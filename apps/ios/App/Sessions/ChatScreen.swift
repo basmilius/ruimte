@@ -334,6 +334,7 @@ struct ChatScreen: View {
         ) { [weak chat] provider in
             chat?.providers.first { $0.text("kind") == provider }?["models"]?.arrayValue ?? []
         }
+        model.presentation.chatModels = { [weak chat] in chat?.models ?? [] }
         if let workspace {
             let chatID = model.chatID
             let session = machineSession

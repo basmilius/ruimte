@@ -1,6 +1,6 @@
+import type { AppIpc } from '@adecore/shell';
 import type { MachineMode } from '@ruimte/desktop-bridge';
 import type { MachineModeFile } from '../machine-mode';
-import type { AppIpc } from './ipc';
 import type { Machine } from './service';
 
 export interface MachineModeOptions {

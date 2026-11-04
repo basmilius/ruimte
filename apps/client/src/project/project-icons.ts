@@ -1,3 +1,4 @@
+import { isProjectIconName, type ProjectIconName } from '@ruimte/contracts';
 import {
     Activity,
     Anchor,
@@ -171,7 +172,6 @@ import {
     Zap,
     type LucideIcon
 } from 'lucide-react';
-import { isProjectIconName, type ProjectIconName } from '@ruimte/contracts';
 
 export type ProjectIconGroupId = 'general' | 'code' | 'ai' | 'web' | 'infra' | 'data' | 'hardware' | 'design' | 'writing' | 'planning' | 'life';
 

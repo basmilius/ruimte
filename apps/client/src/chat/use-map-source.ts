@@ -1,8 +1,8 @@
-import { useEffect, useSyncExternalStore } from 'react';
 import type { UiMapSource } from '@adecore/agents-react';
+import { useEffect, useSyncExternalStore } from 'react';
+import { MapTickets, mapSourceFor } from '@/chat/map-source';
 import { usePulsarAccount, withAccessToken } from '@/pulsar/account';
 import { useSettings } from '@/state/settings';
-import { MapTickets, mapSourceFor } from '@/chat/map-source';
 
 const tickets = new MapTickets({
     fetchTicket: () => withAccessToken((client, token) => client.mapsTicket(token)),

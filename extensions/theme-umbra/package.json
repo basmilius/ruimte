@@ -1,0 +1,9 @@
+{
+    "name": "@ruimte/extension-theme-umbra",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "exports": {
+        ".": "./client/index.ts"
+    }
+}

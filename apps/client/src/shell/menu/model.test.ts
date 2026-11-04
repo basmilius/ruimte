@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
 import { CANVAS_SHORTCUTS, ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
-import { menuIconOf } from './icons';
 import { LANGUAGE_COMMAND_IDS } from '@/language/command-table';
-import { COMMAND_IDS, COMMANDS, isCommandId, menuPlacesOf } from '@/shell/command-table';
 import { languageCommandRows } from '@/language/language-commands';
+import { COMMAND_IDS, COMMANDS, isCommandId, menuPlacesOf } from '@/shell/command-table';
 import { EDITOR_COMMAND_IDS, editorCommandRows } from '@/shell/editor-commands';
+import { menuIconOf } from './icons';
 import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, isPaletteId, LAUNCH_CHOOSE_PREFIX } from './ids';
 import { menuModel, toAccelerator, type MenuContext } from './model';
 

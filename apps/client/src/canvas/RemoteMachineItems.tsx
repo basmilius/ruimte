@@ -1,23 +1,23 @@
+import { ContextMenu, DisabledReason, Icon } from '@adecore/ui';
+import type { RemoteLink } from '@ruimte/contracts';
+import { Monitor, MonitorUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Monitor, MonitorUp } from 'lucide-react';
-import type { RemoteLink } from '@ruimte/contracts';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import type { Point } from '@/canvas/math';
+import { useOtherMachines } from '@/canvas/use-other-machines';
+import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { machineLost } from '@/shell/machine-lost';
 import { iconOfEntry } from '@/shell/settings/machine-icon';
 import { nameOf, type MachineEntry } from '@/shell/settings/machine-list';
-import { useOtherMachines } from '@/canvas/use-other-machines';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
-import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
+import { useProjectList } from '@/state/project-list';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { useWorkspace } from '@/transport/connections';
 import { machineAnswers } from '@/transport/features';
 import { useEndpointConnection } from '@/transport/status';
-import { machineLost } from '@/shell/machine-lost';
-import { ContextMenu, DisabledReason, Icon } from '@adecore/ui';
 
 /* The checkouts this project is linked to on the machines, so a row can say which one it would work in. */
 function useLinks(): RemoteLink[] {

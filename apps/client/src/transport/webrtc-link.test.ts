@@ -9,10 +9,10 @@ import {
     splitFrame,
     type DirectChallengeFrame
 } from '@ruimte/contracts';
+import { FakeSocket } from '../../testing/fake-socket';
 import type { LinkEvents } from './link-transport';
 import type { SignalingEvents } from './signaling';
 import { inflateFrame, webRtcLink, type WebRtcLinkOptions } from './webrtc-link';
-import { FakeSocket } from '../../testing/fake-socket';
 
 const OFFER = 'v=0\r\na=fingerprint:sha-256 AA:AA\r\n';
 const ANSWER = 'v=0\r\na=fingerprint:sha-256 BB:BB\r\n';

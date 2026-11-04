@@ -1,68 +1,85 @@
 import { mkdir, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { NODE_SIZE, type AgentKind, type ChatItem, type ChatTurnItem, type ProjectContent, type ServerFrame } from '@ruimte/contracts';
-import { agentStates } from '../agents/agent-state.ts';
-import { chatRequests, AgentLineageStore, NoticeNotes, NoticeStore, restartBackgroundLimits, TaskStore } from '@adecore/agents/coordination';
-import { PendingPromptStore } from '../agents/pending-prompts.ts';
-import { CANVAS_PATH, handleCanvasRequest } from '../canvas/canvas-route.ts';
-import type { CanvasHost, VisualHost } from '../canvas/verb.ts';
 import { AttachmentStore, ChatStore, VisualStore } from '@adecore/agents/chat';
+import { chatRequests, AgentLineageStore, NoticeNotes, NoticeStore, restartBackgroundLimits, TaskStore } from '@adecore/agents/coordination';
+import type { OutboxWorker } from '@adecore/agents/coordination';
+import type { AccountLaunches, ChatProvider, ProviderAccountsService } from '@adecore/agents/providers';
+import { fakeClaude, fakeCodex, inProcess, type FakeCli, type InProcessCli } from '@adecore/agents/testing';
+import type { ManualClock } from '@adecore/agents/testing';
+import type { LimitsUpdate } from '@adecore/agents/usage';
+import { NODE_SIZE, type AgentKind, type ChatItem, type ChatTurnItem, type ProjectContent, type ServerFrame } from '@ruimte/contracts';
+import { StartClaims } from '../actions/start-claims.ts';
+import { agentStates } from '../agents/agent-state.ts';
+import { openedAgentCount } from '../agents/hidden-agents.ts';
+import { PendingPromptStore } from '../agents/pending-prompts.ts';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { continueOn } from '../chat/continue-on.ts';
 import { chatForkDeps, forkChat, forkForAgent, readForkInfo, readHandoff } from '../chat/fork.ts';
-import { fakeClaude, fakeCodex, inProcess, type FakeCli, type InProcessCli } from '@adecore/agents/testing';
 import { agentMessages } from '../context/agent-messages.ts';
 import { MESSAGE_WORDS } from '../context/notices.ts';
 import { Dispatcher } from '../dispatcher.ts';
+import { BundleStore } from '../git/bundles.ts';
 import { Checkpoints, type CheckpointService } from '../git/checkpoints.ts';
+import type { GhRunner } from '../git/github.ts';
 import { worktreeAgents } from '../git/worktree-agents.ts';
 import { checkoutHost, worktreeHost } from '../git/worktree-host.ts';
 import { WorktreeMerge } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import { PrWatchStore } from '../github/pr-watch.ts';
-import type { GhRunner } from '../git/github.ts';
 import { registerChatHandlers } from '../handlers/chat.ts';
-import { registerSessionHandlers } from '../handlers/session.ts';
+import { registerPeerTaskHandlers } from '../handlers/peer-tasks.ts';
 import { registerPlanHandlers } from '../handlers/plan.ts';
+import { registerSessionHandlers } from '../handlers/session.ts';
 import { registerTaskHandlers } from '../handlers/tasks.ts';
-import type { ManualClock } from '@adecore/agents/testing';
-import { OutboxStore, type OutboxWork } from '../outbox/outbox.ts';
-import type { OutboxWorker } from '@adecore/agents/coordination';
 import type { EndChildrenWiring } from '../outbox/end-children.ts';
-import type { TaskWiring } from './wiring.ts';
-import { isPlanFileName, PlanStore } from '../plans/plan-store.ts';
+import { OutboxStore, type OutboxWork } from '../outbox/outbox.ts';
 import { agentChatOpening, agentStartHost } from '../outbox/start-agent.ts';
 import { OutboxLink, wireOutbox } from '../outbox/wiring.ts';
-import { chatAccess } from '../wiring/canvas-host.ts';
+import type { PeerLinks } from '../peering/links.ts';
+import { PeerTasks, type PeerTasksDeps } from '../peering/peer-tasks.ts';
+import { UntrustedFolders } from '../peering/untrusted.ts';
+import { isPlanFileName, PlanStore } from '../plans/plan-store.ts';
 import { projectAccountChooser } from '../projects/project-accounts.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { openedAgentCount } from '../agents/hidden-agents.ts';
-import type { AccountLaunches, ProviderAccountsService } from '@adecore/agents/providers';
-import type { LimitsUpdate } from '@adecore/agents/usage';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import type { PtyAdapter } from '../pty/pty.ts';
+import { RemoteTasks, type RemoteTasksDeps } from '../remote/remote-tasks.ts';
 import { SessionManager } from '../sessions/manager.ts';
 import { TEST_GIT_BASH } from '../sessions/test-helpers.ts';
-import { agentVisuals } from '../visuals/agent-host.ts';
-import { RemoteTasks, type RemoteTasksDeps } from '../remote/remote-tasks.ts';
-import { registerPeerTaskHandlers } from '../handlers/peer-tasks.ts';
-import type { PeerLinks } from '../peering/links.ts';
-import { UntrustedFolders } from '../peering/untrusted.ts';
-import { PeerTasks, type PeerTasksDeps } from '../peering/peer-tasks.ts';
-import { BundleStore } from '../git/bundles.ts';
-import { StartClaims } from '../actions/start-claims.ts';
+import type { CanvasHost, VisualHost } from '../tools/host.ts';
+import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { untilChecked } from '../until-test-helpers.ts';
+import { agentVisuals } from '../visuals/agent-host.ts';
+import { chatAccess } from '../wiring/canvas-host.ts';
+import type { TaskWiring } from './wiring.ts';
 
-const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
+const detect = async () => ({ installed: true, version: '0.0.0' });
+const sharedProviders = new ProviderRegistry({ detect });
+
+/* The built-in providers with the ones a test brings in place of those of the same kind, in a registry of this daemon alone. */
+function registryWith(replacements: readonly ChatProvider[]): ProviderRegistry {
+    if (replacements.length === 0) {
+        return sharedProviders;
+    }
+
+    const registry = new ProviderRegistry({ detect });
+
+    for (const provider of replacements) {
+        registry.add(provider);
+    }
+
+    return registry;
+}
 
 /* One run of the daemon over a home, wired the way `daemon.ts` wires it, with fakes where a process would be. */
 export interface TestDaemon {
     tasks: TaskStore;
     notices: NoticeStore;
     lineage: AgentLineageStore;
+    prompts: PendingPromptStore;
     outbox: OutboxStore;
     prWatches: PrWatchStore;
     worker: OutboxWorker<OutboxWork>;
@@ -105,7 +122,7 @@ interface TestDaemonOptions {
     /* What runs a terminal; the fake adapter unless a measurement needs real processes. */
     ptyAdapter?: PtyAdapter;
     checkpoints?: CheckpointService;
-    /* Real worktrees for the verbs; without them a project is in no repository. */
+    /* Real worktrees for the tools; without them a project is in no repository. */
     worktrees?: Worktrees;
     /* The CLIs this machine says it has; Claude Code alone unless a test needs another. */
     installed?: AgentKind[];
@@ -139,6 +156,8 @@ interface TestDaemonOptions {
         git: PeerTasksDeps['git'];
         notify: PeerTasksDeps['notify'];
     };
+    /* Providers in place of the built-ins of their kind, such as the Claude API on a service of the test's own. */
+    providers?: readonly ChatProvider[];
 }
 
 export async function bootTestDaemon({
@@ -158,8 +177,10 @@ export async function bootTestDaemon({
     visualRender = {},
     gh = () => Promise.resolve({ code: 1, stdout: '', stderr: 'no gh in this test' }),
     remote,
-    peer
+    peer,
+    providers: replacements = []
 }: TestDaemonOptions): Promise<TestDaemon> {
+    const providers = registryWith(replacements);
     await store.hiddenAgents.load();
     const projectAccount = projectAccountChooser({
         projectOf: (id) => store.index.locate(id)?.projectId ?? null,
@@ -220,6 +241,8 @@ export async function bootTestDaemon({
         store: new ChatStore(home, { attachments, isSidecar: isPlanFileName }),
         attachments,
         ...(checkpoints ? { checkpoints } : {}),
+        // Never listened on: a chat's CLI is a fake, and the URL only rides on its line and in its environment.
+        contextUrl: 'http://127.0.0.1:4210/context',
         spawn: (options) => {
             chatEnvs.push(options.env);
             chatCommands.push([...options.command]);
@@ -472,6 +495,7 @@ export async function bootTestDaemon({
         tasks,
         notices,
         lineage,
+        prompts,
         outbox,
         worker,
         sessions,
@@ -547,13 +571,7 @@ export function turnsOf(daemon: Pick<TestDaemon, 'chats'>, chatId: string): Chat
     return itemsOf(daemon, chatId).filter((item): item is ChatTurnItem => item.kind === 'turn');
 }
 
-/* A verb the node `caller` runs, the way `ruimte-context` posts it; the token is the caller's id. */
-export async function runVerb(daemon: Pick<TestDaemon, 'host'>, caller: string, name: string, argv: string[]): Promise<string[]> {
-    const path = `${CANVAS_PATH}/${name}`;
-    const response = await handleCanvasRequest(
-        new Request(`http://127.0.0.1${path}`, { method: 'POST', headers: { authorization: `Bearer ${caller}` }, body: JSON.stringify({ argv }) }),
-        path,
-        { targetForToken: (token) => token, host: daemon.host }
-    );
-    return (await response.text()).trim().split('\n');
+/* A tool of a toolkit the node `caller` calls with JSON input: its lines, or a refusal as its `refused` rows. */
+export async function invokeTool(daemon: Pick<TestDaemon, 'host'>, caller: string, name: string, input: Record<string, unknown>): Promise<string[]> {
+    return (await toolAnswer(name, input, toolCall(caller, daemon.host))).lines;
 }

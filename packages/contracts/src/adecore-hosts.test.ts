@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import * as drawing from './drawing-host.ts';
-import * as diagram from './diagram-host.ts';
-import * as plan from './plan-host.ts';
-import { DrawingDocumentSchema } from '@adecore/drawing/protocol';
 import { DiagramDocumentSchema } from '@adecore/diagram/protocol';
+import { DrawingDocumentSchema } from '@adecore/drawing/protocol';
 import { PlanSchema } from '@adecore/plan/protocol';
+import * as diagram from './diagram-host.ts';
+import * as drawing from './drawing-host.ts';
 import { EVENT_SCHEMAS, REQUEST_SCHEMAS } from './index.ts';
+import * as plan from './plan-host.ts';
 
 describe('Adecore schemas in the Ruimte wire', () => {
     test('uses the shared instances inside application request and event envelopes', () => {

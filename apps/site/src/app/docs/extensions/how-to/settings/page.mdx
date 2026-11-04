@@ -1,0 +1,154 @@
+import { SettingsFields, SettingsOwnPage } from '@/components/docs/extensions/SettingsScenes.tsx';
+
+export const metadata = { title: 'Add a settings page' };
+
+# Add a settings page
+
+<p className="lead">Settings a person changes under Settings, Extensions, and your code reads.</p>
+
+Every extension has a page there with its name, an On switch and its permissions. You add what comes under that.
+
+## Describe the fields
+
+In `client/index.ts`, call `defineExtensionSettings` once. Put fields that belong together in a group:
+
+```ts
+import { defineExtensionSettings } from '@ruimte/extension/client';
+
+defineExtensionSettings({
+    groups: [
+        {
+            title: 'Summary',
+            fields: [
+                {
+                    key: 'length',
+                    type: 'select',
+                    label: 'Length',
+                    description: 'How long a summary of a canvas gets.',
+                    default: 'short',
+                    options: [
+                        { value: 'short', label: 'Short' },
+                        { value: 'long', label: 'Long' }
+                    ]
+                },
+                {
+                    key: 'includeTerminals',
+                    type: 'boolean',
+                    label: 'Include terminals',
+                    default: true
+                }
+            ]
+        },
+        {
+            title: 'Schedule',
+            description: 'When the standup note is written.',
+            fields: [
+                {
+                    key: 'time',
+                    type: 'text',
+                    label: 'Time',
+                    default: '09:00'
+                },
+                {
+                    key: 'weekdaysOnly',
+                    type: 'boolean',
+                    label: 'Weekdays only',
+                    default: true
+                }
+            ]
+        }
+    ]
+});
+```
+
+Save, and with `bun run dev` running, open Settings, Extensions and pick your extension under In development:
+
+<SettingsFields />
+
+Each group is a section with its title and description above a card of rows. A `boolean` is a switch, `select` a menu with `options`, and `text` an input. Until the person changes a field, it holds `default`.
+
+With one group and no title, pass `fields` instead of `groups`:
+
+```ts
+defineExtensionSettings({
+    fields: [
+        {
+            key: 'time',
+            type: 'text',
+            label: 'Time',
+            default: '09:00'
+        }
+    ]
+});
+```
+
+## Read a setting
+
+`useSetting` reads a field by its `key`, in any component of your extension. The component draws again when the person changes it:
+
+```tsx
+import { useSetting } from '@ruimte/extension/client';
+
+export default function Summary() {
+    const length = useSetting<string>('length');
+    const terminals = useSetting<boolean>('includeTerminals');
+
+    return (
+        <p>
+            {length} summary, {terminals ? 'with' : 'without'} terminals
+        </p>
+    );
+}
+```
+
+Keys are unique across all groups. Settings stay on the computer where the person set them. The server part cannot read them, so pass what it needs as an argument when you call it.
+
+## Draw a page of your own
+
+When fields are not enough, give a component instead. Ruimte draws it under the permissions, where the fields would go:
+
+```ts
+defineExtensionSettings({
+    component: () => import('./Settings'),
+    keywords: ['tracker', 'api key']
+});
+```
+
+`keywords` are words the search in Settings finds your page by. Build the page from the components in `@ruimte/extension/ui`, so its fields and buttons match the rest of Settings:
+
+```tsx
+import { useState } from 'react';
+import { Button, Field, Input } from '@ruimte/extension/ui';
+import { useServer } from '@ruimte/extension/client';
+import type { Api } from '../server';
+
+export default function Settings() {
+    const server = useServer<Api>();
+    const [key, setKey] = useState('');
+
+    return (
+        <Field
+            label="Tracker API key"
+            hint="It stays on the machine, readable only by you."
+        >
+            <div style={{ display: 'flex', gap: 8 }}>
+                <Input
+                    type="password"
+                    value={key}
+                    onChange={(event) => setKey(event.target.value)}
+                />
+                <Button
+                    variant="secondary"
+                    onClick={() => void server.saveKey(key)}
+                >
+                    Save
+                </Button>
+            </div>
+        </Field>
+    );
+}
+```
+
+<SettingsOwnPage />
+
+The server part that keeps the key is in [Server and secrets](/docs/extensions/how-to/server).

@@ -1,10 +1,10 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
+import { fileExists } from '@adecore/utils/fs';
+import { isWithin } from '@adecore/utils/path';
+import { isRecord } from '@adecore/utils/record';
 import type { LaunchConfig, LaunchConfigEnv, LaunchConfigKind, LaunchSuggestion } from '@ruimte/contracts';
-import { fileExists } from '@adecore/agents';
-import { isInside } from '../canvas/project-paths.ts';
-import { isRecord } from '../is-record.ts';
 import { readVscodeLaunch } from './vscode.ts';
 
 /*
@@ -156,7 +156,7 @@ class PathScope {
     /* A path as the command writes it: relative to where it runs, or absolute once it leaves the project. */
     path(value: string): string {
         const absolute = resolve(this.cwd, this.expand(value));
-        if (!isInside(this.folder, absolute)) {
+        if (!isWithin(this.folder, absolute)) {
             this.outside = true;
             return absolute;
         }
@@ -260,7 +260,7 @@ function npmScript(configuration: XmlElement, context: RunFileContext): Built {
             env: envOf(configuration, inCwd)
         },
         detail: configuration.attributes.factoryName ?? 'npm',
-        outside: !isInside(context.folder, cwd) || inCwd.outside
+        outside: !isWithin(context.folder, cwd) || inCwd.outside
     };
 }
 
@@ -289,7 +289,7 @@ function shellScript(configuration: XmlElement, context: RunFileContext): Built 
     return {
         launch: { id: '', name: configuration.attributes.name ?? 'Script', kind: 'task', cwd, command, env: envOf(configuration, inCwd) },
         detail: configuration.attributes.factoryName ?? 'Shell Script',
-        outside: !isInside(context.folder, cwd) || inCwd.outside
+        outside: !isWithin(context.folder, cwd) || inCwd.outside
     };
 }
 
@@ -337,7 +337,7 @@ async function packageRunner(folder: string, cwd: string): Promise<string> {
         if (await fileExists(join(at, 'yarn.lock'))) {
             return 'yarn';
         }
-        if (at === folder || !isInside(folder, at) || dirname(at) === at) {
+        if (at === folder || !isWithin(folder, at) || dirname(at) === at) {
             return 'npm run';
         }
     }
@@ -474,7 +474,7 @@ async function runFilesUnder(root: string, roots: ReadonlySet<string>, budget: {
 
 /* What `$PROJECT_DIR$` stands for: the folder that holds the settings the file belongs to, else its checkout. */
 async function projectDirOf(file: string, root: string): Promise<string> {
-    for (let at = dirname(file); isInside(root, at); at = dirname(at)) {
+    for (let at = dirname(file); isWithin(root, at); at = dirname(at)) {
         if (await fileExists(join(at, '.idea'))) {
             return at;
         }
@@ -491,7 +491,7 @@ async function projectDirOf(file: string, root: string): Promise<string> {
  * client that asks only answers when `sources` names it, since a client validates every reply whole.
  */
 export async function detectLaunches(folder: string, checkouts: readonly string[], options: { sources?: readonly string[] } = {}): Promise<LaunchSuggestion[]> {
-    const roots = [folder, ...checkouts.filter((path) => path !== folder && isInside(folder, path))];
+    const roots = [folder, ...checkouts.filter((path) => path !== folder && isWithin(folder, path))];
     const rootSet = new Set(roots);
     const budget = { directories: MAX_DIRECTORIES };
     const found: { built: Built; source: LaunchSuggestion['source']; path: string }[] = [];
@@ -538,7 +538,7 @@ export async function detectLaunches(folder: string, checkouts: readonly string[
         if (cwd === undefined || cwd === '') {
             delete launch.cwd;
         } else {
-            launch.cwd = isInside(folder, built.launch.cwd!) ? cwd : built.launch.cwd;
+            launch.cwd = isWithin(folder, built.launch.cwd!) ? cwd : built.launch.cwd;
         }
         if (launch.env === undefined) {
             delete launch.env;

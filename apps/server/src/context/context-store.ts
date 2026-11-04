@@ -1,30 +1,16 @@
-import type {
-    ChatApprovalDecision,
-    ChatItem,
-    ChatQuestion,
-    ChatQuestionItem,
-    ChatWorkflow,
-    ChatWorkflowAgent,
-    ContextSource,
-    DeviceInfo,
-    DiagramDocument,
-    DrawingElement,
-    Plan,
-    ProjectCanvasView
-} from '@ruimte/contracts';
-import { workflowAgentRef } from '@ruimte/contracts';
-import { renderPlanText } from '@adecore/plan';
-import { contextChangeNote } from './context-note.ts';
 import { CodedError } from '@adecore/agents';
-import { readRefusal } from './read-refusal.ts';
-import type { Reference } from './references.ts';
+import { renderTranscript } from '@adecore/agents/context';
+import { renderPlanText } from '@adecore/plan';
+import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
 import type { PageReading } from '../browser/drive.ts';
+import { chatReadUsage, chatUsageLine, type ChatReadUsage, type ChatUsageInfo } from './chat-usage.ts';
 import { renderPage } from './context-browser.ts';
 import { renderDevice } from './context-device.ts';
 import { renderDiagram } from './context-diagram.ts';
 import { renderDrawing } from './context-drawing.ts';
-import { readableAssistantText } from '@adecore/agents/chat';
-import { chatReadUsage, chatUsageLine, type ChatReadUsage, type ChatUsageInfo } from './chat-usage.ts';
+import { contextChangeNote } from './context-note.ts';
+import { readRefusal } from './read-refusal.ts';
+import type { Reference } from './references.ts';
 
 export const CONTEXT_PATH = '/context';
 
@@ -46,7 +32,7 @@ function asReading(text: string | null): ContextReading | null {
 /* A read that found nothing to answer, under the code and the sentence that say why. */
 export class ContextRefusal extends CodedError {}
 
-/* A `--subagent` read that cannot be answered, with the sentence that says why. */
+/* A `subagent` read that cannot be answered, with the sentence that says why. */
 export class SubagentUnreadable extends ContextRefusal {
     constructor(message: string) {
         super('unknown-subagent', message);
@@ -54,13 +40,15 @@ export class SubagentUnreadable extends ContextRefusal {
 }
 
 interface ContextReaders {
+    /* What an extension's `server/` says its node holds. */
+    extensionNode?(extension: string, type: string, data: unknown): Promise<string | null>;
     /* What the agent under this id may read, derived from the project documents the daemon knows. */
     sources(targetId: string): ContextSource[];
     /* The views, nodes and chats a person pointed at in a message of this chat. Readable like a line, but
        never listed or announced as one: the message that pointed at them already said where they are. */
     referenced?(targetId: string): Reference[];
     /* The agent under `sourceId` when `targetId` opened it itself. Readable like a line and never listed,
-       since the verb that opened it already named it. */
+       since the tool that opened it already named it. */
     opened?(targetId: string, sourceId: string): ContextSource | null;
     /* The elements of a drawing view, or null when no open project has one under that id. */
     drawingElements(viewId: string): Promise<DrawingElement[] | null>;
@@ -94,128 +82,8 @@ interface ContextReaders {
 export interface ContextReading {
     text: string;
     usage?: ChatReadUsage;
-}
-
-/* The first line of a subagent's report that says something, which is all a line about it has room for. */
-function firstLine(text: string | null): string {
-    return (
-        (text ?? '')
-            .split('\n')
-            .find((line) => line.trim() !== '')
-            ?.trim() ?? ''
-    );
-}
-
-/* The request id stays on a request that no longer waits, so the state beside it is what tells a parent not to answer it. */
-const QUESTION_STATES: Record<ChatQuestionItem['state'], string> = {
-    pending: 'waits for an answer',
-    answered: 'answered',
-    cancelled: 'cancelled',
-    dismissed: 'dismissed'
-};
-
-const APPROVAL_STATES: Record<ChatApprovalDecision, string> = {
-    pending: 'waits for a person',
-    allow: 'allowed',
-    'allow-always': 'allowed always',
-    deny: 'denied',
-    cancelled: 'cancelled'
-};
-
-/* What `ruimte-context answer` needs of one waiting question besides the request: its id and what it may pick. */
-function pendingQuestionLine(question: ChatQuestion): string {
-    const how =
-        question.choices.length === 0
-            ? 'answer in your own words'
-            : `choices ${question.choices.map((choice) => choice.label).join(' | ')}${question.multiSelect ? ', one or more' : ''}, or your own words`;
-    return `- question ${question.id}: ${how}`;
-}
-
-/* An agent of a workflow, by the id `--subagent` reads its conversation under. */
-function workflowAgentText(agent: ChatWorkflowAgent): string {
-    return `${agent.label} (${agent.status}, ${agent.agentId === null ? 'not started yet' : workflowAgentRef(agent.agentId)})`;
-}
-
-/* What a Workflow call runs, one line per phase, so a parent can follow a child's workflow without opening it. */
-function workflowLines(workflow: ChatWorkflow): string[] {
-    const inPhase = (index: number): ChatWorkflowAgent[] => workflow.agents.filter((agent) => agent.phaseIndex === index);
-    const phases = workflow.phases.map((phase) => {
-        const agents = inPhase(phase.index);
-        return `- phase ${phase.index} "${phase.title}": ${agents.length === 0 ? 'not started yet' : agents.map(workflowAgentText).join(', ')}`;
-    });
-    const loose = workflow.agents.filter((agent) => !workflow.phases.some((phase) => phase.index === agent.phaseIndex));
-    return [
-        `Workflow${workflow.name === null ? '' : ` "${workflow.name}"`}, each agent readable with --subagent and the id beside it:`,
-        ...phases,
-        ...(loose.length === 0 ? [] : [`- outside a phase: ${loose.map(workflowAgentText).join(', ')}`])
-    ];
-}
-
-/*
- * A chat thread as an agent should read it: who said what, and what tools ran. A subagent is one line:
- * the work it did inside its row is its own, and printed between the parent's lines it would read as
- * if the parent had done it. Its whole conversation is `read <id> --subagent <toolUseId>`.
- */
-export function renderTranscript(items: ChatItem[]): string {
-    const lines: string[] = [];
-    for (const item of items) {
-        if ((item.kind === 'tool' || item.kind === 'assistant') && item.parentToolUseId) {
-            continue;
-        }
-        switch (item.kind) {
-            case 'subagent': {
-                const report = firstLine(item.result ?? item.summary);
-                lines.push(`> Subagent "${item.description}" (${item.status}, ${item.toolUseId})${report ? `: ${report}` : ''}`, '');
-                break;
-            }
-            case 'user':
-                lines.push('## User', '');
-                if (item.uiChoice) {
-                    lines.push(`Chose ${JSON.stringify(item.uiChoice.label)}`, '');
-                }
-                lines.push(item.text, '');
-                break;
-            case 'assistant':
-                if (item.text.trim() !== '') {
-                    lines.push('## Assistant', '', readableAssistantText(item), '');
-                }
-                break;
-            case 'tool': {
-                const input = typeof item.input === 'object' && item.input !== null ? JSON.stringify(item.input) : String(item.input ?? '');
-                lines.push(`> Tool ${item.name} (${item.state}): ${input.slice(0, 300)}`);
-                if (item.workflow !== undefined) {
-                    lines.push(...workflowLines(item.workflow));
-                }
-                if (item.output) {
-                    lines.push('', '```', item.output.slice(0, 2000), '```', '');
-                }
-                break;
-            }
-            case 'question': {
-                const answers = item.answers ? ` -> ${Object.values(item.answers).join(', ')}` : '';
-                lines.push(
-                    `> Question (${QUESTION_STATES[item.state]}, request ${item.requestId}): ${item.questions.map((question) => question.question).join(' / ')}${answers}`
-                );
-                if (item.state === 'pending') {
-                    lines.push(...item.questions.map(pendingQuestionLine));
-                }
-                lines.push('');
-                break;
-            }
-            case 'approval':
-                lines.push(
-                    `> Approval (${APPROVAL_STATES[item.decision]}, request ${item.requestId}): ${item.toolName}${item.description ? `: ${item.description}` : ''}`,
-                    ''
-                );
-                break;
-            case 'note':
-                lines.push(`> ${item.text}`, '');
-                break;
-            default:
-                break;
-        }
-    }
-    return lines.join('\n').trim();
+    /* The png a read in form image wrote. */
+    image?: string;
 }
 
 /*
@@ -254,6 +122,11 @@ export class ContextStore {
      * One source as text. `tail` is counted here rather than in the CLI, since only this side knows
      * what a line of each kind is, and the wire then carries fifteen lines instead of two thousand.
      */
+    /* Set once the extensions are up, which is after the agents. */
+    useExtensionNodes(read: NonNullable<ContextReaders['extensionNode']>): void {
+        this.readers.extensionNode = read;
+    }
+
     async read(targetId: string, sourceId: string, tail: number | null = null, subagent: string | null = null): Promise<string | null> {
         const source = this.sourceFor(targetId, sourceId);
         return source ? ((await this.reading(targetId, source, tail, subagent))?.text ?? null) : null;
@@ -274,7 +147,7 @@ export class ContextStore {
                 return asReading(lastLines(source.text ?? '', tail));
             case 'terminal': {
                 const text = await this.readers.terminalText(source.id);
-                // The screen cap stays the ceiling: a --tail past it cannot reach further back than the daemon keeps.
+                // The screen cap stays the ceiling: a tail past it cannot reach further back than the daemon keeps.
                 return asReading(text === null ? null : lastLines(text, Math.min(tail ?? MAX_SCREEN_LINES, MAX_SCREEN_LINES)));
             }
             case 'chat':
@@ -311,6 +184,14 @@ export class ContextStore {
             case 'artifact': {
                 const text = source.artifact ? ((await this.readers.artifactReport?.(targetId, source.artifact, projectId).catch(() => null)) ?? null) : null;
                 return asReading(text === null ? null : lastLines(text, tail));
+            }
+            case 'extension': {
+                if (!source.extension) {
+                    return null;
+                }
+                return asReading(
+                    lastLines((await this.readers.extensionNode?.(source.extension.id, source.extension.type, source.extension.data)) ?? '', tail)
+                );
             }
             case 'routine': {
                 const text = source.routine ? ((await this.readers.routineReport?.(targetId, source.routine, projectId).catch(() => null)) ?? null) : null;

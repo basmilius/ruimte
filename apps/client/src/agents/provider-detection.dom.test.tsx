@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectCanvasView, ProviderInfo } from '@ruimte/contracts';
+import { act } from 'react';
 import { startProviderDetection } from '@/transport/provider-detection';
+import { clickOn, mount, openSubmenu, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { fakeProvider } from '../../testing/fake-provider';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, mount, openSubmenu, until, type Mounted } from '../../testing/dom';
 
 // A canvas with something on it, since an empty one offers the agents itself and would ask before the test does.
 const MAIN: ProjectCanvasView = {

@@ -1,5 +1,5 @@
-import { modelsByVendor } from '../../node_modules/@adecore/agents-react/src/chat/logic/picker-entries';
 import { ModelInfoSchema } from '@ruimte/contracts';
+import { modelsByVendor } from '../../node_modules/@adecore/agents-react/src/chat/logic/picker-entries';
 import { median } from './bench';
 
 const count = Number(process.env.BENCH_MODELS ?? 700);

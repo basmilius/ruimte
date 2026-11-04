@@ -1,0 +1,44 @@
+import { Shortcut } from '@/components/docs/Shortcut.tsx';
+import { SettingsAgents } from '@/components/docs/guide/SettingsAgents.tsx';
+
+export const metadata = { title: 'Settings' };
+
+# Settings
+
+<p className="lead">Settings hold what differs per person or per machine: the theme, your keys, the agent CLIs and what agents may do.</p>
+
+Press <Shortcut keys="Mod+," /> to open Settings, and <Shortcut keys="Mod+F" /> inside to search them. Some settings belong to a machine: they apply to every device connected to it, and the page says so.
+
+<SettingsAgents />
+
+## Sections
+
+| Section | What it holds |
+| --- | --- |
+| General | Language and region, projects as tabs or a menu, what the sidebar and Needs you cover, when the dock shows, where folder browsing starts |
+| Appearance | Light, dark or system theme, palette, accent color, extension themes, interface font and size, panel layout, glow in the project color, scroll bounce |
+| Keyboard | Every shortcut, by area |
+| Views | Size of new nodes, the canvas map, render distance, snap to grid in drawings, swiping between pages in a browser |
+| Editor | Font, display, folding, smart keys, saving, code vision, live templates, language servers, AI features |
+| Terminal | Font, where links open, and on Windows the shell a new terminal opens in |
+| Files and Git | How files open, hidden and ignored files, diff layout, worktree folder |
+| Extensions | What you added to Ruimte, and the store. See [Extensions](/docs/extensions). |
+| Providers | Each agent CLI with its accounts, login and default model. Add an account or a provider, install a CLI, enter API keys. |
+| Chats | How replies appear, reading width, the key that sends, what agents may show, map tiles |
+| Agents | Defaults for new agents, what agents may do per machine, agent status in terminals, notifications, keep awake, computer use |
+| Voice | Microphone, Speech to text, Voice Control |
+| Usage | Cost, tokens and plan limits |
+| About | Version, machine, data folder, updates, and **Set up Ruimte** |
+| Account | Your sign-in and your machines |
+
+## Language and region
+
+Ruimte speaks English and Dutch. Set the language and the region apart: the language picks the words, the region the order of dates and how numbers are written. The region follows the language unless you set it.
+
+## Usage and models
+
+Usage adds up what your agents cost per model and provider, with the plan limits your CLIs report. **Compare models**, in the command palette, compares models on intelligence, coding, agentic work, cost and speed.
+
+## Processes
+
+The Processes panel shows the CPU and memory of each terminal and agent. A process that seems stuck gets a warning. Ruimte stops a process only when you click the button.

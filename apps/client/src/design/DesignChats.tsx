@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
-import { MessageSquare, Plus } from 'lucide-react';
-import type { DesignPlace, ViewChat } from '@ruimte/contracts';
 import type { ComposerHeaderSlotProps } from '@adecore/agents-react';
 import { Icon, ProjectSwitcher, type ProjectSwitcherItem } from '@adecore/ui';
+import type { DesignPlace, ViewChat } from '@ruimte/contracts';
+import { MessageSquare, Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { ChatAgentMenu } from '@/agents/AgentMenus';
 import { addDesignChat } from '@/agents/nodes';
 import { useDesignChat } from '@/design/design-chat';

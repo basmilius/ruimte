@@ -1,6 +1,5 @@
 'use client';
 
-import type { CSSProperties, ReactNode } from 'react';
 import {
     ChartNoAxesColumn,
     ChevronDown,
@@ -10,6 +9,7 @@ import {
     Clock,
     Database,
     LayoutTemplate,
+    ListChecks,
     LockOpen,
     Maximize,
     Minus,
@@ -25,6 +25,7 @@ import {
     type LucideIcon
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import type { CSSProperties, ReactNode } from 'react';
 import { AppIcon } from '../AppIcon.tsx';
 import { EASE } from '../film/playback.ts';
 import { type AgentStatus, ClaudeMark, StatusDot } from './canvas.tsx';
@@ -42,6 +43,8 @@ export interface SidebarRow {
     readonly selected?: boolean;
     /** Open in another cell of the grid. */
     readonly beside?: boolean;
+    /** The view a node row stands on, in the faint text after its name, as a Needs you row shows it (`NodeRow` in `SidebarListRows.tsx`). */
+    readonly view?: string;
 }
 
 export function RowIcon({ icon: Icon }: { readonly icon: SidebarRow['icon'] }) {
@@ -61,6 +64,7 @@ function Row({ row }: { readonly row: SidebarRow }) {
         >
             <RowIcon icon={row.icon} />
             <span className="min-w-0 truncate">{row.name}</span>
+            {row.view && <span className="min-w-0 shrink truncate text-[13px] font-normal text-text-faint">{row.view}</span>}
             <span className="grow" />
             {row.done && <CircleCheck size={12} strokeWidth={1.75} className="text-status-idle" />}
             {row.status && <StatusDot status={row.status} />}
@@ -90,8 +94,21 @@ function SidebarGlow() {
     );
 }
 
-/** `shell/Sidebar.tsx`: the wordmark past the traffic lights, what waits on you, then the views. */
-export function Sidebar({ waiting, rows }: { readonly waiting: readonly SidebarRow[]; readonly rows: readonly (SidebarRow | 'separator')[] }) {
+/**
+ * `shell/Sidebar.tsx`: the wordmark past the traffic lights, what waits on you, then the views. An
+ * extension's cards stand at its foot (`SidebarCards.tsx`), and its `sidebarFooter` slot opens the footer.
+ */
+export function Sidebar({
+    waiting,
+    rows,
+    cards,
+    footer
+}: {
+    readonly waiting: readonly SidebarRow[];
+    readonly rows: readonly (SidebarRow | 'separator')[];
+    readonly cards?: ReactNode;
+    readonly footer?: ReactNode;
+}) {
     return (
         <aside className="relative isolate flex h-full w-[248px] shrink-0 flex-col border-r border-border bg-surface">
             <SidebarGlow />
@@ -142,7 +159,9 @@ export function Sidebar({ waiting, rows }: { readonly waiting: readonly SidebarR
                     </span>
                 </motion.div>
             </div>
+            {cards}
             <div className="flex items-center justify-end gap-1 border-t border-border p-2">
+                {footer}
                 <span className="flex h-8 w-5 items-center justify-center">
                     <span className="size-2 rounded-full bg-status-idle" />
                 </span>
@@ -151,13 +170,18 @@ export function Sidebar({ waiting, rows }: { readonly waiting: readonly SidebarR
     );
 }
 
-/** `shell/TopRow.tsx`: the project, and beside it the title of the view when it is the only one on screen. */
+/**
+ * `shell/TopRow.tsx`: the project, and beside it the title of the view when it is the only one on screen.
+ * `trailing` is what the view's bar adds before its close button, such as the `viewToolbar` slot.
+ */
 export function TopRow({
     project = 'acme-web',
-    view
+    view,
+    trailing
 }: {
     readonly project?: string;
     readonly view?: { readonly icon: SidebarRow['icon']; readonly name: string };
+    readonly trailing?: ReactNode;
 }) {
     return (
         <div className="flex h-[47px] shrink-0 items-center gap-2 border-b border-border bg-surface pr-1.5 pl-2 text-[13px] text-text-muted">
@@ -175,6 +199,7 @@ export function TopRow({
                         <span className="truncate text-[14px] font-medium">{view.name}</span>
                     </span>
                     <span className="grow" />
+                    {trailing}
                     <IconButton icon={X} size="sm" />
                 </>
             )}
@@ -182,14 +207,31 @@ export function TopRow({
     );
 }
 
+/** The panels with a button in the rail (`shell/panels.ts`, `toolbar: true`). */
+export type RailPanel = 'files' | 'git' | 'databases' | 'devices' | 'output';
+
 function RailSeparator() {
     return <span className="my-1 h-px w-5 shrink-0 bg-border" />;
 }
 
-/** `shell/ShellRail.tsx`: search, the launches, the panels and Routines, and at the foot Usage and Settings. */
-export function Rail({ panel }: { readonly panel?: 'git' | 'files' }) {
+/**
+ * `shell/ShellRail.tsx`: search, the launches, the panels and Routines, and at the foot Usage and Settings.
+ * An extension's panel gets a toggle in a group of its own, after Routines (`PanelControls.tsx`).
+ */
+export function Rail({
+    panel,
+    extension
+}: {
+    readonly panel?: RailPanel;
+    readonly extension?: { readonly icon: LucideIcon; readonly open: boolean; readonly badge?: string };
+}) {
+    // `.ade-workspace[data-side-panel] > .ade-workspace-rail`: an open panel gets a line between it and the rail.
+    const panelOpen = panel !== undefined || extension?.open === true;
+
     return (
-        <nav className="flex w-12 shrink-0 flex-col items-center gap-1 bg-[color-mix(in_srgb,var(--surface)_70%,var(--surface-sunken))] pt-[7px] pb-2">
+        <nav
+            className={`flex w-12 shrink-0 flex-col items-center gap-1 bg-[color-mix(in_srgb,var(--surface)_70%,var(--surface-sunken))] pt-[7px] pb-2 ${panelOpen ? 'shadow-[inset_1px_0_var(--separator)]' : ''}`}
+        >
             <IconButton icon={Search} />
             <span className="mt-[3px] mb-1 h-px w-5 shrink-0 bg-border" />
             <IconButton icon={Play} />
@@ -197,11 +239,24 @@ export function Rail({ panel }: { readonly panel?: 'git' | 'files' }) {
             <IconButton icon={Folder} active={panel === 'files'} />
             <IconButton icon={GitBranch} active={panel === 'git'} />
             <RailSeparator />
-            <IconButton icon={Database} />
-            <IconButton icon={TabletSmartphone} />
+            <IconButton icon={Database} active={panel === 'databases'} />
+            <IconButton icon={TabletSmartphone} active={panel === 'devices'} />
             <RailSeparator />
-            <IconButton icon={Package} />
+            <IconButton icon={Package} active={panel === 'output'} />
             <IconButton icon={Clock} />
+            {extension && (
+                <>
+                    <RailSeparator />
+                    <span className="relative">
+                        <IconButton icon={extension.icon} active={extension.open} />
+                        {extension.badge !== undefined && (
+                            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-xs text-accent-text">
+                                {extension.badge}
+                            </span>
+                        )}
+                    </span>
+                </>
+            )}
             <span className="grow" />
             <IconButton icon={ChartNoAxesColumn} />
             <IconButton icon={Settings} />
@@ -219,6 +274,8 @@ export function Dock({ waiting = 0, working = 0, finished = 0 }: { readonly wait
         <div className={`flex items-center gap-2 rounded-xl p-1 ${FLOAT}`}>
             {counts && (
                 <>
+                    {/* `StatusSummary.tsx` opens with the attention queue, then the counts. */}
+                    <IconButton icon={ListChecks} />
                     {waiting > 0 && (
                         <Button size="md" className="gap-1.5 text-text">
                             <StatusDot status="needs-you" />
@@ -302,23 +359,28 @@ export function AppWindow({
     sidebar,
     toolbar,
     rail,
+    sidePanel,
     children
 }: {
     readonly sidebar: ReactNode;
     readonly toolbar: ReactNode;
     readonly rail: ReactNode;
+    /** A panel opened from the rail, such as the plan: behind the sheet, between it and the rail (`ade-workspace-side-panel`). */
+    readonly sidePanel?: ReactNode;
     readonly children: ReactNode;
 }) {
     return (
         <div className="flex h-full w-full overflow-hidden rounded-[12px] border border-white/10 bg-[color-mix(in_srgb,var(--surface)_70%,var(--surface-sunken))] text-[14px] text-text shadow-[0_40px_120px_-20px_rgb(0_0_0/0.8),0_0_0_1px_rgb(0_0_0/0.6)]">
-            {/* `.ade-workspace-sheet`: a rounded right edge, its hairline and its shadow over the rail. */}
-            <div className="relative z-1 flex min-w-0 grow overflow-hidden rounded-r-[12px] bg-surface shadow-[0_0_0_1px_var(--border),0_0_14px_rgb(0_0_0/0.3)]">
+            {/* `.ade-workspace-sheet`: a rounded right edge, its hairline and its shadow over the rail. Inside the
+                workspace `--border` is `--separator`, which this hairline draws in. */}
+            <div className="relative z-1 flex min-w-0 grow overflow-hidden rounded-r-[12px] bg-surface shadow-[0_0_0_1px_var(--separator),var(--sheet-shadow)]">
                 {sidebar}
                 <main className="flex min-w-0 grow flex-col">
                     {toolbar}
-                    <div className="relative min-h-0 grow">{children}</div>
+                    <div className="relative min-h-0 grow overflow-hidden">{children}</div>
                 </main>
             </div>
+            {sidePanel}
             {rail}
         </div>
     );

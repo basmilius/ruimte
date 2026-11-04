@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { ActionRegistry } from '@ruimte/actions';
 import type { LaunchConfigEntry } from '@ruimte/contracts';
+import { TransportError, type Transport } from '@/transport/transport';
 import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
 import { launchActions } from './launch-actions';
-import { TransportError, type Transport } from '@/transport/transport';
 
 const web = { id: 'web', name: 'Web', kind: 'service', command: 'bun dev', shared: true } as unknown as LaunchConfigEntry;
 

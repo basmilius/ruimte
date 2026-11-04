@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
+import { ContextMenu, FileTree, Icon, PanelEmpty, useFileTree, type FoldKeyOf } from '@adecore/ui';
 import type { FileTreeVisibleRow } from '@pierre/trees';
+import type { GitFile, GitStatus } from '@ruimte/contracts';
 import {
     ChevronsDownUp,
     ChevronsUpDown,
@@ -16,7 +16,8 @@ import {
     Plus,
     Trash2
 } from 'lucide-react';
-import type { GitFile, GitStatus } from '@ruimte/contracts';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { FileCopyRow } from '@/shell/panels/FileCopyRow';
 import { absoluteOf, revealableInFiles } from '@/shell/panels/files-tree';
@@ -50,7 +51,6 @@ import type { GitCheckout } from '@/state/git-repos';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { ContextMenu, FileTree, Icon, PanelEmpty, useFileTree, type FoldKeyOf } from '@adecore/ui';
 
 const { applyExpansion, directoryHandle, menuTargetsOf, mergeCollapsedPaths, rebuildPaths, rowPathOf, selectOnly, visibleRows } = FileTree;
 

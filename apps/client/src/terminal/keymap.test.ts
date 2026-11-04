@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import type { KeyLike, Shortcut } from '@adecore/ui';
 import { CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
-import type { KeyLike, Shortcut } from '@adecore/ui';
 import {
     isAppShortcut,
     isClearShortcut,

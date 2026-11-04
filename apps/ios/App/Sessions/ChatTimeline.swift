@@ -1128,6 +1128,10 @@ struct ChatEntryView: View {
                             .lineLimit(1).font(.footnote).foregroundStyle(MobileStyle.muted).frame(minHeight: 28)
                     }.buttonStyle(.plain).disabled(task.isEmpty)
                 }
+            case .selectionSwitch:
+                if let from = entry.switchedFrom, let to = entry.items.first?.item.turnItem?.selection {
+                    ChatSelectionSwitchRule(from: from, to: to, models: presentation.chatModels())
+                }
             case .changedFiles:
                 if let turn = entry.items.first {
                     ChatChangedFilesRow(
@@ -1162,15 +1166,12 @@ struct ChatEntryView: View {
                 } label: {
                     let tools = entry.items.compactMap(\.item.toolItem)
                     let running = tools.filter { $0.state == .running }.count
-                    let failed = tools.contains { $0.state == .error }
+                    let failures = ChatToolPresentation.groupFailures(tools)
                     HStack(spacing: 8) {
                         if running > 0 {
                             Spinner(size: 12).foregroundStyle(MobileStyle.statusRunning)
                         } else {
-                            ChatToolMarkView(
-                                mark: failed
-                                    ? .lucide("circle-alert")
-                                    : tools.first.map(ChatToolPresentation.mark) ?? .lucide("wrench"))
+                            ChatToolMarkView(mark: tools.first.map(ChatToolPresentation.mark) ?? .lucide("wrench"))
                         }
                         if running > 0 {
                             Text("\(tools.count) tool calls").lineLimit(1)
@@ -1178,9 +1179,13 @@ struct ChatEntryView: View {
                         } else {
                             Text(ChatToolPresentation.groupLabel(tools).attributed).lineLimit(1)
                         }
+                        // The failures stand apart in the error tone, so the run's own line keeps its tone.
+                        if let failures {
+                            Text(verbatim: "· \(failures)").foregroundStyle(MobileStyle.statusError).fixedSize()
+                        }
                     }
                     .font(.footnote).monospacedDigit()
-                    .foregroundStyle(failed ? MobileStyle.statusError : MobileStyle.muted)
+                    .foregroundStyle(MobileStyle.muted)
                 }
             }
         }

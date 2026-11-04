@@ -2,12 +2,12 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { AttachmentStore } from '@adecore/agents/chat';
+import { fakeClaude, inProcess } from '@adecore/agents/testing';
 import type { ChatItem, ContextSource } from '@ruimte/contracts';
 import { ProviderRegistry } from '../providers/registry.ts';
-import { AttachmentStore } from '@adecore/agents/chat';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder, RecordingStore } from './chat-test-helpers.ts';
-import { fakeClaude, inProcess } from '@adecore/agents/testing';
 
 const FIXTURE = join(dirname(fileURLToPath(import.meta.resolve('@adecore/agents/chat'))), 'fixtures', 'claude-projects');
 const LINKED: ContextSource[] = [{ id: 'dev-1', kind: 'device', title: 'iPhone 18 Pro Max' }];

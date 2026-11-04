@@ -77,23 +77,6 @@ export function applyDatabaseAction(state: TabPool, action: DatabaseTabAction, c
     }
 }
 
-/* The action that opens a closed tab again as it stood. */
-export function reopenAction(tab: DatabaseTab): DatabaseTabAction | null {
-    if (tab.table === undefined) {
-        return null;
-    }
-    const ref = { connectionId: tab.connectionId, schema: tab.schema, table: tab.table };
-    const tableKind = tab.kind !== 'designer' && tab.tableKind !== undefined ? { tableKind: tab.tableKind } : {};
-    switch (tab.kind) {
-        case 'table':
-            return { kind: 'open-table', ref, view: 'data', ...(tab.where === undefined ? {} : { where: tab.where }), ...tableKind };
-        case 'structure':
-            return { kind: 'open-table', ref, view: 'structure', ...tableKind };
-        case 'designer':
-            return { kind: 'edit-table', ref };
-    }
-}
-
 /*
  * The database view of the project that already shows what an open-table action asks for, so a table is
  * never in the grid twice. The filter is part of what the person asked to see, and an empty one is none.

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { FileTree as SharedFileTree } from '@adecore/ui';
 import { FileTree } from '@pierre/trees';
 import type { FsEntry, GitFile } from '@ruimte/contracts';
-import { FileTree as SharedFileTree } from '@adecore/ui';
 import {
     LOADING_NAME,
     ancestorDirsOf,
@@ -263,6 +263,19 @@ describe('the checkouts of a tree', () => {
             { path: 'Makefile', status: 'modified' },
             { path: 'backend/config/feeds.yaml', status: 'modified' }
         ]);
+    });
+
+    test('a checkout counts its files from its own path, also when git names its root through a symlink', () => {
+        const linked = { path: '/tmp/repo', status: { root: '/private/tmp/repo', files: [file('src/index.ts', 'M')] } };
+
+        expect(checkoutStatusEntries('/tmp/repo', [linked])).toEqual([{ path: 'src/index.ts', status: 'modified' }]);
+        expect(checkoutOfPath([linked], '/tmp/repo/src/index.ts')).toBe(linked);
+    });
+
+    test('a folder below its repository counts the files from the root git named', () => {
+        const corner = { path: '/repo/apps/web', status: { root: '/repo', files: [file('apps/web/a.ts', 'M'), file('Makefile', 'M')] } };
+
+        expect(checkoutStatusEntries('/repo/apps/web', [corner])).toEqual([{ path: 'a.ts', status: 'modified' }]);
     });
 
     test('a path belongs to the innermost checkout it is in', () => {

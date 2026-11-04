@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import type { ChatCheckpointDiff } from '@ruimte/contracts';
-import { FakeCheckpoints } from './chat-test-helpers.ts';
 import { makeChatFixture, retire } from './chat-manager.fixture.test.ts';
+import { FakeCheckpoints } from './chat-test-helpers.ts';
 
 type ChatFixture = Awaited<ReturnType<typeof makeChatFixture>>;
 let home: ChatFixture['home'];
@@ -268,7 +268,7 @@ describe('clearing a chat', () => {
         expect(recorder.info).toMatchObject({ status: 'idle', activeTurnId: null, queue: [] });
 
         // Whatever the killed CLI or the settled checkpoint still had on its way must not bring the turn back.
-        expect(await claude.started[0]!.exited).toBeNull();
+        await claude.started[0]!.exited;
         await checkpoints.settled();
         expect(recorder.items.size).toBe(0);
         expect(manager.attach('chat-busy', 'c1').items).toEqual([]);

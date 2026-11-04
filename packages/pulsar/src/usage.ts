@@ -9,7 +9,6 @@ export const USAGE_PATH = '/v1/usage';
 
 // A machine sends at most the last seven finished days it missed; one day more absorbs a slow clock.
 export const USAGE_MAX_DAYS_PER_BATCH = 7;
-const USAGE_MAX_AGE_DAYS = 8;
 
 // Well above a heavy day of one machine, so only a broken or forged counter meets it. A machine clamps before it sends.
 export const USAGE_MAX_COUNT = 100_000;
@@ -106,7 +105,7 @@ export const USAGE_VIEW_COUNTERS = {
     database: 'viewsDatabase'
 } as const satisfies Record<string, UsageCounter>;
 
-// Every `ruimte-context` verb in one group, since the batch has fewer counters than there are verbs.
+// Every agent verb in one group, since the batch has fewer counters than there are verbs.
 export const USAGE_VERB_COUNTERS = {
     help: 'verbsRead',
     list: 'verbsRead',
@@ -137,6 +136,7 @@ export const USAGE_VERB_COUNTERS = {
     worktree: 'verbsWorktree',
     launches: 'verbsLaunches',
     operation: 'verbsLaunches',
+    tool: 'verbsLaunches',
     routine: 'verbsLaunches',
     secret: 'verbsSecret',
     language: 'verbsLanguage',
@@ -171,7 +171,6 @@ const CountSchema = z.number().int().min(0).max(USAGE_MAX_COUNT);
 export const UsageCountsSchema = z.strictObject(
     Object.fromEntries(USAGE_COUNTERS.map((counter) => [counter, CountSchema.optional()])) as Record<UsageCounter, z.ZodOptional<typeof CountSchema>>
 );
-export type UsageCounts = z.infer<typeof UsageCountsSchema>;
 
 /* What describes a day and the machine it is of, in the address book's batch and in the report alike (`usage-report.ts`). */
 export const USAGE_DAY_DESCRIPTION = {
@@ -208,15 +207,3 @@ export const UsageBatchSchema = z
     .strictObject({ days: z.array(UsageDaySchema).min(1).max(USAGE_MAX_DAYS_PER_BATCH) })
     .refine((batch) => new Set(batch.days.map((day) => day.date)).size === batch.days.length, { message: 'A day appears twice', path: ['days'] });
 export type UsageBatch = z.infer<typeof UsageBatchSchema>;
-
-/* Why a day falls outside what the address book takes at `now`, or null when it is in. Today counts, for a clock a little ahead. */
-export function usageDateProblem(date: string, now: number): string | null {
-    const today = usageDateOf(now);
-    if (date > today) {
-        return 'The day is in the future';
-    }
-    if (date < usageDateOf(now - USAGE_MAX_AGE_DAYS * DAY_MS)) {
-        return `The day is more than ${USAGE_MAX_AGE_DAYS} days old`;
-    }
-    return null;
-}

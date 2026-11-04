@@ -1,24 +1,24 @@
-import type { AgentKind } from '@ruimte/contracts';
 import { ProviderAccountsService } from '@adecore/agents/providers';
+import type { AgentKind } from '@ruimte/contracts';
 import { AgentIntegrations } from '../agents/integrations.ts';
+import type { ServerConfig } from '../config.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
+import type { AgentServers } from '../handlers/agent-servers.ts';
 import { RUIMTE_ACCOUNTS_HOST } from '../providers/accounts-host.ts';
 import { ANTIGRAVITY_ACP_RELEASE } from '../providers/acp-providers.ts';
 import { AcpRegistry } from '../providers/acp-registry.ts';
 import { AcpServerInstall } from '../providers/acp-server.ts';
+import { anthropicClaudeApiService } from '../providers/anthropic-claude-api-provider.ts';
+import type { AnthropicClaudeApiService } from '../providers/anthropic-claude-api-service.ts';
 import { CliVersions, type OwnInstall } from '../providers/cli-versions.ts';
-import { RegistryAgents } from '../providers/registry-agents.ts';
-import type { AgentServers } from '../handlers/agent-servers.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { terminalExecutable } from '../providers/launch.ts';
 import { ModelCatalogFeed } from '../providers/model-catalogs.ts';
-import { ProviderFeed } from '../providers/provider-feed.ts';
-import { ProviderRegistry } from '../providers/registry.ts';
-import type { ServerConfig } from '../config.ts';
 import { nanoGptService } from '../providers/nanogpt-provider.ts';
-import { anthropicClaudeApiService } from '../providers/anthropic-claude-api-provider.ts';
-import type { AnthropicClaudeApiService } from '../providers/anthropic-claude-api-service.ts';
 import type { NanoGptService } from '../providers/nanogpt-service.ts';
+import { ProviderFeed } from '../providers/provider-feed.ts';
+import { RegistryAgents } from '../providers/registry-agents.ts';
+import { ProviderRegistry } from '../providers/registry.ts';
 
 /* The agent CLIs of this machine, their accounts and what a person allowed in their settings. */
 export interface ProvidersBundle {
@@ -54,7 +54,6 @@ export async function wireProviders(
     await Promise.all([nanogpt.load(config.home), claudeApi.load(config.home)]);
     const antigravityServer = new AcpServerInstall({ provider: 'antigravity', home: config.home, release: ANTIGRAVITY_ACP_RELEASE });
     const providers = new ProviderRegistry({
-        appleEnabled: () => identity.appleFoundationEnabled,
         antigravityServer,
         home: config.home,
         onList: () => {
@@ -66,7 +65,9 @@ export async function wireProviders(
     const modelCatalogs = new ModelCatalogFeed({
         home: config.home,
         allowFetch: config.modelFetch,
-        catalogs: Object.fromEntries((['claude', 'codex', 'antigravity', 'copilot', 'grok'] as const).map((kind) => [kind, providers.catalogFor(kind)]))
+        catalogs: Object.fromEntries((['claude', 'codex', 'antigravity', 'copilot', 'grok'] as const).map((kind) => [kind, providers.catalogFor(kind)])),
+        // The Claude API takes its options from Claude Code's catalog, which may now know a model it did not.
+        changed: () => claudeApi.rebuildCatalog()
     });
     // What a person allowed in the CLIs' global settings; the accounts below ask it before they write anywhere.
     const integrations = new AgentIntegrations({
@@ -141,7 +142,11 @@ export async function wireProviders(
     });
     // Before the feed listens, so the list it sends reads the new key instead of the cached detection.
     nanogpt.onChange(() => providers.invalidate('nanogpt'));
-    claudeApi.onChange(() => providers.invalidate('anthropic-claude-api'));
+    // Its account is checked against the detection too, which said "not found" while no key was saved.
+    claudeApi.onChange(() => {
+        providers.invalidate('anthropic-claude-api');
+        void accounts.refresh();
+    });
     return {
         nanogpt,
         claudeApi,

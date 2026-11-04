@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import { clipboard } from '@adecore/editor/testing';
+import { act } from 'react';
 import { isApplePlatform } from '@/desktop/bridge';
+import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 
 const MOD = isApplePlatform() ? { metaKey: true } : { ctrlKey: true };
 const VIEW = { kind: 'file', id: 'notes-view', name: 'notes.txt', path: 'notes.txt' };

@@ -1,7 +1,7 @@
+import { messageOf } from '@adecore/ui';
+import type { ProjectNewChatPayload, RuntimeMode } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import type { ProjectNewChatPayload, RuntimeMode } from '@ruimte/contracts';
-import { messageOf } from '@adecore/ui';
 import { openChatInMode } from '@/chat/opening-mode';
 import { desktop } from '@/desktop/bridge';
 import { ensureMachine } from '@/endpoint/reach';

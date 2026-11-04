@@ -1,4 +1,5 @@
 import { createCipheriv, createPublicKey, diffieHellman, generateKeyPairSync, hkdfSync, randomBytes } from 'node:crypto';
+import { clipText } from '@ruimte/contracts';
 import {
     PUSH_HKDF_SALT,
     PushAlertContentSchema,
@@ -12,7 +13,6 @@ import {
     type PushEnvelope,
     type PushRouting
 } from '@ruimte/pulsar';
-import { clipText } from '@ruimte/contracts';
 
 export function encryptPush(
     routing: PushRouting,

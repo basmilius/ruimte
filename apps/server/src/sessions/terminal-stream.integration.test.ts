@@ -1,12 +1,12 @@
+import type { Server, ServerWebSocket } from 'bun';
+import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
 import { randomBytes } from 'node:crypto';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { connect } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
-import { Terminal } from '@xterm/headless';
 import { EVENT_SCHEMAS, REQUEST_SCHEMAS, parseServerFrame, type RequestMap, type RequestType } from '@ruimte/contracts';
-import type { Server, ServerWebSocket } from 'bun';
+import { Terminal } from '@xterm/headless';
 import { SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
 import { connectionOpener, socketChannel, type ConnectionServices, type OpenConnection, type SocketChannel } from '../connection.ts';
 import { Dispatcher, type ClientAccess } from '../dispatcher.ts';

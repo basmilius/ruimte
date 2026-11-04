@@ -1,0 +1,8 @@
+{
+    "id": "poc.frame",
+    "name": "POC frame",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "description": "A panel in a sandboxed frame, which reaches its server only by asking."
+}

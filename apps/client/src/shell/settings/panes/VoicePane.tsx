@@ -1,17 +1,17 @@
-import { LIVE_VOICES, VOICE_LANGUAGES, type LiveVoice } from '@ruimte/contracts';
-import { useEffect, useState, type FormEvent } from 'react';
-import i18next from 'i18next';
-import { Trash2 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { messageOf, Skeleton, Switch, Pill, Button, IconButton, Input, Select } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
+import { LIVE_VOICES, VOICE_LANGUAGES, type LiveVoice } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { Trash2 } from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { desktop, type OpenAiCredentialStatus } from '@/desktop/bridge';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
+import { stopVoice } from '@/voice/controller';
 import { useMachineVoicePreferences, useWindowEndpointId } from '@/voice/machine-preferences';
 import { closeVoicePanel, useVoice } from '@/voice/state';
-import { stopVoice } from '@/voice/controller';
 import { DictationSection } from './DictationSection';
 import { VoiceInputSection } from './VoiceInputSection';
 

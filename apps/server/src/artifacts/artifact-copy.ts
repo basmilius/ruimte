@@ -1,8 +1,8 @@
 import { createReadStream } from 'node:fs';
 import { lstat, mkdir, open, rm, rmdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { isNotFound } from '@adecore/utils/errors';
 import type { ArtifactFile } from '@ruimte/contracts';
-import { isNotFound } from '@adecore/agents';
 import { isDiskFull } from './artifact-fs.ts';
 import { ArtifactError, relativeSegments } from './artifact-names.ts';
 

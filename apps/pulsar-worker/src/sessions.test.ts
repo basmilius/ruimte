@@ -3,7 +3,7 @@ import { generateKeyPairSync, sign } from 'node:crypto';
 import { sessionRefreshMessage, type SessionRefreshPayload, type SessionResult } from '@ruimte/pulsar';
 import type { Env } from './env.ts';
 import { refreshSession } from './login.ts';
-import { ACCESS_LIFETIME_MS, ROTATION_GRACE_MS, authenticate, createSession, rotateSession } from './sessions.ts';
+import { ACCESS_LIFETIME_MS, ROTATION_GRACE_MS, SESSION_LIFETIME_MS, authenticate, createSession, rotateSession } from './sessions.ts';
 import { d1, migratedDatabase } from './test/sqlite-d1.ts';
 
 const NOW = 1_900_000_000_000;
@@ -36,7 +36,7 @@ function bearer(token: string): Request {
 }
 
 function rotated(outcome: Awaited<ReturnType<typeof rotateSession>>): SessionResult {
-    if (outcome === null || outcome === 'clock-skew') {
+    if (outcome === null || outcome === 'clock-skew' || outcome === 'bad-signature') {
         throw new Error(`Expected a rotation, got ${outcome}`);
     }
     return outcome;
@@ -90,8 +90,40 @@ describe('a refresh whose answer got lost', () => {
     test('a retry signed with another key gets nothing and ends nothing', async () => {
         const session = await createSession(db, account, 'phone', sessionKey);
         const lost = rotated(await rotateSession(db, signed(session.refreshToken)));
-        expect(await rotateSession(db, signedWith(generateKeyPairSync('ed25519'), session.refreshToken))).toBeNull();
+        expect(await rotateSession(db, signedWith(generateKeyPairSync('ed25519'), session.refreshToken))).toBe('bad-signature');
         expect(await authenticate(bearer(lost.accessToken), db)).not.toBeNull();
+    });
+});
+
+describe('a session in use', () => {
+    test('lasts its lifetime from the last refresh, not from sign-in', async () => {
+        const session = await createSession(db, account, 'phone', sessionKey);
+        expect(session.expiresAt).toBe(NOW + SESSION_LIFETIME_MS);
+
+        moveClockTo(NOW + SESSION_LIFETIME_MS - 60_000);
+        const late = rotated(await rotateSession(db, signed(session.refreshToken)));
+        expect(late.expiresAt).toBe(NOW + 2 * SESSION_LIFETIME_MS - 60_000);
+
+        moveClockTo(NOW + SESSION_LIFETIME_MS + 60_000);
+        expect(rotated(await rotateSession(db, signed(late.refreshToken))).account.id).toBe('account');
+    });
+
+    test('left alone past its lifetime is over', async () => {
+        const session = await createSession(db, account, 'phone', sessionKey);
+        moveClockTo(NOW + SESSION_LIFETIME_MS + 1);
+        expect(await rotateSession(db, signed(session.refreshToken))).toBeNull();
+    });
+
+    test('a refresh signed with another key is told so', async () => {
+        const session = await createSession(db, account, 'phone', sessionKey);
+        const request = new Request('https://pulsar.test/v1/session/refresh', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(signedWith(generateKeyPairSync('ed25519'), session.refreshToken))
+        });
+        const response = await refreshSession(request, { DB: db } as Env);
+        expect(response.status).toBe(403);
+        expect(await response.json()).toMatchObject({ error: { code: 'bad-signature' } });
     });
 });
 

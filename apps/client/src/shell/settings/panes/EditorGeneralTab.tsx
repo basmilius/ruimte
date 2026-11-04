@@ -1,6 +1,6 @@
-import { useTranslation } from 'react-i18next';
 import { Segmented, Select, Stepper, Switch } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
+import { useTranslation } from 'react-i18next';
 import { RENDERED_DOC_COMMENTS } from '@/features';
 import { CodeThemePreview } from '@/shell/settings/panes/CodeSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';

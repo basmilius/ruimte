@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { ChatItem, ProjectCanvasView } from '@ruimte/contracts';
 import { AgentLineageStore } from '@adecore/agents/coordination';
+import type { ChatItem, ProjectCanvasView } from '@ruimte/contracts';
 import { ProjectIndex } from '../projects/project-index.ts';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { ContextRefusal, ContextStore } from './context-store.ts';
 import { openedChildSource } from './opened-child.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 /* Two parents side by side, each with a child, and a grandchild the first child opened; no line anywhere. */
 const canvas: ProjectCanvasView = {
@@ -74,7 +74,7 @@ async function refusalOf(reader: string, source: string): Promise<string> {
 }
 
 describe('a node the caller opened itself', () => {
-    test('reads without a line, whole, by --tail and by --subagent', async () => {
+    test('reads without a line, whole, by tail and by subagent', async () => {
         expect((await store.answer('parent', 'child', null, null)).text).toBe('## User\n\nthe thread of child\n\n## Assistant\n\nDone: the thread of child');
         expect((await store.answer('parent', 'child', 1, null)).text).toBe('Done: the thread of child');
         expect((await store.answer('parent', 'child', null, 'toolu_1')).text).toContain('toolu_1 of child');

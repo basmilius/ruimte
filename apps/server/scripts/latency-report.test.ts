@@ -2,7 +2,18 @@ import { describe, expect, test } from 'bun:test';
 import { percentiles, renderReport, type Environment, type PhaseData, type Run } from './latency-report.ts';
 
 function phase(patch: Partial<PhaseData> = {}): PhaseData {
-    return { seconds: 10, reply: [1, 2, 3], quiet: [4, 5], chat: [6], lag: [0.5], busyBytes: 10 * 1024 * 1024, busyFrames: 500, resyncs: 2, pauses: 3, ...patch };
+    return {
+        seconds: 10,
+        reply: [1, 2, 3],
+        quiet: [4, 5],
+        chat: [6],
+        lag: [0.5],
+        busyBytes: 10 * 1024 * 1024,
+        busyFrames: 500,
+        resyncs: 2,
+        pauses: 3,
+        ...patch
+    };
 }
 
 const env: Environment = {
@@ -23,7 +34,15 @@ const env: Environment = {
 };
 
 const run: Run = {
-    fixture: { busyCommand: 'yes x', replyIntervalMs: 50, quietIntervalMs: 250, chatIntervalMs: 2000, warmupSeconds: 5, seconds: 10, channels: ['socket', 'direct'] },
+    fixture: {
+        busyCommand: 'yes x',
+        replyIntervalMs: 50,
+        quietIntervalMs: 250,
+        chatIntervalMs: 2000,
+        warmupSeconds: 5,
+        seconds: 10,
+        channels: ['socket', 'direct']
+    },
     channels: [
         { channel: 'socket', idle: phase(), busy: phase() },
         { channel: 'direct', idle: phase(), busy: phase({ reply: [10, 20, 400] }) }
@@ -50,7 +69,15 @@ describe('the report', () => {
     const text = renderReport(run, env);
 
     test('has every section', () => {
-        for (const heading of ['# Latency under load', '## Environment', '## Fixture', '## What this measures', '## Results', '### The busy terminal', '## Conclusion']) {
+        for (const heading of [
+            '# Latency under load',
+            '## Environment',
+            '## Fixture',
+            '## What this measures',
+            '## Results',
+            '### The busy terminal',
+            '## Conclusion'
+        ]) {
             expect(text).toContain(heading);
         }
     });

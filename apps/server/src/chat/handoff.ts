@@ -1,5 +1,5 @@
+import { renderTranscript } from '@adecore/agents/context';
 import type { ChatItem } from '@ruimte/contracts';
-import { renderTranscript } from '../context/context-store.ts';
 
 /*
  * How much of the conversation a new CLI reads as text before its first prompt. It is the dearest
@@ -96,7 +96,7 @@ export function handoffText(items: readonly ChatItem[], meta: HandoffMeta, budge
         : [
               `Ruimte: you take over a conversation that ran with ${meta.fromName} in ${where} ${meta.originalId} ("${meta.originalTitle}") on this machine, forked after its turn ${meta.turnNumber} of ${meta.totalTurns} on ${moment(meta.at)}.`,
               `Folder: ${folder}`,
-              `The original is readable with: ruimte-context read ${meta.originalId} (add --tail 200 for the last part); only its turns up to turn ${meta.turnNumber} happened here. What follows is ${part}, as text. The tool lines are what ${meta.fromName} ran, not you, so check the files before you assume.`
+              `The original is readable with context_read on ${meta.originalId} (tail 200 for the last part); only its turns up to turn ${meta.turnNumber} happened here. What follows is ${part}, as text. The tool lines are what ${meta.fromName} ran, not you, so check the files before you assume.`
           ];
     const text = [...lines, '---', kept.join('\n\n'), '---', "Continue from here. The person's next message follows."].join('\n');
     return { text, turns: kept.length, all: kept.length === rendered.length };

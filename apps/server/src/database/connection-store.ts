@@ -1,5 +1,8 @@
 import { existsSync } from 'node:fs';
-import { isAbsolute, join, relative, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
+import { CodedError, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
+import { Serializer } from '@adecore/utils/async';
+import { isWithin } from '@adecore/utils/path';
 import {
     DATABASES_VERSION,
     DatabasesPrivateFileSchema,
@@ -15,9 +18,8 @@ import {
     type DatabasesPrivateFile,
     type DatabasesSharedFile
 } from '@ruimte/contracts';
-import { CodedError, Serializer, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import { ClientSinks } from '../client-sinks.ts';
-import { climbsOut } from '../fs/path-segment.ts';
+import { PairedWriteRaced, PairedWriteStuck, recoverPaired, writePaired, type PairedFile } from '../projects/paired-write.ts';
 import {
     PRIVATE_DIR,
     PROJECT_DIR,
@@ -32,7 +34,6 @@ import {
     closeLoaded,
     type JsonDocumentRead
 } from '../projects/project-files.ts';
-import { PairedWriteRaced, PairedWriteStuck, recoverPaired, writePaired, type PairedFile } from '../projects/paired-write.ts';
 import type { ProjectWriteIO } from '../projects/project-write.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 
@@ -131,7 +132,7 @@ function entriesIn(folder: string, entries: readonly unknown[]): DatabaseFileEnt
         }
         const stored = entry.connection.config.path;
         const path = resolve(resolveStoredPath(folder, stored) ?? stored);
-        if (!isAbsolutePath(stored) && climbsOut(relative(folder, path))) {
+        if (!isAbsolutePath(stored) && !isWithin(folder, path)) {
             return { raw: entries[index] };
         }
         return { connection: { ...entry.connection, config: { ...entry.connection.config, path } } };
@@ -283,7 +284,7 @@ export class DatabaseConnectionStore {
     /* Finishes a save that was cut off between its two files. */
     private async recover(folder: string): Promise<void> {
         try {
-            await recoverPaired(pendingPathIn(folder), this.io);
+            await recoverPaired(pendingPathIn(folder), { root: folder, paths: [sharedPathIn(folder), privatePathIn(folder)] }, this.io);
         } catch (e) {
             if (e instanceof PairedWriteStuck) {
                 throw new DatabaseConnectionError('connections-invalid', e.message);

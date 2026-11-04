@@ -1,6 +1,6 @@
-import i18next from 'i18next';
-import { annexBNalHeaders, H264_SPS, h264KeyFrame, hevcKeyFrame, type LiveStreamFormat, type LiveStreamFrame } from '@ruimte/contracts';
 import { messageOf } from '@adecore/ui';
+import { annexBNalHeaders, H264_SPS, h264KeyFrame, hevcKeyFrame, type LiveStreamFormat, type LiveStreamFrame } from '@ruimte/contracts';
+import i18next from 'i18next';
 import type { FrameDecoder, PaintTarget } from '@/transport/live-stream';
 
 type VideoFormat = Exclude<LiveStreamFormat, 'jpeg'>;

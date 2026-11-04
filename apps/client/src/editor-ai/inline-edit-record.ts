@@ -1,5 +1,5 @@
-import type { AgentKind } from '@ruimte/contracts';
 import type { EditorRange } from '@adecore/editor';
+import type { AgentKind } from '@ruimte/contracts';
 import { z } from 'zod';
 import { storedJson, type KeyValueStorage, type StoredValue } from '@/state/stored-json';
 

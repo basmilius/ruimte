@@ -1,8 +1,8 @@
+import type { Subprocess } from 'bun';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Subprocess } from 'bun';
 import { peerStatementMessage, type PeerStatement } from '@ruimte/pulsar';
 import { AuthStore } from '../auth/auth-store.ts';
 import { Handshake } from '../auth/handshake.ts';
@@ -16,12 +16,12 @@ import { DirectPeers } from '../pulsar/peers.ts';
 import { SignalGate } from '../pulsar/signal-gate.ts';
 import { StatementGate } from '../pulsar/statement.ts';
 import { servicesWith } from '../pulsar/test-helpers.ts';
+import { waitFor } from '../sessions/test-helpers.ts';
 import { PeerKey } from './peer-key.ts';
 import { PeerMachines } from './peer-machines.ts';
 import { PendingAdmissions } from './pending-admissions.ts';
 import { RemoteConnections, brokerDialer } from './remote-connections.ts';
 import { RemoteStatus } from './remote-status.ts';
-import { waitFor } from '../sessions/test-helpers.ts';
 import { startBroker } from './test-helpers.ts';
 
 /*

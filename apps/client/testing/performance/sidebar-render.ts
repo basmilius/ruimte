@@ -1,8 +1,8 @@
 import { ChatInfoSchema } from '@ruimte/contracts';
 import { chatInfoOf } from '../chat-info';
 import { cpuTaskMs } from './bench';
-import { measureRestore } from './restore';
 import { withProjectFixture } from './project-fixture';
+import { measureRestore } from './restore';
 
 const count = Number(process.env.BENCH_PROJECTS ?? 20);
 const views = Number(process.env.BENCH_VIEWS ?? 100);

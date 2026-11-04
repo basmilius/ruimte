@@ -1,7 +1,7 @@
 import type { BrowserDriveAction, BrowserInfo, BrowserPageState } from '@ruimte/contracts';
+import { writeShot } from '../shots.ts';
 import type { BrowserManager } from './manager.ts';
 import type { BrowserPages } from './pages.ts';
-import { writeShot } from '../shots.ts';
 
 export interface DriveOutcome {
     /* Where the page stands afterwards, null when whoever holds it answered without a state. */
@@ -41,10 +41,10 @@ function pageState(info: BrowserInfo): BrowserPageState {
 }
 
 /*
- * The one door a verb drives a page through, whichever of the two kinds of page a node turns out to
+ * The one door a tool drives a page through, whichever of the two kinds of page a node turns out to
  * be: one this machine runs itself (a station or a phone attached to it) or one a client holds in a
  * <webview> of its own. A machine that runs the page answers straight away; otherwise the clients
- * holding it are asked. Nobody holding it is not a failure, it is a null, and the verb says so.
+ * holding it are asked. Nobody holding it is not a failure, it is a null, and the tool says so.
  */
 export class BrowserDriver {
     private readonly home: string;

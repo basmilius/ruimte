@@ -8,8 +8,9 @@
         "types": ["bun"],
         "jsx": "react-jsx",
         "paths": {
-            "@/*": ["./src/*"]
+            "@/*": ["./src/*"],
+            "@extensions/*": ["../../extensions/*"]
         }
     },
-    "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "test-preload.ts", "testing/**/*.ts", "testing/**/*.tsx"]
+    "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "../../extensions/**/*.test.ts", "../../extensions/**/*.test.tsx", "test-preload.ts", "testing/**/*.ts", "testing/**/*.tsx"]
 }

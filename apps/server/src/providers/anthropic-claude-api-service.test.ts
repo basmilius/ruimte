@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { UsageService } from '@adecore/agents/usage';
-import { UsageSummaryResultSchema } from '@ruimte/contracts';
+import { ModelCatalog } from '@adecore/agents/providers';
+import claudeManifest from '@adecore/agents/providers/claude-models.json' with { type: 'json' };
+import { ModelCatalogDataSchema } from '@ruimte/contracts';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { ANTHROPIC_URL, ANTHROPIC_VERSION, AnthropicClaudeApiService, anthropicHttpError, defaultModelOf } from './anthropic-claude-api-service.ts';
 import type { ApiFetch } from './keyed-api-service.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 const home = tempHomes('ruimte-claude-api-');
 beforeEach(() => setSystemTime(new Date('2026-10-24T12:00:00Z')));
@@ -159,6 +160,80 @@ describe('Claude API key and models', () => {
     });
 });
 
+describe('the options of a Claude API model', () => {
+    const claude = new ModelCatalog();
+    const optionsOf = (service: AnthropicClaudeApiService, slug: string) => service.catalog.list().find((model) => model.slug === slug)?.options ?? [];
+
+    test("are those of the same model in Claude Code's catalog, with its windows", async () => {
+        const service = new AnthropicClaudeApiService(api().request, claude);
+        await service.load(await home());
+        await service.configure('sk-ant-key');
+
+        const known = claude.list().find((model) => model.slug === 'claude-sonnet-5-5')!;
+        expect(optionsOf(service, 'claude-sonnet-5-5')).toEqual(known.options);
+        expect(optionsOf(service, 'claude-sonnet-5-5').find((option) => option.id === 'effort')).toMatchObject({ type: 'select', defaultChoice: 'high' });
+        expect(service.catalog.contextWindowFor({ model: 'claude-sonnet-5-5', options: { contextWindow: '200k' } })).toBe(200_000);
+        expect(service.catalog.contextWindowFor({ model: 'claude-sonnet-5-5', options: { contextWindow: '1m' } })).toBe(1_000_000);
+    });
+
+    test('a model Claude Code does not know thinks on request only when the API says so, and keeps its own window', async () => {
+        const thinking = {
+            id: 'claude-new-thinker',
+            lifecycle: 'active',
+            max_input_tokens: 300_000,
+            capabilities: { thinking: { types: { adaptive: { supported: true } } } }
+        };
+        const plain = { id: 'claude-new-plain', lifecycle: 'active', capabilities: { thinking: { types: { adaptive: { supported: false } } } } };
+        const service = new AnthropicClaudeApiService(api({ pages: [{ data: [thinking, plain], has_more: false, last_id: null }] }).request, claude);
+        await service.load(await home());
+        await service.configure('sk-ant-key');
+
+        expect(optionsOf(service, 'claude-new-thinker').map((option) => option.id)).toEqual(['effort']);
+        expect(optionsOf(service, 'claude-new-plain')).toEqual([]);
+        expect(service.catalog.contextWindowFor({ model: 'claude-new-thinker', options: {} })).toBe(300_000);
+    });
+
+    test('start a new chat on the window a person chose, 200k unless they chose otherwise', async () => {
+        const service = new AnthropicClaudeApiService(api().request, claude);
+        await service.load(await home());
+        await service.configure('sk-ant-key');
+        const changes: number[] = [];
+        service.onChange(() => changes.push(1));
+        const windowOf = () => service.catalog.normalize({ model: 'claude-sonnet-5-5' }).options.contextWindow;
+
+        expect(windowOf()).toBe('200k');
+        await service.setSettings({ contextWindow: '1m' });
+        expect(windowOf()).toBe('1m');
+        expect(changes).toHaveLength(1);
+        // A chat that picked a window keeps it.
+        expect(service.catalog.normalize({ model: 'claude-sonnet-5-5', options: { contextWindow: '200k' } }).options.contextWindow).toBe('200k');
+
+        await service.setSettings({ maxOutputTokens: 16_000 });
+        expect(changes).toHaveLength(1);
+    });
+
+    test("follow Claude Code's catalog when it learns a model later", async () => {
+        const later = new ModelCatalog({
+            updatedAt: '2026-01-01T00:00:00Z',
+            defaultModel: 'other',
+            profiles: {},
+            models: [{ slug: 'other', name: 'Other', profile: 'none' }]
+        });
+        const service = new AnthropicClaudeApiService(api().request, later);
+        await service.load(await home());
+        await service.configure('sk-ant-key');
+        expect(optionsOf(service, 'claude-sonnet-5-5')).toEqual([]);
+
+        const changes: number[] = [];
+        service.onChange(() => changes.push(1));
+        later.replace({ ...ModelCatalogDataSchema.parse(claudeManifest), updatedAt: '2026-11-01T00:00:00Z' });
+        service.rebuildCatalog();
+
+        expect(optionsOf(service, 'claude-sonnet-5-5').map((option) => option.id)).toContain('effort');
+        expect(changes).toHaveLength(1);
+    });
+});
+
 describe('what an HTTP status says', () => {
     test('is a fixed sentence, except a 400, which carries Anthropic words clipped', () => {
         expect(anthropicHttpError(401).message).toBe('Anthropic rejected the API key.');
@@ -188,14 +263,14 @@ describe('Claude API settings', () => {
         const folder = await home();
         const first = new AnthropicClaudeApiService(api().request);
         await first.load(folder);
-        expect(first.status().settings).toEqual({ autoContinue: false, roundsPerRun: 40, runs: 3, maxOutputTokens: 32_000 });
+        expect(first.status().settings).toEqual({ autoContinue: false, roundsPerRun: 40, runs: 3, maxOutputTokens: 32_000, contextWindow: '200k' });
         expect(first.runLimits()).toEqual({ roundsPerRun: 40, runs: 1 });
 
         await first.setSettings({ autoContinue: true, runs: 2 });
         expect(first.runLimits()).toEqual({ roundsPerRun: 40, runs: 2 });
         const again = new AnthropicClaudeApiService(api().request);
         await again.load(folder);
-        expect(again.status().settings).toEqual({ autoContinue: true, roundsPerRun: 40, runs: 2, maxOutputTokens: 32_000 });
+        expect(again.status().settings).toEqual({ autoContinue: true, roundsPerRun: 40, runs: 2, maxOutputTokens: 32_000, contextWindow: '200k' });
     });
 
     test('stay inside what the wire allows, and a refused change changes nothing', async () => {
@@ -206,7 +281,8 @@ describe('Claude API settings', () => {
         await expect(service.setSettings({ runs: 21 })).rejects.toThrow();
         await expect(service.setSettings({ maxOutputTokens: 100 })).rejects.toThrow();
         await expect(service.setSettings({ maxOutputTokens: 12.5 })).rejects.toThrow();
-        expect(service.status().settings).toEqual({ autoContinue: false, roundsPerRun: 40, runs: 3, maxOutputTokens: 32_000 });
+        await expect(service.setSettings({ contextWindow: '2m' as never })).rejects.toThrow();
+        expect(service.status().settings).toEqual({ autoContinue: false, roundsPerRun: 40, runs: 3, maxOutputTokens: 32_000, contextWindow: '200k' });
     });
 
     test('a file that cannot be read leaves the defaults', async () => {
@@ -219,28 +295,6 @@ describe('Claude API settings', () => {
         const again = new AnthropicClaudeApiService(api().request);
         await again.load(folder);
         expect(again.status().settings?.runs).toBe(3);
-    });
-
-    test('a model that takes adaptive thinking says so, since that is how it is asked to think', async () => {
-        const folder = await home();
-        const withThinking = {
-            id: 'claude-opus-4-6',
-            display_name: 'Claude Opus 4.6',
-            lifecycle: 'active',
-            capabilities: { thinking: { supported: true, types: { adaptive: { supported: true } } } }
-        };
-        const without = {
-            id: 'claude-haiku-4-5',
-            display_name: 'Claude Haiku 4.5',
-            lifecycle: 'active',
-            capabilities: { thinking: { supported: false, types: { adaptive: { supported: false } } } }
-        };
-        const service = new AnthropicClaudeApiService(api({ pages: [{ data: [withThinking, without], has_more: false, last_id: null }] }).request);
-        await service.load(folder);
-        await service.configure('sk-ant-key');
-        expect(service.supportsAdaptiveThinking('claude-opus-4-6')).toBe(true);
-        expect(service.supportsAdaptiveThinking('claude-haiku-4-5')).toBe(false);
-        expect(service.supportsAdaptiveThinking('unknown')).toBe(false);
     });
 
     test('settings sent along with a key Anthropic rejects are not kept', async () => {
@@ -279,60 +333,5 @@ describe('Claude API settings', () => {
         expect(service.maxOutputTokensFor('claude-opus-5-5')).toBe(50_000);
         expect(service.maxOutputTokensFor('claude-sonnet-5-5')).toBe(32_000);
         expect(service.maxOutputTokensFor('unknown-model')).toBe(50_000);
-    });
-});
-
-describe('Claude API usage', () => {
-    test('a call is added to the log of its month with the cache kinds apart, and a write has its own count', async () => {
-        const folder = await home();
-        const service = new AnthropicClaudeApiService(api().request);
-        await service.load(folder);
-        await service.logUsage({ model: 'claude-sonnet-5-5', session: 's-1', cwd: '/work', input: 120, cacheRead: 9000, cacheWrite: 400, output: 250 });
-
-        const [file] = await readdir(service.usageDirectory);
-        expect(file).toMatch(/^\d{4}-\d{2}\.jsonl$/);
-        const lines = (await readFile(join(service.usageDirectory, file!), 'utf8')).trim().split('\n');
-        expect(lines.map((line) => JSON.parse(line))).toEqual([
-            expect.objectContaining({
-                model: 'claude-sonnet-5-5',
-                session: 's-1',
-                cwd: '/work',
-                input: 120,
-                cacheRead: 9000,
-                cacheWrite: 400,
-                output: 250,
-                reasoning: 0
-            })
-        ]);
-        expect(typeof JSON.parse(lines[0]!).at).toBe('number');
-    });
-
-    test('a logged call shows on the usage page under its provider, with its tokens, cache writes and a price', async () => {
-        const folder = await home();
-        const service = new AnthropicClaudeApiService(api().request);
-        await service.load(folder);
-        await service.logUsage({ model: 'claude-sonnet-5-5', session: 's-1', cwd: '/work', input: 120, cacheRead: 9000, cacheWrite: 400, output: 250 });
-
-        const usage = new UsageService({
-            home: folder,
-            allowPriceFetch: false,
-            knownProjects: async () => [],
-            roots: () => [{ provider: 'anthropic-claude-api', path: service.usageDirectory }]
-        });
-        const today = '2026-10-24';
-        const summary = await usage.summary({ from: today, to: today, resolution: 'day', timeZone: 'UTC' });
-        usage.stop();
-
-        expect(UsageSummaryResultSchema.parse(JSON.parse(JSON.stringify(summary)))).toEqual(summary);
-
-        expect(summary.roots).toEqual([expect.objectContaining({ provider: 'anthropic-claude-api', status: 'ok' })]);
-        expect(summary.models).toEqual([expect.objectContaining({ provider: 'anthropic-claude-api', model: 'claude-sonnet-5-5' })]);
-        expect(summary.models[0]!.totals).toMatchObject({ calls: 1, input: 120, cacheRead: 9000, cacheWrite: 400, output: 250 });
-    });
-
-    test('a log that cannot be written never fails the call', async () => {
-        const service = new AnthropicClaudeApiService(api().request);
-        // Not loaded, so there is no folder to write in.
-        await expect(service.logUsage({ model: 'm', session: 's', cwd: '/', input: 1, cacheRead: 0, cacheWrite: 0, output: 1 })).resolves.toBeUndefined();
     });
 });

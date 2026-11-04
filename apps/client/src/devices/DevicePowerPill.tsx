@@ -1,9 +1,9 @@
+import { Icon, Pill, Tooltip } from '@adecore/ui';
+import type { DeviceInfo } from '@ruimte/contracts';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { DeviceInfo } from '@ruimte/contracts';
 import { powerKey, powerLook, useDevicePowers } from '@/devices/device-power';
 import { deviceClientFor } from '@/transport/connections';
-import { Icon, Pill, Tooltip } from '@adecore/ui';
 
 /*
  * A phone's own battery in the header of its node or view. Nothing for a device without one of its

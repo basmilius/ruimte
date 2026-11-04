@@ -1,4 +1,4 @@
-import i18next from 'i18next';
+import { messageOf } from '@adecore/ui';
 import {
     EVENT_SCHEMAS,
     REQUEST_SCHEMAS,
@@ -13,12 +13,12 @@ import {
     type RequestMap,
     type RequestType
 } from '@ruimte/contracts';
+import i18next from 'i18next';
 import type { LinkProblem } from '@/telemetry/events';
 import type { LinkOutcome, ReconnectReason } from '@/telemetry/metrics';
 import type { BytesPiece } from './piece';
-import { protocolGate } from './protocol';
-import { messageOf } from './signaling';
 import type { PooledTransport } from './pool';
+import { protocolGate } from './protocol';
 import { TransportError, type ConnectionState, type LiveFrameHandler, type SignalRoute, type TransportStatus } from './transport';
 
 const RECONNECT_MIN_MS = 500;
@@ -48,6 +48,13 @@ const UNBOUNDED_REQUESTS: ReadonlySet<RequestType> = new Set<RequestType>([
     'archive.extract',
     'artifact.importFrom',
     'chat.continueOn',
+    'extension.agentRun',
+    'extension.action',
+    'extension.agentStart',
+    'extension.clientFiles',
+    'extension.agentStream',
+    'extension.databaseQuery',
+    'extension.call',
     'chat.summarize',
     'database.request',
     'device.boot',
@@ -63,7 +70,7 @@ const UNBOUNDED_REQUESTS: ReadonlySet<RequestType> = new Set<RequestType>([
     'language.install',
     'language.rollback',
     'language.workspaceProblems',
-    'ondevice.generate',
+    'editor.generate',
     'provider.installAgent',
     'provider.installServer',
     'provider.update'

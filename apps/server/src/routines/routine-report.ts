@@ -1,12 +1,12 @@
 import type { RoutineListResult } from '@ruimte/contracts';
-import { approvalOf, runStateOf, scheduleText } from '../canvas/routine-verb.ts';
-import { field } from '../canvas/verb.ts';
+import { field } from '../tools/host.ts';
+import { approvalOf, runStateOf, scheduleText } from '../tools/routine-tools.ts';
 
-// The newest runs a read prints; the stage and `routine list` reach the rest.
+// The newest runs a read prints; the stage and `routine_list` reach the rest.
 export const REPORTED_RUNS = 10;
 
 /*
- * What `read` of a routine node gives an agent: the routine's definition as `routine list` words it,
+ * What `read` of a routine node gives an agent: the routine's definition as `routine_list` words it,
  * then its newest runs. Only a routine of the reader's own project; any other reads as not there.
  */
 export async function routineReport(

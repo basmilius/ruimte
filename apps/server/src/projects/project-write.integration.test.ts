@@ -3,9 +3,9 @@ import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
-import { ProjectStore } from './project-store.ts';
-import { documentPathInFolder, viewFilePathOf, writeDrawing } from './project-files.ts';
 import { projectLinks } from './project-file-test-helpers.ts';
+import { documentPathInFolder, viewFilePathOf, writeDrawing } from './project-files.ts';
+import { ProjectStore } from './project-store.ts';
 
 test('a process killed at each durable save boundary recovers on a fresh daemon', async () => {
     const root = await mkdtemp(join(tmpdir(), 'ruimte-save-crash-'));

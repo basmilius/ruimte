@@ -1,13 +1,13 @@
-import type { AgentInfo, AgentKind, AgentLaunch, ChatCreatePayload, ChatInfo, RuntimeMode } from '@ruimte/contracts';
-import type { AgentLineageStore } from '@adecore/agents/coordination';
-import type { PendingPromptStore } from '../agents/pending-prompts.ts';
-import type { AgentStart, AgentStartHost, NodeAccount } from '../canvas/verb.ts';
-import type { ChatManager } from '../chat/chat-manager.ts';
-import type { SessionManager } from '../sessions/manager.ts';
-import { errorText } from '../error-text.ts';
 import type { ComposerPreference } from '@adecore/agents/chat';
+import type { AgentLineageStore } from '@adecore/agents/coordination';
 import { narrowerMode } from '@adecore/agents/providers';
+import type { AgentInfo, AgentKind, AgentLaunch, ChatCreatePayload, ChatInfo, RuntimeMode } from '@ruimte/contracts';
+import type { PendingPromptStore } from '../agents/pending-prompts.ts';
+import type { ChatManager } from '../chat/chat-manager.ts';
+import { errorText } from '../error-text.ts';
 import { DEFAULT_RUNTIME_MODE, launchedMode } from '../providers/launch.ts';
+import type { SessionManager } from '../sessions/manager.ts';
+import type { AgentStart, AgentStartHost, NodeAccount } from '../tools/host.ts';
 import type { OutboxStore, OutboxWork, StartAgentEntry } from './outbox.ts';
 
 interface NodeModeDeps {
@@ -55,8 +55,8 @@ function nodeAccount(deps: NodeAccountDeps) {
 }
 
 /*
- * The entry a verb owes for a node it made. A chat opened by a chat takes that chat's mode unless
- * `--mode` said otherwise, and every start carries the opener's mode as the ceiling, read now, since
+ * The entry a tool owes for a node it made. A chat opened by a chat takes that chat's mode unless
+ * `mode` said otherwise, and every start carries the opener's mode as the ceiling, read now, since
  * the opener may be gone by the time the entry runs.
  */
 export function startAgentWork(start: AgentStart, deps: NodeModeDeps): OutboxWork {
@@ -89,7 +89,7 @@ interface AgentStartHostDeps {
     accountsOff?(projectId: string, kind: AgentKind): readonly string[];
 }
 
-/* What the verbs start an agent node through, the same for the daemon and the test daemon. */
+/* What the tools start an agent node through, the same for the daemon and the test daemon. */
 export function agentStartHost(deps: AgentStartHostDeps): AgentStartHost {
     const modes: NodeModeDeps = {
         chatMode: (id) => deps.chats.get(id)?.info.runtimeMode,
@@ -99,7 +99,7 @@ export function agentStartHost(deps: AgentStartHostDeps): AgentStartHost {
     };
     return {
         installedAgents: () => deps.installed(),
-        holdPrompt: (projectId, nodeId, prompt, brief) => deps.prompts.put(projectId, nodeId, prompt, brief),
+        holdPrompt: (projectId, nodeId, prompt, brief) => deps.prompts.put(projectId, nodeId, prompt, { brief }),
         startAgent: (start) => deps.enqueue(start.projectId, start.nodeId, startAgentWork(start, modes)),
         modeOf: nodeMode(modes),
         accountOf: nodeAccount({ chat: (id) => deps.chats.get(id)?.info, session: (id) => deps.sessions.get(id) }),
@@ -133,7 +133,7 @@ export interface StartAgentDeps {
         agent: { kind: StartAgentEntry['payload']['provider']; runtimeMode?: RuntimeMode; account?: string };
     }): Promise<unknown>;
     killSession(sessionId: string): Promise<void>;
-    /* Refuses a directory the node may not start in; asked right before the start, not when the verb ran. */
+    /* Refuses a directory the node may not start in; asked right before the start, not when the tool ran. */
     checkCwd?: (nodeId: string, cwd: string) => Promise<void>;
     log?: (line: string) => void;
     /* A start that failed and will not be tried again. What was waiting on the agent hears it here. */
@@ -163,7 +163,7 @@ export function agentChatOpening(outbox: Pick<OutboxStore, 'list'>, composerPref
 }
 
 /*
- * Starts the chat or the terminal of an agent node a verb wrote, so a client that mounts it later
+ * Starts the chat or the terminal of an agent node a tool wrote, so a client that mounts it later
  * attaches to what already runs. Never retried: the create takes the node's first prompt before it
  * spawns, so a second attempt would start the agent without its task.
  */

@@ -36,6 +36,9 @@ function width(stored: number | undefined, fallback: number | null): number | nu
 
 /* The kind of the panel, from the flags a kind an older client does not know is stored in. */
 function storedPanelKind(stored: ProjectPanels, kind: ProjectPanelKind): PanelKind {
+    if (stored.extensionPanel?.startsWith('extension:')) {
+        return stored.extensionPanel as `extension:${string}`;
+    }
     if (stored.databasesPanel === true) {
         return 'databases';
     }
@@ -170,11 +173,12 @@ export function serializePanels(state: PanelsState): ProjectPanels {
     return {
         // A client from before launches, databases or output reads the files panel in its place.
         panel:
-            state.panel.kind === 'launches' || state.panel.kind === 'databases' || state.panel.kind === 'output'
+            state.panel.kind === 'launches' || state.panel.kind === 'databases' || state.panel.kind === 'output' || state.panel.kind.startsWith('extension:')
                 ? { open: state.panel.open, kind: 'files' }
                 : state.panel.kind === 'problems' || state.panel.kind === 'voice'
                   ? { open: false, kind: 'files' }
-                  : { open: state.panel.open, kind: state.panel.kind },
+                  : { open: state.panel.open, kind: state.panel.kind as ProjectPanelKind },
+        ...(state.panel.kind.startsWith('extension:') ? { extensionPanel: state.panel.kind } : {}),
         ...(state.panel.kind === 'launches' ? { launchesPanel: true } : {}),
         ...(state.panel.kind === 'databases' ? { databasesPanel: true } : {}),
         ...(state.panel.kind === 'output' ? { outputPanel: true } : {}),

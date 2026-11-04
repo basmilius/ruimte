@@ -1,5 +1,5 @@
-import type { ChatItem } from '@ruimte/contracts';
 import type { ChatState } from '@adecore/agents-react/state';
+import type { ChatItem } from '@ruimte/contracts';
 import { chatWaits as threadWaits, turnCompletion, type VoiceChatCompletion } from '@ruimte/voice';
 
 /* The thread in the order this window holds it. A long turn's own item may sit in `items` before the page `order` reaches back to. */

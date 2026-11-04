@@ -175,7 +175,7 @@ struct ChatFileChangeView: View {
                 ChatCardRule()
                 if let omitted = change.omitted {
                     Text(omitted == "binary" ? "Binary file, no diff" : "Too large to show")
-                        .font(.caption).foregroundStyle(MobileStyle.faint).padding(12)
+                        .font(.caption).foregroundStyle(MobileStyle.muted).padding(12)
                 } else if let whole, change.diff.isEmpty {
                     ChatWholeBar(
                         whole: whole.state, label: "Show full diff", failedLabel: "Could not load the full diff",
@@ -232,7 +232,7 @@ struct ChatChangedFilesRow: View {
                             Text(
                                 "Branch moved this turn (\(moved.from) to \(moved.to)). Includes its incoming changes."
                             )
-                            .font(.caption).foregroundStyle(MobileStyle.faint)
+                            .font(.caption).foregroundStyle(MobileStyle.muted)
                             .padding(.leading, 34).padding(.trailing, 12).padding(.bottom, 10)
                         }
                         if expanded {

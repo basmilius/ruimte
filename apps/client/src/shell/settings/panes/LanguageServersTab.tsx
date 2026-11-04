@@ -1,20 +1,20 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
-import { Plus } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import type { CustomLanguageServer, LanguageServerStatus } from '@ruimte/contracts';
+import { createHolder } from '@adecore/editor-react';
 import { Button, Icon, PromptDialog, Spinner } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
-import { CustomServerDialog } from '@/language/CustomServerDialog';
+import type { CustomLanguageServer, LanguageServerStatus } from '@ruimte/contracts';
+import { Plus } from 'lucide-react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useTranslation } from 'react-i18next';
 import { draftOf, emptyDraft, type CustomDraft } from '@/language/custom-draft';
 import { CustomServersTracker, useCustomServers } from '@/language/custom-servers';
-import { Dot, LogDialog, ServerActionButtons } from '@/language/ServerParts';
-import { report, serverDetail, sidecarDetails, useStatuses } from '@/language/server-status';
+import { CustomServerDialog } from '@/language/CustomServerDialog';
 import type { ProjectLanguage } from '@/language/ruimte-project-language';
-import { actionsOf, groupedStatuses, isOwn, kindOf, nameOf, packageOf, toneOf } from '@/language/status-view';
+import { report, serverDetail, sidecarDetails, useStatuses } from '@/language/server-status';
+import { Dot, LogDialog, ServerActionButtons } from '@/language/ServerParts';
 import type { LanguageStatusTracker } from '@/language/status';
-import { createHolder } from '@adecore/editor-react';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { actionsOf, groupedStatuses, isOwn, kindOf, nameOf, packageOf, toneOf } from '@/language/status-view';
 import { useWindowProjectLanguage } from '@/shell/settings/panes/window-project-language';
+import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useWindow, workspaceOf } from '@/state/window';
 
 /* The servers a person added on the machine of this window, for as long as the tab is up. */

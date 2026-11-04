@@ -1,7 +1,7 @@
-import i18next from 'i18next';
 import { copyText, messageOf } from '@adecore/ui';
-import { measureScene, sceneFacts, type MeasureVariant } from '@/measure/scene';
+import i18next from 'i18next';
 import { startRecording, take } from '@/measure/recorder';
+import { measureScene, sceneFacts, type MeasureVariant } from '@/measure/scene';
 import { openFolderOn } from '@/project/open';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';

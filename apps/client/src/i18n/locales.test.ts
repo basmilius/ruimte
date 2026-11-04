@@ -1,10 +1,10 @@
+import { describe, expect, test } from 'bun:test';
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, test } from 'bun:test';
+import { fileURLToPath } from 'node:url';
 import { parseSync, Visitor } from 'oxc-parser';
 import { APP_LANGUAGES, FALLBACK_LANGUAGE } from '@/i18n/languages';
 import { NAMESPACES } from '@/i18n/namespaces';
-import { fileURLToPath } from 'node:url';
 
 const HERE = fileURLToPath(new URL('.', import.meta.url));
 function localeDir(language: string): string {

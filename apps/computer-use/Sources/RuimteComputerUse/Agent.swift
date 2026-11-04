@@ -237,7 +237,7 @@ final class Agent {
         let previous = snapshots[pid]?.handles ?? HandleTable()
         let subtree = try request.within.map { index in
             guard let snapshot = snapshots[pid] else {
-                throw AgentError("no state for \(Targets.name(app)) yet; run `cu state \(Targets.name(app))` first, then --within one of its elements")
+                throw AgentError("no state for \(Targets.name(app)) yet; run `cu state \(Targets.name(app))` first, then name one of its elements in within")
             }
             return try snapshot.element(index)
         }
@@ -265,7 +265,7 @@ final class Agent {
             lines = kept.prefix(limit).map { walker.lines[$0] }
             truncation = truncation.map { "searched only part of the window: \($0)" }
             if kept.count > limit {
-                truncation = [truncation, "listed \(limit) of \(kept.count) lines (raise with --max-elements)"].compactMap { $0 }.joined(separator: "; ")
+                truncation = [truncation, "listed \(limit) of \(kept.count) lines (raise with max_elements)"].compactMap { $0 }.joined(separator: "; ")
             }
         }
 
@@ -275,8 +275,8 @@ final class Agent {
         var shot: WindowCapture.Shot?
         var captureProblem: String?
         if request.screenshot == false {
-            screenshot["error"] = "skipped (--no-screenshot)"
-            captureProblem = "the last state was taken with --no-screenshot, so there is no screenshot to map --x/--y from; run `cu state \(Targets.name(app))` without it"
+            screenshot["error"] = "skipped (no_screenshot)"
+            captureProblem = "the last state was taken with no_screenshot, so there is no screenshot to map x/y from; run `cu state \(Targets.name(app))` without it"
         } else if !CGPreflightScreenCaptureAccess() {
             screenshot["error"] = "Screen Recording is not granted to \(Permissions.appName); run `cu doctor`"
             captureProblem = "the last state has no screenshot because Screen Recording is not granted; run `cu doctor`"
@@ -331,7 +331,7 @@ final class Agent {
             notes.append("the app is hidden: its windows are off screen, cannot be captured, and AppKit reports them with subrole Dialog; `cu open \(Targets.name(app))` shows it")
         }
         if AX.attribute(root, kAXMinimizedAttribute) as? Bool == true {
-            notes.append("the window is minimized: the picture is the last frame it showed, and keys cannot reach it without --front")
+            notes.append("the window is minimized: the picture is the last frame it showed, and keys cannot reach it without front")
         } else if mode != .none, let shot, !shot.onScreen || WindowStack.isCovered(shot.windowID, in: WindowCapture.onScreenStack()) {
             // Chromium stops drawing and updating its tree for a window nothing of which shows.
             notes.append("other windows cover this window whole, so the picture and the tree may be stale until part of it shows")

@@ -1,4 +1,4 @@
-import { isRecord } from '../is-record.ts';
+import { isRecord } from '@adecore/utils/record';
 
 /*
  * What a page wrote to its console during a preview, as lines an agent reads: the console API, an

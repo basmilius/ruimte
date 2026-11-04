@@ -3,13 +3,13 @@ import { createRequire } from 'node:module';
 import { dirname, join, normalize, sep } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 import babel from '@rolldown/plugin-babel';
-import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import { build, defaultClientConditions, defineConfig, searchForWorkspaceRoot, type Plugin, type PluginOption } from 'vite';
 import { adecoreSources } from './adecore-sources.ts';
+import { scriptFilesGuard } from './inline-scripts.ts';
 import { compiledThroughCache } from './react-compiler-vite.ts';
 import { COMPILER_RUNTIME, REACT_COMPILED, REACT_COMPILED_PACKAGES, REACT_COMPILER_LEFT_OUT, REACT_COMPILER_OPTIONS } from './react-compiler.ts';
-import { scriptFilesGuard } from './inline-scripts.ts';
 import { shikiModules, shikiOnce } from './shiki-once.ts';
 import { startChunkGuard } from './start-chunk.ts';
 import { visualHostPage } from './visual-host.ts';
@@ -219,7 +219,8 @@ export default defineConfig(({ command, mode }) => ({
     },
     resolve: {
         alias: {
-            '@': fileURLToPath(new URL('./src', import.meta.url))
+            '@': fileURLToPath(new URL('./src', import.meta.url)),
+            '@extensions': fileURLToPath(new URL('../../extensions', import.meta.url))
         },
         // The library's `source` export is its TypeScript, compiled here like the app's own.
         conditions: ['source', ...defaultClientConditions],
@@ -240,7 +241,10 @@ export default defineConfig(({ command, mode }) => ({
             '@lezer/highlight',
             '@lezer/markdown',
             // One shiki, also when a linked package brings a copy of its own.
-            'shiki'
+            'shiki',
+            // One formatter and one file icon override: a second copy, resolved under other peers for a package that
+            // imports it, never hears the region or the extensions the client sets.
+            '@adecore/ui'
         ]
     },
     worker: {
@@ -270,6 +274,8 @@ export default defineConfig(({ command, mode }) => ({
         // Keep the client same-origin in development; `RUIMTE_DAEMON` can target another daemon.
         proxy: {
             '/ws': { target: daemon, ws: true },
+            // The shell keeps these (`apps/desktop/src/main/dev-extension-files.ts`).
+            '/__extensions': { target: 'http://127.0.0.1:4213' },
             // Signing in, and bytes that stay off the JSON socket: project icons, files, attachments, live pixels.
             ...Object.fromEntries(
                 ['/auth', '/projects', '/fs', '/attachments', '/live-stream'].map((path) => [path, { target: daemon.replace(/^ws/, 'http') }])

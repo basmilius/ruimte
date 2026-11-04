@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useChatRow } from '@adecore/agents-react/state';
 import { ErrorBoundary, LazyBoundary, lazyNamed } from '@adecore/ui';
+import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRemoteNodeState } from '@/canvas/remote-node-state';
 import { useUntakenTask } from '@/canvas/remote-wait';
 import { workflowCandidates } from '@/chat/workflow/beside-workflows';

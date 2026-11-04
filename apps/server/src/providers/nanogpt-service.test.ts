@@ -2,9 +2,9 @@ import { afterEach, describe, expect, setSystemTime, test } from 'bun:test';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { UsageService } from '@adecore/agents/usage';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import type { ApiFetch } from './keyed-api-service.ts';
 import { NANOGPT_URL, NanoGptService } from './nanogpt-service.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 const home = tempHomes('ruimte-nanogpt-');
 afterEach(() => setSystemTime());

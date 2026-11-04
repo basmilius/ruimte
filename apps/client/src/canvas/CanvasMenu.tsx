@@ -1,17 +1,18 @@
-import { useTranslation } from 'react-i18next';
+import { Icon, Kbd, ContextMenu } from '@adecore/ui';
 import { Maximize, Minus, Scan, SquareDashedMousePointer, Type } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { createNodeAction, createTextAction, fitAction, groupSelectionAction, selectAllAction } from '@/actions/client-actions';
 import { AgentSubmenus } from '@/agents/AgentMenus';
-import { DesignAddItem } from '@/design/DesignAddItem';
 import type { Point } from '@/canvas/math';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';
 import { RemoteMachineItems } from '@/canvas/RemoteMachineItems';
+import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { DesignAddItem } from '@/design/DesignAddItem';
+import { ExtensionNodesSubmenu, SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { RoutineAddItems } from '@/routines/RoutineAddItems';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { Icon, Kbd, ContextMenu } from '@adecore/ui';
-import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 function AddItem({ kind, at }: { kind: keyof typeof ADD_NODE_SHORTCUTS; at: () => Point }) {
     const { t } = useTranslation('canvas');
@@ -31,6 +32,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
     return (
         <ContextMenu.Popup>
             <CanvasCreateItems at={at} />
+            <ExtensionNodesSubmenu at={at()} />
             <ContextMenu.Separator />
             <ContextMenu.Group>
                 <ContextMenu.Item onClick={() => selectAllAction(canvasStore)}>
@@ -43,6 +45,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                     <Icon icon={Maximize} size={14} /> {t('canvasMenu.zoomToFit')} <Kbd shortcut={CANVAS_SHORTCUTS.fitAll} />
                 </ContextMenu.Item>
             </ContextMenu.Group>
+            <SlotMenuItems place="canvasMenu" context={{ at: at() }} />
         </ContextMenu.Popup>
     );
 }

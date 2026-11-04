@@ -1,23 +1,23 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, readdir, rm, symlink } from 'node:fs/promises';
 import { join } from 'node:path';
-import { NODE_SIZE, type ChatItem, type ProjectContent } from '@ruimte/contracts';
-import { AgentLineageStore, OutboxWorker, type OutboxClock } from '@adecore/agents/coordination';
-import { PendingPromptStore } from '../agents/pending-prompts.ts';
-import { CANVAS_PATH, handleCanvasRequest } from '../canvas/canvas-route.ts';
-import { startCwdGuard } from '../canvas/project-paths.ts';
-import type { AgentStart, CanvasHost } from '../canvas/verb.ts';
 import { AttachmentStore, ChatStore } from '@adecore/agents/chat';
-import { ChatManager } from '../chat/chat-manager.ts';
+import { AgentLineageStore, OutboxWorker, type OutboxClock } from '@adecore/agents/coordination';
 import { fakeClaude, fakeCodex, inProcess, type InProcessCli } from '@adecore/agents/testing';
+import { NODE_SIZE, type ChatItem, type ProjectContent } from '@ruimte/contracts';
+import { PendingPromptStore } from '../agents/pending-prompts.ts';
+import { ChatManager } from '../chat/chat-manager.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import { SessionManager } from '../sessions/manager.ts';
+import { releasedProject } from '../tasks/test-daemon.ts';
+import type { AgentStart, CanvasHost } from '../tools/host.ts';
+import { startCwdGuard } from '../tools/project-paths.ts';
+import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { untilChecked } from '../until-test-helpers.ts';
 import { refusingHandlers } from './outbox-test-helpers.ts';
 import { OutboxStore, type OutboxWork, type StartAgentEntry } from './outbox.ts';
-import { releasedProject } from '../tasks/test-daemon.ts';
 import { HEADLESS_TERMINAL, nodeMode, startAgentHandler, startAgentWork, type StartAgentDeps } from './start-agent.ts';
 
 /* Nothing here fails, so no retry is ever timed; the clock only has to say one moment. */
@@ -149,7 +149,7 @@ async function boot(): Promise<Daemon> {
         })
     });
     store.index.onPlaces = (id, ids) => {
-        void prompts.prune(id, ids);
+        void prompts.pruneLeftNodes(id, ids);
         void outbox.prune(id, ids);
     };
 
@@ -225,20 +225,11 @@ async function boot(): Promise<Daemon> {
     return daemon;
 }
 
-/* A team verb run by the lead chat, the way `ruimte-context team` posts it. */
-async function openTeam(daemon: Daemon, extra: string[] = []): Promise<string[]> {
-    const path = `${CANVAS_PATH}/team`;
-    const response = await handleCanvasRequest(
-        new Request(`http://127.0.0.1${path}`, {
-            method: 'POST',
-            headers: { authorization: 'Bearer lead' },
-            body: JSON.stringify({ argv: ['--label', 'Crew', '--roles', JSON.stringify(TEAM), ...extra] })
-        }),
-        path,
-        { targetForToken: (token) => (token === 'lead' ? 'chat-lead' : null), host: daemon.host }
-    );
-    expect(response.status).toBe(200);
-    const lines = (await response.text()).trim().split('\n');
+/* A team the lead chat opens with `agent_team`. */
+async function openTeam(daemon: Daemon, extra: Record<string, unknown> = {}): Promise<string[]> {
+    const { refused, lines } = await toolAnswer('agent_team', { label: 'Crew', roles: JSON.stringify(TEAM), ...extra }, toolCall('chat-lead', daemon.host));
+    expect(refused).toBe(false);
+
     return lines.slice(1).map((line) => line.split('\t')[0]!);
 }
 
@@ -305,7 +296,7 @@ describe('a team the daemon starts on its own', () => {
 
     test('a daemon that restarts between the write and the start starts every agent exactly once', async () => {
         const before = await boot();
-        // The worker never got going. The daemon went down right after the verb wrote the team.
+        // The worker never got going. The daemon went down right after the tool wrote the team.
         const ids = await openTeam(before);
         await before.retire();
         expect(before.adapter.spawned).toEqual([]);
@@ -359,14 +350,14 @@ describe('a team the daemon starts on its own', () => {
         expect(after.chats.get(docs!)?.info.runtimeMode).toBe('supervised');
     });
 
-    test('a --cwd whose symlink moved outside the project after the verb checked it is refused at the start', async () => {
+    test('a cwd whose symlink moved outside the project after the tool checked it is refused at the start', async () => {
         await mkdir(join(folder, 'inside'));
         const outside = join(root, 'outside');
         await mkdir(outside);
         await link(join(folder, 'w'), join(folder, 'inside'));
 
         const daemon = await boot();
-        const [lexer, parser, docs] = await openTeam(daemon, ['--cwd', 'w']);
+        const [lexer, parser, docs] = await openTeam(daemon, { cwd: 'w' });
         await link(join(folder, 'w'), outside);
         daemon.worker.start();
         await daemon.worker.settled();
@@ -374,7 +365,7 @@ describe('a team the daemon starts on its own', () => {
         expect(daemon.adapter.spawned).toEqual([]);
         expect(daemon.chats.list()).toEqual([]);
         expect(daemon.logged.filter((line) => line.includes('is outside'))).toHaveLength(3);
-        // A client mounting one later is refused the same way, with the code the verb uses.
+        // A client mounting one later is refused the same way, with the code the tool uses.
         await expect(daemon.sessions.create({ sessionId: lexer!, cols: 80, rows: 24, cwd: join(folder, 'w') })).rejects.toMatchObject({
             code: 'cwd-outside-project'
         });
@@ -477,7 +468,7 @@ describe('the start of one agent node', () => {
         ]);
     });
 
-    test('the entry a verb owes carries the opener as the ceiling, a chat its mode and a terminal what it runs', () => {
+    test('the entry a tool owes carries the opener as the ceiling, a chat its mode and a terminal what it runs', () => {
         const modes = {
             chatMode: (id: string) => (id === 'lead' ? ('auto' as const) : undefined),
             launch: (id: string) =>

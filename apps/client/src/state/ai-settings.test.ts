@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { ProviderAccounts } from '@ruimte/contracts';
-import { inlineEditAccountOn, inlineEditAgentFrom } from './ai-settings';
+import type { ProviderAccounts, ProviderInfo } from '@ruimte/contracts';
+import { editorAgentOn, inlineEditAccountOn, inlineEditAgentFrom } from './ai-settings';
 
 const accounts = {
     accounts: {
@@ -45,4 +45,14 @@ describe('inlineEditAccountOn', () => {
         expect(inlineEditAccountOn(null, 'claude', 'claude_work')).toBeUndefined();
         expect(inlineEditAccountOn(undefined, 'claude', 'claude_work')).toBeUndefined();
     });
+});
+
+test('the editor helper can choose Antigravity while only its CLI is installed', () => {
+    const provider = {
+        kind: 'antigravity',
+        installed: true,
+        capabilities: { terminal: true, chat: false },
+        models: [{ slug: 'gemini-3.8-flash', name: 'Gemini Flash', legacy: false, isDefault: true, options: [] }]
+    } as unknown as ProviderInfo;
+    expect(editorAgentOn([provider], { provider: 'antigravity', model: null }, 'terminal')).toEqual({ provider: 'antigravity', model: 'gemini-3.8-flash' });
 });

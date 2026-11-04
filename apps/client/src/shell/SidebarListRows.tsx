@@ -1,46 +1,48 @@
-import { useRef, useState, type ReactElement, type ReactNode } from 'react';
-import { ChevronRight, Globe, PanelTop, Pencil, Plus, Trash, TriangleAlert, Users } from 'lucide-react';
-import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
+import { AgentIcon } from '@adecore/agents-react/providers';
+import { Tooltip, Icon, Input, ListRow, ContextMenu, Menu, SectionLabel } from '@adecore/ui';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import type { AgentKind, AgentStatus, CanvasNodeKind } from '@ruimte/contracts';
+import clsx from 'clsx';
+import { ChevronRight, Globe, PanelTop, Pencil, Plus, Trash, TriangleAlert, Users } from 'lucide-react';
+import { useRef, useState, type ReactElement, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { renameNodeAction, renameViewAction } from '@/actions/client-actions';
-import type { AgentWork } from '@/state/agent-work';
-import { askViewSettings, revealNode, showView } from '@/project/views';
-import { useCanvas } from '@/state/canvas';
-import { CellViewContext } from '@/state/workspace-stores';
-import { ViewMenuItems } from '@/shell/ViewMenuItems';
-import { useUi } from '@/state/ui';
-import { useEndpointId } from '@/state/keys';
-import { SnoozeButton, SnoozedMark, SnoozeMenuItems } from '@/shell/Snooze';
-import { heaviestWork, snoozeTargetOf, viewNameOf, type SidebarGroup, type SidebarNodeRow, type SidebarRow, type SidebarViewRow } from '@/shell/sidebar-rows';
+import { UnseenMark } from '@/attention/UnseenMark';
 import { WaitingCount } from '@/attention/WaitingCount';
 import { WaitLabel } from '@/attention/WaitLabel';
-import { UnseenMark } from '@/attention/UnseenMark';
 import { WorkingMark } from '@/attention/WorkingMark';
-import { TaskMark } from '@/tasks/TaskMark';
-import { showsTaskMark } from '@/tasks/task-mark';
 import { Favicon } from '@/browser/Favicon';
 import { useBrowserDisplayTitle } from '@/browser/title';
-import { resetTitle } from '@/nodes/node-host';
+import { NODE_KIND_ICONS } from '@/canvas/node-icons';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
-import { FlagMark } from '@/project/FlagMark';
-import { ViewGlyph } from '@/project/ViewGlyph';
-import { Tooltip, Icon, Input, ListRow, ContextMenu, Menu, SectionLabel } from '@adecore/ui';
-import { wantsNewTab } from '@/shell/tab-drop';
 import { isApplePlatform } from '@/desktop/bridge';
-import type { ProjectMenuRow } from '@/project/list';
-import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { useServers } from '@/state/server';
-import { separatorKey, useSidebarProjects, type SidebarSeparator } from '@/shell/sidebar-projects';
-import { openSidebarTarget, showSidebarProject } from '@/shell/sidebar-navigation';
-import { NewViewItems } from '@/shell/NewViewMenu';
+import { nodeInfoOf } from '@/extensions/slots';
+import { SlotRow } from '@/extensions/SlotSurfaces';
+import { resetTitle } from '@/nodes/node-host';
+import { FlagMark } from '@/project/FlagMark';
+import type { ProjectMenuRow } from '@/project/list';
 import { newChatOn } from '@/project/new-chat';
+import { ProjectGlyph } from '@/project/ProjectGlyph';
+import { ViewGlyph } from '@/project/ViewGlyph';
+import { askViewSettings, revealNode, showView } from '@/project/views';
+import { NewViewItems } from '@/shell/NewViewMenu';
 import { useUnsavedStoredPath } from '@/shell/panels/use-unsaved';
-import { NODE_KIND_ICONS } from '@/canvas/node-icons';
-import { AgentIcon } from '@adecore/agents-react/providers';
+import { openSidebarTarget, showSidebarProject } from '@/shell/sidebar-navigation';
+import { separatorKey, useSidebarProjects, type SidebarSeparator } from '@/shell/sidebar-projects';
+import { heaviestWork, snoozeTargetOf, viewNameOf, type SidebarGroup, type SidebarNodeRow, type SidebarRow, type SidebarViewRow } from '@/shell/sidebar-rows';
+import { SnoozeButton, SnoozedMark, SnoozeMenuItems } from '@/shell/Snooze';
+import { wantsNewTab } from '@/shell/tab-drop';
+import { ViewMenuItems } from '@/shell/ViewMenuItems';
+import type { AgentWork } from '@/state/agent-work';
+import { useCanvas } from '@/state/canvas';
+import { useEndpointId } from '@/state/keys';
+import { useServers } from '@/state/server';
+import { useUi } from '@/state/ui';
+import { CellViewContext } from '@/state/workspace-stores';
+import { showsTaskMark } from '@/tasks/task-mark';
+import { TaskMark } from '@/tasks/TaskMark';
 
 const ROW = 'w-full gap-2 text-left text-sm';
 
@@ -225,6 +227,7 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
                     {node.task && showsTaskMark(node.task, node.work, node.finished === true) && <TaskMark task={node.task} />}
                     {node.finished && <UnseenMark />}
                     {node.alert && <ProcessWarningMark />}
+                    <SlotRow place="sidebarRow" context={{ node: nodeInfoOf(node.id) }} />
                     {node.snoozedUntil && <SnoozedMark until={node.snoozedUntil} />}
                     {snoozable && node.status === 'needs-you' ? (
                         <WaitLabel detail={node.wait} snoozed={Boolean(node.snoozedUntil)} />

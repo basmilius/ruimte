@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
-import { MessageSquare } from 'lucide-react';
 import { Icon, Kbd, KEY_SHORTCUTS, Tooltip } from '@adecore/ui';
-import type { PaletteContext, PaletteGroup, PaletteModeView } from '@/shell/palette-entries';
+import { MessageSquare } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { externalMatching, groupByChat, openChatHit, resumeExternal, useChatSearch, useExternalSessions } from '@/shell/palette-chats';
+import type { PaletteContext, PaletteGroup, PaletteModeView } from '@/shell/palette-entries';
 import { ChatGroupLabel, ChatItem, ExternalLabel, type ChatRow } from '@/shell/PaletteChatResults';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';

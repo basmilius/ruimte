@@ -37,6 +37,8 @@ test('node runs the packaged daemon and its search worker', async () => {
         { cwd: repoRoot, stdio: ['ignore', 'inherit', 'inherit'] }
     );
     expect(build.exitCode).toBe(0);
+    expect(JSON.parse(readFileSync(join(out, 'extension', 'package.json'), 'utf8'))).toMatchObject({ name: '@ruimte/extension', version });
+    expect(existsSync(join(out, 'extension', 'client.d.ts'))).toBe(true);
 
     const scope = join(out, 'ruimte', 'node_modules', '@ruimte');
     mkdirSync(scope, { recursive: true });

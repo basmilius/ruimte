@@ -24,6 +24,16 @@ export const SIGNING_PURPOSES = {
 } as const;
 export type SigningPurpose = (typeof SIGNING_PURPOSES)[keyof typeof SIGNING_PURPOSES];
 
+/*
+ * The extension store's own key signs `index.json` whole, outside the `pulsar-` namespace and under the
+ * prefix it had before it moved here, so an index signed then still verifies.
+ */
+export const EXTENSION_STORE_PURPOSE = 'ruimte-extension-store-v1';
+
+export function extensionStoreMessage(index: string): string {
+    return `${EXTENSION_STORE_PURPOSE}\n${index}`;
+}
+
 function signedBytes(purpose: SigningPurpose, fields: ReadonlyArray<string | number | null>): string {
     return `${purpose}\n${JSON.stringify(fields)}`;
 }

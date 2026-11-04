@@ -1,15 +1,24 @@
-import { bundledThemesInfo } from 'shiki/themes';
-import { create } from 'zustand';
-import { z } from 'zod';
-import { isLiveVoice, isVoiceLanguage, WorktreeMergeStrategySchema, type LiveVoice, type VoiceLanguage, type WorktreeMergeStrategy } from '@ruimte/contracts';
+import type { EditorFoldOutline, EditorSmartKeys } from '@adecore/editor';
+import { FORMAT_LANGUAGE, formatRegionFrom } from '@adecore/ui/format';
+import {
+    EditorAssistAgentSchema,
+    type EditorAssistAgent,
+    isLiveVoice,
+    isVoiceLanguage,
+    WorktreeMergeStrategySchema,
+    type LiveVoice,
+    type VoiceLanguage,
+    type WorktreeMergeStrategy
+} from '@ruimte/contracts';
 import type { UpdateTrack } from '@ruimte/desktop-bridge';
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
+import { bundledThemesInfo } from 'shiki/themes';
+import { z } from 'zod';
+import { create } from 'zustand';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
 import { renderDistanceFrom, type RenderDistance } from '@/canvas/render-distance';
-import { BEAM_SETTINGS, type BeamSetting } from '@/pets/beam';
-import { FORMAT_LANGUAGE, formatRegionFrom } from '@adecore/ui/format';
 import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
-import type { EditorFoldOutline, EditorSmartKeys } from '@adecore/editor';
+import { CODE_THEMES } from '@/shell/panels/code-themes';
 import {
     agentChangesModeFrom,
     DEFAULT_AGENT_CHANGES_MODE,
@@ -22,10 +31,10 @@ import {
     type InlineEditAgent
 } from '@/state/ai-settings';
 import { type CodeFolding, codeFoldingFrom, DEFAULT_CODE_FOLDING } from '@/state/code-folding';
-import { CODE_THEMES } from '@/shell/panels/code-themes';
-import { storedJson, switchesFrom } from '@/state/stored-json';
+import { useExtensionTheme } from '@/state/extension-theme';
 import { applyPalette } from '@/state/palette';
 import { palettePresetFrom, presetTokens, type PalettePreset } from '@/state/palette-presets';
+import { storedJson, switchesFrom } from '@/state/stored-json';
 
 export const SETTINGS_STORAGE_KEY = 'ruimte.settings';
 
@@ -98,38 +107,6 @@ function chatStreamingFrom(stored: unknown): ChatStreamingMode {
     return CHAT_STREAMING_MODES.find((mode) => mode === stored) ?? 'words';
 }
 
-export type PetsPlace = 'nodes' | 'screen';
-
-// More than the built-in sets and every figure a client may keep, so a hand-edited list cannot slow every pet down.
-const MAX_PET_SETS = 32;
-const MAX_PET_SET_LENGTH = 64;
-
-/*
- * The stored sets, or the one choice before sets could be combined, under `petsSprite`, as a set of one.
- * Each once and never none. Whether a custom set is still there is the pets' own question, so a name is kept as it is.
- */
-function petSetsFrom(stored: unknown, legacy: unknown): string[] {
-    const named: unknown[] = Array.isArray(stored) ? stored : [legacy];
-    const sets = [...new Set(named.filter((set): set is string => typeof set === 'string' && set !== '' && set.length <= MAX_PET_SET_LENGTH))];
-    return sets.length > 0 ? sets.slice(0, MAX_PET_SETS) : ['buddies'];
-}
-
-/* A CLI is named by a short word, and a person gives a figure to the few CLIs they use. */
-const MAX_PET_AGENTS = 16;
-const MAX_PET_AGENT_LENGTH = 64;
-
-/* The figure set given to each CLI, as `petsSets` names one; anything else stored is left out. */
-function petsByAgentFrom(stored: unknown): Record<string, string> {
-    if (typeof stored !== 'object' || stored === null || Array.isArray(stored)) {
-        return {};
-    }
-
-    const named = (value: unknown): value is string => typeof value === 'string' && value !== '' && value.length <= MAX_PET_SET_LENGTH;
-    const entries = Object.entries(stored).filter(([agent, set]) => agent !== '' && agent.length <= MAX_PET_AGENT_LENGTH && named(set));
-
-    return Object.fromEntries(entries.slice(0, MAX_PET_AGENTS));
-}
-
 /* When this computer stays awake: never, while an agent works, or all the time. */
 export type KeepAwakeMode = 'off' | 'working' | 'always';
 
@@ -189,6 +166,8 @@ export interface Settings {
     palette: PalettePreset;
     /* The glow at the top of the sidebar, and of the toolbar while the sidebar is closed, in the color of the project. */
     projectGlow: boolean;
+    /* A scroller bounces at its end, as macOS does, with a trackpad or mouse. */
+    scrollBounce: boolean;
     interfaceFont: InterfaceFontId;
     font: MonoFontId;
     /* Terminal font size in px; every terminal refits when it changes. */
@@ -234,9 +213,10 @@ export interface Settings {
     aiAgentChanges: AgentChangesMode;
     /* Whether the gutter marks the lines an agent wrote. */
     aiAttribution: boolean;
-    /* Whether the hover explains code and rename suggests names, both with the model on the machine. */
-    aiOnDeviceHelp: boolean;
-    /* When the editor asks the model on the machine for ghost text. */
+    /* Whether the hover explains code and rename suggests names, both with the chosen editor model. */
+    aiCodeHelp: boolean;
+    aiAssistAgent: EditorAssistAgent | null;
+    /* When the editor asks the chosen editor model for ghost text. */
     aiGhostText: GhostTextMode;
     /* Whether a font draws `=>` or `!==` as one glyph. Off sets the whole document, since the diffs draw in a shadow root that only inheritance reaches. */
     codeLigatures: boolean;
@@ -315,22 +295,6 @@ export interface Settings {
     /* How far out a canvas still draws its costly bodies live (a page, a file, a diagram, a device).
        About what this computer can carry, so it sits with the client and not with a project. */
     canvasRenderDistance: RenderDistance;
-    /* Whether a pet stands on every agent's node and says when it waits on you. Off to start with: a canvas is a place to work. */
-    pets: boolean;
-    /* Where the pets are: on their nodes, or along the bottom of the screen, around the dock (`canvas/pets/roam.ts`). */
-    petsPlace: PetsPlace;
-    /* The sets pets come from, each a built-in set (`PET_SETS`) or `custom:<id>` for one a person added (`pets/custom-sprites.ts`). Never empty. */
-    petsSets: string[];
-    /* Whether, while Pets is off, a pet now and then drops by beside a node for a moment. On to start with. */
-    petsVisitor: boolean;
-    /* Whether a pet takes a smaller one along for each sub-agent of its chat at work (`pets/kids.ts`). On to start with, since it only shows once Pets is on. */
-    petsSubagents: boolean;
-    /* Whether a chat or a terminal open as a view of its own has its pet too (`pets/ViewPet.tsx`). On to start with, since it only shows once Pets is on. */
-    petsInViews: boolean;
-    /* A figure set per CLI, by its kind, as `petsSets` names one; a CLI without one takes its pets from `petsSets`. */
-    petsByAgent: Record<string, string>;
-    /* How a pet comes and goes (`pets/beam.ts`), the same for every pet. */
-    petsBeam: BeamSetting;
 }
 
 /* What `RTCPeerConnection` takes for the servers in the setting; none for an empty field. */
@@ -355,6 +319,7 @@ const DEFAULT_SETTINGS: Settings = {
     accent: 'blue',
     palette: 'default',
     projectGlow: true,
+    scrollBounce: true,
     interfaceFont: 'system',
     font: 'system',
     fontSize: 13,
@@ -380,7 +345,8 @@ const DEFAULT_SETTINGS: Settings = {
     aiInlineAgent: { ...DEFAULT_INLINE_EDIT_AGENT },
     aiAgentChanges: DEFAULT_AGENT_CHANGES_MODE,
     aiAttribution: true,
-    aiOnDeviceHelp: true,
+    aiCodeHelp: false,
+    aiAssistAgent: null,
     aiGhostText: DEFAULT_GHOST_TEXT_MODE,
     codeLigatures: true,
     smartKeys: { ...DEFAULT_SMART_KEYS },
@@ -416,15 +382,7 @@ const DEFAULT_SETTINGS: Settings = {
     onboardingSkipWelcome: false,
     codeEnsureFinalNewline: true,
     terminalFont: 'editor',
-    canvasRenderDistance: 'standard',
-    pets: false,
-    petsPlace: 'nodes',
-    petsSets: ['buddies'],
-    petsVisitor: true,
-    petsSubagents: true,
-    petsInViews: true,
-    petsByAgent: {},
-    petsBeam: 'gather'
+    canvasRenderDistance: 'standard'
 };
 
 // Rounded as well as clamped: storage can still hold a half pixel, and text renders sharpest on a whole one.
@@ -459,6 +417,11 @@ function settingsOf(state: Settings): Settings {
     return Object.fromEntries(Object.keys(DEFAULT_SETTINGS).map((key) => [key, state[key as keyof Settings]])) as unknown as Settings;
 }
 
+/* An older installation may have saved nothing, so an absent choice always becomes an explicit opt-out. */
+function needsCodeHelpMigration(stored: Partial<Settings>): boolean {
+    return typeof stored.aiCodeHelp !== 'boolean';
+}
+
 /* What a stored blob means, key by key. Everything a client wrote before a setting existed, or wrote
    as something else, reads as what a fresh client gets. */
 export function settingsFrom(stored: Partial<Settings>): Settings {
@@ -486,7 +449,8 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         aiInlineAgent: inlineEditAgentFrom(stored.aiInlineAgent),
         aiAgentChanges: agentChangesModeFrom(stored.aiAgentChanges),
         aiAttribution: stored.aiAttribution !== false,
-        aiOnDeviceHelp: stored.aiOnDeviceHelp !== false,
+        aiCodeHelp: stored.aiCodeHelp === true,
+        aiAssistAgent: EditorAssistAgentSchema.nullable().catch(null).parse(stored.aiAssistAgent),
         aiGhostText: ghostTextModeFrom(stored.aiGhostText),
         codeLigatures: stored.codeLigatures !== false,
         smartKeys: switchesFrom(stored.smartKeys, DEFAULT_SMART_KEYS),
@@ -497,6 +461,7 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent,
         palette: palettePresetFrom(stored.palette),
         projectGlow: stored.projectGlow !== false,
+        scrollBounce: stored.scrollBounce !== false,
         // Nothing moves a person's eyes unless that person said so, so only a stored `true` turns it on.
         agentsShowViews: stored.agentsShowViews === true,
         // On unless a person turned it off, so a client that stored nothing yet draws maps.
@@ -532,16 +497,7 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         codeEnsureFinalNewline: stored.codeEnsureFinalNewline !== false,
         terminalFont:
             stored.terminalFont === 'editor' ? 'editor' : (MONO_FONTS.find((entry) => entry.id === stored.terminalFont)?.id ?? DEFAULT_SETTINGS.terminalFont),
-        canvasRenderDistance: renderDistanceFrom(stored.canvasRenderDistance),
-        // Only a stored `true` brings the pets, and only a stored `false` keeps the visitor, the kids or the pets in views away.
-        pets: stored.pets === true,
-        petsPlace: stored.petsPlace === 'screen' ? 'screen' : 'nodes',
-        petsSets: petSetsFrom(stored.petsSets, (stored as Partial<Settings> & { petsSprite?: unknown }).petsSprite),
-        petsVisitor: stored.petsVisitor !== false,
-        petsSubagents: stored.petsSubagents !== false,
-        petsInViews: stored.petsInViews !== false,
-        petsByAgent: petsByAgentFrom(stored.petsByAgent),
-        petsBeam: BEAM_SETTINGS.find((each) => each === stored.petsBeam) ?? 'gather'
+        canvasRenderDistance: renderDistanceFrom(stored.canvasRenderDistance)
     };
 }
 
@@ -553,14 +509,25 @@ const storedSettings = storedJson<Partial<Settings>, Settings>(
 
 function read(): Settings {
     try {
-        return settingsFrom(storedSettings.read() ?? {});
+        const stored = storedSettings.read() ?? {};
+        const settings = settingsFrom(stored);
+
+        // Written back once, so from then on the blob holds its own answer and no later rule decides it again. Keys this
+        // store no longer knows stay, since a built-in such as the pets moves its own out of this blob only after.
+        if (needsCodeHelpMigration(stored)) {
+            storedSettings.write({ ...stored, ...settingsOf(settings) });
+        }
+
+        return settings;
     } catch {
         return DEFAULT_SETTINGS;
     }
 }
 
-function applyColors(palette: PalettePreset, accentId: AccentId, preview = false): void {
+function applyColors(chosen: PalettePreset, accentId: AccentId, preview = false): void {
     const accent = accentColor(accentId);
+    // A theme of an extension sets its own colors, which a palette would only paint over. The choice stays for Ruimte's own.
+    const palette = useExtensionTheme.getState().key === null ? chosen : 'default';
     applyPalette(
         {
             light: { ...presetTokens(palette, 'light'), accent },
@@ -624,6 +591,7 @@ function apply(settings: Settings): void {
         return;
     }
     document.documentElement.dataset.panelLayout = settings.panelLayout;
+    document.documentElement.toggleAttribute('data-scroll-bounce', settings.scrollBounce);
     const root = document.documentElement.style;
     root.setProperty('font-size', `${settings.interfaceFontSize}px`);
     root.setProperty('--code-font-size', `${settings.codeFontSize}px`);

@@ -1,12 +1,12 @@
-import { BYTES_CHUNK_MAX, type PeerResultResult, type PeerTaskStartPayload, type PeerTaskStartResult } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
 import type { TaskCoordinator, TaskStore } from '@adecore/agents/coordination';
-import { MAX_RESULT_LENGTH } from '../canvas/tasks.ts';
+import { BYTES_CHUNK_MAX, type PeerResultResult, type PeerTaskStartPayload, type PeerTaskStartResult } from '@ruimte/contracts';
+import { errorText } from '../error-text.ts';
 import { BundleStore, bundleIdFor, fetchBundle, makeBundle } from '../git/bundles.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import type { Worktrees } from '../git/worktrees.ts';
-import { errorText } from '../error-text.ts';
 import type { OutboxEntry, OutboxWork, StartRemoteAgentEntry, StopRemoteAgentEntry, TakeRemoteResultEntry } from '../outbox/outbox.ts';
+import { MAX_RESULT_LENGTH } from '../tools/tasks.ts';
 import { RECONNECT_LIFETIME_MS, peerTarget } from './connect-peer.ts';
 import type { PeerLink } from './peer-connection.ts';
 import type { RemoteConnections } from './remote-connections.ts';
@@ -435,7 +435,7 @@ export class RemoteTasks {
         if (taken.path !== undefined) {
             await worktrees.claim(folder, taken.path, entry.target).catch(() => undefined);
         }
-        return `The work came back as the branch ${taken.branch}${taken.path === undefined ? '' : ` in the worktree ${taken.path}`}; ruimte-context worktree merge ${taken.branch} brings it into your branch.`;
+        return `The work came back as the branch ${taken.branch}${taken.path === undefined ? '' : ` in the worktree ${taken.path}`}; worktree_merge ${taken.branch} brings it into your branch.`;
     }
 
     /*

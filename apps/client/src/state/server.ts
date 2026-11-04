@@ -1,4 +1,3 @@
-import { create } from 'zustand';
 import type {
     AgentIntegrationsSummary,
     EndpointNameSource,
@@ -10,6 +9,7 @@ import type {
     TerminalShell
 } from '@ruimte/contracts';
 import type { BrokerSetting } from '@ruimte/pulsar';
+import { create } from 'zustand';
 import { useEndpointId } from '@/state/keys';
 
 export interface ServerInfo {
@@ -36,7 +36,6 @@ export interface ServerInfo {
     resumeAtReset: boolean;
     /* Whether an agent may show a page above its reply. */
     visualReplies: boolean;
-    appleFoundationEnabled: boolean;
     /* When the machine keeps itself awake. */
     keepAwake: KeepAwakeMode;
     keepAwakeOnBattery: boolean;
@@ -93,7 +92,6 @@ const UNKNOWN: ServerInfo = {
     streamingAllowed: true,
     resumeAtReset: false,
     visualReplies: true,
-    appleFoundationEnabled: false,
     keepAwake: 'off',
     keepAwakeOnBattery: false,
     keepAwakeDisplay: false,
@@ -133,7 +131,6 @@ interface ServersStore {
             | 'streamingAllowed'
             | 'resumeAtReset'
             | 'visualReplies'
-            | 'appleFoundationEnabled'
             | 'keepAwake'
             | 'keepAwakeOnBattery'
             | 'keepAwakeDisplay'
@@ -173,7 +170,6 @@ interface ServersStore {
                     | 'streamingAllowed'
                     | 'resumeAtReset'
                     | 'visualReplies'
-                    | 'appleFoundationEnabled'
                     | 'keepAwake'
                     | 'keepAwakeOnBattery'
                     | 'keepAwakeDisplay'

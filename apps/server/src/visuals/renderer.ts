@@ -1,8 +1,9 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { CodedError } from '@adecore/agents';
+import { cancellableTimeout } from '@adecore/utils/async';
 import { VISUAL_MEASURE_WIDTHS, type VisualAppearance, type VisualHeight } from '@ruimte/contracts';
-import { CodedError, cancellableTimeout } from '@adecore/agents';
 import { errorText } from '../error-text.ts';
 import type { ConsoleEntry } from './page-console.ts';
 import { RENDER_COMMAND, RenderAnswerSchema, type RenderAnswer, type RenderRequest } from './render-protocol.ts';
@@ -192,7 +193,7 @@ export class VisualRenderer {
             if (answer.code === 'browser-unavailable') {
                 throw new VisualRenderError(
                     'preview-unavailable',
-                    `This machine has no Chrome to render a preview with (${answer.message}); show the page with visual show without a preview`
+                    `This machine has no Chrome to render a preview with (${answer.message}); show the page with visual_show without a preview`
                 );
             }
             throw new VisualRenderError('preview-failed', `The preview failed: ${answer.message}`);

@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from 'bun:test';
-import { Terminal } from '@xterm/headless';
-import { SerializeAddon } from '@xterm/addon-serialize';
 import { trackTerminalCwd, windowsPathOfMsys } from '@ruimte/contracts';
+import { SerializeAddon } from '@xterm/addon-serialize';
+import { Terminal } from '@xterm/headless';
 
 const root = '\x1b]7;file://localhost/root\x07';
 const child = '\x1b]7;file://localhost/root/nested\x07';

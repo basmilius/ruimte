@@ -2,18 +2,20 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { chmod, mkdir, readFile, readdir, rename, rm } from 'node:fs/promises';
 import { basename, dirname, join, posix } from 'node:path';
-import { z } from 'zod';
+import { runProcess, type ProcessResult } from '@adecore/agents';
+import { agentDefaultCatalog, agentModel, createAcpProvider, type ChatProvider } from '@adecore/agents/providers';
+import { SingleFlight } from '@adecore/utils/async';
+import { writeAtomic } from '@adecore/utils/fs';
 import type { AgentKind, RegistryAgent, RegistryCatalog } from '@ruimte/contracts';
-import { runProcess, SingleFlight, writeAtomic, type ProcessResult } from '@adecore/agents';
-import { createAcpProvider, type ChatProvider } from '@adecore/agents/providers';
+import { z } from 'zod';
+import { downloadFile, type FileDownload } from '../artifacts/artifact-fs.ts';
 import { errorText } from '../error-text.ts';
 import { extractEntries, extractZipFile, readArchive } from '../language/archive.ts';
 import { acpCatalogStore } from './acp-catalog-store.ts';
-import { throwOnFailure } from './cli-versions.ts';
-import { RUIMTE_ACP_CLIENT, agentDefaultCatalog, agentModel, allowsContextCommand } from './acp-providers.ts';
+import { RUIMTE_ACP_CLIENT, loadingRuimteMcp } from './acp-providers.ts';
 import type { AcpRegistry, RegistryDistribution, RegistryEntry } from './acp-registry.ts';
-import { downloadFile, type FileDownload } from '../artifacts/artifact-fs.ts';
 import { downloadChecked } from './acp-server.ts';
+import { throwOnFailure } from './cli-versions.ts';
 
 const InstalledSchema = z.object({
     id: z.string(),
@@ -328,7 +330,7 @@ export class RegistryAgents {
     private offer(agent: InstalledAgent): void {
         this.agents.set(agent.id, agent);
         const [command, ...args] = this.launch(agent);
-        this.providers.add(
+        const provider = loadingRuimteMcp(
             createAcpProvider({
                 kind: agent.kind,
                 name: agent.name,
@@ -339,12 +341,12 @@ export class RegistryAgents {
                 model: agentModel,
                 loginHint: `Sign in to ${agent.name} the way its own documentation says, then start the chat again.`,
                 client: RUIMTE_ACP_CLIENT,
-                autoAllow: allowsContextCommand,
                 catalogStore: acpCatalogStore(this.home, agent.kind),
                 // The record says what is installed; starting the agent to ask would run code a person never asked to run.
                 detect: (path) => Promise.resolve({ installed: existsSync(path), version: agent.version })
             })
         );
+        this.providers.add(provider);
         this.providers.invalidate(agent.kind);
     }
 

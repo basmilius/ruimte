@@ -16,8 +16,6 @@ export type Signature = z.infer<typeof SignatureSchema>;
 
 // At least 16 random bytes, so a nonce is never short enough to guess; the upper bound only keeps a frame small.
 export const NonceSchema = z.string().regex(/^[A-Za-z0-9_-]{22,128}$/, 'Expected a nonce in base64url');
-export type Nonce = z.infer<typeof NonceSchema>;
 
 // The id a daemon mints for itself and keeps in `endpoint.json`.
 export const MachineIdSchema = z.string().min(1).max(128);
-export type MachineId = z.infer<typeof MachineIdSchema>;

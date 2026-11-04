@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { CircleCheck, Laptop, Terminal } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useEffect, useState } from 'react';
 import { TerminalBody } from '../app/bodies.tsx';
 import { ClaudeMark, StatusDot } from '../app/canvas.tsx';
 import { CellToolbar, FLOAT, WindowBar } from '../app/chrome.tsx';

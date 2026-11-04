@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { TerminalPrepareSource } from '@ruimte/contracts';
+import type { ClientConnection } from '../dispatcher.ts';
 import { PrepareTerminal, type PrepareTerminalHost } from './prepare-terminal.ts';
 import { makeHarness, type Harness } from './test-helpers.ts';
-import type { ClientConnection } from '../dispatcher.ts';
 
 let harness: Harness;
 const client: ClientConnection = { id: 'reader', send() {} };

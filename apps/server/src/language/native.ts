@@ -1,5 +1,3 @@
-import phpRelease from './php-native-release.json' with { type: 'json' };
-import sqlRelease from './sql-native-release.json' with { type: 'json' };
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { access, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -7,6 +5,8 @@ import { basename, dirname, join, resolve } from 'node:path';
 import type { LanguageServerKind } from '@ruimte/contracts';
 import { sha256, type FileDownload } from '../artifacts/artifact-fs.ts';
 import { extractEntries, readArchive, type ArchiveFormat } from './archive.ts';
+import phpRelease from './php-native-release.json' with { type: 'json' };
+import sqlRelease from './sql-native-release.json' with { type: 'json' };
 import { cargoBin } from './toolchain.ts';
 
 /* A kind whose server is a program of its own, downloaded or built once, and not an npm package. */

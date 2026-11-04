@@ -1,17 +1,18 @@
-import { useState, type RefObject } from 'react';
-import { useTranslation } from 'react-i18next';
-import { ChevronDown } from 'lucide-react';
-import type { AgentKind } from '@ruimte/contracts';
-import { AccountDot } from '@adecore/agents-react/providers';
 import { useAccountChoice, type AccountChoice } from '@adecore/agents-react/chat';
 import { ModelPicker } from '@adecore/agents-react/chat/ui';
+import { AccountDot } from '@adecore/agents-react/providers';
 import { useProviders } from '@adecore/agents-react/state';
 import { Button, Icon, Menu } from '@adecore/ui';
+import type { AgentKind } from '@ruimte/contracts';
+import { ChevronDown } from 'lucide-react';
+import { useState, type RefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 import { availableAgents } from '@/agents/creation';
+import { editorAgentOn } from '@/state/ai-settings';
 
 interface InlineAgent {
     readonly provider: AgentKind;
-    /* Null is the CLI's own default model. */
+    /* Null chooses the cheapest available model. */
     readonly model: string | null;
     /* Absent is the CLI's default account. */
     readonly account?: string;
@@ -59,19 +60,25 @@ function AccountChip({
 export function InlineAgentPicker({
     agent,
     onChange,
-    finalFocus
+    finalFocus,
+    kinds,
+    footer,
+    capability = 'chat'
 }: {
     agent: InlineAgent;
     onChange(agent: InlineAgent): void;
+    kinds?: readonly AgentKind[];
+    capability?: 'chat' | 'terminal';
+    footer?: string;
     finalFocus?: RefObject<HTMLElement | null>;
 }) {
     const { t } = useTranslation('inline-edit');
     const providers = useProviders((row) => row.providers);
     const [open, setOpen] = useState(false);
     // An inline edit is no chat of its own yet; the project in view gives the rule.
-    const choice = useAccountChoice(agent.provider, agent.account, '');
-    const offered = availableAgents(providers, 'chat');
-    const owner = providers.find((provider) => provider.kind === agent.provider);
+    const resolved = editorAgentOn(providers, agent, capability);
+    const choice = useAccountChoice(resolved.provider, resolved.account, '');
+    const offered = availableAgents(providers, capability).filter((provider) => kinds === undefined || kinds.includes(provider.kind));
 
     if (offered.length === 0) {
         return <span className="text-xs text-text-muted">{t('prompt.noAgent')}</span>;
@@ -80,15 +87,15 @@ export function InlineAgentPicker({
         <>
             <ModelPicker
                 providers={offered}
-                provider={agent.provider}
-                selection={{ model: agent.model ?? owner?.defaultModel ?? '', options: {} }}
+                provider={resolved.provider}
+                selection={{ model: resolved.model ?? '', options: {} }}
                 open={open}
                 onOpenChange={setOpen}
                 onChange={(provider, model) => onChange(provider === agent.provider ? { ...agent, model } : { provider, model })}
                 kbd={null}
                 side="bottom"
                 trigger="chip"
-                footer={t('prompt.note')}
+                footer={footer ?? t('prompt.note')}
                 {...(finalFocus === undefined ? {} : { finalFocus })}
             />
             {choice !== null && (

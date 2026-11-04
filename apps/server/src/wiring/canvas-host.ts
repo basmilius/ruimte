@@ -1,8 +1,6 @@
 import { chatRequests } from '@adecore/agents/coordination';
 import { agentStates } from '../agents/agent-state.ts';
 import { openedAgentCount } from '../agents/hidden-agents.ts';
-import { projectReach } from '../canvas/reach.ts';
-import type { CanvasHost } from '../canvas/verb.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { chatForkDeps, forkForAgent } from '../chat/fork.ts';
 import { agentMessages } from '../context/agent-messages.ts';
@@ -14,17 +12,19 @@ import { agentStartHost } from '../outbox/start-agent.ts';
 import type { PushService } from '../push/service.ts';
 import { agentRoutines } from '../routines/agent-host.ts';
 import type { SessionManager } from '../sessions/manager.ts';
+import type { CanvasHost } from '../tools/host.ts';
+import { projectReach } from '../tools/reach.ts';
 import { agentVisuals } from '../visuals/agent-host.ts';
+import type { AgentWorkBundle } from './agent-work.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { ArtifactsBundle } from './artifacts.ts';
-import type { AgentWorkBundle } from './agent-work.ts';
+import { chatIsInChats } from './chat-move.ts';
 import type { DatabasesBundle } from './databases.ts';
 import type { DevicesBundle } from './devices.ts';
 import type { GitBundle } from './git.ts';
 import type { LaunchesBundle } from './launches.ts';
 import type { ProjectsBundle } from './projects.ts';
 import type { ProvidersBundle } from './providers.ts';
-import { chatIsInChats } from './chat-move.ts';
 import type { RemoteBundle } from './remote.ts';
 import type { RoutinesBundle } from './routines.ts';
 import type { TemplatesBundle } from './templates.ts';
@@ -41,6 +41,7 @@ interface CanvasHostInput {
     git: GitBundle;
     devices: DevicesBundle;
     databases: DatabasesBundle;
+    extensions: NonNullable<CanvasHost['extensions']>;
     remote: RemoteBundle;
     usage: UsageBundle;
     artifacts: ArtifactsBundle;
@@ -52,7 +53,7 @@ interface CanvasHostInput {
     };
 }
 
-/* How a verb reads and prompts chats and asks which agent a terminal runs. */
+/* How a tool reads and prompts chats and asks which agent a terminal runs. */
 export function chatAccess(chats: ChatManager, sessions: SessionManager): Pick<CanvasHost, 'chatThreads' | 'chatPrompts' | 'terminals'> {
     return {
         // A chat nobody opened since a restart is read from its record, which starts no CLI.
@@ -74,7 +75,7 @@ export function chatAccess(chats: ChatManager, sessions: SessionManager): Pick<C
     };
 }
 
-/* The services the agent verbs reach the daemon through. */
+/* The services the agent tools reach the daemon through. */
 export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
     const { identity, stores, providers, agents, work, launches, git, devices, databases, remote, usage, later } = input;
     const { lineage, outbox, tasks } = stores;
@@ -127,6 +128,7 @@ export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
         agentImages: { attach: (chatId, upload) => chats.attachAgentImage(chatId, upload) },
         visuals: agentVisuals({ enabled: () => identity.visualReplies, visuals: agents.visuals, chats, renderer: devices.visualRenderer }),
         databases: databases.agents,
+        extensions: input.extensions,
         language: new AgentLanguage({
             host: {
                 forAgent: (projectId, request, languageWork) => later.language().forAgent(projectId, request, languageWork),

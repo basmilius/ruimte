@@ -1,5 +1,5 @@
-import type { DesktopBridge, MachineMode } from '@ruimte/desktop-bridge';
 import { isApplePlatform as isApplePlatformFromNavigator } from '@adecore/ui';
+import type { DesktopBridge, MachineMode } from '@ruimte/desktop-bridge';
 
 export type {
     BrowserRouteBinding,

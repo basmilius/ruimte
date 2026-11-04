@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { VISUAL_MEASURE_WIDTHS } from '@ruimte/contracts';
 import { AttachmentStore, VisualStore } from '@adecore/agents/chat';
+import { VISUAL_MEASURE_WIDTHS } from '@ruimte/contracts';
 import type { RenderAnswer } from './render-protocol.ts';
 import { previewVisual, renderCommand, VisualRenderer, type RenderJob, type RenderProcess } from './renderer.ts';
 

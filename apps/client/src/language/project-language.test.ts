@@ -1,8 +1,8 @@
-import { settleLanguage as settle } from './settle.test';
 import { describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeLanguageTransport } from './fake-daemon';
 import { acquireProjectLanguage, ProjectLanguage } from './ruimte-project-language';
+import { settleLanguage as settle } from './settle.test';
 
 const folder = '/work/app';
 const uri = 'file:///work/app/src/a.ts';

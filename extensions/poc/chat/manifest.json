@@ -1,0 +1,15 @@
+{
+    "id": "poc.chat",
+    "name": "POC chat",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "description": "Slash commands, references, streaming, voice, a database, templates, shortcuts, file icons, diffs and settings Ruimte draws.",
+    "color": "#db2777",
+    "permissions": {
+        "agents.run": "Streams an answer into a panel",
+        "canvas.write": "Lays out nodes from a template",
+        "database.read": "Reads a table you name",
+        "files.read": "Reads the project for a slash command"
+    }
+}

@@ -1,8 +1,9 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
-import { VerbRefusal, type ComputerHost } from '../canvas/verb.ts';
 import type { OperateInput } from '../computer/computer-use.ts';
 import type { ActionResult, AppCommand, StateResult } from '../computer/helper-protocol.ts';
 import type { TreeView } from '../computer/tree-diff.ts';
+import { type ComputerHost } from '../tools/host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 type ComputerState = ActionOutput<'computer.state'>;
@@ -131,7 +132,7 @@ function cutOf(input: CutInput): OperateInput {
     };
 }
 
-/* The hold an agent asked for with --wait, in the milliseconds the service counts in. */
+/* The hold an agent asked for with wait, in the milliseconds the service counts in. */
 function holdOf(input: { wait?: number | null }): number | undefined {
     return given(input.wait) ? input.wait * 1000 : undefined;
 }
@@ -150,11 +151,11 @@ function placeOf({ element, x, y }: Place, refusal: string): { element: number }
     if (!given(element) && given(x) && given(y)) {
         return { x, y };
     }
-    throw new VerbRefusal('bad-arguments', refusal);
+    throw new ToolRefusal('bad-arguments', refusal);
 }
 
-function pointOf(place: Place, verb: string): OperateInput {
-    return placeOf(place, `computer ${verb} takes --element N, or both --x and --y, and not both`);
+function pointOf(place: Place, action: string): OperateInput {
+    return placeOf(place, `computer_act ${action} takes element, or both x and y, and not both`);
 }
 
 /* Runs an action and tells the state after it as the agent asked: what changed, unless it asked for all of it. */
@@ -170,7 +171,7 @@ async function act(
     return { result, outcome: outcomeOf(result, (state) => computer.treeView(callerId, state, input.fullState ? 'full' : 'diff')) };
 }
 
-/* How long `wait` waits for its condition without --timeout, in seconds. */
+/* How long `wait` waits for its condition without timeout, in seconds. */
 const WAIT_TIMEOUT_S = 10;
 
 /* What `wait` holds out for: exactly one of a text that appears, a text that goes, or the value of an element. */
@@ -196,7 +197,7 @@ function conditionOf({
             return { element, value };
         }
     }
-    throw new VerbRefusal('bad-arguments', 'computer wait takes one of --text T, --gone T, or --element N with --value V');
+    throw new ToolRefusal('bad-arguments', 'computer_wait takes one of text, gone, or element with value');
 }
 
 /* The start of a text too long to pass on whole, counted in characters so a cut never splits one. */
@@ -289,9 +290,9 @@ export const computerActions: ActionHandlers<ServerActionContext> = {
     'computer.drag': async (input, { actor, context }) => {
         const from = placeOf(
             { element: input.from, x: input.fromX, y: input.fromY },
-            'computer drag starts at --from N, or at both --from-x and --from-y, and not both'
+            'computer_act drag starts at from, or at both from_x and from_y, and not both'
         );
-        const to = placeOf({ element: input.to, x: input.toX, y: input.toY }, 'computer drag ends at --to N, or at both --to-x and --to-y, and not both');
+        const to = placeOf({ element: input.to, x: input.toX, y: input.toY }, 'computer_act drag ends at to, or at both to_x and to_y, and not both');
         const end = 'element' in to ? { toElement: to.element } : { toX: to.x, toY: to.y };
         return { output: (await act(context, actor.id, 'drag', input, { ...from, ...end })).outcome };
     },

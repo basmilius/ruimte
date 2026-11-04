@@ -123,3 +123,24 @@ export function createCameraSlice<TState extends CameraSlice>(
         }
     };
 }
+
+let lastState: object | null = null;
+let lastPrevious: object | null = null;
+let lastAnswer = false;
+
+/*
+ * Whether a change moved the camera and nothing else, which is every frame of a pan or a zoom. Every
+ * listener of one change asks with the same pair, so the keys are compared once per change rather
+ * than once for each of the hundreds of listeners a canvas has.
+ */
+export function onlyCameraMoved<T extends { camera: Camera }>(state: T, previous: T): boolean {
+    if (state === lastState && previous === lastPrevious) {
+        return lastAnswer;
+    }
+
+    lastState = state;
+    lastPrevious = previous;
+    lastAnswer = state.camera !== previous.camera && Object.keys(state).every((key) => key === 'camera' || state[key as keyof T] === previous[key as keyof T]);
+
+    return lastAnswer;
+}

@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { act } from 'react';
 import { projectSidebarViews, type ProjectSummary, type ProjectView } from '@ruimte/contracts';
+import { act } from 'react';
 import { useSettings } from '@/state/settings';
-import { useSidebarProjects } from './sidebar-projects';
+import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, pressKey, until, type Mounted } from '../../testing/dom';
+import { useSidebarProjects } from './sidebar-projects';
 
 const background: ProjectSummary = {
     projectId: 'background',

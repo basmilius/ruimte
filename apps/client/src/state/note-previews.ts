@@ -1,9 +1,9 @@
-import { create } from 'zustand';
 import { z } from 'zod';
-import { useCurrentProjectKey } from '@/state/view-pins';
+import { create } from 'zustand';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { storedJson } from '@/state/stored-json';
+import { useCurrentProjectKey } from '@/state/view-pins';
 
 /*
  * The notes a person locked to their rendered markdown, per project. How one person likes to read a

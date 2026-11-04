@@ -1,8 +1,9 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { ModelCatalogDataSchema, type AgentKind } from '@ruimte/contracts';
 import type { ModelCatalog } from '@adecore/agents/providers';
-import { isNotFound, writeAtomic } from '@adecore/agents';
+import { isNotFound } from '@adecore/utils/errors';
+import { writeAtomic } from '@adecore/utils/fs';
+import { ModelCatalogDataSchema, type AgentKind } from '@ruimte/contracts';
 import { AddressBookClient, type ModelCatalogsV2Result } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';
@@ -23,6 +24,8 @@ interface ModelCatalogFeedOptions {
     allowFetch: boolean;
     fetchCatalogs?: () => Promise<ModelCatalogsV2Result>;
     now?: () => number;
+    // Told once a catalog took a newer copy, from disk or the address book, for what is built from them.
+    changed?: () => void;
 }
 
 function fromAddressBook(): Promise<ModelCatalogsV2Result> {
@@ -127,6 +130,9 @@ export class ModelCatalogFeed {
             if (data.success && catalog.replace(data.data)) {
                 changed = true;
             }
+        }
+        if (changed) {
+            this.options.changed?.();
         }
         return changed;
     }

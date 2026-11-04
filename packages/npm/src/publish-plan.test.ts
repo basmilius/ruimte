@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { distTagOf, latestFromView, planPublish, publishedFromView, type PackageToPublish } from './publish-plan';
+import { distTagOf, landedAfterAll, latestFromView, planPublish, publishedFromView, type PackageToPublish } from './publish-plan';
 
 const PACKAGES: PackageToPublish[] = [
     { name: 'ruimte', dir: '/out/ruimte' },
@@ -58,6 +58,42 @@ describe('planPublish', () => {
         ]);
         expect(distTagOf('0.11.2', '0.11.1')).toBe('latest');
         expect(distTagOf('0.10.0', '0.11.1')).toBe('previous');
+    });
+});
+
+describe('landedAfterAll', () => {
+    test('a failed publish that shows up on the registry later counts as published', async () => {
+        let waits = 0;
+        const lookup = {
+            published: async () => waits >= 3,
+            latest: async () => null
+        };
+
+        expect(
+            await landedAfterAll(lookup, 'ruimte', '0.2.0', async () => {
+                waits += 1;
+            })
+        ).toBe(true);
+        expect(waits).toBe(3);
+    });
+
+    test('a version that never shows up, or a registry that cannot answer, leaves the failure', async () => {
+        let waits = 0;
+        const wait = async () => {
+            waits += 1;
+        };
+
+        expect(await landedAfterAll(registry().lookup, 'ruimte', '0.2.0', wait, 4)).toBe(false);
+        expect(waits).toBe(4);
+
+        const failing = {
+            published: async (): Promise<boolean> => {
+                throw new Error('npm view failed (1)');
+            },
+            latest: async () => null
+        };
+
+        expect(await landedAfterAll(failing, 'ruimte', '0.2.0', wait, 2)).toBe(false);
     });
 });
 

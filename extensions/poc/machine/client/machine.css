@@ -1,0 +1,9 @@
+/* Bundled into client/index.css by pack, and linked before the code runs. Prefixed, since it shares the page with Ruimte. */
+.poc-machine-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px;
+    border-left: 2px solid var(--accent);
+}

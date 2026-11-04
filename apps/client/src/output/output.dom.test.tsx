@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
-import { act } from 'react';
+import { useProvidersStore } from '@adecore/agents-react/state';
 import { REQUEST_SCHEMAS, type ArtifactFile, type ArtifactGetResult, type ArtifactSummary, type ArtifactVersion, type RequestType } from '@ruimte/contracts';
+import { act } from 'react';
 import { visibleRect } from '@/canvas/math';
 import { liveCanvas } from '@/state/canvas';
-import { useProvidersStore } from '@adecore/agents-react/state';
+import { artifactTabKey, useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { artifactTabKey, useFiles } from '@/state/files';
 import { TransportError } from '@/transport/transport';
+import { clickOn, mount, openSubmenu, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, mount, openSubmenu, pressKey, until, type Mounted } from '../../testing/dom';
 import { emptyCanvas } from '../../testing/project-fixtures';
 
 const MAIN = emptyCanvas();

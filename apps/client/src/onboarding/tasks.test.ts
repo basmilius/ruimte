@@ -47,8 +47,7 @@ const PROVIDERS = [
     provider('claude', 'Claude Code', true),
     provider('codex', 'Codex', true),
     provider('antigravity', 'Antigravity', false),
-    provider('copilot', 'Copilot', false),
-    provider('apple', 'Apple Foundation Models', false)
+    provider('copilot', 'Copilot', false)
 ];
 
 function accounts(states: Partial<Record<string, ProviderAccountStatus['state']>>): ProviderAccounts {

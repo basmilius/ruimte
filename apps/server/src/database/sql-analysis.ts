@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { CodedError } from '@adecore/agents';
 import {
     absoluteOf,
     isPathBelow,
@@ -13,14 +14,13 @@ import {
     type SqlBinding,
     type SqlSnapshotInfo
 } from '@ruimte/contracts';
-import { CodedError } from '@adecore/agents';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import type { FileChange } from '../language/file-watch.ts';
 import type { ProjectSqlSettings } from '../language/profiles.ts';
+import { CONSOLES_DIR, PRIVATE_DIR, PROJECT_DIR } from '../projects/project-files.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
 import type { SessionSink } from '../sessions/manager.ts';
-import { CONSOLES_DIR, PRIVATE_DIR, PROJECT_DIR } from '../projects/project-files.ts';
 import { startDatabaseOf } from './agent-databases.ts';
 import type { SchemaSnapshots, SnapshotFacts, SnapshotTarget } from './schema-snapshots.ts';
 
@@ -169,7 +169,7 @@ export function sqlSettingsOf(input: SqlSettingsInput): ProjectSqlSettings {
     return { sql: settings, php: settings, unbound };
 }
 
-/* What the verbs tell an agent about the SQL of a file. */
+/* What the tools tell an agent about the SQL of a file. */
 export interface SqlFileContext {
     choice: SqlChoice;
     /* The snapshot the file is read against, when one was taken. */

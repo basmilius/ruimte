@@ -1,0 +1,97 @@
+import { ThemePicker, ThemedWindow } from '@/components/docs/extensions/ThemePicker.tsx';
+
+export const metadata = { title: 'Make a theme' };
+
+# Make a theme
+
+<p className="lead">A file of tokens, a thumbnail and, where tokens fall short, a stylesheet. No code.</p>
+
+This page builds Midnight, a dark theme in deep blue.
+
+## The files
+
+```text
+manifest.json
+assets/icon.svg
+themes/midnight.json
+themes/midnight.svg      the thumbnail
+themes/midnight.css      optional
+themes/stars.svg         an image the stylesheet uses
+```
+
+Start from `bunx ruimte extension create` with the parts `client` and the surface `none`, which writes the `dev` and `pack` scripts. An extension that only brings themes needs no `client/` and no `server/`. `manifest.json` lists each theme file, and asks for no permission:
+
+```json
+{
+    "id": "acme.midnight",
+    "name": "Midnight",
+    "version": "1.0.0",
+    "api": 1,
+    "publisher": "Acme",
+    "description": "A dark theme in deep blue.",
+    "color": "#14204d",
+    "themes": ["themes/midnight.json"]
+}
+```
+
+## The tokens
+
+`themes/midnight.json` names the theme, the base it builds on, its thumbnail, and the tokens it changes:
+
+```json
+{
+    "name": "Midnight",
+    "side": "dark",
+    "thumbnail": "themes/midnight.svg",
+    "tokens": {
+        "--bg": "#050a1f",
+        "--surface": "#0b1538",
+        "--surface-raised": "#14204d",
+        "--surface-sunken": "#060c26",
+        "--surface-hover": "#1b2a60",
+        "--surface-active": "#24367a",
+        "--canvas-bg": "#050a1f",
+        "--canvas-dot": "#22306b"
+    }
+}
+```
+
+`side` is `dark` or `light`: the theme starts from Ruimte's dark or light colors, and every token it names replaces one of them. Name only what you change. A token's name starts with `--`, and its value holds no `;`, `{` or `}`. [Styling](/docs/extensions/styling#color-tokens) lists the tokens.
+
+<ThemedWindow />
+
+## The thumbnail
+
+`thumbnail` is required. It is a PNG, JPEG, WebP or SVG in the pack, of at most 256 KB, drawn at 16:10. Draw Ruimte in your theme, so a person can tell it apart from the others. A person picks the theme under Settings, Appearance:
+
+<ThemePicker />
+
+A theme of an extension brings its own colors, so Ruimte's Palette setting stays at its default under it. The person's accent color stays on top of every theme.
+
+## A stylesheet
+
+For what tokens cannot say, add `css` to the theme file:
+
+```json
+{
+    "css": "themes/midnight.css"
+}
+```
+
+```css
+[data-surface='sidebar'] > div {
+    background-image: url('stars.svg');
+}
+
+[data-surface='node'] {
+    outline: 1px solid rgb(120 140 255 / 40%);
+}
+```
+
+Style only the hooks Ruimte keeps: `[data-surface='sidebar']`, `'panel'`, `'node'`, `'canvas'` and `'chat'`. The sidebar and a panel sit on a column, so their ground is the `> div` inside. Every other class can change in any release.
+
+A `url()` reaches only files in the pack, and `@import` is refused, by `pack` and by Ruimte.
+
+## Check it
+
+Run `bun run dev` and choose Midnight under Settings, Appearance. Each save applies the theme again. If a theme breaks the window, add `?safe-mode` to its address to start without themes or extensions.

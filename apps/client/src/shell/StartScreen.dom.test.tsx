@@ -1,7 +1,6 @@
-import { machineBridge } from '../../testing/machine-bridge';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { Account, Machine } from '@ruimte/pulsar';
+import { act } from 'react';
 import type { DesktopBridge } from '@/desktop/bridge';
 import { usePulsarAccount } from '@/pulsar/account';
 import { usePulsarMachines } from '@/pulsar/machines';
@@ -11,9 +10,10 @@ import { menuModel } from '@/shell/menu/model';
 import { searchSettings } from '@/shell/settings/search';
 import { useUi } from '@/state/ui';
 import { useWindow } from '@/state/window';
-import { removeDesktop } from '../../testing/dom-helpers';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { removeDesktop } from '../../testing/dom-helpers';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
+import { machineBridge } from '../../testing/machine-bridge';
 
 const STUDIO: Machine = { id: 'studio', name: 'Studio', icon: null, publicKey: 'A'.repeat(43), brokerUrl: 'wss://broker.ruimte.app', lastSeenAt: null };
 const ATTIC: Machine = { id: 'attic', name: 'Attic', icon: null, publicKey: 'B'.repeat(43), brokerUrl: 'wss://broker.ruimte.app', lastSeenAt: null };

@@ -1,14 +1,14 @@
+import { Icon, IconButton, Tooltip, Menu, ProjectSwitcher, ProjectSwitcherGroups } from '@adecore/ui';
+import { FolderOpen, MessageSquarePlus, Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FolderOpen, MessageSquarePlus, Plus } from 'lucide-react';
+import { openProjectClickAction } from '@/actions/client-actions';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import type { ProjectMenuRow } from '@/project/list';
 import { newChat } from '@/project/new-chat';
-import { openProjectClickAction } from '@/actions/client-actions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { useProjectMenu, type ProjectMenuModel } from '@/shell/project-menu-model';
 import { useUi } from '@/state/ui';
-import { Icon, IconButton, Tooltip, Menu, ProjectSwitcher, ProjectSwitcherGroups } from '@adecore/ui';
 
 /*
  * The Chats project of this machine, with a new chat on the edge where a project row has its actions.
@@ -92,6 +92,8 @@ export function ProjectMenu() {
     return (
         <>
             <ProjectSwitcher
+                // A lone cell's tabs share the row and scroll, so they give way first, not the project's name.
+                className="max-w-1/3 shrink-0"
                 current={
                     current === null
                         ? null

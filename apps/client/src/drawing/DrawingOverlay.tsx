@@ -1,10 +1,10 @@
+import { LINE_HEIGHT, NOTE_PADDING, RESIZE_HANDLES, boundsOfElements, handlePoint, writingFrameOf, type Rect, type WrittenElement } from '@adecore/drawing';
 import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { LINE_HEIGHT, NOTE_PADDING, RESIZE_HANDLES, boundsOfElements, handlePoint, writingFrameOf, type Rect, type WrittenElement } from '@adecore/drawing';
-import { HANDLE_HIT_SIZE } from './handle-hit';
 import { fitTextBox } from '@/drawing/measure';
 import { readFontStacks } from '@/drawing/palette';
 import { isWritten, useDrawing, useDrawingStore } from '@/state/drawing';
+import { HANDLE_HIT_SIZE } from './handle-hit';
 
 /* The squares on a selection box, in screen pixels whatever the zoom is. */
 const HANDLE = 8;

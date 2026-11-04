@@ -1,8 +1,8 @@
 import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { writeAtomic } from '@adecore/agents';
 import { claudeProjectSlug, findClaudeSession } from '@adecore/agents/chat';
-import { isRecord } from '../is-record.ts';
+import { writeAtomic } from '@adecore/utils/fs';
+import { isRecord } from '@adecore/utils/record';
 import { ChatError } from './errors.ts';
 
 /* The Claude Code whose transcript this cut was checked against; the file is undocumented, so a change there is a refusal here. */

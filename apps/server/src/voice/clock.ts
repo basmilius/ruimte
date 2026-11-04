@@ -1,4 +1,4 @@
-import { cancellableTimeout } from '@adecore/agents';
+import { cancellableTimeout } from '@adecore/utils/async';
 /* Time for Voice run by the daemon, injected so a test runs every deadline without waiting on the wall clock. */
 export interface VoiceClock {
     now(): number;

@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { readdir, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import release from './antigravity-acp-release.json' with { type: 'json' };
 import { isMachineStatePath } from '../fs/machine-home.ts';
 import { sha256, zip } from '../language/test-archives.ts';
-import { AcpServerInstall, parseAcpServerRelease, type AcpServerRelease } from './acp-server.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { AcpServerInstall, parseAcpServerRelease, type AcpServerRelease } from './acp-server.ts';
+import release from './antigravity-acp-release.json' with { type: 'json' };
 
 const ARCHIVE = zip([
     { path: 'agy_acp_server.par', text: '#!/bin/sh\n', mode: 0o644 },

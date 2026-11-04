@@ -1,14 +1,14 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { mkdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fileExists } from '@adecore/agents';
+import { fileExists } from '@adecore/utils/fs';
 import type { Worktree } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { checkpointIndexFile, Checkpoints } from './checkpoints.ts';
+import * as runner from './run.ts';
 import { forgetBase } from './status.ts';
 import { gitIn, initRepo, repoSnapshots, type RepoSnapshots, NO_WORKTREE_AGENTS } from './test-repo.ts';
 import { countStatus, Worktrees } from './worktrees.ts';
-import * as runner from './run.ts';
 
 let snapshots: RepoSnapshots;
 let madeLexer: Worktree;

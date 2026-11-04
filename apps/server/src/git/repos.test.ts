@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
-import { appendFile, cp, mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import { appendFile, cp, mkdir, mkdtemp, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { listRepos, MAX_REPOS, parseSubmodulePaths, repoLabel } from './repos.ts';
@@ -124,6 +124,16 @@ describe('listRepos', () => {
         await rm(join(folder, '.gitmodules'));
         const { repos } = await listRepos(folder);
         expect(repos[0]).toEqual({ path: folder, label: 'parent', kind: 'root' });
+    });
+
+    test.skipIf(process.platform === 'win32')('a folder opened through a symlink names its root as it was opened, not as git resolves it', async () => {
+        const dir = await copy(parent);
+        const folder = join(dir, 'parent');
+        await rm(join(folder, '.gitmodules'));
+        const link = join(dir, 'linked');
+        await symlink(folder, link);
+        const { repos } = await listRepos(link);
+        expect(repos[0]).toEqual({ path: link, label: 'linked', kind: 'root' });
     });
 
     test('a checkout the repository ignores is not one the panel offers', async () => {

@@ -14,7 +14,6 @@ export type ProvenanceReviewState = z.infer<typeof ProvenanceReviewStateSchema>;
 
 // `tool` is a write the CLI reported; `checkpoint` is a change only the turn's tree shows (a shell command, a formatter), so the author is a likelier guess than a fact.
 export const ProvenanceViaSchema = z.enum(['tool', 'checkpoint']);
-export type ProvenanceVia = z.infer<typeof ProvenanceViaSchema>;
 
 /*
  * The lines one turn of a chat wrote in a file, as the daemon records them. A run that a later edit cut
@@ -45,7 +44,6 @@ export const ProvenanceReadPayloadSchema = z.object({
     // Absolute on the machine, as every file request is.
     path: z.string().min(1)
 });
-export type ProvenanceReadPayload = z.infer<typeof ProvenanceReadPayloadSchema>;
 
 export const ProvenanceReadResultSchema = z.object({
     // The file the runs are mapped onto, so a client holding another version asks again.
@@ -61,13 +59,11 @@ export const ProvenanceReviewPayloadSchema = z.object({
     runIds: z.array(z.string().min(1)).min(1),
     state: ProvenanceReviewStateSchema
 });
-export type ProvenanceReviewPayload = z.infer<typeof ProvenanceReviewPayloadSchema>;
 
 export const ProvenanceReviewResultSchema = z.object({
     // How many runs took the state.
     updated: z.number().int().nonnegative()
 });
-export type ProvenanceReviewResult = z.infer<typeof ProvenanceReviewResultSchema>;
 
 // To every client that holds the project. `live` is set while the turn still runs.
 export const ProvenanceChangedEventSchema = z.object({

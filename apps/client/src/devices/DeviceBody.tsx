@@ -1,5 +1,15 @@
-import { useEffect, useState, type DragEvent, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Button, ButtonGroup, ErrorBoundary, Icon, IconButton, LazyBoundary, lazyNamed, PanelEmpty, Menu, Popover, useNow } from '@adecore/ui';
+import { formatClockDuration } from '@adecore/ui/format';
+import {
+    absoluteOf,
+    deviceButtons,
+    deviceTools,
+    type DeviceButton,
+    type DeviceFoldPose,
+    type DeviceInfo,
+    type DeviceInput,
+    type DeviceReference
+} from '@ruimte/contracts';
 import {
     CircleAlert,
     Download,
@@ -26,31 +36,21 @@ import {
     Volume2,
     type LucideIcon
 } from 'lucide-react';
-import {
-    absoluteOf,
-    deviceButtons,
-    deviceTools,
-    type DeviceButton,
-    type DeviceFoldPose,
-    type DeviceInfo,
-    type DeviceInput,
-    type DeviceReference
-} from '@ruimte/contracts';
+import { useEffect, useState, type DragEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PATHS_DRAG_TYPE } from '@/canvas/drop';
-import { useNodeHost } from '@/nodes/node-host';
 import { restartDevice, runDeviceAction, toastDeviceFailure } from '@/devices/control';
 import { stopRecording } from '@/devices/device-capture';
 import { dropAction } from '@/devices/device-files';
-import { ANDROID_BUTTONS } from '@/devices/operated';
-import { useDeviceList, useDevices, useRecordingEnded, useRecordingSince, useResolvedDevice } from '@/devices/state';
 import { DevicePowerPill } from '@/devices/DevicePowerPill';
 import { DeviceStream } from '@/devices/DeviceStream';
+import { ANDROID_BUTTONS } from '@/devices/operated';
+import { useDeviceList, useDevices, useRecordingEnded, useRecordingSince, useResolvedDevice } from '@/devices/state';
+import { useNodeHost } from '@/nodes/node-host';
 import { failed } from '@/shell/surface-failure';
 import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { deviceClientFor } from '@/transport/connections';
-import { formatClockDuration } from '@adecore/ui/format';
-import { Button, ButtonGroup, ErrorBoundary, Icon, IconButton, LazyBoundary, lazyNamed, PanelEmpty, Menu, Popover, useNow } from '@adecore/ui';
 
 const DeviceToolsPanel = lazyNamed(() => import('@/devices/DeviceToolsPanel'), 'DeviceToolsPanel');
 

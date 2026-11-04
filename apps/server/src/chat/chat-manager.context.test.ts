@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
-import type { ContextSource } from '@ruimte/contracts';
-import { chatPrompt, verbsNote } from '../context/context-note.ts';
-import { showNotices, NoticeNotes, unshownNotes, NoticeStore, type Notice } from '@adecore/agents/coordination';
-import { deliverNotice, MESSAGE_WORDS } from '../context/notices.ts';
 import { VisualStore } from '@adecore/agents/chat';
-import { referenceNote, type Reference } from '../context/references.ts';
+import { showNotices, NoticeNotes, unshownNotes, NoticeStore, type Notice } from '@adecore/agents/coordination';
+import type { ContextSource } from '@ruimte/contracts';
 import type { FirstPrompt } from '../agents/pending-prompts.ts';
+import { chatPrompt, toolsNote } from '../context/context-note.ts';
+import { deliverNotice, MESSAGE_WORDS } from '../context/notices.ts';
+import { referenceNote, type Reference } from '../context/references.ts';
+import { makeChatFixture, retire, LINKED } from './chat-manager.fixture.test.ts';
 import { BRIEF_TITLE } from './chat-manager.ts';
 import { ChatRecorder } from './chat-test-helpers.ts';
-import { makeChatFixture, retire, LINKED } from './chat-manager.fixture.test.ts';
 
 type ChatFixture = Awaited<ReturnType<typeof makeChatFixture>>;
 let home: ChatFixture['home'];
@@ -34,7 +34,7 @@ test('a standalone chat passes its location to the Claude system prompt', async 
     await open(manager, 'chat-view');
     await manager.send('chat-view', 'system?');
     await recorder.untilIdle();
-    expect(recorder.ofKind('assistant')[0]?.text).toBe(verbsNote({ depth: 0, standalone: true }));
+    expect(recorder.ofKind('assistant')[0]?.text).toBe(toolsNote({ depth: 0, standalone: true }));
 });
 
 test('the system prompt names visuals while the machine has them on, and never to an inline edit', async () => {
@@ -43,7 +43,7 @@ test('the system prompt names visuals while the machine has them on, and never t
     await open(manager, 'chat-shows');
     await manager.send('chat-shows', 'system?');
     await recorder.untilIdle();
-    expect(recorder.ofKind('assistant')[0]?.text).toBe(verbsNote({ depth: 0, visuals: true }));
+    expect(recorder.ofKind('assistant')[0]?.text).toBe(toolsNote({ depth: 0, visuals: true }));
     expect(claude.started[0]!.argv.filter((arg) => arg.startsWith('--add-dir='))).toEqual([`--add-dir=${visuals.workspacePath('chat-shows')}`]);
 
     const inline = new ChatRecorder();
@@ -55,15 +55,15 @@ test('the system prompt names visuals while the machine has them on, and never t
     await inline.until(() => inline.ofKind('assistant').length === 1 && inline.info?.activeTurnId === null);
     await manager.send('chat-inline', 'system?');
     await inline.until(() => inline.ofKind('assistant').length === 2 && inline.info?.activeTurnId === null);
-    expect(inline.ofKind('assistant')[1]?.text).toBe(verbsNote({ depth: 0 }));
+    expect(inline.ofKind('assistant')[1]?.text).toBe(toolsNote({ depth: 0 }));
     expect(claude.started[1]!.argv.some((arg) => arg.startsWith('--add-dir='))).toBe(false);
 });
 
-test('the system prompt names the verbs always and the linked sources by name when there are some', async () => {
+test('the system prompt names the tools always and the linked sources by name when there are some', async () => {
     await open(manager, 'chat-sys');
     await manager.send('chat-sys', 'system?');
     await recorder.untilIdle();
-    expect(recorder.ofKind('assistant')[0]?.text).toBe(verbsNote({ depth: 0 }));
+    expect(recorder.ofKind('assistant')[0]?.text).toBe(toolsNote({ depth: 0 }));
 
     manager = await remake(manager, { contextSources: () => LINKED, depthOf: () => 2 });
     const linked = new ChatRecorder();

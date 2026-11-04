@@ -1,5 +1,5 @@
-import { useRef, useState, type ComponentProps } from 'react';
 import clsx from 'clsx';
+import { useRef, useState, type ComponentProps } from 'react';
 import { DictationControl } from './DictationControl';
 import { DictationError } from './engine';
 

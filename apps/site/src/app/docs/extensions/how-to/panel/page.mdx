@@ -1,0 +1,129 @@
+import { RailPanel } from '@/components/docs/extensions/Surfaces.tsx';
+
+export const metadata = { title: 'Open a panel' };
+
+# Open a panel
+
+<p className="lead">A panel with a toggle in the rail, opened from your code, with a badge on its toggle.</p>
+
+This page builds a Review panel: a checklist per project, and a badge that counts the chats that finished since the person last looked.
+
+## The files
+
+```text
+manifest.json
+assets/icon.svg
+client/index.ts
+client/ReviewPanel.tsx
+```
+
+The manifest asks for no permission; hearing that a chat finished and keeping data per project need none:
+
+```json
+{
+    "id": "acme.review",
+    "name": "Review",
+    "version": "1.0.0",
+    "api": 1,
+    "publisher": "Acme",
+    "description": "A checklist to go through when an agent is done.",
+    "color": "#0891b2"
+}
+```
+
+## Define the panel
+
+In `client/index.ts`, `definePanel` adds the toggle to the rail and answers a handle to the panel:
+
+```ts
+import { defineCommand, definePanel, onEvent } from '@ruimte/extension/client';
+
+export const review = definePanel<{ from: string }>({
+    id: 'review',
+    title: 'Review',
+    icon: 'list-checks',
+    minWidth: 280,
+    component: () => import('./ReviewPanel')
+});
+
+let finished = 0;
+
+onEvent('chat.turnFinished', () => {
+    finished += 1;
+    review.setBadge(String(finished));
+});
+
+export function markSeen(): void {
+    finished = 0;
+    review.setBadge(null);
+}
+
+defineCommand({
+    id: 'open-review',
+    title: 'Open the review',
+    run: () => review.open({ from: 'palette' })
+});
+```
+
+`icon` names a [Lucide](https://lucide.dev/icons) icon. Without one, the toggle shows `assets/icon.svg`. `minWidth` is the narrowest the person can drag the panel, 280 when you leave it out.
+
+The toggle sits in a group of its own, after Ruimte's panels and Routines, and opens and closes the panel. Ruimte draws the header with your `title`; your component draws what comes under it.
+
+## Draw the body
+
+The component gets `params`, the value your code last opened the panel with. It stays `undefined` until `open` is called with one:
+
+```tsx
+import { useEffect } from 'react';
+import { ListRow, Switch } from '@ruimte/extension/ui';
+import { useStorage } from '@ruimte/extension/client';
+import { markSeen } from './index';
+
+const CHECKS = [
+    'Keeps the email',
+    'Shows the error',
+    'Focus moves to it'
+];
+
+export default function ReviewPanel({ params }: { params: { from: string } | undefined }) {
+    const [done, setDone] = useStorage<string[]>('done', [], 'project');
+
+    useEffect(() => markSeen(), []);
+
+    const toggle = (check: string) => {
+        setDone(done.includes(check) ? done.filter((each) => each !== check) : [...done, check]);
+    };
+
+    return (
+        <div style={{ padding: 8 }}>
+            {CHECKS.map((check) => (
+                <ListRow
+                    key={check}
+                    variant="inset"
+                >
+                    <Switch
+                        checked={done.includes(check)}
+                        label={check}
+                        onCheckedChange={() => toggle(check)}
+                    />
+                    {check}
+                </ListRow>
+            ))}
+        </div>
+    );
+}
+```
+
+The panel's code loads when the person first opens it. The `project` scope of `useStorage` keeps the checklist on the machine, per project, so every computer that opens the project sees the same ticks.
+
+## Badge and title
+
+`setBadge(text)` puts a short text on the toggle and after the panel's title, and `setBadge(null)` takes it off. `setTitle(title)` renames the panel. Both work while the panel is closed:
+
+<RailPanel />
+
+`close()` closes the panel from your code. Only one panel is open at a time, so opening another one closes yours.
+
+## Check it
+
+Run `bun run dev`. Start a chat and let it finish a turn: the toggle in the rail shows 1. Press the toggle, and the badge goes as the panel opens. "Open the review" in the command palette opens it with `params`.

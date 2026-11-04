@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import type { SecretRequest } from '@ruimte/contracts';
+import { create } from 'zustand';
 
 const NONE: readonly SecretRequest[] = [];
 

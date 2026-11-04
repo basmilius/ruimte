@@ -1,3 +1,4 @@
+import { wait } from '@adecore/utils/async';
 import {
     AddressBookClient,
     AddressBookRequestError,
@@ -25,20 +26,6 @@ export interface LoginOptions extends LocalDaemonOptions {
 
 // A poll that reaches nobody this many times in a row is a network that is gone, not a hiccup.
 const MAX_POLL_FAILURES = 5;
-
-function sleepFor(ms: number, signal?: AbortSignal): Promise<void> {
-    return new Promise((resolve) => {
-        const timer = setTimeout(resolve, ms);
-        signal?.addEventListener(
-            'abort',
-            () => {
-                clearTimeout(timer);
-                resolve();
-            },
-            { once: true }
-        );
-    });
-}
 
 function whose(account: Account): string {
     return account.login === null ? 'your' : `${account.login}'s`;
@@ -78,7 +65,7 @@ const ON_ANOTHER_ACCOUNT =
  */
 export async function runLogin(options: LoginOptions): Promise<number> {
     const { fetcher, out, err } = commandIo(options);
-    const sleep = options.sleep ?? sleepFor;
+    const sleep = options.sleep ?? wait;
     const now = options.now ?? Date.now;
     const book = new AddressBookClient({ baseUrl: options.addressBookUrl, fetch: fetcher });
 

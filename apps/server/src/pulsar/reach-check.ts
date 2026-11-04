@@ -1,6 +1,6 @@
 import { networkInterfaces } from 'node:os';
-import type { IceServer } from '@ruimte/pulsar';
 import type { ReachCheck, ReachFacts, ReachProbe } from '@ruimte/contracts';
+import type { IceServer } from '@ruimte/pulsar';
 import { iceTargets, probeTarget, type IceTarget } from './ice-probe.ts';
 import { classifyReach, reachAdvice } from './reach-classify.ts';
 

@@ -1,3 +1,4 @@
+import { describeActivity, type Activity } from './activity.ts';
 import { HEARTBEAT_MS, LoopWatch } from './loop-watch.ts';
 import { daemonBeforeSend, daemonClientOptions, nodeContext, type TelemetrySettings } from './reporter.ts';
 
@@ -8,13 +9,20 @@ export interface WatchdogStart {
     readonly telemetry: TelemetrySettings | null;
 }
 
+export interface WatchdogBeat {
+    readonly activity: readonly Activity[];
+}
+
 type Sentry = typeof import('@sentry/bun');
 
 let watch: LoopWatch | null = null;
 let sentry: Sentry | null = null;
+let activity: readonly Activity[] = [];
 
-self.onmessage = (event: MessageEvent<WatchdogStart | 0>) => {
+self.onmessage = (event: MessageEvent<WatchdogStart | WatchdogBeat>) => {
     if (watch !== null) {
+        activity = 'activity' in event.data ? event.data.activity : [];
+
         const verdict = watch.beat(Date.now());
         if (verdict?.state === 'recovered') {
             log(`The event loop answers again after ${seconds(verdict.blockedMs)} s`);
@@ -22,7 +30,7 @@ self.onmessage = (event: MessageEvent<WatchdogStart | 0>) => {
         return;
     }
     watch = new LoopWatch(Date.now());
-    if (event.data !== 0 && event.data.telemetry !== null) {
+    if ('telemetry' in event.data && event.data.telemetry !== null) {
         void startReporting(event.data.telemetry);
     }
     setInterval(check, HEARTBEAT_MS);
@@ -40,7 +48,7 @@ function check(): void {
         level: 'error',
         fingerprint: ['event-loop-blocked'],
         tags: { hang: 'event-loop' },
-        extra: { blocked_ms: verdict.sinceMs }
+        extra: { blocked_ms: verdict.sinceMs, activity: describeActivity(activity, Date.now()) }
     });
 }
 

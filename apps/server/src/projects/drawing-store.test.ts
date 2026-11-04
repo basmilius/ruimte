@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileExists } from '@adecore/agents';
-import type { DrawingContent, DrawingElement, ProjectContent } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
+import { fileExists } from '@adecore/utils/fs';
+import type { DrawingContent, DrawingElement, ProjectContent } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { DrawingStore } from './drawing-store.ts';
-import { ProjectStore } from './project-store.ts';
-import { documentPathInFolder, serializeDrawing } from './project-files.ts';
 import { projectLinks } from './project-file-test-helpers.ts';
+import { documentPathInFolder, serializeDrawing } from './project-files.ts';
+import { ProjectStore } from './project-store.ts';
 
 let root: string;
 let home: string;

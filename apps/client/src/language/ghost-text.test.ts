@@ -1,15 +1,15 @@
-import { settleLanguage as settle } from './settle.test';
 import { beforeEach, describe, expect, test } from 'bun:test';
+import { ManualTimers } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
-import { FakeOnDeviceModel } from '@/ondevice/fake-model';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { eventOf } from './key-events';
+import { EditorLanguage } from './ruimte-editor-language';
 import { ProjectLanguage } from './ruimte-project-language';
-import { ManualTimers } from '@adecore/editor-react/testing';
+import { settleLanguage as settle } from './settle.test';
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });
@@ -18,7 +18,10 @@ const TEXT = 'export function bestMatch(pool: Candidate[]): Candidate | null {\n
 
 async function setup(options: { available?: boolean; text?: string; caret?: { line: number; character: number } } = {}) {
     const transport = new FakeLanguageTransport();
-    const model = new FakeOnDeviceModel(transport, options.available === false ? { available: false, reason: 'Apple Intelligence is turned off.' } : {});
+    const model = new FakeEditorAssistModel(
+        transport,
+        options.available === false ? { available: false, reason: 'The selected editor model is unavailable.' } : {}
+    );
     const project = new ProjectLanguage(transport, 'p1', '/work/app');
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: options.text ?? TEXT, theme: 'light' });
     const timers = new ManualTimers();
@@ -120,7 +123,7 @@ describe('ghost text on request', () => {
     test('Escape while the model works cancels the request, and a late answer shows nothing', async () => {
         const { model, editor, language, transport } = await setup();
         // Records the cancel but lets the answer still arrive afterwards, to prove it shows nothing.
-        transport.answers.set('ondevice.cancel', ({ id }: { id: string }) => {
+        transport.answers.set('editor.cancel', ({ id }: { id: string }) => {
             model.cancels.push(id);
             return {};
         });
@@ -171,7 +174,7 @@ describe('ghost text on request', () => {
         const { model, language } = await setup({ available: false });
         await language.ghost.request();
         expect(model.requests).toEqual([]);
-        expect(useToasts.getState().toasts.at(-1)?.title).toBe('Apple Intelligence is turned off.');
+        expect(useToasts.getState().toasts.at(-1)?.title).toBe('The selected editor model is unavailable.');
     });
 
     test('never asks with the setting off, and leaves the key to the editor', async () => {

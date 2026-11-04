@@ -345,16 +345,16 @@ struct TreeWalker {
     var truncation: String? {
         var reasons: [String] = []
         if hitElementLimit {
-            reasons.append("stopped at \(maxElements) elements (raise with --max-elements)")
+            reasons.append("stopped at \(maxElements) elements (raise with max_elements)")
         }
         if hitVisitLimit {
             reasons.append("stopped after visiting \(maxVisits) accessibility nodes")
         }
         if offscreenLeftOut > 0 {
-            reasons.append("\(offscreenLeftOut) elements out of view left out after \(Clipping.offscreenLines(of: maxElements)) (raise with --max-elements, or find them with --find)")
+            reasons.append("\(offscreenLeftOut) elements out of view left out after \(Clipping.offscreenLines(of: maxElements)) (raise with max_elements, or find them with find)")
         }
         if depthCutoffs > 0 {
-            reasons.append("\(depthCutoffs) branches deeper than \(maxDepth) levels left out (raise with --max-depth)")
+            reasons.append("\(depthCutoffs) branches deeper than \(maxDepth) levels left out (raise with max_depth)")
         }
         return reasons.isEmpty ? nil : reasons.joined(separator: "; ")
     }

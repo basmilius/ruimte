@@ -13,7 +13,7 @@ import {
 } from '@/canvas/resize-handles';
 import { stackingOrder } from '@/canvas/stacking';
 import { useWorldPointer } from '@/canvas/use-world-pointer';
-import { useCanvas } from '@/state/canvas';
+import { useCanvas, useCanvasCamera } from '@/state/canvas';
 
 const FOLDED_EDGES: readonly ResizeEdge[] = ['e', 'w'];
 
@@ -46,7 +46,7 @@ export function ResizeHandles({ rootRef }: { rootRef: RefObject<HTMLDivElement |
     const order = useCanvas((s) => s.order);
     const selection = useCanvas((s) => s.selection);
     const hidden = useCanvas((s) => s.hidden);
-    const zoom = useCanvas((s) => s.camera.zoom);
+    const zoom = useCanvasCamera((s) => s.camera.zoom);
     const locked = useCanvas((s) => s.locks.resize);
     const cards = useCanvas((s) => s.derivedCards);
     const resizing = useCanvas((s) => s.resizing);

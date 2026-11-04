@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatItem, ChatToolItem } from '@ruimte/contracts';
-import { EMPTY_FIND_QUERY, type FindQuery } from '@adecore/editor-react/models';
-import { hitRow, indexRows, placeOfHit, searchChat } from './search';
 import { deriveTimelineRows } from '@adecore/agents-react/chat';
+import { EMPTY_FIND_QUERY, type FindQuery } from '@adecore/editor-react/models';
+import type { ChatItem, ChatToolItem } from '@ruimte/contracts';
+import { hitRow, indexRows, placeOfHit, searchChat } from './search';
 
 function tool(id: string, input: unknown, output: string, extra: Partial<ChatToolItem> = {}): ChatToolItem {
     return {
@@ -50,6 +50,14 @@ describe('searchChat', () => {
         expect(searchChat([call], query('Feature'), nameOf).hits).toHaveLength(1);
         expect(searchChat([call], query('Downloads')).hits).toEqual([]);
         expect(searchChat([call], query('3f2a9k1d')).hits).toHaveLength(1);
+    });
+
+    test('a call of the MCP server is found by the titles its line draws, and a message it sent by its text', () => {
+        const go = tool('m1', { id: 'browser-3f2a9k1d', url: 'https://example.com' }, '', { name: 'mcp__ruimte__browser_go' });
+        const notify = tool('m2', { id: 'chat-b', text: 'The build is green' }, 'notified\tchat-b\tnow\td', { name: 'mcp__ruimte__notify' });
+        const nameOf = (word: string) => (word === 'browser-3f2a9k1d' ? { name: 'Downloads' } : null);
+        expect(searchChat([go], query('Downloads'), nameOf).hits).toEqual([{ itemId: 'm1', field: 'summary', occurrence: 0 }]);
+        expect(searchChat([notify], query('green'), nameOf, true).hits).toEqual([{ itemId: 'm2', field: 'text', occurrence: 0 }]);
     });
 
     test('a note drawn as a bubble is found in the words the bubble shows', () => {

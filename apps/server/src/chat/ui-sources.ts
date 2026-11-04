@@ -1,6 +1,7 @@
 import { realpath } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { z } from 'zod';
+import { ChatUiRefusal, type ChatUiHost, type ChatUiSource } from '@adecore/agents/chat';
+import { isWithin } from '@adecore/utils/path';
 import {
     GitFileSchema,
     GitFileStateSchema,
@@ -13,14 +14,14 @@ import {
     type GitStatus,
     type Task
 } from '@ruimte/contracts';
-import { ChatUiRefusal, type ChatUiHost, type ChatUiSource } from '@adecore/agents/chat';
-import { checkCwd, isInside } from '../canvas/project-paths.ts';
-import type { LaunchReading } from '../canvas/verb.ts';
+import { z } from 'zod';
 import type { AgentDatabases, DatabasePlace } from '../database/agent-databases.ts';
-import { UiSourceAccessSchema } from './ui-access.ts';
-import { UI_SOURCE_ARGS } from './ui-source-args.ts';
-import { resolveUiProjectLink } from './ui-links.ts';
 import { realOrNull } from '../fs/real-path.ts';
+import type { LaunchReading } from '../tools/host.ts';
+import { checkCwd } from '../tools/project-paths.ts';
+import { UiSourceAccessSchema } from './ui-access.ts';
+import { resolveUiProjectLink } from './ui-links.ts';
+import { UI_SOURCE_ARGS } from './ui-source-args.ts';
 
 export interface UiSourceHosts {
     place(chatId: string): DatabasePlace | null;
@@ -100,7 +101,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
         const access = await authorize(info, input);
         const cwd = await checkCwd(place(info).folder, resolve(access.cwd, String(args.repo ?? '.')), host.worktreePaths);
         const real = await realpath(cwd);
-        if (!access.roots.some((root) => isInside(root, real))) {
+        if (!access.roots.some((root) => isWithin(root, real))) {
             throw new ChatUiRefusal('outside-project', 'This repository is outside the project the agent wrote this in.');
         }
         return cwd;
@@ -200,7 +201,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
     const capturePlace = async (info: ChatInfo, current: DatabasePlace) => {
         const [folder, cwd, trees] = await Promise.all([realpath(current.folder), realpath(info.cwd), host.worktreePaths(current.folder)]);
         const roots = [folder, ...(await Promise.all(trees.map(realOrNull))).filter((tree): tree is string => tree !== null)];
-        if (!roots.some((root) => isInside(root, cwd))) {
+        if (!roots.some((root) => isWithin(root, cwd))) {
             throw new ChatUiRefusal('outside-project', "The agent's chat is outside its project.");
         }
         return { projectId: current.projectId, folder, cwd, roots };

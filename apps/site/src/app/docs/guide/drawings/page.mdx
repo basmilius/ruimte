@@ -1,0 +1,45 @@
+import { DrawingView } from '@/components/docs/guide/DrawingView.tsx';
+
+export const metadata = { title: 'Drawings and diagrams' };
+
+# Drawings and diagrams
+
+<p className="lead">Draw boxes and arrows beside your code, or keep a diagram that you and an agent both edit.</p>
+
+## Make a drawing
+
+Click **New view** in the sidebar and choose **Drawing**, or run **New drawing view** from the command palette.
+
+<DrawingView />
+
+| Tool | What it draws |
+| --- | --- |
+| Select, Pan | Picks shapes, moves the view |
+| Rectangle, Diamond, Ellipse | Shapes |
+| Arrow, Line | Connections |
+| Draw | Freehand strokes |
+| Text, Sticky note | Words |
+| Eraser | Removes what you drag over |
+
+**Keep tool** keeps the tool after you draw a shape. While you are not typing text, each tool also has a single key.
+
+Select a shape to set its stroke and fill color, stroke width and style, fill pattern, sloppiness (Architect, Artist or Cartoonist) and font (Hand, Sans or Mono).
+
+## Export a drawing
+
+Choose **Export**, then **Copy as PNG**, **Save PNG**, **Copy as SVG** or **Save SVG**. Pick **Export selection** for part of the drawing, and **With background** to keep the background.
+
+## Make a diagram
+
+Click **New view** and choose **Diagram**, or run **New diagram view**. A diagram holds labeled nodes and their connections. Drag nodes to arrange them, or ask an agent to write the diagram.
+
+**Open JSON** shows the diagram as data. To export it, run **Copy diagram as PNG**, **Save diagram as SVG** or another export command from the command palette.
+
+## Show a drawing to an agent
+
+1. Run **Show drawing on canvas** (or **Show diagram on canvas**). The drawing appears on a canvas as a node.
+2. Draw a line from the node into a chat or terminal.
+
+The agent reads the shapes, their text and the arrows between them.
+
+A drawing or diagram is private until you share its view. A shared one goes into the `.ruimte` folder you commit.

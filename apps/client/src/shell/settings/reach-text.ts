@@ -1,6 +1,6 @@
-import i18next from 'i18next';
-import { brokerHostOf } from '@ruimte/pulsar';
 import type { ReachCheck } from '@ruimte/contracts';
+import { brokerHostOf } from '@ruimte/pulsar';
+import i18next from 'i18next';
 
 /* The i18n key of a cause; a cause a newer machine names reads as unknown. */
 function causeKey(check: ReachCheck): string {

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
+import { isOpenableView, isUnlistedView, type ProjectView } from './project';
 import { projectSidebarViews, ProjectSidebarResultSchema, ProjectSidebarViewSchema } from './project-sidebar';
-import { isOpenableView, type ProjectView } from './project';
 
 test('the sidebar projection keeps navigation and session identity but excludes canvas content', () => {
     const views: ProjectView[] = [
@@ -126,4 +126,14 @@ test('a canvas kept for another machine is not listed, and no view picker opens 
     ];
     expect(projectSidebarViews(views, []).map((view) => view.id)).toEqual(['main']);
     expect(views.filter(isOpenableView).map((view) => view.id)).toEqual(['main']);
+});
+
+test('a chat an extension draws is unlisted only where its extension runs, and a machine that cannot know keeps it so', () => {
+    const drawn: ProjectView = { id: 'drawn', kind: 'chat', name: 'Kept work', node: {}, drawnBy: 'acme.chat' };
+    const drawnEmpty: ProjectView = { ...drawn, id: 'drawn-empty', empty: true };
+    expect(isUnlistedView(drawn)).toBe(true);
+    expect(isUnlistedView(drawn, (id) => id === 'acme.chat')).toBe(true);
+    expect(isUnlistedView(drawn, () => false)).toBe(false);
+    expect(isUnlistedView(drawnEmpty, () => false)).toBe(true);
+    expect(projectSidebarViews([drawn], [])).toEqual([]);
 });

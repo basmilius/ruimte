@@ -6,7 +6,6 @@ export interface DaemonRuntime {
     compiled: boolean;
     /* The server's `src` folder; a wiring module's own `import.meta.dir` is not it. */
     sourceDir: string;
-    /* Where `ruimte-context` lives, which goes on the PATH of every shell and chat. */
-    binDir: string;
+    /* The `/context` route an agent's session is told about; the MCP endpoint sits beside it (`mcpUrlOf`). */
     contextUrl: string;
 }

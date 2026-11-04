@@ -1,0 +1,65 @@
+import { Surfaces } from '@/components/docs/extensions/Surfaces.tsx';
+
+export const metadata = { title: 'Extensions' };
+
+# Extensions
+
+<p className="lead">An extension adds a panel, a node, a button, a theme or a tool for agents to Ruimte.</p>
+
+It is a folder with a manifest, a client part that runs in Ruimte's window and, if you need one, a server part that runs on the machine. You write both in TypeScript and React. `@ruimte/extension` holds the types; Ruimte supplies the code when the extension loads.
+
+<Note>The extension API is a preview for invited developers and can still change. [Changes to the API](/docs/extensions/changelog) lists every change and what to do about it.</Note>
+
+<Surfaces />
+
+## What an extension can do
+
+- **Draw its own surfaces.** A panel, a view, a node, a sidebar card, an overlay, a viewer for a file type. See [Surfaces](/docs/extensions/surfaces).
+- **Add to Ruimte's own places.** A button in a node's header, an item in the canvas menu, a widget in the editor's status bar. Ruimte calls each of these a slot. See [Slots and actions](/docs/extensions/slots).
+- **Work with chats and agents.** Draw a fenced block in a chat, add a slash command, run a hidden prompt, start a chat a person sees, offer agents a tool. See [Chats and agents](/docs/extensions/chats-and-agents).
+- **Read and change the project.** Notes, files, git, databases, launches, terminals and browsers on the canvas. See [The project and the machine](/docs/extensions/machine).
+- **Keep running on the machine.** Follow events, keep secrets, run on a clock, add a language server. See [The server part](/docs/extensions/server).
+- **Change how Ruimte looks.** A theme is data and needs no code. See [Themes](/docs/extensions/themes).
+
+Each How to page builds one of these end to end, such as [a panel from the rail](/docs/extensions/how-to/panel), [a node](/docs/extensions/how-to/node) or [a tool for agents](/docs/extensions/how-to/agent-tool).
+
+## What an extension is trusted with
+
+An extension is trusted code, like a plugin in an IDE. Its client part runs in Ruimte's page, its server part as the person who runs the machine. Permissions tell a person what it does before they install it, and the API refuses what the manifest does not ask for.
+
+<Note tone="warning">Permissions are no sandbox. Install only extensions you trust.</Note>
+
+Only a `frame` surface is isolated. It runs sandboxed and reaches your server part through Ruimte.
+
+No extension types into a terminal or answers a permission prompt for a person. `chats.send` from the server part stops at 20 messages per chat per hour.
+
+## A package
+
+```text
+manifest.json     id, name, version, api, color, permissions, themes
+assets/icon.svg   its mark, always at this path
+client/index.ts   runs in the client and calls define*
+server/index.ts   runs on the machine, optional
+locales/          words per language, such as locales/nl.json
+themes/ views/    copied into the pack as they are
+```
+
+The smallest extension is a manifest and a `client/index.ts`:
+
+```ts
+import { defineCommand, host } from '@ruimte/extension/client';
+
+defineCommand({
+    id: 'hello',
+    title: 'Say hello',
+    run: () => host.notify('Hello from an extension')
+});
+```
+
+[Getting started](/docs/extensions/getting-started) builds one and loads it into a running Ruimte.
+
+## Where extensions run
+
+The desktop app loads the extensions you installed and runs their server parts on its machine. Station, the web app, runs the extensions of the machine it is connected to, without `frame` surfaces.
+
+Add `?safe-mode` to a window's address to start without extensions or themes, and remove one that breaks the app.

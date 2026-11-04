@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import { sessionNodesOfView, type ProjectClosingResult, type ProjectView, type ViewSessionNode } from '@ruimte/contracts';
+import i18next from 'i18next';
 
 /*
  * Every session a project holds, over every view it has. Pass the exported views (`exportViews`), so

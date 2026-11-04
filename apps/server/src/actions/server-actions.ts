@@ -1,12 +1,12 @@
-import { ActionRegistry } from '@ruimte/actions';
 import { CodedError } from '@adecore/agents';
+import { ActionRegistry } from '@ruimte/actions';
 import { agentActions } from './agent-actions.ts';
 import { artifactActions } from './artifact-actions.ts';
 import { browserActions } from './browser-actions.ts';
 import { chatAttachActions } from './chat-attach-actions.ts';
 import { computerActions } from './computer-actions.ts';
-import type { ServerActionContext } from './context.ts';
 import { contextActions } from './context-actions.ts';
+import type { ServerActionContext } from './context.ts';
 import { databaseActions } from './database-actions.ts';
 import { deviceActions } from './device-actions.ts';
 import { diagramActions } from './diagram-actions.ts';
@@ -28,6 +28,7 @@ import { secretActions } from './secret-actions.ts';
 import { startActions } from './start-actions.ts';
 import { taskActions } from './task-actions.ts';
 import { templateActions } from './template-actions.ts';
+import { toolActions } from './tool-actions.ts';
 import { viewActions } from './view-actions.ts';
 import { visualActions } from './visual-actions.ts';
 import { voiceActions } from './voice-actions.ts';
@@ -35,7 +36,7 @@ import { worktreeActions } from './worktree-actions.ts';
 
 /*
  * What the daemon itself carries out, on the project file rather than on a client's stores. A client
- * has its own handlers for the same actions; an agent's `ruimte-context` call lands here.
+ * has its own handlers for the same actions; an agent's tool call lands here.
  */
 export const serverActions = new ActionRegistry<ServerActionContext>(
     {
@@ -44,6 +45,7 @@ export const serverActions = new ActionRegistry<ServerActionContext>(
         ...nodeActions,
         ...linkActions,
         ...agentActions,
+        ...toolActions,
         ...forkActions,
         ...startActions,
         ...operationActions,

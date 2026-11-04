@@ -1,7 +1,21 @@
 'use client';
 
+import {
+    AlarmClock,
+    ArrowUp,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    CircleCheck,
+    Eye,
+    Hand,
+    Pencil,
+    Plus,
+    SquarePen,
+    Terminal,
+    type LucideIcon
+} from 'lucide-react';
 import type { ReactNode } from 'react';
-import { ArrowUp, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, Eye, Hand, Pencil, Plus, SquarePen, Terminal, type LucideIcon } from 'lucide-react';
 import { StatusDot, type AgentStatus, ClaudeMark } from './canvas.tsx';
 import { Button, IconButton, Typed } from './primitives.tsx';
 
@@ -69,9 +83,23 @@ export function WorkingRow({ seconds }: { readonly seconds: number }) {
 }
 
 /** The composer card and its controls row (`Composer.tsx`, `RunSettings.tsx`). */
-export function Composer({ draft, typing = false }: { readonly draft?: string; readonly typing?: boolean }) {
+export function Composer({
+    draft,
+    typing = false,
+    prompt,
+    menu
+}: {
+    readonly draft?: string;
+    readonly typing?: boolean;
+    /** The list `composer/ComposerMenu.tsx` opens inside the card, above the draft, such as the slash commands. */
+    readonly menu?: ReactNode;
+    /** A question or approval of the chat, which `PromptComposer.tsx` shows inside the composer card, above the draft. */
+    readonly prompt?: ReactNode;
+}) {
     return (
         <div className={FLOATING_CARD}>
+            {prompt && <div className="border-b border-dashed border-border">{prompt}</div>}
+            {menu}
             <div className="min-h-[45px] pt-[18px] pr-[14px] pb-[6px] pl-5 text-[14px] leading-[21px]">
                 {draft ? (
                     <Typed shown text={draft} speed={typing ? 45 : 0} caret={typing} />
@@ -109,16 +137,25 @@ function Kbd({ children }: { readonly children: ReactNode }) {
 }
 
 /** `PromptCard.tsx` for an approval: the command in its box, then Deny and the inverse Allow. */
-export function ApprovalCard({ command, cwd, pressed = false }: { readonly command: string; readonly cwd: string; readonly pressed?: boolean }) {
+export function ApprovalCard({
+    command,
+    cwd,
+    pressed = false,
+    waiting = 1
+}: {
+    readonly command: string;
+    readonly cwd: string;
+    readonly pressed?: boolean;
+    /** How many requests wait in all; the card names the count under its heading only when there are more than one. */
+    readonly waiting?: number;
+}) {
     return (
         <div className="flex flex-col gap-2 p-3">
             <div className="flex items-start gap-2">
-                <Hand size={16} strokeWidth={1.75} className="mt-[3px] text-status-needs-you" />
-                <div>
-                    <h3 className="text-[14px] leading-[21px] font-semibold text-text">Run command</h3>
-                    <div className="text-[13px] leading-[19px] text-text-muted">1 request waiting</div>
-                </div>
+                <Hand size={16} strokeWidth={1.75} className="mt-[3px] shrink-0 text-status-needs-you" />
+                <h3 className="text-[14px] leading-[21px] font-semibold text-text">Run command</h3>
             </div>
+            {waiting > 1 && <div className="text-[13px] leading-[19px] text-text-muted tabular-nums">{waiting} requests waiting</div>}
             <div className="rounded-xl bg-surface-sunken p-3">
                 <div className="font-mono text-[13px] leading-[19px] text-text-muted">{cwd}</div>
                 <div className="font-mono text-[13px] leading-5 text-text">{command}</div>
@@ -140,11 +177,15 @@ export function PromptStack({
     title,
     status,
     meta,
+    count = 1,
     children
 }: {
     readonly title: string;
     readonly status: AgentStatus;
+    /** The CLI, the surface and the time it asked, as `Claude · chat · 12:05`. */
     readonly meta: string;
+    /** How many prompts wait; the pager shows only when there are more than one. */
+    readonly count?: number;
     readonly children: ReactNode;
 }) {
     return (
@@ -154,9 +195,15 @@ export function PromptStack({
                 <span className="font-medium text-text">{title}</span>
                 <span>{meta}</span>
                 <span className="grow" />
-                <IconButton icon={ChevronLeft} size="xs" />
-                <span className="tabular-nums">1 of 1</span>
-                <IconButton icon={ChevronRight} size="xs" />
+                {count > 1 && (
+                    <>
+                        <IconButton icon={ChevronLeft} size="xs" />
+                        <span className="tabular-nums">1 of {count}</span>
+                        <IconButton icon={ChevronRight} size="xs" />
+                    </>
+                )}
+                <IconButton icon={AlarmClock} size="xs" />
+                <IconButton icon={ChevronDown} size="xs" />
             </div>
             {children}
         </div>

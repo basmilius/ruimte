@@ -1,13 +1,13 @@
 import type { ActionHandlers } from '@ruimte/actions';
-import { checkInsideFile } from '../canvas/project-paths.ts';
-import type { LanguageAgentHost } from '../canvas/verb.ts';
+import type { LanguageAgentHost } from '../tools/host.ts';
+import { checkInsideFile } from '../tools/project-paths.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 function languageOf(context: ServerActionContext): LanguageAgentHost {
     return hostService(context, 'language', 'no-language-servers', 'This machine runs no language servers');
 }
 
-/* The file the call names, held to the project folder and its worktrees the way every verb's path is. */
+/* The file the call names, held to the project folder and its worktrees the way every tool's path is. */
 function fileOf(context: ServerActionContext, path: string): Promise<string> {
     return checkInsideFile(context.place.folder, path, context.host.checkouts.paths);
 }

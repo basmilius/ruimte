@@ -1,7 +1,7 @@
 import { deepStrictEqual, strictEqual } from 'node:assert';
 import { resolve } from 'node:path';
-import type { Plan, PlanItem, PlanStep, PlanStepState } from '../packages/contracts/src/plan-host';
 import { groupMemberIds, type GroupFrame, type GroupItem } from '../packages/contracts/src/node-defaults';
+import type { Plan, PlanItem, PlanStep, PlanStepState } from '../packages/contracts/src/plan-host';
 
 const beforeRoot = process.argv[2];
 

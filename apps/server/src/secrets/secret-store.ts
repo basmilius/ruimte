@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { Serializer } from '@adecore/utils/async';
+import { isNotFound } from '@adecore/utils/errors';
+import { writeAtomic } from '@adecore/utils/fs';
+import { isRecord } from '@adecore/utils/record';
 import { isSecretReference } from '@ruimte/contracts';
-import { isNotFound, writeAtomic, Serializer } from '@adecore/agents';
-import { isRecord } from '../is-record.ts';
 
 const SECRETS_DIR = 'secrets';
 
@@ -37,7 +39,7 @@ function isStoredSecret(value: unknown): value is StoredSecret {
 /*
  * The secrets a person typed into a card, one file per project under `$RUIMTE_HOME/secrets`, keyed on
  * launch and variable. Files are 0600 in a 0700 folder and replaced whole, so a crash leaves the old
- * file or the new one. Nothing here is a client's to read: `MachineHome` refuses the folder, no verb
+ * file or the new one. Nothing here is a client's to read: `MachineHome` refuses the folder, no tool
  * reads it, and the only reader is the start of a launch, which puts a value into that process's
  * environment and nowhere else.
  */

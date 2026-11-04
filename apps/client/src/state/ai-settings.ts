@@ -1,6 +1,7 @@
-import { AgentKindSchema, type AgentKind, type ProviderAccounts } from '@ruimte/contracts';
+import prices from '@adecore/agents/usage/prices-snapshot.json' with { type: 'json' };
+import { cheapestEditorModel, EDITOR_ASSIST_PROVIDERS, type ProviderInfo, AgentKindSchema, type AgentKind, type ProviderAccounts } from '@ruimte/contracts';
 
-/* Which agent answers an inline edit; a null model is that CLI's own default, and no account is the CLI's default account. */
+/* Which agent answers an inline edit; a null model is that CLI's cheapest available model, and no account is the CLI's default account. */
 export interface InlineEditAgent {
     provider: AgentKind;
     model: string | null;
@@ -16,7 +17,7 @@ export type AgentChangesMode = (typeof AGENT_CHANGES_MODES)[number];
 
 export const DEFAULT_AGENT_CHANGES_MODE: AgentChangesMode = 'gutter';
 
-/* A stored pick that names no known CLI falls back to the default, and a model that is not text is the CLI's own. */
+/* A stored pick that names no known CLI falls back to the default, and an unset model uses its cheapest available model. */
 export function inlineEditAgentFrom(stored: unknown): InlineEditAgent {
     const pick: Partial<Record<keyof InlineEditAgent, unknown>> = typeof stored === 'object' && stored !== null ? stored : {};
     const provider = AgentKindSchema.safeParse(pick.provider);
@@ -41,7 +42,7 @@ export function agentChangesModeFrom(stored: unknown): AgentChangesMode {
     return AGENT_CHANGES_MODES.find((mode) => mode === stored) ?? DEFAULT_AGENT_CHANGES_MODE;
 }
 
-/* Whether the editor asks the on-device model for a continuation: never, or when a person presses the key. */
+/* Whether the editor asks the editor model for a continuation: never, or when a person presses the key. */
 export const GHOST_TEXT_MODES = ['off', 'request'] as const;
 
 export type GhostTextMode = (typeof GHOST_TEXT_MODES)[number];
@@ -50,4 +51,18 @@ export const DEFAULT_GHOST_TEXT_MODE: GhostTextMode = 'request';
 
 export function ghostTextModeFrom(stored: unknown): GhostTextMode {
     return GHOST_TEXT_MODES.find((mode) => mode === stored) ?? DEFAULT_GHOST_TEXT_MODE;
+}
+
+/* An unset model follows the economy default; a concrete model remains the person's choice. */
+export function editorAgentOn(providers: readonly ProviderInfo[], wanted: InlineEditAgent, capability: 'chat' | 'terminal' = 'chat'): InlineEditAgent {
+    const offered = providers.filter((provider) => provider.installed && provider.capabilities[capability]);
+    const owner = offered.find((provider) => provider.kind === wanted.provider);
+
+    if (owner !== undefined) {
+        return { ...wanted, model: wanted.model ?? cheapestEditorModel(owner.models, prices) };
+    }
+
+    const fallback = EDITOR_ASSIST_PROVIDERS.map((kind) => offered.find((provider) => provider.kind === kind)).find((provider) => provider !== undefined);
+
+    return fallback === undefined ? wanted : { provider: fallback.kind, model: cheapestEditorModel(fallback.models, prices) };
 }

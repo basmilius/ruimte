@@ -2,9 +2,9 @@ import { afterEach, expect, test } from 'bun:test';
 import { act } from 'react';
 import { windowWorkspace } from '@/state/window';
 import { ConnectionProvider } from '@/transport/ConnectionProvider';
+import { mount, until, type Mounted } from '../../../testing/dom';
 import { FakeMachine } from '../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';
-import { mount, until, type Mounted } from '../../../testing/dom';
 import { useFileEditing } from './use-file-editing';
 
 const READ = { kind: 'text', text: 'file', encoding: 'utf-8', size: 4, mtime: 1 } as const;

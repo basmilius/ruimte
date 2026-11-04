@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
-import { act } from 'react';
 import type { FsEntry, ProjectView } from '@ruimte/contracts';
+import { act } from 'react';
 import { useDesignChat } from '@/design/design-chat';
 import { DESIGN_METHODS } from '@/design/design-protocol';
 import { useDocument } from '@/state/document';
@@ -196,5 +196,61 @@ describe('a design view', () => {
         listing = PAGES.filter((entry) => entry.name !== '2a Dense.html');
         await act(async () => machine.emit('fs.changed', { root: '/work/atlas', paths: [FOLDER] }));
         await until(() => shownPage() === '1b Bold');
+    });
+
+    test('shows a page the chat makes, also over a page a person picked', async () => {
+        await until(() => shownPage() === '2a Dense');
+        await clickOn(mounted.host.querySelector('button[aria-label="Page: 2a Dense"]'));
+        await until(() => button('1a Calm') !== null);
+        await clickOn(document.querySelector('[aria-label="1a Calm"] [role="menuitem"]'));
+        await until(() => shownPage() === '1a Calm');
+
+        listing = [...PAGES, page('3a Airy.html', 400)];
+        await act(async () => machine.emit('fs.changed', { root: '/work/atlas', paths: [FOLDER] }));
+        await until(() => shownPage() === '3a Airy');
+    });
+
+    test('stays on the page while a comment on it waits to be sent', async () => {
+        await until(() => shownPage() === '2a Dense');
+
+        const frame = { postMessage: () => undefined };
+        const stand = document.createElement('iframe');
+        const element = {
+            selector: 'h1',
+            option: null,
+            name: 'h1',
+            html: '<h1>Pricing</h1>',
+            text: 'Pricing',
+            rect: { x: 0, y: 0, width: 100, height: 20 },
+            style: {}
+        };
+
+        Object.defineProperty(stand, 'contentWindow', { value: frame });
+        mounted.host.querySelector('button[aria-label^="Page: "]')?.parentElement?.nextElementSibling?.prepend(stand);
+        await clickOn(button('Comment'));
+        await act(async () => {
+            window.dispatchEvent(
+                new MessageEvent('message', {
+                    source: frame as never,
+                    data: { jsonrpc: '2.0', method: DESIGN_METHODS.pick, params: { tool: 'comment', element } }
+                })
+            );
+        });
+        await until(() => document.querySelector('textarea') !== null);
+        await act(async () => {
+            const area = document.querySelector('textarea')!;
+
+            Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(area, 'Make it larger');
+            area.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        await clickOn(button('Add comment'));
+        await until(() => button('Send 1 comment') !== null);
+
+        listing = [...PAGES, page('3a Airy.html', 400)];
+        await act(async () => machine.emit('fs.changed', { root: '/work/atlas', paths: [FOLDER] }));
+        await clickOn(mounted.host.querySelector('button[aria-label="Page: 2a Dense"]'));
+        await until(() => button('3a Airy') !== null);
+
+        expect(shownPage()).toBe('2a Dense');
     });
 });

@@ -1,0 +1,216 @@
+import { EXTENSION_API_VERSION, ExtensionManifestSchema } from '@ruimte/contracts';
+import { VERSION } from '../version.ts';
+
+export interface ScaffoldAnswers {
+    name: string;
+    id: string;
+    description: string;
+    parts: 'client' | 'server' | 'both';
+    surface: 'panel' | 'node' | 'view' | 'card' | 'none';
+    git: boolean;
+}
+
+/* The major of React the client draws extensions with, which a test holds to `apps/client/package.json`. */
+export const CLIENT_REACT_MAJOR = 19;
+
+/*
+ * The types go out to npm with every release of Ruimte, at its version, so a project starts on those of the Ruimte that made
+ * it. A checkout says 0.0.0, which on npm is a placeholder without types.
+ */
+const EXTENSION_TYPES_VERSION = VERSION === '0.0.0' ? 'latest' : VERSION;
+
+// A build lands in `dist/`, and beside it in a `.ruimte-build-*` folder while it runs.
+const GITIGNORE = 'node_modules/\ndist/\n.ruimte-build-*/\n';
+
+// The ground of the mark until the author picks their own.
+const COLOR = '#0891b2';
+
+const TSCONFIG = `${JSON.stringify(
+    {
+        compilerOptions: {
+            target: 'ES2023',
+            module: 'ESNext',
+            moduleResolution: 'bundler',
+            jsx: 'react-jsx',
+            lib: ['ES2023', 'DOM'],
+            strict: true,
+            noEmit: true,
+            skipLibCheck: true,
+            types: ['bun']
+        },
+        include: ['client', 'server', 'test']
+    },
+    null,
+    4
+)}\n`;
+
+/* Any text a person typed as a string literal in single quotes, the way the rest of the project writes one. */
+function quoted(text: string): string {
+    return `'${JSON.stringify(text).slice(1, -1).replaceAll('\\"', '"').replaceAll("'", "\\'")}'`;
+}
+
+const DEFINE: Readonly<Record<'panel' | 'node' | 'view' | 'card', (title: string) => string>> = {
+    panel: (title) => `definePanel({ id: 'main', title: ${quoted(title)}, icon: 'package', component: () => import('./Main') });`,
+    node: (title) => `defineNode({ id: 'main', title: ${quoted(title)}, icon: 'package', component: () => import('./Main') });`,
+    view: (title) => `defineView({ id: 'main', title: ${quoted(title)}, component: () => import('./Main') });`,
+    card: (title) => `defineSidebarCard({ id: 'main', title: ${quoted(title)}, component: () => import('./Main') });`
+};
+
+const FUNCTION_OF: Readonly<Record<'panel' | 'node' | 'view' | 'card', string>> = {
+    panel: 'definePanel',
+    node: 'defineNode',
+    view: 'defineView',
+    card: 'defineSidebarCard'
+};
+
+function mainComponent(withServer: boolean, name: string): string {
+    if (withServer) {
+        return `import { useServer } from '@ruimte/extension/client';
+import type server from '../server';
+
+export default function Main() {
+    const greeting = useServer<typeof server>().greeting.use();
+
+    return <p>{greeting.ok ? greeting.value : greeting.error.message}</p>;
+}
+`;
+    }
+
+    return `export default function Main() {
+    return <p>{${quoted(`Hello from ${name}`)}}</p>;
+}
+`;
+}
+
+const KIND_OF: Readonly<Record<'panel' | 'node' | 'view' | 'card', string>> = {
+    panel: 'panel',
+    node: 'node',
+    view: 'view',
+    card: 'sidebarCard'
+};
+
+const HOST_LOOKUP: Readonly<Record<'panel' | 'node' | 'view' | 'card', string>> = {
+    panel: 'panel',
+    node: 'node',
+    view: 'view',
+    card: 'card'
+};
+
+/* An example test for each part, run by `bun run test` against the test host. */
+function exampleTest(surface: 'panel' | 'node' | 'view' | 'card' | null, withServer: boolean, name: string): string {
+    const testing = [...(surface === null ? [] : ['createTestHost']), ...(withServer ? ['createTestServer'] : [])];
+    const imports = ["import { describe, expect, test } from 'bun:test';", `import { ${testing.join(', ')} } from '@ruimte/extension/testing';`];
+    const tests: string[] = [];
+
+    if (surface !== null) {
+        tests.push(`    test('defines its ${KIND_OF[surface]}', async () => {
+        const host = await createTestHost();
+
+        expect(host.${HOST_LOOKUP[surface]}('main')).toMatchObject({ title: ${quoted(name)} });
+    });`);
+    }
+
+    if (withServer) {
+        imports.push("import type server from '../server';");
+        tests.push(`    test('greets', async () => {
+        const machine = await createTestServer<typeof server>();
+
+        expect(await machine.call('greeting')).toEqual({ ok: true, value: ${quoted(`Hello from ${name}`)} });
+    });`);
+    }
+
+    return `${imports.join('\n')}\n\ndescribe(${quoted(name)}, () => {\n${tests.join('\n\n')}\n});\n`;
+}
+
+const PARTS: readonly string[] = ['client', 'server', 'both'];
+const SURFACES: readonly string[] = ['panel', 'node', 'view', 'card', 'none'];
+
+/* What is wrong with answers given on the command line, before a file is written, or null when they make a project. */
+export function scaffoldProblem(answers: ScaffoldAnswers): string | null {
+    if (!PARTS.includes(answers.parts)) {
+        return `--parts is client, server or both, not ${answers.parts}`;
+    }
+
+    if (!SURFACES.includes(answers.surface)) {
+        return `--surface is panel, node, view, card or none, not ${answers.surface}`;
+    }
+
+    const manifest = ExtensionManifestSchema.safeParse(JSON.parse(scaffoldFiles(answers)['manifest.json'] ?? '{}'));
+
+    return manifest.success ? null : manifest.error.issues.map((issue) => `${issue.path.join('.') || 'manifest'}: ${issue.message}`).join('; ');
+}
+
+/* The folder a new project goes in, named after what it is: `standup` for `acme.standup`. */
+export function scaffoldFolder(answers: ScaffoldAnswers): string {
+    return answers.id.slice(answers.id.indexOf('.') + 1);
+}
+
+/* A project that builds and runs as it is, with an example of what was asked for and a test of it. */
+export function scaffoldFiles(answers: ScaffoldAnswers): Record<string, string> {
+    const withClient = answers.parts !== 'server' && answers.surface !== 'none';
+    const withServer = answers.parts !== 'client';
+    const files: Record<string, string> = {
+        '.gitignore': GITIGNORE,
+        'tsconfig.json': TSCONFIG,
+        'assets/icon.svg':
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="4"/></svg>\n',
+        'manifest.json': `${JSON.stringify(
+            {
+                id: answers.id,
+                name: answers.name,
+                version: '0.1.0',
+                api: EXTENSION_API_VERSION,
+                description: answers.description,
+                color: COLOR,
+                permissions: {}
+            },
+            null,
+            4
+        )}\n`,
+        'package.json': `${JSON.stringify(
+            {
+                name: answers.id.replace('.', '-'),
+                private: true,
+                scripts: { dev: 'bunx ruimte extension dev', test: 'bunx ruimte extension test', pack: 'bunx ruimte extension pack' },
+                devDependencies: {
+                    // A `*.dom.test.tsx` file draws into the page this registers.
+                    '@happy-dom/global-registrator': '^21.0.0',
+                    '@ruimte/extension': EXTENSION_TYPES_VERSION,
+                    '@types/bun': 'latest',
+                    '@types/react': `^${CLIENT_REACT_MAJOR}.0.0`,
+                    react: `^${CLIENT_REACT_MAJOR}.0.0`,
+                    'react-dom': `^${CLIENT_REACT_MAJOR}.0.0`,
+                    typescript: '^5.0.0'
+                }
+            },
+            null,
+            4
+        )}\n`
+    };
+
+    if (withClient && answers.surface !== 'none') {
+        const surface = answers.surface;
+
+        files['client/index.ts'] = `import { ${FUNCTION_OF[surface]} } from '@ruimte/extension/client';\n\n${DEFINE[surface](answers.name)}\n`;
+        files['client/Main.tsx'] = mainComponent(withServer, answers.name);
+    }
+
+    if (withServer) {
+        files['server/index.ts'] = `import { defineServer } from '@ruimte/extension/server';
+
+export default defineServer({
+    async greeting() {
+        return ${quoted(`Hello from ${answers.name}`)};
+    }
+});
+`;
+    }
+
+    const surface = withClient && answers.surface !== 'none' ? answers.surface : null;
+
+    if (surface !== null || withServer) {
+        files['test/extension.test.ts'] = exampleTest(surface, withServer, answers.name);
+    }
+
+    return files;
+}

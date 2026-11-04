@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { chatWaitAsk, terminalWaitAsk, type WaitAsk } from '@ruimte/contracts';
 import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
+import { chatWaitAsk, terminalWaitAsk, type WaitAsk } from '@ruimte/contracts';
+import { create } from 'zustand';
 import { projectNodes, subscribeViewNodes } from '@/project/view-nodes';
 import { groupAttention, useAttention } from '@/state/attention';
 import { currentEndpointId, endpointKey, endpointOfNode } from '@/state/keys';

@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import type { WaitAsk } from '@ruimte/contracts';
+import i18next from 'i18next';
 
 const LINES = {
     command: { detail: 'shell:notifications.asks.command', bare: 'shell:notifications.asks.commandBare' },

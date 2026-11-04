@@ -1,32 +1,7 @@
-import { messageOf } from '@adecore/ui';
-import { endpointById } from '@/state/endpoints';
-import { splitKey } from '@/state/keys';
-import { pool, transportFor } from '@/transport';
-import { chatClientFor } from '@/transport/connections';
-import { VoiceToolQueue } from '@/voice/tool-queue';
-import { voiceWorkspaceRevision } from '@/voice/workspace-context';
-import { claimMicrophone } from '@/audio/ownership';
-import { localTimeZone } from '@adecore/ui/format';
-import i18next from 'i18next';
-import { isCanvasView, isOpenableView, type AgentStatus } from '@ruimte/contracts';
-import { focusedCanvas } from '@/state/canvas';
 import { useChats } from '@adecore/agents-react/state';
-import { subscribeChatStatuses } from '@/state/chats';
-import { sessionStatus, useSessions } from '@/state/sessions';
-import { activeViewOf, useDocument } from '@/state/document';
-import { useProject } from '@/state/project';
-import { useSettings } from '@/state/settings';
-import { LiveSession } from '@/voice/live-session';
-import { MicrophoneMonitor, WaveformMonitor } from '@/audio/microphone';
-import { silentBands } from '@/audio/waveform';
-import { microphoneFailureText } from '@/audio/microphone-failure';
-import { ResponseToolLoop } from '@/voice/response-tool-loop';
-import { chatCompletion, chatWaits } from '@/voice/chat-follow-up';
-import { addTranscriptDelta, nextVoiceTimelineOrder, useVoice, type VoiceAction, type VoiceActionKind } from '@/voice/state';
-import { bypassesQueue, executeVoiceTool } from '@/voice/tools';
-import { currentVoiceDomains } from '@/voice/domains';
-import { voicePreferencesForStart } from '@/voice/machine-preferences';
-import { finishVoiceDiagnostics, noteVoiceError, startVoiceDiagnostics, voiceDeliveryObserver, voiceDiagnosticsObserver } from '@/voice/diagnostics-log';
+import { messageOf } from '@adecore/ui';
+import { localTimeZone } from '@adecore/ui/format';
+import { isCanvasView, isOpenableView, type AgentStatus } from '@ruimte/contracts';
 import {
     settledPrompt,
     SETTLED_COMMENTARY,
@@ -40,6 +15,31 @@ import {
     type VoiceSessionChange,
     type VoiceWatchedSession
 } from '@ruimte/voice';
+import i18next from 'i18next';
+import { MicrophoneMonitor, WaveformMonitor } from '@/audio/microphone';
+import { microphoneFailureText } from '@/audio/microphone-failure';
+import { claimMicrophone } from '@/audio/ownership';
+import { silentBands } from '@/audio/waveform';
+import { focusedCanvas } from '@/state/canvas';
+import { subscribeChatStatuses } from '@/state/chats';
+import { activeViewOf, useDocument } from '@/state/document';
+import { endpointById } from '@/state/endpoints';
+import { splitKey } from '@/state/keys';
+import { useProject } from '@/state/project';
+import { sessionStatus, useSessions } from '@/state/sessions';
+import { useSettings } from '@/state/settings';
+import { pool, transportFor } from '@/transport';
+import { chatClientFor } from '@/transport/connections';
+import { chatCompletion, chatWaits } from '@/voice/chat-follow-up';
+import { finishVoiceDiagnostics, noteVoiceError, startVoiceDiagnostics, voiceDeliveryObserver, voiceDiagnosticsObserver } from '@/voice/diagnostics-log';
+import { currentVoiceDomains } from '@/voice/domains';
+import { LiveSession } from '@/voice/live-session';
+import { voicePreferencesForStart } from '@/voice/machine-preferences';
+import { ResponseToolLoop } from '@/voice/response-tool-loop';
+import { addTranscriptDelta, nextVoiceTimelineOrder, useVoice, type VoiceAction, type VoiceActionKind } from '@/voice/state';
+import { VoiceToolQueue } from '@/voice/tool-queue';
+import { bypassesQueue, executeVoiceTool } from '@/voice/tools';
+import { voiceWorkspaceRevision } from '@/voice/workspace-context';
 
 let session: LiveSession | null = null;
 let releaseMicrophone: (() => void) | null = null;

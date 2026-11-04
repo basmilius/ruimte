@@ -1,5 +1,6 @@
 import {
     USAGE_DESKTOP_COMMANDS,
+    USAGE_DESKTOP_SETTINGS_SECTIONS,
     type UsageCommandSource,
     type UsageDesktopCommand,
     type UsageDesktopCounter,
@@ -59,7 +60,7 @@ export function countCommand(id: string, source: UsageCommandSource): void {
 
 /* The counter a settings section opens. A section newer than Observatory's list is counted nowhere until the list there has it. */
 export function usageSectionOf(section: SettingsSectionId): UsageDesktopSettingsSection | null {
-    return section === 'pets' || section === 'general' || section === 'chats' ? null : section;
+    return (USAGE_DESKTOP_SETTINGS_SECTIONS as readonly string[]).includes(section) ? (section as UsageDesktopSettingsSection) : null;
 }
 
 type Watched = Pick<ReturnType<typeof useUi.getState>, 'panel' | 'panelsRestoring' | 'settings'>;
@@ -68,8 +69,9 @@ type Watched = Pick<ReturnType<typeof useUi.getState>, 'panel' | 'panelsRestorin
 export function openedBy(state: Watched, previous: Watched): UsageDesktopCounter[] {
     const opened: UsageDesktopCounter[] = [];
     const { panel } = state;
-    if (panel.open && !state.panelsRestoring && (!previous.panel.open || previous.panel.kind !== panel.kind)) {
-        opened.push(`panels.${panel.kind satisfies UsageDesktopPanel}`);
+    // Which extensions a person opens stays on this computer.
+    if (panel.open && !panel.kind.startsWith('extension:') && !state.panelsRestoring && (!previous.panel.open || previous.panel.kind !== panel.kind)) {
+        opened.push(`panels.${panel.kind as UsageDesktopPanel}`);
     }
     const section = usageSectionOf(state.settings.section);
     if (state.settings.open && !previous.settings.open) {

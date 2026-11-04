@@ -1,5 +1,5 @@
-import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import { useProviders } from '@adecore/agents-react/state';
+import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import { chooserChats } from '@/chat/chat-chooser';
 import { useSidebarSource } from '@/shell/sidebar-source';
 

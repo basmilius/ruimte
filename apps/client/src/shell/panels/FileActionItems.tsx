@@ -1,6 +1,9 @@
-import { useTranslation } from 'react-i18next';
+import { Icon, Menu } from '@adecore/ui';
 import { Columns2, CornerUpRight, Folder, Frame, Globe, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { createNodeAction, createViewAction, ignoreRefusal, perform } from '@/actions/client-actions';
+import { fileInfoOf } from '@/extensions/file-info';
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { showFileOnCanvas } from '@/project/views';
 import { isHtmlName } from '@/shell/panels/file-kind';
 import { localFileUrl } from '@/shell/panels/file-url';
@@ -11,7 +14,6 @@ import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { Icon, Menu } from '@adecore/ui';
 
 /* Where these items are drawn, since a file already there does not offer to go there again: a node is
    not shown on the canvas twice, a view is not opened as one, and the files panel does not reveal a row
@@ -70,6 +72,7 @@ export function FileActionItems({ path, on, onRefresh, gone = false }: FileActio
             </Menu.Item>
             <Menu.Separator />
             <FileCopyRow targets={[{ absolute: path, relative: folder === null ? null : relativeTo(folder, path), gone }]} />
+            <SlotMenuItems kit={Menu} place={on === 'files' ? 'fileMenu' : 'editorMenu'} context={{ file: fileInfoOf(path), files: [fileInfoOf(path)] }} />
             {onRefresh !== undefined && (
                 <>
                     <Menu.Separator />

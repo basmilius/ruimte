@@ -509,14 +509,14 @@ describe('naming an app', () => {
         expect(await codeOf(computer.operate('chat-1', 'click', 'TextEdit', { element: 3 }))).toBe('stopped');
         helper.error = 'stopped by the person (the stop button). Run `cu state <app>` to continue.';
         expect(await codeOf(computer.operate('chat-1', 'click', 'TextEdit', { element: 3 }))).toBe('stopped');
-        expect(agentWords('Run `cu state` again')).toBe('Run `ruimte-context computer state` again');
+        expect(agentWords('Run `cu state` again')).toBe('Run `computer_state` again');
     });
 
     test('passes on a call only the front can do as needs-front, and never goes to the front itself', async () => {
         const setup = await computerSetup();
         const { computer, helper } = setup;
         await letIn(setup);
-        helper.error = 'A drag needs the real pointer, and so the app in front. Call again with --front: that brings the app forward';
+        helper.error = 'A drag needs the real pointer, and so the app in front. Call again with front: that brings the app forward';
         helper.errorCode = 'needs-front';
         const refusal = await computer.operate('chat-1', 'drag', 'TextEdit', { element: 1, toElement: 2 }).catch((error: unknown) => error);
         expect(refusal).toMatchObject({ code: 'needs-front', message: helper.error });
@@ -814,7 +814,7 @@ describe('one agent at a time', () => {
         const refusal = await refusalOf(computer.operate('term-1', 'click', 'TextEdit', { element: 1 }));
         expect(refusal?.code).toBe('busy');
         expect(refusal?.message).toContain('Node chat-1');
-        expect(refusal?.message).toContain('--wait 60');
+        expect(refusal?.message).toContain('wait 60');
         expect(helper.acted).toEqual([]);
         await computer.operate('chat-1', 'click', 'TextEdit', { element: 1 });
         expect(helper.acted.map((request) => request.command)).toEqual(['click']);

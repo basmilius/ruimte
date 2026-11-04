@@ -1,7 +1,7 @@
-import { useTranslation } from 'react-i18next';
-import { Unplug } from 'lucide-react';
-import type { ProjectDatabaseView } from '@ruimte/contracts';
 import { Button, EmptyState } from '@adecore/ui';
+import type { ProjectDatabaseView } from '@ruimte/contracts';
+import { Unplug } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { DatabaseBody } from '@/database/DatabaseTabBody';
 import { useDatabasePanel } from '@/database/state';
 

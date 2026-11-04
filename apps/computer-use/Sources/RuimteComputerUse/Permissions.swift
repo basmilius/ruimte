@@ -73,7 +73,7 @@ enum Permissions {
                 "pid": Int(ProcessInfo.processInfo.processIdentifier),
             ],
             "accessibility": ["granted": accessibility, "neededFor": "state, click, type, key, set-value and the Esc stop"],
-            "screenRecording": ["granted": screenRecording, "neededFor": "the window screenshot in state and clicks by --x/--y"],
+            "screenRecording": ["granted": screenRecording, "neededFor": "the window screenshot in state and clicks by x/y"],
             "ready": accessibility && screenRecording,
         ]
         if !steps.isEmpty {

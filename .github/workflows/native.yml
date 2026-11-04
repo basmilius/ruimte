@@ -1,0 +1,120 @@
+name: Native
+
+# The Rust and Swift checks, which ci.yml runs only for the paths they cover and release.yml runs on every
+# tagged commit, so a release never ships a helper whose tests were skipped on the commit it builds.
+on:
+  workflow_call:
+    inputs:
+      full:
+        description: Run every native check, whatever paths changed
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    if: ${{ !inputs.full }}
+    runs-on: ubuntu-latest
+    outputs:
+      rust: ${{ steps.paths.outputs.rust }}
+      swift_pulsar: ${{ steps.paths.outputs.RuimtePulsar }}
+      swift_transport: ${{ steps.paths.outputs.RuimteTransport }}
+      computer_use: ${{ steps.paths.outputs.computer_use }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
+        id: paths
+        with:
+          # Git detection also works for fork PRs without pull-requests permission in callers.
+          token: ''
+          filters: |
+            rust:
+              - '.github/**'
+              - 'apps/ios-device-bridge/**'
+            RuimtePulsar:
+              - '.github/**'
+              - 'apps/ios/Packages/RuimtePulsar/**'
+            RuimteTransport:
+              - '.github/**'
+              - 'apps/ios/Packages/RuimtePulsar/**'
+              - 'apps/ios/Packages/RuimteTransport/**'
+            computer_use:
+              - '.github/**'
+              - 'apps/computer-use/**'
+
+  rust:
+    needs: changes
+    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.rust == 'true') }}
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        crate: [ios-device-bridge]
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.crate }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: apps/${{ matrix.crate }}
+      - run: cargo test --locked
+
+  # The packages declare swift-tools-version 6.4, which takes Xcode 27; macos-latest still carries 26.
+  swift-pulsar:
+    name: swift (RuimtePulsar)
+    needs: changes
+    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.swift_pulsar == 'true') }}
+    runs-on: xcode-27
+    defaults:
+      run:
+        working-directory: apps/ios/Packages/RuimtePulsar
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: swift test
+
+  swift-transport:
+    name: swift (RuimteTransport)
+    needs: changes
+    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.swift_transport == 'true') }}
+    runs-on: xcode-27
+    defaults:
+      run:
+        working-directory: apps/ios/Packages/RuimteTransport
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: swift test
+
+  # The same runner as the iOS packages, for the tests. `packaged` in ci.yml compiles the helper for release
+  # on macos-latest, the runner the release itself builds on.
+  computer-use:
+    needs: changes
+    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.computer_use == 'true') }}
+    runs-on: xcode-27
+    defaults:
+      run:
+        working-directory: apps/computer-use
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: swift build
+      - run: swift test
+
+  # One result for a caller to wait on: a skipped check passes only when this run left it to the paths.
+  native:
+    name: Native checks
+    if: ${{ always() }}
+    needs: [changes, rust, swift-pulsar, swift-transport, computer-use]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check job results
+        env:
+          FULL: ${{ inputs.full }}
+          RESULTS: ${{ toJSON(needs.*.result) }}
+          CHECKS: ${{ toJSON(needs) }}
+        run: |
+          if [ "$FULL" = true ]; then
+            jq -e 'del(.changes) | all(.[]; .result == "success")' <<< "$CHECKS"
+          else
+            jq -e 'all(.[]; . == "success" or . == "skipped")' <<< "$RESULTS"
+          fi

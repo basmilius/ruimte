@@ -1,6 +1,6 @@
+import { CommandPalette as Palette } from '@adecore/ui';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CommandPalette as Palette } from '@adecore/ui';
 import { paletteStart, type PaletteSignal } from '@/shell/palette-browse';
 import type { PaletteContext, PaletteGroup, PaletteKeyEvent, PaletteModeView, PaletteRow } from '@/shell/palette-entries';
 import { usePaletteBrowse } from '@/shell/use-palette-browse';

@@ -1,5 +1,5 @@
-import type { DrawingElement, DrawingFont } from '@ruimte/contracts';
 import { LINE_HEIGHT, pathsOfElement, writingFrameOf, type ElementPath, type WrittenElement } from '@adecore/drawing';
+import type { DrawingElement, DrawingFont } from '@ruimte/contracts';
 import { fontOfElement, linesOn } from '@/drawing/measure';
 import { readEdge, readFontStacks, readPalette, readPaper, type DrawingPalette } from '@/drawing/palette';
 

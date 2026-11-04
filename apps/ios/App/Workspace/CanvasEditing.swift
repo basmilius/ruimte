@@ -100,17 +100,20 @@ enum CanvasEditing {
             width: snap(bounds.width + groupPadding * 2), height: snap(bounds.height + groupPadding * 2 + groupHeader))
     }
 
-    /// What a group holds: open, the nodes whose center lies inside its frame; collapsed, the ids the file spells out.
+    /// What a group holds: the ids the file spells out, open or collapsed. A group that spells out none holds
+    /// the nodes whose center lies inside its frame, and of two overlapping groups only the larger holds the other.
     static func members(of group: JSONValue, in canvas: JSONValue) -> [JSONValue] {
         let nodes = canvas.list("nodes").filter { $0.stableID != group.stableID }
-        if group["collapsed"]?.boolValue == true {
+        if group["memberIds"] != nil || group["collapsed"]?.boolValue == true {
             let ids = Set(group.list("memberIds").compactMap(\.stringValue))
             return nodes.filter { ids.contains($0.stableID) }
         }
         var frame = rect(group)
         frame.size.height = group.number("expandedHeight", fallback: frame.height)
+        let area = frame.width * frame.height
         return nodes.filter { node in
             let box = rect(node)
+            if node.text("kind") == "group" && box.width * box.height >= area { return false }
             return frame.contains(CGPoint(x: box.midX, y: box.midY))
         }
     }
@@ -120,9 +123,11 @@ enum CanvasEditing {
         let wanted = Set(ids)
         let members = canvas.list("nodes").filter { wanted.contains($0.stableID) && $0.text("kind") != "group" }
         guard let frame = groupFrame(members) else { return nil }
+        // It holds exactly what was grouped, so nothing else that stands under the frame joins it.
         let group: JSONValue = .object([
             "id": .string(groupID), "kind": .string("group"), "title": .string("Group"),
             "x": .number(frame.minX), "y": .number(frame.minY), "w": .number(frame.width), "h": .number(frame.height),
+            "memberIds": .array(members.map { .string($0.stableID) }),
         ])
         return canvas.setting("nodes", .array(canvas.list("nodes") + [group]))
     }

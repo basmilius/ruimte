@@ -152,4 +152,3 @@ export const ProcessesAlertsSchema = z.object({ alerts: z.array(ProcessAlertSche
 export type ProcessesAlerts = z.infer<typeof ProcessesAlertsSchema>;
 
 export const ProcessesDismissPayloadSchema = z.object({ id: z.string() });
-export type ProcessesDismissPayload = z.infer<typeof ProcessesDismissPayloadSchema>;

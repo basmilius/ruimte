@@ -1,5 +1,5 @@
-import type { Task } from '@ruimte/contracts';
 import { taskStatusWord } from '@adecore/agents-react/chat';
+import type { Task } from '@ruimte/contracts';
 import type { AgentWork } from '@/state/agent-work';
 
 /*

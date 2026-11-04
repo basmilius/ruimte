@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentInfo, AgentRequest, ChatInfo } from '@ruimte/contracts';
 import type { ChatStatuses } from '@adecore/agents-react/state';
+import type { AgentInfo, AgentRequest, ChatInfo } from '@ruimte/contracts';
 import { endpointKey } from '@/state/keys';
 import type { SessionsByKey, StatusOf } from '@/state/sessions';
 import { compareWaits, nextWaiting, nextWaitingSince, oldestWaitingFirst, waitDetailsOf, type Waiting } from './waiting';

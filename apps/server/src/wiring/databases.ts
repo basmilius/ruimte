@@ -1,6 +1,6 @@
 import { join } from 'node:path';
-import { AgentDatabases } from '../database/agent-databases.ts';
 import { DatabaseAccessStore } from '../database/agent-access.ts';
+import { AgentDatabases } from '../database/agent-databases.ts';
 import { DatabasePasswords } from '../database/agent-passwords.ts';
 import { DatabaseConnectionStore } from '../database/connection-store.ts';
 import { DatabaseService } from '../database/database-service.ts';
@@ -11,7 +11,7 @@ import type { MachineHome } from '../fs/machine-home.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { LanguageBundle } from './language.ts';
 
-/* A project's databases, for a person through the views and for an agent through its verb. */
+/* A project's databases, for a person through the views and for an agent through its tool. */
 export interface DatabasesBundle {
     service: DatabaseService;
     connections: DatabaseConnectionStore;

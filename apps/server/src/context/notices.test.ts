@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { NoticeStore, type Notice } from '@adecore/agents/coordination';
 import type { AgentInfo } from '@ruimte/contracts';
-import { deliverNotice, messageLabel, messageText, NO_REPLY_NOTICE, noticeNote, renderNotice, type NoticeTargets } from './notices.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { deliverNotice, messageLabel, messageText, NO_REPLY_NOTICE, noticeNote, renderNotice, type NoticeTargets } from './notices.ts';
 
 let home: string;
 let clock: number;
@@ -143,8 +143,6 @@ describe('deliverNotice', () => {
         for (const delivery of deliveries) {
             expect(delivery.detail).toEndWith(`; ${NO_REPLY_NOTICE}`);
         }
-        expect(NO_REPLY_NOTICE).toBe(
-            'do not wait on it: an answer reaches you only as a message of its own, and ruimte-context task new is what brings a result back'
-        );
+        expect(NO_REPLY_NOTICE).toBe('do not wait on it: an answer reaches you only as a message of its own, and task_new is what brings a result back');
     });
 });

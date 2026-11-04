@@ -1,12 +1,12 @@
 import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs';
-import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
 import { homedir, userInfo } from 'node:os';
 import { join } from 'node:path';
 import { definitionRunsProgram, diskFiles, serviceDefinition, type ServiceFiles, type ServiceManager } from '@adecore/service';
+import { replaceSync, tempNameFor } from '@adecore/utils/fs';
+import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
 import { commandLineServiceProgram, daemonServiceSpec, pathsOf, platformServiceManager, type HostEnvironment } from '@ruimte/service/host';
-import { buildFileOf, readBuildFile } from '../service/self-update.ts';
 import { describeError } from '../error-text.ts';
-import { replaceSync, tempNameFor } from '@adecore/agents';
+import { buildFileOf, readBuildFile } from '../service/self-update.ts';
 
 /*
  * `ruimte service install|uninstall|status`: the background service for a machine without the app.
@@ -15,16 +15,16 @@ import { replaceSync, tempNameFor } from '@adecore/agents';
  * install replaces that copy, which the daemon under the service notices through `ruimte.build`.
  */
 
-/* What travels with the daemon: `ruimte-context` goes on every session's PATH, `ruimte.build` is how an update is seen. */
+/* What travels with the daemon: `ruimte.build` is how an update is seen. */
 function binaryFiles(platform: NodeJS.Platform): string[] {
     if (platform === 'win32') {
-        return ['ruimte.exe', 'ruimte-context', 'ruimte-context.exe', 'ruimte.build'];
+        return ['ruimte.exe', 'ruimte.build'];
     }
-    return ['ruimte', 'ruimte-context', 'ruimte.build'];
+    return ['ruimte', 'ruimte.build'];
 }
 
 /* What an earlier release copied and this one no longer does; a copy left behind would answer in place of the new one. */
-const FORMER_FILES = ['ruimte-context.cmd'];
+const FORMER_FILES = ['ruimte-context', 'ruimte-context.exe', 'ruimte-context.cmd'];
 
 /* Windows will not replace an executable that runs, but lets it be renamed; what is left is removed once it ended. */
 const RETIRED_SUFFIX = '.retired';

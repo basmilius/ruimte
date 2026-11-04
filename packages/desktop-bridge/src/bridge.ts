@@ -1,6 +1,7 @@
 import type { SessionLoginCode } from '@ruimte/pulsar';
 import type { BrowserRouteBinding, BrowserRouteBlocked } from './browser.ts';
 import type { DatabaseSecretsBridge, OpenPathRequest, SavePathRequest } from './database.ts';
+import type { ExtensionsBridge } from './extensions.ts';
 import type { MachineModeBridge } from './machine.ts';
 import type { MenuSpec } from './menu.ts';
 import type { MicrophoneBridge } from './microphone.ts';
@@ -239,6 +240,7 @@ export interface DesktopBridge {
        since a loopback address proves nothing. Null while the daemon has not written it. A window
        opens while the machine still comes up, and this answers only once it proved itself. */
     localSecret?(): Promise<string | null>;
+    extensions?: ExtensionsBridge;
     /* How long this app took from its start to now, in milliseconds, for the machine's usage counts.
        Only the first caller after a start gets it; every later one, another window too, gets null. */
     takeStartupMs?(): Promise<number | null>;

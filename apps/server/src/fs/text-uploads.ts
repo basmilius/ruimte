@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { FS_WRITE_PIECE_BYTES } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
+import { FS_WRITE_PIECE_BYTES } from '@ruimte/contracts';
 
 type UploadErrorCode = 'upload-gone' | 'upload-invalid' | 'upload-incomplete' | 'not-text';
 
@@ -46,8 +46,24 @@ export class TextUploads {
         const upload = this.ownUpload(clientId, uploadId);
         const piece = Buffer.from(data, 'base64');
 
-        if (piece.byteLength === 0 || piece.byteLength > FS_WRITE_PIECE_BYTES || offset + piece.byteLength > upload.bytes.byteLength) {
+        if (
+            !Number.isSafeInteger(offset) ||
+            offset < 0 ||
+            piece.byteLength === 0 ||
+            piece.byteLength > FS_WRITE_PIECE_BYTES ||
+            offset + piece.byteLength > upload.bytes.byteLength
+        ) {
             throw new UploadError('upload-invalid', 'That piece does not fit the upload');
+        }
+
+        for (const [start, length] of upload.pieces) {
+            if (offset === start && piece.byteLength === length && piece.equals(upload.bytes.subarray(start, start + length))) {
+                return;
+            }
+
+            if (offset < start + length && start < offset + piece.byteLength) {
+                throw new UploadError('upload-invalid', 'That piece overlaps bytes already received');
+            }
         }
 
         upload.bytes.set(piece, offset);

@@ -1,11 +1,13 @@
-import { useTranslation } from 'react-i18next';
-import { CircleX, GitBranch, TriangleAlert } from 'lucide-react';
 import type { Editor, EditorBlock, EditorIndentation } from '@adecore/editor';
+import { useProblemCounts } from '@adecore/editor-react';
 import { ErrorBoundary, Icon, Tooltip } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
-import type { EditorLanguage } from '@/language/ruimte-editor-language';
+import { CircleX, GitBranch, TriangleAlert } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { fileInfoOf } from '@/extensions/file-info';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { LanguageStatusItem } from '@/language/LanguageStatusItem';
-import { useProblemCounts } from '@adecore/editor-react';
+import type { EditorLanguage } from '@/language/ruimte-editor-language';
 import { encodingLabelOf, languageNameOf, symbolBadgeOf } from '@/shell/panels/status-bar-model';
 import { useEditorCaret } from '@/shell/panels/use-editor-caret';
 import { useFileBranch } from '@/shell/panels/use-git-root';
@@ -47,6 +49,7 @@ export function EditorStatusBar({ editor, language, path, languageId, indentatio
             className="relative flex h-[26px] shrink-0 items-center gap-1.5 border-t border-border bg-surface px-2 text-xs whitespace-nowrap text-text-muted select-none"
             data-editor-status-bar
         >
+            <SlotRow place="editorStatusBar" context={{ file: fileInfoOf(path) }} />
             {branch !== null && (
                 <Tooltip label={t('statusBar.branch')}>
                     <span className={ITEM}>

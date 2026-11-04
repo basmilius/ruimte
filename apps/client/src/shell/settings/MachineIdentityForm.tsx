@@ -1,11 +1,11 @@
+import { Button, useAsyncAction, IconPicker, FormError, Input } from '@adecore/ui';
+import { SettingsRow } from '@adecore/ui/settings';
+import { type ProjectIconChoice } from '@ruimte/contracts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type ProjectIconChoice } from '@ruimte/contracts';
 import { perform } from '@/actions/client-actions';
 import { PROJECT_ICON_KEYWORDS } from '@/project/project-icons';
 import { useProjectIconGroups } from '@/project/use-project-icon-groups';
-import { SettingsRow } from '@adecore/ui/settings';
-import { Button, useAsyncAction, IconPicker, FormError, Input } from '@adecore/ui';
 import { WithReason } from '@/shell/settings/MachineSettings';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useServers } from '@/state/server';

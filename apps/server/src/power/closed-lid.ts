@@ -1,5 +1,5 @@
-import { CLOSED_LID_BATTERY_FLOOR } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
+import { CLOSED_LID_BATTERY_FLOOR } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 import { keepAwakeWanted, type KeepAwakeSetting } from './keep-awake.ts';
 

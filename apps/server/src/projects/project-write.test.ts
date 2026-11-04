@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ProjectContent } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
-import { ProjectStore } from './project-store.ts';
-import { DrawingStore } from './drawing-store.ts';
+import type { ProjectContent } from '@ruimte/contracts';
 import { DiagramStore } from './diagram-store.ts';
-import { documentPathInFolder, viewFilePathOf } from './project-files.ts';
-import { pendingWritePathOf, PROJECT_WRITE_IO, type ProjectWriteIO } from './project-write.ts';
+import { DrawingStore } from './drawing-store.ts';
 import { projectLinks } from './project-file-test-helpers.ts';
+import { documentPathInFolder, viewFilePathOf } from './project-files.ts';
+import { ProjectStore } from './project-store.ts';
+import { pendingWritePathOf, PROJECT_WRITE_IO, type ProjectWriteIO } from './project-write.ts';
 
 let root: string;
 let folder: string;
@@ -138,7 +138,7 @@ describe('durable project saves', () => {
         projects.closeAll();
         projects = new ProjectStore(home, projectLinks(), new FakeWatch());
         const refused = await projects.openProject({ projectId }).catch((e: unknown) => e);
-        // A coded error, so a verb is refused instead of failing, and it names the file that lets the save go.
+        // A coded error, so a tool is refused instead of failing, and it names the file that lets the save go.
         expect(refused).toMatchObject({ code: 'project-invalid' });
         expect((refused as Error).message).toContain('changed since');
         expect((refused as Error).message).toContain(pendingWritePathOf(path));

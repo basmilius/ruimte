@@ -4,9 +4,9 @@ import type { MachineStopPreview } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
+import { buttonWithText, everything, installDesktop, removeDesktop } from '../../../testing/dom-helpers';
 import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
 import { machineBridge } from '../../../testing/machine-bridge';
-import { buttonWithText, everything, installDesktop, removeDesktop } from '../../../testing/dom-helpers';
 import { StopMachineRow } from './StopMachineRow';
 
 const BUSY: MachineStopPreview = { work: { agents: 2, terminals: 0 }, home: '~/.ruimte', commandLine: false };

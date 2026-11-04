@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import i18next from 'i18next';
+import { messageOf } from '@adecore/ui';
 import type { TerminalShell } from '@ruimte/contracts';
 import type { BrokerSetting } from '@ruimte/pulsar';
-import { messageOf } from '@adecore/ui';
+import i18next from 'i18next';
+import { useState } from 'react';
 import { perform } from '@/actions/client-actions';
 import type { MachineSwitch } from '@/shell/settings/machine-switches';
 import type { Endpoint } from '@/state/endpoints';

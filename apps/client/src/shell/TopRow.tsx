@@ -1,18 +1,18 @@
+import { ErrorBoundary, lazyNamed, LazyBoundary, WorkspaceTopRow } from '@adecore/ui';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { hasLogoMenu, hasOverlayControls } from '@/desktop/bridge';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
+import { StationMenu } from '@/shell/menu/StationMenu';
 import { ProjectMenu } from '@/shell/ProjectMenu';
 import { SIDEBAR_WIDTH_PX, SidebarGlow } from '@/shell/SidebarGlow';
 import { SidebarToggle } from '@/shell/SidebarToggle';
-import { StationMenu } from '@/shell/menu/StationMenu';
-import { IS_STATION } from '@/station';
 import { useDiagram } from '@/state/diagram';
 import { useDrawing } from '@/state/drawing';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useShownPanel, useUi } from '@/state/ui';
-import { ErrorBoundary, lazyNamed, LazyBoundary, WorkspaceTopRow } from '@adecore/ui';
+import { IS_STATION } from '@/station';
 
 const ProjectTabs = lazyNamed(() => import('@/shell/ProjectTabs'), 'ProjectTabs');
 

@@ -1,8 +1,8 @@
 import { serverActions } from '../actions/server-actions.ts';
-import type { CanvasHost } from '../canvas/verb.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { ServerConfig } from '../config.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { SYSTEM_CLOCK } from '../voice/clock.ts';
 import { VoiceKeyStore } from '../voice/key-store.ts';
 import { openAiLive, type OpenAiLive } from '../voice/openai-live.ts';
@@ -28,7 +28,7 @@ interface VoiceInput {
 
 /*
  * Voice run by the daemon for a phone, after the canvas host and push: a session runs its tools through the
- * same registry and host the agents' verbs reach.
+ * same registry and host the agents' tools reach.
  */
 export function wireVoice(input: VoiceInput): VoiceBundle {
     const { config, projects, canvasHost, chats } = input;

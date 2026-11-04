@@ -1,14 +1,15 @@
-import { memo, useEffect, useRef } from 'react';
+import { copyText, Icon, ContextMenu, Kbd } from '@adecore/ui';
 import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
 import { Copy, Pencil, Trash } from 'lucide-react';
+import { memo, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { deleteNodesAction } from '@/actions/client-actions';
 import { accentColor } from '@/canvas/accents';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { FONT_STACK } from '@/canvas/text-font';
 import { loadDrawingFont } from '@/drawing/fonts';
-import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { copyText, Icon, ContextMenu, Kbd } from '@adecore/ui';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
+import { useCanvas, useCanvasCamera, useCanvasStore } from '@/state/canvas';
 
 export const TextElementView = memo(function TextElementView({ id }: { id: string }) {
     const { t } = useTranslation('canvas');
@@ -17,7 +18,7 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
     const selected = useCanvas((s) => s.selection.includes(id));
     const editing = useCanvas((s) => s.editingTextId === id);
     const resizeLocked = useCanvas((s) => s.locks.resize);
-    const zoom = useCanvas((s) => s.camera.zoom);
+    const zoom = useCanvasCamera((s) => s.camera.zoom);
     const hidden = useCanvas((s) => s.hidden.has(id));
     const ref = useRef<HTMLDivElement>(null);
     const hand = text?.font === 'hand';
@@ -131,6 +132,7 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
                 <ContextMenu.Item className="text-status-error" onClick={() => deleteNodesAction(canvasStore, [id])}>
                     <Icon icon={Trash} size={14} /> {t('common:action.delete')} <Kbd shortcut={CANVAS_SHORTCUTS.deleteSelection} />
                 </ContextMenu.Item>
+                <SlotMenuItems place="textMenu" context={{ text: { id } }} />
             </ContextMenu.Popup>
         </ContextMenu.Root>
     );

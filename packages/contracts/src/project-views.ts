@@ -6,6 +6,7 @@ import {
     isDiagramView,
     isDividerView,
     isDrawingView,
+    isExtensionView,
     isSessionView,
     isUnknownView,
     type NodeTitleSource,
@@ -96,15 +97,22 @@ export function withView(views: readonly ProjectView[], view: ProjectView, after
  */
 export function withRenamedView(views: readonly ProjectView[], id: string, name: string, source: NodeTitleSource | null = 'user'): ProjectView[] | null {
     const current = views.find((view) => view.id === id);
-    // A view of an unknown kind is written back as it was read, so a new name would never reach the file.
-    if (!current || isUnknownView(current) || (current.name === name && (isDividerView(current) || (current.titleSource ?? null) === source))) {
+    // A view of an unknown kind is written back as it was read, so a new name reaches the file only through an extension's own entry.
+    if (
+        !current ||
+        (isUnknownView(current) && !isExtensionView(current)) ||
+        (current.name === name && (isDividerView(current) || isUnknownView(current) || (current.titleSource ?? null) === source))
+    ) {
         return null;
     }
     return views.map((view) => {
         if (view.id !== id) {
             return view;
         }
-        return isDividerView(view) || isUnknownView(view) ? { ...view, name } : { ...view, name, titleSource: source ?? undefined };
+        if (isUnknownView(view)) {
+            return { ...view, name, raw: { ...view.raw, name } };
+        }
+        return isDividerView(view) ? { ...view, name } : { ...view, name, titleSource: source ?? undefined };
     });
 }
 

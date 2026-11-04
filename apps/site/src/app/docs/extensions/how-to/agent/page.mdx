@@ -1,0 +1,117 @@
+import { AgentFinished } from '@/components/docs/extensions/CanvasScenes.tsx';
+
+export const metadata = { title: 'When an agent finishes' };
+
+# When an agent finishes
+
+<p className="lead">Hear when a chat finishes or an agent waits on the person, and show it where they look.</p>
+
+This page builds two things: a toast with a Show button whenever a chat finishes, and a sidebar card that lists the agents on the canvas and which of them need the person.
+
+## The files
+
+```text
+manifest.json
+assets/icon.svg
+client/index.ts
+client/AgentsCard.tsx
+```
+
+Hearing events needs no permission. Reading every agent's status for the card does:
+
+```json
+{
+    "id": "acme.watch",
+    "name": "Watch",
+    "version": "1.0.0",
+    "api": 1,
+    "publisher": "Acme",
+    "description": "Tells you when an agent is done.",
+    "color": "#16a34a",
+    "permissions": {
+        "agents.status": "Shows which agents need you"
+    }
+}
+```
+
+## A toast when a chat finishes
+
+In `client/index.ts`, `onEvent` listens for as long as the extension runs, and answers a function that stops it:
+
+```ts
+import { canvas, defineSidebarCard, host, onEvent } from '@ruimte/extension/client';
+
+onEvent('chat.turnFinished', ({ chatId }) => {
+    host.notify('A chat finished its turn', {
+        action: {
+            title: 'Show',
+            run: () => canvas.reveal({ id: chatId })
+        }
+    });
+});
+
+defineSidebarCard({
+    id: 'agents',
+    title: 'Agents',
+    component: () => import('./AgentsCard')
+});
+```
+
+A chat's id is the id of its node, so `canvas.reveal` brings the chat into view. `reveal` needs no permission.
+
+<AgentFinished />
+
+`chat.turnFinished` comes when an AI chat goes from working to done. `agent.status` comes on every change of a chat's or a terminal's status, with `nodeId` and `status`. [Events](/docs/extensions/events) lists the rest.
+
+## A card of agents
+
+`useAgents` gives every chat and terminal on the canvas in front with its `title` and its `status`: `idle`, `running`, `needsYou` or `stopped`. The card draws again on each change:
+
+```tsx
+import { ListRow, Pill } from '@ruimte/extension/ui';
+import { canvas, useAgents } from '@ruimte/extension/client';
+
+export default function AgentsCard() {
+    const agents = useAgents();
+
+    if (agents.length === 0) {
+        return <p>No agents on this canvas.</p>;
+    }
+
+    return agents.map((agent) => (
+        <ListRow
+            key={agent.id}
+            variant="flat"
+            onClick={() => canvas.reveal({ id: agent.id })}
+        >
+            {agent.title}
+            {agent.status === 'needsYou' && <Pill tone="needsYou">Needs you</Pill>}
+        </ListRow>
+    ));
+}
+```
+
+Ruimte draws the card at the foot of the sidebar, in a border of its own. The `title` names the card for a screen reader and is not drawn, so draw a heading in the card if it needs one.
+
+## In a component
+
+Inside a component, `useEvent` listens while the component is on screen and stops by itself. `useChat(id)` follows one chat's `status`:
+
+```tsx
+import { useState } from 'react';
+import { useEvent } from '@ruimte/extension/client';
+
+export default function Finished() {
+    const [count, setCount] = useState(0);
+
+    useEvent('chat.turnFinished', () => setCount((current) => current + 1));
+
+    return <p>{count} turns finished while this was open</p>;
+}
+```
+
+## With no window open
+
+These events come from the window, so they stop when the person closes it. To follow the machine itself, listen in the [server part](/docs/extensions/server) with `onEvent('chat.status', listener)` and set `"autostart": true` in the manifest, so the server part starts with the machine.
+
+A chat that waits on the person already shows it in Ruimte's own Needs you list. Use a toast for what Ruimte does not say by itself.

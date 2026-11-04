@@ -21,7 +21,6 @@ export const PushStartActivityRegistrationSchema = z.object({
     machineId: MachineIdSchema.nullable().optional(),
     collapseId: key.nullable().optional()
 });
-export type PushRegisterDevicePayload = z.infer<typeof PushRegisterDevicePayloadSchema>;
 
 export const PushAlertContentSchema = z.object({
     kind: z.enum(['turn', 'attention', 'approval']),

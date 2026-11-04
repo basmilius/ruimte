@@ -1,5 +1,5 @@
 import type { AgentStatus } from '@ruimte/contracts';
-import type { CanvasHost } from '../canvas/verb.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import type { VoiceAgentPlace } from './project-reading.ts';
 
 type VoiceAgentStatus = AgentStatus | 'unknown';

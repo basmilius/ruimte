@@ -1,8 +1,8 @@
-import type { EventMap, PushAttentionEntry, ServerFrame } from '@ruimte/contracts';
 import type { ServerWebSocket } from 'bun';
+import type { EventMap, PushAttentionEntry, ServerFrame } from '@ruimte/contracts';
 import { OutputGate, type OutputShare } from './backpressure.ts';
-import { sendEvent, type ClientAccess, type ClientConnection, type Dispatcher } from './dispatcher.ts';
 import { isLiveFrame, type LiveSink } from './client-sinks.ts';
+import { sendEvent, type ClientAccess, type ClientConnection, type Dispatcher } from './dispatcher.ts';
 import type { SessionSink } from './sessions/manager.ts';
 import { clientClosed, clientKindOf, clientOpened } from './telemetry/reporter.ts';
 
@@ -67,6 +67,7 @@ export interface ConnectionServices {
     diagrams: Subscribable;
     launchStore?: Subscribable;
     launches?: Subscribable;
+    extensions?: Subscribable;
     /* The database sessions a client opened, which close when it goes. */
     databases?: { release(clientId: string): Promise<void> };
     databaseConnections?: Subscribable;
@@ -133,6 +134,7 @@ function subscribeClient(services: ConnectionServices, client: ClientConnection,
         services.diagrams,
         services.launchStore,
         services.launches,
+        services.extensions,
         services.databaseConnections,
         services.databaseAgents,
         services.language,

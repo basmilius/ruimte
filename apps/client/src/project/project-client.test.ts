@@ -12,22 +12,22 @@ import type {
     RequestMap,
     RequestType
 } from '@ruimte/contracts';
+import { ProjectDocumentSchema } from '@ruimte/contracts';
+import type { StoreApi } from 'zustand';
 import { focusedCanvas, type CanvasState } from '../state/canvas';
 import { useDocument } from '../state/document';
 import { useFiles } from '../state/files';
 import { useUi } from '../state/ui';
 import { createWorkspaceStores, defaultWorkspaceStores } from '../state/workspace';
 import type { WorkspaceStores } from '../state/workspace-stores';
-import { ProjectDocumentSchema } from '@ruimte/contracts';
-import type { StoreApi } from 'zustand';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
-import { PanelsPort } from './panels-port';
-import { rekeyLastProject } from './last-project';
-import { setViewShared } from './views';
-import { ProjectClient, type ProjectSink } from './project-client';
-import { sessionNodesOf } from './project-sessions';
 import { withClientClosedProject } from './closed-projects';
 import { fakeStorage } from './fixtures';
+import { rekeyLastProject } from './last-project';
+import { PanelsPort } from './panels-port';
+import { ProjectClient, type ProjectSink } from './project-client';
+import { sessionNodesOf } from './project-sessions';
+import { setViewShared } from './views';
 
 type Call = { type: RequestType; payload: unknown };
 
@@ -591,7 +591,7 @@ describe('ProjectClient', () => {
     });
 
     test('a node the daemon added lands on a canvas with unsaved edits, and the next save carries the new rev', async () => {
-        const { transport, state, client, dispose } = setup();
+        const { transport, state, dispose } = setup();
         await tick();
         const mine = focusedCanvas().getState().addNode('chat', { x: 0, y: 0 })!;
 
@@ -599,7 +599,6 @@ describe('ProjectClient', () => {
         emitChanged(transport, document(4, [canvasView('main', [noteNode('agent')]), canvasView('made')]));
 
         expect(state.conflict).toBeNull();
-        expect(client.mergeRefusal).toBeNull();
         expect(focusedCanvas().getState().order).toEqual([mine, 'agent']);
         // A view an agent made is in the list, and did not take the cell the person is looking at.
         expect(useDocument.getState().views.map((view) => view.id)).toEqual(['main', 'made']);
@@ -640,7 +639,7 @@ describe('ProjectClient', () => {
     });
 
     test('a node moved and retitled in another client lands in the editor as a load, beside an edit here', async () => {
-        const { transport, state, client, dispose } = setup();
+        const { transport, state, dispose } = setup();
         transport.views = [canvasView('main', [noteNode('a'), noteNode('b')])];
         await tick();
         const editor = focusedCanvas();
@@ -652,7 +651,6 @@ describe('ProjectClient', () => {
         emitChanged(transport, document(4, [canvasView('main', [noteNode('a', { x: 300, title: 'Moved' }), noteNode('b')])]));
 
         expect(state.conflict).toBeNull();
-        expect(client.mergeRefusal).toBeNull();
         expect(focusedCanvas()).toBe(editor);
         expect(editor.getState().nodes.a).toMatchObject({ x: 300, title: 'Moved' });
         expect(editor.getState().nodes.b).toMatchObject({ x: 24 });

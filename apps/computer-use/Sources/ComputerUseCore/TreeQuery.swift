@@ -66,14 +66,14 @@ public enum WaitCondition: Equatable, Sendable {
         }
         if let element = request.element {
             guard let value = request.value else {
-                throw AgentError("wait --element N needs --value V")
+                throw AgentError("wait element N needs value V")
             }
             conditions.append(.value(element: element, value))
         } else if request.value != nil {
-            throw AgentError("wait --value V needs --element N")
+            throw AgentError("wait value V needs element N")
         }
         guard conditions.count == 1, let condition = conditions.first else {
-            throw AgentError("wait takes one of --text T, --gone T, or --element N with --value V")
+            throw AgentError("wait takes one of text T, gone T, or element N with value V")
         }
         self = condition
     }

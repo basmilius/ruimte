@@ -24,6 +24,21 @@ Reviewed on October 28, 2026.
 
 Measure before changing the WebGL budget, splitting the composer chunk or choosing media buffer sizes.
 
+## Notes for 0.30.0 stable
+
+The beta notes leave these out, and someone coming from 0.29.x needs them. They go under the breaking changes of the stable release, as written here. Remove this section once that tag carries them.
+
+- **Editor** After the update, Explain and rename suggestions are off until you turn them on in Settings, Editor, AI. They used the model on this Mac; now they send code to the provider of the editor model. This also applies when no settings were saved, including a fresh install, since an older installation may never have saved settings. An explicit choice already saved for the new editor help is kept.
+- **Older apps** An app on 0.29.x that connects to a machine on 0.30 has no Explain, rename suggestions or code suggestions, since the machine no longer answers what the older app asks for them. Update the app too.
+- **Claude API** A Claude API chat no longer stops after a number of tool rounds. Rounds per run and continuing in Settings apply to NanoGPT only. The output limit per reply still holds.
+- **Claude API** A server in `api-mcp.json` that runs as a local command, or that limits its tools with `allowedTools`, no longer reaches Claude API chats. HTTP servers without `allowedTools` still do.
+- **Claude API** A chat from before 0.30 keeps its messages but starts a new session, so the model no longer sees what was said in it.
+
+Fixes since 0.30.0-beta.3, for the same notes:
+
+- A chat an extension draws shows in the sidebar, the chat chooser and `#` again once that extension is off or removed, or in safe mode.
+- A new output limit, or a model with another limit, reaches a running Claude API chat at its next message. This one needs the ADE CORE release with `ChatBackend.outdated` and its bump first.
+
 ## 3. Measurements
 
 The scenes and recorder are built (the "Measure:" rows in a dev build's palette); the baseline was taken on October 17. Still open, on real hardware in the Electron app: the 30-node scene, nine cells and ten large files, the WebGL budget under context loss, 100 idle chats, and workspace startup, which decides whether CodeMirror is split.
@@ -88,11 +103,11 @@ Accepted limits: a Claude chat cannot move to an account with another folder aft
 ## 15. Language servers
 
 4. Further native servers (Go, Swift, TOML, Lua, Zig, Markdown) only after their install and execution rules are set. Work from another machine already gets no server that runs project code (`runsProjectCode`). Still open: what such a server may run in a person's own agent worktrees, such as build scripts and proc macros.
-5. Remaining limits, each in its own package or host: a file view keeps its old path after a move; project-wide diagnostics; column-precise navigation; peek highlighting and more than thirty files; review rows hiding unchanged ranges; on-device help for non-function symbols, Explain in the context menu, suggestions while typing.
+5. Remaining limits, each in its own package or host: a file view keeps its old path after a move; project-wide diagnostics; column-precise navigation; peek highlighting and more than thirty files; review rows hiding unchanged ranges; code explanations for non-function symbols, Explain in the context menu, suggestions while typing.
 
 ## 16. Plugins
 
-After 1.0, declarative first: context, commands and panels, no executable code. Source: [the plugin report](reports/2026-09-14-plugins.html).
+Replaced by executable extensions: [EXTENSIONS.md](EXTENSIONS.md), source [the extensions report](reports/2026-10-30-extensions.html). The list below is from the earlier plugin report.
 
 2. Ship the compatibility changes first: unknown plugin data survives in project and client state.
 3. A manifest and an install, disable and error lifecycle under `$RUIMTE_HOME/plugins`. Opening a repository runs none of its suggested plugins.

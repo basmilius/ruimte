@@ -1,9 +1,9 @@
-import i18next from 'i18next';
+import { formatAge } from '@adecore/ui/format';
 import type { Reachability } from '@ruimte/contracts';
+import i18next from 'i18next';
 import type { Endpoint } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
 import type { ConnectionState } from '@/transport';
-import { formatAge } from '@adecore/ui/format';
 
 /*
  * How far away a machine is, in the words a row's tooltip and the About pane show. Each word is read

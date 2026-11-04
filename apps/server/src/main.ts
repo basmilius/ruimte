@@ -64,7 +64,7 @@ if (config.command === 'closed-lid') {
     const { closedLidRulePath } = await import('./power/closed-lid.ts');
     const { readLocalSecret } = await import('./auth/local-secret.ts');
     const { readMachineStatus } = await import('./cli/machine-status.ts');
-    const { fileExists } = await import('@adecore/agents');
+    const { fileExists } = await import('@adecore/utils/fs');
     const { userInfo } = await import('node:os');
     const uid = process.getuid?.() ?? -1;
     process.exit(
@@ -109,9 +109,9 @@ if (config.command === 'notify') {
     );
 }
 
-if (config.command === 'context') {
-    const { runContext } = await import('./cli/context.ts');
-    process.exit(await runContext(config.args));
+if (config.command === 'extension') {
+    const { runExtension } = await import('./cli/extension.ts');
+    process.exit(await runExtension(config.args, { port: config.port, home: config.home }));
 }
 
 if (config.command === 'voice') {
@@ -126,7 +126,7 @@ if (config.command === 'voice') {
     );
 }
 
-// Only after the CLI commands: `ruimte context` runs inside a session and needs these to find it.
+// Only after the CLI commands: `ruimte notify` runs inside a session and needs these to find it.
 forgetInheritedSession(process.env);
 // Read into the config already; a shell must not pass it on to a daemon started by hand inside a session.
 delete process.env.RUIMTE_SERVICE;

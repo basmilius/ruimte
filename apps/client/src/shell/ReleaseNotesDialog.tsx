@@ -1,9 +1,9 @@
+import { Markdown } from '@adecore/agents-react/chat/ui';
+import { Button, ErrorBoundary, CloseButton, Icon, Pill, Dialog, ScrollArea } from '@adecore/ui';
+import { formatDay, formatDayWithYear } from '@adecore/ui/format';
+import { ExternalLink, Heart } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ExternalLink, Heart } from 'lucide-react';
-import { Markdown } from '@adecore/agents-react/chat/ui';
-import { formatDay, formatDayWithYear } from '@adecore/ui/format';
-import { Button, ErrorBoundary, CloseButton, Icon, Pill, Dialog } from '@adecore/ui';
 import { UpdateAction } from '@/shell/settings/panes/AboutPane';
 import {
     closeReleaseNotes,
@@ -110,7 +110,7 @@ export function ReleaseNotesDialog() {
                     <Dialog.Title className="grow">{t('releaseNotes.title')}</Dialog.Title>
                     <CloseButton label={t('releaseNotes.close')} dialog />
                 </div>
-                <div ref={listRef} className="relative min-h-0 grow overflow-y-auto">
+                <ScrollArea viewportRef={listRef} className="grow" viewportClassName="relative">
                     <ErrorBoundary label={t('releaseNotes.failed')} resetKeys={[notes]}>
                         {missing && (
                             <p className="border-b border-border px-5 py-3 text-xs text-text-muted">
@@ -133,7 +133,7 @@ export function ReleaseNotesDialog() {
                             <ReleaseEntry key={entry.release.version} entry={entry} />
                         ))}
                     </ErrorBoundary>
-                </div>
+                </ScrollArea>
                 <div className="flex items-center gap-2 border-t border-border px-5 py-3">
                     <Button variant="ghost" href={RELEASES_PAGE}>
                         {t('releaseNotes.allReleases')} <Icon icon={ExternalLink} size={12} />

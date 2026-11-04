@@ -4,7 +4,13 @@
     "version": "0.0.0",
     "type": "module",
     "exports": {
-        ".": "./src/index.ts"
+        ".": "./src/index.ts",
+        "./extension-actions": "./src/extension-actions.ts",
+        "./extension-client": "./src/extension-client.ts",
+        "./extension-context": "./src/extension-context.ts",
+        "./extension-permissions": "./src/extension-permissions.ts",
+        "./extension-results": "./src/extension-results.ts",
+        "./node-defaults": "./src/node-defaults.ts"
     },
     "scripts": {
         "typecheck": "bun check --no-script",
@@ -12,10 +18,11 @@
         "check:swift": "bun scripts/generate-swift.ts --check && bun ../../apps/ios/Scripts/generate-renderer.ts --check && bun ../../apps/ios/Scripts/generate-visual.ts --check && bun ../../apps/ios/Scripts/generate-mermaid.ts --check && bun ../../apps/server/scripts/generate-native-ui.ts --check"
     },
     "dependencies": {
-        "@adecore/agent-contracts": "0.50.6",
-        "@adecore/diagram": "0.50.6",
-        "@adecore/drawing": "0.50.6",
-        "@adecore/plan": "0.50.6",
+        "@adecore/agent-contracts": "0.54.5",
+        "@adecore/diagram": "0.54.5",
+        "@adecore/drawing": "0.54.5",
+        "@adecore/plan": "0.54.5",
+        "@adecore/utils": "0.54.5",
         "@ruimte/pulsar": "workspace:*",
         "zod": "^4.6.7"
     },

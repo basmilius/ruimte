@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
-import type { EventMap, ProjectNode } from '@ruimte/contracts';
 import { useProviderAccountsStore } from '@adecore/agents-react/state';
+import type { EventMap, ProjectNode } from '@ruimte/contracts';
+import { act } from 'react';
 import { windowWorkspace } from '@/state/window';
+import { clickOn, mount, openSubmenu, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { fakeProvider } from '../../testing/fake-provider';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, mount, openSubmenu, until, type Mounted } from '../../testing/dom';
 import { emptyCanvas } from '../../testing/project-fixtures';
 
 // The endpoint `openFakeWorkspace` puts the machine behind.

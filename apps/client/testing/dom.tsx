@@ -1,17 +1,18 @@
 import { expect } from 'bun:test';
-import { act, type ReactNode } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
-import i18next from 'i18next';
 import { ChatHostProvider } from '@adecore/agents-react';
 import { UIProvider } from '@adecore/ui';
+import i18next from 'i18next';
+import { act, type ReactNode } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { App } from '@/App';
 import { CHAT_HOST, configureChat } from '@/chat/host';
 import { startFileReadPreparation } from '@/project/file-read-preparation';
-import { defaultProjectStore } from '@/state/project';
 import { defaultDocumentStore } from '@/state/document';
-import { folderWatches } from '@/state/fs-watch';
 import { useFiles } from '@/state/files';
+import { folderWatches } from '@/state/fs-watch';
+import { defaultProjectStore } from '@/state/project';
 import { ChatScopeProvider } from '@/transport/ChatScopeProvider';
+import { closedAfterTest, currentTest, waitTurn } from './test-scope';
 
 // Once for the process, before any chat store is read, as `main.tsx` does it.
 configureChat();
@@ -19,13 +20,20 @@ startFileReadPreparation(defaultProjectStore, defaultDocumentStore, folderWatche
 
 /*
  * Lets what a fake machine answered and what React drew from it land. Bounded by turns of the event
- * loop rather than by a clock, so a slow machine waits longer and a missing answer still fails.
+ * loop rather than by a clock, so a slow machine waits longer and a missing answer still fails. A test
+ * that ran out of time stops here, before it acts beside the next one (`test-scope.ts`).
  */
 export async function until(condition: () => boolean): Promise<void> {
-    for (let turn = 0; turn < 200 && !condition(); turn++) {
-        await act(async () => {
-            await new Promise((resolve) => setTimeout(resolve, 0));
-        });
+    const test = currentTest();
+    for (let turn = 0; turn < 200 && !condition() && currentTest() === test; turn++) {
+        await waitTurn(
+            act(async () => {
+                await new Promise((resolve) => setTimeout(resolve, 0));
+            })
+        );
+    }
+    if (currentTest() !== test) {
+        throw new Error('The test ended while it waited');
     }
     expect(condition()).toBe(true);
 }
@@ -39,11 +47,15 @@ export interface Mounted {
     unmount(): Promise<void>;
 }
 
-/* A root of its own in the page. */
+/* A root of its own in the page, unmounted after the test if the test did not. */
 export function mount(): Mounted {
     const host = document.createElement('div');
     document.body.append(host);
     const root: Root = createRoot(host);
+    const unmount = closedAfterTest(async () => {
+        await act(async () => root.unmount());
+        host.remove();
+    });
     return {
         host,
         render: async (element) => {
@@ -67,10 +79,7 @@ export function mount(): Mounted {
                 );
             });
         },
-        unmount: async () => {
-            await act(async () => root.unmount());
-            host.remove();
-        }
+        unmount
     };
 }
 
@@ -119,7 +128,8 @@ export async function openToolCall(host: Element, itemId: string): Promise<void>
 /* Opens the submenu behind the row that says `label` in a menu that is open, the way a click on its trigger does. */
 export async function openSubmenu(label: string): Promise<void> {
     const before = document.querySelectorAll('[role="menu"]').length;
-    const trigger = ([...document.querySelectorAll('[role="menuitem"][aria-haspopup]')] as HTMLElement[]).find((item) => item.textContent?.includes(label)) ?? null;
+    const trigger =
+        ([...document.querySelectorAll('[role="menuitem"][aria-haspopup]')] as HTMLElement[]).find((item) => item.textContent?.includes(label)) ?? null;
     await clickOn(trigger);
     await until(() => document.querySelectorAll('[role="menu"]').length > before);
 }

@@ -1,18 +1,18 @@
+import type { EditorPosition } from '@adecore/editor';
+import { shikiLanguageOf } from '@adecore/editor-react';
+import { endOfInsertion } from '@adecore/editor-react/models';
+import { messageOf } from '@adecore/ui';
 import i18next from 'i18next';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import type { EditorPosition } from '@adecore/editor';
-import { endOfInsertion } from '@adecore/editor-react/models';
-import { messageOf } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { cleanGhost, firstWord } from '@/ondevice/ghost-model';
-import { onDeviceClientFor, type OnDeviceClient } from '@/ondevice/ondevice-client';
-import { ghostPrompt } from '@/ondevice/prompts';
+import { editorAssistClientFor, type EditorAssistClient } from '@/editor-assist/client';
+import { cleanGhost, firstWord } from '@/editor-assist/ghost-model';
+import { ghostPrompt } from '@/editor-assist/prompts';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { promptFileName, type HostLanguage as EditorLanguage } from './host-language';
 import { GhostHint } from './GhostHint';
-import { shikiLanguageOf } from '@adecore/editor-react';
+import { promptFileName, type HostLanguage as EditorLanguage } from './host-language';
 import { isShortcut } from './shortcut-keys';
 
 const TOAST_ID = 'language-ghost';
@@ -40,7 +40,7 @@ interface Suggestion {
  */
 export class GhostTextFeature {
     private readonly language: EditorLanguage;
-    private readonly client: OnDeviceClient;
+    private readonly client: EditorAssistClient;
     private suggestion: Suggestion | null = null;
     private controller: AbortController | null = null;
     /* Counts the edits of the text, so an answer for text that has changed since is dropped. */
@@ -48,7 +48,7 @@ export class GhostTextFeature {
     private accepting = false;
     private hints: Root[] = [];
 
-    constructor(language: EditorLanguage, client: OnDeviceClient = onDeviceClientFor(language.project.transport), listenForKeys = true) {
+    constructor(language: EditorLanguage, client: EditorAssistClient = editorAssistClientFor(language.project.transport), listenForKeys = true) {
         this.language = language;
         this.client = client;
         const { editor } = language;

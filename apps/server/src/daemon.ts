@@ -1,23 +1,33 @@
-import { dirname, resolve } from 'node:path';
+import { CustomLanguageServerInputSchema, extensionChatOf } from '@ruimte/contracts';
+import { serverActionCall } from './actions/context.ts';
+import { serverActions } from './actions/server-actions.ts';
+import { HOOKS_PATH } from './agents/hook-receiver.ts';
+import { pruneHiddenChats } from './agents/prune-hidden-chats.ts';
 import { greetingLines } from './cli/greeting.ts';
 import type { ServerConfig } from './config.ts';
 import { CONTEXT_PATH } from './context/context-store.ts';
 import { Dispatcher } from './dispatcher.ts';
 import { errorText } from './error-text.ts';
-import { HOOKS_PATH } from './agents/hook-receiver.ts';
-import { pruneHiddenChats } from './agents/prune-hidden-chats.ts';
+import { extensionChatStarter } from './extensions/extension-chat.ts';
+import { ExtensionHost } from './extensions/extension-host.ts';
+import type { ExtensionAsks, ExtensionHostOptions } from './extensions/extension-host.ts';
+import { runMachineAction, outputOf } from './extensions/machine-actions.ts';
+import { ExtensionRefusal } from './extensions/refusal.ts';
+import { ExtensionStore } from './extensions/store.ts';
+import { registerExtensionChatRead } from './handlers/extension-chat-read.ts';
+import { registerExtensionHandlers, runExtensionPrompt } from './handlers/extensions.ts';
+import { registerRoutineHandlers } from './handlers/routine.ts';
+import { registerTemplateHandlers } from './handlers/template.ts';
+import { registerVoiceHandlers } from './handlers/voice.ts';
+import { readMachineModel } from './machine-model.ts';
+import { markDrawnChat } from './projects/drawn-chat.ts';
 import { dropEmptyMark } from './projects/scratch-project.ts';
 import { probeCodexNoDaemon } from './providers/launch.ts';
-import { readMachineModel } from './machine-model.ts';
 import { noteMoment, noteShutdown, rememberSecret, stopTelemetry, watchProjects, type Launcher } from './telemetry/reporter.ts';
 import { COMPILED as compiled, VERSION } from './version.ts';
+import { wireAgentWork } from './wiring/agent-work.ts';
 import { loadAgentStores, wireAgents } from './wiring/agents.ts';
 import { wireArtifacts } from './wiring/artifacts.ts';
-import { wireRoutines } from './wiring/routines.ts';
-import { registerRoutineHandlers } from './handlers/routine.ts';
-import { wireTemplates } from './wiring/templates.ts';
-import { registerTemplateHandlers } from './handlers/template.ts';
-import { wireAgentWork } from './wiring/agent-work.ts';
 import { wireCanvasHost } from './wiring/canvas-host.ts';
 import { repairChatMoves } from './wiring/chat-move.ts';
 import { wireClients } from './wiring/clients.ts';
@@ -32,16 +42,19 @@ import { wireMachine } from './wiring/machine.ts';
 import { wireMaintenance } from './wiring/maintenance.ts';
 import { wireNetwork } from './wiring/network.ts';
 import { wirePower } from './wiring/power.ts';
+import { wireProcesses } from './wiring/processes.ts';
 import { wireProjects } from './wiring/projects.ts';
-import { wireRemote } from './wiring/remote.ts';
 import { wireProviders } from './wiring/providers.ts';
 import { wirePush } from './wiring/push.ts';
+import { wireRemote } from './wiring/remote.ts';
+import { wireRoutines } from './wiring/routines.ts';
 import type { DaemonRuntime } from './wiring/runtime.ts';
-import { wireProcesses } from './wiring/processes.ts';
-import { wireUsage } from './wiring/usage.ts';
+import { wireTemplates } from './wiring/templates.ts';
 import { wireUsageStats } from './wiring/usage-stats.ts';
+import { wireUsage } from './wiring/usage.ts';
 import { wireVoice } from './wiring/voice.ts';
-import { registerVoiceHandlers } from './handlers/voice.ts';
+
+const EXTENSION_QUERY_ROWS = 500;
 
 /*
  * Runs the daemon until a signal ends the process. The wiring modules are called in boot order; a
@@ -53,11 +66,22 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         config,
         compiled,
         sourceDir: import.meta.dir,
-        // `ruimte-context` lives next to the binary, or next to the source in dev.
-        binDir: compiled ? dirname(process.execPath) : resolve(import.meta.dir, '..', 'bin'),
         contextUrl: `http://127.0.0.1:${config.port}${CONTEXT_PATH}`
     };
     const { home } = config;
+    let extensionAsks: ExtensionAsks = {};
+    let runExtensionAction: NonNullable<ExtensionHostOptions['runAction']> = () => Promise.reject(new Error('The machine is still starting'));
+    let addExtensionLanguageServer: NonNullable<ExtensionHostOptions['addLanguageServer']> = () => Promise.reject(new Error('The machine is still starting'));
+    let startExtensionChat: NonNullable<ExtensionHostOptions['startChat']> = () => Promise.reject(new Error('The machine is still starting'));
+    const extensions = new ExtensionHost({
+        store: new ExtensionStore(home),
+        asks: () => extensionAsks,
+        startChat: (id, start, check) => startExtensionChat(id, start, check),
+        runAction: (id, projectId, action, input) => runExtensionAction(id, projectId, action, input),
+        addLanguageServer: (id, server) => addExtensionLanguageServer(id, server),
+        removeLanguageServers: (id) => language.host.customRemoveOwned(id),
+        languageServerOwners: () => language.host.customOwners()
+    });
 
     // Runs while the stores load; it never rejects, and the managers await it before any launch.
     const codexProbe = probeCodexNoDaemon();
@@ -94,7 +118,14 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         stores,
         agents,
         computer,
-        later: { launches: () => launches, work: () => work, databases: () => databases, language: () => language, templates: () => templates }
+        later: {
+            launches: () => launches,
+            work: () => work,
+            databases: () => databases,
+            language: () => language,
+            templates: () => templates,
+            devices: () => devices
+        }
     });
     const templates = wireTemplates(home, projects);
     watchProjects(projects.store);
@@ -133,10 +164,12 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         work,
         launches,
         projects: projects.store,
+        devices: devices.deviceDriver,
         shutdown: (reason) => shutdown(reason)
     });
     const maintenance = wireMaintenance(home, processes, { language: () => language.host, projects: () => projects.store.index });
     const canvasHost = wireCanvasHost({
+        extensions,
         identity,
         stores,
         providers,
@@ -166,6 +199,8 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     sessions.observe((event) => computer.observe(event));
     chats.observe((event) => computer.observe(event));
     chats.observe((event) => launches.secrets.observe(event));
+    chats.observe((event) => extensions.forwardEvent(event.event, event.payload));
+    sessions.observe((event) => extensions.forwardEvent(event.event, event.payload));
     chats.observe((event) => agents.proposals.observe(event));
     chats.observe((event) => launches.afterSettle.chatEvent(event));
     chats.observe((event) => {
@@ -206,7 +241,81 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         watches: git.watches,
         projects: projects.store,
         sqlAnalysis: databases.sqlAnalysis,
-        agents
+        agents,
+        providers
+    });
+    agents.context.useExtensionNodes(async (extension, type, data) => {
+        const parts = await extensions.nodeContext(extension, type, data);
+
+        return Array.isArray(parts) ? parts.map((part: { text?: string }) => part.text ?? '').join('\n') : typeof parts === 'string' ? parts : null;
+    });
+    startExtensionChat = extensionChatStarter({
+        host: canvasHost,
+        actions: serverActions,
+        folderOf: (projectId) => projects.store.index.folderOf(projectId),
+        projectOfFolder: (folder) => projects.store.index.projectOfFolder(folder),
+        markDrawn: (projectId, viewId, extensionId) => markDrawnChat(projects.store, projectId, viewId, extensionId)
+    });
+    runExtensionAction = async (id, projectId, action, input) => {
+        const folder = projects.store.index.folderOf(projectId);
+
+        if (folder === null) {
+            throw new ExtensionRefusal('not-found', `No project ${projectId} on this machine`);
+        }
+
+        const call = serverActionCall(canvasHost, { projectId, folder, canvasId: null }, `extension:${id}`);
+
+        call.context.extension = true;
+
+        return runMachineAction(
+            action,
+            input,
+            async (name, translated) => outputOf(await serverActions.execute(name, translated, call)),
+            (files) => artifacts.artifacts.publishFor(projectId, files)
+        );
+    };
+    // Saved like one a person added, so it is listed in Settings and held when its file changes.
+    addExtensionLanguageServer = async (id, server) => {
+        const input = CustomLanguageServerInputSchema.safeParse({ args: [], ...server, id: undefined });
+
+        if (!input.success) {
+            throw new ExtensionRefusal('invalid-input', `defineLanguageServer takes another shape: ${input.error.issues[0]?.message ?? 'invalid'}`);
+        }
+
+        await language.host.customSaveFor(id, input.data);
+    };
+    const readExtensionChat = async (chatId: string): Promise<string> =>
+        (await agents.context.answerSource('extension', { id: chatId, kind: 'chat', title: chatId }, null, null)).text ?? '';
+
+    extensionAsks = {
+        'agents.run': (options: { prompt: string; context?: string[]; provider?: string }) => runExtensionPrompt(providers.providers, options),
+        'chats.send': async (chatId: string, text: string) => {
+            await chats.send(chatId, text);
+        },
+        'chats.list': async () => (await chats.list()).map(extensionChatOf),
+        'chats.read': readExtensionChat
+    };
+    registerExtensionChatRead(dispatcher, readExtensionChat);
+    registerExtensionHandlers(dispatcher, extensions, {
+        viewsOf: (projectId) => projects.store.index.viewsOf(projectId),
+        folderOf: (projectId) => projects.store.index.folderOf(projectId),
+        readSource: async (source, projectId) => (await agents.context.answerSource('extension', source, null, null, projectId)).text ?? '',
+        providers: providers.providers,
+        databaseQuery: async (projectId, connection, sql) => {
+            const folder = projects.store.index.folderOf(projectId);
+
+            if (folder === null) {
+                throw new ExtensionRefusal('not-found', `No project ${projectId} on this machine`);
+            }
+
+            const { result } = await databases.agents.query({ projectId, folder }, 'extension', connection, sql, { schema: null, limit: EXTENSION_QUERY_ROWS });
+
+            return {
+                columns: result.columns.map((column) => (typeof column === 'string' ? column : column.name)),
+                rows: result.rows.map((row) => [...row]),
+                hasMore: result.hasMore
+            };
+        }
     });
     registerEditorHandlers(dispatcher, {
         machine,
@@ -226,6 +335,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     const network = wireNetwork(config, compiled, machine, dispatcher, { clients: () => clients });
 
     noteMoment('daemon.boot', 'wired');
+    void extensions.startAutostarted();
     // Only from here on has the identity everything its announce describes; a CLI found sooner took the daemon down.
     providers.integrations.onChanged(() => identity.announce());
     void providers.integrations.refreshInstalled();
@@ -233,6 +343,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
 
     const clients = wireClients(machine.handshake, {
         dispatcher,
+        extensions,
         presence: push,
         snoozes: work.snoozes,
         prWatches: work.prWatches,
@@ -301,6 +412,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     }).catch((e) => console.error('Removing old hidden agent chats failed:', errorText(e)));
     const server = serveDaemon({
         requestStop: () => void shutdown('a request'),
+        extensions,
         runtime,
         machine,
         stores,
@@ -372,6 +484,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
             }
         };
         await step('Stopping maintenance', () => maintenance.stop());
+        await step('Stopping extensions', async () => extensions.stopAll());
         // Before the sessions go: a Voice session left open at OpenAI keeps costing.
         await step('Ending Voice sessions', async () => voice.sessions.stopAll());
         await step('Settling tasks', () => work.tasks.coordinator.settled());
@@ -394,7 +507,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         databases.agents.close();
         await step('Stopping the database helper', () => databases.service.dispose());
         await step('Stopping language servers', () => language.host.close());
-        await step('Stopping the on-device helper', () => language.onDevice.dispose());
+        await step('Stopping editor model requests', () => language.editorAssist.dispose());
         await step('Writing the usage counts', () => stats.stop());
         await step('Sending error reports', () => stopTelemetry());
         network.peers.closeAll();

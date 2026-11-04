@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, sep } from 'node:path';
-import { fileExists } from '@adecore/agents';
-import { AgentIntegrations, IntegrationsFixed } from './integrations.ts';
-import { ANTIGRAVITY_RULES, CODEX_RULES, hookEntry, installHooks } from './install.ts';
+import { fileExists } from '@adecore/utils/fs';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { ANTIGRAVITY_RULES, CODEX_RULES, hookEntry, installHooks } from './install.ts';
+import { AgentIntegrations, IntegrationsFixed } from './integrations.ts';
 
 let root: string;
 let home: string;
@@ -30,6 +30,12 @@ function providers(states: Partial<Record<string, 'on' | 'off'>> = {}): ReturnTy
 async function tree(folder: string): Promise<string[]> {
     const entries = await readdir(folder, { recursive: true, withFileTypes: true }).catch(() => []);
     return entries.filter((entry) => entry.isFile()).map((entry) => join(entry.parentPath, entry.name).slice(folder.length).split(sep).join('/'));
+}
+
+/* A ledger in which an earlier release wrote the rules at `path`, as it did for every file it wrote. */
+async function ledgerWith(provider: 'codex' | 'antigravity', path: string): Promise<void> {
+    const written = [{ path, kind: 'rules', createdFile: false, createdHooksKey: false }];
+    await writeFile(join(home, 'agent-integrations.json'), JSON.stringify({ version: 1, providers: { [provider]: { state: 'on', reviewed: true, written } } }));
 }
 
 function settingsPath(): string {
@@ -158,26 +164,65 @@ describe('AgentIntegrations', () => {
         expect(await fileExists(settingsPath())).toBe(false);
     });
 
-    test('Codex hooks and rule go together, and an edited rules file is kept', async () => {
-        const subject = await loaded();
-        await subject.set('codex', true);
+    test('installing the Codex hooks removes the rules file an earlier release wrote, and writes none', async () => {
         const rules = join(env.CODEX_HOME!, 'rules', 'ruimte.rules');
-        expect(await readFile(rules, 'utf8')).toBe(CODEX_RULES);
-        await writeFile(rules, `${CODEX_RULES}# mine\n`);
+        await mkdir(dirname(rules));
+        await writeFile(rules, CODEX_RULES);
+        await ledgerWith('codex', rules);
+        const subject = await loaded();
 
-        const reports = await subject.set('codex', false);
+        const reports = await subject.set('codex', true);
 
         expect(reports).toEqual([
-            { path: join(env.CODEX_HOME!, 'hooks.json'), kind: 'hooks', outcome: 'deleted' },
-            { path: rules, kind: 'rules', outcome: 'kept-edited' }
+            { path: join(env.CODEX_HOME!, 'hooks.json'), kind: 'hooks', outcome: 'written' },
+            { path: rules, kind: 'rules', outcome: 'deleted' }
         ]);
-        expect(await fileExists(rules)).toBe(true);
+        expect(await fileExists(rules)).toBe(false);
+        expect(await subject.set('codex', true)).toEqual([{ path: join(env.CODEX_HOME!, 'hooks.json'), kind: 'hooks', outcome: 'unchanged' }]);
+        expect((await subject.files()).map((file) => file.kind)).not.toContain('rules');
     });
 
-    test("Antigravity's rule joins a person's settings and leaves with only Ruimte's entries", async () => {
+    test('a Codex rules file a person edited stays, through an install and turning off', async () => {
+        const rules = join(env.CODEX_HOME!, 'rules', 'ruimte.rules');
+        await mkdir(dirname(rules));
+        await writeFile(rules, `${CODEX_RULES}# mine\n`);
+        await ledgerWith('codex', rules);
+        const subject = await loaded();
+
+        expect(await subject.set('codex', true)).toContainEqual({ path: rules, kind: 'rules', outcome: 'kept-edited' });
+        expect(await subject.set('codex', false)).toContainEqual({ path: rules, kind: 'rules', outcome: 'kept-edited' });
+        expect(await readFile(rules, 'utf8')).toBe(`${CODEX_RULES}# mine\n`);
+    });
+
+    test('a Codex rules file the ledger does not name stays, through an install and turning off', async () => {
+        const rules = join(env.CODEX_HOME!, 'rules', 'ruimte.rules');
+        await mkdir(dirname(rules));
+        await writeFile(rules, CODEX_RULES);
+        const subject = await loaded();
+
+        expect(await subject.set('codex', true)).toEqual([{ path: join(env.CODEX_HOME!, 'hooks.json'), kind: 'hooks', outcome: 'written' }]);
+        expect(await subject.set('codex', false)).toEqual([{ path: join(env.CODEX_HOME!, 'hooks.json'), kind: 'hooks', outcome: 'deleted' }]);
+        expect(await readFile(rules, 'utf8')).toBe(CODEX_RULES);
+    });
+
+    test('Antigravity rules a person added themselves stay, through an install and turning off', async () => {
+        const settings = join(env.GEMINI_HOME!, 'antigravity-cli', 'settings.json');
+        const theirs = JSON.stringify({ permissions: { allow: ['command(git)', ...ANTIGRAVITY_RULES] } });
+        await mkdir(dirname(settings), { recursive: true });
+        await writeFile(settings, theirs);
+        const subject = await loaded();
+
+        const hooks = join(env.GEMINI_HOME!, 'config', 'hooks.json');
+        expect(await subject.set('antigravity', true)).toEqual([{ path: hooks, kind: 'hooks', outcome: 'written' }]);
+        expect(await subject.set('antigravity', false)).toEqual([{ path: hooks, kind: 'hooks', outcome: 'deleted' }]);
+        expect(await readFile(settings, 'utf8')).toBe(theirs);
+    });
+
+    test("installing the Antigravity hook takes the former rules Ruimte wrote out of a person's settings and leaves the rest", async () => {
         const settings = join(env.GEMINI_HOME!, 'antigravity-cli', 'settings.json');
         await mkdir(dirname(settings), { recursive: true });
-        await writeFile(settings, JSON.stringify({ theme: 'dark', permissions: { allow: ['command(git)'], deny: ['command(sudo)'] } }));
+        await writeFile(settings, JSON.stringify({ theme: 'dark', permissions: { allow: ['command(git)', ...ANTIGRAVITY_RULES], deny: ['command(sudo)'] } }));
+        await ledgerWith('antigravity', settings);
         const subject = await loaded();
 
         const on = await subject.set('antigravity', true);
@@ -185,45 +230,37 @@ describe('AgentIntegrations', () => {
 
         const hooks = join(env.GEMINI_HOME!, 'config', 'hooks.json');
         expect(on).toEqual([
-            { path: settings, kind: 'rules', outcome: 'written' },
-            { path: hooks, kind: 'hooks', outcome: 'written' }
+            { path: hooks, kind: 'hooks', outcome: 'written' },
+            { path: settings, kind: 'rules', outcome: 'removed' }
         ]);
-        expect(again).toEqual([
-            { path: settings, kind: 'rules', outcome: 'unchanged' },
-            { path: hooks, kind: 'hooks', outcome: 'unchanged' }
-        ]);
-        expect(JSON.parse(await readFile(settings, 'utf8'))).toEqual({
-            theme: 'dark',
-            permissions: { allow: ['command(git)', ...ANTIGRAVITY_RULES], deny: ['command(sudo)'] }
-        });
-        expect(await subject.files()).toContainEqual({ provider: 'antigravity', path: settings, kind: 'rules', present: true, ours: true });
-
-        const off = await subject.set('antigravity', false);
-
-        expect(off).toEqual([
-            { path: settings, kind: 'rules', outcome: 'removed' },
-            { path: hooks, kind: 'hooks', outcome: 'deleted' }
-        ]);
-        expect(await fileExists(hooks)).toBe(false);
+        expect(again).toEqual([{ path: hooks, kind: 'hooks', outcome: 'unchanged' }]);
         expect(JSON.parse(await readFile(settings, 'utf8'))).toEqual({
             theme: 'dark',
             permissions: { allow: ['command(git)'], deny: ['command(sudo)'] }
         });
-    });
+        expect(await subject.files()).toContainEqual({ provider: 'antigravity', path: settings, kind: 'rules', present: true, ours: false });
 
-    test('an Antigravity settings file Ruimte created goes back to absent', async () => {
-        const settings = join(env.GEMINI_HOME!, 'antigravity-cli', 'settings.json');
-        const subject = await loaded();
-
-        await subject.set('antigravity', true);
-        expect(JSON.parse(await readFile(settings, 'utf8'))).toEqual({ permissions: { allow: [...ANTIGRAVITY_RULES] } });
         const off = await subject.set('antigravity', false);
 
-        expect(off).toEqual([
-            { path: settings, kind: 'rules', outcome: 'deleted' },
-            { path: join(env.GEMINI_HOME!, 'config', 'hooks.json'), kind: 'hooks', outcome: 'deleted' }
-        ]);
+        expect(off).toEqual([{ path: hooks, kind: 'hooks', outcome: 'deleted' }]);
+        expect(await fileExists(hooks)).toBe(false);
+    });
+
+    test('an Antigravity settings file an earlier release created goes back to absent at the next startup install', async () => {
+        const settings = join(env.GEMINI_HOME!, 'antigravity-cli', 'settings.json');
+        await mkdir(dirname(settings), { recursive: true });
+        await writeFile(settings, JSON.stringify({ permissions: { allow: [...ANTIGRAVITY_RULES] } }));
+        const written = [{ path: settings, kind: 'rules', createdFile: true, createdHooksKey: true }];
+        await writeFile(
+            join(home, 'agent-integrations.json'),
+            JSON.stringify({ version: 1, providers: { antigravity: { state: 'on', reviewed: true, written } } })
+        );
+        const subject = await loaded();
+
+        await subject.installDefaults();
+
         expect(await fileExists(settings)).toBe(false);
+        expect(await fileExists(join(env.GEMINI_HOME!, 'config', 'hooks.json'))).toBe(true);
     });
 
     test("Antigravity's hook joins a person's hooks under a name of its own, and an edited one stays", async () => {
@@ -272,11 +309,15 @@ describe('AgentIntegrations', () => {
         const settings = join(env.GEMINI_HOME!, 'antigravity-cli', 'settings.json');
         await mkdir(dirname(settings), { recursive: true });
         await writeFile(settings, '{"permissions":{"allow":"command(*)"}}');
+        await ledgerWith('antigravity', settings);
         const subject = await loaded();
 
         const reports = await subject.set('antigravity', true);
 
-        expect(reports.map((report) => [report.kind, report.outcome])).toEqual([['rules', 'refused']]);
+        expect(reports.map((report) => [report.kind, report.outcome])).toEqual([
+            ['hooks', 'written'],
+            ['rules', 'refused']
+        ]);
         expect(await readFile(settings, 'utf8')).toBe('{"permissions":{"allow":"command(*)"}}');
     });
 

@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { EventMap, EventType, RequestMap, RequestType, ServerFrame } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
-import { DrawingClient } from '../drawing/drawing-client';
+import type { EventMap, EventType, RequestMap, RequestType, ServerFrame } from '@ruimte/contracts';
 import { DiagramClient } from '../diagram/diagram-client';
+import { DrawingClient } from '../drawing/drawing-client';
 import { TransportError, type Transport } from '../transport/transport';
 import { createWorkspaceStores } from './workspace';
 

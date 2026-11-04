@@ -1,12 +1,13 @@
+import type { KeyLike } from '@adecore/ui';
 import { useEffect } from 'react';
+import { isInNodeBody } from '@/canvas/node-body';
 import { isApplePlatform } from '@/desktop/bridge';
 import { countCommand } from '@/desktop/usage';
-import { isInNodeBody } from '@/canvas/node-body';
+import { runActionShortcut } from '@/extensions/action-shortcuts';
 import { newChat } from '@/project/new-chat';
 import { canOpenWindows, openNewWindow } from '@/project/windows';
 import { commandForKey, type WindowCommandId } from '@/shell/command-table';
 import { useUi } from '@/state/ui';
-import type { KeyLike } from '@adecore/ui';
 
 // Window shortcuts also work on the start screen; project shortcuts are bound by the workspace.
 type AppShortcut = WindowCommandId;
@@ -78,6 +79,9 @@ export function useAppShortcuts(): void {
                 windows: canOpenWindows()
             });
             if (shortcut === null) {
+                // Ruimte's own first, so an extension never takes a key from it.
+                runActionShortcut(e, isApplePlatform());
+
                 return;
             }
             e.preventDefault();

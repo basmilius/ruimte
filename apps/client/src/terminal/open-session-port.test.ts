@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import type { ProjectCanvasView } from '@ruimte/contracts';
-import { useEndpoints } from '@/state/endpoints';
 import { defaultCanvases, NODE_SIZE } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { useEndpoints } from '@/state/endpoints';
 import { openVerifiedSessionPort } from './open-session-port';
 
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');

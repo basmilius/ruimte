@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import type { Machine } from '@ruimte/pulsar';
+import i18next from 'i18next';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
 

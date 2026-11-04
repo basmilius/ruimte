@@ -6,8 +6,8 @@ import type { AgentEvent } from '@adecore/agents/host';
 import type { ChatTurnItem } from '@ruimte/contracts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { gitIn, repoTemplate, type RepoTemplate } from '../git/test-repo.ts';
-import { ProvenanceStore } from './provenance-store.ts';
 import { ProvenanceService, type ProvenanceChat } from './provenance-service.ts';
+import { ProvenanceStore } from './provenance-store.ts';
 
 const SCORE = ['export function rank(list: Candidate[]) {', '    return list;', '}', ''].join('\n');
 const OTHER = ['one', 'two', 'three', 'four', 'five', ''].join('\n');

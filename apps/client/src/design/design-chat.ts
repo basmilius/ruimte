@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import { designNodeChats, viewChats, type DesignPlace, type ProjectDesignView, type ProjectNode } from '@ruimte/contracts';
+import { create } from 'zustand';
 import type { DesignCamera } from '@/design/design-protocol';
 
 interface DesignChatState {

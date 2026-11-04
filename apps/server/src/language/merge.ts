@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from 'node:util';
 import { applyCompletionDefaults, type CompletionItem, type CompletionList } from '@adecore/lsp';
-import { isRecord } from '../is-record.ts';
+import { isRecord } from '@adecore/utils/record';
 
 /*
  * Several servers can serve one document, such as the TypeScript server and ESLint. A feature that

@@ -22,7 +22,7 @@ module.exports = async (context) => {
     const daemon = join(bin, platform === 'win32' ? 'ruimte.exe' : 'ruimte');
     expectFiles([daemon], `No daemon at ${daemon}; run \`bun run --cwd apps/server compile\` for this os and arch first`);
     if (platform === 'win32') {
-        for (const name of ['ruimte-context.exe', join('native', 'adecore-database.exe')]) {
+        for (const name of [join('native', 'adecore-database.exe')]) {
             expectFiles([join(bin, name)], `No ${name} in ${bin}; run \`bun run --cwd apps/server compile -- --os win --arch x64\` first`);
         }
     }
@@ -35,10 +35,6 @@ module.exports = async (context) => {
             [join(resources, '..', 'Helpers', 'Ruimte Computer Use.app', 'Contents', 'MacOS', 'RuimteComputerUse')],
             `No computer use helper; ${COMPILE_HINT}`
         );
-        // electron-builder uses builder-util's numeric Arch.arm64 (3) in packaging contexts.
-        if (context.arch === 3) {
-            expectFiles([join(native, 'ruimte-foundation-models')], 'No Apple Foundation Models helper; compile the server resources for macOS arm64 first');
-        }
     }
     expectFiles([join(resources, 'client', 'index.html')], 'No built client; run `bun run --cwd apps/client build` first');
 };

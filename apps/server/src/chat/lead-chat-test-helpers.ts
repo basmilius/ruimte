@@ -1,10 +1,10 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
-import { turnsOf } from './chat-test-helpers.ts';
 import { claudeProjectSlug } from '@adecore/agents/chat';
+import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { TestDaemon } from '../tasks/test-daemon.ts';
+import { turnsOf } from './chat-test-helpers.ts';
 
 /* A canvas with one Claude chat, `chat-lead`, which the fork tests copy and summarize. */
 export function leadProject(): ProjectContent {
@@ -25,7 +25,7 @@ export function leadProject(): ProjectContent {
     };
 }
 
-/* `leadProject` with a terminal beside the chat, for the verbs that only an AI chat may call. */
+/* `leadProject` with a terminal beside the chat, for the tools that only an AI chat may call. */
 export function leadAndShellProject(): ProjectContent {
     const project = leadProject();
     const [canvas] = project.views;

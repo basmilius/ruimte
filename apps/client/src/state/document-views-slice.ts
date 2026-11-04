@@ -31,6 +31,7 @@ export function createDocumentViewsSlice({
     | 'addFileView'
     | 'addDatabaseView'
     | 'addStandaloneView'
+    | 'addExtensionView'
     | 'addArtifactView'
     | 'addDesignChat'
     | 'renameView'
@@ -95,6 +96,13 @@ export function createDocumentViewsSlice({
         addSubheaderView(name) {
             // A heading over the rows under it, which is a row that divides the list, not a place to go.
             return addView({ kind: 'subheader', id: nextId('subheader'), name }, false);
+        },
+
+        addExtensionView(name, extension, type, params) {
+            const id = nextId('view');
+            const raw = { kind: 'extension', id, name, extension, type, ...(params === undefined ? {} : { params }) };
+
+            return addView({ kind: 'unknown', id, name, raw }, true);
         },
 
         addDrawingView(name) {

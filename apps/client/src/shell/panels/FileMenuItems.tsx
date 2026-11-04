@@ -1,13 +1,13 @@
+import { copyText, Icon, Menu } from '@adecore/ui';
+import { Copy, FileText, Minus, PanelLeftOpen, Plus, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ignoreRefusal, perform } from '@/actions/client-actions';
 import { promoteLooseDatabase } from '@/project/views';
-import { Copy, FileText, Minus, PanelLeftOpen, Plus, RefreshCw } from 'lucide-react';
 import { useDiffCarets } from '@/shell/panels/diff-caret';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { relativeTo } from '@/shell/panels/files-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
 import { isArtifactTab, isCheckoutDiff, isDatabaseTab, isPromotableTab, useFiles } from '@/state/files';
-import { copyText, Icon, Menu } from '@adecore/ui';
 
 /*
  * What a loose tab holds can be asked, for the toolbar's overflow menu and the right click on a tab

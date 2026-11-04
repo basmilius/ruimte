@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { NODE_SIZE } from '@ruimte/contracts';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
-import { readOrCreateEndpointIdentity as readIdentity } from './endpoint-id.ts';
 import { LENT_NOTHING, lendNothing } from './endpoint-id-test-helpers.ts';
+import { readOrCreateEndpointIdentity as readIdentity } from './endpoint-id.ts';
 
 let home: string;
 
@@ -142,7 +142,6 @@ describe('readOrCreateEndpointIdentity', () => {
                     streamingAllowed: true,
                     resumeAtReset: false,
                     visualReplies: true,
-                    appleFoundationEnabled: false,
                     keepAwake: 'off',
                     keepAwakeOnBattery: false,
                     keepAwakeDisplay: false,
@@ -279,23 +278,6 @@ describe('readOrCreateEndpointIdentity', () => {
             { event: 'endpoint.changed', payload: { label: 'Studio', keepAwakeLidClosed: true, keepAwakeLidRule: false } },
             { event: 'endpoint.changed', payload: { label: 'Studio', keepAwakeLidClosed: true, keepAwakeLidRule: true } }
         ]);
-    });
-
-    test('Apple Foundation Models is off by default, persists and broadcasts changes to every client', async () => {
-        const identity = await readOrCreateEndpointIdentity(home, 'box');
-        expect(identity.appleFoundationEnabled).toBe(false);
-        const first: unknown[] = [];
-        const second: unknown[] = [];
-        identity.subscribe('first', (event) => first.push(event));
-        identity.subscribe('second', (event) => second.push(event));
-        await identity.setIdentity(null, null, { appleFoundationEnabled: true });
-        expect((await readOrCreateEndpointIdentity(home, 'box')).appleFoundationEnabled).toBe(true);
-        expect(first.at(-1)).toMatchObject({ payload: { appleFoundationEnabled: true } });
-        expect(second).toEqual(first);
-        await identity.setIdentity('Renamed', null);
-        expect(identity.appleFoundationEnabled).toBe(true);
-        await identity.setIdentity(null, null, { appleFoundationEnabled: false });
-        expect((await readOrCreateEndpointIdentity(home, 'box')).appleFoundationEnabled).toBe(false);
     });
 
     test('the broker setting survives a restart, is applied before clients hear it, and a default one is not written', async () => {

@@ -1,6 +1,6 @@
+import { Serializer } from '@adecore/utils/async';
 import { effectiveBrokerUrl, type BrokerOverride, type BrokerSetting, type IceServer } from '@ruimte/pulsar';
 import type { Relay } from '../auth/relay.ts';
-import { Serializer } from '@adecore/agents';
 
 interface BrokerSwitchOptions {
     /* What `--broker`, `--no-broker` or `RUIMTE_BROKER_URL` forced; null leaves it to the setting. */

@@ -78,7 +78,7 @@ public struct AgentError: Error, Sendable {
     /// A call in the background that only the front can do; `reason` is the sentence that says why, without its period.
     public static func needsFront(_ reason: String) -> AgentError {
         AgentError(
-            "\(reason). Call again with --front: that brings the app forward and interrupts the person, so do it only when there is no other way or the person agreed",
+            "\(reason). Call again with front: that brings the app forward and interrupts the person, so do it only when there is no other way or the person agreed",
             code: "needs-front"
         )
     }

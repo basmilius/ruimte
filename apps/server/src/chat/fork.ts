@@ -1,11 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
+import { forkThreadOnce, ChatError as AgentChatError } from '@adecore/agents/chat';
+import type { AgentLineageStore } from '@adecore/agents/coordination';
+import { narrowerMode, AccountError, storedAccount, codexServiceTier, codexThreadOptions } from '@adecore/agents/providers';
 import {
     chatHostOf,
     clipText,
     idsInViews,
     isCanvasView,
     isDesignView,
+    joinGroupUnder,
     nodeChats,
     withView,
     type AgentKind,
@@ -29,21 +33,18 @@ import {
     type ProjectView,
     type Worktree
 } from '@ruimte/contracts';
-import { forkThreadOnce, ChatError as AgentChatError } from '@adecore/agents/chat';
-import type { AgentLineageStore } from '@adecore/agents/coordination';
-import { narrowerMode, AccountError, storedAccount, codexServiceTier, codexThreadOptions } from '@adecore/agents/providers';
 import type { HiddenAgent, HiddenAgentStore } from '../agents/hidden-agents.ts';
-import { agentNode, nameOf } from '../canvas/agents.ts';
-import { MAX_CANVAS_NODES, newId } from '../canvas/nodes.ts';
-import { placeFree } from '../canvas/placement.ts';
-import type { CanvasHost, MachineHost, ProjectHost, WorktreeWant } from '../canvas/verb.ts';
-import { branchSlug } from '../canvas/worktree.ts';
 import { errorText } from '../error-text.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
 import { git } from '../git/run.ts';
 import { freeBranch, type Worktrees } from '../git/worktrees.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
+import { agentNode, nameOf } from '../tools/agents.ts';
+import type { CanvasHost, MachineHost, ProjectHost, WorktreeWant } from '../tools/host.ts';
+import { MAX_CANVAS_NODES, newId } from '../tools/nodes.ts';
+import { placeFree } from '../tools/placement.ts';
+import { branchSlug } from '../tools/worktree.ts';
 import type { ChatManager } from './chat-manager.ts';
 import { forkClaudeTranscript, type TranscriptCutPoint } from './claude-fork.ts';
 import { ChatError } from './errors.ts';
@@ -218,7 +219,7 @@ const CHAT_CLIS: ReadonlySet<AgentKind> = new Set(['claude', 'codex']);
 /* What the person reads under the copied history of a fork that goes on with another CLI, after "Forked". */
 function switchNote(cut: Cut, original: { title: string }, files: ForkFiles, handoff: { to: string; turns: number; all: boolean }): string {
     const read = handoff.all ? 'the whole conversation' : `the last ${handoff.turns === 1 ? 'turn' : `${handoff.turns} turns`}`;
-    return `after ${cutPlace(cut)} and continued with ${handoff.to}. ${filesLine(cut, files)} The agent got ${read} as text and can read the rest of ${original.title} through ruimte-context.`;
+    return `after ${cutPlace(cut)} and continued with ${handoff.to}. ${filesLine(cut, files)} The agent got ${read} as text and can read the rest of ${original.title} itself.`;
 }
 
 function cliRefusal(error: unknown): ChatError {
@@ -678,7 +679,13 @@ async function landFork(
         content: {
             ...content,
             views: content.views.map((view) =>
-                view.id === canvas.id ? { ...canvas, nodes: [...canvas.nodes, node], edges: edge ? [...canvas.edges, edge] : canvas.edges } : view
+                view.id === canvas.id
+                    ? {
+                          ...canvas,
+                          nodes: joinGroupUnder({ nodes: [...canvas.nodes, node], texts: canvas.texts }, forkId),
+                          edges: edge ? [...canvas.edges, edge] : canvas.edges
+                      }
+                    : view
             )
         },
         result: { info: forkInfo, nodeId: forkId, viewId: canvas.id, edgeId: edge?.id ?? null, ...answer },

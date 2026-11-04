@@ -1,8 +1,8 @@
+import type { LanDoor, Reachability } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import type { LanDoor, Reachability } from '@ruimte/contracts';
-import { credentialFor } from '@/endpoint/credentials';
 import { desktop } from '@/desktop/bridge';
+import { credentialFor } from '@/endpoint/credentials';
 import { storedText } from '@/state/stored-json';
 
 export const ENDPOINTS_STORAGE_KEY = 'ruimte.endpoints';

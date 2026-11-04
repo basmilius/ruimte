@@ -1,8 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
-import { ArrowLeft, ChevronLeft, ChevronRight, CloudOff, MessageSquareText, Square, TriangleAlert, Workflow, X } from 'lucide-react';
-import { nodeColorOf, workflowEndedAt, type AgentKind, type ChatWorkflow } from '@ruimte/contracts';
+import { useChatScope } from '@adecore/agents-react';
 import {
     jumpToTimelineItem,
     liveWorkflowPhase,
@@ -21,9 +17,13 @@ import {
 } from '@adecore/agents-react/chat';
 import { SubagentTimeline, WorkflowAgentLine } from '@adecore/agents-react/chat/ui';
 import { useChatRow } from '@adecore/agents-react/state';
-import { useChatScope } from '@adecore/agents-react';
-import { ErrorBoundary, Icon, IconButton, Tooltip, messageOf, useTickingText } from '@adecore/ui';
+import { ErrorBoundary, Icon, IconButton, ScrollArea, Tooltip, messageOf, useTickingText } from '@adecore/ui';
 import { formatElapsedShort } from '@adecore/ui/format';
+import { nodeColorOf, workflowEndedAt, type AgentKind, type ChatWorkflow } from '@ruimte/contracts';
+import clsx from 'clsx';
+import { ArrowLeft, ChevronLeft, ChevronRight, CloudOff, MessageSquareText, Square, TriangleAlert, Workflow, X } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { accentColor, accentHeaderStyle, accentShades } from '@/canvas/accents';
 import { CHROME_H, FRAME, frameStyle, HEADER, HEADER_MIDDLE } from '@/canvas/derived-card-look';
 import { CardLine } from '@/canvas/DerivedCardLook';
@@ -33,6 +33,7 @@ import type { Rect } from '@/canvas/math';
 import { derivedCardId } from '@/canvas/node-body';
 import type { ResizeEdge } from '@/canvas/resize-handles';
 import { shownWorkflow, workflowCandidates, type WorkflowCandidate } from '@/chat/workflow/beside-workflows';
+import { phaseCardKey, workflowBesideLayout, type WorkflowBesideCard } from '@/chat/workflow/workflow-beside-layout';
 import {
     besideKey,
     closeWorkflowAgent,
@@ -44,7 +45,6 @@ import {
     setWorkflowAgentTrail,
     useWorkflowBeside
 } from '@/chat/workflow/workflow-beside-state';
-import { phaseCardKey, workflowBesideLayout, type WorkflowBesideCard } from '@/chat/workflow/workflow-beside-layout';
 import { AGENT_MIN, storedAgentSize } from '@/chat/workflow/workflow-size';
 import type { CardSize } from '@/routines/output-size';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
@@ -448,7 +448,7 @@ function OpenPhase({
                     <PhaseTime phase={phase} />
                 </span>
             </header>
-            <div className="min-h-0 grow overflow-auto">
+            <ScrollArea className="grow">
                 <div ref={listRef} className="px-3 py-2">
                     {refused && <p className="pb-1 text-xs text-text-muted">{t('workflowBeside.unsupported')}</p>}
                     {phase.agents.map((view) => (
@@ -461,7 +461,7 @@ function OpenPhase({
                         />
                     ))}
                 </div>
-            </div>
+            </ScrollArea>
         </div>
     );
 }

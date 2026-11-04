@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
-import { act } from 'react';
 import type { ArtifactGetResult, ArtifactSummary, ArtifactVersion, RemoteLink } from '@ruimte/contracts';
+import { act } from 'react';
 import { openArtifact } from '@/output/open';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { TransportError } from '@/transport/transport';
+import { clickOn, mount, openSubmenu, pressKey, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, mount, openSubmenu, pressKey, until, type Mounted } from '../../testing/dom';
 import { emptyCanvas } from '../../testing/project-fixtures';
 
 const MAIN = emptyCanvas();

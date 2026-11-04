@@ -1,7 +1,7 @@
-import { useTranslation } from 'react-i18next';
+import type { EditorFoldOutline } from '@adecore/editor';
 import { Segmented, Switch } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
-import type { EditorFoldOutline } from '@adecore/editor';
+import { useTranslation } from 'react-i18next';
 import { FOLDING_GROUPS } from '@/shell/settings/folding-rows';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { FOLD_OUTLINES, useSettings } from '@/state/settings';

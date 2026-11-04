@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
-import i18next from 'i18next';
-import { useTranslation } from 'react-i18next';
+import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
+import { Segmented, Switch, Button, Dialog, Field, FieldHint, Input } from '@adecore/ui';
 import type { Worktree, WorktreeMergeResult, WorktreeMergeStrategy } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cancelGitRunAction, perform } from '@/actions/client-actions';
 import { agentsEndedWith } from '@/agents/end-children';
 import { nextActionId, phaseLabel } from '@/shell/panels/git-actions';
@@ -23,17 +25,15 @@ import {
 } from '@/shell/panels/worktree-merge';
 import { nodesInWorktree, worktreeSessionsOf } from '@/shell/panels/worktree-rows';
 import { inspectWorktrees, nodeNames } from '@/shell/worktree-inspection';
-import { Segmented, Switch, Button, Dialog, Field, FieldHint, Input } from '@adecore/ui';
 import { nodeWorking } from '@/state/agent-work';
-import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
 import { useEndpointId, endpointKey } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useUi, type WorktreeMergeRequest } from '@/state/ui';
 import { useProjectNodes, worktreeLists, type WorktreeNode } from '@/state/worktrees';
-import type { Transport } from '@/transport/transport';
 import { useTransport } from '@/transport/context';
+import type { Transport } from '@/transport/transport';
 
 type Reading = { request: WorktreeMergeRequest; worktrees: Worktree[]; error: { message: string | null } | null };
 

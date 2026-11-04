@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { ACTION_ACTOR_KINDS, ACTION_DEFINITIONS, VOICE_CONTROL_TOOL, voiceToolDefinitions, type ActionName } from '@ruimte/actions';
 import { DAEMON_VOICE_ACTIONS, daemonVoiceTools } from '@ruimte/voice';
-import type { CanvasHost } from '../canvas/verb.ts';
 import { voiceActionCall, type VoiceActionContext, type ServerActionContext } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { VOICE_FIELD_RULES, voicePolicy } from './action-policy.ts';
 import { VoiceToolExecutor } from './tool-executor.ts';
 

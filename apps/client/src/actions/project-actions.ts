@@ -12,16 +12,16 @@ import {
 import type { StoreApi } from 'zustand';
 import { asksFirst } from '@/actions/developer-actions';
 import { asRefusal, refusing } from '@/actions/refusal';
+import { plural } from '@/actions/words';
 import type { ProjectClient } from '@/project/project-client';
-import type { SwitchOutcome } from '@/project/project-switch';
 import { sessionNodesOf } from '@/project/project-sessions';
+import type { SwitchOutcome } from '@/project/project-switch';
 import type { DocumentState } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { windowWorkspace } from '@/state/window';
-import { plural } from '@/actions/words';
 
 export interface ListedProject {
     endpointId: string;

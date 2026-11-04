@@ -1,7 +1,7 @@
 'use client';
 
-import { CanvasEdge, CanvasNode } from '../app/canvas.tsx';
 import { TerminalBody } from '../app/bodies.tsx';
+import { CanvasEdge, CanvasNode } from '../app/canvas.tsx';
 import { AssistantText, ToolRow } from '../app/chat.tsx';
 import { useTimeline } from '../film/playback.ts';
 import { Stage } from '../film/Stage.tsx';

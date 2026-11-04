@@ -14,8 +14,8 @@ import {
     type ActionHandlers,
     type ActionName
 } from '../index.ts';
-import { WRITE_CASES } from './cases.ts';
 import type { WriteCase, WriteDomain } from './case.ts';
+import { WRITE_CASES } from './cases.ts';
 import { sampleOf } from './sample.ts';
 
 interface Context {

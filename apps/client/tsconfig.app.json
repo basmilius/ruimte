@@ -8,8 +8,8 @@
     "allowArbitraryExtensions": true,
     "resolveJsonModule": true,
     "jsx": "react-jsx",
-    "paths": { "@/*": ["./src/*"] }
+    "paths": { "@/*": ["./src/*"], "@extensions/*": ["../../extensions/*"] }
   },
-  "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/worker"]
+  "include": ["src", "../../extensions/*/client", "../../extensions/poc/*/client"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/worker", "../../extensions/**/*.test.ts", "../../extensions/**/*.test.tsx"]
 }

@@ -1,5 +1,4 @@
-import { useSyncExternalStore } from 'react';
-import i18next from 'i18next';
+import type { LiveTemplate, PostfixTemplate, TemplateLanguage, TemplatePlace, TemplateRegistry } from '@adecore/editor-react';
 import {
     TEMPLATE_LANGUAGES,
     TEMPLATE_PLACES,
@@ -14,7 +13,8 @@ import {
     type TemplateScope,
     type TemplateSettings
 } from '@ruimte/contracts';
-import type { LiveTemplate, PostfixTemplate, TemplateLanguage, TemplatePlace, TemplateRegistry } from '@adecore/editor-react';
+import i18next from 'i18next';
+import { useSyncExternalStore } from 'react';
 import { useToasts } from '@/state/toasts';
 import { machineAnswers } from '@/transport/features';
 import { TransportError, type Transport } from '@/transport/transport';

@@ -1,4 +1,6 @@
-import i18next from 'i18next';
+import { sendFromComposer, stepEffortFromComposer, stepTimelineMessage } from '@adecore/agents-react/chat';
+import { providersOf } from '@adecore/agents-react/state';
+import type { Shortcut } from '@adecore/ui';
 import {
     isCanvasView,
     isDiagramView,
@@ -9,8 +11,8 @@ import {
     type ProviderInfo,
     type SplitLayout
 } from '@ruimte/contracts';
-import type { AgentTarget } from '@/agents/nodes';
-import { availableAgents } from '@/agents/creation';
+import i18next from 'i18next';
+import { centerWorld } from '@/actions/action-reach';
 import {
     applyLayoutAction,
     closeCellsRightOfAction,
@@ -29,63 +31,66 @@ import {
     showViewOnCanvasAction,
     toggleFlagAction
 } from '@/actions/client-actions';
-import { centerWorld } from '@/actions/action-reach';
+import { availableAgents } from '@/agents/creation';
+import type { AgentTarget } from '@/agents/nodes';
+import { openAttentionQueue } from '@/attention/queue';
 import { groupArrangeable } from '@/canvas/arrange-group';
+import { focusedChatId } from '@/chat/focused-chat';
+import { restartChatSession } from '@/chat/restart-session';
 import { openNewConsole } from '@/database/console-file';
-import { useDatabasePanel } from '@/database/state';
 import { refreshSqlSchemas } from '@/database/sql-bindings';
-import { languageForCommand } from '@/language/focused-language';
-import { languageCommandRows } from '@/language/language-commands';
-import { editorCommandRows } from '@/shell/editor-commands';
-import { stepFocusedEditorFind } from '@/shell/panels/use-editor-find';
-import { diffInFront, openFileAtDiffCaret } from '@/shell/panels/diff-caret';
-import { keepAwakeAvailable, setKeepAwake } from '@/state/keep-awake';
-import { newChat, newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
-import { canMoveToNewWindow, canOpenWindows, moveToNewWindow, openNewWindow } from '@/project/windows';
-import { stepMove, stepWindowTab, useWindowTabs } from '@/project/window-tabs';
-import { useSettings } from '@/state/settings';
-import { openFocusedFind } from '@/find/hosts';
-import { askDeleteView, askOpenAsView, askViewSettings, canOpenAsView, newSubheaderView } from '@/project/views';
+import { useDatabasePanel } from '@/database/state';
+import { shownChatOfNode } from '@/design/design-chat';
 import { copyDiagram, exportDiagram, openDiagramJson } from '@/diagram/diagram-actions';
 import { copyDrawing, exportDrawing } from '@/drawing/drawing-actions';
-import { focusedCanvas, maximizedNodeOf, maximizeTargetOf, zoomNodeTargetOf, type CanvasState } from '@/state/canvas';
-import { focusedDiagram } from '@/state/diagram';
-import { focusedDrawing } from '@/state/drawing';
+import { runAction } from '@/extensions/action-runs';
+import { useInstalledExtensions } from '@/extensions/loader';
+import { useContributions, type Contributions } from '@/extensions/registry';
+import { useSlotOutlines } from '@/extensions/slot-outlines';
+import { baseContext, nodeInfoOf, resolveSlot } from '@/extensions/slots';
+import { openFocusedFind } from '@/find/hosts';
+import { languageForCommand } from '@/language/focused-language';
+import { languageCommandRows } from '@/language/language-commands';
 import { afterSettleCandidates, chooseAfterSettle, chosenLaunchId, startLaunch, stopLaunch } from '@/launches/actions';
 import { launchViews } from '@/launches/model';
 import { useLaunches } from '@/launches/state';
-import { activeViewOf, useDocument } from '@/state/document';
-import { nextWaitingTitle, revealNextWaiting } from '@/shell/next-waiting';
-import { openAttentionQueue } from '@/attention/queue';
-import { hasPrWatch, stopPrWatch } from '@/shell/pr-watch-actions';
-import { currentEndpointId, endpointKey } from '@/state/keys';
-import { endpointOfNodeId } from '@/state/node-endpoint';
+import type { MeasureVariant } from '@/measure/scene';
 import { openOnboarding } from '@/onboarding/open';
-import { pullRequestCommands } from '@/shell/pull-request-commands';
-import { prReposOfCurrent, type PrRepo } from '@/state/pr-repos';
-import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
-import { windowWorkspace } from '@/state/window';
-import { hasLocalMachine } from '@/state/local-machine';
-import { providersOf } from '@adecore/agents-react/state';
-import { fileManagerName, serverInfoOf } from '@/state/server';
-import { useTheme } from '@/state/theme';
-import { useFiles } from '@/state/files';
-import { useUi } from '@/state/ui';
-import { pool, transportFor } from '@/transport';
-import { machineAnswers } from '@/transport/features';
+import { newChat, newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
+import { askDeleteView, askOpenAsView, askViewSettings, canOpenAsView, newSubheaderView } from '@/project/views';
+import { stepMove, stepWindowTab, useWindowTabs } from '@/project/window-tabs';
+import { canMoveToNewWindow, canOpenWindows, moveToNewWindow, openNewWindow } from '@/project/windows';
 import { openRoutineForm } from '@/routines/form-state';
 import { toggleRoutines } from '@/routines/stage';
-import { activeViewFacts } from '@/shell/menu/context';
 import { runAppShortcut } from '@/shell/app-shortcuts';
-import { canSplit, cellAt, cellCount, cellsRightOf, isTabHost, maximizedCell } from '@/shell/split';
-import type { Shortcut } from '@adecore/ui';
-import { sendFromComposer, stepEffortFromComposer, stepTimelineMessage } from '@adecore/agents-react/chat';
-import { focusedChatId } from '@/chat/focused-chat';
-import { shownChatOfNode } from '@/design/design-chat';
-import { restartChatSession } from '@/chat/restart-session';
 import { COMMANDS, type PaletteCommandId } from '@/shell/command-table';
+import { editorCommandRows } from '@/shell/editor-commands';
+import { activeViewFacts } from '@/shell/menu/context';
+import { nextWaitingTitle, revealNextWaiting } from '@/shell/next-waiting';
+import { diffInFront, openFileAtDiffCaret } from '@/shell/panels/diff-caret';
+import { stepFocusedEditorFind } from '@/shell/panels/use-editor-find';
+import { hasPrWatch, stopPrWatch } from '@/shell/pr-watch-actions';
+import { pullRequestCommands } from '@/shell/pull-request-commands';
+import { canSplit, cellAt, cellCount, cellsRightOf, isTabHost, maximizedCell } from '@/shell/split';
+import { focusedCanvas, maximizedNodeOf, maximizeTargetOf, zoomNodeTargetOf, type CanvasState } from '@/state/canvas';
+import { focusedDiagram } from '@/state/diagram';
+import { activeViewOf, useDocument } from '@/state/document';
+import { focusedDrawing } from '@/state/drawing';
+import { useFiles } from '@/state/files';
+import { keepAwakeAvailable, setKeepAwake } from '@/state/keep-awake';
+import { currentEndpointId, endpointKey } from '@/state/keys';
+import { hasLocalMachine } from '@/state/local-machine';
+import { endpointOfNodeId } from '@/state/node-endpoint';
 import { isNotePreviewLocked, setNotePreviewLocked } from '@/state/note-previews';
-import type { MeasureVariant } from '@/measure/scene';
+import { prReposOfCurrent, type PrRepo } from '@/state/pr-repos';
+import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
+import { fileManagerName, serverInfoOf } from '@/state/server';
+import { useSettings } from '@/state/settings';
+import { useTheme } from '@/state/theme';
+import { useUi } from '@/state/ui';
+import { windowWorkspace } from '@/state/window';
+import { pool, transportFor } from '@/transport';
+import { machineAnswers } from '@/transport/features';
 
 export interface Command {
     id: string;
@@ -297,7 +302,60 @@ function measureCommands(): Command[] {
 }
 
 /* Every row the palette offers besides the jumps, each only while it can act. */
-export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent()): Command[] {
+type ExtensionRows = Pick<Contributions, 'commands' | 'slotEntries'>;
+
+export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent(), contributions: ExtensionRows = useContributions.getState()): Command[] {
+    return [...coreCommands(prRepos), ...extensionCommands(contributions)];
+}
+
+function extensionCommands({ commands, slotEntries }: ExtensionRows): Command[] {
+    const developing = useInstalledExtensions.getState().installed.some((entry) => entry.dev);
+    const outlines: Command[] = developing
+        ? [
+              {
+                  id: 'extension:slots',
+                  label: useSlotOutlines.getState().on ? 'Hide extension slots' : 'Show extension slots',
+                  run: () => useSlotOutlines.setState(({ on }) => ({ on: !on }))
+              }
+          ]
+        : [];
+    const context = { ...baseContext(), nodes: focusedCanvas().getState().selection.map(nodeInfoOf) };
+
+    return [
+        ...outlines,
+        ...commands
+            .filter((command) => command.when?.() ?? true)
+            .map((command) => ({
+                id: command.id,
+                label: command.title,
+                // Someone else's code, so a throw reaches a person as an action's does.
+                run: () =>
+                    void runAction(
+                        {
+                            id: command.id,
+                            title: command.title,
+                            run: () => command.run(),
+                            ...(command.onFailure === undefined ? {} : { onFailure: command.onFailure })
+                        },
+                        {},
+                        'commandPalette'
+                    )
+            })),
+        ...resolveSlot(slotEntries, 'commandPalette', context).flatMap(({ entry, title, disabled }) =>
+            entry.kind === 'action' && !disabled
+                ? [
+                      {
+                          id: `extension:${entry.id}`,
+                          label: entry.addsNode === true ? `Add ${title}` : title,
+                          run: () => void runAction({ ...entry, title }, context, 'commandPalette')
+                      }
+                  ]
+                : []
+        )
+    ];
+}
+
+function coreCommands(prRepos: readonly PrRepo[]): Command[] {
     const canvas = focusedCanvas().getState();
     const anyLocked = Object.values(canvas.locks).some(Boolean);
     const current = useProject.getState().current;

@@ -1,12 +1,12 @@
 import { afterAll, afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
-import { act } from 'react';
 import type { GitStatus, ProjectCanvasView } from '@ruimte/contracts';
+import { act } from 'react';
 import { focusedCanvas } from '@/state/canvas';
 import { useUi } from '@/state/ui';
+import { clickOn, mount, openSubmenu, until, type Mounted } from '../../../testing/dom';
+import { buttonWithText, menuItem } from '../../../testing/dom-helpers';
 import { FakeMachine } from '../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';
-import { buttonWithText, menuItem } from '../../../testing/dom-helpers';
-import { clickOn, mount, openSubmenu, until, type Mounted } from '../../../testing/dom';
 
 const FOLDER = '/work/atlas';
 const API = `${FOLDER}/api`;

@@ -1,24 +1,24 @@
+import { DEFAULT_NODE_TONE } from '@adecore/diagram';
+import { isInFloatingLayer, Icon, IconButton, Input, Tile, ContextMenu, Menu } from '@adecore/ui';
+import type { ActionInput } from '@ruimte/actions';
+import { Bot, Braces, FileJson, MoreHorizontal, Pencil, RotateCcw, Sparkles } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Bot, Braces, FileJson, MoreHorizontal, Pencil, RotateCcw, Sparkles } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
-import type { ActionInput } from '@ruimte/actions';
-import { DEFAULT_NODE_TONE } from '@adecore/diagram';
+import { ignoreRefusal, perform } from '@/actions/client-actions';
 import { groundPlacement, type Point } from '@/canvas/math';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
+import { copyDiagram, openDiagramJson } from '@/diagram/diagram-actions';
 import { DiagramDock } from '@/diagram/DiagramDock';
 import { DiagramScene } from '@/diagram/DiagramScene';
 import { exampleDiagram } from '@/diagram/example';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
-import { copyDiagram, openDiagramJson } from '@/diagram/diagram-actions';
-import { askAgentAboutDiagram } from '@/project/views';
 import { Swatches } from '@/drawing/DrawingDock';
 import { useViewportSize } from '@/drawing/use-viewport-size';
+import { askAgentAboutDiagram } from '@/project/views';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
 import { useProject } from '@/state/project';
-import { isInFloatingLayer, Icon, IconButton, Input, Tile, ContextMenu, Menu } from '@adecore/ui';
 
 function isChrome(target: EventTarget | null): boolean {
     return isInFloatingLayer(target) || (target instanceof Element && target.closest('[data-diagram-chrome]') !== null);

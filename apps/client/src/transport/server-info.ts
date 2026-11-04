@@ -1,8 +1,8 @@
+import { useProvidersStore } from '@adecore/agents-react/state';
 import { knownNodeSizes, type EndpointInfo, type EndpointNameSource } from '@ruimte/contracts';
 import { noteDaemonIdentity } from '@/endpoint/identity';
 import { LOCAL_ENDPOINT_ID, localMachineLabel, useEndpoints } from '@/state/endpoints';
 import { serverInfoOf, useServers } from '@/state/server';
-import { useProvidersStore } from '@adecore/agents-react/state';
 import { pool, transportFor } from '@/transport';
 import { watchOpenMachines } from './open-machines';
 
@@ -46,7 +46,6 @@ export function adoptEndpointInfo(endpointId: string, info: EndpointInfo): void 
         streamingAllowed: info.streamingAllowed ?? true,
         resumeAtReset: info.resumeAtReset === true,
         visualReplies: info.visualReplies ?? true,
-        appleFoundationEnabled: info.appleFoundationEnabled === true,
         keepAwake: info.keepAwake ?? 'off',
         keepAwakeOnBattery: info.keepAwakeOnBattery === true,
         keepAwakeDisplay: info.keepAwakeDisplay === true,

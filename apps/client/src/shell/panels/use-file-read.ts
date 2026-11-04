@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import i18next from 'i18next';
 import type { FsReadResult, FsReadText } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { useEffect, useRef, useState } from 'react';
 import { dirnameOf } from '@/shell/panels/files-tree';
 import { readLargeText } from '@/shell/panels/large-text';
 import { pathAffected } from '@/state/changed-paths';

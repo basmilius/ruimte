@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
-import { searchSettings } from '@/shell/settings/search';
 import { ViewsPane } from '@/shell/settings/panes/ViewsPane';
+import { searchSettings } from '@/shell/settings/search';
 import { SETTINGS_STORAGE_KEY, useSettings } from '@/state/settings';
 import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
 

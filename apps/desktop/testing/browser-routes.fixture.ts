@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { createServer } from 'node:http';
 import { writeFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
+import { createServer } from 'node:http';
 import { join } from 'node:path';
-import { installBrowserRoutes } from '../src/browser-routes';
+import { pathToFileURL } from 'node:url';
 import { answerAppRequest, createDesktopAppScheme } from '../src/app-scheme';
+import { installBrowserRoutes } from '../src/browser-routes';
 import { BROWSER_PARTITION, PREVIEW_PARTITION } from '../src/web-guards';
 
 const { app, BrowserWindow, protocol, webContents, session } = require('electron') as typeof import('electron');

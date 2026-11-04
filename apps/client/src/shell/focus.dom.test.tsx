@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { isApplePlatform } from '@/desktop/bridge';
 import { StationMenu } from '@/shell/menu/StationMenu';
+import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';
 
 const VIEW = { kind: 'file', id: 'answer-view', name: 'answer.ts', path: 'src/answer.ts' };
 const MOD = isApplePlatform() ? { metaKey: true } : { ctrlKey: true };

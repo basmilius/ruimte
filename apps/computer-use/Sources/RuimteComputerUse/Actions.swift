@@ -23,7 +23,7 @@ extension Agent {
     func pointableFrame(_ element: AXUIElement, index: Int) throws -> CGRect {
         let frame = try liveFrame(element, index: index)
         guard !Clipping.isOffscreen(frame, within: .infinite) else {
-            throw AgentError("element \(index) is scrolled out of view; bring it in with `cu scroll --element \(index)` first")
+            throw AgentError("element \(index) is scrolled out of view; bring it in by scrolling element \(index) first")
         }
         return frame
     }
@@ -42,14 +42,14 @@ extension Agent {
 
     func screenPoint(_ snapshot: Snapshot, _ request: Request) throws -> CGPoint {
         guard let pixelX = request.x, let pixelY = request.y else {
-            throw AgentError("pass --element N, or both --x and --y")
+            throw AgentError("pass element N, or both x and y")
         }
         return try screenPoint(snapshot, pixelX: pixelX, pixelY: pixelY)
     }
 
     func screenPoint(_ snapshot: Snapshot, pixelX: Double, pixelY: Double) throws -> CGPoint {
         guard let capture = snapshot.capture else {
-            throw AgentError(snapshot.captureProblem ?? "the last state has no screenshot to map --x/--y from")
+            throw AgentError(snapshot.captureProblem ?? "the last state has no screenshot to map x/y from")
         }
         guard pixelX >= 0, pixelY >= 0, pixelX < Double(capture.pixelWidth), pixelY < Double(capture.pixelHeight) else {
             throw AgentError("(\(pixelX), \(pixelY)) is outside the screenshot (\(capture.pixelWidth)x\(capture.pixelHeight) px)")
@@ -76,7 +76,7 @@ extension Agent {
     func click(_ app: NSRunningApplication, _ request: Request) async throws -> [String: Any] {
         let buttonName = request.button ?? "left"
         guard buttonName == "left" || buttonName == "right" else {
-            throw AgentError("--button is left or right, not \"\(buttonName)\"")
+            throw AgentError("button is left or right, not \"\(buttonName)\"")
         }
         let right = buttonName == "right"
         let count = right ? 1 : min(max(request.count ?? 1, 1), 3)
@@ -151,11 +151,11 @@ extension Agent {
 
     func scroll(_ app: NSRunningApplication, _ request: Request) async throws -> [String: Any] {
         guard let direction = ScrollDirection(rawValue: request.direction ?? "") else {
-            throw AgentError("--direction is up, down, left or right")
+            throw AgentError("direction is up, down, left or right")
         }
         let pages = request.pages ?? 1
         guard pages > 0, pages <= 50 else {
-            throw AgentError("--pages must be above 0 and at most 50")
+            throw AgentError("pages must be above 0 and at most 50")
         }
         let vertical = direction.isVertical
         let snapshot = try snapshot(for: app)
@@ -212,10 +212,10 @@ extension Agent {
             throw AgentError.needsFront("A drag needs the real pointer, and so the app in front")
         }
         guard (request.element == nil) != (request.x == nil || request.y == nil) else {
-            throw AgentError("drag starts at --from N, or at both --from-x and --from-y, and not both")
+            throw AgentError("drag starts at from N, or at both from_x and from_y, and not both")
         }
         guard (request.toElement == nil) != (request.toX == nil || request.toY == nil) else {
-            throw AgentError("drag ends at --to N, or at both --to-x and --to-y, and not both")
+            throw AgentError("drag ends at to N, or at both to_x and to_y, and not both")
         }
         var start: CGPoint
         var grabbed: AXUIElement?
@@ -327,7 +327,7 @@ extension Agent {
 
     func setValue(_ app: NSRunningApplication, _ request: Request) async throws -> [String: Any] {
         guard let index = request.element, let text = request.value else {
-            throw AgentError("set-value needs --element and a value")
+            throw AgentError("set-value needs element and a value")
         }
         let element = try snapshot(for: app).element(index)
         let frame = try liveFrame(element, index: index)
@@ -474,7 +474,7 @@ extension Agent {
             if result == .cannotComplete {
                 answer["note"] = "the app did not answer in time; the item probably opened something modal"
             } else if request.front != true {
-                answer["note"] = "behind the person's work an item for the window or the text in focus, such as save, export or print, does nothing, since the app has no key window: if the state shows no change, it needs --front"
+                answer["note"] = "behind the person's work an item for the window or the text in focus, such as save, export or print, does nothing, since the app has no key window: if the state shows no change, it needs front"
             }
             return answer
         }

@@ -1,5 +1,5 @@
-import { diffLines, splitLines } from '@adecore/merge';
 import type { EditorChangeMark } from '@adecore/editor';
+import { diffLines, splitLines } from '@adecore/merge';
 
 /*
  * Where a text differs from the version it is compared against, as the marks the editor draws. A

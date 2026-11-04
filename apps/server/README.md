@@ -18,7 +18,7 @@ The `dev` script runs on port `4211` with `RUIMTE_HOME` from `RUIMTE_DEV_HOME` (
 | --- | --- | --- |
 | `--host` | `127.0.0.1` | Interface the API listens on. Leave loopback only for a container that publishes the port; only the local secret or a ticket from a direct channel gets in. |
 | `--port` | `4210` | Port for `/ws`, `/health`, `/hooks` and the other HTTP routes. |
-| `--no-hooks` | off | Write nothing into the CLIs' settings and remove nothing: no status hooks, no Codex or Antigravity rule for `ruimte-context`. The app cannot change this. |
+| `--no-hooks` | off | Write nothing into the CLIs' settings and remove nothing: no status hooks, and the `ruimte-context` rules of an earlier release stay where they are. The app cannot change this. |
 | `--label <name>` | hostname | What the machine calls itself until someone names it from a client (`RUIMTE_LABEL` works too). |
 | `--no-price-fetch` | off | Never fetch the LiteLLM price table or the exchange rate; the bundled snapshot prices everything. |
 | `--no-model-fetch` | off | Never ask the address book for newer model catalogs. |
@@ -47,7 +47,7 @@ Other environment variables:
 
 ## Compile
 
-`bun run compile` (`scripts/compile.ts`) builds one executable with `bun build --compile` into `dist/<os>-<arch>/ruimte`, with `ruimte-context` and `ruimte.build` beside it. For Windows it adds `ruimte-context.exe`, a launcher (`apps/context-launcher`) that starts `ruimte.exe context` with the arguments untouched, so cmd and PowerShell never pass an agent's words through a batch file. That takes cargo, plus the MinGW target and linker off Windows.
+`bun run compile` (`scripts/compile.ts`) builds one executable with `bun build --compile` into `dist/<os>-<arch>/ruimte`, with `ruimte.build` beside it.
 
 It builds for this machine, or for another with `--os mac|linux --arch arm64|x64`. `--target darwin-arm64` names the target the way the npm packages do, and `--outdir` picks the folder. A macOS binary compiles only on macOS, since `codesign` has to repair the signature Bun leaves. `RUIMTE_VERSION` stamps a version in. The desktop app packages the folder as its `bin` resource.
 
@@ -56,7 +56,7 @@ It builds for this machine, or for another with `--os mac|linux --arch arm64|x64
 A release build always reports crashes and errors, and nothing else (`src/telemetry`). `scripts/compile.ts` stamps `RUIMTE_TELEMETRY=1` only when CI compiles a release, so `bun dev`, the tests and a local compile send nothing. A report goes out for:
 
 - an uncaught exception or rejection, before the process exits (two seconds at most)
-- a helper that ends while the daemon still needs it (the database helper, the Apple Foundation Models helper, a language server Ruimte ships), with its exit code or signal and last stderr lines; not after SIGTERM, SIGINT or SIGHUP, and nothing once shutdown began
+- a helper that ends while the daemon still needs it (the database helper or a language server Ruimte ships), with its exit code or signal and last stderr lines; not after SIGTERM, SIGINT or SIGHUP, and nothing once shutdown began
 - an event loop stuck for five seconds, seen from a worker thread, without a stack. A worker that missed its own ticks was suspended with the process (machine sleep) and does not report. Stall and recovery also write a log line, release build or not.
 
 Under the same stamp and scrubber (`src/telemetry/reporter.ts`) go a session per run without a user, every `console.warn` line (first line only), up to 30 breadcrumbs of fixed words (`DAEMON_MOMENTS`), and four metrics: `daemon.request.duration` by request area, `daemon.loop.lag`, `daemon.memory` (resident MB) and `daemon.clients` by kind. Metrics gather in a quarter-hour window (`startQuarterMeter` in `@ruimte/telemetry`), sent every 15 minutes and on shutdown.
@@ -73,7 +73,7 @@ A release build also counts how the machine is used and sends daily totals (`src
 
 `UsageCounter` counts in memory per UTC day and writes `usage/stats.json` at most once a minute and on shutdown, keeping today and the seven days before. A once-a-day count remembers its keys (project, view, session or machine id) in memory for that day only; they are never written or sent. Every name comes from the allow-list `USAGE_REPORT_COUNTERS` in `packages/pulsar/src/usage-report.ts`. A dotted name is one value of a dimension, with `other` where the set can grow, so nothing a person typed becomes a name.
 
-It counts distinct projects and views opened, terminals, new chats and turns (by provider, model family via `usageModelFamilyOf` and runtime mode), usage limits and resumes, verbs and delegations, launches, worktree merges, clients by kind and peers, files opened and saved, git actions, PR-watches, database queries, device boots, Voice sessions and peer tasks, plans and visuals. The app hands over dictations, connections, startup time and timings with `usage.count`, `usage.startup` and `usage.timing` (local secret only). Each count is one call at its site (`countUsage` in `src/stats/usage-stats.ts`).
+It counts distinct projects and views opened, terminals, new chats and turns (by provider, model family via `usageModelFamilyOf` and runtime mode), usage limits and resumes, tool calls (under the report's `verbs.` keys) and delegations, launches, worktree merges, clients by kind and peers, files opened and saved, git actions, PR-watches, database queries, device boots, Voice sessions and peer tasks, plans and visuals. The app hands over dictations, connections, startup time and timings with `usage.count`, `usage.startup` and `usage.timing` (local secret only). Each count is one call at its site (`countUsage` in `src/stats/usage-stats.ts`).
 
 `packages/pulsar/fixtures/usage.json` is a batch the daemon's own serializer made (`src/stats/usage-fixture.test.ts`), the contract Observatory builds against. A change to what goes out changes it, and Observatory takes the new one before the release that sends it.
 
@@ -104,13 +104,11 @@ A bare `ruimte` at a terminal prints its address and the commands; under the ser
 
 `ruimte logout` takes the machine off its account. `ruimte status` asks the daemon on the local secret (`GET /machine/status`) for its version, service state, name, account, broker, door addresses, keep awake, and whether other devices reach it. The reach check runs when the broker takes the machine, after a network change, and on request (`--check`, or `endpoint.reach`); `src/pulsar/reach-classify.ts` names one cause with a fix. `--json` prints the whole answer. It exits 0 when the daemon answers, else 1.
 
-`ruimte notify` raises a notification like `ruimte-context alert`: on every window and as a push, under the node's title. It needs the local secret (`POST /machine/notify`). It names a node with `--node <id>`, or else the Ruimte terminal it runs in (`RUIMTE_SESSION_ID`). The text is at most 500 characters. It exits 0 once queued, and 1 without a secret, a node, a daemon or a project that holds the node.
+`ruimte notify` raises a notification like an agent's `alert` tool: on every window and as a push, under the node's title. It needs the local secret (`POST /machine/notify`). It names a node with `--node <id>`, or else the Ruimte terminal it runs in (`RUIMTE_SESSION_ID`). The text is at most 500 characters. It exits 0 once queued, and 1 without a secret, a node, a daemon or a project that holds the node.
 
-`ruimte service install` copies `ruimte` (on Windows `ruimte.exe` and `ruimte-context.exe`), `ruimte-context` and `ruimte.build` to `$RUIMTE_HOME/bin` and writes the LaunchAgent or systemd user unit the desktop app writes, pointing at that copy, never the npx cache. The unit carries the flags after `install`, the shell's PATH (without npx's folders) and `RUIMTE_SERVICE=1`. A newer version replaces the copy and the service moves to it once idle; different flags restart it. It refuses a service that runs another program, such as the desktop app's. On Linux it prints `loginctl enable-linger <user>` when lingering is off. `uninstall` removes the service, definition and copy, leaving the rest of `$RUIMTE_HOME`. `status` exits 0 only when installed and answering on `--port`.
+`ruimte service install` copies `ruimte` (on Windows `ruimte.exe`) and `ruimte.build` to `$RUIMTE_HOME/bin`, removes the `ruimte-context` an earlier release copied there, and writes the LaunchAgent or systemd user unit the desktop app writes, pointing at that copy, never the npx cache. The unit carries the flags after `install`, the shell's PATH (without npx's folders) and `RUIMTE_SERVICE=1`. A newer version replaces the copy and the service moves to it once idle; different flags restart it. It refuses a service that runs another program, such as the desktop app's. On Linux it prints `loginctl enable-linger <user>` when lingering is off. `uninstall` removes the service, definition and copy, leaving the rest of `$RUIMTE_HOME`. `status` exits 0 only when installed and answering on `--port`.
 
 `ruimte voice key set` saves the OpenAI key for Voice in `$RUIMTE_HOME/voice/openai.json` (0600 in a 0700 folder). It reads the key without echo at a terminal, else from stdin (`pbpaste | ruimte voice key set`), and refuses it as an argument. `status` says whether a key is set; `clear` removes it. The daemon reads the file at each Voice start, so no restart is needed. The desktop app hands over its key with `POST /machine/voice-key` on the local secret.
-
-`ruimte context` is the agent-side CLI behind `ruimte-context` (see "Context links").
 
 ## Machine settings
 
@@ -119,19 +117,18 @@ A bare `ruimte` at a terminal prints its address and the commands; under the ser
 | Setting | What it does |
 | --- | --- |
 | `name`, `icon` | The machine's name and Lucide icon. A null name falls back to `--label`, `RUIMTE_LABEL`, else the hostname. |
-| `agentsDeleteAnyView` | Lets an agent's `view delete`, `node delete` and `link delete` remove what it did not make. Off by default. |
-| `reachOpenProjects` | Lets an agent's `--project` read the other projects open on this machine, message their terminals and chats, and start agents there. Off by default. |
+| `agentsDeleteAnyView` | Lets an agent's `view_delete`, `node_delete` and `link_delete` remove what it did not make. Off by default. |
+| `reachOpenProjects` | Lets an agent's `project` field read the other projects open on this machine, message their terminals and chats, and start agents there. Off by default. |
 | `resumeAtReset` | Resumes a chat that stopped on a limit, on a clock. Off by default; a chat's own switch can say no. |
 | `visualReplies` | Lets an agent in a chat show a page above its reply. On by default; written only as `false`. |
 | `streamingAllowed` | Browser pages and device screens stream to clients. On by default. |
-| `appleFoundationEnabled` | Offers the Apple on-device model as a chat provider. |
 | `keepAwake`, `keepAwakeOnBattery`, `keepAwakeDisplay` | Block sleep `off`, `working` (while an agent works) or `always`; on the adapter only unless battery is allowed; the display only under `always`. |
 | `keepAwakeLidClosed` | Also hold with the lid closed (below). |
 | `broker` | The broker this machine announces itself to, or off. |
 | `lanDoor` | Whether the door on the local network is open. |
 | `worktreeRoot` | The folder new worktrees go in; absent is `worktrees` in the data folder. Local secret only. |
 | `usageStats` | Sends the daily usage counts of a release build. On by default; written only as `false`. Local secret only. |
-| `nodeSizes` | The size a new node starts at, by kind, for people and agents alike. Missing kinds take `NODE_SIZE` in `packages/contracts`. Set one kind at a time with `endpoint.setNodeSize`; no verb changes it. |
+| `nodeSizes` | The size a new node starts at, by kind, for people and agents alike. Missing kinds take `NODE_SIZE` in `packages/contracts`. Set one kind at a time with `endpoint.setNodeSize`; no tool changes it. |
 
 Keep awake is the daemon's own (`src/power/keep-awake.ts`), so it holds with no window open. On macOS it is a `caffeinate -w <daemon pid>` child, so a dead daemon never leaves the Mac awake. On Windows the daemon's own thread holds `SetThreadExecutionState`, which ends with it (`src/power/windows-keep-awake.ts`). Elsewhere `keepAwakeAvailable` is false.
 
@@ -164,7 +161,7 @@ $RUIMTE_HOME/
   pr-watches.json                  the PR-watches a person turned on, per chat
   launch-after-settle.json         per project, the task a person chose to run after a worktree chat settles, and the last turn each chat ran it for
   push-attention.json              the alerts pushed in the last 30 days, which clients mark nodes from
-  apple-mcp.json                   optional, written by a person: the MCP servers the Apple chat provider may use
+  api-mcp.json                     optional, written by a person: MCP servers for API chat providers
   telemetry/sent.json              0600, hashes of the errors a release build reported in the last day
   bin/                             the copy of the binaries `ruimte service install` runs
   projects/<projectId>.local.json  camera, focus, grid and panels, where a client that never saw the project starts
@@ -186,7 +183,7 @@ $RUIMTE_HOME/
   outbox/<id>.json                 0700, work the daemon still owes (src/outbox/CLAUDE.md)
   tasks/<taskId>.json              0700, a task a chat gave a node it opened
   lineage/<nodeId>.json            0700, who opened a node, its depth, its mode ceiling and when it was ended
-  start-claims/                    what a retried agent start with the same `--request-id` answers, for a day
+  start-claims/                    what a retried agent start with the same `request_id` answers, for a day
   peers/<machineId>.json           0700, a machine that works in a project here: its label and, per project, the ceiling of its agents
   remote/<projectId>.json          0700, which node of the project runs on another machine, as node id to machine id
   command-approvals/<hash>.json    0700, a command, launch or routine a person approved for a node, or a task for the project's worktrees
@@ -221,10 +218,11 @@ $RUIMTE_HOME/
     overlay.json                   the words of the helper's cursor, session bar and menu
     agent.sock, screenshots/       the helper's own (apps/computer-use/README.md); captures swept after an hour
   browser/                         the profile of the pages the daemon runs for clients without a browser
-  screenshots/                     pngs `browser shot` and `device shot` wrote, swept after a day
+  screenshots/                     pngs `browser_shot` and `device_shot` wrote, swept after a day
   device-captures/                 a person's screenshots and recordings of a device, read over `bytes.read`, swept after a week
     placed/                        the screenshots a person placed on a canvas (`device.importCapture`), never swept
-  anthropic-claude-api/            0600 key, model list, settings and conversations of the Claude API provider
+  anthropic-claude-api/            0600 key, model list, settings and older usage log of the Claude API provider
+    claude-config/                 the config folder (`CLAUDE_CONFIG_DIR`) of Claude Code on that key, with its sessions
   nanogpt/                         0600 key, model list, settings, conversations and usage log of NanoGPT
   agent-servers/antigravity/       Google's ACP server for Antigravity chats, put here by a person's Install
   agent-registry/                  the agents of the ACP registry (see "Providers and models")
@@ -265,7 +263,7 @@ Root `CLAUDE.md` and `src/projects/CLAUDE.md` cover the two project files, shari
 - `project.open` refuses a folder whose canvas uses node ids another open project uses (`project-ids-taken`), as two checkouts of one repository do. Close the other first.
 - `project.delete` forgets the project and, when asked, removes the canvas file, never other files.
 - The Chats project lives in `$RUIMTE_HOME/scratch`, one folder per chat that nothing removes. A home inside a git checkout answers `scratch-unavailable`.
-- An agent in Chats suggests making its chat a project with `ruimte-context project propose`. The daemon raises one card per chat (`chat.proposals`) and holds the chat at `needs-you`; a person moves the chat (`chat.move`) or declines (`chat.proposalDecline`). The verb answers `waiting` at once and reports `declined` with the next suggestion. A card lapses after a day without a new suggestion, or when the chat stops or leaves Chats.
+- An agent in Chats suggests making its chat a project with `project_propose`. The daemon raises one card per chat (`chat.proposals`) and holds the chat at `needs-you`; a person moves the chat (`chat.move`) or declines (`chat.proposalDecline`). The tool answers `waiting` at once and reports `declined` with the next suggestion. A card lapses after a day without a new suggestion, or when the chat stops or leaves Chats.
 - Without a chosen icon the daemon looks in the folder (`.ruimte/icon.*`, IDE icons, favicons), jailed to it, sniffed by magic bytes, at most 256 KB. `GET /projects/<projectId>/icon` serves it behind the `/ws` access rules, with `nosniff` and, for an SVG, a policy that runs nothing.
 - An inline edit in the editor runs in a hidden chat view in the private project file (`src/projects/inline-chat.ts`). The client asks to remove old ones after seven days.
 
@@ -283,11 +281,11 @@ Passwords reach the daemon only through `database.passwords` from a project clie
 
 ## Launch secrets
 
-An agent in an AI chat asks for a secret a launch needs with `ruimte-context secret request` (`src/canvas/secret-verb.ts`). The daemon raises a card in that chat (`secret.requests`, `src/secrets/secret-requests.ts`) and holds the chat at `needs-you`. One card stands per chat, launch and variable; it goes when the turn ends, the chat stops, or 15 minutes pass without a new ask. The verb answers only `saved`, `declined`, `cancelled`, `timed-out` or `waiting`, never the value.
+An agent in an AI chat asks for a secret a launch needs with `secret_request` (`src/tools/secret-tools.ts`). The daemon raises a card in that chat (`secret.requests`, `src/secrets/secret-requests.ts`) and holds the chat at `needs-you`. One card stands per chat, launch and variable; it goes when the turn ends, the chat stops, or 15 minutes pass without a new ask. The tool answers only `saved`, `declined`, `cancelled`, `timed-out` or `waiting`, never the value.
 
 A person answers with `secret.save` or `secret.decline`. The value goes into `$RUIMTE_HOME/secrets/<hash>.json` (`src/secrets/secret-store.ts`), one 0600 file per project. The launch gets the marker `ruimte:secret` (`LAUNCH_SECRET_REFERENCE`) in this machine's own launch file, and the approval covers the marker, not the value. A new value changes nothing an approval covers; a marker added or removed outside a person's save asks again. Only the started process gets the value (`resolveEnv` in `src/launches/runner.ts`); a marker without a secret leaves the variable unset.
 
-The value is never in a project file, chat log, event, agent reply or log line, and no verb or client file request reaches `secrets/` (`src/fs/machine-home.ts`).
+The value is never in a project file, chat log, event, agent reply or log line, and no tool or client file request reaches `secrets/` (`src/fs/machine-home.ts`).
 
 ## Sessions
 
@@ -316,16 +314,16 @@ The daemon writes into a CLI's global settings only for a provider a person allo
 | CLI | Files |
 | --- | --- |
 | Claude Code | one command hook per event in `~/.claude/settings.json` (`CLAUDE_CONFIG_DIR`) |
-| Codex | the same in `~/.codex/hooks.json` (`CODEX_HOME`), plus `~/.codex/rules/ruimte.rules` so `ruimte-context` runs outside its sandbox, which blocks the loopback port; Codex asks once to trust new hooks (`/hooks`) |
+| Codex | the same in `~/.codex/hooks.json` (`CODEX_HOME`); Codex asks once to trust new hooks (`/hooks`) |
 | Grok | `hooks/ruimte.json` in `GROK_HOME` (default `~/.grok`), in Claude Code's shape |
 | Copilot | `hooks/ruimte.json` in `COPILOT_HOME` (default `~/.copilot`), one `bash` entry per PascalCase event under `version: 1` |
-| Antigravity | a `ruimte` hook on `Stop` in `config/hooks.json` under `GEMINI_HOME`, and `command(ruimte-context)` and `unsandboxed(ruimte-context)` in `permissions.allow` of `~/.gemini/antigravity-cli/settings.json` |
+| Antigravity | a `ruimte` hook on `Stop` in `config/hooks.json` under `GEMINI_HOME` |
 
-The merge is idempotent, leaves other tools' entries alone and skips a file whose shape it does not expect. Turning a provider off removes only Ruimte's unchanged entries, and a file Ruimte created once it is empty, and answers per file (`removed`, `deleted`, `kept-edited`, `missing`, `refused`, `failed`). The written paths are kept as a ledger in the same file. Two daemons with different homes share these global files with no lock, so turning a provider off in one removes what the other relies on until its next start. Under `--no-hooks` the choice cannot change (`integrations-fixed`).
+The merge is idempotent, leaves other tools' entries alone and skips a file whose shape it does not expect. An earlier release also wrote rules for `ruimte-context`: `~/.codex/rules/ruimte.rules`, and `command(ruimte-context)` and `unsandboxed(ruimte-context)` in `permissions.allow` of `~/.gemini/antigravity-cli/settings.json`. Every install takes those out again, only where the ledger below says Ruimte wrote them, and the Codex file only while it still reads as Ruimte wrote it. Turning a provider off removes only Ruimte's unchanged entries, and a file Ruimte created once it is empty, and answers per file (`removed`, `deleted`, `kept-edited`, `missing`, `refused`, `failed`). The written paths are kept as a ledger in the same file. Two daemons with different homes share these global files with no lock, so turning a provider off in one removes what the other relies on until its next start. Under `--no-hooks` the choice cannot change (`integrations-fixed`).
 
 Grok and Copilot also run Claude Code's hooks; such a hook never counts for Claude Code (`borrowedHook`, `src/agents/hooks.ts`).
 
-Every shell gets `RUIMTE_HOOK_URL` (`http://127.0.0.1:<port>/hooks`) and a per-session `RUIMTE_HOOK_TOKEN`. The hook POSTs its stdin to `$RUIMTE_HOOK_URL/<kind>` with the token as bearer and does nothing outside Ruimte. On `SessionStart` and `UserPromptSubmit` the reply carries `additionalContext`, which tells a terminal agent about `ruimte-context`, its links and messages. A Codex a node launches gets `--no-daemon` when `codex --help` names it, so its shared server does not run hooks with another terminal's environment.
+Every shell gets `RUIMTE_HOOK_URL` (`http://127.0.0.1:<port>/hooks`) and a per-session `RUIMTE_HOOK_TOKEN`. The hook POSTs its stdin to `$RUIMTE_HOOK_URL/<kind>` with the token as bearer and does nothing outside Ruimte. On `SessionStart` and `UserPromptSubmit` the reply carries `additionalContext`, which tells a terminal agent about Ruimte's MCP tools, its links and messages. A Codex a node launches gets `--no-daemon` when `codex --help` names it, so its shared server does not run hooks with another terminal's environment.
 
 ## Permission requests
 
@@ -333,13 +331,13 @@ A terminal agent's permission request is answered in its CLI's prompt; the hook 
 
 ## Computer use
 
-An agent operates the apps of this Mac through `ruimte-context computer`, carried out by the helper app in `apps/computer-use` (`src/computer`). `apps/computer-use/README.md` covers the helper and `src/computer/CLAUDE.md` what the daemon enforces.
+An agent operates the apps of this Mac through the `computer_*` tools, carried out by the helper app in `apps/computer-use` (`src/computer`). `apps/computer-use/README.md` covers the helper and `src/computer/CLAUDE.md` what the daemon enforces.
 
 The helper is `Contents/Helpers/Ruimte Computer Use.app` in Ruimte.app and `apps/computer-use/dist/Ruimte Computer Use Dev.app` in a checkout. The daemon starts it with `open -g <app> --args --home $RUIMTE_HOME` on first need and quits it when the feature is turned off or the daemon stops. A daemon from npm or on Linux has no helper and answers `unavailable`. `computer.restart` relaunches it, since macOS applies a Screen Recording grant only to a fresh launch.
 
 ## Devices
 
-A device node shows a simulator, emulator or phone on this machine (`src/devices`). `DeviceManager` keeps one capture session per device, shared by every client and agent. A person starts, stops, restarts and (after confirming) erases a simulator or emulator, and drives it with pointer, keyboard, buttons, fold menu and tools panel. An agent with a line drives it through `DeviceDriver` (`src/devices/agent-driver.ts`, `ruimte-context device`) and reads an Android clipboard, never a simulator's pasteboard, which follows the Mac's. What agents may do is in `src/devices/CLAUDE.md`.
+A device node shows a simulator, emulator or phone on this machine (`src/devices`). `DeviceManager` keeps one capture session per device, shared by every client and agent. A person starts, stops, restarts and (after confirming) erases a simulator or emulator, and drives it with pointer, keyboard, buttons, fold menu and tools panel. An agent names a device by the id `device_list` gives it, or by a device node, with no line, and drives it through `DeviceDriver` (`src/devices/agent-driver.ts`, the `device_*` tools). It may start a simulator or emulator with `device_start`, the same `boot` a person's start runs. One agent holds a device at a time (`src/devices/device-claims.ts`, in memory): its first call claims it, another agent gets `device-in-use`, and the claim ends with the agent's terminal or chat. An agent reads an Android clipboard, never a simulator's pasteboard, which follows the Mac's. What agents may do is in `src/devices/CLAUDE.md`.
 
 | | iOS simulator | Android emulator |
 | --- | --- | --- |
@@ -370,15 +368,15 @@ An Android phone on USB or Wi-Fi debugging is listed by serial with the same too
 
 An Android emulator also cannot clear a location, receive a local push, rotate to a chosen side, read elements of a screen that never stands still (`tree none`), record past 3 minutes, switch its camera while running or enroll a fingerprint. Typing on Android needs version 7 or later.
 
-A path to install or add is a file on the machine, never an upload; one that is not absolute or lies under `$RUIMTE_HOME` answers `device-path-refused`. A checkout downloads the scrcpy server on first use into `.native`, checked against its pinned checksum; a build carries it in `native/`, and without it a device has no screen, touch or typing.
+A path to install or add is a file on the machine, never an upload; one that is not absolute or lies under `$RUIMTE_HOME` answers `device-path-refused`. An agent's path also lies inside the project folder, its worktrees, its chat's own folders (`attachments/<chatId>/`, `chats/<chatId>.visuals/`) or the system temp folder. A checkout downloads the scrcpy server on first use into `.native`, checked against its pinned checksum; a build carries it in `native/`, and without it a device has no screen, touch or typing.
 
 ## Providers and models
 
-Each agent CLI is one `ChatProvider` (`@adecore/agents`). The daemon's list is `src/providers/registry.ts`, ordered by `src/providers/kinds.ts`: Claude Code, Codex, Antigravity, GitHub Copilot, Grok, the Apple on-device model (when turned on), NanoGPT and the Claude API. `provider.list` answers per CLI whether it is installed, its version, models, resume template, capabilities and install instructions. Detection is cached a minute; `provider.detect` clears it (at most every ten seconds), which a client asks on window focus and when the Providers pane or an agent menu opens.
+Each agent CLI is one `ChatProvider` (`@adecore/agents`). The daemon's list is `src/providers/registry.ts`, ordered by `src/providers/kinds.ts`: Claude Code, Codex, Antigravity, GitHub Copilot, Grok, NanoGPT and the Claude API. `provider.list` answers per CLI whether it is installed, its version, models, resume template, capabilities and install instructions. Detection is cached a minute; `provider.detect` clears it (at most every ten seconds), which a client asks on window focus and when the Providers pane or an agent menu opens.
 
 A kind is an open word on the wire (`AgentKindSchema`, lowercase, at most 32 characters), so an older client draws an unknown kind with a neutral mark. A kind this daemon does not offer starts nothing and is not counted in usage.
 
-Copilot and Grok chat over the Agent Client Protocol (`createAcpProvider`). The daemon starts `copilot --acp --stdio --no-auto-update --allow-tool=shell(ruimte-context:*)` and `grok --no-auto-update agent stdio`, keeps the models, effort and commands they report in `models/agents/<kind>.json`, and sends `provider.changed` when that changes. Only `supervised` maps to a session mode (`agent` for Copilot, `default` for Grok); the backend answers permission requests a wider mode allows. Grok signs in with `XAI_API_KEY`, else the login `grok login` left in `GROK_HOME` (default `~/.grok`), and checks it with `grok --no-auto-update models`. Copilot keeps its login in the system credential store (`copilot login`, or `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`) and has only its default account. Install Copilot with `npm install -g @github/copilot` (or Homebrew `copilot-cli`) and Grok with `curl -fsSL https://x.ai/cli/install.sh | bash`.
+Copilot and Grok chat over the Agent Client Protocol (`createAcpProvider`). The daemon starts `copilot --acp --stdio --no-auto-update --allow-tool=ruimte` and `grok --no-auto-update agent stdio`, hands every ACP agent Ruimte's MCP server in `session/new` when it advertises MCP over HTTP (`withRuimteMcp` in `src/providers/ruimte-mcp.ts`), keeps the models, effort and commands they report in `models/agents/<kind>.json`, and sends `provider.changed` when that changes. Only `supervised` maps to a session mode (`agent` for Copilot, `default` for Grok); the backend answers permission requests a wider mode allows. Grok signs in with `XAI_API_KEY`, else the login `grok login` left in `GROK_HOME` (default `~/.grok`), and checks it with `grok --no-auto-update models`. Copilot keeps its login in the system credential store (`copilot login`, or `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`) and has only its default account. Install Copilot with `npm install -g @github/copilot` (or Homebrew `copilot-cli`) and Grok with `curl -fsSL https://x.ai/cli/install.sh | bash`.
 
 Antigravity's terminal is `agy`, installed with `curl -fsSL https://antigravity.google/cli/install.sh | bash` into `~/.local/bin` (Windows: `irm https://antigravity.google/cli/install.ps1 | iex`); it signs in through the browser on first start. Runtime modes map to `--mode=accept-edits` (`auto-accept-edits`, `auto`) or `--dangerously-skip-permissions` (`full-access`); a first prompt is `-i`, a resume `--conversation <id>`.
 
@@ -392,19 +390,19 @@ Ruimte no longer offers Gemini: a node with `provider: 'gemini'` keeps it and op
 
 A release ships model catalogs as `<kind>-models.json` in `@adecore/agents/providers`. The address book serves the live ones on `GET /v2/models/catalog` (`apps/pulsar-worker/README.md`). The daemon asks at start and on `provider.list` once the last answer is fifteen minutes old, keeps it in `models/catalogs-v2.json`, and never takes a catalog older than the bundled one. `--no-model-fetch` turns this off.
 
-The runtime mode (`supervised`, `auto-accept-edits`, `auto`, `full-access`) is one vocabulary that each provider maps to its own flags. `ruimte-context` runs without a prompt in every mode, since the daemon checks each verb itself: Claude Code gets `--allowedTools=Bash(ruimte-context *)`, Copilot `--allow-tool=shell(ruimte-context:*)`, a Grok terminal `--allow=Bash(ruimte-context *)`, and Codex and Antigravity their rule files.
+The runtime mode (`supervised`, `auto-accept-edits`, `auto`, `full-access`) is one vocabulary that each provider maps to its own flags. Ruimte's MCP tools run without a prompt in every mode, since the daemon checks each call itself: a Claude Code terminal gets `--allowedTools=mcp__ruimte`, a Claude chat the server in its launch with `allowTools` (`mcp__ruimte__*`), Copilot `--allow-tool=ruimte`, and Codex `default_tools_approval_mode="approve"` on the server (`src/providers/ruimte-mcp.ts`).
 
 ### Claude API
 
-A chat provider with no CLI. Save an Anthropic API key in Settings, Providers, Claude API. `anthropic.configure` validates it against the model list before saving it or its settings; `anthropic.status` reports whether a key exists without returning it. Only the machine's owner configures it. Requests go only to `https://api.anthropic.com`, redirects refused. Everything lives under `$RUIMTE_HOME/anthropic-claude-api`.
+Claude Code on an Anthropic API key, beside a person's own sign-in (`src/providers/anthropic-claude-api-provider.ts`). Save the key in Settings, Providers, Claude API. `anthropic.configure` validates it against the model list before saving it or its settings; `anthropic.status` reports whether a key exists without returning it. Only the machine's owner configures it. The daemon's own requests (the model list) go only to `https://api.anthropic.com`, redirects refused. Everything lives under `$RUIMTE_HOME/anthropic-claude-api`.
 
-Tools follow the runtime modes as with NanoGPT; there are no attachments, MCP, subagents, forks or compaction. Settings: tool rounds per run (40), maximum runs (3 when continuing is on; it is off by default since it spends credits) and output tokens per request (32000, capped by the model, thinking included). A request fails only after two minutes without data.
+A chat runs the person's installed `claude` through the same Agent SDK backend as a Claude Code chat, so the provider is there only once a key brought models and the CLI is installed; without the CLI, Settings leads to its install. The CLI gets the key as `ANTHROPIC_API_KEY`, `CLAUDE_CONFIG_DIR=anthropic-claude-api/claude-config`, and `DISABLE_TELEMETRY`, `DISABLE_ERROR_REPORTING`, `DISABLE_BUG_COMMAND` and `DISABLE_AUTOUPDATER`, so telemetry, error reporting, bug reports and auto-update are off. It loses any sign-in token from the environment, and loads no settings file and only the servers of its launch: Ruimte's own, with the token's variable in its header, and the HTTP servers of `api-mcp.json`. A stdio server, or one with `allowedTools`, stays out, since the CLI would not keep that limit. It has the capabilities of a Claude Code chat (attachments, compaction, cost from the result frame) except terminals and hooks. The output tokens per reply (32000, capped by the model, thinking included) go as `CLAUDE_CODE_MAX_OUTPUT_TOKENS`; the run settings the service keeps apply to NanoGPT only. The usage page reads Claude Code's transcripts in `claude-config` under the Claude API, beside `usage/`, where turns before this backend left their tokens. A chat whose resume id has no transcript there (one from before this backend) starts a session of its own.
 
 ### NanoGPT
 
-NanoGPT's subscription API is a chat with no CLI (`src/providers/nanogpt-provider.ts`, `src/chat/nanogpt-backend.ts`). `nanogpt.configure` checks a key against `/usage` before keeping it. The daemon only calls `https://nano-gpt.com/api/subscription/v1`, so no setting or redirect reaches pay as you go, and slugs with a suffix (`:online`) are never offered.
+NanoGPT's subscription API is a chat with no CLI (`src/providers/nanogpt-provider.ts`, on the chat completions backend of `@adecore/agents`, with Ruimte's tools from `src/chat/ruimte-api-tools.ts`). `nanogpt.configure` checks a key against `/usage` before keeping it. The daemon only calls `https://nano-gpt.com/api/subscription/v1`, so no setting or redirect reaches pay as you go, and slugs with a suffix (`:online`) are never offered.
 
-The key is a 0600 file in `$RUIMTE_HOME/nanogpt`, which no client reads; only the owner sets or removes it. `supervised` asks for every tool, `auto-accept-edits` and `auto` ask only for commands, `full-access` for none. An `ask_user` tool opens a question card in every mode. Settings (`nanogpt/settings.json`): `roundsPerRun` (40 by default, 5 to 200) and, with continuing on by default, `runs` (5 by default, 1 to 20). Models group by `vendor` (`src/providers/nanogpt-vendor.ts`). Every call appends to `nanogpt/usage/<year>-<month>.jsonl`, which the scanner reads without prices; plan windows come from `/usage` on the limits monitor's clock.
+The key is a 0600 file in `$RUIMTE_HOME/nanogpt`, which no client reads; only the owner sets or removes it. `supervised` asks for every tool, `auto-accept-edits` and `auto` ask only for commands, `full-access` for none. An `ask_user` tool opens a question card in every mode. Settings (`nanogpt/settings.json`): `roundsPerRun` (40 by default, 5 to 200) and, with continuing on by default, `runs` (5 by default, 1 to 20). Models group by `vendor` (`nanoGptVendorOf` of `@adecore/agents`). Every call appends to `nanogpt/usage/<year>-<month>.jsonl`, which the scanner reads without prices; plan windows come from `/usage` on the limits monitor's clock.
 
 ## Voice for a phone
 
@@ -432,14 +430,14 @@ The chat lifecycle and backends live in `@adecore/agents/chat`; `src/chat/chat-m
 - A chat no client reads, without a CLI and with nothing under way, leaves memory after ten minutes and keeps only its status for `chat.list`. Opening it loads it from its record.
 - A turn running when the daemon went down resumes at start through a `resume-run` outbox entry, or ends `aborted` with a note.
 - Attachments are any type, at most 25 MB each and 8 per message, in `attachments/<chatId>/<id>.<ext>`. `GET /attachments/<chatId>/<id>` serves them behind the `/ws` access rules, `inline` only for what a browser paints, with `nosniff` and an immutable cache; a visual's page is always a download.
-- An agent's `ruimte-context chat attach` reads the file in its own process. The verb route takes bodies up to 72 MiB; every other route stops at 24 MiB.
+- An agent's `chat_attach` names a path, which the daemon reads only inside the folders `src/mcp/files.ts` allows. `/mcp` takes bodies up to 72 MiB; every other route stops at 24 MiB.
 - A turn checkpoints the chat's folder as a git tree through a private index under `checkpoints/` (`src/git/checkpoints.ts`), leaving the person's index, stashes and commits alone.
 - A hidden agent's chat is pruned at daemon start once its tasks settled over 30 days ago, no view holds it and no agent it opened lives (`src/agents/prune-hidden-chats.ts`). Its worktree stays.
 - `chat.imageTarget` and `chat.saveImage` copy a generated image into the project, never into `.git`, `.ruimte` or machine state, refuse a symlink target and overwrite only with `replace` against the revision read.
 
 ## Maps
 
-The daemon looks up no addresses, holds no map ticket and never contacts the map service (`apps/maps-worker`); the client takes tiles. A `Place` is drawn from `lat` and `lon`, and `ruimte-context help ui places` tells agents to give both.
+The daemon looks up no addresses, holds no map ticket and never contacts the map service (`apps/maps-worker`); the client takes tiles. A `Place` is drawn from `lat` and `lon`, and `ui_catalog` with the group `places` tells agents to give both.
 
 ## Language servers
 
@@ -480,9 +478,11 @@ The `rust` kind runs the `rust-analyzer` on `PATH` or in `~/.cargo/bin` that ans
 
 One server runs per project per kind, from the first document that needs it until the project closes or the daemon stops. A server that ends by itself after a minute of being ready restarts once; any other end leaves it `crashed` until `language.restart`. `language.log` returns the last 500 lines of install and server, each with `source` (`stderr`, `log`, `message`, `trace`) and `level` (`error`, `warning`, `info`, `log`, `debug`). `language.trace` sets `$/setTrace` (`off`, `messages`, `verbose`) per server, in memory.
 
-## On-device help for the editor
+## Editor model
 
-`src/ondevice` runs one-shot generations on Apple Foundation Models for explanations, rename suggestions and ghost text (wire: `packages/contracts/src/ondevice.ts`). It starts the Apple chat helper with `--oneshot` and keeps it until the daemon stops. Instructions per purpose live in `src/ondevice/instructions.ts`. The helper opens no connection and has no tools. More than four requests at once answer `busy`. A machine that is not an Apple silicon Mac reports itself unavailable.
+`src/editor-assist` runs one-shot generations through an installed Claude, Codex, Grok or Antigravity CLI for explanations, rename suggestions and ghost text (wire: `packages/contracts/src/editor-assist.ts`). Settings > Editor > AI lets a person choose a model and account. Automatic uses the cheapest current model of the first available provider in that order, skipping disabled or signed-out accounts. Known prices come from ADE CORE's bundled price snapshot; without a price, Grok's Build Fast and Gemini's Flash variants take precedence. A chosen provider or model that is unavailable reports why rather than silently switching.
+
+The CLI runs in an empty folder under `$RUIMTE_HOME/editor-assist`, outside the project, with its account's environment and no Ruimte agent token. Claude and Grok have no built-in tools; Codex uses its read-only one-shot mode. The selected provider receives the supplied code. Instructions per purpose live in `src/editor-assist/instructions.ts`. Requests stream and can be cancelled, stop after 60 seconds, and accept at most four concurrent generations.
 
 ## Files
 
@@ -532,7 +532,7 @@ Joining an account cuts off clients another account let in; leaving cuts off eve
 
 Which chat wrote which lines of a file, for the editor's gutter (`src/provenance/CLAUDE.md`). Each file has a record in `$RUIMTE_HOME/provenance/<projectId>/<hash of the path>.json`: line hashes as last read, and per run the chat, turn, provider, time, the first 400 characters of the prompt, the lines (`start`, `end`, one-based inclusive), the replaced lines (`before`), a review state (`pending`, `kept`, `undone`) and `via`.
 
-`provenance.read { projectId, path }` answers `{ mtime, lines, runs }` mapped onto the text on disk. `provenance.review { projectId, path, runIds, state }` sets a review state. Both refuse a path outside the project or under `$RUIMTE_HOME`. `provenance.changed` goes to the project's clients on a write, a review change and a turn's end. No verb reaches it and no setting turns it off.
+`provenance.read { projectId, path }` answers `{ mtime, lines, runs }` mapped onto the text on disk. `provenance.review { projectId, path, runIds, state }` sets a review state. Both refuse a path outside the project or under `$RUIMTE_HOME`. `provenance.changed` goes to the project's clients on a write, a review change and a turn's end. No tool reaches it and no setting turns it off.
 
 ## Git
 
@@ -558,7 +558,7 @@ On the machine whose person works elsewhere, `remote.link`, `remote.list` and `r
 
 ### Tasks on another machine
 
-`ruimte-context agent --machine M --task ...` (or `team`) gives a task to a linked machine (`machine-not-linked` otherwise); `--task` is required and `--cwd`, `--reads`, `--model` and `--base` are refused. The node stands on a private canvas (`remote-node-shared` on a shared one). A `start-remote-agent` outbox entry waits for the link, sending the checkout as a bundle first with `--worktree`. `peer-busy` (4 open tasks) and `peer-bundle-limit` (2 transfers) keep it waiting; other refusals fail the task. The result comes back as `refs/remotes/ruimte-<machine>/ruimte/<name>` with a worktree that `worktree merge` brings in.
+`agent_start` with `machine` and `task` (or `agent_team`) gives a task to a linked machine (`machine-not-linked` otherwise); `task` is required and `cwd`, `reads`, `model` and `base` are refused. The node stands on a private canvas (`remote-node-shared` on a shared one). A `start-remote-agent` outbox entry waits for the link, sending the checkout as a bundle first with `worktree`. `peer-busy` (4 open tasks) and `peer-bundle-limit` (2 transfers) keep it waiting; other refusals fail the task. The result comes back as `refs/remotes/ruimte-<machine>/ruimte/<name>` with a worktree that `worktree_merge` brings in.
 
 ## Worktrees
 
@@ -568,24 +568,15 @@ A worktree the daemon makes lives under `$RUIMTE_HOME/worktrees/<repo>-<hash>/<b
 
 ## Context links
 
-A line on the canvas into a terminal or chat lets that agent read the source. Every shell and chat gets:
+A line on the canvas into a terminal or chat lets that agent read the source. Every shell gets `RUIMTE_CONTEXT_URL` (`http://127.0.0.1:<port>/context`) and its `RUIMTE_HOOK_TOKEN`. A chat gets the same URL, a token of its own per load in `RUIMTE_CONTEXT_TOKEN`, and `RUIMTE_MCP_URL` for a backend that runs inside the daemon.
 
-- `RUIMTE_CONTEXT_URL` (`http://127.0.0.1:<port>/context`)
-- a bearer token: `RUIMTE_HOOK_TOKEN` in a shell, `RUIMTE_CONTEXT_TOKEN` in a chat
-- the folder of `ruimte-context` in front of its PATH (`apps/server/bin` in a checkout, the app's `bin` resource when packaged)
+`context_list` lists the linked sources and `context_read` reads one (`tail`, `subagent`, `form`). A chat view names a canvas with `view` instead of a line (`src/tools/chat-view.ts`).
 
-`ruimte-context` lists the linked sources and `ruimte-context read <id>` prints one (`--tail N`, `--json`). See `ruimte-context help read`. A chat view names a canvas with `--view` instead of a line (`src/canvas/chat-view.ts`).
+## Agent tools
 
-| Exit code | Meaning |
-| --- | --- |
-| 0 | Success; the answer is on stdout. |
-| 1 | The daemon cannot be reached or failed. |
-| 2 | Not in a live session: no token, or a token the daemon does not know. |
-| 3 | A refusal, on stderr. |
+An agent Ruimte starts gets the daemon's MCP server: `/mcp` on the daemon's port, with the session's token (`src/providers/ruimte-mcp.ts`). Claude Code, Codex and Copilot take it on their command line and read the token from the environment. An ACP chat (Grok, Antigravity, Copilot, the registry agents) gets it in `session/new` with its tools allowed, when the agent advertises MCP over HTTP. The backends inside the daemon (Apple's model, the API providers) reach it through `RUIMTE_MCP_URL`. A Grok or Antigravity terminal gets no tools, since those CLIs take no server on their command line, and neither does a CLI a person types by hand in a terminal.
 
-## Agent commands
-
-`ruimte-context <verb>` and `ruimte-context <noun> <action>` post `{ argv }` to `POST /canvas/<verb or noun>`, and the daemon parses the words, so an older CLI never disagrees with the daemon. `src/canvas/verbs.ts` is the one registry; run `ruimte-context help [<noun> [<action>]]` for the reference. Answers are `text/plain`, one tab-separated line per result. A refusal is HTTP 422 (404 for an unknown verb) starting with `refused\t<code>\t<message>`; the CLI prints it to stderr and exits 3. `src/canvas/CLAUDE.md` and `src/outbox/CLAUDE.md` have the invariants.
+`/mcp` speaks Streamable HTTP in stateless mode (`src/mcp/mcp-route.ts`). Every request carries the bearer token, which names the caller; an unknown one gets 401, and the `Mcp-Session-Id` names nobody. The catalog (`src/mcp/catalog.ts`) lists the tools of the toolkits in `src/tools/toolkits.ts` and `guide`, which prints the guide topics the toolkits keep. Their JSON input runs through `runTool` (`src/tools/tool.ts`), which also checks `project`. The answer is one text block of tab-separated lines; a picture a tool wrote and handed back (`ToolCall.image`, never a path in the text) comes back as image content too, read only inside the caller's folders and the machine's shot folders. A refusal is an error result starting with `refused <code>: <message>`. A tool that takes a file takes a path, read only inside the folders of `src/mcp/files.ts`, from the one handle the check was made on. `src/tools/CLAUDE.md` and `src/outbox/CLAUDE.md` have the invariants.
 
 ## Usage
 
@@ -595,7 +586,7 @@ A line on the canvas into a terminal or chat lets that agent read the source. Ev
 - `usage/scan-state.json` is a cache; deleting it costs one cold scan. `usage/history.jsonl` keeps the usage of every transcript ever read, also after its CLI removed it, so deleting it loses that usage for good.
 - Copilot chat turns are logged to `usage/copilot`, a file per session; a Copilot terminal is not counted.
 - Prices come from LiteLLM's `model_prices_and_context_window.json`, refreshed every 24 hours into `usage/prices.json`, with a bundled fallback. An unpriced model shows as unknown, never free. The ECB euro rate comes from frankfurter.app on the same schedule into `usage/exchange-rate.json`. `--no-price-fetch` turns off both.
-- Plan limits come from the CLIs (`get_usage` over Claude Code's stream-json, `account/rateLimits/read` over Codex's app-server) every five minutes, backing off to an hour after a failure. Agents read them with `ruimte-context provider limits`.
+- Plan limits come from the CLIs (`get_usage` over Claude Code's stream-json, `account/rateLimits/read` over Codex's app-server) every five minutes, backing off to an hour after a failure. Agents read them with `provider_info`.
 
 ## Smoke test
 

@@ -1,14 +1,14 @@
-import i18next from 'i18next';
-import { createStore, type StoreApi } from 'zustand';
 import type { EditorRange } from '@adecore/editor';
 import { shikiLanguageOf, type HoverView } from '@adecore/editor-react';
 import { isEmptyRange } from '@adecore/editor-react/models';
 import { messageOf } from '@adecore/ui';
+import i18next from 'i18next';
+import { createStore, type StoreApi } from 'zustand';
+import { editorAssistClientFor, type EditorAssistClient } from '@/editor-assist/client';
+import { functionSourceAt, isFunctionSignature } from '@/editor-assist/explain-model';
+import { explainPrompt } from '@/editor-assist/prompts';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { functionSourceAt, isFunctionSignature } from '@/ondevice/explain-model';
-import { onDeviceClientFor, type OnDeviceClient } from '@/ondevice/ondevice-client';
-import { explainPrompt } from '@/ondevice/prompts';
 import { promptFileName, type HostLanguage as EditorLanguage } from './host-language';
 
 const TOAST_ID = 'language-explain';
@@ -32,7 +32,7 @@ function answerLanguage(code: string): string {
 }
 
 function say(key: string, options?: Record<string, unknown>): string {
-    return i18next.t(`panels:language.onDevice.${key}`, options);
+    return i18next.t(`panels:language.editorAssist.${key}`, options);
 }
 
 /*
@@ -42,11 +42,11 @@ function say(key: string, options?: Record<string, unknown>): string {
 export class ExplainFeature {
     readonly store: StoreApi<ExplainView> = createStore<ExplainView>(() => IDLE);
     private readonly language: EditorLanguage;
-    private readonly client: OnDeviceClient;
+    private readonly client: EditorAssistClient;
     private controller: AbortController | null = null;
     private subject: HoverView['subject'] | null = null;
 
-    constructor(language: EditorLanguage, client: OnDeviceClient = onDeviceClientFor(language.project.transport)) {
+    constructor(language: EditorLanguage, client: EditorAssistClient = editorAssistClientFor(language.project.transport)) {
         this.language = language;
         this.client = client;
         const unsubscribe = language.popups.subscribe((state, previous) => {
@@ -64,7 +64,7 @@ export class ExplainFeature {
     }
 
     private get enabled(): boolean {
-        return this.language.served && useSettings.getState().aiOnDeviceHelp;
+        return this.language.served && useSettings.getState().aiCodeHelp;
     }
 
     private reset(): void {

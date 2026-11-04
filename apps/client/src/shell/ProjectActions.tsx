@@ -1,11 +1,11 @@
+import { copyText, Icon, Menu } from '@adecore/ui';
+import { AppWindow, Copy, ExternalLink, Settings2, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppWindow, Copy, ExternalLink, Settings2, X } from 'lucide-react';
 import type { ProjectMenuRow } from '@/project/list';
 import { canOpenWindows, moveToNewWindow, openInNewWindow } from '@/project/windows';
 import { fileManagerName } from '@/state/server';
 import { transportFor } from '@/transport';
-import { copyText, Icon, Menu } from '@adecore/ui';
 
 /*
  * What a row offers for its window and its folder; a recent project offers only these. The Chats

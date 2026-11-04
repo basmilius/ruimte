@@ -1,8 +1,8 @@
+import { Icon } from '@adecore/ui';
+import type { ProjectIconChoice } from '@ruimte/contracts';
 import clsx from 'clsx';
 import { Server } from 'lucide-react';
-import type { ProjectIconChoice } from '@ruimte/contracts';
 import { projectIconGlyphOf } from '@/project/project-icons';
-import { Icon } from '@adecore/ui';
 
 interface MachineGlyphProps {
     /* What a person picked for this machine, or null while nobody has. */

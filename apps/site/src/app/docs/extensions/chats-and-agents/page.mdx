@@ -1,0 +1,182 @@
+import { ChatBlocks } from '@/components/docs/extensions/ChatBlocks.tsx';
+import { AgentTool } from '@/components/docs/extensions/TerminalScenes.tsx';
+
+export const metadata = { title: 'Chats and agents' };
+
+# Chats and agents
+
+<p className="lead">An extension can draw inside a chat, put words in a prompt, run an agent of its own and give agents a tool.</p>
+
+<ChatBlocks />
+
+## In a thread
+
+`defineMarkdownBlock` draws a fenced block of a language of yours. When an agent writes a `chart` fence, your component draws it instead of the code:
+
+```ts
+defineMarkdownBlock({
+    language: 'chart',
+    component: () => import('./Chart')
+});
+```
+
+The component gets the fence's `source`. On a client without the extension the block stays code.
+
+`defineToolResult` draws the calls of tools, by their exact name, instead of the thread's own view of them:
+
+```ts
+defineToolResult({
+    id: 'reads',
+    tools: ['Read'],
+    component: () => import('./ReadCall')
+});
+```
+
+The `threadHeader`, `emptyThread`, `composer`, `messageActions` and `toolActions` slots add buttons and widgets around the thread.
+
+## In a prompt
+
+`defineSlashCommand` adds a command after `/`. What `run` answers goes into the prompt, and the person still sends it:
+
+```ts
+defineSlashCommand({
+    name: 'review',
+    description: 'Ask for a review of the open diff',
+    run: async () => {
+        const diff = await git.diff({
+            path: 'src/app.ts'
+        });
+
+        return diff.ok ? `Review this diff:\n\n${diff.value.diff}` : 'Review the last change';
+    }
+});
+```
+
+`defineReference` adds things from outside the project to `#`. Picking one puts what `read` answers in the prompt:
+
+```ts
+defineReference({
+    id: 'tickets',
+    title: 'Tickets',
+    list: async () => {
+        const tickets = await openTickets();
+
+        return tickets.map((ticket) => ({
+            id: ticket.id,
+            name: ticket.title
+        }));
+    },
+    read: async (item) => (await ticket(item.id)).body
+});
+```
+
+## Running an agent
+
+`agents.run` runs one hidden prompt on one of the person's own CLIs and answers the text whole. `agents.stream` gives the same answer in pieces as the CLI writes them. Both need `agents.run`, and both answer a `Result` ([When a call fails](/docs/extensions/machine#when-a-call-fails)). A stream that fails ends with a piece whose `ok` is false.
+
+```ts
+const answer = await agents.run({
+    prompt: 'Summarize these notes',
+    context: [notes]
+});
+
+for await (const piece of agents.stream({ prompt, signal })) {
+    if (piece.ok) {
+        append(piece.value.text);
+    }
+}
+```
+
+`context` takes texts, which go after the prompt. To hand the agent nodes, read them first with `context.read`, which needs the permission `context.read`:
+
+```ts
+const sources = await context.read({
+    nodes: selection
+});
+
+if (sources.ok) {
+    const answer = await agents.run({
+        prompt: 'Summarize these notes',
+        context: sources.value.map((source) => `# ${source.title}\n${source.text}`)
+    });
+}
+```
+
+The agent runs in the project folder, on the person's own CLI and plan.
+
+`agents.start` starts a chat a person sees and can stop, supervised at most. It lands beside `near` on the canvas in front, or as a view of its own when no canvas is open, and answers the chat's node. It needs `agents.start`.
+
+Give it a `folder` to start the chat in another project on the machine, such as the repository your extension reads. The chat becomes a view of that project and works in its folder. A folder the machine knows no project in answers `not-found`.
+
+## A chat in your own surface
+
+`Chat` draws a chat of the project in front inside your panel, view or node: its thread and its composer, as Ruimte draws them. Give it the id `agents.start` answered. It needs `agents.start`, since it opens the chat again when it is not running.
+
+Start it with `hidden: true` to keep it out of the sidebar. It stays in the project and keeps running, but only your surface shows it, so keep its id to show it again.
+
+```tsx
+import { agents, Chat } from '@ruimte/extension/client';
+import { useState } from 'react';
+
+export default function Inbox() {
+    const [chat, setChat] = useState<string | null>(null);
+    const start = async () => {
+        const started = await agents.start({
+            hidden: true,
+            prompt: 'Write down a new idea with me.'
+        });
+
+        if (started.ok) {
+            setChat(started.value.id);
+        }
+    };
+
+    return chat === null ? <button onClick={start}>New idea</button> : <Chat id={chat} />;
+}
+```
+
+For the pieces of a chat without an agent behind them, such as the answer of `agents.stream` drawn as markdown, use `@ruimte/extension/agents-ui`.
+
+## Reading and waking chats
+
+With `chats.read`, `chats.list()` and `chats.read(id)` read every chat. With `chats.send`, `chats.send(id, text)` sends a message that wakes the chat. `useChat(id)` follows one chat's status in a component, and `useAgents()` (with `agents.status`) every agent on the canvas. A status is one of `idle`, `running`, `needsYou` and `stopped`, the same word in the client and the server part.
+
+## Tools for agents
+
+The server part can offer every agent on the machine a tool. Agents find it with Ruimte's `tool_list` tool and call it with `tool_run`:
+
+```ts
+import { defineAgentTool } from '@ruimte/extension/server';
+
+defineAgentTool({
+    id: 'tickets',
+    description: 'Lists the open tickets of this project',
+    run: async () => {
+        const tickets = await openTickets();
+
+        return tickets.map((ticket) => `${ticket.id}\t${ticket.title}`).join('\n');
+    }
+});
+```
+
+A tool answers in text. Offering one needs `agents.tools`, and starts the server part with the machine, since an agent can only find what runs.
+
+<AgentTool />
+
+[Give agents a tool](/docs/extensions/how-to/agent-tool) builds one with an input schema.
+
+## Voice
+
+`defineVoiceAction` lets a person ask for something by voice. Describe it like a tool. Voice reads `description` and `parameters` to decide when to call it, and speaks what `run` answers.
+
+```ts
+defineVoiceAction({
+    id: 'open-tickets',
+    description: 'Says how many tickets are open in this project',
+    run: async () => {
+        const tickets = await openTickets();
+
+        return `${tickets.length} tickets are open`;
+    }
+});
+```

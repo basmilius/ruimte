@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ChatSubagentItem, ChatTurnItem, ProjectContent, Task } from '@ruimte/contracts';
-import { nextLine } from '../canvas/task-verbs.ts';
 import { ManualClock } from '@adecore/agents/testing';
+import type { ChatSubagentItem, ChatTurnItem, ProjectContent, Task } from '@ruimte/contracts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, releasedProject, runVerb, turnsOf, type TestDaemon } from './test-daemon.ts';
+import { nextLine } from '../tools/task-tools.ts';
+import { bootTestDaemon, invokeTool, releasedProject, turnsOf, type TestDaemon } from './test-daemon.ts';
 
 type Daemon = TestDaemon;
 
@@ -75,14 +75,14 @@ async function leadIdle(daemon: Daemon): Promise<void> {
 
 /* An agent the lead opens without a task, as a chat that is asked something later. */
 async function opened(daemon: Daemon, prompt: string, terminal = false): Promise<string> {
-    const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', ...(terminal ? ['--terminal'] : []), '--prompt', prompt]);
+    const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', terminal, prompt });
     const childId = line!.split('\t')[0]!;
     await daemon.until(() => (terminal ? daemon.sessions.get(childId) !== undefined : daemon.chats.get(childId) !== undefined));
     return childId;
 }
 
-async function give(daemon: Daemon, childId: string, argv: string[]): Promise<{ lines: string[]; taskId: string }> {
-    const lines = await runVerb(daemon, 'chat-lead', 'task', ['new', childId, ...argv]);
+async function give(daemon: Daemon, childId: string, input: Record<string, unknown>): Promise<{ lines: string[]; taskId: string }> {
+    const lines = await invokeTool(daemon, 'chat-lead', 'task_new', { id: childId, ...input });
     return { lines, taskId: lines[0]!.split('\t')[1]! };
 }
 
@@ -98,7 +98,7 @@ describe('a task given to an agent that is already open', () => {
         const childId = await opened(daemon, 'look around');
         await daemon.until(() => turnsOf(daemon, childId).some((turn) => turn.state === 'done'));
 
-        const { lines, taskId } = await give(daemon, childId, ['--prompt', 'check the note', '--title', 'The note']);
+        const { lines, taskId } = await give(daemon, childId, { prompt: 'check the note', title: 'The note' });
         expect(lines).toEqual([`task\t${taskId}\t${childId}\tnow`, nextLine(false)]);
 
         await daemon.until(() => taskOf(daemon, taskId).wake === 'sent');
@@ -123,7 +123,7 @@ describe('a task given to an agent that is already open', () => {
         const childId = await opened(daemon, 'slow');
         await daemon.until(() => daemon.chats.get(childId)?.info.activeTurnId !== null);
 
-        const { lines, taskId } = await give(daemon, childId, ['--prompt', 'check the note']);
+        const { lines, taskId } = await give(daemon, childId, { prompt: 'check the note' });
         expect(lines[0]).toBe(`task\t${taskId}\t${childId}\twaiting`);
         expect(daemon.outbox.list().map((entry) => entry.kind)).toEqual(['give-task']);
         expect(taskOf(daemon, taskId).status).toBe('open');
@@ -144,7 +144,7 @@ describe('a task given to an agent that is already open', () => {
         const daemon = await boot();
         daemon.worker.start();
         await leadIdle(daemon);
-        const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--task', 'Survey', '--prompt', 'look around']);
+        const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', task: 'Survey', prompt: 'look around' });
         const [childId = '', , , , , first = ''] = line!.split('\t');
         await daemon.until(() => taskOf(daemon, first).wake === 'sent');
         await daemon.worker.settled();
@@ -153,7 +153,7 @@ describe('a task given to an agent that is already open', () => {
         expect(rows().map((row) => row.status)).toEqual(['done']);
 
         // `slow` keeps the new turn open, so the child is caught while it works on the second task.
-        const { taskId: second } = await give(daemon, childId, ['--prompt', 'slow', '--title', 'Second look']);
+        const { taskId: second } = await give(daemon, childId, { prompt: 'slow', title: 'Second look' });
         await daemon.until(() => turnsFor(daemon, childId, second).some((turn) => turn.state === 'running'));
 
         expect(rows().map((row) => [row.id, row.childId, row.status, row.finishedAt === null])).toEqual([
@@ -170,9 +170,9 @@ describe('a task given to an agent that is already open', () => {
         await leadIdle(daemon);
         const childId = await opened(daemon, 'slow');
         await daemon.until(() => daemon.chats.get(childId)?.info.activeTurnId !== null);
-        const { taskId } = await give(daemon, childId, ['--prompt', 'check the note', '--title', 'The note']);
+        const { taskId } = await give(daemon, childId, { prompt: 'check the note', title: 'The note' });
 
-        const refused = await runVerb(daemon, 'chat-lead', 'task', ['new', childId, '--prompt', 'and the other one']);
+        const refused = await invokeTool(daemon, 'chat-lead', 'task_new', { id: childId, prompt: 'and the other one' });
         expect(refused[0]).toBe(
             `refused\ttask-running\t${childId} is working on the task "The note" and takes one at a time; wait for its result, which wakes you`
         );
@@ -185,9 +185,9 @@ describe('a task given to an agent that is already open', () => {
         const daemon = await boot();
         daemon.worker.start();
         await leadIdle(daemon);
-        await runVerb(daemon, 'chat-lead', 'link', ['new', '--to', 'chat-other']);
+        await invokeTool(daemon, 'chat-lead', 'link_new', { to: 'chat-other' });
 
-        const refused = await runVerb(daemon, 'chat-lead', 'task', ['new', 'chat-other', '--prompt', 'check the note']);
+        const refused = await invokeTool(daemon, 'chat-lead', 'task_new', { id: 'chat-other', prompt: 'check the note' });
         expect(refused[0]).toBe('refused\tnot-yours\tchat-other is not a node you opened; a task only goes to an agent you opened yourself');
         expect(daemon.tasks.involving('chat-other')).toEqual([]);
         expect(daemon.outbox.list()).toEqual([]);
@@ -198,7 +198,7 @@ describe('a task given to an agent that is already open', () => {
         daemon.worker.start();
         await leadIdle(daemon);
 
-        const refused = await runVerb(daemon, 'chat-lead', 'task', ['new', 'note-1', '--prompt', 'check the note']);
+        const refused = await invokeTool(daemon, 'chat-lead', 'task_new', { id: 'note-1', prompt: 'check the note' });
         expect(refused[0]).toBe('refused\tnot-an-agent\tnote-1 is a note node; only a terminal or a chat has an agent that could take a task');
         expect(daemon.tasks.involving('note-1')).toEqual([]);
     });
@@ -209,7 +209,7 @@ describe('a task given to an agent that is already open', () => {
         await leadIdle(daemon);
         const childId = await opened(daemon, 'look around', true);
 
-        const refused = await runVerb(daemon, 'chat-lead', 'task', ['new', childId, '--prompt', 'check the note']);
+        const refused = await invokeTool(daemon, 'chat-lead', 'task_new', { id: childId, prompt: 'check the note' });
         expect(refused[0]).toBe(
             `refused\tnot-a-chat\t${childId} is a terminal node: a task has to start a turn, and nothing is typed into a shell a person can type in`
         );
@@ -220,11 +220,11 @@ describe('a task given to an agent that is already open', () => {
         const daemon = await boot();
         await leadIdle(daemon);
         // The worker is not running, so the node is on the canvas while its start is still owed.
-        const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--prompt', 'look around']);
+        const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', prompt: 'look around' });
         const childId = line!.split('\t')[0]!;
         expect(daemon.chats.get(childId)).toBeUndefined();
 
-        const refused = await runVerb(daemon, 'chat-lead', 'task', ['new', childId, '--prompt', 'check the note']);
+        const refused = await invokeTool(daemon, 'chat-lead', 'task_new', { id: childId, prompt: 'check the note' });
         expect(refused[0]).toBe(`refused\tno-agent\t${childId} runs no agent yet: nothing was started in it, so there is no turn a task could open`);
         expect(daemon.tasks.involving(childId)).toEqual([]);
     });

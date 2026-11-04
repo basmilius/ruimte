@@ -1,9 +1,9 @@
+import { readClipboardText } from '@adecore/ui';
 import type { ActionInput } from '@ruimte/actions';
 import type { StoreApi } from 'zustand';
 import { ignoreRefusal, perform } from '@/actions/client-actions';
 import { readDrawingElements } from '@/drawing/export';
 import type { DrawingState, DrawingStyle } from '@/state/drawing';
-import { readClipboardText } from '@adecore/ui';
 
 /* The store is the cell's own, never the focused one, so a split acts where it was asked. */
 

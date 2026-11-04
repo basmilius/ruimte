@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { Handshake } from '../auth/handshake.ts';
-import type { ClientAccess } from '../dispatcher.ts';
 import type { ConnectionServices, OpenConnection } from '../connection.ts';
+import type { ClientAccess } from '../dispatcher.ts';
 import { wireClients, type DirectConnection } from './clients.ts';
 
 interface Closed {

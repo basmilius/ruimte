@@ -1,6 +1,6 @@
 import type { UsageCountPayload, UsageTimingPayload } from '@ruimte/contracts';
-import type { ReconnectReason } from '@/telemetry/metrics';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import type { ReconnectReason } from '@/telemetry/metrics';
 import { machineAnswers } from './features';
 import type { LinkMeter } from './link-transport';
 import type { Transport } from './transport';

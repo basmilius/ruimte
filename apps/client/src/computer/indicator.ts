@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import type { ComputerControlAction, ComputerSessionMode, ComputerUseStatus } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { useComputer } from '@/state/computer';
 
 interface IndicatorLook {

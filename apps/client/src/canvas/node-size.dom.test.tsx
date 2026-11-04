@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
-import { act } from 'react';
 import type { EndpointInfo, NodeSizes, ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
+import { act } from 'react';
 import { startEndpointWatch } from '@/endpoint/watch';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { windowWorkspace } from '@/state/window';
 import { pool } from '@/transport';
 import { startServerInfo } from '@/transport/server-info';
-import { FakeMachine } from '../../testing/fake-machine';
-import { typeInto } from '../../testing/dom-helpers';
-import { clickOn, openSubmenu, pressKey, until } from '../../testing/dom';
 import { menuItem, openCanvasPage, openContextMenu, savedNodes, type CanvasPage } from '../../testing/canvas-page';
+import { clickOn, openSubmenu, pressKey, until } from '../../testing/dom';
+import { typeInto } from '../../testing/dom-helpers';
+import { FakeMachine } from '../../testing/fake-machine';
 
 const MACHINE = 'fake-machine';
 const PLAN: ProjectNode = { id: 'plan', kind: 'note', title: 'Plan', body: 'Ship it', x: 0, y: 0, w: 400, h: 320 };

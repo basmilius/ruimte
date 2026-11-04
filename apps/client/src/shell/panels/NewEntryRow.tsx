@@ -1,8 +1,8 @@
-import { useEffect, useRef, type KeyboardEvent } from 'react';
+import { FileIcon, Icon } from '@adecore/ui';
 import type { FileTree } from '@pierre/trees';
 import clsx from 'clsx';
 import { ChevronRight } from 'lucide-react';
-import { FileIcon, Icon } from '@adecore/ui';
+import { useEffect, useRef, type KeyboardEvent } from 'react';
 import type { NewEntryKind } from '@/shell/panels/file-create';
 
 const ICON_SIZE = 16;

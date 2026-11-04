@@ -1,14 +1,14 @@
-import { isAgentKind, lineEndOf, nodeChats, type ContextSource, type ProjectCanvasView } from '@ruimte/contracts';
 import type { ParsedRefusal } from '@adecore/agents/context';
+import { isAgentKind, lineEndOf, nodeChats, type ContextSource, type ProjectCanvasView } from '@ruimte/contracts';
 
 function body(code: string, message: string, ...lines: string[]): ParsedRefusal {
     return { code, message, lines };
 }
 
-/* The line that draws what the read needs. It names both ends rather than the shorter --to, since
-   the direction is the whole misunderstanding here and only --from spells it out. */
+/* The line that draws what the read needs. It names both ends rather than the shorter to, since
+   the direction is the whole misunderstanding here and only from spells it out. */
 function drawLine(sourceId: string, readerId: string): string {
-    return `see\truimte-context link new --from ${sourceId} --to ${readerId}\tdraws the line this read needs, and leaves any line that is there`;
+    return `see\tlink_new from ${sourceId} to ${readerId}\tdraws the line this read needs, and leaves any line that is there`;
 }
 
 /* The other way in besides a line, which only a person gives. */

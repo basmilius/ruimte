@@ -1,4 +1,3 @@
-import i18next from 'i18next';
 import { VOICE_CONTROL_TOOL, VOICE_TOOL_ACTIONS, type ActionName, type ActionOutput, type ActionResult } from '@ruimte/actions';
 import {
     actionInput,
@@ -9,13 +8,14 @@ import {
     type VoiceReplyWords,
     type VoiceWatchedSession
 } from '@ruimte/voice';
+import i18next from 'i18next';
 import { clientActions, VOICE_ACTION_CALL } from '@/actions/client-actions';
 import { accentLabel } from '@/canvas/accents';
 import { useEndpoints } from '@/state/endpoints';
 import { currentEndpointId, endpointKey } from '@/state/keys';
+import { endpointOfNodeId } from '@/state/node-endpoint';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
-import { endpointOfNodeId } from '@/state/node-endpoint';
 import type { VoiceActionKind } from '@/voice/state';
 import { voiceWorkspaceRevision } from '@/voice/workspace-context';
 

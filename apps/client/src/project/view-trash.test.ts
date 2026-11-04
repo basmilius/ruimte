@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
+import { UNDO_MS } from '@adecore/ui';
+import type { ActionCall } from '@ruimte/actions';
 import type { ProjectCanvasView, ProjectDocument } from '@ruimte/contracts';
 import { createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from '@/actions/client-actions';
 import { undoLatestDeletion } from '@/project/view-trash';
@@ -6,8 +8,6 @@ import { focusedCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useToasts } from '@/state/toasts';
 import { watchNodes } from '@/terminal/lifecycle-watch';
-import type { ActionCall } from '@ruimte/actions';
-import { UNDO_MS } from '@adecore/ui';
 
 const board: ProjectCanvasView = {
     kind: 'canvas',

@@ -14,6 +14,6 @@ test('every view kind a person opens has a usage counter', () => {
     expect(Object.keys(USAGE_VIEW_COUNTERS).sort()).toEqual([...opened].sort());
 });
 
-test('every ruimte-context verb counts in a usage group', () => {
+test('every agent verb counts in a usage group', () => {
     expect(Object.keys(USAGE_VERB_COUNTERS).sort()).toEqual([...CONTEXT_VERBS].sort());
 });

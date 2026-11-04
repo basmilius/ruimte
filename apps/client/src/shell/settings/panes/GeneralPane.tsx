@@ -1,7 +1,7 @@
-import { useTranslation } from 'react-i18next';
-import { formatDayClock, useFormatLocale, formatMoney, FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM, regionName } from '@adecore/ui/format';
 import { Input, Select } from '@adecore/ui';
+import { formatDayClock, useFormatLocale, formatMoney, FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM, regionName } from '@adecore/ui/format';
 import { SettingsRow } from '@adecore/ui/settings';
+import { useTranslation } from 'react-i18next';
 import { chooseLanguage, chooseRegion } from '@/i18n';
 import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/i18n/languages';
 import { SettingsSection } from '@/shell/settings/SettingsSection';

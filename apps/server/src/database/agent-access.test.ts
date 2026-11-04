@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { DatabaseAccessStore } from './agent-access.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { DatabaseAccessStore } from './agent-access.ts';
 
 let home: string;
 

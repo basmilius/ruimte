@@ -1,8 +1,8 @@
+import { Button, ButtonGroup, Dialog, IconButton, ScrollArea, Select } from '@adecore/ui';
+import { LANGUAGE_TRACE_VALUES, type LanguageLogLine, type LanguageServerStatus, type LanguageTraceValue } from '@ruimte/contracts';
+import { RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw } from 'lucide-react';
-import { LANGUAGE_TRACE_VALUES, type LanguageLogLine, type LanguageServerStatus, type LanguageTraceValue } from '@ruimte/contracts';
-import { Button, ButtonGroup, Dialog, IconButton, Select } from '@adecore/ui';
 import { report, useStatuses } from './server-status';
 import type { LanguageStatusTracker } from './status';
 import { actionsOf, kindOf, logLineText, nameOf, type ServerTone } from './status-view';
@@ -63,9 +63,12 @@ export function LogDialog({ server, tracker, onClose }: { server: string | null;
                         </ButtonGroup>
                     </div>
                 </div>
-                <div className="min-h-0 grow overflow-auto rounded-md bg-surface-sunken p-3 font-mono text-xs whitespace-pre-wrap text-text-muted select-text">
+                <ScrollArea
+                    className="grow overflow-hidden rounded-md bg-surface-sunken"
+                    viewportClassName="p-3 font-mono text-xs whitespace-pre-wrap break-words text-text-muted select-text"
+                >
                     {lines !== null && (lines.length === 0 ? t('language.logEmpty') : lines.map(logLineText).join('\n'))}
-                </div>
+                </ScrollArea>
             </Dialog.Popup>
         </Dialog.Root>
     );

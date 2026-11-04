@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile } from 'node:fs/promises';
 import { dirname, isAbsolute } from 'node:path';
+import { CodedError } from '@adecore/agents';
+import { isNotFound } from '@adecore/utils/errors';
+import { writeAtomic } from '@adecore/utils/fs';
 import {
     CUSTOM_SERVER_PREFIX,
     CustomLanguageServerSchema,
@@ -11,12 +14,21 @@ import {
     type LanguageCustomCheckResult,
     type LanguageErrorCode
 } from '@ruimte/contracts';
-import { CodedError, isNotFound, writeAtomic } from '@adecore/agents';
 import { z } from 'zod';
 import { sha256 } from '../artifacts/artifact-fs.ts';
 import type { KindProfile } from './profiles.ts';
 
 class CustomServerError extends CodedError<LanguageErrorCode> {}
+
+/* A removal of an extension's servers that the file did not take. They left the list all the same, and `ids` names them. */
+export class UnsavedRemoval extends Error {
+    readonly ids: readonly string[];
+
+    constructor(ids: readonly string[], cause: unknown) {
+        super(cause instanceof Error ? cause.message : String(cause), { cause });
+        this.ids = ids;
+    }
+}
 
 const StoredServerSchema = CustomLanguageServerSchema.omit({ held: true }).extend({ approval: z.string().min(1) });
 type StoredServer = z.infer<typeof StoredServerSchema>;
@@ -51,6 +63,8 @@ export class CustomLanguageServers {
     private unreadable: unknown[] = [];
     /* The file is there and is no JSON, which a write would destroy. */
     private damaged = false;
+    /* Extensions whose servers were removed while the file may still hold them. */
+    private readonly retired = new Set<string>();
     private writing: Promise<unknown> = Promise.resolve();
 
     constructor(options: { path: string; resolve?: ResolveCommand }) {
@@ -87,7 +101,7 @@ export class CustomLanguageServers {
     }
 
     list(): CustomLanguageServer[] {
-        return this.servers.map(({ approval, ...server }) => ({ ...server, ...(approval === approvalOf(server) ? {} : { held: true }) }));
+        return listed(this.active());
     }
 
     get(id: string): CustomLanguageServer | undefined {
@@ -102,48 +116,105 @@ export class CustomLanguageServers {
     /* Saves a server a person gave, which approves starting exactly what it names. */
     async save(input: CustomLanguageServerInput): Promise<CustomLanguageServer> {
         this.assertWritable();
-        const languages = [...new Set(input.languages.map((language) => language.trim().toLowerCase()))];
-        const patterns = [...new Set(input.patterns.map((pattern) => pattern.trim()))];
-        for (const pattern of patterns) {
-            if (!isValidFilePattern(pattern)) {
+        this.assertRunnable(input);
+
+        return this.mutate((servers) => {
+            if (input.id !== undefined && !servers.some((server) => server.id === input.id)) {
+                throw new CustomServerError(LANGUAGE_ERROR_CODES.invalidServer, `There is no server ${input.id} to change`);
+            }
+
+            const server = serverOf(input, input.id ?? newServerId(), undefined);
+
+            return { next: replaced(servers, server), result: server };
+        });
+    }
+
+    /*
+     * An extension's server, by its name, so loading it again changes the one it already added. Who owns the name is
+     * decided in the queue, and only a registration that is saved has its command checked: one a person took over keeps
+     * their command, whatever the extension names.
+     */
+    async saveFor(extension: string, input: CustomLanguageServerInput): Promise<CustomLanguageServer> {
+        this.assertWritable();
+
+        const name = input.name.trim();
+
+        return this.mutate((servers) => {
+            // A person made it theirs, so loading the extension again neither changes it nor adds a second.
+            const approved = listed(servers).find((server) => server.extension === undefined && server.name === name);
+
+            if (approved !== undefined) {
+                return { next: null, result: approved };
+            }
+
+            this.assertRunnable(input);
+
+            const known = servers.find((server) => server.extension === extension && server.name === name);
+            const server = serverOf(input, known?.id ?? newServerId(), extension);
+
+            return { next: replaced(servers, server), result: server };
+        });
+    }
+
+    ownedBy(extension: string): string[] {
+        return this.active()
+            .filter((server) => server.extension === extension)
+            .map((server) => server.id);
+    }
+
+    /* Whether there was such a server. */
+    async remove(id: string): Promise<boolean> {
+        this.assertWritable();
+
+        return this.mutate((servers) =>
+            servers.some((server) => server.id === id) ? { next: servers.filter((server) => server.id !== id), result: true } : { next: null, result: false }
+        );
+    }
+
+    /*
+     * Removes every server of the extension in one write, and gives the ids it removed. They leave the list at once, also
+     * when the write fails, so none starts again for an extension that no longer runs; that failure is an `UnsavedRemoval`
+     * naming them, so their processes stop all the same.
+     */
+    async removeOwnedBy(extension: string): Promise<string[]> {
+        let owned: string[] = [];
+
+        try {
+            this.assertWritable();
+
+            return await this.mutate((servers) => {
+                owned = servers.filter((server) => server.extension === extension).map((server) => server.id);
+                this.retired.add(extension);
+
+                return { next: owned.length === 0 ? null : servers.filter((server) => server.extension !== extension), result: owned };
+            });
+        } catch (e) {
+            throw new UnsavedRemoval(owned, e);
+        }
+    }
+
+    /* The extensions that own a server on the list. */
+    owners(): string[] {
+        return [...new Set(this.active().flatMap((server) => server.extension ?? []))];
+    }
+
+    private active(): StoredServer[] {
+        return this.servers.filter((server) => server.extension === undefined || !this.retired.has(server.extension));
+    }
+
+    private assertRunnable(input: CustomLanguageServerInput): void {
+        for (const pattern of input.patterns) {
+            if (!isValidFilePattern(pattern.trim())) {
                 throw new CustomServerError(LANGUAGE_ERROR_CODES.invalidServer, `${pattern} is not a file pattern`);
             }
         }
+
         if (this.resolve(input.command.trim()) === null) {
             throw new CustomServerError(
                 LANGUAGE_ERROR_CODES.invalidServer,
                 `${input.command.trim()} is not an executable on this machine. Give an absolute path, or a command that is on the PATH of the daemon.`
             );
         }
-        const id = input.id ?? `${CUSTOM_SERVER_PREFIX}${randomUUID()}`;
-        if (input.id !== undefined && !this.servers.some((server) => server.id === id)) {
-            throw new CustomServerError(LANGUAGE_ERROR_CODES.invalidServer, `There is no server ${id} to change`);
-        }
-        const server: CustomLanguageServer = {
-            id,
-            name: input.name.trim(),
-            command: input.command.trim(),
-            args: [...input.args],
-            env: { ...input.env },
-            languages,
-            patterns,
-            ...(input.initializationOptions === undefined ? {} : { initializationOptions: input.initializationOptions }),
-            ...(input.projects === undefined || input.projects.length === 0 ? {} : { projects: [...new Set(input.projects)] })
-        };
-        const stored: StoredServer = { ...server, approval: approvalOf(server) };
-        const index = this.servers.findIndex((candidate) => candidate.id === id);
-        await this.write(index === -1 ? [...this.servers, stored] : this.servers.map((candidate) => (candidate.id === id ? stored : candidate)));
-        return server;
-    }
-
-    /* Whether there was such a server. */
-    async remove(id: string): Promise<boolean> {
-        this.assertWritable();
-        if (!this.servers.some((server) => server.id === id)) {
-            return false;
-        }
-        await this.write(this.servers.filter((server) => server.id !== id));
-        return true;
     }
 
     private assertWritable(): void {
@@ -152,16 +223,59 @@ export class CustomLanguageServers {
         }
     }
 
-    /* One write at a time, and the list in memory only changes once the file has it. */
-    private write(next: StoredServer[]): Promise<void> {
+    /*
+     * One change at a time, computed from the list the previous change left, so two saves or removes
+     * never write over each other. The list in memory only changes once the file has it, except that a
+     * retired server is gone from it at once; the next write that lands leaves it out of the file too.
+     */
+    private mutate<T>(change: (servers: StoredServer[]) => { next: StoredServer[] | null; result: T }): Promise<T> {
         const run = this.writing.then(async () => {
-            await mkdir(dirname(this.path), { recursive: true });
-            await writeAtomic(this.path, `${JSON.stringify({ servers: [...next, ...this.unreadable] }, null, 2)}\n`, 0o600, { durable: true });
-            this.servers = next;
+            const { next, result } = change(this.active());
+
+            if (next !== null) {
+                await mkdir(dirname(this.path), { recursive: true });
+                await writeAtomic(this.path, `${JSON.stringify({ servers: [...next, ...this.unreadable] }, null, 2)}\n`, 0o600, { durable: true });
+                this.servers = next;
+                this.retired.clear();
+            }
+
+            return result;
         });
         this.writing = run.catch(() => undefined);
+
         return run;
     }
+}
+
+function newServerId(): string {
+    return `${CUSTOM_SERVER_PREFIX}${randomUUID()}`;
+}
+
+function serverOf(input: CustomLanguageServerInput, id: string, extension: string | undefined): CustomLanguageServer {
+    return {
+        id,
+        ...(extension === undefined ? {} : { extension }),
+        name: input.name.trim(),
+        command: input.command.trim(),
+        args: [...input.args],
+        env: { ...input.env },
+        languages: [...new Set(input.languages.map((language) => language.trim().toLowerCase()))],
+        patterns: [...new Set(input.patterns.map((pattern) => pattern.trim()))],
+        ...(input.initializationOptions === undefined ? {} : { initializationOptions: input.initializationOptions }),
+        ...(input.projects === undefined || input.projects.length === 0 ? {} : { projects: [...new Set(input.projects)] })
+    };
+}
+
+function listed(servers: StoredServer[]): CustomLanguageServer[] {
+    return servers.map(({ approval, ...server }) => ({ ...server, ...(approval === approvalOf(server) ? {} : { held: true }) }));
+}
+
+function replaced(servers: StoredServer[], server: CustomLanguageServer): StoredServer[] {
+    const stored: StoredServer = { ...server, approval: approvalOf(server) };
+
+    return servers.some((candidate) => candidate.id === server.id)
+        ? servers.map((candidate) => (candidate.id === server.id ? stored : candidate))
+        : [...servers, stored];
 }
 
 /* What a server of a person's own runs: one process, named by its id on the wire. */

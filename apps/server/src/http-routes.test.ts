@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'bun:test';
 import type { Server } from 'bun';
+import { describe, expect, test } from 'bun:test';
 import { answerRoute, routeFor, type Route } from './http-routes.ts';
 
 const answer = (): Response => new Response('ok');

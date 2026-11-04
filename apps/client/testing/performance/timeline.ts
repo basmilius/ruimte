@@ -1,5 +1,5 @@
-import { join } from 'node:path';
 import { realpathSync } from 'node:fs';
+import { join } from 'node:path';
 import { withBrowserFixture, clientDirectory } from '../browser-fixture';
 import { cpuTaskMs, median } from './bench';
 

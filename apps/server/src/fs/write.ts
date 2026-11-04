@@ -1,12 +1,13 @@
 import { constants } from 'node:fs';
 import { lstat, open, realpath, type FileHandle } from 'node:fs/promises';
 import { basename, dirname, join, relative, sep } from 'node:path';
+import { CodedError } from '@adecore/agents';
+import { KeyedSerializer } from '@adecore/utils/async';
+import { isWithin } from '@adecore/utils/path';
 import { FS_READ_MAX_TEXT_BYTES, type FsWriteResult } from '@ruimte/contracts';
-import { CodedError, KeyedSerializer } from '@adecore/agents';
-import { isInside } from '../canvas/project-paths.ts';
-import { realOrNull } from './real-path.ts';
 import { isRuimteState } from '../projects/project-files.ts';
 import { ReadError, UTF8_BOM, inspect } from './read.ts';
+import { realOrNull } from './real-path.ts';
 
 type WriteErrorCode = 'stale' | 'too-large' | 'not-text' | 'ruimte-state' | 'not-writable';
 
@@ -38,9 +39,27 @@ export async function realRoots(boundary: WriteBoundary): Promise<string[]> {
     const made = registered ? (await Promise.all(boundary.folders.map((folder) => registered(folder).catch(() => [] as string[])))).flat() : [];
     const madeReal = new Set((await Promise.all(made.map(realOrNull))).filter((path): path is string => path !== null));
     const worktrees = (await Promise.all(listed.map(realOrNull))).filter(
-        (path) => path !== null && ((worktreesRoot !== null && isInside(worktreesRoot, path)) || madeReal.has(path))
+        (path) => path !== null && ((worktreesRoot !== null && isWithin(worktreesRoot, path)) || madeReal.has(path))
     );
     return [...folders, ...worktrees].filter((root): root is string => root !== null);
+}
+
+/*
+ * The boundary of one folder alone, which has to lie inside `boundary` itself. Without `within` it is
+ * `boundary`; with it, no other open project and no worktree counts, as an extension's own project promises.
+ */
+export async function narrowTo(boundary: WriteBoundary, within: string | undefined): Promise<WriteBoundary> {
+    if (within === undefined) {
+        return boundary;
+    }
+
+    const real = await realOrNull(within);
+
+    if (real === null || !(await realRoots(boundary)).some((root) => isWithin(root, real))) {
+        throw new BoundaryError('outside-project', `${within} is outside the projects open here and their worktrees`);
+    }
+
+    return { folders: [real], worktreesOf: async () => [], worktreesRoot: boundary.worktreesRoot };
 }
 
 /* The real path of an entry; a link keeps its own name, so it is handled as the link and never followed. */
@@ -69,7 +88,7 @@ export function stateRefusal(segments: readonly string[], path: string, verb: st
 
 /* The root of the boundary a real path lies in; `path` is how the refusal names it. */
 export function rootOf(roots: readonly string[], real: string, path: string): string {
-    const root = roots.find((candidate) => isInside(candidate, real));
+    const root = roots.find((candidate) => isWithin(candidate, real));
     if (root === undefined) {
         throw new BoundaryError('outside-project', `${path} is outside the projects open here and their worktrees`);
     }
@@ -135,7 +154,7 @@ export async function writeTextFile(
     const roots = await realRoots(boundary);
     rootOf(roots, real, file.path);
     // The project files move only through `project.save` and its rev; a write here would slip past both.
-    if (roots.some((root) => isInside(root, real) && isRuimteState(relative(root, real).split(sep)))) {
+    if (roots.some((root) => isWithin(root, real) && isRuimteState(relative(root, real).split(sep)))) {
         throw new WriteError('ruimte-state', `${file.path} is Ruimte's own state and is not written from here`);
     }
     if (mime) {

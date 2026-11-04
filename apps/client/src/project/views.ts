@@ -1,6 +1,6 @@
-import i18next from 'i18next';
+import { offerDraft } from '@adecore/agents-react/chat';
 import { designOfChat, isCanvasView, isOpenableView, sessionNodesOfView, type AgentKind, type ProjectView } from '@ruimte/contracts';
-import { askBeforeEndingAgents } from '@/agents/end-children';
+import i18next from 'i18next';
 import {
     createNodeAction,
     createViewAction,
@@ -14,7 +14,7 @@ import {
     shareViewAction,
     showViewOnCanvasAction
 } from '@/actions/client-actions';
-import { offerDraft } from '@adecore/agents-react/chat';
+import { askBeforeEndingAgents } from '@/agents/end-children';
 import { GRID, type Point } from '@/canvas/math';
 import { databaseTargetOf, databaseViewName } from '@/database/view-name';
 import { useDesignChat } from '@/design/design-chat';
@@ -24,11 +24,11 @@ import { leaveRoutines } from '@/routines/stage';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { focusedCanvas, liveCanvas, revealWhenItLands } from '@/state/canvas';
-import { defaultNodeSize } from '@/state/node-size';
+import { useDocument, viewOfNode } from '@/state/document';
 import { fileTabOf, isDatabaseTab, useFiles } from '@/state/files';
 import { currentEndpointId } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
-import { useDocument, viewOfNode } from '@/state/document';
+import { defaultNodeSize } from '@/state/node-size';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';

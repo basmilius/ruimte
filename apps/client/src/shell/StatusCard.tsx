@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react';
+import { Icon } from '@adecore/ui';
 import clsx from 'clsx';
 import { CircleAlert, LoaderCircle, type LucideIcon } from 'lucide-react';
-import { Icon } from '@adecore/ui';
+import type { ReactNode } from 'react';
 
 interface StatusCardProps {
     glyph: ReactNode;

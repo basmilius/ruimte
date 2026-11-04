@@ -188,6 +188,11 @@ schemes:
         Ruimte: all
     test:
       targets: [RuimteTests]
+      # Tests read English and fixtures carry UTC times, so a Mac set to another language or zone runs the same.
+      language: en
+      region: US
+      environmentVariables:
+        TZ: UTC
   RuimteDeviceChecks:
     build:
       targets:

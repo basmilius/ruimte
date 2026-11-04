@@ -1,8 +1,8 @@
-import { type RefObject, useEffect, useLayoutEffect, useRef } from 'react';
-import i18next from 'i18next';
-import { useTranslation } from 'react-i18next';
 import type { Editor, EditorEngine, EditorIndentation } from '@adecore/editor';
 import { forgetMovesFrom, openingPlace, viewStateKey, viewStates } from '@adecore/editor-react';
+import i18next from 'i18next';
+import { type RefObject, useEffect, useLayoutEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { mountDraftEditor } from '@/shell/panels/draft-editor';
 import { revealLocation } from '@/shell/panels/reveal-location';
 import { foldRolesFor } from '@/state/code-folding';

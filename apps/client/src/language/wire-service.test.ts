@@ -1,9 +1,9 @@
-import { settleLanguage as settle } from './settle.test';
 import { describe, expect, test } from 'bun:test';
+import type { DiagnosticsReport } from '@adecore/lsp';
 import { TransportError } from '@/transport/transport';
 import { FakeLanguageTransport } from './fake-daemon';
+import { settleLanguage as settle } from './settle.test';
 import { WireLanguageService } from './wire-service';
-import type { DiagnosticsReport } from '@adecore/lsp';
 
 const folder = '/work/app';
 const uri = 'file:///work/app/src/a.ts';

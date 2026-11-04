@@ -9,6 +9,7 @@
 
 /* The components of @adecore/ui and the chat of @adecore/agents-react carry their own classes, outside the folder Tailwind scans by itself.
    The library through `node_modules`, so a linked checkout, the published package and the station build read the same path. */
+@source "../../../extensions";
 @source "../node_modules/@adecore/ui/src";
 @source "../node_modules/@adecore/agents-react/src";
 @source "../node_modules/@adecore/editor-react/src";
@@ -317,6 +318,24 @@
         height: 100%;
         margin: 0;
         overscroll-behavior: none;
+    }
+
+    /* Chromium reads the document's overscroll-behavior for every scroller, so `none` would take the bounce of each
+       scroll area too. With a mouse or trackpad the page allows a vertical one, so a scroll area bounces at its end,
+       unless a person turned that off in Appearance. Sideways stays off, so a swipe never navigates. A finger keeps
+       `none`, against pull to refresh. */
+    @media (pointer: fine) {
+        html[data-scroll-bounce],
+        html[data-scroll-bounce] body,
+        html[data-scroll-bounce] #root {
+            overscroll-behavior-y: contain;
+        }
+    }
+
+    /* The window itself is no scroller a person can move, so it never bounces as a whole; only what scrolls inside it does. */
+    html,
+    body {
+        overflow: hidden;
     }
 
     /* A Home Screen app on iPadOS draws under the status bar and its fade, and a phone under the notch
@@ -634,11 +653,13 @@
     .code-theme-preview > [data-theme] {
         background: var(--surface);
     }
+    /* The `ScrollArea` around it scrolls a long line; the block takes the line's width, so its padding stays at the end. */
     .code-theme-preview pre {
         margin: 0;
         background: transparent !important;
         padding: 12px 16px;
-        overflow-x: auto;
+        width: max-content;
+        min-width: 100%;
         font-family: var(--font-mono);
         font-size: var(--code-font-size);
         line-height: var(--code-line-height);

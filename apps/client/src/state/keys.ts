@@ -1,6 +1,6 @@
 import { endpointIdIn, endpointIdOfMachine, useEndpoints, type Endpoint } from '@/state/endpoints';
-import { useOptionalConnection } from '@/transport/context';
 import { windowWorkspace } from '@/state/window';
+import { useOptionalConnection } from '@/transport/context';
 
 /*
  * A row in a store is about one daemon, and its key says which. Node ids are random, so this is not

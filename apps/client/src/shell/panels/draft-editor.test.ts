@@ -89,3 +89,27 @@ describe('the whitespace of a file editor on save', () => {
         unbind();
     });
 });
+
+describe('the undo history of a file editor', () => {
+    test('never steps back past a reload of the file', async () => {
+        const { drafts, editor, unbind, changeOnDisk } = setup('const a = 1;\n');
+        editor.applyEdits([{ range: { start: { line: 0, character: 10 }, end: { line: 0, character: 11 } }, text: '2' }]);
+
+        changeOnDisk('const a = 3;\n');
+        await drafts.reload('local', PATH);
+
+        expect(editor.runCommand('undo')).toBe(false);
+        expect(editor.getText()).toBe('const a = 3;\n');
+        unbind();
+    });
+
+    test('keeps a change from another editor on the same draft as one undo step', () => {
+        const { drafts, editor, unbind } = setup('const a = 1;\n');
+
+        drafts.edit('local', PATH, 'const a = 2;\n');
+
+        expect(editor.runCommand('undo')).toBe(true);
+        expect(editor.getText()).toBe('const a = 1;\n');
+        unbind();
+    });
+});

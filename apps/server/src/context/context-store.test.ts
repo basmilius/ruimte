@@ -1,26 +1,31 @@
 import { describe, expect, test } from 'bun:test';
-import { compileUi } from '@adecore/intelligent-ui';
-import type { ChatItem, ChatWorkflowAgent, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
-import type { CanvasHost } from '../canvas/verb.ts';
-import { handleContextRequest } from './context-route.ts';
-import { ContextStore, MAX_SCREEN_LINES, renderTranscript } from './context-store.ts';
-import type { ChatUsageInfo } from './chat-usage.ts';
-import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
-import { artifactReport } from '../artifacts/artifact-report.ts';
+import { renderTranscript } from '@adecore/agents/context';
+import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
 import { ArtifactError } from '../artifacts/artifact-names.ts';
+import { artifactReport } from '../artifacts/artifact-report.ts';
+import { catalog } from '../mcp/catalog.ts';
+import { callTool } from '../mcp/mcp-route.ts';
+import type { CanvasHost } from '../tools/host.ts';
+import type { ChatUsageInfo } from './chat-usage.ts';
+import { ContextStore, MAX_SCREEN_LINES } from './context-store.ts';
 
-/* The route in front of a store, for a caller no project places: `list` and `read` never ask where it stands. */
-function route(context: ContextStore) {
-    return (path: string, token?: string) => {
-        const url = new URL(`http://127.0.0.1${path}`);
-        const host = {
-            projects: { locate: () => null, machineOfNode: () => null },
-            context
-        } as unknown as CanvasHost;
-        return handleContextRequest(new Request(url, { headers: token ? { authorization: `Bearer ${token}` } : {} }), url.pathname, {
-            targetForToken: (given) => (given === 'tok' ? 'agent' : null),
-            host
-        });
+interface ToolAnswer {
+    refused: boolean;
+    text: string;
+}
+
+/* The context tools in front of a store, for a caller no project places: `list` and `read` never ask where it stands. */
+function toolsOf(context: ContextStore): (name: string, input?: Record<string, unknown>) => Promise<ToolAnswer> {
+    const host = {
+        projects: { locate: () => null, machineOfNode: () => null },
+        context
+    } as unknown as CanvasHost;
+
+    return async (name, input = {}) => {
+        const result = await callTool(catalog(), name, input, { caller: 'agent', host, files: () => Promise.reject(new Error('no files in these tests')) });
+        const first = result.content[0];
+
+        return { refused: result.isError === true, text: first?.type === 'text' ? first.text : '' };
     };
 }
 
@@ -121,7 +126,11 @@ const store = new ContextStore({
     canvasOf: (targetId) => (targetId === 'agent' ? canvas : null)
 });
 
-const get = route(store);
+const tool = toolsOf(store);
+
+function read(id: string, input: Record<string, unknown> = {}): Promise<ToolAnswer> {
+    return tool('context_read', { id, ...input });
+}
 
 describe('ContextStore', () => {
     test('a source handed over with no line is read like a linked one, and one with nothing in it says so', async () => {
@@ -203,7 +212,7 @@ describe('ContextStore', () => {
         expect(await store.read('agent', 'nope')).toBeNull();
     });
 
-    test('--tail is the last lines of each kind, and every kind really gets shorter', async () => {
+    test('tail is the last lines of each kind, and every kind really gets shorter', async () => {
         linked.set('agent', [
             { id: 'note', kind: 'text', title: 'Sprint', text: Array.from({ length: 10 }, (_, i) => `note line ${i}`).join('\n') },
             { id: 'term', kind: 'terminal', title: 'dev server' },
@@ -236,29 +245,28 @@ describe('ContextStore', () => {
         expect((await store.read('agent', 'view-1', 2)) ?? '').not.toContain('<svg');
     });
 
-    test('the HTTP face checks the token and answers list and read', async () => {
+    test('the context tools list and read what is linked', async () => {
         linked.set('agent', [{ id: 'note', kind: 'text', title: 'Sprint', text: 'ship it' }]);
-        expect((await get('/context')).status).toBe(401);
-        expect((await get('/context', 'wrong')).status).toBe(401);
-        expect(await (await get('/context', 'tok')).json()).toEqual({ sources: [{ id: 'note', kind: 'text', title: 'Sprint' }] });
-        expect(await (await get('/context/note', 'tok')).text()).toBe('ship it');
-        expect((await get('/context/other', 'tok')).status).toBe(404);
+        expect(await tool('context_list')).toEqual({ refused: false, text: 'note\ttext\tSprint\t-\t-' });
+        expect(await read('note')).toEqual({ refused: false, text: 'ship it' });
+        expect((await read('other')).refused).toBe(true);
         linked.set('agent', [{ id: 'note', kind: 'text', title: 'Sprint', text: 'one\ntwo' }]);
-        expect(await (await get('/context/note?tail=1', 'tok')).text()).toBe('two');
-        expect((await get('/context/note?tail=0', 'tok')).status).toBe(400);
-        expect((await get('/context/note?tail=two', 'tok')).status).toBe(400);
-        expect((await get('/context/%E0', 'tok')).status).toBe(400);
+        expect(await read('note', { tail: 1 })).toEqual({ refused: false, text: 'two' });
+        expect((await read('note', { tail: 0 })).text).toStartWith('refused bad-arguments:');
+        expect((await read('note', { tail: 'two' })).text).toStartWith('refused bad-arguments:');
     });
 
-    test('a read that finds nothing answers why, from the canvas the CLI cannot see', async () => {
+    test('a read that finds nothing answers why, from the canvas the agent cannot see', async () => {
         linked.set('agent', [{ id: 'note', kind: 'text', title: 'Sprint', text: 'ship it' }]);
-        const refused = await get('/context/term', 'tok');
-        expect(refused.status).toBe(404);
-        const body = await refused.text();
-        expect(body.split('\n')[0]).toStartWith('not-linked\tterm is a terminal node on main with a line from you into it');
-        expect(body).toInclude('ruimte-context link new --from term --to agent');
-        // An id the canvas does not carry either keeps the answer the CLI would have written itself.
-        expect(await (await get('/context/other', 'tok')).text()).toStartWith('unknown-source\tother is not linked to this session');
+        const refused = await read('term');
+        expect(refused.refused).toBe(true);
+        expect(refused.text.split('\n')[0]).toStartWith('refused not-linked: term is a terminal node on main with a line from you into it');
+        expect(refused.text).toInclude('link_new');
+        // An id the canvas does not carry either is refused with what is linked under it.
+        expect((await read('other')).text.split('\n')).toEqual([
+            'refused unknown-source: other is not linked to this session, and no node of main carries that id either',
+            'note\ttext\tSprint'
+        ]);
     });
 
     test('a linked chat reads its plans above the thread, and a tail never cuts them off', async () => {
@@ -345,183 +353,6 @@ describe('a chat read with its usage', () => {
         expect((await withUsage.answer('agent', 'chat', null, 'toolu_1')).usage).toBeUndefined();
         expect(await withUsage.answer('agent', 'note', null, null)).toEqual({ text: 'ship it' });
     });
-
-    test('the HTTP face answers JSON when asked, and text otherwise', async () => {
-        const json = await route(withUsage)('/context/chat?tail=1&json', 'tok');
-        expect(json.headers.get('content-type')).toStartWith('application/json');
-        const body = (await json.json()) as { text: string; usage: { contextPercent: number } };
-        expect(body.text).toEndWith('\n\nDone.');
-        expect(body.usage.contextPercent).toBe(25);
-        expect(await (await route(withUsage)('/context/note', 'tok')).text()).toBe('ship it');
-    });
-});
-
-describe('renderTranscript', () => {
-    test('reads like a conversation with the tool calls in between', () => {
-        const text = renderTranscript(items);
-        expect(text).toContain('## User');
-        expect(text).toContain('> Tool Bash (done): {"command":"ls"}');
-        expect(text).toContain('a.ts');
-        expect(text.endsWith('Done.')).toBe(true);
-    });
-
-    test('a subagent is one line, and nothing it did reads as if the parent did it', () => {
-        const text = renderTranscript([
-            { id: 'u', kind: 'user', createdAt: 1, turnId: 't', text: 'look around' },
-            {
-                id: 'sub',
-                kind: 'subagent',
-                createdAt: 2,
-                turnId: 't',
-                toolUseId: 'toolu_1',
-                description: 'Survey the docs',
-                subagentType: null,
-                prompt: 'Survey',
-                background: false,
-                status: 'done',
-                startedAt: 2,
-                finishedAt: 3,
-                summary: null,
-                result: '\nA guide is missing.\nAnd more.',
-                usage: null,
-                lastTool: null,
-                itemsTruncated: false
-            },
-            {
-                id: 'child-tool',
-                kind: 'tool',
-                createdAt: 2,
-                turnId: 't',
-                toolUseId: 'child-tool',
-                name: 'Glob',
-                input: { pattern: 'docs/**' },
-                output: 'docs/README.md',
-                state: 'done',
-                parentToolUseId: 'toolu_1'
-            },
-            { id: 'child-text', kind: 'assistant', createdAt: 2, turnId: 't', text: 'A guide is missing.', streaming: false, parentToolUseId: 'toolu_1' },
-            { id: 'a', kind: 'assistant', createdAt: 3, turnId: 't', text: 'The docs need a guide.', streaming: false }
-        ]);
-        expect(text.split('\n').filter((line) => line.startsWith('> '))).toEqual(['> Subagent "Survey the docs" (done, toolu_1): A guide is missing.']);
-        expect(text).not.toContain('Glob');
-        expect(text.match(/A guide is missing\./g)).toHaveLength(1);
-    });
-
-    test('a Workflow row lists each phase with its agents, their state and the id a --subagent read takes', () => {
-        const workflow = (name: string | null, agents: ChatWorkflowAgent[]): ChatItem => ({
-            id: 'wf',
-            kind: 'tool',
-            createdAt: 1,
-            turnId: 't',
-            toolUseId: 'toolu_wf',
-            name: 'Workflow',
-            input: { script: 'export const meta = { name: "write-and-read" }' },
-            output: null,
-            state: 'running',
-            parentToolUseId: null,
-            workflow: {
-                name,
-                phases: [
-                    { index: 1, title: 'Write' },
-                    { index: 2, title: 'Read' },
-                    { index: 3, title: 'Check' }
-                ],
-                agents
-            }
-        });
-        const agent = (
-            index: number,
-            label: string,
-            phaseIndex: number | null,
-            agentId: string | null,
-            status: ChatWorkflowAgent['status']
-        ): ChatWorkflowAgent => ({
-            index,
-            label,
-            phaseIndex,
-            agentId,
-            status,
-            startedAt: null,
-            durationMs: null,
-            lastTool: null
-        });
-        const text = renderTranscript([
-            workflow('write-and-read', [
-                agent(1, 'write-file', 1, 'a-writer', 'done'),
-                agent(2, 'read-file', 2, 'a-reader', 'running'),
-                agent(3, 'read-again', 2, null, 'running'),
-                agent(4, 'tidy', null, 'a-tidy', 'failed')
-            ])
-        ]);
-        expect(text.split('\n').slice(1)).toEqual([
-            'Workflow "write-and-read", each agent readable with --subagent and the id beside it:',
-            '- phase 1 "Write": write-file (done, workflow-agent:a-writer)',
-            '- phase 2 "Read": read-file (running, workflow-agent:a-reader), read-again (running, not started yet)',
-            '- phase 3 "Check": not started yet',
-            '- outside a phase: tidy (failed, workflow-agent:a-tidy)'
-        ]);
-        expect(renderTranscript([workflow(null, [])]).split('\n')[1]).toBe('Workflow, each agent readable with --subagent and the id beside it:');
-    });
-});
-
-describe('a request in a thread', () => {
-    const question = (state: 'pending' | 'answered', answers: Record<string, string> | null): ChatItem => ({
-        id: 'question-req-1',
-        kind: 'question',
-        createdAt: 1,
-        turnId: 't',
-        requestId: 'req-1',
-        questions: [
-            {
-                id: 'color',
-                header: 'Color',
-                question: 'Welke kleur?',
-                choices: [
-                    { label: 'Rood', description: '' },
-                    { label: 'Blauw', description: 'the calm one' }
-                ],
-                multiSelect: false
-            },
-            { id: 'name', header: 'Name', question: 'Which name?', choices: [], multiSelect: false }
-        ],
-        answers,
-        state
-    });
-
-    const approval = (decision: 'pending' | 'allow'): ChatItem => ({
-        id: 'approval-req-2',
-        kind: 'approval',
-        createdAt: 2,
-        turnId: 't',
-        requestId: 'req-2',
-        toolUseId: 'toolu_9',
-        toolName: 'Write',
-        input: { file_path: 'a.ts' },
-        description: 'Write a.ts',
-        canAllowAlways: false,
-        decision
-    });
-
-    test('a waiting question shows its request id, and the question ids and choices answer takes', () => {
-        expect(renderTranscript([question('pending', null)])).toBe(
-            [
-                '> Question (waits for an answer, request req-1): Welke kleur? / Which name?',
-                '- question color: choices Rood | Blauw, or your own words',
-                '- question name: answer in your own words'
-            ].join('\n')
-        );
-    });
-
-    test('an answered question keeps its id and says it was answered, with nothing left to pick', () => {
-        expect(renderTranscript([question('answered', { color: 'Blauw', name: 'Kees' })])).toBe(
-            '> Question (answered, request req-1): Welke kleur? / Which name? -> Blauw, Kees'
-        );
-    });
-
-    test('an approval shows its request id and who it waits for, and what came of it', () => {
-        expect(renderTranscript([approval('pending')])).toBe('> Approval (waits for a person, request req-2): Write: Write a.ts');
-        expect(renderTranscript([approval('allow')])).toBe('> Approval (allowed, request req-2): Write: Write a.ts');
-    });
 });
 
 describe('a subagent of a linked chat', () => {
@@ -542,21 +373,26 @@ describe('a subagent of a linked chat', () => {
         }
     });
 
-    const ask = (path: string) => route(subagentStore)(path, 'tok');
+    const ask = toolsOf(subagentStore);
 
-    test('--subagent prints that conversation through the chat it belongs to, and --tail counts its lines', async () => {
-        expect(await (await ask('/context/chat?subagent=toolu_1')).text()).toBe('## User\n\nSurvey the docs\n\n## Assistant\n\nA guide is missing.');
-        expect(await (await ask('/context/chat?subagent=toolu_1&tail=1')).text()).toBe('A guide is missing.');
+    test('subagent prints that conversation through the chat it belongs to, and tail counts its lines', async () => {
+        expect(await ask('context_read', { id: 'chat', subagent: 'toolu_1' })).toEqual({
+            refused: false,
+            text: '## User\n\nSurvey the docs\n\n## Assistant\n\nA guide is missing.'
+        });
+        expect((await ask('context_read', { id: 'chat', subagent: 'toolu_1', tail: 1 })).text).toBe('A guide is missing.');
     });
 
-    test('a subagent that is not there, or asked of something that is no chat, is a 422 that says why', async () => {
-        const missing = await ask('/context/chat?subagent=toolu_2');
-        expect(missing.status).toBe(422);
-        expect(await missing.text()).toBe('Claude has not written a transcript for this subagent');
-        const note = await ask('/context/note?subagent=toolu_1');
-        expect(note.status).toBe(422);
-        expect(await note.text()).toBe('note is a text, and only a chat has subagents');
-        expect((await ask('/context/nope?subagent=toolu_1')).status).toBe(404);
+    test('a subagent that is not there, or asked of something that is no chat, is refused with why', async () => {
+        expect(await ask('context_read', { id: 'chat', subagent: 'toolu_2' })).toEqual({
+            refused: true,
+            text: 'refused unknown-subagent: Claude has not written a transcript for this subagent'
+        });
+        expect(await ask('context_read', { id: 'note', subagent: 'toolu_1' })).toEqual({
+            refused: true,
+            text: 'refused unknown-subagent: note is a text, and only a chat has subagents'
+        });
+        expect((await ask('context_read', { id: 'nope', subagent: 'toolu_1' })).text).toStartWith('refused unknown-source:');
     });
 });
 
@@ -595,62 +431,30 @@ describe('a diagram as context', () => {
         expect(svg).toContain('<svg');
     });
 
-    test('--tail counts the reading order alone and never reaches the SVG', async () => {
+    test('tail counts the reading order alone and never reaches the SVG', async () => {
         linked.set('agent', [{ id: 'flow-1', kind: 'diagram', title: 'Wire' }]);
         expect(await store.read('agent', 'flow-1', 2)).toBe('Daemon -> Disk\nMachine wraps: Daemon, Disk');
         // A tail longer than the list is the whole list and still no heading and no markup.
         expect(await store.read('agent', 'flow-1', 100)).toBe(
             'Client (React)\nDaemon\nDisk\nClient -> Daemon: socket\nDaemon -> Disk\nMachine wraps: Daemon, Disk'
         );
-        expect(await (await get('/context/flow-1?tail=1', 'tok')).text()).toBe('Machine wraps: Daemon, Disk');
+        expect((await read('flow-1', { tail: 1 })).text).toBe('Machine wraps: Daemon, Disk');
     });
 
     test('the node it is linked through reads it too, and lists under the view id alone', async () => {
         linked.set('agent', [{ id: 'flow-1', kind: 'diagram', title: 'Wire', nodeId: 'diagram-node' }]);
         expect(store.list('agent')).toEqual([{ id: 'flow-1', kind: 'diagram', title: 'Wire' }]);
-        expect(await (await get('/context/diagram-node', 'tok')).text()).toBe(await (await get('/context/flow-1', 'tok')).text());
-        expect(await (await get('/context/diagram-node?tail=1', 'tok')).text()).toBe('Machine wraps: Daemon, Disk');
+        expect(await read('diagram-node')).toEqual(await read('flow-1'));
+        expect((await read('diagram-node', { tail: 1 })).text).toBe('Machine wraps: Daemon, Disk');
         // A node nothing links into the asker stays unreadable, whatever it mirrors.
-        expect((await get('/context/other-node', 'tok')).status).toBe(404);
+        expect((await read('other-node')).refused).toBe(true);
     });
 
     test('a diagram the daemon cannot find reads as nothing at all', async () => {
         linked.set('agent', [{ id: 'gone', kind: 'diagram', title: 'Wire' }]);
         expect(await store.read('agent', 'gone')).toBeNull();
-        expect((await get('/context/gone', 'tok')).status).toBe(404);
+        expect((await read('gone')).refused).toBe(true);
     });
-});
-
-test('reading an assistant UI block returns its fallback between the surrounding prose', () => {
-    const text = 'Before\n```ruimte-ui\n<Summary>Readable result</Summary>\n```\nAfter';
-    const item: ChatItem = {
-        id: 'reply',
-        kind: 'assistant',
-        createdAt: 1,
-        turnId: null,
-        text,
-        streaming: false,
-        ui: compileUi(text, { id: 'reply', final: true, fenceLanguage: RUIMTE_UI_FENCE, now: () => 0 })
-    };
-    const transcript = renderTranscript([item]);
-    expect(transcript).toContain('Before');
-    expect(transcript).toContain('Readable result');
-    expect(transcript).toContain('After');
-    expect(transcript).not.toContain('ruimte-ui');
-    expect(transcript).not.toContain('<Summary>');
-});
-
-test('a transcript retains the intent of a chosen UI action without changing the visible message', () => {
-    const item: ChatItem = {
-        id: 'user-choice',
-        kind: 'user',
-        createdAt: 2,
-        turnId: 'turn',
-        text: 'The selected files',
-        uiChoice: { itemId: 'reply', blockId: 'block', revision: 'revision', choiceId: 'choice', label: 'Fix errors', sourceAt: 1, older: false, at: 2 }
-    };
-    expect(renderTranscript([item])).toContain('Chose "Fix errors"\n\nThe selected files');
-    expect(item.text).toBe('The selected files');
 });
 
 describe('an artifact node read', () => {
@@ -703,7 +507,7 @@ describe('a routine node read', () => {
         routineReport: async (targetId, routineId) => (targetId === 'agent' && routineId === 'morning' ? 'routine\tmorning\nrun\trun-1' : null)
     });
 
-    test("gives the report of the node's routine, and --tail counts its lines", async () => {
+    test("gives the report of the node's routine, and tail counts its lines", async () => {
         expect(await reading.read('agent', 'morning-node')).toEndWith('routine\tmorning\nrun\trun-1');
         expect(await reading.read('agent', 'morning-node', 1)).toEndWith('run\trun-1');
         expect(await reading.read('stranger', 'morning-node')).toBeNull();

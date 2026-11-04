@@ -1,6 +1,6 @@
+import { Icon } from '@adecore/ui';
 import clsx from 'clsx';
 import { Check, CircleDot, CircleX, Clock, Gauge, Hand, Moon, Pause, SkipForward, type LucideIcon } from 'lucide-react';
-import { Icon } from '@adecore/ui';
 import type { BlockLook } from '@/routines/agenda';
 
 const ICONS: Record<BlockLook, { icon: LucideIcon; className: string }> = {

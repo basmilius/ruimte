@@ -1,6 +1,6 @@
 import { FsWritePayloadSchema } from '@ruimte/contracts';
-import { withProjectFixture } from './project-fixture';
 import { median } from './bench';
+import { withProjectFixture } from './project-fixture';
 import { measureRestore } from './restore';
 
 const content = process.env.BENCH_CONTENT ?? 'empty';

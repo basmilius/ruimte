@@ -1,28 +1,30 @@
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
-import { ArrowDown, ArrowUp, Plus } from 'lucide-react';
+import { useDrafts } from '@adecore/agents-react/chat';
+import { useChats } from '@adecore/agents-react/state';
+import { Icon, Menu, ScrollArea, SectionLabel } from '@adecore/ui';
+import { designNodeChats, isDesignView, isExtensionView, isSessionView, isUnlistedView, sessionKindOfView, viewChats, type AgentKind } from '@ruimte/contracts';
 import clsx from 'clsx';
+import { ArrowDown, ArrowUp, Plus } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { usePanelGap } from '@/shell/panel-layout';
-import { designNodeChats, isDesignView, isSessionView, isUnlistedView, sessionKindOfView, viewChats, type AgentKind } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { moveViewAction } from '@/actions/client-actions';
-import { useDrafts } from '@adecore/agents-react/chat';
-import { nodeWork } from '@/state/agent-work';
-import { isUnseen, useAttention } from '@/state/attention';
-import { useProcessWarnings } from '@/state/processes';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
-import { askDeleteView, newFileViewsAfter, promoteLooseDatabase, promoteLooseFile, revealNode } from '@/project/views';
+import { StatusDot } from '@/canvas/NodeFrame';
+import { hasLogoMenu } from '@/desktop/bridge';
+import { useTrafficLightInset } from '@/desktop/useFullscreen';
+import { useChatDrawers } from '@/extensions/drawn-chats';
+import { SidebarCards } from '@/extensions/SidebarCards';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { addArtifactToSidebar, carriesArtifact, droppedArtifact } from '@/output/artifact-drag';
-import { useChats } from '@adecore/agents-react/state';
-import { useDocument } from '@/state/document';
-import { isDatabaseTab, isPromotableTab, useFiles } from '@/state/files';
-import { nodeProvider, nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
-import { useUi } from '@/state/ui';
-import { useEndpointId, endpointOfNodeIn } from '@/state/keys';
-import { useEndpoints } from '@/state/endpoints';
-import { snoozeOf, useSnoozes } from '@/state/snooze';
-import { useWaitingSince, waitDetailsOf } from '@/state/waiting';
+import { newChat } from '@/project/new-chat';
+import { askDeleteView, newFileViewsAfter, promoteLooseDatabase, promoteLooseFile, revealNode } from '@/project/views';
+import { viewGlyphOf } from '@/shell/cell-view';
+import { StationMenu } from '@/shell/menu/StationMenu';
+import { NewViewItems } from '@/shell/NewViewMenu';
+import { usePanelGap } from '@/shell/panel-layout';
+import { useProjectMenu } from '@/shell/project-menu-model';
+import { foldedProjects, movableKeys, separatorKey, useSidebarProjects, type SeparatorPlaces, type SidebarSeparator } from '@/shell/sidebar-projects';
 import {
     buildCombinedSidebar,
     buildSidebar,
@@ -39,26 +41,7 @@ import {
     type SidebarSection
 } from '@/shell/sidebar-rows';
 import { useSidebarSource } from '@/shell/sidebar-source';
-import { viewGlyphOf } from '@/shell/cell-view';
-import { childTask, useTasks } from '@/state/tasks';
-import { StatusDot } from '@/canvas/NodeFrame';
-import { Brand } from '@/ui/Brand';
-import { Icon, Menu, SectionLabel } from '@adecore/ui';
-import { hasLogoMenu } from '@/desktop/bridge';
-import { SidebarToggle } from '@/shell/SidebarToggle';
-import { StationMenu } from '@/shell/menu/StationMenu';
-import { IS_STATION } from '@/station';
-import { draggedViewId, dragging as draggedView, draggingWholeCell, PROJECT_DRAG_TYPE, setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
-import { useInstantWidth } from '@/shell/useInstantWidth';
-import { ConnectionDot } from '@/shell/ConnectionDot';
-import { useTrafficLightInset } from '@/desktop/useFullscreen';
-import { useSettings } from '@/state/settings';
-import { isScratchProject, useProject } from '@/state/project';
-import { newChat } from '@/project/new-chat';
-import { NewViewItems } from '@/shell/NewViewMenu';
-import { useSidebarGroups } from './sidebar-groups';
-import { openSidebarTarget } from './sidebar-navigation';
-import { NeedsYouCard } from './NeedsYouCard';
+import { SIDEBAR_WIDTH_PX, SidebarGlow } from '@/shell/SidebarGlow';
 import {
     BackgroundRow,
     NewViewRow,
@@ -70,9 +53,28 @@ import {
     UnknownViewRow,
     ViewRow
 } from '@/shell/SidebarListRows';
-import { useProjectMenu } from '@/shell/project-menu-model';
-import { foldedProjects, movableKeys, separatorKey, useSidebarProjects, type SeparatorPlaces, type SidebarSeparator } from '@/shell/sidebar-projects';
-import { SIDEBAR_WIDTH_PX, SidebarGlow } from '@/shell/SidebarGlow';
+import { SidebarToggle } from '@/shell/SidebarToggle';
+import { useInstantWidth } from '@/shell/useInstantWidth';
+import { draggedViewId, dragging as draggedView, draggingWholeCell, PROJECT_DRAG_TYPE, setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
+import { nodeWork } from '@/state/agent-work';
+import { isUnseen, useAttention } from '@/state/attention';
+import { useDocument } from '@/state/document';
+import { useEndpoints } from '@/state/endpoints';
+import { isDatabaseTab, isPromotableTab, useFiles } from '@/state/files';
+import { useEndpointId, endpointOfNodeIn } from '@/state/keys';
+import { useProcessWarnings } from '@/state/processes';
+import { isScratchProject, useProject } from '@/state/project';
+import { nodeProvider, nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
+import { useSettings } from '@/state/settings';
+import { snoozeOf, useSnoozes } from '@/state/snooze';
+import { childTask, useTasks } from '@/state/tasks';
+import { useUi } from '@/state/ui';
+import { useWaitingSince, waitDetailsOf } from '@/state/waiting';
+import { IS_STATION } from '@/station';
+import { Brand } from '@/ui/Brand';
+import { NeedsYouCard } from './NeedsYouCard';
+import { useSidebarGroups } from './sidebar-groups';
+import { openSidebarTarget } from './sidebar-navigation';
 
 const NO_SEPARATORS: SeparatorPlaces = { before: {}, trailing: [] };
 
@@ -118,6 +120,7 @@ export function Sidebar() {
     const gap = usePanelGap();
     const { t } = useTranslation('shell');
     const source = useSidebarSource();
+    const draws = useChatDrawers();
     const combined = useSettings((s) => s.sidebarScope === 'all-open');
     const everywhere = useSettings((s) => s.needsYouAllProjects);
     const currentProject = useProject((s) => s.current);
@@ -219,7 +222,8 @@ export function Sidebar() {
                               designChats.map((chat) => asRow({ id: chat.id, kind: 'chat', title: chat.name, provider: chat.node.provider }, view.id))
                           )
                         : own,
-                hidden: isUnlistedView(view)
+                hidden: isUnlistedView(view, draws),
+                ...(isExtensionView(view) ? { extension: true } : {})
             };
         })
     };
@@ -431,6 +435,7 @@ export function Sidebar() {
     return (
         <aside
             id="app-sidebar"
+            data-surface="sidebar"
             inert={!open}
             data-instant={instant ? '' : undefined}
             className="sliding-column h-full shrink-0 overflow-hidden"
@@ -449,9 +454,10 @@ export function Sidebar() {
                     <SidebarToggle />
                 </div>
 
-                <div
-                    ref={listRef}
-                    className="mt-2 min-h-0 grow overflow-auto px-2"
+                <ScrollArea
+                    viewportRef={listRef}
+                    className="mt-2 grow"
+                    viewportClassName="px-2"
                     onFocusCapture={(event) => {
                         listHadFocus.current = true;
                         const row = (event.target as HTMLElement).closest<HTMLElement>('[data-sidebar-row]');
@@ -647,7 +653,7 @@ export function Sidebar() {
                                                                   <SeparatorRow {...shared} />
                                                               ) : row.view.kind === 'subheader' ? (
                                                                   <SubheaderRow {...shared} />
-                                                              ) : row.view.kind === 'unknown' ? (
+                                                              ) : row.view.kind === 'unknown' && row.view.extension !== true ? (
                                                                   <UnknownViewRow {...shared} />
                                                               ) : (
                                                                   <ViewRow
@@ -687,9 +693,11 @@ export function Sidebar() {
                         })
                     )}
                     {!empty && separators.trailing.map(separatorRow)}
-                </div>
+                </ScrollArea>
+                <SidebarCards />
 
-                <div className="flex shrink-0 items-center justify-end gap-1 border-t border-border p-2">
+                <div className="flex shrink-0 items-center justify-end gap-1 border-t border-border px-2 py-1.5">
+                    <SlotRow place="sidebarFooter" context={{}} />
                     {combined ? (
                         <button type="button" className={FOOTER_BUTTON} onClick={() => useSidebarProjects.getState().addSeparator(movable, movable.length)}>
                             <Icon icon={Plus} size={14} /> {t('sidebar.separator')}
@@ -708,8 +716,6 @@ export function Sidebar() {
                             </Menu.Popup>
                         </Menu.Root>
                     )}
-                    {/* Usage and Settings stand at the foot of the rail. */}
-                    <ConnectionDot />
                 </div>
             </div>
             {projectMenu.dialogs}

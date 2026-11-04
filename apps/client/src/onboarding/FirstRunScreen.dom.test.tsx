@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { useSettings } from '@/state/settings';
 import { useWindow } from '@/state/window';
-import { installDesktop, removeDesktop } from '../../testing/dom-helpers';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { installDesktop, removeDesktop } from '../../testing/dom-helpers';
 import { machineBridge } from '../../testing/machine-bridge';
 
 let page: Mounted;

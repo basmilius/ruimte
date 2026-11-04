@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import i18next from 'i18next';
 import type { LanguageServerStatus } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { serverDetail } from './server-status';
 
 const t = i18next.getFixedT('en', 'panels');

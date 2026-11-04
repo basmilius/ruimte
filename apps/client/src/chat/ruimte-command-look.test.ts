@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { matchCommandLook, summarizeGroup } from '@adecore/agents-react/chat';
+import { lookRunOf, matchCommandLook, summarizeGroup } from '@adecore/agents-react/chat';
 import type { ChatToolItem } from '@ruimte/contracts';
-import { RUIMTE_COMMAND_LOOKS, sentByNotify } from '@/chat/ruimte-command-look';
+import { RUIMTE_COMMAND_LOOKS, RUIMTE_TOOL_LOOKS, sentByNotify, sentByNotifyTool } from '@/chat/ruimte-command-look';
 
 /* A call as its line reads: the label after "Ruimte", the detail, and what else the line ran. */
 function line(command: string): [string, string, readonly string[], number] | null {
@@ -126,5 +126,74 @@ describe('a notify call as the message it sent', () => {
         expect(sent('', 'running', ['notify', 'chat-b'])).toBeNull();
         expect(sent('', 'running', ['notify', 'chat-b', '--text', 'hi', '--view', 'main'])).toBeNull();
         expect(sent('', 'running', ['answer', 'chat-b', '--text', 'hi'])).toBeNull();
+    });
+});
+
+function mcp(id: string, name: string, input: Record<string, unknown>, output: string | null = '', state: ChatToolItem['state'] = 'done'): ChatToolItem {
+    return { ...call(id, ''), name, input, output, state };
+}
+
+/* A call of the MCP server as its line reads: the label after "Ruimte" and the detail. */
+function toolLine(item: ChatToolItem): [string, string] | null {
+    const run = lookRunOf(item, RUIMTE_COMMAND_LOOKS, RUIMTE_TOOL_LOOKS);
+    return run === null ? null : [run.label, run.detail];
+}
+
+describe('a tool of the MCP server', () => {
+    test('reads as the part of Ruimte it works on, from where its command started the detail', () => {
+        expect(toolLine(mcp('1', 'mcp__ruimte__node_new', { kind: 'note', title: 'Open punten' }))).toEqual([
+            'Canvas',
+            'node new kind=note title="Open punten"'
+        ]);
+        expect(toolLine(mcp('1', 'ruimte/device_shot', { device: 'iphone' }))).toEqual(['Device', 'shot device=iphone']);
+        expect(toolLine(mcp('1', 'mcp__ruimte__task_done', { result: 'Done' }))).toEqual(['Task', 'task done result=Done']);
+        expect(toolLine(mcp('1', 'mcp__ruimte__launch_read', { launch: 'api' }))).toEqual(['Launches', 'read launch=api']);
+        expect(toolLine(mcp('1', 'mcp__ruimte__alert', { text: 'Groen' }))).toEqual(['Notification', 'text=Groen']);
+        expect(toolLine(mcp('1', 'mcp__ruimte__guide', { topic: 'canvas' }))).toEqual(['Help', 'topic=canvas']);
+        expect(toolLine(mcp('1', 'mcp__ruimte__tool_run', { id: 'lint' }))).toEqual(['Using an extension tool', 'id=lint']);
+    });
+
+    test('reads the same from every CLI, and a toolkit this client does not know as the CLI named it', () => {
+        expect(
+            toolLine(mcp('1', 'Tool', { description: 'ruimte__context_list', variant: 'UseTool', tool_name: 'ruimte__context_list', tool_input: {} }))
+        ).toEqual(['Context', 'context list']);
+        expect(toolLine(mcp('1', 'Tool', { description: 'ruimte_context_list', arguments: {} }))).toEqual(['Context', 'context list']);
+        expect(toolLine(mcp('1', 'Read', { description: 'ruimte-context_list' }))).toEqual(['Context', 'context list']);
+        expect(toolLine(mcp('1', 'mcp__ruimte__teleport', {}))).toBeNull();
+        expect(toolLine(mcp('1', 'mcp__other__node_new', {}))).toBeNull();
+    });
+
+    test('a run of one part reads as using it, mixed with ruimte-context calls of that part too', () => {
+        expect(summarizeGroup([mcp('1', 'mcp__ruimte__node_new', {}), mcp('2', 'mcp__ruimte__link_new', {})], RUIMTE_COMMAND_LOOKS, RUIMTE_TOOL_LOOKS)).toBe(
+            'Used Ruimte Canvas 2 times'
+        );
+        expect(summarizeGroup([mcp('1', 'mcp__ruimte__node_new', {}), mcp('2', 'mcp__ruimte__device_list', {})], RUIMTE_COMMAND_LOOKS, RUIMTE_TOOL_LOOKS)).toBe(
+            'Used Ruimte 2 times'
+        );
+    });
+});
+
+describe('a notify tool call as the message it sent', () => {
+    const sent = (output: string | null, state: ChatToolItem['state'] = 'done', input: Record<string, unknown> = { id: 'chat-b', text: 'a\\nb' }) =>
+        sentByNotifyTool({ tool: 'notify', input, state, output });
+
+    test('takes the text as it is and reads how it went', () => {
+        expect(sent('notified\tchat-b\tnow\tdetail\tLead')).toEqual({ to: 'chat-b', text: 'a\\nb', state: 'delivered', title: 'Lead' });
+        expect(sent(null, 'running')).toEqual({ to: 'chat-b', text: 'a\\nb', state: 'sending' });
+        expect(sent('notified\tchat-b\tnow\td', 'done', { id: 'chat-b', text: 'hi', project: 'site' })).toMatchObject({
+            title: 'In another project',
+            hint: 'site'
+        });
+    });
+
+    test('a refusal of the server says why', () => {
+        expect(sent('refused self-notify: you cannot notify yourself', 'error')).toMatchObject({ state: 'failed', reason: 'That is this chat itself' });
+        expect(sent('The tool failed: boom', 'error')).toEqual({ to: 'chat-b', text: 'a\\nb', state: 'failed' });
+    });
+
+    test('anything but an id and a text stays a tool line', () => {
+        expect(sent('', 'running', { text: 'hi' })).toBeNull();
+        expect(sent('', 'running', { id: 'chat-b', text: '' })).toBeNull();
+        expect(sentByNotifyTool({ tool: 'alert', input: { id: 'chat-b', text: 'hi' }, state: 'running', output: null })).toBeNull();
     });
 });

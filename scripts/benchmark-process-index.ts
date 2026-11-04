@@ -1,7 +1,7 @@
 import { deepStrictEqual } from 'node:assert';
 import { resolve } from 'node:path';
-import * as after from '../apps/server/src/processes/tree.ts';
 import { measurePairs } from '../apps/client/testing/performance/paired';
+import * as after from '../apps/server/src/processes/tree.ts';
 import { processIndexCases } from './process-index-performance-cases';
 
 const baselineModule = process.argv[2];

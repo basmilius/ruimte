@@ -3,6 +3,9 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { AttachmentStore, ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
+import { AgentLineageStore } from '@adecore/agents/coordination';
+import { ManualClock, inProcess, fakeCodex, fakeCodexForks } from '@adecore/agents/testing';
 import {
     NODE_SIZE,
     designNodeChats,
@@ -13,17 +16,14 @@ import {
     type ProjectCanvasView,
     type ProjectContent
 } from '@ruimte/contracts';
-import { AgentLineageStore } from '@adecore/agents/coordination';
-import { ManualClock, inProcess, fakeCodex, fakeCodexForks } from '@adecore/agents/testing';
+import { toolsNote } from '../context/context-note.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { bootTestDaemon, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
-import { AttachmentStore, ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
-import { ChatManager } from './chat-manager.ts';
-import { verbsNote } from '../context/context-note.ts';
-import { chatForkDeps, forkChat, itemsThrough, type ChatForkDeps } from './fork.ts';
-import { assistantTexts, turnsOf } from './chat-test-helpers.ts';
 import { retire } from './chat-manager.fixture.test.ts';
+import { ChatManager } from './chat-manager.ts';
+import { assistantTexts, turnsOf } from './chat-test-helpers.ts';
+import { chatForkDeps, forkChat, itemsThrough, type ChatForkDeps } from './fork.ts';
 import { leadProject, removeNodes, sayAndSettle, writeLeadTranscript } from './lead-chat-test-helpers.ts';
 
 /* A canvas kept in memory, read and rewritten through the two calls the project store gives a fork. */
@@ -190,7 +190,7 @@ describe('forking a Claude chat', () => {
         daemon.chats.persistAllSync();
         expect((await new ChatStore(home).read(nodeId))!.preambles).toEqual([]);
         // The fork resumed its own session, never the original's.
-        expect(daemon.claude.started.at(-1)!.argv).toContain(daemon.chats.get(nodeId)!.info.agentSessionId!);
+        expect(daemon.claude.started.at(-1)!.argv).toContain(`--resume=${daemon.chats.get(nodeId)!.info.agentSessionId!}`);
     });
 
     test('a fork deleted unused takes its record and transcript copy along, loaded or not, and one written in keeps its record', async () => {
@@ -242,7 +242,7 @@ describe('forking a Claude chat', () => {
         expect(record.preambles[0]).toContain('What follows is all of it, as text.');
         expect(record.items.at(-1)).toMatchObject({
             kind: 'note',
-            text: 'Forked from Lexer after its last turn (turn 6) and continued with Codex. Both work in the same folder from here. The agent got the whole conversation as text and can read the rest of Lexer through ruimte-context.'
+            text: 'Forked from Lexer after its last turn (turn 6) and continued with Codex. Both work in the same folder from here. The agent got the whole conversation as text and can read the rest of Lexer itself.'
         });
         const canvas = (await store.read(projectId)).views[0] as ProjectCanvasView;
         expect(canvas.nodes.find((node) => node.id === nodeId)).toMatchObject({ provider: 'codex', providerFixed: true });
@@ -252,10 +252,10 @@ describe('forking a Claude chat', () => {
         await daemon.chats.create({ chatId: nodeId });
         await say(nodeId, 'go on');
         const reply = assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)!;
-        // The note about the verbs went in as developer instructions, so only the handoff stands before the text.
+        // The note about the tools went in as developer instructions, so only the handoff stands before the text.
         expect(reply).toBe(`echo: ${record.preambles[0]}\n\ngo on (medium)`);
         await say(nodeId, 'note?');
-        expect(assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)).toBe(verbsNote({ depth: 0, visuals: true }));
+        expect(assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)).toBe(toolsNote({ depth: 0, visuals: true }));
         expect(daemon.chats.get(nodeId)!.info.agentSessionId).not.toBeNull();
     });
 

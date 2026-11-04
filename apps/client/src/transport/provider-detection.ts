@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
-import type { ProviderInfo } from '@ruimte/contracts';
 import { useProvidersStore } from '@adecore/agents-react/state';
+import type { ProviderInfo } from '@ruimte/contracts';
+import { useEffect } from 'react';
 import { currentEndpointId, useEndpointId } from '@/state/keys';
 import { pool, transportFor } from '@/transport';
 import { machineAnswers } from './features';

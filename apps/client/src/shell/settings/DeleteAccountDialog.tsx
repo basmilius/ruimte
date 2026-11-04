@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { Trash2 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { ACCOUNT_DELETE_WORD, accountConfirmationName, confirmsAccountDeletion, type Account } from '@ruimte/pulsar';
-import { deleteAccountHere } from '@/pulsar/account-deletion';
 import { Button, Dialog, Field, FormError, Icon, Input, useAsyncAction } from '@adecore/ui';
+import { ACCOUNT_DELETE_WORD, accountConfirmationName, confirmsAccountDeletion, type Account } from '@ruimte/pulsar';
+import { Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { deleteAccountHere } from '@/pulsar/account-deletion';
 
 const WHAT_GOES = ['account', 'sessions', 'push', 'machines'] as const;
 

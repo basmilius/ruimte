@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { FadingWords } from '@adecore/agents-react/chat/ui';
+import { Button, EmptyState, FormError, Icon, IconButton, ScrollArea, useNow } from '@adecore/ui';
+import { formatClockDuration } from '@adecore/ui/format';
 import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
 import {
     Check,
     ChevronRight,
@@ -17,14 +18,13 @@ import {
     Trash2,
     type LucideIcon
 } from 'lucide-react';
-import { FadingWords } from '@adecore/agents-react/chat/ui';
-import { formatClockDuration } from '@adecore/ui/format';
-import { Button, EmptyState, FormError, Icon, IconButton, useNow } from '@adecore/ui';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { startVoice, stopVoice, undoVoiceAction, undoVoiceActions } from '@/voice/controller';
-import { VoiceWaveform } from '@/voice/VoiceWaveform';
 import { useVoice, type VoiceAction, type VoiceActionKind, type VoicePhase, type VoiceUtterance } from '@/voice/state';
 import { voiceTimeline, type VoiceTimelineEntry } from '@/voice/timeline';
+import { VoiceWaveform } from '@/voice/VoiceWaveform';
 
 const actionIcons: Record<VoiceActionKind, LucideIcon> = {
     focus: LayoutGrid,
@@ -224,7 +224,7 @@ export function VoicePanelBody() {
                 </PanelHeaderActions>
             </PanelHeaderSlot>
             <VoiceWaveform phase={phase} />
-            <div className="min-h-0 grow overflow-y-auto px-4 py-5" role="log" aria-live="polite">
+            <ScrollArea className="grow" viewportClassName="px-4 py-5" role="log" aria-live="polite">
                 {timeline.length === 0 &&
                     (active ? (
                         <EmptyState className="min-h-48">{t('empty.listening')}</EmptyState>
@@ -250,7 +250,7 @@ export function VoicePanelBody() {
                     ))}
                 </div>
                 <div ref={bottom} className="h-5" aria-hidden="true" />
-            </div>
+            </ScrollArea>
             <footer className="shrink-0 border-t border-border p-3">
                 {error && <FormError className="mb-2">{error}</FormError>}
                 <Button

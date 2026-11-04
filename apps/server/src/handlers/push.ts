@@ -1,7 +1,7 @@
 import { PUSH_NOTIFY_DEFAULT } from '@ruimte/contracts';
-import type { PushService } from '../push/service.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import { RequestError, type ClientConnection, type Dispatcher } from '../dispatcher.ts';
+import type { PushService } from '../push/service.ts';
 
 function provenSession(client: ClientConnection): string {
     const sessionId = client.access?.sessionId;

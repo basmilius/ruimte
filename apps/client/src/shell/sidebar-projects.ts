@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { create, createStore, useStore, type StoreApi } from 'zustand';
 import { z } from 'zod';
+import { create, createStore, useStore, type StoreApi } from 'zustand';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { endpointKey } from '@/state/keys';
 import { listedEndpoints } from '@/state/local-machine';

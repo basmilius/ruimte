@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { GitFile, GitRepo, GitStatus } from '@ruimte/contracts';
+import { act } from 'react';
+import { mount, until, type Mounted } from '../../testing/dom';
+import { installDesktop, removeDesktop } from '../../testing/dom-helpers';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { installDesktop, removeDesktop } from '../../testing/dom-helpers';
-import { mount, until, type Mounted } from '../../testing/dom';
 import { emptyCanvas } from '../../testing/project-fixtures';
 
 const FOLDER = '/work/atlas';

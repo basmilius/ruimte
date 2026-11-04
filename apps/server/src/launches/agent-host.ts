@@ -1,10 +1,10 @@
-import type { LaunchHost } from '../canvas/verb.ts';
+import type { LaunchHost } from '../tools/host.ts';
 import type { LaunchRunner } from './runner.ts';
 import type { LaunchStore } from './store.ts';
 
 /*
- * The launches as the verbs reach them. The actor is fixed to an agent here rather than passed in,
- * so no verb can approve a launch on its way or ask for a person's Force stop, and a save is the store's
+ * The launches as the tools reach them. The actor is fixed to an agent here rather than passed in,
+ * so no tool can approve a launch on its way or ask for a person's Force stop, and a save is the store's
  * `saveByAgent`, which approves nothing.
  */
 export function agentLaunches(

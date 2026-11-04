@@ -1,7 +1,7 @@
-import { useTranslation } from 'react-i18next';
-import { ArrowLeftRight, Check } from 'lucide-react';
 import { bothLines, sideLines, type MergeBlock, type MergeSide } from '@adecore/merge';
-import { Button, EmptyState, Icon } from '@adecore/ui';
+import { Button, EmptyState, Icon, ScrollArea } from '@adecore/ui';
+import { ArrowLeftRight, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface SideProps {
     readonly label: string;
@@ -20,13 +20,13 @@ function Side({ label, lines, onTake }: SideProps) {
                     {t('side.take')}
                 </Button>
             </div>
-            <div className="min-h-0 grow overflow-auto">
+            <ScrollArea axis="both" className="grow">
                 {lines.length === 0 ? (
                     <EmptyState className="h-full">{t('side.nothing')}</EmptyState>
                 ) : (
                     <pre className="px-2 py-1 font-mono text-(length:--code-font-size) leading-(--code-line-height) text-text">{lines.join('\n')}</pre>
                 )}
-            </div>
+            </ScrollArea>
         </div>
     );
 }

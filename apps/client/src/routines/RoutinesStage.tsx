@@ -1,8 +1,3 @@
-import i18next from 'i18next';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, CircleAlert, Clock, Info, LayoutGrid, MoreHorizontal, Pause, Pencil, Play, Plus, Trash2, X } from 'lucide-react';
-import { isCanvasView, type RoutineEntry, type RoutineListResult } from '@ruimte/contracts';
 import {
     Button,
     ButtonGroup,
@@ -19,12 +14,18 @@ import {
     useNow
 } from '@adecore/ui';
 import { formatDateTime } from '@adecore/ui/format';
+import { isCanvasView, type RoutineEntry, type RoutineListResult } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { ChevronLeft, ChevronRight, CircleAlert, Clock, Info, LayoutGrid, MoreHorizontal, Pause, Pencil, Play, Plus, Trash2, X } from 'lucide-react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { NOON_MS, weekOf, type AgendaWeek } from '@/routines/agenda';
 import { openRoutineForm } from '@/routines/form-state';
-import { AgendaLegend, RoutineAgenda, RoutineWeekList, type AgendaGroup } from '@/routines/RoutineAgenda';
-import { RoutineDetail } from '@/routines/RoutineDetail';
 import { runRoutineNow, setRoutinePaused, showRoutineOnCanvas } from '@/routines/routine-commands';
 import { refreshRoutines, useRoutineList } from '@/routines/routine-list';
+import { AgendaLegend, RoutineAgenda, RoutineWeekList, type AgendaGroup } from '@/routines/RoutineAgenda';
+import { RoutineDetail } from '@/routines/RoutineDetail';
 import { RoutineSide } from '@/routines/RoutineSide';
 import { leaveRoutines, setRoutinesFilter, setRoutinesLayout, showRoutine, stepWeek, useRoutinesStage } from '@/routines/stage';
 import { failed } from '@/shell/surface-failure';
@@ -277,6 +278,7 @@ function DetailHeader({ endpointId, entry, rev }: { endpointId: string; entry: R
                     <Menu.Item className="text-status-error" onClick={() => setRemoving(true)}>
                         <Icon icon={Trash2} size={14} /> {t('actions.remove')}
                     </Menu.Item>
+                    <SlotMenuItems kit={Menu} place="routineMenu" context={{ routine: { id: entry.routine.id } }} />
                 </Menu.Popup>
             </Menu.Root>
             <PromptDialog

@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import { PROTOCOL_VERSION, protocolMismatch, type EndpointInfo, type ProtocolMismatch, type UsageClientKind } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { usageClientKind } from './client-kind';
 
 /* What a row and a failed connection say about a machine on another wire version. */

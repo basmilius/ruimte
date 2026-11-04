@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { ActionRegistry } from '@ruimte/actions';
 import type { ProjectClosingResult, ProjectSummary } from '@ruimte/contracts';
-import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
-import { projectActions, type ListedProject, type ProjectMachine } from './project-actions';
 import { useDocument } from '@/state/document';
 import { TransportError } from '@/transport/transport';
 import { questionOf } from './action-support';
+import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
+import { projectActions, type ListedProject, type ProjectMachine } from './project-actions';
 
 function summary(projectId: string, name: string, closedAt: number | null = null): ProjectSummary {
     return {

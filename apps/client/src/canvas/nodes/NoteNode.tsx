@@ -1,12 +1,12 @@
+import { Markdown } from '@adecore/agents-react/chat/ui';
+import { copyText, readClipboardText, Icon, IconButton, EDIT_SHORTCUTS, Kbd, ContextMenu, ScrollArea } from '@adecore/ui';
+import { ClipboardPaste, Copy, Lock, Pencil, Scan, Scissors } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DictationControl } from '@/dictation/DictationControl';
 import { DictationError } from '@/dictation/engine';
-import { useEffect, useRef, useState } from 'react';
-import { ClipboardPaste, Copy, Lock, Pencil, Scan, Scissors } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { Markdown } from '@adecore/agents-react/chat/ui';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { setNotePreviewLocked, useNotePreviewLocked } from '@/state/note-previews';
-import { copyText, readClipboardText, Icon, IconButton, EDIT_SHORTCUTS, Kbd, ContextMenu } from '@adecore/ui';
 
 /* The note while it has the focus: a textarea with its own menu, since a textarea keeps its selection to itself. */
 function NoteEditor({ id, body }: { id: string; body: string }) {
@@ -165,8 +165,8 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
     }
 
     return (
-        <div className="note-markdown h-full overflow-auto px-3 py-2.5 select-text">
+        <ScrollArea className="h-full" viewportClassName="note-markdown px-3 py-2.5 select-text">
             <Markdown text={body} breaks />
-        </div>
+        </ScrollArea>
     );
 }

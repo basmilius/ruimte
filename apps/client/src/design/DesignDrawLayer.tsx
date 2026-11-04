@@ -1,8 +1,8 @@
+import { Button, Icon, IconButton, Input } from '@adecore/ui';
+import type { ChatAttachmentUpload } from '@ruimte/contracts';
+import { Eraser, Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eraser, Send } from 'lucide-react';
-import type { ChatAttachmentUpload } from '@ruimte/contracts';
-import { Button, Icon, IconButton, Input } from '@adecore/ui';
 import { layoutPoint, strokesBox, type Point, type Rect } from '@/design/design-page';
 
 /* Every stroke on the canvas, in the color of the pen, at the pixels of its layout. */

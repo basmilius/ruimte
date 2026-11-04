@@ -1,8 +1,8 @@
-import { chatInfoOf } from '../../testing/chat-info';
 import { afterEach, describe, expect, test } from 'bun:test';
 import { useChats, type ChatState } from '@adecore/agents-react/state';
 import type { AgentStatus } from '@ruimte/contracts';
 import { subscribeChatStatuses, subscribeChatThreads } from '@/state/chats';
+import { chatInfoOf } from '../../testing/chat-info';
 
 function info(status: AgentStatus): ChatState['info'] {
     return chatInfoOf('c1', { status, running: true });

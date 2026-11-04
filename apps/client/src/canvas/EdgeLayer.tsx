@@ -1,18 +1,20 @@
+import { Icon, IconButton, ContextMenu, Input } from '@adecore/ui';
+import { MAX_TITLE_LENGTH } from '@ruimte/actions';
+import { Pencil, Trash, X } from 'lucide-react';
 import { memo, useState, type Dispatch, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Trash, X } from 'lucide-react';
-import { MAX_TITLE_LENGTH } from '@ruimte/actions';
-import { isAgentKind, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
+import type { EdgeLine } from '@/canvas/edge-lines';
 import { edgeLook, lineMeaning } from '@/canvas/edge-look';
 import { routeDraft, SIDE_NORMAL, type EdgeRoute, type Obstacle, type Side } from '@/canvas/edge-route';
-import type { EdgeLine } from '@/canvas/edge-lines';
 import { lineRoutes } from '@/canvas/line-routes';
 import { markerPath, type MarkerShape } from '@/canvas/marker-path';
 import type { Point, Rect } from '@/canvas/math';
-import { endpointOfNodeIn, useEndpointId } from '@/state/keys';
+import { nodeInfoOf } from '@/extensions/slots';
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
+import { isAgentKind, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { useEndpoints } from '@/state/endpoints';
+import { endpointOfNodeIn, useEndpointId } from '@/state/keys';
 import { edgeTask, taskEdgeLabel, useTasks } from '@/state/tasks';
-import { Icon, IconButton, ContextMenu, Input } from '@adecore/ui';
 
 function EdgeLabel({
     ids,
@@ -211,6 +213,7 @@ const EdgeRow = memo(function EdgeRow({ layer, line, route, label, stroke, width
                 <ContextMenu.Item onClick={remove}>
                     <Icon icon={Trash} size={14} /> {t('common:action.remove')}
                 </ContextMenu.Item>
+                <SlotMenuItems place="lineMenu" context={{ from: nodeInfoOf(line.edge.from), to: nodeInfoOf(line.edge.to) }} />
             </ContextMenu.Popup>
         </ContextMenu.Root>
     );

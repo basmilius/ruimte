@@ -1,8 +1,8 @@
 import type { PeerNode, ProjectEdge, ProjectView, RemoteLink } from '@ruimte/contracts';
 import { isCanvasView } from '@ruimte/contracts';
+import { markUnlinked } from '@/project/remote-refusals';
 import type { NodesOfView } from '@/project/view-nodes';
 import type { CanvasNode } from '@/state/canvas';
-import { markUnlinked } from '@/project/remote-refusals';
 import { TransportError, type Transport } from '@/transport/transport';
 
 /* What one machine is to draw of this project: the nodes that run there and the lines between them. */

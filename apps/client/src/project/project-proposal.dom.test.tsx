@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ChatInfo, ChatMoveInfoResult, ProjectProposal, ProjectSummary, ProjectView, ProviderInfo } from '@ruimte/contracts';
+import { act } from 'react';
 import { useProject } from '@/state/project';
 import { useProposals } from '@/state/proposals';
 import { useUi } from '@/state/ui';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { fakeProvider } from '../../testing/fake-provider';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
 const ENDPOINT_ID = 'fake-machine';
 

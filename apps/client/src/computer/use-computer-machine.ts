@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import type { ComputerAppGrants, ComputerGrant, ComputerRevokePayload, ComputerUseStatus } from '@ruimte/contracts';
 import { messageOf } from '@adecore/ui';
+import type { ComputerAppGrants, ComputerGrant, ComputerRevokePayload, ComputerUseStatus } from '@ruimte/contracts';
+import { useEffect, useState } from 'react';
 import { computerSetupOf, opensSystemSettings, recheckOf, SYSTEM_SETTINGS_PANES, type ComputerSetup } from '@/computer/setup';
 import { desktop } from '@/desktop/bridge';
 import { activeLanguage } from '@/i18n/active';

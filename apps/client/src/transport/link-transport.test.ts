@@ -463,7 +463,7 @@ describe('LinkTransport', () => {
         test('a request that waits on a model, a history or a download waits past the timeout for its answer', async () => {
             const { transport } = await opened();
             const replies = [
-                transport.request('ondevice.generate', { id: 'g1', purpose: 'explain', prompt: 'What does this do?' }),
+                transport.request('editor.generate', { id: 'g1', purpose: 'explain', prompt: 'What does this do?' }),
                 transport.request('git.bundle', {} as never),
                 transport.request('git.fetchBundle', {} as never),
                 transport.request('provider.installAgent', { id: 'agent' }),

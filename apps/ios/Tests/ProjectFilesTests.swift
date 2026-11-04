@@ -202,6 +202,21 @@ final class ProjectFilesTests: XCTestCase {
         XCTAssertEqual(edit.mtime, 2000)
     }
 
+    func testTextTypedWhileSavingStaysAnUnsavedEdit() async {
+        let machine = FilesMachine()
+        let edit = FileEditModel()
+        edit.begin(text: "one", mtime: 1000)
+        edit.text = "two"
+        machine.whileWriting = { edit.text = "three" }
+        let saved = await edit.save(client: machine, path: "/work/app/a.ts")
+        XCTAssertTrue(saved)
+        XCTAssertEqual(machine.sent.first { $0.type == "fs.write" }?.payload["text"], .string("two"))
+        XCTAssertTrue(edit.editing)
+        XCTAssertTrue(edit.changed)
+        XCTAssertEqual(edit.text, "three")
+        XCTAssertEqual(edit.mtime, 2000)
+    }
+
     func testAFileThatMovedRefusesTheEditAndKeepsIt() async {
         let machine = FilesMachine()
         machine.stale = true
@@ -219,6 +234,8 @@ final class ProjectFilesTests: XCTestCase {
 @MainActor private final class FilesMachine: MachineRequesting {
     var sent: [(type: String, payload: JSONValue)] = []
     var stale = false
+    /// Runs while `fs.write` is unanswered, as a person typing during the save.
+    var whileWriting: (() -> Void)?
 
     func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
@@ -254,6 +271,7 @@ final class ProjectFilesTests: XCTestCase {
             if stale {
                 throw MachineClientError.server(code: "stale", message: "That file changed on disk since it was read")
             }
+            whileWriting?()
             return .object(["size": .number(3), "mtime": .number(2000)])
         default:
             return .object([:])

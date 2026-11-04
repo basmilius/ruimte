@@ -1,7 +1,7 @@
 import type { ProjectCanvasLine } from '@ruimte/contracts';
-import type { CanvasState } from '@/state/canvas';
-import { nextId, remember, type CanvasGet, type CanvasSet } from '@/state/canvas-model';
 import { snapLine } from '@/canvas/line-geometry';
+import type { CanvasState } from '@/state/canvas';
+import { droppedIntoGroups, nextId, remember, type CanvasGet, type CanvasSet } from '@/state/canvas-model';
 
 export type CanvasLineStyle = Pick<ProjectCanvasLine, 'stroke' | 'strokeWidth' | 'strokeStyle' | 'arrowStart' | 'arrowEnd'>;
 export const DEFAULT_LINE_STYLE: CanvasLineStyle = { stroke: 'ink', strokeWidth: 2, strokeStyle: 'solid' };
@@ -17,7 +17,10 @@ export function createCanvasLinesSlice(set: CanvasSet, get: CanvasGet): Pick<Can
                 return null;
             }
             const id = nextId('line');
-            set((s) => ({ lines: { ...s.lines, [id]: { ...snapped, id } }, linesPresent: true, selection: [id], lineTool: null, ...remember(s) }));
+            set((s) => {
+                const lines = { ...s.lines, [id]: { ...snapped, id } };
+                return { lines, nodes: droppedIntoGroups({ ...s, lines }, [id]), linesPresent: true, selection: [id], lineTool: null, ...remember(s) };
+            });
             return id;
         },
         updateLine(id, patch, undoable = true) {

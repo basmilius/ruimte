@@ -2,16 +2,16 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { generatedImageAttachment, type ChatInfo, type ChatItem, type ChatSubagentItem } from '@ruimte/contracts';
-import type { ContextSource } from '@ruimte/contracts';
-import { CONTEXT_LEAD, chatNote, chatPrompt, contextPrompt, verbsNote } from '../context/context-note.ts';
-import { ProviderRegistry } from '../providers/registry.ts';
 import { AttachmentStore, ChatStore } from '@adecore/agents/chat';
-import { ChatManager } from './chat-manager.ts';
-import { ChatRecorder } from './chat-test-helpers.ts';
 import { inProcess, type InProcessCli, FAKE_CHILD_STEPS, fakeCodexWith } from '@adecore/agents/testing';
 import nativeApprovalCapture from '@adecore/agents/testing/fixtures/codex-0.159.2-native-approval.json';
+import { generatedImageAttachment, type ChatInfo, type ChatItem, type ChatSubagentItem } from '@ruimte/contracts';
+import type { ContextSource } from '@ruimte/contracts';
+import { CONTEXT_LEAD, chatNote, chatPrompt, contextPrompt, toolsNote } from '../context/context-note.ts';
+import { ProviderRegistry } from '../providers/registry.ts';
 import { retire } from './chat-manager.fixture.test.ts';
+import { ChatManager } from './chat-manager.ts';
+import { ChatRecorder } from './chat-test-helpers.ts';
 
 let home: string;
 let store: ChatStore;
@@ -568,15 +568,15 @@ describe('ChatManager with Codex', () => {
         await open('chat-view');
         await manager.send('chat-view', 'note?');
         await recorder.untilIdle();
-        expect(recorder.ofKind('assistant')[0]?.text).toBe(verbsNote({ depth: 0, standalone: true }));
+        expect(recorder.ofKind('assistant')[0]?.text).toBe(toolsNote({ depth: 0, standalone: true }));
     });
 
-    test('a thread starts with the note about the verbs as developer instructions, and no prompt carries it', async () => {
+    test('a thread starts with the note about the tools as developer instructions, and no prompt carries it', async () => {
         await remake({ depthOf: () => 1 });
         await open('chat-note');
         await manager.send('chat-note', 'note?');
         await recorder.untilIdle();
-        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual([verbsNote({ depth: 1 })]);
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual([toolsNote({ depth: 1 })]);
         await manager.send('chat-note', 'hi');
         await recorder.until(() => recorder.info?.usage.turns === 2 && recorder.idle);
         expect(turnInputs().map((input) => input[0]!.text)).toEqual(['note?', 'hi']);

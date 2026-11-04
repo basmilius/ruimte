@@ -1,10 +1,10 @@
+import { Button, Popover, Spinner, Tooltip } from '@adecore/ui';
+import type { LanguageServerStatus } from '@ruimte/contracts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { LanguageServerStatus } from '@ruimte/contracts';
-import { Button, Popover, Spinner, Tooltip } from '@adecore/ui';
 import type { EditorLanguage } from './ruimte-editor-language';
-import { Dot, LogDialog, ServerActionButtons } from './ServerParts';
 import { report, serverDetail, sidecarDetails, useStatuses } from './server-status';
+import { Dot, LogDialog, ServerActionButtons } from './ServerParts';
 import type { LanguageStatusTracker } from './status';
 import { actionsOf, alternativeTo, chipServer, kindOf, listedServers, nameOf, packageOf, toneOf } from './status-view';
 import { useServingKinds } from './use-serving-kinds';

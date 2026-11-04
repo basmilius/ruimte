@@ -1,7 +1,7 @@
 import type { GitActionPayload, GitActionPhase, GitActionResult } from '@ruimte/contracts';
 import { conflictedFiles } from './conflict.ts';
-import { stashStamp } from './stage.ts';
 import { READ_ONLY_GIT, git, runGit, streamCommand, toplevel, verifyRev, GitError } from './run.ts';
+import { stashStamp } from './stage.ts';
 
 // A push over a slow link is allowed to take this long before the daemon gives up on it.
 const NETWORK_TIMEOUT_MS = 120_000;

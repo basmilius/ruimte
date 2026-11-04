@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectView } from '@ruimte/contracts';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { answerDevices, FAKE_SIMULATOR, referenceOf, type FakeDevices } from '../../testing/fake-devices';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { answerDevices, FAKE_SIMULATOR, referenceOf, type FakeDevices } from '../../testing/fake-devices';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
 const PHONE: ProjectView = { kind: 'device', id: 'phone', name: FAKE_SIMULATOR.name, device: referenceOf(FAKE_SIMULATOR) };
 const TARGET = { backendId: 'simctl', platform: 'ios', deviceId: FAKE_SIMULATOR.deviceId };

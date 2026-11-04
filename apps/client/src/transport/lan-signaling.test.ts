@@ -2,9 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { LanDoorClientFrameSchema, lanDoorMessage, signalMessage, type LanDoorClientFrame, type SignalAccess, type SignalEnvelope } from '@ruimte/pulsar';
 import i18next from 'i18next';
 import type { ClientKey } from '@/endpoint/client-key';
+import { FakeSocket, newKey, verifies } from '../../testing/fake-socket';
 import { lanSignaling } from './lan-signaling';
 import type { Signal, SignalingEvents } from './signaling';
-import { FakeSocket, newKey, verifies } from '../../testing/fake-socket';
 
 const NONCE = 'n'.repeat(32);
 const MACHINE_ID = 'studio';

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import type { AppIpc } from '@adecore/shell';
 import type { MachineMode } from '@ruimte/desktop-bridge';
 import type { MachineModeFile } from '../machine-mode';
-import type { AppIpc } from './ipc';
 import { installMachineMode } from './machine-mode';
 
 interface Rig {

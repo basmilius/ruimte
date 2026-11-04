@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { createPublicKey, generateKeyPairSync, sign, verify } from 'node:crypto';
 import { AddressBookClient, AddressBookRequestError } from './address-book-client.ts';
 import { SESSION_REFRESH_MAX_SKEW_MS, type SessionResult } from './address-book.ts';
-import { SessionVault, type SessionSigner, type SessionStore, type StoredSession } from './session-vault.ts';
+import { SessionKeyUnavailableError, SessionVault, type SessionSigner, type SessionStore, type StoredSession } from './session-vault.ts';
 import { sessionKeyMessage, sessionRefreshMessage } from './signing.ts';
 
 function token(seed: string): string {
@@ -386,6 +386,67 @@ describe('SessionVault and its key', () => {
         signer = newSigner();
         expect(await vault.refresh()).toBeNull();
         expect(store.held).toBeNull();
+    });
+
+    test('a key that stands in for one the keychain would not hand over keeps the session for a later start', async () => {
+        const book = fakeAddressBook();
+        const store = memoryStore();
+        const forgotten: string[] = [];
+        await new SessionVault({ client: book.client, store, signer: keyed, now: () => NOW }).exchange(exchange);
+        const kept = store.held;
+
+        const standIn: SessionSigner = { ...newSigner(), temporary: true };
+        const locked = new SessionVault({
+            client: book.client,
+            store,
+            signer: async () => standIn,
+            now: () => NOW,
+            onForget: (reason) => forgotten.push(reason)
+        });
+        await expect(locked.refresh()).rejects.toBeInstanceOf(SessionKeyUnavailableError);
+        expect(store.held).toEqual(kept);
+        expect(forgotten).toEqual([]);
+        expect(book.calls.filter((call) => call.path === '/v1/session/refresh')).toHaveLength(0);
+
+        const unlocked = new SessionVault({ client: book.client, store, signer: keyed, now: () => NOW });
+        expect((await unlocked.refresh())?.accessToken).toBe(token('2'));
+    });
+
+    test('a key for this run only refreshes the session it opened', async () => {
+        const book = fakeAddressBook();
+        const standIn: SessionSigner = { ...newSigner(), temporary: true };
+        const vault = new SessionVault({ client: book.client, store: memoryStore(), signer: async () => standIn, now: () => NOW });
+        await vault.exchange(exchange);
+        expect((await vault.refresh())?.accessToken).toBe(token('2'));
+    });
+
+    test('a cleared session says why', async () => {
+        const book = fakeAddressBook();
+        const store = memoryStore();
+        const forgotten: string[] = [];
+        let now = NOW;
+        let signer: SessionSigner | null = deviceSigner;
+        const vault = new SessionVault({
+            client: book.client,
+            store,
+            signer: async () => signer,
+            now: () => now,
+            onForget: (reason) => forgotten.push(reason)
+        });
+
+        await vault.exchange(exchange);
+        book.revokeEverything();
+        await vault.refresh();
+        await vault.exchange(exchange);
+        signer = null;
+        await vault.refresh();
+        signer = deviceSigner;
+        await vault.exchange(exchange);
+        now = NOW + 86_400_000;
+        await vault.restore();
+        await vault.refresh();
+
+        expect(forgotten).toEqual(['unauthorized', 'no-key', 'expired']);
     });
 
     test('no session is opened without a key', async () => {

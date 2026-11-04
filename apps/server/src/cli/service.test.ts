@@ -270,7 +270,7 @@ describe('the copy the service runs', () => {
         rmSync(dir, { recursive: true, force: true });
     });
 
-    const packageBin = (root: string, build: string, helpers: string[], executables = ['ruimte', 'ruimte-context']): string => {
+    const packageBin = (root: string, build: string, helpers: string[], executables = ['ruimte']): string => {
         const bin = join(root, 'package', 'bin');
         mkdirSync(join(bin, 'native'), { recursive: true });
         for (const name of executables) {
@@ -284,15 +284,15 @@ describe('the copy the service runs', () => {
     };
 
     test('takes the native helpers along, and an update drops the ones its package no longer has', () => {
-        copyServiceBinaries(packageBin(join(dir, 'first'), 'one', ['scrcpy-server', 'ruimte-foundation-models']), binDir, 'darwin');
+        copyServiceBinaries(packageBin(join(dir, 'first'), 'one', ['scrcpy-server', 'retired-helper']), binDir, 'darwin');
         expect(readFileSync(join(binDir, 'native', 'scrcpy-server'), 'utf8')).toBe('scrcpy-server');
         if (process.platform !== 'win32') {
-            expect(statSync(join(binDir, 'native', 'ruimte-foundation-models')).mode & 0o111).not.toBe(0);
+            expect(statSync(join(binDir, 'native', 'retired-helper')).mode & 0o111).not.toBe(0);
         }
 
         copyServiceBinaries(packageBin(join(dir, 'second'), 'two', ['scrcpy-server']), binDir, 'darwin');
         expect(readFileSync(join(binDir, 'ruimte.build'), 'utf8')).toBe('two');
-        expect(existsSync(join(binDir, 'native', 'ruimte-foundation-models'))).toBe(false);
+        expect(existsSync(join(binDir, 'native', 'retired-helper'))).toBe(false);
 
         removeServiceBinaries(binDir, 'darwin');
         expect(existsSync(join(binDir, 'native'))).toBe(false);
@@ -300,25 +300,24 @@ describe('the copy the service runs', () => {
     });
 
     test('on Windows the running executable is renamed out of the way, and removed by the next copy', () => {
-        const executables = ['ruimte.exe', 'ruimte-context', 'ruimte-context.exe'];
+        const executables = ['ruimte.exe'];
         copyServiceBinaries(packageBin(join(dir, 'first'), 'one', [], executables), binDir, 'win32');
         expect(readdirSync(binDir).filter((name) => name.endsWith('.retired'))).toEqual([]);
 
-        // An agent may be running `ruimte-context.exe` as well, so both executables move aside.
         copyServiceBinaries(packageBin(join(dir, 'second'), 'two', [], executables), binDir, 'win32');
-        expect(readdirSync(binDir).filter((name) => name.endsWith('.retired'))).toHaveLength(2);
+        expect(readdirSync(binDir).filter((name) => name.endsWith('.retired'))).toHaveLength(1);
         expect(readFileSync(join(binDir, 'ruimte.build'), 'utf8')).toBe('two');
-        expect(readFileSync(join(binDir, 'ruimte-context.exe'), 'utf8')).toBe('#!ruimte-context.exe');
+        expect(readFileSync(join(binDir, 'ruimte.exe'), 'utf8')).toBe('#!ruimte.exe');
 
         copyServiceBinaries(packageBin(join(dir, 'third'), 'three', [], executables), binDir, 'win32');
-        expect(readdirSync(binDir).filter((name) => name.endsWith('.retired'))).toHaveLength(2);
+        expect(readdirSync(binDir).filter((name) => name.endsWith('.retired'))).toHaveLength(1);
 
         removeServiceBinaries(binDir, 'win32');
         expect(readdirSync(binDir)).toEqual([]);
     });
 
     test('on Windows an executable that cannot be removed moves aside, and an uninstall says so', () => {
-        copyServiceBinaries(packageBin(join(dir, 'first'), 'one', [], ['ruimte.exe', 'ruimte-context', 'ruimte-context.exe']), binDir, 'win32');
+        copyServiceBinaries(packageBin(join(dir, 'first'), 'one', [], ['ruimte.exe']), binDir, 'win32');
         // A folder under the name refuses a plain remove as a running executable does.
         rmSync(join(binDir, 'ruimte.exe'));
         mkdirSync(join(binDir, 'ruimte.exe', 'held'), { recursive: true });
@@ -335,14 +334,16 @@ describe('the copy the service runs', () => {
         expect(out.at(-1)).toContain('ruimte.exe.1.retired');
     });
 
-    test('on Windows the ruimte-context.cmd of an earlier release goes, so cmd and PowerShell find the executable', () => {
+    test('the ruimte-context launchers of an earlier release go with the next copy and with an uninstall', () => {
+        const former = ['ruimte-context', 'ruimte-context.exe', 'ruimte-context.cmd'];
         mkdirSync(binDir, { recursive: true });
-        writeFileSync(join(binDir, 'ruimte-context.cmd'), '@echo off');
-        copyServiceBinaries(packageBin(join(dir, 'first'), 'one', [], ['ruimte.exe', 'ruimte-context', 'ruimte-context.exe']), binDir, 'win32');
-        expect(existsSync(join(binDir, 'ruimte-context.cmd'))).toBe(false);
-        expect(existsSync(join(binDir, 'ruimte-context.exe'))).toBe(true);
+        for (const name of former) {
+            writeFileSync(join(binDir, name), name);
+        }
+        copyServiceBinaries(packageBin(join(dir, 'first'), 'one', [], ['ruimte.exe']), binDir, 'win32');
+        expect(former.filter((name) => existsSync(join(binDir, name)))).toEqual([]);
 
-        writeFileSync(join(binDir, 'ruimte-context.cmd'), '@echo off');
+        writeFileSync(join(binDir, 'ruimte-context'), 'ruimte-context');
         removeServiceBinaries(binDir, 'win32');
         expect(readdirSync(binDir)).toEqual([]);
     });

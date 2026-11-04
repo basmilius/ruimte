@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { join, resolve } from 'node:path';
 import type { ChatItem, LaunchStatus } from '@ruimte/contracts';
 import type { OutboxEntry, OutboxWork, RunAfterSettleEntry } from '../outbox/outbox.ts';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { AfterSettleLaunches, AfterSettleStore, type AfterSettleDeps } from './after-settle.ts';
 import type { ResolvedLaunch } from './store.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 const WORKTREE = resolve('/worktrees/repo-fix');
 
@@ -206,7 +206,7 @@ describe('running it', () => {
         expect(notes.at(-1)).toMatchObject({
             noteId: 'after-settle-turn-1-ended',
             note: 'Run tests ended with exit code 1.',
-            preamble: expect.stringContaining('ruimte-context launches read run-tests')
+            preamble: expect.stringContaining('launch_read run-tests')
         });
     });
 

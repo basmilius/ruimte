@@ -1,21 +1,10 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { chmod, lstat, mkdir, readFile, stat, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { HOOK_EVENTS } from './hooks.ts';
-import {
-    ANTIGRAVITY_RULES,
-    CODEX_RULES,
-    HOOK_MARKER,
-    HookFileRefused,
-    NAMED_HOOK,
-    defaultCodexRulesPath,
-    hookCommand,
-    installCodexRules,
-    installHooks,
-    installInFolder,
-    mergeHooks
-} from './install.ts';
+import { fileExists } from '@adecore/utils/fs';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { HOOK_EVENTS } from './hooks.ts';
+import { HOOK_MARKER, HookFileRefused, NAMED_HOOK, hookCommand, installHooks, installInFolder, mergeHooks } from './install.ts';
 
 const other = { type: 'command', command: 'echo other' };
 
@@ -161,30 +150,6 @@ describe('installHooks', () => {
     });
 });
 
-describe('installCodexRules', () => {
-    test('writes a file of its own beside the rules of a person, then leaves it untouched', async () => {
-        const rules = join(dir, 'rules');
-        const theirs = join(rules, 'default.rules');
-        await installCodexRules(join(rules, 'ruimte.rules'));
-        await writeFile(theirs, 'prefix_rule(pattern=["git", "add"], decision="allow")\n');
-        expect(await installCodexRules(join(rules, 'ruimte.rules'))).toBe('unchanged');
-        expect(await readFile(join(rules, 'ruimte.rules'), 'utf8')).toBe(CODEX_RULES);
-        expect(await readFile(theirs, 'utf8')).toContain('"git", "add"');
-    });
-
-    test('rewrites a file that drifted', async () => {
-        const path = join(dir, 'ruimte.rules');
-        await writeFile(path, 'prefix_rule(pattern=["rm"], decision="allow")\n');
-        expect(await installCodexRules(path)).toBe('written');
-        expect(await readFile(path, 'utf8')).toBe(CODEX_RULES);
-    });
-
-    test('lands in the rules folder of CODEX_HOME', () => {
-        expect(defaultCodexRulesPath({ CODEX_HOME: '/x/codex', HOME: '/home/a' })).toBe(join('/x/codex', 'rules', 'ruimte.rules'));
-        expect(defaultCodexRulesPath({ HOME: '/home/a', USERPROFILE: '/home/a' })).toBe(join('/home/a', '.codex', 'rules', 'ruimte.rules'));
-    });
-});
-
 describe('installInFolder', () => {
     test('puts the hooks of Claude Code in the settings of that folder', async () => {
         expect(await installInFolder('claude', dir)).toEqual([
@@ -196,26 +161,23 @@ describe('installInFolder', () => {
         ]);
     });
 
-    test('gives a Codex folder its hooks and the rule', async () => {
+    test('gives a Codex folder its hooks and no rules file', async () => {
         expect(await installInFolder('codex', dir)).toEqual([
-            { path: join(dir, 'hooks.json'), kind: 'hooks', result: 'written', createdFile: true, createdHooksKey: true },
-            { path: join(dir, 'rules', 'ruimte.rules'), kind: 'rules', result: 'written', createdFile: true, createdHooksKey: false }
+            { path: join(dir, 'hooks.json'), kind: 'hooks', result: 'written', createdFile: true, createdHooksKey: true }
         ]);
-        expect(await readFile(join(dir, 'rules', 'ruimte.rules'), 'utf8')).toBe(CODEX_RULES);
+        expect(await fileExists(join(dir, 'rules', 'ruimte.rules'))).toBe(false);
     });
 
-    test('gives an Antigravity folder the rule in the settings of agy and its Stop hook in a hook of its own', async () => {
-        const settings = join(dir, 'antigravity-cli', 'settings.json');
+    test("gives an Antigravity folder its Stop hook in a hook of its own and leaves agy's settings alone", async () => {
         const hooks = join(dir, 'config', 'hooks.json');
         expect(await installInFolder('antigravity', dir)).toEqual([
-            { path: settings, kind: 'rules', result: 'written', createdFile: true, createdHooksKey: true },
             { path: hooks, kind: 'hooks', result: 'written', createdFile: true, createdHooksKey: true }
         ]);
-        expect(JSON.parse(await readFile(settings, 'utf8'))).toEqual({ permissions: { allow: [...ANTIGRAVITY_RULES] } });
         expect(JSON.parse(await readFile(hooks, 'utf8'))).toEqual({
             [NAMED_HOOK]: { Stop: [{ type: 'command', command: hookCommand('antigravity'), timeout: 3 }] }
         });
-        expect((await installInFolder('antigravity', dir)).map((install) => install.result)).toEqual(['unchanged', 'unchanged']);
+        expect(await fileExists(join(dir, 'antigravity-cli', 'settings.json'))).toBe(false);
+        expect((await installInFolder('antigravity', dir)).map((install) => install.result)).toEqual(['unchanged']);
     });
 
     test("gives Grok a hooks file of Ruimte's own in the shape of Claude Code's settings", async () => {
@@ -237,6 +199,6 @@ describe('installInFolder', () => {
     });
 
     test('writes nothing for a CLI whose settings the daemon cannot wire', async () => {
-        expect(await installInFolder('apple', dir)).toEqual([]);
+        expect(await installInFolder('nanogpt', dir)).toEqual([]);
     });
 });

@@ -31,8 +31,7 @@ runs:
       with:
         path: |
           apps/computer-use/.build
-          apps/foundation-models/.build
-        key: swift-release-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.key }}-${{ hashFiles('apps/computer-use/Package.swift', 'apps/computer-use/Package.resolved', 'apps/computer-use/Sources/**', 'apps/computer-use/scripts/build.ts', 'apps/foundation-models/Package.swift', 'apps/foundation-models/Package.resolved', 'apps/foundation-models/Sources/**', 'apps/foundation-models/scripts/build.ts') }}
+        key: swift-release-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.key }}-${{ hashFiles('apps/computer-use/Package.swift', 'apps/computer-use/Package.resolved', 'apps/computer-use/Sources/**', 'apps/computer-use/scripts/build.ts') }}
     - name: Use matching Swift release products
       shell: bash
       env:

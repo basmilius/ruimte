@@ -1,9 +1,9 @@
+import { Button, FormError, Icon, Input, messageOf, ScrollArea } from '@adecore/ui';
+import type { FsBrowseResult } from '@ruimte/contracts';
+import { ArrowLeft, CornerLeftUp, Folder, FolderCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, CornerLeftUp, Folder, FolderCheck } from 'lucide-react';
-import type { FsBrowseResult } from '@ruimte/contracts';
 import { transportFor } from '@/transport';
-import { Button, FormError, Icon, Input, messageOf } from '@adecore/ui';
 
 /*
  * The folders of another machine, one level at a time, for the checkout that is none of its projects
@@ -59,7 +59,11 @@ export function RemoteFolderPicker({
             </div>
             <Input mono aria-label={t('remoteNode.folders.path', { machine })} value={path} spellCheck={false} onChange={(e) => setPath(e.target.value)} />
             {failure !== null && <FormError>{failure}</FormError>}
-            <ul className="max-h-48 overflow-auto rounded-md border border-border" aria-label={t('remoteNode.folders.title', { machine })}>
+            <ScrollArea
+                render={<ul />}
+                className="max-h-48 overflow-hidden rounded-md border border-border"
+                aria-label={t('remoteNode.folders.title', { machine })}
+            >
                 {parent !== null && (
                     <li>
                         <button
@@ -83,7 +87,7 @@ export function RemoteFolderPicker({
                     </li>
                 ))}
                 {listing !== null && listing.entries.length === 0 && <li className="px-2 py-1 text-sm text-text-muted">{t('remoteNode.folders.none')}</li>}
-            </ul>
+            </ScrollArea>
             <Button size="sm" variant="primary" disabled={listing === null} onClick={() => listing !== null && onPick(listing.parentPath)}>
                 {t('remoteNode.folders.use')}
             </Button>

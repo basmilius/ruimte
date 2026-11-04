@@ -1,8 +1,8 @@
 import { mapsSecretBytes, verifyMapsTicket } from '@ruimte/pulsar';
 import type { Deps } from './deps.ts';
 import type { Env } from './env.ts';
-import { allowedOrigin, corsHeaders, failure, json } from './http.ts';
 import { pathFor, readGrant } from './grant.ts';
+import { allowedOrigin, corsHeaders, failure, json } from './http.ts';
 import { fetchMapResource } from './map.ts';
 
 const STYLE_PATH = 'maps/orbis/assets/styles/0.6.*/style';

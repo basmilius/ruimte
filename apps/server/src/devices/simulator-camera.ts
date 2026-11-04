@@ -2,10 +2,10 @@ import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { cancellableTimeout, type Timer } from '@adecore/utils/async';
 import { isVideo, requireMedia } from './device-paths.ts';
 import { DeviceError } from './manager.ts';
 import { besideDaemon, serveSimFolder } from './serve-sim.ts';
-import { cancellableTimeout, type Timer } from '@adecore/agents';
 
 /* A running camera helper, as far as this daemon needs it. */
 interface CameraHelperProcess {

@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-import { nodeChats } from '@ruimte/contracts';
-import { canvasPrompts, samePrompts, type CanvasPrompt } from '@/canvas/prompts';
-import { useCanvasStore } from '@/state/canvas';
 import { ChatPromptFeed } from '@adecore/agents-react/chat';
 import type { PromptSubject } from '@adecore/agents-react/prompts';
-import { chatScopeOf } from '@/transport/chat-scope';
 import { useChats } from '@adecore/agents-react/state';
+import { nodeChats } from '@ruimte/contracts';
+import { useEffect, useState } from 'react';
+import { onlyCameraMoved } from '@/canvas/camera-slice';
+import { canvasPrompts, samePrompts, type CanvasPrompt } from '@/canvas/prompts';
+import { useCanvasStore } from '@/state/canvas';
 import { subscribeChatThreads } from '@/state/chats';
 import { computerApprovalsOf, useComputer } from '@/state/computer';
 import { endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
@@ -14,6 +14,7 @@ import { secretRequestsOf, useSecrets } from '@/state/secrets';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { useWaitingSince } from '@/state/waiting';
+import { chatScopeOf } from '@/transport/chat-scope';
 
 export interface StackPrompts {
     prompts: CanvasPrompt[];
@@ -86,7 +87,14 @@ export function useCanvasPrompts(): StackPrompts {
         };
         reconcile();
         const unsubscribe = [
-            canvasStore.subscribe(reconcile),
+            // A camera that moved changes no prompt, and a canvas moves it every frame of a pan or a zoom.
+            canvasStore.subscribe((state, previous) => {
+                if (onlyCameraMoved(state, previous)) {
+                    return;
+                }
+
+                reconcile();
+            }),
             subscribeChatThreads(update),
             useSessions.subscribe(update),
             useComputer.subscribe(update),

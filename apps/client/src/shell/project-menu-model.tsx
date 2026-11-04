@@ -1,24 +1,24 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { PromptDialog, type ProjectSwitcherItem } from '@adecore/ui';
 import type { ActionInput } from '@ruimte/actions';
-import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ignoreRefusal, perform } from '@/actions/client-actions';
 import { chatsProjects, menuProjects, openableRows, type ProjectMenuRow } from '@/project/list';
 import { useOffersNewChat } from '@/project/new-chat';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
 import { closingProject } from '@/project/open';
 import { closeWarning, sessionNodesOf } from '@/project/project-sessions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
+import { ProjectActions, ProjectPlaceActions } from '@/shell/ProjectActions';
 import { ProjectSettingsDialog, type ProjectSettingsSubject } from '@/shell/ProjectSettingsDialog';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
-import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
+import { useProjectList } from '@/state/project-list';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { useMachineHold, useOpenEndpoints } from '@/transport/status';
-import { ProjectActions, ProjectPlaceActions } from '@/shell/ProjectActions';
-import { PromptDialog, type ProjectSwitcherItem } from '@adecore/ui';
 
 interface SwitcherItem extends ProjectSwitcherItem {
     row: ProjectMenuRow;

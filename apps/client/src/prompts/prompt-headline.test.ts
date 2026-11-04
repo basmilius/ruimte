@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatApprovalItem, ChatQuestionItem } from '@ruimte/contracts';
-import { PROMPT_SAMPLES } from '@adecore/agents-react/testing';
 import type { PromptSubject } from '@adecore/agents-react/prompts';
+import { PROMPT_SAMPLES } from '@adecore/agents-react/testing';
+import type { ChatApprovalItem, ChatQuestionItem } from '@ruimte/contracts';
 import { promptHeadline } from '@/prompts/prompt-headline';
 import { computerPrompt, proposalPrompt, secretPrompt, waitingPrompt } from '@/prompts/ruimte-prompts';
 

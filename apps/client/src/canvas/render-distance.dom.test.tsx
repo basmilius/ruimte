@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
+import { act } from 'react';
 import { canvasOfNode } from '@/state/canvas';
-import { useSettings } from '@/state/settings';
 import { splitKey } from '@/state/keys';
+import { useSettings } from '@/state/settings';
 import { textDrafts, useTextDrafts } from '@/state/text-drafts';
-import { FakeMachine } from '../../testing/fake-machine';
-import { until } from '../../testing/dom';
 import { openCanvasPage, type CanvasPage } from '../../testing/canvas-page';
+import { until } from '../../testing/dom';
+import { FakeMachine } from '../../testing/fake-machine';
 
 const TEXT = 'one\ntwo\n';
 const FILE: ProjectNode = { id: 'notes', kind: 'file', title: 'notes.txt', path: 'notes.txt', x: 0, y: 0, w: 640, h: 480 };

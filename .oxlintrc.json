@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["react", "typescript", "oxc"],
-    "ignorePatterns": ["apps/ios/App/Resources/document-renderer.js", "apps/ios/App/Resources/pele.js","apps/ios/Packages/RuimteIntelligentUI/Sources/RuimteIntelligentUI/Resources/intelligent-ui.js"],
+    "ignorePatterns": ["apps/ios/App/Resources/document-renderer.js", "apps/ios/App/Resources/pele.js","apps/ios/Packages/RuimteIntelligentUI/Sources/RuimteIntelligentUI/Resources/intelligent-ui.js", "apps/server/src/extensions/generated/**"],
   "rules": {
     "curly": "error",
     "react/rules-of-hooks": "error",
@@ -14,7 +14,7 @@
     {
       // The client's files the React Compiler builds (`apps/client/react-compiler.ts`), held to the Rules of React it relies on.
       // Its `todo` (syntax it cannot compile yet) and `rule-suppression` (a dependency list left short on purpose) are no faults.
-      "files": ["apps/client/src/**"],
+      "files": ["apps/client/src/**", "extensions/*/client/**", "extensions/poc/*/client/**"],
       "rules": {
         "react/hooks": "error",
         "react/refs": "error",
@@ -34,9 +34,12 @@
     },
     {
       // Next.js reads these exports from a layout or page, beside the component.
-      "files": ["apps/site/src/app/**"],
+      "files": ["apps/site/src/app/**", "apps/site/src/mdx-components.tsx"],
       "rules": {
-        "react/only-export-components": ["warn", { "allowConstantExport": true, "allowExportNames": ["metadata", "viewport", "dynamic"] }]
+        "react/only-export-components": [
+          "warn",
+          { "allowConstantExport": true, "allowExportNames": ["metadata", "viewport", "dynamic", "dynamicParams", "generateStaticParams", "generateMetadata", "useMDXComponents"] }
+        ]
       }
     }
   ]

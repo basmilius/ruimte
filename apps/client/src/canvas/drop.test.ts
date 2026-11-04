@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { LEGACY_MENTION_DRAG_TYPE, MENTION_DRAG_TYPE, writeMentionDrag } from '@adecore/agents-react/chat';
 import {
     carriesFiles,
     carriesPaths,
@@ -10,7 +11,6 @@ import {
     PATHS_DRAG_TYPE,
     type DragPayload
 } from '@/canvas/drop';
-import { LEGACY_MENTION_DRAG_TYPE, MENTION_DRAG_TYPE, writeMentionDrag } from '@adecore/agents-react/chat';
 
 function drag(values: Record<string, string>): DragPayload {
     return {

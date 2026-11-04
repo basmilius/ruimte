@@ -1,21 +1,21 @@
 import { expect, jest, test } from 'bun:test';
-import { act } from 'react';
-import type { DesktopBridge, MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
-import { registerPromptStack } from '@/canvas/prompt-stack';
-import { setHistory } from '@/state/camera-history';
-import { useSnoozes } from '@/state/snooze';
 import { useChats } from '@adecore/agents-react/state';
-import { currentEndpointId, endpointKey } from '@/state/keys';
-import { defaultCanvases } from '@/state/canvas';
-import { registerCell } from '@/shell/cell-rects';
-import { registerFocusedEditor } from '@/shell/panels/focused-editor';
+import type { Editor } from '@adecore/editor';
+import type { DesktopBridge, MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
+import { act } from 'react';
+import { registerPromptStack } from '@/canvas/prompt-stack';
 import { registerFocusedLanguage } from '@/language/focused-language';
 import type { EditorLanguage } from '@/language/ruimte-editor-language';
-import type { Editor } from '@adecore/editor';
+import { registerCell } from '@/shell/cell-rects';
+import { registerFocusedEditor } from '@/shell/panels/focused-editor';
+import { setHistory } from '@/state/camera-history';
+import { defaultCanvases } from '@/state/canvas';
+import { currentEndpointId, endpointKey } from '@/state/keys';
+import { useSnoozes } from '@/state/snooze';
 import { chatInfoOf } from '../../../testing/chat-info';
+import { mount } from '../../../testing/dom';
 import { FakeMachine } from '../../../testing/fake-machine';
 import { openFakeWorkspace } from '../../../testing/fake-workspace';
-import { mount } from '../../../testing/dom';
 import { useNativeMenu } from './native-menu';
 
 function Publisher() {

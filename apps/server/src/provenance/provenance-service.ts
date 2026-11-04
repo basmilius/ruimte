@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
-import { CodedError, KeyedSerializer } from '@adecore/agents';
+import { CodedError } from '@adecore/agents';
 import type { AgentEvent } from '@adecore/agents/host';
 import { splitLines } from '@adecore/merge';
+import { KeyedSerializer } from '@adecore/utils/async';
+import { isWithin } from '@adecore/utils/path';
 import {
     PROVENANCE_LIMITS,
     type AgentKind,
@@ -13,7 +15,6 @@ import {
     type ProvenanceReviewState,
     type ProvenanceRun
 } from '@ruimte/contracts';
-import { isInside } from '../canvas/project-paths.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import type { SessionSink } from '../sessions/manager.ts';
@@ -202,7 +203,7 @@ export class ProvenanceService {
     /* Every file request stops at the project's folder, so a client cannot read the records of a path it could not read. */
     private require(projectId: string, path: string): void {
         const folder = this.options.folderOf(projectId);
-        if (folder === null || !isInside(folder, path)) {
+        if (folder === null || !isWithin(folder, path)) {
             throw new ProvenanceError('forbidden', `${path} is not in project ${projectId}`);
         }
     }
@@ -237,7 +238,7 @@ export class ProvenanceService {
         if (place === null || chat === null) {
             return;
         }
-        const writes = toolWrites(item, chat.cwd).filter((write) => isInside(place.folder, write.path));
+        const writes = toolWrites(item, chat.cwd).filter((write) => isWithin(place.folder, write.path));
         if (writes.length === 0 || !remember(this.seenTools, `${chatId}\0${item.toolUseId}\0${item.state}`)) {
             return;
         }
@@ -299,7 +300,7 @@ export class ProvenanceService {
                 const claimable = await this.unmoved(top, chat, turnId, files);
                 for (const file of claimable) {
                     const path = join(top, file);
-                    if (!isInside(place.folder, path)) {
+                    if (!isWithin(place.folder, path)) {
                         continue;
                     }
                     const job: Job = { projectId: place.projectId, path, chatId, turnId, chat, via: 'checkpoint', signature: { all: true, blocks: [] } };

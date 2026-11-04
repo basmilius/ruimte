@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
-import { z } from 'zod';
 import type { DeviceAction, DeviceInfo, DevicePower, DeviceSettings } from '@ruimte/contracts';
+import { z } from 'zod';
 import { collect, runCommand, type CommandResult } from './command.ts';
 import { requireExtension } from './device-paths.ts';
 import { DeviceError, type DeviceBackend, type DeviceSource } from './manager.ts';

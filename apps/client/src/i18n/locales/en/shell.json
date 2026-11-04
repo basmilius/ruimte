@@ -897,6 +897,7 @@
             "views": "Views",
             "projects": "Projects",
             "actions": "Actions",
+            "extensions": "From extensions",
             "settings": "Settings",
             "folders": "Folders",
             "machines": "Machines"
@@ -1373,7 +1374,22 @@
             "waiting": "Waiting"
         },
         "backToList": "Back to list",
-        "underMinute": "< {{minute}} min",        "openToAnswer": "Open the session to answer.",
+        "underMinute": "< {{minute}} min",
+        "openToAnswer": "Open the session to answer.",
         "previewUnavailable": "This request cannot be previewed here."
+    },
+    "extensions": {
+        "failed": "This extension could not be shown",
+        "surfaceFailed": "{{name}} could not be shown",
+        "storageFailed": "{{name}} could not keep what it stores",
+        "newView": "New {{name}}",
+        "nodeNeeds": "This needs an extension",
+        "removeNodes": {
+            "title_one": "Remove {{count}} node?",
+            "title_other": "Remove {{count}} nodes?",
+            "body_one": "{{extension}} asks to remove it.",
+            "body_other": "{{extension}} asks to remove them."
+        },
+        "stopRun": "Stop {{title}}"
     }
 }

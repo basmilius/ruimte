@@ -1,27 +1,28 @@
 import { join, resolve, sep } from 'node:path';
-import type { GitStatus } from '@ruimte/contracts';
 import { PerClientWatches, settled, supportsRecursive, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
+import { isWithin } from '@adecore/utils/path';
+import type { GitStatus } from '@ruimte/contracts';
+import { ClientSinks } from '../client-sinks.ts';
+import { MAX_CHANGED_PATHS } from '../fs/watch.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { ignoredPaths } from './ignore.ts';
 import { nativePath } from './native-path.ts';
-import { git, repositoryRoot } from './run.ts';
+import { git, repositoryRoot, rootAsAsked } from './run.ts';
 import { noRepository, readStatusAt, trackedFiles } from './status.ts';
-import { ClientSinks } from '../client-sinks.ts';
-import { isUnder } from '../fs/path-segment.ts';
-import { MAX_CHANGED_PATHS } from '../fs/watch.ts';
 
 // A save, a formatter and a checkout all touch the repository in a burst; one status per burst is enough.
 const SETTLE_MS = 300;
 // A status run past this makes a live watch cost more than it is worth on this repository.
 const SLOW_STATUS_MS = 1000;
-// And so does a repository this big, before the first run even proves it.
-const MAX_TRACKED_FILES = 5000;
+// And so does a repository this big, before the first run even proves it. The timed runs catch a
+// repository that is slow at any size, so this only keeps out the ones no watch should try.
+const MAX_TRACKED_FILES = 25_000;
 // What made a run slow (an install, a busy machine) passes, so a slow root gets another chance after this.
 const DEGRADED_MS = 5 * 60 * 1000;
 
 /* Loose objects and lock files move on every git command and say nothing about the status. */
 function isNoise(path: string, root: string): boolean {
-    const metadata = !isUnder(path, root) || isUnder(path, join(root, '.git'));
+    const metadata = !isWithin(root, path) || isWithin(join(root, '.git'), path);
 
     return metadata && (path.includes(`${sep}objects${sep}`) || path.endsWith('.lock') || path.endsWith('~'));
 }
@@ -39,6 +40,13 @@ interface RootWatch {
     fingerprint: string | null;
     /* Per client, the folders it watches this repository by, which is what its events name. */
     clients: Map<string, Set<string>>;
+    /* Per such folder, the root as that folder spells it (`rootAsAsked`), which the paths in its events start with. */
+    spelled: Map<string, string>;
+}
+
+/* A path under `root` as a folder that spells the root `spelled` names it. */
+function respell(path: string, root: string, spelled: string): string {
+    return spelled === root || !isWithin(root, path) ? path : spelled + path.slice(root.length);
 }
 
 interface Subscription {
@@ -91,7 +99,11 @@ export class GitStatusWatcher {
     /* The status of a checkout, with the flag that says whether it keeps itself up to date. */
     async status(cwd: string): Promise<GitStatus> {
         const root = await repositoryRoot(cwd);
-        return root === null ? { ...noRepository(), live: false } : await this.run(root);
+        if (root === null) {
+            return { ...noRepository(), live: false };
+        }
+        const status = await this.run(root);
+        return { ...status, root: await rootAsAsked(cwd, root) };
     }
 
     async watch(clientId: string, cwd: string): Promise<void> {
@@ -104,10 +116,12 @@ export class GitStatusWatcher {
             return;
         }
         const watch = this.roots.get(root) ?? (await this.prepare(root));
+        const spelled = await rootAsAsked(key, root);
         // Registered only once git answered, so a second watch asked meanwhile finds this one and opens nothing of its own.
         if (this.watches.get(clientId, key) !== undefined) {
             return;
         }
+        watch.spelled.set(key, spelled);
         const cwds = watch.clients.get(clientId) ?? new Set<string>();
         cwds.add(key);
         watch.clients.set(clientId, cwds);
@@ -144,7 +158,8 @@ export class GitStatusWatcher {
             touched: new Set(),
             settle: settled(this.seams, SETTLE_MS, () => this.flush(watch)),
             fingerprint: null,
-            clients: new Map()
+            clients: new Map(),
+            spelled: new Map()
         };
         this.roots.set(root, watch);
         if (this.isLive(root)) {
@@ -159,6 +174,9 @@ export class GitStatusWatcher {
         cwds?.delete(cwd);
         if (cwds?.size === 0) {
             watch.clients.delete(clientId);
+        }
+        if (![...watch.clients.values()].some((others) => others.has(cwd))) {
+            watch.spelled.delete(cwd);
         }
         if (watch.clients.size === 0 && this.roots.get(watch.root) === watch) {
             GitStatusWatcher.stop(watch);
@@ -214,15 +232,22 @@ export class GitStatusWatcher {
         const fingerprint = JSON.stringify(status);
         if (watch !== undefined && fingerprint !== watch.fingerprint) {
             watch.fingerprint = fingerprint;
-            this.publish(watch, (cwd) => ({ event: 'git.status', payload: { cwd, status } }));
+            this.publish(watch, (cwd, spell) => ({
+                event: 'git.status',
+                payload: { cwd, status: status.root === null ? status : { ...status, root: spell(status.root) } }
+            }));
         }
         return status;
     }
 
-    private publish(watch: RootWatch, frame: (cwd: string) => SessionEvent): void {
+    private publish(watch: RootWatch, frame: (cwd: string, spell: (path: string) => string) => SessionEvent): void {
         for (const [clientId, cwds] of watch.clients) {
             for (const cwd of cwds) {
-                this.sinks.to(clientId, frame(cwd));
+                const spelled = watch.spelled.get(cwd) ?? watch.root;
+                this.sinks.to(
+                    clientId,
+                    frame(cwd, (path) => respell(path, watch.root, spelled))
+                );
             }
         }
     }
@@ -290,9 +315,10 @@ export class GitStatusWatcher {
         await this.run(watch.root);
         // A diff reads the bytes, not the status, so it is told about a burst the status slept through.
         const broad =
-            touched.length > MAX_CHANGED_PATHS || touched.some((path) => path === watch.root || !isUnder(path, watch.root) || path.split(sep).includes('.git'));
-        const hint = broad ? {} : { changedPaths: touched.sort() };
-        this.publish(watch, (cwd) => ({ event: 'git.changed', payload: { cwd, ...hint } }));
+            touched.length > MAX_CHANGED_PATHS ||
+            touched.some((path) => path === watch.root || !isWithin(watch.root, path) || path.split(sep).includes('.git'));
+        const changed = broad ? null : touched.sort();
+        this.publish(watch, (cwd, spell) => ({ event: 'git.changed', payload: { cwd, ...(changed === null ? {} : { changedPaths: changed.map(spell) }) } }));
     }
 
     /* Whether a burst is worth a status run: a build writing into an ignored folder is not. */

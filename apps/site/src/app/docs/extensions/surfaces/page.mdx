@@ -1,0 +1,172 @@
+import { NodeType } from '@/components/docs/extensions/CanvasScenes.tsx';
+import { RailPanel, Surfaces } from '@/components/docs/extensions/Surfaces.tsx';
+
+export const metadata = { title: 'Surfaces' };
+
+# Surfaces
+
+<p className="lead">A surface is a rectangle an extension draws itself: a panel, a view, a node, a card, an overlay or a viewer.</p>
+
+<Surfaces />
+
+Every surface takes its component as a lazy import, `() => import('./Panel')`, so its code loads when a person opens it. A surface that throws shows the error in its own rectangle; the rest of Ruimte goes on.
+
+Instead of `component`, a surface can name a `frame`. That is an HTML file in your pack, which runs sandboxed with an origin of its own and no storage. It reaches only the hosts the manifest names as `net:` permissions, such as `"net:api.example.com"`, over HTTPS.
+
+<Note>A `frame` surface works in the desktop app only.</Note>
+
+```ts
+definePanel({
+    id: 'frame',
+    title: 'Report',
+    icon: 'frame',
+    frame: 'views/report.html'
+});
+```
+
+The frame calls your server part by posting a message to its parent, and gets the answer the same way:
+
+```ts
+parent.postMessage(
+    {
+        ruimte: 1,
+        method: 'summary',
+        args: []
+    },
+    '*'
+);
+
+window.addEventListener('message', (event) => {
+    if (event.data?.ruimte === 1) {
+        console.log(event.data.error ?? event.data.result);
+    }
+});
+```
+
+## Panels
+
+A panel opens from the rail on the right, like Ruimte's own Files and Git panels.
+
+```ts
+const panel = definePanel<{ chatId: string }>({
+    id: 'review',
+    title: 'Review',
+    icon: 'list-checks',
+    component: () => import('./ReviewPanel')
+});
+
+panel.open({ chatId: 'chat-1' });
+panel.setBadge('3');
+```
+
+The component gets `params`, the value the panel was last opened with. The toggle in the rail shows your `icon`, and the badge you set shows on it and after the panel's name:
+
+<RailPanel />
+
+[Open a panel](/docs/extensions/how-to/panel) builds this panel end to end.
+
+## Views
+
+A view fills the window and shows up in the sidebar beside canvases, chats and files. `open(params)` opens it. Its component gets `params` as you passed them, and `undefined` when a person opens it with "New Dashboard" from the palette.
+
+```ts
+const dashboard = defineView({
+    id: 'dashboard',
+    title: 'Dashboard',
+    icon: 'gauge',
+    component: () => import('./Dashboard')
+});
+```
+
+## Nodes
+
+A node is a card on the canvas. Its data lives in the project file, so it survives a reload and travels with the project.
+
+```ts
+defineNode<{ count: number }>({
+    id: 'counter',
+    title: 'Counter',
+    icon: 'hash',
+    size: { width: 320, height: 200 },
+    initialData: { count: 0 },
+    component: () => import('./Counter')
+});
+```
+
+```tsx
+export default function Counter() {
+    const [data, setData] = useNodeData<{ count: number }>();
+
+    return (
+        <button onClick={() => setData({ count: data.count + 1 })}>
+            {data.count}
+        </button>
+    );
+}
+```
+
+A person adds it from the Extensions submenu of the canvas menu, or from the command palette. `addFrom` places that "Add" elsewhere.
+
+<NodeType />
+
+When the shape of the data changes, raise `dataVersion` and give `migrate`, which gets the stored data and its version. [Add a node](/docs/extensions/how-to/node) walks through both.
+
+An agent reads a node of yours along a line once the server part says what it holds. `defineNodeContext` in [The server part](/docs/extensions/server) does that.
+
+## Sidebar cards
+
+```ts
+defineSidebarCard({
+    id: 'today',
+    title: 'Today',
+    component: () => import('./Today')
+});
+```
+
+## Overlays
+
+An overlay opens your UI over the app. Ruimte draws the header with its title and a close button, and the animation; you draw the body. `open` answers what `close` was given, or `null` when the person dismissed it.
+
+```ts
+const rename = defineOverlay<{ name: string }, string>({
+    id: 'rename',
+    title: 'Rename',
+    size: 'sm',
+    component: () => import('./Rename')
+});
+
+const name = await rename.open({ name: 'Draft' });
+```
+
+For a plain question, `host.confirm`, `host.prompt` and `host.pick` ask through Ruimte's own dialogs.
+
+`defineCanvasOverlay` draws over the whole canvas, under Ruimte's own controls. It lets clicks through; set `pointer-events: auto` on what should take them.
+
+## File and diff viewers
+
+```ts
+defineFileViewer({
+    id: 'csv',
+    title: 'Table',
+    extensions: ['csv'],
+    component: () => import('./CsvTable')
+});
+
+defineDiffViewer({
+    id: 'csv',
+    title: 'Table diff',
+    extensions: ['csv'],
+    component: () => import('./CsvDiff')
+});
+
+defineFileIcon({
+    extensions: ['csv'],
+    path: 'assets/csv.svg'
+});
+```
+
+A viewer opens every file with those extensions, with Ruimte's own view one click away. The file viewer gets `file` with its `text`; the diff viewer gets `file` and the `diff`.
+
+## Settings, storage and words
+
+They have a page of their own: [Settings and storage](/docs/extensions/settings).

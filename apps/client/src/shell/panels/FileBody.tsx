@@ -1,13 +1,14 @@
+import { Button, EmptyState } from '@adecore/ui';
+import { FileWarning } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileWarning } from 'lucide-react';
-import type { FileSurfaceKind } from '@/shell/panels/FileActionItems';
+import { ExtensionFileViewer } from '@/extensions/ExtensionFileViewer';
+import { useMountCount } from '@/measure/mounts';
 import { FileActionsContext } from '@/shell/panels/file-actions';
+import type { FileSurfaceKind } from '@/shell/panels/FileActionItems';
 import { FileTextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
 import { renderFile } from '@/shell/panels/renderers';
 import { useFileRead } from '@/shell/panels/use-file-read';
-import { useMountCount } from '@/measure/mounts';
-import { Button, EmptyState } from '@adecore/ui';
 
 /* The two states no renderer draws still carry the bar, so a file that will not read can be
    revealed, copied or put somewhere else, which is exactly what a path that went missing needs. */
@@ -56,7 +57,11 @@ export function FileBody({ path, name, on, tabKey, nodeId }: { path: string; nam
                 </WithoutRenderer>
             );
         }
-        return renderFile({ path, name, read: state.read });
+        return (
+            <ExtensionFileViewer path={path} name={name} text={state.read.kind === 'text' ? state.read.text : null}>
+                {renderFile({ path, name, read: state.read })}
+            </ExtensionFileViewer>
+        );
     };
 
     return <FileActionsContext.Provider value={actions}>{body()}</FileActionsContext.Provider>;

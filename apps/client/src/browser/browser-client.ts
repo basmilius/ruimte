@@ -1,12 +1,12 @@
+import { MountedRegistry, type MountedEntry } from '@adecore/agents-react';
+import { messageOf } from '@adecore/ui';
 import type { BrowserInfo, BrowserInput, LiveFrameHeader, LiveStreamFrame } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { messageOf } from '@adecore/ui';
-import { endpointKey } from '@/state/keys';
-import { useBrowser } from './registry';
 import { eventStreamFields, LatestFrames } from '@/devices/latest-frames';
+import { endpointKey } from '@/state/keys';
 import { decodeBase64 } from '@/transport/piece';
-import { MountedRegistry, type MountedEntry } from '@adecore/agents-react';
 import { isConnectionError, type Transport, type TransportStatus } from '@/transport/transport';
+import { useBrowser } from './registry';
 
 interface MountedBrowser extends MountedEntry {
     refs: number;

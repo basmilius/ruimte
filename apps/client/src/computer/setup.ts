@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import type { ComputerGrant, ComputerUseStatus } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 
 /* Where computer use on one machine stands, in the order the settings walk a person through it. */

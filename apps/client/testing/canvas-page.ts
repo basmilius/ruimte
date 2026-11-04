@@ -1,8 +1,8 @@
-import { act } from 'react';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
+import { act } from 'react';
+import { mount, until, type Mounted } from './dom';
 import type { FakeMachine } from './fake-machine';
 import { openFakeWorkspace } from './fake-workspace';
-import { mount, until, type Mounted } from './dom';
 
 export interface CanvasPage {
     page: Mounted;

@@ -1,6 +1,6 @@
-import type { AgentKind, ModelSelection } from '@ruimte/contracts';
 import { defaultProvider, readChatPreferences, startingSelection } from '@adecore/agents-react/chat';
 import { useProviders } from '@adecore/agents-react/state';
+import type { AgentKind, ModelSelection } from '@ruimte/contracts';
 import { availableAgents } from '@/agents/creation';
 
 export type AgentPick = { provider: AgentKind; selection: ModelSelection | undefined };

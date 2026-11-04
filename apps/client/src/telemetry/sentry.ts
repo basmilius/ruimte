@@ -1,4 +1,13 @@
 import {
+    createDailyDedupe,
+    createScrubber,
+    startQuarterMeter,
+    TELEMETRY_DATA_COLLECTION,
+    TELEMETRY_DSN,
+    telemetryRelease,
+    type QuarterMeter
+} from '@ruimte/telemetry';
+import {
     browserSessionIntegration,
     captureEvent,
     captureException,
@@ -9,15 +18,6 @@ import {
     metrics,
     withScope
 } from '@sentry/browser';
-import {
-    createDailyDedupe,
-    createScrubber,
-    startQuarterMeter,
-    TELEMETRY_DATA_COLLECTION,
-    TELEMETRY_DSN,
-    telemetryRelease,
-    type QuarterMeter
-} from '@ruimte/telemetry';
 import { useProjectList } from '@/state/project-list';
 import { TransportError } from '@/transport/transport';
 import { CLIENT_TAGS, connectionEvent, storageDedupeStore, type ConnectionProblem } from './events';

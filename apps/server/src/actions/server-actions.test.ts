@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { MAX_NOTICE_LENGTH, MAX_TITLE_LENGTH, type ActionInput } from '@ruimte/actions';
+import type { Notice } from '@adecore/agents/coordination';
+import { MAX_TITLE_LENGTH, type ActionInput } from '@ruimte/actions';
 import { NODE_SIZE, type ContextSource, type ProjectContent, type ProjectNode, type Task } from '@ruimte/contracts';
 import { ContextRefusal, SubagentUnreadable } from '../context/context-store.ts';
-import type { Notice } from '@adecore/agents/coordination';
-import type { AgentState, CanvasHost } from '../canvas/verb.ts';
 import { PlanStore } from '../plans/plan-store.ts';
 import { ProjectError } from '../projects/project-error.ts';
+import { tempHomes } from '../temp-home-test-helpers.ts';
+import type { AgentState, CanvasHost } from '../tools/host.ts';
 import { serverActionCall } from './context.ts';
 import { serverActions } from './server-actions.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 const PLACE = { projectId: 'project-1', folder: '/nowhere', canvasId: 'main' };
 
@@ -352,10 +352,6 @@ describe('the daemon actions', () => {
 
     test('the lengths a CLI flag held are held for every call of the action', async () => {
         lineOnMain('term-1', 'term-2');
-        expect(await serverActions.execute('agent.notify', { nodeId: 'term-2', text: 'x'.repeat(MAX_NOTICE_LENGTH + 1) }, agent())).toMatchObject({
-            status: 'failed',
-            error: { code: 'invalid-input' }
-        });
         expect(
             await serverActions.execute(
                 'link.create',
@@ -481,6 +477,24 @@ describe('the daemon actions', () => {
         expect(stopped).toEqual(['chat-2']);
     });
 
+    test('an extension is no node, so it drives a page without a line and reads a list like an agent', async () => {
+        onMain({ id: 'web-1', kind: 'browser', title: 'Docs', url: 'https://example.com', x: 700, y: 0, w: 560, h: 360 });
+
+        const stranger = as('extension:poc.machine');
+
+        expect(await serverActions.execute('browser.back', { nodeId: 'web-1' }, stranger)).toMatchObject({ status: 'failed', error: { code: 'not-linked' } });
+
+        const extension = as('extension:poc.machine');
+
+        extension.context.extension = true;
+
+        expect(await serverActions.execute('browser.back', { nodeId: 'web-1' }, extension)).toMatchObject({ status: 'completed' });
+        expect(await serverActions.execute('browser.back', { nodeId: 'term-1' }, extension)).toMatchObject({
+            status: 'failed',
+            error: { code: 'not-a-browser' }
+        });
+    });
+
     test('a browser page nobody holds is an answer and not an error, and only a line lets the caller drive it', async () => {
         onMain({ id: 'web-1', kind: 'browser', title: 'Docs', url: 'https://example.com', x: 700, y: 0, w: 560, h: 360 });
         expect(await serverActions.execute('browser.back', { nodeId: 'web-1' }, agent())).toMatchObject({ status: 'failed', error: { code: 'not-linked' } });
@@ -599,14 +613,14 @@ describe('a chat view', () => {
         expect(await read('chat-v', 'chat-2', 'board')).toMatchObject({ status: 'completed', output: { text: 'chat-v read chat chat-2' } });
     });
 
-    test('without --view a node of a canvas is refused with the canvas it stands on', async () => {
+    test('without view a node of a canvas is refused with the canvas it stands on', async () => {
         withChatView();
         expect(await read('chat-v', 'term-2', null)).toMatchObject({
             status: 'failed',
             error: {
                 code: 'view-required',
-                message: 'term-2 stands on main; a chat view reads and operates the nodes of a canvas by naming it with --view, since no line runs to a view',
-                details: ['see\truimte-context read term-2 --view main\tnames the canvas it stands on']
+                message: 'term-2 stands on main; a chat view reads and operates the nodes of a canvas by naming it with view, since no line runs to a view',
+                details: ['see\tcontext_read term-2 view main\tnames the canvas it stands on']
             }
         });
         // An id on no canvas at all is no node it forgot to name a canvas for.
@@ -621,13 +635,13 @@ describe('a chat view', () => {
         });
     });
 
-    test('a node on a canvas reads over its lines only, and --view does not stand in for one', async () => {
+    test('a node on a canvas reads over its lines only, and view does not stand in for one', async () => {
         withChatView();
         expect(await read('term-1', 'term-2', null)).toMatchObject({ status: 'failed', error: { code: 'unknown-source' } });
         expect(await read('term-1', 'term-2', 'main')).toMatchObject({ status: 'failed', error: { code: 'not-a-chat-view' } });
     });
 
-    test('drives a page of the canvas it names, and is refused one without --view or on another canvas', async () => {
+    test('drives a page of the canvas it names, and is refused one without view or on another canvas', async () => {
         withChatView();
         expect(await serverActions.execute('browser.back', { nodeId: 'web-1', viewId: 'main' }, as('chat-v'))).toMatchObject({
             status: 'completed',

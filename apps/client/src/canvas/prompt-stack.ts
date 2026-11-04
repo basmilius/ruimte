@@ -1,6 +1,6 @@
+import { focusPromptStart } from '@adecore/agents-react/prompts';
 import { flushSync } from 'react-dom';
 import { create } from 'zustand';
-import { focusPromptStart } from '@adecore/agents-react/prompts';
 import { useDocument } from '@/state/document';
 
 interface PromptFrontStore {

@@ -1,5 +1,5 @@
-import clsx from 'clsx';
 import type { ProviderId } from '@ruimte/pulsar';
+import clsx from 'clsx';
 
 interface SignInMarkProps {
     provider: ProviderId;

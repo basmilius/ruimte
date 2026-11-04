@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import type { DesktopBridge, Release, ReleaseNotesState, UpdateState } from '@/desktop/bridge';
 import type { UpdateTrack } from '@ruimte/desktop-bridge';
+import type { DesktopBridge, Release, ReleaseNotesState, UpdateState } from '@/desktop/bridge';
 import { ensureReleaseNotes, missingNotesNotice, notesView, openReleaseNotes, releasesOnTrack, useReleaseNotes } from '@/state/release-notes';
 
 function release(version: string, body = '- Something changed.'): Release {

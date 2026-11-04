@@ -1,9 +1,9 @@
+import { CliMark } from '@adecore/agents-react/providers';
+import { FormError, Switch } from '@adecore/ui';
+import { SettingsRow } from '@adecore/ui/settings';
+import type { AgentIntegrationFile } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { AgentIntegrationFile } from '@ruimte/contracts';
-import { CliMark } from '@adecore/agents-react/providers';
-import { SettingsRow } from '@adecore/ui/settings';
-import { FormError, Switch } from '@adecore/ui';
 import { IntegrationDetails, IntegrationReports } from '@/shell/AgentIntegrationsDialog';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { INTEGRATION_NAMES, loadIntegrationFiles, useAgentIntegrations, useIntegrationChoice } from '@/state/agent-integrations';

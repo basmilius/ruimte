@@ -2,7 +2,7 @@ import { type RefObject } from 'react';
 import { lineRoutes } from '@/canvas/line-routes';
 import { HINT_HOT, HINT_REACH, portHints, portKey, takenPorts } from '@/canvas/port-hints';
 import { useWorldPointer } from '@/canvas/use-world-pointer';
-import { useCanvas } from '@/state/canvas';
+import { useCanvas, useCanvasCamera } from '@/state/canvas';
 
 /*
  * The ports a node offers the pointer that comes near one. They are drawn here and not in the frame,
@@ -14,7 +14,7 @@ export function PortHints({ rootRef }: { rootRef: RefObject<HTMLDivElement | nul
     const texts = useCanvas((s) => s.texts);
     const edges = useCanvas((s) => s.edges);
     const hidden = useCanvas((s) => s.hidden);
-    const zoom = useCanvas((s) => s.camera.zoom);
+    const zoom = useCanvasCamera((s) => s.camera.zoom);
     // Nothing is offered while a gesture is running: a port that lights up under a node being dragged is noise.
     const quiet = useCanvas((s) => s.gesturing || s.linkDraft !== null);
     const point = useWorldPointer(rootRef);

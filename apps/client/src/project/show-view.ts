@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import { chatNameOf, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import i18next from 'i18next';
 import type { NodesOfView } from '@/project/view-nodes';
 
 /*

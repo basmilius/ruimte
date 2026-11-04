@@ -1,15 +1,15 @@
-import i18next from 'i18next';
-import { injectVisualBootstrap, type FsEntry, type FsReadText } from '@ruimte/contracts';
 import { formatBytes } from '@adecore/ui/format';
+import { injectVisualBootstrap, type FsEntry, type FsReadText } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { DESIGN_FOLDERS } from '@/design/design-folder';
+import { inlineDesignPage } from '@/design/design-inline';
+import { DESIGN_ASSET_MAX_BYTES, DESIGN_PAGE_MAX_BYTES } from '@/design/design-page';
+import { withDesignRuntime } from '@/design/design-runtime';
 import { readLargeText } from '@/shell/panels/large-text';
 import { machineTransport } from '@/transport';
 import { readResource } from '@/transport/byte-transfer';
 import { readPiece } from '@/transport/piece';
 import { writeMachineText } from '@/transport/write-text';
-import { withDesignRuntime } from '@/design/design-runtime';
-import { DESIGN_FOLDERS } from '@/design/design-folder';
-import { DESIGN_ASSET_MAX_BYTES, DESIGN_PAGE_MAX_BYTES } from '@/design/design-page';
-import { inlineDesignPage } from '@/design/design-inline';
 
 /* What the design folder holds, or null while the folder is not there yet: the chat makes it with its first file. */
 export async function listDesignFolder(endpointId: string, folder: string): Promise<FsEntry[] | null> {

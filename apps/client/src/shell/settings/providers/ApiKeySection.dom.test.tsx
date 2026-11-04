@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ClaudeApiSettings, NanoGptSettings, ProviderInfo } from '@ruimte/contracts';
+import { act } from 'react';
 import { useUi } from '@/state/ui';
 import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
+import { buttonWithText, everything, typeInto } from '../../../../testing/dom-helpers';
 import { FakeMachine } from '../../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../../testing/fake-workspace';
-import { buttonWithText, everything, typeInto } from '../../../../testing/dom-helpers';
 import { emptyCanvas } from '../../../../testing/project-fixtures';
 
 const MAIN = emptyCanvas();
@@ -86,11 +86,20 @@ async function enter(input: HTMLInputElement, text: string): Promise<void> {
     await act(async () => input.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
 }
 
+/* Claude Code, which the Claude API runs in. */
+function claudeCode(installed: boolean): ProviderInfo {
+    const base = info(CLAUDE_API, installed);
+
+    return { ...base, kind: 'claude', name: 'Claude Code', version: installed ? '2.1.320' : null, capabilities: { ...base.capabilities, terminal: true } };
+}
+
 /* Opens the provider on a machine that answers its two requests from one status a test may change. */
-async function open(provider: Provider, configured = false): Promise<void> {
+async function open(provider: Provider, configured = false, claudeInstalled = true): Promise<void> {
     let status = { configured, models: configured ? 2 : 0, settings: { ...provider.defaults } };
     machine = new FakeMachine();
-    machine.answer('provider.list', () => ({ providers: [info(provider, status.configured)] }));
+    machine.answer('provider.list', () => ({
+        providers: [...(provider === CLAUDE_API ? [claudeCode(claudeInstalled)] : []), info(provider, status.configured && claudeInstalled)]
+    }));
     machine.answer(`${provider.area}.status`, () => status);
     machine.answer(`${provider.area}.configure`, ({ apiKey, settings }: { apiKey?: string; settings?: object }) => {
         if (settings !== undefined && apiKey === undefined) {
@@ -107,7 +116,7 @@ async function open(provider: Provider, configured = false): Promise<void> {
     await act(async () => useUi.getState().setSettings({ open: true, section: 'providers' }));
 
     const row = (): HTMLButtonElement | undefined =>
-        [...document.querySelectorAll<HTMLButtonElement>('button')].find((candidate) => candidate.textContent?.startsWith(provider.name));
+        [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find((candidate) => candidate.textContent?.startsWith(provider.name));
 
     await until(() => row() !== undefined);
     await clickOn(row()!);
@@ -160,6 +169,10 @@ describe.each([NANOGPT, CLAUDE_API])('The key of $name in Settings', (provider) 
         expect(document.querySelector('[role="alert"]')!.textContent).toContain(`${provider.vendor} rejected the API key.`);
         expect(everything()).toContain('No key saved on this machine.');
     });
+});
+
+describe('The runs of NanoGPT in Settings', () => {
+    const provider = NANOGPT;
 
     test('the continue switch sends only itself, and the runs field follows it', async () => {
         await open(provider);
@@ -189,11 +202,29 @@ describe.each([NANOGPT, CLAUDE_API])('The key of $name in Settings', (provider) 
 });
 
 describe('The Claude API in Settings', () => {
-    test('is not offered as a CLI to install, and starts without continuing since every call is paid for', async () => {
+    test('is not offered as a CLI to install, and has no runs to count since Claude Code runs the chat', async () => {
         await open(CLAUDE_API);
         expect(everything()).toContain('bills every call per token');
         expect(everything()).not.toContain('Not installed');
-        expect(continueSwitch()!.getAttribute('aria-checked') ?? continueSwitch()!.getAttribute('data-checked')).not.toBe('true');
+        // Its own mark, not Claude's, whose label needs the even-odd rule to show.
+        expect(document.querySelector('[role="dialog"] svg[aria-label="Claude API"] path')?.getAttribute('fill-rule')).toBe('evenodd');
+        // The key and what it brought each have a row of their own.
+        const titled = (text: string) =>
+            [...document.querySelectorAll('[role="dialog"] *')].filter((element) => element.children.length === 0 && element.textContent === text);
+        expect(titled('API key')).toHaveLength(1);
+        expect(titled('Connection')).toHaveLength(1);
+        expect(continueSwitch()).toBeNull();
+        expect(field('Steps per run')).toBeNull();
+        expect(everything()).not.toContain('Install it on this machine first.');
+    });
+
+    test('without Claude Code on the machine it says so and leads to its install', async () => {
+        await open(CLAUDE_API, false, false);
+        await until(() => everything().includes('Claude API chats run in Claude Code. Install it on this machine first.'));
+        expect(everything()).toContain('Claude Code is not installed');
+
+        await clickOn(buttonWithText('Install')!);
+        expect(useUi.getState().settings.target).toBe('providers.install.claude');
     });
 
     test('the tokens of a reply have a field of their own, from 1,024 to 128,000', async () => {
@@ -208,5 +239,20 @@ describe('The Claude API in Settings', () => {
         await enter(tokens, '16000');
         await until(() => machine.requests('anthropic.configure').length === 1);
         expect(machine.requests('anthropic.configure')).toEqual([{ settings: { maxOutputTokens: 16000 } }]);
+    });
+
+    test('new chats start on a 200K context window until a person picks 1M', async () => {
+        await open(CLAUDE_API);
+        const choice = (label: string) =>
+            [...document.querySelectorAll<HTMLElement>('[role="radiogroup"][aria-label="Context window"] [role="radio"]')].find(
+                (element) => element.textContent === label
+            )!;
+        expect(everything()).toContain('Used for new chats. You can switch per chat.');
+        expect(choice('200K').getAttribute('aria-checked')).toBe('true');
+
+        await clickOn(choice('1M'));
+        await until(() => machine.requests('anthropic.configure').length === 1);
+        expect(machine.requests('anthropic.configure')).toEqual([{ settings: { contextWindow: '1m' } }]);
+        await until(() => choice('1M').getAttribute('aria-checked') === 'true');
     });
 });

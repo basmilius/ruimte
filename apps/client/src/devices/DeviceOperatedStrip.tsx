@@ -1,16 +1,16 @@
-import { useEffect, useState, type RefObject } from 'react';
+import { Button, Tooltip } from '@adecore/ui';
+import type { DeviceControlMode, DeviceInfo } from '@ruimte/contracts';
 import clsx from 'clsx';
 import i18next from 'i18next';
+import { useEffect, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { DeviceControlMode, DeviceInfo } from '@ruimte/contracts';
 import { perform } from '@/actions/client-actions';
+import { toastDeviceFailure } from '@/devices/control';
 import { operatedOf, stripLook, tapPoint, useDeviceOperated, useOperatedDevice } from '@/devices/operated';
 import { useResolvedDevice } from '@/devices/state';
 import { useNodeHost } from '@/nodes/node-host';
 import { useEndpointId } from '@/state/keys';
-import { toastDeviceFailure } from '@/devices/control';
 import { transportFor } from '@/transport';
-import { Button, Tooltip } from '@adecore/ui';
 
 /* How long the ring of a tap stays; with motion off it stands still for as long. */
 const PING_MS = 700;

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { lstat, mkdir, opendir, readdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
-import { dirname, isAbsolute, join, relative, sep } from 'node:path';
+import { dirname, join, relative, sep } from 'node:path';
+import { isBelow, isWithin } from '@adecore/utils/path';
 import type { Reclaimed } from '../maintenance/maintenance.ts';
 import { realTimers, type Timers } from '../timers.ts';
 import type { PhpCache } from './host.ts';
@@ -79,14 +80,8 @@ export interface EvictionPlan {
     sightings: Sightings;
 }
 
-function isInside(child: string, parent: string): boolean {
-    const path = relative(parent, child);
-
-    return path === '' || (!path.startsWith('..') && !isAbsolute(path));
-}
-
 function stubsCommitOf(path: string, stubsRoot: string): string | null {
-    if (!isInside(path, stubsRoot) || path === stubsRoot) {
+    if (!isBelow(stubsRoot, path)) {
         return null;
     }
 
@@ -100,12 +95,12 @@ function isLive(owner: CacheOwner, live: EvictionInput['live']): boolean {
         return live.stubsDirs.includes(owner.path);
     }
 
-    return live.folders.some((folder) => folder === owner.folder || isInside(owner.path, folder));
+    return live.folders.some((folder) => folder === owner.folder || isWithin(folder, owner.path));
 }
 
 /* A missing checkout is never proof while a known project folder is, holds or lies inside it. */
 function isKnown(path: string, knownFolders: readonly string[]): boolean {
-    return knownFolders.some((folder) => isInside(path, folder) || isInside(folder, path));
+    return knownFolders.some((folder) => isWithin(folder, path) || isWithin(path, folder));
 }
 
 /*

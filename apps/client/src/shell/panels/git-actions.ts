@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import type { GitActionKind, GitActionPhase, GitStash, GitStatus } from '@ruimte/contracts';
+import i18next from 'i18next';
 
 let counter = 0;
 

@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
-import { windowWorkspace } from '@/state/window';
-import { useUi } from '@/state/ui';
+import { act } from 'react';
 import { useDocument } from '@/state/document';
+import { useUi } from '@/state/ui';
+import { windowWorkspace } from '@/state/window';
+import { menuItem, openCanvasPage, openContextMenu, savedNodes, type CanvasPage } from '../../testing/canvas-page';
 import { chatInfoOf } from '../../testing/chat-info';
+import { clickOn, openSubmenu, pressKey, until } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { fakeProvider } from '../../testing/fake-provider';
-import { clickOn, openSubmenu, pressKey, until } from '../../testing/dom';
-import { menuItem, openCanvasPage, openContextMenu, savedNodes, type CanvasPage } from '../../testing/canvas-page';
 
 const CLAUDE = fakeProvider('claude', 'Claude Code', { version: '2.1.0', resumeCommand: 'claude --resume {id}' });
 

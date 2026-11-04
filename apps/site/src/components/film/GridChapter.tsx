@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Globe, PenTool, Terminal } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useEffect, useState } from 'react';
 import { TerminalBody } from '../app/bodies.tsx';
 import { AssistantText, Composer, ToolRow, UserBubble } from '../app/chat.tsx';
 import { CellToolbar, type SidebarRow } from '../app/chrome.tsx';

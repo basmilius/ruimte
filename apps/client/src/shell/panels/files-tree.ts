@@ -1,7 +1,7 @@
-import type { GitStatus, GitStatusEntry } from '@pierre/trees';
-import { FileTree } from '@adecore/ui';
-import { absoluteOf, isAbsolutePath, isPathBelow, relativeTo, resolveStoredPath, storedPathOf, type FsEntry, type GitFile } from '@ruimte/contracts';
 import { chipText } from '@adecore/agents-react/chat';
+import { FileTree } from '@adecore/ui';
+import type { GitStatus, GitStatusEntry } from '@pierre/trees';
+import { absoluteOf, isAbsolutePath, isPathBelow, relativeTo, resolveStoredPath, storedPathOf, type FsEntry, type GitFile } from '@ruimte/contracts';
 
 /* A directory whose children have not arrived yet gets one child nobody sees, so the row keeps its
    chevron. The rule that hides it is in `FilesPanel`. */
@@ -145,9 +145,15 @@ interface TreeCheckout {
     status: { root: string | null; files: readonly GitFile[] } | null;
 }
 
-/* Where a checkout's paths count from: the root git named, or the folder it was asked about. */
+/*
+ * Where a checkout's paths count from: the root git named, or the checkout's own path when git named it through a
+ * symlink the path does not take (under macOS's `/tmp`), since a listed checkout is its repository's root. A checkout
+ * that stands in for the folder before the repositories are listed may lie below its root, which git names then.
+ */
 function rootOf(checkout: TreeCheckout): string {
-    return checkout.status?.root ?? checkout.path;
+    const named = checkout.status?.root ?? null;
+
+    return named !== null && (named === checkout.path || isPathBelow(named, checkout.path)) ? named : checkout.path;
 }
 
 /* What every checkout says, in the rows of a tree that lists `root`; a file of a nested repository is that repository's. */

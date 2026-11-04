@@ -1,8 +1,8 @@
+import { CliMark } from '@adecore/agents-react/providers';
+import { CommandPalette, Icon, RelativeTime } from '@adecore/ui';
+import type { ChatExternalSession, ChatSearchHit } from '@ruimte/contracts';
 import { MessageSquare, Terminal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { ChatExternalSession, ChatSearchHit } from '@ruimte/contracts';
-import { CommandPalette, Icon, RelativeTime } from '@adecore/ui';
-import { CliMark } from '@adecore/agents-react/providers';
 import type { PaletteRow } from '@/shell/palette-entries';
 
 /* A hit in a chat of Ruimte, or a session a CLI started outside it. */

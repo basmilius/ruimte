@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
+import { CodedError } from '@adecore/agents';
 import {
     BROWSER_FAVICON_MAX_BYTES,
     BROWSER_FAVICON_MAX_DATA_URL_LENGTH,
@@ -11,7 +12,6 @@ import {
     type LiveFrameHeader,
     type LiveStreamFrame
 } from '@ruimte/contracts';
-import { CodedError } from '@adecore/agents';
 import { LiveSinks, type LiveEvent, type LiveSink } from '../client-sinks.ts';
 import { FrameFanout, streamKeyOf } from '../streams/frame-fanout.ts';
 import { LiveStreamHub, type LiveFrameSource } from '../streams/live-stream.ts';

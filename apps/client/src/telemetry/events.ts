@@ -13,7 +13,7 @@ export type ConnectionProblem = LinkProblem & { machine: MachineKind; link: Link
 
 interface ConnectionEvent {
     message: string;
-    level: 'error';
+    level: 'error' | 'info';
     fingerprint: string[];
     tags: Record<string, string>;
 }
@@ -33,17 +33,19 @@ export function connectionEvent(problem: ConnectionProblem): ConnectionEvent {
                 tags: { problem: 'connection-dropped', ...where, close_code: code }
             };
         }
+        // A machine that stops answering leaves every pending request without one, so they group by the link and not the request.
         case 'timeout':
             return {
-                message: `${problem.request} got no answer in time`,
+                message: `A request to a ${problem.machine} machine got no answer in time`,
                 level: 'error',
-                fingerprint: ['request-timeout', problem.request],
+                fingerprint: ['request-timeout', problem.machine, problem.link],
                 tags: { problem: 'request-timeout', ...where, request: problem.request }
             };
+        // The check doing its work: an update that has not reached one of the two ends yet.
         case 'refused':
             return {
                 message: `A machine was refused at the protocol check (${problem.mismatch})`,
-                level: 'error',
+                level: 'info',
                 fingerprint: ['protocol-refused', problem.mismatch],
                 tags: { problem: 'protocol-refused', ...where, mismatch: problem.mismatch }
             };

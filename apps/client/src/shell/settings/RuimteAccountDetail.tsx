@@ -1,19 +1,19 @@
-import { useEffect, useState } from 'react';
+import { Skeleton, Button, Icon, IconButton } from '@adecore/ui';
+import { SettingsRow } from '@adecore/ui/settings';
+import { PROVIDER_NAMES, type ProviderId } from '@ruimte/pulsar';
 import clsx from 'clsx';
 import { Check, CircleAlert, KeyRound, LogOut, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PROVIDER_NAMES, type ProviderId } from '@ruimte/pulsar';
 import { isDesktop } from '@/desktop/bridge';
-import { hasLocalMachine } from '@/state/local-machine';
-import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
-import { DeleteAccountDialog } from '@/shell/settings/DeleteAccountDialog';
 import { cancelPulsarSignIn, linkPulsarProvider, refreshPulsarIdentities, signOutOfPulsar, unlinkPulsarProvider, usePulsarAccount } from '@/pulsar/account';
 import { PROVIDER_ORDER, identityDetail, signedInLabel, takeoverWarning } from '@/pulsar/account-name';
 import { dismissAccountConfirmation, useAccountConfirmation } from '@/pulsar/confirmation';
-import { Skeleton, Button, Icon, IconButton } from '@adecore/ui';
-import { SettingsRow } from '@adecore/ui/settings';
+import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
+import { DeleteAccountDialog } from '@/shell/settings/DeleteAccountDialog';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { ProviderButton, SignInButtons } from '@/shell/SignInButtons';
+import { hasLocalMachine } from '@/state/local-machine';
 import { SignInMark } from '@/ui/SignInMark';
 
 /* One way to sign in to the account. Remove it while another remains, or add it when the address book offers it. */

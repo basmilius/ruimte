@@ -208,7 +208,7 @@ private struct ChatTaskLine: View {
             // The time it waits for reads as today, tomorrow or a day, so it is said again once a minute.
             TimelineView(.everyMinute) { context in
                 Text(ChatSubagents.taskStateText(state, task: task, now: context.date))
-                    .foregroundStyle(MobileStyle.faint)
+                    .foregroundStyle(MobileStyle.muted)
             }
         default:
             Text(ChatSubagents.taskStateText(state, task: task, now: .now)).foregroundStyle(Self.tone(state))
@@ -219,7 +219,7 @@ private struct ChatTaskLine: View {
         switch state {
         case .waiting: MobileStyle.statusNeedsYou
         case .failed: MobileStyle.statusError
-        default: MobileStyle.faint
+        default: MobileStyle.muted
         }
     }
 
@@ -257,14 +257,20 @@ struct ChatProviderMark: View {
     var size: CGFloat = 14
 
     var body: some View {
-        switch provider {
-        case "claude", "codex":
-            Image(provider == "codex" ? "CodexMark" : "ClaudeMark")
+        if let mark = Self.assets[provider] {
+            Image(mark.asset)
                 .renderingMode(.template).resizable().scaledToFit()
                 .frame(width: size, height: size)
-                .accessibilityLabel(provider.capitalized)
-        default:
+                .accessibilityLabel(mark.name)
+        } else {
             Image(lucide: "bot", size: size)
         }
     }
+
+    // The Claude API's mark keeps its even-odd holes in its SVG, so the label shows through.
+    private static let assets: [String: (asset: String, name: String)] = [
+        "claude": ("ClaudeMark", "Claude"),
+        "codex": ("CodexMark", "Codex"),
+        "anthropic-claude-api": ("ClaudeApiMark", "Claude API"),
+    ]
 }

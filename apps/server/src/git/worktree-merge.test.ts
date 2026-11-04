@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fileExists } from '@adecore/agents';
+import { fileExists } from '@adecore/utils/fs';
 import type { WorktreeMergePayload } from '@ruimte/contracts';
 import { documentPathInFolder } from '../projects/project-files.ts';
 import { UsageCounter } from '../stats/usage-counter.ts';

@@ -1,12 +1,11 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { AgentServerStatus, ProviderInfo } from '@ruimte/contracts';
-import { currentEndpointId } from '@/state/keys';
+import { act } from 'react';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
+import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
 import { FakeMachine } from '../../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../../testing/fake-workspace';
-import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
 
 const ANTIGRAVITY: ProviderInfo = {
     kind: 'antigravity',
@@ -52,8 +51,6 @@ const NANOGPT: ProviderInfo = {
     capabilities: CHAT_ONLY,
     resumeCommand: ''
 };
-
-const APPLE: ProviderInfo = { ...NANOGPT, kind: 'apple', name: 'Apple Foundation Models', version: 'Disabled in Settings' };
 
 const SERVER_MISSING: AgentServerStatus = { provider: 'antigravity', state: 'missing', version: '1.4.1', installed: null };
 
@@ -111,18 +108,11 @@ describe('installing Antigravity in Settings, Providers', () => {
 });
 
 describe('the providers list in Settings, Providers', () => {
-    test('NanoGPT without a key and Apple turned off need setup, and say why', async () => {
-        await openProviders([NANOGPT, APPLE]);
-        const endpointId = currentEndpointId();
-        await act(async () =>
-            useServers.setState(({ byEndpoint }) => ({
-                byEndpoint: { ...byEndpoint, [endpointId]: { ...byEndpoint[endpointId]!, platform: 'darwin', appleFoundationEnabled: false } }
-            }))
-        );
+    test('NanoGPT without a key needs setup and says why', async () => {
+        await openProviders([NANOGPT]);
         const group = (): HTMLElement | null => document.querySelector<HTMLElement>('[role="dialog"] section[aria-label="Needs setup"]');
-        await until(() => group()?.textContent?.includes('Apple Foundation Models') === true);
+        await until(() => group()?.textContent?.includes('NanoGPT') === true);
         expect(group()?.textContent).toContain('NanoGPTNo key');
-        expect(group()?.textContent).toContain('Apple Foundation ModelsOff');
         expect(document.querySelector('[role="dialog"] section[aria-label="Ready"]')).toBeNull();
     });
 });

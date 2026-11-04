@@ -1,24 +1,26 @@
+import { ErrorBoundary, lazyNamed, LazyBoundary } from '@adecore/ui';
+import { isArtifactView, isCanvasView, isDatabaseView, isDesignView, isFileView, type ProjectView } from '@ruimte/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isArtifactView, isCanvasView, isDatabaseView, isDesignView, isFileView, type ProjectView } from '@ruimte/contracts';
-import { isLooseView, type CellView } from '@/shell/cell-view';
-import { FileViewer } from '@/shell/panels/FileViewer';
 import { Canvas } from '@/canvas/Canvas';
+import { DeviceBody } from '@/devices/DeviceBody';
+import { ExtensionViewBody } from '@/extensions/ExtensionNodeBody';
+import { extensionKeyOf } from '@/extensions/registry';
+import { BrowserFallback } from '@/nodes/BrowserBody';
+import { ChatBody } from '@/nodes/ChatBody';
+import { TerminalBody } from '@/nodes/TerminalBody';
+import { usePage } from '@/nodes/use-page';
 import { newChatOn } from '@/project/new-chat';
+import { isLooseView, type CellView } from '@/shell/cell-view';
+import { FileSurface } from '@/shell/panels/FileSurface';
+import { FileViewer } from '@/shell/panels/FileViewer';
 import { ProjectStartScreen } from '@/shell/ProjectStartScreen';
 import { SplitGrid } from '@/shell/SplitGrid';
 import { useDiagram } from '@/state/diagram';
-import { useDrawing } from '@/state/drawing';
-import { BrowserFallback } from '@/nodes/BrowserBody';
-import { usePage } from '@/nodes/use-page';
-import { DeviceBody } from '@/devices/DeviceBody';
-import { ChatBody } from '@/nodes/ChatBody';
-import { TerminalBody } from '@/nodes/TerminalBody';
-import { FileSurface } from '@/shell/panels/FileSurface';
 import { useDocument } from '@/state/document';
-import { isScratchProject, useProject } from '@/state/project';
+import { useDrawing } from '@/state/drawing';
 import { useFiles } from '@/state/files';
-import { ErrorBoundary, lazyNamed, LazyBoundary } from '@adecore/ui';
+import { isScratchProject, useProject } from '@/state/project';
 
 const DrawingView = lazyNamed(() => import('@/drawing/DrawingView'), 'DrawingView');
 const DiagramView = lazyNamed(() => import('@/diagram/DiagramView'), 'DiagramView');
@@ -42,12 +44,13 @@ function StandaloneView({ view }: { view: ProjectView }) {
                 the app's own: a thread reads the same here as it does in a node on the canvas. */}
             {view.kind === 'chat' && (
                 <div className="chat-column flex h-full w-full flex-col">
-                    <ChatBody id={view.id} focused={focused} pet={{ title: view.name }} />
+                    <ChatBody id={view.id} focused={focused} accessories={{ title: view.name }} />
                 </div>
             )}
             {view.kind === 'terminal' && <TerminalBody id={view.id} focused={focused} />}
             {view.kind === 'browser' && <BrowserViewSurface id={view.id} />}
             {view.kind === 'device' && <DeviceBody id={view.id} />}
+            {view.kind === 'unknown' && extensionKeyOf(view.raw) !== null && <ExtensionViewBody raw={view.raw} />}
             {view.kind === 'drawing' && (
                 <LazyBoundary>
                     <DrawingView id={view.id} />

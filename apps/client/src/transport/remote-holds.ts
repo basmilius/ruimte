@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
 import type { ProjectView } from '@ruimte/contracts';
-import { useViewNodes, type NodesOfView } from '@/project/view-nodes';
+import { useEffect, useRef } from 'react';
 import { shallow } from 'zustand/shallow';
+import { useViewNodes, type NodesOfView } from '@/project/view-nodes';
 import { endpointById, endpointIdOfMachine, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { pool } from '@/transport';
 

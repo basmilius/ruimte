@@ -1,5 +1,15 @@
 import { chatOpener, limitResumeAt } from '@adecore/agents/chat';
-import { deliverMessageHandler, OutboxWorker, type AgentLineageStore, type NoticeStore, type OutboxClock, type TaskStore } from '@adecore/agents/coordination';
+import {
+    deliverMessageHandler,
+    OutboxWorker,
+    oweResume,
+    resumeRunHandler,
+    resumeRunParked,
+    type AgentLineageStore,
+    type NoticeStore,
+    type OutboxClock,
+    type TaskStore
+} from '@adecore/agents/coordination';
 import type { Task } from '@ruimte/contracts';
 import type { PendingPromptStore } from '../agents/pending-prompts.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
@@ -23,7 +33,6 @@ import type {
     StopRemoteAgentEntry,
     TakeRemoteResultEntry
 } from './outbox.ts';
-import { oweResume, resumeRunHandler, resumeRunParked } from './resume-run.ts';
 import { startAgentHandler } from './start-agent.ts';
 
 interface OutboxLinkOptions {
@@ -176,7 +185,7 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
         const place = projects.index.locate(nodeId);
         return place !== null && place.projectId !== projectId;
     };
-    // The parents of this project's tasks that another project of this machine places, as one that used `--project` is.
+    // The parents of this project's tasks that another project of this machine places, as one that used `project` is.
     const parentsElsewhere = (projectId: string): string[] =>
         tasks
             .ofProject(projectId)
@@ -319,7 +328,7 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
                 }
             }
             prWatches.prune(projectId, ids);
-            void prompts.prune(projectId, ids).catch((e) => failed('Pruning pending prompts failed', e));
+            void prompts.pruneLeftNodes(projectId, ids).catch((e) => failed('Pruning pending prompts failed', e));
             for (const forkId of lineage.forksLeaving(projectId, ids)) {
                 const drop = chats.dropUnspokenFork(forkId);
                 if (deps.onDropped) {
@@ -330,7 +339,7 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
             }
             void lineage.prune(projectId, ids).catch((e) => failed('Pruning agent lineage failed', e));
             void notices.prune(projectId, ids).catch((e) => failed('Pruning waiting messages failed', e));
-            // A parent in another project, which gave its task here with `--project`, is not gone from this one.
+            // A parent in another project, which gave its task here with `project`, is not gone from this one.
             const kept = new Set([...ids, ...parentsElsewhere(projectId)]);
             void outbox.prune(projectId, kept).catch((e) => failed('Pruning the outbox failed', e));
             void taskWiring

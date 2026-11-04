@@ -1,4 +1,3 @@
-import { machineBridge } from '../../testing/machine-bridge';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectSummary } from '@ruimte/contracts';
 import type { DesktopBridge } from '@/desktop/bridge';
@@ -6,6 +5,7 @@ import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useWindow } from '@/state/window';
 import type { Workspace } from '@/transport/connections';
+import { machineBridge } from '../../testing/machine-bridge';
 import {
     dragsWindow,
     keptTabs,
@@ -20,7 +20,6 @@ import {
     showTab,
     startWindowTabs,
     stepMove,
-    stepTab,
     useWindowTabs,
     withoutClosed,
     withoutTab,
@@ -79,13 +78,6 @@ describe('the tabs of a window', () => {
         expect(neighborOf(tabs(['a', 'b', 'c'], 'b'), 'b')).toBe('c');
         expect(neighborOf(tabs(['a', 'b', 'c'], 'c'), 'c')).toBe('b');
         expect(neighborOf(tabs(['a'], 'a'), 'a')).toBeNull();
-    });
-
-    test('stepping goes round the ends', () => {
-        expect(stepTab(tabs(['a', 'b', 'c'], 'c'), 1)).toBe('a');
-        expect(stepTab(tabs(['a', 'b', 'c'], 'a'), -1)).toBe('c');
-        expect(stepTab(tabs(['a', 'b'], null), -1)).toBe('b');
-        expect(stepTab(NO_TABS, 1)).toBeNull();
     });
 });
 

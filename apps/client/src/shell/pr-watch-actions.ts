@@ -1,5 +1,5 @@
-import { usePrWatches } from '@/state/pr-watches';
 import { endpointKey } from '@/state/keys';
+import { usePrWatches } from '@/state/pr-watches';
 import { machineTransport } from '@/transport';
 
 /* The watch a chat has on a machine, read now, for a command that is only offered while there is one. */

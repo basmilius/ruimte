@@ -328,6 +328,9 @@
                 "skipped_one": "{{count}} item overgeslagen. Ruimte pakt nooit links uit, en ook geen bestanden die buiten de map of in .git terechtkomen.",
                 "skipped_other": "{{count}} items overgeslagen. Ruimte pakt nooit links uit, en ook geen bestanden die buiten de map of in .git terechtkomen."
             }
+        },
+        "viewer": {
+            "original": "Origineel"
         }
     },
     "files": {
@@ -998,22 +1001,23 @@
         "history": {
             "recent": "Recente plekken"
         },
-        "onDevice": {
-            "explain": "Uitleg",
-            "explanation": "Uitleg · Apple Foundation Models, op het apparaat",
-            "note": "Geschreven op deze Mac. Gratis, en de code blijft hier.",
-            "thinking": "Uitleg wordt op deze Mac geschreven…",
-            "off": "Uitleg staat uit. Zet hem aan bij Instellingen, Editor, AI.",
-            "nothing": "Selecteer code, of zet de cursor in een functie, om die uit te leggen."
-        },
         "ghost": {
-            "onDevice": "Op apparaat",
             "accept": "Accepteren",
             "next": "Volgende",
-            "thinking": "Bezig op deze Mac",
+            "thinking": "Bezig met nadenken",
             "off": "Suggesties staan uit. Zet ze aan bij Instellingen, Editor, AI.",
             "none": "Geen suggestie hier",
-            "unavailable": "Het model op het apparaat is niet beschikbaar."
+            "unavailable": "Het editormodel is niet beschikbaar.",
+            "model": "Editormodel"
+        },
+        "editorAssist": {
+            "explain": "Uitleg",
+            "explanation": "Uitleg · Editormodel",
+            "note": "Geschreven door het model uit Instellingen, Editor, AI.",
+            "thinking": "Uitleg wordt geschreven…",
+            "off": "Uitleg staat uit. Zet hem aan bij Instellingen, Editor, AI.",
+            "nothing": "Selecteer code, of zet de cursor in een functie, om die uit te leggen.",
+            "tooOld": "Werk deze machine bij om het editormodel te gebruiken."
         }
     },
     "machineNotAnswering": "Deze machine antwoordt niet.",
@@ -1123,9 +1127,6 @@
             },
             "title": "{{what}} mergen",
             "titleInto": "{{what}} mergen in {{into}}"
-        },
-        "origin": {
-            "from": "van {{branch}}"
         },
         "remove": {
             "anyway": "Toch verwijderen",

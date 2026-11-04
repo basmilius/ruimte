@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import type { DeviceCaptureResult, DeviceInfo } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { createViewAction, placeViewOnCanvasAction } from '@/actions/client-actions';
 import { base64Of } from '@/base64';
 import { recordingKey, useDevices } from '@/devices/state';

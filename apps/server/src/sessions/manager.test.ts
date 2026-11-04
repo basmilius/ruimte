@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
-import { delimiter } from 'node:path';
 import { RESTORED_TEXT } from './session.ts';
 import { Recorder, makeHarness, type Harness } from './test-helpers.ts';
 
@@ -171,8 +170,8 @@ describe('SessionManager', () => {
         await harness.create('plain');
         const linked = await harness.manager.attach('linked', 'c1', 80, 24);
         const plain = await harness.manager.attach('plain', 'c1', 80, 24);
-        expect(linked.screen).toContain('Ruimte: linked context is available with ruimte-context (list, read <id>): "Sprint goals" (text).');
-        expect(plain.screen).not.toContain('ruimte-context');
+        expect(linked.screen).toContain('Ruimte: linked context, read with context_read: "Sprint goals" (text).');
+        expect(plain.screen).not.toContain('Ruimte: linked context');
         // The line is on the screen only; the shell never received it as input.
         expect(harness.adapter.forSession('linked').input).toEqual([]);
     });
@@ -352,7 +351,7 @@ describe('SessionManager', () => {
 
     test('spawns the shell with the size, the folder and the session environment', async () => {
         await harness.cleanup();
-        harness = await makeHarness({ contextUrl: 'http://127.0.0.1:1/context', binDir: '/opt/ruimte/bin' });
+        harness = await makeHarness({ contextUrl: 'http://127.0.0.1:1/context' });
         await harness.manager.create({ sessionId: 's9', cols: 90, rows: 30, shell: '/bin/sh', args: [], cwd: harness.home });
         await harness.manager.create({ sessionId: 's10', cols: 80, rows: 24, shell: '/bin/zsh', cwd: harness.home });
 
@@ -365,8 +364,7 @@ describe('SessionManager', () => {
             RUIMTE_SESSION_ID: 's9',
             RUIMTE_HOOK_URL: 'http://127.0.0.1:1/hooks',
             RUIMTE_CONTEXT_URL: 'http://127.0.0.1:1/context',
-            // In front, so `ruimte-context` wins over anything of the same name on the machine.
-            PATH: ['/opt/ruimte/bin', '/usr/bin:/bin'].join(delimiter)
+            PATH: '/usr/bin:/bin'
         });
         // A login shell reads the profile that sets PATH, which a daemon started from launchd lacks.
         expect(harness.adapter.forSession('s10').options.args).toEqual(['-l']);

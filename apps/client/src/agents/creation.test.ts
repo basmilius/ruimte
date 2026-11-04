@@ -3,7 +3,7 @@ import type { ProviderInfo } from '@ruimte/contracts';
 import { availableAgents, separatesGroups } from './creation';
 
 const provider = (kind: string, name: string, installed = true): ProviderInfo =>
-    ({ kind, name, installed, capabilities: { chat: true, terminal: kind !== 'apple' } }) as ProviderInfo;
+    ({ kind, name, installed, capabilities: { chat: true, terminal: true } }) as ProviderInfo;
 
 describe('availableAgents', () => {
     test('offers the frontier labs, then the rest, then the API providers, each by name, whatever order the machine sent', () => {

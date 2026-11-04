@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { storedText } from '@/state/stored-json';
 import { usePalette } from '@/state/palette';
+import { storedText } from '@/state/stored-json';
 
 export type Theme = 'light' | 'dark' | 'system';
 

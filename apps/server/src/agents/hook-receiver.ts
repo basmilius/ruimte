@@ -1,7 +1,7 @@
+import { isRecord } from '@adecore/utils/record';
 import { AgentKindSchema, type AgentKind } from '@ruimte/contracts';
-import { bearerToken } from '../canvas/canvas-route.ts';
-import { isRecord } from '../is-record.ts';
 import type { HookResult } from '../sessions/manager.ts';
+import { bearerToken } from './bearer.ts';
 import { hasHooks, takesHookContext } from './hooks.ts';
 
 interface HookTarget {

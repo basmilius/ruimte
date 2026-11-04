@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { isCanvasView, type ProjectNode, type ProjectText, type ProjectView } from '@ruimte/contracts';
-import fixture from '../../../ios/Tests/Fixtures/view-references.json';
 import type { Referable } from '@adecore/agents-react/chat';
+import { isCanvasView, type ProjectNode, type ProjectText, type ProjectView } from '@ruimte/contracts';
 import { projectReferables, withReachedProjects } from '@/chat/referables';
+import fixture from '../../../ios/Tests/Fixtures/view-references.json';
 
 function node(id: string, kind: ProjectNode['kind'], title: string, extra: Partial<ProjectNode> = {}): ProjectNode {
     return { id, kind, title, x: 0, y: 0, w: 100, h: 100, ...extra } as ProjectNode;

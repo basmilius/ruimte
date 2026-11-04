@@ -234,6 +234,118 @@ final class ChatCommandLookTests: XCTestCase {
         RuimteCommandLook.match(command).map { Line($0.label, $0.detail, others: $0.others, more: $0.more) }
     }
 
+    func testAToolOfTheMachineReadsAsThePartItWorksOnInEveryShapeACliGivesIt() {
+        let shapes = [
+            tool("mcp__ruimte__context_list", [:]),
+            tool("ruimte/context_list", [:]),
+            tool(
+                "Tool",
+                [
+                    "description": .string("ruimte__context_list"), "variant": .string("UseTool"),
+                    "tool_name": .string("ruimte__context_list"), "tool_input": .object([:]),
+                ]),
+            tool("Tool", ["description": .string("ruimte_context_list"), "arguments": .object([:])]),
+            tool("Read", ["description": .string("ruimte-context_list")]),
+        ]
+        for shape in shapes {
+            XCTAssertEqual(
+                RuimteCommandLook.run(of: shape).map { Line($0.label, $0.detail) }, Line("Context", "context list"))
+        }
+        XCTAssertNil(RuimteCommandLook.run(of: tool("mcp__ruimte__teleport", [:])))
+        XCTAssertNil(RuimteCommandLook.run(of: tool("mcp__other__node_new", [:])))
+        XCTAssertNil(
+            RuimteCommandLook.run(
+                of: tool("Bash", ["command": .string("ls"), "description": .string("ruimte-node_list")])))
+        XCTAssertEqual(ChatToolPresentation.mark(tool("mcp__ruimte__node_list", [:])), .ruimte)
+    }
+
+    func testANameThatSaysTheServerWinsOverAnyTitleTheLongestServerFirst() {
+        let titled = tool("mcp__ruimte__node_list", ["description": .string("github__issue_list")])
+        XCTAssertEqual(ChatMcpCall.of(titled, servers: ["github", "ruimte"])?.server, "ruimte")
+        let foreign = tool("mcp__other__node_list", ["description": .string("ruimte__node_list")])
+        XCTAssertNil(ChatMcpCall.of(foreign, servers: ["ruimte"]))
+        XCTAssertNil(ChatMcpCall.of(tool("other/node_list", ["description": .string("ruimte__node_list")]), servers: ["ruimte"]))
+        let longer = ChatMcpCall.of(tool("mcp__ruimte__dev__node_list", [:]), servers: ["ruimte", "ruimte__dev"])
+        XCTAssertEqual(longer.map { [$0.server, $0.tool] }, ["ruimte__dev", "node_list"])
+        XCTAssertNil(ChatMcpCall.of(tool("Edit", ["description": .string("ruimte__node_list")]), servers: ["ruimte"]))
+        XCTAssertNil(
+            ChatMcpCall.of(
+                tool("Read", ["description": .string("ruimte__node_list"), "file_path": .string("/a")]), servers: ["ruimte"]))
+    }
+
+    func testGrokAnswersComeOutOfTheirEnvelopeWhateverTheOrderOfItsKeys() {
+        let item = ChatWire.item([
+            "id": .string("call"), "kind": .string("tool"), "name": .string("mcp__ruimte__node_list"),
+            "input": .object([:]), "state": .string("done"),
+            "output": .string(#"  {"output":{"OkayOutput":"node\tn1"},"server_name":"ruimte","type":"MCP"}"#),
+        ]).chatTool
+        XCTAssertEqual(ChatMcpCall.of(item, servers: ["ruimte"])?.output, "node\tn1")
+        let other = ChatWire.item([
+            "id": .string("call"), "kind": .string("tool"), "name": .string("mcp__ruimte__node_list"),
+            "input": .object([:]), "state": .string("done"),
+            "output": .string(#"{"type":"Other","output":{"OkayOutput":"x"}}"#),
+        ]).chatTool
+        XCTAssertEqual(ChatMcpCall.of(other, servers: ["ruimte"])?.output, #"{"type":"Other","output":{"OkayOutput":"x"}}"#)
+    }
+
+    func testAToolCallDrawsItsFieldsWithIdsAsTheirTitles() {
+        let call = tool(
+            "mcp__ruimte__node_new",
+            [
+                "title": .string("Open punten"), "kind": .string("note"), "view": .string("main"),
+                "text": .string(String(repeating: "x", count: 50)),
+            ])
+        let run = RuimteCommandLook.run(of: call)!
+        XCTAssertEqual(run.label, "Canvas")
+        XCTAssertEqual(
+            run.detail, #"node new kind=note text=\#(String(repeating: "x", count: 40))… title="Open punten" view=main"#
+        )
+        let werk = ChatCommandName(name: "Werk", icon: "frame", view: true)
+        XCTAssertEqual(
+            RuimteCommandLook.detailParts(run, names: ["main": werk]).last, .name(werk, word: "main"))
+        let device = RuimteCommandLook.run(
+            of: tool("ruimte/device_shot", ["device": .string("iphone"), "wait": .number(3)]))
+        XCTAssertEqual(device.map { Line($0.label, $0.detail) }, Line("Device", "shot device=iphone wait=3"))
+        XCTAssertEqual(
+            ChatToolPresentation.groupLabel([tool("mcp__ruimte__node_new", [:]), bash("ruimte-context link new a b")]),
+            ChatToolSentence(text: "Used Ruimte Canvas 2 times", branded: true))
+    }
+
+    private func notifyTool(_ input: [String: JSONValue], output: String?, state: String = "done") -> ChatAgentSent? {
+        RuimteCommandLook.sent(
+            of: ChatWire.item([
+                "id": .string("call"), "kind": .string("tool"), "name": .string("mcp__ruimte__notify"),
+                "input": .object(input), "state": .string(state), "output": output.map(JSONValue.string) ?? .null,
+            ]).chatTool)
+    }
+
+    func testANotifyToolReadsAsTheMessageItSentWithItsTextAsItIs() {
+        let input: [String: JSONValue] = ["id": .string("chat-b"), "text": .string(#"a\nb"#)]
+        XCTAssertEqual(
+            notifyTool(input, output: "notified\tchat-b\tnow\tdetail\tLead"),
+            ChatAgentSent(to: "chat-b", title: "Lead", hint: nil, text: #"a\nb"#, state: .delivered, reason: nil))
+        XCTAssertEqual(notifyTool(input, output: nil, state: "running")?.state, .sending)
+        let refused = notifyTool(input, output: "refused self-notify: you cannot notify yourself", state: "error")
+        XCTAssertEqual(refused?.state, .failed)
+        XCTAssertNotNil(refused?.reason)
+        XCTAssertEqual(
+            notifyTool(input.merging(["project": .string("site")]) { $1 }, output: "notified\tchat-b\tnow\td")?.hint,
+            "site")
+        XCTAssertNil(notifyTool(["text": .string("hi")], output: "notified\tchat-b\tnow\td"))
+        let grok = ChatWire.item([
+            "id": .string("call"), "kind": .string("tool"), "name": .string("Tool"),
+            "input": .object([
+                "description": .string("ruimte__notify"), "tool_name": .string("ruimte__notify"),
+                "tool_input": .object(input),
+            ]),
+            "state": .string("done"),
+            "output": .string(
+                #"{"type":"MCP","tool_name":"notify","server_name":"ruimte","output":{"OkayOutput":"notified\tchat-b\twaiting\td"}}"#
+            ),
+        ]).chatTool
+        XCTAssertEqual(RuimteCommandLook.sent(of: grok)?.state, .waiting)
+    }
+
     private func bash(_ command: String) -> ChatToolItem {
         tool("Bash", ["command": .string(command)])
     }

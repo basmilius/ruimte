@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import type { Worktree } from '@ruimte/contracts';
+import { create } from 'zustand';
 
 interface FilesRootStore {
     /* The worktree the files panel was pointed at, per machine and project folder. Not saved: a

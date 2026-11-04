@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { Switch, Button, Icon, Dialog, messageOf } from '@adecore/ui';
+import type { Worktree } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { Eraser, Square, Trash } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Worktree } from '@ruimte/contracts';
 import { perform } from '@/actions/client-actions';
 import {
     clearsWarning,
@@ -14,7 +15,6 @@ import {
     type PendingEnd
 } from '@/agents/end-children';
 import { hasWork, leftBehindLine, removedToast } from '@/shell/panels/worktree-rows';
-import { Switch, Button, Icon, Dialog, messageOf } from '@adecore/ui';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { worktreeLists } from '@/state/worktrees';

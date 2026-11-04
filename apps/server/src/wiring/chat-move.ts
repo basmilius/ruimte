@@ -3,23 +3,23 @@ import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import type { AgentLineageStore, NoticeStore, TaskStore } from '@adecore/agents/coordination';
 import { chatIsWorking, type ChatInfo } from '@ruimte/contracts';
-import type { MachineHome } from '../fs/machine-home.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { ChatError } from '../chat/errors.ts';
-import type { ChatMoveHandlers } from '../handlers/chat.ts';
+import type { MachineHome } from '../fs/machine-home.ts';
 import { gitOrThrow, readGit } from '../git/run.ts';
 import { repositoryRoot } from '../git/status.ts';
 import type { PrWatchStore } from '../github/pr-watch.ts';
-import type { SnoozeStore } from '../push/snoozes.ts';
+import type { ChatMoveHandlers } from '../handlers/chat.ts';
 import type { OutboxStore } from '../outbox/outbox.ts';
 import { moveChat, type MoveChatDeps } from '../projects/move-chat.ts';
-import type { MoveJournal } from '../projects/move-journal.ts';
-import { repairInterruptedMoves, type MoveRepairDeps } from '../projects/move-repair.ts';
 import { chatMoveInfo, type MoveInfoDeps } from '../projects/move-info.ts';
-import { ownFolderOf } from '../projects/own-files.ts';
+import type { MoveJournal } from '../projects/move-journal.ts';
 import { moveRefusal, type MoveRefusalDeps } from '../projects/move-refusal.ts';
+import { repairInterruptedMoves, type MoveRepairDeps } from '../projects/move-repair.ts';
+import { ownFolderOf } from '../projects/own-files.ts';
 import type { ProjectProposals } from '../projects/project-proposals.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
+import type { SnoozeStore } from '../push/snoozes.ts';
 
 export interface ChatMoveWiring {
     chats: ChatManager;
@@ -107,7 +107,7 @@ function sharedChatSteps(chats: ChatManager) {
         load: (chatId: string) => loadedInfo(chats, chatId),
         relocate: (chatId: string, cwd: string, during: () => Promise<void>) => chats.relocate(chatId, cwd, during),
         deliverNote: (chatId: string, delivery: { noteId: string; note: string; preamble: string }) => chats.deliverNote(chatId, delivery),
-        claudeProjectsDirOf: (info: Pick<ChatInfo, 'account'>) => chats.claudeProjectsDirOf(info)
+        claudeProjectsDirOf: (info: Pick<ChatInfo, 'account' | 'provider'>) => chats.claudeProjectsDirOf(info)
     };
 }
 

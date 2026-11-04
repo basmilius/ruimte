@@ -3,8 +3,8 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { DeviceInfo, ProjectContent } from '@ruimte/contracts';
-import type { CanvasHost, Noun } from '../canvas/verb.ts';
-import { verbNamed } from '../canvas/verbs.ts';
+import type { CanvasHost } from '../tools/host.ts';
+import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { DeviceDriver } from './agent-driver.ts';
 import { AndroidBackend } from './android.ts';
 import { createDeviceHelperLauncher } from './helper-source.ts';
@@ -79,8 +79,8 @@ const host = {
     devices: driver
 } as unknown as CanvasHost;
 
-function device(argv: string[]) {
-    return (verbNamed('device') as Noun).run(argv, { caller: 'chat-1', host });
+async function device(tool: string, input: Record<string, unknown>): Promise<string[]> {
+    return (await toolAnswer(tool, { device: 'phone-1', ...input }, toolCall('chat-1', host))).lines;
 }
 
 /* The same run on each kind of device, against the Settings app of its platform. */
@@ -88,28 +88,28 @@ for (const [name, target, settings] of [
     ['a booted iOS simulator', simulator, 'com.apple.Preferences'],
     ['a booted Android emulator', emulator, 'com.android.settings']
 ] as const) {
-    describe.skipIf(target === undefined)(`ruimte-context device on ${name}`, () => {
+    describe.skipIf(target === undefined)(`the device tools on ${name}`, () => {
         test('goes home, photographs it, opens Settings, reads it, scrolls and goes home again, with nobody showing the node', async () => {
             booted = target;
-            expect((await device(['button', 'phone-1', '--name', 'home']))[0]).toStartWith('done\tbutton');
+            expect((await device('device_input', { action: 'button', name: 'home' }))[0]).toStartWith('done\tbutton');
             await Bun.sleep(1500);
-            const [line] = await device(['shot', 'phone-1']);
+            const [line] = await device('device_shot', {});
             const [, path, size] = line!.split('\t');
             const [width, height] = size!.split('x').map(Number);
             expect(width).toBeGreaterThan(0);
             const start = await readFile(path!);
-            const shotNow = async (): Promise<Buffer> => readFile((await device(['shot', 'phone-1']))[0]!.split('\t')[1]!);
+            const shotNow = async (): Promise<Buffer> => readFile((await device('device_shot', {}))[0]!.split('\t')[1]!);
             const swipe = (from: number, to: number) =>
-                device(['swipe', 'phone-1', '--from', `${width! / 2},${height! * from}`, '--to', `${width! / 2},${height! * to}`]);
+                device('device_input', { action: 'swipe', from: `${width! / 2},${height! * from}`, to: `${width! / 2},${height! * to}` });
 
             // A Settings left on a page of its own, such as search results, has no list to scroll; a fresh one opens on the list.
             await manager
                 .action({ action: 'terminateApp', appId: settings, backendId: target!.backendId, platform: target!.platform, deviceId: target!.deviceId })
                 .catch(() => undefined);
-            expect((await device(['launch', 'phone-1', '--app', settings]))[0]).toStartWith('done\tlaunch');
+            expect((await device('device_app', { action: 'launch', app: settings }))[0]).toStartWith('done\tlaunch');
             await Bun.sleep(1500);
             expect((await shotNow()).equals(start)).toBe(false);
-            const state = await device(['state', 'phone-1']);
+            const state = await device('device_state', {});
             expect(state).toContain('state\tbooted');
             expect(state).toContain('can\ttype\tyes');
             // This suite gives a simulator no device bridge, so only an emulator reads its elements here.
@@ -126,7 +126,7 @@ for (const [name, target, settings] of [
             const scrolled = await shotNow();
             expect(scrolled.equals(towardTop)).toBe(false);
 
-            await device(['button', 'phone-1', '--name', 'home']);
+            await device('device_input', { action: 'button', name: 'home' });
             await Bun.sleep(1500);
             const back = await shotNow();
             expect(back.equals(scrolled)).toBe(false);

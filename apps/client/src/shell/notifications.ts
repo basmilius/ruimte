@@ -1,10 +1,10 @@
-import i18next from 'i18next';
+import { useChats } from '@adecore/agents-react/state';
 import type { EventMap } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
-import { openSidebarTarget } from '@/shell/sidebar-navigation';
 import { projectNodes } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
-import { useChats } from '@adecore/agents-react/state';
+import { openSidebarTarget } from '@/shell/sidebar-navigation';
 import { subscribeChatStatuses } from '@/state/chats';
 import { seenNodeIds } from '@/state/in-sight';
 import { currentEndpointId, endpointOfNode } from '@/state/keys';

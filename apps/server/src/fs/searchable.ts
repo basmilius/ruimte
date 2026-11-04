@@ -1,7 +1,7 @@
 import { constants } from 'node:fs';
 import { open, realpath, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { isInside } from '../canvas/project-paths.ts';
+import { isWithin } from '@adecore/utils/path';
 import { MAX_FILE_BYTES } from './grep-lines.ts';
 import { isMachineStatePath, type MachineHomePolicy } from './machine-home.ts';
 import { realOrNull, realOrSelf } from './real-path.ts';
@@ -63,7 +63,7 @@ export async function readSearchable(root: SearchRoot, path: string, afterOpen?:
         }
         const real = await realpath(full);
         const there = await stat(real, { bigint: true });
-        if (there.dev !== opened.dev || there.ino !== opened.ino || !isInside(root.realCwd, real) || isMachineStatePath(root.policy, real)) {
+        if (there.dev !== opened.dev || there.ino !== opened.ino || !isWithin(root.realCwd, real) || isMachineStatePath(root.policy, real)) {
             return null;
         }
         const chunks: Buffer[] = [];

@@ -1,11 +1,11 @@
+import { trackTerminalCwd, terminalCwdScreenSize, type TerminalCwd, type AgentInfo, type AgentLaunch, type RuntimeMode } from '@ruimte/contracts';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { Terminal } from '@xterm/headless';
-import { trackTerminalCwd, terminalCwdScreenSize, type TerminalCwd, type AgentInfo, type AgentLaunch, type RuntimeMode } from '@ruimte/contracts';
 import { shellName, type PtyAdapter, type PtyProcess } from '../pty/pty.ts';
 import { fitScreen } from './fit-screen.ts';
-import { ShellPrompt } from './shell-prompt.ts';
 import { openShellEditor } from './shell-editor.ts';
+import { ShellPrompt } from './shell-prompt.ts';
 
 const SCROLLBACK_LINES = 10_000;
 

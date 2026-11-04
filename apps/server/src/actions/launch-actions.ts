@@ -1,7 +1,8 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers, ActionInput } from '@ruimte/actions';
 import { isSecretReference, type LaunchConfig, type LaunchConfigKind, type LaunchConfigOverlay } from '@ruimte/contracts';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
-import { VerbRefusal, field, orNote, type LaunchHost, type LaunchReading } from '../canvas/verb.ts';
+import { field, orNote, type LaunchHost, type LaunchReading } from '../tools/host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 import { freeSlug } from './slug.ts';
 
@@ -12,7 +13,7 @@ export function launchHostOf(context: ServerActionContext): LaunchHost {
 export function launchLines(launches: readonly LaunchReading[]): string[] {
     return orNote(
         launches.map((launch) => `launch\t${field(launch.launchId)}\t${field(launch.name)}`),
-        'This project has no launches; a person adds them from the launch chip in the toolbar, and ruimte-context launches new adds one they approve'
+        'This project has no launches; a person adds them from the launch chip in the toolbar, and launch_new adds one they approve'
     );
 }
 
@@ -27,9 +28,9 @@ export function named(launches: readonly LaunchReading[], wanted: string): Launc
         return byName[0]!;
     }
     if (byName.length > 1) {
-        throw new VerbRefusal('ambiguous-launch', `${byName.length} launches are called ${wanted}; name one by its id`, launchLines(byName));
+        throw new ToolRefusal('ambiguous-launch', `${byName.length} launches are called ${wanted}; name one by its id`, launchLines(byName));
     }
-    throw new VerbRefusal('unknown-launch', `This project has no launch ${wanted}`, launchLines(launches));
+    throw new ToolRefusal('unknown-launch', `This project has no launch ${wanted}`, launchLines(launches));
 }
 
 function lastLines(text: string, count: number): string {
@@ -42,7 +43,7 @@ async function started(context: ServerActionContext, wanted: string, restart: bo
     const launch = named(await host.list(projectId), wanted);
     const result = await host.start(projectId, launch.launchId, restart);
     if (result.outcome === 'held') {
-        throw new VerbRefusal(
+        throw new ToolRefusal(
             'launch-held',
             `${launch.name} runs only once a person approves it on this machine as it stands now; the launch chip in the toolbar asks them`,
             (result.held ?? []).map((held) => `held\t${field(held.launchId)}\t${field(held.command)}\t${field(held.cwd)}`)
@@ -51,7 +52,7 @@ async function started(context: ServerActionContext, wanted: string, restart: bo
     if (result.outcome === 'busy' && result.busy) {
         const { busy } = result;
         const holder = busy.projectId === projectId ? `the launch ${busy.launchId}` : 'a launch of another project';
-        throw new VerbRefusal('port-busy', `Port ${busy.port} is taken by ${holder}; nothing started`);
+        throw new ToolRefusal('port-busy', `Port ${busy.port} is taken by ${holder}; nothing started`);
     }
     return { output: { launchId: launch.launchId, name: launch.name, kind: launch.kind, members: launch.members } };
 }
@@ -62,7 +63,7 @@ function refuseFor(kind: LaunchConfigKind, input: LaunchFields): void {
     const notFor: readonly (keyof LaunchFields)[] = kind === 'group' ? ['command', 'cwd', 'url', 'env'] : kind === 'task' ? ['url', 'members'] : ['members'];
     const given = notFor.find((name) => input[name] !== undefined);
     if (given !== undefined) {
-        throw new VerbRefusal('wrong-kind', `A ${kind} takes no --${given}`);
+        throw new ToolRefusal('wrong-kind', `A ${kind} takes no ${given}`);
     }
 }
 
@@ -93,7 +94,7 @@ function launchFrom(before: LaunchConfig, overlay: LaunchConfigOverlay | undefin
         const env: Record<string, string> = { ...before.env };
         for (const [variable, value] of Object.entries(input.env)) {
             if (isSecretReference(env[variable]) || isSecretReference(overlay?.env?.[variable])) {
-                throw new VerbRefusal('secret-variable', `${variable} holds a secret the person keeps on this machine; only they change it`);
+                throw new ToolRefusal('secret-variable', `${variable} holds a secret the person keeps on this machine; only they change it`);
             }
             if (value === null) {
                 delete env[variable];
@@ -108,7 +109,7 @@ function launchFrom(before: LaunchConfig, overlay: LaunchConfigOverlay | undefin
         }
     }
     if (next.kind !== 'group' && !next.command?.trim()) {
-        throw new VerbRefusal('command-required', `A ${next.kind} needs --command: what its shell runs`);
+        throw new ToolRefusal('command-required', `A ${next.kind} needs command: what its shell runs`);
     }
     return next;
 }
@@ -134,7 +135,7 @@ export const launchActions: ActionHandlers<ServerActionContext> = {
         const { launchId } = named(readings, wanted);
         const entry = (await host.entries(projectId)).find((candidate) => candidate.id === launchId);
         if (entry === undefined) {
-            throw new VerbRefusal('unknown-launch', `This project has no launch ${wanted}`, launchLines(readings));
+            throw new ToolRefusal('unknown-launch', `This project has no launch ${wanted}`, launchLines(readings));
         }
         const { shared, overlay, ...before } = entry;
         const launch = launchFrom(before, overlay, input, readings);
@@ -165,7 +166,7 @@ export const launchActions: ActionHandlers<ServerActionContext> = {
         const launches = await host.list(projectId);
         const launch = named(launches, wanted);
         if (launch.kind === 'group') {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'launch-group',
                 `${launch.name} is a group and has no output of its own; read one of the launches it starts`,
                 launchLines(launches.filter((candidate) => launch.members.includes(candidate.launchId)))
@@ -183,7 +184,7 @@ export const launchActions: ActionHandlers<ServerActionContext> = {
         const { projectId } = context.place;
         const launch = named(await host.list(projectId), wanted);
         if (!launch.approved) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'launch-held',
                 `${launch.name} is stopped only once a person approves it on this machine as it stands now; the launch chip in the toolbar asks them`
             );

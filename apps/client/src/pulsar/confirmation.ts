@@ -1,6 +1,6 @@
+import { PROVIDER_NAMES, type Account, type ProviderId } from '@ruimte/pulsar';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import { PROVIDER_NAMES, type Account, type ProviderId } from '@ruimte/pulsar';
 
 /*
  * The line at the top of the account section that says a sign-in or an added provider went through.

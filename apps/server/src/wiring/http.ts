@@ -1,4 +1,5 @@
 import type { Server } from 'bun';
+import { join } from 'node:path';
 import {
     MACHINE_HEALTH_PATH,
     MACHINE_NOTIFY_PATH,
@@ -22,22 +23,22 @@ import { crossOriginHeaders, decideAccess, handleLocalTicketRequest, isOwner, pr
 import { handleLocalProofRequest } from '../auth/local-proof.ts';
 import { MachineAccountError, signForAccount, signLinkRequest } from '../auth/registration.ts';
 import { SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
-import { ARTIFACT_UPLOAD_BODY_BYTES, ARTIFACT_UPLOAD_PATH, handleArtifactUpload } from '../canvas/artifact-upload-route.ts';
-import { CANVAS_PATH, CANVAS_REQUEST_TIMEOUT_S, handleCanvasRequest } from '../canvas/canvas-route.ts';
-import type { CanvasHost } from '../canvas/verb.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from '../chat/attachment-route.ts';
 import { socketChannel } from '../connection.ts';
 import { hookContext } from '../context/context-note.ts';
-import { handleContextRequest } from '../context/context-route.ts';
-import { CONTEXT_PATH } from '../context/context-store.ts';
 import type { ClientAccess } from '../dispatcher.ts';
+import { errorText } from '../error-text.ts';
+import type { ExtensionHost } from '../extensions/extension-host.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from '../fs/file-route.ts';
 import { PAIRING_REMOVED } from '../handlers/auth.ts';
 import { answerRoute, type Route } from '../http-routes.ts';
+import { handleMcpRequest, MCP_PATH, MCP_REQUEST_TIMEOUT_S } from '../mcp/mcp-route.ts';
 import { handleProjectRequest, PROJECTS_PATH } from '../projects/icon-route.ts';
+import { noteOnLine } from '../providers/launch.ts';
 import { handleMachineNotify } from '../push/notify-route.ts';
-import { takesNoteOnLine } from '../providers/launch.ts';
+import { shotFolders } from '../shots.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from '../streams/http-stream.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { BUILD, VERSION } from '../version.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { ArtifactsBundle } from './artifacts.ts';
@@ -46,13 +47,15 @@ import type { DevicesBundle } from './devices.ts';
 import type { MachineBundle } from './machine.ts';
 import type { NetworkBundle } from './network.ts';
 import type { PowerBundle } from './power.ts';
+import type { ProcessesBundle } from './processes.ts';
 import type { ProjectsBundle } from './projects.ts';
 import type { DaemonRuntime } from './runtime.ts';
-import type { ProcessesBundle } from './processes.ts';
 import type { VoiceBundle } from './voice.ts';
 
 // What `ruimte login` has the machine sign; local secret only, like the work.
 const MACHINE_LINK_PATH = '/machine/link-request';
+const EXTENSION_LINK_PATH = '/extensions/link';
+const EXTENSION_UNLINK_PATH = '/extensions/unlink';
 const MACHINE_REGISTRATION_PATH = '/machine/registration';
 // What `ruimte logout` asks: the machine leaves its account, as `endpoint.leaveAccount` does for the app.
 const MACHINE_LEAVE_ACCOUNT_PATH = '/machine/leave-account';
@@ -60,11 +63,14 @@ const MACHINE_LEAVE_ACCOUNT_PATH = '/machine/leave-account';
 const LEGACY_PAIRING_PATHS = ['/auth/pair', '/auth/pairing-token', '/auth/challenge', '/auth/ticket'];
 const RegistrationRequestSchema = z.object({ accountId: AccountSchema.shape.id });
 const VoiceKeyRequestSchema = z.object({ key: z.string() });
+// `owner` is the token of one `extension dev` run, so its Ctrl-C ends only the link it set itself.
+const ExtensionLinkSchema = z.object({ folder: z.string().min(1), owner: z.string().min(1).optional() });
+const ExtensionUnlinkSchema = z.object({ id: z.string().min(1), owner: z.string().min(1).optional() });
 
-// Past anything a hook or a verb sends, a visual of 16 MiB with its JSON escaping included, and what any other request may declare.
+// Past anything a hook or a tool call sends, a visual of 16 MiB with its JSON escaping included, and what any other request may declare.
 const MAX_REQUEST_BODY_BYTES = 24 * 1024 * 1024;
-// A model an agent attaches, 50 MiB as base64 with its other words; the verb route checks the token before it reads the body. Also the server's ceiling.
-const MAX_VERB_BODY_BYTES = 72 * 1024 * 1024;
+// A model an agent attaches, 50 MiB as base64 with its other fields; the MCP route checks the token before it reads the body. Also the server's ceiling.
+const MAX_MCP_BODY_BYTES = 72 * 1024 * 1024;
 
 export type SocketData = ClientAccess & { protocolRefused: boolean; ticket: string | null };
 
@@ -83,12 +89,14 @@ interface HttpInput {
     canvasHost: CanvasHost;
     voice: VoiceBundle;
     artifacts: ArtifactsBundle;
+    extensions: ExtensionHost;
 }
 
 /* Every HTTP route and the upgrade, before the cross-origin headers the desktop app's page needs. */
 function daemonRoutes(input: HttpInput): Route<SocketData>[] {
     const { runtime, machine, stores, agents, projects, devices, processes, power, network, clients, canvasHost, voice } = input;
     const { config } = runtime;
+    const { extensions } = input;
     const { identity, auth, handshake, access, machineHome } = machine;
     const { sessions, chats, context } = agents;
     const { brokerSwitch } = network;
@@ -195,6 +203,33 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
             }
         },
         {
+            exact: [EXTENSION_LINK_PATH, EXTENSION_UNLINK_PATH],
+            // `ruimte extension dev` on the local secret, which is the only way a folder starts running here.
+            handle: async ({ request, url, remote }) => {
+                const refused = await refuseUnlessOwner(request, remote, 'POST');
+                if (refused) {
+                    return refused;
+                }
+                const body: unknown = await request.json().catch(() => null);
+                try {
+                    if (url.pathname === EXTENSION_LINK_PATH) {
+                        const parsed = ExtensionLinkSchema.safeParse(body);
+                        return parsed.success
+                            ? Response.json({ id: await extensions.linked(parsed.data.folder, parsed.data.owner) })
+                            : new Response('Expected a folder', { status: 400 });
+                    }
+                    const parsed = ExtensionUnlinkSchema.safeParse(body);
+                    if (!parsed.success) {
+                        return new Response('Expected an id', { status: 400 });
+                    }
+                    await extensions.unlink(parsed.data.id, parsed.data.owner);
+                    return Response.json({});
+                } catch (e) {
+                    return Response.json({ message: errorText(e) }, { status: 422 });
+                }
+            }
+        },
+        {
             exact: [MACHINE_LINK_PATH, MACHINE_REGISTRATION_PATH],
             // `ruimte login` on the local secret: the machine signs, the terminal talks to the address book.
             handle: async ({ request, url, remote }) => {
@@ -259,37 +294,32 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     // Asked on every event that can carry an answer, so the memory of what this
                     // agent was told keeps up with its turns even where nothing is printed.
                     const changed = context.changeSince(sessionId);
-                    // A CLI the node launched got the verbs on its line; one typed by hand in the shell did not.
-                    const verbs = !(takesNoteOnLine(kind) && sessions.get(sessionId)?.launch?.kind === kind);
+                    // A CLI the node launched fresh got the tools note on its line; a resume or one typed by hand in the shell did not.
+                    const tools = !noteOnLine(kind, sessions.get(sessionId)?.launch);
                     return hookContext(event, context.list(sessionId), {
                         changed,
                         messages: agents.messagesFor(sessionId),
                         depth: stores.lineage.depthOf(sessionId),
                         standalone: projects.store.index.locate(sessionId)?.canvasId === null,
-                        verbs,
+                        tools,
                         computer: devices.computer.usable,
                         reach: identity.reachOpenProjects
                     });
                 })
         },
-        // Before the verbs, whose prefix it shares: an agent's files arrive here in raw pieces, never in a verb's body.
         {
-            below: ARTIFACT_UPLOAD_PATH,
-            bodyBytes: ARTIFACT_UPLOAD_BODY_BYTES,
-            handle: ({ request, url }) => handleArtifactUpload(request, url, { targetForToken: agents.targetForToken, artifacts: input.artifacts.artifacts })
-        },
-        {
-            below: CANVAS_PATH,
-            bodyBytes: MAX_VERB_BODY_BYTES,
-            handle: ({ request, url, server }) => {
-                server.timeout(request, CANVAS_REQUEST_TIMEOUT_S);
-                return handleCanvasRequest(request, url.pathname, { targetForToken: agents.targetForToken, host: canvasHost });
+            exact: [MCP_PATH],
+            bodyBytes: MAX_MCP_BODY_BYTES,
+            handle: ({ request, server }) => {
+                server.timeout(request, MCP_REQUEST_TIMEOUT_S);
+                return handleMcpRequest(request, {
+                    targetForToken: agents.targetForToken,
+                    host: canvasHost,
+                    uploads: input.artifacts.artifacts,
+                    callerFolders: (caller) => [join(config.home, 'attachments', caller), agents.visuals.workspacePath(caller)],
+                    shotFolders: shotFolders(config.home)
+                });
             }
-        },
-        {
-            exact: [CONTEXT_PATH],
-            below: CONTEXT_PATH,
-            handle: ({ request, url }) => handleContextRequest(request, url.pathname, { targetForToken: agents.targetForToken, host: canvasHost })
         }
     ];
 }
@@ -303,7 +333,7 @@ export function serveDaemon(input: HttpInput): Server<SocketData> {
     return Bun.serve<SocketData>({
         hostname: config.host,
         port: config.port,
-        maxRequestBodySize: MAX_VERB_BODY_BYTES,
+        maxRequestBodySize: MAX_MCP_BODY_BYTES,
         async fetch(request, server) {
             const cors = crossOriginHeaders(request);
             if (cors !== null && request.method === 'OPTIONS') {

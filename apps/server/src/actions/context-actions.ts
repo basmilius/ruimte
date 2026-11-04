@@ -1,12 +1,13 @@
-import type { ActionHandlers } from '@ruimte/actions';
 import { CodedError } from '@adecore/agents';
+import { ToolRefusal } from '@adecore/agents/context';
+import type { ActionHandlers } from '@ruimte/actions';
 import { canvasContextSources, isHiddenCanvasView, type ContextSource } from '@ruimte/contracts';
-import { resolveReference, type Reference } from '../context/references.ts';
-import { arrangedCanvas, canvasHolding, isChatView, notOnView, viewRequired } from '../canvas/chat-view.ts';
-import { VerbRefusal, snoozedAt, type ContextHost } from '../canvas/verb.ts';
-import { refuseOtherMachine } from '../canvas/remote-node.ts';
 import { ContextRefusal } from '../context/context-store.ts';
 import { readInForm, readReference } from '../context/read-forms.ts';
+import { resolveReference, type Reference } from '../context/references.ts';
+import { arrangedCanvas, canvasHolding, isChatView, notOnView, viewRequired } from '../tools/chat-view.ts';
+import { snoozedAt, type ContextHost } from '../tools/host.ts';
+import { refuseOtherMachine } from '../tools/remote-node.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 function contextOf(context: ServerActionContext): ContextHost {
@@ -26,7 +27,7 @@ async function arrangedSource({ host, place }: ServerActionContext, caller: stri
     }
     const holding = canvasHolding(content, sourceId);
     if (holding && holding.id !== canvas.id) {
-        throw notOnView(sourceId, holding, canvas, `read ${sourceId}`);
+        throw notOnView(sourceId, holding, canvas, `context_read ${sourceId}`);
     }
     if (holding) {
         throw new ContextRefusal('unreadable', `${sourceId} is on ${canvas.id}, but it holds nothing to read`);
@@ -35,7 +36,7 @@ async function arrangedSource({ host, place }: ServerActionContext, caller: stri
 }
 
 /*
- * What an id names in the other project `--project` reached, read without a line: a person opened every
+ * What an id names in the other project `project` reached, read without a line: a person opened every
  * open project to agents with the switch, as a `#` opens one canvas. Another machine's canvas stays out.
  */
 async function reachedReference({ host, place }: ServerActionContext, sourceId: string): Promise<Reference> {
@@ -50,14 +51,14 @@ async function reachedReference({ host, place }: ServerActionContext, sourceId: 
 }
 
 /* Why a chat view's read of a node found nothing: it named no canvas, which is what stands in for a line. */
-async function chatViewRefusal({ host }: ServerActionContext, caller: string, sourceId: string): Promise<VerbRefusal | null> {
+async function chatViewRefusal({ host }: ServerActionContext, caller: string, sourceId: string): Promise<ToolRefusal | null> {
     const place = host.projects.locate(caller);
     if (place === null) {
         return null;
     }
     const content = await host.projects.read(place.projectId);
     const holding = canvasHolding(content, sourceId);
-    return holding && isChatView(content, caller) ? viewRequired(sourceId, holding, `read ${sourceId}`) : null;
+    return holding && isChatView(content, caller) ? viewRequired(sourceId, holding, `context_read ${sourceId}`) : null;
 }
 
 /* What a person linked into the caller: only a line it sits on, or the frame of a group, makes a source readable. */
@@ -77,7 +78,7 @@ export const contextActions: ActionHandlers<ServerActionContext> = {
         refuseOtherMachine(context.host, sourceId);
         if (context.origin !== undefined) {
             if (viewId != null) {
-                throw new VerbRefusal('bad-arguments', '--project reads every node of that project without --view; leave --view out');
+                throw new ToolRefusal('bad-arguments', 'project reads every node of that project without view; leave view out');
             }
             const reached = await reachedReference(context, sourceId);
             if (reached.kind === 'canvas' || reached.kind === 'database') {

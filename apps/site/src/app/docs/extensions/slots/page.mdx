@@ -1,0 +1,165 @@
+import { SlotTable } from '@/components/docs/SlotTable';
+import { SlotMap } from '@/components/docs/extensions/SlotMap.tsx';
+import { ActionRun } from '@/components/docs/extensions/ActionRun.tsx';
+import { PaletteCommands, PaletteSource } from '@/components/docs/extensions/PaletteScenes.tsx';
+
+export const metadata = { title: 'Slots and actions' };
+
+# Slots and actions
+
+<p className="lead">A slot is a place an extension can add to, such as a node's header, the canvas menu or the editor's status bar.</p>
+
+<SlotMap />
+
+Three things go in slots:
+
+- `defineAction` is a button in a bar, or an item in a menu.
+- `defineMenu` is a menu of your own: a submenu in a menu, a dropdown in a bar.
+- `defineWidget` is your own React.
+
+## Actions
+
+```ts
+defineAction({
+    id: 'summarize',
+    title: 'Summarize',
+    icon: 'sparkles',
+    shortcut: 'mod+alt+u',
+    slots: {
+        selectionBar: ({ nodes }) => nodes.length > 1,
+        nodeMenu: true
+    },
+    async run({ nodes, signal }) {
+        // ...
+    }
+});
+```
+
+Each slot gets a function that receives what is true at that place and answers:
+
+- `false` to hide the action there,
+- `true` to show it as it is,
+- an object to change what it shows there: `title`, `icon`, `badge`, `order`, or `disabled` with an optional reason.
+
+```ts
+slots: {
+    nodeHeader: ({ node }) => node.kind === 'terminal' && {
+        badge: 'new'
+    }
+}
+```
+
+<ActionRun />
+
+While `run` is pending, the nodes it is about show a spinner, which also stops the action through `signal`, and its button is disabled for those nodes. When `run` throws, the person sees the error. For work that is no action, `host.busy` shows the same spinner. [Add a button](/docs/extensions/how-to/button) builds an action for a terminal's header and the canvas menu.
+
+An action without `slots` shows only where a menu of yours puts it, and gets that menu's context. Type that context yourself with `defineAction<{ node: NodeInfo }>`.
+
+A `shortcut` needs `mod` or `alt`. `mod` is Cmd on macOS and Ctrl elsewhere, so `'mod+alt+u'` is <Shortcut keys="Mod+Alt+U" /> on this computer. Pressed, it runs with the context of the command palette. Ruimte's own shortcuts come first. [Add a command](/docs/extensions/how-to/command) walks through one.
+
+## Menus
+
+```ts
+defineMenu({
+    id: 'standup',
+    title: 'Standup',
+    icon: 'calendar',
+    slots: { nodeMenu: true, canvasMenu: true },
+    items: (context) => [
+        summarize,
+        'separator',
+        {
+            title: 'Settings',
+            run: () => host.openSettings()
+        }
+    ]
+});
+```
+
+An item is an action, `'separator'`, an item with `title` and `run` (and `checked` for a toggle), or a submenu with `title` and `items`. In a menu of Ruimte's own, an extension always comes below Ruimte's items.
+
+## Widgets
+
+```ts
+defineWidget({
+    id: 'count',
+    slots: { editorStatusBar: true },
+    component: () => import('./WordCount')
+});
+```
+
+The component gets `context`, the same object a slot function gets. A widget works in every slot, also in a menu.
+
+## Every slot
+
+Every slot also gets the base context: the `project`, the `view` in front, the `machine` and the `theme`.
+
+<SlotTable />
+
+## The command palette
+
+`commandPalette` puts an action in the palette. `definePaletteSource` adds rows for what a person types, from your own search:
+
+```ts
+definePaletteSource({
+    id: 'issues',
+    title: 'Issues',
+    search: async (query) => {
+        const issues = await findIssues(query);
+
+        return issues.map((issue) => ({
+            id: issue.id,
+            title: issue.title,
+            detail: issue.state,
+            run: () => host.openUrl(issue.url)
+        }));
+    }
+});
+```
+
+It runs after a pause in the typing. A source that is slow or fails costs only its own rows. Each row shows its `detail` beside the title, or the source's `title` without one:
+
+<PaletteSource />
+
+`defineCommand` adds a plain command to the palette, with no slots and no context:
+
+```ts
+defineCommand({
+    id: 'standup',
+    title: 'Open the standup',
+    run: () => standup.open()
+});
+```
+
+A person finds a command and an action alike, by a word of the title:
+
+<PaletteCommands />
+
+## Templates
+
+`defineTemplate` adds an entry under Extensions in the canvas menu. `create` gets the spot the person clicked as `at`. A `canvas` call places a node beside the node it is `near`, or in the middle of the canvas, so move what you made to `at`:
+
+```ts
+defineTemplate({
+    id: 'review',
+    title: 'Review setup',
+    icon: 'list-checks',
+    create: ({ at }) => {
+        const note = canvas.createNote({
+            title: 'Review',
+            text: 'What to check'
+        });
+
+        if (note.ok) {
+            canvas.update(note.value, {
+                x: at.x,
+                y: at.y
+            });
+        }
+    }
+});
+```
+
+## Finding the slots
+
+While `ruimte extension dev` runs, "Show extension slots" in the command palette outlines every slot on the screen with its name. Its tooltip lists what the slot tells.

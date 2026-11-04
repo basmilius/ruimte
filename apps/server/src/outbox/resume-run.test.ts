@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
-import type { ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
 import { AttachmentStore, ChatStore } from '@adecore/agents/chat';
 import type { SpawnChatProcess } from '@adecore/agents/chat';
-import { OutboxWorker, RETRY_DELAYS_MS } from '@adecore/agents/coordination';
+import { OutboxWorker, oweResume, resumeRunHandler, resumeRunParked, RETRY_DELAYS_MS } from '@adecore/agents/coordination';
 import { fakeClaude, fakeCodex, inProcess, type InProcessCli, ManualClock } from '@adecore/agents/testing';
+import type { ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
 import { ChatManager, RESUME_PROMPT } from '../chat/chat-manager.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
@@ -12,7 +12,6 @@ import { releasedProject } from '../tasks/test-daemon.ts';
 import { untilChecked } from '../until-test-helpers.ts';
 import { refusingHandlers } from './outbox-test-helpers.ts';
 import { OutboxStore, type OutboxWork } from './outbox.ts';
-import { oweResume, resumeRunHandler, resumeRunParked } from './resume-run.ts';
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
@@ -155,7 +154,7 @@ describe('resume-run', () => {
         expect(turnOf(daemon, turnId)).toMatchObject({ state: 'done', attempt: 2 });
         expect(session.info).toMatchObject({ status: 'idle', activeTurnId: null, agentSessionId });
         const argv = daemon.claude.started[0]!.argv;
-        expect(argv[argv.indexOf('--resume') + 1]).toBe(agentSessionId);
+        expect(argv).toContain(`--resume=${agentSessionId}`);
         const items = session.thread.list();
         // No message of a person was made up. The prompt only went to the CLI, and the thread says why the turn went on.
         expect(items.filter((item) => item.kind === 'user').map((item) => (item.kind === 'user' ? item.text : ''))).toEqual(['slow']);
@@ -195,7 +194,7 @@ describe('resume-run', () => {
         expect(turnOf(daemon, turnId, 'chat-view')).toMatchObject({ state: 'done', attempt: 2 });
         expect(daemon.chats.get('chat-view')?.info).toMatchObject({ status: 'idle', activeTurnId: null, agentSessionId });
         const argv = daemon.claude.started[0]!.argv;
-        expect(argv[argv.indexOf('--resume') + 1]).toBe(agentSessionId);
+        expect(argv).toContain(`--resume=${agentSessionId}`);
         expect(daemon.outbox.list()).toEqual([]);
     });
 

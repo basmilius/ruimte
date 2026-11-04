@@ -1,12 +1,12 @@
-import { useRef } from 'react';
-import { useTranslation } from 'react-i18next';
-import { GitBranch, Pencil, Play, Plus, Search, ShieldCheck, SquareTerminal } from 'lucide-react';
-import type { GitRepo, LaunchesDocument } from '@ruimte/contracts';
 import { Button, Icon, IconButton, Menu, Popover, PromptDialog, useNow } from '@adecore/ui';
 import { formatAgo } from '@adecore/ui/format';
+import type { GitRepo, LaunchesDocument } from '@ruimte/contracts';
+import { GitBranch, Pencil, Play, Plus, Search, ShieldCheck, SquareTerminal } from 'lucide-react';
+import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { afterSettleCandidates, chooseAfterSettle, chooseLaunch, launchActions, showLaunchOutput, startLaunch } from '@/launches/actions';
-import { HeldCommand, LaunchDot, LaunchStatusIcon } from '@/launches/LaunchControls';
 import { foundText, newSuggestions } from '@/launches/editing';
+import { HeldCommand, LaunchDot, LaunchStatusIcon } from '@/launches/LaunchControls';
 import { headlineOf, launchSections, type LaunchView } from '@/launches/model';
 import { useLaunches, useLaunchSuggestions, useProjectLaunches } from '@/launches/state';
 import { useProjectRepos } from '@/state/git-repos';

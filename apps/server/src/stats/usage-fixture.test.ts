@@ -10,7 +10,7 @@ import {
     countLimit,
     countTurn,
     countUsage,
-    countVerb,
+    countToolCall,
     installUsageCounter,
     recordFirstToken,
     recordStartup,
@@ -51,8 +51,8 @@ function batchOfTwoDays(): unknown {
     countTurn('nanogpt', 'my-finetune', 'supervised');
     countTurn('my-own-agent', null, null);
     countLimit('claude');
-    countVerb('agent');
-    countVerb('read');
+    countToolCall('agent');
+    countToolCall('read');
     for (const counted of [
         'projects.opened',
         'terminals.started',

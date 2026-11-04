@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import type { GitStatus, GitWatchResult } from '@ruimte/contracts';
+import { useEffect, useState } from 'react';
 import { pathAffected } from '@/state/changed-paths';
 import { HeldWatches, type HeldWatch } from '@/state/held-watches';
 import { currentEndpointId, endpointKey, useEndpointId } from '@/state/keys';

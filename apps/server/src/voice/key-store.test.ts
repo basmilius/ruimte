@@ -3,8 +3,8 @@ import { mkdir, readdir, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { runVoice, type VoiceCliOptions } from '../cli/voice.ts';
 import { MachineHome } from '../fs/machine-home.ts';
-import { VoiceKeyStore } from './key-store.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { VoiceKeyStore } from './key-store.ts';
 
 // Recognizable, so a test can prove it never lands in a line it should not.
 const KEY = 'sk-test-voice-0123456789abcdef';

@@ -1,6 +1,6 @@
-import i18next from 'i18next';
-import type { AgentKind, Plan, PlanItem, PlanSection, PlanStep, PlanStepState, PlanText } from '@ruimte/contracts';
 import { allItems, isParentStep, leafSteps, planProgress, stepState, type PlanProgress } from '@adecore/plan';
+import type { AgentKind, Plan, PlanItem, PlanSection, PlanStep, PlanStepState, PlanText } from '@ruimte/contracts';
+import i18next from 'i18next';
 
 /* Which steps the panel lists; local to this client, never part of the plan. */
 export type PlanFilter = 'all' | 'open' | 'issues';

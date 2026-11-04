@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ArtifactSummary, ArtifactVersion, ChatInfo, ChatItem } from '@ruimte/contracts';
+import { act } from 'react';
 import { WORKSPACE_CHAT_HOST } from '@/chat/workspace-host';
 import { useArtifactSelection } from '@/output/open';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
-import { FakeMachine } from '../../testing/fake-machine';
-import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 import { clickOn, layOutChat, mount, openToolCall, until, type Mounted } from '../../testing/dom';
+import { FakeMachine } from '../../testing/fake-machine';
 import { claudeProvider } from '../../testing/fake-provider';
+import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 
 const CLAUDE = claudeProvider({ chat: true, terminal: true, hooks: true, diffs: 'before-after', slashCommands: true });
 

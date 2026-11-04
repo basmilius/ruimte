@@ -1,8 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import type { ChatAttachResult, ComputerApproval, ProjectProposal, SecretRequest } from '@ruimte/contracts';
-import { Button, ButtonGroup, ErrorBoundary, IconButton, PreviewCard } from '@adecore/ui';
+import { ChatScopeContext, useChatHost } from '@adecore/agents-react';
+import { Markdown } from '@adecore/agents-react/chat/ui';
 import {
     answerPrompt,
     promptCreatedAt,
@@ -12,15 +9,19 @@ import {
     PROMPT_SURFACE,
     PromptView
 } from '@adecore/agents-react/prompts';
-import { ChatScopeContext, useChatHost } from '@adecore/agents-react';
-import { Markdown } from '@adecore/agents-react/chat/ui';
 import { useChats, type ChatState, useProviders } from '@adecore/agents-react/state';
+import { Button, ButtonGroup, ErrorBoundary, IconButton, PreviewCard } from '@adecore/ui';
+import type { ChatAttachResult, ComputerApproval, ProjectProposal, SecretRequest } from '@ruimte/contracts';
+import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
+import { WaitAge } from '@/attention/WaitLabel';
 import { canvasPrompts, stackFront, type CanvasPrompt } from '@/canvas/prompts';
 import { useComputer } from '@/state/computer';
+import { endpointKey, useEndpointId } from '@/state/keys';
 import { useProposals } from '@/state/proposals';
 import { useSecrets } from '@/state/secrets';
-import { endpointKey, useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { useWaitingSince, type WaitDetails } from '@/state/waiting';
 import { machineTransport } from '@/transport';
@@ -28,7 +29,6 @@ import { chatScopeOf } from '@/transport/chat-scope';
 import { chatClientFor } from '@/transport/connections';
 import { useEndpointConnection } from '@/transport/status';
 import type { SidebarNode } from './sidebar-rows';
-import { WaitAge } from '@/attention/WaitLabel';
 
 const NO_APPROVALS: readonly ComputerApproval[] = [];
 const EXCERPT_LENGTH = 280;

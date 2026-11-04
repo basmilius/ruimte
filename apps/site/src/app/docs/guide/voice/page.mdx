@@ -1,0 +1,51 @@
+import { Shortcut } from '@/components/docs/Shortcut.tsx';
+import { Note } from '@/components/docs/guide/ui.tsx';
+import { VoiceControl } from '@/components/docs/guide/VoiceControl.tsx';
+
+export const metadata = { title: 'Voice' };
+
+# Voice
+
+<p className="lead">Speech to text types what you say, with a model on your Mac. Voice Control talks with you about your workspace, on a cloud model.</p>
+
+## Speech to text
+
+Speech to text works in the desktop app on a Mac. It dictates into a chat, a note, a field or a terminal. Recognition runs on your Mac; Ruimte never uploads or saves audio, and you need no account or API key.
+
+### Turn it on
+
+1. Open Settings, Voice.
+2. Turn on **Enable Speech to text**. Ruimte downloads a 2.6 GB speech model the first time.
+3. Pick the microphone and the language.
+
+Turning Speech to text off keeps the model. **Remove model** deletes it.
+
+### Dictate
+
+Press <Shortcut keys="Mod+Shift+D" /> to start and to stop. A live transcript shows while you speak. In a terminal, the text waits until you click **Paste into terminal**; it never presses Enter.
+
+## Voice Control
+
+Ask Voice Control what is on screen, switch to another view, add a note, open a terminal, start a chat or send a chat a message.
+
+### Turn it on
+
+1. Open Settings, Voice, Voice Control.
+2. Enter your OpenAI API key. It stays on your machine and goes only to OpenAI.
+3. Pick its voice and the language it speaks.
+
+### Talk
+
+Press <Shortcut keys="Mod+Shift+M" /> to start or end a conversation, or hold it to talk. The Voice Control panel shows what you said, what it answered and each action it took. **Undo action** reverses a note it added.
+
+<VoiceControl />
+
+| Limit | Detail |
+| --- | --- |
+| Project | It works in the current project of one machine. |
+| Chats it starts | Supervised mode at most |
+| Clearing a chat | It asks you first, every time. |
+| Deleting views or nodes | It asks first while **Confirm deletions** is on. |
+| Audio | The machine never keeps it. |
+
+<Note>Voice Control sends what you say to OpenAI. Speech to text does not.</Note>

@@ -1,6 +1,6 @@
-import i18next from 'i18next';
 import { clipText } from '@ruimte/contracts';
 import { accessRequestMessage, randomToken, type AccessRequestPayload, type AccessStatement, type SignalAccess } from '@ruimte/pulsar';
+import i18next from 'i18next';
 import type { ClientKey } from '@/endpoint/client-key';
 import { currentClientLabel } from '@/endpoint/client-label';
 import { withAccessToken } from './account';

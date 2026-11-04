@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { ErrorBoundary, Segmented } from '@adecore/ui';
 import { useSettingsTarget } from '@adecore/ui/settings';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CodeSection } from '@/shell/settings/panes/CodeSection';
 import { EditorAiTab } from '@/shell/settings/panes/EditorAiTab';
 import { EditorFoldingTab } from '@/shell/settings/panes/EditorFoldingTab';

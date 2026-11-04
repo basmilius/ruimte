@@ -1,10 +1,12 @@
 import { mkdir, readFile, rename } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { z } from 'zod';
+import { Serializer } from '@adecore/utils/async';
+import { isNotFound } from '@adecore/utils/errors';
+import { fileExists, writeAtomic } from '@adecore/utils/fs';
+import { isRecord } from '@adecore/utils/record';
 import type { AgentIntegrationFile, AgentIntegrationReport, AgentIntegrationsSummary, AgentKind } from '@ruimte/contracts';
-import { fileExists, isNotFound, writeAtomic, Serializer } from '@adecore/agents';
+import { z } from 'zod';
 import { errorText } from '../error-text.ts';
-import { isRecord } from '../is-record.ts';
 import { realOrSelf } from '../fs/real-path.ts';
 import {
     CODEX_RULES,
@@ -13,6 +15,7 @@ import {
     codexRulesPathIn,
     hasAntigravityRules,
     defaultConfigFolder,
+    formerRulesPathIn,
     holdsOurHook,
     hookPathIn,
     installInFolder,
@@ -208,7 +211,9 @@ export class AgentIntegrations {
                 }
                 for (const report of await this.installInto(kind, folder)) {
                     if (report.outcome === 'written') {
-                        console.log(`Installed the ${kind} ${report.kind === 'hooks' ? 'status hooks' : 'rule for ruimte-context'} in ${report.path}`);
+                        console.log(`Installed the ${kind} status hooks in ${report.path}`);
+                    } else if (report.outcome === 'removed' || report.outcome === 'deleted') {
+                        console.log(`Removed the former ${kind} rule for ruimte-context from ${report.path}`);
                     } else if (report.outcome === 'failed' || report.outcome === 'refused') {
                         console.error(`Could not install the ${kind} ${report.kind}: ${report.message ?? 'the file is not a settings object'}`);
                     }
@@ -247,7 +252,10 @@ export class AgentIntegrations {
         });
     }
 
-    /* Every file the integration writes or would write, for the dialog and the settings to list. Local secret only. */
+    /*
+     * Every file the integration writes or would write, for the dialog and the settings to list, and a rules file
+     * of an earlier release while it is still there. Local secret only.
+     */
     async files(): Promise<AgentIntegrationFile[]> {
         const files: AgentIntegrationFile[] = [];
         for (const kind of INTEGRATION_KINDS) {
@@ -260,6 +268,9 @@ export class AgentIntegrations {
                     }
                     seen.add(key);
                     const present = await fileExists(target.path);
+                    if (target.kind === 'rules' && !present) {
+                        continue;
+                    }
                     const ours =
                         present && (target.kind === 'rules' ? await hasOurRules(kind, target.path) : holdsOurHook(await jsonOrNull(target.path), kind));
                     files.push({ provider: kind, path: target.path, kind: target.kind, present, ours });
@@ -285,13 +296,11 @@ export class AgentIntegrations {
         return [...(folder === null ? [] : [folder]), ...accounts];
     }
 
+    /* The hooks file of a folder, and the rules file an earlier release wrote there, which turning off still clears. */
     private targetsIn(kind: AgentKind, folder: string): { path: string; kind: 'hooks' | 'rules' }[] {
         const hooks = hookPathIn(kind, folder);
-        return [
-            ...(kind === 'antigravity' ? [{ path: antigravitySettingsPathIn(folder), kind: 'rules' as const }] : []),
-            ...(hooks === null ? [] : [{ path: hooks, kind: 'hooks' as const }]),
-            ...(kind === 'codex' ? [{ path: codexRulesPathIn(folder), kind: 'rules' as const }] : [])
-        ];
+        const rules = formerRulesPathIn(kind, folder);
+        return [...(hooks === null ? [] : [{ path: hooks, kind: 'hooks' as const }]), ...(rules === null ? [] : [{ path: rules, kind: 'rules' as const }])];
     }
 
     /* Whether the CLI's default folder already holds something of Ruimte's, which is how an earlier release left it. */
@@ -329,7 +338,49 @@ export class AgentIntegrations {
         for (const install of installs) {
             this.remember(kind, install);
         }
-        return installs.map((install) => ({ path: install.path, kind: install.kind, outcome: install.result }));
+        const reports: AgentIntegrationReport[] = installs.map((install) => ({ path: install.path, kind: install.kind, outcome: install.result }));
+        return [...reports, ...(await this.removeFormerRules(kind, folder))];
+    }
+
+    /*
+     * Takes out the `ruimte-context` rules an earlier release wrote into this folder, exactly those and nothing of a
+     * person's: only a file the ledger says Ruimte wrote, since a person may have added the same rules. A folder
+     * without them reports nothing; one a person edited, or that will not read, says so.
+     */
+    private async removeFormerRules(kind: AgentKind, folder: string): Promise<AgentIntegrationReport[]> {
+        const path = formerRulesPathIn(kind, folder);
+
+        if (path === null) {
+            return [];
+        }
+
+        const state = this.stateOf(kind);
+        const entry = await this.ledgerEntry(kind, path);
+
+        if (entry === null) {
+            return [];
+        }
+
+        const report = kind === 'antigravity' ? await revokeAntigravityRules(path, entry) : await revokeCodexRules(path);
+
+        if (report.outcome !== 'kept-edited' && report.outcome !== 'refused' && report.outcome !== 'failed') {
+            this.providers[kind] = { ...state, written: state.written.filter((written) => written !== entry) };
+        }
+
+        return report.outcome === 'missing' || report.outcome === 'none' ? [] : [report];
+    }
+
+    /* What the ledger says Ruimte wrote at this path, matched on real paths; null for a file it never wrote. */
+    private async ledgerEntry(kind: AgentKind, path: string): Promise<Written | null> {
+        const key = await realOrSelf(path);
+
+        for (const written of this.stateOf(kind).written) {
+            if (written.path === path || (await realOrSelf(written.path)) === key) {
+                return written;
+            }
+        }
+
+        return null;
     }
 
     /* The first time a file is written decides whether it was ours to begin with; later runs only confirm. */
@@ -361,7 +412,14 @@ export class AgentIntegrations {
         }
         const reports: AgentIntegrationReport[] = [];
         for (const [key, target] of targets) {
-            const entry: LedgerEntry = ledger.get(key) ?? { createdFile: false, createdHooksKey: false };
+            const written = ledger.get(key);
+
+            // A person may have added the former rules themselves; only the ones Ruimte wrote are its to take out.
+            if (target.kind === 'rules' && written === undefined) {
+                continue;
+            }
+
+            const entry: LedgerEntry = written ?? { createdFile: false, createdHooksKey: false };
             reports.push(await this.revokeTarget(kind, target, entry));
         }
         this.providers[kind] = { ...this.stateOf(kind), written: [] };

@@ -1,22 +1,23 @@
-import type { StoreApi } from 'zustand';
-import type {
-    AgentKind,
-    AgentStatus,
-    DeviceReference,
-    NodeSide,
-    ProjectEdge,
-    ProjectCanvasLine,
-    ProjectLayout,
-    ProjectNode,
-    ProjectText,
-    RuntimeMode,
-    ViewLocks
+import {
+    groupUnder,
+    type AgentKind,
+    type AgentStatus,
+    type DeviceReference,
+    type NodeSide,
+    type ProjectEdge,
+    type ProjectCanvasLine,
+    type ProjectLayout,
+    type ProjectNode,
+    type ProjectText,
+    type RuntimeMode,
+    type ViewLocks
 } from '@ruimte/contracts';
+import type { StoreApi } from 'zustand';
+import { textRect } from '@/canvas/edge-lines';
+import { lineBounds } from '@/canvas/line-geometry';
 import type { Point, Rect } from '@/canvas/math';
 import type { CanvasPatch } from '@/project/merge';
 import type { CanvasState } from '@/state/canvas';
-import { textRect } from '@/canvas/edge-lines';
-import { lineBounds } from '@/canvas/line-geometry';
 
 export type CanvasSet = StoreApi<CanvasState>['setState'];
 export type CanvasGet = () => CanvasState;
@@ -124,19 +125,27 @@ export function contains(rect: Rect, point: Point): boolean {
     return point.x >= rect.x && point.x <= rect.x + rect.w && point.y >= rect.y && point.y <= rect.y + rect.h;
 }
 
-/* What one group holds: its remembered members when collapsed, else whatever has its center inside the frame. */
+/*
+ * What one group holds, by the rule of `groupMemberIds`: the members it spells out, open or collapsed.
+ * One that spells out none holds what has its center inside the frame, where of two overlapping
+ * groups only the larger holds the other, so no two hold each other.
+ */
 export function membersOf(
     group: CanvasNode,
     nodes: Record<string, CanvasNode>,
     texts: Record<string, TextElement>,
     lines: Record<string, ProjectCanvasLine> = {}
 ): string[] {
+    if (group.memberIds !== undefined) {
+        return group.memberIds;
+    }
     if (group.collapsed) {
-        return group.memberIds ?? [];
+        return [];
     }
     const members: string[] = [];
+    const area = group.w * group.h;
     for (const node of Object.values(nodes)) {
-        if (node.id !== group.id && contains(group, center(node))) {
+        if (node.id !== group.id && contains(group, center(node)) && (node.kind !== 'group' || node.w * node.h < area)) {
             members.push(node.id);
         }
     }
@@ -196,16 +205,107 @@ export function boundsOfElement(
     return lines[id] ? [lineBounds(lines[id])] : [];
 }
 
-export function hiddenIn(nodes: Record<string, CanvasNode>): Set<string> {
+/* What the collapsed groups put out of sight: exactly what each would carry, through the groups inside it. */
+export function hiddenIn(
+    nodes: Record<string, CanvasNode>,
+    texts: Record<string, TextElement> = {},
+    lines: Record<string, ProjectCanvasLine> = {}
+): Set<string> {
     const hidden = new Set<string>();
     for (const node of Object.values(nodes)) {
         if (node.kind === 'group' && node.collapsed) {
-            for (const id of node.memberIds ?? []) {
+            for (const id of carriedByGroups(nodes, texts, [node.id], lines)) {
                 hidden.add(id);
             }
         }
     }
     return hidden;
+}
+
+/* What deleting these ids takes along: a collapsed group goes with everything it hides. */
+export function goingWithDelete(
+    ids: readonly string[],
+    nodes: Record<string, CanvasNode>,
+    texts: Record<string, TextElement> = {},
+    lines: Record<string, ProjectCanvasLine> = {}
+): string[] {
+    return [...new Set(ids.flatMap((id) => (nodes[id]?.kind === 'group' && nodes[id].collapsed ? [id, ...carriedByGroups(nodes, texts, [id], lines)] : [id])))];
+}
+
+type Placement = Pick<CanvasState, 'nodes' | 'texts' | 'lines'>;
+
+/* Where a thing stands for the group it is in: a node and a line by their center, a text by the point it sits on. */
+export function anchorOf(id: string, { nodes, texts, lines }: Placement): Point | null {
+    if (nodes[id]) {
+        return center(nodes[id]);
+    }
+    if (texts[id]) {
+        return texts[id];
+    }
+    return lines[id] ? center(lineBounds(lines[id])) : null;
+}
+
+/* The groups with every member written out, so what they hold stops following where things stand. */
+export function withMembersWritten(placement: Placement): Record<string, CanvasNode> {
+    const nodes = { ...placement.nodes };
+    for (const group of Object.values(placement.nodes)) {
+        if (group.kind === 'group' && group.memberIds === undefined) {
+            nodes[group.id] = { ...group, memberIds: membersOf(group, placement.nodes, placement.texts, placement.lines) };
+        }
+    }
+    return nodes;
+}
+
+/* The groups with `id` taken out of each one that holds it and written into `targetId`, if any. A group that held it by position writes its members out first. */
+export function movedToGroup(placement: Placement, id: string, targetId: string | null): Record<string, CanvasNode> {
+    const nodes = { ...placement.nodes };
+    for (const group of Object.values(placement.nodes)) {
+        if (group.kind !== 'group' || group.id === id) {
+            continue;
+        }
+        const members = membersOf(group, placement.nodes, placement.texts, placement.lines);
+        const holds = members.includes(id);
+        if (group.id === targetId) {
+            if (!holds || group.memberIds === undefined) {
+                nodes[group.id] = { ...group, memberIds: holds ? members : [...members, id] };
+            }
+        } else if (holds) {
+            nodes[group.id] = { ...group, memberIds: members.filter((member) => member !== id) };
+        }
+    }
+    return nodes;
+}
+
+/* The groups after `id` was resized: an open group lets go of what no longer stands in its frame, and takes in nothing. */
+export function withoutMembersOutside(placement: Placement, id: string): Record<string, CanvasNode> {
+    const group = placement.nodes[id];
+    if (group?.kind !== 'group' || group.collapsed || group.memberIds === undefined) {
+        return placement.nodes;
+    }
+    const kept = group.memberIds.filter((member) => {
+        const at = anchorOf(member, placement);
+        return at === null || contains(group, at);
+    });
+    return kept.length === group.memberIds.length ? placement.nodes : { ...placement.nodes, [id]: { ...group, memberIds: kept } };
+}
+
+/*
+ * The groups after these ids were dropped where they stand: each joins the smallest open group under it
+ * and leaves the one it was in. A group never joins itself, a group it holds or one out of sight.
+ */
+export function droppedIntoGroups(placement: Placement, ids: readonly string[]): Record<string, CanvasNode> {
+    const hidden = hiddenIn(placement.nodes, placement.texts, placement.lines);
+    let nodes = placement.nodes;
+    for (const id of ids) {
+        const at = anchorOf(id, placement);
+        if (at === null) {
+            continue;
+        }
+        const excluded = new Set([id, ...hidden, ...carriedByGroups(nodes, placement.texts, [id], placement.lines)]);
+        const target = groupUnder(Object.values(nodes), at, excluded);
+        nodes = movedToGroup({ ...placement, nodes }, id, target?.id ?? null);
+    }
+    return nodes;
 }
 
 // Ids double as daemon session ids and end up in a shared file, so they must not repeat across machines.
@@ -228,9 +328,10 @@ export function snapshotOf(s: Pick<CanvasState, 'nodes' | 'order' | 'texts' | 'e
  * Takes another writer's additions and deletions into one step of the history, so an undo neither
  * brings back what they deleted nor takes away what they added. The fields of what the step already
  * holds stay as they are: an undo still puts a person's own move back. `patch` names only what is new
- * to this editor, since a node that is merely changed there may be one the step is from before.
+ * to this editor, since a node that is merely changed there may be one the step is from before; only
+ * what `groups` (the groups as the other writer left them) put the new things in is taken over.
  */
-export function patchSnapshot(snapshot: Snapshot, patch: CanvasPatch): Snapshot {
+export function patchSnapshot(snapshot: Snapshot, patch: CanvasPatch, groups: readonly ProjectNode[] = []): Snapshot {
     const lines = { ...snapshot.lines };
     for (const id of patch.removed.lines ?? []) {
         delete lines[id];
@@ -255,6 +356,14 @@ export function patchSnapshot(snapshot: Snapshot, patch: CanvasPatch): Snapshot 
     }
     for (const text of patch.texts) {
         texts[text.id] ??= text;
+    }
+    const arrived = new Set([...patch.nodes, ...patch.texts, ...(patch.lines ?? [])].map((item) => item.id));
+    for (const group of groups) {
+        const held = nodes[group.id];
+        const joined = group.memberIds?.filter((id) => arrived.has(id) && held?.memberIds?.includes(id) === false) ?? [];
+        if (held?.memberIds !== undefined && joined.length > 0) {
+            nodes[group.id] = { ...held, memberIds: [...held.memberIds, ...joined] };
+        }
     }
     const removedEdges = new Set(patch.removed.edges);
     const holds = (id: string): boolean => nodes[id] !== undefined || texts[id] !== undefined;

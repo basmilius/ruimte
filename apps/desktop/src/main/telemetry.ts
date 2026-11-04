@@ -1,12 +1,16 @@
 import { homedir, hostname, userInfo } from 'node:os';
 import { join } from 'node:path';
-import type { IPCMode } from '@sentry/electron/main';
 import { TELEMETRY_DATA_COLLECTION, TELEMETRY_DSN, telemetryRelease } from '@ruimte/telemetry';
 import { fileDedupeStore } from '@ruimte/telemetry/file-store';
+import type { IPCMode } from '@sentry/electron/main';
+import { RendererMemory, type RendererSample } from '../renderer-memory';
 import { isCrash, problemEvent, processTag, shellBeforeSend, shellTags, type ShellProblem } from '../telemetry';
 import { electron } from './electron';
 
-const { app } = electron;
+const { app, webContents } = electron;
+
+// Often enough to see a renderer grow toward its heap limit; a sample is one call into the OS, nothing from a page.
+const MEMORY_SAMPLE_MS = 30_000;
 
 type Sdk = typeof import('@sentry/electron/main');
 
@@ -78,9 +82,17 @@ export function startTelemetry(): void {
             waiting.length = 0;
             console.warn('Crash reports are off for this run:', e instanceof Error ? e.message : e);
         });
-    app.on('render-process-gone', (_event, _contents, details) => {
+    const memory = new RendererMemory();
+    setInterval(() => memory.sample(windowRendererSamples(), Date.now()), MEMORY_SAMPLE_MS).unref();
+    app.on('render-process-gone', (_event, contents, details) => {
         if (isCrash(details.reason)) {
-            reportShellProblem({ kind: 'process-gone', process: 'renderer', reason: details.reason, exitCode: details.exitCode });
+            reportShellProblem({
+                kind: 'process-gone',
+                process: 'renderer',
+                reason: details.reason,
+                exitCode: details.exitCode,
+                memory: memory.reportOf(contents.id, Date.now())
+            });
         }
     });
     app.on('child-process-gone', (_event, details) => {
@@ -88,6 +100,20 @@ export function startTelemetry(): void {
             reportShellProblem({ kind: 'process-gone', process: processTag(details.type), reason: details.reason, exitCode: details.exitCode });
         }
     });
+}
+
+/* The renderer of every window with its memory and the pages it hosts; a page in a browser node runs in a process of its own. */
+function windowRendererSamples(): RendererSample[] {
+    const workingSet = new Map(app.getAppMetrics().map((metric) => [metric.pid, metric.memory.workingSetSize]));
+    const all = webContents.getAllWebContents();
+
+    return all
+        .filter((contents) => contents.getType() === 'window' && !contents.isDestroyed())
+        .map((contents) => ({
+            contentsId: contents.id,
+            workingSetKb: workingSet.get(contents.getOSProcessId()) ?? 0,
+            guests: all.filter((guest) => guest.getType() === 'webview' && guest.hostWebContents?.id === contents.id).length
+        }));
 }
 
 export function reportShellProblem(problem: ShellProblem): void {

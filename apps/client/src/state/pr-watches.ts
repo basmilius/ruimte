@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import type { GitPrWatch, GitPrWatchEndReason } from '@ruimte/contracts';
+import { create } from 'zustand';
 import { dropEndpoint, endpointKey, useEndpointId } from '@/state/keys';
 import { readOnEveryOpen, type Transport } from '@/transport/transport';
 

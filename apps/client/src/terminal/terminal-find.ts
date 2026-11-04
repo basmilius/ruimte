@@ -1,5 +1,5 @@
-import type { ISearchOptions } from '@xterm/addon-search';
 import type { FindQuery } from '@adecore/editor-react/models';
+import type { ISearchOptions } from '@xterm/addon-search';
 
 type TerminalFindColors = NonNullable<ISearchOptions['decorations']>;
 

@@ -1,23 +1,23 @@
+import { runtimeModeLabel } from '@adecore/agents-react/chat';
+import { AgentModelLabel } from '@adecore/agents-react/providers';
+import { Button, EmptyState, ErrorBoundary, FormError, Icon, IconButton, KeyValueList, Pill, ScrollArea, SectionLabel, Segmented } from '@adecore/ui';
+import { formatDateTime } from '@adecore/ui/format';
+import type { RoutineEntry, RoutineRun } from '@ruimte/contracts';
+import { Ban, CircleCheck, Hand, SquareArrowOutUpRight } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Ban, CircleCheck, Hand, SquareArrowOutUpRight } from 'lucide-react';
-import type { RoutineEntry, RoutineRun } from '@ruimte/contracts';
-import { Button, EmptyState, ErrorBoundary, FormError, Icon, IconButton, KeyValueList, Pill, SectionLabel, Segmented } from '@adecore/ui';
-import { formatDateTime } from '@adecore/ui/format';
-import { runtimeModeLabel } from '@adecore/agents-react/chat';
-import { ArtifactView } from '@/output/ArtifactView';
 import { ArtifactOpenerContext } from '@/output/artifact-opener';
+import { ArtifactView } from '@/output/ArtifactView';
 import { openArtifact } from '@/output/open';
-import { FileToolbarSlotProvider, fixedSlot } from '@/shell/panels/file-toolbar-slot';
 import { lookOfRun } from '@/routines/agenda';
 import { LookIcon } from '@/routines/look';
-import { AgentModelLabel } from '@adecore/agents-react/providers';
-import { RoutineRunChat } from '@/routines/RoutineRunChat';
 import { useRoutineApproval } from '@/routines/routine-approval';
 import { useRoutineWhat } from '@/routines/routine-what';
 import { RoutinePrompt } from '@/routines/RoutinePrompt';
+import { RoutineRunChat } from '@/routines/RoutineRunChat';
 import { leaveRoutines, showRoutine } from '@/routines/stage';
 import { dayClockWords, dayWords, runWords, scheduleWords, weekdayClock } from '@/routines/words';
+import { FileToolbarSlotProvider, fixedSlot } from '@/shell/panels/file-toolbar-slot';
 import { useEndpoints } from '@/state/endpoints';
 import { isThisMachine } from '@/state/local-machine';
 
@@ -27,10 +27,10 @@ export function RoutineDetail({ endpointId, entry, runId, timeZone }: { endpoint
     const run = entry.runs.find((candidate) => candidate.runId === runId) ?? entry.runs.find((candidate) => candidate.state !== 'skipped') ?? null;
     return (
         <div className="flex min-h-0 grow">
-            <div className="flex w-[440px] shrink-0 flex-col overflow-y-auto border-r border-border">
+            <ScrollArea className="w-[440px] shrink-0 border-r border-border" viewportClassName="flex flex-col">
                 <Definition endpointId={endpointId} entry={entry} />
                 <RunTimeline entry={entry} picked={run?.runId ?? null} timeZone={timeZone} />
-            </div>
+            </ScrollArea>
             <div className="flex min-w-0 grow flex-col">
                 <ErrorBoundary label={t('detail.runFailed')} resetKeys={[run?.runId ?? null]} className="grow">
                     {run === null ? (

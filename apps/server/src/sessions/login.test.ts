@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import type { AgentKind, ServerFrame } from '@ruimte/contracts';
-import type { ProviderAccountsService } from '@adecore/agents/providers';
-import { testAccounts } from '@adecore/agents/testing';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { ProviderAccountsService } from '@adecore/agents/providers';
+import { testAccounts } from '@adecore/agents/testing';
+import type { AgentKind, ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
 import { registerSessionHandlers, type LoginCommands } from '../handlers/session.ts';
 import { makeHarness, type Harness } from './test-helpers.ts';

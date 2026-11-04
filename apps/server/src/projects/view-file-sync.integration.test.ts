@@ -2,16 +2,16 @@ import { expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ServerFrame } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
+import type { ServerFrame } from '@ruimte/contracts';
 import { connectionOpener, socketChannel, type OpenConnection, type SocketChannel } from '../connection.ts';
 import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
-import { registerDrawingHandlers } from '../handlers/drawing.ts';
 import { registerDiagramHandlers } from '../handlers/diagram.ts';
-import { ProjectStore } from './project-store.ts';
-import { DrawingStore } from './drawing-store.ts';
+import { registerDrawingHandlers } from '../handlers/drawing.ts';
 import { DiagramStore } from './diagram-store.ts';
+import { DrawingStore } from './drawing-store.ts';
 import { projectLinks } from './project-file-test-helpers.ts';
+import { ProjectStore } from './project-store.ts';
 
 class Peer {
     readonly socket: WebSocket;
@@ -126,8 +126,10 @@ for (const kind of ['drawing', 'diagram'] as const) {
             });
             await watch.settle();
             await Promise.all(peers.map((peer) => peer.request('server.hello', {})));
-            expect(writer.frames.filter((frame) => 'type' in frame)).toEqual([]);
-            expect(reader.frames.filter((frame) => 'type' in frame)).toHaveLength(1);
+            // Opening and saving the project publish its summary to every client without awaiting it, so it lands before or after the sockets connect.
+            const events = (peer: Peer) => peer.frames.filter((frame) => 'type' in frame && frame.event !== 'project.summary');
+            expect(events(writer)).toEqual([]);
+            expect(events(reader)).toHaveLength(1);
         } finally {
             peers.forEach((peer) => peer.socket.close());
             try {

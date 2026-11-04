@@ -1,7 +1,7 @@
-import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
-import { CircleCheck } from 'lucide-react';
 import { Icon, Tooltip } from '@adecore/ui';
+import clsx from 'clsx';
+import { CircleCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // The camera clears unseen state, so this mark is not another button for the same action.
 export function UnseenMark({ className }: { className?: string }) {

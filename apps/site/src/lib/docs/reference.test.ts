@@ -1,0 +1,61 @@
+import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { referenceModules } from './reference-source.ts';
+import { parseDeclarations, slotsOf } from './reference.ts';
+
+describe('the reference', () => {
+    test('matches the types of @ruimte/extension; run `bun run --cwd apps/site reference` after changing them', () => {
+        const committed = JSON.parse(readFileSync(join(import.meta.dir, '../../generated/reference.json'), 'utf8'));
+
+        expect(committed).toEqual(referenceModules());
+    });
+
+    test('declares the types client/ and server/ share alike in both', () => {
+        const [client, server] = ['client', 'server'].map((name) => referenceModules().find((module) => module.module === name)?.entries ?? []);
+        const shared = ['ExtensionErrorCode', 'Result', 'Json', 'NodeRef', 'ViewRef', 'ProjectRef', 'AgentStatus', 'ChatSummary'];
+
+        for (const name of shared) {
+            expect({ name, entry: server?.find((entry) => entry.name === name) }).toEqual({ name, entry: client?.find((entry) => entry.name === name) });
+        }
+    });
+
+    test('keeps the doc above a declaration, joins overloads and ignores brackets in comments and wrapped imports', () => {
+        const entries = parseDeclarations(`import type { X } from 'x';
+import type {
+    Y,
+    Z
+} from 'y';
+
+/** Opens a thing (the first one. */
+export function open(id: string): void;
+export function open(): void;
+
+export const host: {
+    /** Asks (once. */
+    ask(question: string): Promise<boolean>;
+};
+
+export * from '@adecore/ui';
+`);
+
+        expect(entries.map(({ name, kind, doc }) => ({ name, kind, doc }))).toEqual([
+            { name: 'open', kind: 'function', doc: 'Opens a thing (the first one.' },
+            { name: 'host', kind: 'const', doc: null },
+            { name: '@adecore/ui', kind: 'export', doc: null }
+        ]);
+        expect(entries[0]?.code).toBe('export function open(id: string): void;\nexport function open(): void;');
+    });
+
+    test('lists every slot with what it tells', () => {
+        const client = referenceModules().find((module) => module.module === 'client');
+        const slots = slotsOf(client?.entries ?? []);
+
+        expect(slots.find((slot) => slot.name === 'nodeMenu')).toEqual({
+            name: 'nodeMenu',
+            context: '{ node: NodeInfo; nodes: NodeInfo[] }',
+            doc: '`nodes` is the selection if the node is in it.'
+        });
+        expect(slots.length).toBeGreaterThan(30);
+    });
+});

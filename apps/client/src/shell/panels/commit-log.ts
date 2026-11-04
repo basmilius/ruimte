@@ -1,6 +1,6 @@
-import i18next from 'i18next';
-import type { GitCommit } from '@ruimte/contracts';
 import { formatDay, formatDayWithYear } from '@adecore/ui/format';
+import type { GitCommit } from '@ruimte/contracts';
+import i18next from 'i18next';
 
 /* The date a row falls back to once "days ago" stops meaning anything, with the year when it is not this one. */
 function dateOf(at: number, now: number): string {

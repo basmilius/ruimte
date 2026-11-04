@@ -29,8 +29,16 @@ export function Scaled({ width, height, label, className = '', children }: Scene
         return () => resize.disconnect();
     }, [width]);
 
+    // Until the first measure the drawing is at its full size, so the frame clips it rather than let a phone's page
+    // scroll sideways; the margin keeps the shadows of nodes at the edge.
     return (
-        <div ref={ref} role="img" aria-label={label} className={`relative w-full ${className}`} style={{ aspectRatio: `${width} / ${height}` }}>
+        <div
+            ref={ref}
+            role="img"
+            aria-label={label}
+            className={`relative w-full overflow-clip [overflow-clip-margin:16px] ${className}`}
+            style={{ aspectRatio: `${width} / ${height}` }}
+        >
             <div
                 aria-hidden
                 inert

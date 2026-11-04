@@ -4,8 +4,8 @@ import { useDatabasePanel } from '@/database/state';
 import { shownViewIdsIn } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { useFiles, type Tab } from '@/state/files';
-import { currentEndpointId } from '@/state/keys';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE, useGit } from '@/state/git';
+import { currentEndpointId } from '@/state/keys';
 import { parsePanels, serializePanels, type PanelsState } from '@/state/panel-state';
 import { PANEL_DEFAULTS, useUi } from '@/state/ui';
 

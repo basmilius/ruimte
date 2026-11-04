@@ -13,8 +13,10 @@ const helperEntitlements = join(__dirname, '..', '..', 'computer-use', 'Resource
 
 module.exports = async (options) => {
     const optionsForFile = options.optionsForFile ?? (() => ({}));
-    // Helpers a build only has for some architectures (the foundation models and the database helper exist for Apple silicon alone) or on macOS alone.
-    const nativeHelpers = ['ruimte-foundation-models', 'adecore-database', 'serve-sim-duo-hid', 'serve-sim-camera-helper', 'libSimCameraInjector.dylib'].map((name) => join(options.app, 'Contents', 'Resources', 'bin', 'native', name));
+    // Helpers a build only has for some architectures (the database helper exists for Apple silicon alone) or on macOS alone.
+    const nativeHelpers = ['adecore-database', 'serve-sim-duo-hid', 'serve-sim-camera-helper', 'libSimCameraInjector.dylib'].map((name) =>
+        join(options.app, 'Contents', 'Resources', 'bin', 'native', name)
+    );
     await signAsync({
         ...options,
         binaries: [...(options.binaries ?? []), ...nativeHelpers.filter((helper) => existsSync(helper))],

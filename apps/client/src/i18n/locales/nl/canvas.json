@@ -130,7 +130,8 @@
         "newRoutine": "Nieuwe routine…",
         "design": "Design",
         "groupSelection": "Selectie groeperen",
-        "zoomToFit": "Passend zoomen"
+        "zoomToFit": "Passend zoomen",
+        "extensions": "Extensies"
     },
     "empty": {
         "sections": {
@@ -367,13 +368,6 @@
     },
     "minimap": {
         "label": "Canvaskaart"
-    },
-    "pets": {
-        "goTo": "Ga naar {{title}}",
-        "writeTo": "Schrijf naar {{title}}",
-        "typeIn": "Typ in {{title}}",
-        "waiting": "{{title}} heeft je nodig",
-        "failed": "Kon de pets niet tonen"
     },
     "missingProvider": {
         "notInstalled": "{{name}} is niet geïnstalleerd op deze machine.",

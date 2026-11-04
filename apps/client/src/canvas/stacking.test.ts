@@ -33,6 +33,16 @@ describe('stackingOrder', () => {
         const nodes = { a: at('terminal', 0, 0), g: at('group', 0, 0) };
         expect(stackingOrder(nodes, ['a', 'g'])).toEqual({ g: 1, a: 2 });
     });
+
+    test('puts a group over the groups that hold it, whatever its place in the order', () => {
+        const nodes = {
+            inner: { ...at('group', 100, 100), w: 280, h: 240 },
+            outer: { ...at('group', 0, 0), w: 320, h: 280 },
+            held: { ...at('group', 2000, 0), memberIds: [] },
+            holder: { ...at('group', 4000, 0), memberIds: ['held'] }
+        };
+        expect(stackingOrder(nodes, ['inner', 'held', 'outer', 'holder'])).toEqual({ outer: 1, holder: 2, inner: 3, held: 4 });
+    });
 });
 
 describe('nodesOverBrowsers', () => {

@@ -1,0 +1,68 @@
+import { GridCells } from '@/components/docs/guide/GridCells.tsx';
+import { Shortcut } from '@/components/docs/Shortcut.tsx';
+
+export const metadata = { title: 'Projects and views' };
+
+# Projects and views
+
+<p className="lead">A project is a folder with a sidebar of views. Open one view at a time, or up to nine in a grid.</p>
+
+## The sidebar
+
+The sidebar lists the project's views, each terminal and chat with its agent's status. **Needs you**, above them, lists the agents that wait for an answer.
+
+- Press <Shortcut keys="Mod+B" /> to hide or show the sidebar.
+- Drag a row to move it.
+- Right-click a row for **View settings…** (name and icon) and **Delete view**.
+- Add a **Separator** or a **Subheader** from **New view** to split the list into parts.
+
+## Add a view
+
+Click **New view** in the sidebar and choose a kind. <Shortcut keys="Mod+T" /> adds a canvas.
+
+| Kind | What it shows |
+| --- | --- |
+| Canvas | Nodes side by side. See [The canvas](/docs/guide/canvas). |
+| Terminal | One shell or terminal agent. See [Terminals](/docs/guide/terminals). |
+| Chat | One AI chat. See [AI chats](/docs/guide/chats). |
+| Browser | One web page. |
+| File | One file in the editor. See [Files and the editor](/docs/guide/files). |
+| Drawing, Diagram | See [Drawings and diagrams](/docs/guide/drawings). |
+| Design | Pages an agent designs. Comment, edit, draw or change tweaks, and send the result to the chat. **Implement** starts a chat that builds the page into the project. |
+
+To turn a node into a view, right-click it and choose **Open as view**. Its session keeps running. **Show on canvas** does the reverse.
+
+## Show several views at once
+
+<GridCells />
+
+| Shortcut | Action |
+| --- | --- |
+| <Shortcut keys="Mod+\" /> | Split the cell to the right |
+| <Shortcut keys="Mod+Shift+\" /> | Split the cell down |
+| <Shortcut keys="Mod+Shift+Enter" /> | Maximize the cell, or restore the split |
+| <Shortcut keys="Mod+W" /> | Close the cell |
+| <Shortcut keys="Mod+1" /> to <Shortcut keys="Mod+9" /> | Open the first nine views of the sidebar |
+| <Shortcut keys="Mod+Shift+[" />, <Shortcut keys="Mod+Shift+]" /> | Previous or next view |
+
+A window holds up to three by three cells. Drag the title of a cell to move it.
+
+A cell can hold tabs: right-click a view and choose **Open in new tab**. <Shortcut keys="Ctrl+Tab" /> moves to the next tab. Moving a tab keeps its session running.
+
+## Share a view with your team
+
+Right-click the view in the sidebar and choose **Share with team**. The view moves into the part of `.ruimte` you commit, and teammates get it when they pull. **Make private** takes it back. Your open views, camera positions and grid stay on your computer.
+
+If the project changes on disk while you have unsaved edits, for example after `git pull`, choose **Keep mine** or **Take the file**.
+
+## Switch and close projects
+
+- Press <Shortcut keys="Mod+K" /> to jump to a view or node, run a command, or open another folder.
+- Settings, General, Projects shows a window's projects as tabs or in a menu.
+- Press <Shortcut keys="Mod+Shift+N" /> for a new window. **Move project to new window** takes the current project along. A project is open in one window at a time.
+- **Project settings…** in the project menu sets the name, icon and color, and which of your accounts per CLI the project offers. The accounts are yours alone; colleagues choose their own.
+- **Close project** ends its terminals and agents, unless another window or device still has it open. The project moves to Recent.
+
+## Chats without a project
+
+Press <Shortcut keys="Mod+Alt+N" /> to start a chat in **Chats**, for questions and quick tasks. To turn a chat into a project, run **Make project from chat**. An agent in Chats can also suggest it; click **Review…** to see its proposal.

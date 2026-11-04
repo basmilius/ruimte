@@ -1,4 +1,9 @@
 import { stat } from 'node:fs/promises';
+import { ToolRefusal } from '@adecore/agents/context';
+import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
+import { narrowerMode } from '@adecore/agents/providers';
+import { KeyedSerializer } from '@adecore/utils/async';
+import { MAX_OPENED_PER_CALLER } from '@ruimte/actions';
 import {
     BUNDLE_MAX_BYTES,
     PEER_MAX_OPEN_TASKS,
@@ -16,26 +21,21 @@ import {
     type RuntimeMode,
     type Task
 } from '@ruimte/contracts';
-import { MAX_OPENED_PER_CALLER } from '@ruimte/actions';
-import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
-import { narrowerMode } from '@adecore/agents/providers';
 import type { PendingPromptStore } from '../agents/pending-prompts.ts';
-import { MAX_AGENT_DEPTH } from '../canvas/depth.ts';
-import { checkCwd } from '../canvas/project-paths.ts';
-import { taskFirstPrompt } from '../canvas/tasks.ts';
-import { VerbRefusal } from '../canvas/verb.ts';
 import { RequestError } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import { BundleStore, fetchBundle, makeBundle } from '../git/bundles.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import { git } from '../git/run.ts';
 import type { Worktrees } from '../git/worktrees.ts';
-import { KeyedQueue } from '../keyed-queue.ts';
 import type { OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
+import type { ProjectStore } from '../projects/project-store.ts';
 import { DEFAULT_RUNTIME_MODE } from '../providers/launch.ts';
 import { providerFor } from '../providers/registry.ts';
-import type { ProjectStore } from '../projects/project-store.ts';
 import { peerTarget } from '../remote/connect-peer.ts';
+import { MAX_AGENT_DEPTH } from '../tools/depth.ts';
+import { checkCwd } from '../tools/project-paths.ts';
+import { taskFirstPrompt } from '../tools/tasks.ts';
 import { peerCanvasId, type PeerLinks } from './links.ts';
 import { idTakenOutside, nodeOf, sameCanvas, stripHidden } from './peer-canvas.ts';
 
@@ -85,7 +85,7 @@ export function peerCaller(machineId: string, parentId: string): string {
  */
 export class PeerTasks {
     private readonly deps: PeerTasksDeps;
-    private readonly starts = new KeyedQueue();
+    private readonly starts = new KeyedSerializer();
     // The bundles offered for a result and the machine each was made for, in memory like the files themselves.
     private readonly offered = new Map<string, { machineId: string; nodeId: string }>();
     // Tasks that machine stopped itself, which it needs no word of.
@@ -213,7 +213,7 @@ export class PeerTasks {
             await deps.links.recordTask(machineId, nodeId, { projectId, cwd, worktree: made.path !== undefined });
         }
         await checkCwd(folder, cwd, deps.worktreePaths).catch((e: unknown) => {
-            throw e instanceof VerbRefusal ? new RequestError('cwd-outside', e.message) : e;
+            throw e instanceof ToolRefusal ? new RequestError('cwd-outside', e.message) : e;
         });
 
         await this.place(
@@ -252,7 +252,7 @@ export class PeerTasks {
         );
         try {
             const first = taskFirstPrompt(payload.prompt, chat);
-            await deps.prompts.put(projectId, nodeId, first.prompt, first.brief);
+            await deps.prompts.put(projectId, nodeId, first.prompt, { brief: first.brief });
             await deps.enqueue(projectId, nodeId, {
                 kind: 'start-agent',
                 payload: {

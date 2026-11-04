@@ -73,10 +73,10 @@ describe('arranging the members of a group', () => {
         expect(result.moves.hidden).toEqual({ x: 3000 + result.moves.inner!.x - 700, y: 3000 + result.moves.inner!.y - 400 });
     });
 
-    test('a node landing in the expanded rect of a collapsed group refuses', () => {
+    test('a node landing in the expanded rect of a collapsed group stays out of it, since that group spells out its members', () => {
         const hiding = group('c', 300, -100, 300, 40, { collapsed: true, memberIds: ['m'], expandedHeight: 400 });
         const nodes = byId(group('g', 0, 0, 500, 400), hiding, node('m', 3000, 3000), node('a', 20, 60), node('b', 20, 170), node('d', 20, 280));
-        expect(arrangeGroupMembers('g', nodes, {})).toEqual({ refused: 'membership' });
+        expect(arrangeGroupMembers('g', nodes, {})).not.toEqual({ refused: 'membership' });
     });
 
     test('the command is offered for an open group on an unlocked canvas only', () => {

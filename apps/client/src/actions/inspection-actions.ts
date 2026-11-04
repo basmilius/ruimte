@@ -3,8 +3,8 @@ import { isCanvasView, isChatHostView, isDesignView, nodeChats, viewChats, type 
 import type { StoreApi } from 'zustand';
 import { agentActivity } from '@/actions/agent-activity';
 import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
-import { chatWorking, sessionWorking } from '@/state/agent-work';
 import { nodesOfView } from '@/project/view-nodes';
+import { chatWorking, sessionWorking } from '@/state/agent-work';
 import { focusedCanvas } from '@/state/canvas';
 import { activeViewOf, type DocumentState } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';

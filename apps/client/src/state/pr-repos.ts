@@ -1,7 +1,7 @@
-import { create } from 'zustand';
 import type { GitRepo } from '@ruimte/contracts';
-import { shownFolderOf, useProject } from '@/state/project';
+import { create } from 'zustand';
 import { currentEndpointId, endpointKey } from '@/state/keys';
+import { shownFolderOf, useProject } from '@/state/project';
 import { machineFor } from '@/transport/connections';
 
 /* A repository of the project folder that has a branch out, which is what a pull request hangs on. */

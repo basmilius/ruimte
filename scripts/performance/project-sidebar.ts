@@ -1,8 +1,8 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ProjectStore } from '../../apps/server/src/projects/project-store';
 import { projectLinks } from '../../apps/server/src/projects/project-file-test-helpers';
+import { ProjectStore } from '../../apps/server/src/projects/project-store';
 
 const count = Number(process.env.BENCH_PROJECTS ?? 20);
 const viewsPerProject = Number(process.env.BENCH_VIEWS ?? 100);

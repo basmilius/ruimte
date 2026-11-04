@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectCanvasView, ProjectNode, RemoteStatusEvent, Task } from '@ruimte/contracts';
-import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { act } from 'react';
 import { useAttention } from '@/state/attention';
+import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { startRemoteStatusWatch } from '@/state/remote-status';
-import { startTaskWatch } from '@/tasks/watch';
 import { useTasks } from '@/state/tasks';
+import { startTaskWatch } from '@/tasks/watch';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
 const WORKSPACE = 'fake-machine';
 const REMOTE = 'machine-b';

@@ -68,7 +68,7 @@ enum ChatVisuals {
     @MainActor static func rowTime(_ entry: ChatTimelineEntry) -> Double? {
         switch entry.kind {
         case .activity: return .infinity
-        case .turnFold, .turnStart, .subagent, .tools: return entry.items.first?.item.createdAt
+        case .turnFold, .turnStart, .selectionSwitch, .subagent, .tools: return entry.items.first?.item.createdAt
         case .changedFiles, .forks, .visual, .output: return nil
         // It stands for the call it is repeated over, which it carries after the thought.
         case .liveThought: return entry.items.last?.item.createdAt

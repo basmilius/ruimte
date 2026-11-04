@@ -1,6 +1,7 @@
 import { nodeSessionFs } from '@adecore/agents/chat';
 import { usageRootsOf } from '@adecore/agents/usage';
-import type { CanvasHost } from '../canvas/verb.ts';
+import { readArchiveEntry } from '../archive/archive.ts';
+import { ArtifactImporter } from '../artifacts/artifact-import.ts';
 import { continueOn } from '../chat/continue-on.ts';
 import { ExternalChatSessions, ownSessionSources } from '../chat/external.ts';
 import { chatForkDeps, forkChat, readForkInfo, readHandoff } from '../chat/fork.ts';
@@ -10,58 +11,55 @@ import type { Dispatcher } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import { readServedFile } from '../fs/read.ts';
 import type { WriteBoundary } from '../fs/write.ts';
-import { readArchiveEntry } from '../archive/archive.ts';
+import { registerProviderAccountHandlers } from '../handlers/accounts.ts';
+import { registerAgentRegistryHandlers } from '../handlers/agent-registry.ts';
+import { registerAgentServerHandlers } from '../handlers/agent-servers.ts';
+import { registerArchiveHandlers } from '../handlers/archive.ts';
+import { registerArtifactHandlers } from '../handlers/artifact.ts';
 import { registerAuthHandlers } from '../handlers/auth.ts';
 import { registerBrowserHandlers } from '../handlers/browser.ts';
-import { registerArchiveHandlers } from '../handlers/archive.ts';
 import { registerBytesHandlers } from '../handlers/bytes.ts';
-import { registerChatHandlers } from '../handlers/chat.ts';
 import { registerChatImageHandlers } from '../handlers/chat-image.ts';
 import { registerChatSearchHandlers } from '../handlers/chat-search.ts';
+import { registerChatHandlers } from '../handlers/chat.ts';
 import { registerComputerHandlers } from '../handlers/computer.ts';
 import { registerDatabaseHandlers } from '../handlers/database.ts';
 import { registerDeviceControlHandlers, registerDeviceHandlers } from '../handlers/device.ts';
 import { registerDiagramHandlers } from '../handlers/diagram.ts';
 import { registerDrawingHandlers } from '../handlers/drawing.ts';
+import { registerEditorAssistHandlers } from '../handlers/editor-assist.ts';
 import { registerFsHandlers } from '../handlers/fs.ts';
 import { registerGitHandlers } from '../handlers/git.ts';
 import { registerLanguageHandlers } from '../handlers/language.ts';
-import { registerAgentRegistryHandlers } from '../handlers/agent-registry.ts';
-import { registerAgentServerHandlers } from '../handlers/agent-servers.ts';
-import { registerProviderDetectHandler } from '../handlers/provider-detect.ts';
 import { registerLaunchHandlers } from '../handlers/launches.ts';
-import { registerOnDeviceHandlers } from '../handlers/ondevice.ts';
-import { registerPeerHandlers } from '../handlers/peer.ts';
-import { registerPeerTaskHandlers } from '../handlers/peer-tasks.ts';
-import { registerArtifactHandlers } from '../handlers/artifact.ts';
 import { registerPeerArtifactHandlers } from '../handlers/peer-artifacts.ts';
-import { ArtifactImporter } from '../artifacts/artifact-import.ts';
+import { registerPeerTaskHandlers } from '../handlers/peer-tasks.ts';
+import { registerPeerHandlers } from '../handlers/peer.ts';
 import { registerPlanHandlers } from '../handlers/plan.ts';
-import { registerRemoteHandlers } from '../handlers/remote.ts';
-import { trustedStatementKeys } from '../pulsar/statement.ts';
-import type { RemoteBundle } from './remote.ts';
-import type { UsageStatsBundle } from './usage-stats.ts';
 import { registerProcessHandlers } from '../handlers/processes.ts';
+import { registerProposalHandlers } from '../handlers/project-proposals.ts';
 import { registerProjectHandlers } from '../handlers/project.ts';
 import { registerProvenanceHandlers } from '../handlers/provenance.ts';
-import { registerProviderAccountHandlers } from '../handlers/accounts.ts';
+import { registerProviderDetectHandler } from '../handlers/provider-detect.ts';
 import { registerPushHandlers } from '../handlers/push.ts';
-import { registerProposalHandlers } from '../handlers/project-proposals.ts';
+import { registerRemoteHandlers } from '../handlers/remote.ts';
 import { registerSecretHandlers } from '../handlers/secrets.ts';
 import { registerServerHandlers } from '../handlers/server.ts';
-import { registerSessionHandlers } from '../handlers/session.ts';
 import { registerSessionPortHandlers } from '../handlers/session-ports.ts';
+import { registerSessionHandlers } from '../handlers/session.ts';
 import { registerSnoozeHandlers } from '../handlers/snooze.ts';
 import { registerTaskHandlers } from '../handlers/tasks.ts';
 import { projectTerminalPrepareHost, registerTerminalPrepareHandlers } from '../handlers/terminal-prepare.ts';
 import { registerUsageHandlers } from '../handlers/usage.ts';
 import { workEndedByInstall } from '../power/machine-update.ts';
+import { trustedStatementKeys } from '../pulsar/statement.ts';
 import type { PushService } from '../push/service.ts';
 import { PrepareTerminal, shellSyntax } from '../sessions/prepare-terminal.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { VERSION } from '../version.ts';
+import type { AgentWorkBundle } from './agent-work.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { ArtifactsBundle } from './artifacts.ts';
-import type { AgentWorkBundle } from './agent-work.ts';
 import { chatMoveHandlers } from './chat-move.ts';
 import type { ClientsBundle } from './clients.ts';
 import type { DatabasesBundle } from './databases.ts';
@@ -72,10 +70,12 @@ import type { LaunchesBundle } from './launches.ts';
 import type { MachineBundle } from './machine.ts';
 import type { NetworkBundle } from './network.ts';
 import type { PowerBundle } from './power.ts';
+import type { ProcessesBundle } from './processes.ts';
 import type { ProjectsBundle } from './projects.ts';
 import type { ProvidersBundle } from './providers.ts';
+import type { RemoteBundle } from './remote.ts';
 import type { DaemonRuntime } from './runtime.ts';
-import type { ProcessesBundle } from './processes.ts';
+import type { UsageStatsBundle } from './usage-stats.ts';
 import type { UsageBundle } from './usage.ts';
 
 interface HandlersInput {
@@ -183,6 +183,7 @@ export async function registerHandlers(dispatcher: Dispatcher, input: HandlersIn
     });
     const beforeChatKill = (chatId: string): Promise<unknown> => {
         devices.computer.nodeClosed(chatId);
+        devices.deviceDriver.nodeClosed(chatId);
         launches.secrets.nodeClosed(chatId);
         agents.proposals.forget(chatId);
         return work.endChildren.owe(chatId);
@@ -334,18 +335,6 @@ export async function registerHandlers(dispatcher: Dispatcher, input: HandlersIn
             }
         },
         usageStatsChanged: (on) => stats.changed(on),
-        appleFoundationChanged: async (on) => {
-            providers.providers.invalidate('apple');
-            if (!on) {
-                await Promise.all(
-                    chats
-                        .list()
-                        .filter((chat) => chat.provider === 'apple')
-                        .map((chat) => chats.stop(chat.chatId, 'Apple Foundation Models was turned off in Settings.'))
-                );
-            }
-            await providers.accounts.refresh();
-        },
         agentIntegrations: {
             summary: () => providers.integrations.summary(),
             files: () => providers.integrations.files(),
@@ -398,7 +387,7 @@ export function registerEditorHandlers(dispatcher: Dispatcher, input: EditorHand
     registerAgentServerHandlers(dispatcher, providers.servers);
     registerAgentRegistryHandlers(dispatcher, providers.registryAgents, providers.versions);
     registerProviderDetectHandler(dispatcher, providers.providers, providers.accounts);
-    registerOnDeviceHandlers(dispatcher, language.onDevice);
+    registerEditorAssistHandlers(dispatcher, language.editorAssist);
     registerProvenanceHandlers(dispatcher, language.provenance, machine.machineHome);
     registerDatabaseHandlers(dispatcher, databases.service, databases.connections, databases.agents, databases.sqlAnalysis);
     const boundaryOf = async (clientId: string): Promise<WriteBoundary> => ({

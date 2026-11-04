@@ -474,6 +474,30 @@ struct ChatCompactionRule: View {
     }
 }
 
+/// A solid line where the model or effort changed, so a reader can tell which answers came from which.
+struct ChatSelectionSwitchRule: View {
+    let from: ChatTurnItemSelection
+    let to: ChatTurnItemSelection
+    let models: [JSONValue]
+
+    var body: some View {
+        if let text = ChatSelectionSwitch.text(from: from, to: to, models: models) {
+            HStack(spacing: 12) {
+                line
+                Text(verbatim: "\(text.from) → \(text.to)")
+                    .font(.caption).foregroundStyle(MobileStyle.faint).lineLimit(1).layoutPriority(1)
+                line
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityHint("The model or reasoning effort changed before this turn")
+        }
+    }
+
+    private var line: some View {
+        ChatHorizontalLine().stroke(MobileStyle.border, lineWidth: 1).frame(height: 1)
+    }
+}
+
 private struct ChatHorizontalLine: Shape {
     func path(in rect: CGRect) -> Path {
         Path { path in

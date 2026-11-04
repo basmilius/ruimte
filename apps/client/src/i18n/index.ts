@@ -1,8 +1,8 @@
-import i18next from 'i18next';
-import { initReactI18next } from 'react-i18next';
 import { AGENTS_LOCALES, AGENTS_NAMESPACES } from '@adecore/agents-react/locales';
 import { CHARTS_NAMESPACE, CHARTS_RESOURCES } from '@adecore/charts';
 import { UI_NAMESPACE } from '@adecore/ui';
+import i18next from 'i18next';
+import { initReactI18next } from 'react-i18next';
 import { forgetMemoizedWords } from '@/compiler-runtime';
 import { desktop } from '@/desktop/bridge';
 import { activeLanguage } from '@/i18n/active';
@@ -109,6 +109,12 @@ function redrawForRegion(): void {
  */
 export async function chooseLanguage(choice: string): Promise<void> {
     useSettings.getState().update({ language: choice });
+    await applyLanguage();
+    redrawForRegion();
+}
+
+/* What another window chose, once this one read the settings again: the words and every format follow it here too. */
+export async function followLanguageAndRegion(): Promise<void> {
     await applyLanguage();
     redrawForRegion();
 }

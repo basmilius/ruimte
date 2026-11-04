@@ -1,3 +1,4 @@
+import { copyText, Icon, ContextMenu } from '@adecore/ui';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { buildBrowserMenu, buildPreviewMenu, type BrowserMenuAction, type BrowserMenuItem } from '@/browser/browser-menu';
 import { menuPointFor } from '@/browser/menu-point';
@@ -6,8 +7,8 @@ import { drivePage } from '@/browser/open-page';
 import { previewGuestOf } from '@/browser/preview-guests';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { desktop, type BrowserContextAction } from '@/desktop/bridge';
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { splitKey } from '@/state/keys';
-import { copyText, Icon, ContextMenu } from '@adecore/ui';
 
 interface MenuTarget {
     webContentsId: number;
@@ -120,6 +121,7 @@ export function BrowserContextMenu() {
                             ))}
                         </Fragment>
                     ))}
+                    <SlotMenuItems place="browserMenu" context={{}} />
                 </ContextMenu.Popup>
             )}
         </ContextMenu.Root>

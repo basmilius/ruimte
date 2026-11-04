@@ -3,19 +3,19 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PROTOCOL_VERSION, type ServerFrame } from '@ruimte/contracts';
-import { AuthStore, type StatementAdmission } from '../auth/auth-store.ts';
-import { admitClient } from '../auth/test-admit.ts';
 import { machineRegistrationMessage, peerAccessRequestMessage } from '@ruimte/pulsar';
-import { PeerKey } from '../remote/peer-key.ts';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
-import { generateKeyPair } from '../auth/keys.ts';
-import { Dispatcher, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
-import { readOrCreateEndpointIdentity, type EndpointIdentity } from '../endpoint-id.ts';
-import { LENT_NOTHING, lendNothing } from '../endpoint-id-test-helpers.ts';
-import { MachineUpdates } from '../power/machine-update.ts';
-import { registerAuthHandlers } from './auth.ts';
 import { AgentIntegrations } from '../agents/integrations.ts';
+import { AuthStore, type StatementAdmission } from '../auth/auth-store.ts';
+import { generateKeyPair } from '../auth/keys.ts';
+import { admitClient } from '../auth/test-admit.ts';
+import { Dispatcher, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
+import { LENT_NOTHING, lendNothing } from '../endpoint-id-test-helpers.ts';
+import { readOrCreateEndpointIdentity, type EndpointIdentity } from '../endpoint-id.ts';
 import { ClosedLidError, DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
+import { MachineUpdates } from '../power/machine-update.ts';
+import { PeerKey } from '../remote/peer-key.ts';
+import { registerAuthHandlers } from './auth.ts';
 
 let home: string;
 let store: AuthStore;
@@ -24,7 +24,6 @@ let dispatcher: Dispatcher;
 let lanDoorOpen: boolean;
 let disconnected: string[];
 let streamingChanges: boolean[];
-let appleChanges: boolean[];
 let keepAwakeChanges: number;
 let lidRule: boolean;
 let lidCancels: boolean;
@@ -74,7 +73,6 @@ beforeEach(async () => {
     lanDoorOpen = true;
     disconnected = [];
     streamingChanges = [];
-    appleChanges = [];
     keepAwakeChanges = 0;
     lidRule = false;
     lidCancels = false;
@@ -98,9 +96,6 @@ beforeEach(async () => {
         broker: () => ({ brokerUrl: identity.broker.mode === 'custom' ? identity.broker.url : null, brokerFixed: false }),
         lanDoor: () => ({ lan: lanDoorOpen ? { port: 4220, addresses: ['192.168.1.20'] } : null, lanDoorFixed: false }),
         streamingChanged: (allowed) => streamingChanges.push(allowed),
-        appleFoundationChanged: async (on) => {
-            appleChanges.push(on);
-        },
         keepAwake: {
             available: true,
             changed: () => {
@@ -167,17 +162,6 @@ describe('auth handlers', () => {
         expect(disconnected).toEqual([laptop]);
     });
 
-    test('Apple setting invokes lifecycle changes and leaves it alone on unrelated edits', async () => {
-        expect(await ask(undefined, 'endpoint.info')).toMatchObject({ result: { appleFoundationEnabled: false } });
-        expect(await ask(undefined, 'endpoint.setIdentity', { name: null, icon: null, appleFoundationEnabled: true })).toMatchObject({
-            ok: true,
-            result: { appleFoundationEnabled: true }
-        });
-        await ask(undefined, 'endpoint.setIdentity', { name: 'Box', icon: null });
-        await ask(undefined, 'endpoint.setIdentity', { name: null, icon: null, appleFoundationEnabled: false });
-        expect(appleChanges).toEqual([true, false]);
-    });
-
     test('keep awake is set from any paired client, and only a change of it reaches the holder', async () => {
         expect(await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.info')).toMatchObject({
             result: { keepAwake: 'off', keepAwakeOnBattery: false, keepAwakeDisplay: false, keepAwakeAvailable: true }
@@ -222,12 +206,12 @@ describe('auth handlers', () => {
         const paired: ClientAccess = { reachability: 'lan', sessionId: 's1' };
         await ask(paired, 'endpoint.setIdentity', { name: 'Studio', icon: { kind: 'lucide', value: 'server' } });
 
-        const set = await ask(paired, 'endpoint.settings', { keepAwake: 'working', appleFoundationEnabled: true });
+        const set = await ask(paired, 'endpoint.settings', { keepAwake: 'working' });
         expect(set).toMatchObject({
             ok: true,
-            result: { label: 'Studio', icon: { kind: 'lucide', value: 'server' }, keepAwake: 'working', appleFoundationEnabled: true }
+            result: { label: 'Studio', icon: { kind: 'lucide', value: 'server' }, keepAwake: 'working' }
         });
-        expect([keepAwakeChanges, appleChanges]).toEqual([1, [true]]);
+        expect(keepAwakeChanges).toBe(1);
 
         // The same checks as beside a name: the closed-lid rule, and a folder for worktrees only from the owner.
         expect(await ask(paired, 'endpoint.settings', { keepAwakeLidClosed: true })).toMatchObject({ ok: false, error: { code: 'closed-lid-no-rule' } });
@@ -366,7 +350,6 @@ describe('auth handlers', () => {
                     streamingAllowed: true,
                     resumeAtReset: false,
                     visualReplies: true,
-                    appleFoundationEnabled: false,
                     keepAwake: 'off',
                     keepAwakeOnBattery: false,
                     keepAwakeDisplay: false,
@@ -752,7 +735,7 @@ describe('auth handlers', () => {
     });
 
     test('a provider whose settings Ruimte does not write is unknown', async () => {
-        expect(await ask(LOCAL, 'endpoint.setAgentIntegration', { provider: 'apple', on: true })).toMatchObject({
+        expect(await ask(LOCAL, 'endpoint.setAgentIntegration', { provider: 'nanogpt', on: true })).toMatchObject({
             ok: false,
             error: { code: 'unknown-provider' }
         });

@@ -1,5 +1,5 @@
-import type { CSSProperties } from 'react';
 import clsx from 'clsx';
+import type { CSSProperties } from 'react';
 import { EclipseStars } from '@/ui/EclipseStars';
 
 export interface EclipseOrbit {

@@ -1,8 +1,8 @@
 import { lstat, mkdir, readdir, readFile, rename, rm, rmdir } from 'node:fs/promises';
 import { dirname, extname, join } from 'node:path';
+import { writeAtomic } from '@adecore/utils/fs';
+import { isRecord } from '@adecore/utils/record';
 import { designFolderOf, designPlaces, isSharedDesign, type DesignPlace, type ProjectView } from '@ruimte/contracts';
-import { writeAtomic } from '@adecore/agents';
-import { isRecord } from '../is-record.ts';
 
 /*
  * The moves this daemon started and has not settled yet, under `private` so git never sees it. Only a

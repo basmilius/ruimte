@@ -1,6 +1,6 @@
-import { useRef, type CSSProperties, type ReactNode } from 'react';
-import clsx from 'clsx';
 import { ColumnResizeHandle, useColumnResize } from '@adecore/ui';
+import clsx from 'clsx';
+import { useRef, type CSSProperties, type ReactNode } from 'react';
 
 /* The narrowest a commit's tree goes, which a patch's tree shares since both are drawn at one width. */
 export const COMMIT_TREE_MIN_WIDTH = 160;

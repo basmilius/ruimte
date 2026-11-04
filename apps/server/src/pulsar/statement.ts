@@ -7,8 +7,8 @@ import {
     type PeerStatement,
     type SignalOfferAccess
 } from '@ruimte/pulsar';
-import type { StatementAdmission, StatementEntry } from '../auth/auth-store.ts';
 import { isPublicKey, verifySignature } from '@ruimte/pulsar/verify-node';
+import type { StatementAdmission, StatementEntry } from '../auth/auth-store.ts';
 
 /*
  * How far the address book's clock and this machine's may disagree. A statement lives two minutes, so

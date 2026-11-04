@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { cloneRepository, isRemoteUrl } from './clone.ts';
 import type { streamCommand } from './run.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 let parent: string;
 let progress: string[];

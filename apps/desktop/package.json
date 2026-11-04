@@ -20,12 +20,12 @@
         "pack": "bun run build:main && electron-builder --publish never",
         "pack:dir": "bun run build:main && electron-builder --dir --publish never",
         "build:speech": "bun scripts/build-speech.ts",
-        "build:foundation-models": "bun ../foundation-models/scripts/build.ts",
         "build:computer-use": "bun ../computer-use/scripts/build.ts"
     },
     "dependencies": {
-        "@adecore/service": "0.50.6",
-        "@adecore/shell": "0.50.6",
+        "@adecore/service": "0.54.5",
+        "@adecore/shell": "0.54.5",
+        "@adecore/utils": "0.54.5",
         "@ruimte/actions": "workspace:*",
         "@ruimte/contracts": "workspace:*",
         "@ruimte/csp": "workspace:*",

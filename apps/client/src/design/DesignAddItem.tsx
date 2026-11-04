@@ -1,6 +1,6 @@
+import { Icon, Tile } from '@adecore/ui';
 import type { ProviderInfo } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
-import { Icon, Tile } from '@adecore/ui';
 import { AgentSubmenu, ChatAgentPicker } from '@/agents/AgentMenus';
 import type { Point } from '@/canvas/math';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';

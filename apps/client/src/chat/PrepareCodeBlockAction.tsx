@@ -1,11 +1,11 @@
 import type { ShellCodeBlockContext } from '@adecore/agents-react';
+import { ErrorBoundary, IconButton, lazyNamed, messageOf } from '@adecore/ui';
+import type { TerminalPreparePreview } from '@ruimte/contracts';
+import { SquareTerminal } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ErrorBoundary, IconButton, lazyNamed, messageOf } from '@adecore/ui';
-import { SquareTerminal } from 'lucide-react';
-import type { TerminalPreparePreview } from '@ruimte/contracts';
-import { preparableShell } from '@/chat/preparable-shell';
 import { perform } from '@/actions/client-actions';
+import { preparableShell } from '@/chat/preparable-shell';
 import { endpointById } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
 import { prepareDestination, type PrepareDestination } from '@/terminal/prepare-destination';

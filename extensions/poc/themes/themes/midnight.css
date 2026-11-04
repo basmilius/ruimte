@@ -1,0 +1,12 @@
+/* The hook sits on the column; what draws its ground is the element inside. */
+[data-surface='sidebar'] > div {
+    background-image: url('stars.svg');
+}
+
+[data-surface='node'] {
+    outline: 1px solid rgb(120 140 255 / 40%);
+}
+
+[data-surface='panel'] > div {
+    background: rgb(11 21 56 / 85%);
+}

@@ -1,14 +1,14 @@
-import i18next from 'i18next';
-import { createStore, type StoreApi } from 'zustand';
-import type { AgentKind, ProjectNewInlineChatPayload, ProjectNewInlineChatResult } from '@ruimte/contracts';
-import type { Editor, EditorRange, EditorTrackedRange } from '@adecore/editor';
 import { waitingRequestsOf, type ChatState } from '@adecore/agents-react/state';
+import type { Editor, EditorRange, EditorTrackedRange } from '@adecore/editor';
 import { endOfInsertion, fitReplacement, locateSelection, parseAnswer, replaceRange, type InlineProblem, type LineSpan } from '@adecore/editor-react/models';
 import { messageOf } from '@adecore/ui';
+import type { AgentKind, ProjectNewInlineChatPayload, ProjectNewInlineChatResult } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { createStore, type StoreApi } from 'zustand';
+import { basenameOf } from '@/shell/panels/files-tree';
 import type { DiskText } from '@/state/text-drafts';
 import type { InlineEditRecord } from './inline-edit-record';
 import { inlineMessage } from './inline-message';
-import { basenameOf } from '@/shell/panels/files-tree';
 
 type InlinePhase = 'running' | 'proposal' | 'answer' | 'failed' | 'stopped';
 

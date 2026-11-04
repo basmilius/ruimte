@@ -1,8 +1,10 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { Serializer } from '@adecore/utils/async';
+import { isNotFound } from '@adecore/utils/errors';
+import { writeAtomic } from '@adecore/utils/fs';
 import { ProjectIconChoiceSchema } from '@ruimte/contracts';
 import { z } from 'zod';
-import { isNotFound, writeAtomic, Serializer } from '@adecore/agents';
 import { errorText } from '../error-text.ts';
 import { ProjectError } from './project-error.ts';
 

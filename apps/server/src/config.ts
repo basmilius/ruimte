@@ -1,10 +1,11 @@
 import { homedir, hostname } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
-import { DEFAULT_STUN_SERVER, brokerUrlProblem, type BrokerOverride } from '@ruimte/pulsar';
 import { RUIMTE_SESSION_VARIABLES } from '@adecore/agents/host';
+import { DEFAULT_STUN_SERVER, brokerUrlProblem, type BrokerOverride } from '@ruimte/pulsar';
+import { MCP_URL_VARIABLE } from './providers/ruimte-mcp.ts';
 
-const COMMANDS = ['serve', 'login', 'logout', 'status', 'context', 'service', 'closed-lid', 'notify', 'voice', 'version'] as const;
+const COMMANDS = ['serve', 'login', 'logout', 'status', 'extension', 'service', 'closed-lid', 'notify', 'voice', 'version'] as const;
 type Command = (typeof COMMANDS)[number];
 
 function isCommand(value: string): value is Command {
@@ -39,11 +40,11 @@ export interface ServerConfig {
     lanDoorOff: boolean;
     // Started by the background service (`RUIMTE_SERVICE=1` in its definition), which starts it again when it exits.
     underService: boolean;
-    // `login` puts it on an account with a code; `status` says how the running daemon is reached; `context` is the agent-side CLI (`ruimte-context`);
+    // `login` puts it on an account with a code; `status` says how the running daemon is reached;
     // `service` installs, removes or reports the background service; `closed-lid` installs or removes the sudoers rule behind keep awake
     // with the lid closed; `notify` raises a notification; `voice` sets the key of Voice run by the daemon; `version` prints the version.
     command: Command;
-    // What follows the command: the words of `context` and `notify`, and the action of `service` followed by the daemon flags its service runs with.
+    // What follows the command: the words of `extension` and `notify`, and the action of `service` followed by the daemon flags its service runs with.
     args: string[];
     // `notify --node`: the node the notification opens.
     node?: string;
@@ -56,7 +57,7 @@ export interface ServerConfig {
  * What a session hands its shell. A daemon started from inside another daemon's terminal inherits
  * them, and its own sessions and usage probes would then report into that other daemon's node.
  */
-export const SESSION_VARIABLES = RUIMTE_SESSION_VARIABLES;
+export const SESSION_VARIABLES = [...RUIMTE_SESSION_VARIABLES, MCP_URL_VARIABLE];
 
 /** Removes the variables of a session this process was started from; a daemon never belongs to one. */
 export function forgetInheritedSession(env: Record<string, string | undefined>): void {
@@ -114,8 +115,8 @@ function parseBrokerOverride(noBroker: boolean, value: string | undefined): Brok
 }
 
 export function parseServerArgs(argv: string[], env: Record<string, string | undefined> = process.env): ServerConfig {
-    // Everything after `context` belongs to the agent's CLI (`node note --text ...`), whose flags the daemon parses, not this.
-    const cli = argv[0] === 'context';
+    // Everything after `extension` belongs to that CLI, whose flags it parses itself, not this.
+    const cli = argv[0] === 'extension';
     const { values, positionals } = parseArgs({
         args: cli ? argv.slice(0, 1) : argv,
         options: {

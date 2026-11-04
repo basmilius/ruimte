@@ -1,0 +1,49 @@
+import { NeedsYou } from '@/components/docs/guide/NeedsYou.tsx';
+import { Shortcut } from '@/components/docs/Shortcut.tsx';
+
+export const metadata = { title: 'Needs you' };
+
+# Needs you
+
+<p className="lead">Ruimte lists every agent that waits for an answer, across views, projects and devices.</p>
+
+<NeedsYou />
+
+## Where you see it
+
+- **Node and tab headers.** A terminal or chat that waits reads **Needs you**.
+- **The sidebar.** **Needs you**, above the views, lists what waits, oldest first. To include your other open projects, turn on Settings, General, Needs you across projects.
+- **The dock.** Under a canvas, the dock counts what waits and what works.
+- **The canvas.** Questions and approvals of the canvas's agents stack above the dock. Step through them, fold them, or click a title to go to its node.
+
+Answer a chat's request right in its card. For a terminal agent, the card has **Go to terminal**, since you answer in the terminal.
+
+## Jump to what waits
+
+| Shortcut | Action |
+| --- | --- |
+| <Shortcut keys="Mod+Alt+P" /> | Go to the next node that needs you, in any view, oldest first |
+| <Shortcut keys="Mod+Alt+Shift+P" /> | Open the attention queue: what waits, and turns that finished while you were away |
+| <Shortcut keys="Mod+Shift+P" /> | Move the keyboard to the questions and approvals on the canvas |
+
+## Snooze an agent
+
+Hover a waiting agent and click the snooze button. Choose **10 minutes**, **1 hour** or **Tomorrow**. The agent leaves the list and raises nothing until the snooze ends.
+
+## Notifications
+
+Ruimte notifies you when an agent needs you or finishes. Turn its sound on or off under Settings, Agents, Notification sound.
+
+With the iPhone app, a notification reaches your phone only once you step away from your computer. A question waits a minute and an approval ten seconds. If you answer in that time, your phone stays quiet. See [Phone and web](/docs/guide/phone-and-web).
+
+## Keep the computer awake
+
+A computer that sleeps pauses every agent on it. Set Settings, Agents, Keep awake:
+
+| Choice | The computer stays awake |
+| --- | --- |
+| Off | Never; it follows your system settings |
+| While agents work | Only while an agent works |
+| Always | Also when no agent works |
+
+Below it, turn on **Also on battery**, **Keep display on** and, on a Mac, **Also with the lid closed**. The lid setting asks once for an administrator password.

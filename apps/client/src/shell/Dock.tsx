@@ -1,7 +1,5 @@
-import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
-import { useDictation } from '@/dictation/controller';
-import { useTranslation } from 'react-i18next';
-import { useEffect } from 'react';
+import { ButtonGroup, Icon, IconButton, Menu, Separator, Kbd, DockShell, ZoomControls } from '@adecore/ui';
+import { isCanvasView } from '@ruimte/contracts';
 import {
     FileText,
     Globe,
@@ -19,25 +17,27 @@ import {
     X,
     type LucideIcon
 } from 'lucide-react';
+import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-import { isCanvasView } from '@ruimte/contracts';
+import { centerWorld } from '@/actions/action-reach';
 import { applyLayoutAction, createNodeAction, createTextAction, deleteLayoutAction, fitAction, setLocksAction } from '@/actions/client-actions';
 import { AgentSubmenus } from '@/agents/AgentMenus';
-import { centerWorld } from '@/actions/action-reach';
 import { LOCK_KEYS, lockHint, lockLabel } from '@/canvas/locks';
-import { PET_LEDGE_ATTRIBUTE } from '@/canvas/pets/attributes';
 import type { Point } from '@/canvas/math';
+import { OVERLAY_LEDGE_ATTRIBUTE } from '@/canvas/overlay-attributes';
 import { RemoteMachineItems } from '@/canvas/RemoteMachineItems';
-import { RoutineAddItems } from '@/routines/RoutineAddItems';
-import { DesignAddItem } from '@/design/DesignAddItem';
-import { shownFolderOf, useProject } from '@/state/project';
-import { maximizedNodeOf, useCanvas, useCanvasStore } from '@/state/canvas';
-import { activeViewOf, useDocument } from '@/state/document';
-import { useUi } from '@/state/ui';
-import { StatusSummary } from '@/shell/StatusSummary';
-import { ButtonGroup, Icon, IconButton, Menu, Separator, Kbd, DockShell, ZoomControls } from '@adecore/ui';
-import { useSettings } from '@/state/settings';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { DesignAddItem } from '@/design/DesignAddItem';
+import { useDictation } from '@/dictation/controller';
+import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
+import { RoutineAddItems } from '@/routines/RoutineAddItems';
+import { StatusSummary } from '@/shell/StatusSummary';
+import { maximizedNodeOf, useCanvas, useCanvasCamera, useCanvasStore } from '@/state/canvas';
+import { activeViewOf, useDocument } from '@/state/document';
+import { shownFolderOf, useProject } from '@/state/project';
+import { useSettings } from '@/state/settings';
+import { useUi } from '@/state/ui';
 
 /*
  * The canvas's own controls: zoom, locks, layouts and the plus that adds a node. A view of its own
@@ -55,7 +55,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
         const view = activeViewOf(s);
         return view !== null && isCanvasView(view);
     });
-    const { zoom, locks, hasSelection, layouts } = useCanvas(
+    const { zoom, locks, hasSelection, layouts } = useCanvasCamera(
         useShallow((s) => ({
             zoom: s.camera.zoom,
             locks: s.locks,
@@ -88,7 +88,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
         return null;
     }
     return (
-        <DockShell autoHide={dockAutoHide} onHiddenChange={onHiddenChange} {...{ [PET_LEDGE_ATTRIBUTE]: '' }}>
+        <DockShell autoHide={dockAutoHide} onHiddenChange={onHiddenChange} {...{ [OVERLAY_LEDGE_ATTRIBUTE]: '' }}>
             <StatusSummary />
 
             <Menu.Root>

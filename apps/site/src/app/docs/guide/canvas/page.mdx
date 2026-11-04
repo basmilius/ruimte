@@ -1,0 +1,102 @@
+import { Canvas } from '@/components/docs/guide/Canvas.tsx';
+import { Shortcut } from '@/components/docs/Shortcut.tsx';
+import { Note } from '@/components/docs/guide/ui.tsx';
+
+export const metadata = { title: 'The canvas' };
+
+# The canvas
+
+<p className="lead">A canvas holds nodes side by side. Lines between nodes decide what an agent may read and which page or device it works in.</p>
+
+<Canvas />
+
+## Add a node
+
+- Click an item on the empty canvas.
+- Right-click the canvas and choose **New node**.
+- Press <Shortcut keys="Mod+K" /> and run a **New** command.
+- Press a shortcut:
+
+| Shortcut | Node |
+| --- | --- |
+| <Shortcut keys="Alt+T" /> | Terminal |
+| <Shortcut keys="Alt+C" /> | Chat |
+| <Shortcut keys="Alt+B" /> | Browser |
+| <Shortcut keys="Alt+N" /> | Note |
+| <Shortcut keys="Alt+G" /> | Group |
+
+Double-click the canvas to add text. Drop a file on it to add the file.
+
+## Kinds of node
+
+| Node | What it is |
+| --- | --- |
+| Terminal | A shell, or an agent CLI in its own interface. See [Terminals](/docs/guide/terminals). |
+| Chat | An AI chat. See [AI chats](/docs/guide/chats). |
+| Browser | A web page. See [Browsers and devices](/docs/guide/browsers-and-devices). |
+| Note | Markdown. **Lock to preview** shows it rendered. **Start agent from note** opens an agent with the note as its brief. |
+| Text | A label in a sans, hand or mono font. |
+| File | A file of the project, in the editor. |
+| Group | A frame around nodes. A node joins it when you drag it in or add it there, and leaves when you drag it out. Collapse it, or choose **Arrange group** to line them up. |
+| Device | A simulator, emulator or phone. See [Browsers and devices](/docs/guide/browsers-and-devices). |
+| Drawing, Diagram | A drawing or diagram view. See [Drawings and diagrams](/docs/guide/drawings). |
+| Routine | A routine and its latest runs. See [Routines and Output](/docs/guide/routines). |
+
+Right-click a node for **Duplicate**, **Color**, **Open as view** and **Set as default size**. An agent's node also has its conversation and worktree there.
+
+## Link a node to an agent
+
+An agent reads or operates another node only over a line, or when you point at it with `#` in a chat.
+
+To draw a line:
+
+1. Move the pointer to the side of a node until a dot appears.
+2. Drag to the other node.
+
+Hold <Shortcut keys="Shift" /> for a straight or diagonal line. Press <Shortcut keys="Escape" /> to cancel. You can also right-click a node, choose **Connect to…** and click the other node.
+
+| Line | Look | What the agent can do |
+| --- | --- | --- |
+| Into an agent | Accent color, dot at the agent | Read the node at the other end: a note, file, terminal output, chat or drawing |
+| Between an agent and a browser or device | Neutral, point at the page or device | Drive the page or operate the device |
+| Into an agent it opened, with a task | Dashed while the task is open | See [Agents working together](/docs/guide/delegation) |
+
+<Note>A line never lets an agent type into another terminal or close another node. A terminal at the end of a line is read-only to the agent.</Note>
+
+Select a line to change its arrows, direction and color.
+
+## Move around
+
+| Input | Action |
+| --- | --- |
+| Two-finger scroll, <Shortcut keys="Space" /> and drag, or middle-button drag | Pan |
+| Pinch, <Shortcut keys="+" /> or <Shortcut keys="-" /> | Zoom |
+| <Shortcut keys="Mod+0" /> | Zoom to 100% |
+| <Shortcut keys="Shift+1" /> | Fit everything |
+| <Shortcut keys="Shift+2" /> | Fit the selection |
+| <Shortcut keys="Mod+Shift+2" /> | Fit the selected node |
+| <Shortcut keys="Alt+ArrowLeft" /> and the other arrows | Select the neighboring node |
+| <Shortcut keys="Enter" /> | Give the selected node the keyboard |
+| <Shortcut keys="Escape" /> | Give the keyboard back to the canvas |
+| <Shortcut keys="Mod+Alt+[" />, <Shortcut keys="Mod+Alt+]" /> | Previous or next camera position |
+
+The camera only moves when you move it.
+
+## Arrange nodes
+
+| Input | Action |
+| --- | --- |
+| Drag a header | Move a node |
+| Drag a handle just outside the frame | Resize a node |
+| Drag across the background | Select several nodes |
+| <Shortcut keys="Mod+A" /> | Select all |
+| <Shortcut keys="Mod+G" /> | Group the selection |
+| <Shortcut keys="Backspace" /> | Delete the selection |
+| <Shortcut keys="Mod+Z" />, <Shortcut keys="Mod+Shift+Z" /> | Undo, redo |
+| Hold <Shortcut keys="Alt" /> | Show handles in the gaps between nodes; dragging one moves every equal gap |
+
+## The dock
+
+The dock under the canvas shows what waits and works, and holds zoom and locks. A lock stops panning, zooming, moving or resizing. Buttons and shortcuts still work while something is locked.
+
+To keep an arrangement, choose **Layouts**, then **Save layout as…**. Apply a saved layout from the same menu or from the empty canvas.

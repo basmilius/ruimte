@@ -1,8 +1,8 @@
 import { userInfo } from 'node:os';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { errorText } from '../error-text.ts';
-import { ClosedLid } from '../power/closed-lid.ts';
 import { macClosedLidSystem } from '../power/closed-lid-system.ts';
+import { ClosedLid } from '../power/closed-lid.ts';
 import { caffeinateCommand, KeepAwake, agentsWorking, type KeepAwakeBlock, type HeldProcess } from '../power/keep-awake.ts';
 import { MachineUpdates } from '../power/machine-update.ts';
 import { ExecutionStateHold, windowsPower } from '../power/windows-keep-awake.ts';

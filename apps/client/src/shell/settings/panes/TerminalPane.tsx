@@ -1,26 +1,28 @@
-import { useTranslation } from 'react-i18next';
-import { Segmented, Select, Stepper } from '@adecore/ui';
+import { ScrollArea, Segmented, Select, Stepper } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
+import { useTranslation } from 'react-i18next';
 import { TerminalShellRow } from '@/shell/settings/MachineSettings';
 import { IntegrationsSection } from '@/shell/settings/panes/IntegrationsSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useServers } from '@/state/server';
-import { useEndpointConnection } from '@/transport/status';
 import { FONT_SIZE_RANGE, MONO_FONTS, monoFontStack, TERMINAL_LINE_HEIGHT_RANGE, terminalFontOf, useSettings } from '@/state/settings';
+import { useEndpointConnection } from '@/transport/status';
 
 function TerminalPreview({ fontSize, fontFamily }: { fontSize: number; fontFamily: string }) {
     return (
-        <div
-            className="overflow-x-auto rounded-lg bg-term-bg px-3.5 py-3 leading-normal whitespace-pre text-term-fg"
+        <ScrollArea
+            axis="x"
+            className="overflow-hidden rounded-lg bg-term-bg"
+            viewportClassName="px-3.5 py-3 leading-normal whitespace-pre text-term-fg"
             style={{ fontSize: `${fontSize}px`, fontFamily }}
             aria-hidden
         >
             <span className="text-term-green">~/Development/ruimte</span> <span className="text-term-blue">main</span> ❯ bun run dev
             {'\n'}
             <span className="text-term-dim">ready in 412 ms</span>
-        </div>
+        </ScrollArea>
     );
 }
 

@@ -61,7 +61,7 @@ function signerOf(privateKey: KeyObject): SessionSigner {
 
 /* A key for this run only; a session bound to it signs in again on the next start. */
 function keyInMemory(): SessionSigner {
-    return signerOf(generateKeyPairSync('ed25519').privateKey);
+    return { ...signerOf(generateKeyPairSync('ed25519').privateKey), temporary: true };
 }
 
 /*

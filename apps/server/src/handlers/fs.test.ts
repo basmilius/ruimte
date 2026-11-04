@@ -2,15 +2,15 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { FS_WRITE_PIECE_BYTES, type ServerFrame } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
-import { readServedFile } from '../fs/read.ts';
-import { MachineHome } from '../fs/machine-home.ts';
-import { FolderWatcher } from '../fs/watch.ts';
+import { FS_WRITE_PIECE_BYTES, type ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
-import { askOnce } from './test-helpers.ts';
+import { MachineHome } from '../fs/machine-home.ts';
+import { readServedFile } from '../fs/read.ts';
+import { FolderWatcher } from '../fs/watch.ts';
 import { registerBytesHandlers } from './bytes.ts';
 import { registerFsHandlers } from './fs.ts';
+import { askOnce } from './test-helpers.ts';
 
 const GIF = new TextEncoder().encode('GIF89a and then some');
 
@@ -115,6 +115,76 @@ describe('the machine home', () => {
         expect(await request('fs.rename', { path: join(root, 'a.txt'), to: join(root, 'moved', 'b.txt') })).toMatchObject({ ok: true, result: {} });
         expect((await stat(join(root, 'moved', 'b.txt'))).isFile()).toBe(true);
         expect(await request('fs.rename', { path: join(root, 'a.txt'), to: join(root, 'c.txt') })).toMatchObject({ ok: false, error: { code: 'not-found' } });
+    });
+});
+
+describe('a read within a folder', () => {
+    const outside = { ok: false, error: { code: 'outside-project' } };
+    let project: string;
+
+    beforeEach(async () => {
+        project = join(root, 'project');
+        await mkdir(join(root, 'private'), { recursive: true });
+        await mkdir(project);
+        await writeFile(join(root, 'private', 'secret.txt'), 'secret');
+        await writeFile(join(project, 'notes.md'), '# Notes');
+        await symlink(join(root, 'private', 'secret.txt'), join(project, 'secret.txt'));
+        await symlink(join(root, 'private'), join(project, 'private'));
+    });
+
+    test('follows no symlink out of the folder', async () => {
+        expect(await request('fs.read', { path: join(project, 'secret.txt'), within: project })).toMatchObject(outside);
+        expect(await request('fs.list', { path: join(project, 'private'), within: project })).toMatchObject(outside);
+    });
+
+    test('reads what is really inside it, and leaves a read without one as it was', async () => {
+        expect(await request('fs.read', { path: join(project, 'notes.md'), within: project })).toMatchObject({ ok: true, result: { text: '# Notes' } });
+        expect(await request('fs.list', { path: project, within: project })).toMatchObject({ ok: true });
+        expect(await request('fs.read', { path: join(project, 'secret.txt') })).toMatchObject({ ok: true, result: { text: 'secret' } });
+    });
+});
+
+describe('a write within a folder', () => {
+    const outside = { ok: false, error: { code: 'outside-project' } };
+    let project: string;
+
+    beforeEach(async () => {
+        // The sibling is inside the client's boundary, as another open project or a worktree is, but not inside the project.
+        project = join(root, 'project');
+        await mkdir(join(root, 'sibling'), { recursive: true });
+        await mkdir(project);
+        await writeFile(join(root, 'sibling', 'notes.md'), 'sibling');
+        await symlink(join(root, 'sibling'), join(project, 'sibling'));
+    });
+
+    test('follows no symlink out of the folder, into the rest of the boundary', async () => {
+        const mtime = Math.round((await stat(join(root, 'sibling', 'notes.md'))).mtimeMs);
+
+        expect(await request('fs.write', { path: join(project, 'sibling', 'notes.md'), text: 'changed', expectedMtime: mtime, within: project })).toMatchObject(
+            outside
+        );
+        expect(await request('fs.create', { path: join(project, 'sibling', 'new.md'), kind: 'file', text: 'new', within: project })).toMatchObject(outside);
+        expect(await readFile(join(root, 'sibling', 'notes.md'), 'utf8')).toBe('sibling');
+        expect(await stat(join(root, 'sibling', 'new.md')).catch(() => null)).toBeNull();
+    });
+
+    test('refuses a folder outside the boundary itself', async () => {
+        const elsewhere = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-fs-elsewhere-')));
+
+        try {
+            expect(await request('fs.create', { path: join(elsewhere, 'new.md'), kind: 'file', within: elsewhere })).toMatchObject(outside);
+        } finally {
+            await rm(elsewhere, { recursive: true, force: true });
+        }
+    });
+
+    test('writes and creates what is really inside it', async () => {
+        expect(await request('fs.create', { path: join(project, 'notes.md'), kind: 'file', text: 'a', within: project })).toMatchObject({ ok: true });
+
+        const mtime = Math.round((await stat(join(project, 'notes.md'))).mtimeMs);
+
+        expect(await request('fs.write', { path: join(project, 'notes.md'), text: 'b', expectedMtime: mtime, within: project })).toMatchObject({ ok: true });
+        expect(await readFile(join(project, 'notes.md'), 'utf8')).toBe('b');
     });
 });
 
@@ -224,6 +294,36 @@ describe('files that go past the language servers', () => {
 
         expect(await request('fs.writeCommit', { uploadId })).toMatchObject({ ok: false, error: { code: 'upload-incomplete' } });
         expect(await readFile(path, 'utf8')).toBe('old');
+    });
+
+    test('refuses overlapping upload pieces without counting a hole as received bytes', async () => {
+        const path = join(root, 'overlap.txt');
+        await writeFile(path, 'old');
+        const { mtimeMs } = await stat(path);
+        const started = await request('fs.writeStart', { path, size: 6, expectedMtime: Math.round(mtimeMs) });
+        const { uploadId } = (started as { result: { uploadId: string } }).result;
+        const piece = (offset: number, text: string) => request('fs.writePiece', { uploadId, offset, data: Buffer.from(text).toString('base64') });
+
+        expect(await piece(0, 'abcd')).toMatchObject({ ok: true });
+        expect(await piece(2, 'XY')).toMatchObject({ ok: false, error: { code: 'upload-invalid' } });
+        expect(await request('fs.writeCommit', { uploadId })).toMatchObject({ ok: false, error: { code: 'upload-incomplete' } });
+        expect(await readFile(path, 'utf8')).toBe('old');
+    });
+
+    test('accepts out of order upload pieces and identical retries, but refuses changed retries', async () => {
+        const path = join(root, 'retry.txt');
+        await writeFile(path, 'old');
+        const { mtimeMs } = await stat(path);
+        const started = await request('fs.writeStart', { path, size: 6, expectedMtime: Math.round(mtimeMs) });
+        const { uploadId } = (started as { result: { uploadId: string } }).result;
+        const piece = (offset: number, text: string) => request('fs.writePiece', { uploadId, offset, data: Buffer.from(text).toString('base64') });
+
+        expect(await piece(4, 'ef')).toMatchObject({ ok: true });
+        expect(await piece(0, 'abcd')).toMatchObject({ ok: true });
+        expect(await piece(0, 'abcd')).toMatchObject({ ok: true });
+        expect(await piece(0, 'XY')).toMatchObject({ ok: false, error: { code: 'upload-invalid' } });
+        expect(await request('fs.writeCommit', { uploadId })).toMatchObject({ ok: true });
+        expect(await readFile(path, 'utf8')).toBe('abcdef');
     });
 
     test('does not tell the servers about a write that is refused', async () => {

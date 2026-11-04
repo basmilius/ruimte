@@ -1,5 +1,5 @@
-import * as Sentry from '@sentry/bun';
 import { createScrubber, startQuarterMeter, TELEMETRY_DATA_COLLECTION, type QuarterMeter } from '@ruimte/telemetry';
+import * as Sentry from '@sentry/bun';
 import type { BrokerMeter } from './broker.ts';
 
 // The broker's app in Observatory. A DSN only lets a client send, so it is no secret.

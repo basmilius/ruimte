@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, symlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { AgentLineageStore } from '@adecore/agents/coordination';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { PeerLinks } from './links.ts';
 import { UntrustedFolders, untrustedStartProblem } from './untrusted.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 const newHome = tempHomes('ruimte-untrusted-');
 let home: string;

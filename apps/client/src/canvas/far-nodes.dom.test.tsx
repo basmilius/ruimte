@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
+import { act } from 'react';
 import { canvasOfNode } from '@/state/canvas';
-import { FakeMachine } from '../../testing/fake-machine';
-import { until } from '../../testing/dom';
 import { openCanvasPage, type CanvasPage } from '../../testing/canvas-page';
+import { until } from '../../testing/dom';
+import { FakeMachine } from '../../testing/fake-machine';
 
 const NEAR: ProjectNode = { id: 'near', kind: 'note', title: 'Near', body: 'In sight', x: 0, y: 0, w: 320, h: 240 };
 // More than a viewport past the right edge of a 1280 by 800 view at 100%.

@@ -1,15 +1,14 @@
+import { DrawingFontSchema, DrawingStrokeStyleSchema, DrawingStrokeWidthSchema } from '@adecore/drawing/protocol';
+import { isRecord } from '@adecore/utils/record';
 import { z } from 'zod';
-import { isRecord } from '@adecore/agent-contracts';
 import { AgentKindSchema } from './agent.ts';
+import { DeviceReferenceSchema } from './device.ts';
 import { GitDiffScopeSchema } from './git.ts';
 import { RuntimeModeSchema } from './model.ts';
-import { ProviderAccountIdSchema } from './provider-accounts.ts';
-import { DeviceReferenceSchema } from './device.ts';
-import { DrawingFontSchema, DrawingStrokeStyleSchema, DrawingStrokeWidthSchema } from '@adecore/drawing/protocol';
 import { NODE_ACCENT_NAMES } from './node-accents.ts';
+import { ProviderAccountIdSchema } from './provider-accounts.ts';
 
 export const ProjectIdSchema = z.string().min(1);
-export type ProjectId = z.infer<typeof ProjectIdSchema>;
 
 export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'device', 'group', 'note', 'drawing', 'diagram', 'file', 'artifact', 'routine', 'design']);
 export type NodeKind = z.infer<typeof NodeKindSchema>;
@@ -135,9 +134,11 @@ export const ProjectNodeSchema = keepingUnknown(
         browserOwner: z.string().min(1).optional(),
         // Device only: a portable identity resolved to a local simulator when it is shown.
         device: DeviceReferenceSchema.optional(),
-        // Folded to its header, with the height it opens to again. A group also keeps the nodes it held
-        // out of sight (`memberIds`, group only); any other node keeps its body as it was, under the header.
+        // Folded to its header, with the height it opens to again; any node but a group keeps its body as it
+        // was, under the header.
         collapsed: z.boolean().optional(),
+        // Group only: what it holds, open or collapsed. Without it the group holds what stands in its frame
+        // (`groupMemberIds`), until the first change to its members writes them out.
         memberIds: z.array(z.string()).optional(),
         expandedHeight: z.number().positive().optional(),
         // Group only: the git worktree every node made inside it starts in.
@@ -318,7 +319,7 @@ export type ProjectEdge = z.infer<typeof ProjectEdgeSchema>;
 
 /*
  * `context` is the one every version has drawn: the agent it touches reads the other end with
- * `ruimte-context read` and may notify along it; between two agents the head reads. `target` runs from
+ * `context_read` and may notify along it; between two agents the head reads. `target` runs from
  * an agent into something it can drive. `origin` only records which node opened another and grants nothing.
  */
 export const EDGE_ROLES = ['context', 'target', 'origin'] as const;
@@ -636,7 +637,9 @@ export const ProjectChatViewSchema = ViewBaseSchema.extend({
     // A Chats project chat nobody wrote in yet: unlisted, reused by the next new chat, cleared by the first message.
     empty: z.boolean().optional(),
     // A chat an inline edit runs in: no list or tab shows it, only its card in the editor.
-    hidden: z.boolean().optional()
+    hidden: z.boolean().optional(),
+    // The extension that draws this chat in a surface of its own, so the sidebar leaves it out; otherwise an ordinary chat.
+    drawnBy: z.string().min(1).optional()
 });
 export type ProjectChatView = z.infer<typeof ProjectChatViewSchema>;
 
@@ -756,6 +759,7 @@ export const PROJECT_VIEW_KINDS = KNOWN_VIEW_SCHEMAS.map((schema) => schema.shap
 const KNOWN_VIEW_KINDS: ReadonlySet<string> = new Set(PROJECT_VIEW_KINDS);
 
 // A view of a kind a newer Ruimte made: listed, never opened, written back as read. The name falls back to the kind.
+// An extension's view is one too, and the one that opens (`isExtensionView`).
 export const ProjectUnknownViewSchema = z.object({
     kind: z.literal(UNKNOWN_KIND),
     id: z.string().min(1),
@@ -1025,12 +1029,31 @@ export function isHiddenCanvasView(view: ProjectView): view is ProjectCanvasView
     return view.kind === 'canvas' && view.hidden === true;
 }
 
-export function isUnlistedView(view: ProjectView): boolean {
-    return isEmptyChatView(view) || isHiddenView(view);
+/*
+ * `draws` says whether the extension that drew a chat runs where it is listed. Without one, as on a machine that
+ * cannot know a window's extensions, a drawn chat stays unlisted.
+ */
+export function isUnlistedView(view: ProjectView, draws?: (extensionId: string) => boolean): boolean {
+    const drawn = view.kind === 'chat' && view.drawnBy !== undefined && (draws?.(view.drawnBy) ?? true);
+
+    return drawn || isEmptyChatView(view) || isHiddenView(view);
+}
+
+/* A chat an extension draws itself: listed nowhere, but no inline edit, so it keeps everything an ordinary chat has. */
+export function isDrawnChatView(view: ProjectView): view is ProjectChatView {
+    return view.kind === 'chat' && view.drawnBy !== undefined;
+}
+
+/*
+ * A view an extension draws. It is kept as an unknown kind, so a Ruimte without the extension writes it back as it
+ * was read, but it opens: without its extension it says which one it needs.
+ */
+export function isExtensionView(view: ProjectView): boolean {
+    return view.kind === UNKNOWN_KIND && view.raw.kind === 'extension' && typeof view.raw.extension === 'string' && typeof view.raw.type === 'string';
 }
 
 export function isOpenableView(view: ProjectView): boolean {
-    return !isDividerView(view) && view.kind !== UNKNOWN_KIND && !isHiddenView(view);
+    return !isDividerView(view) && (view.kind !== UNKNOWN_KIND || isExtensionView(view)) && !isHiddenView(view);
 }
 
 function storedViewOf(view: ProjectView): unknown {
@@ -1182,7 +1205,6 @@ export const ProjectDocumentV2Schema = z.object({
     icon: ProjectIconChoiceSchema.optional(),
     views: z.array(ProjectViewSchema).min(1)
 });
-export type ProjectDocumentV2 = z.infer<typeof ProjectDocumentV2Schema>;
 
 // One project is one canvas. Read, migrated, never written again.
 export const ProjectDocumentV1Schema = z.object({
@@ -1196,7 +1218,6 @@ export const ProjectDocumentV1Schema = z.object({
     edges: z.array(ProjectEdgeSchema),
     layouts: z.array(ProjectLayoutSchema).default([])
 });
-export type ProjectDocumentV1 = z.infer<typeof ProjectDocumentV1Schema>;
 
 export const ProjectPanelKindSchema = z.enum(['files', 'git', 'processes', 'devices']);
 export type ProjectPanelKind = z.infer<typeof ProjectPanelKindSchema>;
@@ -1266,6 +1287,8 @@ export const ProjectPanelsSchema = z.object({
     launchesPanel: z.boolean().optional(),
     // Beside `panel` for the same reason as `launchesPanel`.
     databasesPanel: z.boolean().optional(),
+    // Beside `panel` for the same reason: `extension:<extension id>/<panel id>`.
+    extensionPanel: z.string().min(1).optional(),
     // Whole pixels.
     panelWidth: z.number().int().positive().optional(),
     // Whether the plan panel is open follows from its chat being on screen, never from this file.
@@ -1373,7 +1396,6 @@ export const ProjectLocalV1Schema = z.object({
     focusedNodeId: z.string().nullable(),
     panels: ProjectPanelsSchema.optional()
 });
-export type ProjectLocalV1 = z.infer<typeof ProjectLocalV1Schema>;
 
 export const ProjectSummarySchema = z
     .object({
@@ -1496,10 +1518,8 @@ export const ProjectSaveLocalPayloadSchema = z.object({
     projectId: ProjectIdSchema,
     local: ProjectLocalSchema
 });
-export type ProjectSaveLocalPayload = z.infer<typeof ProjectSaveLocalPayloadSchema>;
 
 export const ProjectTargetPayloadSchema = z.object({ projectId: ProjectIdSchema });
-export type ProjectTargetPayload = z.infer<typeof ProjectTargetPayloadSchema>;
 
 // Asked before the confirmation so it can name a number. While `otherClients` is above zero nothing ends.
 export const ProjectClosingResultSchema = z.object({
@@ -1524,7 +1544,6 @@ export const ProjectDeletePayloadSchema = z.object({
     // Also remove the canvas file; a folder project's other files are never touched.
     removeFiles: z.boolean()
 });
-export type ProjectDeletePayload = z.infer<typeof ProjectDeletePayloadSchema>;
 
 // The file changed under the daemon (a git pull, another machine); carries what is on disk now.
 export const ProjectChangedEventSchema = z.object({
@@ -1576,7 +1595,6 @@ export type ProjectSetIdentityPayload = z.infer<typeof ProjectSetIdentityPayload
 export const ProjectSummaryResultSchema = z.object({
     summary: ProjectSummarySchema
 });
-export type ProjectSummaryResult = z.infer<typeof ProjectSummaryResultSchema>;
 
 /* One person's choice of accounts for one agent kind in a project: null `default` leaves new starts to the machine's order. */
 export const ProjectSetAccountsPayloadSchema = z.object({
@@ -1592,4 +1610,3 @@ export type ProjectSetAccountsPayload = z.infer<typeof ProjectSetAccountsPayload
 export const ProjectSetAccountsResultSchema = z.object({
     accounts: ProjectAccountsSchema
 });
-export type ProjectSetAccountsResult = z.infer<typeof ProjectSetAccountsResultSchema>;

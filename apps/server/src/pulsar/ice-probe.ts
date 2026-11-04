@@ -1,8 +1,8 @@
 import { createSocket } from 'node:dgram';
 import { connect as connectTcp, type Socket } from 'node:net';
 import { connect as connectTls } from 'node:tls';
-import type { IceServer } from '@ruimte/pulsar';
 import type { ReachProbe } from '@ruimte/contracts';
+import type { IceServer } from '@ruimte/pulsar';
 import { errorText } from '../error-text.ts';
 import {
     STUN_ATTRIBUTE,

@@ -5,9 +5,9 @@ import { agentProvenance } from '../artifacts/artifact-provenance.ts';
 import { ArtifactStore } from '../artifacts/artifact-store.ts';
 import { Artifacts } from '../artifacts/artifacts.ts';
 import type { MachineHome } from '../fs/machine-home.ts';
+import type { Routines } from '../routines/routines.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { ProjectsBundle } from './projects.ts';
-import type { Routines } from '../routines/routines.ts';
 
 /* Output on this machine: the store under `$RUIMTE_HOME/artifacts` and what a person and an agent do with it. */
 export interface ArtifactsBundle {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { LoginStartQuerySchema } from '@ruimte/pulsar';
-import { PENDING_LOGIN_LIFETIME_MS, beginWebLogin, completeWebLogin, webRedirectUriFor, type LoginStorage } from './web';
 import { memoryStorage } from '../../testing/memory-storage';
+import { PENDING_LOGIN_LIFETIME_MS, beginWebLogin, completeWebLogin, webRedirectUriFor, type LoginStorage } from './web';
 
 const REDIRECT = 'https://station.ruimte.app/pulsar/callback';
 

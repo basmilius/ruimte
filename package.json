@@ -6,14 +6,16 @@
   "packageManager": "bun@1.4.4",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "extensions/*",
+    "extensions/poc/*"
   ],
   "scripts": {
     "adecore:link": "bun scripts/adecore.ts link",
     "adecore:npm": "bun scripts/adecore.ts npm",
     "adecore:status": "bun scripts/adecore.ts status",
     "adecore:bump": "bun scripts/adecore.ts bump",
-    "dev": "bun scripts/adecore.ts status --brief && bun run --filter './apps/*' dev",
+    "dev": "bun scripts/adecore.ts status --brief && bun run --filter './apps/*' --filter '!./apps/site' dev",
     "dev:built": "bun scripts/adecore.ts status --brief && bun run --cwd apps/client build && bun run --parallel dev:client:built dev:server dev:desktop:built",
     "dev:client": "bun run --cwd apps/client dev",
     "dev:client:built": "bun run --cwd apps/client preview --port 4212 --strictPort",
@@ -21,8 +23,9 @@
     "build": "bun run --cwd apps/client build && bun run --cwd apps/desktop build",
     "check": "bun run check:types && bun run check:generated && bun run lint && bun run format:check",
     "check:types": "bun check --no-script -p tsconfig.scripts.json && bun run --filter '*' typecheck",
-    "check:generated": "bun run --cwd packages/contracts check:swift",
-    "lint": "oxlint --deny-warnings && oxlint --type-aware --deny-warnings -c apps/server/oxlint.promises.json apps/server/src && bun scripts/check-client-conventions.ts && bun scripts/check-test-clock.ts",
+    "check:generated": "bun run --cwd packages/contracts check:swift && bun apps/server/scripts/generate-extension-runtimes.ts --check",
+    "generate:extension-runtimes": "bun apps/server/scripts/generate-extension-runtimes.ts",
+    "lint": "oxlint --deny-warnings && oxlint --type-aware --deny-warnings -c apps/server/oxlint.promises.json apps/server/src && bun scripts/check-client-conventions.ts && bun scripts/check-test-clock.ts && bun scripts/check-built-ins.ts",
     "symbolicate:electron": "bun scripts/symbolicate-electron.ts",
     "test": "bun test --conditions=source --parallel --no-isolate --only-failures --timings=test-timings.json",
     "test:windows": "bun test --conditions=source --parallel=8 --no-isolate --only-failures",
@@ -33,8 +36,8 @@
     "test:devices": "bun scripts/test-integration.ts --suite devices",
     "test:browser": "bun run --cwd apps/client build && bun scripts/test-integration.ts --browser",
     "test:terminal": "bun --config=integration.bunfig.toml test --conditions=source apps/server/src/sessions/terminal-stream.integration.test.ts",
-    "format": "oxfmt --write \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\" \"scripts/**/*.ts\"",
-    "format:check": "oxfmt --check \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\" \"scripts/**/*.ts\"",
+    "format": "oxfmt --write \"apps/*/{src,testing,scripts,Scripts,build}/**/*.{ts,tsx,mjs,cjs}\" \"apps/*/*.{ts,tsx,mjs}\" \"extensions/**/*.{ts,tsx,js}\" \"packages/*/{src,scripts}/**/*.{ts,tsx}\" \"packages/extension/*.d.ts\" \"scripts/**/*.ts\"",
+    "format:check": "oxfmt --check \"apps/*/{src,testing,scripts,Scripts,build}/**/*.{ts,tsx,mjs,cjs}\" \"apps/*/*.{ts,tsx,mjs}\" \"extensions/**/*.{ts,tsx,js}\" \"packages/*/{src,scripts}/**/*.{ts,tsx}\" \"packages/extension/*.d.ts\" \"scripts/**/*.ts\"",
     "dev:desktop": "bun run --cwd apps/desktop dev",
     "dev:desktop:built": "RUIMTE_DEV_WAIT_FOR_DAEMON=1 bun run dev:desktop",
     "dist": "bun run --cwd apps/client build && bun run --cwd apps/server compile && bun run --cwd apps/desktop pack"

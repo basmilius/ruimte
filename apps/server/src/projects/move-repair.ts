@@ -1,13 +1,13 @@
 import type { AgentLineageStore } from '@adecore/agents/coordination';
+import { isWithin } from '@adecore/utils/path';
 import type { ChatInfo, ProjectView } from '@ruimte/contracts';
-import { isInside } from '../canvas/project-paths.ts';
 import type { moveClaudeTranscript } from '../chat/claude-move.ts';
 import { ChatError } from '../chat/errors.ts';
 import { errorText } from '../error-text.ts';
 import type { SnoozeStore } from '../push/snoozes.ts';
 import { fileTranscript } from './move-chat.ts';
-import type { MoveJournal } from './move-journal.ts';
 import { ownFileNames } from './move-info.ts';
+import type { MoveJournal } from './move-journal.ts';
 import { movedNote } from './move-note.ts';
 import type { MutationApply } from './project-store.ts';
 
@@ -31,7 +31,7 @@ export interface MoveRepairDeps {
         /* The record's info, loaded from disk when nobody has it; throws `chat-not-found` for a chat with no record. */
         load(chatId: string): Promise<ChatInfo>;
         relocate(chatId: string, cwd: string, during: () => Promise<void>): Promise<ChatInfo>;
-        claudeProjectsDirOf(info: Pick<ChatInfo, 'account'>): string;
+        claudeProjectsDirOf(info: Pick<ChatInfo, 'account' | 'provider'>): string;
     };
     moveTranscript?: typeof moveClaudeTranscript;
 }
@@ -74,7 +74,7 @@ async function repairOne(deps: MoveRepairDeps, chatsId: string, chatId: string, 
     }
     const info = await loadOrNull(deps, chatId);
     // Anywhere else the record already took the new folder. The own files stay where they are.
-    if (info !== null && isInside(deps.scratchFolder, info.cwd)) {
+    if (info !== null && isWithin(deps.scratchFolder, info.cwd)) {
         await deps.chats.relocate(chatId, target.folder, async () => {
             await fileTranscript(deps.chats, info, target.folder, deps.moveTranscript);
         });

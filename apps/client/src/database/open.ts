@@ -3,10 +3,10 @@ import { openNewConsole } from '@/database/console-file';
 import { useDatabasePanel } from '@/database/state';
 import { applyDatabaseAction, databaseViewFor, type DatabaseTabAction } from '@/database/tabs';
 import { showView } from '@/project/views';
+import { canSplit, type CellAt, type SplitZone } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
-import { canSplit, type CellAt, type SplitZone } from '@/shell/split';
 
 interface ActOptions {
     /* The tab whose view asked, so a designer that saved a table can become the designer of that table. */

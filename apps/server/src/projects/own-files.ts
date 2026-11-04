@@ -1,7 +1,8 @@
-import { cp, mkdir, readdir, rm, rmdir } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
+import { cp, mkdir, readdir, rm, rmdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
-import { entryExists, hasErrorCode, isNotFound } from '@adecore/agents';
+import { hasErrorCode, isNotFound } from '@adecore/utils/errors';
+import { entryExists } from '@adecore/utils/fs';
 import { ChatError } from '../chat/errors.ts';
 import { errorText } from '../error-text.ts';
 import { renameNoReplace } from '../fs/no-replace-rename.ts';

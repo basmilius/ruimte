@@ -1,21 +1,8 @@
+import type { ChatSendExtras } from '@adecore/agents-react/chat';
+import { recentChatMessages } from '@adecore/agents-react/chat';
+import type { ChatPromptClients } from '@adecore/agents-react/prompts';
+import { useChats, providersOf } from '@adecore/agents-react/state';
 import { messageOf } from '@adecore/ui';
-import { terminalPrepareActions } from '@/actions/terminal-prepare-actions';
-import i18next from 'i18next';
-import { useToasts } from '@/state/toasts';
-import { contentActions, type ContentMachine } from '@/actions/content-actions';
-import { chatSearchActions, type ChatSearchMachine } from '@/actions/chat-search-actions';
-import { databaseActions, type DatabaseMachine } from '@/actions/database-actions';
-import { asksFirst, developerActions, GIT_OPERATION, type DeveloperMachine } from '@/actions/developer-actions';
-import { refusing } from '@/actions/refusal';
-import { filesActions, type FilesMachine } from '@/actions/files-actions';
-import { inspectionActions } from '@/actions/inspection-actions';
-import { launchActions, type LaunchReach } from '@/actions/launch-actions';
-import { machineActions, type MachineReach } from '@/actions/machine-actions';
-import { pageActions, type PageMachine } from '@/actions/page-actions';
-import { projectActions, type ProjectMachine } from '@/actions/project-actions';
-import { sessionActions, sessionTitle, type SessionMachine } from '@/actions/session-actions';
-import { resolveTarget } from '@/actions/resolve-target';
-import { checkClientRevision } from '@/actions/revision';
 import {
     ActionRefusal,
     ActionRegistry,
@@ -39,31 +26,45 @@ import {
     type ProjectIconChoice,
     type ProviderInfo
 } from '@ruimte/contracts';
+import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
+import type { CreatableNodeKind, CreatableViewKind } from '@/actions/action-reach';
+import { canvasActions } from '@/actions/canvas-actions';
+import { chatSearchActions, type ChatSearchMachine } from '@/actions/chat-search-actions';
+import { contentActions, type ContentMachine } from '@/actions/content-actions';
+import { databaseActions, type DatabaseMachine } from '@/actions/database-actions';
+import { asksFirst, developerActions, GIT_OPERATION, type DeveloperMachine } from '@/actions/developer-actions';
+import { extensionVoiceActions } from '@/actions/extension-actions';
+import { filesActions, type FilesMachine } from '@/actions/files-actions';
+import { inspectionActions } from '@/actions/inspection-actions';
+import { launchActions, type LaunchReach } from '@/actions/launch-actions';
+import { layoutActions } from '@/actions/layout-actions';
+import { machineActions, type MachineReach } from '@/actions/machine-actions';
+import { pageActions, type PageMachine } from '@/actions/page-actions';
+import { projectActions, type ProjectMachine } from '@/actions/project-actions';
+import { refusing } from '@/actions/refusal';
+import { resolveTarget } from '@/actions/resolve-target';
+import { checkClientRevision } from '@/actions/revision';
+import { sessionActions, sessionTitle, type SessionMachine } from '@/actions/session-actions';
+import { terminalPrepareActions } from '@/actions/terminal-prepare-actions';
+import { viewActions } from '@/actions/view-actions';
 import type { AgentSession } from '@/agents/nodes';
 import type { Point } from '@/canvas/math';
-import type { ChatSendExtras } from '@adecore/agents-react/chat';
-import { recentChatMessages } from '@adecore/agents-react/chat';
+import { designFoldersOnDisk } from '@/design/design-read';
+import { lastFlagColor, rememberFlagColor } from '@/project/flag-color';
 import { liveViewDeletion, type ViewDeletionMachine } from '@/project/view-deletion';
 import { nodesOfView } from '@/project/view-nodes';
-import { lastFlagColor, rememberFlagColor } from '@/project/flag-color';
 import { openInNewWindow, wantsNewWindow } from '@/project/windows';
-import type { ChatPromptClients } from '@adecore/agents-react/prompts';
 import type { CellAt, SplitDirection, SplitZone } from '@/shell/split';
 import { defaultCanvases, focusedCanvas, type CanvasState, type Locks } from '@/state/canvas';
-import { useChats, providersOf } from '@adecore/agents-react/state';
-import { activeViewOf, useDocument, viewOfNode, type DocumentState } from '@/state/document';
 import { closeCellsRightOfGuarded, closeOtherCellsGuarded } from '@/state/cell-close';
-import { closeTabGuarded, closeTabsAround, type TabsClosing } from '@/state/tab-close';
+import { activeViewOf, useDocument, viewOfNode, type DocumentState } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
-import { shownFolderOf, useProject } from '@/state/project';
-import { designFoldersOnDisk } from '@/design/design-read';
-import { chatClient, chatClientFor, diagramClient, drawingClient, sessionClient, sessionClientFor } from '@/transport/connections';
 import { endpointOfNodeId } from '@/state/node-endpoint';
-import { canvasActions } from '@/actions/canvas-actions';
-import { layoutActions } from '@/actions/layout-actions';
-import { viewActions } from '@/actions/view-actions';
-import type { CreatableNodeKind, CreatableViewKind } from '@/actions/action-reach';
+import { shownFolderOf, useProject } from '@/state/project';
+import { closeTabGuarded, closeTabsAround, type TabsClosing } from '@/state/tab-close';
+import { useToasts } from '@/state/toasts';
+import { chatClient, chatClientFor, diagramClient, drawingClient, sessionClient, sessionClientFor } from '@/transport/connections';
 
 export interface ClientActionMachine {
     sendChat(chatId: string, text: string, extras: ChatSendExtras): Promise<{ queued: boolean; turnId?: string }>;
@@ -137,6 +138,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
     };
     const handlers: ActionHandlers<void> = {
         ...terminalPrepareActions(),
+        ...extensionVoiceActions(),
         ...inspectionActions(document),
         ...developerActions(document, developer),
         ...sessionActions(document, sessions),

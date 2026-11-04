@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
-import { askOnce } from './test-helpers.ts';
 import { makeHarness, Recorder, type Harness } from '../sessions/test-helpers.ts';
 import { registerSessionHandlers } from './session.ts';
+import { askOnce } from './test-helpers.ts';
 
 let harness: Harness;
 let dispatcher: Dispatcher;

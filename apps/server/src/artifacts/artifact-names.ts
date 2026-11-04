@@ -1,5 +1,5 @@
-import { ARTIFACT_KEY_PATTERN, ARTIFACT_LIMITS, type ArtifactKind } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
+import { ARTIFACT_KEY_PATTERN, ARTIFACT_LIMITS, type ArtifactKind } from '@ruimte/contracts';
 import { sniffMime } from '../fs/sniff.ts';
 
 type ArtifactErrorCode =
@@ -150,7 +150,7 @@ export function kindOf(mime: string): ArtifactKind {
     return 'build';
 }
 
-/* Whether a file reads as text, which is what an agent's `artifact read` prints. */
+/* Whether a file reads as text, which is what an agent's `artifact_read` prints. */
 export function isTextMime(mime: string): boolean {
     return mime.startsWith('text/') || mime === 'application/json' || mime === 'application/xml' || mime === 'application/yaml' || mime === 'image/svg+xml';
 }

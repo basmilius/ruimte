@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
-import { LayoutGrid, Pencil, Play, SquareArrowOutUpRight } from 'lucide-react';
-import type { RoutineEntry, RoutineRun } from '@ruimte/contracts';
 import { Button, Icon, Popover } from '@adecore/ui';
 import { formatClock } from '@adecore/ui/format';
+import type { RoutineEntry, RoutineRun } from '@ruimte/contracts';
+import { LayoutGrid, Pencil, Play, SquareArrowOutUpRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useArtifactText } from '@/output/artifact-bytes';
 import { isTextMime } from '@/output/artifact-list';
 import { useArtifact } from '@/output/use-artifact';

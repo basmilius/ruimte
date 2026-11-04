@@ -1,8 +1,8 @@
-import { X } from 'lucide-react';
-import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
-import { IconButton, Select } from '@adecore/ui';
+import { IconButton, ScrollArea, Select } from '@adecore/ui';
 import { formatDecimal, formatRounded } from '@adecore/ui/format';
+import clsx from 'clsx';
+import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { ChartModel, ModelMark } from './chart';
 import { formatMetric, metricChange, metricValue, METRICS, PRICE_METRICS, shortModelName, type ModelPoint } from './comparison';
 import { LabLogo } from './LabLogo';
@@ -31,12 +31,14 @@ export function ModelsPointComparison({ models, marks, points, reference, candid
         metrics.filter((metric) => metricValue(shown, metric) !== null || (reference !== null && metricValue(reference, metric) !== null))
     );
     return (
-        <section
+        <ScrollArea
+            render={<section />}
             aria-label={t('compare.label')}
             className={clsx(
-                'absolute top-8 left-4 z-10 max-h-[calc(100%-3rem)] w-96 max-w-[calc(100%-2rem)] overflow-y-auto overscroll-contain rounded-lg border border-border-strong bg-surface-raised/95 p-3 shadow-lg backdrop-blur-sm max-[760px]:top-5 max-[760px]:max-h-[60%]',
+                'absolute top-8 left-4 z-10 max-h-[calc(100%-3rem)] w-96 max-w-[calc(100%-2rem)] overflow-hidden rounded-lg border border-border-strong bg-surface-raised/95 shadow-lg backdrop-blur-sm max-[760px]:top-5 max-[760px]:max-h-[60%]',
                 reference === null && 'pointer-events-none max-[760px]:pointer-events-auto'
             )}
+            viewportClassName="overscroll-contain p-3"
         >
             <div className="flex items-center gap-2">
                 <span style={{ color: marks.get(model.id)?.color }}>
@@ -113,6 +115,6 @@ export function ModelsPointComparison({ models, marks, points, reference, candid
                 )}
             </table>
             <p className="mt-2 text-xs text-text-faint">{t(reference === null ? 'compare.pinHint' : 'compare.changeHint')}</p>
-        </section>
+        </ScrollArea>
     );
 }

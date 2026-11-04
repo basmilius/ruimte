@@ -1,20 +1,20 @@
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
-import { useTranslation } from 'react-i18next';
 import { ChatScopeContext } from '@adecore/agents-react';
 import { useChats } from '@adecore/agents-react/state';
-import { isHiddenChatView } from '@ruimte/contracts';
-import { Button, Dialog, Icon, IconButton, Pill } from '@adecore/ui';
+import { Button, Dialog, Icon, IconButton, Pill, ScrollArea } from '@adecore/ui';
 import { formatNumber, useFormatLocale } from '@adecore/ui/format';
+import { isHiddenChatView } from '@ruimte/contracts';
 import { Check, CircleAlert, X } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { projectNodes, useProjectNodes, type ProjectNodeRef } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { WaitingPrompt } from '@/shell/NeedsYouCard';
 import type { SidebarNode } from '@/shell/sidebar-rows';
 import { groupAttention, useAttention } from '@/state/attention';
+import { useDocument } from '@/state/document';
 import { endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { useDocument } from '@/state/document';
 import { nodeProvider, nodeStatus, useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { compareWaits, useWaitingSince, waitDetailsOf } from '@/state/waiting';
@@ -182,7 +182,7 @@ function QueueBody({
                 {t('attention.projectLeft', { project: projectName, count: formatNumber(entries.length) })}
             </Dialog.Description>
             <div className="grid min-h-0 grow border-t border-border md:h-[28rem] md:grid-cols-[18rem_minmax(0,1fr)]">
-                <div className={`max-h-60 overflow-auto border-border p-2 md:max-h-none md:border-r ${selected === null ? '' : 'hidden md:block'}`}>
+                <ScrollArea className={`max-h-60 border-border md:max-h-none md:border-r ${selected === null ? '' : 'hidden md:flex'}`} viewportClassName="p-2">
                     {asks.length > 0 && (
                         <QueueGroup label={t('attention.waiting')} count={asks.length}>
                             {asks.map((node) => row(node, true))}
@@ -198,8 +198,8 @@ function QueueBody({
                             {t('attention.answered', { title: answered })}
                         </p>
                     )}
-                </div>
-                <div ref={detail} className={`min-w-0 overflow-auto ${selected === null ? 'hidden md:block' : ''}`}>
+                </ScrollArea>
+                <ScrollArea viewportRef={detail} className={selected === null ? 'hidden md:flex' : ''}>
                     <Button
                         ref={back}
                         className="m-2 md:hidden"
@@ -227,7 +227,7 @@ function QueueBody({
                             />
                         </ChatScopeContext.Provider>
                     )}
-                </div>
+                </ScrollArea>
             </div>
         </>
     );

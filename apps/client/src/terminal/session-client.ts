@@ -1,7 +1,7 @@
+import { MountedRegistry, type MountedEntry } from '@adecore/agents-react';
 import type { AgentLaunch, SessionAttachPayload, SessionAttachResult, SessionInfo } from '@ruimte/contracts';
 import type { SessionSink } from '../state/sessions';
 import { HandlerTable } from '../transport/handler-table';
-import { MountedRegistry, type MountedEntry } from '@adecore/agents-react';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport/transport';
 
 type OutputHandler = (data: string) => void;

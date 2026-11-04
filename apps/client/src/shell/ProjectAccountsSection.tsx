@@ -1,12 +1,12 @@
-import { useTranslation } from 'react-i18next';
-import type { ProjectAccounts } from '@ruimte/contracts';
 import { AccountDot, AgentIcon, accountsOfKind, topAccountEntry, type AccountEntry } from '@adecore/agents-react/providers';
 import { useProviderAccountsStore, useProvidersStore } from '@adecore/agents-react/state';
+import { SectionLabel, Select, Switch, useAsyncAction, FormError } from '@adecore/ui';
+import type { ProjectAccounts } from '@ruimte/contracts';
+import { useTranslation } from 'react-i18next';
 import { choiceAfter } from '@/shell/project-accounts';
 import { useDocument } from '@/state/document';
 import { transportFor } from '@/transport';
 import { useMachineAnswers } from '@/transport/features';
-import { SectionLabel, Select, Switch, useAsyncAction, FormError } from '@adecore/ui';
 
 const MACHINE_DEFAULT = '';
 

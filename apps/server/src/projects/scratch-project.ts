@@ -1,8 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { isEmptyChatView, type ProjectChatView, type ProjectNewChatPayload, type ProjectNewChatResult, type ProjectView } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
+import { isEmptyChatView, type ProjectChatView, type ProjectNewChatPayload, type ProjectNewChatResult, type ProjectView } from '@ruimte/contracts';
 import { git } from '../git/run.ts';
 import type { ProjectStore } from './project-store.ts';
 

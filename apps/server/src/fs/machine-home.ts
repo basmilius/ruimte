@@ -1,6 +1,6 @@
 import { join, relative, resolve, sep } from 'node:path';
 import { CodedError } from '@adecore/agents';
-import { isInside } from '../canvas/project-paths.ts';
+import { isWithin } from '@adecore/utils/path';
 import { DEVICE_CAPTURES_FOLDER } from '../shots.ts';
 import { realOrSelf } from './real-path.ts';
 
@@ -17,7 +17,7 @@ const OPEN_FOLDERS = ['scratch', 'worktrees', 'screenshots', join('computer-use'
 
 function isChatVisuals(home: string, path: string): boolean {
     const chats = join(home, 'chats');
-    if (!isInside(chats, path)) {
+    if (!isWithin(chats, path)) {
         return false;
     }
     const folder = relative(chats, path).split(sep)[0]!;
@@ -25,7 +25,7 @@ function isChatVisuals(home: string, path: string): boolean {
 }
 
 function isMachineState(home: string, path: string): boolean {
-    return isInside(home, path) && !OPEN_FOLDERS.some((folder) => isInside(join(home, folder), path)) && !isChatVisuals(home, path);
+    return isWithin(home, path) && !OPEN_FOLDERS.some((folder) => isWithin(join(home, folder), path)) && !isChatVisuals(home, path);
 }
 
 /* The home as it is named and as it really is: what a search that cannot ask `MachineHome` itself (a worker) judges paths by. */
@@ -42,7 +42,7 @@ export function isMachineStatePath(policy: MachineHomePolicy, path: string): boo
 
 /* Whether a walk from `folder` reaches into the home, so that every name it meets has to be judged on its own. */
 export function holdsMachineHome(policy: MachineHomePolicy, folder: string): boolean {
-    return policy.homes.some((home) => isInside(folder, home));
+    return policy.homes.some((home) => isWithin(folder, home));
 }
 
 /*

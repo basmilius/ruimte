@@ -1,17 +1,17 @@
+import { Button } from '@adecore/ui';
+import { ConfirmDialog } from '@adecore/ui/settings';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { desktop, type BackgroundServiceState } from '@/desktop/bridge';
-import { leaveWorkspace, showStart } from '@/transport/connections';
-import { MachineCard } from '@/shell/MachineCard';
 import { offersMachineRestart } from '@/shell/machine-lost';
+import { MachineCard } from '@/shell/MachineCard';
+import { nameOf } from '@/shell/settings/machine-list';
 import { useMachineEntry } from '@/shell/use-machine-entry';
 import { useMachineLost } from '@/shell/use-machine-lost';
-import { nameOf } from '@/shell/settings/machine-list';
 import { useEndpointId } from '@/state/keys';
 import { pool } from '@/transport';
+import { leaveWorkspace, showStart } from '@/transport/connections';
 import { useEndpointConnection } from '@/transport/status';
-import { Button } from '@adecore/ui';
-import { ConfirmDialog } from '@adecore/ui/settings';
 
 /*
  * Stands over the whole workspace while the machine of the open project does not answer, so no

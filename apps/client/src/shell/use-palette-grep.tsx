@@ -1,7 +1,7 @@
+import { ButtonGroup, Icon, Kbd, KEY_SHORTCUTS } from '@adecore/ui';
+import { CaseSensitive, FileSearch, Regex, WholeWord } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CaseSensitive, FileSearch, Regex, WholeWord } from 'lucide-react';
-import { ButtonGroup, Icon, Kbd, KEY_SHORTCUTS } from '@adecore/ui';
 import type { PaletteContext, PaletteModeView } from '@/shell/palette-entries';
 import { DEFAULT_GREP_OPTIONS, groupByFile, useGrepSearch, type GrepOptions } from '@/shell/palette-grep';
 import { GrepFileLabel, GrepItem, type GrepRow } from '@/shell/PaletteGrepResults';

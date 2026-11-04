@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { detectLaunches } from './detect.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { detectLaunches } from './detect.ts';
 
 const runServer = `<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Run server" type="PhpBuiltInWebServerConfigurationType" factoryName="PHP Built-in Web Server" activateToolWindowBeforeRun="false" document_root="$PROJECT_DIR$/public" host="0.0.0.0" port="8000" router_script="$PROJECT_DIR$/dev/server.php" use_router_script="true">

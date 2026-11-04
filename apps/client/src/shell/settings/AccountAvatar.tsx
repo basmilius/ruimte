@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { User } from 'lucide-react';
-import type { Account } from '@ruimte/pulsar';
-import { accountName } from '@/pulsar/account-name';
 import { Icon } from '@adecore/ui';
+import type { Account } from '@ruimte/pulsar';
+import { User } from 'lucide-react';
+import { useState } from 'react';
+import { accountName } from '@/pulsar/account-name';
 
 /* GitHub serves every login's profile picture at this address; no other provider hands out a picture. */
 function pictureOf(account: Account): string | null {

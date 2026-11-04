@@ -1,18 +1,18 @@
-import i18next from 'i18next';
+import { composerEditorExtensions } from '@adecore/agents-react/chat/ui';
+import { createSmartEditorEngine, type Editor } from '@adecore/editor';
+import dutchEditor from '@adecore/editor-react/locales/nl.json' with { type: 'json' };
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { composerEditorExtensions } from '@adecore/agents-react/chat/ui';
-import { dictationRange, dictationRangeEffect, dictationPreview, dictationPreviewEffect } from '@/dictation/editor';
+import i18next from 'i18next';
 import { createElement } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
-import { createSmartEditorEngine, type Editor } from '@adecore/editor';
-import dutchEditor from '@adecore/editor-react/locales/nl.json' with { type: 'json' };
+import { dictationRange, dictationRangeEffect, dictationPreview, dictationPreviewEffect } from '@/dictation/editor';
+import { initI18n } from '@/i18n';
 import dutchPanels from '@/i18n/locales/nl/panels.json' with { type: 'json' };
-import { FileEditor } from '@/shell/panels/FileEditor';
 import { FakeLanguageTransport } from '@/language/fake-daemon';
 import { ProjectLanguage } from '@/language/ruimte-project-language';
-import { initI18n } from '@/i18n';
+import { FileEditor } from '@/shell/panels/FileEditor';
 
 export async function probeEditorLabels() {
     // The probe page boots no app, so nothing set the words up yet.

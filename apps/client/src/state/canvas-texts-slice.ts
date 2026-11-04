@@ -1,6 +1,6 @@
 import { snapToGrid } from '@/canvas/math';
 import type { CanvasState } from '@/state/canvas';
-import { nextId, remember, type CanvasSet, type TextElement } from '@/state/canvas-model';
+import { droppedIntoGroups, nextId, remember, type CanvasSet, type TextElement } from '@/state/canvas-model';
 
 /* The labels on the canvas. */
 export function createCanvasTextsSlice(set: CanvasSet): Pick<CanvasState, 'addText' | 'updateText' | 'styleText' | 'resizeText' | 'setEditingText'> {
@@ -12,7 +12,10 @@ export function createCanvasTextsSlice(set: CanvasSet): Pick<CanvasState, 'addTe
         addText(at) {
             const id = nextId('text');
             const text: TextElement = { id, x: snapToGrid(at.x), y: snapToGrid(at.y), text: '', size: 18 };
-            set((s) => ({ texts: { ...s.texts, [id]: text }, selection: [id], editingTextId: id, ...remember(s) }));
+            set((s) => {
+                const texts = { ...s.texts, [id]: text };
+                return { texts, nodes: droppedIntoGroups({ ...s, texts }, [id]), selection: [id], editingTextId: id, ...remember(s) };
+            });
             return id;
         },
         updateText(id, text) {

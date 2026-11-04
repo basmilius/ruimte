@@ -1,8 +1,8 @@
+import type { HostMenuAction } from '@adecore/agents-react';
+import { messageOf } from '@adecore/ui';
+import type { ArtifactSaveSource } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { PackagePlus } from 'lucide-react';
-import type { HostMenuAction } from '@adecore/agents-react';
-import type { ArtifactSaveSource } from '@ruimte/contracts';
-import { messageOf } from '@adecore/ui';
 import { newRequestId } from '@/output/artifacts';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';

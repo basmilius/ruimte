@@ -70,6 +70,10 @@
         "projectGlow": {
             "label": "Glow in project color",
             "description": "Tints the top of the sidebar, or the toolbar, in the project's color."
+        },
+        "scrollBounce": {
+            "label": "Scroll bounce",
+            "description": "Lists and text spring back when you scroll past the end."
         }
     },
     "general": {
@@ -235,21 +239,28 @@
                 "label": "Attribution in gutter",
                 "description": "Marks lines an agent wrote. Hover for the chat and turn."
             },
-            "onDevice": {
-                "title": "On device",
+            "assist": {
+                "title": "Editor model",
                 "help": {
                     "label": "Explain and name suggestions",
-                    "description": "Uses Apple Foundation Models. Code stays on this Mac."
+                    "description": "Explains code and suggests names using the selected model."
                 },
                 "ghost": {
                     "label": "Suggestions while typing",
-                    "description": "Suggestions from the model on this Mac appear as you type. Each takes two to three seconds.",
+                    "description": "Request a code suggestion with the shortcut. The selected provider receives the code around the cursor.",
                     "options": {
                         "off": "Off",
                         "request": "On request"
                     }
                 },
-                "unavailable": "Not available: {{reason}}"
+                "unavailable": "Not available: {{reason}}",
+                "model": {
+                    "label": "Model",
+                    "description": "Automatic uses the cheapest model of the first available provider: Claude, Codex, Grok, then Antigravity. Code is sent to the selected provider."
+                },
+                "automatic": "Automatic",
+                "choose": "Choose a model",
+                "resolved": "Using {{model}}"
             }
         },
         "folding": {
@@ -652,9 +663,9 @@
             "label": "About",
             "description": "Version, machine details and links."
         },
-        "pets": {
-            "label": "Pets",
-            "description": "Small figures that show what your agents do."
+        "extensions": {
+            "label": "Extensions",
+            "description": "What you added to Ruimte, and the store."
         }
     },
     "gesture": {
@@ -782,7 +793,6 @@
         },
         "canvas": {
             "palette": "Command palette",
-            "findInFiles": "Find in files",
             "pan": "Pan canvas",
             "zoomPointer": "Zoom at pointer",
             "zoomIn": "Zoom in",
@@ -1145,6 +1155,7 @@
         "tagline": "Space for AI Engineering.",
         "version": "Version {{version}}",
         "unknownVersion": "unknown",
+        "byline": "By <author>Bas Milius</author> · © 2026",
         "details": {
             "title": "Details",
             "copy": "Copy details",
@@ -1737,19 +1748,6 @@
         }
     },
     "providers": {
-        "apple": {
-            "label": "Enable Apple Foundation Models",
-            "description": "Use the model on this Mac for chats and tools. Requires Apple silicon, macOS 26.4 or later, and Apple Intelligence.",
-            "toggleDescription": "Turning this off stops active Apple chats and pending tool approvals on this machine.",
-            "tools": "The model runs on this Mac. Web searches, page requests and MCP tools you approve can send data to their own services.",
-            "status": "Availability",
-            "disabled": "Off on this machine.",
-            "ready": "Ready.",
-            "unavailable": "Not available.",
-            "saveFailed": "Could not change Apple Foundation Models",
-            "requiresMac": "Requires a Mac with Apple silicon.",
-            "off": "Off"
-        },
         "nanogpt": {
             "description": "Chat with the models your NanoGPT subscription includes. Requests go only to the subscription API, never to pay as you go.",
             "footer": "The key stays on this machine and is never shown again. Every tool a model asks for needs your approval.",
@@ -1842,12 +1840,12 @@
             "removeButton": "Remove"
         },
         "claudeApi": {
-            "description": "Chat with Claude through the API, with a key of your own. Anthropic bills every call per token, so check your spending there.",
+            "description": "Chat with Claude in Claude Code, on a key of your own. Anthropic bills every call per token, so check your spending there.",
             "footer": "The key stays on this machine and is never shown again. Tools follow the chat's permission mode.",
             "key": "API key",
             "keyDescription": "A key from console.anthropic.com.",
             "saved": "Saved",
-            "status": "API key",
+            "status": "Connection",
             "save": "Save",
             "refresh": "Refresh models",
             "disconnect": "Disconnect",
@@ -1858,194 +1856,59 @@
             "disconnected": "No key saved on this machine.",
             "unavailable": "This machine does not offer the Claude API yet. Update Ruimte on it.",
             "failed": "Could not change the Claude API on this machine.",
-            "continue": {
-                "label": "Continue automatically",
-                "description": "A chat that uses up a run's steps starts the next run itself, and every call is billed. When off, it waits for you."
+            "window": {
+                "label": "Context window",
+                "description": "Used for new chats. You can switch per chat.",
+                "options": {
+                    "200k": "200K",
+                    "1m": "1M"
+                }
             },
-            "rounds": {
-                "label": "Steps per run",
-                "description": "Steps before a run stops, 5 to 200."
-            },
-            "runs": {
-                "label": "Runs in a row",
-                "description": "Runs a chat starts by itself, 1 to 20. Each run is billed."
+            "cli": {
+                "missing": "Claude API chats run in Claude Code. Install it on this machine first.",
+                "install": "Install"
             },
             "tokens": {
                 "label": "Output tokens per reply",
                 "description": "The most a reply may use, 1,024 to 128,000, within the model's limit. Thinking counts too."
             },
-            "noKey": "No API key saved"
+            "noKey": "No API key saved",
+            "noCli": "Claude Code is not installed"
         }
     },
-    "pets": {
-        "title": "Pets",
-        "enabled": {
-            "label": "Pets",
-            "description": "A small figure on every agent shows what it does, and jumps when it needs you. Click a pet to go to its node."
-        },
-        "place": {
-            "label": "Where pets are",
-            "description": "On their nodes, or roaming the bottom of the screen.",
-            "nodes": "On their nodes",
-            "screen": "Bottom of the screen"
-        },
-        "subagents": {
-            "label": "Sub-agents",
-            "description": "A smaller figure walks along with a pet for each sub-agent at work, up to three."
-        },
-        "visitor": {
-            "label": "Visitor",
-            "description": "While Pets is off, a pet now and then drops by beside a node for a few seconds."
-        },
-        "sprite": {
-            "label": "Figures",
-            "description": "Pick one or more packs. Each agent keeps one figure. Buddies and Animals give every provider its own; the other packs spread their figures over your agents.",
-            "sets": {
-                "buddies": "Buddies",
-                "animals": "Animals",
-                "nox-and-chanel": "Nox and Chanel",
-                "pebbles-and-onyx": "Pebbles and Onyx",
-                "woodland": "Woodland",
-                "living-room": "Living room",
-                "deep-sea": "Deep sea",
-                "cosmos": "Cosmos",
-                "workshop": "Workshop",
-                "windowsill": "Windowsill",
-                "after-hours": "After hours"
-            },
-            "figures": {
-                "claude-buddy": "Claude",
-                "codex-buddy": "Codex",
-                "orbit": "Orbit",
-                "wing": "Wing",
-                "spark": "Spark",
-                "pip": "Pip",
-                "nano": "Nano",
-                "relay": "Relay",
-                "fox": "Fox",
-                "frog": "Frog",
-                "hummingbird": "Hummingbird",
-                "penguin": "Penguin",
-                "raven": "Raven",
-                "deer": "Deer",
-                "nano-bee": "Bee",
-                "api-fox": "Relay fox",
-                "nox": "Nox",
-                "chanel": "Chanel",
-                "pebbles": "Pebbles",
-                "onyx": "Onyx",
-                "hazel": "Hazel",
-                "bramble": "Bramble",
-                "oak": "Oak",
-                "bandit": "Bandit",
-                "miso": "Miso",
-                "pixel": "Pixel",
-                "mochi": "Mochi",
-                "pico": "Pico",
-                "inky": "Inky",
-                "lumi": "Lumi",
-                "tuck": "Tuck",
-                "ripple": "Ripple",
-                "cosmo": "Cosmo",
-                "pebble": "Pebble",
-                "halley": "Halley",
-                "rover": "Rover",
-                "bolt": "Bolt",
-                "rivet": "Rivet",
-                "zip": "Zip",
-                "clamp": "Clamp",
-                "cap": "Cap",
-                "sprig": "Sprig",
-                "prickle": "Prickle",
-                "sunny": "Sunny",
-                "echo": "Echo",
-                "velvet": "Velvet",
-                "glow": "Glow",
-                "soot": "Soot",
-                "deep": "Deep",
-                "gust": "Gust",
-                "qiu": "Qiu",
-                "luna": "Luna",
-                "llumi": "Llumi",
-                "duo": "Duo"
-            },
-            "extras": "More figures",
-            "builtIn": "Built in",
-            "use": "Use {{name}}",
-            "preview": "Preview of {{name}}"
-        },
-        "custom": {
-            "label": "Your own figures",
-            "description": "A PNG or WebP strip of square frames side by side. Up to {{frames}} frames of {{size}} pixels, {{kilobytes}} KB at most.",
-            "add": "Add figure",
-            "remove": "Remove {{name}}",
-            "frames_one": "{{count}} frame, {{size}} px",
-            "frames_other": "{{count}} frames, {{size}} px",
-            "edit": "Edit {{name}}",
-            "stateCount_one": "{{count}} state",
-            "stateCount_other": "{{count}} states",
-            "states": {
-                "stand": "Standing",
-                "walk": "Walking",
-                "work": "Working",
-                "wait": "Needs you",
-                "sleep": "Idle",
-                "stopped": "Stopped"
-            },
-            "dialog": {
-                "new": "New figure",
-                "edit": "Edit figure",
-                "description": "Every state can have a strip of its own. One without plays Standing, which every figure needs.",
-                "name": "Name",
-                "save": "Save",
-                "choose": "Choose file",
-                "chooseFor": "Choose file for {{state}}",
-                "replaceFor": "Replace the strip for {{state}}",
-                "replace": "Replace",
-                "drop": "Remove the strip for {{state}}",
-                "needed": "Every figure needs this one",
-                "standing": "Plays Standing",
-                "tipped": "Plays Standing, tipped over"
-            },
-            "problem": {
-                "type": "Pick a PNG or WebP image.",
-                "bytes": "This image is larger than {{kilobytes}} KB.",
-                "unreadable": "This file could not be read as a PNG or WebP image.",
-                "frame-small": "A frame is at least {{min}} pixels high.",
-                "frame-large": "A frame is at most {{max}} pixels high.",
-                "frames-whole": "The width must be a whole number of square frames.",
-                "frames-many": "A strip has at most {{frames}} frames.",
-                "full": "You can keep {{limit}} figures at most. Remove one first.",
-                "room": "Your figures take {{total}} KB together at most. Remove one or pick a smaller strip.",
-                "storage": "There is no room left to keep this figure."
-            }
-        },
-        "groups": {
-            "place": "Where they stand",
-            "show": "What they show"
-        },
-        "inViews": {
-            "label": "In views of their own",
-            "description": "A chat or terminal open as its own view has a pet too, on the composer or in the terminal's bar."
-        },
-        "agents": {
-            "title": "Per agent",
-            "label": "A figure per agent",
-            "description": "Give a CLI a pack or one fixed figure, such as Nox for Codex. That overrides the packs you turned on. A CLI on Default uses those packs.",
-            "default": "Default",
-            "packs": "Packs",
-            "own": "Your own figures",
-            "choose": "Figure for {{name}}"
-        },
-        "beam": {
-            "label": "Teleport",
-            "description": "How a pet appears and leaves when its agent starts or ends, and when you turn pets on or off.",
-            "gather": "Gather",
-            "scan": "Scanline",
-            "rain": "Pixel rain",
-            "transporter": "Transporter",
-            "portal": "Portal",
-            "random": "Random"
-        }
+    "extensions": {
+        "list": "Extensions",
+        "browse": "Browse store",
+        "store": "Store",
+        "search": "Search extensions",
+        "storeUnavailable": "The store is not available right now.",
+        "storeSoon": "The store opens soon",
+        "storeSoonBody": "Until then, install an extension someone shared with you from Install from disk.",
+        "fromDisk": "Install from disk",
+        "fromDiskBody": "Choose a .rex file someone shared with you. You see what it asks for before it is installed.",
+        "chooseFile": "Choose file…",
+        "reviewed": "reviewed {{date}}",
+        "asksTo": "This extension asks to",
+        "trust": "Extensions run inside Ruimte and can do what you can, on all your machines. Install only what you trust.",
+        "install": "Install",
+        "back": "Back",
+        "notOnMachine": "{{name}} is on this computer, but its part for the machine takes that machine's owner.",
+        "machineKept": "{{name}} changed on this computer, but its part on the machine stayed as it was",
+        "installFailed": "{{name}} could not be installed",
+        "fromFileTrust": "This pack comes from a file, and the store has not reviewed it. It runs inside Ruimte and can do what you can, on all your machines.",
+        "fromFileUnreadable": "This file is not an extension pack",
+        "enabled": "On",
+        "remove": "Remove",
+        "desktopOnly": "Extensions work in the desktop app.",
+        "frameDesktopOnly": "This part of the extension opens only in the desktop app.",
+        "safeMode": "Safe mode: no extensions are loaded.",
+        "permissions": "Asks to",
+        "noPermissions": "Asks for nothing extra.",
+        "removeDescription": "Takes it and what it stored off this computer.",
+        "groupDevelopment": "In development",
+        "groupInstalled": "Installed",
+        "builtIn": "Built-in",
+        "development": "Development",
+        "fromDiskBadge": "From disk"
     }
 }

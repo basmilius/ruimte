@@ -1,10 +1,10 @@
+import { Separator, DockShell, ZoomControls } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
 import { fitAction } from '@/actions/client-actions';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { copyDiagram, exportDiagram } from '@/diagram/diagram-actions';
 import { DockExportHistory } from '@/drawing/DockExportHistory';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
-import { Separator, DockShell, ZoomControls } from '@adecore/ui';
 import { useSettings } from '@/state/settings';
 
 /* Shaped like a drawing's dock. The JSON file's menu stays in the bar above the view, since it is about the file. */

@@ -1,3 +1,7 @@
+import type { EditorRunCommand } from '@adecore/editor';
+import type { KeymapId } from '@adecore/editor/keymap';
+import type { Shortcut } from '@adecore/ui';
+import i18next from 'i18next';
 import {
     ArrowDownAZ,
     ArrowDownFromLine,
@@ -44,10 +48,6 @@ import {
     ZoomOut,
     type LucideIcon
 } from 'lucide-react';
-import i18next from 'i18next';
-import type { Shortcut } from '@adecore/ui';
-import type { EditorRunCommand } from '@adecore/editor';
-import type { KeymapId } from '@adecore/editor/keymap';
 import { editorShortcut } from '@/shell/editor-keymap';
 import { editorForCommand } from '@/shell/panels/focused-editor';
 

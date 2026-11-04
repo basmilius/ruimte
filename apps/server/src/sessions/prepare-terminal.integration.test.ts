@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
-import { shellSyntax } from './prepare-terminal.ts';
 import { access, mkdtemp, rm } from 'node:fs/promises';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { shellSyntax } from './prepare-terminal.ts';
 
 test.skipIf(process.platform === 'win32')('shell syntax validation never executes a command or accepts incomplete syntax', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'ruimte-prepare-syntax-'));

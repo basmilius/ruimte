@@ -1,10 +1,10 @@
 import { CHAT_MODEL_MAX_BYTES } from '@ruimte/contracts';
-import { imageType, VISUAL_IMAGE_BYTES } from '../cli/visual-images.ts';
 import { sniffMime } from '../fs/sniff.ts';
+import { imageType, VISUAL_IMAGE_BYTES } from '../mcp/visual-images.ts';
 
 /*
- * What an agent may attach to its chat, read off the bytes and never the name. Shared by `ruimte-context`,
- * which checks the file before it sends it, and the daemon, which trusts no CLI to have checked it.
+ * What an agent may attach to its chat, read off the bytes and never the name. The daemon checks
+ * every file it reads for an agent here, whoever named the path.
  */
 
 /* The image formats every client draws; an SVG could run script when opened on its own, so it stays out. */

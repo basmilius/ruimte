@@ -1,20 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
-import { pathToFileUri } from '@adecore/lsp';
-import { LANGUAGE_ERROR_CODES, type LanguageServerKind } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
 import { FakeWatch } from '@adecore/agents/testing';
+import { pathToFileUri } from '@adecore/lsp';
+import { LANGUAGE_ERROR_CODES, type LanguageServerKind } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { LanguageChoices } from './choices.ts';
 import { CustomLanguageServers } from './custom.ts';
 import { LanguageHost } from './host.ts';
 import { NativePolicy, nativeProgramFile, type Download } from './native.ts';
 import { KIND_PROFILES, type CatalogKind, type ProjectSqlSettings } from './profiles.ts';
-import { FULL_CAPABILITIES, fakeSpawner, makeAlternatives, ManualClock, settle, type FakeProcess, type FakeSpawner } from './test-fakes.ts';
 import { tarGz } from './test-archives.ts';
+import { FULL_CAPABILITIES, fakeSpawner, makeAlternatives, ManualClock, settle, type FakeProcess, type FakeSpawner } from './test-fakes.ts';
 import { LANGUAGE_KIND_PACKAGES, pinnedVersionsOf, versionOf, type NpmKind } from './versions.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 let root = '';
 
@@ -938,6 +938,24 @@ describe('language servers of a person', () => {
         expect(kinds(events['client-1'], 'language.providers').at(-1)).toMatchObject({ payload: { path: 'src/main.zig', providers: {} } });
     });
 
+    // Windows keeps a folder writable whatever its mode says, so the write this test makes fail would succeed there.
+    it.skipIf(process.platform === 'win32')('stops the servers of an extension whose removal the file did not take, and never starts them again', async () => {
+        const { host, spawner } = rig();
+        const saved = await host.customSaveFor('poc.machine', zig);
+        await open(host, 'src/main.zig', '', 'client-1', 'zig');
+        await ready(host, saved.id);
+        await chmod(root, 0o555);
+        try {
+            await expect(host.customRemoveOwned('poc.machine')).rejects.toThrow();
+        } finally {
+            await chmod(root, 0o755);
+        }
+        expect(spawner.of('zls')[0]!.server.exited).toBe(true);
+        expect(host.customOwners()).toEqual([]);
+        expect((await open(host, 'src/other.zig', '', 'client-1', 'zig')).servers).toEqual([]);
+        expect(spawner.of('zls')).toHaveLength(1);
+    });
+
     it('starts again with what was saved when a server is changed', async () => {
         const { host, spawner } = rig();
         const saved = await host.customSave(zig);
@@ -1083,6 +1101,21 @@ describe('commands', () => {
         await settle();
         leave();
         expect((await running).result).toMatchObject({ applied: false });
+    });
+
+    it('answers at once for a client that went away before the server asked', async () => {
+        const { host, server } = await commandRig();
+        const leave = host.subscribe('client-3', () => undefined);
+        const asking = Promise.withResolvers<void>();
+        server.handle('workspace/executeCommand', async () => {
+            await asking.promise;
+            return server.request('workspace/applyEdit', { edit });
+        });
+        const running = host.command('client-3', { projectId: 'p1', path: 'src/a.ts', command: 'fix.all' });
+        await settle();
+        leave();
+        asking.resolve();
+        expect((await running).result).toMatchObject({ applied: false, failureReason: 'The client went away' });
     });
 });
 

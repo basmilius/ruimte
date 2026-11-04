@@ -1,16 +1,17 @@
-import { useEffect, useId, useState } from 'react';
-import clsx from 'clsx';
-import { ArrowRight, Check, Info, PanelsTopLeft, Server, Terminal } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { ChatScopeContext } from '@adecore/agents-react';
 import { useProviderAccounts, useProviders } from '@adecore/agents-react/state';
+import { Button, CloseButton, Dialog, Icon, Meter } from '@adecore/ui';
+import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
+import clsx from 'clsx';
+import { ArrowRight, Check, Info, PanelsTopLeft, Server, Terminal } from 'lucide-react';
+import { useEffect, useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { computerSetupOf } from '@/computer/setup';
 import { useComputerMachine } from '@/computer/use-computer-machine';
-import { closeOnboarding } from '@/onboarding/open';
 import { ComputerTask } from '@/onboarding/ComputerTask';
+import { closeOnboarding } from '@/onboarding/open';
 import { ProvidersTask } from '@/onboarding/ProvidersTask';
 import { RowTile, TaskPane } from '@/onboarding/TaskPane';
-import { WELCOME_SKY } from '@/onboarding/welcome-sky';
 import {
     cliRowsOf,
     doneCount,
@@ -26,6 +27,7 @@ import {
     type OnboardingPlace,
     type OnboardingTask
 } from '@/onboarding/tasks';
+import { WELCOME_SKY } from '@/onboarding/welcome-sky';
 import { useComputer } from '@/state/computer';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
@@ -36,8 +38,6 @@ import { machineFor } from '@/transport/connections';
 import { useMachineHold } from '@/transport/status';
 import { BrandSymbol } from '@/ui/Brand';
 import { Eclipse } from '@/ui/Eclipse';
-import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
-import { Button, CloseButton, Dialog, Icon, Meter } from '@adecore/ui';
 
 /*
  * The machine this window runs beside, held for as long as the onboarding is up. Its clients are

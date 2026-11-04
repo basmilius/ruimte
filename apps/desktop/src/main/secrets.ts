@@ -1,10 +1,10 @@
 import { join } from 'node:path';
+import type { AppIpc } from '@adecore/shell';
 import type { OpenAiCredentialStatus } from '@ruimte/desktop-bridge';
 import { databaseSecretFile, parseSecret, parseSecretKey } from '../database-bridge';
 import { createOpenAiLiveSession, parseOpenAiLivePreferences } from '../openai-live';
 import { fileSecretStore, type SecretStore } from '../secret-store';
 import { electron } from './electron';
-import type { AppIpc } from './ipc';
 
 const { app, net, safeStorage } = electron;
 

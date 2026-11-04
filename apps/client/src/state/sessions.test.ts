@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { CanvasNode } from '@/state/canvas';
 import { useChats } from '@adecore/agents-react/state';
+import type { CanvasNode } from '@/state/canvas';
 import { chatSinkFor } from '@/state/chats';
 import { endpointKey, isOfEndpoint } from '@/state/keys';
 import { nodeStatus, sessionSinkFor, useSessions } from '@/state/sessions';

@@ -1,10 +1,10 @@
+import { PromptDialog, Dialog } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
 import { createViewAction, promoteNodeAction } from '@/actions/client-actions';
 import { ViewSettingsDialog } from '@/shell/ViewSettingsDialog';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
-import { PromptDialog, Dialog } from '@adecore/ui';
 
 /* Settings, promoting and a new page: everything a view asks before it happens. */
 export function ViewDialogs() {

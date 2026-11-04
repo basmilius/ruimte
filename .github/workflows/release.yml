@@ -18,6 +18,7 @@ jobs:
   # loses, and its upload with it: v0.0.1 landed without the x64 zip that `latest-mac.yml` names.
   # With the builds in parallel the draft has to exist before any of them starts.
   draft:
+    needs: gate
     runs-on: ubuntu-latest
     steps:
       # Checkout writes a tag ref as a lightweight tag on the commit, and fetch-tags beside it
@@ -41,17 +42,29 @@ jobs:
           fi
           gh release create "$GITHUB_REF_NAME" --draft --title "Release ${GITHUB_REF_NAME#v}" --notes-file "$notes"
 
-  # ci.yml on the tagged commit, alongside packaging. A red job keeps the release a draft.
-  verify:
-    uses: ./.github/workflows/ci.yml
-    with:
-      full: true
+  # A release ships only a commit whose ci.yml run on main passed, so that run is the check and this
+  # job only reads its result. Anything else (red, still running, never pushed to main) stops the
+  # release before a runner builds, and no draft gets made.
+  gate:
+    runs-on: ubuntu-latest
     permissions:
-      contents: read
+      actions: read
+    steps:
+      - name: The CI run of the tagged commit passed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          conclusion=$(gh run list --workflow ci.yml --event push --commit "$GITHUB_SHA" --limit 1 --json conclusion --jq '.[0].conclusion // ""')
+          if [ "$conclusion" != success ]; then
+            echo "::error::CI on $GITHUB_SHA is '${conclusion:-missing}'; tag a commit whose CI run on main passed"
+            exit 1
+          fi
 
   # The client is the same bundle on every platform, so it is built once: one set of debug ids and
   # source maps under `ruimte@<version>`, matching the page every build ships.
   client:
+    needs: gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -278,10 +291,19 @@ jobs:
           token: ${{ env.OBSERVATORY_UPLOAD_TOKEN }}
           version: ruimte@${{ env.RUIMTE_VERSION }}
 
+  # The tagged commit's CI run skips a native check whose paths did not change, so the release runs every one of them.
+  native:
+    needs: gate
+    uses: ./.github/workflows/native.yml
+    with:
+      full: true
+    permissions:
+      contents: read
+
   publish:
-    needs: [verify, mac, linux, windows]
+    needs: [native, mac, linux, windows]
     # A skipped Windows build (WINDOWS_RELEASE off) holds nothing up; a failed one keeps the draft a draft.
-    if: ${{ !cancelled() && needs.verify.result == 'success' && needs.mac.result == 'success' && needs.linux.result == 'success' && (needs.windows.result == 'success' || needs.windows.result == 'skipped') }}
+    if: ${{ !cancelled() && needs.native.result == 'success' && needs.mac.result == 'success' && needs.linux.result == 'success' && (needs.windows.result == 'success' || needs.windows.result == 'skipped') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

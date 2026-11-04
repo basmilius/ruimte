@@ -1,8 +1,8 @@
+import type { AgentKind, AgentStatus, CanvasNodeKind, NodeTitleSource, ProjectIconChoice, ProjectSummary, ProjectViewKind, Task } from '@ruimte/contracts';
 import i18next from 'i18next';
-import type { SidebarTarget } from './sidebar-target';
 import type { AgentWork } from '@/state/agent-work';
 import { compareWaits, type WaitDetails } from '@/state/waiting';
-import type { AgentKind, AgentStatus, CanvasNodeKind, NodeTitleSource, ProjectIconChoice, ProjectSummary, ProjectViewKind, Task } from '@ruimte/contracts';
+import type { SidebarTarget } from './sidebar-target';
 
 export interface SidebarNode {
     id: string;
@@ -53,6 +53,8 @@ export interface SidebarView {
     self: SidebarNode | null;
     /* A chat nobody wrote in yet, which has no row until its first message, even while it is on screen. */
     hidden?: boolean;
+    /* An extension's view, which opens though its kind is `unknown`. */
+    extension?: boolean;
 }
 
 export interface SidebarViewRow {

@@ -1,0 +1,154 @@
+import { PaletteCommands } from '@/components/docs/extensions/PaletteScenes.tsx';
+
+export const metadata = { title: 'Add a command' };
+
+# Add a command
+
+<p className="lead">A command in the palette, with a key a person can press anywhere in the window.</p>
+
+This page builds two rows for the palette. "Open the standup" opens a panel. "Write the standup" asks an agent to write a standup note from the canvas in front, and also runs on <Shortcut keys="Mod+Alt+Y" />.
+
+## The files
+
+```text
+manifest.json
+assets/icon.svg
+client/index.ts
+client/Standup.tsx
+```
+
+Writing the note reads the canvas, asks an agent and writes on the canvas:
+
+```json
+{
+    "id": "acme.standup",
+    "name": "Standup",
+    "version": "1.2.0",
+    "api": 1,
+    "publisher": "Acme",
+    "description": "Collects what every agent did since yesterday.",
+    "color": "#0891b2",
+    "permissions": {
+        "context.read": "Reads the canvas you write the standup for",
+        "agents.run": "Asks one of your agents to write it",
+        "canvas.write": "Writes the standup as a note"
+    }
+}
+```
+
+## A plain command
+
+`defineCommand` is a row in the palette with a title and what it runs. It gets no context:
+
+```ts
+import { defineCommand, definePanel } from '@ruimte/extension/client';
+
+const standup = definePanel({
+    id: 'standup',
+    title: 'Standup',
+    icon: 'calendar-check',
+    component: () => import('./Standup')
+});
+
+defineCommand({
+    id: 'open',
+    title: 'Open the standup',
+    run: () => standup.open()
+});
+```
+
+## Call the server part
+
+`useServer` is a hook, so only a component can call it. A command's `run` calls `getServer` instead. It answers the same `Result` for each method, without `.use()` and `.reload()`. Here `server/index.ts` has a `sync` method, as in [Server and secrets](/docs/extensions/how-to/server):
+
+```ts
+import { defineCommand, getServer, host } from '@ruimte/extension/client';
+import type server from '../server';
+
+defineCommand({
+    id: 'sync',
+    title: 'Sync the standup',
+    async run() {
+        const synced = await getServer<typeof server>().sync();
+
+        host.notify(synced.ok ? 'Synced the standup' : synced.error.message, {
+            tone: synced.ok ? 'neutral' : 'error'
+        });
+    }
+});
+```
+
+Each call goes to the machine in front at the moment it is made. An action's `run`, a menu item and a palette source call `getServer` the same way.
+
+## A command with a shortcut
+
+A shortcut belongs to an action. Give `defineAction` a `shortcut`, and the `commandPalette` slot to list it in the palette too:
+
+```ts
+import { agents, canvas, context, defineAction, host } from '@ruimte/extension/client';
+
+defineAction({
+    id: 'write',
+    title: 'Write the standup',
+    icon: 'pen-line',
+    shortcut: 'mod+alt+y',
+    slots: {
+        commandPalette: true
+    },
+    async run({ view }) {
+        if (view?.kind !== 'canvas') {
+            host.notify('Open a canvas to write the standup for', {
+                tone: 'error'
+            });
+
+            return;
+        }
+
+        const sources = await context.read({
+            view
+        });
+
+        if (!sources.ok) {
+            throw new Error(sources.error.message);
+        }
+
+        const answer = await agents.run({
+            prompt: 'Write a standup: what was done, what is next, what is stuck.',
+            context: sources.value.map((source) => `# ${source.title}\n${source.text}`)
+        });
+
+        if (!answer.ok) {
+            throw new Error(answer.error.message);
+        }
+
+        canvas.createNote({
+            title: 'Standup',
+            text: answer.value.text
+        });
+    }
+});
+```
+
+Open the palette and type a word of either title:
+
+<PaletteCommands />
+
+## Pick the keys
+
+Write a shortcut as its parts joined by `+`, such as `mod+alt+y` or `mod+shift+k`. `mod` is Cmd on macOS and Ctrl elsewhere, so `mod+alt+y` is <Shortcut keys="Mod+Alt+Y" /> on this computer.
+
+- A shortcut needs `mod` or `alt`. Ruimte refuses one without, as it does for its own.
+- Ruimte's own shortcuts come first, so pick a free key, such as one with `mod+alt`. [Keyboard shortcuts](/docs/guide/shortcuts) lists Ruimte's.
+- Pressed, the action runs with the context of the command palette: the base context and `nodes`, the selection on the canvas in front.
+
+## Only when it can act
+
+The `commandPalette` slot can answer `false` to keep the row out of the palette, for example without a selection:
+
+```ts
+slots: {
+    commandPalette: ({ nodes }) => nodes.length > 0
+}
+```
+
+That only hides the row. The shortcut still runs the action, so check in `run` too, as the example above does with `view`.

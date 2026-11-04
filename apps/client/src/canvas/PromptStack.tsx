@@ -1,11 +1,17 @@
-import { useEffect, useRef, type ReactNode } from 'react';
-import { flushSync } from 'react-dom';
+import { useChatHost } from '@adecore/agents-react';
+import { pageKey, answerPrompt, promptCreatedAt, useFocusAfterAnswer, usePromptSession, PROMPT_SURFACE, PromptView } from '@adecore/agents-react/prompts';
+import { useProviders } from '@adecore/agents-react/state';
+import { formatClock } from '@adecore/agents-react/usage';
+import { ButtonGroup, ErrorBoundary, Icon, IconButton, Menu, Pill, Tooltip } from '@adecore/ui';
+import { formatMoment } from '@adecore/ui/format';
 import clsx from 'clsx';
 import { AlarmClock, AlarmClockOff, ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { focusNodeAction, PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
-import { StatusDot } from '@/canvas/NodeFrame';
 import { isTypingTarget } from '@/canvas/canvas-shortcuts';
+import { StatusDot } from '@/canvas/NodeFrame';
 import {
     bringPromptToFront,
     leavePromptStack,
@@ -17,22 +23,16 @@ import {
 } from '@/canvas/prompt-stack';
 import { stackFront, type CanvasPrompt } from '@/canvas/prompts';
 import { useCanvasPrompts } from '@/canvas/use-canvas-prompts';
-import { agentName } from '@/processes/format';
-import { promptHeadline } from '@/prompts/prompt-headline';
-import { designChatInFront } from '@/project/views';
 import { isApplePlatform } from '@/desktop/bridge';
-import { pageKey, answerPrompt, promptCreatedAt, useFocusAfterAnswer, usePromptSession, PROMPT_SURFACE, PromptView } from '@adecore/agents-react/prompts';
-import { useChatHost } from '@adecore/agents-react';
-import { formatClock } from '@adecore/agents-react/usage';
+import { agentName } from '@/processes/format';
+import { designChatInFront } from '@/project/views';
+import { promptHeadline } from '@/prompts/prompt-headline';
+import { SnoozeButton } from '@/shell/Snooze';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { endpointOfNode, useEndpointId } from '@/state/keys';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
-import { SnoozeButton } from '@/shell/Snooze';
-import { formatMoment } from '@adecore/ui/format';
-import { useProviders } from '@adecore/agents-react/state';
 import { useTransportStatus } from '@/transport/status';
-import { ButtonGroup, ErrorBoundary, Icon, IconButton, Menu, Pill, Tooltip } from '@adecore/ui';
 
 /* Marks the chevron that folds or opens the stack, which keeps the keyboard across the change. */
 const FOLD_ATTRIBUTE = 'data-prompt-fold';

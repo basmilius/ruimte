@@ -1,3 +1,4 @@
+import type { Shortcut } from '@adecore/ui';
 import {
     AlignLeft,
     ArrowDown,
@@ -38,10 +39,9 @@ import {
     WandSparkles,
     type LucideIcon
 } from 'lucide-react';
-import type { Shortcut } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { editorShortcut } from '@/shell/editor-keymap';
 import { RENDERED_DOC_COMMENTS } from '@/features';
+import { editorShortcut } from '@/shell/editor-keymap';
 
 /*
  * The commands that act on the editor with the keyboard in it: the id the menu and the palette share, the

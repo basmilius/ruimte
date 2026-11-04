@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { FileLocation, FsEntry, RequestMap, RequestType } from '@ruimte/contracts';
+import { useDocument } from '@/state/document';
+import { TransportError } from '@/transport/transport';
 import { completed } from './action-support';
 import { createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
 import type { FilesMachine } from './files-actions';
-import { useDocument } from '@/state/document';
-import { TransportError } from '@/transport/transport';
 
 type Answers = { [Type in RequestType]?: (payload: RequestMap[Type]['payload']) => RequestMap[Type]['result'] };
 

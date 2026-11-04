@@ -1,13 +1,15 @@
 import { realpath, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, relative, resolve } from 'node:path';
-import type { ChatInfo } from '@ruimte/contracts';
-import type { UiLinkResolution, UiLinkTarget } from '@adecore/intelligent-ui/links';
-import { fileExists, isNotFound } from '@adecore/agents';
 import { ChatUiRefusal } from '@adecore/agents/chat';
-import { checkCwd, isInside } from '../canvas/project-paths.ts';
+import type { UiLinkResolution, UiLinkTarget } from '@adecore/intelligent-ui/links';
+import { isNotFound } from '@adecore/utils/errors';
+import { fileExists } from '@adecore/utils/fs';
+import { isWithin } from '@adecore/utils/path';
+import type { ChatInfo } from '@ruimte/contracts';
 import { locateFile } from '../fs/locate.ts';
 import { cachedRepos } from '../git/repo-cache.ts';
 import { git, toplevel } from '../git/run.ts';
+import { checkCwd } from '../tools/project-paths.ts';
 import { UiSourceAccessSchema, type UiSourceAccess } from './ui-access.ts';
 import type { UiSourceHosts } from './ui-sources.ts';
 
@@ -42,7 +44,7 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
         return { state: 'chip', projectId: place.projectId, target, label: node.title, viewId: node.canvasId ?? undefined };
     }
     const cwd = await checkCwd(place.folder, access.cwd, host.worktreePaths);
-    if (!access.roots.some((root) => isInside(root, cwd))) {
+    if (!access.roots.some((root) => isWithin(root, cwd))) {
         return { state: 'plain', code: 'access-unavailable', reason: "The agent's working folder is outside the project it wrote this in." };
     }
     if (target.type === 'Commit') {
@@ -56,7 +58,7 @@ async function resolveCommit(host: UiSourceHosts, place: LinkPlace, access: UiSo
     const candidates = new Set<string>();
     for (const directory of [cwd, ...(await cachedRepos(place.folder)).repos.map((repo) => repo.path)]) {
         const root = await repositoryOf(directory);
-        if (root !== null && access.roots.some((allowed) => isInside(allowed, root))) {
+        if (root !== null && access.roots.some((allowed) => isWithin(allowed, root))) {
             candidates.add(root);
         }
     }
@@ -113,7 +115,7 @@ async function resolvePath(
         }
     }
     path = resolve(real, ...missing);
-    if (!access.roots.some((root) => isInside(root, path))) {
+    if (!access.roots.some((root) => isWithin(root, path))) {
         throw new ChatUiRefusal('outside-project', 'This file is outside the project the agent wrote this in.');
     }
     if (target.type === 'File' && !(await stat(real)).isFile()) {
@@ -124,7 +126,7 @@ async function resolvePath(
         return { state: 'chip', projectId: place.projectId, target: { ...target, path }, cwd, label: basename(path) };
     }
     const root = await repositoryOf(missing.length ? real : dirname(path));
-    if (!root || !access.roots.some((allowed) => isInside(allowed, root)) || !isInside(root, path)) {
+    if (!root || !access.roots.some((allowed) => isWithin(allowed, root)) || !isWithin(root, path)) {
         throw new ChatUiRefusal('outside-project', "This diff is outside the repositories of the agent's project.");
     }
     await checkCwd(place.folder, root, host.worktreePaths);

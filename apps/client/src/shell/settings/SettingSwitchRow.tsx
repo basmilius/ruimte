@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Switch } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
+import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSettings, type Settings } from '@/state/settings';
 
 type BooleanSetting = { [Key in keyof Settings]: Settings[Key] extends boolean ? Key : never }[keyof Settings];

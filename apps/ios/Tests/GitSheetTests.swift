@@ -139,6 +139,8 @@ final class GitSheetTests: XCTestCase {
         let machine = GitSheetMachine()
         let repositories = await GitSheetRepositories.with([checkout("one", ["staged"]), checkout("two", ["staged"])])
         let model = GitCommitModel(repositories: repositories)
+        XCTAssertEqual(model.files.map(\.file.path), ["0.ts", "0.ts"])
+        XCTAssertEqual(Set(model.files.map(\.id)).count, 2, "The same path in two repositories is two rows")
         model.subject = "Share one backoff"
         let line = await model.commit(client: machine, push: true)
         XCTAssertEqual(line, "Committed and pushed in 2 repositories.")

@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { join, resolve } from 'node:path';
 import type { LiveStreamFrame } from '@ruimte/contracts';
-import { AndroidBackend } from './android.ts';
 import { locateAndroidSdk } from './android-sdk.ts';
+import { AndroidBackend } from './android.ts';
 import { createDeviceHelperLauncher } from './helper-source.ts';
 import { IosSimulatorBackend } from './ios-simulator.ts';
 import { DeviceManager, type DeviceBackend } from './manager.ts';

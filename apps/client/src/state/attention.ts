@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
 import {
     isCanvasView,
     isChatHostView,
@@ -9,19 +9,19 @@ import {
     type ProjectView,
     type SplitLayout
 } from '@ruimte/contracts';
-import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
+import { create } from 'zustand';
 import { intersects, isMeasured, visibleRect, type Rect } from '@/canvas/math';
+import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
 import { desktop } from '@/desktop/bridge';
 import { nodeRefsOfView, projectNodes, useViewNodes } from '@/project/view-nodes';
 import { shownViewIdsIn } from '@/shell/split';
 import { nodeWorking } from '@/state/agent-work';
-import { nodesInSight, seenNodes, sightOf, type CanvasSight } from '@/state/in-sight';
-import { seePushNotifications, subscribePushAttention, unreadOnMachine } from '@/state/push-attention';
 import { liveCanvas, subscribeCanvases } from '@/state/canvas';
-import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
 import { subscribeChatStatuses } from '@/state/chats';
 import { useDocument } from '@/state/document';
+import { nodesInSight, seenNodes, sightOf, type CanvasSight } from '@/state/in-sight';
 import { currentEndpointId, endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
+import { seePushNotifications, subscribePushAttention, unreadOnMachine } from '@/state/push-attention';
 import { nodeStatus, useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
 import { snoozeOf, useSnoozes, type Snoozes } from '@/state/snooze';
 

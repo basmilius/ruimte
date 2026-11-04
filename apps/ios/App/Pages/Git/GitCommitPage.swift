@@ -34,11 +34,19 @@ import SwiftUI
         }
     }
 
-    /// The files that go in, with the repository they go into.
-    var files: [(checkout: GitCheckout, file: GitStatusFile)] {
+    /// A file that goes in, with the repository it goes into. Two repositories can each hold the same relative path,
+    /// and with everything staged one path can be listed both staged and unstaged.
+    struct CommitFile: Identifiable {
+        let checkout: GitCheckout
+        let file: GitStatusFile
+
+        var id: String { "\(checkout.path)\u{0}\(file.state.rawValue)\u{0}\(file.path)" }
+    }
+
+    var files: [CommitFile] {
         let plan = plan
         return plan.targets.flatMap { target in
-            target.files.filter { plan.stageAll || $0.state == .staged }.map { (target, $0) }
+            target.files.filter { plan.stageAll || $0.state == .staged }.map { CommitFile(checkout: target, file: $0) }
         }
     }
 
@@ -153,7 +161,7 @@ struct GitCommitPage: View {
                 if model.plan.targets.isEmpty {
                     Text("Stage changes first.").foregroundStyle(MobileStyle.muted)
                 }
-                ForEach(model.files, id: \.file.path) { entry in
+                ForEach(model.files) { entry in
                     fileRow(entry.checkout, entry.file)
                 }
             } header: {

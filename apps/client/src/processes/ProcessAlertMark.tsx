@@ -1,10 +1,10 @@
-import i18next from 'i18next';
-import clsx from 'clsx';
-import { TriangleAlert } from 'lucide-react';
+import { Icon, Tooltip, useNow } from '@adecore/ui';
 import type { ProcessAlert } from '@ruimte/contracts';
+import clsx from 'clsx';
+import i18next from 'i18next';
+import { TriangleAlert } from 'lucide-react';
 import { alertText } from '@/processes/format';
 import { useUi } from '@/state/ui';
-import { Icon, Tooltip, useNow } from '@adecore/ui';
 
 const MINUTE_MS = 60_000;
 

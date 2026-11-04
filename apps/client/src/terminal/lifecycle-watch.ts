@@ -1,4 +1,5 @@
 import type { CanvasNodeKind } from '@ruimte/contracts';
+import { onlyCameraMoved } from '@/canvas/camera-slice';
 import { nodeRefsOfView, projectNodes } from '@/project/view-nodes';
 import { liveCanvases, subscribeCanvases } from '@/state/canvas';
 import { useDocument } from '@/state/document';
@@ -82,9 +83,14 @@ export function watchNodes(end: NodeEnder): () => void {
     const canvasLoading = (): boolean => liveCanvases().some(([, state]) => state.loading);
     const canvasMerging = (): boolean => liveCanvases().some(([, state]) => state.merging);
     nodesMoved();
-    const offCanvas = subscribeCanvases(() =>
-        step(nodesMoved(), canvasLoading() || useDocument.getState().loading, canvasMerging() || useDocument.getState().merging)
-    );
+    const offCanvas = subscribeCanvases((_viewId, state, previous) => {
+        // A camera that moved ends no session, and a canvas moves it every frame of a pan or a zoom.
+        if (onlyCameraMoved(state, previous)) {
+            return;
+        }
+
+        step(nodesMoved(), canvasLoading() || useDocument.getState().loading, canvasMerging() || useDocument.getState().merging);
+    });
     const offDocument = useDocument.subscribe((state, before) => {
         if (followReload(state.reloading, before.reloading)) {
             return;

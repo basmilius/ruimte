@@ -1,6 +1,6 @@
-import { useTranslation } from 'react-i18next';
-import { Cpu } from 'lucide-react';
 import { formatShortcut, Icon, shortcut } from '@adecore/ui';
+import { Cpu } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
 
@@ -16,7 +16,7 @@ export function GhostHint({ phase }: { phase: 'progress' | 'ready' }) {
         <span className="inline-flex h-5 items-center gap-2 font-sans text-xs whitespace-nowrap text-text-faint not-italic">
             <span className="flex h-[18px] items-center gap-1.25 rounded-sm bg-surface-sunken px-1.75 dark:bg-surface-active">
                 <Icon icon={Cpu} size={12} className="shrink-0" />
-                {t('language.ghost.onDevice')}
+                {t('language.ghost.model')}
             </span>
             {phase === 'ready'
                 ? [keys(t('language.ghost.accept'), TAB), keys(t('language.ghost.next'), CANVAS_SHORTCUTS.acceptGhostWord), formatShortcut(ESCAPE, apple)].join(

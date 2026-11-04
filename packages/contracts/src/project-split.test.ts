@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { canShareView, mergeFiles, overlayOfLegacy, privateFieldsOf, privateFileOf, splitContent, viewShareRefusal } from './project-split.ts';
 import {
     designFolderOf,
     designPlaces,
@@ -15,7 +16,6 @@ import {
     type ProjectSharedFile,
     type ProjectView
 } from './project.ts';
-import { canShareView, mergeFiles, overlayOfLegacy, privateFieldsOf, privateFileOf, splitContent, viewShareRefusal } from './project-split.ts';
 
 function canvas(id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectView {
     return {

@@ -1,10 +1,10 @@
+import { type CanvasNodeKind, type Worktree } from '@ruimte/contracts';
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import { shallow } from 'zustand/shallow';
-import { type CanvasNodeKind, type Worktree } from '@ruimte/contracts';
 import { useViewNodes } from '@/project/view-nodes';
 import { worktreeOfPath } from '@/shell/panels/worktree-rows';
-import { membersOf, useCanvas } from '@/state/canvas';
+import { carriedByGroups, useCanvas } from '@/state/canvas';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useOptionalConnection } from '@/transport/context';
@@ -208,7 +208,7 @@ export function useGroupWorktrees(groupId: string | null): readonly Worktree[] {
         }
     };
     add(group.worktree ? worktrees.find((entry) => entry.path === group.worktree?.path) : null);
-    for (const id of membersOf(group, nodes, texts)) {
+    for (const id of carriedByGroups(nodes, texts, [group.id])) {
         const member = nodes[id];
         if (member?.kind === 'terminal' || member?.kind === 'chat') {
             add(worktreeOfPath(worktrees, member.cwd));

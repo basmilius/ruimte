@@ -1,7 +1,7 @@
 import type { BrowserDriveAction, BrowserDriveResult, BrowserPageState } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import type { DriveOutcome } from './drive.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { DriveOutcome } from './drive.ts';
 
 /* What one ask may take before the agent hears that nobody answered; a load has its own, shorter, wait in the client. */
 const ASK_TIMEOUT_MS = 15_000;
@@ -9,7 +9,7 @@ const ASK_TIMEOUT_MS = 15_000;
 /*
  * The pages this machine does not run itself. In the desktop shell a browser node is a <webview>
  * inside the client, so the daemon only knows it because that client says so: it holds the page and
- * reports where it stands. An agent's verb goes back out over the same link, and the client that
+ * reports where it stands. An agent's tool goes back out over the same link, and the client that
  * holds the page answers under the `askId` it was asked with.
  *
  * Two clients with the same project open each draw their own page under one node, so an ask goes to

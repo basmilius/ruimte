@@ -1,0 +1,46 @@
+import { Shortcut } from '@/components/docs/Shortcut.tsx';
+import { ComputerPrompt } from '@/components/docs/guide/ComputerPrompt.tsx';
+import { ComputerUseVignette } from '@/components/features/ComputerUseVignette.tsx';
+import { Note } from '@/components/docs/guide/ui.tsx';
+
+export const metadata = { title: 'Computer use' };
+
+# Computer use
+
+<p className="lead">On a Mac, computer use lets an agent see and operate another app with a cursor of its own. It reaches only the apps you let it into.</p>
+
+## Turn on computer use
+
+1. Open Settings, Agents, Computer use.
+2. Turn on **Allow computer use on** followed by your Mac's name.
+3. Click **Open System Settings** and allow **Accessibility** and **Screen Recording** for Ruimte.
+4. Come back to Ruimte, where Screen Recording takes effect.
+
+## Let an agent into an app
+
+The first time an agent wants an app, Ruimte asks **Let an agent use Mail?** (or the app it wants):
+
+<ComputerPrompt />
+
+| Choice | Effect |
+| --- | --- |
+| Allow this time | Until the agent's turn ends |
+| Always allow | Every agent on this Mac may use the app from now on |
+| Deny | The agent does not get the app |
+
+Ruimte asks in every permission mode, Full access included. Settings, Agents, Computer use lists the apps under **Allowed apps**; **Remove** takes one off.
+
+<Note tone="warning">An agent never operates a terminal app, whatever you allowed. If you let an agent into Ruimte itself, it can do anything you can there.</Note>
+
+## While an agent works
+
+The agent works with its own cursor, behind your windows where it can. One agent operates the Mac at a time.
+
+<ComputerUseVignette />
+
+| Shortcut | Action |
+| --- | --- |
+| <Shortcut keys="Alt+Space" /> | Pause the agent, so you can take over |
+| <Shortcut keys="Alt+Escape" /> | Stop it |
+
+While an agent operates the Mac, Ruimte shows **Pause**, **Resume** and **Stop session**.

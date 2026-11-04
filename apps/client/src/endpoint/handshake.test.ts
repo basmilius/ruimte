@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { DesktopBridge } from '@/desktop/bridge';
-import { httpUrlFor } from '@/transport/machine-url';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { httpUrlFor } from '@/transport/machine-url';
 import { forgetTicket, rememberLocalSecret, rememberTicket } from './credentials';
 import { socketAddressFor } from './handshake';
 

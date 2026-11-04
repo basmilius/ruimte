@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { BookmarkPlus, CodeXml, Share } from 'lucide-react';
-import type { DesignPlace } from '@ruimte/contracts';
 import { offerDraft } from '@adecore/agents-react/chat';
 import { Button, ButtonGroup, Icon, IconButton, Tooltip } from '@adecore/ui';
+import type { DesignPlace } from '@ruimte/contracts';
+import { BookmarkPlus, CodeXml, Share } from 'lucide-react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createViewAction } from '@/actions/client-actions';
 import { designVersionKey, useDesignChat } from '@/design/design-chat';
 import { implementPrompt } from '@/design/design-messages';

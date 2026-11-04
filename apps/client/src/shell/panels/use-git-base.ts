@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { isPathBelow, relativeTo } from '@/shell/panels/files-tree';
 import { useGitRoot } from '@/shell/panels/use-git-root';
 import { useGitSignal } from '@/state/git-watch';
 import { useEndpointId } from '@/state/keys';
 import { useTransport } from '@/transport/context';
-import { isPathBelow, relativeTo } from '@/shell/panels/files-tree';
 
 /*
  * What the file is compared against in the editor's margin: its text in the last commit, or null when

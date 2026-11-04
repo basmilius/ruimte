@@ -1,42 +1,44 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
-import i18next from 'i18next';
-import clsx from 'clsx';
-import { ClipboardPaste, Copy, Eraser, Eye, Play, RotateCw, Scan } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import type { TerminalViewHandle } from '@adecore/terminal';
 import { Button, copyText, readClipboardText, Icon, ContextMenu, ErrorBoundary, Kbd, prefetcher, EDIT_SHORTCUTS, messageOf } from '@adecore/ui';
+import clsx from 'clsx';
+import i18next from 'i18next';
+import { ClipboardPaste, Copy, Eraser, Eye, Play, RotateCw, Scan } from 'lucide-react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 import { clearTerminalAction, restartTerminalAction, resumeTerminalAgentAction } from '@/actions/client-actions';
 import { carriesFiles } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
+import { isApplePlatform } from '@/desktop/bridge';
 import { TerminalDictation } from '@/dictation/TerminalDictation';
+import { nodeInfoOf } from '@/extensions/slots';
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { FindBar } from '@/find/FindBar';
 import { openFocusedFind } from '@/find/hosts';
 import { useFind } from '@/find/use-find';
+import { useMountCount } from '@/measure/mounts';
+import { MissingProviderNote } from '@/nodes/MissingProviderNote';
+import { closeHost, readNodeHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
+import { ConnectionNotice, NodeNotice } from '@/nodes/NodeNotice';
 import { openFileLink } from '@/shell/panels/file-links';
-import type { TerminalFileLink } from '@/terminal/file-links';
-import { MachineTerminal } from '@/terminal/MachineTerminal';
-import { SessionPortMonitor } from '@/terminal/SessionPorts';
-import { useEndpointId } from '@/state/keys';
-import { useSessionRestarts, useSessionRow } from '@/state/sessions';
 import { canvasOfNode, useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { serverInfoOf } from '@/state/server';
+import { useSessionRestarts, useSessionRow } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
+import { hasControlCharacter, shellQuotedPaths } from '@/terminal/drop-path';
+import type { TerminalFileLink } from '@/terminal/file-links';
+import { CLEAR_SHORTCUT, platformShortcut } from '@/terminal/keymap';
+import { MachineTerminal } from '@/terminal/MachineTerminal';
 import { osc52Text } from '@/terminal/osc52';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
-import { hasControlCharacter, shellQuotedPaths } from '@/terminal/drop-path';
-import { CLEAR_SHORTCUT, platformShortcut } from '@/terminal/keymap';
+import { SessionPortMonitor } from '@/terminal/SessionPorts';
 import { useTerminalFind } from '@/terminal/use-terminal-find';
 import { bindTerminalKeys, drawSession, fittedGrid } from '@/terminal/xterm';
 import { sessionClientFor } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';
-import { isApplePlatform } from '@/desktop/bridge';
-import { MissingProviderNote } from '@/nodes/MissingProviderNote';
-import { ConnectionNotice, NodeNotice } from '@/nodes/NodeNotice';
-import { useMountCount } from '@/measure/mounts';
-import { closeHost, readNodeHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
 
 // A terminal loads the WebGL addon on its first context; prefetched, it is there by then.
 prefetcher.register(() => import('@xterm/addon-webgl'));
@@ -258,6 +260,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                 <ContextMenu.Item onClick={() => clearTerminalAction(id)}>
                     <Icon icon={Eraser} size={14} /> {t('menu.clear')} <Kbd shortcut={platformShortcut(CLEAR_SHORTCUT, isApplePlatform())} />
                 </ContextMenu.Item>
+                <SlotMenuItems place="terminalMenu" context={{ node: nodeInfoOf(id) }} />
             </ContextMenu.Popup>
             {/* Outside the trigger, so a right click in the field is the field's own menu and not the terminal's. */}
             {find.open && (

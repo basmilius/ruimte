@@ -1,0 +1,56 @@
+import { PlanBeside } from '@/components/docs/guide/PlanBeside.tsx';
+
+export const metadata = { title: 'Plans, forks and visuals' };
+
+# Plans, forks and visuals
+
+<p className="lead">A chat keeps a plan you and the agent both edit. A fork continues a conversation in a new chat. An agent can answer with a page.</p>
+
+## Open a plan
+
+When an agent makes a plan, a **New plan** pill appears in the chat. Click it to open the plan in the panel at the right of the window.
+
+<PlanBeside />
+
+A plan is a list of steps, or a test plan with tests that pass or fail.
+
+| To | Do |
+| --- | --- |
+| Set the state of a step | Right-click it, choose **Status**, then a state |
+| Add a note to a step | Right-click it and choose **Add note** |
+| Show only some steps | Choose **All**, **Open** or **Issues** |
+| Hide finished steps | Choose **Collapse done** |
+| Hand the results to the agent | Choose **Send results to chat** |
+| Copy the plan | Choose **Copy as Markdown** |
+
+The agent never overwrites a state you set. An agent can lock a step so only it checks that step; **Unlock** removes the lock.
+
+A plan belongs to its chat. **Clear** on the chat removes its plans too.
+
+## Fork a conversation
+
+1. Right-click a chat node, or open the menu of a chat view.
+2. Choose **Fork conversation…**. The fork starts after the last turn that finished.
+3. Pick the options below and click **Fork**.
+
+| Option | Choices |
+| --- | --- |
+| Fork into | **A node beside it**, with a line from the original, or **A new view** |
+| Continue with | The same CLI and model, or another. Another CLI gets the last part of the conversation as text and can read the rest in the original. |
+| Account | Another account of the same CLI |
+| Work in a git worktree | A branch and checkout of its own. Choose to take uncommitted files along, or to undo the work after this turn. |
+| Machine | Another machine of your account. See [Work on another machine](/docs/guide/other-machines). |
+
+Ruimte sends nothing until you write the first message. The fork shows a **Fork** pill that leads to the original. In the fork's menu, **Summarize for the original** sends what the fork found back to the original chat.
+
+## Visual replies
+
+An agent can put a page above its reply: a chart, a table, a diagram or a mockup. Click **Open large** to see it full size. The page cannot read your files.
+
+To have agents answer in text only, turn off Settings, Agents, Visual replies. The setting is per machine.
+
+A reply can also hold a map. Map tiles load from Ruimte's map service while Settings, Chats, Map tiles is on and you are signed in. Otherwise the map shows only an outline and its places.
+
+## Images and 3D models
+
+An agent can show an image or a 3D model (glTF, USDZ or STL) in the thread. To keep an image the agent made, choose **Save image to project**. Pages and images you save from a chat go to [Output](/docs/guide/routines#output).

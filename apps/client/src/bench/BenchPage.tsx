@@ -1,7 +1,7 @@
+import { ErrorBoundary, Tooltip, UIProvider } from '@adecore/ui';
+import { AddressBookClient, type ModelBenchmarksResult } from '@ruimte/pulsar';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { AddressBookClient, type ModelBenchmarksResult } from '@ruimte/pulsar';
-import { ErrorBoundary, Tooltip, UIProvider } from '@adecore/ui';
 import { formatSource } from '@/format/source';
 import { ModelsBenchmarks } from '@/shell/models/ModelsBenchmarks';
 import { RuimteMark } from '@/ui/RuimteMark';

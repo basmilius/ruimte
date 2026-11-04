@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState, type PointerEvent } from 'react';
+import { EmptyState, messageOf } from '@adecore/ui';
 import { LIVE_STREAM_CONTENT_TYPE, type BrowserInput } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { CircleAlert } from 'lucide-react';
+import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { followLiveStream } from '@/endpoint/live-stream-fetch';
+import { useEndpoints } from '@/state/endpoints';
+import { useEndpointId } from '@/state/keys';
 import { browserClientFor } from '@/transport/connections';
 import { FramePainter } from '@/transport/live-stream';
-import { followLiveStream } from '@/endpoint/live-stream-fetch';
-import { useEndpointId } from '@/state/keys';
-import { useEndpoints } from '@/state/endpoints';
-import { EmptyState, messageOf } from '@adecore/ui';
 import { initialStreamUrl, useBrowserRow } from './registry';
 import { browserStreamScaleLimit, clampBrowserStreamScale, useBrowserStreamQuality } from './stream-quality';
 

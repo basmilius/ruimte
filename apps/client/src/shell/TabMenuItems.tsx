@@ -1,14 +1,15 @@
-import { useTranslation } from 'react-i18next';
+import { Icon, Kbd, Menu } from '@adecore/ui';
 import { ArrowLeft, ArrowRight, ArrowRightToLine, Columns3, ListX, PanelRight, Pin, PinOff, SquareX, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { closeTabAction, closeTabsAction } from '@/actions/client-actions';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { SplitItems } from '@/shell/ViewMenuItems';
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { canSplit, cellAt, locateView } from '@/shell/split';
+import { SplitItems } from '@/shell/ViewMenuItems';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { setTabPinned, tabsToClose } from '@/state/tab-close';
 import { useCurrentProjectKey, useViewPins } from '@/state/view-pins';
-import { Icon, Kbd, Menu } from '@adecore/ui';
 
 /* Whether a tab of a host is pinned, for a loose tab in the pool and for a view of the project in this client's pins. */
 function usePinnedOf(): (id: string) => boolean {
@@ -80,6 +81,7 @@ export function TabMenuItems({ viewId }: { viewId: string }) {
                 </Menu.Popup>
             </Menu.SubmenuRoot>
             <Menu.Separator />
+            <SlotMenuItems kit={Menu} place="tabMenu" context={{ target: { id: viewId } }} />
         </>
     );
 }

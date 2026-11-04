@@ -1,6 +1,7 @@
-import i18next from 'i18next';
+import { messageOf } from '@adecore/ui';
 import { DirectSignalPayloadSchema, type DirectSignalPayload } from '@ruimte/contracts';
 import type { IceServer, SignalAccess } from '@ruimte/pulsar';
+import i18next from 'i18next';
 import type { ClientKey } from '@/endpoint/client-key';
 
 export type Signal = DirectSignalPayload['envelope']['signal'];
@@ -25,10 +26,6 @@ export interface Signaling {
  * knows nothing else about the route: a socket to the machine itself, or the broker.
  */
 export type SignalingOpener = (connectionId: string, events: SignalingEvents) => Signaling;
-
-export function messageOf(e: unknown, fallback?: string): string {
-    return e instanceof Error ? e.message : (fallback ?? String(e));
-}
 
 /* Closes a socket without its handlers firing, so a close this side chose is never reported as a loss. */
 export function closeQuietly(socket: WebSocket): void {

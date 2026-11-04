@@ -1,5 +1,5 @@
-import { shortcut, type Shortcut } from '@adecore/ui';
 import { chordOf, resolveKeymap, type KeymapId } from '@adecore/editor/keymap';
+import { shortcut, type Shortcut } from '@adecore/ui';
 import { isApplePlatform } from '@/desktop/bridge';
 
 export const RUIMTE_EDITOR_KEYMAP = resolveKeymap({

@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ActionRegistry } from '@ruimte/actions';
 import type { GitFile, GitStatus, ProjectCanvasView, RequestMap, RequestType, Worktree } from '@ruimte/contracts';
-import { developerActions } from './developer-actions';
-import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
 import { useDocument } from '@/state/document';
 import { TransportError, type Transport } from '@/transport/transport';
 import { confirmed, questionOf } from './action-support';
+import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
+import { developerActions } from './developer-actions';
 
 const FOLDER = '/work/atlas';
 

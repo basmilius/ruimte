@@ -1,7 +1,7 @@
+import { Segmented, Stepper } from '@adecore/ui';
+import { SettingsRow } from '@adecore/ui/settings';
 import { Folder, FolderGit2, GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { SettingsRow } from '@adecore/ui/settings';
-import { Segmented, Stepper } from '@adecore/ui';
 import { WorktreeFolderRow } from '@/shell/settings/MachineSettings';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { ModelBenchmarksResult } from '@ruimte/pulsar';
-import { typeInto } from '../../../testing/dom-helpers';
 import { clickOn, mount, pressKey, until, type Mounted } from '../../../testing/dom';
+import { typeInto } from '../../../testing/dom-helpers';
 import { ModelsComparison } from './ModelsComparison';
 
 const RESULT: ModelBenchmarksResult = {

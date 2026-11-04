@@ -1,7 +1,7 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
 import { flagOf, isCanvasView, withFlags, type ProjectContent } from '@ruimte/contracts';
-import { VerbRefusal } from '../canvas/verb.ts';
-import { viewLines } from '../canvas/views.ts';
+import { viewLines } from '../tools/views.ts';
 import type { ServerActionContext } from './context.ts';
 
 /* Whether an id names a view or a node of this project; a view id and a node id are one namespace. */
@@ -12,9 +12,9 @@ function targetOf(content: ProjectContent, id: string): 'view' | 'node' {
     if (content.views.some((view) => isCanvasView(view) && view.nodes.some((node) => node.id === id))) {
         return 'node';
     }
-    throw new VerbRefusal('unknown-target', `${id} is not a view or a node of this project`, [
+    throw new ToolRefusal('unknown-target', `${id} is not a view or a node of this project`, [
         ...viewLines(content.views),
-        'note\tflag takes an id, never a name; ruimte-context node list lists the nodes of a canvas'
+        'note\tflag takes an id, never a name; node_list lists the nodes of a canvas'
     ]);
 }
 

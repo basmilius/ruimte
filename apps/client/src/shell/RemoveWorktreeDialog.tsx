@@ -1,19 +1,19 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useChats } from '@adecore/agents-react/state';
+import { PromptDialog, messageOf } from '@adecore/ui';
 import { ActionRefusal } from '@ruimte/actions';
 import type { Worktree } from '@ruimte/contracts';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { perform } from '@/actions/client-actions';
-import { PromptDialog, messageOf } from '@adecore/ui';
-import { useChats } from '@adecore/agents-react/state';
-import { nodeWorking } from '@/state/agent-work';
-import { useSessions } from '@/state/sessions';
-import { useProjectNodes } from '@/state/worktrees';
 import { nodesInWorktree, removeAllQuestion, removedToast, worktreeSessionsOf } from '@/shell/panels/worktree-rows';
+import { inspectWorktrees, nodeNames } from '@/shell/worktree-inspection';
+import { nodeWorking } from '@/state/agent-work';
 import { useEndpointId } from '@/state/keys';
+import { useSessions } from '@/state/sessions';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
+import { useProjectNodes } from '@/state/worktrees';
 import { worktreeLists } from '@/state/worktrees';
-import { inspectWorktrees, nodeNames } from '@/shell/worktree-inspection';
 import { useTransport } from '@/transport/context';
 
 type Reading = { key: string; worktrees: Worktree[]; error: { message: string | null } | null };

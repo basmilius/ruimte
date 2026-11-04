@@ -1,0 +1,52 @@
+import { BrowserDevice } from '@/components/docs/guide/BrowserDevice.tsx';
+import { Shortcut } from '@/components/docs/Shortcut.tsx';
+import { Note } from '@/components/docs/guide/ui.tsx';
+
+export const metadata = { title: 'Browsers and devices' };
+
+# Browsers and devices
+
+<p className="lead">A browser node is a web page on the canvas. A device node shows a simulator, an emulator or a phone. Draw a line from an agent to either, and the agent works there.</p>
+
+<BrowserDevice />
+
+## Open a page
+
+Press <Shortcut keys="Alt+B" /> on a canvas, or run **New browser view**, and type an address such as `localhost:5173`. Click, type and scroll in the page as in any browser.
+
+| Control | Action |
+| --- | --- |
+| <Shortcut keys="Mod+[" />, <Shortcut keys="Mod+]" /> | Back, forward |
+| **Inspect** | Opens the developer tools of the page |
+| **Open in system browser** | Opens the page in your own browser |
+
+Pages run in the desktop app. In the web app and on a phone, the machine can show the page instead; turn on **Browser and device streaming** for that machine under Settings, Account.
+
+A `localhost` page belongs to the project's machine. It opens only in that machine's own desktop app.
+
+### What an agent may do in a browser
+
+With a line from an agent to a browser, the agent can send the page to an address, go back and forward, and take a picture of the page. It cannot click, type or scroll.
+
+## Open a device
+
+Open the Devices panel from the rail. Choose **Show on canvas** or **Open as view** on a device.
+
+| Device | What the machine needs |
+| --- | --- |
+| iOS simulator | macOS with Xcode |
+| Android emulator | The Android SDK, on macOS or Linux |
+| Android phone | USB or Wi-Fi debugging turned on |
+| iPhone | A connection to the Mac |
+
+Start, stop and restart a simulator or emulator from its node, and use its screen with your pointer and keyboard. The tools panel sets the location, permissions, status bar, clipboard and biometrics, sends a push notification, installs an app, adds photos and videos, records the screen, and feeds a simulator's camera.
+
+**Erase** resets a device to new, after you confirm.
+
+A phone does less than a simulator. An Android phone cannot be started, stopped or given a location. An iPhone takes touches, screenshots and app installs, but no typed text.
+
+### What an agent may do on a device
+
+With a line from an agent to a device, the agent can see the screen and its elements, tap, swipe, press buttons, type, open apps and use the tools panel. Ruimte asks no approval: the device is a sandbox of its own.
+
+<Note>Starting, stopping, restarting and erasing a device, and its camera, stay with you.</Note>

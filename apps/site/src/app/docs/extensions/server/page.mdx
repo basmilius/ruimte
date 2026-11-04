@@ -1,0 +1,132 @@
+import { TicketsPanel } from '@/components/docs/extensions/Surfaces.tsx';
+
+export const metadata = { title: 'The server part' };
+
+# The server part
+
+<p className="lead">`server/index.ts` runs as one process on the machine, as the person who runs Ruimte. Use it for work that should go on without a window, or needs the machine itself.</p>
+
+Ruimte starts it on the first call from a client, and stops it with the machine. A crash starts it again on the next call; after three crashes in a row, Settings marks it as crashed until the person turns it on again.
+
+## What clients call
+
+The default export lists what a client may call. Every method is async, and its arguments and answer must survive JSON.
+
+```ts
+import { defineServer, storage } from '@ruimte/extension/server';
+
+const api = defineServer({
+    async count() {
+        const next = ((await storage.get<number>('count')) ?? 0) + 1;
+        await storage.set('count', next);
+        return next;
+    }
+});
+
+export type Api = typeof api;
+export default api;
+```
+
+In the client, `useServer<Api>()` makes those methods typed, each answering a `Result`. A method that throws answers `failed` with its message, so `throw` is how a method says no. Outside a component, such as in a command's `run`, `getServer<Api>()` calls the same methods; see [Add a command](/docs/extensions/how-to/command#call-the-server-part). [Server and secrets](/docs/extensions/how-to/server) builds a panel on a server part that calls an outside service with a stored key:
+
+<TicketsPanel />
+
+## Events
+
+`emit(name, payload)` tells every client of the machine, where `useServerEvent(name, listener)` hears it. Without a payload, the listener gets `undefined`. `onEvent(name, listener)` follows the machine's own events:
+
+```ts
+onEvent('chat.status', ({ chat }) => {
+    if (chat.status === 'needsYou') {
+        log.info(`${chat.id} waits for the person`);
+    }
+});
+```
+
+| Event | What it says | Permission |
+| --- | --- | --- |
+| `chat.status` | `{ chat }`, a chat that changed what it is doing | `chats.read` |
+| `chat.event` | `{ chatId }`, something new in a chat's thread | `chats.read` |
+| `session.status` | `{ nodeId, status }`, the agent in a terminal | `terminals.read` |
+
+Any other name is refused, and the log says why. To follow them while no client is open, set `"autostart": true` in the manifest.
+
+## Storage and secrets
+
+`storage` keeps JSON per extension on the machine. `secrets` keeps strings in a file only the person who runs the machine can read, such as an API key.
+
+`machine.dataFolder` is a folder of the extension's own for anything bigger.
+
+## On a clock
+
+With the permission `clock`, `schedule` runs work every so often, from every 10 seconds to every 596 hours:
+
+```ts
+schedule({
+    id: 'sync',
+    every: '5m',
+    run: () => sync()
+});
+```
+
+## What agents read of your nodes
+
+`defineNodeContext` tells agents what a node of yours holds, also when no client is open:
+
+```ts
+defineNodeContext<{ items: string[] }>('checklist', (node) => [
+    { text: node.data.items.join('\n') }
+]);
+```
+
+## Agents and chats
+
+`agents.run` runs a hidden prompt, and `agents.start` a chat a person sees in the project you name. With no window to look at, `agents.start` takes the project, and `view` and `near` say where the chat goes:
+
+```ts
+const chat = await agents.start({
+    project: {
+        id: projectId
+    },
+    near: [node],
+    prompt: 'Look at the failing build'
+});
+```
+
+`chats.list`, `chats.read` and `chats.send` work as in the client. `chats.send` answers `limit` past 20 messages per chat per hour, so a loop with a chat ends on its own. Every call here answers a `Result`, as in [the client](/docs/extensions/machine#when-a-call-fails). `defineAgentTool` is described in [Chats and agents](/docs/extensions/chats-and-agents#tools-for-agents).
+
+## The machine's actions
+
+`machine.run(project, action, input)` calls a machine action, such as `launch.start`, with the same input, answer and permissions as in [the client](/docs/extensions/machine#what-the-machine-runs):
+
+```ts
+const project = {
+    id: projectId
+};
+const started = await machine.run(project, 'launch.start', {
+    launch: 'web'
+});
+```
+
+## Language servers
+
+With `languages.servers`, an extension adds a language server for a language Ruimte does not know:
+
+```ts
+const added = await defineLanguageServer({
+    name: 'Zig',
+    command: 'zls',
+    languages: ['zig'],
+    patterns: ['*.zig']
+});
+
+if (!added.ok) {
+    log.error(added.error.message);
+}
+```
+
+It shows in Settings like one the person added and starts without asking, since installing the extension was the approval. Calling it again with the same name changes it, and removing the extension removes it, unless the person edited it.
+
+## Logging
+
+`log.info` and `log.error` write to the extension's log, which `ruimte extension logs` prints. While `ruimte extension dev` runs, `console.*` goes to your terminal as well.

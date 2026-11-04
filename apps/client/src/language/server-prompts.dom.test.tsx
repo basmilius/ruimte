@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { installDesktop, removeDesktop, buttonWithText, everything } from '../../testing/dom-helpers';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
 const PROJECT_ID = 'project-atlas';
 

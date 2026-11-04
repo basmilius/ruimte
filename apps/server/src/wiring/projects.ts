@@ -8,27 +8,31 @@ import { DrawingStore } from '../projects/drawing-store.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { commandsSet } from '../sessions/command-approvals.ts';
 import { modesSet } from '../sessions/mode-approvals.ts';
-import type { AgentStores, AgentsBundle } from './agents.ts';
+import { failTasksOfClosedProject } from '../tasks/closed-project.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
+import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { DatabasesBundle } from './databases.ts';
+import type { DevicesBundle } from './devices.ts';
 import type { LanguageBundle } from './language.ts';
 import type { LaunchesBundle } from './launches.ts';
 import type { TemplatesBundle } from './templates.ts';
-import { failTasksOfClosedProject } from '../tasks/closed-project.ts';
+
+const PROJECT_CLOSED_REASON = 'the project this chat is in was closed';
 
 /* The projects of this machine and the drawing and diagram files beside them. */
 export interface ProjectsBundle {
     store: ProjectStore;
-    /* What a retried `agent --request-id` answers with. */
+    /* What a retried `agent request_id` answers with. */
     startClaims: StartClaims;
     drawings: DrawingStore;
     diagrams: DiagramStore;
     /*
      * Ends the shell or the CLI behind a node. A node that has never been shown has no session, and a
      * project going down is not the place to fail over one, so an id neither manager knows is
-     * already ended as far as the caller goes.
+     * already ended as far as the caller goes. A chat goes along with its record unless `closing`, when
+     * only its CLI ends and the thread stays for the project's next open.
      */
-    endSession(kind: 'terminal' | 'chat', nodeId: string): Promise<void>;
+    endSession(kind: 'terminal' | 'chat', nodeId: string, closing?: boolean): Promise<void>;
 }
 
 interface ProjectsInput {
@@ -43,17 +47,21 @@ interface ProjectsInput {
         databases(): DatabasesBundle;
         language(): LanguageBundle;
         templates(): TemplatesBundle;
+        devices(): DevicesBundle;
     };
 }
 
 export async function wireProjects({ home, machineId, stores, agents, computer, later }: ProjectsInput): Promise<ProjectsBundle> {
     const { sessions, chats } = agents;
-    const endSession = async (kind: 'terminal' | 'chat', nodeId: string): Promise<void> => {
+    const endChat = (nodeId: string, closing: boolean): Promise<void> => (closing ? chats.stop(nodeId, PROJECT_CLOSED_REASON) : chats.kill(nodeId));
+
+    const endSession = async (kind: 'terminal' | 'chat', nodeId: string, closing = false): Promise<void> => {
         computer.nodeClosed(nodeId);
+        later.devices().deviceDriver.nodeClosed(nodeId);
         later.launches().secrets.nodeClosed(nodeId);
         agents.proposals.forget(nodeId);
         await later.work().endChildren.owe(nodeId);
-        await (kind === 'terminal' ? sessions.kill(nodeId) : chats.kill(nodeId)).catch(() => undefined);
+        await (kind === 'terminal' ? sessions.kill(nodeId) : endChat(nodeId, closing)).catch(() => undefined);
     };
     const store = new ProjectStore(home, {
         tracked: isTrackedPath,

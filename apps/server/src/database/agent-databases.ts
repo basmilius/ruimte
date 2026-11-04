@@ -1,19 +1,18 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { realpath } from 'node:fs/promises';
-import { relative } from 'node:path';
-import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
-import type { DatabaseError, RowsResult, SchemaInfo, StatementResult, TableInfo, TableStructure } from '@adecore/database/protocol';
 import { CodedError } from '@adecore/agents';
 import { field } from '@adecore/agents/context';
+import type { DatabaseError, RowsResult, SchemaInfo, StatementResult, TableInfo, TableStructure } from '@adecore/database/protocol';
+import { isWithin } from '@adecore/utils/path';
+import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import { climbsOut } from '../fs/path-segment.ts';
+import { realOrSelf } from '../fs/real-path.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import type { DatabaseAccessStore } from './agent-access.ts';
 import type { DatabasePasswords } from './agent-passwords.ts';
 import { inOwnedSession, type DatabaseCalls, type SessionCall } from './owned-session.ts';
-import { realOrSelf } from '../fs/real-path.ts';
 
-/* How long one verb may keep its session; past it the call is cancelled and its session closed. */
+/* How long one tool may keep its session; past it the call is cancelled and its session closed. */
 export const AGENT_DATABASE_LIMIT_MS = 120_000;
 
 /* The longest text or binary value a row prints whole; a longer one prints its start and its length. */
@@ -66,7 +65,7 @@ interface AgentExecution {
     inTransaction: boolean;
 }
 
-/* What the agents reach a project's databases through, the verbs' side of `AgentDatabases`. */
+/* What the agents reach a project's databases through, the tools' side of `AgentDatabases`. */
 export type DatabaseAgentHost = Pick<AgentDatabases, 'list' | 'tables' | 'describe' | 'query' | 'execute' | 'tableOf'>;
 
 interface AgentDatabasesOptions {
@@ -123,7 +122,7 @@ function connectionLines(connections: readonly AgentConnection[]): string[] {
 }
 
 const FAILURE_DETAILS: Partial<Record<string, string>> = {
-    unsupported: 'database query reads one statement that starts with SELECT or WITH; ruimte-context help database query',
+    unsupported: 'database_query reads one statement that starts with SELECT or WITH',
     'read-only': 'A query runs on a read-only session; database execute writes, on a connection a person allowed to write'
 };
 
@@ -151,7 +150,7 @@ export function openConfig(connection: DatabaseConnection, passwordOf: (target: 
  * The databases of a project as its agents reach them, and what a person sets for that. Every call
  * opens a session of its own under an owner of its own and releases it before it answers, so no
  * session, transaction or temporary table outlives the call. A read runs on a session opened read
- * only; a write needs the connection set to `write` by a person, which no verb can do.
+ * only; a write needs the connection set to `write` by a person, which no tool can do.
  */
 export class AgentDatabases {
     private readonly options: AgentDatabasesOptions;
@@ -246,7 +245,7 @@ export class AgentDatabases {
         const connection = await this.named(place, wanted);
         const resolved = schema ?? startDatabaseOf(connection);
         if (resolved === null) {
-            refuse('schema-required', `${connection.name} starts in no database; name one with --schema`);
+            refuse('schema-required', `${connection.name} starts in no database; name one with schema`);
         }
         return { connectionId: connection.id, schema: resolved };
     }
@@ -381,7 +380,7 @@ export class AgentDatabases {
     private async insideFile(place: DatabasePlace, path: string): Promise<string | null> {
         try {
             const [file, folder] = await Promise.all([realpath(path), realpath(place.folder)]);
-            return climbsOut(relative(folder, file)) ? null : file;
+            return isWithin(folder, file) ? file : null;
         } catch {
             return null;
         }
@@ -458,7 +457,7 @@ export class AgentDatabases {
         const { schemas } = await call<{ schemas: SchemaInfo[] }>('schemas', {});
         refuse(
             'schema-required',
-            `${connection.name} starts in no database; name one with --schema`,
+            `${connection.name} starts in no database; name one with schema`,
             schemas.filter((schema) => !schema.system).map((schema) => `schema\t${schema.name}`)
         );
     }

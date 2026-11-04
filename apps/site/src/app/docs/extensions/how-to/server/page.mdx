@@ -1,0 +1,197 @@
+import { SettingsOwnPage } from '@/components/docs/extensions/SettingsScenes.tsx';
+import { TicketsPanel } from '@/components/docs/extensions/Surfaces.tsx';
+
+export const metadata = { title: 'Server and secrets' };
+
+# Server and secrets
+
+<p className="lead">Keep an API key on the machine, where only your server part reads it, and call an outside service from there.</p>
+
+This page builds a Tickets panel with the open tickets of a tracker. The person types the tracker's key once in Settings. From then on only the machine holds it.
+
+## The files
+
+```text
+manifest.json
+assets/icon.svg
+client/index.ts
+client/Settings.tsx
+client/Tickets.tsx
+server/index.ts
+```
+
+Keeping a secret and calling a service from the server part need no permission. The server part runs as the person who runs the machine, with the network they have:
+
+```json
+{
+    "id": "acme.tickets",
+    "name": "Tickets",
+    "version": "1.0.0",
+    "api": 1,
+    "publisher": "Acme",
+    "description": "Your tracker's open tickets beside the canvas.",
+    "color": "#ea580c"
+}
+```
+
+## The server part
+
+`server/index.ts` exports what the client may call. Each method is async, and its arguments and answer must survive JSON:
+
+```ts
+import { defineServer, log, secrets } from '@ruimte/extension/server';
+
+export interface Ticket {
+    key: string;
+    title: string;
+}
+
+const api = defineServer({
+    async saveKey(key: string) {
+        await secrets.set('trackerKey', key);
+    },
+    async tickets(): Promise<Ticket[]> {
+        const key = await secrets.get('trackerKey');
+
+        if (key === undefined) {
+            throw new Error('Add your tracker key under Settings, Extensions');
+        }
+
+        const response = await fetch('https://tracker.example.com/api/tickets?state=open', {
+            headers: {
+                Authorization: `Bearer ${key}`
+            }
+        });
+
+        if (!response.ok) {
+            log.error(`The tracker answered ${response.status}`);
+            throw new Error(`The tracker answered ${response.status}`);
+        }
+
+        return response.json();
+    }
+});
+
+export type Api = typeof api;
+export default api;
+```
+
+`secrets` keeps strings in a file on the machine that only the person who runs it can read. Only the server part has `secrets`. No method here hands the key back, so no window ever reads it.
+
+Ruimte starts the server part on the first call, and again on the next call after a crash. After three crashes in a row, Settings marks it as crashed until the person turns it on again.
+
+## Ask for the key
+
+In `client/index.ts`, give the extension a settings page of its own, and the panel:
+
+```ts
+import { defineExtensionSettings, definePanel } from '@ruimte/extension/client';
+
+defineExtensionSettings({
+    component: () => import('./Settings'),
+    keywords: ['tracker', 'api key']
+});
+
+definePanel({
+    id: 'tickets',
+    title: 'Tickets',
+    icon: 'ticket',
+    component: () => import('./Tickets')
+});
+```
+
+`client/Settings.tsx` sends what the person types straight to the server part:
+
+```tsx
+import { useState } from 'react';
+import { Button, Field, Input } from '@ruimte/extension/ui';
+import { host, useServer } from '@ruimte/extension/client';
+import type { Api } from '../server';
+
+export default function Settings() {
+    const server = useServer<Api>();
+    const [key, setKey] = useState('');
+
+    const save = async () => {
+        const saved = await server.saveKey(key);
+
+        if (!saved.ok) {
+            host.notify(saved.error.message, {
+                tone: 'error'
+            });
+
+            return;
+        }
+
+        setKey('');
+        server.tickets.reload();
+        host.notify('Saved the tracker key');
+    };
+
+    return (
+        <Field
+            label="Tracker API key"
+            hint="It stays on the machine, readable only by you."
+        >
+            <div style={{ display: 'flex', gap: 8 }}>
+                <Input
+                    type="password"
+                    value={key}
+                    onChange={(event) => setKey(event.target.value)}
+                />
+                <Button
+                    variant="secondary"
+                    onClick={() => void save()}
+                >
+                    Save
+                </Button>
+            </div>
+        </Field>
+    );
+}
+```
+
+<SettingsOwnPage />
+
+`import type` takes only the types from `server/`. `pack` refuses a client part that imports code from it.
+
+## Call it
+
+`useServer<Api>()` gives the server part's methods, typed. Each returns a promise of a `Result`. `.use()` suspends the component until the answer arrives, so the panel needs no loading state:
+
+```tsx
+import { ListRow } from '@ruimte/extension/ui';
+import { useServer } from '@ruimte/extension/client';
+import type { Api } from '../server';
+
+export default function Tickets() {
+    const tickets = useServer<Api>().tickets.use();
+
+    if (!tickets.ok) {
+        return <p>{tickets.error.message}</p>;
+    }
+
+    return tickets.value.map((ticket) => (
+        <ListRow
+            key={ticket.key}
+            variant="inset"
+        >
+            <code>{ticket.key}</code> {ticket.title}
+        </ListRow>
+    ));
+}
+```
+
+<TicketsPanel />
+
+When `tickets` throws, `ok` is false with the code `failed` and the message it threw, such as the missing key. The panel shows that message.
+
+`.use()` keeps its answer, a failure too, so the panel asks only once. That is why `save` calls `server.tickets.reload()`: it drops the kept answer, and the panel asks the server part again with the new key. A connection to the machine that comes back drops every kept answer the same way. A call goes to the machine the window works on, so on another computer the panel still reads the key from that machine.
+
+## Watch it work
+
+With `bun run dev` running, every save builds both parts, restarts the server part and prints what both log. Afterwards, `ruimte extension logs` prints what the server part wrote.
+
+## More on the machine
+
+The server part can also tell every window something with `emit`, follow the machine's events with `onEvent`, run on a clock with `schedule`, and keep data with `storage`. [The server part](/docs/extensions/server) covers each.

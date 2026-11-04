@@ -1,5 +1,5 @@
-import { DIAGRAM_VERSION, EMPTY_DIAGRAM, diagramProblemIn, isDiagramView, type DiagramContent, type DiagramDocument } from '@ruimte/contracts';
 import { CodedError, type WatchSeams } from '@adecore/agents';
+import { DIAGRAM_VERSION, EMPTY_DIAGRAM, diagramProblemIn, isDiagramView, type DiagramContent, type DiagramDocument } from '@ruimte/contracts';
 import { diagramsDirOf, privateDiagramsDirOf, readDiagram, tooNewMessage, writeDiagram } from './project-files.ts';
 import type { ProjectStore } from './project-store.ts';
 import { ProjectViewFileStore, type ViewFileKind } from './view-file-store.ts';

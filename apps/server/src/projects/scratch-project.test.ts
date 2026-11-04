@@ -2,12 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, readdir, realpath, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ProjectChatView } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
+import type { ProjectChatView } from '@ruimte/contracts';
 import { initRepo } from '../git/test-repo.ts';
+import { chatViewsOf, projectLinks } from './project-file-test-helpers.ts';
 import { ProjectStore } from './project-store.ts';
 import { dropEmptyMark, newScratchChat, reusableChat, scratchFolderOf } from './scratch-project.ts';
-import { chatViewsOf, projectLinks } from './project-file-test-helpers.ts';
 
 let root: string;
 let store: ProjectStore;

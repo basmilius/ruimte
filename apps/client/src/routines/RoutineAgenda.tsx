@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { EmptyState, Icon, Popover, ScrollArea, Switch } from '@adecore/ui';
+import { formatClock, formatDateTime } from '@adecore/ui/format';
+import type { RoutineEntry, RoutineKind } from '@ruimte/contracts';
 import clsx from 'clsx';
 import { Bot, Pause, Rocket, SquareTerminal, type LucideIcon } from 'lucide-react';
-import type { RoutineEntry, RoutineKind } from '@ruimte/contracts';
-import { EmptyState, Icon, Popover, Switch } from '@adecore/ui';
-import { formatClock, formatDateTime } from '@adecore/ui/format';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { OutputProjectGlyph } from '@/output/look';
 import { blocksOf, cellItems, LEGEND, NOON_MS, pausedBand, skippedWhilePaused, type AgendaBlock, type AgendaWeek, type CellItem } from '@/routines/agenda';
 import { LookIcon } from '@/routines/look';
@@ -56,7 +56,7 @@ export function RoutineAgenda({ endpointId, groups, week, now, timeZone, empty =
     const nowAt = today < 0 ? null : (today + (now - week.days[today]!.start) / (week.days[today]!.end - week.days[today]!.start)) / 7;
 
     return (
-        <div className="flex min-h-0 min-w-0 grow flex-col overflow-auto">
+        <ScrollArea axis="both" className="grow" viewportClassName="flex flex-col">
             <div className="relative isolate min-w-[948px] grow" role="grid" aria-label={t('agenda.label')}>
                 {/* The days run to the bottom of the stage, however few routines there are. */}
                 <div aria-hidden="true" className={`${GRID} pointer-events-none absolute inset-0 -z-10`}>
@@ -126,7 +126,7 @@ export function RoutineAgenda({ endpointId, groups, week, now, timeZone, empty =
                 )}
             </div>
             <RoutineRunPopover endpointId={endpointId} picked={picked} timeZone={timeZone} onClose={() => setPicked(null)} />
-        </div>
+        </ScrollArea>
     );
 }
 
@@ -145,7 +145,7 @@ export function RoutineWeekList({ endpointId, groups, week, now, timeZone }: Omi
     const shown = days.filter((day) => day.items.length > 0);
 
     return (
-        <div className="flex min-h-0 min-w-0 grow flex-col overflow-auto">
+        <ScrollArea className="grow" viewportClassName="flex flex-col">
             {shown.length === 0 ? (
                 <div className="grid grow place-items-center p-6">
                     <EmptyState>{t('list.empty')}</EmptyState>
@@ -193,7 +193,7 @@ export function RoutineWeekList({ endpointId, groups, week, now, timeZone }: Omi
                 </div>
             )}
             <RoutineRunPopover endpointId={endpointId} picked={picked} timeZone={timeZone} onClose={() => setPicked(null)} />
-        </div>
+        </ScrollArea>
     );
 }
 

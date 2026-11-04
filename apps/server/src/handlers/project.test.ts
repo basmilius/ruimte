@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { FakeWatch } from '@adecore/agents/testing';
 import type { ProjectCanvasView, ProjectContent, ProjectDocument, ProjectSummaryEvent, ServerFrame } from '@ruimte/contracts';
 import { connectionOpener, type ClientChannel, type ConnectionServices, type OpenConnection } from '../connection.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { FakeWatch } from '@adecore/agents/testing';
 import type { InlineChatHost } from '../projects/inline-chat.ts';
+import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { registerProjectHandlers } from './project.ts';
-import { projectLinks } from '../projects/project-file-test-helpers.ts';
 
 class FakeChannel implements ClientChannel {
     readonly frames: ServerFrame[] = [];

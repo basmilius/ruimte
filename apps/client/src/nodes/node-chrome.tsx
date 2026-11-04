@@ -1,7 +1,7 @@
+import { EmptyState } from '@adecore/ui';
+import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import type { LucideIcon } from 'lucide-react';
-import { EmptyState } from '@adecore/ui';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 
 /* What a node shows in place of its body: one line, or a title over a line of detail. */

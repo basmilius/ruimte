@@ -1,10 +1,10 @@
 import { readdir } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
+import { isWithin } from '@adecore/utils/path';
 import { FS_SEARCH_MAX_RESULTS, type FsSearchResult } from '@ruimte/contracts';
 import { cachedRepos } from '../git/repo-cache.ts';
 import { NO_MACHINE_HOME, type MachineHomePolicy } from './machine-home.ts';
 import { firstInOrder, inOrder } from './ordered.ts';
-import { isUnder } from './path-segment.ts';
 import { isOpenName, isOpenPath, searchRoot } from './searchable.ts';
 import { classifyEntry } from './visibility.ts';
 
@@ -30,17 +30,6 @@ function isWordStart(path: string, index: number): boolean {
     }
     const before = path[index - 1]!;
     return before === '/' || before === '.' || before === '-' || before === '_' || before === ' ';
-}
-
-/*
- * Subsequence match of `query` in `path`, case-insensitive. Null when a query character is
- * missing. Higher is better: a hit at a word start or right after the previous hit counts
- * more, a hit in the file name more than one in a directory, and a shorter path wins ties.
- * Words apart match each on their own and in any order, so `alpha greeting` finds
- * `app-alpha/src/greeting.ts` the way `alpha/greeting` does; the path scores their sum.
- */
-export function fuzzyScore(query: string, path: string): number | null {
-    return scorePath(wordsOf(query), path);
 }
 
 function wordsOf(query: string): string[] {
@@ -222,7 +211,7 @@ async function filesOfInnerRepos(cwd: string, own: string[]): Promise<string[]> 
     const root = resolve(cwd);
     let repos: string[];
     try {
-        repos = (await cachedRepos(root)).repos.map((repo) => resolve(repo.path)).filter((path) => path !== root && isUnder(path, root));
+        repos = (await cachedRepos(root)).repos.map((repo) => resolve(repo.path)).filter((path) => path !== root && isWithin(root, path));
     } catch {
         return own;
     }
@@ -312,7 +301,7 @@ export function forgetSearchCache(changed?: readonly string[]): void {
     const paths = changed.map((path) => resolve(path));
     for (const cache of [trackedCache, ignoredCache]) {
         for (const key of [...cache.keys()]) {
-            if (paths.some((path) => isUnder(path, key) || isUnder(key, path))) {
+            if (paths.some((path) => isWithin(key, path) || isWithin(path, key))) {
                 cache.delete(key);
             }
         }

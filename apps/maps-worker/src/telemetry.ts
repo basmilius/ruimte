@@ -1,5 +1,5 @@
-import { consoleLoggingIntegration, dedupeIntegration, functionToStringIntegration, linkedErrorsIntegration, type CloudflareOptions } from '@sentry/cloudflare';
 import { createScrubber, TELEMETRY_DATA_COLLECTION } from '@ruimte/telemetry';
+import { consoleLoggingIntegration, dedupeIntegration, functionToStringIntegration, linkedErrorsIntegration, type CloudflareOptions } from '@sentry/cloudflare';
 import type { Env } from './env.ts';
 
 /*

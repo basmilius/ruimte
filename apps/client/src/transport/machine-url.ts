@@ -1,15 +1,15 @@
+import { imageForDisplay } from '@adecore/agents-react/images';
+import { CHAT_MODEL_MAX_BYTES, type ByteResource } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useEffect, useState } from 'react';
-import { CHAT_MODEL_MAX_BYTES, type ByteResource } from '@ruimte/contracts';
-import { imageForDisplay } from '@adecore/agents-react/images';
 import { credentialFor } from '@/endpoint/credentials';
 import { endpointById, useEndpoints } from '@/state/endpoints';
 import { transportFor } from '@/transport';
 import { BlobCache, type BlobLease, type BlobState } from './blob-cache';
 import { readResource } from './byte-transfer';
-import { readPiece } from './piece';
 import { bytesStreamUrl } from './bytes-stream';
 import { bytesWorkerReady } from './bytes-worker-host';
+import { readPiece } from './piece';
 import { useEndpointConnection } from './status';
 
 /*

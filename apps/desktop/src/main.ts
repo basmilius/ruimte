@@ -2,13 +2,8 @@ import { existsSync } from 'node:fs';
 import { Socket } from 'node:net';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
-import { installBrowserRoutes } from './browser-routes';
-import { LAUNCHER_PIPE_VARIABLE } from './launcher-pipe';
-import { moveLegacyStorage } from './legacy-storage';
-import { MACHINE_ARGUMENT } from './machine-argument';
-import { decideMachineMode, hasInstallTraces, machineModeFile, parseModeOverride } from './machine-mode';
 import {
+    createAppIpc,
     createGestureGate,
     createPageKeys,
     createTheme,
@@ -20,20 +15,26 @@ import {
 } from '@adecore/shell';
 import type { ThemeState } from '@adecore/shell/bridge';
 import { type AgentActivity, type KeepAwakeRequest } from '@ruimte/desktop-bridge';
+import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
 import { isWindowKey, isWindowState, isWindowView, tabStripOf, totalActivity, windowPointOf, windowUrl } from './app-windows';
-import { createTabDrag } from './tab-drag';
+import { installBrowserRoutes } from './browser-routes';
+import { askDaemonWork, handVoiceKey } from './daemon-proof';
 import { editFrameOf, runGuestEdit } from './guest-edit';
 import { contextMenuPayload, editableMenuTemplate, PREVIEW_ACTIONS, type BrowserContextAction, type GuestKind } from './guest-menu';
-import { askDaemonWork, handVoiceKey } from './daemon-proof';
 import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE, mergeKeepAwake } from './keep-awake';
+import { LAUNCHER_PIPE_VARIABLE } from './launcher-pipe';
+import { moveLegacyStorage } from './legacy-storage';
+import { MACHINE_ARGUMENT } from './machine-argument';
+import { decideMachineMode, hasInstallTraces, machineModeFile, parseModeOverride } from './machine-mode';
+import { serveDevExtensionFiles } from './main/dev-extension-files';
 import { installDialogs } from './main/dialogs';
 import { electron } from './main/electron';
-import { createAppIpc } from './main/ipc';
+import { ClientExtensions } from './main/extensions';
 import { installLogin } from './main/login';
 import { installMachineMode } from './main/machine-mode';
 import { installMenu } from './main/menu';
-import { installSecrets } from './main/secrets';
 import { installQuickLook } from './main/quick-look';
+import { installSecrets } from './main/secrets';
 import { createMachine } from './main/service';
 import { installSpeech } from './main/speech';
 import { startTelemetry } from './main/telemetry';
@@ -43,6 +44,7 @@ import { createReleaseNotes } from './release-notes';
 import { runSmoke } from './smoke';
 import { installSocketTypeOfServiceGuard } from './socket-tos-guard';
 import { startApp } from './startup';
+import { createTabDrag } from './tab-drag';
 import { appSubframeNavigation, BROWSER_PARTITION, isExternalLink, PREVIEW_PARTITION } from './web-guards';
 
 const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, powerMonitor, powerSaveBlocker, protocol, screen, session, shell, webContents } = electron;
@@ -99,6 +101,9 @@ const scheme = createDesktopAppScheme(clientRoot(), devUrl ?? undefined);
 const daemonUrl = `http://127.0.0.1:${port}`;
 
 protocol.registerSchemesAsPrivileged([scheme.privileged]);
+
+// A change reaches only through IPC, so `windows` is there by the time one is told.
+const clientExtensions = new ClientExtensions(join(app.getPath('userData'), 'extensions'), () => windows.send('extensions:changed'));
 
 const devtoolsWindows = new Map<number, Electron.BrowserWindow>();
 
@@ -370,6 +375,8 @@ function createWindow(
             // The bridge, the local secret included, stays in the top frame: a visual's page runs in a frame of this page.
             nodeIntegrationInSubFrames: false,
             webviewTag: true,
+            // Electron leaves the elastic bounce of macOS off unless a window asks; a scroller then bounces at its end.
+            scrollBounce: true,
             // `app.getLocale()` is the bundle's language, `en-US` even on a Dutch Mac; these follow the
             // Region setting and the language order of System Settings.
             additionalArguments: [
@@ -598,6 +605,14 @@ ipc.handle('browser:capture', async (_event, id: number) => {
     return guest ? (await guest.capturePage()).toPNG() : null;
 });
 
+ipc.handle('extensions:list', () => clientExtensions.list());
+ipc.handle('extensions:install', (_event, pack: Uint8Array, options?: { fromStore?: unknown }) => clientExtensions.install(pack, options?.fromStore === true));
+ipc.handle('extensions:remove', (_event, id: string) => clientExtensions.remove(id));
+ipc.handle('extensions:set-enabled', (_event, id: string, enabled: boolean) => clientExtensions.setEnabled(id, enabled));
+ipc.handle('extensions:link', (_event, folder: string, revision: number, enabled?: unknown) =>
+    clientExtensions.link(folder, revision, typeof enabled === 'boolean' ? enabled : undefined)
+);
+ipc.handle('extensions:unlink', (_event, id: string) => clientExtensions.unlink(id));
 const secrets = installSecrets(ipc, localMachine ? (key) => handVoiceKey(machine.daemonPort, key) : null);
 installSpeech(ipc, { ruimteHome, repoRoot, send: (channel, payload) => windows.send(channel, payload), windows: () => windows.all() });
 const login = installLogin(ipc);
@@ -829,6 +844,11 @@ async function runSmokeWindow(): Promise<void> {
     });
 }
 
+// Chromium bounces a scroller at its end only on macOS by default; Windows and Linux get the same through this feature.
+if (process.platform !== 'darwin') {
+    app.commandLine.appendSwitch('enable-features', 'ElasticOverscroll');
+}
+
 if (!app.requestSingleInstanceLock()) {
     app.quit();
 } else {
@@ -868,7 +888,10 @@ if (!app.requestSingleInstanceLock()) {
 
     void app.whenReady().then(async () => {
         menu.setStatic();
-        protocol.handle(scheme.scheme, (request) => answerAppRequest(scheme, request));
+        protocol.handle(scheme.scheme, (request) => answerAppRequest(scheme, request, clientExtensions));
+        if (devUrl !== null) {
+            serveDevExtensionFiles(devUrl, clientExtensions);
+        }
         sealAppSession();
         sealPreviewSession();
         browserRoutes = installBrowserRoutes(fromAppWindow, join(here, 'guest.cjs'));

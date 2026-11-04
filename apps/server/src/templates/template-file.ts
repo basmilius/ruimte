@@ -1,3 +1,4 @@
+import { isRecord } from '@adecore/utils/record';
 import {
     LiveTemplateSchema,
     PersonalTemplatesFileSchema,
@@ -8,7 +9,6 @@ import {
     type PostfixTemplate,
     type TemplateSettings
 } from '@ruimte/contracts';
-import { isRecord } from '../is-record.ts';
 import { parseVersioned, serializeJson, type JsonDocumentParse } from '../projects/project-files.ts';
 
 /* An entry of a file as it stands, and what this release reads of it; `template` is null for one it cannot read. */

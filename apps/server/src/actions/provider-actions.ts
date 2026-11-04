@@ -1,6 +1,7 @@
-import { evenPace, registryAgentMatches, type UsageLimitsProvider, type UsageLimitsSnapshot } from '@ruimte/contracts';
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
-import { VerbRefusal, type NodeAccount, type ProviderInstallHost } from '../canvas/verb.ts';
+import { evenPace, registryAgentMatches, type UsageLimitsProvider, type UsageLimitsSnapshot } from '@ruimte/contracts';
+import { type NodeAccount, type ProviderInstallHost } from '../tools/host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 function installsOf(context: ServerActionContext): ProviderInstallHost {
@@ -51,11 +52,11 @@ export const providerActions: ActionHandlers<ServerActionContext> = {
         const limits = hostService(context, 'planLimits', 'no-limits', 'This machine reads no plan windows');
         const account = context.host.starts.accountOf?.(actor.id) ?? null;
         if (account === null) {
-            throw new VerbRefusal('no-agent', 'You run no agent CLI this machine knows, so there is no plan to read');
+            throw new ToolRefusal('no-agent', 'You run no agent CLI this machine knows, so there is no plan to read');
         }
         const entry = limitsOfAccount(limits.snapshot(), account);
         if (entry === null) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'no-limits',
                 account.account === undefined
                     ? `This machine reads no plan windows for ${account.kind}`

@@ -1,6 +1,7 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { isNotFound, writeAtomic } from '@adecore/agents';
+import { isNotFound } from '@adecore/utils/errors';
+import { writeAtomic } from '@adecore/utils/fs';
 import type { ComputerAppGrants } from '@ruimte/contracts';
 import { z } from 'zod';
 import { helperDirectory } from './helper.ts';
@@ -35,7 +36,7 @@ async function readJson<Schema extends z.ZodType>(path: string, schema: Schema, 
 /*
  * What a person decided about computer use on this machine: whether it is on, and which apps an
  * agent may operate without asking. Under `$RUIMTE_HOME`, beside the helper's own files, and never
- * in a project: no verb writes here, and a project file an agent can rewrite must not grant anything.
+ * in a project: no tool writes here, and a project file an agent can rewrite must not grant anything.
  */
 export class ComputerUseStore {
     private readonly directory: string;

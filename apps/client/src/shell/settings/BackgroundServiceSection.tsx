@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
+import { Switch, Button, Icon, FormError } from '@adecore/ui';
+import { ConfirmDialog, SettingsRow } from '@adecore/ui/settings';
 import { Power } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { desktop, type BackgroundServiceState } from '@/desktop/bridge';
 import { pendingRestartLine } from '@/shell/machine-update';
-import { ConfirmDialog, SettingsRow } from '@adecore/ui/settings';
-import { Switch, Button, Icon, FormError } from '@adecore/ui';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { backgroundServiceRow } from '@/shell/settings/background-service';
+import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { StopMachineRow } from '@/shell/settings/StopMachineRow';
 import { hasLocalMachine } from '@/state/local-machine';
 

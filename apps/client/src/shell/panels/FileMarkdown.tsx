@@ -1,6 +1,7 @@
+import { DisplayImage, Markdown, useFileLinkCwd } from '@adecore/agents-react/chat/ui';
+import { ScrollArea } from '@adecore/ui';
 import { type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DisplayImage, Markdown, useFileLinkCwd } from '@adecore/agents-react/chat/ui';
 import { parseMarkdownDocument, markdownImagePath, markdownImageStyle } from '@/shell/panels/markdown-document';
 import { FILE_HTML_PLUGINS } from '@/shell/panels/markdown-html';
 import { useFileRead } from '@/shell/panels/use-file-read';
@@ -39,7 +40,7 @@ export function FileMarkdown({ text }: { text: string }) {
     return (
         <div className="file-markdown">
             {document.rows !== null && document.rows.length > 0 && (
-                <div className="mb-6 overflow-x-auto rounded-md border border-border">
+                <ScrollArea axis="x" className="mb-6 overflow-hidden rounded-md border border-border">
                     <table className="w-full border-collapse text-left text-xs">
                         <caption className="border-b border-border bg-surface-sunken px-3 py-2 text-left font-medium text-text-muted">
                             {t('file.markdown.frontmatter')}
@@ -55,7 +56,7 @@ export function FileMarkdown({ text }: { text: string }) {
                             ))}
                         </tbody>
                     </table>
-                </div>
+                </ScrollArea>
             )}
             {document.invalid && (
                 <p className="mb-3 text-xs text-text-muted" role="status">

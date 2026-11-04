@@ -4,9 +4,9 @@ import { folderWatches } from '@/state/fs-watch';
 import type { HeldWatch } from '@/state/held-watches';
 import { windowWorkspace } from '@/state/window';
 import { ConnectionProvider } from '@/transport/ConnectionProvider';
+import { mount, until, type Mounted } from '../../../testing/dom';
 import { FakeMachine } from '../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';
-import { mount, until, type Mounted } from '../../../testing/dom';
 import { useFileRead } from './use-file-read';
 
 function pending() {

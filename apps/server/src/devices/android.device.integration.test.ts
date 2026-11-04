@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import type { LiveStreamFrame } from '@ruimte/contracts';
-import { AndroidBackend } from './android.ts';
 import { locateAndroidSdk } from './android-sdk.ts';
+import { AndroidBackend } from './android.ts';
 import { centerOf, flattenTree, type DeviceElement } from './device-tree.ts';
 import { ScrcpyServerFile, scrcpyServerDirectory } from './scrcpy-server.ts';
 import { adbScrcpyHost, ScrcpySource } from './scrcpy-source.ts';

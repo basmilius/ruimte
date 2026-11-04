@@ -4,7 +4,7 @@ import { realTimers, type Timers } from '../timers.ts';
 import type { SecretSlot } from './secret-store.ts';
 
 /*
- * How long a verb holds its call while the card is up, unless the agent asks for longer with `--wait`.
+ * How long a tool holds its call while the card is up, unless the agent asks for longer with `wait`.
  * Some agent CLIs end a shell command after 10 s unless the model asked for more; past this the agent
  * hears `waiting` and asks again, which joins the same card.
  */

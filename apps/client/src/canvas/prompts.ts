@@ -1,3 +1,5 @@
+import { orderPrompts, isBlockingSubject, promptCreatedAt, promptIdOf, type PromptSubject } from '@adecore/agents-react/prompts';
+import { waitingRequestsOf, type ChatsById, type ChatState } from '@adecore/agents-react/state';
 import {
     CHAT_REQUEST_LIMITS,
     designNodeChats,
@@ -8,11 +10,9 @@ import {
     type ProjectProposal,
     type SecretRequest
 } from '@ruimte/contracts';
-import { orderPrompts, isBlockingSubject, promptCreatedAt, promptIdOf, type PromptSubject } from '@adecore/agents-react/prompts';
-import type { CanvasNode } from '@/state/canvas';
-import { waitingRequestsOf, type ChatsById, type ChatState } from '@adecore/agents-react/state';
-import { endpointKey, endpointOfNode } from '@/state/keys';
 import { computerPrompt, proposalPrompt, ruimtePayloadOf, secretPrompt, waitingPrompt } from '@/prompts/ruimte-prompts';
+import type { CanvasNode } from '@/state/canvas';
+import { endpointKey, endpointOfNode } from '@/state/keys';
 import { nodeStatus, type SessionsByKey } from '@/state/sessions';
 import { snoozeOf, type Snoozes } from '@/state/snooze';
 

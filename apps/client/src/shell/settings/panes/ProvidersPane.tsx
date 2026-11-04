@@ -1,17 +1,16 @@
-import { useTranslation } from 'react-i18next';
-import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import { ProvidersPane as Pane } from '@adecore/agents-react/providers';
+import { useProvidersStore } from '@adecore/agents-react/state';
+import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
+import { useTranslation } from 'react-i18next';
 import { AcpServerSection, AcpServerStepBody } from '@/shell/settings/providers/AcpServerSection';
-import { useAcpServer } from '@/shell/settings/providers/use-acp-server';
-import { AppleFoundationSection } from '@/shell/settings/providers/AppleFoundationSection';
-import { CliVersionSection } from '@/shell/settings/providers/CliVersionSection';
 import { ClaudeApiSection, NanoGptSection } from '@/shell/settings/providers/ApiKeySection';
+import { CliVersionSection } from '@/shell/settings/providers/CliVersionSection';
 import { RegistryCatalogPage } from '@/shell/settings/providers/RegistryCatalogPage';
+import { useAcpServer } from '@/shell/settings/providers/use-acp-server';
 import { useCliVersions, useRegistryCatalog } from '@/shell/settings/providers/use-provider-installs';
-import { useMachineAnswers } from '@/transport/features';
 import { useEndpointId } from '@/state/keys';
-import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
+import { useMachineAnswers } from '@/transport/features';
 import { useDetectProviders } from '@/transport/provider-detection';
 
 /* The registry is read only once a person opens the page to add a provider. */
@@ -20,15 +19,16 @@ function RegistryCatalog({ endpointId, onOpen }: { endpointId: string; onOpen(ki
     return <RegistryCatalogPage registry={registry} onOpen={onOpen} />;
 }
 
-/* The providers of the machine in scope, with the model that machine runs on its own drawn by Ruimte. */
+/* The providers of the machine in scope, with setup steps drawn by Ruimte. */
 export function ProvidersPane() {
     const { t } = useTranslation('settings');
     const endpointId = useEndpointId();
     const target = useUi((s) => s.settings.target);
     const antigravity = useAcpServer(endpointId, 'antigravity');
-    const machine = useServers((s) => s.byEndpoint[endpointId]);
     const registryAnswers = useMachineAnswers(endpointId, 'provider.registry');
     const versions = useCliVersions(endpointId);
+    const providers = useProvidersStore((s) => s.byScope[endpointId]?.providers);
+    const claudeInstalled = providers?.find((provider) => provider.kind === 'claude')?.installed !== false;
     useDetectProviders();
     const detailOf = (provider: ProviderInfo) => {
         if (provider.kind === 'anthropic-claude-api') {
@@ -36,9 +36,6 @@ export function ProvidersPane() {
         }
         if (provider.kind === 'nanogpt') {
             return <NanoGptSection key={endpointId} endpointId={endpointId} />;
-        }
-        if (provider.kind === 'apple') {
-            return <AppleFoundationSection endpointId={endpointId} provider={provider} />;
         }
         if (provider.kind !== 'antigravity') {
             return null;
@@ -56,12 +53,10 @@ export function ProvidersPane() {
               };
     // Off is a choice only a Mac offers; elsewhere the detail says why the model is not there.
     const setupStatusOf = (provider: ProviderInfo) => {
-        if (provider.kind === 'apple' && machine?.platform === 'darwin' && !machine.appleFoundationEnabled) {
-            return { text: t('providers.apple.off'), tone: 'muted' as const };
-        }
         // The machine reports a provider behind a key installed once a saved key brought it models.
+        // It also needs Claude Code, which it runs in.
         if (provider.kind === 'anthropic-claude-api' && !provider.installed) {
-            return { text: t('providers.claudeApi.noKey'), tone: 'warning' as const };
+            return { text: t(claudeInstalled ? 'providers.claudeApi.noKey' : 'providers.claudeApi.noCli'), tone: 'warning' as const };
         }
         if (provider.kind === 'nanogpt' && !provider.installed) {
             return { text: t('providers.nanogpt.noKey'), tone: 'warning' as const };

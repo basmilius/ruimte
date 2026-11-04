@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
-import type { FsReadResult, FsWriteResult } from '@ruimte/contracts';
 import { FakeEditorEngine } from '@adecore/editor/fake';
+import type { FsReadResult, FsWriteResult } from '@ruimte/contracts';
 import { bindDraftEditor, mountDraftEditor } from '@/shell/panels/draft-editor';
 import { AUTOSAVE_DELAY_MS, type DraftLink, TextDrafts, useTextDrafts } from '@/state/text-drafts';
 import { TransportError } from '@/transport/transport';

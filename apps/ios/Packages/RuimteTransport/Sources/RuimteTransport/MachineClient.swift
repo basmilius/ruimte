@@ -154,7 +154,11 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         var cancelTimeout: () -> Void = {}
         // What `heard` had counted when the timer was set.
         var heardAt = 0
+        var renewals = 0
     }
+    /// `heard` counts pieces of any frame, so a terminal streaming output would renew an unanswered read forever.
+    /// Past this many renewals a read times out whatever else is arriving.
+    static let maxTimeoutRenewals = 8
     private struct Subscription {
         var owners: Set<UUID>
         let start: String
@@ -318,10 +322,11 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         pending[id]?.heardAt = heardCount
         let cancel = scheduler.after(milliseconds: timeoutMilliseconds) { [weak self] in
             guard let self, let request = pending[id] else { return }
-            if request.heardAt == heardCount {
+            if request.heardAt == heardCount || request.renewals >= Self.maxTimeoutRenewals {
                 LinkProblems.report(.timeout(request: type))
                 finish(id, result: .failure(MachineClientError.timeout(type)))
             } else {
+                pending[id]?.renewals += 1
                 armTimeout(id, type: type)
             }
         }

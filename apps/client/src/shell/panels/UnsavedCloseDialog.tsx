@@ -1,3 +1,4 @@
+import { Button, Dialog, ScrollArea } from '@adecore/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DraftBar } from '@/shell/panels/DraftBar';
@@ -5,7 +6,6 @@ import { closeWithoutSaving, dismissClose as close, retryClose, useUnsavedClose 
 import { useFiles } from '@/state/files';
 import { currentEndpointId } from '@/state/keys';
 import { useSettings } from '@/state/settings';
-import { Button, Dialog } from '@adecore/ui';
 
 export function UnsavedCloseDialog() {
     const { t } = useTranslation('panels');
@@ -24,14 +24,14 @@ export function UnsavedCloseDialog() {
             <Dialog.Popup size="sm">
                 <Dialog.Title>{t('file.unsaved.failedTitle')}</Dialog.Title>
                 <Dialog.Text className="mt-1">{t('file.unsaved.description', { count: pending?.paths.length ?? 1 })}</Dialog.Text>
-                <div className="my-4 flex max-h-80 flex-col gap-3 overflow-auto">
+                <ScrollArea className="my-4 max-h-80" viewportClassName="flex flex-col gap-3">
                     {pending?.paths.map((path) => (
                         <div key={path} className="overflow-hidden rounded-md border border-border">
                             <p className="px-3 py-2 text-xs break-all text-text">{path}</p>
                             <DraftBar endpointId={pending.endpointId} path={path} onReviewed={close} />
                         </div>
                     ))}
-                </div>
+                </ScrollArea>
                 <div className="flex flex-wrap justify-end gap-2">
                     <Button
                         size="sm"

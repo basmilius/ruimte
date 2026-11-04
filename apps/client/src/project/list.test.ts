@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { ConnectionState, TransportStatus } from '../transport/transport';
 import type { ProjectSummary } from '@ruimte/contracts';
 import { useEndpoints } from '../state/endpoints';
 import { useProjectList } from '../state/project-list';
 import { pool } from '../transport';
+import type { ConnectionState, TransportStatus } from '../transport/transport';
+import { fakeStorage, lanEndpoint } from './fixtures';
 import {
     chatsProjects,
     closeListedProjectLocally,
@@ -17,7 +18,6 @@ import {
     writeCachedList,
     type OpenListSource
 } from './list';
-import { fakeStorage, lanEndpoint } from './fixtures';
 
 function summary(projectId: string, lastOpenedAt = 0, closedAt: number | null = null): ProjectSummary {
     return {

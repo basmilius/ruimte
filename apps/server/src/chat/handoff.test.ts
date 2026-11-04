@@ -33,7 +33,7 @@ describe('handoffText', () => {
         expect(text).toStartWith(
             'Ruimte: you take over a conversation that ran with Claude Code in node chat-lead ("Lexer") on this machine, forked after its turn 6 of 6 on 2026-09-16 14:02 UTC.'
         );
-        expect(text).toContain('ruimte-context read chat-lead');
+        expect(text).toContain('context_read on chat-lead');
         expect(text).toContain('What follows is all of it, as text.');
         expect(text.indexOf('question 1')).toBeLessThan(text.indexOf('question 6'));
         expect(text).toEndWith("Continue from here. The person's next message follows.");

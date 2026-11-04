@@ -1,6 +1,6 @@
+import { Dialog, ScrollArea } from '@adecore/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@adecore/ui';
 import { closeRoutineForm, useRoutineForm } from '@/routines/form-state';
 import { useRoutineList } from '@/routines/routine-list';
 import { RoutineForm } from '@/routines/RoutineForm';
@@ -22,20 +22,22 @@ export function RoutineFormDialog() {
     }
     return (
         <Dialog.Root open={request !== null} onOpenChange={(open) => !open && closeRoutineForm()}>
-            <Dialog.Popup className="flex max-h-[85vh] w-[480px] flex-col gap-4 overflow-y-auto p-5">
-                <Dialog.Title>{shown?.editing ? t('form.editTitle') : t('form.newTitle')}</Dialog.Title>
-                {shown !== null && (
-                    <RoutineForm
-                        key={round}
-                        endpointId={endpointId}
-                        request={shown}
-                        onCancel={closeRoutineForm}
-                        onDone={(projectId, routineId) => {
-                            closeRoutineForm();
-                            showRoutine({ projectId, routineId });
-                        }}
-                    />
-                )}
+            <Dialog.Popup className="flex max-h-[85vh] w-[480px] flex-col">
+                <ScrollArea viewportClassName="flex flex-col gap-4 p-5">
+                    <Dialog.Title>{shown?.editing ? t('form.editTitle') : t('form.newTitle')}</Dialog.Title>
+                    {shown !== null && (
+                        <RoutineForm
+                            key={round}
+                            endpointId={endpointId}
+                            request={shown}
+                            onCancel={closeRoutineForm}
+                            onDone={(projectId, routineId) => {
+                                closeRoutineForm();
+                                showRoutine({ projectId, routineId });
+                            }}
+                        />
+                    )}
+                </ScrollArea>
             </Dialog.Popup>
         </Dialog.Root>
     );

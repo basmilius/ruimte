@@ -1,10 +1,9 @@
-import { z } from 'zod';
 import type { ChatInfo } from '@adecore/agent-contracts';
+import { z } from 'zod';
 import { ProjectSummarySchema } from './project.ts';
 import { isAbsolutePath } from './stored-path.ts';
 
 export const ChatMoveRefusalReasonSchema = z.enum(['not-in-chats', 'working', 'agents', 'tasks', 'owed', 'messages', 'pr-watch']);
-export type ChatMoveRefusalReason = z.infer<typeof ChatMoveRefusalReasonSchema>;
 
 export const ChatMoveTargetSchema = z.union([
     z.object({ projectId: z.string().min(1) }),
@@ -38,7 +37,6 @@ export const ChatMoveWorkedFolderSchema = z.object({
     branch: z.string().nullable(),
     files: z.number().int().nonnegative()
 });
-export type ChatMoveWorkedFolder = z.infer<typeof ChatMoveWorkedFolderSchema>;
 
 export const ChatMoveInfoResultSchema = z.object({
     // At most 5, most used first.
@@ -100,13 +98,11 @@ export type ProjectProposals = z.infer<typeof ProjectProposalsSchema>;
 export const ProjectProposalDeclinePayloadSchema = z.object({
     proposalId: z.string().min(1)
 });
-export type ProjectProposalDeclinePayload = z.infer<typeof ProjectProposalDeclinePayloadSchema>;
 
 // False when the card was gone already: another client was first, the chat moved or it expired.
 export const ProjectProposalDeclineResultSchema = z.object({
     accepted: z.boolean()
 });
-export type ProjectProposalDeclineResult = z.infer<typeof ProjectProposalDeclineResultSchema>;
 
 /*
  * Whether a chat does anything a move would cut off: a turn, a question or approval waiting on a

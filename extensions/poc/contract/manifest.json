@@ -1,0 +1,16 @@
+{
+    "id": "poc.contract",
+    "name": "POC contract",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "description": "The probe of the contract suite, which holds the test hosts to the real ones.",
+    "permissions": {
+        "canvas.write": "Writes a note and links it",
+        "chats.read": "Hears a chat change",
+        "chats.send": "Says hello to a chat",
+        "agents.tools": "Offers an agent a tool that echoes",
+        "agents.start": "Starts a chat",
+        "launches.run": "Starts a launch"
+    }
+}

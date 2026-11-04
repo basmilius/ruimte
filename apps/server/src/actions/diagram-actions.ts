@@ -1,9 +1,10 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
 import { DiagramEdgeSchema, DiagramGroupSchema, DiagramMetaSchema, DiagramNodeSchema, diagramProblemIn, isDiagramView } from '@ruimte/contracts';
 import { z } from 'zod';
-import { VerbRefusal, orNote } from '../canvas/verb.ts';
-import { viewLines } from '../canvas/views.ts';
 import { DiagramError } from '../projects/diagram-store.ts';
+import { orNote } from '../tools/host.ts';
+import { viewLines } from '../tools/views.ts';
 import type { ServerActionContext } from './context.ts';
 import { parseJson, pathOf, problemsRefusal } from './json-input.ts';
 
@@ -66,15 +67,13 @@ function issueText(issue: z.core.$ZodIssue, json: unknown): string {
     }
 }
 
-const HELP_LINE = 'detail\truimte-context help view diagram';
-
-function documentProblems(error: z.ZodError, json: unknown): VerbRefusal {
+function documentProblems(error: z.ZodError, json: unknown): ToolRefusal {
     const problems = error.issues.map((issue) => ({
         path: pathOf(issue.path) || 'document',
         text: `${issueText(issue, json)}${whoseLabel(json, issue.path)}`
     }));
 
-    return problemsRefusal('bad-document', problems, HELP_LINE);
+    return problemsRefusal('bad-document', problems);
 }
 
 export const diagramActions: ActionHandlers<ServerActionContext> = {
@@ -83,23 +82,16 @@ export const diagramActions: ActionHandlers<ServerActionContext> = {
         const content = await host.projects.read(place.projectId);
         const view = content.views.find((candidate) => candidate.id === viewId);
         if (!view || !isDiagramView(view)) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'not-a-diagram',
                 `${viewId} is not a diagram view of this project`,
-                orNote(
-                    viewLines(content.views.filter(isDiagramView)),
-                    'This project has no diagram view; ruimte-context view new <name> --kind diagram makes one'
-                )
+                orNote(viewLines(content.views.filter(isDiagramView)), 'This project has no diagram view; view_new <name> kind diagram makes one')
             );
         }
         if (document.trim() === '') {
-            throw new VerbRefusal(
-                'no-document',
-                "view diagram reads the document on stdin and got nothing: ruimte-context view diagram <viewId> <<'EOF' ... EOF",
-                [HELP_LINE]
-            );
+            throw new ToolRefusal('no-document', 'view_diagram got an empty document; pass the whole diagram as JSON');
         }
-        const json = parseJson(document, 'document', HELP_LINE);
+        const json = parseJson(document, 'document');
         const parsed = DocumentSchema.safeParse(json);
         if (!parsed.success) {
             throw documentProblems(parsed.error, json);
@@ -107,10 +99,10 @@ export const diagramActions: ActionHandlers<ServerActionContext> = {
         const { meta, nodes, groups, edges } = parsed.data;
         const problem = diagramProblemIn({ nodes, groups, edges });
         if (problem) {
-            throw new VerbRefusal('diagram-invalid', problem, [HELP_LINE]);
+            throw new ToolRefusal('diagram-invalid', problem);
         }
         const rev = await host.diagrams.write(place.projectId, viewId, { meta, nodes, groups, edges }).catch((e: unknown) => {
-            throw e instanceof DiagramError ? new VerbRefusal(e.code, e.message) : e;
+            throw e instanceof DiagramError ? new ToolRefusal(e.code, e.message) : e;
         });
 
         return { output: { viewId, rev, nodes: nodes.length, groups: groups.length, edges: edges.length } };

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { groupFrame, NodeKindSchema, ProjectCanvasViewSchema, ProjectNodeSchema, ProjectTextSchema, type ProjectCanvasView } from '@ruimte/contracts';
 import { toWorld } from '@/canvas/math';
-import { forgetCameraHistories } from '@/state/camera-history';
 import type { CanvasPatch } from '@/project/merge';
+import { forgetCameraHistories } from '@/state/camera-history';
 import {
     carriedByGroups,
     createCanvasStore,
@@ -421,6 +421,29 @@ describe('the node the keyboard is in', () => {
             viewId: 'main'
         });
     };
+
+    test('activating a node this canvas does not hold leaves its order and its save whole', () => {
+        two();
+        canvas().activateNode('gone');
+
+        expect(canvas().order).toEqual(['a', 'b']);
+        expect(
+            canvas()
+                .exportContent()
+                .nodes.map((entry) => entry.id)
+        ).toEqual(['a', 'b']);
+    });
+
+    test('a save skips an id in the order that has no node', () => {
+        two();
+        focusedCanvas().setState({ order: ['a', 'gone', 'b'] });
+
+        expect(
+            canvas()
+                .exportContent()
+                .nodes.map((entry) => entry.id)
+        ).toEqual(['a', 'b']);
+    });
 
     test('shift-clicking a node that is already selected takes it out again', () => {
         two();

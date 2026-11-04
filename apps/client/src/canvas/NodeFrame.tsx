@@ -1,52 +1,6 @@
-import { MAX_TITLE_LENGTH } from '@ruimte/actions';
-import { notePaperOf, type CanvasNodeKind } from '@ruimte/contracts';
-import { memo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
-import { ChevronDown, ChevronRight, CircleDot, CirclePower, CircleX, Crosshair, Eye, GitBranch, Hand, Link2, Shrink, X, type LucideIcon } from 'lucide-react';
-import { renameNodeAction } from '@/actions/client-actions';
-import { openInSystemBrowser } from '@/desktop/bridge';
 import { useSubagentTrail } from '@adecore/agents-react/chat';
-import { UnseenMark } from '@/attention/UnseenMark';
-import { WorkingMark } from '@/attention/WorkingMark';
-import { TaskMark } from '@/tasks/TaskMark';
-import { showsTaskMark } from '@/tasks/task-mark';
-import { useChildTask } from '@/state/tasks';
-import { useUnseen } from '@/state/attention';
-import { useHiddenNeedsYou } from '@/canvas/use-group-waits';
-import { deleteSelectionAsking } from '@/canvas/delete-selection';
-import { KindIcon } from '@/canvas/KindIcon';
-import { NODE_KIND_ICONS } from '@/canvas/node-icons';
-import { useWorkspace } from '@/transport/connections';
-import { markPeerLapsed, usePeerLapse } from '@/project/peer-lapse';
-import { linkToPeer } from '@/project/peer-linker';
-import { useUntakenTask, useWaitingMachines } from '@/canvas/remote-wait';
-import { useEndpointIdOfMachine } from '@/state/endpoints';
-import { useToasts } from '@/state/toasts';
-import { NodeMachineScope } from '@/transport/node-machine';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { RemoteNodeOffline } from '@/canvas/RemoteNodeOffline';
-import { useRemoteNodeState } from '@/canvas/remote-node-state';
-import { useMachineEntry } from '@/shell/use-machine-entry';
-import { useMachineIcon } from '@/shell/settings/machine-icon';
-import { nameOf } from '@/shell/settings/machine-list';
-import { GROUP_HEADER_PX, isNodeActive, maximizedNodeOf, useCanvas, useCanvasStore, type AgentStatus } from '@/state/canvas';
-import type { AgentWork } from '@/state/agent-work';
-import { useNodeStatus, useNodeWork } from '@/state/chats';
-import { ProcessAlertMark } from '@/processes/ProcessAlertMark';
-import { useNodeAlerts } from '@/processes/use-node-alerts';
-import { useHasContextLinks } from '@/context/sources';
-import { accentColor, accentHeaderStyle, accentShades, notePaperClass } from '@/canvas/accents';
-import { DeviceOperatedStrip } from '@/devices/DeviceOperatedStrip';
-import { ComputerIndicator } from '@/computer/ComputerIndicator';
-import { NodeMenuPopup } from '@/canvas/NodeMenu';
-import { FlagMarkOf } from '@/project/FlagMark';
-import { SnoozeMenuItems } from '@/shell/Snooze';
-import { useEndpointId, useEndpointOfNode } from '@/state/keys';
-import { useUi } from '@/state/ui';
-import { useCellHasFocus } from '@/state/document';
-import { useProject } from '@/state/project';
-import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
+import { AccountPill, GoalPill, LimitPill, SubagentTitleCrumb } from '@adecore/agents-react/chat/ui';
+import { AgentIcon } from '@adecore/agents-react/providers';
 import {
     ButtonGroup,
     ErrorBoundary,
@@ -62,30 +16,80 @@ import {
     lazyNamed,
     tintStyle
 } from '@adecore/ui';
+import { MAX_TITLE_LENGTH } from '@ruimte/actions';
+import { notePaperOf, type CanvasNodeKind } from '@ruimte/contracts';
+import clsx from 'clsx';
+import { ChevronDown, ChevronRight, CircleDot, CirclePower, CircleX, Crosshair, Eye, GitBranch, Hand, Link2, Shrink, X, type LucideIcon } from 'lucide-react';
+import { memo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { renameNodeAction } from '@/actions/client-actions';
+import { UnseenMark } from '@/attention/UnseenMark';
+import { WorkingMark } from '@/attention/WorkingMark';
+import { Favicon } from '@/browser/Favicon';
+import { useBrowserDisplayTitle } from '@/browser/title';
+import { accentColor, accentHeaderStyle, accentShades, notePaperClass } from '@/canvas/accents';
 import { useHeldWhileVisible, useNodeInViewport, useRenderZoom } from '@/canvas/culling';
-import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
-import { SessionPorts } from '@/terminal/SessionPorts';
-import { ChatBody } from '@/nodes/ChatBody';
-import { ForkPill } from '@/chat/ForkPill';
-import { useShownChatOfNode } from '@/chat/focused-chat';
-import { AccountPill, GoalPill, LimitPill, SubagentTitleCrumb } from '@adecore/agents-react/chat/ui';
-import { PlanPill } from '@/plan/PlanPill';
-import { useChatPrWatch } from '@/state/pr-watches';
-import { BrowserBody } from '@/nodes/BrowserBody';
-import { DeviceBody, DevicePlate, DeviceToolbar } from '@/devices/DeviceBody';
-import { NoteNode, NotePreviewLock } from '@/canvas/nodes/NoteNode';
+import { deleteSelectionAsking } from '@/canvas/delete-selection';
+import { KindIcon } from '@/canvas/KindIcon';
 import type { Point } from '@/canvas/math';
+import { NODE_KIND_ICONS } from '@/canvas/node-icons';
+import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { DiagramNode, DiagramPlate } from '@/canvas/nodes/DiagramNode';
 import { DrawingNode } from '@/canvas/nodes/DrawingNode';
 import { FileNode, FilePlate } from '@/canvas/nodes/FileNode';
+import { NoteNode, NotePreviewLock } from '@/canvas/nodes/NoteNode';
 import { UnknownNodePlate } from '@/canvas/nodes/UnknownNode';
-import { Favicon } from '@/browser/Favicon';
-import { useBrowserDisplayTitle } from '@/browser/title';
+import { useRemoteNodeState } from '@/canvas/remote-node-state';
+import { useUntakenTask, useWaitingMachines } from '@/canvas/remote-wait';
+import { RemoteNodeOffline } from '@/canvas/RemoteNodeOffline';
+import { useHiddenNeedsYou } from '@/canvas/use-group-waits';
+import { useShownChatOfNode } from '@/chat/focused-chat';
+import { ForkPill } from '@/chat/ForkPill';
+import { ComputerIndicator } from '@/computer/ComputerIndicator';
+import { useHasContextLinks } from '@/context/sources';
+import { openInSystemBrowser } from '@/desktop/bridge';
+import { DeviceBody, DevicePlate, DeviceToolbar } from '@/devices/DeviceBody';
+import { DeviceOperatedStrip } from '@/devices/DeviceOperatedStrip';
+import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { ExtensionNodeBody } from '@/extensions/ExtensionNodeBody';
+import { extensionKeyOf } from '@/extensions/registry';
+import { nodeInfoOf } from '@/extensions/slots';
+import { NodeHeaderSlot, SlotRow } from '@/extensions/SlotSurfaces';
+import { BrowserBody } from '@/nodes/BrowserBody';
+import { ChatBody } from '@/nodes/ChatBody';
+import { resetTitle } from '@/nodes/node-host';
+import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
+import { PlanPill } from '@/plan/PlanPill';
+import { ProcessAlertMark } from '@/processes/ProcessAlertMark';
+import { useNodeAlerts } from '@/processes/use-node-alerts';
+import { FlagMarkOf } from '@/project/FlagMark';
+import { markPeerLapsed, usePeerLapse } from '@/project/peer-lapse';
+import { linkToPeer } from '@/project/peer-linker';
 import { fixedSlot, FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { useUnsavedStoredPath } from '@/shell/panels/use-unsaved';
 import { workFolderOf } from '@/shell/panels/worktree-rows';
-import { resetTitle } from '@/nodes/node-host';
-import { AgentIcon } from '@adecore/agents-react/providers';
+import { useMachineIcon } from '@/shell/settings/machine-icon';
+import { nameOf } from '@/shell/settings/machine-list';
+import { SnoozeMenuItems } from '@/shell/Snooze';
+import { useMachineEntry } from '@/shell/use-machine-entry';
+import type { AgentWork } from '@/state/agent-work';
+import { useUnseen } from '@/state/attention';
+import { GROUP_HEADER_PX, isNodeActive, maximizedNodeOf, useCanvas, useCanvasCamera, useCanvasStore, type AgentStatus } from '@/state/canvas';
+import { useNodeStatus, useNodeWork } from '@/state/chats';
+import { useCellHasFocus } from '@/state/document';
+import { useEndpointIdOfMachine } from '@/state/endpoints';
+import { useEndpointId, useEndpointOfNode } from '@/state/keys';
+import { useChatPrWatch } from '@/state/pr-watches';
+import { useProject } from '@/state/project';
+import { useChildTask } from '@/state/tasks';
+import { useToasts } from '@/state/toasts';
+import { useUi } from '@/state/ui';
+import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
+import { showsTaskMark } from '@/tasks/task-mark';
+import { TaskMark } from '@/tasks/TaskMark';
+import { SessionPorts } from '@/terminal/SessionPorts';
+import { useWorkspace } from '@/transport/connections';
+import { NodeMachineScope } from '@/transport/node-machine';
 
 // Draws what the artifact view draws, which a canvas without one never loads.
 const ArtifactNodeBody = lazyNamed(() => import('@/output/ArtifactNode'), 'ArtifactNodeBody');
@@ -297,7 +301,7 @@ function Title({ id, title, editing, muted, onDone }: { id: string; title: strin
  * transform and undoes it, since moving it out would remount its session or its page.
  */
 function useMaximizedPlace(id: string): CSSProperties | null {
-    const camera = useCanvas((s) => (maximizedNodeOf(s) === id ? s.camera : null));
+    const camera = useCanvasCamera((s) => (maximizedNodeOf(s) === id ? s.camera : null));
     const viewport = useCanvas((s) => (maximizedNodeOf(s) === id ? s.viewport : null));
     if (camera === null || viewport === null) {
         return null;
@@ -409,6 +413,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const borderAccent = isNote ? noteAccent : frameAccent;
     // A newer Ruimte's node: it moves, resizes and goes away like any other, and nothing else about it is this version's to change.
     const isUnknown = node.kind === 'unknown';
+    const extensionKey = isUnknown ? extensionKeyOf(node.raw) : null;
     const collapsed = isGroup && node.collapsed === true;
     // Any other node folded to its header: its body stays mounted at the height it had, under the header and out of reach.
     const folded = !isGroup && node.collapsed === true;
@@ -422,6 +427,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
             <ContextMenu.Trigger
                 render={<div />}
                 data-node-id={id}
+                data-surface="node"
                 data-paper={isNote ? (notePaperOf(node) ?? 'yellow') : undefined}
                 className={clsx(
                     // isolate: xterm's layers carry z-indexes; without a stacking context they would paint over a node added later.
@@ -584,6 +590,8 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                     {(node.kind === 'file' || node.kind === 'artifact') && <ButtonGroup ref={setFileControls} render={<span />} className="shrink-0" />}
                     {(node.kind === 'routine' || node.kind === 'design') && <span ref={setFileControls} className="flex shrink-0 items-center gap-1.5" />}
                     {node.kind === 'device' && <DeviceToolbar id={id} narrow={node.w < MACHINE_PILL_MIN_WIDTH} />}
+                    <NodeHeaderSlot nodeId={id} />
+                    {isNote && <SlotRow place="noteToolbar" context={{ node: nodeInfoOf(id) }} />}
                     <ButtonGroup className="shrink-0">
                         {isNote && <NotePreviewLock id={id} />}
                         {maximized ? (
@@ -643,7 +651,8 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                                     {node.kind === 'note' && <NoteNode id={id} focused={active} />}
                                     {node.kind === 'drawing' && <DrawingNode id={id} />}
                                     {node.kind === 'diagram' && (live && renderBody ? <DiagramNode id={id} /> : <DiagramPlate id={id} />)}
-                                    {isUnknown && <UnknownNodePlate id={id} />}
+                                    {isUnknown &&
+                                        (extensionKey === null ? <UnknownNodePlate id={id} /> : <ExtensionNodeBody id={id} contributionKey={extensionKey} />)}
                                     {node.kind === 'artifact' && (
                                         <FileToolbarSlotProvider value={toolbarSlot}>
                                             <LazyBoundary>

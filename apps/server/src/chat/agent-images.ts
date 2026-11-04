@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { copyFile, lstat, mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { AttachmentStore } from '@adecore/agents/chat';
 import { CodedError } from '@adecore/agents';
-import { withoutControlCharacters } from '../bytes/byte-route.ts';
+import type { AttachmentStore } from '@adecore/agents/chat';
 import type { ChatAttachment } from '@ruimte/contracts';
+import { withoutControlCharacters } from '../bytes/byte-route.ts';
 import { AGENT_ATTACHMENT_TYPES } from './attachment-type.ts';
 
 /* What an agent may put in its chat, images and models together; the folder goes with a clear or a deletion of the chat, so nothing here keeps an index. */

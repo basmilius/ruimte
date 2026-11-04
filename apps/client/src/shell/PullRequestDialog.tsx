@@ -1,8 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import type { LucideIcon } from 'lucide-react';
-import { CircleCheck, CircleDashed, CircleX, ExternalLink, Eye, EyeOff, GitPullRequest, MessagesSquare, RefreshCw } from 'lucide-react';
-import type { ChangeSplit, GitPrCheck, GitPrThread, GitPullRequest as PullRequest } from '@ruimte/contracts';
+import { AgentIcon } from '@adecore/agents-react/providers';
 import {
     Button,
     ButtonGroup,
@@ -14,14 +10,22 @@ import {
     IconButton,
     Menu,
     Pill,
+    ScrollArea,
     SectionLabel,
     Switch,
     Tooltip,
     messageOf
 } from '@adecore/ui';
+import { formatNumber } from '@adecore/ui/format';
+import type { ChangeSplit, GitPrCheck, GitPrThread, GitPullRequest as PullRequest } from '@ruimte/contracts';
+import type { LucideIcon } from 'lucide-react';
+import { CircleCheck, CircleDashed, CircleX, ExternalLink, Eye, EyeOff, GitPullRequest, MessagesSquare, RefreshCw } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useChooserSections } from '@/chat/chat-chooser';
 import { sendToChat } from '@/chat/selection-to-chat';
 import { openInSystemBrowser } from '@/desktop/bridge';
+import { splitRows } from '@/shell/change-size';
 import { groupChecks, mergeStateKey, threadBlock, visibleThreads } from '@/shell/pr-view';
 import { stopPrWatch } from '@/shell/pr-watch-actions';
 import { endpointKey, isOfEndpoint, useEndpointId } from '@/state/keys';
@@ -30,9 +34,6 @@ import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
 import { useMachineAnswers } from '@/transport/features';
-import { AgentIcon } from '@adecore/agents-react/providers';
-import { formatNumber } from '@adecore/ui/format';
-import { splitRows } from '@/shell/change-size';
 
 /*
  * A pull request read-only: its checks, how it stands to merge and its review threads. A thread can be
@@ -99,7 +100,7 @@ function PullRequestView({ cwd, onDone }: { cwd: string; onDone(): void }) {
                 </div>
                 {pr !== null && <PullRequestMeta pr={pr} split={split} />}
             </header>
-            <div className="flex min-h-0 grow flex-col overflow-y-auto">
+            <ScrollArea className="grow" viewportClassName="flex flex-col">
                 {reading === null && (
                     <EmptyState busy className="grow">
                         {t('git.pr.loading')}
@@ -122,7 +123,7 @@ function PullRequestView({ cwd, onDone }: { cwd: string; onDone(): void }) {
                         <PullRequestThreads pr={pr} showBots={showBots} showResolved={showResolved} onBots={setShowBots} onResolved={setShowResolved} />
                     </>
                 )}
-            </div>
+            </ScrollArea>
             <div className="flex flex-wrap items-center gap-2 border-t border-border px-5 py-3">
                 {pr !== null && pr.state === 'OPEN' && <PullRequestWatch cwd={cwd} pr={pr} />}
                 <span className="grow" />

@@ -1,0 +1,185 @@
+export const metadata = { title: 'Testing and packing' };
+
+# Testing and packing
+
+<p className="lead">`ruimte extension test` runs your tests with Bun against a test host, so a test needs no window and no machine.</p>
+
+```bash
+bun run test
+```
+
+It runs `bun test` with `@ruimte/extension/testing` at hand. `createTestHost` stands in for the client of Ruimte, `createTestServer` for the machine, and `render` draws a surface into a page. Each refuses what your manifest does not ask for, with the code and message Ruimte gives.
+
+## The client part
+
+`createTestHost` loads `client/index.ts` afresh and keeps a project in memory that you seed. Ask it for what you defined by the id you gave it, then press an action at a place as a person would:
+
+```ts
+import { expect, test } from 'bun:test';
+import { createTestHost } from '@ruimte/extension/testing';
+
+test('summarize writes a note linked to each node', async () => {
+    const host = await createTestHost({
+        project: {
+            nodes: [
+                { id: 'a', title: 'Login', text: 'We fixed the bug.' },
+                { id: 'b', title: 'Plan', text: 'Ship on Friday.' }
+            ]
+        },
+        selection: ['a', 'b'],
+        answers: {
+            'agents.run': () => ({ text: 'Ships Friday, bug fixed.' })
+        }
+    });
+
+    const result = await host.run(host.action('summarize'), 'selectionBar');
+    const [note] = host.canvas.notes();
+
+    expect(result).toEqual({ ok: true, value: undefined });
+    expect(note?.text).toBe('Ships Friday, bug fixed.');
+    expect(host.canvas.links()).toEqual([
+        { from: 'a', to: note?.id },
+        { from: 'b', to: note?.id }
+    ]);
+});
+```
+
+`run` answers a `Result`. It is `refused` where the action does not show or is disabled, and `failed` with what `run` threw, which also lands in `host.notifications` as the error a person sees.
+
+- `slot(definition, place, extra)` answers how a definition shows at a place, or null where it does not. It fills in the project, view, machine and theme, and the selection where the place tells it. A `{ id }` of a node you seeded becomes its full `NodeInfo`, and a place that does not exist throws.
+- `menuItems(menu, place, extra)` answers the rows of a menu, each with its own `run`.
+- `fire(name, payload)` hands a client event to `useEvent` and `onEvent`, and `select(ids)` selects as a person does.
+- `host.canvas`, `notifications`, `dialogs`, `opened`, `panels`, `calls` and `logs` record what your extension did.
+
+The person answers through `answers` too. `confirm` is yes unless you say otherwise, and `prompt` and `pick` are dismissed:
+
+```ts
+const host = await createTestHost({
+    answers: {
+        confirm: false,
+        prompt: 'Roadmap',
+        pick: 'Pear'
+    }
+});
+```
+
+A call that asks the machine, such as `git.log`, answers what you put under its name in `answers`. `launches`, `routines`, `artifacts`, `browser` and `devices` answer under `answers['machine.run']`, by the action each call is: `launches.start` is `launch.start`. Throw `refusal(code, message)` to answer a failure. A call nothing answers is `unavailable`, so a test never passes on a value it did not choose.
+
+`createTestHost` throws for an option or an answer it does not know, so a misspelled name fails the test at once instead of leaving a call unanswered.
+
+`agents.stream` takes a list of pieces, or an async generator for a stream that fails halfway or waits. A throw after some pieces ends the stream with that failure. The `signal` it gets aborts once your extension stops the stream:
+
+```ts
+const host = await createTestHost({
+    answers: {
+        'agents.stream': async function* ({ signal }) {
+            yield 'First';
+            await new Promise((resolve) => signal.addEventListener('abort', resolve));
+        }
+    }
+});
+```
+
+`changeFile(path)` changes a file of the project as the machine sees it, which calls back every `files.watch` of that file or of a folder above it. `setStorage(scope, key, value)` writes a key as another window or your server part would, and `undefined` deletes it.
+
+## A surface
+
+Name the test file `*.dom.test.tsx` and `ruimte extension test` gives it a page. `render` draws a panel, view, node, widget or card, or a component of your own, and waits for its lazy import and for what it suspends on:
+
+```tsx
+import { expect, test } from 'bun:test';
+import { createTestHost } from '@ruimte/extension/testing';
+
+test('the panel greets, and counts per project', async () => {
+    const host = await createTestHost({
+        answers: {
+            server: {
+                greeting: () => 'Good morning'
+            }
+        }
+    });
+    const panel = await host.render(host.panel('main'));
+
+    expect(panel.text()).toContain('Good morning');
+
+    await panel.click('Count');
+
+    expect(host.storage.project).toEqual({ count: 1 });
+});
+```
+
+`click` and `type` take the words a person reads, or an element. Each waits for what React does after it. `until(check)` waits until `check` neither throws nor answers false. Pass `node` for the node `useNodeData` reads, and `params` for what a panel or view gets. A surface that throws while it draws makes `render` reject, as a missing permission for `useAgents` does.
+
+`answers.server` stands in for your server part as `useServer` and `getServer` reach it. It goes under `answers`, never beside it. Give it methods, or a test server from `createTestServer`, so the client and the server part run together in one test. With a test server, its `storage` is the `machine` storage of `useStorage`, as on one machine.
+
+The page needs `@happy-dom/global-registrator`, which a new project already has:
+
+```bash
+bun add -d @happy-dom/global-registrator
+```
+
+## The server part
+
+`createTestServer` loads `server/index.ts` in the test's own process, against the same rules the machine applies:
+
+```ts
+import { expect, test } from 'bun:test';
+import { createTestServer } from '@ruimte/extension/testing';
+import type server from '../server';
+
+test('pokes a chat at most 20 times an hour', async () => {
+    const machine = await createTestServer<typeof server>({
+        answers: {
+            'chats.send': () => undefined
+        }
+    });
+
+    for (let poke = 0; poke < 20; poke++) {
+        await machine.call('poke', 'chat-1');
+    }
+
+    expect(await machine.call('poke', 'chat-1')).toMatchObject({
+        value: {
+            ok: false,
+            error: {
+                code: 'limit'
+            }
+        }
+    });
+});
+```
+
+Storage and secrets live in memory, `clock.advance('5m')` runs every `schedule` that falls due, and `fire` hands a machine event to `onEvent` only with its permission. `machine.run` checks its input as the machine does and throws for one of the wrong shape. `machine.dataFolder` is a fresh folder of each test server's own, removed once the tests are done. `emitted` lists what `emit` said; an `emit` without a payload has none there, as a client hears it.
+
+Each test host and test server loads your files afresh, so no state carries from one test to the next. A package from `node_modules` loads once.
+
+## Packing
+
+```bash
+bun run pack
+```
+
+`pack` builds the client and server parts with Bun and writes a `.rex`. It refuses a pack that would not load:
+
+- a client part that imports from `server/`, or a server part that imports from `client/`,
+- an icon that is not an SVG of at most 64 KB at `assets/icon.svg`,
+- a theme whose tokens or stylesheet break the rules in [Themes](/docs/extensions/themes).
+
+Imports of `@ruimte/extension` and React become what Ruimte supplies, so they add nothing to the pack.
+
+## The command line
+
+```text
+ruimte extension create    scaffold a project
+ruimte extension dev       build on save and load it into the running Ruimte
+ruimte extension test      bun test against a test host
+ruimte extension pack      build a .rex
+ruimte extension publish   pack and open a pull request on the store
+ruimte extension logs      what the server part wrote
+```
+
+`dev` and `logs` use the machine whose home is in `RUIMTE_HOME`, `~/.ruimte` when it is not set. To work against another machine on this computer, such as a dev machine, give its home and port: `RUIMTE_HOME=~/.ruimte-dev ruimte extension dev --port 4211`, and `RUIMTE_HOME=~/.ruimte-dev ruimte extension logs`.
+
+`publish` packs, forks the store's repository and opens a pull request with your `.rex`. It needs the [GitHub CLI](https://cli.github.com), signed in. The store opens later, and until then a `.rex` you share by hand is the way to hand an extension on.
+
+`test` warns when your React has another major version than the one Ruimte draws extensions with, since what passes then can differ in Ruimte.

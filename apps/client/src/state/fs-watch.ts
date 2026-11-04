@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { endpointKey } from '@/state/keys';
 import { HeldWatches, type HeldWatch } from '@/state/held-watches';
+import { endpointKey } from '@/state/keys';
 import { machineTransport } from '@/transport';
 import type { Transport } from '@/transport/transport';
 

@@ -50,6 +50,4 @@ Both are named volumes, not bind mounts, so the file system is the container's o
 
 Every client of the suite comes from Docker's gateway, and the door allows one address 30 sockets a minute, so a test that opens many channels in a row has to stay under that.
 
-Inside the image `ruimte-context` is called by its path, since Debian's `/etc/profile` rewrites PATH in a login shell.
-
 The suite skips itself unless `RUIMTE_DOCKER=1` is set, so `bun test` and CI never reach for a container. `RUIMTE_DOCKER_CONTAINER` and `RUIMTE_DOCKER_PORT` point it at another container started the same way, at the cost of that daemon's state.

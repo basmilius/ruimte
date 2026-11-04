@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectView } from '@ruimte/contracts';
-import { useFiles } from '@/state/files';
+import { act } from 'react';
 import { useDocument } from '@/state/document';
-import { useViewPins } from '@/state/view-pins';
+import { useFiles } from '@/state/files';
 import { useSnoozes } from '@/state/snooze';
+import { useViewPins } from '@/state/view-pins';
 import { chatInfoOf } from '../../testing/chat-info';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { menuItem } from '../../testing/dom-helpers';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { menuItem } from '../../testing/dom-helpers';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { emptyCanvas } from '../../testing/project-fixtures';
 
 const CHAT: ProjectView = { kind: 'chat', id: 'chat-view', name: 'Notes chat', node: {} };

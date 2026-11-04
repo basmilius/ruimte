@@ -1,4 +1,6 @@
-import i18next from 'i18next';
+import { forkRefusal, lastSettledTurn, summaryRefusal, recentSubagentMessages, stopOf, subagentTitle } from '@adecore/agents-react/chat';
+import { useChats, type ChatState, providersOf } from '@adecore/agents-react/state';
+import { effectiveChecks, findItem } from '@adecore/plan';
 import { ActionRefusal, pendingRequestsOf, type ActionCall, type ActionHandlers, type ActionOutput } from '@ruimte/actions';
 import {
     CHAT_FORK_TITLE_MAX,
@@ -19,27 +21,25 @@ import {
     type RequestType,
     nodeChats
 } from '@ruimte/contracts';
-import { effectiveChecks, findItem } from '@adecore/plan';
+import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
 import { asksFirst } from '@/actions/developer-actions';
 import { refusing, type Requester } from '@/actions/refusal';
+import { plural } from '@/actions/words';
 import { agentsEndedWith } from '@/agents/end-children';
-import { forkRefusal, lastSettledTurn, summaryRefusal, recentSubagentMessages, stopOf, subagentTitle } from '@adecore/agents-react/chat';
 import { readNodeHost, updateHost, type NodeHost } from '@/nodes/node-host';
 import { PlanClient } from '@/plan/plan-client';
 import { nodesOfView } from '@/project/view-nodes';
 import { revealForkWhenItLands, showViewWhenItLands } from '@/project/views';
-import { useChats, type ChatState, providersOf } from '@adecore/agents-react/state';
 import { chatSinkFor } from '@/state/chats';
+import { useComputer } from '@/state/computer';
 import type { DocumentState } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
-import { useComputer } from '@/state/computer';
 import { usePlans } from '@/state/plans';
 import { useSessions, type SessionState } from '@/state/sessions';
 import { screenOf } from '@/terminal/registry';
 import { chatClient, chatClientFor, machineFor, sessionClient, sessionClientFor } from '@/transport/connections';
-import { plural } from '@/actions/words';
 
 type Call = ActionCall<void> & { confirmed: boolean };
 

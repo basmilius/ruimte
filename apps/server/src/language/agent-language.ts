@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
-import { storedPathOf, type LanguageMethod } from '@ruimte/contracts';
+import { ToolRefusal } from '@adecore/agents/context';
 import { fileUriToPath, type Diagnostic, type Range } from '@adecore/lsp';
-import { VerbRefusal } from '../canvas/verb.ts';
+import { storedPathOf, type LanguageMethod } from '@ruimte/contracts';
 import type { SqlAnalysis, SqlChoice } from '../database/sql-analysis.ts';
 import { languageOf } from '../fs/read.ts';
 import type { AgentDocument, LanguageHost } from './host.ts';
@@ -283,7 +283,7 @@ function isSql(path: string): boolean {
 }
 
 /*
- * The project's running language servers as an agent's `language` verb reaches them. Nothing here
+ * The project's running language servers as an agent's `language` tool reaches them. Nothing here
  * installs a server: a file opens in the servers that are installed, as it would for a person, and a
  * server that is not answers so. A file whose SQL is read against a connection a person turned off for
  * agents is refused whole, since every answer about it may say what that schema holds.
@@ -361,7 +361,7 @@ export class AgentLanguage {
     async sqlFile(place: AgentLanguagePlace, path: string): Promise<AgentSqlFile> {
         const stored = storedPathOf(place.folder, path);
         if (!isSql(path)) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'not-sql',
                 `${stored} is no .sql file; the SQL in other files is read against the project's default, which language sql of a .sql file without a choice of its own shows`
             );
@@ -400,9 +400,9 @@ export class AgentLanguage {
         const { servers, pulled, files, reports } = this.options.host.cachedWorkspaceProblems(place.projectId);
 
         if (servers.length === 0) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'no-workspace-diagnostics',
-                'No running language server of this project reports problems for the whole project; language diagnostics <path> reads one file'
+                'No running language server of this project reports problems for the whole project; language_file with action diagnostics reads one file'
             );
         }
 
@@ -539,7 +539,7 @@ export class AgentLanguage {
         const stored = storedPathOf(place.folder, path);
         const disk = await this.readText(path);
         if (disk === null) {
-            throw new VerbRefusal('bad-path', `${stored} cannot be read as text`);
+            throw new ToolRefusal('bad-path', `${stored} cannot be read as text`);
         }
         const languageId = lspLanguageId(languageOf(basename(path)) ?? 'plaintext');
         return this.options.host.forAgent(place.projectId, { path, languageId, disk, owner: `agent:${caller}` }, async (document) => {
@@ -559,26 +559,26 @@ export class AgentLanguage {
 
     private async checkServers(document: AgentDocument, stored: string, languageId: string): Promise<void> {
         if (document.servers.length === 0) {
-            throw new VerbRefusal('no-language-server', `No language server of this machine serves ${languageId} files such as ${stored}`);
+            throw new ToolRefusal('no-language-server', `No language server of this machine serves ${languageId} files such as ${stored}`);
         }
         if (document.servers.some((server) => server.state === 'ready' || server.state === 'indexing')) {
             return;
         }
         const missing = document.servers.filter((server) => server.state === 'not-installed').map((server) => server.kind);
         if (missing.length === document.servers.length) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'language-server-not-installed',
                 `The ${missing.join(' and ')} language server is not installed on this machine; a person installs it in the app, in Settings under Language servers, which an agent cannot do`
             );
         }
         const crashed = document.servers.find((server) => server.state === 'crashed');
         if (crashed !== undefined) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'language-server-crashed',
                 `The ${crashed.kind} language server is down${crashed.message ? `: ${crashed.message}` : ''}; a person restarts it in the app`
             );
         }
-        throw new VerbRefusal('language-server-starting', `The language server of ${stored} did not come up in time; ask again in a moment`);
+        throw new ToolRefusal('language-server-starting', `The language server of ${stored} did not come up in time; ask again in a moment`);
     }
 
     private readText(path: string): Promise<string | null> {
@@ -588,7 +588,7 @@ export class AgentLanguage {
     /* The same rule `database` holds agents to: a connection a person turned off for agents says nothing of its schema to them. */
     private gate(access: string, choice: SqlChoice): void {
         if (isWithheld(access, choice) && choice.source !== 'none' && choice.source !== 'unbound') {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'database-access-off',
                 `The SQL of this file is read against ${choice.connection.name}, which a person turned off for agents; ask them, who can turn it on in the connections dialog of the app`
             );
@@ -613,7 +613,7 @@ function shellQuote(text: string): string {
 function positionIn(text: string, at: AgentPosition): { line: number; character: number } {
     const lines = linesOf(text);
     if (at.line > lines.length) {
-        throw new VerbRefusal('bad-position', `The file has ${lines.length} lines, not ${at.line}`);
+        throw new ToolRefusal('bad-position', `The file has ${lines.length} lines, not ${at.line}`);
     }
     return { line: at.line - 1, character: utf16Column(lines[at.line - 1] ?? '', at.column) };
 }

@@ -1,4 +1,6 @@
 import { basename } from 'node:path';
+import { ToolRefusal } from '@adecore/agents/context';
+import { isWithin } from '@adecore/utils/path';
 import { ARRANGE_LAYOUTS, ActionRefusal, type ActionHandlers, type ActionInput, type ActionOutput } from '@ruimte/actions';
 import {
     DEFAULT_TITLES,
@@ -13,6 +15,7 @@ import {
     isDiagramView,
     isDrawingView,
     isUnknownNode,
+    joinGroupUnder,
     lineEndOf,
     nodeChats,
     storedPathOf,
@@ -25,17 +28,17 @@ import {
     type ProjectView
 } from '@ruimte/contracts';
 import { ArtifactError } from '../artifacts/artifact-names.ts';
-import { isChatView } from '../canvas/chat-view.ts';
-import { ownEnd } from '../canvas/links.ts';
-import { EVERY_KIND_LINE, KIND_FLAGS, REQUIRED_FLAG, kindLine, type KindFlag } from '../canvas/node-kinds.ts';
-import { MAX_CANVAS_NODES, NOT_A_GROUP, canvasFull, checkUrl, newId, nodeLines, nodesNamed, openingEdge } from '../canvas/nodes.ts';
-import { ownViewOf, refuseMissingNodes, refuseOwnView } from '../canvas/own-view.ts';
-import { arrangeRects, containersOf, gridColumns, groupMembers, placeBeside, placeFree } from '../canvas/placement.ts';
-import { checkCwd, checkPath, isInside } from '../canvas/project-paths.ts';
-import { refuseOtherMachine } from '../canvas/remote-node.ts';
-import { NEW_NODE, VerbRefusal, canvasNamed, field, orNote, referencedBy, snoozedAt, type VerbCall } from '../canvas/verb.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import { hostService, verbCallOf, type ServerActionCall, type ServerActionContext } from './context.ts';
+import { isChatView } from '../tools/chat-view.ts';
+import { NEW_NODE, canvasNamed, field, orNote, referencedBy, snoozedAt, type AgentCall } from '../tools/host.ts';
+import { ownEnd } from '../tools/links.ts';
+import { EVERY_KIND_LINE, KIND_FIELDS, REQUIRED_FIELD, kindLine, type KindField } from '../tools/node-kinds.ts';
+import { MAX_CANVAS_NODES, NOT_A_GROUP, canvasFull, checkUrl, newId, nodeLines, nodesNamed, openingEdge } from '../tools/nodes.ts';
+import { ownViewOf, refuseMissingNodes, refuseOwnView } from '../tools/own-view.ts';
+import { arrangeRects, containersOf, gridColumns, groupMembers, placeBeside, placeFree } from '../tools/placement.ts';
+import { checkCwd, checkPath } from '../tools/project-paths.ts';
+import { refuseOtherMachine } from '../tools/remote-node.ts';
+import { hostService, agentCallOf, type ServerActionCall, type ServerActionContext } from './context.ts';
 import { machineDevice } from './device-actions.ts';
 import { entryOf, routinesOf } from './routine-actions.ts';
 
@@ -54,10 +57,10 @@ function withCanvas(content: ProjectContent, canvas: ProjectCanvasView): Project
  * actually remove. The caller's own node is left out, since `deletes-caller` refuses it two lines
  * later, and so is every node the caller did not make unless the machine frees them.
  */
-function deletableLines(content: ProjectContent, place: IndexedPlace, call: VerbCall, anyNode: boolean): string[] {
+function deletableLines(content: ProjectContent, place: IndexedPlace, call: AgentCall, anyNode: boolean): string[] {
     const canvas = place.canvasId === null ? undefined : content.views.find((view) => view.id === place.canvasId);
     if (canvas === undefined || !isCanvasView(canvas)) {
-        return ['detail\truimte-context node list --view <id>\tthe nodes of a canvas, which is where an id comes from'];
+        return ['detail\tnode_list view <id>\tthe nodes of a canvas, which is where an id comes from'];
     }
     return nodeLines(canvas, {
         takes: (node) => node.id !== lineEndOf(canvas.nodes, call.caller) && (anyNode || call.host.lineage.madeBy(node.id) === call.caller),
@@ -71,7 +74,7 @@ function deletableLines(content: ProjectContent, place: IndexedPlace, call: Verb
  * is no way into what a session runs. A chat view has no lines and touches any node of the canvas
  * it names, as a person arranging that canvas would. A later chat of a design node goes by the node's lines.
  */
-function mayTouch(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, chatView: boolean): boolean {
+function mayTouch(canvas: ProjectCanvasView, node: ProjectNode, call: AgentCall, chatView: boolean): boolean {
     const end = lineEndOf(canvas.nodes, call.caller);
 
     return (
@@ -82,28 +85,28 @@ function mayTouch(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, 
 }
 
 /* A note a person pointed the caller at with `#` is its to write in as well, as along a line; a `#` to its canvas alone is not. */
-function mayWrite(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, chatView: boolean): boolean {
+function mayWrite(canvas: ProjectCanvasView, node: ProjectNode, call: AgentCall, chatView: boolean): boolean {
     return mayTouch(canvas, node, call, chatView) || referencedBy(call.host, call.caller, node.id);
 }
 
 /* Its own node too: how a session's node looks is that session's to say. A node pointed at with `#` counts as along a line. */
-function mayColor(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, chatView: boolean): boolean {
+function mayColor(canvas: ProjectCanvasView, node: ProjectNode, call: AgentCall, chatView: boolean): boolean {
     return node.id === lineEndOf(canvas.nodes, call.caller) || mayWrite(canvas, node, call, chatView);
 }
 
 /* What a refusal may offer instead: only the nodes this same call would really color. */
-function colorableLines(canvas: ProjectCanvasView, call: VerbCall, chatView: boolean): string[] {
+function colorableLines(canvas: ProjectCanvasView, call: AgentCall, chatView: boolean): string[] {
     return nodeLines(canvas, {
         takes: (node) => !isUnknownNode(node) && mayColor(canvas, node, call, chatView),
-        empty: `${canvas.id} has no node you may color; ruimte-context node new adds one of your own`
+        empty: `${canvas.id} has no node you may color; node_new adds one of your own`
     });
 }
 
 /* What a refusal may offer instead: only the notes this same call would really write in. */
-function writableLines(canvas: ProjectCanvasView, call: VerbCall, chatView: boolean): string[] {
+function writableLines(canvas: ProjectCanvasView, call: AgentCall, chatView: boolean): string[] {
     return nodeLines(canvas, {
         takes: (node) => node.kind === 'note' && mayWrite(canvas, node, call, chatView),
-        empty: `${canvas.id} has no note you may write in; ruimte-context node new note --text B adds one of your own`
+        empty: `${canvas.id} has no note you may write in; node_new note text B adds one of your own`
     });
 }
 
@@ -117,9 +120,9 @@ function withLine(body: string, text: string): string {
 
 /*
  * The lines between the caller and what the frame now holds, which the one line into the group says
- * in their place. Both ends have to be the caller's, the rule `link delete` follows, either way round.
+ * in their place. Both ends have to be the caller's, the rule `link_delete` follows, either way round.
  */
-function ownLinesInto(edges: readonly ProjectEdge[], held: ReadonlySet<string>, call: VerbCall): ProjectEdge[] {
+function ownLinesInto(edges: readonly ProjectEdge[], held: ReadonlySet<string>, call: AgentCall): ProjectEdge[] {
     return edges.filter(
         (edge) =>
             ((edge.from === call.caller && held.has(edge.to)) || (edge.to === call.caller && held.has(edge.from))) &&
@@ -132,7 +135,7 @@ function ownLinesInto(edges: readonly ProjectEdge[], held: ReadonlySet<string>, 
 function renamedOn(content: ProjectContent, canvas: ProjectCanvasView, nodeId: string, name: string) {
     const [node] = nodesNamed(content, canvas, [nodeId], { cannot: 'there is no node to rename' });
     if (!node || isUnknownNode(node)) {
-        throw new VerbRefusal('unknown-node', `${nodeId} is not a renameable node on ${canvas.id}`);
+        throw new ToolRefusal('unknown-node', `${nodeId} is not a renameable node on ${canvas.id}`);
     }
     const previousName = node.title;
     const previousSource = node.titleSource ?? null;
@@ -148,7 +151,7 @@ function writtenOn(
     content: ProjectContent,
     canvas: ProjectCanvasView,
     { nodeId, text, append }: { nodeId: string; text: string; append: boolean },
-    caller: VerbCall,
+    caller: AgentCall,
     chatView: boolean
 ) {
     const node = canvas.nodes.find((candidate) => candidate.id === nodeId);
@@ -157,16 +160,16 @@ function writtenOn(
     }
     refuseOtherMachine(caller.host, nodeId);
     if (node.kind !== 'note') {
-        throw new VerbRefusal(
+        throw new ToolRefusal(
             'not-a-note',
             `${nodeId} is a ${node.kind} node and only a note holds a body to write; what a file, a browser, a terminal or a chat shows is not yours to set`,
             writableLines(canvas, caller, chatView)
         );
     }
     if (!mayWrite(canvas, node, caller, chatView)) {
-        throw new VerbRefusal('not-linked', `${nodeId} is a note you did not make and no line joins you to it: draw that line and you can write in it`, [
+        throw new ToolRefusal('not-linked', `${nodeId} is a note you did not make and no line joins you to it: draw that line and you can write in it`, [
             ...writableLines(canvas, caller, chatView),
-            `see\truimte-context link new --to ${nodeId}\tdraws the line this needs`
+            `see\tlink_new to ${nodeId}\tdraws the line this needs`
         ]);
     }
     // Read here under the project's lock and nowhere earlier, so of two agents appending at once the second writes under the first.
@@ -223,7 +226,7 @@ async function checkArtifact(call: ServerActionCall, artifactId: string, version
         return { reference: { id: artifact.artifactId, ...(versionId == null ? {} : { version: version.versionId }) }, title: artifact.title };
     } catch (error) {
         if (error instanceof ArtifactError) {
-            throw new VerbRefusal('not-found', error.message, ['see\truimte-context artifact list\twhat this project keeps']);
+            throw new ToolRefusal('not-found', error.message, ['see\tartifact_list\twhat this project keeps']);
         }
         throw error;
     }
@@ -236,8 +239,8 @@ async function forNode<T>(index: number | null, run: () => Promise<T>): Promise<
     try {
         return await run();
     } catch (error) {
-        if (index !== null && error instanceof VerbRefusal) {
-            throw new VerbRefusal(error.code, `Node ${index + 1}: ${error.message}`, error.lines);
+        if (index !== null && error instanceof ToolRefusal) {
+            throw new ToolRefusal(error.code, `Node ${index + 1}: ${error.message}`, error.lines);
         }
         throw error;
     }
@@ -248,10 +251,10 @@ async function checkNode(spec: NodeSpec, call: ServerActionCall): Promise<Checke
     const { host, place } = call.context;
     const { kind } = spec;
     if (kind === 'group') {
-        throw new VerbRefusal('bad-arguments', 'node new draws no frame; ruimte-context node group draws one around nodes');
+        throw new ToolRefusal('bad-arguments', 'node_new draws no frame; node_group draws one around nodes');
     }
     const kindLines = [kindLine(kind), EVERY_KIND_LINE];
-    const given: Record<KindFlag, unknown> = {
+    const given: Record<KindField, unknown> = {
         text: spec.content,
         url: spec.url,
         path: spec.path,
@@ -263,13 +266,13 @@ async function checkNode(spec: NodeSpec, call: ServerActionCall): Promise<Checke
         routine: spec.routine
     };
     for (const flag of ['text', 'url', 'path', 'source', 'device', 'cwd', 'artifact', 'version', 'routine'] as const) {
-        if (given[flag] != null && !KIND_FLAGS[kind].includes(flag)) {
-            throw new VerbRefusal('flag-not-for-kind', `--${flag} does not go with a ${kind} node`, kindLines);
+        if (given[flag] != null && !KIND_FIELDS[kind].includes(flag)) {
+            throw new ToolRefusal('flag-not-for-kind', `${flag} does not go with a ${kind} node`, kindLines);
         }
     }
-    const required = REQUIRED_FLAG[kind];
+    const required = REQUIRED_FIELD[kind];
     if (required && given[required] == null) {
-        throw new VerbRefusal('missing-flag', `A ${kind} node needs --${required}`, kindLines);
+        throw new ToolRefusal('missing-flag', `A ${kind} node needs ${required}`, kindLines);
     }
     return {
         spec,
@@ -287,19 +290,19 @@ function sourceNameOf(content: ProjectContent, spec: NodeSpec): string | undefin
     if (spec.source == null) {
         return undefined;
     }
-    // Only a drawing or a diagram takes --source, and each mirrors a view of its own kind.
+    // Only a drawing or a diagram takes source, and each mirrors a view of its own kind.
     const sourceKind = spec.kind === 'diagram' ? 'diagram' : 'drawing';
     const ofKind = (view: ProjectView): view is ProjectDrawingView | ProjectDiagramView =>
         sourceKind === 'diagram' ? isDiagramView(view) : isDrawingView(view);
     const source = content.views.find((view) => view.id === spec.source);
     if (!source || !ofKind(source)) {
-        throw new VerbRefusal(
+        throw new ToolRefusal(
             `not-a-${sourceKind}`,
             `${spec.source} is not a ${sourceKind} view of this project`,
             orNote(
                 content.views.filter(ofKind).map((view) => `${sourceKind}\t${view.id}\t${field(view.name)}`),
                 sourceKind === 'diagram'
-                    ? 'This project has no diagram views; ruimte-context view new --kind diagram makes one'
+                    ? 'This project has no diagram views; view_new kind diagram makes one'
                     : 'This project has no drawing views; a person makes one in the sidebar'
             )
         );
@@ -364,7 +367,7 @@ async function createNodes(call: ServerActionCall, viewId: string, specs: readon
                 ...(spec.color == null ? {} : { accent: spec.color }),
                 ...(spec.content == null ? {} : { body: spec.content }),
                 ...(url === undefined ? {} : { url }),
-                ...(path === undefined ? {} : { path: isInside(place.folder, path) ? storedPathOf(place.folder, path) : path }),
+                ...(path === undefined ? {} : { path: isWithin(place.folder, path) ? storedPathOf(place.folder, path) : path }),
                 ...(spec.source == null ? {} : { viewId: spec.source }),
                 ...(device === undefined ? {} : { device }),
                 ...(cwd === undefined ? {} : { cwd }),
@@ -372,7 +375,11 @@ async function createNodes(call: ServerActionCall, viewId: string, specs: readon
                 ...(routine === undefined ? {} : { routine: routine.id })
             };
             const edge = caller ? openingEdge(caller.id, node, current) : null;
-            canvas = { ...canvas, nodes: [...canvas.nodes, node], edges: edge ? [...canvas.edges, edge] : canvas.edges };
+            canvas = {
+                ...canvas,
+                nodes: joinGroupUnder({ nodes: [...canvas.nodes, node], texts: canvas.texts }, id),
+                edges: edge ? [...canvas.edges, edge] : canvas.edges
+            };
             current = withCanvas(current, canvas);
             owned.push(id);
             made.push(
@@ -386,7 +393,7 @@ async function createNodes(call: ServerActionCall, viewId: string, specs: readon
             return { content: null, result: { output } };
         }
         /* Written down under the project's lock, before the nodes are on disk: who made a node is
-           the whole of the rule `node delete` follows, and it may not arrive after the node does. */
+           the whole of the rule `node_delete` follows, and it may not arrive after the node does. */
         for (const nodeId of owned) {
             await host.lineage.put({ projectId: place.projectId, nodeId, openedBy: actor.id, depth: 0, agent: false });
         }
@@ -422,9 +429,9 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
         };
     },
     'node.create': async (input, call) => {
-        // Only `agent` starts anything, so a node an agent adds opens empty.
+        // Only `agent_start` starts anything, so a node an agent adds opens empty.
         if (input.command !== null || input.provider !== null) {
-            throw new VerbRefusal('starts-nothing', 'node new starts no CLI and no command; ruimte-context agent is what opens an agent');
+            throw new ToolRefusal('starts-nothing', 'node_new starts no CLI and no command; agent_start is what opens an agent');
         }
         const made = await createNodes(call, input.viewId, [input], false);
         const [first] = made.nodes;
@@ -479,7 +486,7 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
     },
     'node.delete': async ({ viewId, nodeIds }, call) => {
         const { host, place } = call.context;
-        const caller = verbCallOf(call);
+        const caller = agentCallOf(call);
         const anyNode = host.machine.agentsDeleteAnyView;
         const ids = [...new Set(nodeIds)];
         return host.projects.mutate(place.projectId, async (content) => {
@@ -493,11 +500,11 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                         throw refuseOwnView(
                             own,
                             'there is no node to remove',
-                            [...lines, `see\truimte-context view delete ${own.id}\tremoves a view you made, with the session it holds`],
+                            [...lines, `see\tview_delete ${own.id}\tremoves a view you made, with the session it holds`],
                             id
                         );
                     }
-                    throw new VerbRefusal('unknown-node', `${id} is not a node on any canvas of this project`, lines);
+                    throw new ToolRefusal('unknown-node', `${id} is not a node on any canvas of this project`, lines);
                 }
             }
             const canvas = canvasNamed(content, viewId);
@@ -506,11 +513,11 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
             const callerEnd = lineEndOf(canvas.nodes, caller.caller);
             for (const node of going) {
                 if (node.id === callerEnd) {
-                    throw new VerbRefusal('deletes-caller', `You are ${node.id}, so removing it would end the session asking`);
+                    throw new ToolRefusal('deletes-caller', `You are ${node.id}, so removing it would end the session asking`);
                 }
                 const madeBy = host.lineage.madeBy(node.id);
                 if (!anyNode && madeBy !== caller.caller) {
-                    throw new VerbRefusal('not-yours', `${node.id} was made by ${madeBy ?? 'a person'} and node delete only removes a node you made yourself`, [
+                    throw new ToolRefusal('not-yours', `${node.id} was made by ${madeBy ?? 'a person'} and node delete only removes a node you made yourself`, [
                         `made by\t${madeBy ?? 'a person'}`,
                         `you\t${caller.caller}`,
                         "setting\tagentsDeleteAnyView in this machine's endpoint.json frees every node and view; a person turns it on from the Machines pane"
@@ -525,8 +532,7 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
             }
 
             const edges = canvas.edges.filter((edge) => !gone.has(edge.from) && !gone.has(edge.to));
-            /* A collapsed frame keeps its members by id, so a node that goes has to leave those lists
-               too; nothing reads geometry while a group is shut. */
+            // A group that spells out its members loses the ones that go.
             const nodes = canvas.nodes
                 .filter((candidate) => !gone.has(candidate.id))
                 .map((candidate) =>
@@ -560,9 +566,9 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
     },
     'node.update': async ({ viewId, nodeId, text, append }, call) => {
         const { host, place } = call.context;
-        const caller = verbCallOf(call);
+        const caller = agentCallOf(call);
         if (append && text === '') {
-            throw new VerbRefusal('bad-arguments', '--append has nothing to add: --text is empty; leave --append off to empty the note');
+            throw new ToolRefusal('bad-arguments', 'append has nothing to add: text is empty; leave append off to empty the note');
         }
         return host.projects.mutate(place.projectId, (content) => {
             const canvas = canvasNamed(content, viewId);
@@ -575,10 +581,10 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
     },
     'node.updateMany': async ({ viewId, nodes: edits }, call) => {
         const { host, place } = call.context;
-        const caller = verbCallOf(call);
+        const caller = agentCallOf(call);
         const empty = edits.find((edit) => edit.append && edit.text === '');
         if (empty) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'bad-arguments',
                 `${empty.nodeId} has append and nothing to add, since its text is empty; leave append off to empty the note`
             );
@@ -600,7 +606,7 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
     },
     'node.setColor': async ({ viewId, nodeId, color }, call) => {
         const { host, place } = call.context;
-        const caller = verbCallOf(call);
+        const caller = agentCallOf(call);
         return host.projects.mutate(place.projectId, (content) => {
             const canvas = canvasNamed(content, viewId);
             const chatView = isChatView(content, caller.caller);
@@ -610,7 +616,7 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
             }
             // A newer Ruimte's node is written back as it was read, so a color on it would never reach the file.
             if (isUnknownNode(node)) {
-                throw new VerbRefusal(
+                throw new ToolRefusal(
                     'unknown-node',
                     `${nodeId} is a node of a kind this machine does not know, so it cannot color it`,
                     colorableLines(canvas, caller, chatView)
@@ -618,9 +624,9 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
             }
             refuseOtherMachine(host, nodeId);
             if (!mayColor(canvas, node, caller, chatView)) {
-                throw new VerbRefusal('not-linked', `${nodeId} is a node you did not make and no line joins you to it: draw that line and you can color it`, [
+                throw new ToolRefusal('not-linked', `${nodeId} is a node you did not make and no line joins you to it: draw that line and you can color it`, [
                     ...colorableLines(canvas, caller, chatView),
-                    `see\truimte-context link new --to ${nodeId}\tdraws the line this needs`
+                    `see\tlink_new to ${nodeId}\tdraws the line this needs`
                 ]);
             }
             const patch = nodeColorPatch(node, color);
@@ -636,10 +642,10 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
     },
     'group.create': async ({ viewId, nodeIds, label, color }, call) => {
         const { host, place } = call.context;
-        const caller = verbCallOf(call);
+        const caller = agentCallOf(call);
         const ids = [...new Set(nodeIds)];
         if (color != null && !(NODE_ACCENT_NAMES as readonly string[]).includes(color)) {
-            throw new VerbRefusal('unknown-color', `${color} is not one of the ${NODE_ACCENT_NAMES.length} colors a frame takes`, [...COLOR_LINES]);
+            throw new ToolRefusal('unknown-color', `${color} is not one of the ${NODE_ACCENT_NAMES.length} colors a frame takes`, [...COLOR_LINES]);
         }
         const accent = color ?? undefined;
 
@@ -651,7 +657,7 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
             const members = nodesNamed(content, canvas, ids, { ...NOT_A_GROUP, cannot: 'it cannot stand inside a frame' });
             const framed = members.find((node) => node.kind === 'group');
             if (framed) {
-                throw new VerbRefusal(
+                throw new ToolRefusal(
                     'not-groupable',
                     `${framed.id} is a group, and a frame is drawn around nodes; move it inside the frame instead and it goes in with them`
                 );
@@ -661,7 +667,7 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
             const container = containers.get(members[0]!.id);
             const elsewhere = members.find((node) => containers.get(node.id)?.id !== container?.id);
             if (elsewhere) {
-                throw new VerbRefusal(
+                throw new ToolRefusal(
                     'different-groups',
                     `${members[0]!.id} stands ${placeName(container)} and ${elsewhere.id} stands ${placeName(containers.get(elsewhere.id))}; a frame goes around nodes that are already in the same place`
                 );
@@ -689,13 +695,15 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
             const opening = replaced.length === 0 ? null : openingEdge(caller.caller, group, content);
             const gone = new Set(replaced.map((edge) => edge.id));
             const edges = opening === null ? canvas.edges : [...canvas.edges.filter((edge) => !gone.has(edge.id)), opening];
-            /* A collapsed frame keeps its members in the file, so the new group has to be written into
-               them: by geometry it is inside, and while the container is shut nothing reads geometry. */
+            /* A container that spells out its members trades the framed nodes for the new group, so
+               they are in the inner group only. One that reads positions holds the group already. */
             const nodes = canvas.nodes.map((node) =>
-                container !== undefined && node.id === container.id && node.collapsed === true ? { ...node, memberIds: [...(node.memberIds ?? []), id] } : node
+                container !== undefined && node.id === container.id && node.memberIds !== undefined
+                    ? { ...node, memberIds: [...node.memberIds.filter((member) => !held.has(member)), id] }
+                    : node
             );
             return {
-                content: withCanvas(content, { ...canvas, nodes: [...nodes, group], edges }),
+                content: withCanvas(content, { ...canvas, nodes: [...nodes, { ...group, memberIds: inside.map((node) => node.id) }], edges }),
                 result: {
                     output: {
                         viewId: canvas.id,
@@ -714,9 +722,9 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
         const { host, place } = context;
         const ids = [...new Set(nodeIds)];
         if (columns !== null && layout !== 'grid') {
-            throw new VerbRefusal('flag-not-for-layout', `--cols does not go with ${layout}; a row is one row and a column is one column`, [
-                'layout\tgrid\ttakes --cols',
-                `layout\t${ARRANGE_LAYOUTS.filter((candidate) => candidate !== 'grid').join(', ')}\ttake no --cols`
+            throw new ToolRefusal('flag-not-for-layout', `cols does not go with ${layout}; a row is one row and a column is one column`, [
+                'layout\tgrid\ttakes cols',
+                `layout\t${ARRANGE_LAYOUTS.filter((candidate) => candidate !== 'grid').join(', ')}\ttake no cols`
             ]);
         }
         return host.projects.mutate(place.projectId, (content) => {
@@ -724,16 +732,16 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
             const moving = nodesNamed(content, canvas, ids, { ...NOT_A_GROUP, cannot: 'there is nothing there to move' });
             const carrier = moving.find((node) => node.kind === 'group');
             if (carrier) {
-                throw new VerbRefusal(
+                throw new ToolRefusal(
                     'not-arrangeable',
-                    `${carrier.id} is a group and carries whatever stands inside it; node arrange moves the nodes it is given, so name those instead`
+                    `${carrier.id} is a group and carries whatever stands inside it; node_arrange moves the nodes it is given, so name those instead`
                 );
             }
             if (columns !== null && columns > moving.length) {
-                throw new VerbRefusal(
+                throw new ToolRefusal(
                     'too-many-columns',
-                    `--cols is ${columns} and you named ${moving.length} ${moving.length === 1 ? 'node' : 'nodes'}; a grid holds at most one column per node`,
-                    [`columns\twithout --cols\t${gridColumns(moving.length)}`]
+                    `cols is ${columns} and you named ${moving.length} ${moving.length === 1 ? 'node' : 'nodes'}; a grid holds at most one column per node`,
+                    [`columns\twithout cols\t${gridColumns(moving.length)}`]
                 );
             }
 

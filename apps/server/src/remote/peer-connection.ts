@@ -1,4 +1,4 @@
-import { withTimeout } from '@adecore/agents';
+import { withTimeout } from '@adecore/utils/async';
 import { BrokerPeer, brokerHostOf, signalMessage, type IceServer, type PeerStatement, type SignalEnvelope } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { weriftIceServers } from '../pulsar/broker-relay.ts';

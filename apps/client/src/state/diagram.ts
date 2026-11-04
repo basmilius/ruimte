@@ -1,6 +1,6 @@
-import { createStore, type StoreApi } from 'zustand';
-import { EMPTY_DIAGRAM, type DiagramContent, type DiagramDocument, type DiagramNode, type ProjectViewLocal } from '@ruimte/contracts';
 import { layoutOf, type DiagramLayout } from '@adecore/diagram';
+import { EMPTY_DIAGRAM, type DiagramContent, type DiagramDocument, type DiagramNode, type ProjectViewLocal } from '@ruimte/contracts';
+import { createStore, type StoreApi } from 'zustand';
 import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
 import { editorBindings } from '@/state/editor-bindings';
 import { createEditorRegistry, finishLoad, savedFileSetters, type SavedFileSetters } from '@/state/editors';

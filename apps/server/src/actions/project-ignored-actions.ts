@@ -1,5 +1,5 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
-import { VerbRefusal } from '../canvas/verb.ts';
 import { listIgnoredFiles } from '../git/ignored.ts';
 import { GitError } from '../git/run.ts';
 import type { ServerActionContext } from './context.ts';
@@ -11,7 +11,7 @@ export const projectIgnoredActions: ActionHandlers<ServerActionContext> = {
             return { output: { root, files, truncated } };
         } catch (e) {
             if (e instanceof GitError && e.code === 'not-a-repo') {
-                throw new VerbRefusal('not-a-repository', `${context.place.folder} is not in a git repository`);
+                throw new ToolRefusal('not-a-repository', `${context.place.folder} is not in a git repository`);
             }
             throw e;
         }

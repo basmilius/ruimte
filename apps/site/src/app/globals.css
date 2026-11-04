@@ -1,33 +1,17 @@
 @import "tailwindcss";
+@import "@adecore/ui/theme.css";
 
-/* The dark theme of `apps/client/src/styles.css`, token for token, so what the page draws of the app
-   looks like the app. The site has no light theme. */
-:root {
-    color-scheme: dark;
-    --bg: #0d0d10;
+/* The components of @adecore/ui carry their classes in its own folder, outside the one Tailwind scans. */
+@source "../../node_modules/@adecore/ui/src";
+
+/* What the site draws of the app beyond ADE CORE's tokens: the canvas, the terminal, notes and the sidebar's glow,
+   token for token as `apps/client/src/styles.css` has them in the dark theme. The site has no light theme. */
+[data-theme="dark"] {
     --canvas-bg: #0d0d10;
     --canvas-dot: #202024;
-    --surface: #131316;
-    --surface-raised: #18181c;
-    --surface-sunken: #08080a;
-    --surface-hover: #202024;
-    --surface-active: #28282e;
-    --border: rgb(255 255 255 / 0.07);
-    --border-strong: rgb(255 255 255 / 0.13);
-    --border-soft: rgb(255 255 255 / 0.03);
-    --text: #ececf1;
-    --text-muted: #9a9aa6;
-    --text-faint: #5f5f6b;
-    --accent: #155dfc;
-    --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--surface));
     --edge-line: color-mix(in srgb, var(--text) 22%, var(--canvas-bg));
     --edge-context: color-mix(in srgb, var(--accent) 55%, var(--canvas-bg));
-    --status-running: #60a5fa;
-    --status-needs-you: #fbbf24;
-    --status-idle: #4ade80;
-    --status-error: #f87171;
     --node-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 4px rgb(0 0 0 / 0.2), 0 4px 8px rgb(0 0 0 / 0.12);
-    --float-shadow: 0 1px 2px -1px rgb(0 0 0 / 0.3), 0 2px 4px rgb(0 0 0 / 0.24), 0 4px 8px rgb(0 0 0 / 0.18), 0 6px 12px rgb(0 0 0 / 0.1);
     --term-bg: #08080a;
     --term-fg: #d6d6de;
     --term-dim: #6b6b76;
@@ -43,29 +27,12 @@
     --sidebar-glow-wash: rgb(26 33 68 / 0.35);
     --sidebar-glow: rgb(121 184 255 / 0.09);
     --sidebar-glow-orbit: 255 255 255;
+    /* Links in the documentation, readable on the dark ground. */
+    --link: #79b8ff;
 }
 
 @theme inline {
-    --color-*: initial;
-    --color-bg: var(--bg);
     --color-canvas-bg: var(--canvas-bg);
-    --color-surface: var(--surface);
-    --color-surface-raised: var(--surface-raised);
-    --color-surface-sunken: var(--surface-sunken);
-    --color-surface-hover: var(--surface-hover);
-    --color-surface-active: var(--surface-active);
-    --color-border: var(--border);
-    --color-border-strong: var(--border-strong);
-    --color-border-soft: var(--border-soft);
-    --color-text: var(--text);
-    --color-text-muted: var(--text-muted);
-    --color-text-faint: var(--text-faint);
-    --color-accent: var(--accent);
-    --color-accent-soft: var(--accent-soft);
-    --color-status-running: var(--status-running);
-    --color-status-needs-you: var(--status-needs-you);
-    --color-status-idle: var(--status-idle);
-    --color-status-error: var(--status-error);
     --color-term-bg: var(--term-bg);
     --color-term-fg: var(--term-fg);
     --color-term-dim: var(--term-dim);
@@ -77,10 +44,10 @@
     --color-ansi-cyan: var(--ansi-cyan);
     --color-note-yellow: var(--note-yellow);
     --color-skill: var(--skill);
+    --color-link: var(--link);
     --color-white: #ffffff;
     --color-black: #000000;
     --color-transparent: transparent;
-    --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
     --font-display: var(--font-geist), -apple-system, BlinkMacSystemFont, sans-serif;
     --font-brand: var(--font-geist), -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: ui-monospace, var(--font-jetbrains), "SF Mono", Menlo, monospace;
@@ -221,3 +188,4 @@
         animation: none;
     }
 }
+

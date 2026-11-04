@@ -1,7 +1,7 @@
+import { FadingWords } from '@adecore/agents-react/chat/ui';
+import { ErrorBoundary, ScrollArea } from '@adecore/ui';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FadingWords } from '@adecore/agents-react/chat/ui';
-import { ErrorBoundary } from '@adecore/ui';
 import { openVoicePanel, useVoice, useVoicePanelOpen } from '@/voice/state';
 import { VoiceWaveform } from '@/voice/VoiceWaveform';
 
@@ -31,11 +31,25 @@ function VoiceOverlayContent({ visible }: { visible: boolean }) {
                 type="button"
                 className="pointer-events-auto relative flex w-full max-w-lg flex-col items-center gap-3 rounded-xl px-4 py-2 text-center text-text"
                 aria-label={t('button')}
-                onClick={openVoicePanel}
+                onClick={(event) => {
+                    // Dragging the caption's scrollbar ends in a click on the button too.
+                    if (event.target instanceof Element && event.target.closest('.ade-scrollbar') !== null) {
+                        return;
+                    }
+
+                    openVoicePanel();
+                }}
             >
-                <p ref={caption} className="max-h-24 overflow-y-auto text-sm leading-6 whitespace-pre-wrap [text-wrap:pretty]" role="status" aria-live="polite">
+                <ScrollArea
+                    render={<p />}
+                    viewportRef={caption}
+                    className="max-h-24"
+                    viewportClassName="text-sm leading-6 whitespace-pre-wrap [text-wrap:pretty]"
+                    role="status"
+                    aria-live="polite"
+                >
                     <FadingWords key={displayed.key} text={displayed.text} />
-                </p>
+                </ScrollArea>
                 <VoiceWaveform phase={phase} compact />
             </button>
         </div>

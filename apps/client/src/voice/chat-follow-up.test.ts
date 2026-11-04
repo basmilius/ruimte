@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatInfo, ChatItem } from '@ruimte/contracts';
 import { applyEvent, type ChatState } from '@adecore/agents-react/state';
+import type { ChatInfo, ChatItem } from '@ruimte/contracts';
 import { chatCompletion, chatWaits } from '@/voice/chat-follow-up';
 
 function state(items: ChatItem[]): ChatState {

@@ -1,7 +1,7 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { motion } from 'motion/react';
+import type { ReactNode } from 'react';
 
 // A sketch of a phone, an API and a database with the first call circled, drawn a few strokes per step.
 const STROKES: readonly { readonly d: string; readonly at: number }[] = [

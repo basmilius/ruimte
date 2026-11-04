@@ -2,6 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { constants, type Stats } from 'node:fs';
 import { link, lstat, open, realpath, rename, rm } from 'node:fs/promises';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
+import { CodedError } from '@adecore/agents';
+import { isNotFound } from '@adecore/utils/errors';
+import { isWithin } from '@adecore/utils/path';
 import {
     CHAT_ATTACHMENT_MAX_BYTES,
     type ChatAttachment,
@@ -11,10 +14,8 @@ import {
     type ChatImageTargetResult,
     sniffImageMime
 } from '@ruimte/contracts';
-import { CodedError, isNotFound } from '@adecore/agents';
-import { isInside } from '../canvas/project-paths.ts';
-import { isRuimteState } from '../projects/project-files.ts';
 import { realOrNull } from '../fs/real-path.ts';
+import { isRuimteState } from '../projects/project-files.ts';
 
 class ImageFileError extends CodedError {}
 
@@ -48,7 +49,7 @@ async function destination(folder: string, path: string): Promise<string> {
         throw new ImageFileError('not-a-directory', 'The destination folder is not there');
     }
     const actual = join(parent, basename(target));
-    if (!isInside(root, actual) || actual === root) {
+    if (!isWithin(root, actual) || actual === root) {
         throw new ImageFileError('outside-project', 'The image must stay inside its project');
     }
     const segments = relative(root, actual).split(sep);

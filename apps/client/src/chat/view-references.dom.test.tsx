@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import { EditorView } from '@codemirror/view';
 import type { EndpointInfo, ProjectView } from '@ruimte/contracts';
+import { act } from 'react';
 import { useServers } from '@/state/server';
 import { startServerInfo } from '@/transport/server-info';
 import { chatInfoOf } from '../../testing/chat-info';
-import { FakeMachine } from '../../testing/fake-machine';
-import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 import { clickOn, layOutChat, mount, pressKey, until, type Mounted } from '../../testing/dom';
+import { FakeMachine } from '../../testing/fake-machine';
 import { claudeProvider } from '../../testing/fake-provider';
+import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 
 const MACHINE = 'fake-machine';
 

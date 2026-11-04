@@ -1,6 +1,6 @@
+import { CodedError } from '@adecore/agents';
 import type { RemoteStatusEvent } from '@ruimte/contracts';
 import type { PeerStatement } from '@ruimte/pulsar';
-import { CodedError } from '@adecore/agents';
 import { PEER_ATTEMPT_TIMEOUT_MS, openBrokerLine, openPeerLink, type PeerLink, type PeerSigner } from './peer-connection.ts';
 import type { PeerMachine, PeerMachines } from './peer-machines.ts';
 import type { PendingAdmissions } from './pending-admissions.ts';

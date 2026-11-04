@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { ProcessSampler, RawProcess, RawSample } from '../processes/sampler.ts';
 import type { TcpListener } from '../processes/listeners.ts';
+import type { ProcessSampler, RawProcess, RawSample } from '../processes/sampler.ts';
 import { SessionPorts, sessionTree, type PortSession } from './ports.ts';
 
 function proc(pid: number, ppid: number, overrides: Partial<RawProcess> = {}): RawProcess {

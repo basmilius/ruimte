@@ -1,20 +1,20 @@
-import { createStore, type StoreApi } from 'zustand';
 import type { ProjectCanvasLine, ProjectCanvasView, ProjectLayout, ProjectViewLocal, NodeAccent, NodeKind, NodeTitleSource } from '@ruimte/contracts';
 import { DEFAULT_TITLES, NODE_SIZE, isAgentKind } from '@ruimte/contracts';
-import { textRect } from '@/canvas/edge-lines';
-import { isMeasured, unionOf, type Point, type Rect } from '@/canvas/math';
-import type { NodeDirection } from '@/canvas/node-navigation';
-import type { DerivedFrame } from '@/canvas/node-body';
-import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
+import { createStore, useStore, type StoreApi } from 'zustand';
 import type { ArrangeRefusal } from '@/canvas/arrange-group';
+import { createCameraSlice, onlyCameraMoved, type CameraSlice } from '@/canvas/camera-slice';
+import { textRect } from '@/canvas/edge-lines';
+import { lineBounds } from '@/canvas/line-geometry';
+import { isMeasured, unionOf, type Point, type Rect } from '@/canvas/math';
+import type { DerivedFrame } from '@/canvas/node-body';
+import type { NodeDirection } from '@/canvas/node-navigation';
 import type { CanvasPatch } from '@/project/merge';
-import { editorBindings } from '@/state/editor-bindings';
-import { createEditorRegistry } from '@/state/editors';
 import { withCameraHistory } from '@/state/canvas-camera-history';
 import { createCanvasContentSlice } from '@/state/canvas-content-slice';
 import { createCanvasEdgesSlice } from '@/state/canvas-edges-slice';
 import { createCanvasGestureSlice } from '@/state/canvas-gesture-slice';
 import { createCanvasLayoutsSlice } from '@/state/canvas-layouts-slice';
+import { createCanvasLinesSlice } from '@/state/canvas-lines-slice';
 import {
     boundsOfElement,
     maximizedNodeOf,
@@ -32,8 +32,9 @@ import { createCanvasNavigationSlice } from '@/state/canvas-navigation-slice';
 import { createCanvasNodesSlice } from '@/state/canvas-nodes-slice';
 import { createCanvasSelectionSlice } from '@/state/canvas-selection-slice';
 import { createCanvasTextsSlice } from '@/state/canvas-texts-slice';
-import { createCanvasLinesSlice } from '@/state/canvas-lines-slice';
-import { lineBounds } from '@/canvas/line-geometry';
+import { editorBindings } from '@/state/editor-bindings';
+import { createEditorRegistry } from '@/state/editors';
+import type { EditorHook } from '@/state/workspace-stores';
 
 export type { AgentStatus, NodeKind } from '@ruimte/contracts';
 export type { CameraRequest, Viewport } from '@/canvas/camera-slice';
@@ -161,6 +162,16 @@ export interface CanvasState extends CameraSlice {
     duplicateNode(id: string): void;
     /* Null with no view under the canvas, since nothing in the project file could hold such a node. */
     addNode(kind: NodeKind, at: Point, options?: AddNodeOptions): string | null;
+    addExtensionNode(
+        extension: string,
+        type: string,
+        title: string,
+        size: { width: number; height: number },
+        data: unknown,
+        dataVersion?: number,
+        at?: Point
+    ): string | null;
+    updateExtensionNode(id: string, patch: Record<string, unknown>): void;
     /* Wraps the selected nodes in a group; answers null when nothing is selected. */
     groupSelection(): string | null;
     /* Tidies the members that stand directly in a group into a grid, as one undo step; the ids of what moved, or why not. */
@@ -292,12 +303,47 @@ export const defaultCanvases = createEditorRegistry(createCanvasStore, defaultCa
  * the wrong store as often as not.
  */
 export const {
-    use: useCanvas,
+    use: useCanvasCamera,
     useStore: useCanvasStore,
     focused: focusedCanvas,
     live: liveCanvas,
     subscribe: subscribeCanvases
 } = editorBindings(defaultCanvases);
+
+const quietStores = new WeakMap<StoreApi<CanvasState>, StoreApi<CanvasState>>();
+
+/*
+ * The store as a selector that never reads the camera hears it: deaf to a change that only moved the
+ * camera. A canvas has hundreds of selectors, and running each on every frame of a zoom was most of
+ * what a zoom cost the main thread.
+ */
+function quietCameraOf(store: StoreApi<CanvasState>): StoreApi<CanvasState> {
+    let quiet = quietStores.get(store);
+
+    if (quiet === undefined) {
+        quiet = {
+            ...store,
+            subscribe: (listener) =>
+                store.subscribe((state, previous) => {
+                    if (onlyCameraMoved(state, previous)) {
+                        return;
+                    }
+
+                    listener(state, previous);
+                })
+        };
+        quietStores.set(store, quiet);
+    }
+
+    return quiet;
+}
+
+/*
+ * What a component reads from the canvas of its cell. A selector that reads the camera or depends on
+ * it asks `useCanvasCamera` instead, since this one may skip a change that only moved the camera.
+ */
+export const useCanvas = (<U>(selector?: (state: CanvasState) => U): CanvasState | U =>
+    useStore(quietCameraOf(useCanvasStore()), selector as (state: CanvasState) => U)) as EditorHook<CanvasState>;
 
 /*
  * The editor of the view a node stands on, out of every canvas on screen. What arrives for one node

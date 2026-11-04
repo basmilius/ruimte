@@ -1,6 +1,6 @@
 import { join, resolve } from 'node:path';
+import { isWithin } from '@adecore/utils/path';
 import type { GitReposResult } from '@ruimte/contracts';
-import { isUnder } from '../fs/path-segment.ts';
 import { PROJECT_DIR } from '../projects/project-files.ts';
 import { listRepos } from './repos.ts';
 
@@ -76,8 +76,8 @@ export class RepoListCache {
             const settled = entry.settled;
             const touched =
                 settled === null
-                    ? paths.some((path) => isUnder(key, path) || isUnder(path, key))
-                    : paths.some((path) => isUnder(key, path) || settled.repos.some((repo) => namingDirs(repo.path).includes(path)));
+                    ? paths.some((path) => isWithin(path, key) || isWithin(key, path))
+                    : paths.some((path) => isWithin(path, key) || settled.repos.some((repo) => namingDirs(repo.path).includes(path)));
             if (touched) {
                 this.folders.delete(key);
             }

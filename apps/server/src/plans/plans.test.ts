@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fileExists } from '@adecore/agents';
+import { ManualClock } from '@adecore/agents/testing';
+import { fileExists } from '@adecore/utils/fs';
 import type { ChatItem, Plan, ProjectContent } from '@ruimte/contracts';
 import { PLAN_RESUME_PREAMBLE, RESUME_PROMPT } from '../chat/chat-manager.ts';
-import { ManualClock } from '@adecore/agents/testing';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { bootTestDaemon, releasedProject, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
 import { planFileName } from './plan-store.ts';
 
 function content(): ProjectContent {
@@ -75,7 +75,7 @@ function listen(daemon: TestDaemon): SessionEvent[] {
 }
 
 async function newPlan(daemon: TestDaemon, document = DOCUMENT): Promise<string> {
-    const lines = await runVerb(daemon, 'chat-lead', 'plan', ['new', `--document=${document}`]);
+    const lines = await invokeTool(daemon, 'chat-lead', 'plan_new', { document });
     const [kind, planId] = lines[0]!.split('\t');
     expect(kind).toBe('plan');
     return planId!;
@@ -93,12 +93,12 @@ function stepOf(plan: Plan, id: string) {
     return plan.items.find((item) => item.id === id) as Extract<Plan['items'][number], { type: 'step' }>;
 }
 
-describe('plan verbs', () => {
+describe('plan tools', () => {
     test('plan new from a chat writes the plan and sends plan.changed and plan.created; a terminal is refused', async () => {
         const daemon = await boot();
         const events = listen(daemon);
 
-        const lines = await runVerb(daemon, 'chat-lead', 'plan', ['new', '--kind', 'test', `--document=${DOCUMENT}`]);
+        const lines = await invokeTool(daemon, 'chat-lead', 'plan_new', { kind: 'test', document: DOCUMENT });
         const [first, ...rest] = lines;
         const [, planId, rev, kind, title] = first!.split('\t');
         expect([rev, kind, title]).toEqual(['rev 0', 'test', 'Ship the feature']);
@@ -107,8 +107,8 @@ describe('plan verbs', () => {
             'item\ttests\tstep\t-\tWrite the tests',
             'item\tcheck\tstep\t-\tA person checks it',
             'item\tmine\tstep\t-\tOnly the agent',
-            'example\truimte-context plan set build --state done',
-            'ids\tIds are for your commands. When you talk to the person, name the plan and its steps by their title, never by id'
+            'example\tplan_set with step_id build and state done',
+            'ids\tIds are for your tool calls. When you talk to the person, name the plan and its steps by their title, never by id'
         ]);
         expect(events.map((event) => event.event)).toEqual(['plan.changed', 'plan.created']);
         expect(events[0]!.payload).toMatchObject({ chatId: 'chat-lead', plan: { id: planId, rev: 0, createdAt: new Date(clock.now()).toISOString() } });
@@ -117,7 +117,7 @@ describe('plan verbs', () => {
         expect(file.version).toBe(1);
         expect(file.plans.map((plan) => plan.id)).toEqual([planId!]);
 
-        const refused = await runVerb(daemon, 'term-lead', 'plan', ['new', `--document=${DOCUMENT}`]);
+        const refused = await invokeTool(daemon, 'term-lead', 'plan_new', { document: DOCUMENT });
         expect(refusalCode(refused)).toBe('plan-needs-chat');
         expect(events).toHaveLength(2);
     });
@@ -125,17 +125,17 @@ describe('plan verbs', () => {
     test('a dry run writes nothing, a misspelled field is refused by its path, and Markdown makes a plan too', async () => {
         const daemon = await boot();
         const events = listen(daemon);
-        const dry = await runVerb(daemon, 'chat-lead', 'plan', ['new', '--dry-run', `--document=${DOCUMENT}`]);
+        const dry = await invokeTool(daemon, 'chat-lead', 'plan_new', { dry_run: true, document: DOCUMENT });
         expect(dry[0]).toStartWith('dry-run\tplan-');
         expect(await daemon.plans.read('chat-lead')).toEqual([]);
         expect(events).toEqual([]);
 
-        const misspelled = await runVerb(daemon, 'chat-lead', 'plan', ['new', '--document={"meta":{"title":"T"},"items":[{"type":"step","titel":"x"}]}']);
+        const misspelled = await invokeTool(daemon, 'chat-lead', 'plan_new', { document: '{"meta":{"title":"T"},"items":[{"type":"step","titel":"x"}]}' });
         expect(refusalCode(misspelled)).toBe('plan-invalid');
 
-        const markdown = await runVerb(daemon, 'chat-lead', 'plan', ['new', '--markdown=# From a list\n\n## Build\n- [x] Compile\n- [ ] Run']);
+        const markdown = await invokeTool(daemon, 'chat-lead', 'plan_new', { markdown: '# From a list\n\n## Build\n- [x] Compile\n- [ ] Run' });
         expect(markdown[0]).toMatch(/^plan\tplan-[a-z0-9]+\trev 0\tsteps\tFrom a list$/);
-        const read = await runVerb(daemon, 'chat-lead', 'plan', ['read']);
+        const read = await invokeTool(daemon, 'chat-lead', 'plan_read', {});
         expect(read[0]).toMatch(/^Plan "From a list" \(plan-[a-z0-9]+, steps, rev 0\): 1 of 2 done$/);
     });
 
@@ -143,28 +143,30 @@ describe('plan verbs', () => {
         const daemon = await boot();
         const planId = await newPlan(daemon);
 
-        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['set', 'check', '--state', 'done']))).toBe('person-only');
+        expect(refusalCode(await invokeTool(daemon, 'chat-lead', 'plan_set', { step_id: ['check'], state: 'done' }))).toBe('person-only');
 
         expect(await daemon.request('plan.apply', { chatId: 'chat-lead', planId, ops: [{ op: 'set', ids: ['build'], state: 'failed' }] })).toMatchObject({
             ok: true,
             result: { plan: { rev: 1 } }
         });
-        const bySomeone = await runVerb(daemon, 'chat-lead', 'plan', ['set', 'build', '--state', 'done']);
+        const bySomeone = await invokeTool(daemon, 'chat-lead', 'plan_set', { step_id: ['build'], state: 'done' });
         expect(refusalCode(bySomeone)).toBe('set-by-person');
-        expect(bySomeone.at(-1)).toStartWith('see\truimte-context plan note');
-        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['remove', 'build']))).toBe('set-by-person');
-        expect((await runVerb(daemon, 'chat-lead', 'plan', ['note', 'build', '--text', 'Fixed in abc123']))[0]).toStartWith(`plan\t${planId}\trev 2`);
+        expect(bySomeone.at(-1)).toStartWith('see\tplan_note');
+        expect(refusalCode(await invokeTool(daemon, 'chat-lead', 'plan_remove', { item_id: 'build' }))).toBe('set-by-person');
+        expect((await invokeTool(daemon, 'chat-lead', 'plan_note', { step_id: 'build', text: 'Fixed in abc123' }))[0]).toStartWith(`plan\t${planId}\trev 2`);
 
         // A person taking the mark away frees the step again.
         await daemon.request('plan.apply', { chatId: 'chat-lead', planId, ops: [{ op: 'set', ids: ['build'], state: 'open' }] });
-        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['set', 'build', '--state', 'done']))).toBeUndefined();
+        expect(refusalCode(await invokeTool(daemon, 'chat-lead', 'plan_set', { step_id: ['build'], state: 'done' }))).toBeUndefined();
 
         expect(await daemon.request('plan.apply', { chatId: 'chat-lead', planId, ops: [{ op: 'set', ids: ['mine'], state: 'done' }] })).toMatchObject({
             ok: false,
             error: { code: 'step-locked' }
         });
         expect(await daemon.request('plan.apply', { chatId: 'chat-lead', planId, ops: [{ op: 'unlock', ids: ['mine'] }] })).toMatchObject({ ok: true });
-        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['edit', 'mine', '--checks', 'agent']))).toBe('unlocked-by-person');
+        expect(refusalCode(await invokeTool(daemon, 'chat-lead', 'plan_edit', { action: 'edit', item_id: 'mine', checks: 'agent' }))).toBe(
+            'unlocked-by-person'
+        );
 
         // The structure is the agent's alone.
         expect(await daemon.request('plan.apply', { chatId: 'chat-lead', planId, ops: [{ op: 'remove', id: 'mine' } as never] })).toMatchObject({
@@ -173,27 +175,27 @@ describe('plan verbs', () => {
         });
     });
 
-    test('a click through plan.apply and a verb at the same moment both land, one rev each', async () => {
+    test('a click through plan.apply and a tool at the same moment both land, one rev each', async () => {
         const daemon = await boot();
         const planId = await newPlan(daemon);
-        const [clicked, verbed] = await Promise.all([
+        const [clicked, asked] = await Promise.all([
             daemon.request('plan.apply', { chatId: 'chat-lead', planId, ops: [{ op: 'set', ids: ['check'], state: 'done' }] }),
-            runVerb(daemon, 'chat-lead', 'plan', ['set', 'build', '--state', 'active'])
+            invokeTool(daemon, 'chat-lead', 'plan_set', { step_id: ['build'], state: 'active' })
         ]);
         expect(clicked).toMatchObject({ ok: true });
-        expect(refusalCode(verbed)).toBeUndefined();
+        expect(refusalCode(asked)).toBeUndefined();
         const plan = await planOf(daemon, planId);
         expect(plan.rev).toBe(2);
         expect(stepOf(plan, 'check')).toMatchObject({ state: 'done', by: 'person' });
         expect(stepOf(plan, 'build')).toMatchObject({ state: 'active', by: 'agent' });
     });
 
-    test('--next finishes one step and makes the next active in the same rev', async () => {
+    test('next finishes one step and makes the next active in the same rev', async () => {
         const daemon = await boot();
         const planId = await newPlan(daemon);
         const events = listen(daemon);
-        await runVerb(daemon, 'chat-lead', 'plan', ['set', 'build', '--state', 'active']);
-        const lines = await runVerb(daemon, 'chat-lead', 'plan', ['set', 'build', '--state', 'done', '--next', 'tests']);
+        await invokeTool(daemon, 'chat-lead', 'plan_set', { step_id: ['build'], state: 'active' });
+        const lines = await invokeTool(daemon, 'chat-lead', 'plan_set', { step_id: ['build'], state: 'done', next: 'tests' });
         expect(lines).toEqual([`plan\t${planId}\trev 2\tsteps\tShip the feature\t1 of 4 done`, 'now\ttests']);
         const plan = await planOf(daemon, planId);
         expect(stepOf(plan, 'build').state).toBe('done');
@@ -204,8 +206,8 @@ describe('plan verbs', () => {
     test('a description plan edit sets is what plan read shows under the step', async () => {
         const daemon = await boot();
         await newPlan(daemon);
-        await runVerb(daemon, 'chat-lead', 'plan', ['edit', 'tests', '--description', 'Cover the lexer\\nand the parser']);
-        const lines = await runVerb(daemon, 'chat-lead', 'plan', ['read']);
+        await invokeTool(daemon, 'chat-lead', 'plan_edit', { action: 'edit', item_id: 'tests', description: 'Cover the lexer\nand the parser' });
+        const lines = await invokeTool(daemon, 'chat-lead', 'plan_read', {});
         const at = lines.findIndex((line) => line.includes('[tests]'));
         expect(lines[at + 1]).toBe('  Cover the lexer and the parser');
     });
@@ -213,17 +215,21 @@ describe('plan verbs', () => {
     test('a step a person checks or checked keeps its place and title, and its plan stays', async () => {
         const daemon = await boot();
         const planId = await newPlan(daemon);
-        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['remove', 'check']))).toBe('person-only');
-        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['edit', 'check', '--title', 'Checked by nobody']))).toBe('person-only');
+        expect(refusalCode(await invokeTool(daemon, 'chat-lead', 'plan_remove', { item_id: 'check' }))).toBe('person-only');
+        expect(refusalCode(await invokeTool(daemon, 'chat-lead', 'plan_edit', { action: 'edit', item_id: 'check', title: 'Checked by nobody' }))).toBe(
+            'person-only'
+        );
 
         expect(await daemon.plans.apply('chat-lead', planId, [{ op: 'set', ids: ['build'], state: 'failed' }], 'person')).toMatchObject({ ok: true });
-        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['remove', 'build']))).toBe('set-by-person');
-        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['edit', 'build', '--title', 'Built after all']))).toBe('set-by-person');
-        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['delete', '--plan', planId]))).toBe('set-by-person');
+        expect(refusalCode(await invokeTool(daemon, 'chat-lead', 'plan_remove', { item_id: 'build' }))).toBe('set-by-person');
+        expect(refusalCode(await invokeTool(daemon, 'chat-lead', 'plan_edit', { action: 'edit', item_id: 'build', title: 'Built after all' }))).toBe(
+            'set-by-person'
+        );
+        expect(refusalCode(await invokeTool(daemon, 'chat-lead', 'plan_delete', { plan: planId }))).toBe('set-by-person');
         expect(await planOf(daemon, planId)).toBeDefined();
 
         expect(await daemon.plans.apply('chat-lead', planId, [{ op: 'set', ids: ['build'], state: 'open' }], 'person')).toMatchObject({ ok: true });
-        expect(await runVerb(daemon, 'chat-lead', 'plan', ['delete', '--plan', planId])).toEqual([`deleted\t${planId}\tShip the feature`]);
+        expect(await invokeTool(daemon, 'chat-lead', 'plan_delete', { plan: planId })).toEqual([`deleted\t${planId}\tShip the feature`]);
     });
 
     test('a chat keeps at most twenty plans, and the refusal points at plan delete', async () => {
@@ -231,12 +237,12 @@ describe('plan verbs', () => {
         for (let i = 0; i < 20; i++) {
             await newPlan(daemon);
         }
-        const refused = await runVerb(daemon, 'chat-lead', 'plan', ['new', `--document=${DOCUMENT}`]);
+        const refused = await invokeTool(daemon, 'chat-lead', 'plan_new', { document: DOCUMENT });
         expect(refusalCode(refused)).toBe('too-many-plans');
-        expect(refused.at(-1)).toStartWith('see\truimte-context plan delete --plan P');
+        expect(refused.at(-1)).toStartWith('see\tplan_delete plan P');
         const oldest = (await daemon.plans.read('chat-lead'))[0]!.id;
-        expect(await runVerb(daemon, 'chat-lead', 'plan', ['delete', '--plan', oldest])).toEqual([`deleted\t${oldest}\tShip the feature`]);
-        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['new', `--document=${DOCUMENT}`]))).toBeUndefined();
+        expect(await invokeTool(daemon, 'chat-lead', 'plan_delete', { plan: oldest })).toEqual([`deleted\t${oldest}\tShip the feature`]);
+        expect(refusalCode(await invokeTool(daemon, 'chat-lead', 'plan_new', { document: DOCUMENT }))).toBeUndefined();
     });
 });
 
@@ -266,7 +272,7 @@ describe('plans and the chat they belong to', () => {
 
         const second = await boot();
         expect(await second.request('plan.list', {})).toMatchObject({ ok: true, result: { plans: [{ chatId: 'chat-lead', plan: { id: planId } }] } });
-        expect((await runVerb(second, 'chat-lead', 'plan', ['read']))[0]).toStartWith(`Plan "Ship the feature" (${planId}, steps, rev 0)`);
+        expect((await invokeTool(second, 'chat-lead', 'plan_read', {}))[0]).toStartWith(`Plan "Ship the feature" (${planId}, steps, rev 0)`);
 
         second.worker.start();
         await second.chats.recoverInterrupted();
@@ -288,7 +294,7 @@ describe('plans and the chat they belong to', () => {
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
         await say(daemon, 'chat-lead', 'one');
         const planId = await newPlan(daemon);
-        await runVerb(daemon, 'chat-lead', 'plan', ['set', 'build', '--state', 'done']);
+        await invokeTool(daemon, 'chat-lead', 'plan_set', { step_id: ['build'], state: 'done' });
         const events = listen(daemon);
 
         const turn = turnsOf(daemon.chats.get('chat-lead')!.thread.list())[0]!;
@@ -300,7 +306,7 @@ describe('plans and the chat they belong to', () => {
         expect(copied).toEqual(await daemon.plans.read('chat-lead'));
         expect(events).toEqual([{ event: 'plan.changed', payload: { chatId: nodeId, plan: copied[0]! } }]);
 
-        await runVerb(daemon, nodeId, 'plan', ['set', 'tests', '--state', 'done']);
+        await invokeTool(daemon, nodeId, 'plan_set', { step_id: ['tests'], state: 'done' });
         expect(stepOf((await daemon.plans.read(nodeId))[0]!, 'tests').state).toBe('done');
         const original = await planOf(daemon, planId);
         expect(original.rev).toBe(1);

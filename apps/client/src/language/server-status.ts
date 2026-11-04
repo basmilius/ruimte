@@ -1,8 +1,8 @@
-import { useSyncExternalStore } from 'react';
-import type { TFunction } from 'i18next';
-import type { LanguageServerStatus } from '@ruimte/contracts';
-import { formatNumber } from '@adecore/ui/format';
 import { messageOf } from '@adecore/ui';
+import { formatNumber } from '@adecore/ui/format';
+import type { LanguageServerStatus } from '@ruimte/contracts';
+import type { TFunction } from 'i18next';
+import { useSyncExternalStore } from 'react';
 import { useToasts } from '@/state/toasts';
 import type { LanguageStatusTracker } from './status';
 import { nameOf } from './status-view';

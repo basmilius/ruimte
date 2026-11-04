@@ -19,7 +19,7 @@
 
 ## Tasks a peer gives
 
-- The folder, mode and depth are B's: the linked project, `--cwd` inside it or its worktrees (`startCwdGuard` at every start), the narrowest of A's mode, A's ceiling and the link's ceiling, and depth `max(1, depth A gives)`, refused above B's maximum.
+- The folder, mode and depth are B's: the linked project, `cwd` inside it or its worktrees (`startCwdGuard` at every start), the narrowest of A's mode, A's ceiling and the link's ceiling, and depth `max(1, depth A gives)`, refused above B's maximum.
 - Everything a peer starts runs as `actor: 'agent'` with B's own `start-agent` entry and lineage (`openedBy` = `peer:<A>:<parentNodeId>`). A launch there stays held until a person approves it through B. Worktrees go under B's worktree folder.
 - A peer drives no device (`peer-no-device`), and `peer.placeNodes` drops any line to a device or a task node.
 - A's nodes sit on one hidden, private canvas per machine A (`peerCanvasId`) with A's node ids. Hiddenness is laid over the document (`withHiddenCanvases`), never written, and a hidden canvas cannot be shared. A's window manages only the ids it placed with `peer.placeNodes`, never a task node or one a person placed, and `peer.taskStart` takes over only a node that window placed or a new one. Where a task runs is recorded beside it, never in the project file.
@@ -36,5 +36,5 @@
 - A folder from another machine, either way, is untrusted and recorded before git makes it, and so is any worktree cut from a branch such work arrived on.
 - A person's own handoff (`git.bundle` there, `git.fetchBundle` with `into: 'worktree'` here) and a worktree it starts here from origin are trusted. What the sending machine never vouched for stays untrusted (`untrusted` on the bundle, which can only narrow), and so does anything cut from a foreign tip. Work brought back home keeps its `refs/remotes/ruimte-*` mark and stays untrusted whoever asked. Origin is outside these records.
 - `UntrustedFolders` (`untrusted.ts`) covers a node that machine gave a task, one an untrusted node opened (through `openedBy` and forks), and any node whose cwd lies in a folder from that machine's work (`$RUIMTE_HOME/peer-worktrees`, which outlives the link). Such a node loads no project configuration (`projectConfigFor`) and never runs the after-settle task.
-- `peer.taskStart`, and `agent` or `team` from an untrusted node or into an untrusted `--cwd`, refuse a provider without `ignoresProjectConfig: true` and a terminal agent (`untrusted-folder`), before any task or worktree exists.
+- `peer.taskStart`, and `agent_start` or `agent_team` from an untrusted node or into an untrusted `cwd`, refuse a provider without `ignoresProjectConfig: true` and a terminal agent (`untrusted-folder`), before any task or worktree exists.
 - A one-shot CLI run (commit message, conflict help, a Codex chat title) in such a folder works in `$RUIMTE_HOME/oneshot` (`one-shot-place.ts`), since a CLI loads the hooks of the folder it starts in. The prompt carries everything those runs read, and none lets the CLI read files itself.

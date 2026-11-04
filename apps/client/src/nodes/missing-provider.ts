@@ -1,5 +1,5 @@
-import type { AgentKind } from '@ruimte/contracts';
 import type { ProvidersRow } from '@adecore/agents-react/state';
+import type { AgentKind } from '@ruimte/contracts';
 
 interface MissingProvider {
     name: string;
@@ -9,7 +9,7 @@ interface MissingProvider {
 
 /*
  * The CLI a node runs that its machine lacks, or null while the list is not in or the CLI is there.
- * A provider with no terminal (the local model) is turned on in its own settings, not installed.
+ * A provider with no terminal is configured in its own settings, not installed.
  */
 export function missingProvider(row: ProvidersRow | undefined, kind: AgentKind | undefined): MissingProvider | null {
     if (kind === undefined || row === undefined || !row.loaded) {

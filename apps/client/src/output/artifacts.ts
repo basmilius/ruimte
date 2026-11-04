@@ -1,6 +1,6 @@
+import type { ArtifactListPayload, ArtifactSummary } from '@ruimte/contracts';
 import { useEffect } from 'react';
 import { create } from 'zustand';
-import type { ArtifactListPayload, ArtifactSummary } from '@ruimte/contracts';
 import { endpointKey } from '@/state/keys';
 import { machineTransport, pool } from '@/transport';
 import { machineAnswers } from '@/transport/features';

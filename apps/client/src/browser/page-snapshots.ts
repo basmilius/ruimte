@@ -1,5 +1,5 @@
-import { browserRegistry } from '@/browser/registry';
 import { create } from 'zustand';
+import { browserRegistry } from '@/browser/registry';
 import { endpointKey, useEndpointId } from '@/state/keys';
 
 /*

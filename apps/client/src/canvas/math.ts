@@ -1,6 +1,5 @@
-import { CANVAS_GRID, type ViewCamera } from '@ruimte/contracts';
-
 import { centerOf, intersects, unionOf, type Point, type Rect } from '@adecore/drawing';
+import { CANVAS_GRID, type ViewCamera } from '@ruimte/contracts';
 
 /*
  * This module is what a camera does with the world it looks at. The world itself is one geometry,

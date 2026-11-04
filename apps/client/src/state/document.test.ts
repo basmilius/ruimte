@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ProjectSavePayloadSchema, storedViewsOf, type ProjectCanvasView, type ProjectDocument, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import type { CameraHistory } from '@/canvas/camera-history';
 import { viewIdsIn } from '@/shell/split';
-import { focusedCanvas } from './canvas';
 import { historyOf, setHistory } from './camera-history';
+import { focusedCanvas } from './canvas';
 import { useDocument } from './document';
 
 function view(id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectCanvasView {

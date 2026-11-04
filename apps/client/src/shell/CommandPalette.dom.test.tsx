@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
-import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { useUi } from '@/state/ui';
+import { contribute } from '@/extensions/registry';
 import { useDocument } from '@/state/document';
-import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
+import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { useToasts } from '@/state/toasts';
+import { useUi } from '@/state/ui';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
+import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 
 let page: Mounted;
 let workspace: FakeWorkspace | null = null;
@@ -43,6 +45,14 @@ function labels(): string[] {
     return rows().map((row) => row.textContent ?? '');
 }
 
+function groupLabels(): string[] {
+    return [...document.querySelectorAll('[role="group"]')].map((group) => {
+        const id = group.getAttribute('aria-labelledby');
+
+        return (id === null ? null : document.getElementById(id)?.textContent) ?? '';
+    });
+}
+
 async function openPalette(open: () => void, ready: () => boolean): Promise<void> {
     page = mount();
     await page.renderApp();
@@ -55,6 +65,99 @@ afterEach(async () => {
     await page.unmount();
     await act(async () => workspace?.close());
     workspace = null;
+});
+
+describe('the command palette with an extension', () => {
+    test('shows what a source finds for words no row holds, and pressing it runs it', async () => {
+        const ran: string[] = [];
+        const remove = contribute('paletteSources', {
+            id: 'poc/numbers',
+            title: 'POC',
+            search: async (query) => [{ id: query, title: 'From the source', run: () => ran.push(query) }]
+        });
+
+        try {
+            await openPalette(
+                () => useUi.getState().setPaletteOpen(true),
+                () => rows().length > 0
+            );
+            await type('zzzqqq');
+            await until(() => labels().some((label) => label.includes('From the source')));
+            await pressKey(field()!, 'Enter');
+
+            expect(ran).toEqual(['zzzqqq']);
+        } finally {
+            remove();
+        }
+    });
+
+    test('puts what a source finds under a label of its own, apart from the actions', async () => {
+        const removes = [
+            contribute('paletteSources', {
+                id: 'poc/issues',
+                title: 'POC',
+                search: async () => [{ id: 'issue', title: 'An issue', run: () => undefined }]
+            }),
+            contribute('commands', { id: 'extension:poc/command', title: 'Command wwyy', run: () => undefined })
+        ];
+
+        try {
+            await openPalette(
+                () => useUi.getState().setPaletteOpen(true),
+                () => rows().length > 0
+            );
+            await type('wwyy');
+            await until(() => labels().some((label) => label.includes('An issue')) && labels().some((label) => label.includes('Command wwyy')));
+
+            expect(groupLabels()).toEqual(['From extensions', 'Actions']);
+        } finally {
+            removes.forEach((remove) => remove());
+        }
+    });
+
+    test('lists a command an extension adds while it is open, leaves out an action that says it cannot run, and says when a command fails', async () => {
+        const failures: string[] = [];
+        const removes = [
+            contribute('slotEntries', {
+                id: 'poc/blocked',
+                kind: 'action',
+                title: 'Blocked qqzz',
+                slots: { commandPalette: () => ({ disabled: 'Not now' }) },
+                run: () => undefined
+            })
+        ];
+
+        try {
+            await openPalette(
+                () => useUi.getState().setPaletteOpen(true),
+                () => rows().length > 0
+            );
+            await act(async () => {
+                removes.push(
+                    contribute('commands', {
+                        id: 'extension:poc/late',
+                        title: 'Late qqzz',
+                        run: () => {
+                            throw new Error('It broke');
+                        },
+                        onFailure: (text) => failures.push(text)
+                    })
+                );
+            });
+            await type('qqzz');
+            await until(() => labels().some((label) => label.includes('Late qqzz')));
+
+            expect(labels().some((label) => label.includes('Blocked qqzz'))).toBe(false);
+
+            await pressKey(field()!, 'Enter');
+            await until(() => failures.length === 1);
+
+            expect(failures).toEqual(['It broke']);
+            expect(useToasts.getState().toasts.some((toast) => toast.title === 'Late qqzz' && toast.description === 'It broke')).toBe(true);
+        } finally {
+            removes.forEach((remove) => remove());
+        }
+    });
 });
 
 describe('the command palette keeps the keyboard in its field', () => {

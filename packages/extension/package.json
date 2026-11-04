@@ -1,0 +1,29 @@
+{
+    "name": "@ruimte/extension",
+    "version": "1.0.0",
+    "description": "The types of the Ruimte extension API. The code comes with Ruimte; this package holds none.",
+    "license": "MIT",
+    "type": "module",
+    "files": ["*.d.ts"],
+    "exports": {
+        "./client": { "types": "./client.d.ts" },
+        "./server": { "types": "./server.d.ts" },
+        "./ui": { "types": "./ui.d.ts" },
+        "./charts": { "types": "./charts.d.ts" },
+        "./agents-ui": { "types": "./agents-ui.d.ts" },
+        "./testing": { "types": "./testing.d.ts" }
+    },
+    "dependencies": {
+        "@adecore/charts": "0.54.5",
+        "@adecore/ui": "0.54.5"
+    },
+    "peerDependencies": {
+        "@adecore/agents-react": "0.54.5",
+        "@types/react": "^19.0.0"
+    },
+    "peerDependenciesMeta": {
+        "@adecore/agents-react": {
+            "optional": true
+        }
+    }
+}

@@ -1,7 +1,8 @@
 [test]
 # Real shells, watchers and sockets run through `test:integration`, browser checks through `test:browser`
-# and the tests that need a page through `test:dom`.
-pathIgnorePatterns = ["**/*.integration.test.ts", "**/*.dom.test.tsx", "**/docs/reports/**"]
+# and the tests that need a page through `test:dom`. An extension's `test/` runs under `ruimte extension test`,
+# against its fake host (`apps/server/src/cli/extension-test.integration.test.ts`).
+pathIgnorePatterns = ["**/*.integration.test.ts", "**/*.dom.test.tsx", "**/docs/reports/**", "extensions/*/test/**", "extensions/poc/*/test/**"]
 # The client's English words, so a pure function that reads one off i18next is testable
 # without every test file initializing it first. The dedupe preload goes first and by path,
 # since the root has no copy of the library under the isolated install.

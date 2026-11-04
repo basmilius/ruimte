@@ -9,14 +9,12 @@ export const FsBrowsePayloadSchema = z.object({
     // Includes folders with a leading dot.
     hidden: z.boolean().optional()
 });
-export type FsBrowsePayload = z.infer<typeof FsBrowsePayloadSchema>;
 
 export const FsBrowseEntrySchema = z.object({
     name: z.string(),
     fullPath: z.string(),
     hasCanvas: z.boolean()
 });
-export type FsBrowseEntry = z.infer<typeof FsBrowseEntrySchema>;
 
 export const FsBrowseResultSchema = z.object({
     // Absolute.
@@ -30,7 +28,6 @@ export type FsBrowseResult = z.infer<typeof FsBrowseResultSchema>;
 export const FsRevealPayloadSchema = z.object({
     path: z.string().min(1)
 });
-export type FsRevealPayload = z.infer<typeof FsRevealPayloadSchema>;
 
 // Past this a link names nothing a person would pick from.
 export const FS_LOCATE_MAX_MATCHES = 20;
@@ -66,7 +63,6 @@ export const FsSearchPayloadSchema = z.object({
     query: z.string().max(256),
     limit: z.number().int().positive().max(FS_SEARCH_MAX_RESULTS).optional()
 });
-export type FsSearchPayload = z.infer<typeof FsSearchPayloadSchema>;
 
 export const FsSearchResultSchema = z.object({
     // Paths relative to `cwd`, best match first.
@@ -90,7 +86,6 @@ export const FsGrepPayloadSchema = z.object({
     wholeWord: z.boolean().optional(),
     limit: z.number().int().positive().max(FS_GREP_MAX_RESULTS).optional()
 });
-export type FsGrepPayload = z.infer<typeof FsGrepPayloadSchema>;
 
 export const FsGrepMatchSchema = z.object({
     // Relative to `cwd` with POSIX separators, the shape `fs.search` answers with.
@@ -144,9 +139,10 @@ export type FsEntry = z.infer<typeof FsEntrySchema>;
 export const FsListPayloadSchema = z.object({
     path: z.string().min(1),
     depth: z.number().int().positive().max(FS_LIST_MAX_DEPTH).optional(),
-    hidden: z.boolean().optional()
+    hidden: z.boolean().optional(),
+    // A folder the real path must stay in, so a symlink inside it cannot lead out (`outside-project`).
+    within: z.string().min(1).optional()
 });
-export type FsListPayload = z.infer<typeof FsListPayloadSchema>;
 
 export const FsListResultSchema = z.object({
     // Absolute.
@@ -161,7 +157,6 @@ export type FsListResult = z.infer<typeof FsListResultSchema>;
 export const FsWatchPayloadSchema = z.object({
     path: z.string().min(1)
 });
-export type FsWatchPayload = z.infer<typeof FsWatchPayloadSchema>;
 
 // The directories that changed under a watched root, coalesced over a settle window.
 export const FsChangedEventSchema = z.object({
@@ -176,9 +171,10 @@ export type FsChangedEvent = z.infer<typeof FsChangedEventSchema>;
 export const FS_READ_MAX_TEXT_BYTES = 2 * 1024 * 1024;
 
 export const FsReadPayloadSchema = z.object({
-    path: z.string().min(1)
+    path: z.string().min(1),
+    // As for `fs.list`.
+    within: z.string().min(1).optional()
 });
-export type FsReadPayload = z.infer<typeof FsReadPayloadSchema>;
 
 export const FsReadTextSchema = z.object({
     kind: z.literal('text'),
@@ -216,9 +212,10 @@ export const FsWritePayloadSchema = z.object({
     path: z.string().min(1),
     text: z.string(),
     // The `mtime` the read answered with; overwriting a file that moved is a new write at its fresh mtime.
-    expectedMtime: z.number()
+    expectedMtime: z.number(),
+    // A folder the real target must stay in, past every symlink, instead of the client's whole boundary with its worktrees (`outside-project`).
+    within: z.string().min(1).optional()
 });
-export type FsWritePayload = z.infer<typeof FsWritePayloadSchema>;
 
 export const FsWriteResultSchema = z.object({
     size: z.number(),
@@ -238,10 +235,8 @@ export const FsWriteStartPayloadSchema = z.object({
     size: z.number().int().positive().max(FS_WRITE_MAX_BYTES),
     expectedMtime: z.number()
 });
-export type FsWriteStartPayload = z.infer<typeof FsWriteStartPayloadSchema>;
 
 export const FsWriteStartResultSchema = z.object({ uploadId: z.string().min(1) });
-export type FsWriteStartResult = z.infer<typeof FsWriteStartResultSchema>;
 
 export const FsWritePiecePayloadSchema = z.object({
     uploadId: z.string().min(1),
@@ -249,10 +244,8 @@ export const FsWritePiecePayloadSchema = z.object({
     // Base64, of at most `FS_WRITE_PIECE_BYTES`.
     data: z.string().max(Math.ceil(FS_WRITE_PIECE_BYTES / 3) * 4)
 });
-export type FsWritePiecePayload = z.infer<typeof FsWritePiecePayloadSchema>;
 
 export const FsWriteUploadPayloadSchema = z.object({ uploadId: z.string().min(1) });
-export type FsWriteUploadPayload = z.infer<typeof FsWriteUploadPayloadSchema>;
 
 /* Makes missing parent folders. An existing path is refused as `exists`, unless `overwrite` makes a file of `text`
    over a file that is there (a folder, or a folder over a file, is still `exists`). Held to the boundary of
@@ -267,7 +260,9 @@ export const FsCreatePayloadSchema = z.object({
     edits: z.boolean().optional(),
     overwrite: z.boolean().optional(),
     // The permission bits a file is made with, exactly and before its text is in it, also over a file that was there.
-    mode: z.number().int().min(0).max(0o777).optional()
+    mode: z.number().int().min(0).max(0o777).optional(),
+    // As for `fs.write`.
+    within: z.string().min(1).optional()
 });
 export type FsCreatePayload = z.infer<typeof FsCreatePayloadSchema>;
 
@@ -288,13 +283,11 @@ export const FsDeletePayloadSchema = z.object({
     // False when the caller made those edits itself; the servers then only hear it was deleted.
     edits: z.boolean().optional()
 });
-export type FsDeletePayload = z.infer<typeof FsDeletePayloadSchema>;
 
 export const FsDeleteResultSchema = z.object({
     // The files the language servers edited before the delete, at the places they had.
     edited: z.array(z.string()).optional()
 });
-export type FsDeleteResult = z.infer<typeof FsDeleteResultSchema>;
 
 /*
  * Inside the boundary of `fs.write`, with `.git` and `.ruimte` closed. A taken path is refused as
@@ -310,13 +303,11 @@ export const FsRenamePayloadSchema = z.object({
     // A file at `to` is moved to the trash first and replaced; a folder on either side is still `exists`.
     overwrite: z.boolean().optional()
 });
-export type FsRenamePayload = z.infer<typeof FsRenamePayloadSchema>;
 
 export const FsRenameResultSchema = z.object({
     // The files the language servers edited before the move, at the places they had.
     edited: z.array(z.string()).optional()
 });
-export type FsRenameResult = z.infer<typeof FsRenameResultSchema>;
 
 // What `GET /fs/file` serves; a read result names one of these before the client asks for the bytes.
 // TIFF needs the platform's decoder; web clients decode HEIC and HEIF before displaying them.

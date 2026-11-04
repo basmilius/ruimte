@@ -1,5 +1,5 @@
-import type { AgentStatus } from '@ruimte/contracts';
 import { describe, expect, test } from 'bun:test';
+import type { AgentStatus } from '@ruimte/contracts';
 import { borrowedHook, modeOfHook, normalizeHook, requestOfHook, settleWaiting } from './hooks.ts';
 
 function hook(event: string, extra: Record<string, unknown> = {}) {

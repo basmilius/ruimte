@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { PackageStore } from './package-store.ts';
 import type { RunCommand } from './runtime.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 let root = '';
 

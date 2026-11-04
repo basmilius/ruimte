@@ -1,9 +1,9 @@
 import { createNodeAction, createViewAction, linkNodesAction } from '@/actions/client-actions';
+import { browserBeside } from '@/browser/open-beside';
+import { localBrowserRouteAvailable } from '@/browser/owner-route';
 import { readNodeHost } from '@/nodes/node-host';
 import { canvasOfNode } from '@/state/canvas';
 import { currentEndpointId } from '@/state/keys';
-import { localBrowserRouteAvailable } from '@/browser/owner-route';
-import { browserBeside } from '@/browser/open-beside';
 
 export async function openVerifiedSessionPort(id: string, url: string, machineId: string): Promise<void> {
     const host = readNodeHost(id);

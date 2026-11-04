@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
+import { externalChange } from '@adecore/agents-react/chat/ui';
 import { EditorState } from '@codemirror/state';
 import { dictationLevelsEffect, dictationPreview, dictationPreviewEffect, dictationRange, dictationRangeEffect } from './editor';
-import { externalChange } from '@adecore/agents-react/chat/ui';
 
 test('the insertion follows edits ahead of its selection', () => {
     let state = EditorState.create({ doc: 'one two three', extensions: [dictationRange] });

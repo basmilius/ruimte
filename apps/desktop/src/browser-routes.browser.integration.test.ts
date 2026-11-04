@@ -1,8 +1,8 @@
-import type { BrowserRouteEvidence } from '../testing/browser-routes.fixture';
 import { expect, test } from 'bun:test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import type { BrowserRouteEvidence } from '../testing/browser-routes.fixture';
 
 const desktop = resolve(import.meta.dir, '..');
 const client = resolve(desktop, '../client');

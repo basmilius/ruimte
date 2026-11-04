@@ -2,8 +2,8 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MACHINE_HEALTH_PATH } from '@ruimte/contracts';
-import { ProjectStore } from '../../../server/src/projects/project-store';
 import { projectLinks } from '../../../server/src/projects/project-file-test-helpers';
+import { ProjectStore } from '../../../server/src/projects/project-store';
 import { reservedPort, spawnBenchDaemon, stopBenchDaemon } from './bench';
 
 interface ProjectFixture {

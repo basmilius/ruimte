@@ -1,4 +1,4 @@
-import i18next from 'i18next';
+import { messageOf } from '@adecore/ui';
 import {
     PROJECT_VERSION,
     type ProjectContent,
@@ -10,23 +10,23 @@ import {
     type ProjectSummary,
     type ProjectView
 } from '@ruimte/contracts';
+import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
-import { messageOf } from '@adecore/ui';
 import type { LooseStrip } from '@/shell/legacy-files-cell';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { stripOf } from '@/state/panel-state';
 import { browserStorage } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport/transport';
-import { forgetClosedProject, rememberClosedProject } from './closed-projects';
-import { restoreDesignFolders } from './design-folder-refusal';
 import { overlayLocal, readClientLocal, withoutClientBrowserState, writeClientLocal } from './client-local';
+import { forgetClosedProject, rememberClosedProject } from './closed-projects';
 import { readDeletedViews, writeDeletedViews } from './deleted-views';
+import { restoreDesignFolders } from './design-folder-refusal';
+import { projectIconAppearance } from './icon-appearance';
 import { rememberProject, type LastProjectStorage } from './last-project';
 import { mergeProject, type CanvasPatch } from './merge';
 import type { PanelsPort } from './panels-port';
 import { dropProjectDraft, readProjectDraft, writeProjectDraft } from './project-draft';
-import { projectIconAppearance } from './icon-appearance';
 
 type SaveOutcome = 'saved' | 'offline' | 'failed';
 
@@ -198,8 +198,6 @@ export class ProjectClient {
     private baseRev = 0;
     private baseShared: string[] = [];
     private locallyDrafted = false;
-    /* Why the last incoming document went to the person instead of being merged in. */
-    private refusal: string | null = null;
     /* Views that left the trash for good but may still be in the file, until a save without them lands. */
     private purging = new Set<string>();
     private readonly nextFrame: ((run: () => void) => () => void) | null;
@@ -274,11 +272,6 @@ export class ProjectClient {
             host.addEventListener('pagehide', onLeave);
             this.unsubscribe.push(() => host.removeEventListener('pagehide', onLeave));
         }
-    }
-
-    /* Why the last conflict was one; the id in it is what a person needs to make sense of the dialog. */
-    get mergeRefusal(): string | null {
-        return this.refusal;
     }
 
     async refreshList(): Promise<ProjectSummary[]> {
@@ -797,11 +790,9 @@ export class ProjectClient {
         }
         const merge = mergeProject(this.base, this.contentOfScreen(), contentOf(document), this.documents.getState().heldNodeIds());
         if (!merge.ok) {
-            this.refusal = merge.reason;
             console.debug(`[project] the canvas could not take in rev ${document.rev}: ${merge.reason}`);
             return false;
         }
-        this.refusal = null;
         this.setBase(document);
         this.sink.setRev(document.rev);
         /* Which file a view is in is the folder's answer and not this screen's. A colleague's pull

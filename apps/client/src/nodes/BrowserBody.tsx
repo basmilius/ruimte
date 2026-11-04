@@ -1,25 +1,27 @@
+import { Button, ButtonGroup, EmptyState, Icon, IconButton, Select, formatShortcut, KEY_SHORTCUTS } from '@adecore/ui';
+import clsx from 'clsx';
+import { ArrowLeft, ArrowRight, Code, ExternalLink, Lock, RotateCw, Unplug, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, ArrowRight, Code, ExternalLink, Lock, RotateCw, Unplug, X } from 'lucide-react';
-import { BrowserSplash } from '@/browser/BrowserSplash';
 import { BrowserPlate } from '@/browser/BrowserPlate';
+import { BrowserSplash } from '@/browser/BrowserSplash';
+import { BrowserStream } from '@/browser/BrowserStream';
 import { ERROR_ICON } from '@/browser/error-icons';
-import { usePageFar } from '@/browser/page-snapshots';
 import { classifyLoadError } from '@/browser/load-error';
 import { drivePage, openPage } from '@/browser/open-page';
 import { browserRouteAvailable } from '@/browser/owner-route';
+import { usePageFar } from '@/browser/page-snapshots';
 import { prettyUrl } from '@/browser/pretty-url';
 import { browserRegistry, useBrowserRow } from '@/browser/registry';
-import { BrowserStream } from '@/browser/BrowserStream';
 import { browserStreamScaleLimit, browserStreamScaleOptions, clampBrowserStreamScale, useBrowserStreamQuality } from '@/browser/stream-quality';
 import { useSwipeOverlay } from '@/browser/swipe-overlay';
-import { endpointKey, useEndpointId } from '@/state/keys';
 import { desktop, isApplePlatform, isDesktop } from '@/desktop/bridge';
+import { nodeInfoOf } from '@/extensions/slots';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { useNodeHost } from '@/nodes/node-host';
 import { useLocalDaemonId, usePage } from '@/nodes/use-page';
-import { Button, ButtonGroup, EmptyState, Icon, IconButton, Select, formatShortcut, KEY_SHORTCUTS } from '@adecore/ui';
+import { endpointKey, useEndpointId } from '@/state/keys';
 
 /* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
 export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }) {
@@ -143,6 +145,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                 />
                 {native && <IconButton icon={Code} size="sm" label={t('browser.inspect')} disabled={!hasPage} onClick={() => browserRegistry.inspect(key)} />}
             </ButtonGroup>
+            <SlotRow place="browserToolbar" context={{ node: nodeInfoOf(id), url: state?.url ?? saved ?? '' }} />
             {/* The bar is the one piece a browser node and a browser view both mount, and the plate
                 it draws lands in the parked host either way, never in the bar itself. */}
             <BrowserErrorPlate id={id} />

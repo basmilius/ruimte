@@ -1,4 +1,3 @@
-import type { DiagramContent, DrawingColor } from '@ruimte/contracts';
 import {
     DEFAULT_EDGE_TONE,
     DEFAULT_GROUP_TONE,
@@ -13,6 +12,7 @@ import {
     textLinesOf,
     type DiagramLayout
 } from '@adecore/diagram';
+import type { DiagramContent, DrawingColor } from '@ruimte/contracts';
 
 // The palette names resolve through the theme's own tokens, so a diagram follows light and dark.
 function ink(tone: DrawingColor): string {

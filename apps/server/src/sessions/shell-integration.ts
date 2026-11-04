@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { join, basename } from 'node:path';
-import { writeAtomic } from '@adecore/agents';
+import { writeAtomic } from '@adecore/utils/fs';
 import { shellName } from '../pty/pty.ts';
 
 export type ShellEnvironment = (shell: string, env: Record<string, string>) => void;

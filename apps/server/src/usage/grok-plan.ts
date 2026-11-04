@@ -1,10 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { UsageWindow } from '@ruimte/contracts';
-import { isNotFound } from '@adecore/agents';
 import { fraction, type ProbeEnv, type ProbeResult } from '@adecore/agents/usage';
-import { isRecord } from '../is-record.ts';
+import { isNotFound } from '@adecore/utils/errors';
+import { isRecord } from '@adecore/utils/record';
+import type { UsageWindow } from '@ruimte/contracts';
 
 /* The billing view Grok's own `/usage` reads, on the proxy its CLI talks to. Undocumented, so any other shape is a failed read. */
 const GROK_BILLING_URL = 'https://cli-chat-proxy.grok.com/v1/billing?format=credits';

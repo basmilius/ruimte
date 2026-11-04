@@ -5,7 +5,7 @@ import { useSettings } from '@/state/settings';
 import { useWindow } from '@/state/window';
 import type { Workspace } from '@/transport/connections';
 import { NO_TABS, startWindowTabs, useWindowTabs, type TabsShell } from './window-tabs';
-import { moveToNewWindow, outsideViewport, tearOutTab, wantsNewWindow, type MoveDeps, type TearOutDeps } from './windows';
+import { moveToNewWindow, tearOutTab, wantsNewWindow, type MoveDeps, type TearOutDeps } from './windows';
 
 function spyMove(over: Partial<MoveDeps> = {}): { deps: Partial<MoveDeps>; steps: string[] } {
     const steps: string[] = [];
@@ -215,18 +215,5 @@ describe('wantsNewWindow', () => {
 
     test('is never true where no shell opens windows', () => {
         expect(wantsNewWindow({ metaKey: true, ctrlKey: true }, true, null)).toBe(false);
-    });
-});
-
-describe('letting go of a tab outside the window', () => {
-    const size = { innerWidth: 800, innerHeight: 600 };
-
-    test('is outside past any edge and inside on the edge itself', () => {
-        expect(outsideViewport(-1, 300, size)).toBe(true);
-        expect(outsideViewport(400, 601, size)).toBe(true);
-        expect(outsideViewport(400, -1, size)).toBe(true);
-        expect(outsideViewport(801, 300, size)).toBe(true);
-        expect(outsideViewport(0, 0, size)).toBe(false);
-        expect(outsideViewport(800, 600, size)).toBe(false);
     });
 });

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { deriveIdentity, faviconHref, readIdeaName, sniffIconMime, IdentityCache, ICON_MAX_BYTES } from './project-identity.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { deriveIdentity, faviconHref, readIdeaName, sniffIconMime, IdentityCache, ICON_MAX_BYTES } from './project-identity.ts';
 
 let root: string;
 let folder: string;

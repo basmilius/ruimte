@@ -1,0 +1,98 @@
+import { ChatApproval } from '@/components/docs/guide/ChatApproval.tsx';
+import { Shortcut } from '@/components/docs/Shortcut.tsx';
+import { Note } from '@/components/docs/guide/ui.tsx';
+
+export const metadata = { title: 'AI chats' };
+
+# AI chats
+
+<p className="lead">An AI chat runs an agent CLI in a conversation Ruimte draws. You answer its questions and approvals in the app or on your phone.</p>
+
+<ChatApproval />
+
+## Chat or terminal
+
+Both run the agent CLI on your machine, with its own login.
+
+| | Terminal | AI chat |
+| --- | --- | --- |
+| Interface | The CLI's own | Messages drawn by Ruimte |
+| Questions and approvals | Answered in the terminal | Answered in cards, here or on your phone |
+| Plan beside it | No | Yes |
+| Tables, maps and pages in replies | No | Yes |
+
+## Providers
+
+Chats work with Claude Code, Codex, GitHub Copilot, Grok and Antigravity. Settings, Providers adds more:
+
+- **Claude API**, which runs Claude Code on an Anthropic API key, so Claude Code has to be installed
+- **NanoGPT**, with a key for its subscription
+- other agents from the public agent registry, under **Add provider**
+
+## Start a chat
+
+- On a canvas, press <Shortcut keys="Alt+C" />, or choose **Chat** under Agents.
+- As a view of its own, run **New Claude Code chat view** (or another CLI) from the command palette.
+- Outside a project, press <Shortcut keys="Mod+Alt+N" />.
+
+The control beside the composer sets the model, the reasoning effort, the account and the permissions. <Shortcut keys="Mod+Shift+." /> raises the effort, <Shortcut keys="Mod+Shift+," /> lowers it. A pick becomes the default for new chats of that CLI.
+
+## Write a message
+
+These keys open a picker in the composer:
+
+| Key | Picks |
+| --- | --- |
+| `/` | A command of the CLI |
+| `@` | A file of the project |
+| `$` | A skill |
+| `#` | A view or node of the project |
+
+A `#` reference lets the agent read and work in that view or node, as over a line on the canvas. A terminal you reference stays read-only.
+
+- To attach files, click the attach button or drop them on the chat.
+- To change which key sends, open Settings, Chats, Send with.
+- <Shortcut keys="Alt+ArrowUp" /> and <Shortcut keys="Alt+ArrowDown" /> bring back messages you sent.
+
+A message you send while Claude Code or Codex works reaches it at its next step. Hold <Shortcut keys="Alt" /> while sending to queue it until the turn ends instead. Turning off Settings, Chats, Send to a working agent right away swaps the two.
+
+## Permissions
+
+| Mode | The agent asks before |
+| --- | --- |
+| Supervised | Commands and file changes |
+| Auto-accept edits | Commands |
+| Auto | Actions it does not judge routine |
+| Full access | Nothing |
+
+Set the defaults for new agents under Settings, Agents. An agent never gives an agent it opens a wider mode than its own.
+
+## Answer a request
+
+A **Run command** card, or a card for another tool, shows what the agent wants to do. For file changes it shows the diff. Click **Allow** or **Deny**, or **Always allow** when the CLI offers it. To tell the agent why you deny, click **Add a reason** first.
+
+A question card lists choices. Pick one or more, or write your own under **Something else…**, then click **Answer**.
+
+While a request waits, the chat reads **Needs you**. You can also answer from the Needs you list or your phone; see [Needs you](/docs/guide/attention).
+
+## Control a running chat
+
+| Action | Result |
+| --- | --- |
+| **Stop** | Ends the turn. Shift-click to stop the sub-agents too. |
+| **Clear** | Deletes the conversation, attachments and plans. The chat stays. |
+| **Restart agent session** | Loads new skills, plugins, commands and MCP servers for the next message. The conversation stays. |
+| **Bookmark message** | Marks a message to find it again. |
+| <Shortcut keys="Mod+F" /> | Finds text in the chat. |
+| **Search chats** | Searches every chat of the project, from the command palette. |
+
+Settings, Chats, Show what an agent reads and runs hides or shows the file reads and commands in the thread.
+
+## Usage limits
+
+When a chat stops on a usage limit, it shows when the limit resets.
+
+- To continue by itself after the reset, turn on Settings, Agents, Continue after a usage limit. A turn that failed on an overloaded model then also tries again later. **Resume at reset** turns this off for one chat.
+- To continue now on another account of the same CLI, click **Continue on** or pick the account in the account menu.
+
+<Note>Ruimte never moves a chat to another account by itself.</Note>

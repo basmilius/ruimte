@@ -76,6 +76,20 @@ import Testing
         #expect(CanvasEditing.members(of: group, in: canvas).map(\.stableID) == ["far"])
     }
 
+    @Test func anOpenGroupThatSpellsOutItsMembersHoldsThoseAlone() {
+        let group = node("g", "group", w: 1000, h: 1000).setting("memberIds", .array([.string("far")]))
+        let canvas: JSONValue = .object(["nodes": .array([group, node("near", "chat", x: 10), node("far", "chat", x: 5000)])])
+        #expect(CanvasEditing.members(of: group, in: canvas).map(\.stableID) == ["far"])
+    }
+
+    @Test func ofTwoOverlappingGroupsOnlyTheLargerHoldsTheOther() {
+        let large = node("large", "group", w: 1000, h: 1000)
+        let small = node("small", "group", x: 400, y: 400, w: 900, h: 900)
+        let canvas: JSONValue = .object(["nodes": .array([large, small])])
+        #expect(CanvasEditing.members(of: large, in: canvas).map(\.stableID) == ["small"])
+        #expect(CanvasEditing.members(of: small, in: canvas).isEmpty)
+    }
+
     @Test func aContextLinkIntoAnAgentIsLabeledAndRunsBothWaysBetweenAgents() {
         var ids = ["one", "two", "three"].makeIterator()
         let canvas: JSONValue = .object([

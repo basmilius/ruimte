@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { useUi } from '@/state/ui';
+import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
+import { menuItem } from '../../../testing/dom-helpers';
 import { FakeMachine } from '../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';
-import { menuItem } from '../../../testing/dom-helpers';
-import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
 
 /*
  * The tree of a commit draws its rows in a shadow root, and happy-dom hands React no event from inside

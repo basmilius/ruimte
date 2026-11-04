@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import { readChatPreferences, rememberChatPreferences } from '@adecore/agents-react/chat';
 import type { ProjectView, RuntimeMode } from '@ruimte/contracts';
+import { act } from 'react';
 import { openNewChatAfterSend } from '@/chat/new-chat-after-send';
 import { currentEndpointId } from '@/state/keys';
 import { chatInfoOf } from '../../testing/chat-info';
+import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, until, type Mounted } from '../../testing/dom';
 
 const LEAD: ProjectView = { kind: 'chat', id: 'chat-lead', name: 'Lead', node: {} };
 

@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
+import { BookmarkStore } from '@adecore/agents/chat';
 import type { ChatBookmark } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { BookmarkStore } from '@adecore/agents/chat';
-import { INLINE_EDIT_PREAMBLE } from './inline-edit.ts';
 import { makeChatFixture, retire } from './chat-manager.fixture.test.ts';
+import { INLINE_EDIT_PREAMBLE } from './inline-edit.ts';
 
 type ChatFixture = Awaited<ReturnType<typeof makeChatFixture>>;
 let home: ChatFixture['home'];

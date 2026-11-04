@@ -1,5 +1,5 @@
-import type { AgentKind } from '@ruimte/contracts';
 import type { ChatProvider } from '@adecore/agents/providers';
+import type { AgentKind } from '@ruimte/contracts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import { GitError, streamWithTimeout, type GitResult } from './run.ts';
 

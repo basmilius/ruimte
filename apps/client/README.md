@@ -37,7 +37,7 @@ Missing data stays missing and never becomes zero. The dialog shows the source a
 
 ## Code editor
 
-The editor lives in ADE CORE (`@adecore/editor-core`, `@adecore/editor`, `@adecore/editor-react`). Ruimte owns the language adapters in `src/language`, the AI actions in `src/editor-ai` and the on-device client in `src/ondevice`. Language servers run behind the daemon; see the [daemon README](../server/README.md#language-servers).
+The editor lives in ADE CORE (`@adecore/editor-core`, `@adecore/editor`, `@adecore/editor-react`). Ruimte owns the language adapters in `src/language`, the AI actions in `src/editor-ai` and the editor model client in `src/editor-assist`. Language servers run behind the daemon; see the [daemon README](../server/README.md#language-servers).
 
 `RUIMTE_EDITOR_KEYMAP` in `src/shell/editor-keymap.ts` holds editor shortcuts and the keys shown in menus, the palette and settings. `editor-keymap.test.ts` checks collisions with application shortcuts. Reformat is Option+Cmd+L; selection to chat is Option+Cmd+K (Ctrl+Alt+K elsewhere). Code colors live in `src/shell/panels/code-themes.ts`, with contrast checks in `code-themes.test.ts`. The code font sits under Appearance because terminals share it.
 
@@ -55,13 +55,13 @@ Agent changes have Off, Gutter and Review modes. The daemon records provenance f
 
 When disk changes overlap an unsaved draft, the editor compares original, draft and incoming text. Non-overlapping changes merge as one undo step. Overlapping ones offer Keep yours, Keep theirs and Keep both, and autosave waits until each is answered.
 
-Explain, rename suggestions and ghost text use Apple Foundation Models on the daemon's Mac, with no tools and no file changes. Ghost text runs on request: Tab accepts, Option+] accepts a word, Escape dismisses. Settings say why the model is unavailable. See the [daemon's on-device documentation](../server/README.md#on-device-help-for-the-editor).
+Explain, rename suggestions and ghost text use the model chosen under Settings > Editor > AI. Automatic picks the cheapest available model, trying Claude, Codex, Grok, then Antigravity. Inline edits also default to the cheapest model. The selected provider receives the code. Ghost text runs on request: Tab accepts, Option+] accepts a word, Escape dismisses. Settings show the resolved model or why it is unavailable. See the [daemon's editor model documentation](../server/README.md#editor-model).
 
 Open acceptance and limits are in [NEXT.md](../../docs/NEXT.md#15-language-servers).
 
 ## Icons
 
-Icons are Lucide through the `Icon` component of `@adecore/ui`, which sets the pixel box and stroke. Brand marks for the agent CLIs come from simple-icons (`src/chat/host.ts`).
+Icons are Lucide through the `Icon` component of `@adecore/ui`, which sets the pixel box and stroke. Brand marks for the agent CLIs come from `@adecore/agents-react/providers`.
 
 ## Crash reports
 

@@ -1,10 +1,11 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { chmod, mkdir, rename, rm } from 'node:fs/promises';
-import { writeAtomic } from '@adecore/agents';
 import { join } from 'node:path';
-import { z } from 'zod';
+import type { AcpServerLaunch } from '@adecore/agents/providers';
+import { writeAtomic } from '@adecore/utils/fs';
 import type { AgentKind, AgentServerStatus } from '@ruimte/contracts';
+import { z } from 'zod';
 import { downloadFile, sha256Of, type FileDownload } from '../artifacts/artifact-fs.ts';
 import { extractZipFile } from '../language/archive.ts';
 
@@ -42,11 +43,6 @@ export async function downloadChecked(download: FileDownload, url: string, desti
 
 const InstalledSchema = z.object({ version: z.string(), sha256: z.string(), executable: z.string(), args: z.array(z.string()) });
 type Installed = z.infer<typeof InstalledSchema>;
-
-/* What a provider asks of its server: the line that starts it, once a verified copy is in place. */
-export interface AcpServerLaunch {
-    launch(): string[] | null;
-}
 
 interface AcpServerInstallOptions {
     provider: AgentKind;

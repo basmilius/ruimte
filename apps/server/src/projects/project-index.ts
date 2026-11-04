@@ -129,6 +129,19 @@ export class ProjectIndex {
         return this.projects.get(projectId)?.folder ?? null;
     }
 
+    /* The project the daemon knows in this folder, open or not, or null for none. */
+    projectOfFolder(folder: string): string | null {
+        const wanted = resolve(folder);
+
+        for (const [projectId, project] of this.projects) {
+            if (resolve(project.folder) === wanted) {
+                return projectId;
+            }
+        }
+
+        return null;
+    }
+
     /* The folder of every project the daemon knows, open or not. */
     folders(): string[] {
         return [...this.projects.values()].map((project) => project.folder);
@@ -231,7 +244,7 @@ export class ProjectIndex {
 
     /*
      * The view or node under `id` in a project other than that of `fromId`. It only words the note in
-     * front of a message: this opens no door, since the `--project` of every command there checks the
+     * front of a message: this opens no door, since the `project` of every command there checks the
      * reach again, and what a chat may reach without it still asks `referenceBeside`.
      */
     referenceElsewhere(fromId: string, id: string): Reference | null {

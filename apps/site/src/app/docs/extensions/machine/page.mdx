@@ -1,0 +1,201 @@
+export const metadata = { title: 'The project and the machine' };
+
+# The project and the machine
+
+<p className="lead">The client part reads and changes the project in front: its canvas, views, files, git and databases, and what runs on the machine.</p>
+
+Every call works on the project of the window. Reading what is on screen needs no permission; the rest names its permission below.
+
+## When a call fails
+
+A call that can fail answers a `Result`. Check `ok` before you read `value`:
+
+```ts
+const readme = await files.readText('README.md');
+
+if (!readme.ok) {
+    host.notify(readme.error.message, {
+        tone: 'error'
+    });
+
+    return;
+}
+
+render(readme.value);
+```
+
+`error.code` says why, so you can act on one reason and report the rest:
+
+| Code | Why |
+| --- | --- |
+| `permission-denied` | The manifest does not ask for the permission. |
+| `no-project` | No project with a folder is open. |
+| `no-canvas` | No canvas is in front to put a node on. |
+| `not-found` | The node, file, chat or launch is not there. |
+| `outside-project` | A path leaves the project folder. |
+| `refused` | The machine or the person said no, such as a person who keeps the nodes `canvas.remove` asked about. |
+| `limit` | Too many calls in a while, such as a 21st `chats.send` to one chat within an hour. |
+| `timeout` | No answer in time. |
+| `unavailable` | The machine, or your server part, cannot answer now. |
+| `failed` | Anything else; `message` says what. |
+
+A call throws only for an argument of the wrong shape, which is a mistake in your code. Hooks such as `useNodes`, the `define*` functions and `host.notify`, `host.copy` and `host.openUrl` answer no Result. While `ruimte extension dev` runs, every failed call also shows in its terminal.
+
+## What is on screen
+
+```ts
+const selection = useSelection();
+const terminals = useNodes((node) => node.kind === 'terminal');
+const project = useProject();
+```
+
+`useNode`, `useViews`, `useActiveView`, `useMachine` and `useTheme` read the rest. [Events](/docs/extensions/events) tells you when any of it changes.
+
+## The canvas
+
+With `canvas.write`:
+
+```ts
+const note = canvas.createNote({
+    title: 'Summary',
+    text,
+    near: selection
+});
+
+if (note.ok) {
+    canvas.link(selection[0], note.value);
+    canvas.arrange(selection, 'grid');
+}
+```
+
+`canvas` also creates file, browser and your own nodes, groups and moves nodes, and links and unlinks them. Each answers a `Result`, with `no-canvas` when no canvas is in front. `canvas.remove` asks the person first and answers `refused` when they keep the nodes. `select` and `reveal` need no permission.
+
+With `views.write`, `views.createCanvas` and `views.rename` change views; `views.open` needs nothing.
+
+## Files and git
+
+Paths are relative to the project folder. A path outside it answers `outside-project`.
+
+```ts
+const readme = await files.readText('README.md');
+const watching = files.watch('src', () => refresh());
+
+if (watching.ok) {
+    stopLater(watching.value);
+}
+```
+
+`files.readText` and `list` need `files.read`, `write` needs `files.write`, and `open` shows a file in the editor without either. `git.status`, `git.diff` and `git.log` need `git.read`:
+
+```ts
+const status = await git.status();
+const diff = await git.diff({
+    path: 'src/app.ts'
+});
+const log = await git.log({
+    limit: 5
+});
+```
+
+`git.diff` reads one file of the working tree, or of the index with `staged: true`. `git.log` answers the newest commits first, each with `at` in milliseconds.
+
+## Databases
+
+With `database.read`, an extension runs one `SELECT` or `WITH` statement on a read-only session, as an agent does:
+
+```ts
+const connections = await database.connections();
+const [connection] = connections.ok ? connections.value : [];
+
+if (connection !== undefined) {
+    const result = await database.query(connection.id, 'select count(*) from orders');
+
+    if (result.ok) {
+        render(result.value.rows);
+    }
+}
+```
+
+A cell is a string, number, boolean or null. A large number, a decimal or a date comes as the text the database writes for it. Two kinds of cell come as an object:
+
+| Cell | Shape |
+| --- | --- |
+| Bytes | `{ kind: 'binary', hex, length? }`: the bytes as hex, cut off when there are many. `length` counts all of them, and is there only when `hex` is cut off. |
+| A long text | `{ kind: 'longText', preview, length }`: the start of the text, with the `length` of the whole. |
+
+A query answers at most 500 rows. `hasMore` says whether there were more.
+
+## What the machine runs
+
+Each of these calls the machine action of the same name, so `launches.start({ launch: 'web' })` is `launch.start`. Each answers a `Result` with a typed `value`, listed under `MachineActions` in the [reference](/docs/extensions/reference/client).
+
+| Object | Calls | Permissions |
+| --- | --- | --- |
+| `launches` | `list`, `read`, `start`, `restart`, `stop` | `launches.read` to read, `launches.run` for the rest |
+| `routines` | `list`, `run`, `pause`, `resume` | `routines.read` to list, `routines.run` for the rest |
+| `artifacts` | `list`, `read`, `publish` | `artifacts.read` to read, `artifacts.write` to publish |
+| `browser` | `inspect`, `navigate`, `back`, `forward`, `reload`, `screenshot` | `browser.control` |
+| `devices` | `list`, `inspect`, `screenshot`, `tap`, `launch` | `devices.control` |
+
+A browser or device takes the node it is on:
+
+```ts
+const page = await browser.inspect({
+    node
+});
+
+if (page.ok && page.value.page !== null) {
+    host.notify(page.value.page.title);
+}
+```
+
+An agent may only drive a browser or device it has a line to. An extension has no node for a line to reach, so with the permission it drives any of the project's.
+
+`artifacts.publish` puts files in the Output of the project in front. Give each file as `text` or as `base64` bytes, up to 2 MB together:
+
+```ts
+const published = await artifacts.publish({
+    files: [
+        {
+            name: 'weekly.md',
+            text: report
+        }
+    ],
+    key: 'weekly-report'
+});
+```
+
+The same `key` adds a new version to the same artifact. Pass a `requestId` of your own when you may retry, and the retry lands once.
+
+## Terminals
+
+`terminals.read(node)` answers what a terminal shows, with `terminals.read`. `terminals.open()` opens a shell beside the nodes you name, with `canvas.write`. Only a person types into a terminal.
+
+## Context
+
+With `context.read`, `context.read({ nodes })` answers what an agent would read of those nodes along a line, such as a note's text, a file or a terminal's screen.
+
+## Talking to the person
+
+`host` shows things to the person and asks them things:
+
+```ts
+host.notify('Saved', {
+    action: {
+        title: 'Open',
+        run: () => files.open('notes.md')
+    }
+});
+
+const confirmed = await host.confirm({
+    title: 'Remove 3 notes?',
+    body: 'This cannot be undone.',
+    danger: true
+});
+```
+
+`host.prompt`, `host.pick`, `host.pickFolder`, `host.openUrl`, `host.copy` and `host.openSettings` do what their names say.
+
+## Usage
+
+With `usage.read`, `useUsageLimits()` reads how much of each plan window the person used, from 0 to 1.

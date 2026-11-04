@@ -1,16 +1,17 @@
+import { nodeChats, resolveStoredPath, type Worktree } from '@ruimte/contracts';
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
-import { nodeChats, resolveStoredPath, type Worktree } from '@ruimte/contracts';
 import { deleteNodesAction } from '@/actions/client-actions';
 import { askBeforeEndingAgents, type PendingEnd } from '@/agents/end-children';
+import { nodesOfView } from '@/project/view-nodes';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { worktreeSessionsOf, worktreesLeftBy } from '@/shell/panels/worktree-rows';
-import { nodesOfView } from '@/project/view-nodes';
+import type { CanvasState } from '@/state/canvas';
+import { goingWithDelete } from '@/state/canvas-model';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointOfNode } from '@/state/keys';
-import { transportFor } from '@/transport';
 import { useProject } from '@/state/project';
-import type { CanvasState } from '@/state/canvas';
+import { transportFor } from '@/transport';
 import type { Transport } from '@/transport/transport';
 
 /*
@@ -24,13 +25,10 @@ export function deleteSelectionAsking(
     transport: Pick<Transport, 'request'> | null,
     folder: string | null = useProject.getState().current?.folder ?? null
 ): Promise<void> {
-    const { nodes, selection } = store.getState();
+    const { nodes, texts, lines, selection } = store.getState();
     const picked = [...selection];
-    const going = picked.flatMap((id) => {
-        const node = nodes[id];
-        // A collapsed group takes what it hid along, which `deleteSelected` does as well.
-        return node?.kind === 'group' && node.collapsed ? [id, ...(node.memberIds ?? [])] : [id];
-    });
+    // A collapsed group takes what it hid along, which `deleteSelected` does as well.
+    const going = goingWithDelete(picked, nodes, texts, lines);
     // A design node ends every chat it holds, each of them asked about under its own id.
     const holderOf = new Map(
         going.flatMap((id): [string, string][] => {

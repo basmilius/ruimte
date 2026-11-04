@@ -1,12 +1,17 @@
-import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
 import { Select } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
+import clsx from 'clsx';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useInstalledExtensions } from '@/extensions/loader';
+import { useContributions } from '@/extensions/registry';
+import { chooseExtensionTheme, listExtensionThemes, type ThemeChoice } from '@/extensions/themes';
+import { AccentRow, PaletteRow } from '@/shell/settings/panes/ColorRows';
 import { FontSection } from '@/shell/settings/panes/FontSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
+import { useExtensionTheme } from '@/state/extension-theme';
 import { useSettings } from '@/state/settings';
-import { AccentRow, PaletteRow } from '@/shell/settings/panes/ColorRows';
 import { useTheme, type Theme } from '@/state/theme';
 
 const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
@@ -29,10 +34,42 @@ function AccentMark({ className }: { className: string }) {
     return <span className={clsx('h-3 w-7 rounded-full bg-accent', className)} />;
 }
 
+/* The themes that enabled extensions bring, loaded again when what is installed changes. */
+function useExtensionThemes(): readonly ThemeChoice[] {
+    const installed = useInstalledExtensions((state) => state.installed);
+    const builtInThemes = useContributions((state) => state.builtInThemes);
+    const [themes, setThemes] = useState<readonly ThemeChoice[]>([]);
+
+    useEffect(() => {
+        let current = true;
+
+        void listExtensionThemes(installed).then((next) => {
+            if (current) {
+                setThemes(next);
+            }
+        });
+
+        return () => {
+            current = false;
+        };
+    }, [installed, builtInThemes]);
+
+    return themes;
+}
+
+function sampleFrame(checked: boolean): string {
+    return clsx(
+        'relative flex h-24 w-39 overflow-hidden rounded-[10px]',
+        checked ? 'ring-2 ring-accent ring-offset-2 ring-offset-surface' : 'ring-1 ring-border-strong'
+    );
+}
+
 function ThemePicker() {
     const { t } = useTranslation('settings');
     const theme = useTheme((state) => state.theme);
     const setTheme = useTheme((state) => state.setTheme);
+    const extensionTheme = useExtensionTheme((state) => state.key);
+    const extensionThemes = useExtensionThemes();
     return (
         <div className="flex flex-wrap gap-3.5" role="radiogroup" aria-label={t('appearance.theme.label')}>
             {THEMES.map((id) => (
@@ -40,16 +77,14 @@ function ThemePicker() {
                     key={id}
                     type="button"
                     role="radio"
-                    aria-checked={theme === id}
+                    aria-checked={extensionTheme === null && theme === id}
                     className="flex flex-col items-center gap-2 rounded-lg"
-                    onClick={() => setTheme(id)}
+                    onClick={() => {
+                        chooseExtensionTheme(null);
+                        setTheme(id);
+                    }}
                 >
-                    <span
-                        className={clsx(
-                            'relative flex h-24 w-39 overflow-hidden rounded-[10px]',
-                            theme === id ? 'ring-2 ring-accent ring-offset-2 ring-offset-surface' : 'ring-1 ring-border-strong'
-                        )}
-                    >
+                    <span className={sampleFrame(extensionTheme === null && theme === id)}>
                         {id === 'system' ? (
                             <>
                                 <ThemeSample side="light" half />
@@ -61,7 +96,24 @@ function ThemePicker() {
                             <ThemeSample side={id} half={false} />
                         )}
                     </span>
-                    <span className={clsx('text-xs', theme === id ? 'text-text' : 'text-text-muted')}>{t(`appearance.theme.options.${id}`)}</span>
+                    <span className={clsx('text-xs', extensionTheme === null && theme === id ? 'text-text' : 'text-text-muted')}>
+                        {t(`appearance.theme.options.${id}`)}
+                    </span>
+                </button>
+            ))}
+            {extensionThemes.map((choice) => (
+                <button
+                    key={choice.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={extensionTheme === choice.key}
+                    className="flex flex-col items-center gap-2 rounded-lg"
+                    onClick={() => chooseExtensionTheme(choice)}
+                >
+                    <span className={sampleFrame(extensionTheme === choice.key)}>
+                        <img src={choice.thumbnailUrl} alt="" className="h-full w-full object-cover" draggable={false} />
+                    </span>
+                    <span className={clsx('max-w-39 truncate text-xs', extensionTheme === choice.key ? 'text-text' : 'text-text-muted')}>{choice.name}</span>
                 </button>
             ))}
         </div>
@@ -70,6 +122,7 @@ function ThemePicker() {
 
 export function AppearancePane() {
     const { t } = useTranslation('settings');
+    const extensionTheme = useExtensionTheme((state) => state.key);
     const panelLayout = useSettings((s) => s.panelLayout);
     const update = useSettings((s) => s.update);
 
@@ -79,12 +132,14 @@ export function AppearancePane() {
                 <SettingsRow searchId="appearance.theme" label={t('appearance.theme.label')} description={t('appearance.theme.description')}>
                     <ThemePicker />
                 </SettingsRow>
-                <SettingsRow
-                    searchId="appearance.palette"
-                    label={t('appearance.palette.label')}
-                    description={t('appearance.palette.description')}
-                    control={<PaletteRow />}
-                />
+                {extensionTheme === null && (
+                    <SettingsRow
+                        searchId="appearance.palette"
+                        label={t('appearance.palette.label')}
+                        description={t('appearance.palette.description')}
+                        control={<PaletteRow />}
+                    />
+                )}
                 <SettingsRow
                     searchId="appearance.accent"
                     label={t('appearance.accent.label')}
@@ -108,6 +163,7 @@ export function AppearancePane() {
                     }
                 />
                 <SettingSwitchRow id="appearance.projectGlow" setting="projectGlow" />
+                <SettingSwitchRow id="appearance.scrollBounce" setting="scrollBounce" />
             </SettingsSection>
             <FontSection />
         </>

@@ -1,0 +1,60 @@
+import { Shortcut } from '@/components/docs/Shortcut.tsx';
+import { LaunchesPanel } from '@/components/docs/guide/LaunchesPanel.tsx';
+import { Note } from '@/components/docs/guide/ui.tsx';
+
+export const metadata = { title: 'Launches' };
+
+# Launches
+
+<p className="lead">Launches are a project's commands, such as a dev server or a test suite. You start one with a key, and an agent can start the ones you approved.</p>
+
+## Kinds of launch
+
+| Kind | What it is |
+| --- | --- |
+| Service | Keeps running, like a web server. With an address, it counts as running once that port answers. |
+| Task | Runs until done, like the tests or a build. |
+| Group | Starts the launches you check together. |
+
+## Add a launch
+
+1. Run **Edit launches…** from the command palette.
+2. Fill in the name, kind, command, folder and environment. A service can have an address.
+3. Click **Save**. Saving approves the command on this machine.
+
+| Option | Effect |
+| --- | --- |
+| Launch when the project opens | Starts the launch when you open the project, once approved on this machine |
+| Share with team | Saves the launch in the project file your team commits |
+| Secret, kept on this machine | Keeps an environment variable's value on your machine, out of every project file |
+
+## Import launches
+
+Ruimte finds the scripts in `package.json` and `composer.json`, and run configurations. Under **Found in project**, click **Review and import…** and pick the ones you want. Imported launches ask for approval on their first run.
+
+## Run and stop
+
+The Launches panel, in the rail, lists every launch with its state and output.
+
+<LaunchesPanel />
+
+| Shortcut | Action |
+| --- | --- |
+| <Shortcut keys="Mod+Alt+R" /> | Run the chosen launch |
+| <Shortcut keys="Mod+Alt+." /> | Stop it |
+
+If another launch holds a service's port, **Stop and launch** stops that one first. **Force stop** ends a launch that does not stop.
+
+## Approval
+
+A command from a project file runs on your machine only after you approve it. The first run shows **Run a command from the project file?** with the command, folder and environment. Click **Launch** to approve and run it.
+
+An approval holds while the launch stays the same. When its command, folder or environment changes, for example after `git pull`, it asks again.
+
+<Note>Agents can add and change launches, but never approve one. An agent starts, restarts and stops only launches you approved. For any other, its chat shows a card that asks you.</Note>
+
+An agent that needs a secret for a launch, such as an API key, asks for it in a card in its chat. Type the value and click **Save**. Only the launch gets the value, never the agent.
+
+## Run a task after a worktree chat
+
+In the launches menu in the rail, **After a worktree chat finishes** picks one task, such as the tests. It runs in a chat's worktree each time that chat ends a turn with nothing left running. Choosing the task approves it for this project's worktrees. The chat gets a note with the result; the run does not wake it.

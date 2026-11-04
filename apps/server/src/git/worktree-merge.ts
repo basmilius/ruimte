@@ -1,12 +1,12 @@
 import type { GitActionPhase, WorktreeMergePayload, WorktreeMergeResult } from '@ruimte/contracts';
+import { errorText } from '../error-text.ts';
+import { PROJECT_DIR } from '../projects/project-files.ts';
+import { countUsage } from '../stats/usage-stats.ts';
 import { Job, type ProgressSink } from './actions.ts';
 import { abortOperation, conflictedFiles, dropSquashMessage, existingGitPaths, hasStaged, operationOf, squashWaits } from './conflict.ts';
-import { resolveBase } from './status.ts';
 import { GitError, git, readGit, runGit, streamGit, verifyRev } from './run.ts';
+import { resolveBase } from './status.ts';
 import type { Worktrees } from './worktrees.ts';
-import { PROJECT_DIR } from '../projects/project-files.ts';
-import { errorText } from '../error-text.ts';
-import { countUsage } from '../stats/usage-stats.ts';
 
 /* One agent whose folder is inside a worktree. */
 export interface WorktreeAgent {
@@ -44,7 +44,7 @@ function settingsFor(into: string): string[] {
     ].flatMap((setting) => ['-c', setting]);
 }
 
-/* What the agent verb holds a merge to on top of what a person's merge is held to. */
+/* What `worktree_merge` holds a merge to on top of what a person's merge is held to. */
 interface MergeLimits {
     /* Refuses a target checkout with uncommitted changes to tracked files. */
     cleanTarget?: boolean;

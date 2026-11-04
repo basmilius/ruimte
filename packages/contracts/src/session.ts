@@ -59,7 +59,6 @@ export const SessionCreatePayloadSchema = z.object({
     // before this field ignores it and keeps the shell until it is killed.
     endsWithClient: z.boolean().optional()
 });
-export type SessionCreatePayload = z.infer<typeof SessionCreatePayloadSchema>;
 
 // A shell in the home folder that runs a CLI's own login under one of its accounts, for a person
 // who asked for it outside any project. The daemon picks the command, so nothing is ever held.
@@ -71,7 +70,6 @@ export const SessionLoginPayloadSchema = z.object({
     cols,
     rows
 });
-export type SessionLoginPayload = z.infer<typeof SessionLoginPayloadSchema>;
 
 export const SessionAttachPayloadSchema = z
     .object({
@@ -97,20 +95,17 @@ export type SessionAttachResult = z.infer<typeof SessionAttachResultSchema>;
 export const SessionTargetPayloadSchema = z.object({
     sessionId: SessionIdSchema
 });
-export type SessionTargetPayload = z.infer<typeof SessionTargetPayloadSchema>;
 
 export const SessionWritePayloadSchema = z.object({
     sessionId: SessionIdSchema,
     data: z.string()
 });
-export type SessionWritePayload = z.infer<typeof SessionWritePayloadSchema>;
 
 export const SessionResizePayloadSchema = z.object({
     sessionId: SessionIdSchema,
     cols,
     rows
 });
-export type SessionResizePayload = z.infer<typeof SessionResizePayloadSchema>;
 
 export const SessionListResultSchema = z.object({
     sessions: z.array(SessionInfoSchema)
@@ -127,7 +122,6 @@ export const SessionExitEventSchema = z.object({
     sessionId: SessionIdSchema,
     exitCode: z.number().int()
 });
-export type SessionExitEvent = z.infer<typeof SessionExitEventSchema>;
 
 // Sent instead of the output a slow client missed: the daemon owns the screen, so it can hand
 // out a fresh one and continue the stream from there.
@@ -135,7 +129,6 @@ export const SessionResyncEventSchema = z.object({
     sessionId: SessionIdSchema,
     screen: z.string()
 });
-export type SessionResyncEvent = z.infer<typeof SessionResyncEventSchema>;
 
 // The grid the PTY moved to, for every client attached: one that fits another grid draws this one until it is active again.
 export const SessionSizeEventSchema = z.object({
@@ -143,4 +136,3 @@ export const SessionSizeEventSchema = z.object({
     cols,
     rows
 });
-export type SessionSizeEvent = z.infer<typeof SessionSizeEventSchema>;

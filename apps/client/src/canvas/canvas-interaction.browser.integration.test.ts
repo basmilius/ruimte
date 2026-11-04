@@ -134,7 +134,8 @@ test('the canvas keeps selection anchored during scroll, pans over focused bodie
             await view.evaluate('window.canvas.setState({camera:{x:-300,y:0,zoom:0.5}})');
             const modifiers = await view.evaluate<number>('/Mac/.test(navigator.platform) ? 12 : 10');
             await view.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: '@', code: 'Digit2', windowsVirtualKeyCode: 50, modifiers });
-            expect(await view.evaluate<number>('window.canvas.getState().camera.zoom')).toBe(1);
+            // A node this small fills the view only at the canvas's deepest zoom.
+            expect(await view.evaluate<number>('window.canvas.getState().camera.zoom')).toBe(4);
             expect(await view.evaluate<string[]>('window.canvas.getState().selection')).toEqual(['b']);
 
             await view.evaluate('(() => { window.canvas.getState().clearSelection(); window.canvas.setState({camera:{x:0,y:0,zoom:1}}); })()');
@@ -266,6 +267,116 @@ test('a line between two nodes in a group is selected by a press on it, and the 
             await view.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 300, y: 240, button: 'left', buttons: 0, clickCount: 1 });
             expect(await view.evaluate<string[]>('window.canvas.getState().selection')).toEqual(['line']);
             expect(await view.evaluate<number[]>('[window.canvas.getState().nodes.group.x, window.canvas.getState().nodes.group.y]')).toEqual([0, 0]);
+            expect(await view.evaluate<string[]>('window.errors')).toEqual([]);
+        }
+    );
+}, 15000);
+
+test('a double-click on the title of a group renames it and adds no text', async () => {
+    await withBrowserFixture(
+        `
+        import { Canvas } from ${JSON.stringify(join(import.meta.dir, 'Canvas.tsx'))};
+        import { defaultCanvasStore } from ${JSON.stringify(join(import.meta.dir, '../state/canvas.ts'))};
+        import { ChatScopeProvider } from ${JSON.stringify(join(import.meta.dir, '../transport/ChatScopeProvider.tsx'))};
+        import { ConnectionContext } from ${JSON.stringify(join(import.meta.dir, '../transport/context.ts'))};
+        import { machineTransport } from ${JSON.stringify(join(import.meta.dir, '../transport/index.ts'))};
+        defaultCanvasStore.setState({
+            viewId: 'fixture', camera: { x: 0, y: 0, zoom: 1 }, texts: {}, order: ['group'],
+            nodes: { group: { id: 'group', kind: 'group', title: 'Group', x: 0, y: 0, w: 600, h: 500 } }
+        });
+        window.canvas = defaultCanvasStore;
+        createRoot(document.getElementById('root')).render(React.createElement(UIProvider, {i18n:i18next}, React.createElement(ConnectionContext.Provider, {value:{endpointId:'fixture',transport:machineTransport('fixture')}}, React.createElement(ChatScopeProvider, null, React.createElement(Canvas)))));
+    `,
+        '.absolute{position:absolute}.relative{position:relative}.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}.flex{display:flex}[data-canvas-surface]{position:relative;width:800px;height:600px;overflow:hidden}svg{overflow:visible}',
+        async (view) => {
+            await view.evaluate(frame);
+            const [x, y] = await view.evaluate<number[]>(
+                `(() => { const title = [...document.querySelectorAll('[data-node-id="group"] header span')].find((span) => span.textContent === 'Group'); const rect = title.getBoundingClientRect(); return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)]; })()`
+            );
+            for (const clickCount of [1, 2]) {
+                await view.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount });
+                await view.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount });
+            }
+            await view.evaluate(frame);
+
+            expect(await view.evaluate<boolean>(`document.querySelector('[data-node-id="group"] header input') !== null`)).toBe(true);
+            expect(await view.evaluate<number>('Object.keys(window.canvas.getState().texts).length')).toBe(0);
+            expect(await view.evaluate<string[]>('window.errors')).toEqual([]);
+        }
+    );
+}, 15000);
+
+test('two overlapping groups drag apart, the inner one closes from its own button, and a group opened and closed again leaves the nodes below it', async () => {
+    await withBrowserFixture(
+        `
+        import { Canvas } from ${JSON.stringify(join(import.meta.dir, 'Canvas.tsx'))};
+        import { defaultCanvasStore } from ${JSON.stringify(join(import.meta.dir, '../state/canvas.ts'))};
+        import { ChatScopeProvider } from ${JSON.stringify(join(import.meta.dir, '../transport/ChatScopeProvider.tsx'))};
+        import { ConnectionContext } from ${JSON.stringify(join(import.meta.dir, '../transport/context.ts'))};
+        import { machineTransport } from ${JSON.stringify(join(import.meta.dir, '../transport/index.ts'))};
+        defaultCanvasStore.setState({
+            viewId: 'fixture', camera: { x: 0, y: 0, zoom: 1 }, texts: {}, order: ['inner', 'outer', 'kept', 'note', 'folding', 'held', 'below'],
+            nodes: {
+                inner: { id: 'inner', kind: 'group', title: 'Inner', x: 160, y: 120, w: 280, h: 240 },
+                outer: { id: 'outer', kind: 'group', title: 'Outer', x: 0, y: 0, w: 320, h: 280 },
+                kept: { id: 'kept', kind: 'note', title: 'Kept', body: '', x: 20, y: 200, w: 80, h: 60 },
+                note: { id: 'note', kind: 'note', title: 'Note', body: '', x: 320, y: 280, w: 80, h: 60 },
+                folding: { id: 'folding', kind: 'group', title: 'Folding', x: 480, y: 0, w: 280, h: 39, collapsed: true, expandedHeight: 400, memberIds: ['held'] },
+                held: { id: 'held', kind: 'note', title: 'Held', body: '', x: 520, y: 60, w: 80, h: 60 },
+                below: { id: 'below', kind: 'note', title: 'Below', body: '', x: 520, y: 300, w: 80, h: 60 }
+            }
+        });
+        window.canvas = defaultCanvasStore;
+        createRoot(document.getElementById('root')).render(React.createElement(UIProvider, {i18n:i18next}, React.createElement(ConnectionContext.Provider, {value:{endpointId:'fixture',transport:machineTransport('fixture')}}, React.createElement(ChatScopeProvider, null, React.createElement(Canvas)))));
+    `,
+        '.absolute{position:absolute}.relative{position:relative}.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}.flex{display:flex}[data-canvas-surface]{position:relative;width:800px;height:600px;overflow:hidden}svg{overflow:visible}',
+        async (view) => {
+            await view.evaluate(frame);
+            const centerOf = (selector: string): Promise<number[]> =>
+                view.evaluate<number[]>(
+                    `(() => { const rect = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect(); return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)]; })()`
+                );
+            const click = async (x: number, y: number): Promise<void> => {
+                await view.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: 1 });
+                await view.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount: 1 });
+                await view.evaluate(frame);
+            };
+            const state = (expression: string): Promise<unknown> => view.evaluate(`(({ nodes, hidden }) => ${expression})(window.canvas.getState())`);
+
+            // Inner's bar stands over Outer's frame, so a press there is Inner's.
+            const [barX, barY] = [300, 140];
+            expect(
+                await view.evaluate<string | null>(
+                    `document.elementFromPoint(${barX}, ${barY})?.closest('[data-node-id]')?.getAttribute('data-node-id') ?? null`
+                )
+            ).toBe('inner');
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: barX, y: barY, button: 'left', buttons: 1, clickCount: 1 });
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: barX + 200, y: barY + 200, button: 'left', buttons: 1 });
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: barX + 200, y: barY + 200, button: 'left', buttons: 0, clickCount: 1 });
+            await view.evaluate(frame);
+
+            expect(await state('[nodes.outer.x, nodes.outer.y]')).toEqual([0, 0]);
+            expect(await state('[nodes.inner.x, nodes.inner.y, nodes.note.x, nodes.note.y]')).toEqual([360, 320, 520, 480]);
+
+            // Dragged back over Outer, Inner still closes from its own button.
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: barX + 200, y: barY + 200, button: 'left', buttons: 1, clickCount: 1 });
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: barX, y: barY, button: 'left', buttons: 1 });
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: barX, y: barY, button: 'left', buttons: 0, clickCount: 1 });
+            await view.evaluate(frame);
+            // The fixture loads no translations, so a button is labelled by its key.
+            const [closeX, closeY] = await centerOf('[data-node-id="inner"] header button[aria-label="node.close"]');
+            await click(closeX!, closeY!);
+
+            expect(await state('nodes.inner === undefined')).toBe(true);
+            expect(await state('nodes.outer === undefined')).toBe(false);
+
+            const [foldX, foldY] = await centerOf('[data-node-id="folding"] header button[aria-label="group.expand"]');
+            await click(foldX!, foldY!);
+            const [unfoldX, unfoldY] = await centerOf('[data-node-id="folding"] header button[aria-label="group.collapse"]');
+            await click(unfoldX!, unfoldY!);
+
+            expect(await state('nodes.folding.memberIds')).toEqual(['held']);
+            expect(await state('[...hidden]')).toEqual(['held']);
             expect(await view.evaluate<string[]>('window.errors')).toEqual([]);
         }
     );

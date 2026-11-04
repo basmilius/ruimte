@@ -1,5 +1,5 @@
-import { PROTOCOL_VERSION, type DatabaseError } from '@adecore/database/protocol';
 import type { HelperProcess } from '@adecore/database/host';
+import { PROTOCOL_VERSION, type DatabaseError } from '@adecore/database/protocol';
 
 interface Written {
     id: string;

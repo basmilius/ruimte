@@ -1,10 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import i18next from 'i18next';
-import { useTranslation } from 'react-i18next';
-import type { AgentKind, ModelSelection } from '@ruimte/contracts';
-import { perform } from '@/actions/client-actions';
 import type { ChatSendExtras } from '@adecore/agents-react/chat';
-import { providersOf, useChats, useChatRow } from '@adecore/agents-react/state';
 import {
     defaultProvider,
     readChatPreferences,
@@ -14,26 +8,34 @@ import {
     composerWrites,
     useSubagentTrail
 } from '@adecore/agents-react/chat';
+import { Composer, SubagentTimeline, Timeline } from '@adecore/agents-react/chat/ui';
+import { providersOf, useChats, useChatRow } from '@adecore/agents-react/state';
+import { ErrorBoundary, LazyBoundary, messageOf } from '@adecore/ui';
+import type { AgentKind, ModelSelection } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { perform } from '@/actions/client-actions';
+import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { peekOpeningMode, settleOpeningMode } from '@/chat/opening-mode';
 import { deriveNodeTitle } from '@/chat/title';
-import { Composer, SubagentTimeline, Timeline } from '@adecore/agents-react/chat/ui';
-import { useProject } from '@/state/project';
+import { ViewAccessories } from '@/extensions/ContributedSlots';
+import { nodeInfoOf } from '@/extensions/slots';
+import { SlotRow } from '@/extensions/SlotSurfaces';
+import { useMountCount } from '@/measure/mounts';
+import { MissingProviderNote } from '@/nodes/MissingProviderNote';
+import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
+import { ConnectionNotice, NodeNotice } from '@/nodes/NodeNotice';
+import { OutputChatContext } from '@/output/chat-scope';
+import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { endpointKey, useEndpointId } from '@/state/keys';
+import { useProject } from '@/state/project';
 import { chatClientFor } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';
-import { MissingProviderNote } from '@/nodes/MissingProviderNote';
-import { OutputChatContext } from '@/output/chat-scope';
-import { ConnectionNotice, NodeNotice } from '@/nodes/NodeNotice';
-import { useMountCount } from '@/measure/mounts';
-import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
-import { ErrorBoundary, LazyBoundary, messageOf } from '@adecore/ui';
-import { bringPromptToFront } from '@/canvas/prompt-stack';
-import { PROMPTS_IN_NODES } from '@/prompts/placement';
-import { ChatViewPetMount } from '@/pets/ViewPetMounts';
 
 /*
- * The body of a chat, the same on a canvas inside a frame and filling a view of its own. In a view its
- * pet stands on the composer (`pet`), since no node frame is there to carry it. A chat node's workflows
+ * The body of a chat, the same on a canvas inside a frame and filling a view of its own. In a view what a built-in
+ * adds stands on the composer (`accessories`), since no node frame is there to carry it. A chat node's workflows
  * stand beside it on the canvas (`workflowsBeside`), so its composer draws no pill for them.
  */
 export function ChatBody({
@@ -41,13 +43,13 @@ export function ChatBody({
     focused,
     onCanvas = false,
     workflowsBeside = false,
-    pet
+    accessories
 }: {
     id: string;
     focused: boolean;
     onCanvas?: boolean;
     workflowsBeside?: boolean;
-    pet?: { title: string | undefined };
+    accessories?: { title: string | undefined };
 }) {
     useMountCount('chat');
     const { t } = useTranslation('canvas');
@@ -149,7 +151,7 @@ export function ChatBody({
     );
 
     return (
-        <div className="relative flex h-full flex-col bg-surface">
+        <div className="relative flex h-full flex-col bg-surface" data-surface="chat">
             <ConnectionNotice status={status} />
             {status === 'open' && !failure && <MissingProviderNote endpointId={endpointId} kind={info?.provider ?? nodeHost?.provider} />}
             {failure && (
@@ -163,20 +165,29 @@ export function ChatBody({
                     {failure}
                 </NodeNotice>
             )}
+            <SlotRow
+                place="threadHeader"
+                context={{ chat: { id }, node: nodeInfoOf(id) }}
+                words
+                wrap={(row) => <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border px-2 py-1">{row}</div>}
+            />
             <OutputChatContext value={id}>
                 <LazyBoundary fallback={<div className="grow" />}>
                     <Timeline
                         chatId={id}
                         composer={
-                            composer &&
-                            (pet === undefined ? (
-                                composer
-                            ) : (
+                            composer && (
                                 <div className="relative">
-                                    <ChatViewPetMount id={id} title={pet.title} />
+                                    {accessories !== undefined && <ViewAccessories on="chat" id={id} title={accessories.title} />}
+                                    <SlotRow
+                                        place="composer"
+                                        words
+                                        context={{ chat: { id }, node: nodeInfoOf(id) }}
+                                        wrap={(row) => <div className="flex flex-wrap items-center gap-1 px-2 pb-1">{row}</div>}
+                                    />
                                     {composer}
                                 </div>
-                            ))
+                            )
                         }
                         overlay={
                             shown && (

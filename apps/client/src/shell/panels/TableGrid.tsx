@@ -1,9 +1,9 @@
-import { useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import type { FsReadText } from '@ruimte/contracts';
 import { DataGrid, type DataGridProps, type GridLayout, type GridSort } from '@adecore/database';
 import { compileFind, stepIndex } from '@adecore/editor-react/models';
 import { formatBytes, formatNumber } from '@adecore/ui/format';
+import type { FsReadText } from '@ruimte/contracts';
+import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FindBar } from '@/find/FindBar';
 import { useFind } from '@/find/use-find';
 import { FILE_FOOTER } from '@/shell/panels/classes';

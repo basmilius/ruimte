@@ -30,8 +30,8 @@ import {
 import { Miniflare, type WorkerOptions } from 'miniflare';
 import { BENCHMARK_LABS } from './benchmark-labs.ts';
 import { MAX_PAGES } from './benchmarks.ts';
-import { BUNDLED_CATALOGS } from './catalog.ts';
 import { seedStatementsOf } from './catalog-seed.ts';
+import { BUNDLED_CATALOGS } from './catalog.ts';
 import { LIMITS, WINDOW_MS } from './rate-window.ts';
 import { ROTATION_GRACE_MS } from './sessions.ts';
 
@@ -754,14 +754,15 @@ describe('sessions', () => {
     test('a refresh token without its key is worth nothing, and cannot end the session it was copied from', async () => {
         const session = await signIn(2004);
         const stolen = await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, newKeyPair()) });
-        expect(stolen.status).toBe(401);
+        expect(stolen.status).toBe(403);
+        expect(await errorCode(stolen)).toBe('bad-signature');
         expect((await dispatch('/v1/machines', { headers: bearer(session) })).status).toBe(200);
 
         const refreshed = await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, session.key) });
         expect(refreshed.status).toBe(200);
         const next = (await refreshed.json()) as SessionResult;
         // A spent token without the key is not a second holder either, so the session carries on.
-        expect((await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, newKeyPair()) })).status).toBe(401);
+        expect((await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, newKeyPair()) })).status).toBe(403);
         expect((await dispatch('/v1/machines', { headers: bearer(next) })).status).toBe(200);
     });
 
@@ -772,7 +773,7 @@ describe('sessions', () => {
         expect(await errorCode(old)).toBe('clock-skew');
         const other = await signIn(2005, session.key);
         const moved = { ...refreshBody(other.refreshToken, session.key), refreshToken: session.refreshToken };
-        expect((await dispatch('/v1/session/refresh', { method: 'POST', body: moved })).status).toBe(401);
+        expect((await dispatch('/v1/session/refresh', { method: 'POST', body: moved })).status).toBe(403);
         expect((await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, session.key) })).status).toBe(200);
     });
 

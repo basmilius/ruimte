@@ -1,11 +1,11 @@
 import { readdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import { entryExists } from '@adecore/agents';
-import { isInside } from '../canvas/project-paths.ts';
+import { entryExists } from '@adecore/utils/fs';
+import { isWithin } from '@adecore/utils/path';
 import type { ChatItem, ChatMoveInfoPayload, ChatMoveInfoResult, ChatMoveRefusal, ChatMoveTarget } from '@ruimte/contracts';
-import { IGNORED_OWN_NAMES } from './own-files.ts';
 import { workedFolders } from '../chat/worked-folders.ts';
 import { referencedIds } from '../context/references.ts';
+import { IGNORED_OWN_NAMES } from './own-files.ts';
 
 const MAX_FOLDERS = 5;
 const MAX_NAMES = 5;
@@ -99,7 +99,7 @@ export async function chatMoveInfo(payload: ChatMoveInfoPayload, deps: MoveInfoD
     const projects = await deps.projects();
     const refusal = deps.refusal(chatId);
     const newFolderParent = commonParent(
-        projects.filter((project) => project.available && !isInside(deps.ruimteHome, project.folder)).map((project) => project.folder),
+        projects.filter((project) => project.available && !isWithin(deps.ruimteHome, project.folder)).map((project) => project.folder),
         deps.home
     );
     // Nothing is read for an id that is no chat of Chats: it may name any folder.

@@ -1,6 +1,6 @@
+import { useChatRow } from '@adecore/agents-react/state';
 import { chatHostOf, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import { agentName } from '@/plan/plan-view';
-import { useChatRow } from '@adecore/agents-react/state';
 import { useViewNodes, type NodesOfView } from '@/project/view-nodes';
 
 /* The provider of a chat as the project names it, for a chat this client has not attached yet. */

@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useEffect, useState } from 'react';
 import { TrafficLights, Typed } from '../app/primitives.tsx';
 import { PHANTOM_ARROW, PHANTOM_COLORS } from '../film/phantom.ts';
 import { PhantomCursor, type PhantomMode } from '../film/PhantomCursor.tsx';

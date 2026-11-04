@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import { ProjectDocumentSchema, type ProjectCanvasView, type ProjectView } from './project.ts';
 import { duplicateIdIn } from './project-migrate.ts';
 import {
     emptyCanvasView,
@@ -15,6 +14,7 @@ import {
     withViewIcon,
     withoutView
 } from './project-views.ts';
+import { ProjectDocumentSchema, type ProjectCanvasView, type ProjectView } from './project.ts';
 
 function node(id: string, kind: ProjectCanvasView['nodes'][number]['kind'] = 'terminal'): ProjectCanvasView['nodes'][number] {
     return {

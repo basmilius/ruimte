@@ -1,5 +1,30 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { CodedError, type WatchSeams } from '@adecore/agents';
+import {
+    ErrorCodes,
+    LspError,
+    fileUriToPath,
+    pathToFileUri,
+    planWorkspaceOperations,
+    StaleResultError,
+    TextMirror,
+    watchesFile,
+    type ApplyWorkspaceEditParams,
+    type ApplyWorkspaceEditResult,
+    type Diagnostic,
+    type CreatedFile,
+    type DeletedFile,
+    type MessageActionItem,
+    type RenamedFile,
+    type ShowDocumentParams,
+    type ShowDocumentResult,
+    type ShowMessageRequestParams,
+    type WorkspaceEdit,
+    type WorkspaceEditPlan,
+    type WorkspaceEditSource
+} from '@adecore/lsp';
+import { fileExists } from '@adecore/utils/fs';
 import {
     LANGUAGE_ERROR_CODES,
     LANGUAGE_METHODS,
@@ -34,42 +59,18 @@ import type {
     LanguageTraceValue,
     LanguageWillSavePayload
 } from '@ruimte/contracts';
-import { CodedError, fileExists, type WatchSeams } from '@adecore/agents';
-import {
-    ErrorCodes,
-    LspError,
-    fileUriToPath,
-    pathToFileUri,
-    planWorkspaceOperations,
-    StaleResultError,
-    TextMirror,
-    watchesFile,
-    type ApplyWorkspaceEditParams,
-    type ApplyWorkspaceEditResult,
-    type Diagnostic,
-    type CreatedFile,
-    type DeletedFile,
-    type MessageActionItem,
-    type RenamedFile,
-    type ShowDocumentParams,
-    type ShowDocumentResult,
-    type ShowMessageRequestParams,
-    type WorkspaceEdit,
-    type WorkspaceEditPlan,
-    type WorkspaceEditSource
-} from '@adecore/lsp';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import { isDirectory } from '../fs/browse.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
-import { pinnedItem, tagHierarchy } from './hierarchy.ts';
 import { LanguageChoices } from './choices.ts';
-import { CustomLanguageServers, customProfile } from './custom.ts';
+import { CustomLanguageServers, customProfile, UnsavedRemoval } from './custom.ts';
 import { ProjectFileWatcher, type FileChange, type StatPath } from './file-watch.ts';
+import { pinnedItem, tagHierarchy } from './hierarchy.ts';
 import { LanguageInstaller, type CheckoutRevision } from './installer.ts';
 import { findManifests } from './manifests.ts';
-import { nativeStorageOf, nativeStubsOf, type Download, type NativePolicy } from './native.ts';
 import { MERGED_METHODS, mergeAnswers, mergeProviders } from './merge.ts';
+import { nativeStorageOf, nativeStubsOf, type Download, type NativePolicy } from './native.ts';
 import {
     activates,
     additionKindsForLanguage,
@@ -287,7 +288,7 @@ function translated(error: unknown): unknown {
  * and the one owner of each document's text and version, so any number of clients share what a
  * server sees. A server starts when a document that needs it opens (and it is installed), and ends
  * only when its project closes, since starting one again for every file opened costs seconds of
- * indexing. Installing happens only through `install`, which a person's request calls, so no verb and
+ * indexing. Installing happens only through `install`, which a person's request calls, so no tool and
  * no agent reaches it.
  */
 export class LanguageHost {
@@ -504,6 +505,41 @@ export class LanguageHost {
         const saved = await this.custom.save(input);
         await this.customChanged(saved.id);
         return saved;
+    }
+
+    async customSaveFor(extension: string, input: CustomLanguageServerInput): Promise<CustomLanguageServer> {
+        const saved = await this.custom.saveFor(extension, input);
+        await this.customChanged(saved.id);
+        return saved;
+    }
+
+    /* Its servers stop also when the file did not take their removal, which then rejects. */
+    async customRemoveOwned(extension: string): Promise<void> {
+        let removed: readonly string[];
+        let unsaved: UnsavedRemoval | null = null;
+
+        try {
+            removed = await this.custom.removeOwnedBy(extension);
+        } catch (e) {
+            if (!(e instanceof UnsavedRemoval)) {
+                throw e;
+            }
+
+            removed = e.ids;
+            unsaved = e;
+        }
+
+        for (const id of removed) {
+            await this.customChanged(id);
+        }
+
+        if (unsaved !== null) {
+            throw unsaved;
+        }
+    }
+
+    customOwners(): string[] {
+        return this.custom.owners();
     }
 
     async customRemove(id: string): Promise<void> {
@@ -1382,6 +1418,11 @@ export class LanguageHost {
 
     /* Hands an edit to one client, which makes it in its editors and answers with `language.edit.answer`. */
     private sendEdit(projectId: string, clientId: string, edit: WorkspaceEdit, label?: string): Promise<ApplyWorkspaceEditResult> {
+        // A client that left before the server asked would never answer; `dropClient` only settles edits already sent.
+        if (!this.sinks.clientIds().includes(clientId)) {
+            return Promise.resolve({ applied: false, failureReason: 'The client went away' });
+        }
+
         const editId = `edit-${++this.editCounter}`;
         return new Promise<ApplyWorkspaceEditResult>((resolve) => {
             const cancel = this.clock.set(() => pending.settle({ applied: false, failureReason: 'The client did not answer' }), EDIT_ANSWER_MS);

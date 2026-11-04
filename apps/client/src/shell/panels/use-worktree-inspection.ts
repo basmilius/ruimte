@@ -1,7 +1,7 @@
+import { messageOf } from '@adecore/ui';
+import type { Worktree } from '@ruimte/contracts';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Worktree } from '@ruimte/contracts';
-import { messageOf } from '@adecore/ui';
 import { removeVerdict, type RemoveVerdict } from '@/shell/panels/worktree-rows';
 import { useEndpointId } from '@/state/keys';
 import { worktreeLists } from '@/state/worktrees';

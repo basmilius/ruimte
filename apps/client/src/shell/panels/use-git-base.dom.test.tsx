@@ -3,9 +3,9 @@ import { act } from 'react';
 import { useGitSignal } from '@/state/git-watch';
 import { windowWorkspace } from '@/state/window';
 import { ConnectionProvider } from '@/transport/ConnectionProvider';
+import { mount, until, type Mounted } from '../../../testing/dom';
 import { FakeMachine } from '../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';
-import { mount, until, type Mounted } from '../../../testing/dom';
 import { useGitBase } from './use-git-base';
 
 function Reader({ path, cwd }: { path: string; cwd: string }) {

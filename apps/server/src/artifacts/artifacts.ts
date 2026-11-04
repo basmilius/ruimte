@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto';
 import { lstat, readdir, realpath } from 'node:fs/promises';
 import { basename, join, relative, resolve } from 'node:path';
+import { WatchedSinks } from '@adecore/agents/host';
+import { KeyedSerializer } from '@adecore/utils/async';
+import { isWithin } from '@adecore/utils/path';
 import {
     ARTIFACT_LIMITS,
     PEER_ARTIFACT_PIECE_BYTES,
@@ -24,23 +27,20 @@ import {
     type ArtifactVersionRef,
     type ChatAttachment
 } from '@ruimte/contracts';
-import { KeyedSerializer } from '@adecore/agents';
-import { WatchedSinks } from '@adecore/agents/host';
-import { isInside } from '../canvas/project-paths.ts';
 import type { MachineHome } from '../fs/machine-home.ts';
+import { realOrNull } from '../fs/real-path.ts';
 import { sniffMime } from '../fs/sniff.ts';
-import { DEVICE_CAPTURES_FOLDER } from '../shots.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import { shotFolders } from '../shots.ts';
 import { cleanupProposals, NO_PINS, removable, type PinnedVersions } from './artifact-cleanup.ts';
 import { copyVersionInto } from './artifact-copy.ts';
 import { ArtifactError, isTextMime, SNIFF_HEAD_BYTES } from './artifact-names.ts';
 import { versionTooLarge, type ArtifactStore, type CommitResult } from './artifact-store.ts';
-import { realOrNull } from '../fs/real-path.ts';
 
 // One agent with this many publishes half sent holds them all; the next waits until one is done.
 export const MAX_OPEN_UPLOADS = 8;
 
-// What `artifact read` prints of a text file; past it the agent reads the rest from its own copy.
+// What `artifact_read` prints of a text file; past it the agent reads the rest from its own copy.
 export const MAX_READ_BYTES = 256 * 1024;
 
 interface ArtifactReading {
@@ -95,6 +95,14 @@ interface DeliverInput {
     files: ReadonlyArray<{ name: string; bytes: Uint8Array }>;
 }
 
+export interface ExtensionPublishInput {
+    title?: string;
+    kind?: ArtifactKind;
+    key?: string;
+    requestId: string;
+    files: ReadonlyArray<{ name: string; bytes: Uint8Array }>;
+}
+
 export interface UploadState {
     /* The bytes each staged file holds, by its place. */
     sizes: number[];
@@ -105,11 +113,6 @@ export interface UploadState {
 interface OpenUpload {
     caller: string;
     stagingId: string;
-}
-
-/* The names a picture made for a person is in, under the machine's own folder. */
-function shotFolders(home: string): string[] {
-    return [join(home, 'screenshots'), join(home, 'computer-use', 'screenshots'), join(home, DEVICE_CAPTURES_FOLDER)];
 }
 
 /* A label from a title: no folders, no control characters. */
@@ -189,7 +192,7 @@ export class Artifacts {
         const root = resolve(project.folder, payload.path);
         const real = await realOrNull(root);
         const realProject = await realOrNull(project.folder);
-        if (real === null || realProject === null || real === realProject || !isInside(realProject, real)) {
+        if (real === null || realProject === null || real === realProject || !isWithin(realProject, real)) {
             throw new ArtifactError('outside-project', 'Only a folder inside the project can be kept');
         }
         const files = await filesUnder(root, ARTIFACT_LIMITS.filesPerVersion);
@@ -331,6 +334,38 @@ export class Artifacts {
             });
             return this.published(committed);
         });
+    }
+
+    /*
+     * An extension's files, sent with its call, as a version in the project the call came from, which the
+     * daemon read off the call and never off the input. The person runs the extension, so the version is theirs.
+     */
+    async publishFor(projectId: string, input: ExtensionPublishInput): Promise<{ result: CommitResult; artifact: Artifact; version: ArtifactVersion }> {
+        const project = await this.requireProject(projectId);
+        const earlier = this.store.findRequest(projectId, input.requestId);
+        if (earlier) {
+            return this.published(earlier);
+        }
+        const bytes = input.files.reduce((sum, file) => sum + file.bytes.byteLength, 0);
+        const committed = await this.store.saveNew(
+            bytes,
+            async (stagingId) => {
+                for (const [index, file] of input.files.entries()) {
+                    await this.store.stageAppend(stagingId, index, file.bytes);
+                }
+            },
+            {
+                projectId,
+                projectName: project.name,
+                title: input.title ?? titleOf(basename(input.files[0]!.name)),
+                ...(input.kind === undefined ? {} : { kind: input.kind }),
+                ...(input.key === undefined ? {} : { key: input.key }),
+                requestId: input.requestId,
+                provenance: { maker: 'person', machineId: this.deps.machineId },
+                names: input.files.map((file) => file.name)
+            }
+        );
+        return this.published(committed);
     }
 
     /*
@@ -547,7 +582,7 @@ export class Artifacts {
         }
         const real = await realpath(resolved);
         const roots = await Promise.all([folder, ...shotFolders(this.deps.home)].map(realOrNull));
-        if (!roots.some((root) => root !== null && isInside(root, real))) {
+        if (!roots.some((root) => root !== null && isWithin(root, real))) {
             throw new ArtifactError('outside-project', 'Only a picture inside the project folder or one the machine took for a chat is saved');
         }
         const head = new Uint8Array(await Bun.file(real).slice(0, SNIFF_HEAD_BYTES).arrayBuffer());

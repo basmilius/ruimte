@@ -1,10 +1,10 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Scaling } from 'lucide-react';
-import { NODE_SIZE, NODE_SIZE_MAX, NODE_SIZE_MIN, NodeKindSchema, type NodeKind, type NodeSize } from '@ruimte/contracts';
 import { Button, DisabledReason, Field, Input } from '@adecore/ui';
 import { formatNumber, useFormatLocale } from '@adecore/ui/format';
 import { SettingsRow, TopIcon } from '@adecore/ui/settings';
+import { NODE_SIZE, NODE_SIZE_MAX, NODE_SIZE_MIN, NodeKindSchema, type NodeKind, type NodeSize } from '@ruimte/contracts';
+import { Scaling } from 'lucide-react';
+import { useRef, useState, type KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatNodeSize, setDefaultSize } from '@/canvas/default-size';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';
 import { readNodeSide, storedNodeSize, type NodeSide } from '@/shell/settings/node-size-fields';

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
+import type { ServerFrame } from '@ruimte/contracts';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { Terminal } from '@xterm/headless';
-import type { ServerFrame } from '@ruimte/contracts';
 import { HIGH_WATER_MARK, OutputGate, type BackpressuredSocket } from '../backpressure.ts';
 import { SCREEN_MAX_BYTES } from './fit-screen.ts';
 import type { SessionEvent } from './manager.ts';

@@ -1,10 +1,10 @@
-import type { Artifacts } from './artifacts.ts';
 import { ArtifactError } from './artifact-names.ts';
+import type { Artifacts } from './artifacts.ts';
 
 /*
  * What `read` of an artifact node gives an agent: the version the node shows, its text when its first
  * file is text and what it holds otherwise. Only an artifact of the reader's own project; any other
- * reads as not there, the way `artifact read` answers.
+ * reads as not there, the way `artifact_read` answers.
  */
 export async function artifactReport(
     artifacts: Pick<Artifacts, 'read'>,

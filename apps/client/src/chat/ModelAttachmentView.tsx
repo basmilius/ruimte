@@ -1,9 +1,9 @@
+import type { UiModelViewProps } from '@adecore/agents-react';
+import { EmptyState, IconButton, ScrollArea, messageOf } from '@adecore/ui';
 import clsx from 'clsx';
+import { Box, RotateCcw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, RotateCcw } from 'lucide-react';
-import type { UiModelViewProps } from '@adecore/agents-react';
-import { EmptyState, IconButton, messageOf } from '@adecore/ui';
 import { modelMimeOf } from '@/chat/model-attachment';
 import { canDrawWebgl, ModelViewer } from '@/shell/panels/model-viewer';
 import { useTheme } from '@/state/theme';
@@ -132,7 +132,7 @@ export function ModelAttachmentView({ url, label }: UiModelViewProps) {
                 </div>
             )}
             {!ready && (
-                <div className="absolute inset-0 grid place-items-center overflow-auto">
+                <ScrollArea className="absolute inset-0" viewportClassName="grid place-items-center">
                     {phase.kind === 'failed' && (
                         <EmptyState className="select-text" icon={Box}>
                             {t('panels:file.model.failed', { name: label, reason: phase.reason })}
@@ -144,7 +144,7 @@ export function ModelAttachmentView({ url, label }: UiModelViewProps) {
                         </EmptyState>
                     )}
                     {phase.kind === 'loading' && <EmptyState busy>{t('panels:file.reading', { name: label })}</EmptyState>}
-                </div>
+                </ScrollArea>
             )}
         </div>
     );

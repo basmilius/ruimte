@@ -1,0 +1,66 @@
+import { Note } from '@/components/docs/guide/ui.tsx';
+
+export const metadata = { title: 'A machine without a screen' };
+
+# A machine without a screen
+
+<p className="lead">On a server or a computer without the app, `npx ruimte` starts a machine. You open it from the Ruimte app on another computer, the web or your iPhone.</p>
+
+## Start a machine
+
+You need Node. It runs on Macs with Apple silicon, Linux (x64 and arm64) and Windows (x64).
+
+```sh
+npx ruimte
+```
+
+`bunx ruimte` works too. Install the agent CLIs you want on that computer and log in to them there.
+
+## Add it to your account
+
+1. On the server, run:
+
+    ```sh
+    npx ruimte login
+    ```
+
+    It prints a code, such as `BCDF-GHJK`, and a fingerprint.
+
+2. In the desktop app or at [station.ruimte.app](https://station.ruimte.app), open Settings, Account, click **Add machine**, then **Link a machine with a code**.
+3. Enter the code and check that the fingerprint matches.
+4. Click **Add to account**.
+
+The machine shows up under Machines a few seconds later.
+
+On the same network or tailnet, the app connects to the machine on port 4220. From anywhere else it connects through your account. `npx ruimte status` shows which routes are open.
+
+## Keep it running
+
+```sh
+npx ruimte service install
+```
+
+This runs the machine in the background for your user: a LaunchAgent on macOS, a systemd user service on Linux.
+
+<Note>On Linux, systemd stops your services when you log out. Run `loginctl enable-linger "$USER"` to keep the machine running.</Note>
+
+To update, run `npx ruimte@latest service install` again. The machine switches to the new version once no agent or shell is busy.
+
+## Commands
+
+| Command | Action |
+| --- | --- |
+| `npx ruimte` | Start the machine |
+| `npx ruimte login` | Add the machine to your account with a code |
+| `npx ruimte status` | Show how your devices reach the machine |
+| `npx ruimte logout` | Take the machine off its account |
+| `npx ruimte service install` | Run the machine in the background |
+| `npx ruimte service status` | Show the background service |
+| `npx ruimte service uninstall` | Remove the background service |
+| `npx ruimte closed-lid install` | On a Mac, let it stay awake with the lid closed |
+| `npx ruimte --version` | Print the version |
+
+| Flag | Effect |
+| --- | --- |
+| `--no-lan` | Closes the local network route |
+| `--lan-port <port>` | Moves the local network route to another port |

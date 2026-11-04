@@ -1,13 +1,13 @@
-import { isCanvasView, type ChatInfo, type ChatItem, type ChatSummarizeResult, type ProjectContent, type ProjectEdge } from '@ruimte/contracts';
 import { readableAssistantText } from '@adecore/agents/chat';
 import type { OutboxOutcome } from '@adecore/agents/coordination';
-import { newId } from '../canvas/nodes.ts';
-import type { ProjectHost } from '../canvas/verb.ts';
+import { isCanvasView, type ChatInfo, type ChatItem, type ChatSummarizeResult, type ProjectContent, type ProjectEdge } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 import type { DeliverSummaryEntry, OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
+import type { ProjectHost } from '../tools/host.ts';
+import { newId } from '../tools/nodes.ts';
 import type { ChatManager } from './chat-manager.ts';
 import { ChatError } from './errors.ts';
 
@@ -162,7 +162,7 @@ export function summaryTexts(
     after: number | null
 ): { note: string; preamble: string } {
     const { text, cut } = cutAt(summary, SUMMARY_MAX_BYTES);
-    const read = `ruimte-context read ${fork.id}`;
+    const read = `context_read on ${fork.id}`;
     const body = cut ? `${text}\n\n[The summary was cut at ${SUMMARY_MAX_BYTES / 1024} KiB; ${read} shows the whole fork.]` : text;
     return {
         note: `Summary from fork ${fork.title} (${fork.kind} ${fork.id})\n\n${body}`,

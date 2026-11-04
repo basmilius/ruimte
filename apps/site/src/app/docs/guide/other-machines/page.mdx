@@ -1,0 +1,56 @@
+import { RemoteNode } from '@/components/docs/guide/RemoteNode.tsx';
+import { Note } from '@/components/docs/guide/ui.tsx';
+
+export const metadata = { title: 'Work on another machine' };
+
+# Work on another machine
+
+<p className="lead">A project on your laptop can run some of its terminals, chats and devices on another machine of your account. The nodes stay on your canvas, and their work comes back as a branch.</p>
+
+To open a whole project that lives on another machine, see [Open another machine](/docs/guide/machines#open-another-machine).
+
+## Clone the project there
+
+The other machine needs a checkout of the repository, cloned from its remote.
+
+1. Right-click the canvas and, under **On another machine**, choose **Add to another machine…**.
+2. Pick the machine and a folder, and click **Clone**.
+3. Pick the ignored files, such as `.env`, to copy over.
+
+The repository needs a remote. Push it first if it has none.
+
+## Add a node on another machine
+
+1. Right-click the canvas and, under **On another machine**, pick a machine.
+2. Choose a terminal, a chat or a device.
+3. Choose the **Checkout** to work in.
+4. Choose where to **Start from**: your files here, uncommitted work included; the last commit here; a branch on origin; or the checkout as it is there.
+5. Optionally turn on **Work in a git worktree**.
+6. Click **Create**.
+
+<RemoteNode />
+
+The node shows on your canvas with a pill that names its machine. It keeps running there while your laptop sleeps. Adding the node also links the project on that machine.
+
+<Note>A shared canvas cannot hold nodes on another machine.</Note>
+
+To fork a chat onto another machine, choose the machine in **Fork conversation…**. The new chat starts from a transcript of the original.
+
+## Bring the work back
+
+Right-click the node and choose **Bring back to this machine**. The work arrives here as a branch. Merge it with **Merge…**.
+
+## Let agents give tasks to another machine
+
+Once the project is linked on another machine, an agent here can give a task to an agent there. The task waits while that machine sleeps or is offline, and the result comes back as a branch.
+
+Questions and approvals of that agent wait on the machine where it runs. Answer them from any device.
+
+## Set what the other machine allows
+
+On the machine that does the work, open Settings, Account, that machine's page, **Linked projects**. It lists the projects your other machines work in.
+
+- **Highest mode for agents from** sets the widest permission mode their agents get. It starts at Supervised.
+- **Unlink** stops their tasks and ends the link. The checkout and its worktrees stay.
+
+Work from another machine counts as untrusted. Its agents do not load the CLI configuration in the project folder, and launches still need your approval on that machine.

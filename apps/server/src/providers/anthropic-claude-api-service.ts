@@ -1,11 +1,12 @@
-import { z } from 'zod';
 import {
     ClaudeApiSettingsSchema,
     DEFAULT_CLAUDE_API_SETTINGS,
     type ClaudeApiConfigurePayload,
     type ClaudeApiSettings,
-    type ClaudeApiStatus
+    type ClaudeApiStatus,
+    type ModelInfo
 } from '@ruimte/contracts';
+import { z } from 'zod';
 import { KeyedApiService, type ApiFetch, type CatalogContent } from './keyed-api-service.ts';
 
 // Deliberately not configurable: a key is sent to Anthropic and nowhere else, and a redirect is an error.
@@ -31,22 +32,73 @@ const ModelSchema = z.object({
 });
 type AnthropicModel = z.infer<typeof ModelSchema>;
 
+type ModelOption = ModelInfo['options'][number];
+type CatalogProfile = CatalogContent['profiles'][string];
+
+/* What Claude Code's own catalog knows of a model, read through what a catalog answers in public. */
+interface ClaudeModels {
+    list(): ModelInfo[];
+    resolveModel(name: string): string | null;
+    contextWindowFor(selection: { model: string; options: Record<string, string | boolean> }): number | null;
+}
+
+// The levels every model that thinks on request takes on the CLI's flag, for one Claude Code's catalog does not know yet.
+const PLAIN_EFFORT: ModelOption = {
+    id: 'effort',
+    label: 'Reasoning',
+    type: 'select',
+    defaultChoice: 'high',
+    choices: [
+        { id: 'low', label: 'Low' },
+        { id: 'medium', label: 'Medium' },
+        { id: 'high', label: 'High' }
+    ]
+};
+
+/*
+ * The options of the same model in Claude Code's catalog, which runs these chats too, with the window of each pick. A model
+ * it does not know gets effort when the API says it thinks on request, and its own window.
+ */
+function profileOf(model: AnthropicModel, claude: ClaudeModels | null, contextWindow: string): CatalogProfile {
+    const slug = claude?.resolveModel(model.id) ?? null;
+    const known = slug === null ? undefined : claude?.list().find((entry) => entry.slug === slug);
+
+    if (claude === null || slug === null || known === undefined) {
+        const adaptive = model.capabilities?.thinking?.types?.adaptive?.supported === true;
+
+        return { options: adaptive ? [PLAIN_EFFORT] : [], contextWindowTokens: { '*': model.max_input_tokens ?? FALLBACK_CONTEXT } };
+    }
+
+    const windows = known.options.find((option) => option.id === 'contextWindow');
+    const contextWindowTokens: Record<string, number> = {
+        '*': claude.contextWindowFor({ model: slug, options: {} }) ?? model.max_input_tokens ?? FALLBACK_CONTEXT
+    };
+
+    for (const choice of windows?.type === 'select' ? windows.choices : []) {
+        const tokens = claude.contextWindowFor({ model: slug, options: { contextWindow: choice.id } });
+
+        if (tokens !== null) {
+            contextWindowTokens[choice.id] = tokens;
+        }
+    }
+
+    return { options: known.options.map((option) => withWindowDefault(option, contextWindow)), contextWindowTokens };
+}
+
+/* The window a person chose for new chats as the default, on a model that offers both. */
+function withWindowDefault(option: ModelOption, contextWindow: string): ModelOption {
+    if (option.id !== 'contextWindow' || option.type !== 'select' || !['200k', '1m'].every((id) => option.choices.some((choice) => choice.id === id))) {
+        return option;
+    }
+
+    return { ...option, defaultChoice: contextWindow };
+}
+
 const PageSchema = z.object({
     data: z.array(ModelSchema),
     last_id: z.string().nullish(),
     has_more: z.boolean().optional()
 });
-
-/* One call a chat made, with the counts as Anthropic reports them: the input apart from both cache kinds. */
-interface ClaudeApiCall {
-    model: string;
-    session: string;
-    cwd: string;
-    input: number;
-    cacheRead: number;
-    cacheWrite: number;
-    output: number;
-}
 
 /* The key goes in the header and nowhere else; with redirects as errors it never follows a `Location` to another host. */
 export function anthropicHeaders(key: string): Record<string, string> {
@@ -88,7 +140,10 @@ export function defaultModelOf(models: AnthropicModel[]): string {
 
 /* The Claude API of this machine: its key, the models it offers and how far a chat may go alone. */
 export class AnthropicClaudeApiService extends KeyedApiService<ClaudeApiSettings, AnthropicModel> {
-    constructor(request: ApiFetch = fetch) {
+    private readonly claude: ClaudeModels | null;
+
+    /* `claude` is Claude Code's catalog, whose options these chats take, since they run in Claude Code too. */
+    constructor(request: ApiFetch = fetch, claude: ClaudeModels | null = null) {
         super(request, {
             folder: 'anthropic-claude-api',
             settingsSchema: ClaudeApiSettingsSchema,
@@ -101,23 +156,26 @@ export class AnthropicClaudeApiService extends KeyedApiService<ClaudeApiSettings
                 unloggedCall: 'A Claude API call could not be added to the usage log'
             }
         });
+        this.claude = claude;
     }
 
-    /* The `max_tokens` of a request: what a person set, never more than the model allows. */
+    /* A new default window changes the models' options, so the catalog and the provider list go out again; a chat keeps its pick. */
+    override async setSettings(change: Partial<ClaudeApiSettings>): ReturnType<KeyedApiService<ClaudeApiSettings, AnthropicModel>['setSettings']> {
+        const before = this.settings.contextWindow;
+        const status = await super.setSettings(change);
+
+        if (this.settings.contextWindow !== before) {
+            this.rebuildCatalog();
+        }
+
+        return status;
+    }
+
+    /* The most a reply of the model may use: what a person set, never more than the model allows. */
     maxOutputTokensFor(model: string): number {
         const allowed = this.models.find((entry) => entry.id === model)?.max_tokens;
 
         return allowed ? Math.min(this.settings.maxOutputTokens, allowed) : this.settings.maxOutputTokens;
-    }
-
-    /* Whether the model takes `thinking: { type: 'adaptive' }`, which is how the older ones are asked to think; the newer ones think without being asked. */
-    supportsAdaptiveThinking(model: string): boolean {
-        return this.models.find((entry) => entry.id === model)?.capabilities?.thinking?.types?.adaptive?.supported === true;
-    }
-
-    /* Anthropic counts the input apart from both cache kinds, as the log does. Thinking is part of the output. */
-    logUsage(call: ClaudeApiCall): Promise<void> {
-        return this.appendUsage({ ...call, reasoning: 0 });
     }
 
     /* What `anthropic.configure` asks. The key is checked before the settings sent along are kept, so a rejected key changes nothing. */
@@ -166,9 +224,7 @@ export class AnthropicClaudeApiService extends KeyedApiService<ClaudeApiSettings
     protected catalogOf(models: AnthropicModel[]): CatalogContent {
         return {
             defaultModel: defaultModelOf(models),
-            profiles: Object.fromEntries(
-                models.map((model) => [model.id, { options: [], contextWindowTokens: { '*': model.max_input_tokens ?? FALLBACK_CONTEXT } }])
-            ),
+            profiles: Object.fromEntries(models.map((model) => [model.id, profileOf(model, this.claude, this.settings.contextWindow ?? '200k')])),
             models: models.map((model) => ({
                 slug: model.id,
                 name: model.display_name ?? model.id,

@@ -1,9 +1,9 @@
+import { IconButton, WorkspaceRailSeparator } from '@adecore/ui';
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
-import { IconButton, WorkspaceRailSeparator } from '@adecore/ui';
 import { useRoutineList } from '@/routines/routine-list';
 import { RoutinesButton } from '@/routines/RoutinesButton';
-import { toolbarPanels, type PanelGroup } from '@/shell/panels';
+import { useToolbarPanels, type PanelGroup } from '@/shell/panels';
 import { useFolderInRepo } from '@/state/git-repos';
 import { useGitStatus } from '@/state/git-watch';
 import { useEndpointId } from '@/state/keys';
@@ -11,7 +11,7 @@ import { isThisMachine } from '@/state/local-machine';
 import { isScratchProject, useProject } from '@/state/project';
 import { useShownPanel, useUi } from '@/state/ui';
 
-const GROUPS: readonly PanelGroup[] = ['project', 'connected', 'made'];
+const GROUPS: readonly PanelGroup[] = ['project', 'connected', 'made', 'extensions'];
 
 /* The panel toggles in the rail, one group under the other, and the Routines clock beside Output. A toggle
    opens its panel and closes it again, since the panel's header has no close button of its own. */
@@ -20,7 +20,7 @@ export function PanelControls() {
     const panel = useShownPanel();
     const scratch = useProject((s) => isScratchProject(s.current));
     const folder = useProject((s) => s.current?.folder ?? null);
-    const entries = toolbarPanels(scratch);
+    const entries = useToolbarPanels(scratch);
     const endpointId = useEndpointId();
     // Only a checkout of this machine is watched for the dot: a project elsewhere would hold a watch on that machine all the while.
     const candidate = entries.some((entry) => entry.kind === 'git') && isThisMachine(endpointId) ? folder : null;
@@ -40,18 +40,27 @@ export function PanelControls() {
                     {index > 0 && <WorkspaceRailSeparator />}
                     {group.entries.map((entry) => {
                         const dirty = entry.kind === 'git' && changes > 0;
+                        const badge = 'badge' in entry ? (entry.badge?.() ?? null) : null;
 
                         return (
                             <IconButton
                                 key={entry.kind}
                                 icon={entry.icon}
-                                label={dirty ? t('panel.gitChanges', { count: changes }) : t(`panel.names.${entry.kind}`)}
+                                label={dirty ? t('panel.gitChanges', { count: changes }) : 'label' in entry ? entry.label() : t(`panel.names.${entry.kind}`)}
                                 tooltipSide="left"
                                 active={panel.open && panel.kind === entry.kind}
-                                className={dirty ? 'relative' : undefined}
+                                className={dirty || badge !== null ? 'relative' : undefined}
                                 onClick={() => useUi.getState().togglePanel(entry.kind)}
                             >
                                 {/* Gray as the unsaved dot is: it says there is something to commit, not that something is wrong. */}
+                                {badge !== null && (
+                                    <span
+                                        aria-hidden="true"
+                                        className="pointer-events-none absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-xs text-accent-text"
+                                    >
+                                        {badge}
+                                    </span>
+                                )}
                                 {dirty && (
                                     <span aria-hidden="true" className="pointer-events-none absolute top-1 right-1 size-1.5 rounded-full bg-text-faint" />
                                 )}

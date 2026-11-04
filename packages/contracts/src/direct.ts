@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { SignalEnvelopeSchema } from '@ruimte/pulsar';
+import { z } from 'zod';
 import { ProtocolVersionSchema } from './protocol.ts';
 
 /*
@@ -72,7 +72,6 @@ export const DirectRefusedFrameSchema = z.object({
 });
 
 export const DirectVerdictFrameSchema = z.discriminatedUnion('type', [DirectAcceptedFrameSchema, DirectRefusedFrameSchema]);
-export type DirectVerdictFrame = z.infer<typeof DirectVerdictFrameSchema>;
 
 /* Every DTLS fingerprint an SDP announces, normalized, so both peers read the same list out of the same text. */
 export function sdpFingerprints(sdp: string): string[] {

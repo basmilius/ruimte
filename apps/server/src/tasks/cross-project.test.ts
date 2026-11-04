@@ -3,11 +3,11 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
-import type { CanvasHost } from '../canvas/verb.ts';
-import { ProjectStore } from '../projects/project-store.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
+import { ProjectStore } from '../projects/project-store.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { failTasksOfClosedProject } from './closed-project.ts';
-import { bootTestDaemon, runVerb, type TestDaemon } from './test-daemon.ts';
+import { bootTestDaemon, invokeTool, type TestDaemon } from './test-daemon.ts';
 
 let root: string;
 let home: string;
@@ -73,7 +73,7 @@ async function boot(): Promise<TestDaemon> {
     return daemon;
 }
 
-/* The daemon's verbs with the machine's switch on and both projects open. */
+/* The daemon's tools with the machine's switch on and both projects open. */
 function reaching(booted: TestDaemon): { host: CanvasHost } {
     return {
         host: {
@@ -91,17 +91,7 @@ function reaching(booted: TestDaemon): { host: CanvasHost } {
 }
 
 async function delegate(booted: TestDaemon, prompt: string): Promise<{ childId: string; taskId: string }> {
-    const lines = await runVerb(reaching(booted), 'chat-lead', 'agent', [
-        'claude',
-        '--project',
-        otherId,
-        '--view',
-        'work',
-        '--task',
-        'Look',
-        '--prompt',
-        prompt
-    ]);
+    const lines = await invokeTool(reaching(booted), 'chat-lead', 'agent_start', { cli: 'claude', project: otherId, view: 'work', task: 'Look', prompt });
     const fields = lines[0]!.split('\t');
 
     return { childId: fields[0]!, taskId: fields[5]! };
@@ -165,6 +155,6 @@ test('closing the other project in its last window ends the child, fails its tas
             ?.thread.list()
             .filter((item) => item.kind === 'turn')
     ).toHaveLength(2);
-    const refused = await runVerb(reaching(booted), 'chat-lead', 'view', ['list', '--project', otherId]);
+    const refused = await invokeTool(reaching(booted), 'chat-lead', 'view_list', { project: otherId });
     expect(refused[0]).toStartWith('refused\tproject-not-open\t');
 });

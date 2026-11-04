@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import { Markdown } from '@adecore/agents-react/chat/ui';
+import { useChatRow } from '@adecore/agents-react/state';
+import { effectiveChecks, planProgress } from '@adecore/plan';
+import { copyText, EmptyState, Icon, IconButton, Menu, ScrollArea, TextArea, TextMenu, Tooltip, ContextMenu } from '@adecore/ui';
+import { formatMoment } from '@adecore/ui/format';
+import { PLAN_LIMITS, type Plan, type PlanStepState } from '@ruimte/contracts';
 import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
 import {
     CheckCheck,
     ChevronDown,
@@ -21,11 +25,8 @@ import {
     TriangleAlert,
     type LucideIcon
 } from 'lucide-react';
-import { PLAN_LIMITS, type Plan, type PlanStepState } from '@ruimte/contracts';
-import { effectiveChecks, planProgress } from '@adecore/plan';
-import { Markdown } from '@adecore/agents-react/chat/ui';
-import { formatMoment } from '@adecore/ui/format';
-import { copyText, EmptyState, Icon, IconButton, Menu, TextArea, TextMenu, Tooltip, ContextMenu } from '@adecore/ui';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     collapsedOf,
     copyPlanMarkdown,
@@ -50,7 +51,6 @@ import {
     type PlanRow
 } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
-import { useChatRow } from '@adecore/agents-react/state';
 
 const STATE_ICON: Record<PlanStepState, LucideIcon> = {
     open: Circle,
@@ -187,12 +187,12 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
                     <span style={{ flexGrow: progress.open + progress.active }} />
                 </div>
             </PlanTextMenu>
-            <div ref={scroller} className="min-h-0 grow overflow-y-auto py-1">
+            <ScrollArea viewportRef={scroller} className="grow" viewportClassName="py-1">
                 {rows.length === 0 && <EmptyState>{filter === 'issues' ? t('empty.issues') : filter === 'open' ? t('empty.open') : t('empty.all')}</EmptyState>}
                 {rows.map((row) => (
                     <PlanRowView key={row.item.id} row={row} context={context} />
                 ))}
-            </div>
+            </ScrollArea>
         </div>
     );
 }

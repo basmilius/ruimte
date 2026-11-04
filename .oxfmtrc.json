@@ -3,5 +3,13 @@
   "tabWidth": 4,
   "singleQuote": true,
   "trailingComma": "none",
-  "sortPackageJson": false
+  "sortPackageJson": false,
+  "sortImports": {
+    "newlinesBetween": false,
+    "customGroups": [
+      { "groupName": "bun", "elementNamePattern": ["bun", "bun:**"] },
+      { "groupName": "node", "elementNamePattern": ["node:**"] }
+    ],
+    "groups": ["bun", ["node", "builtin"], "external", "internal", "parent", ["sibling", "index"], "unknown"]
+  }
 }

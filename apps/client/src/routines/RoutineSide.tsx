@@ -1,15 +1,15 @@
-import { useTranslation } from 'react-i18next';
-import { CircleCheck } from 'lucide-react';
+import { useChats } from '@adecore/agents-react/state';
+import { Button, FormError, Icon, ScrollArea, SectionLabel } from '@adecore/ui';
 import type { RoutineEntry } from '@ruimte/contracts';
-import { Button, FormError, Icon, SectionLabel } from '@adecore/ui';
+import { CircleCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { OutputProjectGlyph } from '@/output/look';
 import { awaitingApproval, runsWaiting } from '@/routines/agenda';
-import { showRoutine } from '@/routines/stage';
-import { scheduleWords, weekdayClock } from '@/routines/words';
 import { useRoutineApproval } from '@/routines/routine-approval';
 import { useRoutineWhat } from '@/routines/routine-what';
+import { showRoutine } from '@/routines/stage';
+import { scheduleWords, weekdayClock } from '@/routines/words';
 import { endpointKey } from '@/state/keys';
-import { useChats } from '@adecore/agents-react/state';
 
 /*
  * The right column of the week, only while something waits on this machine, in any project: routines for
@@ -33,7 +33,7 @@ export function RoutineSide({
         return null;
     }
     return (
-        <aside className="flex w-[248px] shrink-0 flex-col overflow-y-auto border-l border-border" aria-label={t('side.label')}>
+        <ScrollArea render={<aside />} className="w-[248px] shrink-0 border-l border-border" viewportClassName="flex flex-col" aria-label={t('side.label')}>
             {held.length > 0 && (
                 <section className="flex flex-col gap-2 border-b border-border p-3" aria-label={t('side.approvals')}>
                     <SideHeading label={t('side.approvals')} count={held.length} />
@@ -66,7 +66,7 @@ export function RoutineSide({
                     ))}
                 </section>
             )}
-        </aside>
+        </ScrollArea>
     );
 }
 

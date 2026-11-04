@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { readdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { ACTION_DEFINITIONS } from '@ruimte/actions';
 import { ManualClock } from '@adecore/agents/testing';
+import { ACTION_DEFINITIONS } from '@ruimte/actions';
+import { AgentFiles } from '../mcp/files.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, releasedProject, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
+import { refusalCode, toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { AGENT_ATTACHMENT_LIMIT } from './agent-images.ts';
-import { refusalCode } from '../canvas/verb-test-helpers.ts';
 import { leadAndShellProject } from './lead-chat-test-helpers.ts';
 
 const MIB = 1024 * 1024;
@@ -69,8 +70,16 @@ async function bootWithChat(): Promise<TestDaemon> {
     return daemon;
 }
 
-function attach(daemon: TestDaemon, caller: string, bytes: Uint8Array, name = 'shot.png'): Promise<string[]> {
-    return runVerb(daemon, caller, 'chat', ['attach', '--name', name, `--data=${Buffer.from(bytes).toString('base64')}`]);
+let written = 0;
+
+/* What chat_attach answers for these bytes, written to a file of their own in the project folder first. */
+async function attach(daemon: TestDaemon, caller: string, bytes: Uint8Array, name = 'shot.png'): Promise<string[]> {
+    const place = join(folder, 'attach', String(written++));
+    await mkdir(place, { recursive: true });
+    await writeFile(join(place, 'upload'), bytes);
+    const files = await AgentFiles.of(folder, [], []);
+
+    return (await toolAnswer('chat_attach', { path: join(place, 'upload'), name }, { ...toolCall(caller, daemon.host), files: async () => files })).lines;
 }
 
 describe('chat attach', () => {
@@ -173,11 +182,12 @@ describe('chat attach', () => {
         expect(await stat(join(home, 'attachments', 'term-lead')).catch(() => null)).toBeNull();
     });
 
-    test('a call without the bytes the CLI reads is refused with the way to run it', async () => {
+    test('a path outside the folders a chat may read is refused before anything is read', async () => {
         const daemon = await bootWithChat();
-        const lines = await runVerb(daemon, 'chat-lead', 'chat', ['attach', '--file', '/etc/hosts']);
-        expect(refusalCode(lines)).toBe('bad-arguments');
-        expect(lines).toContain('detail\truimte-context help chat attach');
+        const files = await AgentFiles.of(folder, [], []);
+        const { lines } = await toolAnswer('chat_attach', { path: '/etc/hosts' }, { ...toolCall('chat-lead', daemon.host), files: async () => files });
+        expect(lines[0]).toStartWith('refused\tpath-outside\t');
+        expect(await stat(join(home, 'attachments', 'chat-lead')).catch(() => null)).toBeNull();
     });
 
     test('the action takes no path: only a name and the bytes', () => {

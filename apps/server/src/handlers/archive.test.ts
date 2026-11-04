@@ -6,11 +6,11 @@ import type { ServerFrame } from '@ruimte/contracts';
 import { readArchiveEntry } from '../archive/archive.ts';
 import { buildZip } from '../archive/test-archives.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { askOnce } from './test-helpers.ts';
 import { MachineHome } from '../fs/machine-home.ts';
 import { readServedFile } from '../fs/read.ts';
 import { registerArchiveHandlers } from './archive.ts';
 import { registerBytesHandlers } from './bytes.ts';
+import { askOnce } from './test-helpers.ts';
 
 const ZIP = buildZip([{ name: 'docs/readme.md', data: '# Read me' }]);
 

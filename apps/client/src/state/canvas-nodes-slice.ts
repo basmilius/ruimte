@@ -2,19 +2,24 @@ import { DEFAULT_TITLES, emptyCanvasGroupIds, groupFrame, isUnknownNode, nodeCol
 import { arrangeGroupMembers } from '@/canvas/arrange-group';
 import { snapToGrid } from '@/canvas/math';
 import type { CanvasState } from '@/state/canvas';
-import { defaultNodeSize } from '@/state/node-size';
 import {
+    anchorOf,
+    carriedByGroups,
     COLLAPSED_NODE_PX,
     contains,
+    droppedIntoGroups,
+    goingWithDelete,
     GROUP_HEADER_PX,
     hiddenIn,
     membersOf,
+    movedToGroup,
     nextId,
     remember,
     type CanvasGet,
     type CanvasNode,
     type CanvasSet
 } from '@/state/canvas-model';
+import { defaultNodeSize } from '@/state/node-size';
 
 /* Adding, changing, grouping and removing the nodes of the canvas. */
 export function createCanvasNodesSlice(
@@ -28,6 +33,8 @@ export function createCanvasNodesSlice(
     | 'duplicateNode'
     | 'bringToFront'
     | 'addNode'
+    | 'addExtensionNode'
+    | 'updateExtensionNode'
     | 'groupSelection'
     | 'arrangeGroup'
     | 'deleteSelected'
@@ -70,16 +77,67 @@ export function createCanvasNodesSlice(
                 return;
             }
             const copyId = nextId(source.kind);
-            // A copy is a new node: a fresh session, never the original's agent session.
-            const copy: CanvasNode = { ...source, id: copyId, x: source.x + 32, y: source.y + 32, resume: undefined };
-            set((s) => ({ nodes: { ...s.nodes, [copyId]: copy }, order: [...s.order, copyId], selection: [copyId], ...remember(s) }));
+            // A copy is a new node: a fresh session, never the original's agent session, and a group's copy is its frame alone.
+            const copy: CanvasNode = {
+                ...source,
+                id: copyId,
+                x: source.x + 32,
+                y: source.y + 32,
+                resume: undefined,
+                ...(source.kind === 'group' ? { memberIds: [] } : {})
+            };
+            set((s) => ({
+                nodes: droppedIntoGroups({ ...s, nodes: { ...s.nodes, [copyId]: copy } }, [copyId]),
+                order: [...s.order, copyId],
+                selection: [copyId],
+                ...remember(s)
+            }));
         },
         bringToFront(id) {
-            const { order } = get();
-            if (order.at(-1) === id) {
+            const { order, nodes } = get();
+            // A node that just went, or stands on another canvas, must never get a place in this one's order.
+            if (nodes[id] === undefined || order.at(-1) === id) {
                 return;
             }
             set({ order: [...order.filter((entry) => entry !== id), id] });
+        },
+        addExtensionNode(extension, type, title, size, data, dataVersion, place) {
+            if (get().viewId === null) {
+                return null;
+            }
+
+            const id = nextId('extension');
+            const { viewport, camera } = get();
+            const at = place ?? { x: (viewport.w / 2 - camera.x) / camera.zoom, y: (viewport.h / 2 - camera.y) / camera.zoom };
+            const frame = { x: snapToGrid(at.x - size.width / 2), y: snapToGrid(at.y - size.height / 2), w: size.width, h: size.height };
+            // Stored as it is here: a Ruimte without the extension keeps it whole, and none of it needs a new field on the wire.
+            const raw = { kind: 'extension', id, extension, type, title, ...frame, data, ...(dataVersion === undefined ? {} : { dataVersion }) };
+
+            set((s) => ({
+                nodes: droppedIntoGroups({ ...s, nodes: { ...s.nodes, [id]: { id, kind: 'unknown', title, ...frame, raw } as CanvasNode } }, [id]),
+                order: [...s.order, id],
+                selection: [id],
+                ...remember(s)
+            }));
+
+            return id;
+        },
+        updateExtensionNode(id, patch) {
+            set((s) => {
+                const node = s.nodes[id];
+
+                if (!node?.raw) {
+                    return {};
+                }
+
+                return {
+                    nodes: {
+                        ...s.nodes,
+                        [id]: { ...node, ...(typeof patch.title === 'string' ? { title: patch.title } : {}), raw: { ...node.raw, ...patch } }
+                    },
+                    ...remember(s)
+                };
+            });
         },
         addNode(kind, at, options = {}) {
             // Without a view nothing would ever save the node; the surfaces that offer one are hidden then, and this is the floor under them.
@@ -116,20 +174,38 @@ export function createCanvasNodesSlice(
                 ...(options.artifact === undefined ? {} : { artifact: options.artifact }),
                 ...(options.routine === undefined ? {} : { routine: options.routine })
             };
-            set((s) => ({ nodes: { ...s.nodes, [id]: node }, order: [...s.order, id], selection: [id], ...remember(s) }));
+            // A new group takes in nothing that already stood under it.
+            const added: CanvasNode = kind === 'group' ? { ...node, memberIds: [] } : node;
+            set((s) => ({
+                nodes: droppedIntoGroups({ ...s, nodes: { ...s.nodes, [id]: added } }, [id]),
+                order: [...s.order, id],
+                selection: [id],
+                ...remember(s)
+            }));
             return id;
         },
         groupSelection() {
-            const { nodes, selection } = get();
-            const members = selection.map((id) => nodes[id]).filter((node): node is CanvasNode => Boolean(node) && node!.kind !== 'group');
+            const { nodes, texts, lines, selection } = get();
+            const framed = selection.map((id) => nodes[id]).filter((node): node is CanvasNode => Boolean(node) && node!.kind !== 'group');
             // The same frame the daemon's `node group` action draws, so the two ways to group cannot drift.
-            const frame = groupFrame(members);
+            const frame = groupFrame(framed);
             if (!frame) {
                 return null;
             }
             const id = nextId('group');
-            const group: CanvasNode = { id, kind: 'group', title: DEFAULT_TITLES.group, ...frame };
-            set((s) => ({ nodes: { ...s.nodes, [id]: group }, order: [...s.order, id], selection: [id], ...remember(s) }));
+            // What a selected group holds stays in it, and that group comes along as a member.
+            const carried = new Set(selection.flatMap((selected) => [...carriedByGroups(nodes, texts, [selected], lines)]));
+            const inFrame = (selected: string): boolean => {
+                const at = anchorOf(selected, { nodes, texts, lines });
+                return at !== null && contains(frame, at);
+            };
+
+            const members = selection.filter((selected) => !carried.has(selected) && inFrame(selected));
+            let placed = { nodes: { ...nodes, [id]: { id, kind: 'group', title: DEFAULT_TITLES.group, ...frame, memberIds: [] } as CanvasNode }, texts, lines };
+            for (const member of members) {
+                placed = { ...placed, nodes: movedToGroup(placed, member, id) };
+            }
+            set((s) => ({ nodes: droppedIntoGroups(placed, [id]), order: [...s.order, id], selection: [id], ...remember(s) }));
             return id;
         },
         arrangeGroup(id) {
@@ -167,16 +243,8 @@ export function createCanvasNodesSlice(
             if (selection.length === 0) {
                 return;
             }
-            const gone = new Set(selection);
             // A collapsed group takes what it hid along; nothing should linger unseen.
-            for (const id of selection) {
-                const node = nodes[id];
-                if (node?.kind === 'group' && node.collapsed) {
-                    for (const member of node.memberIds ?? []) {
-                        gone.add(member);
-                    }
-                }
-            }
+            const gone = new Set(goingWithDelete(selection, nodes, texts, lines));
 
             for (const id of emptyCanvasGroupIds({ nodes: Object.values(nodes), texts: Object.values(texts), lines: Object.values(lines) }, gone)) {
                 gone.add(id);
@@ -201,7 +269,7 @@ export function createCanvasNodesSlice(
                 nodes: nextNodes,
                 texts: nextTexts,
                 lines: nextLines,
-                hidden: hiddenIn(nextNodes),
+                hidden: hiddenIn(nextNodes, nextTexts, nextLines),
                 order: order.filter((id) => !gone.has(id)),
                 edges: edges.filter((edge) => !gone.has(edge.id) && !gone.has(edge.from) && !gone.has(edge.to)),
                 selection: [],
@@ -224,11 +292,12 @@ export function createCanvasNodesSlice(
                 set({ nodes: { ...s.nodes, [id]: folded }, bodyFocusId: folded.collapsed && s.bodyFocusId === id ? null : s.bodyFocusId, ...remember(s) });
                 return;
             }
+            // What it holds stays as it is either way, so opening it over other nodes never takes them in.
             const next: CanvasNode = group.collapsed
-                ? { ...group, collapsed: false, memberIds: undefined, h: group.expandedHeight ?? group.h, expandedHeight: undefined }
+                ? { ...group, collapsed: false, h: group.expandedHeight ?? group.h, expandedHeight: undefined }
                 : { ...group, collapsed: true, memberIds: membersOf(group, s.nodes, s.texts, s.lines), expandedHeight: group.h, h: GROUP_HEADER_PX };
             const nodes = { ...s.nodes, [id]: next };
-            const hidden = hiddenIn(nodes);
+            const hidden = hiddenIn(nodes, s.texts, s.lines);
             set({ nodes, hidden, selection: s.selection.filter((selected) => !hidden.has(selected)), ...remember(s) });
         },
         setGroupWorktree(id, worktree) {

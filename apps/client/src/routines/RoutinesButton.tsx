@@ -1,10 +1,10 @@
-import { useTranslation } from 'react-i18next';
-import { Clock } from 'lucide-react';
 import { IconButton } from '@adecore/ui';
-import { COMMANDS } from '@/shell/command-table';
+import { Clock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { awaitingApproval, runsWaiting } from '@/routines/agenda';
 import { useRoutineList } from '@/routines/routine-list';
 import { toggleRoutines } from '@/routines/stage';
+import { COMMANDS } from '@/shell/command-table';
 import { useEndpointId } from '@/state/keys';
 
 /* The clock in the rail, with a dot while a routine waits for approval or a run waits for a person. Absent on a machine without routines. */

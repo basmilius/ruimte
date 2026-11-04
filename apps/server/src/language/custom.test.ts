@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
+import { chmodSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { CustomLanguageServerInput } from '@ruimte/contracts';
-import { CustomLanguageServers, customProfile, resolveCommandOnPath } from './custom.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { CustomLanguageServers, customProfile, resolveCommandOnPath, UnsavedRemoval } from './custom.ts';
 
 let root = '';
 let path = '';
@@ -24,6 +25,54 @@ function store(): CustomLanguageServers {
 }
 
 describe('the language servers of a person', () => {
+    it('keeps one server per name for an extension, and a person who edits it makes it theirs', async () => {
+        const servers = store();
+        await servers.load();
+
+        const first = await servers.saveFor('poc.machine', zig);
+        const again = await servers.saveFor('poc.machine', { ...zig, args: ['--stdio'] });
+        await servers.saveFor('poc.other', zig);
+
+        expect(again.id).toBe(first.id);
+        expect(servers.list()).toHaveLength(2);
+        expect(servers.ownedBy('poc.machine')).toEqual([first.id]);
+
+        const reloaded = store();
+        await reloaded.load();
+
+        expect(reloaded.list().map((server) => server.held)).toEqual([undefined, undefined]);
+
+        await servers.save({ ...zig, id: first.id });
+
+        expect(servers.ownedBy('poc.machine')).toEqual([]);
+        // The person's command is what runs, so one the extension names that this machine lacks refuses nothing.
+        expect((await servers.saveFor('poc.machine', { ...zig, command: 'other', args: [] })).id).toBe(first.id);
+        await expect(servers.saveFor('poc.machine', { ...zig, name: 'New', command: 'other' })).rejects.toMatchObject({ code: 'invalid-server' });
+    });
+
+    // Windows keeps a folder writable whatever its mode says, so the write this test makes fail would succeed there.
+    it.skipIf(process.platform === 'win32')('takes an extension off the list also when the file does not take it, and names what it took', async () => {
+        const servers = store();
+        const owned = await servers.saveFor('poc.machine', zig);
+        const mine = await servers.save({ ...zig, name: 'Mine' });
+        chmodSync(dirname(path), 0o555);
+        let failure: unknown;
+        try {
+            failure = await servers.removeOwnedBy('poc.machine').catch((e: unknown) => e);
+        } finally {
+            chmodSync(dirname(path), 0o755);
+        }
+        expect(failure).toBeInstanceOf(UnsavedRemoval);
+        expect((failure as UnsavedRemoval).ids).toEqual([owned.id]);
+        expect(servers.list().map((server) => server.id)).toEqual([mine.id]);
+        expect(servers.owners()).toEqual([]);
+
+        await servers.save({ ...zig, name: 'Later' });
+        const reloaded = store();
+        await reloaded.load();
+        expect(reloaded.list().map((server) => server.name)).toEqual(['Mine', 'Later']);
+    });
+
     it('saves a server and reads it back after a restart', async () => {
         const first = store();
         await first.load();
@@ -59,6 +108,27 @@ describe('the language servers of a person', () => {
         expect(await servers.remove(id)).toBe(true);
         expect(await servers.remove(id)).toBe(false);
         expect(servers.list()).toEqual([]);
+    });
+
+    it('keeps every server when saves and removes run at the same time', async () => {
+        const servers = store();
+        await servers.load();
+
+        const kept = await servers.save({ ...zig, name: 'Kept' });
+        await Promise.all([
+            servers.saveFor('poc.machine', { ...zig, name: 'One' }),
+            servers.saveFor('poc.machine', { ...zig, name: 'Two' }),
+            servers.saveFor('poc.machine', { ...zig, name: 'Two' }),
+            servers.save({ ...zig, name: 'Mine' })
+        ]);
+        const [removed] = await Promise.all([servers.removeOwnedBy('poc.machine'), servers.save({ ...zig, name: 'Late' })]);
+
+        const reloaded = store();
+        await reloaded.load();
+
+        expect(removed).toHaveLength(2);
+        expect(reloaded.list().map((server) => server.name)).toEqual(['Kept', 'Mine', 'Late']);
+        expect(reloaded.list()[0]?.id).toBe(kept.id);
     });
 
     it('holds a server whose command was changed in the file by hand until it is saved again', async () => {

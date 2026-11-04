@@ -1,18 +1,15 @@
-import { useState, type ReactNode } from 'react';
-import { Laptop, LogIn, RefreshCw, Sparkles } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import type { ProviderInfo } from '@ruimte/contracts';
 import { accountStatusLine, ACCOUNT_TONE_CLASSES, CliMark } from '@adecore/agents-react/providers';
 import { useProviderAccountsStore, useProviders, useProvidersStore } from '@adecore/agents-react/state';
-import { joinNames, type CliRow } from '@/onboarding/tasks';
+import { Button, Icon, Pill } from '@adecore/ui';
+import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
+import { LogIn, RefreshCw, Sparkles } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RowTile, TaskNote, TaskPane } from '@/onboarding/TaskPane';
-import { useAppleFoundation } from '@/shell/settings/providers/use-apple-foundation';
+import { joinNames, type CliRow } from '@/onboarding/tasks';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
-import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
-import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
-import { Button, Icon, Pill, Switch } from '@adecore/ui';
 
 interface ProvidersTaskProps {
     machine: string;
@@ -43,8 +40,6 @@ async function checkAgain(): Promise<void> {
 export function ProvidersTask({ machine, rows, missing, done, next }: ProvidersTaskProps) {
     const { t } = useTranslation('onboarding');
     const loaded = useProviders((s) => s.loaded);
-    const apple = useProviders((s) => s.providers.find((provider) => provider.kind === 'apple') ?? null);
-    const mac = useServers((s) => s.byEndpoint[LOCAL_ENDPOINT_ID]?.platform === 'darwin');
     const [checking, setChecking] = useState(false);
 
     const recheck = async (): Promise<void> => {
@@ -84,7 +79,6 @@ export function ProvidersTask({ machine, rows, missing, done, next }: ProvidersT
                 {rows.map((row) => (
                     <CliLoginRow key={row.provider.kind} row={row} />
                 ))}
-                {mac && apple !== null && <AppleRow provider={apple} />}
                 {missing.length > 0 && (
                     <SettingsRow
                         muted
@@ -157,26 +151,6 @@ function CliLoginRow({ row }: { row: CliRow }) {
             }
             description={line}
             control={control}
-        />
-    );
-}
-
-/* The model on this Mac, behind the same switch as in the settings. */
-function AppleRow({ provider }: { provider: ProviderInfo }) {
-    const { t } = useTranslation('onboarding');
-    const apple = useAppleFoundation(LOCAL_ENDPOINT_ID, provider);
-    return (
-        <SettingsRow
-            leading={
-                <RowTile>
-                    <Icon icon={Laptop} size={16} className="text-text-muted" />
-                </RowTile>
-            }
-            label="Apple Foundation Models"
-            description={apple.enabled ? apple.status : t('providers.apple')}
-            control={
-                <Switch checked={apple.enabled} onCheckedChange={apple.setEnabled} label={t('settings:providers.apple.label')} disabled={!apple.switchable} />
-            }
         />
     );
 }

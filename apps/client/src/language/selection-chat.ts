@@ -1,14 +1,14 @@
-import i18next from 'i18next';
-import { storedPathOf, type AgentKind } from '@ruimte/contracts';
-import { fileUriToPath } from '@adecore/lsp';
 import type { EditorRange } from '@adecore/editor';
+import { shikiLanguageOf } from '@adecore/editor-react';
+import type { Problem } from '@adecore/editor-react/models';
+import { fileUriToPath } from '@adecore/lsp';
+import { storedPathOf, type AgentKind } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { lineRangeLabel, offerSelection, selectionBlock, startLinkedChatOrTell, type SelectionOffer } from '@/chat/selection-to-chat';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useProject } from '@/state/project';
 import type { HostLanguage as EditorLanguage } from './host-language';
-import type { Problem } from '@adecore/editor-react/models';
-import { shikiLanguageOf } from '@adecore/editor-react';
 import { isShortcut } from './shortcut-keys';
 
 const PLAIN_IDS = new Set(['plaintext', 'text']);

@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import { messageOf } from '@adecore/ui';
+import i18next from 'i18next';
 
 /* Why a microphone would not open, in words a person can act on; null for a failure that is not about opening it. */
 export function knownMicrophoneFailure(error: unknown): string | null {

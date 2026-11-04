@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, expect, jest, test } from 'bun:test';
 import { useChats } from '@adecore/agents-react/state';
 import type { AgentRequest, AgentStatus, ChatRequestSummary } from '@ruimte/contracts';
-import { chatInfoOf } from '../../testing/chat-info';
 import { startAttentionWatch, useAttention } from '@/state/attention';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
+import { chatInfoOf } from '../../testing/chat-info';
 import { notifyRequested, startAgentNotifications } from './notifications';
 
 beforeEach(() => {

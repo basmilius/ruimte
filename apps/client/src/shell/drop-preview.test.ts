@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
-import { dropPreview, HIDE_GRACE_MS, hideDropPreview, showDropPreview, subscribeDropPreview } from './drop-preview';
 import { rectDropPreview } from '@adecore/ui';
+import { dropPreview, HIDE_GRACE_MS, hideDropPreview, showDropPreview, subscribeDropPreview } from './drop-preview';
 
 const first = rectDropPreview({ x: 0, y: 0, width: 100, height: 100 });
 const second = rectDropPreview({ x: 100, y: 0, width: 100, height: 100 });

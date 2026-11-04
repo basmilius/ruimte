@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { prepareShellIntegration } from './shell-integration.ts';
 
 test('shell integration only changes the environment of supported Ruimte shells', async () => {

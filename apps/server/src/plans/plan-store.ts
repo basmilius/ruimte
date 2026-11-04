@@ -1,11 +1,13 @@
 import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { PLAN_LIMITS, PlanSchema, type Plan, type PlanActor, type PlanMeta, type PlanOfChat, type PlanOp } from '@ruimte/contracts';
 import { applyPlanOps, canDeletePlan, createPlan, planProgress, randomItemId, refuse, type PlanApplied, type PlanDraft, type PlanRefusal } from '@adecore/plan';
+import { KeyedSerializer } from '@adecore/utils/async';
+import { isNotFound } from '@adecore/utils/errors';
+import { writeAtomic } from '@adecore/utils/fs';
+import { PLAN_LIMITS, PlanSchema, type Plan, type PlanActor, type PlanMeta, type PlanOfChat, type PlanOp } from '@ruimte/contracts';
 import { z } from 'zod';
-import { isNotFound, writeAtomic, KeyedSerializer } from '@adecore/agents';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { ClientSinks } from '../client-sinks.ts';
+import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { countUsage } from '../stats/usage-stats.ts';
 
 const SUFFIX = '.plans.json';
@@ -43,7 +45,7 @@ export class PlanStore {
     readonly dir: string;
     private readonly now: () => number;
     private readonly mintId: () => string;
-    // A person's click and an agent's verb run after each other per chat; two chats never wait on each other.
+    // A person's click and an agent's tool run after each other per chat; two chats never wait on each other.
     private readonly writes = new KeyedSerializer();
     private readonly sinks = new ClientSinks();
 
@@ -77,7 +79,7 @@ export class PlanStore {
         return result;
     }
 
-    /* A new plan from an agent's draft, last in the chat's list and so the one a verb without `--plan` works on. */
+    /* A new plan from an agent's draft, last in the chat's list and so the one a tool without `plan` works on. */
     create(chatId: string, input: PlanCreateInput): Promise<PlanApplied | PlanRefusal> {
         return this.inChain(chatId, async () => {
             const plans = await this.readFile(chatId);

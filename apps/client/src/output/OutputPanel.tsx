@@ -1,5 +1,21 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import {
+    Button,
+    ButtonGroup,
+    ContextMenu,
+    ErrorBoundary,
+    Icon,
+    IconButton,
+    Input,
+    LazyBoundary,
+    lazyNamed,
+    Menu,
+    PanelEmpty,
+    ScrollArea,
+    SectionLabel,
+    useNow
+} from '@adecore/ui';
+import { formatBytes, formatMoment } from '@adecore/ui/format';
+import type { ArtifactSummary, RemoteLink } from '@ruimte/contracts';
 import {
     Bot,
     CalendarClock,
@@ -18,28 +34,10 @@ import {
     User,
     type LucideIcon
 } from 'lucide-react';
-import type { ArtifactSummary, RemoteLink } from '@ruimte/contracts';
-import {
-    Button,
-    ButtonGroup,
-    ContextMenu,
-    ErrorBoundary,
-    Icon,
-    IconButton,
-    Input,
-    LazyBoundary,
-    lazyNamed,
-    Menu,
-    PanelEmpty,
-    SectionLabel,
-    useNow
-} from '@adecore/ui';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { pinArtifact, useCanRemove, useCopyToThisMachine, usePinCanvases } from '@/output/artifact-actions';
 import { addArtifactToSidebar, startArtifactDrag } from '@/output/artifact-drag';
-import { setDragging } from '@/shell/view-drag';
-import { RemoveArtifactDialog, type RemoveArtifactRequest } from '@/output/RemoveArtifactDialog';
-import type { CopyToProjectRequest } from '@/output/CopyToProjectDialog';
-import { formatBytes, formatMoment } from '@adecore/ui/format';
 import {
     ALL,
     DATES,
@@ -55,12 +53,15 @@ import {
     type OutputFilters
 } from '@/output/artifact-list';
 import { useArtifactList } from '@/output/artifacts';
+import type { CopyToProjectRequest } from '@/output/CopyToProjectDialog';
 import { useLinkedMachines } from '@/output/linked-machines';
-import { useEndpointIdOfMachine, useEndpoints } from '@/state/endpoints';
 import { KindTile, OutputProjectGlyph } from '@/output/look';
 import { openArtifact, useOutputRequest } from '@/output/open';
+import { RemoveArtifactDialog, type RemoveArtifactRequest } from '@/output/RemoveArtifactDialog';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
+import { setDragging } from '@/shell/view-drag';
+import { useEndpointIdOfMachine, useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
@@ -166,7 +167,7 @@ export function OutputPanel() {
                     />
                 </div>
             )}
-            <div className="min-h-0 grow overflow-y-auto px-2 pb-2">
+            <ScrollArea className="grow" viewportClassName="px-2 pb-2">
                 {list.artifacts.length === 0 ? (
                     <PanelEmpty icon={Package} fill="full">
                         <span className="flex flex-col gap-1">
@@ -201,7 +202,7 @@ export function OutputPanel() {
                             <LinkedMachineOutput link={link} filters={filters} query={query} now={now} />
                         </ErrorBoundary>
                     ))}
-            </div>
+            </ScrollArea>
             <div className="flex h-9 shrink-0 items-center gap-2 border-t border-border px-3 text-xs text-text-muted">
                 <Icon icon={HardDrive} size={14} className="shrink-0 text-text-faint" />
                 <span className="grow truncate tabular-nums">{t('panel.shown', { count: shown.length, size: formatBytes(shownBytes) })}</span>

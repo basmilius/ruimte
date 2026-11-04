@@ -1,6 +1,5 @@
 import { readFile, realpath } from 'node:fs/promises';
 import { basename } from 'node:path';
-import type { LanguageServerId, LanguageServerState } from '@ruimte/contracts';
 import {
     bridgeVueTypeScript,
     ErrorCodes,
@@ -38,8 +37,10 @@ import {
     type WorkspaceDocumentDiagnosticReport,
     type WorkspaceEdit
 } from '@adecore/lsp';
+import type { LanguageServerId, LanguageServerState } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 import { reportHelperExit } from '../telemetry/reporter.ts';
+import { realTimers } from '../timers.ts';
 import type { FileChange } from './file-watch.ts';
 import { LanguageLog } from './log.ts';
 import { findManifests, topmostManifests } from './manifests.ts';
@@ -59,7 +60,6 @@ import {
     type ProjectSqlSettings
 } from './profiles.ts';
 import type { LanguageChild, LanguageExit, LanguageRuntime, SpawnLanguageProcess } from './runtime.ts';
-import { realTimers } from '../timers.ts';
 
 const SHIPPED_COMPONENTS = new Set(Object.values(KIND_PROFILES).flatMap((kind) => kind.components.map((component) => component.name)));
 

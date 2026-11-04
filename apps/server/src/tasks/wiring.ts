@@ -1,6 +1,6 @@
-import type { Task } from '@ruimte/contracts';
 import type { TaskCoordinator, TaskCoordinatorDeps, TaskStore, WaitingObserver, OutboxHandlers } from '@adecore/agents/coordination';
 import { wireTasks as wireTaskCore, type TaskVerbs } from '@adecore/agents/coordination';
+import type { Task } from '@ruimte/contracts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { OutboxEntry, OutboxWork, StartAgentEntry } from '../outbox/outbox.ts';
 import { parkedNote } from './parked-note.ts';
@@ -45,7 +45,7 @@ export interface TaskWiring {
 
 /*
  * Ruimte's binding of the tasks in @adecore/agents: its terminals beside the chats, the rows a task draws
- * in its parent, the words of `ruimte-context`, and a note about work the outbox gave up on.
+ * in its parent, the words of its tools, and a note about work the outbox gave up on.
  */
 export function wireTasks(deps: TaskWiringDeps): TaskWiring {
     const core = wireTaskCore({

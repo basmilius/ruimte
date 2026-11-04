@@ -1,16 +1,16 @@
-import { createHolder, lspLanguageIdOf, realTimers } from '@adecore/editor-react';
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { storedPathOf } from '@ruimte/contracts';
-import { pathToFileUri } from '@adecore/lsp';
 import type { Editor } from '@adecore/editor';
-import { EditorLanguage } from '@/language/ruimte-editor-language';
+import { createHolder, lspLanguageIdOf, realTimers } from '@adecore/editor-react';
+import { pathToFileUri } from '@adecore/lsp';
+import { storedPathOf } from '@ruimte/contracts';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { customLanguageIdOf } from '@/language/language-ids-host';
 import { draftFiles } from '@/language/project-files';
+import { EditorLanguage } from '@/language/ruimte-editor-language';
 import { acquireProjectLanguage } from '@/language/ruimte-project-language';
 import { participateInSave } from '@/language/save-participation';
-import { textDrafts } from '@/state/text-drafts';
 import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
+import { textDrafts } from '@/state/text-drafts';
 import { useTransport } from '@/transport/context';
 
 /*

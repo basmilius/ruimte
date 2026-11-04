@@ -1,18 +1,18 @@
-import { useState } from 'react';
-import { MousePointer2 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { Switch, Button, ErrorBoundary, FormError } from '@adecore/ui';
+import { SettingsRow } from '@adecore/ui/settings';
 import type { ComputerGrant } from '@ruimte/contracts';
-import { canSwitch, showsGrants, type ComputerSetup } from '@/computer/setup';
+import { MousePointer2 } from 'lucide-react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { GrantRows, SetupLine } from '@/computer/ComputerSetupRows';
+import { canSwitch, showsGrants, type ComputerSetup } from '@/computer/setup';
 import { useComputerMachine } from '@/computer/use-computer-machine';
 import { desktop, isDesktop } from '@/desktop/bridge';
-import { SettingsRow } from '@adecore/ui/settings';
-import { Switch, Button, ErrorBoundary, FormError } from '@adecore/ui';
-import { SetUpMachineDialog } from '@/shell/settings/SetUpMachineDialog';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { WithReason } from '@/shell/settings/MachineSettings';
 import { useListedMachines } from '@/shell/settings/machine-list';
+import { WithReason } from '@/shell/settings/MachineSettings';
 import { ComputerAppGrants } from '@/shell/settings/panes/ComputerAppGrants';
+import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { SetUpMachineDialog } from '@/shell/settings/SetUpMachineDialog';
 import type { Endpoint } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 

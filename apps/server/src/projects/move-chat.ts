@@ -1,7 +1,8 @@
 import { basename, dirname, join, resolve } from 'node:path';
-import { entryExists } from '@adecore/agents';
 import { ChatError as AgentChatError } from '@adecore/agents/chat';
 import type { AgentLineageStore } from '@adecore/agents/coordination';
+import { entryExists } from '@adecore/utils/fs';
+import { isWithin } from '@adecore/utils/path';
 import {
     DEFAULT_PROJECT_COLOR,
     initialIconOf,
@@ -13,17 +14,16 @@ import {
     type ProjectContent,
     type ProjectSummary
 } from '@ruimte/contracts';
-import { isInside } from '../canvas/project-paths.ts';
 import { moveClaudeTranscript } from '../chat/claude-move.ts';
 import { ChatError } from '../chat/errors.ts';
 import { errorText } from '../error-text.ts';
-import { ownFileConflicts, ownFileNames } from './move-info.ts';
+import { realOrNull } from '../fs/real-path.ts';
 import type { SnoozeStore } from '../push/snoozes.ts';
-import { movedNote } from './move-note.ts';
+import { ownFileConflicts, ownFileNames } from './move-info.ts';
 import type { MoveJournal } from './move-journal.ts';
+import { movedNote } from './move-note.ts';
 import { moveOwnFiles } from './own-files.ts';
 import type { MutationApply } from './project-store.ts';
-import { realOrNull } from '../fs/real-path.ts';
 
 /* The English sentence a refused move carries on its reply; the client writes its own words from the reason. */
 const REFUSAL_SENTENCES: Record<ChatMoveRefusal['reason'], string> = {
@@ -62,7 +62,7 @@ export interface MoveChatDeps {
         claim(chatId: string): (() => void) | null;
         relocate(chatId: string, cwd: string, during: () => Promise<void>): Promise<ChatInfo>;
         deliverNote(chatId: string, delivery: { noteId: string; note: string; preamble: string }): Promise<boolean>;
-        claudeProjectsDirOf(info: Pick<ChatInfo, 'account'>): string;
+        claudeProjectsDirOf(info: Pick<ChatInfo, 'account' | 'provider'>): string;
     };
     lineage: Pick<AgentLineageStore, 'projectOf' | 'rehome'>;
     /* A snooze on the chat goes with it, since the Chats write would drop it. */
@@ -97,8 +97,9 @@ export async function fileTranscript(
     folder: string,
     move: typeof moveClaudeTranscript = moveClaudeTranscript
 ): Promise<Awaited<ReturnType<typeof moveClaudeTranscript>> | null> {
+    // Empty for a provider that does not run Claude Code; one with a config folder of its own has its transcripts there.
     const projectsDir = chats.claudeProjectsDirOf(info);
-    if (info.provider !== 'claude' || info.agentSessionId === null || projectsDir === '') {
+    if (info.agentSessionId === null || projectsDir === '') {
         return null;
     }
     return move({ projectsDir, sessionId: info.agentSessionId, fromCwd: info.cwd, toCwd: folder });
@@ -155,7 +156,7 @@ export async function moveChat(payload: ChatMovePayload, deps: MoveChatDeps): Pr
     // Another chat's folder is no project: it would put the chat inside what Chats still owns.
     // By the resolved path as well, as `MachineHome.refuse` does: a link into Chats is Chats.
     const [realFolder, realScratch] = await Promise.all([resolvedPath(folder), resolvedPath(deps.scratchFolder)]);
-    if (isInside(deps.scratchFolder, folder) || isInside(realScratch, realFolder)) {
+    if (isWithin(deps.scratchFolder, folder) || isWithin(realScratch, realFolder)) {
         throw new ChatError('move-failed', 'A chat cannot move into the folder of Chats');
     }
     await deps.refuseFolder(folder);

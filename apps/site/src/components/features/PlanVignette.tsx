@@ -1,8 +1,8 @@
 'use client';
 
 import { CheckCheck, ChevronDown, Circle, CircleCheck, LoaderCircle, MoreHorizontal, X } from 'lucide-react';
-import { AssistantText, ToolRow, UserBubble } from '../app/chat.tsx';
 import { ClaudeMark, StatusDot } from '../app/canvas.tsx';
+import { AssistantText, ToolRow, UserBubble } from '../app/chat.tsx';
 import { WindowBar } from '../app/chrome.tsx';
 import { useTimeline } from '../film/playback.ts';
 import { Stage } from '../film/Stage.tsx';

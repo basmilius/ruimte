@@ -3,12 +3,12 @@ import { access, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PROTOCOL_VERSION, type ProjectView } from '@ruimte/contracts';
 import { clientDirectory, withBrowserFixture } from '../../../client/testing/browser-fixture.ts';
-import { realShell } from './shell-editor-test-helpers.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { registerSessionHandlers } from '../handlers/session.ts';
 import { projectTerminalPrepareHost, registerTerminalPrepareHandlers } from '../handlers/terminal-prepare.ts';
 import { ProjectIndex } from '../projects/project-index.ts';
 import { PrepareTerminal, shellSyntax } from './prepare-terminal.ts';
+import { realShell } from './shell-editor-test-helpers.ts';
 import { waitForAsync } from './test-helpers.ts';
 
 const source = (path: string): string => JSON.stringify(join(clientDirectory, 'src', path));

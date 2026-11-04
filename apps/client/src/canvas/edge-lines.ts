@@ -1,6 +1,6 @@
-import type { Edge } from '@/state/canvas';
 import type { FixedSides } from '@/canvas/edge-route';
 import type { Rect } from '@/canvas/math';
+import type { Edge } from '@/state/canvas';
 
 /*
  * Two agents that read each other are two edges, one each way, since the daemon reads the direction.

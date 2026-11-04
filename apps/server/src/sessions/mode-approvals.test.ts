@@ -2,13 +2,13 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ProjectNode, ProjectView, RuntimeMode } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
+import type { ProjectNode, ProjectView, RuntimeMode } from '@ruimte/contracts';
+import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { documentPathInFolder, privatePathOf } from '../projects/project-files.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { ModeApprovals, modesSet, personModeOf } from './mode-approvals.ts';
 import { makeHarness } from './test-helpers.ts';
-import { projectLinks } from '../projects/project-file-test-helpers.ts';
 
 function terminal(id: string, extra: Partial<ProjectNode> = {}): ProjectNode {
     return { id, kind: 'terminal', title: 'Shell', x: 0, y: 0, w: 10, h: 10, ...extra };
@@ -110,7 +110,7 @@ describe('a mode an agent writes into the private project file', () => {
         const file = JSON.parse(await readFile(path, 'utf8')) as { views: Array<{ nodes: Array<Record<string, unknown>> }> };
         file.views[0]!.nodes[0]!.runtimeMode = 'full-access';
         await writeFile(path, JSON.stringify(file));
-        // A verb takes the edit in, and every client is sent the document with it.
+        // A tool takes the edit in, and every client is sent the document with it.
         const taken = await store.mutate(projectId, (content) => ({ content: { ...content, color: '#654321' }, result: content }));
         await store.save(projectId, 2, { ...taken, color: '#654321' });
 

@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import type { ProjectContent } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
+import type { ProjectContent } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { ProjectStore } from './project-store.ts';
-import { DrawingStore } from './drawing-store.ts';
 import { DiagramStore } from './diagram-store.ts';
-import { documentPathInFolder, viewFilePathOf } from './project-files.ts';
+import { DrawingStore } from './drawing-store.ts';
 import { projectLinks } from './project-file-test-helpers.ts';
+import { documentPathInFolder, viewFilePathOf } from './project-files.ts';
+import { ProjectStore } from './project-store.ts';
 
 for (const kind of ['drawing', 'diagram'] as const) {
     describe(`${kind} file safety`, () => {

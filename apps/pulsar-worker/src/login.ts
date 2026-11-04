@@ -10,9 +10,9 @@ import {
 } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-web';
 import type { Env } from './env.ts';
-import { countLogin } from './metrics.ts';
 import { clientIp, failure, json, noContent, signInAgain } from './http.ts';
 import { resolveAccount, spendLinkToken, storeLinkCode } from './identities.ts';
+import { countLogin } from './metrics.ts';
 import type { OAuthProvider } from './providers.ts';
 import { bodyWithinLimit, LIMITS, overAnyLimit } from './rate-limit.ts';
 import {
@@ -280,6 +280,9 @@ export async function refreshSession(request: Request, env: Env): Promise<Respon
     const result = await rotateSession(env.DB, body.value);
     if (result === 'clock-skew') {
         return failure('clock-skew', clockSkewMessage(Date.now() - body.value.issuedAt));
+    }
+    if (result === 'bad-signature') {
+        return failure('bad-signature', 'The session key did not sign this refresh');
     }
     return result ? json(result) : signInAgain();
 }

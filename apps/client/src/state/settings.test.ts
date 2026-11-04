@@ -1,13 +1,25 @@
 import { describe, expect, test } from 'bun:test';
-import { bundledThemesInfo } from 'shiki/themes';
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
+import { bundledThemesInfo } from 'shiki/themes';
 import { DEFAULT_CODE_FOLDING } from './code-folding';
-import { codeLineHeight, codeThemesOf, iceServersFrom, settingsFrom, terminalFontOf, useSettings, type KeepAwakeMode, type Settings } from './settings';
+import {
+    codeLineHeight,
+    codeThemesOf,
+    iceServersFrom,
+    SETTINGS_STORAGE_KEY,
+    settingsFrom,
+    terminalFontOf,
+    useSettings,
+    type KeepAwakeMode,
+    type Settings
+} from './settings';
 
 test('project glow defaults to on while preserving an explicit opt-out', () => {
     expect(settingsFrom({}).projectGlow).toBe(true);
     expect(settingsFrom({ projectGlow: false }).projectGlow).toBe(false);
     expect(settingsFrom({ projectGlow: true }).projectGlow).toBe(true);
+    expect(settingsFrom({}).scrollBounce).toBe(true);
+    expect(settingsFrom({ scrollBounce: false }).scrollBounce).toBe(false);
 });
 
 test("a fresh client keeps the theme's own grays and a gone preset falls back to them", () => {
@@ -121,6 +133,104 @@ describe('the tiles of a chat map', () => {
     });
 });
 
+describe('help from the editor model', () => {
+    const legacy = (value: unknown): Partial<Settings> => ({ aiOnDeviceHelp: value }) as Partial<Settings>;
+
+    test('is off without an explicit choice, since an older client may never have saved settings', () => {
+        expect(settingsFrom({}).aiCodeHelp).toBe(false);
+    });
+
+    test('is off for a client that stored settings before it, whatever its on-device switch said', () => {
+        expect(settingsFrom(legacy(false)).aiCodeHelp).toBe(false);
+        expect(settingsFrom(legacy(true)).aiCodeHelp).toBe(false);
+        expect(settingsFrom({ accent: 'blue' }).aiCodeHelp).toBe(false);
+        expect(settingsFrom({ aiCodeHelp: 'yes' as unknown as boolean, accent: 'blue' }).aiCodeHelp).toBe(false);
+    });
+
+    test('keeps a switch written since, over the one left beside it', () => {
+        expect(settingsFrom({ ...legacy(false), aiCodeHelp: true }).aiCodeHelp).toBe(true);
+        expect(settingsFrom({ ...legacy(true), aiCodeHelp: false }).aiCodeHelp).toBe(false);
+        expect(settingsFrom({ aiCodeHelp: true }).aiCodeHelp).toBe(true);
+    });
+
+    test.each([
+        ['missing', null],
+        ['empty', '{}'],
+        ['invalid', '{']
+    ])('keeps editor help off with %s settings until an explicit choice survives a reload', (_kind, blob) => {
+        const previousStorage = globalThis.localStorage;
+        const previous = useSettings.getState();
+        const items = new Map<string, string>();
+
+        if (blob !== null) {
+            items.set(SETTINGS_STORAGE_KEY, blob);
+        }
+
+        globalThis.localStorage = {
+            getItem: (key: string) => items.get(key) ?? null,
+            setItem: (key: string, value: string) => items.set(key, value)
+        } as unknown as Storage;
+
+        try {
+            useSettings.getState().reload();
+            expect(useSettings.getState().aiCodeHelp).toBe(false);
+
+            useSettings.getState().update({ aiCodeHelp: true });
+            useSettings.getState().reload();
+            expect(useSettings.getState().aiCodeHelp).toBe(true);
+        } finally {
+            globalThis.localStorage = previousStorage;
+            useSettings.setState(previous);
+        }
+    });
+
+    test('is decided once for an older blob, written back, and a person turning it on keeps it on', () => {
+        const previousStorage = globalThis.localStorage;
+        const previous = useSettings.getState();
+        const items = new Map<string, string>([
+            [SETTINGS_STORAGE_KEY, JSON.stringify({ aiOnDeviceHelp: true, accent: 'blue', pets: true, petsSets: ['animals'] })]
+        ]);
+        const stored = (): Record<string, unknown> => JSON.parse(items.get(SETTINGS_STORAGE_KEY)!);
+        globalThis.localStorage = {
+            getItem: (key: string) => items.get(key) ?? null,
+            setItem: (key: string, value: string) => items.set(key, value)
+        } as unknown as Storage;
+        try {
+            useSettings.getState().reload();
+            expect(useSettings.getState().aiCodeHelp).toBe(false);
+            // The pets read their choices from this blob after it, so what this store no longer knows stays.
+            expect(stored()).toMatchObject({ aiCodeHelp: false, accent: 'blue', pets: true, petsSets: ['animals'] });
+
+            useSettings.getState().update({ aiCodeHelp: true });
+            useSettings.getState().reload();
+            expect(useSettings.getState().aiCodeHelp).toBe(true);
+            expect(stored().aiCodeHelp).toBe(true);
+        } finally {
+            globalThis.localStorage = previousStorage;
+            useSettings.setState(previous);
+        }
+    });
+
+    test('leaves the blob of a client with an answer alone as it reads it', () => {
+        const previousStorage = globalThis.localStorage;
+        const previous = useSettings.getState();
+        const writes: string[] = [];
+        const blob = JSON.stringify({ aiCodeHelp: false, accent: 'blue' });
+        globalThis.localStorage = {
+            getItem: () => blob,
+            setItem: (key: string) => writes.push(key)
+        } as unknown as Storage;
+        try {
+            useSettings.getState().reload();
+            expect(useSettings.getState().aiCodeHelp).toBe(false);
+            expect(writes).toEqual([]);
+        } finally {
+            globalThis.localStorage = previousStorage;
+            useSettings.setState(previous);
+        }
+    });
+});
+
 describe('keeping the machine awake', () => {
     const legacy = (value: unknown): Partial<Settings> => ({ agentsKeepAwake: value }) as Partial<Settings>;
 
@@ -158,79 +268,6 @@ describe('the map of a canvas', () => {
         expect(settingsFrom({}).canvasMinimap).toBe(false);
         expect(settingsFrom({ canvasMinimap: true }).canvasMinimap).toBe(true);
         expect(settingsFrom({ canvasMinimap: 'yes' as unknown as boolean }).canvasMinimap).toBe(false);
-    });
-});
-
-describe('pets', () => {
-    test('stay away until a person turns them on, and only a stored true does', () => {
-        expect(settingsFrom({}).pets).toBe(false);
-        expect(settingsFrom({ pets: true }).pets).toBe(true);
-        expect(settingsFrom({ pets: 'yes' as unknown as boolean }).pets).toBe(false);
-    });
-
-    test('start as the buddies and keep the sets a person picked, custom ones for the pets to look up', () => {
-        expect(settingsFrom({}).petsSets).toEqual(['buddies']);
-        expect(settingsFrom({ petsSets: ['animals', 'custom:abc'] }).petsSets).toEqual(['animals', 'custom:abc']);
-        expect(settingsFrom({ petsSets: ['animals', 'animals', '', 3 as unknown as string] }).petsSets).toEqual(['animals']);
-        expect(settingsFrom({ petsSets: [] }).petsSets).toEqual(['buddies']);
-        expect(settingsFrom({ petsSets: 'animals' as unknown as string[] }).petsSets).toEqual(['buddies']);
-    });
-
-    test('keep a hand-edited list of sets small', () => {
-        const many = Array.from({ length: 1000 }, (_, i) => `custom:${i}`);
-        expect(settingsFrom({ petsSets: many }).petsSets).toHaveLength(32);
-        expect(settingsFrom({ petsSets: [`custom:${'x'.repeat(100)}`, 'animals'] }).petsSets).toEqual(['animals']);
-    });
-
-    test('take the one choice of a client from before sets could be combined as a set of one', () => {
-        const legacy = (petsSprite: unknown) => settingsFrom({ petsSprite } as Parameters<typeof settingsFrom>[0]).petsSets;
-        expect(legacy('animals')).toEqual(['animals']);
-        expect(legacy('custom:abc')).toEqual(['custom:abc']);
-        expect(legacy('')).toEqual(['buddies']);
-        expect(legacy(3)).toEqual(['buddies']);
-        // Once sets are stored, they are what counts.
-        expect(settingsFrom({ petsSets: ['buddies', 'animals'], petsSprite: 'custom:abc' } as Parameters<typeof settingsFrom>[0]).petsSets).toEqual([
-            'buddies',
-            'animals'
-        ]);
-    });
-
-    test('let the visitor come unless a stored false keeps it away', () => {
-        expect(settingsFrom({}).petsVisitor).toBe(true);
-        expect(settingsFrom({ petsVisitor: false }).petsVisitor).toBe(false);
-        expect(settingsFrom({ petsVisitor: 0 as unknown as boolean }).petsVisitor).toBe(true);
-    });
-
-    test('give a chat or a terminal in a view of its own its pet until a stored false keeps it away', () => {
-        expect(settingsFrom({}).petsInViews).toBe(true);
-        expect(settingsFrom({ petsInViews: false }).petsInViews).toBe(false);
-        expect(settingsFrom({ petsInViews: 'no' as unknown as boolean }).petsInViews).toBe(true);
-    });
-
-    test('beam pets in and out by gathering unless a stored style or Random says otherwise', () => {
-        expect(settingsFrom({}).petsBeam).toBe('gather');
-        expect(settingsFrom({ petsBeam: 'portal' }).petsBeam).toBe('portal');
-        expect(settingsFrom({ petsBeam: 'random' }).petsBeam).toBe('random');
-        expect(settingsFrom({ petsBeam: 'warp' as unknown as 'portal' }).petsBeam).toBe('gather');
-    });
-
-    test('keep the figure given to each CLI, and leave out what is no name of a set', () => {
-        expect(settingsFrom({}).petsByAgent).toEqual({});
-        expect(settingsFrom({ petsByAgent: { claude: 'custom:tabby', codex: 'animals' } }).petsByAgent).toEqual({ claude: 'custom:tabby', codex: 'animals' });
-        expect(settingsFrom({ petsByAgent: { claude: 3, codex: '', '': 'animals' } as unknown as Record<string, string> }).petsByAgent).toEqual({});
-        expect(settingsFrom({ petsByAgent: ['animals'] as unknown as Record<string, string> }).petsByAgent).toEqual({});
-    });
-
-    test('take the kids of sub-agents along until a person turns them off', () => {
-        expect(settingsFrom({}).petsSubagents).toBe(true);
-        expect(settingsFrom({ petsSubagents: false }).petsSubagents).toBe(false);
-        expect(settingsFrom({ petsSubagents: 'no' as unknown as boolean }).petsSubagents).toBe(true);
-    });
-
-    test('keep pets on their nodes unless a stored choice sends them to the bottom of the screen', () => {
-        expect(settingsFrom({}).petsPlace).toBe('nodes');
-        expect(settingsFrom({ petsPlace: 'screen' }).petsPlace).toBe('screen');
-        expect(settingsFrom({ petsPlace: 'ceiling' as unknown as 'screen' }).petsPlace).toBe('nodes');
     });
 });
 

@@ -1,17 +1,15 @@
+import { Button, EmptyState, Icon, Menu, PromptDialog, Segmented, Separator, ZoomControls, useNow } from '@adecore/ui';
+import { formatAgo } from '@adecore/ui/format';
+import type { ChatAttachmentUpload, FsEntry } from '@ruimte/contracts';
+import { ChevronDown, FileCode2, MessageSquarePlus, MousePointer2, PenLine, Send, SquareMousePointer, SwatchBook, Trash2 } from 'lucide-react';
 import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, FileCode2, MessageSquarePlus, MousePointer2, PenLine, Send, SquareMousePointer, SwatchBook, Trash2 } from 'lucide-react';
-import type { ChatAttachmentUpload, FsEntry } from '@ruimte/contracts';
-import { Button, EmptyState, Icon, Menu, PromptDialog, Segmented, Separator, ZoomControls, useNow } from '@adecore/ui';
-import { formatAgo } from '@adecore/ui/format';
 import { perform } from '@/actions/client-actions';
-import { DesignCommentPopover } from '@/design/DesignCommentPopover';
-import { DesignDrawLayer } from '@/design/DesignDrawLayer';
-import { DesignEditPanel } from '@/design/DesignEditPanel';
-import { DesignTweaks } from '@/design/DesignTweaks';
+import { focusCellOfView } from '@/browser/guest-focus';
 import { designCameraKey, useDesignChat } from '@/design/design-chat';
 import { editsCss, editsOf, withEdits, withTweakValues, type DesignEdits } from '@/design/design-file';
+import { runtimeAssets } from '@/design/design-inline';
 import { bakePrompt, commentsPrompt, drawPrompt, textEditPrompt, type DesignComment } from '@/design/design-messages';
 import { changeReaches, designFiles, pageMtime, pageName, pagesByChange } from '@/design/design-page';
 import {
@@ -25,14 +23,16 @@ import {
     type Tweaks,
     type TweakValue
 } from '@/design/design-protocol';
-import { runtimeAssets } from '@/design/design-inline';
 import { listDesignFolder, readDesignAsset, readDesignText, rewriteDesignFile } from '@/design/design-read';
+import { DesignCommentPopover } from '@/design/DesignCommentPopover';
+import { DesignDrawLayer } from '@/design/DesignDrawLayer';
+import { DesignEditPanel } from '@/design/DesignEditPanel';
 import { DesignPageFrame } from '@/design/DesignPageFrame';
-import { focusCellOfView } from '@/browser/guest-focus';
-import { CellViewContext } from '@/state/workspace-stores';
+import { DesignTweaks } from '@/design/DesignTweaks';
 import { useFolderWatch } from '@/state/fs-watch';
-import { useToasts } from '@/state/toasts';
 import { useEndpointId } from '@/state/keys';
+import { useToasts } from '@/state/toasts';
+import { CellViewContext } from '@/state/workspace-stores';
 import { useTransport } from '@/transport/context';
 
 const MINUTE_MS = 60_000;
@@ -115,12 +115,37 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     const frameBox = useRef<HTMLDivElement>(null);
     const located = useRef<((elements: DesignElement[]) => void) | null>(null);
     const assets = useRef<{ opened: string; read: (path: string) => Promise<Blob | null> } | null>(null);
+    const known = useRef<{ folder: string; pages: Set<string> } | null>(null);
 
     const files = entries === null ? null : designFiles(entries);
     const found = entries !== null;
 
     // The folder may not be there yet, so the project's watch is the one that sees the chat make it.
     useFolderWatch(endpointId, watched);
+
+    // A page that came since the last listing is the one the chat just made, unless a person still has work queued on the page in front.
+    const onListed = useEffectEvent((found: FsEntry[] | null): void => {
+        // No listing is a folder not made yet, or a call that failed: the pages known stay, or every one of them would
+        // arrive at the next listing.
+        if (found === null) {
+            if (known.current?.folder !== folder) {
+                known.current = { folder, pages: new Set() };
+            }
+
+            return;
+        }
+
+        const pages = pagesByChange(found);
+        const before = known.current?.folder === folder ? known.current.pages : null;
+        const arrived = before === null ? undefined : pages.find((file) => !before.has(file));
+        const unsent = comments.length > 0 || Object.keys(edits).length > 0 || Object.entries(values).some(([name, value]) => tweaks?.[name]?.value !== value);
+
+        known.current = { folder, pages: new Set(pages) };
+
+        if (arrived !== undefined && pinned === undefined && !unsent) {
+            showPage(designId, arrived);
+        }
+    });
 
     useEffect(() => {
         let current = true;
@@ -129,6 +154,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
             if (current) {
                 setEntries(found);
                 setListed(true);
+                onListed(found);
             }
         });
 

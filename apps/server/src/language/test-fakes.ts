@@ -1,7 +1,7 @@
-import { createMemoryTransportPair, FakeLanguageServer } from '@adecore/lsp/testing';
 import type { RequestHandler, ServerCapabilities } from '@adecore/lsp';
-import type { LanguageChild, LanguageExit, LanguageProcessSpec, SpawnLanguageProcess } from './runtime.ts';
+import { createMemoryTransportPair, FakeLanguageServer } from '@adecore/lsp/testing';
 import { KIND_PROFILES } from './profiles.ts';
+import type { LanguageChild, LanguageExit, LanguageProcessSpec, SpawnLanguageProcess } from './runtime.ts';
 import type { LanguageClock } from './server.ts';
 
 /*

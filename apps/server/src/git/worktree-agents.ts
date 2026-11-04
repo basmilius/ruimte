@@ -1,5 +1,5 @@
+import { isWithin } from '@adecore/utils/path';
 import type { ChatInfo, SessionInfo } from '@ruimte/contracts';
-import { isInside } from '../canvas/project-paths.ts';
 import type { WorktreeAgent, WorktreeAgents } from './worktree-merge.ts';
 
 interface WorktreeAgentSources {
@@ -21,12 +21,12 @@ export function worktreeAgents(sources: WorktreeAgentSources): WorktreeAgents {
         in(path, nodeId) {
             const found: WorktreeAgent[] = [];
             for (const chat of sources.chats()) {
-                if (chat.chatId === nodeId || isInside(path, chat.cwd)) {
+                if (chat.chatId === nodeId || isWithin(path, chat.cwd)) {
                     found.push({ nodeId: chat.chatId, working: chat.activeTurnId !== null, live: chat.running });
                 }
             }
             for (const session of sources.sessions()) {
-                if (session.sessionId === nodeId || isInside(path, session.cwd)) {
+                if (session.sessionId === nodeId || isWithin(path, session.cwd)) {
                     const agent = session.agent;
                     found.push({ nodeId: session.sessionId, working: agent?.live === true && agent.status === 'running', live: !session.exited });
                 }

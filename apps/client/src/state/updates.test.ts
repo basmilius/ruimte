@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import type { UpdateState } from '@/desktop/bridge';
 import { useReleaseNotes } from '@/state/release-notes';
 import { useToasts } from '@/state/toasts';
 import { describeUpdate, hasUpdate, noteVersionChange, seenVersionChange } from '@/state/updates';
-import type { UpdateState } from '@/desktop/bridge';
 
 describe('seenVersionChange', () => {
     test('is first when nothing was seen, or something that is not a version', () => {

@@ -1,0 +1,37 @@
+import { Workspace } from '@/components/docs/guide/Workspace.tsx';
+
+export const metadata = { title: 'Introduction' };
+
+# Introduction
+
+<p className="lead">Ruimte runs terminals, AI chats, browsers and devices side by side on a canvas. You see which agent works, which one is done and which one waits for you.</p>
+
+<Workspace />
+
+## Terms
+
+| Term | Meaning |
+| --- | --- |
+| Machine | The computer that runs your terminals, agents and browsers. The desktop app runs one on your computer. You can add others, such as a server, to your account. |
+| Project | A folder you work in. Ruimte adds a `.ruimte` folder to it the first time you open it. |
+| View | One page of a project, listed in the sidebar, such as a canvas, a terminal, a chat, a browser, a file, a drawing or a diagram. |
+| Canvas | A view that holds nodes side by side. Lines between nodes give an agent context. |
+| Node | One thing on a canvas, such as a terminal, a chat, a browser, a note, a file, a device or a group. |
+| Session | What runs in a terminal or chat. It runs on the machine, so it keeps running when you close the window. |
+| Agent | A coding CLI on your machine, such as Claude Code or Codex. You run it in a terminal or in an AI chat. |
+
+## What keeps running
+
+Closing a window ends nothing, and neither does a lost connection. When you open the project again, every terminal shows its scrollback and every chat its thread.
+
+Terminals and agents stop when you close the project in the last window or device that has it open. The project then moves to Recent on the start screen.
+
+## What goes in git
+
+The `.ruimte` folder holds the views you share with your team. Commit it. Your private views sit in `.ruimte/private`, which Ruimte keeps out of git.
+
+## Next steps
+
+1. [Install Ruimte and open a project](/docs/guide/getting-started).
+2. [Add nodes and lines on the canvas](/docs/guide/canvas).
+3. Start an agent in a [terminal](/docs/guide/terminals) or an [AI chat](/docs/guide/chats).

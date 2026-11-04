@@ -1,8 +1,8 @@
+import type { BrowserRouteBinding } from '@ruimte/desktop-bridge';
 import { browserRegistry, useBrowser } from '../src/browser/registry';
+import { desktop } from '../src/desktop/bridge';
 import { useEndpoints } from '../src/state/endpoints';
 import { endpointKey } from '../src/state/keys';
-import type { BrowserRouteBinding } from '@ruimte/desktop-bridge';
-import { desktop } from '../src/desktop/bridge';
 
 let next = 0;
 const original = useEndpoints.getState();

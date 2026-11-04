@@ -1,24 +1,24 @@
-import { useEffect, useState, type DragEvent as ReactDragEvent, type ReactElement } from 'react';
+import { rectDropPreview, SplitView, tabDropPreview, tabGapAt, type SplitCommand, type SplitRect, type TabDrop } from '@adecore/ui';
 import { isCanvasView } from '@ruimte/contracts';
-import { PromptStack } from '@/canvas/PromptStack';
+import { useEffect, useState, type DragEvent as ReactDragEvent, type ReactElement } from 'react';
+import { placeFilesAction, placeViewAction } from '@/actions/client-actions';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
-import { carriesDiff, droppedDiff } from '@/shell/diff-drag';
+import { PromptStack } from '@/canvas/PromptStack';
 import { carriesDatabase, droppedDatabase } from '@/database/drag';
 import { dropDatabaseTab } from '@/database/open';
 import { carriesArtifact, dropArtifactTab, droppedArtifact } from '@/output/artifact-drag';
+import { cellsMoved, registerCell } from '@/shell/cell-rects';
 import { isLooseView } from '@/shell/cell-view';
-import { useCellView } from '@/shell/use-cell-view';
-import { placeFilesAction, placeViewAction } from '@/actions/client-actions';
-import { canStandInCell, useDocument } from '@/state/document';
-import { tabKey, useFiles } from '@/state/files';
-import { currentEndpointId } from '@/state/keys';
-import { useSettings } from '@/state/settings';
-import { CellViewContext } from '@/state/workspace-stores';
+import { CellOverlay } from '@/shell/CellOverlay';
+import { CellToolbar } from '@/shell/CellToolbar';
+import { cellForPane, columnForSplit, coreLayout } from '@/shell/core-layout';
+import { carriesDiff, droppedDiff } from '@/shell/diff-drag';
+import { Dock } from '@/shell/Dock';
+import { hideDropPreview, showDropPreview } from '@/shell/drop-preview';
 import { canDropAsTab, canMoveCell, canSplit, cellAt, cellViewIds, locateView, MIN_SHARE, type CellAt, type SplitZone } from '@/shell/split';
 import { clampTabLeft, DEFAULT_TAB_WIDTH, gapLeft, positionAfterLifting } from '@/shell/tab-drop';
-import { hideDropPreview, showDropPreview } from '@/shell/drop-preview';
-import { rectDropPreview, SplitView, tabDropPreview, tabGapAt, type SplitCommand, type SplitRect, type TabDrop } from '@adecore/ui';
+import { useCellView } from '@/shell/use-cell-view';
 import {
     carriesView,
     draggedViewId,
@@ -33,11 +33,11 @@ import {
     zoneAt
 } from '@/shell/view-drag';
 import { ViewSurface } from '@/shell/ViewHost';
-import { CellToolbar } from '@/shell/CellToolbar';
-import { cellsMoved, registerCell } from '@/shell/cell-rects';
-import { Dock } from '@/shell/Dock';
-import { cellForPane, columnForSplit, coreLayout } from '@/shell/core-layout';
-import { CellOverlay } from '@/shell/CellOverlay';
+import { canStandInCell, useDocument } from '@/state/document';
+import { tabKey, useFiles } from '@/state/files';
+import { currentEndpointId } from '@/state/keys';
+import { useSettings } from '@/state/settings';
+import { CellViewContext } from '@/state/workspace-stores';
 
 /*
  * What a surface inside a cell says about the paths dropped on it, so the grid does not carry a list

@@ -328,6 +328,9 @@
                 "skipped_one": "Skipped {{count}} entry. Ruimte never extracts links, or files that would land outside the folder or in .git.",
                 "skipped_other": "Skipped {{count}} entries. Ruimte never extracts links, or files that would land outside the folder or in .git."
             }
+        },
+        "viewer": {
+            "original": "Original"
         }
     },
     "files": {
@@ -998,22 +1001,23 @@
         "history": {
             "recent": "Recent locations"
         },
-        "onDevice": {
-            "explain": "Explain",
-            "explanation": "Explanation · Apple Foundation Models, on device",
-            "note": "Written on this Mac. Free, and the code stays here.",
-            "thinking": "Explaining on this Mac…",
-            "off": "Explain is off. Turn it on in Settings, Editor, AI.",
-            "nothing": "Select code, or put the caret in a function, to explain it."
-        },
         "ghost": {
-            "onDevice": "On device",
             "accept": "Accept",
             "next": "Next",
-            "thinking": "Thinking on this Mac",
+            "thinking": "Thinking",
             "off": "Suggestions are off. Turn them on in Settings, Editor, AI.",
             "none": "No suggestion here",
-            "unavailable": "The on-device model is not available."
+            "unavailable": "The editor model is not available.",
+            "model": "Editor model"
+        },
+        "editorAssist": {
+            "explain": "Explain",
+            "explanation": "Explanation · Editor model",
+            "note": "Written by the model chosen in Settings, Editor, AI.",
+            "thinking": "Explaining…",
+            "off": "Explain is off. Turn it on in Settings, Editor, AI.",
+            "nothing": "Select code, or put the caret in a function, to explain it.",
+            "tooOld": "Update this machine to use the editor model."
         }
     },
     "machineNotAnswering": "This machine is not answering.",
@@ -1123,9 +1127,6 @@
             },
             "title": "Merge {{what}}",
             "titleInto": "Merge {{what}} into {{into}}"
-        },
-        "origin": {
-            "from": "from {{branch}}"
         },
         "remove": {
             "anyway": "Remove anyway",

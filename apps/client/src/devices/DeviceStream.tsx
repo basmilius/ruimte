@@ -1,3 +1,8 @@
+import { EmptyState, Icon, messageOf } from '@adecore/ui';
+import { deviceTools, liveStreamFormatOf, type DeviceInfo, type DeviceInput } from '@ruimte/contracts';
+import clsx from 'clsx';
+import i18next from 'i18next';
+import { CircleAlert, LoaderCircle } from 'lucide-react';
 import {
     useEffect,
     useMemo,
@@ -7,13 +12,9 @@ import {
     type PointerEvent as ReactPointerEvent,
     type WheelEvent as ReactWheelEvent
 } from 'react';
-import clsx from 'clsx';
-import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { CircleAlert, LoaderCircle } from 'lucide-react';
-import { deviceTools, liveStreamFormatOf, type DeviceInfo, type DeviceInput } from '@ruimte/contracts';
 import { isApplePlatform } from '@/desktop/bridge';
-import { followLiveStream } from '@/endpoint/live-stream-fetch';
+import { routeDeviceKey } from '@/devices/device-keys';
 import {
     approachGestureTotal,
     boundedGestureDelta,
@@ -23,15 +24,14 @@ import {
     positionInContainedFrame,
     trackpadGesturePoint
 } from '@/devices/device-layout';
-import { routeDeviceKey } from '@/devices/device-keys';
 import { DeviceTapPing } from '@/devices/DeviceOperatedStrip';
 import { hidUsageOf } from '@/devices/hid-usages';
 import { videoFrameDecoder } from '@/devices/video-decoder';
+import { followLiveStream } from '@/endpoint/live-stream-fetch';
 import { useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
 import { FramePainter } from '@/transport/live-stream';
-import { EmptyState, Icon, messageOf } from '@adecore/ui';
 
 const BOTTOM_EDGE_START = 0.92;
 const TRACKPAD_DRAG_GAIN = 0.42;

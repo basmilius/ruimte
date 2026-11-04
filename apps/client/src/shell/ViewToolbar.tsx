@@ -1,24 +1,24 @@
-import { ComputerIndicator } from '@/computer/ComputerIndicator';
-import { DesignActions } from '@/design/DesignActions';
-import { placeOfView } from '@/design/design-chat';
-import { useNodeComputerSession } from '@/computer/indicator';
-import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
-import { useDictation } from '@/dictation/controller';
-import { isLooseView, type CellView } from '@/shell/cell-view';
 import { runtimeModeHint, runtimeModeLabel } from '@adecore/agents-react/chat';
+import { Pill, Tooltip } from '@adecore/ui';
 import { ForkPill } from '@/chat/ForkPill';
-import { PlanPill } from '@/plan/PlanPill';
-import { BrowserToolbar } from '@/nodes/BrowserBody';
+import { ComputerIndicator } from '@/computer/ComputerIndicator';
+import { useNodeComputerSession } from '@/computer/indicator';
+import { placeOfView } from '@/design/design-chat';
+import { DesignActions } from '@/design/DesignActions';
 import { DeviceToolbar } from '@/devices/DeviceBody';
-import { SessionPorts } from '@/terminal/SessionPorts';
-import { useSessionPortControl } from '@/terminal/session-port-controls';
+import { useDictation } from '@/dictation/controller';
+import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
+import { BrowserToolbar } from '@/nodes/BrowserBody';
 import { useNodeHost } from '@/nodes/node-host';
+import { PlanPill } from '@/plan/PlanPill';
+import { isLooseView, type CellView } from '@/shell/cell-view';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
+import { chatIdOf, hostIdOf, KINDS_WITH_TOOLBAR, modeOf, useIsFork } from '@/shell/view-toolbar';
 import { isFileTab } from '@/state/files';
 import { useEndpointId } from '@/state/keys';
 import { useHasPlans } from '@/state/plans';
-import { Pill, Tooltip } from '@adecore/ui';
-import { chatIdOf, hostIdOf, KINDS_WITH_TOOLBAR, modeOf, useIsFork } from '@/shell/view-toolbar';
+import { useSessionPortControl } from '@/terminal/session-port-controls';
+import { SessionPorts } from '@/terminal/SessionPorts';
 
 export function ViewToolbar({ view, focused }: { view: CellView | null; focused: boolean }) {
     const host = useNodeHost(hostIdOf(view));

@@ -1,6 +1,6 @@
 import type { ArtifactProvenance } from '@ruimte/contracts';
 
-/* What the daemon knows of the caller of an agent verb, from its own records only. */
+/* What the daemon knows of the caller of an agent tool, from its own records only. */
 interface CallerRecord {
     machineId: string;
     caller: string;

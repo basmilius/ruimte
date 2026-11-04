@@ -1,19 +1,19 @@
+import type { EditorPosition } from '@adecore/editor';
+import { countsOf, createHolder, type ProblemFile } from '@adecore/editor-react';
+import { codeLabelOf, severityOf } from '@adecore/editor-react/models';
+import { pathToFileUri } from '@adecore/lsp';
+import { ButtonGroup, Icon, IconButton, PanelEmpty, ScrollArea } from '@adecore/ui';
+import { formatNumber } from '@adecore/ui/format';
+import { resolveStoredPath, type LanguageServerStatus } from '@ruimte/contracts';
+import { CircleCheck, CircleX, Info, ScanSearch, Search, TriangleAlert } from 'lucide-react';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CircleCheck, CircleX, Info, ScanSearch, Search, TriangleAlert } from 'lucide-react';
-import { resolveStoredPath, type LanguageServerStatus } from '@ruimte/contracts';
-import type { EditorPosition } from '@adecore/editor';
-import { pathToFileUri } from '@adecore/lsp';
-import { ButtonGroup, Icon, IconButton, PanelEmpty } from '@adecore/ui';
-import { formatNumber } from '@adecore/ui/format';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
-import { countsOf, createHolder, type ProblemFile } from '@adecore/editor-react';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useTransport } from '@/transport/context';
 import { useMachineAnswers } from '@/transport/features';
-import { codeLabelOf, severityOf } from '@adecore/editor-react/models';
 import { draftFiles } from './project-files';
 import { acquireProjectLanguage, type ProjectLanguage } from './ruimte-project-language';
 import { report } from './server-status';
@@ -167,7 +167,7 @@ export function ProblemsPanel() {
                             onChange={(event) => setFilter(event.target.value)}
                         />
                     </div>
-                    <div className="min-h-0 grow overflow-y-auto pb-2">
+                    <ScrollArea className="grow" viewportClassName="pb-2">
                         {shown.length === 0 && <div className="px-3 py-4 text-center text-xs text-text-muted">{t('problems.nothingMatches')}</div>}
                         {shown.map((file) => {
                             const name = basenameOf(file.path);
@@ -207,7 +207,7 @@ export function ProblemsPanel() {
                                 </div>
                             );
                         })}
-                    </div>
+                    </ScrollArea>
                 </div>
             )}
         </>

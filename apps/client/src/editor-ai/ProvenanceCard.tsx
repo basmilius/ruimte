@@ -1,12 +1,12 @@
-import { useTranslation } from 'react-i18next';
+import { AnchoredPopup } from '@adecore/editor-react';
 import { Button, RelativeTime } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
-import { AnchoredPopup } from '@adecore/editor-react';
+import { useTranslation } from 'react-i18next';
 import { useEndpointId } from '@/state/keys';
 import type { AgentHover } from './agent-changes';
 import { colorOfChat } from './agent-runs';
-import { ChatMark } from './ChatMark';
 import { openChatAtTurn } from './chat-turn';
+import { ChatMark } from './ChatMark';
 import { useChatIdentity, useProviderName } from './use-chat-identity';
 
 /* The lines of a run as a person reads them, such as `33-38`. */

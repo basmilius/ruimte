@@ -325,6 +325,7 @@ struct FileContentPage: View {
                 }.padding(.horizontal).padding(.top, 8)
             }
             TextEditor(text: $edit.text)
+                .disabled(edit.saving)
                 .font(.system(.footnote, design: .monospaced))
                 .autocorrectionDisabled().textInputAutocapitalization(.never)
                 .scrollContentBackground(.hidden)

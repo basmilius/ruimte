@@ -1,25 +1,19 @@
-import { personShell } from '../pty/pty.ts';
-import { AgentLineageStore, NoticeNotes, NoticeStore, TaskStore, restartBackgroundLimits, unshownNotes } from '@adecore/agents/coordination';
-import { wakeForWaitingMessages } from '../context/agent-messages.ts';
 import { AttachmentStore, BookmarkStore, ChatStore, ClaudeTitleReader, VisualStore, suggestChatTitle } from '@adecore/agents/chat';
+import { AgentLineageStore, NoticeNotes, NoticeStore, TaskStore, restartBackgroundLimits, unshownNotes } from '@adecore/agents/coordination';
 import { AgentStore } from '../agents/agent-store.ts';
 import { CodexTitleReader } from '../agents/codex-title.ts';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
-import { startCwdGuard } from '../canvas/project-paths.ts';
+import { artifactReport } from '../artifacts/artifact-report.ts';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { ruimteUiSources } from '../chat/ui-sources.ts';
-import { restartConnectPeers } from '../remote/connect-peer.ts';
-import { OneShotPlace } from '../peering/one-shot-place.ts';
-import { projectAccountChooser } from '../projects/project-accounts.ts';
-import { ProjectProposals } from '../projects/project-proposals.ts';
-import { UntrustedFolders } from '../peering/untrusted.ts';
 import type { ComputerUse } from '../computer/computer-use.ts';
 import { ComputerUseStore } from '../computer/store.ts';
-import { referenced } from '../context/references.ts';
+import { wakeForWaitingMessages } from '../context/agent-messages.ts';
 import { ContextStore } from '../context/context-store.ts';
 import { withForkOrigin } from '../context/fork-origin.ts';
 import { MESSAGE_WORDS, renderNotice } from '../context/notices.ts';
 import { openedChildSource } from '../context/opened-child.ts';
+import { referenced } from '../context/references.ts';
 import { hasDatabaseConnections } from '../database/connection-store.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
@@ -27,25 +21,31 @@ import { readLog } from '../git/log.ts';
 import { OutboxStore } from '../outbox/outbox.ts';
 import { agentChatOpening } from '../outbox/start-agent.ts';
 import { OutboxLink } from '../outbox/wiring.ts';
+import { OneShotPlace } from '../peering/one-shot-place.ts';
+import { UntrustedFolders } from '../peering/untrusted.ts';
 import { isPlanFileName, PlanStore } from '../plans/plan-store.ts';
+import { MoveJournal } from '../projects/move-journal.ts';
+import { projectAccountChooser } from '../projects/project-accounts.ts';
+import { ProjectProposals } from '../projects/project-proposals.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
+import { personShell } from '../pty/pty.ts';
+import { restartConnectPeers } from '../remote/connect-peer.ts';
+import { routineReport } from '../routines/routine-report.ts';
 import { CommandApprovals } from '../sessions/command-approvals.ts';
 import { SessionError, SessionManager } from '../sessions/manager.ts';
 import { ModeApprovals, personModeOf } from '../sessions/mode-approvals.ts';
 import { prepareShellIntegration, type ShellEnvironment } from '../sessions/shell-integration.ts';
 import { SnapshotStore, scheduleSnapshots, type SnapshotSchedule } from '../sessions/snapshot-store.ts';
-import { MoveJournal } from '../projects/move-journal.ts';
+import { startCwdGuard } from '../tools/project-paths.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
+import type { ArtifactsBundle } from './artifacts.ts';
 import type { DatabasesBundle } from './databases.ts';
 import type { DevicesBundle } from './devices.ts';
 import type { GitBundle } from './git.ts';
 import type { LaunchesBundle } from './launches.ts';
-import type { ArtifactsBundle } from './artifacts.ts';
-import { artifactReport } from '../artifacts/artifact-report.ts';
-import { routineReport } from '../routines/routine-report.ts';
-import type { RoutinesBundle } from './routines.ts';
 import type { ProjectsBundle } from './projects.ts';
 import type { ProvidersBundle } from './providers.ts';
+import type { RoutinesBundle } from './routines.ts';
 import type { DaemonRuntime } from './runtime.ts';
 import type { UsageBundle } from './usage.ts';
 
@@ -185,7 +185,6 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         snapshots,
         agents: new AgentStore(config.home),
         contextUrl: runtime.contextUrl,
-        binDir: runtime.binDir,
         contextFor: (sessionId) => context.list(sessionId),
         // Only a chat starts with a brief, which a routine run gives; a terminal hears the prompt alone.
         firstPrompt: async (sessionId) => (await prompts.take(sessionId))?.prompt ?? null,
@@ -295,7 +294,6 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         attachments,
         checkpoints,
         contextUrl: runtime.contextUrl,
-        binDir: runtime.binDir,
         depthOf: (chatId) => lineage.depthOf(chatId),
         computer: () => computer.usable,
         reachOpenProjects: () => identity.reachOpenProjects,

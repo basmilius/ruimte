@@ -1,5 +1,9 @@
-import { type ReactNode } from 'react';
+import { AgentIcon } from '@adecore/agents-react/providers';
+import { useProviders } from '@adecore/agents-react/state';
+import { Icon, Kbd, ScrollArea, SectionLabel, Tile } from '@adecore/ui';
+import type { Shortcut } from '@adecore/ui';
 import { LayoutTemplate, Type } from 'lucide-react';
+import { type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { centerWorld } from '@/actions/action-reach';
 import { applyLayoutAction, createNodeAction, createTextAction, showViewOnCanvasAction } from '@/actions/client-actions';
@@ -7,17 +11,14 @@ import { ProviderRows } from '@/agents/ProviderRows';
 import { emptyCanvasSections, type EmptyCanvasTile } from '@/canvas/empty-canvas';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';
 import { ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
-import { DesignTile } from '@/design/DesignAddItem';
 import { useDesignOffered } from '@/design/design-create';
+import { DesignTile } from '@/design/DesignAddItem';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { shownFolderOf, useProject } from '@/state/project';
-import { useProviders } from '@adecore/agents-react/state';
 import { useUi } from '@/state/ui';
-import { Icon, Kbd, SectionLabel, Tile } from '@adecore/ui';
-import type { Shortcut } from '@adecore/ui';
-import { AgentIcon } from '@adecore/agents-react/providers';
 
 interface TileLook {
     icon: ReactNode;
@@ -93,9 +94,10 @@ export function EmptyCanvas() {
     };
 
     return (
-        // The bottom padding keeps the grid clear of the dock, which floats over the same cell.
-        <div className="pointer-events-none absolute inset-0 grid place-items-center overflow-hidden px-4 pt-4 pb-20">
-            <div className="pointer-events-auto flex max-h-full w-full max-w-3xl flex-col gap-5 overflow-auto">
+        /* The bottom padding keeps the list clear of the dock, which floats over the same cell. The list shrinks and
+           scrolls while the hint under it keeps its line, so a small cell still says how to reach the rest. */
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 pt-4 pb-20">
+            <ScrollArea className="pointer-events-auto min-h-0 w-full max-w-3xl" viewportClassName="flex flex-col gap-5 *:shrink-0">
                 <ProviderRows onPick={(provider) => void createNodeAction('chat', { provider: provider.kind })} />
                 {SECTIONS.filter((key) => sections[key].length > 0).map((key) => (
                     <section key={key} className="flex flex-col gap-2">
@@ -124,10 +126,11 @@ export function EmptyCanvas() {
                         </div>
                     </section>
                 ))}
-                <p className="text-center text-xs text-text-muted">
-                    <Trans t={t} i18nKey="empty.hint" components={{ palette: <Kbd shortcut={APP_SHORTCUTS.palette} variant="inline" /> }} />
-                </p>
-            </div>
+                <SlotRow place="emptyCanvas" context={{}} words wrap={(row) => <div className="flex flex-wrap justify-center gap-2">{row}</div>} />
+            </ScrollArea>
+            <p className="pointer-events-auto shrink-0 text-center text-xs text-text-muted">
+                <Trans t={t} i18nKey="empty.hint" components={{ palette: <Kbd shortcut={APP_SHORTCUTS.palette} variant="inline" /> }} />
+            </p>
         </div>
     );
 }

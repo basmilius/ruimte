@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { clientAuthMessage, clientChannelMessage, daemonChallengeMessage, daemonChannelMessage, type AuthTicketPayload } from '@ruimte/contracts';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { AuthStore } from './auth-store.ts';
 import { CHALLENGE_TTL_MS, Handshake, TICKET_TTL_MS } from './handshake.ts';
 import { generateKeyPair, signMessage } from './keys.ts';
 import { admitClient } from './test-admit.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 let home: string;
 let clock: number;

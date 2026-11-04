@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
 import type { Database } from 'bun:sqlite';
+import { beforeEach, describe, expect, test } from 'bun:test';
 import { generateKeyPairSync } from 'node:crypto';
 import type { Env } from './env.ts';
 import { resolveAccount, unlinkIdentity } from './identities.ts';

@@ -1,26 +1,28 @@
+import { SubagentTitleCrumb } from '@adecore/agents-react/chat/ui';
+import { Icon, Menu, PaneBar, Tooltip } from '@adecore/ui';
+import { Ungroup } from 'lucide-react';
 import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Ungroup } from 'lucide-react';
 import { closeCellAction } from '@/actions/client-actions';
+import { useBrowserDisplayTitle } from '@/browser/title';
+import { ViewAccessories } from '@/extensions/ContributedSlots';
+import { nodeInfoOf } from '@/extensions/slots';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { isLooseView, viewGlyphOf, type CellView } from '@/shell/cell-view';
+import { MaximizedIndicator } from '@/shell/MaximizedIndicator';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { LooseGlyph } from '@/shell/panels/LooseGlyph';
-import { MaximizedIndicator } from '@/shell/MaximizedIndicator';
+import { cellAt, type CellAt } from '@/shell/split';
 import { TabStrip } from '@/shell/TabStrip';
 import { useCellBarSlot } from '@/shell/top-row-slot';
-import { SubagentTitleCrumb } from '@adecore/agents-react/chat/ui';
+import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
+import { useHasViewToolbar, useViewToolbarLeads } from '@/shell/view-toolbar';
 import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
 import { ViewToolbar } from '@/shell/ViewToolbar';
-import { useHasViewToolbar, useViewToolbarLeads } from '@/shell/view-toolbar';
-import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
 import { isDatabaseTab } from '@/state/files';
-import { cellAt, type CellAt } from '@/shell/split';
-import { Icon, Menu, PaneBar, Tooltip } from '@adecore/ui';
-import { useBrowserDisplayTitle } from '@/browser/title';
-import { TerminalViewPetMount } from '@/pets/ViewPetMounts';
 
 /* What a cell is: its tabs when it hosts them, or the glyph and the name of the view. */
 function CellTitle({ at, view, tabs, title }: { at: CellAt; view: CellView; tabs: readonly string[] | undefined; title: string | undefined }) {
@@ -129,9 +131,10 @@ export function CellToolbar({
                     compactActions={compactToolbar}
                     separated={leads}
                     accessory={
-                        // A terminal's text takes every pixel of its body, so its pet stands in the bar, on the line over the text.
+                        // A terminal's text takes every pixel of its body, so what a built-in adds stands in the bar.
                         view.kind === 'terminal' && (
-                            <TerminalViewPetMount
+                            <ViewAccessories
+                                on="terminal"
                                 id={view.id}
                                 title={visibleTitle}
                                 onPress={() => {
@@ -141,7 +144,13 @@ export function CellToolbar({
                             />
                         )
                     }
-                    trailing={maximized && <MaximizedIndicator at={at} />}
+                    trailing={
+                        <>
+                            <SlotRow place="viewToolbar" context={{}} />
+                            {view.kind === 'terminal' && <SlotRow place="terminalToolbar" context={{ node: nodeInfoOf(view.id) }} />}
+                            {maximized && <MaximizedIndicator at={at} />}
+                        </>
+                    }
                     focused={focused}
                     onClose={closable ? () => closeCellAction(view.id) : undefined}
                     closeLabel={t('cellToolbar.closeCell')}

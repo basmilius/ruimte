@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import type { ProjectDocument, ProviderInfo } from '@ruimte/contracts';
 import { EMPTY_DRAFT, readDraft, writeDraft } from '@adecore/agents-react/chat';
 import { providerSinkFor } from '@adecore/agents-react/state';
+import type { ProjectDocument, ProviderInfo } from '@ruimte/contracts';
+import { useChatChooser } from '@/chat/chat-chooser';
 import { focusedCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
-import { useChatChooser } from '@/chat/chat-chooser';
 import { fenceOf, lineRangeLabel, offerSelection, selectionBlock, startLinkedChat, type SelectionOffer } from './selection-to-chat';
 
 const node = (id: string, kind: 'file' | 'chat', x: number, extra: Record<string, unknown> = {}) => ({

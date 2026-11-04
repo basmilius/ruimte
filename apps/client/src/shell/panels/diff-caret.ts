@@ -1,8 +1,8 @@
-import { useRef, type RefObject } from 'react';
-import { create } from 'zustand';
 import type { DiffSource } from '@adecore/editor-react';
 import type { DiffSourceLine } from '@adecore/merge';
 import { matchesShortcut } from '@adecore/ui';
+import { useRef, type RefObject } from 'react';
+import { create } from 'zustand';
 import { ignoreRefusal, perform } from '@/actions/client-actions';
 import { isApplePlatform } from '@/desktop/bridge';
 import { cellElement } from '@/shell/cell-rects';

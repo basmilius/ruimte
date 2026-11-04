@@ -1,10 +1,10 @@
+import type { ArtifactSummary, ArtifactVersion } from '@ruimte/contracts';
 import { Fragment, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ArtifactSummary, ArtifactVersion } from '@ruimte/contracts';
-import { KindTile } from '@/output/look';
 import { startArtifactDrag } from '@/output/artifact-drag';
 import { useOpenArtifact } from '@/output/artifact-opener';
 import { OutputShownBesideContext } from '@/output/chat-scope';
+import { KindTile } from '@/output/look';
 import { savedPreviewOf } from '@/output/saved-preview';
 import { SavedPreview } from '@/output/SavedPreview';
 import { setDragging } from '@/shell/view-drag';

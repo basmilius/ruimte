@@ -1,7 +1,7 @@
+import { messageOf } from '@adecore/ui';
+import type { ProjectSummary } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
-import type { ProjectSummary } from '@ruimte/contracts';
-import { messageOf } from '@adecore/ui';
 import { TransportError } from '@/transport/transport';
 
 /* Long enough that a switch on a machine that is already connected never flashes a screen, short enough that a wait is never silent. */

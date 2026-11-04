@@ -1,7 +1,7 @@
+import { messageOf } from '@adecore/ui';
+import type { DatabaseConnection, LanguageSqlChangedEvent, LanguageSqlState, ProjectSql, SqlBinding, SqlSnapshotInfo } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
-import type { DatabaseConnection, LanguageSqlChangedEvent, LanguageSqlState, ProjectSql, SqlBinding, SqlSnapshotInfo } from '@ruimte/contracts';
-import { messageOf } from '@adecore/ui';
 import { consoleConnectionOf } from '@/database/console-file';
 import { windowProjectFollower } from '@/database/window-project';
 import { endpointKey } from '@/state/keys';

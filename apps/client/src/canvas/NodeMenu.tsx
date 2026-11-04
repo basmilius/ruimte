@@ -1,5 +1,8 @@
-import type { ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
+import { EMPTY_DRAFT, writeDraft } from '@adecore/agents-react/chat';
+import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui';
+import { useChatRow, useProviders } from '@adecore/agents-react/state';
+import { DisabledReason, Icon, Kbd, ContextMenu, ScrollArea } from '@adecore/ui';
+import { nodeColorOf, type NodeAccent, type ProviderInfo, type Task } from '@ruimte/contracts';
 import {
     ChevronsDownUp,
     ChevronsUpDown,
@@ -28,7 +31,8 @@ import {
     Terminal,
     Trash
 } from 'lucide-react';
-import { nodeColorOf, type NodeAccent, type ProviderInfo, type Task } from '@ruimte/contracts';
+import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     arrangeGroupAction,
     clearTerminalAction,
@@ -39,47 +43,44 @@ import {
     linkNodesAction,
     perform
 } from '@/actions/client-actions';
-import { BringBackItem } from '@/canvas/BringBackItem';
 import { ChatAgentSubmenu } from '@/agents/AgentMenus';
 import { askBeforeClearingChat, askBeforeStoppingTask } from '@/agents/end-children';
-import { FlagSubmenu } from '@/project/FlagSubmenu';
-import { askOpenAsView, canOpenAsView, showView } from '@/project/views';
 import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
-import { EMPTY_DRAFT, writeDraft } from '@adecore/agents-react/chat';
-import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui';
-import { ForkMenuItem } from '@/chat/ForkMenuItem';
-import { useShownChatOfNode } from '@/chat/focused-chat';
-import { useOffersFork } from '@/chat/use-offers-fork';
-import { stopPrWatch } from '@/shell/pr-watch-actions';
+import { BringBackItem } from '@/canvas/BringBackItem';
+import { CanvasCreateItems } from '@/canvas/CanvasMenu';
+import { formatNodeSize, makeDefaultSize } from '@/canvas/default-size';
+import { deleteSelectionAsking } from '@/canvas/delete-selection';
+import type { Point } from '@/canvas/math';
 import { useUnstartedTask } from '@/canvas/remote-wait';
-import { useEndpointId } from '@/state/keys';
-import { useChatPrWatch } from '@/state/pr-watches';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { useShownChatOfNode } from '@/chat/focused-chat';
+import { ForkMenuItem } from '@/chat/ForkMenuItem';
+import { useOffersFork } from '@/chat/use-offers-fork';
+import { workflowCandidates, type WorkflowCandidate } from '@/chat/workflow/beside-workflows';
+import { useWorkflowBesideSwitch } from '@/chat/workflow/workflow-beside-state';
+import { NodeMenuSlot } from '@/extensions/SlotSurfaces';
+import { FlagSubmenu } from '@/project/FlagSubmenu';
+import { useViewNodes } from '@/project/view-nodes';
+import { askOpenAsView, canOpenAsView, showView } from '@/project/views';
+import { setRunsHidden, useRunsHidden } from '@/routines/runs-hidden';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { workFolderOf, worktreeDiffTab } from '@/shell/panels/worktree-rows';
-import { deleteSelectionAsking } from '@/canvas/delete-selection';
-import { setRunsHidden, useRunsHidden } from '@/routines/runs-hidden';
-import { workflowCandidates, type WorkflowCandidate } from '@/chat/workflow/beside-workflows';
-import { useWorkflowBesideSwitch } from '@/chat/workflow/workflow-beside-state';
+import { stopPrWatch } from '@/shell/pr-watch-actions';
 import { canvasOfNode, maximizedNodeOf, useCanvas, useCanvasStore, type CanvasNode } from '@/state/canvas';
-import { useViewNodes } from '@/project/view-nodes';
-import { useChatRow, useProviders } from '@adecore/agents-react/state';
 import { useFiles } from '@/state/files';
+import { useEndpointId } from '@/state/keys';
+import { useChatPrWatch } from '@/state/pr-watches';
 import { isScratchProject, useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSessionRow } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
+import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
-import { useToasts } from '@/state/toasts';
 import { useWorkspace } from '@/transport/connections';
-import { NodeMachineScope } from '@/transport/node-machine';
 import { useTransport } from '@/transport/context';
-import { DisabledReason, Icon, Kbd, ContextMenu } from '@adecore/ui';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { formatNodeSize, makeDefaultSize } from '@/canvas/default-size';
-import { CanvasCreateItems } from '@/canvas/CanvasMenu';
-import type { Point } from '@/canvas/math';
+import { NodeMachineScope } from '@/transport/node-machine';
 
 interface NodeMenuProps {
     id: string;
@@ -224,7 +225,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
     /*
      * A note becomes the opening prompt of a chat beside it. The prompt is only seeded, never sent:
      * the person reads it once more and presses Enter. The edge keeps the note readable to the agent
-     * through `ruimte-context`, so a note edited later still reaches it.
+     * through `context_read`, so a note edited later still reaches it.
      */
     const startAgentFromNote = async (provider: ProviderInfo, account?: string): Promise<void> => {
         canvas();
@@ -447,6 +448,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
                 </ContextMenu.Item>
             )}
             {node.kind === 'file' && filePath !== null && <FileActionItems path={filePath} on="node" />}
+            <NodeMenuSlot nodeId={id} />
             <ContextMenu.Separator />
             {isChat && (
                 <ContextMenu.Item onClick={clearChat}>
@@ -483,7 +485,7 @@ function AccentSubmenu({ picked, onPick }: { picked: string | undefined; onPick(
             </ContextMenu.SubmenuTrigger>
             {/* The same list as Flag; only the colors scroll, so None stays in sight in a short window. */}
             <ContextMenu.Popup className="flex min-w-44 flex-col overflow-hidden">
-                <div className="min-h-0 overflow-y-auto overscroll-contain">
+                <ScrollArea viewportClassName="overscroll-contain">
                     {NODE_ACCENTS.map((accent) => (
                         <ContextMenu.Item key={accent.id} onClick={() => onPick(accent.id)}>
                             <ContextMenu.Check kind="radio" checked={picked === accent.id} />
@@ -491,7 +493,7 @@ function AccentSubmenu({ picked, onPick }: { picked: string | undefined; onPick(
                             <span className="grow">{accentLabel(accent.id)}</span>
                         </ContextMenu.Item>
                     ))}
-                </div>
+                </ScrollArea>
                 <ContextMenu.Separator />
                 <ContextMenu.Item onClick={() => onPick(null)}>
                     <ContextMenu.Check kind="radio" checked={!picked} /> {t('menu.noAccent')}

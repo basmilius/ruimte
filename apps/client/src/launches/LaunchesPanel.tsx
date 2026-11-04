@@ -1,30 +1,30 @@
-import { useEffect, useRef, useState } from 'react';
-import clsx from 'clsx';
-import i18next from 'i18next';
-import { useTranslation } from 'react-i18next';
 import type { TerminalViewHandle } from '@adecore/terminal';
-import { MachineTerminal } from '@/terminal/MachineTerminal';
-import { ChevronDown, ExternalLink, Play, Plus, Rocket, Smartphone } from 'lucide-react';
 import { Button, ButtonGroup, Icon, Menu, PanelEmpty, useNow, messageOf } from '@adecore/ui';
 import { formatAgo, formatDuration } from '@adecore/ui/format';
+import clsx from 'clsx';
+import i18next from 'i18next';
+import { ChevronDown, ExternalLink, Play, Plus, Rocket, Smartphone } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { isApplePlatform } from '@/desktop/bridge';
+import { useDeviceList } from '@/devices/state';
 import { openLaunchAddress, showLaunchDevice, startLaunch } from '@/launches/actions';
 import { deviceTargetOf, matchLaunchDevice, type DeviceTarget } from '@/launches/device-target';
-import { useDeviceList } from '@/devices/state';
 import { LaunchMenu } from '@/launches/LaunchChip';
 import { LaunchButtons, LaunchStatusIcon } from '@/launches/LaunchControls';
 import { chosenLaunch, othersOf, outputOf, shortAddress, type LaunchView } from '@/launches/model';
 import { useAddressReachable, useLaunches, useProjectLaunches } from '@/launches/state';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
+import { basenameOf } from '@/shell/panels/files-tree';
 import { useProjectRepos } from '@/state/git-repos';
 import { useEndpointId } from '@/state/keys';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { isAppShortcut, isTerminalPaste, macMotionSequence } from '@/terminal/keymap';
+import { MachineTerminal } from '@/terminal/MachineTerminal';
 import { drawSession, fittedGrid } from '@/terminal/xterm';
 import { deviceClientFor, sessionClientFor } from '@/transport/connections';
-import { basenameOf } from '@/shell/panels/files-tree';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { lineBounds } from '@/canvas/line-geometry';
 import { createCanvasStore, type CanvasNode } from '@/state/canvas';
 import { editableGaps, gapOffsets } from './editable-gaps';
-import { lineBounds } from '@/canvas/line-geometry';
 
 function node(id: string, x: number, y = 0, kind: CanvasNode['kind'] = 'note'): CanvasNode {
     return { id, kind, title: id, x, y, w: 100, h: 100 };

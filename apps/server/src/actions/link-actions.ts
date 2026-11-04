@@ -1,11 +1,12 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
 import { EDGE_ROLES, isAgentKind, lineEndOf, type EdgeRole, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
-import { MAX_LINKS, ROLE_LINES, edgeLines, ownEnd } from '../canvas/links.ts';
-import { newId, nodeLines } from '../canvas/nodes.ts';
-import { refuseMissingNodes } from '../canvas/own-view.ts';
-import { refuseOtherMachine } from '../canvas/remote-node.ts';
-import { VerbRefusal, canvasNamed } from '../canvas/verb.ts';
-import { verbCallOf, type ServerActionCall, type ServerActionContext } from './context.ts';
+import { canvasNamed } from '../tools/host.ts';
+import { MAX_LINKS, ROLE_LINES, edgeLines, ownEnd } from '../tools/links.ts';
+import { newId, nodeLines } from '../tools/nodes.ts';
+import { refuseMissingNodes } from '../tools/own-view.ts';
+import { refuseOtherMachine } from '../tools/remote-node.ts';
+import { agentCallOf, type ServerActionCall, type ServerActionContext } from './context.ts';
 
 type DrawnEdge = ActionOutput<'link.create'>['edges'][number];
 
@@ -19,7 +20,7 @@ function edgeRow(edge: ProjectEdge) {
  */
 async function deleteEdges(call: ServerActionCall, viewId: string, edgeIds: readonly string[]): Promise<ActionOutput<'link.deleteMany'>> {
     const { host, place } = call.context;
-    const caller = verbCallOf(call);
+    const caller = agentCallOf(call);
     const anyLine = host.machine.agentsDeleteAnyView;
     const deletable = (edge: ProjectEdge): boolean => anyLine || (ownEnd(edge.from, caller) && ownEnd(edge.to, caller));
     const ids = [...new Set(edgeIds)];
@@ -28,12 +29,12 @@ async function deleteEdges(call: ServerActionCall, viewId: string, edgeIds: read
         const going = ids.map((edgeId) => {
             const edge = canvas.edges.find((candidate) => candidate.id === edgeId);
             if (!edge) {
-                throw new VerbRefusal('unknown-edge', `${edgeId} is not a line on ${canvas.id}`, edgeLines(canvas, deletable));
+                throw new ToolRefusal('unknown-edge', `${edgeId} is not a line on ${canvas.id}`, edgeLines(canvas, deletable));
             }
             if (!deletable(edge)) {
                 const foreign = ownEnd(edge.from, caller) ? edge.to : edge.from;
                 const maker = host.lineage.madeBy(foreign) ?? 'a person';
-                throw new VerbRefusal(
+                throw new ToolRefusal(
                     'not-yours',
                     `${edgeId} runs ${foreign === edge.from ? 'from' : 'into'} ${foreign}, which ${maker} made, and link delete only removes a line whose ends are both yours`,
                     [
@@ -70,10 +71,10 @@ export const linkActions: ActionHandlers<ServerActionContext> = {
         const { host, place } = call.context;
         const targets = [...new Set(to)];
         if (targets.length > MAX_LINKS) {
-            throw new VerbRefusal('too-many-links', `--to names ${targets.length} nodes and at most ${MAX_LINKS} may be linked at once`);
+            throw new ToolRefusal('too-many-links', `to names ${targets.length} nodes and at most ${MAX_LINKS} may be linked at once`);
         }
         if (role != null && !(EDGE_ROLES as readonly string[]).includes(role)) {
-            throw new VerbRefusal('unknown-role', `${role} is not one of the ${EDGE_ROLES.length} things a line can be for`, [...ROLE_LINES]);
+            throw new ToolRefusal('unknown-role', `${role} is not one of the ${EDGE_ROLES.length} things a line can be for`, [...ROLE_LINES]);
         }
         const edgeRole = role == null ? undefined : (role as EdgeRole);
         /* A line that reads: the role says so, or nothing was said and a line into an agent has read
@@ -88,9 +89,9 @@ export const linkActions: ActionHandlers<ServerActionContext> = {
             const source = canvas.nodes.find((node) => node.id === from);
             if (!source) {
                 if (start === null) {
-                    throw new VerbRefusal(
+                    throw new ToolRefusal(
                         'unknown-node',
-                        `You are not a node on ${canvas.id}, so a line has nowhere to start; name one with --from`,
+                        `You are not a node on ${canvas.id}, so a line has nowhere to start; name one with from`,
                         nodeLines(canvas)
                     );
                 }
@@ -111,7 +112,7 @@ export const linkActions: ActionHandlers<ServerActionContext> = {
                 );
             }
             if (targets.includes(from)) {
-                throw new VerbRefusal('self-link', `${from} is both ends of the line; a node reads itself without one`);
+                throw new ToolRefusal('self-link', `${from} is both ends of the line; a node reads itself without one`);
             }
             for (const end of [from, ...targets]) {
                 refuseOtherMachine(host, end);
@@ -120,12 +121,12 @@ export const linkActions: ActionHandlers<ServerActionContext> = {
             const made: ProjectEdge[] = [];
             const reroled = new Map<string, ProjectEdge>();
             const drawn: DrawnEdge[] = [];
-            /* `way` is what tells the two rows of one --to apart: the line that was asked for, and
+            /* `way` is what tells the two rows of one to apart: the line that was asked for, and
                the one this action draws back by itself between two agents. */
             const draw = (tail: string, head: ProjectNode, way: 'out' | 'back'): void => {
                 const already = [...canvas.edges, ...made].find((edge) => edge.from === tail && edge.to === head.id);
                 if (already) {
-                    /* A --role that is not the one on the line is a different line asked for, not the
+                    /* A role that is not the one on the line is a different line asked for, not the
                        same call run twice, so it is written rather than dropped without a word. */
                     if (edgeRole !== undefined && already.role !== edgeRole) {
                         reroled.set(already.id, { ...already, role: edgeRole });

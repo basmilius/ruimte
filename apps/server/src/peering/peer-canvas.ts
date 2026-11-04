@@ -11,15 +11,6 @@ export function nodeOf(node: PeerNode, index: number): ProjectNode {
     return { ...node, x: (index % COLUMNS) * (w + GAP), y: Math.floor(index / COLUMNS) * (h + GAP), w, h };
 }
 
-/* What the other machine drew of a node, without the place and size this machine gave it. */
-export function peerNodeOf(node: ProjectNode): PeerNode | null {
-    if (node.kind !== 'terminal' && node.kind !== 'chat' && node.kind !== 'device') {
-        return null;
-    }
-    const { x: _x, y: _y, w: _w, h: _h, ...rest } = node;
-    return rest as PeerNode;
-}
-
 /* Whether a view or a node outside that machine's canvas has one of these ids, which would fail every flush of the other machine. */
 export function idTakenOutside(views: readonly ProjectView[], canvasId: string, ids: ReadonlySet<string>): boolean {
     return views.some((view) => view.id !== canvasId && (ids.has(view.id) || (isCanvasView(view) && view.nodes.some((node) => ids.has(node.id)))));

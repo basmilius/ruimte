@@ -1,0 +1,12 @@
+{
+    "id": "poc.surfaces",
+    "name": "POC surfaces",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "description": "One of every surface and hook without a server.",
+    "color": "#7c3aed",
+    "permissions": {
+        "ui.canvasOverlay": "Draws a label over the canvas"
+    }
+}

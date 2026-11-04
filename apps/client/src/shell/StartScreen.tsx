@@ -1,28 +1,28 @@
-import { useState, type ReactNode } from 'react';
-import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
+import { Button, ErrorBoundary, Icon, Kbd, ScrollArea, SectionLabel, Tile, ContextMenu } from '@adecore/ui';
 import { isRecentProject } from '@ruimte/contracts';
+import clsx from 'clsx';
 import { FolderOpen, LogIn, MessageSquarePlus, MessagesSquare, MonitorSmartphone, RotateCw } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { openProjectAction, openProjectClickAction } from '@/actions/client-actions';
 import { isDesktop } from '@/desktop/bridge';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { chatsProjects, openableRows, recentProjects, type ProjectMenuRow } from '@/project/list';
 import { newChat, useOffersNewChat } from '@/project/new-chat';
 import { openProject } from '@/project/open';
-import { openProjectAction, openProjectClickAction } from '@/actions/client-actions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { usePulsarAccount } from '@/pulsar/account';
 import { usePulsarMachines } from '@/pulsar/machines';
-import { ProjectPlaceActions } from '@/shell/ProjectActions';
+import { runAppShortcut } from '@/shell/app-shortcuts';
 import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
 import { linkDot, linkHint, machineLink } from '@/shell/palette-browse';
-import { SignInButtons } from '@/shell/SignInButtons';
-import { runAppShortcut } from '@/shell/app-shortcuts';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { ProjectPlaceActions } from '@/shell/ProjectActions';
 import { AddMachineDialog } from '@/shell/settings/AddMachineDialog';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { mergeMachines, nameOf, type MachineEntry } from '@/shell/settings/machine-list';
-import { stationBoot } from '@/station';
+import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { SignInButtons } from '@/shell/SignInButtons';
 import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine, startScreenMachine } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';
@@ -31,9 +31,9 @@ import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { useUpdates } from '@/state/updates';
 import { useWindow, type BootFailure } from '@/state/window';
+import { stationBoot } from '@/station';
 import { useEndpointConnection, useMachineHold, useOpenEndpoints } from '@/transport/status';
 import { BrandIntro } from '@/ui/Brand';
-import { Button, ErrorBoundary, Icon, Kbd, SectionLabel, Tile, ContextMenu } from '@adecore/ui';
 
 const ROW = 'flex min-h-10 w-full min-w-0 items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-surface-hover disabled:opacity-50';
 
@@ -349,11 +349,11 @@ export function StartScreen() {
         <div className="flex h-full w-full flex-col bg-bg">
             <div className="app-drag h-12 shrink-0" style={{ paddingLeft: inset ?? STRIP_PADDING_PX }} />
             <div className="relative min-h-0 grow">
-                <div className="h-full overflow-auto">
+                <ScrollArea className="h-full">
                     <ErrorBoundary label={t('start.failed')}>
                         <StartContent />
                     </ErrorBoundary>
-                </div>
+                </ScrollArea>
                 <Footer />
             </div>
         </div>

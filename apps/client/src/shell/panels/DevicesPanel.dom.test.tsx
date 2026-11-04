@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { DeviceInfo } from '@ruimte/contracts';
+import { act } from 'react';
 import { useUi } from '@/state/ui';
-import { FakeMachine } from '../../../testing/fake-machine';
-import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';
-import { answerDevices, FAKE_EMULATOR, FAKE_PHONE, FAKE_SIMULATOR, type FakeDevices } from '../../../testing/fake-devices';
 import { button, buttonWithText } from '../../../testing/device-dom';
 import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
+import { answerDevices, FAKE_EMULATOR, FAKE_PHONE, FAKE_SIMULATOR, type FakeDevices } from '../../../testing/fake-devices';
+import { FakeMachine } from '../../../testing/fake-machine';
+import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';
 import { emptyCanvas } from '../../../testing/project-fixtures';
 
 const MAIN = emptyCanvas();

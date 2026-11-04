@@ -1,0 +1,48 @@
+import { DatabaseTable } from '@/components/docs/guide/DatabaseTable.tsx';
+import { Note } from '@/components/docs/guide/ui.tsx';
+
+export const metadata = { title: 'Databases' };
+
+# Databases
+
+<p className="lead">The Databases panel connects to SQLite and MySQL or MariaDB. Browse tables, edit rows and run SQL; agents read the same connections.</p>
+
+## Add a connection
+
+1. Click the database icon in the rail, or run **Toggle databases panel**.
+2. Click **Add connection**, or click a database container the panel found running on the machine.
+
+A connection is yours until you choose **Share with team**. A shared connection is saved with the project, without its password. A SQLite file outside the project folder cannot be shared.
+
+Ruimte keeps passwords encrypted on your computer. Where your system offers no encryption, it says so and keeps them only until it quits.
+
+## Work with tables
+
+<DatabaseTable />
+
+| To | Do |
+| --- | --- |
+| See rows | Open a table. Filter the rows, edit them, and submit your edits. |
+| See or change a table's structure | Open its structure, or design a new table |
+| Run SQL | Click **New console** |
+| Keep a table in the sidebar | Save it as a view. A shared view needs a shared connection. |
+
+Unsubmitted edits keep their tab open until you submit or discard them.
+
+## SQL in files
+
+In a `.sql` file, and in SQL inside PHP strings, the editor checks your SQL against a connection's schema. **SQL of this file** picks the connection for one file, or sets a default for the project. **Read schema again** picks up changes to the database.
+
+## What agents may do
+
+Under **Manage connections**, set **Agents** per connection:
+
+| Setting | What agents may do |
+| --- | --- |
+| Off | Nothing with this connection |
+| Read only | Run one SELECT or WITH query at a time, on a read-only session. The default. |
+| Read and write | Also change data |
+
+<Note>Only someone at the machine itself can allow writing. An agent in Supervised mode never writes.</Note>
+
+An agent can show the rows it read as a table above its reply. A connection with a password works for agents only while you have the project open.

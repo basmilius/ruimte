@@ -12,11 +12,11 @@ import {
 } from '@/browser/swipe';
 import { useSwipeOverlay } from '@/browser/swipe-overlay';
 import { canSwipeBetweenPages, desktop, type DesktopBridge } from '@/desktop/bridge';
-import { useSettings } from '@/state/settings';
+import { endpointById, LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { dropEndpoint, endpointKey, isOfEndpoint, splitKey, useEndpointId } from '@/state/keys';
+import { useSettings } from '@/state/settings';
 import { localBrowserRouteAvailable } from './owner-route';
 import { webContentsIdOf } from './preview-guests';
-import { endpointById, LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 
 /* A main-frame load that did not arrive, in Chromium's own terms. What to say about it is
    `classifyLoadError`; the registry only reports what happened. */

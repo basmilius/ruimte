@@ -1,17 +1,18 @@
-import { useState } from 'react';
+import { clampColumnSize, CloseButton, ErrorBoundary, SlidingColumn, lazyNamed, PanelHeader, SectionLabel, Separator, LazyBoundary } from '@adecore/ui';
 import clsx from 'clsx';
+import { createElement, useState, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
-import { usePanelGap } from '@/shell/panel-layout';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { hasOverlayControls } from '@/desktop/bridge';
-import { closesFromRail, PANELS } from '@/shell/panels';
+import { SlotRow } from '@/extensions/SlotSurfaces';
+import { usePanelGap } from '@/shell/panel-layout';
 import { PanelHeaderProvider } from '@/shell/PanelHeaderSlot';
+import { closesFromRail, usePanelEntries, type CorePanel, type PanelEntry } from '@/shell/panels';
+import { DevicesPanel } from '@/shell/panels/DevicesPanel';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
-import { DevicesPanel } from '@/shell/panels/DevicesPanel';
-import { clampColumnSize, CloseButton, ErrorBoundary, SlidingColumn, lazyNamed, PanelHeader, SectionLabel, Separator, LazyBoundary } from '@adecore/ui';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useInstantWidth } from '@/shell/useInstantWidth';
-import { useShownPanel, useUi, type PanelKind } from '@/state/ui';
+import { useShownPanel, useUi } from '@/state/ui';
 
 const GitPanel = lazyNamed(() => import('@/shell/panels/GitPanel'), 'GitPanel');
 const ProblemsPanel = lazyNamed(() => import('@/language/ProblemsPanel'), 'ProblemsPanel');
@@ -24,27 +25,24 @@ const DEFAULT_WIDTH = 540;
 // A drag stops here instead of squeezing the canvas away.
 const MIN_CANVAS_WIDTH = 360;
 
-function PanelBody({ kind }: { kind: PanelKind }) {
-    switch (kind) {
-        case 'files':
-            return <FilesPanel />;
-        case 'git':
-            return <GitPanel />;
-        case 'processes':
-            return <ProcessesPanel />;
-        case 'devices':
-            return <DevicesPanel />;
-        case 'launches':
-            return <LaunchesPanel />;
-        case 'databases':
-            return <DatabasesPanel />;
-        case 'output':
-            return <OutputPanel />;
-        case 'problems':
-            return <ProblemsPanel />;
-        case 'voice':
-            return <VoicePanelBody />;
+const CORE_PANELS: Record<CorePanel['kind'], ComponentType> = {
+    files: FilesPanel,
+    git: GitPanel,
+    processes: ProcessesPanel,
+    devices: DevicesPanel,
+    launches: LaunchesPanel,
+    databases: DatabasesPanel,
+    output: OutputPanel,
+    problems: ProblemsPanel,
+    voice: VoicePanelBody
+};
+
+function bodyOf(entry: PanelEntry | undefined): ComponentType | null {
+    if (entry === undefined) {
+        return null;
     }
+
+    return 'component' in entry ? entry.component : CORE_PANELS[entry.kind];
 }
 
 /* Keep the inner column at its stored width while the outer split animates, avoiding content reflow. */
@@ -58,17 +56,20 @@ export function Panel() {
     const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
     const stored = useUi((s) => s.panelWidth);
     const planOpen = useUi((s) => s.planOpen);
-    const entry = PANELS.find((candidate) => candidate.kind === panel.kind);
+    const entry = usePanelEntries().find((candidate) => candidate.kind === panel.kind);
+    const Body = bodyOf(entry);
     const bounds = { min: entry?.minWidth ?? 240, max: () => window.innerWidth - MIN_CANVAS_WIDTH };
     // The project may have been on a wider window than this one, so its width is clamped on the way in.
     const width = clampColumnSize(bounds, stored ?? DEFAULT_WIDTH);
 
     const instant = useInstantWidth();
 
-    const label = entry === undefined ? t('panel.fallback') : t(`panel.names.${entry.kind}`);
+    const label = entry === undefined ? t('panel.fallback') : 'label' in entry ? entry.label() : t(`panel.names.${entry.kind}`);
 
     return (
         <SlidingColumn
+            // SlidingColumn draws the element, so a theme's hook is set on it from here.
+            ref={(element) => element?.setAttribute('data-surface', 'panel')}
             open={open}
             gap={gap}
             // Beside the sheet its edge is the sheet's; beside an open plan it draws its own line.
@@ -85,6 +86,7 @@ export function Panel() {
                 <div ref={setTitleSignal} className="panel-title-signal hidden" />
                 <SectionLabel className="panel-title shrink-0">{label}</SectionLabel>
                 {/* The panel's own controls, between its name and the close button. */}
+                <SlotRow place="panelHeader" context={{ panel: panel.kind }} />
                 <div ref={setHeaderSlot} className="peer flex grow shrink-0 items-center gap-2" />
                 {/* A panel with a toggle in the rail closes there; one without keeps a close button of its own. */}
                 {entry !== undefined && !closesFromRail(entry.kind) && (
@@ -100,9 +102,7 @@ export function Panel() {
             </PanelHeader>
             <PanelHeaderProvider hosts={{ leading: leadingHeaderSlot, titleSignal, trailing: headerSlot }}>
                 <ErrorBoundary label={t('panel.failed')} resetKeys={[panel.kind]} className="min-h-0 grow">
-                    <LazyBoundary fallback={<div className="min-h-0 grow" />}>
-                        <PanelBody kind={panel.kind} />
-                    </LazyBoundary>
+                    <LazyBoundary fallback={<div className="min-h-0 grow" />}>{Body !== null && createElement(Body)}</LazyBoundary>
                 </ErrorBoundary>
             </PanelHeaderProvider>
         </SlidingColumn>

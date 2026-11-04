@@ -1,6 +1,6 @@
-import i18next from 'i18next';
 import { toolSummary } from '@adecore/agents-react/chat';
 import type { PromptSubject } from '@adecore/agents-react/prompts';
+import i18next from 'i18next';
 import { isRuimtePrompt } from '@/prompts/ruimte-prompts';
 
 /*

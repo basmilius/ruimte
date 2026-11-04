@@ -4,7 +4,7 @@ import Foundation
 /// an element that keeps its value may have taken it all the same (a terminal sends it on and clears its field), so
 /// nothing refuses once a key went out: a refusal has to leave no character behind.
 public enum KeysBehind {
-    public static let keptValueNote = "the focused element kept its value, which a terminal does as well: if the state shows nothing typed, the app takes no keys behind the person's work and it needs --front"
+    public static let keptValueNote = "the focused element kept its value, which a terminal does as well: if the state shows nothing typed, the app takes no keys behind the person's work and it needs front"
 
     /// Sends every character once and in order. Returns the note for an answer when the focused value did not change.
     /// - Parameters:

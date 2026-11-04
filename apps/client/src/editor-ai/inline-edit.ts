@@ -1,9 +1,5 @@
-import i18next from 'i18next';
-import { createStore, type StoreApi } from 'zustand';
-import { storedPathOf, type AgentKind } from '@ruimte/contracts';
-import { fileUriToPath } from '@adecore/lsp';
-import type { EditorRange, EditorTrackedRange } from '@adecore/editor';
 import { knownAccounts, providerAccountsOf, providersOf } from '@adecore/agents-react/state';
+import type { EditorRange, EditorTrackedRange } from '@adecore/editor';
 import { highlightLayers, shikiLanguageOf } from '@adecore/editor-react';
 import {
     codeLabelOf,
@@ -16,18 +12,21 @@ import {
     type InlineProblem,
     type LineSpan
 } from '@adecore/editor-react/models';
-import { availableAgents } from '@/agents/creation';
+import { fileUriToPath } from '@adecore/lsp';
+import { storedPathOf, type AgentKind } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { createStore, type StoreApi } from 'zustand';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import type { HostLanguage as EditorLanguage } from '@/language/host-language';
 import { isShortcut } from '@/language/shortcut-keys';
+import { editorAgentOn, inlineEditAccountOn } from '@/state/ai-settings';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { inlineEditAccountOn } from '@/state/ai-settings';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { inlineEditDeps } from './inline-edit-deps';
-import { inlineEditFor, onInlineEditsChange } from './inline-edit-record';
 import { sweepInlineEdits } from './inline-edit-prune';
+import { inlineEditFor, onInlineEditsChange } from './inline-edit-record';
 import { InlineEditSession, inlineSessionOf, type InlineEditDeps } from './inline-edit-session';
 
 const PLAIN_IDS = new Set(['plaintext', 'text']);
@@ -64,13 +63,10 @@ interface InlineEditView {
 
 /* The agent the setting names, or the first one installed when that one is not. */
 export function inlineAgentNow(endpointId: string): { provider: AgentKind; model: string | null; account?: string } {
-    const wanted = useSettings.getState().aiInlineAgent;
-    const offered = availableAgents(providersOf(endpointId).providers, 'chat');
-    if (offered.length === 0 || offered.some((provider) => provider.kind === wanted.provider)) {
-        const account = inlineEditAccountOn(knownAccounts(providerAccountsOf(endpointId)), wanted.provider, wanted.account);
-        return { provider: wanted.provider, model: wanted.model, ...(account === undefined ? {} : { account }) };
-    }
-    return { provider: offered[0]!.kind, model: null };
+    const wanted = editorAgentOn(providersOf(endpointId).providers, useSettings.getState().aiInlineAgent);
+    const account = inlineEditAccountOn(knownAccounts(providerAccountsOf(endpointId)), wanted.provider, wanted.account);
+
+    return { provider: wanted.provider, model: wanted.model, ...(account === undefined ? {} : { account }) };
 }
 
 /*
@@ -270,13 +266,6 @@ export class InlineEditFeature {
         );
         this.adopt(session);
         await session.restore();
-    }
-
-    /* Whether this file has an edit that Show Inline Edit would bring back. */
-    get hasEdit(): boolean {
-        return (
-            this.store.getState().session !== null || inlineSessionOf(this.endpointId, this.path) !== null || inlineEditFor(this.endpointId, this.path) !== null
-        );
     }
 
     /* The row the proposal is drawn in, which the editor makes again whenever it scrolls back into view. */

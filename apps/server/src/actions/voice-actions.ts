@@ -1,7 +1,8 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import { MAX_PROMPT_LENGTH, pendingRequestsOf, type ActionHandlers, type ActionInput, type ActionOutput } from '@ruimte/actions';
 import { isChatNode, type ChatItem, type ProjectContent } from '@ruimte/contracts';
 import { matchName, resolveNames, type VoiceNameMatch } from '@ruimte/voice';
-import { VerbRefusal, type CanvasHost } from '../canvas/verb.ts';
+import { type CanvasHost } from '../tools/host.ts';
 import { agentReading } from '../voice/agent-reading.ts';
 import { chatExcerpt } from '../voice/chat-excerpt.ts';
 import {
@@ -25,7 +26,7 @@ type Resolved = ActionOutput<'target.resolve'>;
 /* Only Voice reaches these handlers: an agent reads a chat through its lines, with the rules of `context.read`. */
 function voiceOf(context: ServerActionContext): VoiceCaller {
     if (context.voice === undefined) {
-        throw new VerbRefusal('forbidden-action', 'Only Voice reads a project this way');
+        throw new ToolRefusal('forbidden-action', 'Only Voice reads a project this way');
     }
     return context.voice;
 }
@@ -47,20 +48,20 @@ async function sessionProject(context: ServerActionContext): Promise<{ projectId
 /*
  * Refused before anything is read: a chat on another machine has nothing here but the shell it left, and
  * Voice reaches only the project its session works in now, whatever id the model names. The words are for
- * the model of a voice and name no `ruimte-context` flag.
+ * the model of a voice and name no agent tool or flag.
  */
 async function chatOfSession(context: ServerActionContext, chatId: string): Promise<VoiceAgentPlace & { project: string }> {
     const voice = voiceOf(context);
     const { host } = context;
     if (host.projects.machineOfNode(chatId) !== null) {
-        throw new VerbRefusal('remote-target', 'That chat runs on another machine; Voice reaches only the chats of this one');
+        throw new ToolRefusal('remote-target', 'That chat runs on another machine; Voice reaches only the chats of this one');
     }
     const projectId = sessionProjectId(voice);
     const place = host.projects.locate(chatId);
     const content = place?.projectId === projectId ? await host.projects.read(projectId) : null;
     const chat = content === null ? null : projectChat(content, chatId);
     if (content === null || chat === null) {
-        throw new VerbRefusal('not-in-project', 'That id is no AI Chat of the project Voice works in; resolve the chat by its name first');
+        throw new ToolRefusal('not-in-project', 'That id is no AI Chat of the project Voice works in; resolve the chat by its name first');
     }
     return { ...chat, project: content.name ?? projectId };
 }
@@ -110,8 +111,8 @@ function named(target: Resolved['target'], names: readonly string[], match: (nam
 }
 
 /* A phone has no selection and the machine does not see its screen, so whatever a window would read off either is asked for by name. */
-function needsName(what: string): VerbRefusal {
-    return new VerbRefusal('needs-window', `A phone has no selection or view of the screen, so name the ${what}`);
+function needsName(what: string): ToolRefusal {
+    return new ToolRefusal('needs-window', `A phone has no selection or view of the screen, so name the ${what}`);
 }
 
 type InProject = ActionInput<'target.resolve'> & { target: Exclude<ActionInput<'target.resolve'>['target'], 'project'> };
@@ -131,7 +132,7 @@ function resolveIn(content: ProjectContent, canvasId: string | null, input: InPr
             throw needsName('node');
         }
         if (canvas === null) {
-            throw new VerbRefusal('no-canvas', 'This project has no canvas, so it has no nodes to name');
+            throw new ToolRefusal('no-canvas', 'This project has no canvas, so it has no nodes to name');
         }
         const nodes = canvas.nodes.filter((node) => nodeKind === null || node.kind === nodeKind).map((node) => nodeTarget(node, canvas));
         return named(target, names, (name) => matchName(name, nodes));
@@ -156,7 +157,7 @@ function resolveIn(content: ProjectContent, canvasId: string | null, input: InPr
 function runningPrompts(context: ServerActionContext, chatId: string, chat: string, also = ''): NonNullable<CanvasHost['chatPrompts']> {
     const prompts = context.host.chatPrompts;
     if (prompts === undefined || !prompts.running(chatId)) {
-        throw new VerbRefusal('chat-not-running', `“${chat}” does not run on the machine now. Opening it in Ruimte starts it again${also}`);
+        throw new ToolRefusal('chat-not-running', `“${chat}” does not run on the machine now. Opening it in Ruimte starts it again${also}`);
     }
 
     return prompts;
@@ -166,7 +167,7 @@ function lastSettledTurn(items: readonly ChatItem[]): string | null {
     return items.findLast((item) => item.kind === 'turn' && item.state !== 'running')?.id ?? null;
 }
 
-/* The daemon's handlers of actions that only Voice runs here, in the same registry the agents' verbs go through. */
+/* The daemon's handlers of actions that only Voice runs here, in the same registry the agents' tools go through. */
 export const voiceActions: ActionHandlers<ServerActionContext> = {
     'chat.read': async ({ chatId, limit }, { context }) => {
         const chat = await chatOfSession(context, chatId);
@@ -183,10 +184,10 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
         const prompts = runningPrompts(context, chatId, chat.name, ', or agent.start starts a new AI Chat with this prompt');
         const text = prompt.trim();
         if (text === '') {
-            throw new VerbRefusal('empty-prompt', 'The prompt is empty');
+            throw new ToolRefusal('empty-prompt', 'The prompt is empty');
         }
         if (text.length > MAX_PROMPT_LENGTH) {
-            throw new VerbRefusal('prompt-too-long', `The prompt is ${text.length} characters and Voice sends at most ${MAX_PROMPT_LENGTH}`);
+            throw new ToolRefusal('prompt-too-long', `The prompt is ${text.length} characters and Voice sends at most ${MAX_PROMPT_LENGTH}`);
         }
         // Taken before the prompt goes out, so even a turn that ends before the send answers is the one told.
         const ticket = voice.follow?.expectPrompt(chatId, { chat: chat.name, project: chat.project });
@@ -260,7 +261,7 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
         const chat = await chatOfSession(context, chatId);
         const info = await context.host.chatThreads?.info?.(chatId);
         if (!info) {
-            throw new VerbRefusal('chat-not-started', `“${chat.name}” has not started yet, so there is nothing to inspect`);
+            throw new ToolRefusal('chat-not-started', `“${chat.name}” has not started yet, so there is nothing to inspect`);
         }
         const items = (await context.host.chatThreads?.items(chatId)) ?? [];
         const working = info.activeTurnId !== null;
@@ -323,10 +324,10 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
         const voice = voiceOf(context);
         const focus = voice.projects;
         if (focus === undefined) {
-            throw new VerbRefusal('voice-no-switch', 'This Voice session works in one project only');
+            throw new ToolRefusal('voice-no-switch', 'This Voice session works in one project only');
         }
         if (endpointId !== focus.machine.id) {
-            throw new VerbRefusal('remote-target', 'Voice works only in the projects of this machine; read project.list for the ids');
+            throw new ToolRefusal('remote-target', 'Voice works only in the projects of this machine; read project.list for the ids');
         }
         const project = await focus.switchTo(projectId);
         return { output: { project: project.name, endpointId: focus.machine.id, projectId: project.projectId } };

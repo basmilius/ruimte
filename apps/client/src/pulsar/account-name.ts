@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import { PROVIDER_NAMES, type Account, type Identity, type ProviderId } from '@ruimte/pulsar';
+import i18next from 'i18next';
 
 /*
  * How an account and its identities are named in a sentence. Apple hands out no login, so an account

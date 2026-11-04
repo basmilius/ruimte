@@ -1,6 +1,6 @@
+import { AGENT_COLORS } from '@adecore/editor';
 import { diffLines } from '@adecore/merge';
 import type { ProvenanceRun } from '@ruimte/contracts';
-import { AGENT_COLORS } from '@adecore/editor';
 
 /* One piece of a run in the text of the editor, as the lines the bar covers. */
 export interface DrawnRun {

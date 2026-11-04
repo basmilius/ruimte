@@ -1,0 +1,46 @@
+import { Shortcut } from '@/components/docs/Shortcut.tsx';
+import { PhoneNow } from '@/components/docs/guide/PhoneNow.tsx';
+
+export const metadata = { title: 'Phone and web' };
+
+# Phone and web
+
+<p className="lead">Open your machines in a browser at station.ruimte.app, or follow and answer your agents on an iPhone or iPad.</p>
+
+## Station
+
+Go to [station.ruimte.app](https://station.ruimte.app) and sign in. Your machines and their projects open as in the desktop app. Nothing runs in the browser; every project lives on one of your machines.
+
+Station differs from the desktop app in a few places:
+
+- The browser keeps some shortcuts for itself, such as <Shortcut keys="Mod+W" />, <Shortcut keys="Mod+T" /> and <Shortcut keys="Mod+N" />. Use the menu for those commands.
+- A browser node shows its page only when **Browser and device streaming** is on for its machine, under Settings, Account.
+- Files from your computer do not drop onto a canvas. Open them from the Files panel.
+
+## The iPhone and iPad app
+
+The app connects to your machines and runs nothing itself. It opens projects, chats, terminals, files, drawings, diagrams and devices.
+
+On an iPhone, five tabs hold everything:
+
+<PhoneNow />
+
+| Tab | What it shows |
+| --- | --- |
+| Now | Your open projects on every machine, grouped into Needs you, Working, Finished and Coming up. Answer a question or approval on its card. |
+| Projects | Your projects and their views |
+| Routines | The routines of every machine |
+| Machines | Each machine, with its updates and keep awake |
+| Search | Search |
+
+On an iPad the same pages sit in a sidebar, with files and git in an inspector. <Shortcut keys="Mod+K" /> opens Search.
+
+- A terminal keeps the size the desktop gave it.
+- A launch that waits for approval shows its command, folder and environment. It runs after you tap **Launch**.
+- Home Screen widgets show what needs you.
+
+## Notifications on your phone
+
+Under **Notify me when**, each device picks **An agent needs you**, **A turn finishes** or **A process misbehaves**, for all projects or some.
+
+While you use a computer with Ruimte, notifications wait. Once you step away, they reach your phone. A snoozed agent raises nothing until the snooze ends, also when you set the snooze offline.

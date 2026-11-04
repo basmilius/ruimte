@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react';
+import { CloseButton, Icon, ScrollArea } from '@adecore/ui';
 import clsx from 'clsx';
 import { Info, type LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CloseButton, Icon } from '@adecore/ui';
 
 interface TaskPaneProps {
     icon: LucideIcon;
@@ -31,7 +31,9 @@ export function TaskPane({ icon, title, subtitle, action, footer, children }: Ta
                 {action}
                 <CloseButton label={t('action.close')} dialog />
             </header>
-            <div className="flex min-h-0 grow flex-col gap-4.5 overflow-y-auto px-8 pt-1 pb-6">{children}</div>
+            <ScrollArea className="grow" viewportClassName="flex flex-col gap-4.5 px-8 pt-1 pb-6">
+                {children}
+            </ScrollArea>
             <footer className="flex min-h-15 items-center gap-2 border-t border-border px-8 py-3.5">{footer}</footer>
         </section>
     );

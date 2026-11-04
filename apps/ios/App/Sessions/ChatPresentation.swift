@@ -54,7 +54,8 @@ struct ChatAgentSources {
 
 struct ChatTimelineEntry: Identifiable, Equatable {
     enum Kind: Equatable {
-        case message, tools, activity, turnFold, turnStart, changedFiles, subagent, forks, visual, liveThought, output
+        case message, tools, activity, turnFold, turnStart, selectionSwitch, changedFiles, subagent, forks, visual,
+            liveThought, output
     }
     let id: String
     let kind: Kind
@@ -62,11 +63,13 @@ struct ChatTimelineEntry: Identifiable, Equatable {
     var visual: ChatVisual?
     var branch: ChatSubagentBranch?
     var output: ChatOutputCard?
+    /// What the turn before a `selectionSwitch` ran on; the turn in `items` carries what it switched to.
+    var switchedFrom: ChatTurnItemSelection?
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.id == rhs.id && lhs.kind == rhs.kind
             && lhs.items.map(ObjectIdentifier.init) == rhs.items.map(ObjectIdentifier.init) && lhs.visual == rhs.visual
-            && lhs.branch == rhs.branch && lhs.output == rhs.output
+            && lhs.branch == rhs.branch && lhs.output == rhs.output && lhs.switchedFrom == rhs.switchedFrom
     }
 }
 
@@ -141,7 +144,7 @@ extension ChatTimelineEntry {
     @MainActor var isWorkLine: Bool {
         switch kind {
         case .tools, .turnFold, .turnStart, .subagent, .liveThought, .activity: return true
-        case .changedFiles, .forks, .visual, .output: return false
+        case .selectionSwitch, .changedFiles, .forks, .visual, .output: return false
         case .message:
             switch items.first?.item {
             case .thinking?, .approval?: return true
@@ -229,6 +232,8 @@ final class ChatPresentation {
     /// What a person pointed at with `#` in this thread, which a reply's `#Name` wins over another of the same name.
     private(set) var referenced: [String] = []
     @ObservationIgnored var agentSources: ChatAgentSources?
+    /// The catalog of the chat's own CLI, which names the models and efforts a selection switch moved between.
+    @ObservationIgnored var chatModels: () -> [JSONValue] = { [] }
     /// The messages a person marked, by item id, as the machine last said.
     private(set) var bookmarks: [String: ChatBookmark] = [:]
     /// A row asked to place, name or take away a bookmark; the screen carries it out.
@@ -480,12 +485,23 @@ final class ChatPresentation {
             }
         }
         var rows: [ChatTimelineEntry] = []
+        var selection: ChatTurnItemSelection?
         for (turnID, items) in chunks {
             guard let turnID, let turn = items.first(where: { Self.turn($0) != nil }), let turnItem = Self.turn(turn)
             else {
                 let live = rowsFor(items, children: children)
                 rows += turnID != nil && turnID == activeID ? Self.withLiveThought(live, items: items) : live
                 continue
+            }
+            // A turn without a selection (older ones, or one the CLI started on its own) compares the next with the
+            // one before it.
+            if let next = turnItem.selection {
+                if let selection, ChatSelectionSwitch.switches(from: selection, to: next) {
+                    rows.append(
+                        ChatTimelineEntry(
+                            id: "switch-\(turnID)", kind: .selectionSwitch, items: [turn], switchedFrom: selection))
+                }
+                selection = next
             }
             // A turn a message opened needs no line of its own when that message stands right above it.
             if turnItem.origin == .agent && !Self.opensUnderItsMessages(turnItem, rows: rows) {
@@ -856,6 +872,12 @@ enum ChatToolPresentation {
         case "TodoWrite": String(localized: "Updated \(count) plans")
         default: String(localized: "\(count) tool calls")
         }
+    }
+
+    /// How many calls of a run failed, said apart from the run's line in the error tone; nil when none did.
+    static func groupFailures(_ tools: [ChatToolItem]) -> String? {
+        let failed = tools.filter { $0.state == .error }.count
+        return failed == 0 ? nil : String(localized: "\(failed) failed")
     }
 
     /// The line of a run of calls, as `summarizeGroup` in `chat/logic/timeline.ts` writes it: a run of

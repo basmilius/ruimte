@@ -1,0 +1,71 @@
+import { AgentFinished } from '@/components/docs/extensions/CanvasScenes.tsx';
+
+export const metadata = { title: 'Events' };
+
+# Events
+
+<p className="lead">React to what happens in Ruimte: a node added, the selection changed, an agent that finished.</p>
+
+## In a component
+
+`useEvent` listens while the component is on screen:
+
+```tsx
+import { useEvent } from '@ruimte/extension/client';
+
+export default function Activity() {
+    useEvent('chat.turnFinished', ({ chatId }) => {
+        console.info('finished', chatId);
+    });
+
+    return null;
+}
+```
+
+## Outside a component
+
+`onEvent` listens until you stop it, and answers how:
+
+```ts
+import { onEvent } from '@ruimte/extension/client';
+
+const stop = onEvent('node.added', ({ node }) => {
+    console.info('added', node.title);
+});
+```
+
+An event often ends in something the person sees. Here a finished chat shows a toast, whose Show button brings the chat into view:
+
+```ts
+onEvent('chat.turnFinished', ({ chatId }) => {
+    host.notify('A chat finished its turn', {
+        action: {
+            title: 'Show',
+            run: () => canvas.reveal({ id: chatId })
+        }
+    });
+});
+```
+
+<AgentFinished />
+
+[When an agent finishes](/docs/extensions/how-to/agent) builds this end to end.
+
+## The events
+
+| Event | Tells | When |
+| --- | --- | --- |
+| `node.added` | `node` | A node appears on the canvas |
+| `node.removed` | `id` | A node leaves the canvas |
+| `node.changed` | `node` | Anything of a node changes: its place, size, title or data |
+| `selection.changed` | `nodes` | The selection changes |
+| `view.changed` | `viewId` | Another view comes in front |
+| `project.opened` | `projectId` | The window opens a project |
+| `agent.status` | `nodeId`, `status` | An agent's status changes |
+| `chat.turnFinished` | `chatId` | An AI chat finishes a turn |
+
+These happen in the window. To follow the machine while no window is open, use `onEvent` in the [server part](/docs/extensions/server#events).
+
+## Between your parts
+
+The server part tells every window with `emit(name, payload)`, and a component hears it with `useServerEvent(name, listener)`.

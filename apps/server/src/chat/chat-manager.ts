@@ -2,6 +2,9 @@ import { createHash, randomBytes } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { ChatCore, type ChatCoreOptions, type CodexProcessSpec, claudeProjectSlug, limitedTurn } from '@adecore/agents/chat';
+import type { ChatReferences, ChatSession, PromptNotes, ResumeWords, ChatRecord, ChatRecordExtras } from '@adecore/agents/chat';
+import { cliMcpArgs, storedAccount, narrowerMode, type AccountUnusable } from '@adecore/agents/providers';
 import type {
     AgentKind,
     ChatAttachment,
@@ -10,8 +13,6 @@ import type {
     ChatInfo,
     ChatItem,
     ChatNoteMessage,
-    ChatSubagentPayload,
-    ChatSubagentResult,
     ChatSubagentItem,
     ChatTurnLimit,
     ChatUiLinkPayload,
@@ -24,10 +25,7 @@ import type {
     Task
 } from '@ruimte/contracts';
 import { HOST_TASK_ORIGIN } from '@ruimte/contracts';
-import { ChatCore, type ChatCoreOptions, claudeProjectSlug, limitedTurn } from '@adecore/agents/chat';
-import type { ChatReferences, ChatSession, PromptNotes, ResumeWords, ChatRecord, ChatRecordExtras } from '@adecore/agents/chat';
-import { storedAccount, narrowerMode, type AccountUnusable } from '@adecore/agents/providers';
-import { attachedReferences, type Reference } from '../context/references.ts';
+import type { FirstPrompt } from '../agents/pending-prompts.ts';
 import {
     chatNote,
     chatPrompt,
@@ -37,30 +35,27 @@ import {
     type ChatPromptOptions,
     VISUAL_RESUME_NOTE
 } from '../context/context-note.ts';
+import { attachedReferences, type Reference } from '../context/references.ts';
 import { errorText } from '../error-text.ts';
 import { passedOverNote, type ProjectAccountChooser } from '../projects/project-accounts.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
-import { continueOnWake, continuedInForkNote } from './continue-on.ts';
-import { AgentImages } from './agent-images.ts';
-import { appleHomeOf, removeAppleSession } from './apple-sessions.ts';
-import { ChatError } from './errors.ts';
-import { RUIMTE_UI_FENCE } from './ui-fence.ts';
-import { InlineEditNotes } from './inline-edit.ts';
-import type { FirstPrompt } from '../agents/pending-prompts.ts';
+import { codexProvider } from '../providers/codex-provider.ts';
+import { CHAT_TOKEN_VARIABLE, MCP_URL_VARIABLE, mcpUrlOf, ruimteCliMcp } from '../providers/ruimte-mcp.ts';
 import { TurnUsage } from '../stats/turn-usage.ts';
 import { countChatStarted } from '../stats/usage-stats.ts';
-import { prependPath } from '../env-path.ts';
+import { AgentImages } from './agent-images.ts';
+import { continueOnWake, continuedInForkNote } from './continue-on.ts';
+import { ChatError } from './errors.ts';
+import { InlineEditNotes } from './inline-edit.ts';
+import { RUIMTE_UI_FENCE } from './ui-fence.ts';
 
 export type { InterruptedRun } from '@adecore/agents/chat';
-
-// Why a task a person stopped from the list of the chat that gave it ended, in that chat's note and the child's thread.
-export const STOPPED_TASK_REASON = 'a person stopped it';
 
 // What a resumed CLI is told: its transcript ends where the process did, and a tool call that was out is lost to it.
 export const RESUME_PROMPT = 'The machine restarted while you were working on the previous message. Continue where you left off.';
 
 // Said in front of a resume when the chat keeps a plan with steps left.
-export const PLAN_RESUME_PREAMBLE = 'You keep a plan in this chat: ruimte-context plan read shows where you were.';
+export const PLAN_RESUME_PREAMBLE = 'You keep a plan in this chat: plan_read shows where you were.';
 
 /* The plans kept beside a chat's record, which live and die with the chat. */
 export interface ChatPlans {
@@ -70,10 +65,8 @@ export interface ChatPlans {
 }
 
 interface ChatManagerOptions extends ChatCoreOptions {
-    // Where an agent reads its linked context.
+    // Where an agent reads its linked context, with Ruimte's MCP server beside it.
     contextUrl?: string;
-    // Put in front of PATH, so `ruimte-context` is there for the CLI's shell.
-    binDir?: string;
     // How deep a chat sits in a chain of agents; an unknown chat is one a person opened.
     depthOf?: (chatId: string) => number;
     standalone?: (chatId: string) => boolean;
@@ -123,8 +116,8 @@ interface ChatManagerOptions extends ChatCoreOptions {
     projectAccount?: ProjectAccountChooser;
 }
 
-/* The environment every CLI of a chat starts in: the daemon's own, without a terminal's hook variables, with `ruimte-context` on the PATH. */
-function chatEnvOf(env: Record<string, string | undefined>, binDir: string | undefined): Record<string, string> {
+/* The environment every CLI of a chat starts in: the daemon's own, without a terminal's hook variables. */
+function chatEnvOf(env: Record<string, string | undefined>): Record<string, string> {
     const chat: Record<string, string> = {};
     for (const [key, value] of Object.entries(env)) {
         // The hook variables belong to terminal sessions; a chat reports through its own stream.
@@ -132,10 +125,20 @@ function chatEnvOf(env: Record<string, string | undefined>, binDir: string | und
             chat[key] = value;
         }
     }
-    if (binDir) {
-        prependPath(chat, binDir);
-    }
     return chat;
+}
+
+/*
+ * Codex with Ruimte's MCP server on its line, reading the chat's token from its environment. A command a caller
+ * passes (a test's fake CLI) gets the server too. Claude Code gets it in its launch (`claude-provider.ts`).
+ */
+function mcpCommands(options: ChatManagerOptions): Pick<ChatCoreOptions, 'codexCommand'> {
+    if (options.contextUrl === undefined) {
+        return {};
+    }
+    const server = ruimteCliMcp(options.contextUrl, CHAT_TOKEN_VARIABLE);
+
+    return { codexCommand: [...(options.codexCommand ?? codexProvider.command), ...cliMcpArgs('codex', server)] };
 }
 
 export const BRIEF_TITLE = 'Instructions from Ruimte';
@@ -206,7 +209,7 @@ function noteDigest(note: string): string {
 /*
  * The chat row of a task in the thread of the chat that gave it, written from the task alone so writing
  * it twice changes nothing. A new row joins the turn that is running, which is the turn that ran the
- * verb; a cancelled task gets a note saying why its row failed.
+ * tool; a cancelled task gets a note saying why its row failed.
  */
 function taskRowItems(session: ChatSession, task: Task): ChatItem[] {
     const id = `task-${task.id}`;
@@ -251,7 +254,7 @@ function taskRowItems(session: ChatSession, task: Task): ChatItem[] {
 
 /*
  * Ruimte's chats: the generic core with what the daemon adds to it. A chat runs in a project, hears
- * about the verbs and its links, draws a row per task it gave, keeps its plans beside its record and
+ * about the tools and its links, draws a row per task it gave, keeps its plans beside its record and
  * forks into the canvas, and a turn cut off by a restart or a limit is taken up through the outbox.
  */
 export class ChatManager extends ChatCore {
@@ -282,8 +285,8 @@ export class ChatManager extends ChatCore {
     private readonly dropWakes: (chatId: string) => Promise<void>;
     private readonly endChildren: (chatId: string) => Promise<unknown>;
     private readonly plans: ChatPlans | null;
-    private readonly appleHome: string;
     private readonly agentImages: AgentImages;
+    private readonly sideCodexCommand: string[];
     private readonly tokens = new Map<string, string>();
     // The tasks whose rows a clear hid, per chat.
     private readonly clearedTasks = new Map<string, Set<string>>();
@@ -293,15 +296,14 @@ export class ChatManager extends ChatCore {
     private readonly passedOver = new Map<string, { account: string; reason: AccountUnusable }>();
     private readonly projectAccount: ProjectAccountChooser;
     private readonly turnUsage = new TurnUsage();
-    // Clients following the conversation of a node a task opened, per row of the chat that gave it.
-    private readonly childHolds = new Map<string, { parentId: string; toolUseId: string; childId: string; clients: Set<string> }>();
 
     constructor(options: ChatManagerOptions) {
         super({
             codexClient: RUIMTE_CODEX_CLIENT,
             uiFenceLanguage: RUIMTE_UI_FENCE,
             ...options,
-            env: chatEnvOf(options.env ?? process.env, options.binDir),
+            ...mcpCommands(options),
+            env: chatEnvOf(options.env ?? process.env),
             hooks: {
                 instructionsFor: (chatId) => this.instructionsFor(chatId),
                 resumeNoteFor: (chatId) => this.resumeNoteFor(chatId),
@@ -358,12 +360,20 @@ export class ChatManager extends ChatCore {
         this.dropWakes = options.dropWakes ?? (() => Promise.resolve());
         this.endChildren = options.endChildren ?? (() => Promise.resolve());
         this.plans = options.plans ?? null;
-        this.appleHome = appleHomeOf(options.env ?? process.env);
         this.agentImages = new AgentImages(options.attachments);
+        this.sideCodexCommand = options.codexCommand ?? options.providers.get('codex').command;
     }
 
     chatIdForToken(token: string): string | null {
         return this.tokens.get(token) ?? null;
+    }
+
+    /*
+     * The app-server opened beside a chat to read or fork one of its threads runs no turn, so it starts
+     * without Ruimte's MCP server, for which it holds no token.
+     */
+    override codexProcess(info: Pick<ChatInfo, 'cwd' | 'account'>): CodexProcessSpec {
+        return { ...super.codexProcess(info), command: this.sideCodexCommand };
     }
 
     override create(payload: ChatCreatePayload): Promise<ChatInfo> {
@@ -377,10 +387,9 @@ export class ChatManager extends ChatCore {
     /* Also takes back the plans the fork was given and the helper's own conversation, beside what the core removes. */
     override async deleteRecord(chatId: string): Promise<boolean> {
         // Read before the record goes, since only the record names the helper's session; a loaded chat is `kill`'s.
-        const stored = this.get(chatId) ? null : await this.readChat(chatId).catch(() => null);
         const deleted = await super.deleteRecord(chatId);
         if (deleted) {
-            await Promise.all([this.plans?.removeChat(chatId), stored === null ? undefined : removeAppleSession(this.appleHome, stored.info)]);
+            await this.plans?.removeChat(chatId);
         }
         return deleted;
     }
@@ -429,47 +438,6 @@ export class ChatManager extends ChatCore {
     /* Gives a fork the images the original's agent attached. */
     copyAgentImages(fromChatId: string, toChatId: string): Promise<void> {
         return this.agentImages.copy(fromChatId, toChatId);
-    }
-
-    override detachAll(clientId: string): void {
-        super.detachAll(clientId);
-        for (const [key, hold] of this.childHolds) {
-            hold.clients.delete(clientId);
-            if (hold.clients.size === 0) {
-                this.childHolds.delete(key);
-            }
-        }
-    }
-
-    /* A row a task opened reads the conversation of the node it stands for; any other row, the CLI's own subagent. */
-    override async subagent(clientId: string, payload: ChatSubagentPayload): Promise<ChatSubagentResult> {
-        const childId = this.taskChildOf(payload.chatId, payload.toolUseId);
-        if (childId !== null) {
-            return this.childConversation(clientId, payload, childId);
-        }
-        return super.subagent(clientId, payload);
-    }
-
-    /* A task's row stands for a node, which `stopNode` stops as a node is stopped. */
-    override async stopSubagent(chatId: string, toolUseId: string, stopNode?: (nodeId: string, reason: string) => Promise<void>): Promise<void> {
-        await this.loaded(chatId);
-        const row = this.require(chatId).thread.find('subagent', (item) => item.toolUseId === toolUseId);
-        if (row?.origin === HOST_TASK_ORIGIN && row.status === 'running') {
-            if (row.childId === undefined || !stopNode) {
-                throw new ChatError('chat-unsupported', 'This task cannot be stopped from here; stop its node instead');
-            }
-            await stopNode(row.childId, STOPPED_TASK_REASON);
-            return;
-        }
-        await super.stopSubagent(chatId, toolUseId);
-    }
-
-    override async subagentItems(chatId: string, toolUseId: string): Promise<ChatItem[]> {
-        const childId = this.taskChildOf(chatId, toolUseId);
-        if (childId !== null) {
-            return (await this.childChat(childId)).thread.list();
-        }
-        return super.subagentItems(chatId, toolUseId);
     }
 
     /* Writes the row of a task into the chat that gave it, when that chat is loaded; loading it lays every row down anyway. */
@@ -693,14 +661,14 @@ export class ChatManager extends ChatCore {
         return (attached) => attachedReferences(attached, (id: string): Reference | null => this.reference(chatId, id));
     }
 
-    /* A token per load of the chat, which the CLI's `ruimte-context` presents to the daemon. */
+    /* A token per load of the chat, which the CLI presents to the daemon's MCP server as its bearer. */
     private envFor(chatId: string, base: Record<string, string>): Record<string, string> {
         if (this.contextUrl === null) {
             return base;
         }
         const token = randomBytes(24).toString('base64url');
         this.tokens.set(token, chatId);
-        return { ...base, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token };
+        return { ...base, RUIMTE_CONTEXT_URL: this.contextUrl, [MCP_URL_VARIABLE]: mcpUrlOf(this.contextUrl), [CHAT_TOKEN_VARIABLE]: token };
     }
 
     private runtimeModeFor(chatId: string, mode: RuntimeMode): RuntimeMode {
@@ -778,11 +746,6 @@ export class ChatManager extends ChatCore {
 
     private forgotten(chatId: string): void {
         this.briefs.delete(chatId);
-        for (const [key, hold] of this.childHolds) {
-            if (hold.parentId === chatId) {
-                this.childHolds.delete(key);
-            }
-        }
         for (const [token, id] of this.tokens) {
             if (id === chatId) {
                 this.tokens.delete(token);
@@ -794,7 +757,7 @@ export class ChatManager extends ChatCore {
     }
 
     private async removed(chatId: string, chat: { info: ChatInfo; items: ChatItem[] }): Promise<void> {
-        await Promise.all([this.plans?.removeChat(chatId), this.dropForkCopy(chat), removeAppleSession(this.appleHome, chat.info)]);
+        await Promise.all([this.plans?.removeChat(chatId), this.dropForkCopy(chat)]);
     }
 
     /* A client following a task's node hears whenever an item of that node's thread lands; a delta alone does not. */
@@ -811,13 +774,6 @@ export class ChatManager extends ChatCore {
         }
         if (event.type === 'item' && event.item.kind === 'turn' && event.item.state !== 'running') {
             this.turnEnded(chatId, event.item.state);
-        }
-        for (const hold of this.childHolds.values()) {
-            if (hold.childId === chatId) {
-                for (const clientId of hold.clients) {
-                    this.sendTo(clientId, { event: 'chat.subagentChanged', payload: { chatId: hold.parentId, toolUseId: hold.toolUseId } });
-                }
-            }
         }
     }
 
@@ -840,58 +796,15 @@ export class ChatManager extends ChatCore {
     /* The transcript copy of a Claude fork nobody resumed; Codex keeps its forked thread where Ruimte cannot remove it. */
     private async dropForkCopy(chat: { info: ChatInfo; items: readonly ChatItem[] }): Promise<void> {
         const { info } = chat;
+        // Empty for a provider that does not run Claude Code.
         const projectsDir = this.claudeProjectsDirOf(info);
-        if (info.provider !== 'claude' || info.agentSessionId === null || projectsDir === '' || !unspokenFork(chat.items, info)) {
+        if (info.agentSessionId === null || projectsDir === '' || !unspokenFork(chat.items, info)) {
             return;
         }
         if (/[/\\]|\.\./.test(info.agentSessionId)) {
             return;
         }
         await rm(join(projectsDir, claudeProjectSlug(info.cwd), `${info.agentSessionId}.jsonl`), { force: true });
-    }
-
-    /* The node a row of this chat stands for when a task opened it, or null for a subagent of the CLI's own. */
-    private taskChildOf(chatId: string, toolUseId: string): string | null {
-        const row = this.get(chatId)?.thread.find('subagent', (item) => item.toolUseId === toolUseId);
-        return row?.origin === HOST_TASK_ORIGIN && row.childId !== undefined ? row.childId : null;
-    }
-
-    private async childChat(childId: string): Promise<ChatSession> {
-        if (!(await this.loadStored(childId))) {
-            throw new ChatError('chat-unsupported', 'This task runs in a terminal or has not started; its node shows what it does');
-        }
-        return this.require(childId);
-    }
-
-    /*
-     * A row a task opened reads the child's own thread, a page at a time like the chat's history, and
-     * holding it tells the client whenever an item of that thread lands; a delta alone does not.
-     */
-    private async childConversation(clientId: string, payload: ChatSubagentPayload, childId: string): Promise<ChatSubagentResult> {
-        const key = `${payload.chatId}\n${payload.toolUseId}`;
-        if (payload.watch === false) {
-            const hold = this.childHolds.get(key);
-            hold?.clients.delete(clientId);
-            if (hold?.clients.size === 0) {
-                this.childHolds.delete(key);
-            }
-        }
-        const child = await this.childChat(childId);
-        const page = this.history(childId, payload.cursor, payload.limit ?? 60);
-        if (payload.watch === true) {
-            const hold = this.childHolds.get(key) ?? { parentId: payload.chatId, toolUseId: payload.toolUseId, childId, clients: new Set<string>() };
-            hold.clients.add(clientId);
-            this.childHolds.set(key, hold);
-        }
-        return {
-            items: page.items,
-            history: page.history,
-            pending: child.thread.pending(),
-            // The closed set a result carries; the child's thread is that CLI's conversation.
-            source: child.info.provider === 'codex' ? 'codex-thread' : 'claude-transcript',
-            context: { provider: child.info.provider, cwd: child.info.cwd, chatId: childId },
-            live: child.info.activeTurnId !== null
-        };
     }
 }
 

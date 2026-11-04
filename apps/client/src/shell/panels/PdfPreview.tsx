@@ -1,7 +1,7 @@
-import { useTranslation } from 'react-i18next';
-import type { FsReadBinary } from '@ruimte/contracts';
-import { sourceKey, type FileSource } from '@/shell/panels/file-source';
 import { ErrorBoundary, lazyNamed, LazyBoundary } from '@adecore/ui';
+import type { FsReadBinary } from '@ruimte/contracts';
+import { useTranslation } from 'react-i18next';
+import { sourceKey, type FileSource } from '@/shell/panels/file-source';
 
 // pdf.js is most of a megabyte, so it waits for the first PDF or for the prefetcher.
 const PdfFile = lazyNamed(() => import('@/shell/panels/PdfFile'), 'PdfFile');

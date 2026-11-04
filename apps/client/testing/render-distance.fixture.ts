@@ -1,8 +1,8 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { WebviewParking } from '../src/browser/WebviewParking';
 import { pageSnapshots, usePageSnapshots } from '../src/browser/page-snapshots';
 import { browserRegistry, useBrowser } from '../src/browser/registry';
+import { WebviewParking } from '../src/browser/WebviewParking';
 import type { RenderDistance } from '../src/canvas/render-distance';
 import { registerCell } from '../src/shell/cell-rects';
 import { defaultCanvases } from '../src/state/canvas';

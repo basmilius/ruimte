@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { join, resolve } from 'node:path';
-import type { FsChangedEvent } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
+import type { FsChangedEvent } from '@ruimte/contracts';
 import { ProjectFileWatcher, type FileChange } from '../language/file-watch.ts';
 import { SharedWatch } from './shared-watch.ts';
 import { FolderWatcher } from './watch.ts';

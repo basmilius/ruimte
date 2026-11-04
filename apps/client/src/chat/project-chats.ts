@@ -1,5 +1,5 @@
-import { designNodeChats, isChatHostView, isHiddenChatView, viewChats, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import type { ProjectChat } from '@adecore/agents-react/chat';
+import { designNodeChats, isChatHostView, isHiddenChatView, viewChats, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import type { NodesOfView } from '@/project/view-nodes';
 import { useSidebarSource } from '@/shell/sidebar-source';
 

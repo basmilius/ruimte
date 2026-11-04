@@ -70,7 +70,7 @@ struct BackgroundWordsTests {
     @Test func needsFrontSaysHowToGoOn() {
         let error = AgentError.needsFront("A drag needs the real pointer, and so the app in front")
         #expect(error.code == "needs-front")
-        #expect(error.message.hasPrefix("A drag needs the real pointer, and so the app in front. Call again with --front"))
+        #expect(error.message.hasPrefix("A drag needs the real pointer, and so the app in front. Call again with front"))
     }
 
     @Test func theBarNamesTheAppInTheBackground() throws {

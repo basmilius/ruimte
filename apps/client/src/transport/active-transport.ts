@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import type { BytesReadPayload, EventMap, EventType, LiveFrameEvent, RequestMap, RequestType } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { readPiece, type BytesPiece } from './piece';
 import { TransportError, type ConnectionState, type LiveFrameHandler, type Transport, type TransportStatus } from './transport';
 

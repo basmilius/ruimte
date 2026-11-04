@@ -1,5 +1,4 @@
-import { createSnippetTransformWorker } from './snippet-transform-worker';
-import i18next from 'i18next';
+import type { Editor } from '@adecore/editor';
 import {
     ClipboardHistory,
     lspLanguageIdOf,
@@ -12,26 +11,27 @@ import {
     type ProjectFiles,
     type RenameSuggestionsRequest
 } from '@adecore/editor-react';
-import type { Editor } from '@adecore/editor';
 import { fileUriToPath, pathToFileUri, type Diagnostic } from '@adecore/lsp';
-import { onDeviceClientFor } from '@/ondevice/ondevice-client';
-import { parseNames } from '@/ondevice/names-model';
-import { namesPrompt } from '@/ondevice/prompts';
-import { openFileLink } from '@/shell/panels/file-links';
-import { RUIMTE_EDITOR_KEYMAP } from '@/shell/editor-keymap';
+import i18next from 'i18next';
 import { isApplePlatform, openInSystemBrowser } from '@/desktop/bridge';
+import { editorAssistClientFor } from '@/editor-assist/client';
+import { parseNames } from '@/editor-assist/names-model';
+import { namesPrompt } from '@/editor-assist/prompts';
+import { RUIMTE_EDITOR_KEYMAP } from '@/shell/editor-keymap';
+import { openFileLink } from '@/shell/panels/file-links';
+import { isPathBelow } from '@/shell/panels/files-tree';
 import { useSettings } from '@/state/settings';
-import { useUi } from '@/state/ui';
 import { useToasts } from '@/state/toasts';
+import { useUi } from '@/state/ui';
 import { machineAnswers } from '@/transport/features';
 import type { Transport } from '@/transport/transport';
+import { readPanelHeight, writePanelHeight } from './panel-height';
+import type { DraftProjectFiles } from './project-files';
+import { createSnippetTransformWorker } from './snippet-transform-worker';
 import { LanguageStatusTracker } from './status';
 import { draftOfSelection } from './template-draft';
 import { TemplatesTracker } from './templates';
 import { abortable, WireLanguageService, type WireLanguageServiceOptions } from './wire-service';
-import { readPanelHeight, writePanelHeight } from './panel-height';
-import type { DraftProjectFiles } from './project-files';
-import { isPathBelow } from '@/shell/panels/files-tree';
 
 export class ProjectLanguage extends SharedProjectLanguage {
     declare readonly service: WireLanguageService;
@@ -197,10 +197,10 @@ function holdUnsavedTexts(service: WireLanguageService, folder: string, files: D
 }
 
 async function suggestNames(transport: Transport, request: RenameSuggestionsRequest, signal: AbortSignal): Promise<readonly string[]> {
-    if (!useSettings.getState().aiOnDeviceHelp || signal.aborted) {
+    if (!useSettings.getState().aiCodeHelp || signal.aborted) {
         return [];
     }
-    const client = onDeviceClientFor(transport);
+    const client = editorAssistClientFor(transport);
     if (!(await client.availability()).available || signal.aborted) {
         return [];
     }

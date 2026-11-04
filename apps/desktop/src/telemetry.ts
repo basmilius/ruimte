@@ -1,12 +1,15 @@
 import { blankQuoted, createDailyDedupe, createScrubber, type DedupeStore } from '@ruimte/telemetry';
+import type { RendererMemoryReport } from './renderer-memory';
 
 /* What the shell reports besides an error nothing caught and a native crash. Every message is fixed text; a reason is scrubbed. */
 export type ShellProblem =
-    | { kind: 'process-gone'; process: string; reason: string; exitCode: number }
+    | { kind: 'process-gone'; process: string; reason: string; exitCode: number; memory?: RendererMemoryReport | null }
     | { kind: 'daemon-start-failed'; reason: string; daemon?: DaemonStartupDiagnostics }
     | { kind: 'daemon-spawn-failed'; code: string }
     | { kind: 'daemon-gave-up'; ends: number }
-    | { kind: 'service-fallback'; step: 'install' | 'start' | 'restart'; reason: string };
+    | { kind: 'service-fallback'; step: 'install' | 'start' | 'restart'; reason: string }
+    | { kind: 'session-cleared'; reason: 'no-key' | 'unauthorized' | 'bad-request' | 'bad-signature' }
+    | { kind: 'session-key-unreadable' };
 
 export interface ShellEvent {
     message: string;
@@ -29,7 +32,7 @@ export interface ShellIdentity {
 }
 
 const TAGS = ['process', 'platform', 'arch', 'electron', 'package', 'problem', 'exit_reason', 'step'];
-const EXTRAS = ['exit_code', 'reason', 'ends', 'signal', 'startup_output'];
+const EXTRAS = ['exit_code', 'reason', 'ends', 'signal', 'startup_output', 'memory_mb', 'peak_memory_mb', 'uptime_min', 'guests'];
 
 export interface ShellRuntime {
     readonly platform: NodeJS.Platform;
@@ -71,7 +74,17 @@ export function problemEvent(problem: ShellProblem): ShellEvent {
                 level: 'fatal',
                 fingerprint: ['process-gone', problem.process, problem.reason],
                 tags: { problem: problem.kind, process: problem.process, exit_reason: problem.reason },
-                extra: { exit_code: problem.exitCode }
+                extra: {
+                    exit_code: problem.exitCode,
+                    ...(problem.memory
+                        ? {
+                              memory_mb: problem.memory.memoryMb,
+                              peak_memory_mb: problem.memory.peakMemoryMb,
+                              uptime_min: problem.memory.uptimeMin,
+                              guests: problem.memory.guests
+                          }
+                        : {})
+                }
             };
         case 'daemon-start-failed': {
             const extra: ShellEvent['extra'] = { reason: problem.reason };
@@ -119,6 +132,22 @@ export function problemEvent(problem: ShellProblem): ShellEvent {
                 fingerprint: ['service-fallback', problem.step],
                 tags: { problem: problem.kind, step: problem.step },
                 extra: { reason: problem.reason }
+            };
+        case 'session-cleared':
+            return {
+                message: `The account session was cleared (${problem.reason})`,
+                level: 'error',
+                fingerprint: ['session-cleared', problem.reason],
+                tags: { problem: problem.kind, reason: problem.reason },
+                extra: {}
+            };
+        case 'session-key-unreadable':
+            return {
+                message: 'The keychain did not hand over the key of the account session',
+                level: 'error',
+                fingerprint: ['session-key-unreadable'],
+                tags: { problem: problem.kind },
+                extra: {}
             };
     }
 }

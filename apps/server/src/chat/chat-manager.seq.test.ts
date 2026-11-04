@@ -2,13 +2,13 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { AttachmentStore, ChatStore, COMPACT_ABOVE_BYTES, ChatThread } from '@adecore/agents/chat';
+import { fakeClaude, inProcess, type InProcessCli } from '@adecore/agents/testing';
 import type { ChatAttachResult, ChatEvent, Task } from '@ruimte/contracts';
 import { ProviderRegistry } from '../providers/registry.ts';
-import { AttachmentStore, ChatStore, COMPACT_ABOVE_BYTES, ChatThread } from '@adecore/agents/chat';
+import { retire } from './chat-manager.fixture.test.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder, RecordingStore } from './chat-test-helpers.ts';
-import { fakeClaude, inProcess, type InProcessCli } from '@adecore/agents/testing';
-import { retire } from './chat-manager.fixture.test.ts';
 
 let home: string;
 let attachments: AttachmentStore;

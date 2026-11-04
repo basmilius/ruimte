@@ -1,8 +1,8 @@
-import { chmod, copyFile, mkdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { chmod, copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { launcherManifest, platformManifest } from '../src/manifest';
+import { EXTENSION_DIR, extensionManifest, launcherManifest, platformManifest } from '../src/manifest';
 import { binaryNameOf, LAUNCHER_NAME, targetId, TARGETS } from '../src/targets';
 
 /*
@@ -11,9 +11,10 @@ import { binaryNameOf, LAUNCHER_NAME, targetId, TARGETS } from '../src/targets';
  *   bun scripts/build.ts --version 0.2.0 --binaries <dir> --out <dir>
  *
  * `--binaries` holds one folder per target (`darwin-arm64/`, ...), each what `compile.ts --target`
- * wrote: `ruimte` (`ruimte.exe` and `ruimte-context.exe` on Windows), `ruimte-context` and `ruimte.build`. `--only darwin-arm64`
+ * wrote: `ruimte` (`ruimte.exe` on Windows) and `ruimte.build`. `--only darwin-arm64`
  * builds the packages for the binaries that exist, which is what a local try on one machine has.
  * `--skip win32-x64` leaves a platform out of the release, the launcher's dependencies included.
+ * `@ruimte/extension` goes in `extension/`, the types of `packages/extension` at the same version.
  */
 const { values } = parseArgs({
     args: process.argv.slice(2),
@@ -69,8 +70,7 @@ for (const target of targets) {
     const dir = join(out, targetId(target));
     await mkdir(join(dir, 'bin'), { recursive: true });
     const binary = binaryNameOf(target.os);
-    // Git Bash runs `ruimte-context`; cmd and PowerShell find the `ruimte-context.exe` beside it.
-    const files = [binary, 'ruimte-context', 'ruimte.build', ...(target.os === 'win32' ? ['ruimte-context.exe'] : [])];
+    const files = [binary, 'ruimte.build'];
     for (const name of files) {
         if (!existsSync(join(source, name))) {
             console.error(`Missing ${join(source, name)}`);
@@ -81,7 +81,6 @@ for (const target of targets) {
     // The Android screen server and its license, which the daemon pushes onto a device from `bin/native`.
     await copyNative(source, dir, 'scrcpy-server');
     await copyNative(source, dir, 'scrcpy-server.LICENSE');
-    await copyNative(source, dir, 'ruimte-foundation-models', ['ruimte-foundation-models.NOTICES'], true);
     await copyNative(source, dir, target.os === 'win32' ? 'adecore-database.exe' : 'adecore-database', ['adecore-database.LICENSE'], true);
 
     // An artifact download drops the mode, and npm packs the mode it finds.
@@ -108,3 +107,14 @@ await writeJson(join(launcherDir, 'package.json'), launcherManifest(version, rel
 await copyFile(join(packageRoot, 'README.md'), join(launcherDir, 'README.md'));
 await copyFile(join(repoRoot, 'LICENSE'), join(launcherDir, 'LICENSE'));
 console.log(`Laid out ${launcherDir}`);
+
+// The types need no binary, so a try with `--only` lays them out as well.
+const extensionSource = join(repoRoot, 'packages', 'extension');
+const extensionDir = join(out, EXTENSION_DIR);
+await mkdir(extensionDir, { recursive: true });
+for (const name of new Bun.Glob('*.d.ts').scanSync({ cwd: extensionSource })) {
+    await copyFile(join(extensionSource, name), join(extensionDir, name));
+}
+const extensionSourceManifest = JSON.parse(await readFile(join(extensionSource, 'package.json'), 'utf8')) as Record<string, unknown>;
+await writeJson(join(extensionDir, 'package.json'), extensionManifest(extensionSourceManifest, version));
+console.log(`Laid out ${extensionDir}`);

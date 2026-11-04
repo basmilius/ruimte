@@ -1,9 +1,10 @@
 import { join } from 'node:path';
-import { z } from 'zod';
+import { RecordDirectory } from '@adecore/agents';
+import { ToolRefusal } from '@adecore/agents/context';
+import { KeyedSerializer } from '@adecore/utils/async';
 import { ActionRefusal } from '@ruimte/actions';
-import { RecordDirectory, KeyedSerializer } from '@adecore/agents';
+import { z } from 'zod';
 import { sha256 } from '../artifacts/artifact-fs.ts';
-import { VerbRefusal } from '../canvas/verb.ts';
 
 // How long a request id answers a retry; a claim older than this is forgotten at load and ignored after.
 const CLAIM_TTL_MS = 24 * 60 * 60 * 1000;
@@ -31,7 +32,7 @@ export function startInputHash(projectId: string, input: Record<string, unknown>
 }
 
 /*
- * What a retried start answers with. A caller that repeats `--request-id R` with the same command gets
+ * What a retried start answers with. A caller that repeats `request_id R` with the same command gets
  * the node, task and worktree the first call made, also after the machine restarted. Under
  * `$RUIMTE_HOME` and not in the project, since an agent with a shell can rewrite the project file and
  * the claim is what keeps a retry from opening a second agent.
@@ -67,7 +68,7 @@ export class StartClaims {
             const known = this.claims.get(key);
             if (known !== undefined && this.now() - known.at <= CLAIM_TTL_MS) {
                 if (known.inputHash !== claim.inputHash) {
-                    throw new VerbRefusal(
+                    throw new ToolRefusal(
                         'request-id-reused',
                         `Request id ${claim.requestId} was already used for a different start; a retry repeats the same command, a new start needs a new id`
                     );
@@ -75,9 +76,9 @@ export class StartClaims {
                 if (known.state === 'done') {
                     return known.result as T;
                 }
-                throw new VerbRefusal(
+                throw new ToolRefusal(
                     'request-unsettled',
-                    `The start with request id ${claim.requestId} was cut off before it answered; ruimte-context node list shows whether its agent is there. Start again with a new id if it is not`
+                    `The start with request id ${claim.requestId} was cut off before it answered; node_list shows whether its agent is there. Start again with a new id if it is not`
                 );
             }
             await this.claims.write({ key, state: 'pending', inputHash: claim.inputHash, at: this.now() });
@@ -85,7 +86,7 @@ export class StartClaims {
             try {
                 result = await work();
             } catch (e) {
-                if (e instanceof VerbRefusal || e instanceof ActionRefusal) {
+                if (e instanceof ToolRefusal || e instanceof ActionRefusal) {
                     await this.claims.remove(key);
                 }
                 throw e;

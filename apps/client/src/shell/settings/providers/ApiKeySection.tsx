@@ -1,12 +1,18 @@
+import { useProvidersStore } from '@adecore/agents-react/state';
+import { Button, Input, Segmented, Switch, messageOf } from '@adecore/ui';
+import { SettingsRow } from '@adecore/ui/settings';
+import type { ClaudeApiSettings, ClaudeApiStatus, NanoGptSettings, NanoGptStatus } from '@ruimte/contracts';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ClaudeApiSettings, ClaudeApiStatus, NanoGptSettings, NanoGptStatus } from '@ruimte/contracts';
-import { Button, Input, Switch, messageOf } from '@adecore/ui';
-import { SettingsRow } from '@adecore/ui/settings';
 import { CountField } from '@/shell/settings/providers/CountField';
 import { listProvidersAgain } from '@/shell/settings/providers/use-provider-installs';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { useUi } from '@/state/ui';
 import { transportFor, type Transport } from '@/transport';
+
+type ClaudeApiWindow = NonNullable<ClaudeApiSettings['contextWindow']>;
+
+const CONTEXT_WINDOWS: readonly ClaudeApiWindow[] = ['200k', '1m'];
 
 interface RunSettings {
     readonly autoContinue: boolean;
@@ -33,6 +39,10 @@ interface ApiKeySectionProps<Settings extends RunSettings> {
     status(link: Transport): Promise<KeyStatus<Settings>>;
     configure(link: Transport, payload: KeyPayload<Settings>): Promise<KeyStatus<Settings>>;
     extraRows?(settings: Settings, change: (next: Partial<Settings>) => void): ReactNode;
+    // False for a provider whose CLI cuts its own runs, so the rounds a plain API counts mean nothing there.
+    readonly runRows?: boolean;
+    // Rows of the provider's own under the key, such as what else it needs on the machine.
+    readonly children?: ReactNode;
 }
 
 /*
@@ -40,7 +50,16 @@ interface ApiKeySectionProps<Settings extends RunSettings> {
  * back: the field stays empty and the status only says whether one is saved. Mounted per machine (`key`), so
  * another machine starts from an empty field.
  */
-function ApiKeySection<Settings extends RunSettings>({ endpointId, title, words, status: read, configure: write, extraRows }: ApiKeySectionProps<Settings>) {
+function ApiKeySection<Settings extends RunSettings>({
+    endpointId,
+    title,
+    words,
+    status: read,
+    configure: write,
+    extraRows,
+    runRows = true,
+    children
+}: ApiKeySectionProps<Settings>) {
     const { t } = useTranslation('settings');
     const [apiKey, setApiKey] = useState('');
     const [status, setStatus] = useState<KeyStatus<Settings> | null>(null);
@@ -155,47 +174,10 @@ function ApiKeySection<Settings extends RunSettings>({ endpointId, title, words,
                     </div>
                 }
             />
+            {children}
             {settings !== undefined && (
                 <>
-                    <SettingsRow
-                        label={t(`${words}.continue.label`)}
-                        description={t(`${words}.continue.description`)}
-                        control={
-                            <Switch
-                                checked={settings.autoContinue}
-                                onCheckedChange={(autoContinue) => void change({ autoContinue })}
-                                label={t(`${words}.continue.label`)}
-                            />
-                        }
-                    />
-                    <SettingsRow
-                        label={t(`${words}.rounds.label`)}
-                        description={t(`${words}.rounds.description`)}
-                        control={
-                            <CountField
-                                value={settings.roundsPerRun}
-                                min={5}
-                                max={200}
-                                label={t(`${words}.rounds.label`)}
-                                disabled={false}
-                                onCommit={(roundsPerRun) => void change({ roundsPerRun })}
-                            />
-                        }
-                    />
-                    <SettingsRow
-                        label={t(`${words}.runs.label`)}
-                        description={t(`${words}.runs.description`)}
-                        control={
-                            <CountField
-                                value={settings.runs}
-                                min={1}
-                                max={20}
-                                label={t(`${words}.runs.label`)}
-                                disabled={!settings.autoContinue}
-                                onCommit={(runs) => void change({ runs })}
-                            />
-                        }
-                    />
+                    {runRows && <RunRows settings={settings} words={words} change={(next) => void change(next)} />}
                     {extraRows?.(settings, (next) => void change(next))}
                 </>
             )}
@@ -205,6 +187,59 @@ function ApiKeySection<Settings extends RunSettings>({ endpointId, title, words,
                 </p>
             )}
         </SettingsSection>
+    );
+}
+
+/* How far a chat on a plain API goes alone; a chat in a CLI is cut by the CLI itself. */
+function RunRows({
+    settings,
+    words,
+    change
+}: {
+    settings: RunSettings;
+    words: ApiKeySectionProps<RunSettings>['words'];
+    change(next: Partial<RunSettings>): void;
+}) {
+    const { t } = useTranslation('settings');
+
+    return (
+        <>
+            <SettingsRow
+                label={t(`${words}.continue.label`)}
+                description={t(`${words}.continue.description`)}
+                control={
+                    <Switch checked={settings.autoContinue} onCheckedChange={(autoContinue) => change({ autoContinue })} label={t(`${words}.continue.label`)} />
+                }
+            />
+            <SettingsRow
+                label={t(`${words}.rounds.label`)}
+                description={t(`${words}.rounds.description`)}
+                control={
+                    <CountField
+                        value={settings.roundsPerRun}
+                        min={5}
+                        max={200}
+                        label={t(`${words}.rounds.label`)}
+                        disabled={false}
+                        onCommit={(roundsPerRun) => change({ roundsPerRun })}
+                    />
+                }
+            />
+            <SettingsRow
+                label={t(`${words}.runs.label`)}
+                description={t(`${words}.runs.description`)}
+                control={
+                    <CountField
+                        value={settings.runs}
+                        min={1}
+                        max={20}
+                        label={t(`${words}.runs.label`)}
+                        disabled={!settings.autoContinue}
+                        onCommit={(runs) => change({ runs })}
+                    />
+                }
+            />
+        </>
     );
 }
 
@@ -230,6 +265,8 @@ export function NanoGptSection({ endpointId }: { endpointId: string }) {
 
 export function ClaudeApiSection({ endpointId }: { endpointId: string }) {
     const { t } = useTranslation('settings');
+    const row = useProvidersStore((s) => s.byScope[endpointId]);
+    const claude = row?.loaded ? row.providers.find((provider) => provider.kind === 'claude') : undefined;
 
     return (
         <ApiKeySection
@@ -238,22 +275,49 @@ export function ClaudeApiSection({ endpointId }: { endpointId: string }) {
             words="providers.claudeApi"
             status={claudeApiStatus}
             configure={configureClaudeApi}
+            runRows={false}
             extraRows={(settings, change) => (
+                <>
+                    <SettingsRow
+                        label={t('providers.claudeApi.window.label')}
+                        description={t('providers.claudeApi.window.description')}
+                        control={
+                            <Segmented<ClaudeApiWindow>
+                                value={settings.contextWindow ?? '200k'}
+                                options={CONTEXT_WINDOWS.map((id) => ({ id, label: t(`providers.claudeApi.window.options.${id}`) }))}
+                                label={t('providers.claudeApi.window.label')}
+                                onValueChange={(contextWindow) => change({ contextWindow })}
+                            />
+                        }
+                    />
+                    <SettingsRow
+                        label={t('providers.claudeApi.tokens.label')}
+                        description={t('providers.claudeApi.tokens.description')}
+                        control={
+                            <CountField
+                                value={settings.maxOutputTokens}
+                                min={1024}
+                                max={128000}
+                                label={t('providers.claudeApi.tokens.label')}
+                                disabled={false}
+                                onCommit={(maxOutputTokens) => change({ maxOutputTokens })}
+                            />
+                        }
+                    />
+                </>
+            )}
+        >
+            {claude !== undefined && !claude.installed && (
                 <SettingsRow
-                    label={t('providers.claudeApi.tokens.label')}
-                    description={t('providers.claudeApi.tokens.description')}
+                    label={claude.name}
+                    description={t('providers.claudeApi.cli.missing')}
                     control={
-                        <CountField
-                            value={settings.maxOutputTokens}
-                            min={1024}
-                            max={128000}
-                            label={t('providers.claudeApi.tokens.label')}
-                            disabled={false}
-                            onCommit={(maxOutputTokens) => change({ maxOutputTokens })}
-                        />
+                        <Button onClick={() => useUi.getState().setSettings({ open: true, section: 'providers', target: 'providers.install.claude' })}>
+                            {t('providers.claudeApi.cli.install')}
+                        </Button>
                     }
                 />
             )}
-        />
+        </ApiKeySection>
     );
 }

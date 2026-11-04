@@ -1,6 +1,6 @@
-import { useTranslation } from 'react-i18next';
-import type { AgentKind } from '@ruimte/contracts';
 import { useProvidersStore } from '@adecore/agents-react/state';
+import type { AgentKind } from '@ruimte/contracts';
+import { useTranslation } from 'react-i18next';
 import { missingProvider } from '@/nodes/missing-provider';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { useUi } from '@/state/ui';

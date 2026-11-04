@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { launcherManifest, platformManifest } from './manifest';
+import { extensionManifest, launcherManifest, platformManifest } from './manifest';
 
 describe('platformManifest', () => {
     test('a macOS package holds its binary and installs on that platform only', () => {
@@ -27,6 +27,20 @@ describe('platformManifest', () => {
         expect(manifest).toMatchObject({ name: '@ruimte/win32-x64', os: ['win32'], cpu: ['x64'] });
         expect(manifest.description).toContain('for Windows on x64');
         expect(manifest.libc).toBeUndefined();
+    });
+});
+
+describe('extensionManifest', () => {
+    test('goes out at the app version with its own name, license and exports', () => {
+        const source = { name: '@ruimte/extension', version: '1.0.0', license: 'MIT', files: ['*.d.ts'], exports: { './client': { types: './client.d.ts' } } };
+
+        expect(extensionManifest(source, '0.30.0-beta.1')).toEqual({
+            ...source,
+            version: '0.30.0-beta.1',
+            author: 'Bas Milius',
+            homepage: 'https://ruimte.app',
+            repository: { type: 'git', url: 'git+https://github.com/basmilius/ruimte.git', directory: 'packages/extension' }
+        });
     });
 });
 

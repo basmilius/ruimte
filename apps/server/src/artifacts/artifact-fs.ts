@@ -1,6 +1,7 @@
 import { createReadStream } from 'node:fs';
 import { mkdir, open, readdir, readFile, rename, rm, stat, statfs } from 'node:fs/promises';
-import { isNotFound, writeAtomic } from '@adecore/agents';
+import { isNotFound } from '@adecore/utils/errors';
+import { writeAtomic } from '@adecore/utils/fs';
 
 export interface FileDigest {
     size: number;

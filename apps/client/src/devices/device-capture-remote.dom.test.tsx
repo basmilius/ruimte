@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { REQUEST_SCHEMAS, type RequestType } from '@ruimte/contracts';
-import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { useDocument } from '@/state/document';
 import { swapPeerLinker } from '@/project/peer-linker';
-import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
-import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { answerDevices, FAKE_SIMULATOR, type FakeDevices } from '../../testing/fake-devices';
+import { useDocument } from '@/state/document';
+import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { button, phoneCanvas } from '../../testing/device-dom';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { answerDevices, FAKE_SIMULATOR, type FakeDevices } from '../../testing/fake-devices';
+import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
+import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 
 const REMOTE = 'machine-b';
 const MAIN = phoneCanvas(REMOTE);

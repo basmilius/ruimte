@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ChatInfo, ChatTurnItem, ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
+import { ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
+import type { ProviderAccountsService } from '@adecore/agents/providers';
 import { ManualClock, testAccounts } from '@adecore/agents/testing';
+import type { LimitsUpdate } from '@adecore/agents/usage';
+import type { ChatInfo, ChatTurnItem, ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
 import { setProjectAccounts } from '../projects/project-accounts.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import type { ProviderAccountsService } from '@adecore/agents/providers';
-import type { LimitsUpdate } from '@adecore/agents/usage';
-import { bootTestDaemon, releasedProject, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
-import { ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
+import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
 import { turnsOf } from './chat-test-helpers.ts';
 import { sayAndSettle, writeLeadTranscript } from './lead-chat-test-helpers.ts';
 
@@ -93,8 +93,8 @@ function say(chatId: string, text: string): Promise<void> {
 }
 
 /* Has the lead chat start an agent and answers its node id. */
-async function openAgent(argv: string[]): Promise<string> {
-    const [line] = await runVerb(daemon, 'chat-lead', 'agent', argv);
+async function openAgent(input: Record<string, unknown>): Promise<string> {
+    const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', input);
     return line!.split('\t')[0]!;
 }
 
@@ -114,7 +114,7 @@ describe('a chat under an account', () => {
         expect(daemon.chatEnvs.at(-1)!.ANTHROPIC_API_KEY).toBeUndefined();
         daemon.chats.persistAllSync();
         expect((await new ChatStore(home).read('chat-lead'))!.info.account).toBe('claude_personal');
-        expect(daemon.chats.claudeProjectsDirOf({ account: 'claude_personal' })).toBe(join(personal, 'projects'));
+        expect(daemon.chats.claudeProjectsDirOf({ account: 'claude_personal', provider: 'claude' })).toBe(join(personal, 'projects'));
     });
 
     test('reports what a turn says about the plan on its account, which keeps that account read', async () => {
@@ -164,6 +164,14 @@ describe('a chat under an account', () => {
         await say('chat-codex', 'again');
         expect(daemon.chatEnvs.at(-1)!.CODEX_HOME).toBe(join(root, 'codex_work'));
         expect(daemon.chats.codexProcess(daemon.chats.get('chat-codex')!.info).env.CODEX_HOME).toBe(join(root, 'codex_work'));
+    });
+
+    test("the app-server that reads a Codex thread starts without Ruimte's MCP server, which only the chat's own process holds a token for", async () => {
+        await daemon.chats.create({ chatId: 'chat-codex', provider: 'codex', cwd: folder });
+        await say('chat-codex', 'hello');
+        const mcp = (command: readonly string[]): boolean => command.some((arg) => arg.startsWith('mcp_servers.ruimte.'));
+        expect(mcp(daemon.chatCommands.at(-1)!)).toBe(true);
+        expect(mcp(daemon.chats.codexProcess(daemon.chats.get('chat-codex')!.info).command)).toBe(false);
     });
 });
 
@@ -398,9 +406,9 @@ describe('a child an agent opens', () => {
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude_personal' });
         await say('chat-lead', 'plan');
 
-        const chatChild = await openAgent(['claude', '--prompt', 'look around']);
-        const terminalChild = await openAgent(['claude', '--terminal', '--prompt', 'look around']);
-        const codexChild = await openAgent(['codex', '--prompt', 'look around']);
+        const chatChild = await openAgent({ cli: 'claude', prompt: 'look around' });
+        const terminalChild = await openAgent({ cli: 'claude', terminal: true, prompt: 'look around' });
+        const codexChild = await openAgent({ cli: 'codex', prompt: 'look around' });
         await daemon.until(
             () => daemon.chats.get(chatChild) !== undefined && daemon.sessions.get(terminalChild) !== undefined && daemon.chats.get(codexChild) !== undefined
         );
@@ -443,9 +451,9 @@ describe('the top account of the order', () => {
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude' });
         await say('chat-lead', 'plan');
 
-        const chatChild = await openAgent(['claude', '--prompt', 'look around']);
-        const terminalChild = await openAgent(['claude', '--terminal', '--prompt', 'look around']);
-        const codexChild = await openAgent(['codex', '--prompt', 'look around']);
+        const chatChild = await openAgent({ cli: 'claude', prompt: 'look around' });
+        const terminalChild = await openAgent({ cli: 'claude', terminal: true, prompt: 'look around' });
+        const codexChild = await openAgent({ cli: 'codex', prompt: 'look around' });
         await daemon.until(
             () => daemon.chats.get(chatChild) !== undefined && daemon.sessions.get(terminalChild) !== undefined && daemon.chats.get(codexChild) !== undefined
         );
@@ -508,8 +516,8 @@ describe("a project's accounts", () => {
         await say('chat-lead', 'plan');
         await setProjectAccounts(store, { projectId, kind: 'claude', default: 'claude_personal', off: ['claude'] });
 
-        const chatChild = await openAgent(['claude', '--prompt', 'look around']);
-        const terminalChild = await openAgent(['claude', '--terminal', '--prompt', 'look around']);
+        const chatChild = await openAgent({ cli: 'claude', prompt: 'look around' });
+        const terminalChild = await openAgent({ cli: 'claude', terminal: true, prompt: 'look around' });
         await daemon.until(() => daemon.chats.get(chatChild) !== undefined && daemon.sessions.get(terminalChild) !== undefined);
 
         expect(daemon.chats.get(chatChild)!.info.account).toBe('claude_personal');

@@ -1,15 +1,15 @@
+import { Button, copyText, Icon, ListRow, Menu, Pill, PanelEmpty, ScrollArea, SectionLabel, Tooltip, ContextMenu, useNow } from '@adecore/ui';
+import { formatAgo, formatClock, formatElapsedShort, isSameDay } from '@adecore/ui/format';
+import { ChevronDown, Cloud, Copy, GitCommitHorizontal } from 'lucide-react';
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, Cloud, Copy, GitCommitHorizontal } from 'lucide-react';
-import { GIT_GROUP } from '@/shell/panels/classes';
 import { perform } from '@/actions/client-actions';
+import { GIT_GROUP } from '@/shell/panels/classes';
 import { githubPicture, groupCommits, mergeLogs, shownRefs, type LoadedLog, type LogRow } from '@/shell/panels/commit-log';
 import { useGit } from '@/state/git';
 import { useEndpointId } from '@/state/keys';
 import { useTransport } from '@/transport/context';
 import { useMachineAnswers } from '@/transport/features';
-import { Button, copyText, Icon, ListRow, Menu, Pill, PanelEmpty, SectionLabel, Tooltip, ContextMenu, useNow } from '@adecore/ui';
-import { formatAgo, formatClock, formatElapsedShort, isSameDay } from '@adecore/ui/format';
 
 // One screen of rows at a time; the button at the end asks for the next.
 const PAGE = 30;
@@ -141,7 +141,7 @@ export function CommitLog({ sources, filterKey, reading, onOpen }: CommitLogProp
     }
 
     return (
-        <div className="min-h-0 grow overflow-y-auto px-2 py-1">
+        <ScrollArea className="grow" viewportClassName="px-2 py-1">
             {sections.map((section, index) => (
                 <section key={section.label}>
                     <header className={GIT_GROUP}>
@@ -167,7 +167,7 @@ export function CommitLog({ sources, filterKey, reading, onOpen }: CommitLogProp
                     </Button>
                 </div>
             )}
-        </div>
+        </ScrollArea>
     );
 }
 

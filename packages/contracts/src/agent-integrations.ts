@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
 
 /*
- * What a person allowed the daemon to write into a CLI's global settings: the status hooks and, for
- * Codex, the rule that lets `ruimte-context` out of the sandbox. `unset` writes nothing yet.
+ * What a person allowed the daemon to write into a CLI's global settings: the status hooks. `unset`
+ * writes nothing yet.
  */
 export const AgentIntegrationSchema = z.object({
     provider: AgentKindSchema,
@@ -24,6 +24,7 @@ export type AgentIntegrationsSummary = z.infer<typeof AgentIntegrationsSummarySc
 export const AgentIntegrationFileSchema = z.object({
     provider: AgentKindSchema,
     path: z.string(),
+    // `rules` is a rules file of an earlier release for `ruimte-context`, listed while it is still there.
     kind: z.enum(['hooks', 'rules']),
     present: z.boolean(),
     // Whether the file holds an entry Ruimte wrote.
@@ -33,6 +34,7 @@ export type AgentIntegrationFile = z.infer<typeof AgentIntegrationFileSchema>;
 
 export const AgentIntegrationReportSchema = z.object({
     path: z.string(),
+    // `rules` reports only the removal of such an earlier rules file.
     kind: z.enum(['hooks', 'rules']),
     outcome: z.enum(['written', 'unchanged', 'removed', 'deleted', 'none', 'kept-edited', 'missing', 'refused', 'failed']),
     message: z.string().optional()
@@ -50,10 +52,8 @@ export const AgentIntegrationSetPayloadSchema = z.object({
     provider: AgentKindSchema,
     on: z.boolean()
 });
-export type AgentIntegrationSetPayload = z.infer<typeof AgentIntegrationSetPayloadSchema>;
 
 export const AgentIntegrationSetResultSchema = z.object({
     summary: AgentIntegrationsSummarySchema,
     report: z.array(AgentIntegrationReportSchema)
 });
-export type AgentIntegrationSetResult = z.infer<typeof AgentIntegrationSetResultSchema>;

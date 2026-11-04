@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { isCanvasView, type PeerTaskStartPayload, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
 import { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
+import { isCanvasView, type PeerTaskStartPayload, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
+import type { FirstPrompt } from '../agents/pending-prompts.ts';
 import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
+import { BundleStore } from '../git/bundles.ts';
 import { registerPeerTaskHandlers } from '../handlers/peer-tasks.ts';
 import type { OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
-import { BundleStore } from '../git/bundles.ts';
-import type { FirstPrompt } from '../agents/pending-prompts.ts';
-import { taskFirstPrompt } from '../canvas/tasks.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { taskFirstPrompt } from '../tools/tasks.ts';
 import { PeerLinks, peerCanvasId } from './links.ts';
 import { PEER_MAX_BRANCH_LENGTH, PEER_MAX_WORKTREES, PeerTasks, peerCaller, type PeerTasksDeps } from './peer-tasks.ts';
 
@@ -74,8 +74,8 @@ function deps(): PeerTasksDeps {
             enqueued.push({ target, work });
         },
         prompts: {
-            put: async (_projectId: string, nodeId: string, prompt: string, brief?: string) =>
-                void prompts.set(nodeId, { prompt, ...(brief === undefined ? {} : { brief }) }),
+            put: async (_projectId: string, nodeId: string, prompt: string, extra?: { brief?: string }) =>
+                void prompts.set(nodeId, { prompt, ...(extra?.brief === undefined ? {} : { brief: extra.brief }) }),
             take: async (nodeId: string) => {
                 const held = prompts.get(nodeId) ?? null;
                 prompts.delete(nodeId);

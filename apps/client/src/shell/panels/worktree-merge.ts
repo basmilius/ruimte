@@ -1,7 +1,7 @@
-import i18next from 'i18next';
+import { messageOf } from '@adecore/ui';
 import { ActionRefusal } from '@ruimte/actions';
 import type { Worktree, WorktreeMergePayload, WorktreeMergeResult, WorktreeMergeStrategy } from '@ruimte/contracts';
-import { messageOf } from '@adecore/ui';
+import i18next from 'i18next';
 
 /* The three ways a worktree lands, in the order the dialog offers them. */
 export const MERGE_STRATEGIES: readonly WorktreeMergeStrategy[] = ['squash', 'merge', 'rebase'];

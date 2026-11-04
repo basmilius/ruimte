@@ -1,9 +1,9 @@
 import { isOwner } from '../auth/access.ts';
-import type { Dispatcher } from '../dispatcher.ts';
 import type { AgentDatabases } from '../database/agent-databases.ts';
 import type { DatabaseConnectionStore } from '../database/connection-store.ts';
 import type { DatabaseService } from '../database/database-service.ts';
 import type { SqlAnalysis } from '../database/sql-analysis.ts';
+import type { Dispatcher } from '../dispatcher.ts';
 
 /* A client is its own owner of database sessions, so one socket never reaches another's. */
 export function registerDatabaseHandlers(

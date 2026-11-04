@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import type { SubagentStep, SubagentTrail } from '@adecore/agents-react/chat';
+import { create } from 'zustand';
 
 /* What a person chose for one workflow beside a chat node. */
 export interface WorkflowSelection {

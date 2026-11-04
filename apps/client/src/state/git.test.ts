@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from 'bun:test';
-import { endpointKey } from './keys';
 import { useGit } from './git';
+import { endpointKey } from './keys';
 
 afterEach(() => useGit.setState({ messages: {}, messageVersions: {} }));
 

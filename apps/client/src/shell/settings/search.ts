@@ -1,16 +1,17 @@
+import { formatShortcut } from '@adecore/ui';
 import i18next from 'i18next';
-import { RENDERED_DOC_COMMENTS } from '@/features';
 import { canSwipeBetweenPages, desktop, isDesktop } from '@/desktop/bridge';
-import { closedLidOffered, keepAwakeAvailable } from '@/state/keep-awake';
-import { ALL_SETTINGS_SECTIONS, sectionDescription, sectionLabel } from '@/shell/settings/sections';
+import { useContributions } from '@/extensions/registry';
+import { RENDERED_DOC_COMMENTS } from '@/features';
 import { FOLDING_GROUPS } from '@/shell/settings/folding-rows';
+import { allSettingsSections, sectionDescription, sectionLabel } from '@/shell/settings/sections';
 import { shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { closedLidOffered, keepAwakeAvailable } from '@/state/keep-awake';
 import { hasLocalMachine } from '@/state/local-machine';
 import { serverInfoOf } from '@/state/server';
 import { useServers } from '@/state/server';
 import type { SettingsSectionId } from '@/state/ui';
-import { formatShortcut } from '@adecore/ui';
 
 interface SearchEntry {
     /* The `searchId` of the row it leads to. */
@@ -56,6 +57,7 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     row('appearance.accent'),
     row('appearance.interface.layout'),
     row('appearance.projectGlow'),
+    row('appearance.scrollBounce'),
     row('appearance.font.interface'),
     row('appearance.font.interfaceSize'),
     row('editor.colors.light'),
@@ -80,8 +82,8 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     row('editor.ai.inlineAgent'),
     row('editor.ai.agentChanges'),
     row('editor.ai.attribution'),
-    row('editor.ai.onDevice.help'),
-    row('editor.ai.onDevice.ghost'),
+    row('editor.ai.assist.help'),
+    row('editor.ai.assist.ghost'),
     row('editor.smartKeys.pairBrackets'),
     row('editor.smartKeys.pairQuotes'),
     row('editor.smartKeys.surroundSelection'),
@@ -110,15 +112,6 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     row('views.canvas.renderDistance'),
     row('views.drawing.snap'),
     row('views.browser.swipe', canSwipeBetweenPages),
-    row('pets.enabled'),
-    row('pets.place'),
-    row('pets.inViews'),
-    row('pets.subagents'),
-    row('pets.visitor'),
-    row('pets.beam'),
-    row('pets.sprite'),
-    row('pets.custom'),
-    row('pets.agents'),
     row('files.files.openFiles'),
     row('files.files.hidden'),
     row('files.git.layout'),
@@ -152,7 +145,6 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     row('chats.showViews'),
     row('chats.mapTiles'),
     { id: 'agents.visualReplies', section: 'chats', label: 'settings:agents.visualReplies.label', description: 'settings:agents.visualReplies.description' },
-    row('providers.apple'),
     {
         id: 'providers.acpServer',
         section: 'providers',
@@ -393,19 +385,40 @@ export function shortcutSearchRows(groups: readonly ShortcutGroup[], apple: bool
  * Every pane and row whose words hold each word of the query, panes first, in the order of the
  * navigation. `built` holds the rows whose words exist only at run time, like the shortcuts.
  */
+function sectionEnglish(id: SettingsSectionId): string {
+    const contributed = useContributions.getState().settingsSections.find((section) => section.id === id);
+
+    return contributed === undefined
+        ? `${englishWords(`settings:sections.${id}.label`)} ${englishWords(`settings:sections.${id}.description`)}`
+        : `${englishWords(contributed.labelKey)} ${englishWords(contributed.descriptionKey)}`;
+}
+
 export function searchSettings(query: string, built: readonly SearchResult[] = []): SearchResult[] {
     const terms = fold(query).split(/\s+/).filter(Boolean);
     if (terms.length === 0) {
         return [];
     }
-    const panes = ALL_SETTINGS_SECTIONS.map((meta) => ({
-        section: meta.id,
-        id: null,
-        label: sectionLabel(meta.id),
-        description: sectionDescription(meta.id),
-        english: `${englishWords(`settings:sections.${meta.id}.label`)} ${englishWords(`settings:sections.${meta.id}.description`)}`
-    })).filter((result) => matches(terms, result.label, result.description, result.english));
-    const order = ALL_SETTINGS_SECTIONS.map((meta) => meta.id);
+    const sections = allSettingsSections();
+    const contributed = useContributions.getState().settingsSections;
+    const panes = sections
+        .map((meta) => ({
+            section: meta.id,
+            id: null,
+            label: sectionLabel(meta.id),
+            description: sectionDescription(meta.id),
+            english: sectionEnglish(meta.id)
+        }))
+        .filter((result) => matches(terms, result.label, result.description, result.english));
+    const order = sections.map((meta) => meta.id);
+    const contributedRows = contributed.flatMap((section) =>
+        (section.search ?? []).map((row) => ({
+            section: section.id,
+            id: row.id,
+            label: words(row.label),
+            description: words(row.description),
+            english: `${englishWords(row.label)} ${englishWords(row.description)}`
+        }))
+    );
     const indexed = SETTINGS_INDEX.filter((entry) => entry.available?.() ?? true).map((entry) => ({
         section: entry.section,
         id: entry.id,
@@ -413,7 +426,7 @@ export function searchSettings(query: string, built: readonly SearchResult[] = [
         description: entry.description ? words(entry.description) : '',
         english: `${englishWords(entry.label)} ${englishWords(entry.description)}`
     }));
-    const rows = [...indexed, ...built]
+    const rows = [...indexed, ...contributedRows, ...built]
         .filter((result) => matches(terms, result.label, result.description, result.english ?? ''))
         .sort((a, b) => order.indexOf(a.section) - order.indexOf(b.section));
     return [...panes, ...rows];

@@ -39,3 +39,46 @@ enum ModelName {
     }
 
 }
+
+/// The line between two turns that ran on another model or effort, as `chat/logic/selection-switch.ts` on the desktop.
+enum ChatSelectionSwitch {
+    private static let effort = "effort"
+
+    /// Whether the model or the effort changed; other options do not count.
+    static func switches(from: ChatTurnItemSelection, to: ChatTurnItemSelection) -> Bool {
+        from.model != to.model || from.options[effort] != to.options[effort]
+    }
+
+    /// Both sides of the line. A side names only what changed: the effort under the same model, the models when the
+    /// effort stayed, and both otherwise. Nil when the two read the same.
+    static func text(from: ChatTurnItemSelection, to: ChatTurnItemSelection, models: [JSONValue]) -> (
+        from: String, to: String
+    )? {
+        let fromEffort = effortLabel(from, models: models)
+        let toEffort = effortLabel(to, models: models)
+        if from.model == to.model {
+            guard let fromEffort, let toEffort, fromEffort != toEffort else { return nil }
+            return (fromEffort, toEffort)
+        }
+        let fromName = ModelName.short(ModelName.of(from.model, in: models), in: models)
+        let toName = ModelName.short(ModelName.of(to.model, in: models), in: models)
+        if fromEffort == toEffort { return (fromName, toName) }
+        return (
+            fromEffort.map { "\(fromName) \($0)" } ?? fromName,
+            toEffort.map { "\(toName) \($0)" } ?? toName
+        )
+    }
+
+    /// The effort in the catalog's words; nil for a model without one or one the catalog does not know.
+    private static func effortLabel(_ selection: ChatTurnItemSelection, models: [JSONValue]) -> String? {
+        let model = models.first { $0.text("slug") == selection.model }
+        guard
+            let option = model?["options"]?.arrayValue?.first(where: { $0.text("id") == effort }),
+            option.text("type") == "select", let choices = option["choices"]?.arrayValue
+        else { return nil }
+        let chosen = selection.options[effort]?.stringValue
+        let choice =
+            choices.first { $0.text("id") == chosen } ?? choices.first { $0.text("id") == option.text("defaultChoice") }
+        return choice?["label"]?.stringValue
+    }
+}

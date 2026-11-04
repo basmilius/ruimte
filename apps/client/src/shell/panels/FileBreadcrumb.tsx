@@ -1,8 +1,10 @@
-import { Fragment } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Box, Braces, ChevronRight, Hash, SquareFunction, Variable, type LucideIcon } from 'lucide-react';
 import type { EditorBlock } from '@adecore/editor';
 import { FileIcon, Icon } from '@adecore/ui';
+import { Box, Braces, ChevronRight, Hash, SquareFunction, Variable, type LucideIcon } from 'lucide-react';
+import { Fragment } from 'react';
+import { useTranslation } from 'react-i18next';
+import { fileInfoOf } from '@/extensions/file-info';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { pathCrumbs } from '@/shell/panels/file-breadcrumb';
 
 const KIND_ICONS: Record<string, LucideIcon> = {
@@ -59,6 +61,7 @@ export function FileBreadcrumb({ path, folder, scope, onSelect }: FileBreadcrumb
                     </button>
                 </Fragment>
             ))}
+            <SlotRow place="fileBreadcrumb" context={{ file: fileInfoOf(path) }} />
         </nav>
     );
 }

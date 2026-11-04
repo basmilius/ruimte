@@ -1,11 +1,10 @@
+import { CodedError } from '@adecore/agents';
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
 import { VISUAL_LIMITS, type ChatVisual, type VisualLayout } from '@ruimte/contracts';
-import { CodedError } from '@adecore/agents';
-import { VerbRefusal, field, orNote, type VisualHost } from '../canvas/verb.ts';
+import { field, orNote, type VisualHost } from '../tools/host.ts';
 import { PREVIEW_WIDTH } from '../visuals/renderer.ts';
 import { hostService, requireChatCaller, type ServerActionContext } from './context.ts';
-
-const HELP_LINE = 'detail\truimte-context help visual';
 
 /* What the store refuses a page with; its message already says what to change. */
 const STORE_REFUSALS: ReadonlySet<string> = new Set(['visual-invalid', 'visual-too-large']);
@@ -32,7 +31,7 @@ function visualsOf(context: ServerActionContext): VisualHost {
 
 function requireEnabled(visuals: VisualHost): void {
     if (!visuals.enabled()) {
-        throw new VerbRefusal('visuals-off', 'A person turned visual replies off on this machine: answer in text, and do not call visual again');
+        throw new ToolRefusal('visuals-off', 'A person turned visual replies off on this machine: answer in text, and do not call visual again');
     }
 }
 
@@ -41,7 +40,7 @@ export async function callerChat(context: ServerActionContext, caller: string): 
     await requireChatCaller(
         context,
         caller,
-        (you) => new VerbRefusal('visual-needs-chat', `A visual shows only in the thread of an AI chat, and you are ${you}: answer in text instead`)
+        (you) => new ToolRefusal('visual-needs-chat', `A visual shows only in the thread of an AI chat, and you are ${you}: answer in text instead`)
     );
 
     return caller;
@@ -56,12 +55,12 @@ async function visualChat(context: ServerActionContext, caller: string): Promise
 }
 
 /* Passes on what the store refuses a page with, for the agent to change. */
-async function storeRefusalsAsVerb<Result>(work: () => Promise<Result>): Promise<Result> {
+async function storeRefusalsAsTool<Result>(work: () => Promise<Result>): Promise<Result> {
     try {
         return await work();
     } catch (e) {
         if (e instanceof CodedError && STORE_REFUSALS.has(e.code)) {
-            throw new VerbRefusal(e.code, e.message, [HELP_LINE]);
+            throw new ToolRefusal(e.code, e.message);
         }
         throw e;
     }
@@ -69,7 +68,7 @@ async function storeRefusalsAsVerb<Result>(work: () => Promise<Result>): Promise
 
 /*
  * Shows a page above the caller's reply: only in an AI chat, only while the machine lets agents show
- * visuals, and within what the store takes. `visual show` and any action that draws a page of its
+ * visuals, and within what the store takes. `visual_show` and any action that draws a page of its
  * own, such as the table of a database query, go through here.
  */
 export async function showVisual(
@@ -79,7 +78,7 @@ export async function showVisual(
 ): Promise<ChatVisual> {
     const { visuals, chatId } = await visualChat(context, caller);
     const heights = renderable(input.html) ? await visuals.measure?.(input.html) : undefined;
-    return storeRefusalsAsVerb(() =>
+    return storeRefusalsAsTool(() =>
         visuals.publish(chatId, {
             title: input.title,
             html: input.html,
@@ -95,9 +94,9 @@ export const visualActions: ActionHandlers<ServerActionContext> = {
         const { visuals, chatId } = await visualChat(context, actor.id);
         const writeSource = visuals.writeSource?.bind(visuals);
         if (!writeSource) {
-            throw new VerbRefusal('unavailable', 'This machine keeps no visual source files; pass the page directly to visual preview and visual show');
+            throw new ToolRefusal('unavailable', 'This machine keeps no visual source files; pass the page directly to visual_preview and visual_show');
         }
-        return { output: { path: await storeRefusalsAsVerb(() => writeSource(chatId, name, html)) } };
+        return { output: { path: await storeRefusalsAsTool(() => writeSource(chatId, name, html)) } };
     },
     'visual.show': async ({ title, html, maxHeight, layout }, { actor, context }) => ({
         output: { visual: await showVisual(context, actor.id, { title, html, maxHeight, ...(layout === undefined ? {} : { layout }) }) }
@@ -105,23 +104,22 @@ export const visualActions: ActionHandlers<ServerActionContext> = {
     'visual.preview': async ({ html, width, appearance }, { actor, context }) => {
         const { visuals, chatId } = await visualChat(context, actor.id);
         if (html.trim() === '') {
-            throw new VerbRefusal('visual-invalid', 'The page is empty; pass one self-contained HTML document', [HELP_LINE]);
+            throw new ToolRefusal('visual-invalid', 'The page is empty; pass one self-contained HTML document');
         }
         if (!renderable(html)) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'visual-too-large',
-                `The page is larger than the ${VISUAL_LIMITS.bytes / 1024 / 1024} MiB a visual may be; load libraries from a public CDN URL and refer to large images by their http(s) URL`,
-                [HELP_LINE]
+                `The page is larger than the ${VISUAL_LIMITS.bytes / 1024 / 1024} MiB a visual may be; load libraries from a public CDN URL and refer to large images by their http(s) URL`
             );
         }
         if (!visuals.preview) {
-            throw new VerbRefusal('preview-unavailable', 'This machine renders no previews; show the page with visual show without a preview');
+            throw new ToolRefusal('preview-unavailable', 'This machine renders no previews; show the page with visual_show without a preview');
         }
         try {
             return { output: await visuals.preview(chatId, { html, width: width ?? PREVIEW_WIDTH.default, appearance: appearance ?? 'dark' }) };
         } catch (e) {
             if (e instanceof CodedError && PREVIEW_REFUSALS.has(e.code)) {
-                throw new VerbRefusal(e.code, e.message);
+                throw new ToolRefusal(e.code, e.message);
             }
             throw e;
         }
@@ -135,7 +133,7 @@ export const visualActions: ActionHandlers<ServerActionContext> = {
         const shown = await visuals.list(chatId);
         const visual = shown.find((candidate) => candidate.id === visualId);
         if (!visual) {
-            throw new VerbRefusal('visual-not-found', `This chat shows no visual ${visualId}`, visualRows(shown));
+            throw new ToolRefusal('visual-not-found', `This chat shows no visual ${visualId}`, visualRows(shown));
         }
         await visuals.remove(chatId, visualId);
         return { output: { visualId, title: visual.title } };

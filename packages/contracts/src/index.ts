@@ -1,10 +1,19 @@
-import {
-    TerminalPreparePreviewPayloadSchema,
-    TerminalPreparePreviewResultSchema,
-    TerminalPreparePayloadSchema,
-    TerminalPrepareResultSchema
-} from './terminal-prepare.ts';
+import { AGENT_EVENT_SCHEMAS, AGENT_REQUEST_SCHEMAS, EmptySchema } from '@adecore/agent-contracts/protocol';
+import { z } from 'zod';
 import { AgentIntegrationSetPayloadSchema, AgentIntegrationSetResultSchema, AgentIntegrationsResultSchema } from './agent-integrations.ts';
+import {
+    CliUpdatePayloadSchema,
+    CliUpdateResultSchema,
+    CliVersionsPayloadSchema,
+    CliVersionsResultSchema,
+    RegistryAgentPayloadSchema,
+    RegistryAgentResultSchema,
+    RegistryCatalogPayloadSchema,
+    RegistryCatalogResultSchema
+} from './agent-registry.ts';
+import { AgentServerPayloadSchema, AgentServerResultSchema } from './agent-server.ts';
+import { AgentResumePayloadSchema, SessionStatusEventSchema } from './agent.ts';
+import { ArchiveExtractPayloadSchema, ArchiveExtractResultSchema, ArchiveListPayloadSchema, ArchiveListResultSchema } from './archive.ts';
 import {
     ArtifactChangedEventSchema,
     ArtifactCleanupPayloadSchema,
@@ -25,63 +34,24 @@ import {
     ArtifactStorageResultSchema
 } from './artifact.ts';
 import {
-    RoutineApprovePayloadSchema,
-    RoutineChangedEventSchema,
-    RoutineGetResultSchema,
-    RoutineListPayloadSchema,
-    RoutineListResultSchema,
-    RoutineRemovePayloadSchema,
-    RoutineRunNowResultSchema,
-    RoutineSavePayloadSchema,
-    RoutineSaveResultSchema,
-    RoutineSkillsPayloadSchema,
-    RoutineSkillsResultSchema,
-    RoutineTargetPayloadSchema
-} from './routine.ts';
-import {
-    TemplateChangedEventSchema,
-    TemplateConfigurePayloadSchema,
-    TemplateConfigureResultSchema,
-    TemplateListPayloadSchema,
-    TemplateListResultSchema,
-    TemplateRemovePayloadSchema,
-    TemplateRemoveResultSchema,
-    TemplateSavePayloadSchema,
-    TemplateSaveResultSchema
-} from './templates.ts';
-import {
-    CliUpdatePayloadSchema,
-    CliUpdateResultSchema,
-    CliVersionsPayloadSchema,
-    CliVersionsResultSchema,
-    RegistryAgentPayloadSchema,
-    RegistryAgentResultSchema,
-    RegistryCatalogPayloadSchema,
-    RegistryCatalogResultSchema
-} from './agent-registry.ts';
-import { AgentServerPayloadSchema, AgentServerResultSchema } from './agent-server.ts';
-import { AGENT_EVENT_SCHEMAS, AGENT_REQUEST_SCHEMAS, EmptySchema } from '@adecore/agent-contracts/protocol';
-import {
-    ChatExternalPayloadSchema,
-    ChatExternalResultSchema,
-    ChatSearchCancelPayloadSchema,
-    ChatSearchPayloadSchema,
-    ChatSearchResultSchema
-} from './chat-search.ts';
-import { ChatHandoffPayloadSchema, ChatHandoffResultSchema } from './chat-handoff.ts';
-import {
-    ChatMoveInfoPayloadSchema,
-    ChatMoveInfoResultSchema,
-    ChatMovePayloadSchema,
-    ChatMoveResultSchema,
-    ProjectProposalDeclinePayloadSchema,
-    ProjectProposalDeclineResultSchema,
-    ProjectProposalsSchema
-} from './chat-move.ts';
-import { ChatImageTargetPayloadSchema, ChatImageTargetResultSchema, ChatImageSavePayloadSchema, ChatImageSaveResultSchema } from './chat-image.ts';
-import { ProjectSidebarResultSchema, ProjectSummaryEventSchema } from './project-sidebar.ts';
-import { z } from 'zod';
-import { SessionPortsResultSchema, SessionPortVerifyPayloadSchema, SessionPortVerifyResultSchema } from './session-ports.ts';
+    AuthRevokePayloadSchema,
+    AuthSessionsResultSchema,
+    EndpointChangedEventSchema,
+    EndpointClosedLidRulePayloadSchema,
+    EndpointInfoPayloadSchema,
+    EndpointInfoSchema,
+    EndpointLeaveAccountResultSchema,
+    EndpointSetIdentityPayloadSchema,
+    EndpointSetNodeSizePayloadSchema,
+    EndpointSettingsSchema,
+    EndpointSignPeerAccessPayloadSchema,
+    EndpointSignPeerAccessResultSchema,
+    EndpointSignRegistrationPayloadSchema,
+    EndpointSignRegistrationResultSchema,
+    UsageCountPayloadSchema,
+    UsageStartupPayloadSchema,
+    UsageTimingPayloadSchema
+} from './auth.ts';
 import {
     BrowserCommandPayloadSchema,
     BrowserDevServersPayloadSchema,
@@ -97,6 +67,52 @@ import {
     BrowserResizePayloadSchema,
     BrowserTargetPayloadSchema
 } from './browser.ts';
+import { BytesReadPayloadSchema, BytesReadResultSchema } from './bytes.ts';
+import { ChatHandoffPayloadSchema, ChatHandoffResultSchema } from './chat-handoff.ts';
+import { ChatImageTargetPayloadSchema, ChatImageTargetResultSchema, ChatImageSavePayloadSchema, ChatImageSaveResultSchema } from './chat-image.ts';
+import {
+    ChatMoveInfoPayloadSchema,
+    ChatMoveInfoResultSchema,
+    ChatMovePayloadSchema,
+    ChatMoveResultSchema,
+    ProjectProposalDeclinePayloadSchema,
+    ProjectProposalDeclineResultSchema,
+    ProjectProposalsSchema
+} from './chat-move.ts';
+import {
+    ChatExternalPayloadSchema,
+    ChatExternalResultSchema,
+    ChatSearchCancelPayloadSchema,
+    ChatSearchPayloadSchema,
+    ChatSearchResultSchema
+} from './chat-search.ts';
+import { ClaudeApiConfigurePayloadSchema, ClaudeApiStatusSchema } from './claude-api.ts';
+import {
+    ComputerAnswerPayloadSchema,
+    ComputerAnswerResultSchema,
+    ComputerAppGrantsSchema,
+    ComputerApprovalsSchema,
+    ComputerControlPayloadSchema,
+    ComputerRequestGrantPayloadSchema,
+    ComputerRequestGrantResultSchema,
+    ComputerRevokePayloadSchema,
+    ComputerRevokeResultSchema,
+    ComputerSetLanguagePayloadSchema,
+    ComputerUseSetEnabledPayloadSchema,
+    ComputerUseStatusSchema
+} from './computer.ts';
+import {
+    DatabaseAgentAccessChangedEventSchema,
+    DatabaseAgentAccessMapSchema,
+    DatabaseAgentAccessSetPayloadSchema,
+    DatabaseConnectionsChangedEventSchema,
+    DatabaseConnectionsPayloadSchema,
+    DatabaseConnectionsSavePayloadSchema,
+    DatabaseConnectionsSchema,
+    DatabasePasswordsPayloadSchema,
+    DatabaseRequestPayloadSchema,
+    DatabaseRequestResultSchema
+} from './database.ts';
 import {
     DeviceActionPayloadSchema,
     DeviceCaptureResultSchema,
@@ -120,64 +136,31 @@ import {
     DeviceTargetPayloadSchema
 } from './device.ts';
 import {
-    PushSubscribePayloadSchema,
-    PushUnsubscribePayloadSchema,
-    PushPreferencesResultSchema,
-    PushAttentionResultSchema,
-    PushReadPayloadSchema,
-    PushAttentionEntrySchema,
-    PresenceReportPayloadSchema
-} from './push.ts';
-import { RenderSceneResultSchema } from './render.ts';
+    DiagramChangedEventSchema,
+    DiagramCopyPayloadSchema,
+    DiagramOpenResultSchema,
+    DiagramSavePayloadSchema,
+    DiagramSaveResultSchema,
+    DiagramTargetPayloadSchema
+} from './diagram-host.ts';
+import { DirectSignalPayloadSchema } from './direct.ts';
 import {
-    PeerArtifactGetPayloadSchema,
-    PeerArtifactListPayloadSchema,
-    PeerArtifactReadPayloadSchema,
-    PeerArtifactReadResultSchema,
-    PeerBindPayloadSchema,
-    PeerBundlePutPayloadSchema,
-    PeerBundlePutResultSchema,
-    PeerBundleReadPayloadSchema,
-    PeerBundleReadResultSchema,
-    PeerClosePayloadSchema,
-    PeerLinkSchema,
-    PeerListResultSchema,
-    PeerPlaceNodesPayloadSchema,
-    PeerResultPayloadSchema,
-    PeerResultResultSchema,
-    PeerSetCeilingPayloadSchema,
-    PeerTaskSettledEventSchema,
-    PeerTaskStartPayloadSchema,
-    PeerTaskStartResultSchema,
-    PeerTaskStopPayloadSchema,
-    PeerUnbindPayloadSchema
-} from './peer.ts';
+    DrawingChangedEventSchema,
+    DrawingCopyPayloadSchema,
+    DrawingOpenResultSchema,
+    DrawingSavePayloadSchema,
+    DrawingSaveResultSchema,
+    DrawingTargetPayloadSchema
+} from './drawing-host.ts';
 import {
-    RemoteConnectPayloadSchema,
-    RemoteLinkPayloadSchema,
-    RemoteLinkSchema,
-    RemoteListPayloadSchema,
-    RemoteListResultSchema,
-    RemoteStatusEventSchema,
-    RemoteUnlinkPayloadSchema
-} from './remote.ts';
-import { SnoozeClearPayloadSchema, SnoozeListSchema, SnoozeSetPayloadSchema } from './snooze.ts';
-import {
-    EndpointInstallUpdatePayloadSchema,
-    EndpointInstallUpdateResultSchema,
-    EndpointUpdateChangedEventSchema,
-    MachineUpdateReportSchema
-} from './machine-update.ts';
-import { ArchiveExtractPayloadSchema, ArchiveExtractResultSchema, ArchiveListPayloadSchema, ArchiveListResultSchema } from './archive.ts';
-import { BytesReadPayloadSchema, BytesReadResultSchema } from './bytes.ts';
-import {
-    DatabaseSnapshotRefreshPayloadSchema,
-    LanguageSqlBindPayloadSchema,
-    LanguageSqlChangedEventSchema,
-    LanguageSqlPayloadSchema,
-    LanguageSqlStateSchema
-} from './sql-binding.ts';
-import { AgentResumePayloadSchema, SessionStatusEventSchema } from './agent.ts';
+    EditorAssistCancelPayloadSchema,
+    EditorAssistGeneratePayloadSchema,
+    EditorAssistGenerateResultSchema,
+    EditorAssistStatusResultSchema,
+    EditorAssistStatusPayloadSchema,
+    EditorAssistTextEventSchema
+} from './editor-assist.ts';
+import { EXTENSION_EVENT_SCHEMAS, EXTENSION_REQUEST_SCHEMAS } from './extension.ts';
 import {
     FsBrowsePayloadSchema,
     FsBrowseResultSchema,
@@ -279,55 +262,6 @@ import {
     WorktreeRemoveResultSchema
 } from './git.ts';
 import {
-    AuthRevokePayloadSchema,
-    AuthSessionsResultSchema,
-    EndpointChangedEventSchema,
-    EndpointClosedLidRulePayloadSchema,
-    EndpointInfoPayloadSchema,
-    EndpointInfoSchema,
-    EndpointLeaveAccountResultSchema,
-    EndpointSetIdentityPayloadSchema,
-    EndpointSetNodeSizePayloadSchema,
-    EndpointSettingsSchema,
-    EndpointSignPeerAccessPayloadSchema,
-    EndpointSignPeerAccessResultSchema,
-    EndpointSignRegistrationPayloadSchema,
-    EndpointSignRegistrationResultSchema,
-    UsageCountPayloadSchema,
-    UsageStartupPayloadSchema,
-    UsageTimingPayloadSchema
-} from './auth.ts';
-import { DirectSignalPayloadSchema } from './direct.ts';
-import { EndpointReachPayloadSchema, EndpointReachResultSchema } from './reach.ts';
-import {
-    DatabaseAgentAccessChangedEventSchema,
-    DatabaseAgentAccessMapSchema,
-    DatabaseAgentAccessSetPayloadSchema,
-    DatabaseConnectionsChangedEventSchema,
-    DatabaseConnectionsPayloadSchema,
-    DatabaseConnectionsSavePayloadSchema,
-    DatabaseConnectionsSchema,
-    DatabasePasswordsPayloadSchema,
-    DatabaseRequestPayloadSchema,
-    DatabaseRequestResultSchema
-} from './database.ts';
-import {
-    DrawingChangedEventSchema,
-    DrawingCopyPayloadSchema,
-    DrawingOpenResultSchema,
-    DrawingSavePayloadSchema,
-    DrawingSaveResultSchema,
-    DrawingTargetPayloadSchema
-} from './drawing-host.ts';
-import {
-    DiagramChangedEventSchema,
-    DiagramCopyPayloadSchema,
-    DiagramOpenResultSchema,
-    DiagramSavePayloadSchema,
-    DiagramSaveResultSchema,
-    DiagramTargetPayloadSchema
-} from './diagram-host.ts';
-import {
     LanguageCommandPayloadSchema,
     LanguageCommandResultSchema,
     LanguageCustomChangedEventSchema,
@@ -367,13 +301,6 @@ import {
     LanguageWorkspaceProblemsResultSchema
 } from './language.ts';
 import {
-    OnDeviceCancelPayloadSchema,
-    OnDeviceGeneratePayloadSchema,
-    OnDeviceGenerateResultSchema,
-    OnDeviceStatusResultSchema,
-    OnDeviceTextEventSchema
-} from './ondevice.ts';
-import {
     LaunchListResultSchema,
     LaunchStartPayloadSchema,
     LaunchStartResultSchema,
@@ -389,6 +316,36 @@ import {
     LaunchesTargetPayloadSchema
 } from './launches.ts';
 import {
+    EndpointInstallUpdatePayloadSchema,
+    EndpointInstallUpdateResultSchema,
+    EndpointUpdateChangedEventSchema,
+    MachineUpdateReportSchema
+} from './machine-update.ts';
+import { NanoGptConfigurePayloadSchema, NanoGptStatusSchema } from './nanogpt.ts';
+import {
+    PeerArtifactGetPayloadSchema,
+    PeerArtifactListPayloadSchema,
+    PeerArtifactReadPayloadSchema,
+    PeerArtifactReadResultSchema,
+    PeerBindPayloadSchema,
+    PeerBundlePutPayloadSchema,
+    PeerBundlePutResultSchema,
+    PeerBundleReadPayloadSchema,
+    PeerBundleReadResultSchema,
+    PeerClosePayloadSchema,
+    PeerLinkSchema,
+    PeerListResultSchema,
+    PeerPlaceNodesPayloadSchema,
+    PeerResultPayloadSchema,
+    PeerResultResultSchema,
+    PeerSetCeilingPayloadSchema,
+    PeerTaskSettledEventSchema,
+    PeerTaskStartPayloadSchema,
+    PeerTaskStartResultSchema,
+    PeerTaskStopPayloadSchema,
+    PeerUnbindPayloadSchema
+} from './peer.ts';
+import {
     PlanApplyPayloadSchema,
     PlanApplyResultSchema,
     PlanChangedEventSchema,
@@ -398,12 +355,14 @@ import {
     PlanRemovedEventSchema
 } from './plan-host.ts';
 import {
-    ProvenanceChangedEventSchema,
-    ProvenanceReadPayloadSchema,
-    ProvenanceReadResultSchema,
-    ProvenanceReviewPayloadSchema,
-    ProvenanceReviewResultSchema
-} from './provenance.ts';
+    ProcessesAlertsSchema,
+    ProcessesDismissPayloadSchema,
+    ProcessesSampleEventSchema,
+    ProcessesSignalPayloadSchema,
+    ProcessesSubscribePayloadSchema,
+    ProcessesSubscribeResultSchema
+} from './processes.ts';
+import { ProjectSidebarResultSchema, ProjectSummaryEventSchema } from './project-sidebar.ts';
 import {
     ProjectChangedEventSchema,
     ProjectCloseResultSchema,
@@ -430,14 +389,49 @@ import {
     ProjectTargetPayloadSchema
 } from './project.ts';
 import {
-    ProcessesAlertsSchema,
-    ProcessesDismissPayloadSchema,
-    ProcessesSampleEventSchema,
-    ProcessesSignalPayloadSchema,
-    ProcessesSubscribePayloadSchema,
-    ProcessesSubscribeResultSchema
-} from './processes.ts';
+    ProvenanceChangedEventSchema,
+    ProvenanceReadPayloadSchema,
+    ProvenanceReadResultSchema,
+    ProvenanceReviewPayloadSchema,
+    ProvenanceReviewResultSchema
+} from './provenance.ts';
+import {
+    PushSubscribePayloadSchema,
+    PushUnsubscribePayloadSchema,
+    PushPreferencesResultSchema,
+    PushAttentionResultSchema,
+    PushReadPayloadSchema,
+    PushAttentionEntrySchema,
+    PresenceReportPayloadSchema
+} from './push.ts';
+import { EndpointReachPayloadSchema, EndpointReachResultSchema } from './reach.ts';
+import {
+    RemoteConnectPayloadSchema,
+    RemoteLinkPayloadSchema,
+    RemoteLinkSchema,
+    RemoteListPayloadSchema,
+    RemoteListResultSchema,
+    RemoteStatusEventSchema,
+    RemoteUnlinkPayloadSchema
+} from './remote.ts';
+import { RenderSceneResultSchema } from './render.ts';
+import {
+    RoutineApprovePayloadSchema,
+    RoutineChangedEventSchema,
+    RoutineGetResultSchema,
+    RoutineListPayloadSchema,
+    RoutineListResultSchema,
+    RoutineRemovePayloadSchema,
+    RoutineRunNowResultSchema,
+    RoutineSavePayloadSchema,
+    RoutineSaveResultSchema,
+    RoutineSkillsPayloadSchema,
+    RoutineSkillsResultSchema,
+    RoutineTargetPayloadSchema
+} from './routine.ts';
+import { SecretAnswerResultSchema, SecretDeclinePayloadSchema, SecretRequestsSchema, SecretSavePayloadSchema } from './secrets.ts';
 import { ServerHelloPayloadSchema, ServerHelloResultSchema, ServerPingPayloadSchema, ServerPingResultSchema } from './server.ts';
+import { SessionPortsResultSchema, SessionPortVerifyPayloadSchema, SessionPortVerifyResultSchema } from './session-ports.ts';
 import {
     SessionAttachPayloadSchema,
     SessionAttachResultSchema,
@@ -453,24 +447,32 @@ import {
     SessionTargetPayloadSchema,
     SessionWritePayloadSchema
 } from './session.ts';
+import { SnoozeClearPayloadSchema, SnoozeListSchema, SnoozeSetPayloadSchema } from './snooze.ts';
+import {
+    DatabaseSnapshotRefreshPayloadSchema,
+    LanguageSqlBindPayloadSchema,
+    LanguageSqlChangedEventSchema,
+    LanguageSqlPayloadSchema,
+    LanguageSqlStateSchema
+} from './sql-binding.ts';
 import { AgentChildrenPayloadSchema, AgentChildrenResultSchema, TaskChangedEventSchema, TaskListPayloadSchema, TaskListResultSchema } from './task.ts';
 import {
-    ComputerAnswerPayloadSchema,
-    ComputerAnswerResultSchema,
-    ComputerAppGrantsSchema,
-    ComputerApprovalsSchema,
-    ComputerControlPayloadSchema,
-    ComputerRequestGrantPayloadSchema,
-    ComputerRequestGrantResultSchema,
-    ComputerRevokePayloadSchema,
-    ComputerRevokeResultSchema,
-    ComputerSetLanguagePayloadSchema,
-    ComputerUseSetEnabledPayloadSchema,
-    ComputerUseStatusSchema
-} from './computer.ts';
-import { ClaudeApiConfigurePayloadSchema, ClaudeApiStatusSchema } from './claude-api.ts';
-import { NanoGptConfigurePayloadSchema, NanoGptStatusSchema } from './nanogpt.ts';
-import { SecretAnswerResultSchema, SecretDeclinePayloadSchema, SecretRequestsSchema, SecretSavePayloadSchema } from './secrets.ts';
+    TemplateChangedEventSchema,
+    TemplateConfigurePayloadSchema,
+    TemplateConfigureResultSchema,
+    TemplateListPayloadSchema,
+    TemplateListResultSchema,
+    TemplateRemovePayloadSchema,
+    TemplateRemoveResultSchema,
+    TemplateSavePayloadSchema,
+    TemplateSaveResultSchema
+} from './templates.ts';
+import {
+    TerminalPreparePreviewPayloadSchema,
+    TerminalPreparePreviewResultSchema,
+    TerminalPreparePayloadSchema,
+    TerminalPrepareResultSchema
+} from './terminal-prepare.ts';
 import {
     VoiceActivityEventSchema,
     VoiceConfirmPayloadSchema,
@@ -494,7 +496,6 @@ export * from './routine.ts';
 export * from './routine-schedule.ts';
 export * from './routine-cron.ts';
 export * from './agent-server.ts';
-export * from './apple-foundation.ts';
 export * from './archive.ts';
 export * from './auth.ts';
 export * from './browser.ts';
@@ -520,7 +521,8 @@ export * from './fs.ts';
 export * from './git.ts';
 export * from './ids.ts';
 export * from './language.ts';
-export * from './ondevice.ts';
+export * from './editor-assist.ts';
+export { cheapestEditorModel, type EditorModelPrice } from './editor-assist-model.ts';
 export * from './launches.ts';
 export * from './secrets.ts';
 export * from './live-stream.ts';
@@ -531,7 +533,7 @@ export * from './machine-update.ts';
 export * from './model.ts';
 export * from './nanogpt.ts';
 export * from './node-defaults.ts';
-export { emptyCanvasGroupIds } from './canvas-groups.ts';
+export { emptyCanvasGroupIds, groupUnder, joinGroupUnder } from './canvas-groups.ts';
 export * from './plan-host.ts';
 export * from './processes.ts';
 export * from './provenance.ts';
@@ -562,6 +564,11 @@ export * from './terminal-prepare.ts';
 export * from './text.ts';
 export * from './usage.ts';
 export * from './visual.ts';
+export * from './extension.ts';
+export * from './extension-actions.ts';
+export * from './extension-client.ts';
+export * from './extension-permissions.ts';
+export * from './extension-results.ts';
 export * from './voice.ts';
 export * from './voice-languages.ts';
 export * from './wait-ask.ts';
@@ -579,6 +586,7 @@ export {
 // Every request the wire knows, with the schema of what goes in and what comes back.
 // Both apps derive their types from this table, so a shape can only change here.
 export const REQUEST_SCHEMAS = {
+    ...EXTENSION_REQUEST_SCHEMAS,
     'server.hello': { payload: ServerHelloPayloadSchema, result: ServerHelloResultSchema },
     'server.ping': { payload: ServerPingPayloadSchema, result: ServerPingResultSchema },
     'session.create': { payload: SessionCreatePayloadSchema, result: SessionInfoSchema },
@@ -777,10 +785,10 @@ export const REQUEST_SCHEMAS = {
     'language.sql': { payload: LanguageSqlPayloadSchema, result: LanguageSqlStateSchema },
     // A person's choice of the connection a file, or the project, reads its SQL against; kept in their private project file.
     'language.sql.bind': { payload: LanguageSqlBindPayloadSchema, result: LanguageSqlStateSchema },
-    'ondevice.status': { payload: EmptySchema, result: OnDeviceStatusResultSchema },
-    // The text streams to the asking client as `ondevice.text` while it runs; the result is the whole of it.
-    'ondevice.generate': { payload: OnDeviceGeneratePayloadSchema, result: OnDeviceGenerateResultSchema },
-    'ondevice.cancel': { payload: OnDeviceCancelPayloadSchema, result: EmptySchema },
+    'editor.status': { payload: EditorAssistStatusPayloadSchema, result: EditorAssistStatusResultSchema },
+    // The text streams to the asking client as `editor.text` while it runs; the result is the whole of it.
+    'editor.generate': { payload: EditorAssistGeneratePayloadSchema, result: EditorAssistGenerateResultSchema },
+    'editor.cancel': { payload: EditorAssistCancelPayloadSchema, result: EmptySchema },
     'launches.read': { payload: LaunchesTargetPayloadSchema, result: LaunchesDocumentSchema },
     // A person's save; it approves on this machine every launch it adds or changes.
     'launches.save': { payload: LaunchesSavePayloadSchema, result: LaunchesSaveResultSchema },
@@ -972,6 +980,7 @@ export type RequestMap = {
 };
 
 export const EVENT_SCHEMAS = {
+    ...EXTENSION_EVENT_SCHEMAS,
     'push.attention': PushAttentionEntrySchema,
     // Every snooze the machine holds, to every client, whenever one is set, cleared or ends.
     'snooze.changed': SnoozeListSchema,
@@ -1024,7 +1033,7 @@ export const EVENT_SCHEMAS = {
     // To the one client whose command runs on the server.
     'language.show': LanguageShowEventSchema,
     'language.sql.changed': LanguageSqlChangedEventSchema,
-    'ondevice.text': OnDeviceTextEventSchema,
+    'editor.text': EditorAssistTextEventSchema,
     'launch.status': LaunchStatusSchema,
     'launches.changed': LaunchesChangedEventSchema,
     // To every client that holds the project, except the one whose save it answers.

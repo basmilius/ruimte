@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Icon, Pill, Tooltip } from '@adecore/ui';
-import { CircleHelp, Unplug } from 'lucide-react';
+import { Icon, Pill, ScrollArea, Tooltip } from '@adecore/ui';
 import type { SessionPort, SessionPortsResult } from '@ruimte/contracts';
+import { CircleHelp, Unplug } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isDesktop } from '@/desktop/bridge';
 import { readNodeHost } from '@/nodes/node-host';
@@ -11,9 +11,9 @@ import { useToasts } from '@/state/toasts';
 import { windowWorkspace } from '@/state/window';
 import { machineTransport } from '@/transport';
 import { terminalLinkTarget } from './links';
-import { SessionPortWatch } from './session-ports';
 import { openVerifiedSessionPort } from './open-session-port';
 import { publishSessionPortControls, useSessionPortControl } from './session-port-controls';
+import { SessionPortWatch } from './session-ports';
 
 export function SessionPortMonitor({ id, endpointId }: { id: string; endpointId: string }) {
     const { t } = useTranslation('canvas');
@@ -101,7 +101,7 @@ export function SessionPorts({ id }: { id: string }) {
     }
     const { result, opening, localRoute, open } = controls;
     return (
-        <div className="-m-1 flex min-w-0 max-w-1/2 items-center gap-1 overflow-x-auto p-1">
+        <ScrollArea axis="x" className="-m-1 max-w-1/2" viewportClassName="flex items-center gap-1 p-1">
             {result.status === 'ready' ? (
                 result.ports.map((port) => (
                     <Tooltip
@@ -127,6 +127,6 @@ export function SessionPorts({ id }: { id: string }) {
                     </Pill>
                 </Tooltip>
             )}
-        </div>
+        </ScrollArea>
     );
 }

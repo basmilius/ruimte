@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ArtifactGetResult, ArtifactVersion, ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
+import { act } from 'react';
 import { useFiles } from '@/state/files';
 import { windowWorkspace } from '@/state/window';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';

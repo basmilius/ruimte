@@ -1,10 +1,10 @@
 import { afterEach, expect, test } from 'bun:test';
+import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, until, type Mounted } from '../../testing/dom';
+import { emptyCanvas } from '../../testing/project-fixtures';
 import type { PageMetric } from './metrics';
 import { measureWorkspaceLoadWith } from './workspace-load';
-import { emptyCanvas } from '../../testing/project-fixtures';
 
 const MAIN = emptyCanvas();
 

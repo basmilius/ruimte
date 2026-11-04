@@ -1,6 +1,6 @@
+import type { PerformanceCase } from '../apps/client/testing/performance/paired';
 import type { ProcessRate, RawSample } from '../apps/server/src/processes/sampler.ts';
 import { indexTree } from '../apps/server/src/processes/tree.ts';
-import type { PerformanceCase } from '../apps/client/testing/performance/paired';
 
 type GroupApi = Pick<typeof import('../apps/server/src/processes/tree.ts'), 'groupsFor'>;
 

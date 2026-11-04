@@ -1,10 +1,10 @@
-import i18next from 'i18next';
 import type { EndpointInfo } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { forgetEndpoint } from '@/endpoint';
 import { rekeyClientLocal } from '@/project/client-local';
 import { rekeyLastProject } from '@/project/last-project';
-import { browserStorage } from '@/state/stored-json';
 import { LOCAL_ENDPOINT_ID, endpointById, endpointForDaemon, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { browserStorage } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
 import { connectionAddressFor, pool, rekeyMachineTransport } from '@/transport';
 import { rekeyTicket } from './credentials';

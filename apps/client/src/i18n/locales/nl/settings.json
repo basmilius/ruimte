@@ -70,6 +70,10 @@
         "projectGlow": {
             "label": "Gloed in projectkleur",
             "description": "Kleurt de bovenkant van de zijbalk, of de werkbalk, in de kleur van het project."
+        },
+        "scrollBounce": {
+            "label": "Verend scrollen",
+            "description": "Lijsten en tekst veren terug als je voorbij het einde scrolt."
         }
     },
     "general": {
@@ -235,21 +239,28 @@
                 "label": "Toeschrijving in de gutter",
                 "description": "Markeert regels die een agent schreef. Hover voor de chat en turn."
             },
-            "onDevice": {
-                "title": "Op het apparaat",
+            "assist": {
+                "title": "Editormodel",
                 "help": {
                     "label": "Uitleg en naamsuggesties",
-                    "description": "Gebruikt Apple Foundation Models. Code blijft op deze Mac."
+                    "description": "Legt code uit en stelt namen voor met het gekozen model."
                 },
                 "ghost": {
                     "label": "Suggesties tijdens het typen",
-                    "description": "Suggesties van het model op deze Mac verschijnen terwijl je typt. Elke suggestie duurt twee tot drie seconden.",
+                    "description": "Vraag een codesuggestie met de sneltoets. De gekozen provider ontvangt de code rond de cursor.",
                     "options": {
                         "off": "Uit",
                         "request": "Op verzoek"
                     }
                 },
-                "unavailable": "Niet beschikbaar: {{reason}}"
+                "unavailable": "Niet beschikbaar: {{reason}}",
+                "model": {
+                    "label": "Model",
+                    "description": "Automatisch gebruikt het goedkoopste model van de eerste beschikbare provider: Claude, Codex, Grok, dan Antigravity. Code wordt naar de gekozen provider gestuurd."
+                },
+                "automatic": "Automatisch",
+                "choose": "Model kiezen",
+                "resolved": "Gebruikt {{model}}"
             }
         },
         "folding": {
@@ -652,9 +663,9 @@
             "label": "Over",
             "description": "Versie, gegevens van de machine en links."
         },
-        "pets": {
-            "label": "Pets",
-            "description": "Kleine figuurtjes die laten zien wat je agents doen."
+        "extensions": {
+            "label": "Extensies",
+            "description": "Wat je aan Ruimte hebt toegevoegd, en de store."
         }
     },
     "gesture": {
@@ -782,7 +793,6 @@
         },
         "canvas": {
             "palette": "Opdrachtenpalet",
-            "findInFiles": "Zoeken in bestanden",
             "pan": "Canvas verschuiven",
             "zoomPointer": "Zoomen bij de muis",
             "zoomIn": "Inzoomen",
@@ -1145,6 +1155,7 @@
         "tagline": "Space for AI Engineering.",
         "version": "Versie {{version}}",
         "unknownVersion": "onbekend",
+        "byline": "Door <author>Bas Milius</author> · © 2026",
         "details": {
             "title": "Details",
             "copy": "Details kopiëren",
@@ -1737,19 +1748,6 @@
         }
     },
     "providers": {
-        "apple": {
-            "label": "Apple Foundation Models inschakelen",
-            "description": "Gebruik het model op deze Mac voor chats en tools. Vereist Apple silicon, macOS 26.4 of nieuwer en Apple Intelligence.",
-            "toggleDescription": "Uitschakelen stopt actieve Apple-chats en openstaande toolgoedkeuringen op deze machine.",
-            "tools": "Het model draait op deze Mac. Webzoeken, pagina's ophalen en MCP-tools die je goedkeurt, kunnen gegevens naar hun eigen diensten sturen.",
-            "status": "Beschikbaarheid",
-            "disabled": "Uit op deze machine.",
-            "ready": "Beschikbaar.",
-            "unavailable": "Niet beschikbaar.",
-            "saveFailed": "Kon Apple Foundation Models niet wijzigen",
-            "requiresMac": "Vereist een Mac met Apple silicon.",
-            "off": "Uit"
-        },
         "nanogpt": {
             "description": "Chat met de modellen die je NanoGPT-abonnement bevat. Verzoeken gaan alleen naar de abonnements-API, nooit naar pay as you go.",
             "footer": "De sleutel blijft op deze machine en wordt nooit meer getoond. Elke tool die een model vraagt, heeft jouw goedkeuring nodig.",
@@ -1842,12 +1840,12 @@
             "removeButton": "Verwijderen"
         },
         "claudeApi": {
-            "description": "Chat met Claude via de API, met een eigen sleutel. Anthropic rekent elke call per token af, dus houd je uitgaven daar in de gaten.",
+            "description": "Chat met Claude in Claude Code, met een eigen sleutel. Anthropic rekent elke call per token af, dus houd je uitgaven daar in de gaten.",
             "footer": "De sleutel blijft op deze machine en wordt nooit meer getoond. Tools volgen de toestemmingsmodus van de chat.",
             "key": "API-sleutel",
             "keyDescription": "Een sleutel van console.anthropic.com.",
             "saved": "Opgeslagen",
-            "status": "API-sleutel",
+            "status": "Verbinding",
             "save": "Opslaan",
             "refresh": "Modellen vernieuwen",
             "disconnect": "Ontkoppelen",
@@ -1858,194 +1856,59 @@
             "disconnected": "Geen sleutel opgeslagen op deze machine.",
             "unavailable": "Deze machine biedt de Claude API nog niet aan. Werk Ruimte daar bij.",
             "failed": "De Claude API kon niet worden gewijzigd op deze machine.",
-            "continue": {
-                "label": "Automatisch doorgaan",
-                "description": "Een chat die de stappen van een run opmaakt, start zelf de volgende, en elke call kost geld. Als dit uit staat, wacht hij op jou."
+            "window": {
+                "label": "Contextvenster",
+                "description": "Geldt voor nieuwe chats. Per chat kun je wisselen.",
+                "options": {
+                    "200k": "200K",
+                    "1m": "1M"
+                }
             },
-            "rounds": {
-                "label": "Stappen per run",
-                "description": "Stappen voordat een run stopt, 5 tot 200."
-            },
-            "runs": {
-                "label": "Runs achter elkaar",
-                "description": "Runs die een chat zelf start, 1 tot 20. Elke run kost geld."
+            "cli": {
+                "missing": "Chats op de Claude API draaien in Claude Code. Installeer dat eerst op deze machine.",
+                "install": "Installeren"
             },
             "tokens": {
                 "label": "Outputtokens per antwoord",
                 "description": "Het meeste dat een antwoord mag gebruiken, 1.024 tot 128.000, binnen de grens van het model. Denken telt mee."
             },
-            "noKey": "Geen API-sleutel ingesteld"
+            "noKey": "Geen API-sleutel ingesteld",
+            "noCli": "Claude Code is niet geïnstalleerd"
         }
     },
-    "pets": {
-        "title": "Pets",
-        "enabled": {
-            "label": "Pets",
-            "description": "Een klein figuurtje op elke agent laat zien wat die doet, en springt als hij je nodig heeft. Klik op een figuurtje om naar zijn node te gaan."
-        },
-        "place": {
-            "label": "Waar pets staan",
-            "description": "Op hun node, of rondlopend onderin het scherm.",
-            "nodes": "Op hun node",
-            "screen": "Onderin het scherm"
-        },
-        "subagents": {
-            "label": "Sub-agents",
-            "description": "Voor elke sub-agent die bezig is, loopt er een kleiner figuurtje mee, tot drie."
-        },
-        "visitor": {
-            "label": "Bezoeker",
-            "description": "Zolang Pets uit staat, komt er af en toe een figuurtje een paar seconden bij een node langs."
-        },
-        "sprite": {
-            "label": "Figuren",
-            "description": "Kies een of meer pakketten. Elke agent houdt één figuur. Buddy's en Dieren geven elke provider een eigen figuur; de andere pakketten verdelen hun figuren over je agents.",
-            "sets": {
-                "buddies": "Buddy's",
-                "animals": "Dieren",
-                "nox-and-chanel": "Nox en Chanel",
-                "pebbles-and-onyx": "Pebbles en Onyx",
-                "woodland": "Boswachters",
-                "living-room": "Huiskamer",
-                "deep-sea": "Diepzee",
-                "cosmos": "Kosmos",
-                "workshop": "Werkplaats",
-                "windowsill": "Vensterbank",
-                "after-hours": "Na sluitingstijd"
-            },
-            "figures": {
-                "claude-buddy": "Claude",
-                "codex-buddy": "Codex",
-                "orbit": "Orbit",
-                "wing": "Wing",
-                "spark": "Spark",
-                "pip": "Pip",
-                "nano": "Nano",
-                "relay": "Relay",
-                "fox": "Vos",
-                "frog": "Kikker",
-                "hummingbird": "Kolibrie",
-                "penguin": "Pinguïn",
-                "raven": "Raaf",
-                "deer": "Ree",
-                "nano-bee": "Bij",
-                "api-fox": "Relay-vos",
-                "nox": "Nox",
-                "chanel": "Chanel",
-                "pebbles": "Pebbles",
-                "onyx": "Onyx",
-                "hazel": "Hazel",
-                "bramble": "Bramble",
-                "oak": "Oak",
-                "bandit": "Bandit",
-                "miso": "Miso",
-                "pixel": "Pixel",
-                "mochi": "Mochi",
-                "pico": "Pico",
-                "inky": "Inky",
-                "lumi": "Lumi",
-                "tuck": "Tuck",
-                "ripple": "Ripple",
-                "cosmo": "Cosmo",
-                "pebble": "Pebble",
-                "halley": "Halley",
-                "rover": "Rover",
-                "bolt": "Bolt",
-                "rivet": "Rivet",
-                "zip": "Zip",
-                "clamp": "Clamp",
-                "cap": "Cap",
-                "sprig": "Sprig",
-                "prickle": "Prickle",
-                "sunny": "Sunny",
-                "echo": "Echo",
-                "velvet": "Velvet",
-                "glow": "Glow",
-                "soot": "Soot",
-                "deep": "Deep",
-                "gust": "Gust",
-                "qiu": "Qiu",
-                "luna": "Luna",
-                "llumi": "Llumi",
-                "duo": "Duo"
-            },
-            "extras": "Extra figuren",
-            "builtIn": "Ingebouwd",
-            "use": "{{name}} gebruiken",
-            "preview": "Voorbeeld van {{name}}"
-        },
-        "custom": {
-            "label": "Je eigen figuren",
-            "description": "Een PNG- of WebP-strook van vierkante frames naast elkaar. Tot {{frames}} frames van {{size}} pixels, hoogstens {{kilobytes}} KB.",
-            "add": "Figuur toevoegen",
-            "remove": "{{name}} verwijderen",
-            "frames_one": "{{count}} frame, {{size}} px",
-            "frames_other": "{{count}} frames, {{size}} px",
-            "edit": "{{name}} bewerken",
-            "stateCount_one": "{{count}} houding",
-            "stateCount_other": "{{count}} houdingen",
-            "states": {
-                "stand": "Staan",
-                "walk": "Lopen",
-                "work": "Bezig",
-                "wait": "Wacht op jou",
-                "sleep": "Inactief",
-                "stopped": "Gestopt"
-            },
-            "dialog": {
-                "new": "Nieuwe figuur",
-                "edit": "Figuur bewerken",
-                "description": "Elke houding kan een eigen strook hebben. Een houding zonder speelt Staan, die elke figuur nodig heeft.",
-                "name": "Naam",
-                "save": "Opslaan",
-                "choose": "Kies bestand",
-                "chooseFor": "Kies bestand voor {{state}}",
-                "replaceFor": "Strook voor {{state}} vervangen",
-                "replace": "Vervangen",
-                "drop": "Strook voor {{state}} verwijderen",
-                "needed": "Elke figuur heeft deze nodig",
-                "standing": "Speelt Staan",
-                "tipped": "Speelt Staan, omgevallen"
-            },
-            "problem": {
-                "type": "Kies een PNG- of WebP-afbeelding.",
-                "bytes": "Deze afbeelding is groter dan {{kilobytes}} KB.",
-                "unreadable": "Dit bestand kon niet worden gelezen als PNG- of WebP-afbeelding.",
-                "frame-small": "Een frame is minstens {{min}} pixels hoog.",
-                "frame-large": "Een frame is hoogstens {{max}} pixels hoog.",
-                "frames-whole": "De breedte moet een heel aantal vierkante frames zijn.",
-                "frames-many": "Een strook heeft hoogstens {{frames}} frames.",
-                "full": "Je kunt hoogstens {{limit}} figuren bewaren. Verwijder er eerst een.",
-                "room": "Je figuren nemen samen hoogstens {{total}} KB in. Verwijder er een of kies een kleinere strook.",
-                "storage": "Er is geen ruimte meer om deze figuur te bewaren."
-            }
-        },
-        "groups": {
-            "place": "Waar ze staan",
-            "show": "Wat ze laten zien"
-        },
-        "inViews": {
-            "label": "In eigen weergaven",
-            "description": "Een chat of terminal die als eigen weergave open staat, heeft ook een figuurtje, op de composer of in de balk van de terminal."
-        },
-        "agents": {
-            "title": "Per agent",
-            "label": "Een figuur per agent",
-            "description": "Geef een CLI een pakket of één vaste figuur, zoals Nox voor Codex. Dat gaat voor de pakketten die je aanzette. Een CLI op Standaard gebruikt die pakketten.",
-            "default": "Standaard",
-            "packs": "Pakketten",
-            "own": "Je eigen figuren",
-            "choose": "Figuur voor {{name}}"
-        },
-        "beam": {
-            "label": "Teleport",
-            "description": "Hoe een pet verschijnt en vertrekt als zijn agent start of stopt, en als je pets aan- of uitzet.",
-            "gather": "Samentrekken",
-            "scan": "Scanlijn",
-            "rain": "Pixelregen",
-            "transporter": "Transporter",
-            "portal": "Portaal",
-            "random": "Willekeurig"
-        }
+    "extensions": {
+        "list": "Extensies",
+        "browse": "Store bekijken",
+        "store": "Store",
+        "search": "Extensies zoeken",
+        "storeUnavailable": "De store is nu niet beschikbaar.",
+        "storeSoon": "De store komt binnenkort",
+        "storeSoonBody": "Installeer tot die tijd een extensie die iemand met je deelde via Installeren vanaf schijf.",
+        "fromDisk": "Installeren vanaf schijf",
+        "fromDiskBody": "Kies een .rex-bestand dat iemand met je deelde. Je ziet wat het vraagt voordat het wordt geïnstalleerd.",
+        "chooseFile": "Bestand kiezen…",
+        "reviewed": "beoordeeld op {{date}}",
+        "asksTo": "Deze extensie vraagt om",
+        "trust": "Extensies draaien in Ruimte en kunnen wat jij kunt, op al je machines. Installeer alleen wat je vertrouwt.",
+        "install": "Installeren",
+        "back": "Terug",
+        "notOnMachine": "{{name}} staat op deze computer, maar het deel voor de machine vraagt de eigenaar van die machine.",
+        "machineKept": "{{name}} is op deze computer aangepast, maar het deel op de machine bleef zoals het was",
+        "installFailed": "{{name}} kon niet worden geïnstalleerd",
+        "fromFileTrust": "Dit pakket komt uit een bestand en de store heeft het niet gecontroleerd. Het draait in Ruimte en kan wat jij kunt, op al je machines.",
+        "fromFileUnreadable": "Dit bestand is geen extensiepakket",
+        "enabled": "Aan",
+        "remove": "Verwijderen",
+        "desktopOnly": "Extensies werken in de desktopapp.",
+        "frameDesktopOnly": "Dit deel van de extensie opent alleen in de desktopapp.",
+        "safeMode": "Veilige modus: er zijn geen extensies geladen.",
+        "permissions": "Vraagt om",
+        "noPermissions": "Vraagt nergens extra om.",
+        "removeDescription": "Haalt de extensie en wat die bewaarde van deze computer.",
+        "groupDevelopment": "In ontwikkeling",
+        "groupInstalled": "Geïnstalleerd",
+        "builtIn": "Ingebouwd",
+        "development": "Ontwikkeling",
+        "fromDiskBadge": "Van schijf"
     }
 }

@@ -1,7 +1,4 @@
-import { createStore, type StoreApi } from 'zustand';
-import { editorBindings } from '@/state/editor-bindings';
-import { createEditorRegistry, finishLoad, savedFileSetters, type SavedFileSetters } from '@/state/editors';
-import { mergeSelection } from '@/state/selection';
+import { boundsOfElements } from '@adecore/drawing';
 import type {
     DrawingColor,
     DrawingContent,
@@ -15,10 +12,13 @@ import type {
     DrawingStrokeWidth,
     ProjectViewLocal
 } from '@ruimte/contracts';
-import { intersects, type Rect } from '@/canvas/math';
+import { createStore, type StoreApi } from 'zustand';
 import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
-import { boundsOfElements } from '@adecore/drawing';
+import { intersects, type Rect } from '@/canvas/math';
 import { fitTextBox } from '@/drawing/measure';
+import { editorBindings } from '@/state/editor-bindings';
+import { createEditorRegistry, finishLoad, savedFileSetters, type SavedFileSetters } from '@/state/editors';
+import { mergeSelection } from '@/state/selection';
 
 export type DrawingTool = 'select' | 'hand' | 'rect' | 'diamond' | 'ellipse' | 'arrow' | 'line' | 'freehand' | 'text' | 'note' | 'eraser';
 

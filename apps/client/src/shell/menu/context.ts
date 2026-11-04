@@ -1,6 +1,5 @@
-import { inPickerOrder } from '@/agents/creation';
-import { groupArrangeable } from '@/canvas/arrange-group';
-import i18next from 'i18next';
+import { forkRefusal, lastSettledTurn } from '@adecore/agents-react/chat';
+import { useChats, providersOf } from '@adecore/agents-react/state';
 import {
     canShareView,
     chatIsWorking,
@@ -11,47 +10,48 @@ import {
     type ProjectView,
     type SplitLayout
 } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { inPickerOrder } from '@/agents/creation';
+import { groupArrangeable } from '@/canvas/arrange-group';
+import { usePromptStacks } from '@/canvas/prompt-stack';
+import { focusedChatId } from '@/chat/focused-chat';
 import { databaseViewShareRefusal } from '@/database/view-sharing';
-import { forkRefusal, lastSettledTurn } from '@adecore/agents-react/chat';
+import { shownChatOfNode } from '@/design/design-chat';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
-import { keepAwakeAvailable, keepAwakeChoice } from '@/state/keep-awake';
-import { hasLocalMachine } from '@/state/local-machine';
-import { newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
-import { canOpenWindows } from '@/project/windows';
-import { moveTargetsOf } from '@/project/move-targets';
-import { canOpenAsView, viewStepTarget, type SessionHandoff } from '@/project/views';
+import { availableLanguageForCommand } from '@/language/focused-language';
 import { afterSettleCandidates, chosenLaunchId } from '@/launches/actions';
 import { launchViews } from '@/launches/model';
 import { useLaunches } from '@/launches/state';
+import { moveTargetsOf } from '@/project/move-targets';
+import { newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
+import { canOpenAsView, viewStepTarget, type SessionHandoff } from '@/project/views';
+import { canOpenWindows } from '@/project/windows';
 import type { MenuContext, MenuHost, MenuLaunch } from '@/shell/menu/model';
+import { nextWaitingTitle } from '@/shell/next-waiting';
 import { diffInFront } from '@/shell/panels/diff-caret';
+import { availableEditorForCommand } from '@/shell/panels/focused-editor';
+import { hasPrWatch } from '@/shell/pr-watch-actions';
 import { canSplit, cellAt, cellCount, cellsRightOf, focusDirection, freeViewFor, isTabHost, maximizedCell, type SplitDirection } from '@/shell/split';
 import { sessionHandoffs, viewOffers, type ViewOffers } from '@/shell/view-offers';
 import { focusedCanvas, maximizedNodeOf, maximizeTargetOf, zoomNodeTargetOf } from '@/state/canvas';
-import { useChats, providersOf } from '@adecore/agents-react/state';
-import { useEndpoints } from '@/state/endpoints';
-import { useProjectList } from '@/state/project-list';
-import { pool } from '@/transport';
-import { machineAnswers } from '@/transport/features';
-import { activeViewOf, hasActiveCanvas, useDocument } from '@/state/document';
-import { currentEndpointId, endpointKey } from '@/state/keys';
-import { prReposOfCurrent } from '@/state/pr-repos';
-import { proposalsOf } from '@/state/proposals';
-import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
-import { fileManagerName, serverInfoOf } from '@/state/server';
-import { useSessions } from '@/state/sessions';
-import { hasPrWatch } from '@/shell/pr-watch-actions';
-import { focusedChatId } from '@/chat/focused-chat';
-import { shownChatOfNode } from '@/design/design-chat';
-import { terminalHasFind, terminalHasKeyboard } from '@/terminal/xterm';
-import { useUi } from '@/state/ui';
-import { windowWorkspace } from '@/state/window';
 import { cameraHistoryStep } from '@/state/canvas-camera-history';
 import { nodeNavigationTarget } from '@/state/canvas-navigation-slice';
-import { usePromptStacks } from '@/canvas/prompt-stack';
-import { nextWaitingTitle } from '@/shell/next-waiting';
-import { availableEditorForCommand } from '@/shell/panels/focused-editor';
-import { availableLanguageForCommand } from '@/language/focused-language';
+import { activeViewOf, hasActiveCanvas, useDocument } from '@/state/document';
+import { useEndpoints } from '@/state/endpoints';
+import { keepAwakeAvailable, keepAwakeChoice } from '@/state/keep-awake';
+import { currentEndpointId, endpointKey } from '@/state/keys';
+import { hasLocalMachine } from '@/state/local-machine';
+import { prReposOfCurrent } from '@/state/pr-repos';
+import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
+import { useProjectList } from '@/state/project-list';
+import { proposalsOf } from '@/state/proposals';
+import { fileManagerName, serverInfoOf } from '@/state/server';
+import { useSessions } from '@/state/sessions';
+import { useUi } from '@/state/ui';
+import { windowWorkspace } from '@/state/window';
+import { terminalHasFind, terminalHasKeyboard } from '@/terminal/xterm';
+import { pool } from '@/transport';
+import { machineAnswers } from '@/transport/features';
 
 interface ActiveViewFacts {
     view: ProjectView;

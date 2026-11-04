@@ -3,8 +3,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { ProjectContent } from '@ruimte/contracts';
-import type { CanvasHost, Noun } from '../canvas/verb.ts';
-import { verbNamed } from '../canvas/verbs.ts';
+import type { CanvasHost } from '../tools/host.ts';
+import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { DeviceDriver } from './agent-driver.ts';
 import { IosSimulatorBackend } from './ios-simulator.ts';
 import { DeviceManager } from './manager.ts';
@@ -67,22 +67,22 @@ const host = {
     devices: driver
 } as unknown as CanvasHost;
 
-function device(argv: string[]) {
-    return (verbNamed('device') as Noun).run(argv, { caller: 'chat-1', host });
+async function device(tool: string): Promise<string[]> {
+    return (await toolAnswer(tool, { device: 'phone-1' }, toolCall('chat-1', host))).lines;
 }
 
-describe.skipIf(booted === undefined)('ruimte-context device state on a booted simulator', () => {
+describe.skipIf(booted === undefined)('device_state on a booted simulator', () => {
     test('prints the elements of the app in front, and reads them again quickly from the same bridge', async () => {
-        const first = await device(['state', 'phone-1']);
+        const first = await device('device_state');
         expect(first).toContain('can\ttree\tyes');
         const [, count, size] = first.find((line) => line.startsWith('elements\t'))!.split('\t');
         expect(Number(count)).toBeGreaterThan(0);
-        const shot = (await device(['shot', 'phone-1']))[0]!.split('\t')[2];
+        const shot = (await device('device_shot'))[0]!.split('\t')[2];
         expect(size).toBe(shot);
         expect(first.find((line) => line.startsWith('tree\t'))).toMatch(/^tree\t\[0\] Application/);
 
         const started = performance.now();
-        const second = await device(['state', 'phone-1']);
+        const second = await device('device_state');
         expect(performance.now() - started).toBeLessThan(2_000);
         expect(second).toContain('can\ttree\tyes');
     }, 30_000);

@@ -1,6 +1,6 @@
 import type { ClientConnection, Dispatcher } from '../dispatcher.ts';
-import { requirePeerLinks } from '../peering/peer-access.ts';
 import type { PeerLinks } from '../peering/links.ts';
+import { requirePeerLinks } from '../peering/peer-access.ts';
 import type { PeerTasks } from '../peering/peer-tasks.ts';
 
 /*

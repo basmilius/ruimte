@@ -1,13 +1,7 @@
-import { startVoice, stopVoice } from '@/voice/controller';
-import { createVoiceShortcut } from '@/voice/shortcut';
-import { useVoice } from '@/voice/state';
-import { cancelDictation, stopDictation, toggleFocusedDictation, useDictation } from '@/dictation/controller';
-import { useEffect } from 'react';
+import { useSubagentView, stepEffortFromComposer, stepTimelineMessage } from '@adecore/agents-react/chat';
+import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@adecore/ui';
 import { isCanvasView, isDiagramView } from '@ruimte/contracts';
-import { browserRegistry } from '@/browser/registry';
-import { CANVAS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
-import { isApplePlatform } from '@/desktop/bridge';
-import { countCommand } from '@/desktop/usage';
+import { useEffect } from 'react';
 import {
     closeCellAction,
     closeTabAction,
@@ -21,39 +15,45 @@ import {
     splitAction,
     toggleFlagAction
 } from '@/actions/client-actions';
-import { runChosenLaunch, stopChosenLaunch } from '@/launches/actions';
-import { toggleRoutines } from '@/routines/stage';
-import { machineAnswers } from '@/transport/features';
-import { showView, stepView, viewAtIndex, viewStepTarget } from '@/project/views';
-import { undoLatestDeletion } from '@/project/view-trash';
-import { deleteSelectionAsking } from '@/canvas/delete-selection';
-import { isInNodeBody } from '@/canvas/node-body';
+import { openAttentionQueue } from '@/attention/queue';
+import { browserRegistry } from '@/browser/registry';
 import { answerCanvasPaste } from '@/canvas/canvas-paste';
-import { pointerInWorld } from '@/canvas/pointer';
-import { followSpaceRelease, holdSpace, releaseSpace, spaceWorksTarget } from '@/canvas/space-pan';
+import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { setGapModifierDown } from '@/canvas/gap-modifier';
 import { cancelCanvasGesture } from '@/canvas/gesture-cancel';
+import { isInNodeBody } from '@/canvas/node-body';
+import { pointerInWorld } from '@/canvas/pointer';
 import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/prompt-stack';
-import { useSubagentView, stepEffortFromComposer, stepTimelineMessage } from '@adecore/agents-react/chat';
+import { CANVAS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
+import { followSpaceRelease, holdSpace, releaseSpace, spaceWorksTarget } from '@/canvas/space-pan';
+import { focusedChatComposerKey, keyboardChatKey } from '@/chat/focused-chat';
+import { isApplePlatform } from '@/desktop/bridge';
+import { countCommand } from '@/desktop/usage';
+import { cancelDictation, stopDictation, toggleFocusedDictation, useDictation } from '@/dictation/controller';
 import { openFocusedFind } from '@/find/hosts';
-import { focusedCanvas, maximizeTargetOf, zoomNodeTargetOf, type CanvasState } from '@/state/canvas';
-import { focusedDiagram } from '@/state/diagram';
-import { drawingHasSomethingToClear, focusedDrawing } from '@/state/drawing';
-import { isScratchProject, useProject } from '@/state/project';
+import { runChosenLaunch, stopChosenLaunch } from '@/launches/actions';
+import { undoLatestDeletion } from '@/project/view-trash';
+import { showView, stepView, viewAtIndex, viewStepTarget } from '@/project/views';
+import { toggleRoutines } from '@/routines/stage';
 import { commandForKey, type WorkspaceCommandId } from '@/shell/command-table';
 import { revealNextWaiting } from '@/shell/next-waiting';
-import { openAttentionQueue } from '@/attention/queue';
 import { focusViewRow } from '@/shell/sidebar-focus';
+import { cellAt, cellCount, focusDirection, isTabHost, type SplitDirection } from '@/shell/split';
+import { focusedCanvas, maximizeTargetOf, zoomNodeTargetOf, type CanvasState } from '@/state/canvas';
+import { cameraHistoryStep } from '@/state/canvas-camera-history';
+import { focusedDiagram } from '@/state/diagram';
+import { activeViewOf, useDocument } from '@/state/document';
+import { drawingHasSomethingToClear, focusedDrawing } from '@/state/drawing';
+import { currentEndpointId, endpointKey } from '@/state/keys';
+import { isScratchProject, useProject } from '@/state/project';
+import { useUi } from '@/state/ui';
+import { windowWorkspace } from '@/state/window';
 import { isLeaveNodeShortcut } from '@/terminal/keymap';
 import { pool, transportFor } from '@/transport';
-import { activeViewOf, useDocument } from '@/state/document';
-import { useUi } from '@/state/ui';
-import { cellAt, cellCount, focusDirection, isTabHost, type SplitDirection } from '@/shell/split';
-import { cameraHistoryStep } from '@/state/canvas-camera-history';
-import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@adecore/ui';
-import { currentEndpointId, endpointKey } from '@/state/keys';
-import { windowWorkspace } from '@/state/window';
-import { focusedChatComposerKey, keyboardChatKey } from '@/chat/focused-chat';
+import { machineAnswers } from '@/transport/features';
+import { startVoice, stopVoice } from '@/voice/controller';
+import { createVoiceShortcut } from '@/voice/shortcut';
+import { useVoice } from '@/voice/state';
 
 function workspaceEndpointId(): string | null {
     return windowWorkspace()?.connection.endpointId ?? null;

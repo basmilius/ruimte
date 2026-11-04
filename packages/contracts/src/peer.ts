@@ -25,19 +25,15 @@ export const PeerLinkSchema = z.object({
 export type PeerLink = z.infer<typeof PeerLinkSchema>;
 
 export const PeerListResultSchema = z.object({ links: z.array(PeerLinkSchema).max(1000) });
-export type PeerListResult = z.infer<typeof PeerListResultSchema>;
 
 // A project that is not on this machine answers `project-not-found`. Without a `ceiling` a new link is `supervised`.
 export const PeerBindPayloadSchema = PeerLinkSchema.pick({ machineId: true, label: true, projectId: true }).extend({
     ceiling: RuntimeModeSchema.optional()
 });
-export type PeerBindPayload = z.infer<typeof PeerBindPayloadSchema>;
 
 export const PeerSetCeilingPayloadSchema = PeerLinkSchema.pick({ machineId: true, projectId: true, ceiling: true });
-export type PeerSetCeilingPayload = z.infer<typeof PeerSetCeilingPayloadSchema>;
 
 export const PeerUnbindPayloadSchema = PeerLinkSchema.pick({ machineId: true, projectId: true });
-export type PeerUnbindPayload = z.infer<typeof PeerUnbindPayloadSchema>;
 
 /*
  * A node of another machine as it is drawn here. Only what a node needs to start on this machine: the
@@ -68,7 +64,6 @@ export const PeerPlaceNodesPayloadSchema = PeerLinkSchema.pick({ machineId: true
     nodes: z.array(PeerNodeSchema).max(200),
     edges: z.array(ProjectEdgeSchema).max(400)
 });
-export type PeerPlaceNodesPayload = z.infer<typeof PeerPlaceNodesPayloadSchema>;
 
 // How many tasks one machine may have open here at a time; the next `peer.taskStart` answers `peer-busy`.
 export const PEER_MAX_OPEN_TASKS = 4;
@@ -110,7 +105,6 @@ export type PeerTaskStartResult = z.infer<typeof PeerTaskStartResultSchema>;
 
 // Ends the agent and its task; a task that is gone already is ended as well.
 export const PeerTaskStopPayloadSchema = z.object({ nodeId: ProjectNodeSchema.shape.id });
-export type PeerTaskStopPayload = z.infer<typeof PeerTaskStopPayloadSchema>;
 
 /*
  * Where a task stands and, once it settled, its result and the work as a bundle for `peer.bundleRead`.
@@ -157,21 +151,17 @@ export type PeerBundleReadResult = z.infer<typeof PeerBundleReadResultSchema>;
 
 // Lets go of the hold this machine has on a project here; the last holder out ends nothing by it.
 export const PeerClosePayloadSchema = z.object({ projectId: PeerLinkSchema.shape.projectId });
-export type PeerClosePayload = z.infer<typeof PeerClosePayloadSchema>;
 
 // A task of that machine settled here; it asks `peer.result` for the rest.
 export const PeerTaskSettledEventSchema = z.object({ nodeId: ProjectNodeSchema.shape.id });
-export type PeerTaskSettledEvent = z.infer<typeof PeerTaskSettledEventSchema>;
 
 /*
  * Output of the project the link names, read only, for a copy a person on that machine asked for.
  * An artifact of any other project here answers `not-found`, the way one that is not here does.
  */
 export const PeerArtifactListPayloadSchema = z.object({ projectId: PeerLinkSchema.shape.projectId });
-export type PeerArtifactListPayload = z.infer<typeof PeerArtifactListPayloadSchema>;
 
 export const PeerArtifactGetPayloadSchema = z.object({ projectId: PeerLinkSchema.shape.projectId, artifactId: ArtifactIdSchema });
-export type PeerArtifactGetPayload = z.infer<typeof PeerArtifactGetPayloadSchema>;
 
 // The most `peer.artifactRead` answers at a time, as `peer.bundleRead` does.
 export const PEER_ARTIFACT_PIECE_BYTES = 256 * 1024;
@@ -189,7 +179,6 @@ export const PeerArtifactReadPayloadSchema = z.object({
     offset: z.number().int().nonnegative(),
     length: z.number().int().positive().max(PEER_ARTIFACT_PIECE_BYTES)
 });
-export type PeerArtifactReadPayload = z.infer<typeof PeerArtifactReadPayloadSchema>;
 
 export const PeerArtifactReadResultSchema = z.object({
     // The whole file, so a piece of a file that changed size tells.

@@ -1,7 +1,7 @@
 import type { ActionDomain } from '@ruimte/actions';
+import type { LiveEvent, ToolLoopObserver, VoiceDeliveryObserver } from '@ruimte/voice';
 import { VoiceDiagnosticsRecorder, voiceCodeOf } from '@/voice/diagnostics';
 import { summarizeVoiceSessions } from '@/voice/diagnostics-summary';
-import type { LiveEvent, ToolLoopObserver, VoiceDeliveryObserver } from '@ruimte/voice';
 
 /* Measurements go to the developer console and nowhere else; nothing is kept once the window closes. */
 let recorder: VoiceDiagnosticsRecorder | null = null;

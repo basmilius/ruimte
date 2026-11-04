@@ -23,7 +23,7 @@
         "newTab": "Opened {{view}} as a tab"
     },
     "diagram": {
-        "draft": "Fill the empty diagram \"{{name}}\" with `ruimte-context view diagram {{viewId}}`. It should show "
+        "draft": "Fill the empty diagram \"{{name}}\" with `view_diagram {{viewId}}`. It should show "
     },
     "view": {
         "fallbackName": "this view"

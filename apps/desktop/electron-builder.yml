@@ -55,9 +55,23 @@ mac:
   extraResources:
     - from: build/icon/Assets.car
       to: Assets.car
+    # Only the type's name is translated; `electronLanguages` keeps en alone, so nl.lproj holds just this.
+    - from: build/nl.lproj
+      to: nl.lproj
   extendInfo:
     CFBundleIconName: AppIcon
     NSMicrophoneUsageDescription: Ruimte uses the microphone only while you dictate with Speech to Text or use Voice Control.
+    # A `.rex` is an extension pack. Declaring it gives it a name in Finder and the file dialog, and macOS draws its
+    # document icon from the app icon and the label, so no icon file is kept for it.
+    UTExportedTypeDeclarations:
+      - UTTypeIdentifier: app.ruimte.extension-pack
+        UTTypeDescription: Ruimte Extension
+        UTTypeConformsTo: [public.data]
+        UTTypeTagSpecification:
+          public.filename-extension: [rex]
+        UTTypeIcons:
+          UTTypeIconBadgeName: AppIcon
+          UTTypeIconText: REX
   # Set to true by the release workflow once Apple credentials are in the secrets.
   notarize: false
 dmg:

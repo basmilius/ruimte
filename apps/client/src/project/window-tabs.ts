@@ -1,6 +1,6 @@
-import { create } from 'zustand';
 import { isRecentProject } from '@ruimte/contracts';
 import { WINDOW_STATE_PARAM } from '@ruimte/desktop-bridge';
+import { create } from 'zustand';
 import { desktop, type DesktopBridge } from '@/desktop/bridge';
 import { endpointKey, splitKey } from '@/state/keys';
 import { isRealMachine } from '@/state/local-machine';
@@ -120,19 +120,6 @@ export function stepMove(tabs: WindowTabs, key: string, step: 1 | -1): WindowTab
 export function keptTabs(tabs: WindowTabs, kept: readonly string[]): WindowTabs {
     const refused = tabs.keys.filter((key) => !kept.includes(key) && key !== tabs.active);
     return refused.length === 0 ? tabs : settled({ ...tabs, keys: tabs.keys.filter((key) => !refused.includes(key)) });
-}
-
-/* The tab `step` places from the one in front, round the ends; the first or the last when none is. */
-export function stepTab(tabs: WindowTabs, step: 1 | -1): string | null {
-    const count = tabs.keys.length;
-    if (count === 0) {
-        return null;
-    }
-    const index = tabs.active === null ? -1 : tabs.keys.indexOf(tabs.active);
-    if (index === -1) {
-        return tabs.keys[step === 1 ? 0 : count - 1]!;
-    }
-    return tabs.keys[(index + step + count) % count]!;
 }
 
 /*

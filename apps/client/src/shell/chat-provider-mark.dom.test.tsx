@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectView } from '@ruimte/contracts';
+import { act } from 'react';
 import { chatInfoOf } from '../../testing/chat-info';
+import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, until, type Mounted } from '../../testing/dom';
 
 /* A chat New Chat made, which names no CLI: the one it runs on is picked in its composer. */
 const CHAT: ProjectView = { kind: 'chat', id: 'chat-grok', name: 'Moon phases', node: {} };

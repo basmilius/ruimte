@@ -9,7 +9,7 @@
 - A fork into another CLI, or into an account without the original's transcripts, copies no conversation: it gets a handoff preamble (`handoff.ts`) and a mode no wider than the original's. A fork stays on the original's account unless it names another; another CLI starts on its default account.
 - A fork's summary is delivered through a `deliver-summary` entry, whose note id `summary-<turnId>` lands once.
 - A fork node deleted before anyone wrote in it takes its record and transcript copy along, never its worktree.
-- An agent forks only a chat it opened (`ruimte-context fork`), after its last finished turn, on the original's CLI, account and model. That fork is the agent's child (no `relation`, one level deeper, the agent's mode as ceiling): it counts toward depth and the per-caller cap, ends with the agent, and takes work only through `task new`, whose result wakes the agent once. A hidden agent's fork is hidden too.
+- An agent forks only a chat it opened (`agent_fork`), after its last finished turn, on the original's CLI, account and model. That fork is the agent's child (no `relation`, one level deeper, the agent's mode as ceiling): it counts toward depth and the per-caller cap, ends with the agent, and takes work only through `task_new`, whose result wakes the agent once. A hidden agent's fork is hidden too.
 
 ## What belongs to a chat
 
@@ -17,8 +17,8 @@ Each of these goes with the chat or a clear, and a fork copies only what its cop
 
 - A plan: `$RUIMTE_HOME/chats/<chatId>.plans.json` (`apps/server/src/plans/plan-store.ts`), never a project's. The daemon is its only writer, by item id at the latest rev; an operation on a gone id is refused. An agent never overwrites a status a person set, never removes or retitles a step only a person checks or one a person checked, and never deletes a plan holding such a check. Nothing about a plan wakes an agent or schedules work.
 - A bookmark: `$RUIMTE_HOME/chats/<chatId>.bookmarks.json`, on an item of the chat's own thread, never a subagent's. Every change sends the whole list as `chat.bookmarks`.
-- A visual: listed in `<chatId>.visuals.json`, each page `attachments/<chatId>/<visualId>.html`, served by id, never inline on the daemon's origin. Only an agent's `visual show` adds one, to its own chat; a person or agent removes one. A fork also copies those shown until the end of the cut turn. Changes go as `chat.visuals`.
-- An attachment an agent adds (`ruimte-context chat attach`, `src/canvas/chat-verb.ts`): its own process reads the file, never the daemon. PNG, JPEG, GIF, WebP, HEIC and HEIF up to 10 MiB, binary glTF, USDZ and STL up to 50 MiB, typed by their bytes (`attachment-type.ts`), at most 64 per chat (`agent-images.ts`), found by id with no index. Only an AI chat attaches, to its own thread.
+- A visual: listed in `<chatId>.visuals.json`, each page `attachments/<chatId>/<visualId>.html`, served by id, never inline on the daemon's origin. Only an agent's `visual_show` adds one, to its own chat; a person or agent removes one. A fork also copies those shown until the end of the cut turn. Changes go as `chat.visuals`.
+- An attachment an agent adds (`chat_attach`, `src/tools/chat-tools.ts`): the agent names a path, which the daemon reads only inside the project folder, its worktrees, the chat's own folder or the system temp folder. PNG, JPEG, GIF, WebP, HEIC and HEIF up to 10 MiB, binary glTF, USDZ and STL up to 50 MiB, typed by their bytes (`attachment-type.ts`), at most 64 per chat (`agent-images.ts`), found by id with no index. Only an AI chat attaches, to its own thread.
 
 ## Questions and approvals
 
@@ -35,7 +35,7 @@ Each of these goes with the chat or a clear, and a fork copies only what its cop
 
 - A chat leaves Chats only through `chat.move` (`apps/server/src/projects/move-chat.ts`). It refuses what the Chats write would end or orphan (`projects/move-refusal.ts`), decided before it makes anything.
 - It moves the folder only once the CLI is gone, writes the target before Chats, so a project places the chat at every moment, and rehomes a fork's lineage between the two writes. Each step has an undo. A running move is recorded in `$RUIMTE_HOME/chat-moves` and finished at the next start before the outbox runs (`projects/move-repair.ts`).
-- An agent in Chats only proposes that its chat become a project (`ruimte-context project propose`, `projects/project-proposals.ts`), refused outside Chats. Its card holds the chat at `needs-you`, which the move ignores for that card alone (`wiring/chat-move.ts`), releases before it makes anything, and restores if it fails. Any other wait refuses the move.
+- An agent in Chats only proposes that its chat become a project (`project_propose`, `projects/project-proposals.ts`), refused outside Chats. Its card holds the chat at `needs-you`, which the move ignores for that card alone (`wiring/chat-move.ts`), releases before it makes anything, and restores if it fails. Any other wait refuses the move.
 
 ## Product rules
 

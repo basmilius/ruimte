@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { ContextSource, ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { refusalRows } from '@adecore/agents/context';
+import type { ContextSource, ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { readRefusal } from './read-refusal.ts';
 
 /* The refusal as the CLI prints it, which is what these sentences are written for. */
@@ -40,19 +40,19 @@ describe('readRefusal', () => {
         const [first, second] = refusal.split('\n');
         expect(first).toStartWith('not-linked\tterminal-a is a terminal node on main with a line from you into it');
         expect(first).toInclude('reading it takes a line the other way');
-        expect(second).toStartWith('see\truimte-context link new --from terminal-a --to chat-1\t');
+        expect(second).toStartWith('see\tlink_new from terminal-a to chat-1\t');
     });
 
     test('a node on the canvas with no line at all is told which line it needs', () => {
         const refusal = refuseRead('chat-1', 'note-1', [], canvas);
         const [first, second] = refusal.split('\n');
         expect(first).toBe('not-linked\tnote-1 is a note node on main, but no line joins it to you, and that line is what a read takes');
-        expect(second).toStartWith('see\truimte-context link new --from note-1 --to chat-1\t');
+        expect(second).toStartWith('see\tlink_new from note-1 to chat-1\t');
     });
 
     test('a text is named as one, and a drawing is linked through the node that shows it', () => {
         expect(refuseRead('chat-1', 'text-1', [], canvas).split('\n')[0]).toStartWith('not-linked\ttext-1 is a text on main');
-        expect(refuseRead('chat-1', 'view-1', [], canvas)).toInclude('see\truimte-context link new --from draw-1 --to chat-1\t');
+        expect(refuseRead('chat-1', 'view-1', [], canvas)).toInclude('see\tlink_new from draw-1 to chat-1\t');
     });
 
     test('only an agent it would read is told the line has to run from it, since any other line reads either way', () => {
@@ -87,11 +87,11 @@ describe('readRefusal', () => {
         // As the reader: the line from the design node into the terminal is its own, running the wrong way.
         const reading = refuseRead('later-1', 'terminal-a', [], designs).split('\n');
         expect(reading[0]).toInclude('with a line from you into it');
-        expect(reading[1]).toStartWith('see\truimte-context link new --from terminal-a --to design-1\t');
+        expect(reading[1]).toStartWith('see\tlink_new from terminal-a to design-1\t');
         // As the source: the line is drawn from the design node, which holds it.
         const read = refuseRead('chat-1', 'later-1', [], designs).split('\n');
         expect(read[0]).toBe('not-linked\tlater-1 is a design node on main, but no line runs from it into you, and that line is what a read takes');
-        expect(read[1]).toStartWith('see\truimte-context link new --from design-1 --to chat-1\t');
+        expect(read[1]).toStartWith('see\tlink_new from design-1 to chat-1\t');
     });
 
     test('a source that is linked and still read nothing is not called unlinked', () => {

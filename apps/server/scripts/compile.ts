@@ -1,5 +1,5 @@
-import { chmod, copyFile, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { chmod, copyFile, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -7,10 +7,8 @@ import { downloadScrcpyServer } from '../src/devices/scrcpy-server.ts';
 import { placeDatabaseHelper } from './database-helper.ts';
 
 /*
- * Compiles the daemon into one executable per platform, with the `ruimte-context` script next
- * to it, under `dist/<os>-<arch>/`. Git Bash on Windows runs that script too; cmd and PowerShell find
- * `ruimte-context.exe` beside it, the launcher in `apps/context-launcher`. The folder names follow
- * electron-builder's macros, so the desktop build picks the right one with `${os}-${arch}`.
+ * Compiles the daemon into one executable per platform, under `dist/<os>-<arch>/`. The folder names
+ * follow electron-builder's macros, so the desktop build picks the right one with `${os}-${arch}`.
  *
  *   bun scripts/compile.ts                                     the machine it runs on
  *   bun scripts/compile.ts --os mac --arch x64                 cross-compile
@@ -97,6 +95,8 @@ if (values.os === 'mac' && process.platform !== 'darwin') {
 }
 
 const nativeDir = join(outDir, 'native');
+// A removed helper must not survive an incremental build.
+await rm(nativeDir, { recursive: true, force: true });
 await mkdir(nativeDir, { recursive: true });
 const rustTarget = `${values.arch === 'arm64' ? 'aarch64' : 'x86_64'}-apple-darwin`;
 const installedCargo = join(homedir(), '.cargo', 'bin', 'cargo');
@@ -115,22 +115,6 @@ const builds: Array<Promise<number>> = [
 ];
 
 if (values.os === 'mac') {
-    if (values.arch === 'arm64') {
-        const foundationRoot = resolve(root, '../foundation-models');
-        builds.push(
-            run(['bun', join(foundationRoot, 'scripts/build.ts')], root).then(async (exitCode) => {
-                if (exitCode !== 0) {
-                    return exitCode;
-                }
-                const helper = join(nativeDir, 'ruimte-foundation-models');
-                await copyFile(join(foundationRoot, 'dist', 'ruimte-foundation-models'), helper);
-                await copyFile(join(foundationRoot, 'dist', 'ruimte-foundation-models.NOTICES'), `${helper}.NOTICES`);
-                await chmod(helper, 0o755);
-                return 0;
-            })
-        );
-    }
-
     builds.push(
         run(['bun', resolve(root, '../ios-device-bridge/scripts/build.ts'), '--target', rustTarget, '--outfile', join(nativeDir, 'ios-device-bridge')], root)
     );
@@ -175,21 +159,6 @@ if (values.os === 'mac') {
     );
 }
 
-if (values.os === 'win') {
-    // MSVC is the toolchain of a Windows runner; anywhere else the MinGW one cross-compiles, with `x86_64-w64-mingw32-gcc` installed.
-    const launcherRoot = resolve(root, '../context-launcher');
-    const launcherTarget = `${values.arch === 'arm64' ? 'aarch64' : 'x86_64'}-pc-windows-${process.platform === 'win32' ? 'msvc' : 'gnu'}`;
-    builds.push(
-        run([cargo, 'build', '--release', '--locked', '--target', launcherTarget], launcherRoot).then(async (exitCode) => {
-            if (exitCode !== 0) {
-                return exitCode;
-            }
-            await copyFile(join(launcherRoot, 'target', launcherTarget, 'release', 'ruimte-context.exe'), join(outDir, 'ruimte-context.exe'));
-            return 0;
-        })
-    );
-}
-
 // Every build settles before the script ends, so a failure never leaves another one running on its own.
 const settled = await Promise.allSettled(builds);
 for (const result of settled) {
@@ -214,8 +183,6 @@ if (values.os === 'mac' || values.os === 'linux') {
     await downloadScrcpyServer(nativeDir);
 }
 
-await copyFile(join(root, 'bin', 'ruimte-context'), join(outDir, 'ruimte-context'));
-await chmod(join(outDir, 'ruimte-context'), 0o755);
 await writeFile(join(outDir, 'ruimte.build'), `${buildId}\n`);
 console.log(`Compiled ${binary}`);
 

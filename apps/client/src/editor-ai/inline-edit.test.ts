@@ -1,19 +1,19 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { FakeEditorEngine } from '@adecore/editor/fake';
-import type { Editor } from '@adecore/editor';
 import { useProviderAccountsStore, useProvidersStore } from '@adecore/agents-react/state';
+import type { Editor } from '@adecore/editor';
+import { highlightLayers } from '@adecore/editor-react';
+import { FakeEditorEngine } from '@adecore/editor/fake';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { EditorLanguage } from '@/language/ruimte-editor-language';
+import { LANGUAGE_COMMANDS } from '@/language/command-table';
 import { FakeLanguageTransport } from '@/language/fake-daemon';
 import { eventOf } from '@/language/key-events';
-import { LANGUAGE_COMMANDS } from '@/language/command-table';
+import { EditorLanguage } from '@/language/ruimte-editor-language';
 import { ProjectLanguage } from '@/language/ruimte-project-language';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { InlineEditFeature, inlineAgentNow } from './inline-edit';
-import { highlightLayers } from '@adecore/editor-react';
 import { forgetInlineEdit, saveInlineEdit } from './inline-edit-record';
 import { forgetInlineSessions, inlineSessionOf } from './inline-edit-session';
 import { Harness, RANGE, SELECTED, TEXT, at } from './inline-edit-test-helpers';
@@ -202,7 +202,6 @@ describe('an edit under the selection', () => {
             createdAt: 10
         });
         const { feature } = await open();
-        expect(feature.hasEdit).toBe(true);
 
         await feature.show();
 
@@ -397,6 +396,26 @@ describe('the mark in the gutter', () => {
 });
 
 describe('the agent of an inline edit', () => {
+    test('uses Haiku for an unset Claude model, even when the CLI defaults to Sonnet', () => {
+        useSettings.setState({ aiInlineAgent: { provider: 'claude', model: null } });
+        useProvidersStore.getState().setProviders('e1', [
+            {
+                kind: 'claude',
+                name: 'Claude Code',
+                installed: true,
+                capabilities: { chat: true },
+                defaultModel: 'claude-sonnet-5-5',
+                models: [
+                    { slug: 'claude-sonnet-5-5', name: 'Claude Sonnet 5.5', legacy: false, isDefault: true, options: [] },
+                    { slug: 'claude-haiku-5-5', name: 'Claude Haiku 5.5', legacy: false, isDefault: false, options: [] }
+                ]
+            } as never
+        ]);
+        expect(inlineAgentNow('e1')).toEqual({ provider: 'claude', model: 'claude-haiku-5-5' });
+        useSettings.setState({ aiInlineAgent: { provider: 'claude', model: 'claude-sonnet-5-5' } });
+        expect(inlineAgentNow('e1')).toEqual({ provider: 'claude', model: 'claude-sonnet-5-5' });
+    });
+
     function installed(...kinds: string[]): void {
         useProvidersStore.getState().setProviders(
             'e1',

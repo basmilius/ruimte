@@ -1,6 +1,6 @@
 import { projectSidebarViews, type AgentStatus, type ProjectChangedEvent, type ProjectSidebarResult, type ProjectSummaryEvent } from '@ruimte/contracts';
-import type { Transport } from '@/transport/transport';
 import { waitDate } from '@/state/waiting-date';
+import type { Transport } from '@/transport/transport';
 
 export interface SidebarMachineSnapshot {
     projects: ProjectSidebarResult['projects'];

@@ -38,6 +38,11 @@ function sweep(folder: string, now: number, maxAgeMs: number, signal?: AbortSign
     });
 }
 
+/* The folders a picture the machine took for an agent or a person is in, under the machine's own folder. */
+export function shotFolders(home: string): string[] {
+    return [join(home, SCREENSHOTS_FOLDER), join(home, 'computer-use', 'screenshots'), join(home, DEVICE_CAPTURES_FOLDER)];
+}
+
 export function sweepScreenshots(home: string, now: number, signal?: AbortSignal): Promise<Reclaimed> {
     return sweep(join(home, SCREENSHOTS_FOLDER), now, SHOT_MAX_AGE_MS, signal);
 }

@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
+import { PromptDialog } from '@adecore/ui';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
+import { useTranslation } from 'react-i18next';
 import { saveLayoutAction } from '@/actions/client-actions';
 import { useUi } from '@/state/ui';
-import { PromptDialog } from '@adecore/ui';
 
 /* Names an arrangement of the canvas so it can be brought back later from the dock or the palette. */
 export function LayoutDialog() {

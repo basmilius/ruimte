@@ -1,12 +1,12 @@
+import { Button, Banner } from '@adecore/ui';
+import { CircleAlert, Eye, GitBranch } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CircleAlert, Eye, GitBranch } from 'lucide-react';
 import { diagramClient, drawingClient, projectClient } from '@/project';
 import { useDiagram } from '@/state/diagram';
 import { useDocument } from '@/state/document';
 import { useDrawing } from '@/state/drawing';
 import { useProject } from '@/state/project';
-import { Button, Banner } from '@adecore/ui';
 
 // One banner slot: possible data loss outranks an agent's repeatable view request.
 export function ProjectBanner() {

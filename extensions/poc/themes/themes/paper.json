@@ -1,0 +1,13 @@
+{
+    "name": "POC paper",
+    "side": "light",
+    "thumbnail": "themes/paper.svg",
+    "tokens": {
+        "--bg": "#f3e9cf",
+        "--surface": "#fbf3dc",
+        "--surface-raised": "#fff9e8",
+        "--surface-sunken": "#ecdfbe",
+        "--canvas-bg": "#f3e9cf",
+        "--canvas-dot": "#d9c896"
+    }
+}

@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
 import { matchScore, type CommandPaletteInputProps, type CommandPaletteVirtualItemProps } from '@adecore/ui';
+import type { ReactNode } from 'react';
 import type { Command } from '@/shell/commands';
 
 export interface Entry extends Command {
@@ -10,7 +10,7 @@ export interface Entry extends Command {
     trailing?: ReactNode;
     /* What Cmd-click or Cmd+Enter (Ctrl off macOS) does instead of `run`, such as a project in a window of its own. */
     inNewWindow?: () => void;
-    section: 'recent' | 'jump' | 'files' | 'views' | 'projects' | 'actions' | 'settings' | 'folders' | 'machines';
+    section: 'recent' | 'jump' | 'files' | 'views' | 'projects' | 'actions' | 'extensions' | 'settings' | 'folders' | 'machines';
     /* The folder a browse row stands for: what Enter steps into, and what Tab completes the field
        to without stepping in. Navigating is the palette's own business, so such a row has no `run`. */
     browsePath?: string;

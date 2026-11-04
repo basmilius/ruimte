@@ -1,16 +1,16 @@
-import type { ReactElement, ReactNode } from 'react';
-import { Bot, MessageSquare, type LucideIcon } from 'lucide-react';
-import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
-import { useTranslation } from 'react-i18next';
-import { AccountDot, AgentIcon } from '@adecore/agents-react/providers';
-import { agentTargetLabel, type AgentTarget } from '@/agents/nodes';
 import { runtimeModeLabel, useChatPreferences, useNewAccountChoice } from '@adecore/agents-react/chat';
+import { AccountDot, AgentIcon } from '@adecore/agents-react/providers';
 import { useProviders } from '@adecore/agents-react/state';
-import { availableAgents, separatesGroups } from './creation';
+import { Icon, IconButton, Menu } from '@adecore/ui';
+import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
+import { Bot, MessageSquare, type LucideIcon } from 'lucide-react';
+import type { ReactElement, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { agentTargetLabel, type AgentTarget } from '@/agents/nodes';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { useDetectProviders } from '@/transport/provider-detection';
-import { Icon, IconButton, Menu } from '@adecore/ui';
+import { availableAgents, separatesGroups } from './creation';
 
 function Submenu({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
     return (

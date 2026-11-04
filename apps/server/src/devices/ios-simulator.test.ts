@@ -64,6 +64,20 @@ describe('IosSimulatorBackend', () => {
         ]);
     });
 
+    test('is ready once simctl says its boot finished, which comes after it lists the simulator as booted', async () => {
+        const calls: string[][] = [];
+        const backend = new IosSimulatorBackend(async (arguments_) => {
+            calls.push(arguments_);
+            return { exitCode: 0, stdout: arguments_[0] === 'list' ? listOutput.replace('"state":"Shutdown"', '"state":"Booted"') : '', stderr: '' };
+        });
+
+        expect(await backend.ready('phone-1')).toMatchObject({ deviceId: 'phone-1', state: 'booted' });
+        expect(calls).toEqual([
+            ['bootstatus', 'phone-1'],
+            ['list', 'devices', 'available', '--json']
+        ]);
+    });
+
     test('turns a failed command into a stable device error', async () => {
         let call = 0;
         const backend = new IosSimulatorBackend(async () => {

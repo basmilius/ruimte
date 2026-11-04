@@ -1,11 +1,12 @@
+import { ToolRefusal } from '@adecore/agents/context';
+import { isWithin } from '@adecore/utils/path';
 import { worktreeDiffOutput, type ActionHandlers } from '@ruimte/actions';
 import { designNodeChats, isCanvasView, isChatNode, type ProjectContent, type Worktree } from '@ruimte/contracts';
-import { isInside } from '../canvas/project-paths.ts';
-import { VerbRefusal, field, orNote, type CanvasHost, type WorktreeHost } from '../canvas/verb.ts';
 import { GitError } from '../git/run.ts';
+import { field, orNote, type CanvasHost, type WorktreeHost } from '../tools/host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
-// How far up the chain of openers a merge looks for the caller; a chain this deep is refused by `agent` long before.
+// How far up the chain of openers a merge looks for the caller; a chain this deep is refused by `agent_start` long before.
 const MAX_LINEAGE = 64;
 
 function worktreeHostOf(context: ServerActionContext): WorktreeHost {
@@ -21,7 +22,7 @@ async function worktreesOf(context: ServerActionContext): Promise<{ content: Pro
             .list(place.folder)
             .catch((e: unknown) => {
                 if (e instanceof GitError && e.code === 'not-a-repo') {
-                    throw new VerbRefusal('not-a-repository', `${place.folder} is not in a git repository`);
+                    throw new ToolRefusal('not-a-repository', `${place.folder} is not in a git repository`);
                 }
                 throw e;
             })
@@ -47,7 +48,7 @@ function nodesIn(content: ProjectContent, worktree: Worktree): string[] {
                 continue;
             }
             const folders = [node.cwd, ...designNodeChats(node).map((chat) => chat.node.cwd)];
-            if (folders.some((cwd) => cwd !== undefined && isInside(worktree.path, cwd))) {
+            if (folders.some((cwd) => cwd !== undefined && isWithin(worktree.path, cwd))) {
                 ids.add(node.id);
             }
         }
@@ -65,7 +66,7 @@ function branchLines(worktrees: readonly Worktree[]): string[] {
 function named(worktrees: readonly Worktree[], branch: string): Worktree {
     const worktree = worktrees.find((candidate) => candidate.branch === branch);
     if (!worktree) {
-        throw new VerbRefusal('unknown-worktree', `${branch} is not the branch of a worktree of this repository`, branchLines(worktrees));
+        throw new ToolRefusal('unknown-worktree', `${branch} is not the branch of a worktree of this repository`, branchLines(worktrees));
     }
     return worktree;
 }
@@ -103,7 +104,7 @@ export const worktreeActions: ActionHandlers<ServerActionContext> = {
         const { worktrees } = await worktreesOf(context);
         const worktree = named(worktrees, branch);
         if (worktree.missing) {
-            throw new VerbRefusal('worktree-missing', `The folder of ${branch} is gone, so there is nothing to diff`);
+            throw new ToolRefusal('worktree-missing', `The folder of ${branch} is gone, so there is nothing to diff`);
         }
         const diff = await worktreeHostOf(context).diff(worktree.path, worktree.from?.branch ?? worktree.from?.commit);
         return { output: worktreeDiffOutput(branch, worktree, diff) };
@@ -116,14 +117,14 @@ export const worktreeActions: ActionHandlers<ServerActionContext> = {
     'worktree.merge': async ({ branch, strategy, message }, { actor, context }) => {
         // A person and Voice merge through the client, which asks them first; the daemon's rules are an agent's.
         if (actor.kind !== 'agent') {
-            throw new VerbRefusal('forbidden-action', `The daemon merges a worktree only for an agent, not for the ${actor.kind} actor`);
+            throw new ToolRefusal('forbidden-action', `The daemon merges a worktree only for an agent, not for the ${actor.kind} actor`);
         }
         const { host, place } = context;
         const { content, worktrees } = await worktreesOf(context);
         const worktree = named(worktrees, branch);
         const owner = worktree.nodeId;
         if (owner === undefined || !openedBy(host, actor.id, owner)) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'not-yours',
                 `${branch} was made for ${owner ?? 'no agent'}, and worktree merge only merges the worktree of an agent you opened`,
                 [`made for\t${owner ?? '-'}`, `you\t${actor.id}`, 'person\tA person merges any worktree from the git panel']

@@ -1,26 +1,27 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import i18next from 'i18next';
-import { useTranslation } from 'react-i18next';
-import { Columns2, FileWarning, GitCompare, RefreshCw, Rows2 } from 'lucide-react';
-import type { ActionInput } from '@ruimte/actions';
 import type { DiffContents } from '@adecore/agents-react/chat/ui';
+import { ButtonGroup, EmptyState, ErrorBoundary, LazyBoundary, Menu, ScrollArea, Separator, lazyNamed, messageOf, useNow } from '@adecore/ui';
+import { formatAge } from '@adecore/ui/format';
+import type { ActionInput } from '@ruimte/actions';
 import { splitChanges, type GitDiffFile, type GitDiffResult, type GitDiffScope } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { Columns2, FileWarning, GitCompare, RefreshCw, Rows2 } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { perform } from '@/actions/client-actions';
+import { ExtensionDiffViewer } from '@/extensions/ExtensionDiffViewer';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
-import { CommitFileTree } from '@/shell/panels/CommitFileTree';
 import { pickedFile } from '@/shell/panels/commit-tree';
-import { FileActionsContext } from '@/shell/panels/file-actions';
-import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
+import { CommitFileTree } from '@/shell/panels/CommitFileTree';
 import { useDiffCaret, useDiffCarets } from '@/shell/panels/diff-caret';
+import { FileActionsContext } from '@/shell/panels/file-actions';
 import { absoluteOf, relativeTo } from '@/shell/panels/files-tree';
+import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { COMMIT_TREE_MIN_WIDTH, TreeSplit } from '@/shell/panels/TreeSplit';
 import { isCheckoutDiff, useFiles, type FileTabView } from '@/state/files';
 import { useGit } from '@/state/git';
 import { useGitSignal } from '@/state/git-watch';
 import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
-import { ButtonGroup, EmptyState, ErrorBoundary, LazyBoundary, Menu, Separator, lazyNamed, messageOf, useNow } from '@adecore/ui';
-import { formatAge } from '@adecore/ui/format';
 
 const UnifiedDiff = lazyNamed(() => import('@adecore/agents-react/chat/ui'), 'UnifiedDiff');
 
@@ -54,7 +55,11 @@ export function DiffFile({ tabKey, path, name, view }: { tabKey: string; path: s
     if (isCheckoutDiff(path, view)) {
         return <CommitDiff tabKey={tabKey} cwd={view.cwd} base={view.base ?? null} />;
     }
-    return <FileDiffView tabKey={tabKey} path={path} name={name} view={view} />;
+    return (
+        <ExtensionDiffViewer path={path} view={view}>
+            <FileDiffView tabKey={tabKey} path={path} name={name} view={view} />
+        </ExtensionDiffViewer>
+    );
 }
 
 /* One changed file, in whichever scope the tab is set to. */
@@ -181,7 +186,7 @@ function DiffBody({
         );
     }
     return (
-        <div ref={surface} className="file-diff flex min-h-0 grow flex-col overflow-auto">
+        <ScrollArea axis="both" viewportRef={surface} className="grow" viewportClassName="file-diff flex flex-col">
             <LazyBoundary fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('diff.loading')}</div>}>
                 <UnifiedDiff
                     change={{ path: relative, kind: 'update', diff: state.diff.diff }}
@@ -193,7 +198,7 @@ function DiffBody({
                     onSource={onSource}
                 />
             </LazyBoundary>
-        </div>
+        </ScrollArea>
     );
 }
 
@@ -373,7 +378,7 @@ function CommitFileDiff({
         );
     }
     return (
-        <div ref={surface} className="file-diff flex min-h-0 min-w-0 grow flex-col overflow-auto">
+        <ScrollArea axis="both" viewportRef={surface} className="grow" viewportClassName="file-diff flex flex-col">
             <LazyBoundary fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('diff.loading')}</div>}>
                 <UnifiedDiff
                     key={file.path}
@@ -384,6 +389,6 @@ function CommitFileDiff({
                     onSource={onSource}
                 />
             </LazyBoundary>
-        </div>
+        </ScrollArea>
     );
 }

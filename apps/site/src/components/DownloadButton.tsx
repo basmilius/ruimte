@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Download } from 'lucide-react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { downloadPlatform } from '@/lib/download-platform';
 import { PLATFORMS, type Platform } from '@/lib/release.ts';
 

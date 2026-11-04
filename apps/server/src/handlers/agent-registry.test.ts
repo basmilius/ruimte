@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ServerFrame } from '@ruimte/contracts';
 import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
-import { askOnce } from './test-helpers.ts';
 import type { CliVersions } from '../providers/cli-versions.ts';
 import type { RegistryAgents } from '../providers/registry-agents.ts';
 import { registerAgentRegistryHandlers } from './agent-registry.ts';
+import { askOnce } from './test-helpers.ts';
 
 const AGENT = {
     id: 'goose',

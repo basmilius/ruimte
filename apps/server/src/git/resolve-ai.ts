@@ -1,5 +1,5 @@
-import type { GitResolveAiResult, GitResolveBlock } from '@ruimte/contracts';
 import { fingerprint, splitBlocks, splitLines, type MergeBlock } from '@adecore/merge';
+import type { GitResolveAiResult, GitResolveBlock } from '@ruimte/contracts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import { readConflict } from './conflict.ts';
 import { jsonObjectIn, oneShotProvider, runOneShot, type OneShotOptions } from './one-shot.ts';

@@ -1,0 +1,114 @@
+import { InstallPermissions } from '@/components/docs/extensions/SettingsScenes.tsx';
+import { DevLog } from '@/components/docs/extensions/TerminalScenes.tsx';
+
+export const metadata = { title: 'Getting started' };
+
+# Getting started
+
+<p className="lead">From an empty folder to an extension running in Ruimte, with a panel and a server part.</p>
+
+You need [Bun](https://bun.sh) and Ruimte running on the same computer.
+
+## Create the project
+
+```bash
+bunx ruimte extension create
+```
+
+It asks for a name, an id, the parts you want and a first surface, then writes a project that builds into a new folder named after the second half of the id, such as `standup` for `acme.standup`. Pass `--yes` with `--name`, `--id`, `--parts` and `--surface` to skip the questions.
+
+The id is who made it and what it is, joined by a dot: `acme.standup`. Once people install the extension, the id never changes.
+
+## Run it while you work
+
+```bash
+bun run dev
+```
+
+`dev` builds on every save and reloads the extension in the running Ruimte. It prints `console.*` and `log` from the server part, `console.*` from the client part marked `[client]`, and every action or surface that failed. Pass `--port` when your Ruimte listens on another port.
+
+`dev` loads into the machine whose home is in `RUIMTE_HOME`, `~/.ruimte` when it is not set. For a dev machine, give its home and port: `RUIMTE_HOME=~/.ruimte-dev bunx ruimte extension dev --port 4211`.
+
+<DevLog />
+
+Your extension shows under Settings, Extensions, in the In development group. Its On switch is grayed out there. The extension stays on while `dev` runs, and Ctrl-C in the terminal of `dev` takes it out of Ruimte. While `dev` runs, "Show extension slots" in the command palette outlines every place an extension can add to.
+
+## The client part
+
+`client/index.ts` runs when the extension loads and calls `define*` functions. A surface is always a lazy import, so its code loads only when a person opens it:
+
+```ts
+import { definePanel } from '@ruimte/extension/client';
+
+definePanel({
+    id: 'main',
+    title: 'Standup',
+    icon: 'calendar',
+    component: () => import('./Main')
+});
+```
+
+```tsx
+import { useServer } from '@ruimte/extension/client';
+import type server from '../server';
+
+export default function Main() {
+    const greeting = useServer<typeof server>().greeting.use();
+
+    return <p>{greeting.ok ? greeting.value : greeting.error.message}</p>;
+}
+```
+
+`icon` names a [Lucide](https://lucide.dev/icons) icon. Without one, the panel shows your extension's mark.
+
+## The server part
+
+`server/index.ts` exports what the client can call. Ruimte starts it on the first call, and again after a crash.
+
+```ts
+import { defineServer } from '@ruimte/extension/server';
+
+export default defineServer({
+    async greeting() {
+        return 'Good morning';
+    }
+});
+```
+
+`useServer().greeting()` returns a promise of a `Result`. `.use()` suspends the component until the answer arrives, so you need no loading state of your own. When the method throws, or the server part cannot run, `ok` is false and `error.message` says why.
+
+## Test it
+
+```bash
+bun run test
+```
+
+The project starts with a test in `test/extension.test.ts`. It loads your client part into `createTestHost` and your server part into `createTestServer`, so it runs without Ruimte:
+
+```ts
+const host = await createTestHost();
+const machine = await createTestServer<typeof server>();
+
+expect(host.panel('main')).toMatchObject({ title: 'Standup' });
+expect(await machine.call('greeting')).toEqual({ ok: true, value: 'Good morning' });
+```
+
+[Testing and packing](/docs/extensions/testing) shows how to press actions, draw a panel and script the machine.
+
+## Pack it
+
+```bash
+bun run pack
+```
+
+`pack` builds a `.rex` file, the form you share an extension in. It checks your icon and themes, and refuses a client part that imports from `server/`.
+
+To install a `.rex` someone shared with you, open Settings, Extensions, **Install from disk** and press **Choose file…**. Ruimte shows its name and what it asks for before anything runs. The store opens later; until then, a `.rex` is how extensions are shared.
+
+<InstallPermissions />
+
+## Next
+
+- Each How to page builds one task end to end, starting with [Open a panel](/docs/extensions/how-to/panel).
+- [The manifest](/docs/extensions/manifest) lists every field and permission.
+- `extensions/limits` in the Ruimte repository is a complete extension built on the public API alone.

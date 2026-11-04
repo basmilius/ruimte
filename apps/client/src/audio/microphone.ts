@@ -1,6 +1,6 @@
 import i18next from 'i18next';
-import { desktop } from '@/desktop/bridge';
 import { easeBands, silentBands, timeDomainBands } from '@/audio/waveform';
+import { desktop } from '@/desktop/bridge';
 
 interface MicrophoneSnapshot {
     deviceName: string;

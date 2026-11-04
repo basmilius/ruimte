@@ -1,4 +1,3 @@
-import { create } from 'zustand';
 import {
     isCanvasView,
     isChatHostView,
@@ -10,11 +9,13 @@ import {
     type SplitLayout,
     designNodeChats
 } from '@ruimte/contracts';
+import { create } from 'zustand';
+import type { SelectionOffer } from '@/chat/selection-to-chat';
+import { useChatDrawers } from '@/extensions/drawn-chats';
 import type { NodesOfView } from '@/project/view-nodes';
 import { useSidebarSource } from '@/shell/sidebar-source';
 import { viewIdsIn } from '@/shell/split';
 import { useDocument } from '@/state/document';
-import type { SelectionOffer } from '@/chat/selection-to-chat';
 
 export interface ChooserChat {
     readonly id: string;
@@ -34,10 +35,10 @@ interface ChooserSections {
 type ChooserNode = Pick<ProjectNode, 'id' | 'kind' | 'title' | 'provider' | 'chats'>;
 
 /* Every chat of the project with the CLI it runs, node or view, in sidebar order. */
-export function chooserChats(views: readonly ProjectView[], nodesOf: NodesOfView<ChooserNode>): ChooserChat[] {
+export function chooserChats(views: readonly ProjectView[], nodesOf: NodesOfView<ChooserNode>, draws?: (extensionId: string) => boolean): ChooserChat[] {
     return views.flatMap((view): ChooserChat[] => {
         if (isChatHostView(view)) {
-            return isUnlistedView(view) ? [] : viewChats(view).map((chat) => ({ id: chat.id, title: chat.name, provider: chat.node.provider ?? null }));
+            return isUnlistedView(view, draws) ? [] : viewChats(view).map((chat) => ({ id: chat.id, title: chat.name, provider: chat.node.provider ?? null }));
         }
         return nodesOf(view).flatMap((node) =>
             node.kind === 'chat' || node.kind === 'design'
@@ -99,7 +100,8 @@ export function chooserSections(chats: readonly ChooserChat[], linkedIds: readon
 export function useChooserSections(linkedIds: readonly string[]): ChooserSections {
     const source = useSidebarSource();
     const layout = useDocument((s) => s.layout);
-    return chooserSections(chooserChats(source.views, source.nodesOf), linkedIds, chatsOpenHere(source.views, source.nodesOf, layout));
+    const draws = useChatDrawers();
+    return chooserSections(chooserChats(source.views, source.nodesOf, draws), linkedIds, chatsOpenHere(source.views, source.nodesOf, layout));
 }
 
 interface ChatChooserState {

@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ChatMoveInfoResult, ChatMovePayload, ProjectSummary, ProjectView } from '@ruimte/contracts';
-import { TransportError } from '@/transport/transport';
+import { act } from 'react';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
+import { TransportError } from '@/transport/transport';
 import { chatInfoOf } from '../../testing/chat-info';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { installDesktop, removeDesktop } from '../../testing/dom-helpers';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { installDesktop, removeDesktop } from '../../testing/dom-helpers';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
 const CHAT: ProjectView = { kind: 'chat', id: 'written', name: 'Vinyl notes', node: {} };
 

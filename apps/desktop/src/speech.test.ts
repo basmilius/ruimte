@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
+import type { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
-import type { spawn } from 'node:child_process';
 import type { SpeechEvent } from '@ruimte/desktop-bridge';
 import { SpeechService } from './speech';
 

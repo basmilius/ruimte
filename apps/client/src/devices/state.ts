@@ -1,6 +1,6 @@
-import { create } from 'zustand';
 import { deviceMatches, type DeviceInfo, type DeviceReference, type DeviceUnavailable } from '@ruimte/contracts';
 import { z } from 'zod';
+import { create } from 'zustand';
 import { storedJson } from '@/state/stored-json';
 
 interface DeviceListState {

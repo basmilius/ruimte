@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { writeAtomicSync } from '@adecore/agents';
+import { writeAtomicSync } from '@adecore/utils/fs';
 import type { z } from 'zod';
 import { errorText } from './error-text.ts';
 

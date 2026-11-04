@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { ChatAttachment } from '@ruimte/contracts';
-import { ATTACHMENTS_PATH, handleAttachmentRequest } from './attachment-route.ts';
 import { AttachmentStore } from '@adecore/agents/chat';
+import type { ChatAttachment } from '@ruimte/contracts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { ATTACHMENTS_PATH, handleAttachmentRequest } from './attachment-route.ts';
 
 // What the desktop app on this machine presents; a loopback address alone gets nothing.
 const LOCAL_SECRET = 'the-local-secret';

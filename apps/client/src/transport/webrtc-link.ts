@@ -1,4 +1,4 @@
-import i18next from 'i18next';
+import { messageOf } from '@adecore/ui';
 import {
     BinaryFrameAssembler,
     BYTES_REPLY_MAX_BYTES,
@@ -21,10 +21,11 @@ import {
     type DirectProofFrame
 } from '@ruimte/contracts';
 import { randomToken } from '@ruimte/pulsar';
+import i18next from 'i18next';
 import { mergeIceServers, relayedFromStats } from './ice';
 import type { Link, LinkOpener } from './link-transport';
 import { protocolRefusal } from './protocol';
-import { messageOf, socketSignaling, type Signal, type Signaling, type SignalingOpener } from './signaling';
+import { socketSignaling, type Signal, type Signaling, type SignalingOpener } from './signaling';
 
 // Offer to handshake; ICE with a STUN server that answers slowly still fits, a path that does not exist does not.
 const CONNECT_TIMEOUT_MS = 20_000;

@@ -1,6 +1,6 @@
+import { WorktreeSchema } from '@adecore/agent-contracts/worktree';
 import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
-import { WorktreeSchema } from '@adecore/agent-contracts/worktree';
 import { BYTES_CHUNK_MAX } from './bytes.ts';
 import { ChangeSplitSchema } from './change-split.ts';
 
@@ -12,26 +12,22 @@ export const WorktreeAddPayloadSchema = z.object({
     // A new branch starts here: a branch, tag or commit. Without it, at HEAD.
     base: z.string().min(1).optional()
 });
-export type WorktreeAddPayload = z.infer<typeof WorktreeAddPayloadSchema>;
 
 export const WorktreeAddResultSchema = z.object({
     worktree: WorktreeSchema,
     // False when the branch already had a worktree and that one was answered.
     created: z.boolean()
 });
-export type WorktreeAddResult = z.infer<typeof WorktreeAddResultSchema>;
 
 export const WorktreeListPayloadSchema = z.object({
     repo: z.string().min(1),
     // Counts the work in every worktree, which costs a few git calls each.
     inspect: z.boolean().optional()
 });
-export type WorktreeListPayload = z.infer<typeof WorktreeListPayloadSchema>;
 
 export const WorktreeListResultSchema = z.object({
     worktrees: z.array(WorktreeSchema)
 });
-export type WorktreeListResult = z.infer<typeof WorktreeListResultSchema>;
 
 export const WorktreeRemovePayloadSchema = z.object({
     repo: z.string().min(1),
@@ -43,7 +39,6 @@ export const WorktreeRemovePayloadSchema = z.object({
     // Stops the agents working in the worktree first instead of refusing with `agent-working`.
     stopAgent: z.boolean().optional()
 });
-export type WorktreeRemovePayload = z.infer<typeof WorktreeRemovePayloadSchema>;
 
 export const WorktreeRemoveResultSchema = z.object({
     branchDeleted: z.boolean().optional(),
@@ -55,7 +50,6 @@ export type WorktreeRemoveResult = z.infer<typeof WorktreeRemoveResultSchema>;
 export const GitWorktreesEventSchema = z.object({
     repo: z.string()
 });
-export type GitWorktreesEvent = z.infer<typeof GitWorktreesEventSchema>;
 
 // A file that is both staged and changed since is in two groups.
 export const GitFileStateSchema = z.enum(['staged', 'unstaged', 'untracked', 'conflicted']);
@@ -112,13 +106,11 @@ export type GitStatus = z.infer<typeof GitStatusSchema>;
 export const GitCwdPayloadSchema = z.object({
     cwd: z.string().min(1)
 });
-export type GitCwdPayload = z.infer<typeof GitCwdPayloadSchema>;
 
 export const GitWatchPayloadSchema = GitCwdPayloadSchema.extend({
     // Asks for the status read once the watch is up, which spares a first read its own round trip.
     status: z.boolean().optional()
 });
-export type GitWatchPayload = z.infer<typeof GitWatchPayloadSchema>;
 
 export const GitWatchResultSchema = z.object({
     // Only when asked for; a daemon from before it answers none and the client reads the status itself.
@@ -148,7 +140,6 @@ export const GitReposPayloadSchema = z.object({
     // A person's refresh: list the folder again instead of answering from the daemon's short-lived cache.
     fresh: z.boolean().optional()
 });
-export type GitReposPayload = z.infer<typeof GitReposPayloadSchema>;
 
 export const GitReposResultSchema = z.object({
     // The folder's own repository first, then the rest by label.
@@ -192,7 +183,6 @@ export const GitDiffPayloadSchema = z.object({
     // Base scope starts at this ref's merge base with HEAD; omitting a path includes every file.
     base: z.string().min(1).optional()
 });
-export type GitDiffPayload = z.infer<typeof GitDiffPayloadSchema>;
 
 export const GitDiffFileSchema = z.object({
     path: z.string(),
@@ -247,7 +237,6 @@ export const GitBlamePayloadSchema = z.object({
     cwd: z.string().min(1),
     path: z.string().min(1)
 });
-export type GitBlamePayload = z.infer<typeof GitBlamePayloadSchema>;
 
 export const GitBlameCommitSchema = z.object({
     hash: z.string(),
@@ -274,7 +263,6 @@ export type GitBlameResult = z.infer<typeof GitBlameResultSchema>;
 export const GitIdentityPayloadSchema = z.object({
     paths: z.array(z.string().min(1)).max(50)
 });
-export type GitIdentityPayload = z.infer<typeof GitIdentityPayloadSchema>;
 
 export const GitIdentitySchema = z.object({
     path: z.string(),
@@ -308,13 +296,11 @@ export const GitStagePayloadSchema = z.object({
     // True stages the paths, false takes them back out of the index.
     staged: z.boolean()
 });
-export type GitStagePayload = z.infer<typeof GitStagePayloadSchema>;
 
 export const GitDiscardPayloadSchema = z.object({
     cwd: z.string().min(1),
     paths: z.array(z.string().min(1)).min(1)
 });
-export type GitDiscardPayload = z.infer<typeof GitDiscardPayloadSchema>;
 
 export const GitDiscardResultSchema = z.object({
     // The stash the discarded work went into, so it can be taken back; null when git found
@@ -342,7 +328,6 @@ export const GitRefCommitPayloadSchema = z.object({
     cwd: z.string().min(1),
     ref: z.string().min(1)
 });
-export type GitRefCommitPayload = z.infer<typeof GitRefCommitPayloadSchema>;
 
 export const GitRefCommitResultSchema = z.object({
     commit: z.string(),
@@ -355,7 +340,6 @@ export const GitIssuePayloadSchema = z.object({
     // A link, `owner/repo#12` or `#12`, which reads in the repository of the folder.
     ref: z.string().min(1)
 });
-export type GitIssuePayload = z.infer<typeof GitIssuePayloadSchema>;
 
 export const GitIssueSchema = z.object({
     repo: z.string(),
@@ -391,7 +375,6 @@ export const GitPrCommentSchema = z.object({
     url: z.string(),
     createdAt: z.string()
 });
-export type GitPrComment = z.infer<typeof GitPrCommentSchema>;
 
 export const GitPrThreadSchema = z.object({
     id: z.string(),
@@ -434,12 +417,10 @@ export const GitPullRequestPayloadSchema = z.object({
     // Without it, the pull request of the branch the folder is on.
     number: z.number().int().positive().optional()
 });
-export type GitPullRequestPayload = z.infer<typeof GitPullRequestPayloadSchema>;
 
 export const GitPullRequestResultSchema = z.object({
     pr: GitPullRequestSchema.nullable()
 });
-export type GitPullRequestResult = z.infer<typeof GitPullRequestResultSchema>;
 
 /* `git.prSplit`: the split of a pull request `git.pr` answered, read from every page of GitHub's file list, so it comes after. */
 export const GitPrSplitPayloadSchema = z.object({
@@ -448,13 +429,11 @@ export const GitPrSplitPayloadSchema = z.object({
     // The head `git.pr` answered at; a pull request that moved since gives none, since it would disagree with those totals.
     headSha: z.string().min(1)
 });
-export type GitPrSplitPayload = z.infer<typeof GitPrSplitPayloadSchema>;
 
 export const GitPrSplitResultSchema = z.object({
     // Null when GitHub's file list could not be read whole, so a split never disagrees with the totals.
     split: ChangeSplitSchema.nullable()
 });
-export type GitPrSplitResult = z.infer<typeof GitPrSplitResultSchema>;
 
 // A person's watch on one pull request for one chat. The daemon polls it and wakes the chat once per finished state.
 export const GitPrWatchSchema = z.object({
@@ -511,7 +490,6 @@ export const GitLogPayloadSchema = z.object({
     // What a previous answer handed back; opaque to the client, it names where the next page starts.
     cursor: z.string().optional()
 });
-export type GitLogPayload = z.infer<typeof GitLogPayloadSchema>;
 
 export const GitLogResultSchema = z.object({
     commits: z.array(GitCommitSchema),
@@ -612,12 +590,10 @@ export const GitProgressEventSchema = z.object({
     // One line git wrote, or the empty string for a phase that only says where the action is.
     line: z.string()
 });
-export type GitProgressEvent = z.infer<typeof GitProgressEventSchema>;
 
 export const GitCancelPayloadSchema = z.object({
     actionId: z.string().min(1)
 });
-export type GitCancelPayload = z.infer<typeof GitCancelPayloadSchema>;
 
 /*
  * `git.clone`: a repository from a remote into a new folder, with its progress over `git.progress` under
@@ -629,7 +605,6 @@ export const GitClonePayloadSchema = z.object({
     url: z.string().min(1).max(2048),
     path: z.string().min(1).max(4096)
 });
-export type GitClonePayload = z.infer<typeof GitClonePayloadSchema>;
 
 export const GitCloneResultSchema = z.object({
     path: z.string(),
@@ -642,7 +617,6 @@ export type GitCloneResult = z.infer<typeof GitCloneResultSchema>;
 export const IGNORED_COPY_MAX_BYTES = 1024 * 1024;
 
 export const GitIgnoredFilesPayloadSchema = z.object({ cwd: z.string().min(1) });
-export type GitIgnoredFilesPayload = z.infer<typeof GitIgnoredFilesPayloadSchema>;
 
 /*
  * `git.ignoredFiles`: the files git ignores in a checkout, a folder ignored whole (`node_modules/`) left
@@ -683,7 +657,6 @@ export const GitSuggestMessagePayloadSchema = z.object({
     // Which CLI to ask; without one the daemon takes the first installed provider that can chat.
     provider: AgentKindSchema.optional()
 });
-export type GitSuggestMessagePayload = z.infer<typeof GitSuggestMessagePayloadSchema>;
 
 export const GitSuggestMessageResultSchema = z.object({
     subject: z.string(),
@@ -716,7 +689,6 @@ export const GitConflictPayloadSchema = z.object({
     // Relative to the repository root, as `git.status` names it.
     path: z.string().min(1)
 });
-export type GitConflictPayload = z.infer<typeof GitConflictPayloadSchema>;
 
 export const GitConflictResultSchema = z.object({
     path: z.string(),
@@ -749,7 +721,6 @@ export const GitResolveResultSchema = z.object({
     // Files git still holds unmerged in this checkout, so a client knows what is left without asking.
     remaining: z.number().int().nonnegative()
 });
-export type GitResolveResult = z.infer<typeof GitResolveResultSchema>;
 
 // `continue` commits what was resolved and carries a rebase on; `abort` puts the checkout back as it was.
 export const GitOperationPayloadSchema = z.object({
@@ -757,7 +728,6 @@ export const GitOperationPayloadSchema = z.object({
     actionId: z.string().min(1),
     action: z.enum(['continue', 'abort'])
 });
-export type GitOperationPayload = z.infer<typeof GitOperationPayloadSchema>;
 
 /* One stretch of a conflicted file as a CLI would have it, by where it sits in the file's blocks. */
 export const GitResolveBlockSchema = z.object({
@@ -777,7 +747,6 @@ export const GitResolveAiPayloadSchema = z.object({
     // Which CLI to ask; without one the daemon takes the first installed provider that can chat.
     provider: AgentKindSchema.optional()
 });
-export type GitResolveAiPayload = z.infer<typeof GitResolveAiPayloadSchema>;
 
 export const GitResolveAiResultSchema = z.object({
     blocks: z.array(GitResolveBlockSchema),
@@ -868,10 +837,8 @@ export const GitBundlePutPayloadSchema = z.object({
     // The size of the whole bundle, which is how this machine tells an upload that is done from one still open.
     total: z.number().int().positive().optional()
 });
-export type GitBundlePutPayload = z.infer<typeof GitBundlePutPayloadSchema>;
 
 export const GitBundlePutResultSchema = z.object({ received: z.number().int().nonnegative() });
-export type GitBundlePutResult = z.infer<typeof GitBundlePutResultSchema>;
 
 /*
  * Takes a bundle that came in with `git.bundlePut` into a project's repository. `worktree` makes a

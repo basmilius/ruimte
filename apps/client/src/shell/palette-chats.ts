@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
-import i18next from 'i18next';
-import type { ChatExternalResult, ChatExternalSession, ChatSearchHit, ChatSearchResult } from '@ruimte/contracts';
+import { jumpToTimelineItem } from '@adecore/agents-react/chat';
 import { messageOf } from '@adecore/ui';
+import type { ChatExternalResult, ChatExternalSession, ChatSearchHit, ChatSearchResult } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { useEffect, useRef, useState } from 'react';
 import { perform } from '@/actions/client-actions';
 import { focusChat } from '@/plan/plan-actions';
 import { matches } from '@/shell/palette-entries';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
-import { jumpToTimelineItem } from '@adecore/agents-react/chat';
 import { machineFor } from '@/transport/connections';
 
 // The same pause the search in files takes: a typed word is one search.

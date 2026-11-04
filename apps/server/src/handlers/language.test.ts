@@ -4,13 +4,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
 import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
-import { askOnce } from './test-helpers.ts';
-import { CustomLanguageServers } from '../language/custom.ts';
 import { MachineHome } from '../fs/machine-home.ts';
+import { CustomLanguageServers } from '../language/custom.ts';
 import { LanguageHost } from '../language/host.ts';
 import { KIND_PROFILES } from '../language/profiles.ts';
 import { fakeSpawner } from '../language/test-fakes.ts';
 import { registerLanguageHandlers } from './language.ts';
+import { askOnce } from './test-helpers.ts';
 
 let root: string;
 let dispatcher: Dispatcher;

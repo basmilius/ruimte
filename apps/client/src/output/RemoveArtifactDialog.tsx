@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
-import { Trash2 } from 'lucide-react';
-import type { Artifact, ArtifactVersion } from '@ruimte/contracts';
 import { PromptDialog } from '@adecore/ui';
 import { formatBytes } from '@adecore/ui/format';
+import type { Artifact, ArtifactVersion } from '@ruimte/contracts';
+import { Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { selectArtifactVersion, useArtifactSelection } from '@/output/open';
 import { useEndpoints } from '@/state/endpoints';
 import { artifactTabKey, useFiles } from '@/state/files';

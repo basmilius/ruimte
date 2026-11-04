@@ -1,0 +1,19 @@
+{
+    "extends": "../apps/client/tsconfig.app.json",
+    "compilerOptions": {
+        "paths": {
+            "@/*": [
+                "../apps/client/src/*"
+            ],
+            "@extensions/*": [
+                "./*"
+            ]
+        }
+    },
+    "include": [
+        "*/client",
+        "*/server",
+        "poc/*/client",
+        "poc/*/server"
+    ]
+}

@@ -1,3 +1,5 @@
+import { CodedError } from '@adecore/agents';
+import { clipText } from '@ruimte/contracts';
 import {
     MachineIconSchema,
     deviceLinkStartMessage,
@@ -5,8 +7,6 @@ import {
     type DeviceLinkStartPayload,
     type RegisterMachinePayload
 } from '@ruimte/pulsar';
-import { clipText } from '@ruimte/contracts';
-import { CodedError } from '@adecore/agents';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { AccountChange } from './auth-store.ts';
 

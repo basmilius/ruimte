@@ -35,7 +35,6 @@ import {
     type SessionRefreshPayload,
     type SessionResult
 } from './address-book.ts';
-import { MapsTicketSchema, type MapsTicket } from './maps.ts';
 import {
     DeviceLinkCompleteResultSchema,
     DeviceLinkLookupResultSchema,
@@ -50,6 +49,7 @@ import {
     type DeviceLinkStartResult,
     type UserCodePayload
 } from './device-link.ts';
+import { MapsTicketSchema, type MapsTicket } from './maps.ts';
 
 /* `network` is no answer at all; `bad-answer` is an answer this client cannot read. */
 export type AddressBookFailure = AddressBookErrorCode | 'network' | 'bad-answer';

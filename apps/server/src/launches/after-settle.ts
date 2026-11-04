@@ -1,9 +1,9 @@
 import { join, relative } from 'node:path';
-import type { ChatItem, ChatTurnItem, LaunchStatus } from '@ruimte/contracts';
 import { runningInBackground } from '@adecore/agents/chat';
 import type { AgentEvent } from '@adecore/agents/host';
+import { isWithin } from '@adecore/utils/path';
+import type { ChatItem, ChatTurnItem, LaunchStatus } from '@ruimte/contracts';
 import { z } from 'zod';
-import { isInside } from '../canvas/project-paths.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
 import { JsonFileStore } from '../json-file-store.ts';
@@ -95,9 +95,9 @@ function lastTurn(items: readonly ChatItem[]): ChatTurnItem | null {
     return items.findLast((item): item is ChatTurnItem => item.kind === 'turn') ?? null;
 }
 
-/* What a turn of the chat leaves the agent to read about the run, said in the words its launches verb takes. */
+/* What a turn of the chat leaves the agent to read about the run, said in the words its launches tool takes. */
 function endedPreamble(name: string, launchId: string, status: LaunchStatus): string {
-    return `${endedText(name, status)} It ran in your worktree after your last turn; ruimte-context launches read ${launchId} shows its output.`;
+    return `${endedText(name, status)} It ran in your worktree after your last turn; launch_read ${launchId} shows its output.`;
 }
 
 function endedText(name: string, status: LaunchStatus): string {
@@ -245,6 +245,6 @@ export class AfterSettleLaunches {
             return null;
         }
         const worktrees = await this.deps.worktreesOf(folder);
-        return worktrees.find((path) => isInside(path, cwd)) ?? null;
+        return worktrees.find((path) => isWithin(path, cwd)) ?? null;
     }
 }

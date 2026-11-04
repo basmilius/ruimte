@@ -1,0 +1,161 @@
+import { SettingsFields, SettingsOwnPage } from '@/components/docs/extensions/SettingsScenes.tsx';
+
+export const metadata = { title: 'Settings and storage' };
+
+# Settings and storage
+
+<p className="lead">Settings are what a person chooses. Storage is what your code keeps. Secrets are keys and tokens your server part needs.</p>
+
+## Settings
+
+Every extension has a page under Settings, Extensions. Describe fields and Ruimte draws them:
+
+```ts
+import { defineExtensionSettings } from '@ruimte/extension/client';
+
+defineExtensionSettings({
+    fields: [
+        {
+            key: 'summaryLength',
+            type: 'select',
+            label: 'Summary length',
+            description: 'How long a summary of a canvas gets.',
+            default: 'short',
+            options: [
+                { value: 'short', label: 'Short' },
+                { value: 'long', label: 'Long' }
+            ]
+        },
+        {
+            key: 'includeTerminals',
+            type: 'boolean',
+            label: 'Include terminals',
+            default: true
+        }
+    ]
+});
+```
+
+A field is `boolean` (a switch), `text` (an input) or `select` (a menu with `options`). `default` is the value until the person changes it.
+
+With more than a few fields, sort them into groups. Each group is a card with its title above it, as in Ruimte's own settings:
+
+```ts
+defineExtensionSettings({
+    groups: [
+        {
+            title: 'Summaries',
+            description: 'What Summarize writes.',
+            fields: [
+                {
+                    key: 'summaryLength',
+                    type: 'select',
+                    label: 'Summary length',
+                    default: 'short',
+                    options: [
+                        { value: 'short', label: 'Short' },
+                        { value: 'long', label: 'Long' }
+                    ]
+                }
+            ]
+        },
+        {
+            title: 'Sources',
+            fields: [
+                {
+                    key: 'includeTerminals',
+                    type: 'boolean',
+                    label: 'Include terminals',
+                    default: true
+                }
+            ]
+        }
+    ]
+});
+```
+
+<SettingsFields />
+
+A key is unique across all groups.
+
+Read a setting in a component with `useSetting`. The component draws again when the person changes it.
+
+```tsx
+import { useSetting } from '@ruimte/extension/client';
+
+export default function Summary() {
+    const length = useSetting<string>('summaryLength');
+
+    return <p>{length === 'long' ? 'Long summary' : 'Short summary'}</p>;
+}
+```
+
+Settings live on the computer the person changed them on. The server part does not see them; pass what it needs as an argument when you call it.
+
+For more than fields, draw the page yourself:
+
+```ts
+defineExtensionSettings({
+    component: () => import('./Settings'),
+    keywords: ['summary', 'length']
+});
+```
+
+`keywords` let the search in Settings find your page. Ruimte draws your component under the permissions, where the fields would go:
+
+<SettingsOwnPage />
+
+One call takes `component`, `fields` or `groups`, never two of them. With `fields` or `groups` beside it, Ruimte leaves `component` out and draws only the fields. For fields and a component of your own on one page, call `defineExtensionSettings` twice. Ruimte draws the fields first and your component below them.
+
+[Add a settings page](/docs/extensions/how-to/settings) builds both kinds of page.
+
+## Storage
+
+`useStorage` keeps a value and draws again when it changes:
+
+```tsx
+const [count, setCount] = useStorage('count', 0, 'project');
+```
+
+The third argument says where the value lives:
+
+| Scope | Where | Use it for |
+| --- | --- | --- |
+| `computer` (default) | This computer only | View preferences, what was last open |
+| `project` | The machine, per project | Data that belongs to a project, on every computer that opens it |
+| `machine` | The machine, for all projects | Data the server part also reads |
+
+The server part reads and writes `machine` values with `storage.get` and `storage.set`.
+
+A node keeps its own data with `useNodeData`, in the project itself. See [Surfaces](/docs/extensions/surfaces#nodes).
+
+## Secrets
+
+`secrets` keeps strings, such as an API key, on the machine in a file only the person who runs it can read. Only the server part has it.
+
+```ts
+import { secrets } from '@ruimte/extension/server';
+
+const token = await secrets.get('token');
+```
+
+Ask for the value in a component of your settings page, and send it to the server part, which stores it with `secrets.set`.
+
+## Words
+
+Put your words in `locales/<language>.json`, with `en.json` as the fallback:
+
+```json
+{
+    "summarize": "Summarize",
+    "notes": "{{count}} notes"
+}
+```
+
+`useLocale()` gives `t` for words and `format` for numbers and dates, in the language and region the person chose:
+
+```tsx
+const { t, format } = useLocale();
+
+return <span>{t('notes', { count: 3 })}</span>;
+```

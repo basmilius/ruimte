@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
 import { isDatabaseView, type DatabaseConnection, type ProjectView } from '@ruimte/contracts';
+import { useEffect } from 'react';
 import { databaseConnections, ensureDatabaseConnections, useDatabaseConnectionList } from '@/database/connections';
 
 /*

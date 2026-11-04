@@ -1,8 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { gitIn, initRepo, repoTemplate, type RepoTemplate } from '../git/test-repo.ts';
 import { cachedRepos, forgetRepos } from '../git/repo-cache.ts';
+import { gitIn, initRepo, repoTemplate, type RepoTemplate } from '../git/test-repo.ts';
 import { locateFile } from './locate.ts';
 import { NO_MACHINE_HOME } from './machine-home.ts';
 import { forgetSearchCache, listSearchableFiles, searchFiles } from './search.ts';

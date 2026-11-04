@@ -1,5 +1,5 @@
-import type { DrawingElement } from '@ruimte/contracts';
 import { DEFAULT_PALETTE, readingOrder, toSvg } from '@adecore/drawing';
+import type { DrawingElement } from '@ruimte/contracts';
 
 /*
  * A drawing as an agent reads it: the texts in reading order with the arrows between them, then the

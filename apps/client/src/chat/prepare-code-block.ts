@@ -1,5 +1,5 @@
-import { createElement } from 'react';
 import type { ShellCodeBlockContext } from '@adecore/agents-react';
+import { createElement } from 'react';
 import { preparableShell } from '@/chat/preparable-shell';
 import { PrepareCodeBlockAction } from './PrepareCodeBlockAction';
 

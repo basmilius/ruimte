@@ -1,13 +1,13 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { DiffSourceLine } from '@adecore/merge';
+import { ContextMenu, FileTree, useFileTree } from '@adecore/ui';
 import type { FileTreeVisibleRow } from '@pierre/trees';
 import type { GitDiffFile } from '@ruimte/contracts';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { diffFileParts, firstFile, folderParts } from '@/shell/panels/commit-tree';
 import { DiffRowMenuItems } from '@/shell/panels/DiffRowMenuItems';
 import type { DecorationPart } from '@/shell/panels/git-tree';
 import { GitTreeMarks } from '@/shell/panels/GitTreeMarks';
-import { ContextMenu, FileTree, useFileTree } from '@adecore/ui';
 
 const { applyExpansion, dirPathOf, mergeCollapsedPaths, rebuildPaths, rowPathOf, selectOnly, visibleRows } = FileTree;
 

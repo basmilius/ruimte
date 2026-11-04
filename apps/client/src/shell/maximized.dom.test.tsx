@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { useDocument } from '@/state/document';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
 const LEFT = { kind: 'file', id: 'left-view', name: 'left.ts', path: 'src/left.ts' };
 const RIGHT = { kind: 'file', id: 'right-view', name: 'right.ts', path: 'src/right.ts' };

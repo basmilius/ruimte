@@ -1,8 +1,8 @@
 import { beforeEach, expect, test } from 'bun:test';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { OutboxStore } from './outbox.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { OutboxStore } from './outbox.ts';
 
 let home: string;
 

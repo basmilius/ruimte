@@ -1,18 +1,18 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
-import { act } from 'react';
+import { formatDateTime } from '@adecore/ui/format';
 import { EditorView } from '@codemirror/view';
 import { REQUEST_SCHEMAS, zonedTime, type RequestType, type RoutineEntry, type RoutineRun } from '@ruimte/contracts';
-import { formatDateTime } from '@adecore/ui/format';
+import { act } from 'react';
 import { isApplePlatform } from '@/desktop/bridge';
 import { showRoutine, useRoutinesStage } from '@/routines/stage';
 import { liveCanvas } from '@/state/canvas';
 import { useUi } from '@/state/ui';
 import { chatInfoOf } from '../../testing/chat-info';
-import { FakeMachine } from '../../testing/fake-machine';
-import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { buttonWithText } from '../../testing/dom-helpers';
 import { clickOn, layOutChat, mount, pressKey, until, type Mounted } from '../../testing/dom';
+import { buttonWithText } from '../../testing/dom-helpers';
+import { FakeMachine } from '../../testing/fake-machine';
 import { claudeProvider } from '../../testing/fake-provider';
+import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 import { emptyCanvas } from '../../testing/project-fixtures';
 
 const AMS = 'Europe/Amsterdam';

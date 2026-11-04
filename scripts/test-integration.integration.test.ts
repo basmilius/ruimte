@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
 test('browser files get separate processes and a failed file still fails the job without dropping the next file', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'ruimte-browser-runner-'));
@@ -24,8 +24,10 @@ test('browser files get separate processes and a failed file still fails the job
             files.push(file);
         }
 
+        // The script reads `browser.bunfig.toml` from its working folder. The repository's preloads the React Compiler over the whole client, which takes long and has crashed Bun under load; these fixtures need none of it.
+        await writeFile(join(directory, 'browser.bunfig.toml'), '[test]\n');
         const child = Bun.spawn([process.execPath, join(import.meta.dir, 'test-integration.ts'), '--browser', ...files], {
-            cwd: resolve(import.meta.dir, '..'),
+            cwd: directory,
             env: { ...process.env, RUNNER_EVIDENCE_FILE: evidence },
             stdout: 'pipe',
             stderr: 'pipe'

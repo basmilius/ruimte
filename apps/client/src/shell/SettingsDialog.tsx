@@ -1,30 +1,31 @@
+import { formatShortcut, lazyNamed } from '@adecore/ui';
+import { SettingsDialog as Dialog, type SettingsSectionEntry } from '@adecore/ui/settings';
 import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isApplePlatform } from '@/desktop/bridge';
+import { useContributions, type SettingsSectionContribution } from '@/extensions/registry';
 import { AccountTab } from '@/shell/settings/AccountTab';
 import { findSettings } from '@/shell/settings/find-settings';
 import {
     ABOUT_SECTION,
     ACCOUNT_SECTION,
-    SETTINGS_GROUPS,
     groupLabel,
     sectionDescription,
     sectionLabel,
+    settingsGroupsWith,
     type SettingsSectionMeta
 } from '@/shell/settings/sections';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
-import { useUi, type SettingsSectionId } from '@/state/ui';
-import { SettingsDialog as Dialog, type SettingsSectionEntry } from '@adecore/ui/settings';
-import { formatShortcut, lazyNamed } from '@adecore/ui';
+import { useUi, type CoreSettingsSectionId, type SettingsSectionId } from '@/state/ui';
 
 // Each pane is a chunk of its own, loaded when it is opened; the search index in `search.ts` never imports one.
-const PANES: Record<SettingsSectionId, ComponentType> = {
+const PANES: Record<CoreSettingsSectionId, ComponentType> = {
     general: lazyNamed(() => import('@/shell/settings/panes/GeneralPane'), 'GeneralPane'),
     appearance: lazyNamed(() => import('@/shell/settings/panes/AppearancePane'), 'AppearancePane'),
     editor: lazyNamed(() => import('@/shell/settings/panes/EditorPane'), 'EditorPane'),
     terminal: lazyNamed(() => import('@/shell/settings/panes/TerminalPane'), 'TerminalPane'),
     views: lazyNamed(() => import('@/shell/settings/panes/ViewsPane'), 'ViewsPane'),
-    pets: lazyNamed(() => import('@/shell/settings/panes/PetsPane'), 'PetsPane'),
+    extensions: lazyNamed(() => import('@/shell/settings/panes/ExtensionsPane'), 'ExtensionsPane'),
     files: lazyNamed(() => import('@/shell/settings/panes/FilesPane'), 'FilesPane'),
     providers: lazyNamed(() => import('@/shell/settings/panes/ProvidersPane'), 'ProvidersPane'),
     chats: lazyNamed(() => import('@/shell/settings/panes/ChatsPane'), 'ChatsPane'),
@@ -42,13 +43,13 @@ const HEROES: Partial<Record<SettingsSectionId, ComponentType>> = {
 };
 
 // Built on every render rather than once: the words move with the language, the list does not.
-function entryOf(meta: SettingsSectionMeta): SettingsSectionEntry {
+function entryOf(meta: SettingsSectionMeta, contributed: readonly SettingsSectionContribution[]): SettingsSectionEntry {
     return {
         id: meta.id,
         icon: meta.icon,
         label: sectionLabel(meta.id),
         description: sectionDescription(meta.id),
-        pane: PANES[meta.id],
+        pane: contributed.find((section) => section.id === meta.id)?.component ?? PANES[meta.id as CoreSettingsSectionId],
         split: meta.split,
         hero: HEROES[meta.id]
     };
@@ -61,6 +62,7 @@ export function SettingsDialog() {
     const target = useUi((s) => s.settings.target);
     const searchAt = useUi((s) => s.settings.searchAt);
     const setSettings = useUi((s) => s.setSettings);
+    const contributed = useContributions((state) => state.settingsSections);
     // The labels come from `i18next.t`, which no redraw follows: this one is what draws them again in a language picked here.
     useTranslation('settings');
 
@@ -70,9 +72,12 @@ export function SettingsDialog() {
             onOpenChange={(next) => setSettings({ open: next })}
             section={section}
             onNavigate={({ section: next, target: row }) => setSettings({ section: next as SettingsSectionId, ...(row === undefined ? {} : { target: row }) })}
-            groups={SETTINGS_GROUPS.map((group) => ({ label: group.label === null ? null : groupLabel(group.label), sections: group.sections.map(entryOf) }))}
-            footer={[entryOf(ABOUT_SECTION)]}
-            account={{ section: entryOf(ACCOUNT_SECTION), tab: <AccountTab /> }}
+            groups={settingsGroupsWith(contributed).map((group) => ({
+                label: group.label === null ? null : groupLabel(group.label),
+                sections: group.sections.map((meta) => entryOf(meta, contributed))
+            }))}
+            footer={[entryOf(ABOUT_SECTION, contributed)]}
+            account={{ section: entryOf(ACCOUNT_SECTION, contributed), tab: <AccountTab /> }}
             search={{
                 find: (query) => findSettings(query, isApplePlatform()),
                 hint: formatShortcut(APP_SHORTCUTS.settingsSearch, isApplePlatform()),

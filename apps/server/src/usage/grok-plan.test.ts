@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { readGrokBilling, readGrokPlan } from './grok-plan.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { readGrokBilling, readGrokPlan } from './grok-plan.ts';
 
 const NOW = Date.parse('2026-10-23T08:00:00Z');
 const ISSUER = 'https://auth.x.ai::b1a00492-073a-47ea-816f-4c329264a828';

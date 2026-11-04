@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
-import type { SessionSink } from '../state/sessions';
-import { SessionClient } from './session-client';
-import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { makeHarness, type Harness } from '../../../server/src/sessions/test-helpers';
+import type { SessionSink } from '../state/sessions';
+import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
+import { SessionClient } from './session-client';
 
 function gate() {
     const entered = Promise.withResolvers<void>();

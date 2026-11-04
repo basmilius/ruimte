@@ -1,6 +1,11 @@
 import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, rm, rmdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
+import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '@adecore/agents';
+import { KeyedSerializer, Serializer } from '@adecore/utils/async';
+import { isNotFound } from '@adecore/utils/errors';
+import { fileExists, writeAtomic } from '@adecore/utils/fs';
+import { revisionConflictMessage } from '@ruimte/actions';
 import {
     DEFAULT_PROJECT_COLOR,
     EMPTY_LOCAL,
@@ -33,9 +38,19 @@ import {
     type ProjectSummary,
     type ProjectView
 } from '@ruimte/contracts';
-import { revisionConflictMessage } from '@ruimte/actions';
-import { fileExists, isNotFound, writeAtomic, SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams, KeyedSerializer, Serializer } from '@adecore/agents';
+import { HiddenAgentStore } from '../agents/hidden-agents.ts';
+import { ClientSinks } from '../client-sinks.ts';
+import { referablesOfViews } from '../context/references.ts';
+import { errorText } from '../error-text.ts';
+import { isDirectory } from '../fs/browse.ts';
+import { MachineHome } from '../fs/machine-home.ts';
+import { PeerLinks, withHiddenCanvases } from '../peering/links.ts';
+import { RemoteStore, idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines } from '../remote/remote-store.ts';
 import type { SessionSink } from '../sessions/manager.ts';
+import { moveDesignFolders, settleDesignFolders, takenDesignFolders, type DesignAtWork, type DesignSides } from './design-folders.ts';
+import { folderToOpen } from './folder-to-open.ts';
+import { splitLegacy, type LoadedFiles, type TrackedProbe } from './legacy-split.ts';
+import { ProjectError } from './project-error.ts';
 import {
     diagramsDirOf,
     documentPathInFolder,
@@ -56,25 +71,13 @@ import {
     PROJECT_FILE,
     WATCH_SETTLE_MS
 } from './project-files.ts';
-import { PROJECT_WRITE_IO, ProjectWriteRaced, ProjectWriteStuck, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
 import { ProjectHolds } from './project-holds.ts';
-import { moveDesignFolders, settleDesignFolders, takenDesignFolders, type DesignAtWork, type DesignSides } from './design-folders.ts';
-import { placesOf, ProjectIndex, type IndexedPlace } from './project-index.ts';
-import { HiddenAgentStore } from '../agents/hidden-agents.ts';
 import { readIdeaName } from './project-identity.ts';
-import { ProjectError } from './project-error.ts';
+import { placesOf, ProjectIndex, type IndexedPlace } from './project-index.ts';
 import { ProjectRegistry, type RegistryEntry } from './project-registry.ts';
 import { isIconFile, sameIcon, ProjectSummaries } from './project-summaries.ts';
-import { splitLegacy, type LoadedFiles, type TrackedProbe } from './legacy-split.ts';
-import { referablesOfViews } from '../context/references.ts';
-import { errorText } from '../error-text.ts';
-import { ClientSinks } from '../client-sinks.ts';
+import { PROJECT_WRITE_IO, ProjectWriteRaced, ProjectWriteStuck, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
 import { scratchFolderOf } from './scratch-project.ts';
-import { folderToOpen } from './folder-to-open.ts';
-import { isDirectory } from '../fs/browse.ts';
-import { MachineHome } from '../fs/machine-home.ts';
-import { PeerLinks, withHiddenCanvases } from '../peering/links.ts';
-import { RemoteStore, idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines } from '../remote/remote-store.ts';
 
 function asProjectError(e: unknown): unknown {
     if (e instanceof ProjectWriteRaced) {
@@ -166,7 +169,7 @@ export interface ProjectMutation<T> {
     overlayFields?: readonly string[];
     /*
      * Nodes this change adds that run on another machine, by node id to the daemon id of that machine:
-     * the daemon's own way to bind one, since a verb's content never carries `machine`. Refused for a node
+     * the daemon's own way to bind one, since a tool's content never carries `machine`. Refused for a node
      * on a canvas that is shared. Bound before the write, like a person's save, so no client starts the node here.
      */
     bindMachines?: ReadonlyMap<string, string>;
@@ -211,7 +214,8 @@ interface CurrentDocument {
 }
 
 /* Ends the session behind one node, handed over by the daemon so the store stays out of the managers. */
-type SessionEnder = (kind: 'terminal' | 'chat', nodeId: string) => Promise<void>;
+/* `closing` ends a chat's CLI and keeps its thread, for a project that closes; without it the chat goes with its node. */
+type SessionEnder = (kind: 'terminal' | 'chat', nodeId: string, closing?: boolean) => Promise<void>;
 
 /* Told what a person's save changed, with the views as they were before it and as it wrote them. */
 type SaveListener = (folder: string, before: readonly ProjectView[], after: readonly ProjectView[]) => Promise<void>;
@@ -221,7 +225,7 @@ export interface ProjectLinks {
     tracked: TrackedProbe;
     /* The store knows which sessions a project holds; the managers know how to stop one. */
     endSession: SessionEnder;
-    /* Only `save` tells it, which only a client's `project.save` calls: a verb, a watcher or a pull never does. */
+    /* Only `save` tells it, which only a client's `project.save` calls: a tool, a watcher or a pull never does. */
     personSaved: SaveListener;
     launches: ProjectLaunches;
     language: ProjectLanguage;
@@ -841,7 +845,7 @@ export class ProjectStore {
             throw new ProjectError('rev-conflict', revisionConflictMessage('The project', expectedRev, rev));
         }
         /* A bound node keeps its machine through the change so `toPortable` leaves its folder alone,
-           and a machine a verb names for any other node is dropped: only a person's save binds one. */
+           and a machine a tool names for any other node is dropped: only a person's save binds one. */
         const bound = this.remote.nodesOf(projectId);
         const content = withMachines(current.content, bound);
         const before = [...content.views];
@@ -893,7 +897,7 @@ export class ProjectStore {
     }
 
     /*
-     * What every write of this daemon ends with, a save and a verb alike. `announce` runs once the files
+     * What every write of this daemon ends with, a save and a tool alike. `announce` runs once the files
      * are settled and before `project.changed` goes out to every client but `origin`. The watcher reads
      * the write as our own and stays quiet, so a second client hears of it here or not at all. It runs
      * inside the lock, so a save this write makes stale finds the new document before its refusal.
@@ -928,7 +932,7 @@ export class ProjectStore {
     /*
      * Asks the clients that have this project on screen to show a view of it. Nothing is written:
      * what a person looks at is theirs, so this is an event a client may still ignore. False when
-     * nobody was watching, which is what the verb reports back rather than failing over.
+     * nobody was watching, which is what the tool reports back rather than failing over.
      */
     showView(projectId: string, viewId: string, by: string): boolean {
         let told = 0;
@@ -977,7 +981,7 @@ export class ProjectStore {
         return current;
     }
 
-    /* Deliberately not `readSharedFile`: a verb that finds a broken file refuses, it does not move a person's file aside. */
+    /* Deliberately not `readSharedFile`: a tool that finds a broken file refuses, it does not move a person's file aside. */
     private async readCurrent(
         projectId: string,
         readOnly = false
@@ -1085,7 +1089,7 @@ export class ProjectStore {
         if (otherClients > 0) {
             return { ended: 0, otherClients };
         }
-        /* The sessions go before the write, the rule `view delete` follows: a shell that outlived
+        /* The sessions go before the write, the rule `view_delete` follows: a shell that outlived
            the project it stood in would answer to a canvas nobody can open any more. */
         const sessions = this.index.sessionNodes(projectId);
         /* A client may open the project while its sessions end, and keeps what is left of it. An open
@@ -1103,7 +1107,7 @@ export class ProjectStore {
             if (reopened()) {
                 break;
             }
-            await this.links.endSession(node.kind, node.id);
+            await this.links.endSession(node.kind, node.id, true);
             ended += 1;
         }
         const launches = reopened() ? 0 : await this.links.launches.end(projectId);
@@ -1252,7 +1256,7 @@ export class ProjectStore {
                 state.cancelSettle?.();
                 state.cancelSettle = this.seams.schedule(() => {
                     state.cancelSettle = null;
-                    // Under the lock, so a save or a verb never reads the rev between the file and the bump.
+                    // Under the lock, so a save or a tool never reads the rev between the file and the bump.
                     return this.locked(state.entry.projectId, () => this.reload(state, path)).catch((e: unknown) => {
                         console.warn(`An outside edit to ${path} could not be taken in:`, errorText(e));
                     });
@@ -1327,7 +1331,7 @@ export class ProjectStore {
 
     /*
      * The rev goes up for this machine: what arrived is a state no client here has, and every one of
-     * them has to base its next save on it. It goes into the private file too, since a verb reads the
+     * them has to base its next save on it. It goes into the private file too, since a tool reads the
      * rev from disk and would otherwise hand a different document out under the same number.
      */
     private async takeOutsideEdit(state: OpenProject, path: string, text: string, read: SharedFileRead): Promise<void> {

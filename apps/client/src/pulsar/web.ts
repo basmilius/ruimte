@@ -1,5 +1,3 @@
-import i18next from 'i18next';
-import { z } from 'zod';
 import {
     APP_REDIRECT_LOOPBACK_PATH,
     AccountSchema,
@@ -12,8 +10,10 @@ import {
     type SessionStore,
     type StoredSession
 } from '@ruimte/pulsar';
-import { clientKey } from '@/endpoint/client-key';
+import i18next from 'i18next';
+import { z } from 'zod';
 import { desktop } from '@/desktop/bridge';
+import { clientKey } from '@/endpoint/client-key';
 import { objectStoreRunner } from '@/endpoint/indexed-db';
 import { storedJson } from '@/state/stored-json';
 import type { PulsarPlatform } from './desktop';

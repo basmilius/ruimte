@@ -1,7 +1,7 @@
-import i18next from 'i18next';
-import { compareVersions, isVersion, type UpdateTrack } from '@ruimte/desktop-bridge';
-import { create } from 'zustand';
 import { messageOf } from '@adecore/ui';
+import { compareVersions, isVersion, type UpdateTrack } from '@ruimte/desktop-bridge';
+import i18next from 'i18next';
+import { create } from 'zustand';
 import { desktop, type Release, type ReleaseNotesState, type UpdateState } from '@/desktop/bridge';
 import { hasUpdate } from '@/state/updates';
 

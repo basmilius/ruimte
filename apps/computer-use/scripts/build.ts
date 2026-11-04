@@ -1,5 +1,5 @@
-import { copyFile, mkdir, rm, symlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { copyFile, mkdir, rm, symlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 

@@ -1,9 +1,9 @@
+import type { Editor } from '@adecore/editor';
+import { Button } from '@adecore/ui';
 import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
-import { Button } from '@adecore/ui';
-import type { Editor } from '@adecore/editor';
 import { colorOfChat } from './agent-runs';
 import { ChatMark } from './ChatMark';
 import type { ConflictAuthor, ConflictBlockState, ConflictResolution } from './conflict-resolution';

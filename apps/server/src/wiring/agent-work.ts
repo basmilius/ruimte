@@ -1,31 +1,31 @@
 import { join } from 'node:path';
 import type { OutboxWorker } from '@adecore/agents/coordination';
+import type { SummaryWiring } from '../chat/summary.ts';
+import type { EndpointIdentity } from '../endpoint-id.ts';
 import { errorText } from '../error-text.ts';
+import { BundleStore } from '../git/bundles.ts';
 import { runGh } from '../git/github.ts';
 import { prSplits } from '../git/pr-split.ts';
 import { PrWatchStore } from '../github/pr-watch.ts';
 import { AfterSettleStore } from '../launches/after-settle.ts';
 import type { EndChildrenWiring } from '../outbox/end-children.ts';
 import type { OutboxWork } from '../outbox/outbox.ts';
-import type { SummaryWiring } from '../chat/summary.ts';
-import { wireOutbox } from '../outbox/wiring.ts';
 import { wakefulClock } from '../outbox/wakeful-clock.ts';
+import { wireOutbox } from '../outbox/wiring.ts';
+import { PeerTasks } from '../peering/peer-tasks.ts';
+import type { ProjectStore } from '../projects/project-store.ts';
 import type { PushService } from '../push/service.ts';
 import { SnoozeStore } from '../push/snoozes.ts';
-import type { TaskWiring } from '../tasks/wiring.ts';
-import type { EndpointIdentity } from '../endpoint-id.ts';
-import type { ProjectStore } from '../projects/project-store.ts';
 import { ConnectPeer, owedTargetsIn } from '../remote/connect-peer.ts';
+import { RemoteTasks } from '../remote/remote-tasks.ts';
+import type { Routines } from '../routines/routines.ts';
+import type { TaskWiring } from '../tasks/wiring.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
-import type { RemoteBundle } from './remote.ts';
-import type { LaunchesBundle } from './launches.ts';
 import type { ClientsBundle } from './clients.ts';
 import type { GitBundle } from './git.ts';
+import type { LaunchesBundle } from './launches.ts';
 import type { ProvidersBundle } from './providers.ts';
-import { PeerTasks } from '../peering/peer-tasks.ts';
-import { RemoteTasks } from '../remote/remote-tasks.ts';
-import { BundleStore } from '../git/bundles.ts';
-import type { Routines } from '../routines/routines.ts';
+import type { RemoteBundle } from './remote.ts';
 
 /* What the outbox drives on behalf of agents: starts, tasks, wakes and what a node takes along when it goes. */
 export interface AgentWorkBundle {

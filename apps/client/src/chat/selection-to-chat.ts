@@ -1,15 +1,15 @@
-import i18next from 'i18next';
-import type { AgentKind } from '@ruimte/contracts';
-import type { Shortcut } from '@adecore/ui';
 import { offerDraft } from '@adecore/agents-react/chat';
-import { chatsLinkedTo } from '@/context/sources';
+import type { Shortcut } from '@adecore/ui';
+import type { AgentKind } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { createNodeAction, linkNodesAction } from '@/actions/client-actions';
+import { useChatChooser } from '@/chat/chat-chooser';
+import { chatsLinkedTo } from '@/context/sources';
 import { focusChat } from '@/plan/plan-actions';
 import { showFileOnCanvas } from '@/project/views';
 import { canvasOfNode } from '@/state/canvas';
 import { defaultNodeSize } from '@/state/node-size';
 import { useToasts } from '@/state/toasts';
-import { useChatChooser } from '@/chat/chat-chooser';
 
 /* Where the text came from, which decides what a new chat gets a line from. */
 type SelectionSource = { readonly nodeId: string } | { readonly path: string };

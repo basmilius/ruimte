@@ -1,5 +1,5 @@
-import { useTranslation } from 'react-i18next';
 import { useProvidersStore } from '@adecore/agents-react/state';
+import { useTranslation } from 'react-i18next';
 import { useCliSession } from '@/chat/cli-session';
 import { CliTerminalDialog, CliTerminalFrame } from '@/chat/CliTerminalDialog';
 import { useUi, type ProviderCommandRequest } from '@/state/ui';

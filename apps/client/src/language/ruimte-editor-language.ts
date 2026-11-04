@@ -1,10 +1,10 @@
-import { EditorLanguage as SharedEditorLanguage, KEY_PRIORITY, realTimers, type EditorLanguageOptions, type Timers } from '@adecore/editor-react';
 import type { Editor } from '@adecore/editor';
+import { EditorLanguage as SharedEditorLanguage, KEY_PRIORITY, realTimers, type EditorLanguageOptions, type Timers } from '@adecore/editor-react';
 import { InlineEditFeature } from '@/editor-ai/inline-edit';
 import { ExplainFeature } from './explain';
 import { GhostTextFeature } from './ghost-text';
-import { SelectionChatFeature } from './selection-chat';
 import type { ProjectLanguage } from './ruimte-project-language';
+import { SelectionChatFeature } from './selection-chat';
 
 export class EditorLanguage extends SharedEditorLanguage {
     declare readonly project: ProjectLanguage;

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import type { AgentKind, AgentServerStatus } from '@ruimte/contracts';
 import { messageOf } from '@adecore/ui';
+import type { AgentKind, AgentServerStatus } from '@ruimte/contracts';
+import { useEffect, useState } from 'react';
 import { listProvidersAgain } from '@/shell/settings/providers/use-provider-installs';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { transportFor } from '@/transport';

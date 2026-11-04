@@ -3,10 +3,10 @@ import { act } from 'react';
 import { isApplePlatform } from '@/desktop/bridge';
 import { useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
+import { clickOn, mount, pressKey, until, type Mounted } from '../../../testing/dom';
+import { menuItem } from '../../../testing/dom-helpers';
 import { FakeMachine } from '../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';
-import { menuItem } from '../../../testing/dom-helpers';
-import { clickOn, mount, pressKey, until, type Mounted } from '../../../testing/dom';
 
 const CWD = '/work/atlas';
 const FILE = `${CWD}/src/cart.ts`;

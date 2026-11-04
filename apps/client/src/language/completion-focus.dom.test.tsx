@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import { typeInto } from '@adecore/editor/testing';
-import { isApplePlatform } from '@/desktop/bridge';
+import { act } from 'react';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { eventOf } from './key-events';
+import { isApplePlatform } from '@/desktop/bridge';
 import { useSettings } from '@/state/settings';
+import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, pressKey, until, type Mounted } from '../../testing/dom';
+import { eventOf } from './key-events';
 
 const MOD = isApplePlatform() ? { metaKey: true } : { ctrlKey: true };
 const VIEW = { kind: 'file', id: 'greet-view', name: 'greet.ts', path: 'greet.ts' };
@@ -64,8 +64,8 @@ describe('the completion list of the editor', () => {
         const before = 'const prior = 1;\n';
         const suggestion = 'const next = 2;\nconst last = 3;';
         machine.answer('fs.read', () => ({ kind: 'text', text: before, encoding: 'utf-8', size: before.length, mtime: 1, language: 'typescript' }) as never);
-        machine.answer('ondevice.status', () => ({ available: true }));
-        machine.answer('ondevice.generate', () => ({ state: 'done' as const, text: suggestion }));
+        machine.answer('editor.status', () => ({ available: true }));
+        machine.answer('editor.generate', () => ({ state: 'done' as const, text: suggestion }));
         const previous = useSettings.getState().aiGhostText;
         useSettings.setState({ aiGhostText: 'request' });
         try {

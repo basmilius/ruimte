@@ -1,6 +1,6 @@
-import i18next from 'i18next';
-import { isCanvasView, type RoutineEntry } from '@ruimte/contracts';
 import { messageOf } from '@adecore/ui';
+import { isCanvasView, type RoutineEntry } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { createNodeAction } from '@/actions/client-actions';
 import { showView } from '@/project/views';
 import { refreshRoutines } from '@/routines/routine-list';

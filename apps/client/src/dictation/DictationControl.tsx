@@ -1,8 +1,8 @@
-import { useEffect, useId, useLayoutEffect, useRef, type RefObject } from 'react';
+import { ButtonGroup, ErrorBoundary, IconButton, ScrollArea } from '@adecore/ui';
 import { Mic, Square, X } from 'lucide-react';
+import { useEffect, useId, useLayoutEffect, useRef, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { ButtonGroup, ErrorBoundary, IconButton } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { cancelDictation, observeSpeech, registerDictationTarget, toggleDictation, useDictation, type DictationInsertion } from './controller';
 import { DictationButton } from './DictationButton';
@@ -66,12 +66,14 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
                 {buttonContainer &&
                     createPortal(<DictationButton phase={phase} error={error} size="sm" disabled={phase === 'finishing'} onToggle={toggle} />, buttonContainer)}
                 {!inlinePreview && active && text && phase !== 'error' && (
-                    <p
-                        className="max-h-32 overflow-auto whitespace-pre-wrap break-words px-3.5 pb-2 text-sm text-text-muted"
+                    <ScrollArea
+                        render={<p />}
+                        className="max-h-32"
+                        viewportClassName="whitespace-pre-wrap break-words px-3.5 pb-2 text-sm text-text-muted"
                         aria-label={t('dictation.preview')}
                     >
                         {text}
-                    </p>
+                    </ScrollArea>
                 )}
                 {error && (
                     <span role="alert" className="sr-only">
@@ -111,12 +113,14 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
                 )}
             </div>
             {!inlinePreview && active && text && (
-                <p
-                    className="max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-surface-sunken p-2 text-sm text-text"
+                <ScrollArea
+                    render={<p />}
+                    className="max-h-32 overflow-hidden rounded-md border border-border bg-surface-sunken"
+                    viewportClassName="whitespace-pre-wrap break-words p-2 text-sm text-text"
                     aria-label={t('dictation.preview')}
                 >
                     {text}
-                </p>
+                </ScrollArea>
             )}
             {active && error && (
                 <p role="alert" className="text-xs text-status-error">

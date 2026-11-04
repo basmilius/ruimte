@@ -1,7 +1,7 @@
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+import type { AppIpc } from '@adecore/shell';
 import { quickLookPath, type QuickLookFiles } from '../quick-look';
-import type { AppIpc } from './ipc';
 
 function diskFiles(ruimteHome: string): QuickLookFiles {
     return {

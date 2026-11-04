@@ -1,5 +1,3 @@
-import type { LaunchHost } from '../canvas/verb.ts';
-import { checkCwd } from '../canvas/project-paths.ts';
 import { toplevel } from '../git/run.ts';
 import { AfterSettleLaunches } from '../launches/after-settle.ts';
 import { agentLaunches } from '../launches/agent-host.ts';
@@ -10,8 +8,10 @@ import { foregroundGroup } from '../processes/foreground.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { SecretService } from '../secrets/secret-service.ts';
 import { SecretStore } from '../secrets/secret-store.ts';
-import type { AgentStores, AgentsBundle } from './agents.ts';
+import type { LaunchHost } from '../tools/host.ts';
+import { checkCwd } from '../tools/project-paths.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
+import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { GitBundle } from './git.ts';
 
 /* A project's launches and the secrets they start with. */
@@ -19,7 +19,7 @@ export interface LaunchesBundle {
     store: LaunchStore;
     runner: LaunchRunner;
     secrets: SecretService;
-    /* The launches as an agent's verb reaches them. */
+    /* The launches as an agent's tool reaches them. */
     agentHost: LaunchHost;
     /* The one launch a person chose to run after a worktree chat settles. */
     afterSettle: AfterSettleLaunches;

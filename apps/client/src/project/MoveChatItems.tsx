@@ -1,11 +1,11 @@
-import { useTranslation } from 'react-i18next';
+import { DisabledReason, Icon, Menu } from '@adecore/ui';
 import { FolderInput, FolderPlus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { moveTargetsOf } from '@/project/move-targets';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { useEndpoints } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
 import { useUi } from '@/state/ui';
-import { DisabledReason, Icon, Menu } from '@adecore/ui';
 
 interface MoveChatItemsProps {
     chatId: string;

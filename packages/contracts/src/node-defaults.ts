@@ -1,4 +1,5 @@
-import { NodeKindSchema, type NodeKind } from './project.ts';
+// Only a type from the project schema, so the test host of `@ruimte/extension/testing` takes these without zod.
+import type { NodeKind } from './project.ts';
 export { NODE_ACCENT_NAMES, type NodeAccent, type NotePaper, isNodeAccent, notePaperOf, nodeColorOf, nodeColorPatch } from './node-accents.ts';
 
 export interface NodeSize {
@@ -62,7 +63,7 @@ export function knownNodeSizes(raw: unknown): NodeSizes {
         return {};
     }
     const sizes: NodeSizes = {};
-    for (const kind of NodeKindSchema.options) {
+    for (const kind of Object.keys(NODE_SIZE) as NodeKind[]) {
         const size = (raw as Record<string, unknown>)[kind];
         if (isDefaultSize(size)) {
             sizes[kind] = { w: size.w, h: size.h };
@@ -118,6 +119,7 @@ export interface GroupFrame extends NodeRect {
 /* A thing on a canvas a group can hold: a node counts by its center, a text by the point it sits on. */
 export interface GroupItem {
     id: string;
+    kind?: string;
     x: number;
     y: number;
     w?: number;
@@ -141,14 +143,15 @@ function holds(rect: NodeRect, item: GroupItem): boolean {
 }
 
 /*
- * Open, membership is read off the positions; collapsed, the file spells it out, since the members sit
- * nowhere near the header. Only ids still present come back.
+ * A group that spells out its members holds exactly those, open or collapsed. One written before
+ * groups did (or by an older Ruimte) reads them off the positions, and of two overlapping groups only
+ * the larger holds the other, so no two hold each other. Only ids still present come back.
  */
 export function groupMemberIds(group: GroupFrame, items: readonly GroupItem[]): string[] {
     const members: string[] = [];
     const length = items.length;
 
-    if (group.collapsed === true) {
+    if (group.memberIds !== undefined || group.collapsed === true) {
         const ids = new Set(group.memberIds ?? []);
 
         items.forEach((item) => {
@@ -161,6 +164,7 @@ export function groupMemberIds(group: GroupFrame, items: readonly GroupItem[]): 
     }
 
     const rect = groupRect(group);
+    const area = rect.w * rect.h;
 
     for (let index = 0; index < length; index++) {
         if (!(index in items)) {
@@ -168,6 +172,10 @@ export function groupMemberIds(group: GroupFrame, items: readonly GroupItem[]): 
         }
 
         const item = items[index]!;
+
+        if (item.kind === 'group' && (item.w ?? 0) * (item.h ?? 0) >= area) {
+            continue;
+        }
 
         if (item.id !== group.id && holds(rect, item)) {
             members.push(item.id);

@@ -1,0 +1,8 @@
+{
+    "id": "poc.broken",
+    "name": "POC broken",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "description": "Everything that can go wrong while running. The rest of Ruimte should not notice."
+}

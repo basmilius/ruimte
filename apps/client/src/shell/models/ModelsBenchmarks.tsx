@@ -1,10 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import i18next from 'i18next';
-import { useTranslation } from 'react-i18next';
-import { ChartSpline } from 'lucide-react';
-import { AddressBookRequestError, type ModelBenchmarksResult } from '@ruimte/pulsar';
-import { formatNumber } from '@adecore/ui/format';
 import { Skeleton, Button, EmptyState, Separator } from '@adecore/ui';
+import { formatNumber } from '@adecore/ui/format';
+import { AddressBookRequestError, type ModelBenchmarksResult } from '@ruimte/pulsar';
+import i18next from 'i18next';
+import { ChartSpline } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ModelsComparison } from '@/shell/models/ModelsComparison';
 
 // Artificial Analysis requires visible attribution alongside its benchmark visualizations.

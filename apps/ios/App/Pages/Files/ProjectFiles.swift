@@ -289,13 +289,15 @@ enum FileLineChanges {
         guard editing, !saving else { return false }
         saving = true
         defer { saving = false }
+        let sent = text
         do {
             let result = try await client.request(
                 "fs.write",
-                payload: .object(["path": .string(path), "text": .string(text), "expectedMtime": .number(mtime)]))
+                payload: .object(["path": .string(path), "text": .string(sent), "expectedMtime": .number(mtime)]))
             mtime = result.number("mtime")
-            original = text
-            editing = false
+            // Only what went out is saved; text typed while the write was under way stays an open edit.
+            original = sent
+            editing = text != sent
             problem = nil
             return true
         } catch {

@@ -1,15 +1,15 @@
-import { settleLanguage as settle } from './settle.test';
 import { beforeEach, describe, expect, test } from 'bun:test';
+import type { HoverInfo } from '@adecore/editor-react';
 import { FakeEditorEngine } from '@adecore/editor/fake';
-import { FakeOnDeviceModel } from '@/ondevice/fake-model';
+import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { TransportError } from '@/transport/transport';
-import { EditorLanguage } from './ruimte-editor-language';
 import { innermostFunction } from './explain';
 import { FakeLanguageTransport } from './fake-daemon';
-import type { HoverInfo } from '@adecore/editor-react';
+import { EditorLanguage } from './ruimte-editor-language';
 import { ProjectLanguage } from './ruimte-project-language';
+import { settleLanguage as settle } from './settle.test';
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });
@@ -21,7 +21,10 @@ const TEXT = 'function skillOverlap(have: string[], need: string[]): number {\n 
 async function setup(options: { available?: boolean; symbols?: unknown } = {}) {
     const transport = new FakeLanguageTransport();
     transport.providers = { 'textDocument/documentSymbol': {} };
-    const model = new FakeOnDeviceModel(transport, options.available === false ? { available: false, reason: 'Apple Intelligence is turned off.' } : {});
+    const model = new FakeEditorAssistModel(
+        transport,
+        options.available === false ? { available: false, reason: 'The selected editor model is unavailable.' } : {}
+    );
     transport.answers.set('language.request', (payload: { method: string }) => ({
         result: payload.method === 'textDocument/documentSymbol' ? (options.symbols ?? null) : null,
         server: 'typescript',
@@ -49,7 +52,7 @@ function showCard(language: EditorLanguage, info: HoverInfo | null): void {
 
 beforeEach(() => {
     useToasts.setState({ toasts: [] });
-    useSettings.setState({ aiOnDeviceHelp: true });
+    useSettings.setState({ aiCodeHelp: true });
 });
 
 describe('explain in the hover card', () => {
@@ -67,14 +70,14 @@ describe('explain in the hover card', () => {
         await settle();
         expect(plain.language.explain.store.getState().offered).toBe(false);
 
-        useSettings.setState({ aiOnDeviceHelp: false });
+        useSettings.setState({ aiCodeHelp: false });
         const off = await setup();
         showCard(off.language, infoOf('function f(): void'));
         await settle();
         expect(off.language.explain.store.getState().offered).toBe(false);
-        expect(off.transport.callsOf('ondevice.status')).toHaveLength(0);
+        expect(off.transport.callsOf('editor.status')).toHaveLength(0);
 
-        useSettings.setState({ aiOnDeviceHelp: true });
+        useSettings.setState({ aiCodeHelp: true });
         const missing = await setup({ available: false });
         showCard(missing.language, infoOf('function f(): void'));
         await settle();
@@ -128,13 +131,13 @@ describe('explain in the hover card', () => {
 
     test('says why when the model fails', async () => {
         const { language, transport } = await setup();
-        transport.answers.set('ondevice.generate', () => {
-            throw new TransportError('failed', 'The on-device model could not answer.');
+        transport.answers.set('editor.generate', () => {
+            throw new TransportError('failed', 'The editor model could not answer.');
         });
         showCard(language, infoOf('function f(): void'));
         await settle();
         await language.explain.explainCard();
-        expect(language.explain.store.getState()).toMatchObject({ phase: 'error', error: 'The on-device model could not answer.' });
+        expect(language.explain.store.getState()).toMatchObject({ phase: 'error', error: 'The editor model could not answer.' });
     });
 });
 
@@ -173,7 +176,7 @@ describe('explain the selection', () => {
     });
 
     test('says where to turn it on when the setting is off', async () => {
-        useSettings.setState({ aiOnDeviceHelp: false });
+        useSettings.setState({ aiCodeHelp: false });
         const { language, model } = await setup();
         await language.explain.explainHere();
         expect(model.requests).toEqual([]);

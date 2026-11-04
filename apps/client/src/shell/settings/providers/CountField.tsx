@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { Input } from '@adecore/ui';
+import { useState } from 'react';
 
 /* A whole number a person types, kept as text until they leave the field, and sent once if it is one inside the range. */
 export function CountField({

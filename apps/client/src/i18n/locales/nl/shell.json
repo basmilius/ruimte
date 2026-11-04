@@ -897,6 +897,7 @@
             "views": "Weergaven",
             "projects": "Projecten",
             "actions": "Acties",
+            "extensions": "Uit extensies",
             "settings": "Instellingen",
             "folders": "Mappen",
             "machines": "Machines"
@@ -1373,7 +1374,22 @@
             "waiting": "Wacht"
         },
         "backToList": "Terug naar lijst",
-        "underMinute": "< {{minute}} min",        "openToAnswer": "Open de sessie om te antwoorden.",
+        "underMinute": "< {{minute}} min",
+        "openToAnswer": "Open de sessie om te antwoorden.",
         "previewUnavailable": "Dit verzoek kan hier niet worden getoond."
+    },
+    "extensions": {
+        "failed": "Deze extensie kon niet worden getoond",
+        "surfaceFailed": "{{name}} kon niet worden getoond",
+        "storageFailed": "{{name}} kon niet bewaren wat het bijhoudt",
+        "newView": "Nieuwe {{name}}-weergave",
+        "nodeNeeds": "Hiervoor is een extensie nodig",
+        "removeNodes": {
+            "title_one": "{{count}} node verwijderen?",
+            "title_other": "{{count}} nodes verwijderen?",
+            "body_one": "{{extension}} vraagt om hem te verwijderen.",
+            "body_other": "{{extension}} vraagt om ze te verwijderen."
+        },
+        "stopRun": "{{title}} stoppen"
     }
 }

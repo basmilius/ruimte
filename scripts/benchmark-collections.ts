@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
-import * as afterGroups from '../packages/contracts/src/node-defaults';
 import { groupMembershipCases } from '../apps/client/testing/performance/group-membership-cases';
 import { type PerformanceCase, measurePairs } from '../apps/client/testing/performance/paired';
+import * as afterGroups from '../packages/contracts/src/node-defaults';
 
 const beforeRoot = process.argv[2];
 

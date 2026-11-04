@@ -1,18 +1,18 @@
-import { useEffect, useMemo } from 'react';
-import { useEndpoints } from '@/state/endpoints';
-import { snoozeOf, useSnoozes } from '@/state/snooze';
-import { useProject } from '@/state/project';
-import { sidebarWaitingCount, useWaitingCount } from '@/state/attention';
 import { useChats } from '@adecore/agents-react/state';
-import { useSessions } from '@/state/sessions';
-import { useWaitingSince, waitDetailsOf } from '@/state/waiting';
-import { useProjectList } from '@/state/project-list';
+import type { AgentStatus } from '@ruimte/contracts';
+import { useEffect, useMemo } from 'react';
+import { sidebarWaitingCount, useWaitingCount } from '@/state/attention';
+import { useEndpoints } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
-import { sidebarSelection } from './sidebar-selection';
+import { useProject } from '@/state/project';
+import { useProjectList } from '@/state/project-list';
+import { useSessions } from '@/state/sessions';
+import { snoozeOf, useSnoozes } from '@/state/snooze';
+import { useWaitingSince, waitDetailsOf } from '@/state/waiting';
 import { machineTransport } from '@/transport';
 import { placeSeparators, sidebarProjectKey, useSidebarMachines, useSidebarProjects, type SeparatorPlaces } from './sidebar-projects';
 import { heaviestStatus, type SidebarGroup, type SidebarNode, type SidebarProject } from './sidebar-rows';
-import type { AgentStatus } from '@ruimte/contracts';
+import { sidebarSelection } from './sidebar-selection';
 
 export function useSidebarGroups(enabled: boolean, active: SidebarProject, expandedIds: ReadonlySet<string>) {
     const endpoints = useEndpoints((state) => state.endpoints);

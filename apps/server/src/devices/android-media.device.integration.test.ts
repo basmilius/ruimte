@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { AndroidBackend } from './android.ts';
 import { locateAndroidSdk } from './android-sdk.ts';
+import { AndroidBackend } from './android.ts';
 
 /* A whole one-pixel png, which a media scanner indexes where a header alone would be refused. */
 const PIXEL_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');

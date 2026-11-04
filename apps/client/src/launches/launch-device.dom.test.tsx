@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { useUi } from '@/state/ui';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { buttonWithText } from '../../testing/dom-helpers';
+import { answerDevices, FAKE_SIMULATOR, type FakeDevices } from '../../testing/fake-devices';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { answerDevices, FAKE_SIMULATOR, type FakeDevices } from '../../testing/fake-devices';
-import { buttonWithText } from '../../testing/dom-helpers';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { emptyCanvas } from '../../testing/project-fixtures';
 
 const MAIN = emptyCanvas();

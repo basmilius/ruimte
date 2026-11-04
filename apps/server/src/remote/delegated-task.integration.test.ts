@@ -1,15 +1,15 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ChatTurnItem } from '@ruimte/contracts';
 import { ManualClock, claudeStoppingOnResume, type FakeCli } from '@adecore/agents/testing';
+import type { ChatTurnItem } from '@ruimte/contracts';
 import { BundleStore } from '../git/bundles.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate, NO_WORKTREE_AGENTS } from '../git/test-repo.ts';
 import { Worktrees } from '../git/worktrees.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, type TestDaemon } from '../tasks/test-daemon.ts';
 import type { PeerLink } from './peer-connection.ts';
 import { leadContent } from './test-helpers.ts';
 
@@ -246,7 +246,7 @@ async function leadIdle(daemon: TestDaemon): Promise<void> {
 
 async function give(prompt = 'Say hi', title = 'Build it'): Promise<{ nodeId: string; taskId: string }> {
     await writeFile(join(a.repo, 'a.txt'), 'one, changed on A\n');
-    const [line] = await runVerb(daemonA, 'chat-lead', 'agent', ['claude', '--machine', 'Studio', '--task', title, '--prompt', prompt, '--worktree']);
+    const [line] = await invokeTool(daemonA, 'chat-lead', 'agent_start', { cli: 'claude', machine: 'Studio', task: title, prompt, worktree: true });
     const fields = line!.split('\t');
     expect(fields).toHaveLength(6);
     return { nodeId: fields[0]!, taskId: fields[5]! };

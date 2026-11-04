@@ -41,7 +41,7 @@ The iPad keeps the iPhone's pages without tabs (`PadHome`, `PadRouter`): a sideb
 - Terminal keys follow the cursor mode the program asked for (`TerminalKeys`).
 - A canvas only pans and zooms on a phone. Its move and resize locks are this phone's, in the project's local state.
 - A drawing lets only the Pencil draw once a Pencil touched the page, or with Only Draw with Apple Pencil on. Tool options are per phone.
-- Change with an agent on a diagram sends the question to a chat with `chat.send`, naming `ruimte-context view diagram` and the file (`DiagramAgentPrompt`).
+- Change with an agent on a diagram sends the question to a chat with `chat.send`, naming the `view_diagram` tool and the file (`DiagramAgentPrompt`).
 - A device view polls `device.list` every two seconds while it waits and every five while it shows. A booted simulator streams `device.frame` events in JPEG. A phone or Android emulator streams video, which the machine refuses for this format, so the page says it shows on the computer only.
 - A device's tools sheet shows each tool the device announces (`DeviceTools`). Capture and clipboard also need `device.capture` and `device.clipboard` on the machine. Erase asks first; a phone is never erased.
 - With a hardware keyboard, a device that announces `keyboard` takes the keys (`DeviceKeyView`). ⌘V pastes this phone's clipboard into the device; other ⌘ chords stay the app's.

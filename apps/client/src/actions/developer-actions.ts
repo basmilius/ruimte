@@ -1,3 +1,4 @@
+import { messageOf } from '@adecore/ui';
 import {
     ACTION_DEFINITIONS,
     ActionRefusal,
@@ -22,18 +23,17 @@ import {
     type Worktree
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
-import { messageOf } from '@adecore/ui';
+import { refusing, type Requester } from '@/actions/refusal';
+import { listed, plural } from '@/actions/words';
+import { nodesOfView } from '@/project/view-nodes';
 import { basenameOf, isPathBelow, relativeTo } from '@/shell/panels/files-tree';
 import { commitTargets, nextActionId } from '@/shell/panels/git-actions';
 import { nodesInWorktree, worktreeSessionsOf } from '@/shell/panels/worktree-rows';
-import { nodesOfView } from '@/project/view-nodes';
 import type { DocumentState } from '@/state/document';
 import { useGit } from '@/state/git';
 import { visibleRepos } from '@/state/git-repos';
 import { useProject } from '@/state/project';
 import { windowWorkspace } from '@/state/window';
-import { refusing, type Requester } from '@/actions/refusal';
-import { listed, plural } from '@/actions/words';
 
 /* What the git actions reach outside the document; a test hands in a fake of each. */
 export interface DeveloperMachine {

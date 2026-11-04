@@ -1,21 +1,21 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ServerWebSocket } from 'bun';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { ChatItem, ProjectContent, ProjectSummary } from '@ruimte/contracts';
 import type { LiveEvent } from '@ruimte/voice';
 import { serverActions } from '../actions/server-actions.ts';
-import type { CanvasHost } from '../canvas/verb.ts';
 import { connectionOpener, socketChannel, type ConnectionServices, type SocketChannel, type OpenConnection } from '../connection.ts';
 import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
 import { registerVoiceHandlers } from '../handlers/voice.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { SYSTEM_CLOCK } from './clock.ts';
 import { VoiceKeyStore } from './key-store.ts';
 import { openAiLive } from './openai-live.ts';
 import { VoicePreferencesStore } from './preferences-store.ts';
 import { FakeChats } from './voice-fakes.ts';
 import { VoiceSessions } from './voice-sessions.ts';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 
 /*
  * The whole route over real sockets: a client asks the daemon's socket, the daemon mints and attaches with

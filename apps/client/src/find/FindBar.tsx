@@ -1,6 +1,7 @@
-import { useLayoutEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import type { FindOptions } from '@adecore/editor-react/models';
+import { Button, ButtonGroup, Icon, IconButton, Surface, matchesShortcut, type Shortcut, Tooltip } from '@adecore/ui';
+import { formatNumber } from '@adecore/ui/format';
 import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
 import {
     ALargeSmall,
     CaseSensitive,
@@ -16,13 +17,12 @@ import {
     X,
     type LucideIcon
 } from 'lucide-react';
+import { useLayoutEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { isApplePlatform } from '@/desktop/bridge';
-import { requiredShortcut } from '@/shell/editor-keymap';
-import type { FindOptions } from '@adecore/editor-react/models';
 import { FIND_SHORTCUTS } from '@/find/shortcuts';
 import type { FindState } from '@/find/use-find';
-import { formatNumber } from '@adecore/ui/format';
-import { Button, ButtonGroup, Icon, IconButton, Surface, matchesShortcut, type Shortcut, Tooltip } from '@adecore/ui';
+import { requiredShortcut } from '@/shell/editor-keymap';
 
 const OPTIONS: readonly { key: keyof FindOptions; icon: LucideIcon; label: string }[] = [
     { key: 'caseSensitive', icon: CaseSensitive, label: 'find.caseSensitive' },

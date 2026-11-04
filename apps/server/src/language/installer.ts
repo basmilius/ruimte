@@ -1,7 +1,7 @@
 import { lstat, mkdir, readdir, readFile, readlink, rename, rm, symlink, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, relative, resolve } from 'node:path';
+import { fileExists } from '@adecore/utils/fs';
 import { LanguageServerKindSchema, type LanguageServerKind } from '@ruimte/contracts';
-import { fileExists } from '@adecore/agents';
 import { downloadFile, sha256 } from '../artifacts/artifact-fs.ts';
 import { errorText } from '../error-text.ts';
 import { LanguageLog } from './log.ts';

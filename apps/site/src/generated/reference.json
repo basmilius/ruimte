@@ -1,0 +1,932 @@
+[
+    {
+        "module": "client",
+        "entries": [
+            {
+                "name": "ExtensionErrorCode",
+                "kind": "type",
+                "doc": "Why a call came back without its answer. `permission-denied`: the manifest does not ask for the permission. `no-project`: no project with a folder is open. `no-canvas`: no canvas is in front. `not-found`: what it names is not there. `outside-project`: a path leaves the project folder. `refused`: the machine or the person said no. `limit`: too many calls in a while. `timeout`: no answer in time. `unavailable`: the machine, or `server/`, cannot answer now. `failed`: anything else, with its message.",
+                "code": "export type ExtensionErrorCode =\n    | 'permission-denied'\n    | 'no-project'\n    | 'no-canvas'\n    | 'not-found'\n    | 'outside-project'\n    | 'refused'\n    | 'limit'\n    | 'timeout'\n    | 'unavailable'\n    | 'failed';"
+            },
+            {
+                "name": "Result",
+                "kind": "type",
+                "doc": "What a call that can fail answers: its value, or why not. Only a wrong argument throws. A call with nothing to answer, a `Result<void>`, answers `{ ok: true, value: undefined }` with the key `value` there.",
+                "code": "export type Result<Value, Code extends string = ExtensionErrorCode> = { ok: true; value: Value } | { ok: false; error: { code: Code; message: string } };"
+            },
+            {
+                "name": "Json",
+                "kind": "type",
+                "doc": "A value as it crosses to the machine and back.",
+                "code": "export type Json = string | number | boolean | null | Json[] | { [key: string]: Json | undefined };"
+            },
+            {
+                "name": "Returned",
+                "kind": "type",
+                "doc": "What a method of `server/` answers once it crossed as JSON: `undefined`, and so a method that returns nothing, arrives as `null`.",
+                "code": "export type Returned<Value> = Value extends undefined | void ? null : Value;"
+            },
+            {
+                "name": "LazyComponent",
+                "kind": "type",
+                "doc": "A component is always handed over as a lazy import: `() => import('./Panel')`.",
+                "code": "export type LazyComponent<Props = {}> = () => Promise<{ default: ComponentType<Props> }>;"
+            },
+            {
+                "name": "Surface",
+                "kind": "type",
+                "doc": null,
+                "code": "export type Surface<Props = {}> = { component: LazyComponent<Props> } | { frame: string };"
+            },
+            {
+                "name": "PanelHandle",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface PanelHandle<Params = void> {\n    open(params: Params): void;\n    close(): void;\n    setBadge(text: string | null): void;\n    setTitle(title: string): void;\n}"
+            },
+            {
+                "name": "NodeRef",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface NodeRef {\n    id: string;\n}"
+            },
+            {
+                "name": "ViewRef",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface ViewRef {\n    id: string;\n}"
+            },
+            {
+                "name": "ProjectRef",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface ProjectRef {\n    id: string;\n}"
+            },
+            {
+                "name": "definePanel",
+                "kind": "function",
+                "doc": "`icon` names a Lucide icon. Without one, a surface shows the extension's `assets/icon.svg`.",
+                "code": "export function definePanel<Params = void>(\n    panel: { id: string; title: string; icon?: string; minWidth?: number } & Surface<{ params: Params | undefined }>\n): PanelHandle<Params>;"
+            },
+            {
+                "name": "defineSidebarCard",
+                "kind": "function",
+                "doc": null,
+                "code": "export function defineSidebarCard(card: { id: string; title: string; component: LazyComponent }): void;"
+            },
+            {
+                "name": "defineView",
+                "kind": "function",
+                "doc": "`params` is kept with the view in the project, so it is JSON. A view opened without them, as `New <title>` opens it, gets undefined.",
+                "code": "export function defineView<Params = Json>(\n    view: { id: string; title: string; icon?: string } & Surface<{ params: Params | undefined }>\n): {\n    open(params?: Params): void;\n};"
+            },
+            {
+                "name": "defineNode",
+                "kind": "function",
+                "doc": null,
+                "code": "export function defineNode<Data = Json>(\n    node: {\n        id: string;\n        title: string;\n        icon?: string;\n        size?: { width: number; height: number };\n        initialData?: Data;\n        dataVersion?: number;\n        /** `stored` is what an older `dataVersion` kept, which only the extension knows the shape of. */\n        migrate?: (stored: Json, fromVersion: number) => Data;\n        /** Where \"Add\" shows. By default the Extensions submenu of the canvas menu, at the spot clicked, and the command palette. */\n        addFrom?: Partial<Slots>;\n    } & Surface\n): void;"
+            },
+            {
+                "name": "defineCanvasOverlay",
+                "kind": "function",
+                "doc": "Over the whole canvas, under Ruimte's own controls such as the minimap in the bottom right. It lets clicks through; set `pointer-events: auto` on what takes them.",
+                "code": "export function defineCanvasOverlay(overlay: { id: string; component: LazyComponent }): void;"
+            },
+            {
+                "name": "defineFileViewer",
+                "kind": "function",
+                "doc": "Opens every file with these extensions in your component, with Ruimte's own view one click away.",
+                "code": "export function defineFileViewer(viewer: {\n    id: string;\n    title: string;\n    extensions: string[];\n    component: LazyComponent<{ file: FileInfo & { text: string | null } }>;\n}): void;"
+            },
+            {
+                "name": "defineMarkdownBlock",
+                "kind": "function",
+                "doc": "Draws a fenced block of this language in a chat and in markdown, on this client. Elsewhere it stays code.",
+                "code": "export function defineMarkdownBlock(block: { language: string; component: LazyComponent<{ source: string }> }): void;"
+            },
+            {
+                "name": "defineOverlay",
+                "kind": "function",
+                "doc": "Your own UI over the app: Ruimte draws the header with `title` and a close button, and animates it; you draw the body. `open` answers what `close` was given, or null when a person dismissed it.",
+                "code": "export function defineOverlay<Params = void, Answer = void>(overlay: {\n    id: string;\n    title: string;\n    size?: 'sm';\n    component: LazyComponent<{ params: Params; close(answer?: Answer): void }>;\n}): { open(params: Params): Promise<Answer | null>; close(): void };"
+            },
+            {
+                "name": "ToolCall",
+                "kind": "interface",
+                "doc": "A call of a tool in a chat, as the thread holds it.",
+                "code": "export interface ToolCall {\n    name: string;\n    input: Json;\n    output: string | null;\n    state: string;\n}"
+            },
+            {
+                "name": "defineToolResult",
+                "kind": "function",
+                "doc": "Draws these tools' calls in a chat, by their exact name, instead of the thread's own view.",
+                "code": "export function defineToolResult(result: { id: string; tools: string[]; component: LazyComponent<{ call: ToolCall }> }): void;"
+            },
+            {
+                "name": "definePaletteSource",
+                "kind": "function",
+                "doc": "Rows in the command palette for what a person types. It waits for a pause in the typing; a slow or failing one costs only its own rows.",
+                "code": "export function definePaletteSource(source: {\n    id: string;\n    title: string;\n    search(query: string): Promise<{ id: string; title: string; detail?: string; run(): void }[]>;\n}): void;"
+            },
+            {
+                "name": "defineSlashCommand",
+                "kind": "function",
+                "doc": "After `/` in a chat. It expands into the prompt, and the person still sends it.",
+                "code": "export function defineSlashCommand(command: { name: string; description: string; run(args: string): string | Promise<string> }): void;"
+            },
+            {
+                "name": "defineReference",
+                "kind": "function",
+                "doc": "Things from outside the project for `#` in a chat. Picking one puts what `read` answers in the prompt.",
+                "code": "export function defineReference(reference: {\n    id: string;\n    title: string;\n    list(): Promise<{ id: string; name: string }[]>;\n    read(item: { id: string; name: string }): Promise<string>;\n}): void;"
+            },
+            {
+                "name": "defineDiffViewer",
+                "kind": "function",
+                "doc": "Opens a changed file with these extensions in your component, with Ruimte's own diff one click away.",
+                "code": "export function defineDiffViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: FileInfo; diff: string }> }): void;"
+            },
+            {
+                "name": "defineFileIcon",
+                "kind": "function",
+                "doc": "An icon from your pack, by its path, for files with these extensions.",
+                "code": "export function defineFileIcon(icon: { extensions: string[]; path: string }): void;"
+            },
+            {
+                "name": "defineVoiceAction",
+                "kind": "function",
+                "doc": "What a person can ask for by voice, through extension.voiceList and extension.voiceRun. It answers in words. Type `Input` after `parameters`, a JSON Schema.",
+                "code": "export function defineVoiceAction<Input extends object = { [key: string]: Json | undefined }>(action: {\n    id: string;\n    description: string;\n    parameters?: object;\n    run(input: Input): string | Promise<string>;\n}): void;"
+            },
+            {
+                "name": "defineTemplate",
+                "kind": "function",
+                "doc": "New from a template, under Extensions in the canvas menu.",
+                "code": "export function defineTemplate(template: {\n    id: string;\n    title: string;\n    icon?: string;\n    create(context: BaseContext & { at: { x: number; y: number } }): void | Promise<void>;\n}): void;"
+            },
+            {
+                "name": "defineCommand",
+                "kind": "function",
+                "doc": null,
+                "code": "export function defineCommand(command: { id: string; title: string; run: () => void | Promise<void> }): void;"
+            },
+            {
+                "name": "SettingField",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface SettingField {\n    key: string;\n    type: 'boolean' | 'text' | 'select';\n    label: string;\n    description?: string;\n    default: boolean | string;\n    options?: { value: string; label: string }[];\n}"
+            },
+            {
+                "name": "SettingGroup",
+                "kind": "interface",
+                "doc": "A section of an extension's settings page: a title over a card of fields, like Ruimte's own settings.",
+                "code": "export interface SettingGroup {\n    title?: string;\n    description?: string;\n    fields: SettingField[];\n}"
+            },
+            {
+                "name": "defineExtensionSettings",
+                "kind": "function",
+                "doc": "Your own component, or `fields` (one card) or `groups` (a card per group) that Ruimte draws. One call takes one of the three: with `fields` or `groups` beside it, `component` is left out. Read a field with `useSetting`; keys are unique across groups.",
+                "code": "export function defineExtensionSettings(\n    settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] } | { groups: SettingGroup[] }\n): void;"
+            },
+            {
+                "name": "useSetting",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useSetting<Value extends boolean | string>(key: string): Value;"
+            },
+            {
+                "name": "useMachine",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useMachine(): { id: string };"
+            },
+            {
+                "name": "useTheme",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useTheme(): { side: 'light' | 'dark' };"
+            },
+            {
+                "name": "useChat",
+                "kind": "function",
+                "doc": "The chat of this id on the machine in front, or null when it has none.",
+                "code": "export function useChat(id: string): ChatSummary | null;"
+            },
+            {
+                "name": "Chat",
+                "kind": "function",
+                "doc": "Needs `agents.start`, since it opens the chat again when it is not running. A chat of the project in front as Ruimte draws it, its thread and its composer, by the id `agents.start` answered without a `folder`.",
+                "code": "export function Chat(props: { id: string }): ReactElement;"
+            },
+            {
+                "name": "AgentStatus",
+                "kind": "type",
+                "doc": "Where an agent is, the same word everywhere it shows.",
+                "code": "export type AgentStatus = 'idle' | 'running' | 'needsYou' | 'stopped';"
+            },
+            {
+                "name": "AgentInfo",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface AgentInfo {\n    provider: string;\n    account: string | null;\n    status: AgentStatus;\n    cwd: string | null;\n    branch: string | null;\n    worktree: string | null;\n}"
+            },
+            {
+                "name": "ChatSummary",
+                "kind": "interface",
+                "doc": "A chat on the machine, as `chats.list` answers it. Its id is the id of its node.",
+                "code": "export interface ChatSummary {\n    id: string;\n    provider: string;\n    status: AgentStatus;\n    model: string | null;\n    cwd: string;\n}"
+            },
+            {
+                "name": "NodeInfo",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface NodeInfo {\n    id: string;\n    kind: string;\n    title: string;\n    color: string | null;\n    bounds: { x: number; y: number; width: number; height: number };\n    groupId: string | null;\n    viewId: string;\n    machine: string | null;\n    linkedTo: string[];\n    agent?: AgentInfo;\n    path?: string;\n    url?: string;\n    extension?: { id: string; type: string };\n}"
+            },
+            {
+                "name": "FileInfo",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface FileInfo {\n    path: string;\n    name: string;\n    extension: string;\n}"
+            },
+            {
+                "name": "BaseContext",
+                "kind": "interface",
+                "doc": "What every slot, action and widget is told.",
+                "code": "export interface BaseContext {\n    project: { id: string; name: string; folder: string | null };\n    view: { id: string; kind: string; name: string } | null;\n    machine: { id: string };\n    theme: 'light' | 'dark';\n}"
+            },
+            {
+                "name": "SlotAnswer",
+                "kind": "type",
+                "doc": "`false` hides it, `true` shows it, an object also changes what it shows there.",
+                "code": "export type SlotAnswer = boolean | { title?: string; icon?: string; disabled?: boolean | string; badge?: string; order?: number };"
+            },
+            {
+                "name": "Slot",
+                "kind": "type",
+                "doc": null,
+                "code": "export type Slot<Context> = true | ((context: BaseContext & Context) => SlotAnswer);"
+            },
+            {
+                "name": "SlotContexts",
+                "kind": "interface",
+                "doc": "What each place tells.",
+                "code": "export interface SlotContexts {\n    selectionBar: { nodes: NodeInfo[] };\n    nodeHeader: { node: NodeInfo };\n    /** `nodes` is the selection if the node is in it. */\n    nodeMenu: { node: NodeInfo; nodes: NodeInfo[] };\n    canvasMenu: { at: { x: number; y: number } };\n    viewToolbar: {};\n    viewMenu: { target: { id: string; kind: string } };\n    panelHeader: { panel: string };\n    commandPalette: { nodes: NodeInfo[] };\n    sidebarRow: { node: NodeInfo };\n    tabMenu: { target: { id: string } };\n    emptyCanvas: {};\n    startScreen: {};\n    projectBanner: {};\n    threadHeader: { chat: { id: string }; node: NodeInfo };\n    emptyThread: { chat: { id: string } };\n    toolActions: { chat: { id: string }; tool: ToolCall };\n    fileRowBadge: { file: FileInfo };\n    fileBreadcrumb: { file: FileInfo };\n    terminalMenu: { node: NodeInfo };\n    browserMenu: {};\n    textMenu: { text: { id: string } };\n    noteToolbar: { node: NodeInfo };\n    routineMenu: { routine: { id: string } };\n    composer: { chat: { id: string }; node: NodeInfo };\n    projectMenu: {};\n    sidebarFooter: {};\n    editorStatusBar: { file: FileInfo };\n    messageActions: { chat: { id: string }; message: { id: string; kind: 'user' | 'assistant'; text: string } };\n    lineMenu: { from: NodeInfo; to: NodeInfo };\n    fileMenu: { file: FileInfo; files: FileInfo[] };\n    editorToolbar: { file: FileInfo };\n    editorMenu: { file: FileInfo; files: FileInfo[] };\n    diffToolbar: { repository: string };\n    terminalToolbar: { node: NodeInfo };\n    browserToolbar: { node: NodeInfo; url: string };\n}"
+            },
+            {
+                "name": "SlotName",
+                "kind": "type",
+                "doc": null,
+                "code": "export type SlotName = keyof SlotContexts;"
+            },
+            {
+                "name": "Slots",
+                "kind": "type",
+                "doc": null,
+                "code": "export type Slots<Place extends SlotName = SlotName> = { [Key in Place]: Slot<SlotContexts[Key]> };"
+            },
+            {
+                "name": "ContextOf",
+                "kind": "type",
+                "doc": null,
+                "code": "export type ContextOf<Place extends SlotName> = { [Key in Place]: BaseContext & SlotContexts[Key] }[Place];"
+            },
+            {
+                "name": "ActionHandle",
+                "kind": "interface",
+                "doc": "Runs the action from code, with what its `run` reads beside the context of the window in front.",
+                "code": "export interface ActionHandle<Context extends object = object> {\n    run(context?: Partial<BaseContext> & Partial<Context>): Promise<void>;\n    useRunning(): boolean;\n}"
+            },
+            {
+                "name": "defineAction",
+                "kind": "function",
+                "doc": "While `run` is pending, its nodes show a spinner that also stops it through `signal`, and a throw reaches the person. Without `slots` it only shows where a menu puts it, and gets that menu's context. Type it with `defineAction<Context>`.",
+                "code": "export function defineAction<Place extends SlotName>(action: {\n    id: string;\n    title: string;\n    icon?: string;\n    /** Like mod+shift+k. Needs mod or alt. It gets the context of the command palette. */\n    shortcut?: string;\n    slots: Slots<Place>;\n    run(context: ContextOf<Place> & { slot: Place; signal: AbortSignal }): void | Promise<void>;\n}): ActionHandle<SlotContexts[Place]>;\nexport function defineAction<Context extends object = {}>(action: {\n    id: string;\n    title: string;\n    icon?: string;\n    shortcut?: string;\n    run(context: BaseContext & Context & { slot: string; signal: AbortSignal }): void | Promise<void>;\n}): ActionHandle<Context>;"
+            },
+            {
+                "name": "MenuItem",
+                "kind": "type",
+                "doc": null,
+                "code": "export type MenuItem = ActionHandle | 'separator' | { title: string; run(): void; checked?: boolean } | { title: string; items: MenuItem[] };"
+            },
+            {
+                "name": "defineMenu",
+                "kind": "function",
+                "doc": "A menu of your own: a submenu in a menu, a dropdown in a bar.",
+                "code": "export function defineMenu<Place extends SlotName>(menu: {\n    id: string;\n    title: string;\n    icon?: string;\n    slots: Slots<Place>;\n    items: MenuItem[] | ((context: ContextOf<Place>) => MenuItem[]);\n}): void;"
+            },
+            {
+                "name": "defineWidget",
+                "kind": "function",
+                "doc": "Your own React in a slot.",
+                "code": "export function defineWidget<Place extends SlotName>(widget: {\n    id: string;\n    slots: Slots<Place>;\n    component: LazyComponent<{ context: ContextOf<Place> }>;\n}): void;"
+            },
+            {
+                "name": "ServerClient",
+                "kind": "type",
+                "doc": "Each method calls `server/` on the machine in front and answers a Result: `failed` with the message of what it threw, `not-found` for a method it lacks, `unavailable` while it cannot run. `.use()` suspends until it answers, and keeps that answer for the same arguments until `.reload()` with them drops it, or the connection to the machine comes back. Every surface that read it then asks again. The value crosses as JSON, see {@link Returned}.",
+                "code": "export type ServerClient<Server> = {\n    [Method in keyof Server]: Server[Method] extends (...args: infer Args) => Promise<infer Value>\n        ? ((...args: Args) => Promise<Result<Returned<Value>>>) & { use(...args: Args): Result<Returned<Value>>; reload(...args: Args): void }\n        : never;\n};"
+            },
+            {
+                "name": "useServer",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useServer<Server>(): ServerClient<Server>;"
+            },
+            {
+                "name": "ServerCalls",
+                "kind": "type",
+                "doc": "Each method of `server/` as {@link ServerClient} calls it, without `.use()` and `.reload()`, which only a component has.",
+                "code": "export type ServerCalls<Server> = {\n    [Method in keyof Server]: Server[Method] extends (...args: infer Args) => Promise<infer Value>\n        ? (...args: Args) => Promise<Result<Returned<Value>>>\n        : never;\n};"
+            },
+            {
+                "name": "getServer",
+                "kind": "function",
+                "doc": "`server/` outside a component, such as in the `run` of a command or an action. Each call goes to the machine in front when it is made.",
+                "code": "export function getServer<Server>(): ServerCalls<Server>;"
+            },
+            {
+                "name": "useServerEvent",
+                "kind": "function",
+                "doc": "Hears what `emit` says in `server/`, with the payload it was given.",
+                "code": "export function useServerEvent<Payload>(name: string, listener: (payload: Payload) => void): void;"
+            },
+            {
+                "name": "useNodeData",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useNodeData<Data>(): [Data, (next: Data) => void];"
+            },
+            {
+                "name": "useStorage",
+                "kind": "function",
+                "doc": "`computer` stays on this computer. `project` and `machine` live on the machine, where `server/` reads `machine` keys too.",
+                "code": "export function useStorage<Value>(key: string, initial: Value, scope?: 'computer' | 'project' | 'machine'): [Value, (next: Value) => void];"
+            },
+            {
+                "name": "useProject",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useProject(): ProjectRef & { name: string };"
+            },
+            {
+                "name": "useActiveView",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useActiveView(): ViewRef;"
+            },
+            {
+                "name": "useViews",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useViews(): { id: string; kind: string; name: string }[];"
+            },
+            {
+                "name": "useSelection",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useSelection(): NodeInfo[];"
+            },
+            {
+                "name": "useNode",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useNode(id: string): NodeInfo;"
+            },
+            {
+                "name": "useNodes",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useNodes(filter?: (node: NodeInfo) => boolean): NodeInfo[];"
+            },
+            {
+                "name": "useLocale",
+                "kind": "function",
+                "doc": "Words from `locales/<language>.json`, English as the fallback, and every number and date through `format`.",
+                "code": "export function useLocale(): {\n    language: string;\n    t(key: string, values?: Record<string, string | number>): string;\n    format: typeof import('@adecore/ui/format');\n};"
+            },
+            {
+                "name": "ClientEvents",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface ClientEvents {\n    'node.added': { node: NodeInfo };\n    'node.removed': { id: string };\n    'node.changed': { node: NodeInfo };\n    'selection.changed': { nodes: NodeInfo[] };\n    'view.changed': { viewId: string | null };\n    'project.opened': { projectId: string };\n    'agent.status': { nodeId: string; status: AgentStatus };\n    'chat.turnFinished': { chatId: string };\n}"
+            },
+            {
+                "name": "useEvent",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useEvent<Name extends keyof ClientEvents>(name: Name, listener: (event: ClientEvents[Name]) => void): void;"
+            },
+            {
+                "name": "onEvent",
+                "kind": "function",
+                "doc": null,
+                "code": "export function onEvent<Name extends keyof ClientEvents>(name: Name, listener: (event: ClientEvents[Name]) => void): () => void;"
+            },
+            {
+                "name": "useAgents",
+                "kind": "function",
+                "doc": "Needs the permission `agents.status`.",
+                "code": "export function useAgents(): { id: string; title: string; status: AgentStatus }[];"
+            },
+            {
+                "name": "useUsageLimits",
+                "kind": "function",
+                "doc": "Needs the permission `usage.read`. `used` runs from 0 to 1.",
+                "code": "export function useUsageLimits(): { provider: string; plan: string | null; windows: { label: string; used: number; resetsAt: number | null }[] }[];"
+            },
+            {
+                "name": "host",
+                "kind": "const",
+                "doc": null,
+                "code": "export const host: {\n    /** Marks work that is no action as busy: a spinner on `nodes` until it is done, which also stops it through the signal. */\n    busy<Value>(work: { title: string; nodes?: NodeRef[] }, run: (signal: AbortSignal) => Value | Promise<Value>): Promise<Value>;\n    notify(text: string, options?: { tone?: 'neutral' | 'error'; action?: { title: string; run(): void } }): void;\n    /** Null when the person closed the picker. */\n    pickFolder(initial?: string): Promise<string | null>;\n    openSettings(): void;\n    confirm(options: { title: string; body: string; danger?: boolean }): Promise<boolean>;\n    /** Null when the person dismissed it. */\n    prompt(options: { title: string; placeholder?: string; initial?: string }): Promise<string | null>;\n    /** Null when the person dismissed it. */\n    pick<Item>(options: { title: string; items: readonly Item[]; label(item: Item): string }): Promise<Item | null>;\n    openUrl(url: string): void;\n    copy(text: string): void;\n};"
+            },
+            {
+                "name": "FileEntry",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface FileEntry {\n    path: string;\n    name: string;\n    kind: 'file' | 'directory' | 'symlink' | 'other';\n}"
+            },
+            {
+                "name": "files",
+                "kind": "const",
+                "doc": "The project folder only, so a path outside it answers `outside-project`. Needs `files.read` or `files.write`, except `open`.",
+                "code": "export const files: {\n    readText(path: string): Promise<Result<string>>;\n    write(path: string, text: string): Promise<Result<void>>;\n    list(folder: string): Promise<Result<FileEntry[]>>;\n    /** Calls back when the file or anything under the folder changes. Answers how to stop. */\n    watch(path: string, listener: () => void): Result<() => void>;\n    open(path: string): void;\n};"
+            },
+            {
+                "name": "GitFileStatus",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface GitFileStatus {\n    /** Relative to the root of the repository. */\n    path: string;\n    state: 'staged' | 'unstaged' | 'untracked' | 'conflicted';\n    /** The porcelain letter, such as `M`, `A`, `D` or `?`. */\n    status: string;\n    added: number;\n    deleted: number;\n    binary: boolean;\n}"
+            },
+            {
+                "name": "GitStatus",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface GitStatus {\n    /** False outside a repository, with everything below empty. */\n    repository: boolean;\n    root: string | null;\n    branch: string | null;\n    upstream: string | null;\n    ahead: number;\n    behind: number;\n    files: GitFileStatus[];\n    /** More files changed than `files` holds. */\n    truncated: boolean;\n}"
+            },
+            {
+                "name": "GitFileDiff",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface GitFileDiff {\n    path: string;\n    /** The unified diff, empty for a binary file or one too large. */\n    diff: string;\n    added: number;\n    deleted: number;\n    binary: boolean;\n    kind: 'add' | 'update' | 'delete' | null;\n}"
+            },
+            {
+                "name": "GitCommit",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface GitCommit {\n    hash: string;\n    shortHash: string;\n    subject: string;\n    author: string;\n    /** Epoch milliseconds of the author date. */\n    at: number;\n    refs: string[];\n}"
+            },
+            {
+                "name": "git",
+                "kind": "const",
+                "doc": "Needs `git.read`. `repository` is a folder in the project, the project folder by default.",
+                "code": "export const git: {\n    status(options?: { repository?: string }): Promise<Result<GitStatus>>;\n    /** What changed in one file of the working tree, or in the index with `staged`. */\n    diff(options: { path: string; repository?: string; staged?: boolean }): Promise<Result<GitFileDiff>>;\n    /** The newest commits first, 30 by default. */\n    log(options?: { repository?: string; limit?: number }): Promise<Result<GitCommit[]>>;\n};"
+            },
+            {
+                "name": "chats",
+                "kind": "const",
+                "doc": "`list` and `read` need `chats.read`, `send` needs `chats.send`.",
+                "code": "export const chats: {\n    list(): Promise<Result<ChatSummary[]>>;\n    /** The thread as text, as an agent reads it. */\n    read(chatId: string): Promise<Result<string>>;\n    send(chatId: string, text: string): Promise<Result<void>>;\n};"
+            },
+            {
+                "name": "LaunchSummary",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface LaunchSummary {\n    id: string;\n    name: string;\n    kind: 'service' | 'task' | 'group';\n    /** Null when it has not run since the machine started, and for a group. */\n    state: 'starting' | 'running' | 'stopping' | 'exited' | null;\n    exitCode: number | null;\n    /** Whether a person approved it on this machine; only then does it start. */\n    approved: boolean;\n    port: number | null;\n    url: string | null;\n    /** The launches a group starts. */\n    members: string[];\n}"
+            },
+            {
+                "name": "RoutineSummary",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface RoutineSummary {\n    id: string;\n    title: string;\n    kind: 'agent' | 'command' | 'launch';\n    approved: boolean;\n    paused: boolean;\n    /** Epoch milliseconds of its next run, or null when none is due. */\n    next: number | null;\n    lastRun: { state: 'skipped' | 'starting' | 'running' | 'needsYou' | 'limit' | 'done' | 'failed'; at: number } | null;\n}"
+            },
+            {
+                "name": "ArtifactFileInfo",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface ArtifactFileInfo {\n    name: string;\n    mime: string;\n    size: number;\n}"
+            },
+            {
+                "name": "ArtifactInfo",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface ArtifactInfo {\n    id: string;\n    title: string;\n    kind: string;\n    key: string | null;\n    /** Epoch milliseconds. */\n    createdAt: number;\n}"
+            },
+            {
+                "name": "ArtifactSummary",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface ArtifactSummary extends ArtifactInfo {\n    latest: { id: string; number: number; createdAt: number; files: ArtifactFileInfo[] };\n    versions: number;\n}"
+            },
+            {
+                "name": "BrowserState",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface BrowserState {\n    node: NodeRef;\n    /** Whether anyone has the page open; with nobody, `page` is null. */\n    open: boolean;\n    page: { url: string; title: string; loading: boolean; canGoBack: boolean; canGoForward: boolean } | null;\n    error: string | null;\n}"
+            },
+            {
+                "name": "DeviceInfo",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface DeviceInfo {\n    name: string;\n    platform: 'ios' | 'android';\n    kind: 'simulator' | 'physical';\n    runtime: string;\n}"
+            },
+            {
+                "name": "DeviceState",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface DeviceState {\n    node: NodeRef;\n    device: DeviceInfo;\n    /** False when this machine has no such device right now. */\n    present: boolean;\n    state: 'booted' | 'shutdown' | 'transitioning' | null;\n    /** The size of the last shot, which `tap` counts its pixels in. */\n    screen: { width: number; height: number } | null;\n    buttons: string[];\n    can: { shot: boolean; input: boolean; type: boolean; launch: boolean };\n}"
+            },
+            {
+                "name": "MachineActions",
+                "kind": "interface",
+                "doc": "Each action of the machine an extension may call, with what it takes and answers.",
+                "code": "export interface MachineActions {\n    'launch.list': { input: {}; output: { launches: LaunchSummary[] } };\n    /** `launch` is an id, or a name no other launch carries. `tail` keeps the last lines. */\n    'launch.read': { input: { launch: string; tail?: number }; output: { id: string; name: string; text: string | null } };\n    'launch.start': { input: { launch: string }; output: { id: string; name: string } };\n    'launch.restart': { input: { launch: string }; output: { id: string; name: string } };\n    'launch.stop': { input: { launch: string }; output: { id: string; name: string; stopping: number } };\n    'routine.list': { input: {}; output: { routines: RoutineSummary[] } };\n    'routine.run': { input: { routine: string }; output: { id: string; title: string; runId: string } };\n    'routine.pause': { input: { routine: string }; output: { id: string; title: string } };\n    'routine.resume': { input: { routine: string }; output: { id: string; title: string } };\n    'artifact.list': { input: {}; output: { artifacts: ArtifactSummary[] } };\n    /** The latest version and its first file unless `version` and `file` say otherwise. `text` is null for a file that is no text. */\n    'artifact.read': {\n        input: { artifact: string; version?: string; file?: number };\n        output: { artifact: ArtifactInfo; version: { id: string; number: number }; file: ArtifactFileInfo; text: string | null; truncated: boolean };\n    };\n    /**\n     * The files themselves, as `text` or as `base64` bytes, up to 2 MB together, in the project in front. The same `key`\n     * makes a new version of the same artifact, and the same `requestId` makes a retry land once.\n     */\n    'artifact.publish': {\n        input: {\n            files: ({ name: string; text: string } | { name: string; base64: string })[];\n            title?: string;\n            kind?: 'report' | 'image' | 'build' | 'export' | 'recording' | 'page';\n            key?: string;\n            requestId?: string;\n        };\n        output: { artifact: ArtifactInfo; version: { id: string; number: number }; existing: boolean };\n    };\n    'browser.inspect': { input: { node: NodeRef }; output: BrowserState };\n    'browser.navigate': { input: { node: NodeRef; url: string }; output: BrowserState };\n    'browser.back': { input: { node: NodeRef }; output: BrowserState };\n    'browser.forward': { input: { node: NodeRef }; output: BrowserState };\n    'browser.reload': { input: { node: NodeRef; hard?: boolean }; output: BrowserState };\n    /** `path` is a png on the machine, or null when nobody has the page open. */\n    'browser.screenshot': { input: { node: NodeRef }; output: BrowserState & { path: string | null } };\n    'device.list': { input: {}; output: { devices: (DeviceInfo & { id: string; state: 'booted' | 'shutdown' | 'transitioning' })[] } };\n    'device.inspect': { input: { node: NodeRef }; output: DeviceState };\n    /** A png on the machine, outside the project folder. */\n    'device.screenshot': { input: { node: NodeRef }; output: { node: NodeRef; path: string; width: number; height: number } };\n    /** A pixel of the last shot, counted from its top-left corner. */\n    'device.tap': { input: { node: NodeRef; x: number; y: number }; output: { node: NodeRef } };\n    /** `app` is a bundle id on iOS or a package name on Android. */\n    'device.launch': { input: { node: NodeRef; app: string }; output: { node: NodeRef } };\n}"
+            },
+            {
+                "name": "MachineActionName",
+                "kind": "type",
+                "doc": null,
+                "code": "export type MachineActionName = keyof MachineActions;"
+            },
+            {
+                "name": "MachineInput",
+                "kind": "type",
+                "doc": null,
+                "code": "export type MachineInput<Name extends MachineActionName> = MachineActions[Name]['input'];"
+            },
+            {
+                "name": "MachineOutput",
+                "kind": "type",
+                "doc": null,
+                "code": "export type MachineOutput<Name extends MachineActionName> = MachineActions[Name]['output'];"
+            },
+            {
+                "name": "launches",
+                "kind": "const",
+                "doc": "The machine's own actions, in the project in front: `launches.start({ launch })` is `launch.start`. `list` and `read` need `launches.read`, the rest `launches.run`.",
+                "code": "export const launches: {\n    list(): Promise<Result<MachineOutput<'launch.list'>>>;\n    read(input: MachineInput<'launch.read'>): Promise<Result<MachineOutput<'launch.read'>>>;\n    start(input: MachineInput<'launch.start'>): Promise<Result<MachineOutput<'launch.start'>>>;\n    restart(input: MachineInput<'launch.restart'>): Promise<Result<MachineOutput<'launch.restart'>>>;\n    stop(input: MachineInput<'launch.stop'>): Promise<Result<MachineOutput<'launch.stop'>>>;\n};"
+            },
+            {
+                "name": "routines",
+                "kind": "const",
+                "doc": "`list` needs `routines.read`, the rest `routines.run`.",
+                "code": "export const routines: {\n    list(): Promise<Result<MachineOutput<'routine.list'>>>;\n    run(input: MachineInput<'routine.run'>): Promise<Result<MachineOutput<'routine.run'>>>;\n    pause(input: MachineInput<'routine.pause'>): Promise<Result<MachineOutput<'routine.pause'>>>;\n    resume(input: MachineInput<'routine.resume'>): Promise<Result<MachineOutput<'routine.resume'>>>;\n};"
+            },
+            {
+                "name": "artifacts",
+                "kind": "const",
+                "doc": "`list` and `read` need `artifacts.read`, `publish` `artifacts.write`.",
+                "code": "export const artifacts: {\n    list(): Promise<Result<MachineOutput<'artifact.list'>>>;\n    read(input: MachineInput<'artifact.read'>): Promise<Result<MachineOutput<'artifact.read'>>>;\n    publish(input: MachineInput<'artifact.publish'>): Promise<Result<MachineOutput<'artifact.publish'>>>;\n};"
+            },
+            {
+                "name": "browser",
+                "kind": "const",
+                "doc": "Needs `browser.control`.",
+                "code": "export const browser: {\n    inspect(input: MachineInput<'browser.inspect'>): Promise<Result<MachineOutput<'browser.inspect'>>>;\n    navigate(input: MachineInput<'browser.navigate'>): Promise<Result<MachineOutput<'browser.navigate'>>>;\n    back(input: MachineInput<'browser.back'>): Promise<Result<MachineOutput<'browser.back'>>>;\n    forward(input: MachineInput<'browser.forward'>): Promise<Result<MachineOutput<'browser.forward'>>>;\n    reload(input: MachineInput<'browser.reload'>): Promise<Result<MachineOutput<'browser.reload'>>>;\n    screenshot(input: MachineInput<'browser.screenshot'>): Promise<Result<MachineOutput<'browser.screenshot'>>>;\n};"
+            },
+            {
+                "name": "devices",
+                "kind": "const",
+                "doc": "Needs `devices.control`.",
+                "code": "export const devices: {\n    list(): Promise<Result<MachineOutput<'device.list'>>>;\n    inspect(input: MachineInput<'device.inspect'>): Promise<Result<MachineOutput<'device.inspect'>>>;\n    screenshot(input: MachineInput<'device.screenshot'>): Promise<Result<MachineOutput<'device.screenshot'>>>;\n    tap(input: MachineInput<'device.tap'>): Promise<Result<MachineOutput<'device.tap'>>>;\n    launch(input: MachineInput<'device.launch'>): Promise<Result<MachineOutput<'device.launch'>>>;\n};"
+            },
+            {
+                "name": "terminals",
+                "kind": "const",
+                "doc": null,
+                "code": "export const terminals: {\n    /** Needs `terminals.read`. What the terminal shows now. */\n    read(terminal: NodeRef): Promise<Result<string>>;\n    /** Needs `canvas.write`. Opens a shell and types nothing: only a person types in a terminal. */\n    open(options?: { title?: string; cwd?: string; near?: NodeRef[] }): Result<NodeRef>;\n};"
+            },
+            {
+                "name": "DatabaseValue",
+                "kind": "type",
+                "doc": "A cell as the database gave it: a large number, a decimal or a date as the text the server writes for it. Bytes come as hex, with their whole `length` only when the hex is cut off, and a long text cut off as `preview` with its whole `length`.",
+                "code": "export type DatabaseValue =\n    | string\n    | number\n    | boolean\n    | null\n    | { kind: 'binary'; hex: string; length?: number }"
+            },
+            {
+                "name": "database",
+                "kind": "const",
+                "doc": "Needs `database.read`. One SELECT or WITH statement on a read-only session, as for an agent.",
+                "code": "export const database: {\n    connections(): Promise<Result<{ id: string; name: string }[]>>;\n    query(connection: string, sql: string): Promise<Result<{ columns: string[]; rows: DatabaseValue[][]; hasMore: boolean }>>;\n};"
+            },
+            {
+                "name": "views",
+                "kind": "const",
+                "doc": "Needs `views.write`, except `open`.",
+                "code": "export const views: {\n    open(view: ViewRef): void;\n    createCanvas(name: string): Result<ViewRef>;\n    rename(view: ViewRef, name: string): Result<void>;\n};"
+            },
+            {
+                "name": "ContextSource",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface ContextSource {\n    id: string;\n    /** Such as `text`, `terminal`, `chat`, `browser`, `file` or `extension`; a newer Ruimte may add one. */\n    kind: string;\n    title: string;\n    text: string;\n}"
+            },
+            {
+                "name": "context",
+                "kind": "const",
+                "doc": "Needs the permission `context.read`.",
+                "code": "export const context: {\n    /** Each node in `nodes` and every node on `view`, each once. Naming neither reads nothing. */\n    read(of: { nodes?: NodeRef[]; view?: ViewRef }): Promise<Result<ContextSource[]>>;\n};"
+            },
+            {
+                "name": "agents",
+                "kind": "const",
+                "doc": null,
+                "code": "export const agents: {\n    /** Needs `agents.run`. One hidden prompt on a CLI of the person, with the answer whole. */\n    run(options: { prompt: string; context?: string[]; provider?: string }): Promise<Result<{ text: string }>>;\n    /** Needs `agents.run`. The same, in pieces as the CLI writes them. A failure is the last piece. */\n    stream(options: { prompt: string; context?: string[]; provider?: string; signal?: AbortSignal }): AsyncIterable<Result<{ text: string }>>;\n    /**\n     * Needs `agents.start`. A chat a person sees and can stop, supervised at most: on the canvas in front, or a view of its own in the sidebar with none there.\n     * With `folder` it works in the project this machine knows in that folder, as a view of that project, or answers `not-found`. With `hidden` it stays out of the sidebar, a chat of the project in front you draw yourself with {@link Chat}.\n     */\n    start(options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[]; folder?: string; hidden?: boolean }): Promise<Result<NodeRef>>;\n};"
+            },
+            {
+                "name": "NodeColor",
+                "kind": "type",
+                "doc": "An accent of Ruimte, which follows the theme.",
+                "code": "export type NodeColor =\n    | 'red'\n    | 'orange'\n    | 'amber'\n    | 'yellow'\n    | 'lime'\n    | 'green'\n    | 'emerald'\n    | 'teal'\n    | 'cyan'\n    | 'sky'\n    | 'blue'\n    | 'indigo'\n    | 'violet'\n    | 'purple'\n    | 'fuchsia'\n    | 'pink'\n    | 'rose';"
+            },
+            {
+                "name": "canvas",
+                "kind": "const",
+                "doc": "Needs `canvas.write`, except `reveal` and `select`. What makes a node answers `no-canvas` without a canvas in front.",
+                "code": "export const canvas: {\n    createNote(note: { title?: string; text: string; near?: NodeRef[]; color?: NodeColor }): Result<NodeRef>;\n    arrange(nodes: NodeRef[], layout: 'row' | 'column' | 'grid'): Result<void>;\n    /** A person confirms first; `refused` when they did not. */\n    remove(nodes: NodeRef[]): Promise<Result<void>>;\n    createFile(path: string, options?: { near?: NodeRef[] }): Result<NodeRef>;\n    createBrowser(url: string, options?: { near?: NodeRef[] }): Result<NodeRef>;\n    /** A node of this extension's own, by the id it gave `defineNode`. */\n    createNode<Data>(type: string, options?: { data?: Data; title?: string; near?: NodeRef[] }): Result<NodeRef>;\n    update(node: NodeRef, patch: { title?: string; x?: number; y?: number; width?: number; height?: number }): Result<void>;\n    writeNote(node: NodeRef, text: string): Result<void>;\n    group(nodes: NodeRef[]): Result<NodeRef>;\n    link(from: NodeRef, to: NodeRef): Result<void>;\n    unlink(from: NodeRef, to: NodeRef): Result<void>;\n    select(nodes: NodeRef[]): void;\n    reveal(target: NodeRef): void;\n};"
+            }
+        ]
+    },
+    {
+        "module": "server",
+        "entries": [
+            {
+                "name": "ExtensionErrorCode",
+                "kind": "type",
+                "doc": "Why a call came back without its answer. `permission-denied`: the manifest does not ask for the permission. `no-project`: no project with a folder is open. `no-canvas`: no canvas is in front. `not-found`: what it names is not there. `outside-project`: a path leaves the project folder. `refused`: the machine or the person said no. `limit`: too many calls in a while. `timeout`: no answer in time. `unavailable`: the machine, or `server/`, cannot answer now. `failed`: anything else, with its message.",
+                "code": "export type ExtensionErrorCode =\n    | 'permission-denied'\n    | 'no-project'\n    | 'no-canvas'\n    | 'not-found'\n    | 'outside-project'\n    | 'refused'\n    | 'limit'\n    | 'timeout'\n    | 'unavailable'\n    | 'failed';"
+            },
+            {
+                "name": "Result",
+                "kind": "type",
+                "doc": "What a call that can fail answers: its value, or why not. Only a wrong argument throws. A call with nothing to answer, a `Result<void>`, answers `{ ok: true, value: undefined }` with the key `value` there.",
+                "code": "export type Result<Value, Code extends string = ExtensionErrorCode> = { ok: true; value: Value } | { ok: false; error: { code: Code; message: string } };"
+            },
+            {
+                "name": "Json",
+                "kind": "type",
+                "doc": "A value as it crosses to the machine and back.",
+                "code": "export type Json = string | number | boolean | null | Json[] | { [key: string]: Json | undefined };"
+            },
+            {
+                "name": "NodeRef",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface NodeRef {\n    id: string;\n}"
+            },
+            {
+                "name": "ViewRef",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface ViewRef {\n    id: string;\n}"
+            },
+            {
+                "name": "ProjectRef",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface ProjectRef {\n    id: string;\n}"
+            },
+            {
+                "name": "AgentStatus",
+                "kind": "type",
+                "doc": "Where an agent is, the same word everywhere it shows.",
+                "code": "export type AgentStatus = 'idle' | 'running' | 'needsYou' | 'stopped';"
+            },
+            {
+                "name": "ChatSummary",
+                "kind": "interface",
+                "doc": "A chat on the machine, as `chats.list` answers it. Its id is the id of its node.",
+                "code": "export interface ChatSummary {\n    id: string;\n    provider: string;\n    status: AgentStatus;\n    model: string | null;\n    cwd: string;\n}"
+            },
+            {
+                "name": "defineServer",
+                "kind": "function",
+                "doc": "What the client can call. The default export of `server/index.ts`. A method that throws reaches the client as `failed`, with its message.",
+                "code": "export function defineServer<Api extends Record<string, (...args: never[]) => Promise<unknown>>>(api: Api): Api;"
+            },
+            {
+                "name": "ServerEvents",
+                "kind": "interface",
+                "doc": "The machine's events `server/` can follow, with what each says.",
+                "code": "export interface ServerEvents {\n    /** A chat changed what it is doing. Needs `chats.read`. */\n    'chat.status': { chat: ChatSummary };\n    /** Something new in a chat's thread; `chats.read` reads it. Needs `chats.read`. */\n    'chat.event': { chatId: string };\n    /** The agent in a terminal changed what it is doing. Needs `terminals.read`. */\n    'session.status': { nodeId: string; status: AgentStatus };\n}"
+            },
+            {
+                "name": "onEvent",
+                "kind": "function",
+                "doc": "Follows a machine event, behind its permission; any other name is refused. Set `\"autostart\": true` to follow them with no client open.",
+                "code": "export function onEvent<Name extends keyof ServerEvents>(name: Name, listener: (event: ServerEvents[Name]) => void): () => void;"
+            },
+            {
+                "name": "emit",
+                "kind": "function",
+                "doc": "Says something to every client of this machine, where `useServerEvent(name)` hears `payload`, or undefined without one.",
+                "code": "export function emit<Payload>(name: string, payload?: Payload): void;"
+            },
+            {
+                "name": "defineNodeContext",
+                "kind": "function",
+                "doc": "What an agent reads of a node along a line, also with no client open.",
+                "code": "export function defineNodeContext<Data>(nodeType: string, read: (node: { data: Data }) => Promise<{ text: string }[]> | { text: string }[]): void;"
+            },
+            {
+                "name": "defineAgentTool",
+                "kind": "function",
+                "doc": "Needs `agents.tools`. Any agent Ruimte starts on this machine can then find it with `tool_list` and call it with `tool_run`. Having it starts `server/` with the machine, since an agent can only find what is running. It answers in text. Type `Input` after `parameters`, a JSON Schema.",
+                "code": "export function defineAgentTool<Input extends object = { [key: string]: Json | undefined }>(tool: {\n    id: string;\n    description: string;\n    parameters?: object;\n    run(input: Input, context: { caller: string }): string | Promise<string>;\n}): void;"
+            },
+            {
+                "name": "schedule",
+                "kind": "function",
+                "doc": "Needs the permission `clock`. Runs on this process's own clock: `every` is like 30s, 5m or 1h, of at least 10 seconds and at most 596 hours.",
+                "code": "export function schedule(task: { id: string; every: string; run(): void | Promise<void> }): void;"
+            },
+            {
+                "name": "agents",
+                "kind": "const",
+                "doc": null,
+                "code": "export const agents: {\n    /** Needs `agents.run`. One hidden prompt on a CLI of the person, with the answer whole. */\n    run(options: { prompt: string; context?: string[]; provider?: string }): Promise<Result<{ text: string }>>;\n    /**\n     * Needs `agents.start`. A chat a person sees, supervised at most: on the canvas `view`, beside `near`, or a view of its own in the sidebar without one.\n     * With `folder` instead of `project` it works in the project this machine knows in that folder, as a view of that project, or answers `not-found`. With `hidden` it stays out of the sidebar, for a chat the client draws with `Chat`.\n     */\n    start(\n        options: ({ project: ProjectRef; folder?: undefined } | { folder: string; project?: undefined }) & {\n            view?: ViewRef;\n            near?: NodeRef[];\n            prompt?: string;\n            provider?: string;\n            title?: string;\n            hidden?: boolean;\n        }\n    ): Promise<Result<NodeRef>>;\n};"
+            },
+            {
+                "name": "chats",
+                "kind": "const",
+                "doc": "`list` and `read` need `chats.read`, `send` needs `chats.send`.",
+                "code": "export const chats: {\n    list(): Promise<Result<ChatSummary[]>>;\n    /** The thread as text, as an agent reads it. */\n    read(chatId: string): Promise<Result<string>>;\n    /** Wakes the chat. At most 20 messages per chat per hour, past which it answers `limit`. */\n    send(chatId: string, text: string): Promise<Result<void>>;\n};"
+            },
+            {
+                "name": "storage",
+                "kind": "const",
+                "doc": null,
+                "code": "export const storage: {\n    get<Value>(key: string): Promise<Value | undefined>;\n    set<Value>(key: string, value: Value): Promise<void>;\n    delete(key: string): Promise<void>;\n};"
+            },
+            {
+                "name": "secrets",
+                "kind": "const",
+                "doc": "Kept readable only by the person who runs the machine.",
+                "code": "export const secrets: {\n    get(key: string): Promise<string | undefined>;\n    set(key: string, value: string): Promise<void>;\n};"
+            },
+            {
+                "name": "machine",
+                "kind": "const",
+                "doc": null,
+                "code": "export const machine: {\n    platform: string;\n    dataFolder: string;\n    /** An action of the machine in a project, such as `launch.start`, within what your manifest asks for. */\n    run<Name extends MachineActionName>(project: ProjectRef, action: Name, input: MachineInput<Name>): Promise<Result<MachineOutput<Name>>>;\n};"
+            },
+            {
+                "name": "defineLanguageServer",
+                "kind": "function",
+                "doc": "Needs `languages.servers`. Adds a server, listed in Settings like one a person added, and started without asking: installing the extension was the approval. Calling it again with the same name changes it, and removing the extension removes it unless a person edited it.",
+                "code": "export function defineLanguageServer(server: {\n    name: string;\n    command: string;\n    args?: string[];\n    env?: Record<string, string>;\n    languages: string[];\n    patterns: string[];\n}): Promise<Result<void>>;"
+            },
+            {
+                "name": "log",
+                "kind": "const",
+                "doc": null,
+                "code": "export const log: {\n    info(message: string): void;\n    /** `error` is what a `catch` caught, of any shape. */\n    error(message: string, error?: unknown): void;\n};"
+            }
+        ]
+    },
+    {
+        "module": "ui",
+        "entries": [
+            {
+                "name": "@adecore/ui",
+                "kind": "export",
+                "doc": "The components of Ruimte. Optional: any other React library works too.",
+                "code": "export * from '@adecore/ui';"
+            }
+        ]
+    },
+    {
+        "module": "charts",
+        "entries": [
+            {
+                "name": "@adecore/charts",
+                "kind": "export",
+                "doc": "The charts of Ruimte, on the ADE CORE version this Ruimte ships. Its names follow that version, with no promise between releases.",
+                "code": "export * from '@adecore/charts';"
+            }
+        ]
+    },
+    {
+        "module": "agents-ui",
+        "entries": [
+            {
+                "name": "@adecore/agents-react/chat/ui",
+                "kind": "export",
+                "doc": "The pieces of a chat as Ruimte draws them: markdown, messages, tool rows, diffs. They draw what you hand them and talk to no agent; a chat that does is `Chat` in `@ruimte/extension/client`. On the ADE CORE version this Ruimte ships, with no promise between releases.",
+                "code": "export * from '@adecore/agents-react/chat/ui';"
+            }
+        ]
+    },
+    {
+        "module": "testing",
+        "entries": [
+            {
+                "name": "Answer",
+                "kind": "type",
+                "doc": null,
+                "code": "type Answer<Value> = Value | Promise<Value>;"
+            },
+            {
+                "name": "TestNode",
+                "kind": "interface",
+                "doc": "A node of the project a test host starts with. Only `id` is needed: a node is a note on the first view unless it says otherwise.",
+                "code": "export interface TestNode {\n    id: string;\n    kind?: string;\n    title?: string;\n    /** What an agent reads of it: a note's text, a terminal's screen or a chat's thread. */\n    text?: string;\n    color?: string | null;\n    bounds?: { x: number; y: number; width: number; height: number };\n    /** The id of the view it is on. */\n    view?: string;\n    linkedTo?: string[];\n    agent?: Partial<AgentInfo>;\n    path?: string;\n    url?: string;\n    /**\n     * A node of this extension, by the id it gave `defineNode`, with what `useNodeData` reads. `dataVersion` is the version\n     * that stored `data`: below the definition's own, `render` moves it up through `migrate` first, as Ruimte does.\n     */\n    extension?: { type: string; data?: Json; dataVersion?: number };\n}"
+            },
+            {
+                "name": "TestHostAnswers",
+                "kind": "interface",
+                "doc": "What the machine and the person answer the client in a test. A call that asks the machine gets what it was asked and returns the value; throw `refusal(code, message)` to answer a failure. A call nothing answers is `unavailable`, except where the test host keeps the state itself: the canvas, views, storage, settings, and what an agent reads of a node with `text`.",
+                "code": "export interface TestHostAnswers {\n    /** How the person answers `host.confirm` and the question before `canvas.remove`. Yes by default. */\n    confirm?: boolean | ((options: { title: string; body: string }) => boolean);\n    /** Null, by default, is a dismissed prompt. */\n    prompt?: string | null | ((options: { title: string; placeholder?: string; initial?: string }) => string | null);\n    /** The label of the item the person picks, as `label` wrote it. Null, by default, is a dismissed picker. */\n    pick?: string | null | ((options: { title: string; labels: string[] }) => string | null);\n    pickFolder?: string | null;\n    /** What an overlay closes with, by the id it gave `defineOverlay`. Null, by default, is a dismissed one. */\n    overlays?: Record<string, (params: never) => unknown>;\n    /**\n     * `server/` as `useServer` reaches it: methods that answer, or a test server from `createTestServer`, whose `storage` is\n     * then the `machine` storage of `useStorage`, as on one machine.\n     */\n    server?: Record<string, (...args: never[]) => unknown> | TestServer<unknown>;\n    'agents.run'?(options: { prompt: string; context?: string[]; provider?: string }): Answer<{ text: string }>;\n    /**\n     * The pieces of the answer, in order. An async iterable is read piece by piece: a throw after some pieces ends the\n     * stream with that failure, and `signal` aborts once the extension stops the stream, which then yields no more.\n     */\n    'agents.stream'?(options: { prompt: string; context?: string[]; provider?: string; signal: AbortSignal }): Answer<string[]> | AsyncIterable<string>;\n    /** A chat node on the canvas in front by default. */\n    'agents.start'?(options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[]; folder?: string; hidden?: boolean }): Answer<NodeRef>;\n    'chats.list'?(): Answer<ChatSummary[]>;\n    'chats.send'?(chatId: string, text: string): Answer<void>;\n    'files.readText'?(path: string): Answer<string>;\n    'files.write'?(path: string, text: string): Answer<void>;\n    'files.list'?(folder: string): Answer<FileEntry[]>;\n    'git.status'?(options: { repository?: string }): Answer<GitStatus>;\n    'git.diff'?(options: { path: string; repository?: string; staged?: boolean }): Answer<GitFileDiff>;\n    'git.log'?(options: { repository?: string; limit?: number }): Answer<GitCommit[]>;\n    'database.connections'?(): Answer<{ id: string; name: string }[]>;\n    'database.query'?(connection: string, sql: string): Answer<{ columns: string[]; rows: DatabaseValue[][]; hasMore: boolean }>;\n    /** What `context.read` answers; by default the `text` of each node it names and of every node on the view it names. */\n    'context.read'?(of: { nodes?: NodeRef[]; view?: ViewRef }): Answer<ContextSource[]>;\n    /** `launches`, `routines`, `artifacts`, `browser` and `devices`, by the action each call is: `launches.start` is `launch.start`. */\n    'machine.run'?: { [Name in MachineActionName]?: (input: MachineInput<Name>, project: ProjectRef) => Answer<MachineOutput<Name>> };\n    'usage.limits'?: ReturnType<typeof useUsageLimits>;\n}"
+            },
+            {
+                "name": "TestHostOptions",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface TestHostOptions {\n    /** Over `manifest.json` in the folder the test runs in, such as `{ permissions: {} }` to take every permission away. */\n    manifest?: { id?: string; name?: string; permissions?: Record<string, string> };\n    /** `client/index.ts` by default, loaded afresh for this host. */\n    entry?: string;\n    /** The open project, with its views and nodes; the first view is in front. Null for no open project. */\n    project?: { id?: string; name?: string; folder?: string | null; views?: { id: string; kind?: string; name?: string }[]; nodes?: TestNode[] } | null;\n    /** The ids of the selected nodes. */\n    selection?: string[];\n    machine?: { id: string };\n    theme?: 'light' | 'dark';\n    /** Which `locales/<language>.json` `useLocale` reads, over `en.json`. English by default. */\n    language?: string;\n    /** What a person set, over the defaults of `defineExtensionSettings`. */\n    settings?: Record<string, boolean | string>;\n    storage?: { computer?: Record<string, Json>; project?: Record<string, Json>; machine?: Record<string, Json> };\n    answers?: TestHostAnswers;\n}"
+            },
+            {
+                "name": "TestSlotShown",
+                "kind": "interface",
+                "doc": "How a slot shows a definition at a place, after its function answered.",
+                "code": "export interface TestSlotShown {\n    title: string;\n    /** The Lucide name, or null for none. */\n    icon: string | null;\n    /** True, or the reason a person reads, when it shows but cannot be pressed. */\n    disabled: boolean | string;\n    badge: string | null;\n    order: number;\n}"
+            },
+            {
+                "name": "TestMenuItem",
+                "kind": "type",
+                "doc": "A row of a menu as a person sees it. `run` answers as `run` of the test host does.",
+                "code": "export type TestMenuItem = 'separator' | { title: string; checked?: boolean; run(): Promise<Result<void>> } | { title: string; items: TestMenuItem[] };"
+            },
+            {
+                "name": "TestCall",
+                "kind": "interface",
+                "doc": "What a test host recorded of a call of the API that answers a Result.",
+                "code": "export interface TestCall {\n    /** Its path, such as `canvas.createNote` or `launches.start`. */\n    method: string;\n    args: unknown[];\n    result: Result<unknown>;\n}"
+            },
+            {
+                "name": "TestScreen",
+                "kind": "interface",
+                "doc": "Each step lets React finish inside `act` and waits on no timer, so it works under `jest.useFakeTimers()` too.",
+                "code": "export interface TestScreen {\n    container: HTMLElement;\n    /** What the page says, as a person reads it. */\n    text(): string;\n    /** The innermost element that says `text`, or null. */\n    find(text: string): HTMLElement | null;\n    /** Clicks the button, link or menu item that says `target`, or the element itself. */\n    click(target: string | Element): Promise<void>;\n    /** Types into the field whose label, placeholder or name is `target`, or the element itself. */\n    type(target: string | Element, text: string): Promise<void>;\n    /** Waits until `check` neither throws nor answers false, over turns of the event loop rather than a clock. */\n    until(check: () => unknown): Promise<void>;\n    unmount(): void;\n}"
+            },
+            {
+                "name": "TestDefinition",
+                "kind": "interface",
+                "doc": "What the extension gave a `define*`, as it gave it.",
+                "code": "export interface TestDefinition {\n    id: string;\n    title?: string;\n    component?: () => Promise<{ default: ComponentType<never> }>;\n    frame?: string;\n    [key: string]: unknown;\n}"
+            },
+            {
+                "name": "TestHost",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface TestHost {\n    /** What the extension defined, in order, with the object each `define*` was given. */\n    definitions: { kind: string; definition: TestDefinition }[];\n    /** A definition by the id it gave, or a throw that lists the ids there are. */\n    action(id: string): TestDefinition;\n    menu(id: string): TestDefinition;\n    widget(id: string): TestDefinition;\n    panel(id: string): TestDefinition;\n    view(id: string): TestDefinition;\n    node(id: string): TestDefinition;\n    card(id: string): TestDefinition;\n    overlay(id: string): TestDefinition;\n    /** What every slot tells at this place, filled with the project, view, machine and theme, and the selection where the place tells it. A `{ id }` of a node of the project becomes its `NodeInfo`. */\n    context<Place extends SlotName>(place: Place, extra?: Partial<Record<keyof SlotContexts[Place], unknown>>): ContextOf<Place>;\n    /** How an action, menu or widget shows at this place, or null where it does not. An unknown place throws. */\n    slot<Place extends SlotName>(definition: object, place: Place, extra?: Partial<Record<keyof SlotContexts[Place], unknown>>): TestSlotShown | null;\n    /**\n     * Presses an action, or the node of a `defineNode`, at this place as a person would: `refused` where it does not show or is\n     * disabled, `failed` with what it threw, which also shows the person an error, as in Ruimte. An `AbortError` is the\n     * person stopping it, which is no failure.\n     */\n    run<Place extends SlotName>(definition: object, place: Place, extra?: Partial<Record<keyof SlotContexts[Place], unknown>>): Promise<Result<void>>;\n    /** A menu's rows at this place: `refused` where it does not show, `failed` with what its `items` threw. */\n    menuItems<Place extends SlotName>(menu: object, place: Place, extra?: Partial<Record<keyof SlotContexts[Place], unknown>>): Result<TestMenuItem[]>;\n    /** Hands a client event to `useEvent` and `onEvent`. */\n    fire<Name extends keyof ClientEvents>(name: Name, payload: ClientEvents[Name]): void;\n    /** What `emit` in `server/` says, to `useServerEvent`. Without a payload, the listener hears undefined. */\n    emit(name: string, payload?: Json): void;\n    /** Selects these nodes, as a person would, which also fires `selection.changed`. */\n    select(ids: string[]): void;\n    /** Changes a setting, as a person would. */\n    setSetting(key: string, value: boolean | string): void;\n    /** Writes a stored value as another window or `server/` would, and draws again what reads it. Undefined deletes the key. */\n    setStorage(scope: 'computer' | 'project' | 'machine', key: string, value: Json | undefined): void;\n    /** A file of the project changing on the machine, which calls back each `files.watch` of it or of a folder above it. */\n    changeFile(path: string): void;\n    /** The connection to the machine dropping and coming back: every answer `.use()` kept is dropped, so what read one asks again. */\n    reconnect(): void;\n    /**\n     * Draws a panel, view, node, widget or card, or a component of your own, into the page, and waits for its lazy import and\n     * whatever it suspends on. `node` is the node `useNodeData` reads, `params` what a panel or view gets, `context` a widget's.\n     * A throw while it draws rejects. Needs a `*.dom.test.tsx` file.\n     */\n    render(\n        drawable: TestDefinition | ComponentType<never>,\n        options?: { node?: string; params?: unknown; context?: object; props?: object }\n    ): Promise<TestScreen>;\n    canvas: {\n        /** Every node of the view in front. */\n        nodes(): NodeInfo[];\n        /** Each note the extension made, in order. */\n        notes(): { id: string; title: string; text: string; color: string | null }[];\n        /** Each line between two nodes, in order. */\n        links(): { from: string; to: string }[];\n        /** Each node the extension made, of any kind, as it is now. */\n        created(): NodeInfo[];\n        selection(): string[];\n        revealed(): string[];\n    };\n    views(): { id: string; kind: string; name: string; active: boolean }[];\n    /** What `host.notify` said, and each failure a person was shown. */\n    notifications: { text: string; detail?: string; tone: 'neutral' | 'error'; action?: string }[];\n    /** Each question the person was asked, with their answer. */\n    dialogs: { kind: 'confirm' | 'prompt' | 'pick' | 'folder'; title: string; body?: string; answer: unknown }[];\n    /** What opened: a panel, view or overlay of the extension by its id, a file by its path, a url, or settings. */\n    opened: { kind: 'panel' | 'view' | 'overlay' | 'file' | 'url' | 'settings'; id?: string; params?: unknown }[];\n    /** Each panel's state, by the id it gave `definePanel`. */\n    panels: Record<string, { title: string; badge: string | null; open: boolean; params: unknown }>;\n    copied: string[];\n    server: { calls: TestCall[] };\n    agents: { calls: TestCall[] };\n    /** Every call that answered a Result, in order. */\n    calls: TestCall[];\n    /** What `useStorage` holds per scope now, changed in place. */\n    storage: { computer: Record<string, Json>; project: Record<string, Json>; machine: Record<string, Json> };\n    settings: Record<string, boolean | string>;\n    /** Each refusal and failure, as `ruimte extension dev` prints it. */\n    logs: string[];\n}"
+            },
+            {
+                "name": "createTestHost",
+                "kind": "function",
+                "doc": "A client of Ruimte in this process, with a project in memory you seed: it loads `client/index.ts` afresh, records what the extension defines and does, answers what you script and refuses with the permissions of your manifest, in the messages and codes Ruimte gives. What it loaded speaks for it, and a file your test imports itself speaks for the test host created last.",
+                "code": "export function createTestHost(options?: TestHostOptions): Promise<TestHost>;"
+            },
+            {
+                "name": "TestServerAnswers",
+                "kind": "interface",
+                "doc": "What the machine answers `server/` in a test. Each answer gets what `server/` asked and returns the value; throw `refusal(code, message)` to answer a failure. A call nothing answers is `unavailable`.",
+                "code": "export interface TestServerAnswers {\n    'agents.run'?(options: { prompt: string; context?: string[]; provider?: string }): Answer<{ text: string }>;\n    /** `near` holds only the first node, as the machine only uses that one. */\n    'agents.start'?(options: {\n        project?: ProjectRef;\n        folder?: string;\n        view?: ViewRef;\n        near?: NodeRef[];\n        prompt?: string;\n        provider?: string;\n        title?: string;\n        hidden?: boolean;\n    }): Answer<NodeRef>;\n    'chats.list'?(): Answer<ChatSummary[]>;\n    'chats.read'?(chatId: string): Answer<string>;\n    'chats.send'?(chatId: string, text: string): Answer<void>;\n    'machine.run'?: { [Name in MachineActionName]?: (input: MachineInput<Name>, project: ProjectRef) => Answer<MachineOutput<Name>> };\n}"
+            },
+            {
+                "name": "TestServerOptions",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface TestServerOptions {\n    /** Over `manifest.json` in the folder the test runs in, such as `{ permissions: {} }` to take every permission away. */\n    manifest?: { id?: string; permissions?: Record<string, string> };\n    /** `server/index.ts` by default. */\n    entry?: string;\n    storage?: Record<string, Json>;\n    secrets?: Record<string, string>;\n    answers?: TestServerAnswers;\n}"
+            },
+            {
+                "name": "TestAsk",
+                "kind": "interface",
+                "doc": "A call of `server/` to the machine, with what it was answered.",
+                "code": "export interface TestAsk {\n    method: 'agents.run' | 'agents.start' | 'chats.list' | 'chats.read' | 'chats.send' | 'machine.run' | 'defineLanguageServer';\n    args: Json[];\n    result: Result<unknown>;\n}"
+            },
+            {
+                "name": "Method",
+                "kind": "type",
+                "doc": null,
+                "code": "type Method<Api, Name extends keyof Api> = Api[Name] extends (...args: infer Args) => Promise<infer Value>\n    ? (...args: Args) => Promise<Result<Returned<Value>>>\n    : never;"
+            },
+            {
+                "name": "TestServer",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface TestServer<Api> {\n    /** Calls a method of `server/index.ts` as the client does: its arguments and answer cross as JSON, a throw answers `failed`. */\n    call<Name extends keyof Api & string>(method: Name, ...args: Parameters<Method<Api, Name>>): ReturnType<Method<Api, Name>>;\n    /** What `storage` and `secrets` hold now, changed in place. */\n    storage: Record<string, Json>;\n    secrets: Record<string, string>;\n    /** A clock of its own, from 0: `advance('5m')` runs every `schedule` task that falls due on the way, in order, and waits for each. */\n    clock: { now(): number; advance(duration: string | number): Promise<void> };\n    /** Hands a machine event to `onEvent`, if the manifest has its permission, as the machine would. */\n    fire<Name extends keyof ServerEvents>(name: Name, payload: ServerEvents[Name]): void;\n    /** What `emit` said, in order. An `emit` without a payload has none here either, as it crosses to a client. */\n    emitted: { name: string; payload?: Json }[];\n    /** What `server/` asked the machine, in order. */\n    asked: TestAsk[];\n    /** What `defineLanguageServer` added. */\n    languageServers: object[];\n    /** What `log` wrote, and every refusal, as `ruimte extension dev` prints it. */\n    logs: string[];\n    /** An agent's call of a tool `defineAgentTool` named, by the id it gave, answered in text. */\n    tool(id: string): { run(input?: object, context?: { caller?: string }): Promise<string> };\n    /** What an agent reads of a node of this type along a line. */\n    nodeContext(nodeType: string, data: Json): Promise<{ text: string }[]>;\n}"
+            },
+            {
+                "name": "createTestServer",
+                "kind": "function",
+                "doc": "Loads `server/index.ts` in this process, against the machine of a test: storage in memory, answers you script and the permissions of your manifest, refused with the messages and codes Ruimte gives. Each test server loads `server/index.ts` afresh, with every file of your project it imports, so no state carries over; a package from `node_modules` loads once. What it loaded speaks for it, and a file your test imports itself speaks for the test server created last.",
+                "code": "export function createTestServer<Api = Record<string, (...args: never[]) => Promise<unknown>>>(options?: TestServerOptions): Promise<TestServer<Api>>;"
+            },
+            {
+                "name": "refusal",
+                "kind": "function",
+                "doc": "A failure for an answer to throw, which `server/` reads as a Result under `code`.",
+                "code": "export function refusal(code: ExtensionErrorCode, message: string): Error;"
+            }
+        ]
+    }
+]

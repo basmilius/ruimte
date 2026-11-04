@@ -1,15 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Button, Icon, Kbd, KEY_SHORTCUTS, matchesShortcut, messageOf, Tooltip } from '@adecore/ui';
+import type { FsBrowseResult } from '@ruimte/contracts';
 import clsx from 'clsx';
 import i18next from 'i18next';
-import { useTranslation } from 'react-i18next';
 import { ArrowLeft, CornerLeftUp, Folder, FolderCheck } from 'lucide-react';
-import type { FsBrowseResult } from '@ruimte/contracts';
-import { Button, Icon, Kbd, KEY_SHORTCUTS, matchesShortcut, messageOf, Tooltip } from '@adecore/ui';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { openFolderAction } from '@/actions/client-actions';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { ensureMachine } from '@/endpoint/reach';
 import { newChatOn } from '@/project/new-chat';
+import { usePulsarAccount } from '@/pulsar/account';
+import { refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import {
     browseBack,
     browseMachines,
@@ -29,12 +31,10 @@ import {
     settleLink,
     type BrowseStep
 } from '@/shell/palette-browse';
-import { PaletteEntryItem } from '@/shell/PaletteEntryItem';
 import { groupBySection, matches, type Entry, type PaletteContext, type PaletteModeView } from '@/shell/palette-entries';
+import { PaletteEntryItem } from '@/shell/PaletteEntryItem';
 import { iconOfEntry } from '@/shell/settings/machine-icon';
 import { mergeMachines } from '@/shell/settings/machine-list';
-import { usePulsarAccount } from '@/pulsar/account';
-import { refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine, isRealMachine } from '@/state/local-machine';
 import { shownFolderOf, useProject } from '@/state/project';

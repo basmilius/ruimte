@@ -1,10 +1,10 @@
 import { join } from 'node:path';
 import { RecordDirectory } from '@adecore/agents';
+import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { ProjectNodeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
-import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
-import type { OutboxStore } from '../outbox/outbox.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
+import type { OutboxStore } from '../outbox/outbox.ts';
 import type { SessionManager } from '../sessions/manager.ts';
 
 const HiddenAgentSchema = z.object({

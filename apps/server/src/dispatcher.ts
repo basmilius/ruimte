@@ -1,7 +1,4 @@
-import { isOwner } from './auth/access.ts';
-import { errorText } from './error-text.ts';
-import { countRequest } from './stats/usage-stats.ts';
-import { recordRequestDuration } from './telemetry/reporter.ts';
+import { CodedError } from '@adecore/agents';
 import {
     REQUEST_SCHEMAS,
     isRequestType,
@@ -13,7 +10,11 @@ import {
     type RequestType,
     type ServerFrame
 } from '@ruimte/contracts';
-import { CodedError } from '@adecore/agents';
+import { isOwner } from './auth/access.ts';
+import { errorText } from './error-text.ts';
+import { countRequest } from './stats/usage-stats.ts';
+import { noteActivity } from './telemetry/activity.ts';
+import { recordRequestDuration } from './telemetry/reporter.ts';
 
 export interface ClientAccess {
     reachability: 'loopback' | 'lan' | 'tunnel' | 'public';
@@ -148,6 +149,7 @@ export class Dispatcher {
         }
 
         const started = performance.now();
+        noteActivity(`request ${type}`);
 
         try {
             const result = await handler(payloadParse.data, client);

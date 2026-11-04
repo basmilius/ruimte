@@ -1,9 +1,10 @@
 import { join } from 'node:path';
-import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
+import type { AppIpc } from '@adecore/shell';
+import { AddressBookClient, ADDRESS_BOOK_URL, SessionKeyUnavailableError, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { listenForLogin, type LoopbackLogin } from '../pulsar-login';
 import { fileSessionKey, fileSessionStore } from '../pulsar-store';
 import { electron } from './electron';
-import type { AppIpc } from './ipc';
+import { reportShellProblem } from './telemetry';
 
 const { app, net, safeStorage } = electron;
 
@@ -21,7 +22,14 @@ export function installLogin(ipc: AppIpc): { signedIn(): Promise<boolean> } {
         pulsarVault ??= new SessionVault({
             client: new AddressBookClient({ baseUrl: addressBookUrl, fetch: (input, init) => net.fetch(input, init) }),
             store,
-            signer: fileSessionKey(join(app.getPath('userData'), 'pulsar-key.bin'), safeStorage)
+            signer: fileSessionKey(join(app.getPath('userData'), 'pulsar-key.bin'), safeStorage),
+            onForget: (reason) => {
+                console.warn(`The account session was cleared (${reason})`);
+                // A session that ran out unused is the lifetime doing its work, not a problem.
+                if (reason !== 'expired') {
+                    reportShellProblem({ kind: 'session-cleared', reason });
+                }
+            }
         });
         return pulsarVault;
     };
@@ -68,7 +76,17 @@ export function installLogin(ipc: AppIpc): { signedIn(): Promise<boolean> } {
     });
 
     ipc.handle('pulsar:exchange', (_event, payload: unknown) => pulsarSessions().exchange(SessionLoginCodeSchema.parse(payload)));
-    ipc.handle('pulsar:refresh', () => pulsarSessions().refresh());
+    ipc.handle('pulsar:refresh', () =>
+        pulsarSessions()
+            .refresh()
+            .catch((e: unknown) => {
+                if (e instanceof SessionKeyUnavailableError) {
+                    console.warn(e.message);
+                    reportShellProblem({ kind: 'session-key-unreadable' });
+                }
+                throw e;
+            })
+    );
     ipc.handle('pulsar:restore', () => pulsarSessions().restore());
     ipc.handle('pulsar:sign-out', () => pulsarSessions().signOut());
 

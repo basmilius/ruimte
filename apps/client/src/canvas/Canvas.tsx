@@ -1,3 +1,6 @@
+import { isInFloatingLayer, ContextMenu } from '@adecore/ui';
+import type { ProjectCanvasLine } from '@ruimte/contracts';
+import type { NodeSide } from '@ruimte/contracts';
 import {
     useEffect,
     useLayoutEffect,
@@ -9,51 +12,49 @@ import {
     type RefObject
 } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import type { ProjectCanvasLine } from '@ruimte/contracts';
-import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
-import { gridTakesPath } from '@/shell/view-drag';
-import { finderPaths } from '@/canvas/finder-drop';
-import { groundPlacement, snapToGrid, toWorld, type Camera, type Point, type Rect } from '@/canvas/math';
-import { isSpaceDown, subscribeSpacePan } from '@/canvas/space-pan';
-import type { NodeSide } from '@ruimte/contracts';
-import { boxScreenRect, boxWorldRect, startBoxSelection, type BoxSelection } from '@/canvas/box-selection';
+import { createTextAction } from '@/actions/client-actions';
 import { alignmentGuides, gapGuides, type AlignmentGuide, type GapGuide } from '@/canvas/alignment-guides';
 import { AlignmentGuides } from '@/canvas/AlignmentGuides';
-import { editableGaps, gapOffsets, type EditableGap } from '@/canvas/editable-gaps';
-import { GapHandles } from '@/canvas/GapHandles';
-import { gapFrames } from '@/canvas/element-frames';
-import { lineBounds } from '@/canvas/line-geometry';
-import { isGapModifierDown, subscribeGapModifier } from '@/canvas/gap-modifier';
-import { registerGestureCancellation } from '@/canvas/gesture-cancel';
-import { resizedRect } from '@/canvas/resize';
-import { canLink } from '@/canvas/edge-lines';
-import { resizedText } from '@/canvas/text-resize';
-import { framePressHandsKeyboard } from '@/canvas/frame-press';
-import { stackingOrder } from '@/canvas/stacking';
-import { useWheelCamera } from '@/canvas/use-wheel-camera';
-import { farNodeKey } from '@/canvas/culling';
-import { notePointer } from '@/canvas/pointer';
-import { carriedByGroups, isNodeActive, maximizedNodeOf, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
-import { useEndpointId } from '@/state/keys';
-import { defaultNodeSize } from '@/state/node-size';
-import { createTextAction } from '@/actions/client-actions';
-import { showFileOnCanvas } from '@/project/views';
+import { boxScreenRect, boxWorldRect, startBoxSelection, type BoxSelection } from '@/canvas/box-selection';
+import { CanvasLineLayer, CanvasLineTool, CanvasLineToolbar } from '@/canvas/CanvasLines';
 import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
-import { EmptyCanvas } from '@/canvas/EmptyCanvas';
-import { EdgeLayer } from '@/canvas/EdgeLayer';
-import { GroupHover } from '@/canvas/GroupHover';
-import { PortHints } from '@/canvas/PortHints';
-import { ResizeHandles } from '@/canvas/ResizeHandles';
-import { NodeFrame } from '@/canvas/NodeFrame';
-import { CanvasPets, CanvasRoamingPets } from '@/canvas/CanvasPets';
+import { farNodeKey } from '@/canvas/culling';
 import { DerivedCards } from '@/canvas/DerivedCards';
+import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
+import { canLink } from '@/canvas/edge-lines';
+import { EdgeLayer } from '@/canvas/EdgeLayer';
+import { editableGaps, gapOffsets, type EditableGap } from '@/canvas/editable-gaps';
+import { gapFrames } from '@/canvas/element-frames';
+import { EmptyCanvas } from '@/canvas/EmptyCanvas';
+import { finderPaths } from '@/canvas/finder-drop';
+import { framePressHandsKeyboard } from '@/canvas/frame-press';
+import { isGapModifierDown, subscribeGapModifier } from '@/canvas/gap-modifier';
+import { GapHandles } from '@/canvas/GapHandles';
+import { registerGestureCancellation } from '@/canvas/gesture-cancel';
+import { GroupHover } from '@/canvas/GroupHover';
+import { lineBounds } from '@/canvas/line-geometry';
+import { groundPlacement, snapToGrid, toWorld, type Camera, type Point, type Rect } from '@/canvas/math';
+import { Minimap } from '@/canvas/Minimap';
 import { cardHolds, derivedCardOf, derivedOwnerOf } from '@/canvas/node-body';
+import { NodeFrame } from '@/canvas/NodeFrame';
+import { notePointer } from '@/canvas/pointer';
+import { PortHints } from '@/canvas/PortHints';
+import { resizedRect } from '@/canvas/resize';
+import { ResizeHandles } from '@/canvas/ResizeHandles';
+import { isSpaceDown, subscribeSpacePan } from '@/canvas/space-pan';
+import { stackingOrder } from '@/canvas/stacking';
+import { resizedText } from '@/canvas/text-resize';
 import { TextElementView } from '@/canvas/TextElementView';
 import { TextToolbar } from '@/canvas/TextToolbar';
-import { CanvasLineLayer, CanvasLineTool, CanvasLineToolbar } from '@/canvas/CanvasLines';
-import { Minimap } from '@/canvas/Minimap';
+import { useWheelCamera } from '@/canvas/use-wheel-camera';
+import { CanvasLayers } from '@/extensions/ContributedSlots';
+import { SelectionBar } from '@/extensions/SlotSurfaces';
+import { showFileOnCanvas } from '@/project/views';
 import { CellOverlay } from '@/shell/CellOverlay';
-import { isInFloatingLayer, ContextMenu } from '@adecore/ui';
+import { gridTakesPath } from '@/shell/view-drag';
+import { carriedByGroups, isNodeActive, maximizedNodeOf, useCanvas, useCanvasCamera, useCanvasStore, type CanvasState } from '@/state/canvas';
+import { useEndpointId } from '@/state/keys';
+import { defaultNodeSize } from '@/state/node-size';
 
 type Gesture =
     | { kind: 'pan'; last: Point }
@@ -113,7 +114,7 @@ function blurActive(): void {
 type PointerCapture = { element: HTMLElement; pointerId: number };
 
 /* Where a press began and whether its node had the keyboard then, read again by the double-click it may start. */
-type Press = { nodeId: string | null; active: boolean };
+type Press = { nodeId: string | null; active: boolean; group: boolean };
 
 /* Parts of a node that keep their own double-click: a control or a port answers its own press. */
 const OWN_DOUBLE_CLICK = 'button, input, select, [data-port]';
@@ -125,7 +126,8 @@ const OWN_DOUBLE_CLICK = 'button, input, select, [data-port]';
  */
 function zoomPressOf(presses: [Press | null, Press | null], target: HTMLElement): string | null {
     const [first, second] = presses;
-    if (first === null || first.nodeId === null || first.active || second?.nodeId !== first.nodeId || target.closest(OWN_DOUBLE_CLICK)) {
+    // A group never takes the keyboard, so it would always zoom: its title renames on a double-click instead.
+    if (first === null || first.nodeId === null || first.active || first.group || second?.nodeId !== first.nodeId || target.closest(OWN_DOUBLE_CLICK)) {
         return null;
     }
     return first.nodeId;
@@ -197,7 +199,7 @@ export function Canvas() {
     const editable = gapEdit ?? (!altDown || activeGesture !== null || gesturing ? [] : editableGaps(Object.values(frames), selection));
     /* A fixed DOM order with a z-index, since moving an element takes the keyboard from a body a click
        just landed in. A note or a file far from sight is not drawn at all (`farNodeKey`). */
-    const far = useCanvas(farNodeKey);
+    const far = useCanvasCamera(farNodeKey);
     const farIds = new Set(far === '' ? [] : far.split('\n'));
     const drawIds = order.filter((id) => !farIds.has(id)).sort();
     const stacking = stackingOrder(nodes, order);
@@ -411,7 +413,12 @@ export function Canvas() {
     const onPointerDownCapture = (e: ReactPointerEvent): void => {
         if (e.button === 0 && !isInFloatingLayer(e.target)) {
             const nodeId = (e.target as HTMLElement).closest<HTMLElement>('[data-node-id]')?.dataset.nodeId ?? null;
-            const press = { nodeId, active: nodeId !== null && isNodeActive(canvasStore.getState().bodyFocusId, nodeId) };
+            const state = canvasStore.getState();
+            const press = {
+                nodeId,
+                active: nodeId !== null && isNodeActive(state.bodyFocusId, nodeId),
+                group: nodeId !== null && state.nodes[nodeId]?.kind === 'group'
+            };
             pressesRef.current = [pressesRef.current[1], press];
         }
         if (isInFloatingLayer(e.target) || (e.button !== 1 && (e.button !== 0 || !isSpaceDown()))) {
@@ -852,6 +859,7 @@ export function Canvas() {
             <ContextMenu.Trigger
                 render={<div />}
                 ref={rootRef}
+                data-surface="canvas"
                 className="canvas-ground relative h-full w-full touch-none overflow-hidden"
                 style={{
                     cursor: aiming ? 'crosshair' : activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : spaceDown ? 'grab' : undefined
@@ -897,8 +905,8 @@ export function Canvas() {
                         {maximizedId === null && <PortHints rootRef={rootRef} />}
                     </div>
                     {maximizedId === null && <GroupHover rootRef={rootRef} />}
-                    {/* Over every node, as the handles are, and before them, so a handle near a pet still takes the press. */}
-                    {maximizedId === null && <CanvasPets z={order.length + 1} />}
+                    {/* Over every node, as the handles are, and before them, so a handle near one still takes the press. */}
+                    {maximizedId === null && <CanvasLayers place="canvas" z={order.length + 1} />}
                     {/* Over every node, or a press on the handle of a node in a group lands on the group's frame and moves the group. */}
                     {maximizedId === null && (
                         <div className="absolute left-0 top-0" style={{ zIndex: order.length + 1 }}>
@@ -916,7 +924,8 @@ export function Canvas() {
                     )}
                     <TextToolbar />
                     {maximizedId === null && <CanvasLineToolbar />}
-                    {maximizedId === null && <CanvasRoamingPets />}
+                    {maximizedId === null && <CanvasLayers place="screen" z={0} />}
+                    {maximizedId === null && <SelectionBar />}
                     <Minimap />
                     {dropping && <div className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-accent ring-inset" aria-hidden />}
                     {box && (

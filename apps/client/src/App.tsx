@@ -1,16 +1,21 @@
+import { ErrorBoundary, ShortcutHints, UIProvider, lazyDialog, lazyNamed, prefetcher, LazyBoundary } from '@adecore/ui';
 import i18next from 'i18next';
 import { useEffect, type ReactNode } from 'react';
 import { desktop, machineMode } from '@/desktop/bridge';
+import { HostDialogs, HostOverlays } from '@/extensions/host/host-dialogs';
+import '@/extensions/built-in';
+import { startExtensions } from '@/extensions/watch';
+import { formatSource } from '@/format/source';
 import { useProjectSwitch } from '@/project/open';
+import { closeLinkRequest, useLinkRequest } from '@/pulsar/link-request';
 import { useAppShortcuts } from '@/shell/app-shortcuts';
-import { ALL_SETTINGS_SECTIONS } from '@/shell/settings/sections';
+import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
+import { MachineUpdateDialog } from '@/shell/MachineUpdateDialog';
+import { useNativeMenu } from '@/shell/menu/native-menu';
 import { DormantScreen, ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
+import { allSettingsSections } from '@/shell/settings/sections';
 import { StartScreen } from '@/shell/StartScreen';
 import { FLOATING_FAILURE, failed } from '@/shell/surface-failure';
-import { MachineUpdateDialog } from '@/shell/MachineUpdateDialog';
-import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
-import { closeLinkRequest, useLinkRequest } from '@/pulsar/link-request';
-import { useNativeMenu } from '@/shell/menu/native-menu';
 import { Toasts } from '@/shell/Toasts';
 import { watchDrags } from '@/shell/view-drag';
 import { useProject } from '@/state/project';
@@ -20,8 +25,6 @@ import { useUi, type SettingsSectionId } from '@/state/ui';
 import { startUpdates } from '@/state/updates';
 import { useWindow } from '@/state/window';
 import { ChatScopeProvider } from '@/transport/ChatScopeProvider';
-import { ErrorBoundary, ShortcutHints, UIProvider, lazyDialog, lazyNamed, prefetcher, LazyBoundary } from '@adecore/ui';
-import { formatSource } from '@/format/source';
 
 const WorkspaceShell = lazyNamed(() => import('@/shell/WorkspaceShell'), 'WorkspaceShell');
 const FirstRunScreen = lazyNamed(() => import('@/onboarding/FirstRunScreen'), 'FirstRunScreen');
@@ -159,12 +162,13 @@ export function App() {
 
     // Every embedded page steps aside while a drag lasts, so it never swallows a drop meant for the cell under it.
     useEffect(() => watchDrags(), []);
+    useEffect(() => startExtensions(), []);
 
     // The macOS application menu names a pane, and switches to it when the dialog is already open.
     useEffect(
         () =>
             desktop()?.onOpenSettings?.((section) => {
-                const known = ALL_SETTINGS_SECTIONS.some((entry) => entry.id === section);
+                const known = allSettingsSections().some((entry) => entry.id === section);
                 useUi.getState().setSettings(known ? { open: true, section: section as SettingsSectionId } : { open: true });
             }),
         []
@@ -187,6 +191,8 @@ export function App() {
                     <ModelsDialog />
                     <Floating surface="toasts">
                         <Toasts />
+                        <HostDialogs />
+                        <HostOverlays />
                     </Floating>
                     <ReleaseNotesDialog />
                     <Floating surface="machineUpdate">
