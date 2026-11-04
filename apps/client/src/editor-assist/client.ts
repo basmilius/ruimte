@@ -1,4 +1,5 @@
 import type { EditorAssistGenerateResult, EditorAssistPurpose, EditorAssistStatusResult } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { useSettings } from '@/state/settings';
 import { machineAnswers } from '@/transport/features';
 import { TransportError, type Transport } from '@/transport/transport';
@@ -77,7 +78,7 @@ export class EditorAssistClient {
             return aborted();
         }
         if (!machineAnswers(this.transport.connection, 'editor.generate')) {
-            throw new TransportError('unavailable', 'Update this machine to use the editor model.');
+            throw new TransportError('unavailable', i18next.t('panels:language.editorAssist.tooOld'));
         }
         const id = `assist-${++this.sequence}`;
         const off = request.onText === undefined ? null : this.transport.on('editor.text', (event) => event.id === id && request.onText?.(event.text));

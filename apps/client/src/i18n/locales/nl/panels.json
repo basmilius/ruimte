@@ -1016,7 +1016,8 @@
             "note": "Geschreven door het model uit Instellingen, Editor, AI.",
             "thinking": "Uitleg wordt geschreven…",
             "off": "Uitleg staat uit. Zet hem aan bij Instellingen, Editor, AI.",
-            "nothing": "Selecteer code, of zet de cursor in een functie, om die uit te leggen."
+            "nothing": "Selecteer code, of zet de cursor in een functie, om die uit te leggen.",
+            "tooOld": "Werk deze machine bij om het editormodel te gebruiken."
         }
     },
     "machineNotAnswering": "Deze machine antwoordt niet.",

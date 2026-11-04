@@ -31,7 +31,14 @@ function VoiceOverlayContent({ visible }: { visible: boolean }) {
                 type="button"
                 className="pointer-events-auto relative flex w-full max-w-lg flex-col items-center gap-3 rounded-xl px-4 py-2 text-center text-text"
                 aria-label={t('button')}
-                onClick={openVoicePanel}
+                onClick={(event) => {
+                    // Dragging the caption's scrollbar ends in a click on the button too.
+                    if (event.target instanceof Element && event.target.closest('.ade-scrollbar') !== null) {
+                        return;
+                    }
+
+                    openVoicePanel();
+                }}
             >
                 <ScrollArea
                     render={<p />}

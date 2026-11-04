@@ -65,7 +65,7 @@ export function LogDialog({ server, tracker, onClose }: { server: string | null;
                 </div>
                 <ScrollArea
                     className="grow overflow-hidden rounded-md bg-surface-sunken"
-                    viewportClassName="p-3 font-mono text-xs whitespace-pre-wrap text-text-muted select-text"
+                    viewportClassName="p-3 font-mono text-xs whitespace-pre-wrap break-words text-text-muted select-text"
                 >
                     {lines !== null && (lines.length === 0 ? t('language.logEmpty') : lines.map(logLineText).join('\n'))}
                 </ScrollArea>

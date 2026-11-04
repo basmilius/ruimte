@@ -125,7 +125,17 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
 
     // A page that came since the last listing is the one the chat just made, unless a person still has work queued on the page in front.
     const onListed = useEffectEvent((found: FsEntry[] | null): void => {
-        const pages = found === null ? [] : pagesByChange(found);
+        // No listing is a folder not made yet, or a call that failed: the pages known stay, or every one of them would
+        // arrive at the next listing.
+        if (found === null) {
+            if (known.current?.folder !== folder) {
+                known.current = { folder, pages: new Set() };
+            }
+
+            return;
+        }
+
+        const pages = pagesByChange(found);
         const before = known.current?.folder === folder ? known.current.pages : null;
         const arrived = before === null ? undefined : pages.find((file) => !before.has(file));
         const unsent = comments.length > 0 || Object.keys(edits).length > 0 || Object.entries(values).some(([name, value]) => tweaks?.[name]?.value !== value);
