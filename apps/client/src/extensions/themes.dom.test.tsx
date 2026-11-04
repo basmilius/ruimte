@@ -95,6 +95,32 @@ describe('an extension theme', () => {
         expect(activeExtensionTheme()).toBe(CHOICE.key);
     });
 
+    test('a refresh that waited on the theme files never undoes a theme chosen meanwhile', async () => {
+        const installed = {
+            manifest: { id: 'acme.midnight', name: 'Midnight', version: '0.1.0', api: 1, themes: ['themes/midnight.json'] },
+            base: '/__extensions/acme.midnight/x/',
+            enabled: true,
+            hasClient: false,
+            dev: false
+        };
+        const previousFetch = globalThis.fetch;
+        let answer: (response: Response) => void = () => undefined;
+        globalThis.fetch = (() => new Promise<Response>((resolve) => (answer = resolve))) as unknown as typeof fetch;
+
+        try {
+            chooseExtensionTheme(CHOICE);
+            const refreshing = refreshExtensionTheme([installed]);
+            chooseExtensionTheme(null);
+            answer(new Response(JSON.stringify({ ...CHOICE.theme, tokens: { '--surface': '#111' } })));
+            await refreshing;
+
+            expect(activeExtensionTheme()).toBeNull();
+            expect(themeText()).toBeNull();
+        } finally {
+            globalThis.fetch = previousFetch;
+        }
+    });
+
     test('goes away with its extension', async () => {
         chooseExtensionTheme(CHOICE);
 

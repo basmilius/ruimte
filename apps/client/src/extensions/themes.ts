@@ -143,7 +143,12 @@ export async function listExtensionThemes(installed: readonly InstalledClientExt
     return [...builtInThemes(), ...loaded.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))];
 }
 
+/* Moves on every choice and every refresh, so a refresh that waited on the theme files never undoes a later one. */
+let generation = 0;
+
 export function chooseExtensionTheme(choice: ThemeChoice | null): void {
+    generation += 1;
+
     if (choice === null) {
         storedTheme.remove();
         paint(null);
@@ -170,7 +175,14 @@ export async function refreshExtensionTheme(installed: readonly InstalledClientE
         return;
     }
 
+    generation += 1;
+    const started = generation;
     const choice = (await listExtensionThemes(installed)).find((each) => each.key === stored.key);
+
+    // A person chose meanwhile, or a newer refresh started: what this one read is out of date.
+    if (generation !== started) {
+        return;
+    }
 
     if (choice === undefined) {
         const extensionId = extensionIdOf(stored.key);
