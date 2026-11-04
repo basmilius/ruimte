@@ -14,7 +14,7 @@ export interface Camera {
 }
 
 const ZOOM_MIN = 0.1;
-const ZOOM_MAX = 4;
+export const ZOOM_MAX = 4;
 export const GRID = CANVAS_GRID;
 
 /* Where the dots of the ground sit for a camera: three grid steps apart, and moving with the world. */

@@ -134,7 +134,8 @@ test('the canvas keeps selection anchored during scroll, pans over focused bodie
             await view.evaluate('window.canvas.setState({camera:{x:-300,y:0,zoom:0.5}})');
             const modifiers = await view.evaluate<number>('/Mac/.test(navigator.platform) ? 12 : 10');
             await view.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: '@', code: 'Digit2', windowsVirtualKeyCode: 50, modifiers });
-            expect(await view.evaluate<number>('window.canvas.getState().camera.zoom')).toBe(1);
+            // A node this small fills the view only at the canvas's deepest zoom.
+            expect(await view.evaluate<number>('window.canvas.getState().camera.zoom')).toBe(4);
             expect(await view.evaluate<string[]>('window.canvas.getState().selection')).toEqual(['b']);
 
             await view.evaluate('(() => { window.canvas.getState().clearSelection(); window.canvas.setState({camera:{x:0,y:0,zoom:1}}); })()');

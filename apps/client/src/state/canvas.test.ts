@@ -259,11 +259,12 @@ describe('the camera of an editor that has not been measured', () => {
         expect(toWorld(store.getState().camera, { x: 600, y: 400 })).toEqual({ x: 1100, y: 650 });
     });
 
-    test('goToNode with fit zooms until the node just fits, out for a large node and in up to 100% for a small one', () => {
+    test('goToNode with fit zooms until the node just fits, out for a large node and in past 100% for a small one, up to the most the canvas zooms', () => {
         const store = createCanvasStore();
         const large = { ...node('a', 0, 0), w: 2000, h: 1000 };
-        const small = { ...node('b', 3000, 0), w: 200, h: 100 };
-        store.getState().loadView(viewWith(large, small), { camera: { center: { x: 600, y: 400 }, zoom: 0.4 }, focusedNodeId: null });
+        const small = { ...node('b', 3000, 0), w: 400, h: 300 };
+        const tiny = { ...node('c', 4000, 0), w: 20, h: 10 };
+        store.getState().loadView(viewWith(large, small, tiny), { camera: { center: { x: 600, y: 400 }, zoom: 0.4 }, focusedNodeId: null });
         store.getState().setViewport({ w: 1200, h: 800 });
 
         store.getState().goToNode('a', { fit: true });
@@ -273,9 +274,14 @@ describe('the camera of an editor that has not been measured', () => {
         expect(center.y).toBeCloseTo(500);
 
         store.getState().goToNode('b', { fit: true });
-        expect(store.getState().camera.zoom).toBe(1);
-        expect(toWorld(store.getState().camera, { x: 600, y: 400 })).toEqual({ x: 3100, y: 50 });
+        expect(store.getState().camera.zoom).toBeCloseTo((800 - 96) / 300);
+        const smallCenter = toWorld(store.getState().camera, { x: 600, y: 400 });
+        expect(smallCenter.x).toBeCloseTo(3200);
+        expect(smallCenter.y).toBeCloseTo(150);
         expect(store.getState().selection).toEqual(['b']);
+
+        store.getState().goToNode('c', { fit: true });
+        expect(store.getState().camera.zoom).toBe(4);
     });
 
     test('goToNode with fit on an editor without a size fits once it has one', () => {
