@@ -83,6 +83,7 @@ describe('revealCommand', () => {
     test('per platform, folders open and files are selected', () => {
         expect(revealCommand('/a/b', true, 'darwin')).toEqual(['open', '/a/b']);
         expect(revealCommand('/a/b.txt', false, 'darwin')).toEqual(['open', '-R', '/a/b.txt']);
+        expect(revealCommand('/Applications/Calculator.app', true, 'darwin')).toEqual(['open', '-R', '/Applications/Calculator.app']);
         expect(revealCommand('C:\\a', true, 'win32')).toEqual(['explorer', 'C:\\a']);
         expect(revealCommand('/a/b.txt', false, 'linux')).toEqual(['xdg-open', '/a']);
     });

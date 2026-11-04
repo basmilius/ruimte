@@ -17,6 +17,8 @@ const GIF = new TextEncoder().encode('GIF89a and then some');
 let root: string;
 let home: string;
 let dispatcher: Dispatcher;
+let watches: FakeWatch;
+let folders: FolderWatcher;
 
 beforeEach(async () => {
     // The project folder holds the home, the way a person who opens their own home folder has it.
@@ -36,10 +38,12 @@ beforeEach(async () => {
     await writeFile(join(home, 'chats', 'chat-1.visuals', 'report.html'), '<p>Report</p>');
     await symlink(home, join(root, 'linked'));
     dispatcher = new Dispatcher();
+    watches = new FakeWatch();
+    folders = new FolderWatcher('darwin', watches, 0);
     const machineHome = new MachineHome(home);
     registerFsHandlers(
         dispatcher,
-        new FolderWatcher('linux', new FakeWatch(), 0),
+        folders,
         async () => ({ folders: [root], worktreesOf: async () => [], worktreesRoot: join(home, 'worktrees') }),
         machineHome
     );
@@ -88,6 +92,59 @@ describe('the machine home', () => {
 
     test('fs.grep does not search the home', async () => {
         expect(await request('fs.grep', { cwd: home, query: 'secret' })).toMatchObject(refused);
+    });
+
+    test('fs.list names nothing of the home, but lists the folders it lets through', async () => {
+        expect(await request('fs.list', { path: home })).toMatchObject(refused);
+        expect(await request('fs.list', { path: join(home, 'chats') })).toMatchObject(refused);
+        expect(await request('fs.list', { path: join(root, 'linked') })).toMatchObject(refused);
+        expect(await request('fs.list', { path: join(home, 'scratch') })).toMatchObject({ ok: true, result: { entries: [{ name: 'notes.md' }] } });
+        expect(await request('fs.list', { path: join(home, 'chats', 'chat-1.visuals') })).toMatchObject({
+            ok: true,
+            result: { entries: [{ name: 'report.html' }] }
+        });
+    });
+
+    test('fs.list of a folder around the home does not descend into it', async () => {
+        const reply = await request('fs.list', { path: root, depth: 3, hidden: true });
+        const paths = reply.ok ? (reply.result as { entries: Array<{ path: string }> }).entries.map((entry) => entry.path) : [];
+
+        expect(paths).toContain(home);
+        expect(paths.filter((path) => path.startsWith(`${home}/`))).toEqual([]);
+    });
+
+    test('fs.watch refuses the home, and a watch around it hears nothing from inside', async () => {
+        const changed: unknown[] = [];
+        folders.subscribe('paired', (event) => {
+            changed.push(event.payload);
+        });
+
+        expect(await request('fs.watch', { path: join(home, 'command-approvals') })).toMatchObject(refused);
+        expect(await request('fs.watch', { path: root })).toMatchObject({ ok: true });
+
+        watches.on(root).emit(join('ruimte-home', 'command-approvals', 'approval.json'));
+        await watches.settle();
+        expect(changed).toEqual([]);
+
+        watches.on(root).emit(join('ruimte-home', 'scratch', 'notes.md'));
+        await watches.settle();
+        expect(changed).toEqual([{ root, paths: [join(home, 'scratch')], changedPaths: [join(home, 'scratch', 'notes.md')] }]);
+    });
+
+    test('fs.browse completes nothing in the home, neither by its path nor from its cwd', async () => {
+        expect(await request('fs.browse', { partialPath: `${home}/` })).toMatchObject(refused);
+        expect(await request('fs.browse', { partialPath: join(home, 'cha') })).toMatchObject(refused);
+        expect(await request('fs.browse', { partialPath: './', cwd: join(home, 'chats') })).toMatchObject(refused);
+        expect(await request('fs.browse', { partialPath: root, cwd: join(home, 'chats') })).toMatchObject(refused);
+        expect(await request('fs.browse', { partialPath: '../', cwd: join(home, 'scratch') })).toMatchObject(refused);
+        expect(await request('fs.browse', { partialPath: './', cwd: join(home, 'scratch') })).toMatchObject({ ok: true, result: { entries: [] } });
+        expect(await request('fs.browse', { partialPath: `${root}/ruimte` })).toMatchObject({ ok: true, result: { entries: [{ name: 'ruimte-home' }] } });
+    });
+
+    test('fs.reveal shows nothing of the home', async () => {
+        expect(await request('fs.reveal', { path: home })).toMatchObject(refused);
+        expect(await request('fs.reveal', { path: join(home, 'local.key') })).toMatchObject(refused);
+        expect(await request('fs.reveal', { path: join(root, 'linked', 'command-approvals') })).toMatchObject(refused);
     });
 
     test('a project folder around the home does not open it to a save', async () => {

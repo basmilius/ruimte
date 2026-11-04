@@ -1,16 +1,19 @@
 import { stat } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { dirname, extname } from 'node:path';
 import { CodedError } from '@adecore/agents';
 
 type RevealErrorCode = 'path-not-found' | 'reveal-failed';
 
 class RevealError extends CodedError<RevealErrorCode> {}
 
-/* The file manager's command line per platform: a folder opens, a file is selected inside its folder. */
+/*
+ * The file manager's command line per platform: a folder opens, a file is selected inside its folder.
+ * On macOS a folder with an extension may be a bundle, which `open` would launch, so it is selected too.
+ */
 export function revealCommand(path: string, isDirectory: boolean, platform: NodeJS.Platform = process.platform): string[] {
     switch (platform) {
         case 'darwin':
-            return isDirectory ? ['open', path] : ['open', '-R', path];
+            return isDirectory && extname(path) === '' ? ['open', path] : ['open', '-R', path];
         case 'win32':
             return isDirectory ? ['explorer', path] : ['explorer', `/select,${path}`];
         default:

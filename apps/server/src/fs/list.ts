@@ -3,6 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { FS_LIST_MAX_ENTRIES, type FsEntry, type FsEntryKind, type FsListResult } from '@ruimte/contracts';
 import { ignoredPaths } from '../git/ignore.ts';
+import { isMachineStatePath, NO_MACHINE_HOME, type MachineHomePolicy } from './machine-home.ts';
 import { firstInOrder } from './ordered.ts';
 import { classifyEntry, isBuildOutput } from './visibility.ts';
 
@@ -13,6 +14,8 @@ export class ListError extends CodedError<ListErrorCode> {}
 interface ListOptions {
     depth?: number;
     hidden?: boolean;
+    /* The machine's own state, which a deeper level never descends into. */
+    policy?: MachineHomePolicy;
 }
 
 function kindOf(dirent: { isDirectory(): boolean; isFile(): boolean; isSymbolicLink(): boolean }): FsEntryKind {
@@ -94,6 +97,7 @@ export async function listDirectory(path: string, options: ListOptions = {}): Pr
     const root = resolve(path);
     const depth = options.depth ?? 1;
     const includeHidden = options.hidden ?? false;
+    const policy = options.policy ?? NO_MACHINE_HOME;
     const stats = await stat(root).catch(() => null);
     if (!stats) {
         throw new ListError('not-found', 'That folder is not there');
@@ -151,7 +155,9 @@ export async function listDirectory(path: string, options: ListOptions = {}): Pr
                 }
             }
         }
-        queue = levelEntries.filter((entry) => entry.kind === 'directory' && !entry.ignored && !isBuildOutput(entry.name)).map((entry) => entry.path);
+        queue = levelEntries
+            .filter((entry) => entry.kind === 'directory' && !entry.ignored && !isBuildOutput(entry.name) && !isMachineStatePath(policy, entry.path))
+            .map((entry) => entry.path);
     }
 
     const entries: FsEntry[] = [];

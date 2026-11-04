@@ -1,6 +1,6 @@
 import { FS_WRITE_MAX_BYTES, type FsCreateResult } from '@ruimte/contracts';
 import type { Dispatcher } from '../dispatcher.ts';
-import { browseDirectories } from '../fs/browse.ts';
+import { browseDirectories, browseTarget } from '../fs/browse.ts';
 import { createEntry, planCreate } from '../fs/create.ts';
 import { planDelete } from '../fs/delete.ts';
 import { grepFiles } from '../fs/grep.ts';
@@ -46,7 +46,15 @@ export function registerFsHandlers(
     machineHome: MachineHome,
     language?: Pick<LanguageHost, 'renameFiles' | 'createFiles' | 'deleteFiles' | 'saved'>
 ): void {
-    dispatcher.register('fs.browse', (payload) => browseDirectories(payload.partialPath, payload.cwd, { hidden: payload.hidden }));
+    dispatcher.register('fs.browse', async (payload) => {
+        if (payload.cwd) {
+            await machineHome.refuse(payload.cwd);
+        }
+
+        await machineHome.refuse(browseTarget(payload.partialPath, payload.cwd).parentPath);
+
+        return browseDirectories(payload.partialPath, payload.cwd, { hidden: payload.hidden });
+    });
 
     dispatcher.register('fs.search', async (payload) => {
         await machineHome.refuse(payload.cwd);
@@ -74,8 +82,10 @@ export function registerFsHandlers(
     });
 
     dispatcher.register('fs.list', async (payload) => {
+        await machineHome.refuse(payload.path);
         await refuseOutside(payload.path, payload.within);
-        return listDirectory(payload.path, { depth: payload.depth, hidden: payload.hidden });
+
+        return listDirectory(payload.path, { depth: payload.depth, hidden: payload.hidden, policy: await machineHome.policy() });
     });
 
     dispatcher.register('fs.read', async (payload) => {
@@ -175,7 +185,9 @@ export function registerFsHandlers(
     });
 
     dispatcher.register('fs.watch', async (payload, client) => {
-        await watcher.watch(client.id, payload.path);
+        await machineHome.refuse(payload.path);
+        await watcher.watch(client.id, payload.path, await machineHome.policy());
+
         return {};
     });
 
@@ -185,6 +197,7 @@ export function registerFsHandlers(
     });
 
     dispatcher.register('fs.reveal', async (payload) => {
+        await machineHome.refuse(payload.path);
         await revealInFileManager(payload.path);
         return {};
     });

@@ -3,6 +3,7 @@ import { PerClientWatches, settled, supportsRecursive, SYSTEM_WATCH, type Direct
 import { isWithin } from '@adecore/utils/path';
 import { ClientSinks } from '../client-sinks.ts';
 import type { SessionSink } from '../sessions/manager.ts';
+import { isMachineStatePath, NO_MACHINE_HOME, type MachineHomePolicy } from './machine-home.ts';
 
 // A save, a formatter and a build all touch the same folder in a burst; one event per burst is enough.
 const SETTLE_MS = 250;
@@ -49,8 +50,8 @@ export class FolderWatcher {
         return this.sinks.subscribe(clientId, sink);
     }
 
-    /* Starts watching at once; the promise settles when a write is sure to be reported. */
-    watch(clientId: string, path: string): Promise<void> {
+    /* Starts watching at once; the promise settles when a write is sure to be reported. A change in `hidden` is never reported. */
+    watch(clientId: string, path: string, hidden: MachineHomePolicy = NO_MACHINE_HOME): Promise<void> {
         const root = resolve(path);
         for (const [, existing] of this.watches.all(clientId)) {
             // Covered paths share the stream's startup barrier.
@@ -64,6 +65,11 @@ export class FolderWatcher {
             // The platform reports a change only after this call returned, so `state` is there by then.
             watcher = this.seams.watch(root, { recursive }, (_event, filename) => {
                 const name = typeof filename === 'string' ? filename : null;
+
+                if (name !== null && isMachineStatePath(hidden, join(root, name))) {
+                    return;
+                }
+
                 // A platform that reports no name could have touched anything under the root.
                 state.touched.add(name === null ? root : dirname(join(root, name)));
 

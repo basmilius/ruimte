@@ -51,6 +51,18 @@ export function resolveBrowsePath(partialPath: string, cwd: string | undefined, 
     return isAbsolute(trimmed) ? resolve(trimmed) : resolve(cwd ?? home, trimmed);
 }
 
+/* The directory a browse reads and the prefix its names must start with. */
+export function browseTarget(partialPath: string, cwd: string | undefined, options: BrowseOptions = {}): { parentPath: string; prefix: string } {
+    const trimmed = partialPath.trim();
+    const target = resolveBrowsePath(trimmed, cwd, options);
+    const wholeDirectory = endsWithSeparator(trimmed) || trimmed === '~' || trimmed === '.' || trimmed === '..';
+
+    return {
+        parentPath: wholeDirectory ? target : dirname(target),
+        prefix: wholeDirectory ? '' : basename(target).toLowerCase()
+    };
+}
+
 /*
  * Directories that complete what was typed. A path ending in a separator lists that directory;
  * otherwise the last segment filters its parent by prefix. Dot-folders and build output stay hidden
@@ -59,11 +71,7 @@ export function resolveBrowsePath(partialPath: string, cwd: string | undefined, 
  * and `exists` tells it apart from one that is not there.
  */
 export async function browseDirectories(partialPath: string, cwd: string | undefined, options: BrowseOptions = {}): Promise<FsBrowseResult> {
-    const trimmed = partialPath.trim();
-    const target = resolveBrowsePath(trimmed, cwd, options);
-    const wholeDirectory = endsWithSeparator(trimmed) || trimmed === '~' || trimmed === '.' || trimmed === '..';
-    const parentPath = wholeDirectory ? target : dirname(target);
-    const prefix = wholeDirectory ? '' : basename(target).toLowerCase();
+    const { parentPath, prefix } = browseTarget(partialPath, cwd, options);
     let names: Array<{ name: string; isDirectory: boolean }>;
     try {
         names = (await readdir(parentPath, { withFileTypes: true })).map((entry) => ({ name: entry.name, isDirectory: entry.isDirectory() }));
