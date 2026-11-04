@@ -602,10 +602,10 @@ describe('ProjectStore', () => {
         expect(summaries).toEqual([]);
     });
 
-    test('the last client out ends the sessions the project holds', async () => {
+    test('the last client out ends the sessions the project holds, as closing rather than removing them', async () => {
         const ended: string[] = [];
-        links.endSession = async (kind, nodeId) => {
-            ended.push(`${kind}:${nodeId}`);
+        links.endSession = async (kind, nodeId, closing) => {
+            ended.push(`${kind}:${nodeId}:${closing === true ? 'closing' : 'removing'}`);
         };
         const opened = await store.openProject({ folder });
         const { projectId } = opened.summary;
@@ -613,7 +613,8 @@ describe('ProjectStore', () => {
         store.hold('c1', projectId);
 
         expect(await store.closeProject(projectId, 'c1')).toEqual({ ended: 1, otherClients: 0 });
-        expect(ended).toEqual(['terminal:n1']);
+        // A chat's thread has to outlive its project closing; only removing its node takes it along.
+        expect(ended).toEqual(['terminal:n1:closing']);
         expect((await store.list())[0]?.closedAt).toBeNumber();
     });
 

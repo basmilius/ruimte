@@ -214,7 +214,8 @@ interface CurrentDocument {
 }
 
 /* Ends the session behind one node, handed over by the daemon so the store stays out of the managers. */
-type SessionEnder = (kind: 'terminal' | 'chat', nodeId: string) => Promise<void>;
+/* `closing` ends a chat's CLI and keeps its thread, for a project that closes; without it the chat goes with its node. */
+type SessionEnder = (kind: 'terminal' | 'chat', nodeId: string, closing?: boolean) => Promise<void>;
 
 /* Told what a person's save changed, with the views as they were before it and as it wrote them. */
 type SaveListener = (folder: string, before: readonly ProjectView[], after: readonly ProjectView[]) => Promise<void>;
@@ -1106,7 +1107,7 @@ export class ProjectStore {
             if (reopened()) {
                 break;
             }
-            await this.links.endSession(node.kind, node.id);
+            await this.links.endSession(node.kind, node.id, true);
             ended += 1;
         }
         const launches = reopened() ? 0 : await this.links.launches.end(projectId);
