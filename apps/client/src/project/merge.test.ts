@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectChatView, ProjectContent, ProjectNode, ProjectView } from '@ruimte/contracts';
+import { carriedByGroups, createCanvasStore } from '@/state/canvas';
 import { mergeProject, type CanvasPatch, type ProjectMerge } from './merge';
 
 function node(id: string, patch: Partial<ProjectNode> = {}): ProjectNode {
@@ -487,5 +488,81 @@ describe('what a newer Ruimte wrote', () => {
         const base = content([canvas('main')]);
         const theirs = content([canvas('main'), timeline]);
         expect(accepted(mergeProject(base, base, theirs)).changes.views).toEqual([timeline]);
+    });
+});
+
+describe('beside a Ruimte that reads open groups off positions', () => {
+    /* What 0.29 writes: an open group without members, and a fold that names what stands in the frame. */
+    const frame = (patch: Partial<ProjectNode> = {}): ProjectNode => node('g', { kind: 'group', w: 1000, h: 800, ...patch });
+    const folded = (memberIds: string[]): ProjectNode => frame({ collapsed: true, h: 40, expandedHeight: 800, memberIds });
+    const reopened = (): ProjectNode => frame({ collapsed: false });
+    const members = [node('a', { x: 100, y: 100 }), node('b', { x: 400, y: 100 }), node('d', { x: 100, y: 400 })];
+
+    function heldBy(merge: ProjectMerge): Record<string, string[]> {
+        const nodes = Object.fromEntries(canvasOf(merge, 'main').nodes.map((entry) => [entry.id, entry]));
+        const groups = Object.values(nodes).filter((entry) => entry.kind === 'group');
+        return Object.fromEntries(groups.map((entry) => [entry.id, [...carriedByGroups(nodes, {}, [entry.id])].sort()]));
+    }
+
+    test('a group folded and opened there keeps the members this client wrote out, and the one it dropped in', () => {
+        const base = content([canvas('main', { nodes: [frame({ memberIds: ['a', 'b'] }), ...members] })]);
+        const mine = content([canvas('main', { nodes: [frame({ memberIds: ['a', 'b', 'd'] }), ...members] })]);
+        const theirs = content([canvas('main', { nodes: [reopened(), ...members] })]);
+
+        const merge = mergeProject(base, mine, theirs);
+
+        expect(canvasOf(merge, 'main').nodes[0]).toEqual(frame({ collapsed: false, memberIds: ['a', 'b', 'd'] }));
+    });
+
+    test('a group folded there by what stands in it takes in what this client dropped in meanwhile', () => {
+        const base = content([canvas('main', { nodes: [frame({ memberIds: ['a', 'b'] }), ...members] })]);
+        const mine = content([canvas('main', { nodes: [frame({ memberIds: ['a', 'b', 'd'] }), ...members] })]);
+        const theirs = content([canvas('main', { nodes: [folded(['a', 'b']), ...members] })]);
+
+        const merge = mergeProject(base, mine, theirs);
+
+        expect(canvasOf(merge, 'main').nodes[0]).toEqual(folded(['a', 'b', 'd']));
+    });
+
+    test('a group opened there that this client never wrote out reads its members off the frame again', () => {
+        const base = content([canvas('main', { nodes: [folded(['a', 'b']), ...members] })]);
+        const theirs = content([canvas('main', { nodes: [reopened(), ...members] })]);
+
+        const merge = mergeProject(base, base, theirs);
+
+        expect(heldBy(merge)).toEqual({ g: ['a', 'b', 'd'] });
+    });
+
+    test('a node moved there keeps its move beside members written out here, with no conflict', () => {
+        const outside = node('d', { x: 3000, y: 0 });
+        const base = content([canvas('main', { nodes: [frame(), members[0]!, members[1]!, outside] })]);
+        const mine = content([canvas('main', { nodes: [frame({ memberIds: ['a', 'b'] }), members[0]!, members[1]!, outside] })]);
+        const theirs = content([canvas('main', { nodes: [frame(), ...members] })]);
+
+        const merge = mergeProject(base, mine, theirs);
+
+        expect(canvasOf(merge, 'main').nodes.find((entry) => entry.id === 'd')).toEqual(members[2]);
+        expect(canvasOf(merge, 'main').nodes[0]!.memberIds).toEqual(['a', 'b']);
+    });
+
+    test('nested groups written out here and folded there hold each other in one direction only', () => {
+        const inner = node('inner', { kind: 'group', x: 500, y: 300, w: 400, h: 400 });
+        const deep = node('deep', { x: 600, y: 400 });
+        const view = canvas('main', { nodes: [frame(), inner, deep, ...members] });
+        const store = createCanvasStore();
+        store.getState().loadView(view, null);
+        store.getState().select(['d']);
+        store.getState().moveSelected(16, 0, true);
+        store.getState().settleMove();
+        const theirsInner = { ...inner, collapsed: true, h: 40, expandedHeight: 400, memberIds: ['deep'] };
+
+        const merge = mergeProject(
+            content([view]),
+            content([{ ...view, ...store.getState().exportContent() }]),
+            content([canvas('main', { nodes: [frame(), theirsInner, deep, ...members] })])
+        );
+
+        expect(heldBy(merge)).toEqual({ g: ['a', 'b', 'd', 'deep', 'inner'], inner: ['deep'] });
+        expect(canvasOf(merge, 'main').nodes[1]).toMatchObject({ collapsed: true, memberIds: ['deep'] });
     });
 });

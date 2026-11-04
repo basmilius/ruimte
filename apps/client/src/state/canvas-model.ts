@@ -256,9 +256,13 @@ export function withMembersWritten(placement: Placement): Record<string, CanvasN
     return nodes;
 }
 
-/* The groups with `id` taken out of each one that holds it and written into `targetId`, if any. A group that held it by position writes its members out first. */
+/*
+ * The groups with `id` taken out of each one that holds it and written into `targetId`, if any. A group that held it by position writes its members out first.
+ * What `id` carries leaves those groups with it: positions, and what 0.29 wrote on a fold, put a nested group's members in the group around it as well.
+ */
 export function movedToGroup(placement: Placement, id: string, targetId: string | null): Record<string, CanvasNode> {
     const nodes = { ...placement.nodes };
+    const carried = carriedByGroups(placement.nodes, placement.texts, [id], placement.lines);
     for (const group of Object.values(placement.nodes)) {
         if (group.kind !== 'group' || group.id === id) {
             continue;
@@ -270,7 +274,7 @@ export function movedToGroup(placement: Placement, id: string, targetId: string 
                 nodes[group.id] = { ...group, memberIds: holds ? members : [...members, id] };
             }
         } else if (holds) {
-            nodes[group.id] = { ...group, memberIds: members.filter((member) => member !== id) };
+            nodes[group.id] = { ...group, memberIds: members.filter((member) => member !== id && !carried.has(member)) };
         }
     }
     return nodes;

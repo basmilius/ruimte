@@ -79,9 +79,18 @@ const NODE_FIELDS: FieldGroups = {
 // A group's members change on every drop into it, so two writers putting things in one group is no conflict.
 const NODE_SETS: ReadonlySet<string> = new Set(['memberIds']);
 
-/* What both sides made of a list of ids: what either added is in, what either took out is gone, in this client's order. */
+/*
+ * What both sides made of a list of ids: what either added is in, what either took out is gone, in this client's order.
+ * A side without the list took nothing out: 0.29 drops a group's members when it opens it and reads them off the frame.
+ */
 function mergedSet(base: unknown, mine: unknown, theirs: unknown): string[] {
     const list = (value: unknown): string[] => (Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []);
+    if (!Array.isArray(theirs)) {
+        return list(mine);
+    }
+    if (!Array.isArray(mine)) {
+        return list(theirs);
+    }
     const was = new Set(list(base));
     const there = new Set(list(theirs));
     const kept = list(mine).filter((id) => !was.has(id) || there.has(id));
