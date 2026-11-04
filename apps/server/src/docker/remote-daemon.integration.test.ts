@@ -1583,7 +1583,10 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
 
 /* Runs the suite's broker on this machine until `stop`; the container backs off up to 30 seconds between tries to reach it. */
 async function startBroker(): Promise<Subprocess> {
-    const broker = Bun.spawn(['bun', join(import.meta.dir, '..', '..', '..', 'pulsar-broker', 'src', 'main.ts'), '--port', String(BROKER_PORT)], {
+    // Docker Desktop forwards host.docker.internal to this machine's loopback; on Linux it is the bridge's
+    // address, which a broker on loopback never hears.
+    const host = process.platform === 'linux' ? ['--host', '0.0.0.0'] : [];
+    const broker = Bun.spawn(['bun', join(import.meta.dir, '..', '..', '..', 'pulsar-broker', 'src', 'main.ts'), '--port', String(BROKER_PORT), ...host], {
         stdout: 'ignore',
         stderr: 'inherit'
     });

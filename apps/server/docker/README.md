@@ -46,8 +46,8 @@ Both are named volumes, not bind mounts, so the file system is the container's o
 
 `docker:test` runs `src/docker/remote-daemon.integration.test.ts` against `daemon-test`, a second service from the same image on `127.0.0.1:4320` (`ruimte-remote-test`). It has no volumes, starts fresh every time (`RUIMTE_FRESH_STATE=1`) and is recreated around every run, so the container on 4310 is untouched.
 
-`test.sh` makes an ed25519 key per run, which the test container accepts in place of the address book's (`RUIMTE_PULSAR_TEST_STATEMENT_KEY`, read only by a daemon from source). Compose publishes its door on `127.0.0.1:4330` and its UDP range on `43200-43209`. The suite runs a broker on port 4420, which the container dials at `host.docker.internal`.
+`test.sh` makes an ed25519 key per run, which the test container accepts in place of the address book's (`RUIMTE_PULSAR_TEST_STATEMENT_KEY`, read only by a daemon from source). Compose publishes its door on `127.0.0.1:4330` and its UDP range on `43200-43209`. The suite runs a broker on port 4420, which the container dials at `host.docker.internal`; on Linux that is the bridge's address, so there the broker listens on every interface.
 
 Every client of the suite comes from Docker's gateway, and the door allows one address 30 sockets a minute, so a test that opens many channels in a row has to stay under that.
 
-The suite skips itself unless `RUIMTE_DOCKER=1` is set, so `bun test` and CI never reach for a container. `RUIMTE_DOCKER_CONTAINER` and `RUIMTE_DOCKER_PORT` point it at another container started the same way, at the cost of that daemon's state.
+The suite skips itself unless `RUIMTE_DOCKER=1` is set, so `bun test` and the other suites never reach for a container. The `docker` job in `ci.yml` runs `docker:test` on every push to main and on a pull request that touches what the image holds. `RUIMTE_DOCKER_CONTAINER` and `RUIMTE_DOCKER_PORT` point it at another container started the same way, at the cost of that daemon's state.

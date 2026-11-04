@@ -111,10 +111,43 @@ jobs:
       - uses: ./.github/actions/install
       - run: bun run test:package
 
+  # A pull request runs the Docker suite only when what the image holds or the suite reaches changed.
+  docker-changes:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    outputs:
+      docker: ${{ steps.paths.outputs.docker }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
+        id: paths
+        with:
+          token: ''
+          filters: |
+            docker:
+              - '.github/workflows/ci.yml'
+              - 'bun.lock'
+              - 'apps/server/**'
+              - 'apps/pulsar-broker/**'
+              - 'packages/contracts/**'
+              - 'packages/pulsar/**'
+
+  # The daemon in a Linux container, reached the way another machine reaches it: the owner boundary
+  # and the door on the local network end to end (apps/server/docker/README.md).
+  docker:
+    name: docker (Linux)
+    needs: docker-changes
+    if: ${{ !cancelled() && (github.event_name == 'push' || needs.docker-changes.outputs.docker == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/install
+      - run: bun run --cwd apps/server docker:test
+
   checks:
     name: CI checks
     if: ${{ always() }}
-    needs: [native, verify, build, unit, windows, dom, integration, packaged, integration-linux, packaged-linux]
+    needs: [native, verify, build, unit, windows, dom, integration, packaged, integration-linux, packaged-linux, docker-changes, docker]
     runs-on: ubuntu-latest
     steps:
       - name: Check job results
