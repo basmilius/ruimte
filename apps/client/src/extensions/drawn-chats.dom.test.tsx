@@ -20,7 +20,7 @@ function extension(enabled: boolean): InstalledClientExtension {
         manifest: { id: 'acme.chat', name: 'Acme chat', version: '1.0.0', api: 1 },
         base: '/__extensions/acme.chat/x/',
         enabled,
-        hasClient: false,
+        hasClient: true,
         dev: false
     };
 }
@@ -65,6 +65,17 @@ describe('a chat an extension draws itself', () => {
         expect(row()!.textContent).toContain('Kept work');
 
         listed([extension(true)]);
+        await until(() => row() === null);
+    });
+
+    test('is listed while its extension failed to load, and leaves again once a load succeeds', async () => {
+        await page.renderApp();
+        listed([extension(true)]);
+        act(() => useInstalledExtensions.setState({ failures: { 'acme.chat': 'Failed to fetch dynamically imported module' } }));
+        await until(() => row() !== null);
+        expect(row()!.textContent).toContain('Kept work');
+
+        act(() => useInstalledExtensions.setState({ failures: {} }));
         await until(() => row() === null);
     });
 
