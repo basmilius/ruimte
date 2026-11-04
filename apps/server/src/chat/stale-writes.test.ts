@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { mkdir, readdir, utimes, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
+import { tempNameFor } from '@adecore/utils/fs';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { sweepStaleChatWrites } from './stale-writes.ts';
 
@@ -21,11 +22,14 @@ test('takes a temporary write older than a day and keeps a recent one, the recor
         await utimes(path, at, at);
     };
 
+    const current = basename(tempNameFor(join(folder, 'chat-c.json')));
+
     await written('chat-a.json.9173-2.tmp', DAY_MS + 1_000);
+    await written(current, DAY_MS + 1_000);
     await written('chat-b.json.42569-13.tmp', DAY_MS - 1_000);
     await written('chat-a.json', 2 * DAY_MS);
     await written('notes.tmp', 2 * DAY_MS);
 
-    expect(await sweepStaleChatWrites(home, NOW)).toEqual({ files: 1, bytes: 2 });
+    expect(await sweepStaleChatWrites(home, NOW)).toEqual({ files: 2, bytes: 4 });
     expect((await readdir(folder)).sort()).toEqual(['chat-a.json', 'chat-b.json.42569-13.tmp', 'notes.tmp']);
 });
