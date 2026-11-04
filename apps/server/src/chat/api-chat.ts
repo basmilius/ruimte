@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { isNotFound, writeAtomic } from '@adecore/agents';
 import type { ApprovalDecision, BackendHost, BackendLaunch } from '@adecore/agents/chat';
+import { isNotFound } from '@adecore/utils/errors';
+import { writeAtomic } from '@adecore/utils/fs';
 import { isRecord } from '@adecore/utils/record';
 import type { Tool } from '@modelcontextprotocol/client';
 import type { RuntimeMode } from '@ruimte/contracts';

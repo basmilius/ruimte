@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { link, mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileExists } from '@adecore/agents';
+import { fileExists } from '@adecore/utils/fs';
 import { renameNoReplace } from './no-replace-rename.ts';
 import { planRename } from './rename.ts';
 import { codeOf, projectBoundary } from './test-boundary.ts';

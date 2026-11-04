@@ -1,4 +1,4 @@
-import { cancellableTimeout } from '@adecore/agents';
+import { cancellableTimeout } from '@adecore/utils/async';
 
 /* A timer a test can replace, with the callback first. */
 export interface Timers {

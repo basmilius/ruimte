@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { chmod, mkdir, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { writeAtomic } from '@adecore/agents';
+import { writeAtomic } from '@adecore/utils/fs';
 import type { AgentKind, AgentServerStatus } from '@ruimte/contracts';
 import { z } from 'zod';
 import { downloadFile, sha256Of, type FileDownload } from '../artifacts/artifact-fs.ts';

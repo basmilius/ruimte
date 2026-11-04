@@ -1,7 +1,8 @@
 import { constants } from 'node:fs';
 import { lstat, open, realpath, type FileHandle } from 'node:fs/promises';
 import { basename, dirname, join, relative, sep } from 'node:path';
-import { CodedError, KeyedSerializer } from '@adecore/agents';
+import { CodedError } from '@adecore/agents';
+import { KeyedSerializer } from '@adecore/utils/async';
 import { FS_READ_MAX_TEXT_BYTES, type FsWriteResult } from '@ruimte/contracts';
 import { isRuimteState } from '../projects/project-files.ts';
 import { isInside } from '../tools/project-paths.ts';

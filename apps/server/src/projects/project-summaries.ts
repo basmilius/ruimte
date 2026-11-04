@@ -1,5 +1,5 @@
 import { basename } from 'node:path';
-import { fileExists } from '@adecore/agents';
+import { fileExists } from '@adecore/utils/fs';
 import { initialIconOf, type ProjectIcon, type ProjectNameSource, type ProjectSetIconPayload, type ProjectSummary } from '@ruimte/contracts';
 import { ProjectError } from './project-error.ts';
 import { documentPathInFolder, removeIconFiles, writeIconFile, ICON_EXTENSION_BY_MIME } from './project-files.ts';

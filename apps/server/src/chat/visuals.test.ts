@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fileExists } from '@adecore/agents';
 import { visualFileName } from '@adecore/agents/chat';
 import { ManualClock } from '@adecore/agents/testing';
+import { fileExists } from '@adecore/utils/fs';
 import { VISUAL_LIMITS, type ChatVisual } from '@ruimte/contracts';
 import { readBytes } from '../bytes/read-bytes.ts';
 import type { ProjectStore } from '../projects/project-store.ts';

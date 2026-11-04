@@ -1,5 +1,5 @@
-import { isRecord } from '@adecore/agent-contracts';
 import { DrawingFontSchema, DrawingStrokeStyleSchema, DrawingStrokeWidthSchema } from '@adecore/drawing/protocol';
+import { isRecord } from '@adecore/utils/record';
 import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
 import { DeviceReferenceSchema } from './device.ts';

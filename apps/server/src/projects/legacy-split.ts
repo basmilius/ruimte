@@ -1,4 +1,4 @@
-import { fileExists } from '@adecore/agents';
+import { fileExists } from '@adecore/utils/fs';
 import { mergeFiles, overlayOfLegacy, privateFileOf, viewShareRefusal, type ProjectContent, type ProjectSharedFile, type ProjectView } from '@ruimte/contracts';
 import { privatePathOf } from './project-files.ts';
 

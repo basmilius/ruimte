@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { isNotFound } from '@adecore/agents';
 import { fraction, type ProbeEnv, type ProbeResult } from '@adecore/agents/usage';
+import { isNotFound } from '@adecore/utils/errors';
 import { isRecord } from '@adecore/utils/record';
 import type { UsageWindow } from '@ruimte/contracts';
 

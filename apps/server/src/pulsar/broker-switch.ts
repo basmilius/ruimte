@@ -1,4 +1,4 @@
-import { Serializer } from '@adecore/agents';
+import { Serializer } from '@adecore/utils/async';
 import { effectiveBrokerUrl, type BrokerOverride, type BrokerSetting, type IceServer } from '@ruimte/pulsar';
 import type { Relay } from '../auth/relay.ts';
 

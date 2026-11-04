@@ -1,6 +1,9 @@
 import { mkdir, readFile, rename, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { fileExists, isNotFound, settled, writeAtomic, type DirectoryWatcher, type Serializer, type Settled, type WatchSeams } from '@adecore/agents';
+import { settled, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
+import type { Serializer } from '@adecore/utils/async';
+import { isNotFound } from '@adecore/utils/errors';
+import { fileExists, writeAtomic } from '@adecore/utils/fs';
 import { climbsOut } from '@adecore/utils/path';
 import { isRecord } from '@adecore/utils/record';
 import {

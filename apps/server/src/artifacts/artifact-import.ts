@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { KeyedSerializer } from '@adecore/agents';
+import { KeyedSerializer } from '@adecore/utils/async';
 import {
     PEER_ARTIFACT_PIECE_BYTES,
     type ArtifactFile,

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, sep } from 'node:path';
-import { fileExists } from '@adecore/agents';
+import { fileExists } from '@adecore/utils/fs';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { ANTIGRAVITY_RULES, CODEX_RULES, hookEntry, installHooks } from './install.ts';
 import { AgentIntegrations, IntegrationsFixed } from './integrations.ts';

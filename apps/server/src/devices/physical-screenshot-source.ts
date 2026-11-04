@@ -1,7 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { wait } from '@adecore/agents';
+import { wait } from '@adecore/utils/async';
 import type { DeviceInput, LiveStreamFrame } from '@ruimte/contracts';
 import { z } from 'zod';
 import { runCommand } from './command.ts';

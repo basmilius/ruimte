@@ -64,7 +64,7 @@ if (config.command === 'closed-lid') {
     const { closedLidRulePath } = await import('./power/closed-lid.ts');
     const { readLocalSecret } = await import('./auth/local-secret.ts');
     const { readMachineStatus } = await import('./cli/machine-status.ts');
-    const { fileExists } = await import('@adecore/agents');
+    const { fileExists } = await import('@adecore/utils/fs');
     const { userInfo } = await import('node:os');
     const uid = process.getuid?.() ?? -1;
     process.exit(

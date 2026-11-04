@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
-import { CodedError, Serializer, SYSTEM_WATCH, settled, writeAtomic, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
+import { CodedError, SYSTEM_WATCH, settled, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
+import { Serializer } from '@adecore/utils/async';
+import { writeAtomic } from '@adecore/utils/fs';
 import {
     BUILT_IN_LIVE_TEMPLATE_KEYS,
     BUILT_IN_POSTFIX_TEMPLATE_KEYS,

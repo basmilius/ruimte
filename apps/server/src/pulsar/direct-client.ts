@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { wait, withTimeout } from '@adecore/agents';
+import { wait, withTimeout } from '@adecore/utils/async';
 import {
     ChannelLiveness,
     channelBinding,

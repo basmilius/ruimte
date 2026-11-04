@@ -1,6 +1,7 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { isNotFound, writeAtomic } from '@adecore/agents';
+import { isNotFound } from '@adecore/utils/errors';
+import { writeAtomic } from '@adecore/utils/fs';
 import { AgentKindSchema, KNOWN_AGENT_KINDS, type AgentKind } from '@ruimte/contracts';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';

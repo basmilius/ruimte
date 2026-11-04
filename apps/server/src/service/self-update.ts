@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { unrefTimeout } from '@adecore/agents';
+import { unrefTimeout } from '@adecore/utils/async';
 
 /*
  * A daemon under the background service that finds a newer binary on disk ends itself once nothing

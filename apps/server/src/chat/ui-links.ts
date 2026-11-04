@@ -1,8 +1,9 @@
 import { realpath, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, relative, resolve } from 'node:path';
-import { fileExists, isNotFound } from '@adecore/agents';
 import { ChatUiRefusal } from '@adecore/agents/chat';
 import type { UiLinkResolution, UiLinkTarget } from '@adecore/intelligent-ui/links';
+import { isNotFound } from '@adecore/utils/errors';
+import { fileExists } from '@adecore/utils/fs';
 import type { ChatInfo } from '@ruimte/contracts';
 import { locateFile } from '../fs/locate.ts';
 import { cachedRepos } from '../git/repo-cache.ts';

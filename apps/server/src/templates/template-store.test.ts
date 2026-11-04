@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fileExists } from '@adecore/agents';
 import { FakeWatch } from '@adecore/agents/testing';
+import { fileExists } from '@adecore/utils/fs';
 import type { LiveTemplateInput, TemplateChangedEvent } from '@ruimte/contracts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { TemplateStore } from './template-store.ts';

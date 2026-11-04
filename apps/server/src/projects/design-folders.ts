@@ -1,6 +1,6 @@
 import { lstat, mkdir, readdir, readFile, rename, rm, rmdir } from 'node:fs/promises';
 import { dirname, extname, join } from 'node:path';
-import { writeAtomic } from '@adecore/agents';
+import { writeAtomic } from '@adecore/utils/fs';
 import { isRecord } from '@adecore/utils/record';
 import { designFolderOf, designPlaces, isSharedDesign, type DesignPlace, type ProjectView } from '@ruimte/contracts';
 

@@ -1,4 +1,5 @@
-import { CodedError, cancellableTimeout } from '@adecore/agents';
+import { CodedError } from '@adecore/agents';
+import { cancellableTimeout } from '@adecore/utils/async';
 import { clipText, FS_GREP_MAX_RESULTS, type FsGrepMatch, type FsGrepResult } from '@ruimte/contracts';
 import { COMPILED } from '../version.ts';
 import { contextOf, lineReader, MAX_FILE_BYTES, MAX_LINE_LENGTH, type GrepWorkerMessage, type GrepWorkerRequest } from './grep-lines.ts';

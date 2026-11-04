@@ -1,5 +1,5 @@
 import { readFile, rm } from 'node:fs/promises';
-import { isNotFound } from '@adecore/agents';
+import { isNotFound } from '@adecore/utils/errors';
 import { isRecord } from '@adecore/utils/record';
 import type { AgentIntegrationReport, AgentKind } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';

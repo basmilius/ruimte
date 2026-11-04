@@ -1,7 +1,7 @@
 import type { Socket } from 'bun';
 import { chmodSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { isNotFound } from '@adecore/agents';
+import { isNotFound } from '@adecore/utils/errors';
 import { ShellPrompt, type ShellEditorConnection, type ShellEditorState, type ShellPrepareOutcome } from './shell-prompt.ts';
 
 // The version of the line protocol the shell integration's `hello` must name.

@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { constants, type Stats } from 'node:fs';
 import { link, lstat, open, realpath, rename, rm } from 'node:fs/promises';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
-import { CodedError, isNotFound } from '@adecore/agents';
+import { CodedError } from '@adecore/agents';
+import { isNotFound } from '@adecore/utils/errors';
 import {
     CHAT_ATTACHMENT_MAX_BYTES,
     type ChatAttachment,

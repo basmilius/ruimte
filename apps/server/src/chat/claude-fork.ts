@@ -1,7 +1,7 @@
 import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { writeAtomic } from '@adecore/agents';
 import { claudeProjectSlug, findClaudeSession } from '@adecore/agents/chat';
+import { writeAtomic } from '@adecore/utils/fs';
 import { isRecord } from '@adecore/utils/record';
 import { ChatError } from './errors.ts';
 

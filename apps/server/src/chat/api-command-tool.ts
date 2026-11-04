@@ -1,4 +1,4 @@
-import { cancellableTimeout } from '@adecore/agents';
+import { cancellableTimeout } from '@adecore/utils/async';
 import { clipText } from '@ruimte/contracts';
 import type { ApiToolResult } from './api-tools.ts';
 

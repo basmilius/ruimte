@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fileExists } from '@adecore/agents';
 import { ManualClock } from '@adecore/agents/testing';
+import { fileExists } from '@adecore/utils/fs';
 import type { ChatItem, Plan, ProjectContent } from '@ruimte/contracts';
 import { PLAN_RESUME_PREAMBLE, RESUME_PROMPT } from '../chat/chat-manager.ts';
 import type { ProjectStore } from '../projects/project-store.ts';

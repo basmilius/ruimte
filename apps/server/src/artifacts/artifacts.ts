@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { lstat, readdir, realpath } from 'node:fs/promises';
 import { basename, join, relative, resolve } from 'node:path';
-import { KeyedSerializer } from '@adecore/agents';
 import { WatchedSinks } from '@adecore/agents/host';
+import { KeyedSerializer } from '@adecore/utils/async';
 import {
     ARTIFACT_LIMITS,
     PEER_ARTIFACT_PIECE_BYTES,

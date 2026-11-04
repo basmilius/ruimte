@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
-import { CodedError, fileExists, type WatchSeams } from '@adecore/agents';
+import { CodedError, type WatchSeams } from '@adecore/agents';
 import {
     ErrorCodes,
     LspError,
@@ -24,6 +24,7 @@ import {
     type WorkspaceEditPlan,
     type WorkspaceEditSource
 } from '@adecore/lsp';
+import { fileExists } from '@adecore/utils/fs';
 import {
     LANGUAGE_ERROR_CODES,
     LANGUAGE_METHODS,

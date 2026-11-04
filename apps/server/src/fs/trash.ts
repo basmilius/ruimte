@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { link, mkdir, rename, unlink, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { basename, extname, join } from 'node:path';
-import { CodedError, entryExists } from '@adecore/agents';
+import { CodedError } from '@adecore/agents';
+import { entryExists } from '@adecore/utils/fs';
 import { RECYCLE_BIN_SOURCE, RecycleBinExit, recycleBinCommand } from './recycle-bin.ts';
 
 type TrashErrorCode = 'trash-unsupported' | 'trash-failed';

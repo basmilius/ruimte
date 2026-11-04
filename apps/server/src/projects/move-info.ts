@@ -1,6 +1,6 @@
 import { readdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import { entryExists } from '@adecore/agents';
+import { entryExists } from '@adecore/utils/fs';
 import type { ChatItem, ChatMoveInfoPayload, ChatMoveInfoResult, ChatMoveRefusal, ChatMoveTarget } from '@ruimte/contracts';
 import { workedFolders } from '../chat/worked-folders.ts';
 import { referencedIds } from '../context/references.ts';

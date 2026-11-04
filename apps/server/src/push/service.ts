@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { unrefTimeout } from '@adecore/agents';
+import { unrefTimeout } from '@adecore/utils/async';
 import {
     PUSH_NOTIFY_DEFAULT,
     chatWaitAsk,

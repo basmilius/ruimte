@@ -1,7 +1,7 @@
 import { basename, dirname, join, resolve } from 'node:path';
-import { entryExists } from '@adecore/agents';
 import { ChatError as AgentChatError } from '@adecore/agents/chat';
 import type { AgentLineageStore } from '@adecore/agents/coordination';
+import { entryExists } from '@adecore/utils/fs';
 import {
     DEFAULT_PROJECT_COLOR,
     initialIconOf,

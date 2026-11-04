@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
-import { Serializer } from '@adecore/agents';
+import { Serializer } from '@adecore/utils/async';
 import {
     ARTIFACT_LIMITS,
     ArtifactRequestIdSchema,

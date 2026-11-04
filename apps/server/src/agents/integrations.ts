@@ -1,6 +1,8 @@
 import { mkdir, readFile, rename } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { fileExists, isNotFound, writeAtomic, Serializer } from '@adecore/agents';
+import { Serializer } from '@adecore/utils/async';
+import { isNotFound } from '@adecore/utils/errors';
+import { fileExists, writeAtomic } from '@adecore/utils/fs';
 import { isRecord } from '@adecore/utils/record';
 import type { AgentIntegrationFile, AgentIntegrationReport, AgentIntegrationsSummary, AgentKind } from '@ruimte/contracts';
 import { z } from 'zod';

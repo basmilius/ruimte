@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile } from 'node:fs/promises';
 import { dirname, isAbsolute } from 'node:path';
-import { CodedError, isNotFound, writeAtomic } from '@adecore/agents';
+import { CodedError } from '@adecore/agents';
+import { isNotFound } from '@adecore/utils/errors';
+import { writeAtomic } from '@adecore/utils/fs';
 import {
     CUSTOM_SERVER_PREFIX,
     CustomLanguageServerSchema,

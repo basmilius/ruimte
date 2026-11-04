@@ -1,6 +1,7 @@
 import { mkdir, readdir, rm } from 'node:fs/promises';
 import { basename } from 'node:path';
-import { settled, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams, Serializer } from '@adecore/agents';
+import { settled, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
+import { Serializer } from '@adecore/utils/async';
 import type { ProjectView } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';

@@ -1,6 +1,7 @@
 import { join } from 'node:path';
-import { RecordDirectory, KeyedSerializer } from '@adecore/agents';
+import { RecordDirectory } from '@adecore/agents';
 import { ToolRefusal } from '@adecore/agents/context';
+import { KeyedSerializer } from '@adecore/utils/async';
 import { ActionRefusal } from '@ruimte/actions';
 import { z } from 'zod';
 import { sha256 } from '../artifacts/artifact-fs.ts';

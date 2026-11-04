@@ -2,7 +2,8 @@ import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, rename } from 'node:fs/promises';
 import { hostname } from 'node:os';
 import { dirname, join } from 'node:path';
-import { isNotFound, writeAtomic } from '@adecore/agents';
+import { isNotFound } from '@adecore/utils/errors';
+import { writeAtomic } from '@adecore/utils/fs';
 import {
     KeepAwakeModeSchema,
     ProjectIconChoiceSchema,

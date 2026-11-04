@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
-import { CodedError, KeyedSerializer } from '@adecore/agents';
+import { CodedError } from '@adecore/agents';
 import type { AgentEvent } from '@adecore/agents/host';
 import { splitLines } from '@adecore/merge';
+import { KeyedSerializer } from '@adecore/utils/async';
 import {
     PROVENANCE_LIMITS,
     type AgentKind,

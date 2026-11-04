@@ -1,7 +1,7 @@
 import { mkdir, realpath, rm } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
-import { fileExists } from '@adecore/agents';
 import { KeyedSerializer } from '@adecore/utils/async';
+import { fileExists } from '@adecore/utils/fs';
 import type { Worktree, WorktreeWork } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import type { SessionSink } from '../sessions/manager.ts';
