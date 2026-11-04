@@ -589,11 +589,17 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         expect(hello.version.length).toBeGreaterThan(0);
     });
 
-    test('a daemon in a container has no hardware to name', async () => {
+    test('a daemon in a container names only the hardware its kernel shows it', async () => {
         const hello = await client.request<ServerHelloResult>('server.hello', {});
-        // A container has neither a DMI tree nor a device tree, so the field stays out. A Linux daemon on
-        // real hardware answers with what its firmware wrote ("XPS 15 9500"), which is why it is optional.
-        expect(hello.model).toBeUndefined();
+        // Docker Desktop's VM has no DMI tree, so the field stays out there. A container on a Linux host
+        // shares the host's /sys and so its firmware's name, as a CI runner's "Virtual Machine".
+        const productName = await inContainer(['sh', '-c', 'cat /sys/devices/virtual/dmi/id/product_name 2>/dev/null || true']);
+
+        if (productName === '') {
+            expect(hello.model).toBeUndefined();
+        } else {
+            expect(hello.model).toContain(productName);
+        }
     });
 
     test('endpoint.info knows the client is not on its machine', async () => {
