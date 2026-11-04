@@ -15,6 +15,11 @@ beforeAll(async () => {
         'packages/npm/current.package.integration.test.ts',
         'packages/contracts/current.integration.test.ts',
         'scripts/current.integration.test.ts',
+        'extensions/limits/server/current.integration.test.ts',
+        'extensions/poc/board/current.integration.test.ts',
+        'extensions/limits/test/host.integration.test.ts',
+        'extensions/poc/board/test/host.integration.test.ts',
+        'extensions/limits/node_modules/library/foreign.integration.test.ts',
         'docs/reports/old.integration.test.ts',
         'docs/reports/old.browser.integration.test.ts',
         'apps/client/node_modules/library/foreign.integration.test.ts',
@@ -35,10 +40,18 @@ test('default integration discovery selects automatic workspace tests without lo
     expect(integrationFiles(root)).toEqual([
         './apps/client/current.integration.test.ts',
         './apps/server/current.integration.test.ts',
+        './extensions/limits/server/current.integration.test.ts',
+        './extensions/poc/board/current.integration.test.ts',
         './packages/contracts/current.integration.test.ts',
         './packages/npm/current.package.integration.test.ts',
         './scripts/current.integration.test.ts'
     ]);
+});
+
+test("an extension's own integration test is found, its test folder left to the extension host", () => {
+    const found = integrationFiles(root, 'core');
+    expect(found).toContain('./extensions/limits/server/current.integration.test.ts');
+    expect(found.filter((path) => path.includes('/test/') || path.includes('node_modules'))).toEqual([]);
 });
 
 test('browser discovery selects only active browser tests', () => {

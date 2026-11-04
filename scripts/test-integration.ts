@@ -7,13 +7,16 @@ import { parseArgs } from 'node:util';
 const SUITES = ['default', 'core', 'package', 'devices', 'browser'] as const;
 export type IntegrationSuite = (typeof SUITES)[number];
 
+const EXTENSION_HOST_TESTS = /^extensions\/(?:poc\/)?[^/]+\/test\//;
+
 export function integrationFiles(root: string, suite: IntegrationSuite = 'default'): string[] {
     return (
-        [...new Glob('{apps,packages,scripts}/**/*.integration.test.ts').scanSync({ cwd: root, onlyFiles: true, followSymlinks: false })]
+        [...new Glob('{apps,extensions,packages,scripts}/**/*.integration.test.ts').scanSync({ cwd: root, onlyFiles: true, followSymlinks: false })]
             // The scan answers in the separator of the platform; the list is read and sorted with `/`.
             .map((path) => path.split(sep).join('/'))
             .filter((path) => {
-                if (path.split('/').includes('node_modules')) {
+                // An extension's `test/` runs under `ruimte extension test`, against its fake host (bunfig.toml).
+                if (path.split('/').includes('node_modules') || EXTENSION_HOST_TESTS.test(path)) {
                     return false;
                 }
                 const group = path.endsWith('.browser.integration.test.ts')
@@ -49,7 +52,7 @@ async function main(): Promise<void> {
         const config = browser ? 'browser.bunfig.toml' : 'integration.bunfig.toml';
         const selected = files.length > 0 ? files : integrationFiles(process.cwd(), suite as IntegrationSuite);
         if (selected.length === 0) {
-            throw new Error('No integration tests found in apps, packages or scripts.');
+            throw new Error('No integration tests found in apps, extensions, packages or scripts.');
         }
 
         // Chrome keeps the first launch flags and profile for a Bun process; browser files need independent backends.
