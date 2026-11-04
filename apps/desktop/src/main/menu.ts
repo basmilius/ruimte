@@ -1,7 +1,6 @@
-import { createMenuCommands, devToolsAccelerator, menuTemplateOf, staticMenuTemplate, type PageKeys } from '@adecore/shell';
+import { createMenuCommands, devToolsAccelerator, menuTemplateOf, staticMenuTemplate, type AppIpc, type PageKeys } from '@adecore/shell';
 import type { MenuShellAction, MenuSpec } from '@ruimte/desktop-bridge';
 import { electron } from './electron';
-import type { AppIpc } from './ipc';
 
 const { app, Menu } = electron;
 

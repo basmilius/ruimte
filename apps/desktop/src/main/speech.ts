@@ -1,8 +1,8 @@
 import { join } from 'node:path';
+import type { AppIpc } from '@adecore/shell';
 import { SpeechService, speechHelperPath } from '../speech';
 import { SpeechModel } from '../speech-model';
 import { electron } from './electron';
-import type { AppIpc } from './ipc';
 
 const { app, net, systemPreferences } = electron;
 

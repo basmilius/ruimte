@@ -3,6 +3,7 @@ import { Socket } from 'node:net';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
+    createAppIpc,
     createGestureGate,
     createPageKeys,
     createTheme,
@@ -29,7 +30,6 @@ import { serveDevExtensionFiles } from './main/dev-extension-files';
 import { installDialogs } from './main/dialogs';
 import { electron } from './main/electron';
 import { ClientExtensions } from './main/extensions';
-import { createAppIpc } from './main/ipc';
 import { installLogin } from './main/login';
 import { installMachineMode } from './main/machine-mode';
 import { installMenu } from './main/menu';

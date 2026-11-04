@@ -1,9 +1,9 @@
 import { join } from 'node:path';
+import type { AppIpc } from '@adecore/shell';
 import type { MachineMode } from '@ruimte/desktop-bridge';
 import { TELEMETRY_DSN, usageIngestUrl } from '@ruimte/telemetry';
 import { countFromPage, DesktopUsage, fileDesktopUsageStore, flushDesktopUsage, sendDesktopUsage, usageCounts, usageSettingOf } from '../usage';
 import { electron } from './electron';
-import type { AppIpc } from './ipc';
 import { telemetryBuild } from './telemetry';
 
 const { app, net } = electron;

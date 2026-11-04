@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { serviceDefinition as definitionFor, type ServiceManager } from '@adecore/service';
+import type { AppIpc } from '@adecore/shell';
 import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
 import type { BackgroundServiceState, MachineMode, MachineStopPreview, ServiceSupport } from '@ruimte/desktop-bridge';
 import { commandLineServiceProgram, daemonServiceSpec, platformServiceManager, serviceLogFile } from '@ruimte/service/host';
@@ -17,7 +18,6 @@ import { keepRunningSetting, serviceSupport } from '../service/settings';
 import { createSecretGate } from '../startup';
 import type { DaemonStartupDiagnostics } from '../telemetry';
 import { electron } from './electron';
-import type { AppIpc } from './ipc';
 import { reportShellProblem } from './telemetry';
 
 const { app, dialog } = electron;

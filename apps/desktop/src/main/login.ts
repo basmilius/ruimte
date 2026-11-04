@@ -1,9 +1,9 @@
 import { join } from 'node:path';
+import type { AppIpc } from '@adecore/shell';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { listenForLogin, type LoopbackLogin } from '../pulsar-login';
 import { fileSessionKey, fileSessionStore } from '../pulsar-store';
 import { electron } from './electron';
-import type { AppIpc } from './ipc';
 
 const { app, net, safeStorage } = electron;
 
