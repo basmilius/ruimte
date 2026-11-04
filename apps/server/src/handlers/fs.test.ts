@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile } from
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
-import { FS_WRITE_PIECE_BYTES, type ServerFrame } from '@ruimte/contracts';
+import { FS_WRITE_PIECE_BYTES, type FsListResult, type ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
 import { MachineHome } from '../fs/machine-home.ts';
 import { readServedFile } from '../fs/read.ts';
@@ -107,7 +107,7 @@ describe('the machine home', () => {
 
     test('fs.list of a folder around the home does not descend into it', async () => {
         const reply = await request('fs.list', { path: root, depth: 3, hidden: true });
-        const paths = reply.ok ? (reply.result as { entries: Array<{ path: string }> }).entries.map((entry) => entry.path) : [];
+        const paths = (reply as { result: FsListResult }).result.entries.map((entry) => entry.path);
 
         expect(paths).toContain(home);
         expect(paths.filter((path) => path.startsWith(`${home}/`))).toEqual([]);
