@@ -44,6 +44,7 @@ import { nodeDeletionFacts, saveNodeFiles, type ViewDeletionMachine } from '@/pr
 import { nodesOfView } from '@/project/view-nodes';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { liveCanvas, type AddNodeOptions, type CanvasState, type Locks, type NodeKind } from '@/state/canvas';
+import { goingWithDelete } from '@/state/canvas-model';
 import { liveDiagram } from '@/state/diagram';
 import type { DocumentState } from '@/state/document';
 import { liveDrawing } from '@/state/drawing';
@@ -101,13 +102,7 @@ function linesRemoved(lines: number): string {
 
 /* The nodes a delete takes: the ones named, and what a collapsed group among them hides. */
 function goingWith(canvas: CanvasState, nodeIds: readonly string[]): ProjectNode[] {
-    const going = new Set(
-        nodeIds.flatMap((id) => {
-            const node = canvas.nodes[id];
-            return node?.kind === 'group' && node.collapsed ? [id, ...(node.memberIds ?? [])] : [id];
-        })
-    );
-    return [...going].flatMap((id) => canvas.nodes[id] ?? []);
+    return goingWithDelete(nodeIds, canvas.nodes, canvas.texts, canvas.lines).flatMap((id) => canvas.nodes[id] ?? []);
 }
 
 /* The nodes, texts, lines, groups, layouts, locks and history of a canvas on screen. */

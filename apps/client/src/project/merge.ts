@@ -72,9 +72,21 @@ type FieldGroups = Readonly<Record<string, readonly string[]>>;
 
 const NODE_FIELDS: FieldGroups = {
     frame: ['x', 'y', 'w', 'h'],
-    folding: ['collapsed', 'memberIds', 'expandedHeight'],
+    folding: ['collapsed', 'expandedHeight'],
     title: ['title', 'titleSource']
 };
+
+// A group's members change on every drop into it, so two writers putting things in one group is no conflict.
+const NODE_SETS: ReadonlySet<string> = new Set(['memberIds']);
+
+/* What both sides made of a list of ids: what either added is in, what either took out is gone, in this client's order. */
+function mergedSet(base: unknown, mine: unknown, theirs: unknown): string[] {
+    const list = (value: unknown): string[] => (Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []);
+    const was = new Set(list(base));
+    const there = new Set(list(theirs));
+    const kept = list(mine).filter((id) => !was.has(id) || there.has(id));
+    return [...kept, ...list(theirs).filter((id) => !was.has(id) && !kept.includes(id))];
+}
 
 const TEXT_FIELDS: FieldGroups = { position: ['x', 'y'] };
 
@@ -87,7 +99,14 @@ type FieldsMerge<T> = { ok: true; merged: T; took: boolean } | { ok: false; fiel
  * `base` had it takes the other side's. Only a field both sides changed to different values is a
  * conflict, unless `keepMine` says this client's value stands for it anyway.
  */
-function mergeFields<T extends object>(base: T, mine: T, theirs: T, groups: FieldGroups, keepMine: (field: string) => boolean): FieldsMerge<T> {
+function mergeFields<T extends object>(
+    base: T,
+    mine: T,
+    theirs: T,
+    groups: FieldGroups,
+    keepMine: (field: string) => boolean,
+    sets: ReadonlySet<string> = new Set()
+): FieldsMerge<T> {
     const was = base as Record<string, unknown>;
     const here = mine as Record<string, unknown>;
     const there = theirs as Record<string, unknown>;
@@ -109,7 +128,15 @@ function mergeFields<T extends object>(base: T, mine: T, theirs: T, groups: Fiel
             if (keepMine(name)) {
                 continue;
             }
-            return { ok: false, field: name };
+            if (!sets.has(name)) {
+                return { ok: false, field: name };
+            }
+            const joined = mergedSet(was[name], here[name], there[name]);
+            if (!same(joined, here[name])) {
+                merged ??= { ...here };
+                merged[name] = joined;
+            }
+            continue;
         }
         merged ??= { ...here };
         for (const field of keys) {
@@ -127,7 +154,8 @@ function mergeElements<T extends { id: string }>(
     mine: readonly T[],
     theirs: readonly T[],
     groups: FieldGroups,
-    keepMine: (id: string, field: string) => boolean = () => false
+    keepMine: (id: string, field: string) => boolean = () => false,
+    sets: ReadonlySet<string> = new Set()
 ): ElementsMerge<T> {
     const was = new Map(base.map((element) => [element.id, element]));
     const now = new Map(theirs.map((element) => [element.id, element]));
@@ -149,7 +177,7 @@ function mergeElements<T extends { id: string }>(
             removed.push(here.id);
             continue;
         }
-        const fields = mergeFields(before, here, there, groups, (field) => keepMine(here.id, field));
+        const fields = mergeFields(before, here, there, groups, (field) => keepMine(here.id, field), sets);
         if (!fields.ok) {
             return refuse(`the ${fields.field} of the ${kind} ${here.id} changed both here and there`);
         }
@@ -218,7 +246,7 @@ function mergeCanvas(base: ProjectCanvasView, mine: ProjectCanvasView, theirs: P
      * too. A dialog in the middle of a drag is worse than either answer, and the save that follows the
      * drag is made against the rev taken in here, so the file ends where the person let go.
      */
-    const nodes = mergeElements('node', base.nodes, mine.nodes, theirs.nodes, NODE_FIELDS, (id, field) => field === 'frame' && held.has(id));
+    const nodes = mergeElements('node', base.nodes, mine.nodes, theirs.nodes, NODE_FIELDS, (id, field) => field === 'frame' && held.has(id), NODE_SETS);
     if (!nodes.ok) {
         return nodes;
     }

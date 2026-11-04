@@ -4,7 +4,19 @@ import { gapFrames } from '@/canvas/element-frames';
 import { snapLine } from '@/canvas/line-geometry';
 import { snapToGrid, unionOf, type Point } from '@/canvas/math';
 import type { CanvasState } from '@/state/canvas';
-import { boundsOfElement, carriedByGroups, HISTORY_LIMIT, membersOf, remember, snapshotOf, type CanvasGet, type CanvasSet } from '@/state/canvas-model';
+import {
+    boundsOfElement,
+    carriedByGroups,
+    droppedIntoGroups,
+    HISTORY_LIMIT,
+    membersOf,
+    remember,
+    snapshotOf,
+    withMembersWritten,
+    withoutMembersOutside,
+    type CanvasGet,
+    type CanvasSet
+} from '@/state/canvas-model';
 
 /* What is selected, and what its groups carry, each put where `place` and `line` say. */
 function movedSelection(
@@ -53,15 +65,26 @@ export function createCanvasGestureSlice(
             if (s.locks.move) {
                 return;
             }
+            // A drag may end in any group, so before anything moves every group writes out what it holds where things stand now.
+            const start = first ? { ...s, nodes: withMembersWritten(s) } : s;
             const moved = movedSelection(
-                s,
+                start,
                 (at) => ({ x: at.x + dx, y: at.y + dy }),
                 (line) => snapLine({ ...line, x: line.x + dx, y: line.y + dy, endX: line.endX + dx, endY: line.endY + dy })
             );
             set({ ...moved, ...(first ? remember(s) : {}) });
         },
         settleMove() {
-            set(movedSelection(get(), (at) => ({ x: snapToGrid(at.x), y: snapToGrid(at.y) }), snapLine));
+            const s = get();
+            const moved = movedSelection(s, (at) => ({ x: snapToGrid(at.x), y: snapToGrid(at.y) }), snapLine);
+            const carried = new Set(s.selection.flatMap((id) => [...carriedByGroups(moved.nodes, moved.texts, [id], moved.lines)]));
+            set({
+                ...moved,
+                nodes: droppedIntoGroups(
+                    moved,
+                    s.selection.filter((id) => !carried.has(id))
+                )
+            });
         },
         resizeNode(id, rect) {
             const { nodes, locks } = get();
@@ -71,8 +94,18 @@ export function createCanvasGestureSlice(
             set({ nodes: { ...nodes, [id]: { ...nodes[id], ...rect } } });
         },
         setResizing(id) {
-            // The handle goes down before the first resize, so this is where the old size is remembered.
-            set((s) => (id !== null && s.resizing === null && s.nodes[id] !== undefined ? { resizing: id, ...remember(s) } : { resizing: id }));
+            set((s) => {
+                if (id === null) {
+                    return { resizing: null, ...(s.resizing === null ? {} : { nodes: withoutMembersOutside(s, s.resizing) }) };
+                }
+                if (s.resizing !== null || s.nodes[id] === undefined) {
+                    return { resizing: id };
+                }
+                // The handle goes down before the first resize, so this is where the old size is remembered, and what a group holds before it is resized.
+                const group = s.nodes[id];
+                const members = group.kind === 'group' && group.memberIds === undefined ? membersOf(group, s.nodes, s.texts, s.lines) : null;
+                return { resizing: id, ...(members === null ? {} : { nodes: { ...s.nodes, [id]: { ...group, memberIds: members } } }), ...remember(s) };
+            });
         },
         setDerivedCard(id, card) {
             set((s) => {

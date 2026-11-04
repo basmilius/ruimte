@@ -119,13 +119,25 @@ describe('what is additive', () => {
         ]);
     });
 
-    test('a group folded both here and there around different members is a conflict', () => {
-        const group = node('g', { kind: 'group' });
-        const base = content([canvas('main', { nodes: [group, node('a'), node('b')] })]);
-        const mine = content([canvas('main', { nodes: [{ ...group, collapsed: true, memberIds: ['a'] }, node('a'), node('b')] })]);
-        const theirs = content([canvas('main', { nodes: [{ ...group, collapsed: true, memberIds: ['a', 'b'] }, node('a'), node('b')] })]);
+    test('a group folded here and opened there is a conflict', () => {
+        const group = node('g', { kind: 'group', memberIds: ['a'] });
+        const base = content([canvas('main', { nodes: [{ ...group, collapsed: true, expandedHeight: 400 }, node('a')] })]);
+        const mine = content([canvas('main', { nodes: [{ ...group, collapsed: true, expandedHeight: 600 }, node('a')] })]);
+        const theirs = content([canvas('main', { nodes: [{ ...group, collapsed: false }, node('a')] })]);
 
         expect(mergeProject(base, mine, theirs)).toEqual({ ok: false, reason: 'the folding of the node g changed both here and there' });
+    });
+
+    test('members dropped into one group here and there all stay in it, and a member taken out on either side goes', () => {
+        const group = node('g', { kind: 'group', memberIds: ['a', 'b'] });
+        const nodes = [node('a'), node('b'), node('mine'), node('agent')];
+        const base = content([canvas('main', { nodes: [group, ...nodes] })]);
+        const mine = content([canvas('main', { nodes: [{ ...group, memberIds: ['a', 'b', 'mine'] }, ...nodes] })]);
+        const theirs = content([canvas('main', { nodes: [{ ...group, memberIds: ['b', 'agent'] }, ...nodes] })]);
+
+        const merge = mergeProject(base, mine, theirs);
+        expect(canvasOf(merge, 'main').nodes[0]!.memberIds).toEqual(['b', 'mine', 'agent']);
+        expect(accepted(merge).changes.canvases.main!.nodes.map((put) => put.id)).toEqual(['g']);
     });
 });
 

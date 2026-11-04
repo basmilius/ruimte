@@ -16,8 +16,19 @@ describe('connectionEvent', () => {
 
     test('a timeout carries the request type and nothing of its payload', () => {
         const event = connectionEvent({ kind: 'timeout', request: 'fs.read', machine: 'remote', link: 'direct' });
-        expect(event.fingerprint).toEqual(['request-timeout', 'fs.read']);
         expect(event.tags).toEqual({ problem: 'request-timeout', machine: 'remote', link: 'direct', request: 'fs.read' });
+    });
+
+    test('timeouts of different requests on one link are one issue', () => {
+        const open = connectionEvent({ kind: 'timeout', request: 'project.open', machine: 'local', link: 'socket' });
+        const list = connectionEvent({ kind: 'timeout', request: 'project.list', machine: 'local', link: 'socket' });
+        expect(open.fingerprint).toEqual(['request-timeout', 'local', 'socket']);
+        expect(list.fingerprint).toEqual(open.fingerprint);
+        expect(list.message).toBe('A request to a local machine got no answer in time');
+    });
+
+    test('a refusal at the protocol check is information, not an error', () => {
+        expect(connectionEvent({ kind: 'refused', mismatch: 'daemon-older', machine: 'remote', link: 'direct' }).level).toBe('info');
     });
 
     test('keeps every tag through the scrubber of the client', () => {

@@ -1,4 +1,4 @@
-import { arrangeRects, CANVAS_GRID, GROUP_HEADER, GROUP_PADDING, groupMemberIds, groupRect, type GroupItem } from '@ruimte/contracts';
+import { arrangeRects, CANVAS_GRID, GROUP_HEADER, GROUP_PADDING, groupMemberIds, type GroupItem } from '@ruimte/contracts';
 import { snapToGrid as snap, type Point, type Rect } from '@/canvas/math';
 import type { CanvasNode, TextElement } from '@/state/canvas';
 
@@ -19,33 +19,21 @@ function itemsOf(nodes: Record<string, CanvasNode>, texts: Record<string, TextEl
     return [...Object.values(nodes), ...Object.values(texts)];
 }
 
-/*
- * Which ids every group holds, so the frame growing or a node moving can be checked against what it did before.
- * A collapsed group also reports what its expanded rect would take in besides its remembered members.
- */
+/* Which ids every group holds, so the frame growing or a node moving can be checked against what it did before. */
 function membershipOf(nodes: Record<string, CanvasNode>, texts: Record<string, TextElement>): Map<string, string> {
     const items = itemsOf(nodes, texts);
     return new Map(
         Object.values(nodes)
             .filter((node) => node.kind === 'group')
-            .map((group) => {
-                const held = groupMemberIds(group, items).sort().join('\n');
-                if (group.collapsed !== true) {
-                    return [group.id, held];
-                }
-                const remembered = new Set(group.memberIds ?? []);
-                const open = { ...group, collapsed: false, h: groupRect(group).h };
-                const landed = groupMemberIds(open, items).filter((id) => !remembered.has(id));
-                return [group.id, `${held}\n--\n${landed.sort().join('\n')}`];
-            })
+            .map((group) => [group.id, groupMemberIds(group, items).sort().join('\n')])
     );
 }
 
 /*
  * The members that stand directly in a group, tidied into a grid under its title bar. A group inside it
  * moves as one block with what it holds, texts stay where they are, and the frame only ever grows.
- * It refuses where a move or the grown frame would take a node into or out of another group, since
- * membership is read off positions and a tidy-up must not regroup anything.
+ * It refuses where a move or the grown frame would take a node into or out of a group that reads its
+ * members off positions, since a tidy-up must not regroup anything.
  */
 export function arrangeGroupMembers(groupId: string, nodes: Record<string, CanvasNode>, texts: Record<string, TextElement>): ArrangeResult {
     const group = nodes[groupId];

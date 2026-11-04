@@ -1,7 +1,7 @@
 import type { Viewport } from '@/canvas/camera-slice';
 import { unionOf, type Camera, type Point, type Rect } from '@/canvas/math';
 import type { DerivedFrame } from '@/canvas/node-body';
-import type { CanvasNode } from '@/state/canvas-model';
+import { membersOf, type CanvasNode } from '@/state/canvas-model';
 
 /* The map itself, in screen pixels inside its card. */
 export const MINIMAP_SIZE: Readonly<Viewport> = { w: 192, h: 128 };
@@ -71,8 +71,9 @@ export function mappedCards(
 export function waitingOnMap(nodes: Readonly<Record<string, CanvasNode>>, hidden: ReadonlySet<string>, waiting: Iterable<string>): CanvasNode[] {
     const heldBy = new Map<string, string>();
     for (const node of Object.values(nodes)) {
-        if (node.kind === 'group' && node.collapsed) {
-            for (const id of node.memberIds ?? []) {
+        // Every group, not only a collapsed one: a node hides with a group that holds the group it is in.
+        if (node.kind === 'group') {
+            for (const id of membersOf(node, nodes, {})) {
                 heldBy.set(id, node.id);
             }
         }

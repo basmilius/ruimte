@@ -126,7 +126,7 @@ function readNodeInfo(sources: NodeSources, id: string): NodeInfo {
         };
     }
 
-    // An open group keeps no members; what has its center inside the frame is in it, and of nested groups the innermost.
+    // Of nested groups that each hold it, the innermost.
     const group = Object.values(canvas.nodes)
         .filter((each) => each.kind === 'group' && each.id !== id && membersOf(each, canvas.nodes, {}).includes(id))
         .sort((one, other) => one.w * one.h - other.w * other.h)[0];

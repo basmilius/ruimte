@@ -1,34 +1,74 @@
-import type { CanvasNodeKind } from '@ruimte/contracts';
+import { groupMemberIds, type CanvasNodeKind, type GroupFrame } from '@ruimte/contracts';
 import type { PageHole } from '@/browser/page-clip';
 import { intersects, type Rect } from '@/canvas/math';
 
-/* What stacking needs of a node: where it stands and whether it is a group. */
-export interface StackedNode extends Rect {
+/* What stacking needs of a node: where it stands, whether it is a group and what a group holds. */
+export interface StackedNode extends Rect, Pick<GroupFrame, 'collapsed' | 'memberIds' | 'expandedHeight'> {
     kind: CanvasNodeKind;
 }
 
 /*
+ * The groups of `order` in it, each after every group that holds it: its frame would otherwise lie
+ * over the bar of the group inside it and take the presses meant for that bar.
+ */
+function groupsInOrder(nodes: Record<string, StackedNode>, order: string[]): string[] {
+    const groupIds = order.filter((id) => nodes[id]?.kind === 'group');
+
+    if (groupIds.length < 2) {
+        return groupIds;
+    }
+
+    const frames = [...new Set(groupIds)].map((id) => ({ ...nodes[id]!, id }));
+    const holders = new Map<string, string[]>();
+
+    for (const frame of frames) {
+        for (const member of groupMemberIds(frame, frames)) {
+            holders.set(member, [...(holders.get(member) ?? []), frame.id]);
+        }
+    }
+
+    const depths = new Map<string, number>();
+
+    // A cycle a hand-edited file holds counts its repeat as no holder.
+    const depthOf = (id: string, seen: ReadonlySet<string>): number => {
+        const known = depths.get(id);
+
+        if (known !== undefined) {
+            return known;
+        }
+
+        const around = (holders.get(id) ?? []).filter((holder) => !seen.has(holder));
+        const depth = Math.max(0, ...around.map((holder) => depthOf(holder, new Set([...seen, id])) + 1));
+        depths.set(id, depth);
+
+        return depth;
+    };
+
+    return groupIds
+        .map((id, index) => ({ id, index, depth: depthOf(id, new Set()) }))
+        .sort((first, second) => first.depth - second.depth || first.index - second.index)
+        .map((entry) => entry.id);
+}
+
+/*
  * The z-index of every node, one apart and counting from one. A group paints under everything else
- * whatever its place in the order, since a group is a frame under its own nodes.
+ * whatever its place in the order, since a group is a frame under its own nodes, and over the groups
+ * that hold it.
  */
 export function stackingOrder(nodes: Record<string, StackedNode>, order: string[]): Record<string, number> {
+    const groups = groupsInOrder(nodes, order);
+    const rest = order.filter((id) => nodes[id]?.kind !== 'group');
+
     // Chrome builds large records faster through Object.fromEntries; short orders avoid its temporary arrays.
     if (order.length >= 256) {
-        const groups = order.filter((id) => nodes[id]?.kind === 'group');
-        const rest = order.filter((id) => nodes[id]?.kind !== 'group');
-
         return Object.fromEntries([...groups, ...rest].map((id, index) => [id, index + 1]));
     }
 
     const stacking: Record<string, number> = {};
     let next = 1;
 
-    for (const groups of [true, false]) {
-        for (const id of order) {
-            if ((nodes[id]?.kind === 'group') !== groups) {
-                continue;
-            }
-
+    for (const ids of [groups, rest]) {
+        for (const id of ids) {
             // A stored id is an own property, as it was with Object.fromEntries.
             if (id === '__proto__') {
                 Object.defineProperty(stacking, id, { value: next, enumerable: true, configurable: true, writable: true });

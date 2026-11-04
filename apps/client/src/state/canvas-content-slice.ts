@@ -22,19 +22,20 @@ export function createCanvasContentSlice(set: CanvasSet, get: CanvasGet): Pick<C
         loadView(view, local) {
             const nodes = view ? Object.fromEntries(view.nodes.map((node) => [node.id, node])) : {};
             const texts = view ? Object.fromEntries(view.texts.map((text) => [text.id, text])) : {};
+            const lines = Object.fromEntries((view?.lines ?? []).map((line) => [line.id, line]));
             set({
                 loading: true,
                 viewId: view?.id ?? null,
                 nodes,
                 order: view ? view.nodes.map((node) => node.id) : [],
                 texts,
-                lines: Object.fromEntries((view?.lines ?? []).map((line) => [line.id, line])),
+                lines,
                 linesPresent: view?.lines !== undefined,
                 lineTool: null,
                 edges: view?.edges ?? [],
                 layouts: view?.layouts ?? [],
                 linkDraft: null,
-                hidden: hiddenIn(nodes),
+                hidden: hiddenIn(nodes, texts, lines),
                 selection: [],
                 bodyFocusId: null,
                 maximizedId: null,
@@ -74,7 +75,7 @@ export function createCanvasContentSlice(set: CanvasSet, get: CanvasGet): Pick<C
                     .map((edge) => (arriving.has(edge.id) ? { ...edge, ...arriving.get(edge.id)! } : edge));
                 const present = new Set(edges.map((edge) => edge.id));
                 edges.push(...patch.edges.filter((edge) => !present.has(edge.id)));
-                const hidden = hiddenIn(nodes);
+                const hidden = hiddenIn(nodes, texts, lines);
                 const lost = (id: string | null | undefined): boolean => id !== null && id !== undefined && gone.has(id);
                 return {
                     merging: true,
@@ -88,9 +89,9 @@ export function createCanvasContentSlice(set: CanvasSet, get: CanvasGet): Pick<C
                     hidden,
                     ...(reshapes
                         ? {
-                              past: s.past.map((snapshot) => patchSnapshot(snapshot, arrived)),
-                              future: s.future.map((snapshot) => patchSnapshot(snapshot, arrived)),
-                              ...(s.gapMove === null ? {} : { gapMove: { ...s.gapMove, snapshot: patchSnapshot(s.gapMove.snapshot, arrived) } })
+                              past: s.past.map((snapshot) => patchSnapshot(snapshot, arrived, patch.nodes)),
+                              future: s.future.map((snapshot) => patchSnapshot(snapshot, arrived, patch.nodes)),
+                              ...(s.gapMove === null ? {} : { gapMove: { ...s.gapMove, snapshot: patchSnapshot(s.gapMove.snapshot, arrived, patch.nodes) } })
                           }
                         : {}),
                     ...(gone.size === 0
@@ -128,7 +129,7 @@ export function createCanvasContentSlice(set: CanvasSet, get: CanvasGet): Pick<C
             set({
                 ...previous,
                 lines: previous.lines ?? {},
-                hidden: hiddenIn(previous.nodes),
+                hidden: hiddenIn(previous.nodes, previous.texts, previous.lines),
                 past: s.past.slice(0, -1),
                 future: [snapshotOf(s), ...s.future],
                 selection: [],
@@ -147,7 +148,7 @@ export function createCanvasContentSlice(set: CanvasSet, get: CanvasGet): Pick<C
             set({
                 ...next,
                 lines: next.lines ?? {},
-                hidden: hiddenIn(next.nodes),
+                hidden: hiddenIn(next.nodes, next.texts, next.lines),
                 past: [...s.past, snapshotOf(s)],
                 future: s.future.slice(1),
                 selection: [],
