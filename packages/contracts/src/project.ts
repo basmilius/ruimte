@@ -134,9 +134,11 @@ export const ProjectNodeSchema = keepingUnknown(
         browserOwner: z.string().min(1).optional(),
         // Device only: a portable identity resolved to a local simulator when it is shown.
         device: DeviceReferenceSchema.optional(),
-        // Folded to its header, with the height it opens to again. A group also keeps the nodes it held
-        // out of sight (`memberIds`, group only); any other node keeps its body as it was, under the header.
+        // Folded to its header, with the height it opens to again; any node but a group keeps its body as it
+        // was, under the header.
         collapsed: z.boolean().optional(),
+        // Group only: what it holds, open or collapsed. Without it the group holds what stands in its frame
+        // (`groupMemberIds`), until the first change to its members writes them out.
         memberIds: z.array(z.string()).optional(),
         expandedHeight: z.number().positive().optional(),
         // Group only: the git worktree every node made inside it starts in.

@@ -533,7 +533,7 @@ export * from './machine-update.ts';
 export * from './model.ts';
 export * from './nanogpt.ts';
 export * from './node-defaults.ts';
-export { emptyCanvasGroupIds } from './canvas-groups.ts';
+export { emptyCanvasGroupIds, groupUnder, joinGroupUnder } from './canvas-groups.ts';
 export * from './plan-host.ts';
 export * from './processes.ts';
 export * from './provenance.ts';

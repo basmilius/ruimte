@@ -15,6 +15,7 @@ import {
     isDiagramView,
     isDrawingView,
     isUnknownNode,
+    joinGroupUnder,
     lineEndOf,
     nodeChats,
     storedPathOf,
@@ -374,7 +375,11 @@ async function createNodes(call: ServerActionCall, viewId: string, specs: readon
                 ...(routine === undefined ? {} : { routine: routine.id })
             };
             const edge = caller ? openingEdge(caller.id, node, current) : null;
-            canvas = { ...canvas, nodes: [...canvas.nodes, node], edges: edge ? [...canvas.edges, edge] : canvas.edges };
+            canvas = {
+                ...canvas,
+                nodes: joinGroupUnder({ nodes: [...canvas.nodes, node], texts: canvas.texts }, id),
+                edges: edge ? [...canvas.edges, edge] : canvas.edges
+            };
             current = withCanvas(current, canvas);
             owned.push(id);
             made.push(
@@ -527,8 +532,7 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
             }
 
             const edges = canvas.edges.filter((edge) => !gone.has(edge.from) && !gone.has(edge.to));
-            /* A collapsed frame keeps its members by id, so a node that goes has to leave those lists
-               too; nothing reads geometry while a group is shut. */
+            // A group that spells out its members loses the ones that go.
             const nodes = canvas.nodes
                 .filter((candidate) => !gone.has(candidate.id))
                 .map((candidate) =>
@@ -691,13 +695,15 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
             const opening = replaced.length === 0 ? null : openingEdge(caller.caller, group, content);
             const gone = new Set(replaced.map((edge) => edge.id));
             const edges = opening === null ? canvas.edges : [...canvas.edges.filter((edge) => !gone.has(edge.id)), opening];
-            /* A collapsed frame keeps its members in the file, so the new group has to be written into
-               them: by geometry it is inside, and while the container is shut nothing reads geometry. */
+            /* A container that spells out its members trades the framed nodes for the new group, so
+               they are in the inner group only. One that reads positions holds the group already. */
             const nodes = canvas.nodes.map((node) =>
-                container !== undefined && node.id === container.id && node.collapsed === true ? { ...node, memberIds: [...(node.memberIds ?? []), id] } : node
+                container !== undefined && node.id === container.id && node.memberIds !== undefined
+                    ? { ...node, memberIds: [...node.memberIds.filter((member) => !held.has(member)), id] }
+                    : node
             );
             return {
-                content: withCanvas(content, { ...canvas, nodes: [...nodes, group], edges }),
+                content: withCanvas(content, { ...canvas, nodes: [...nodes, { ...group, memberIds: inside.map((node) => node.id) }], edges }),
                 result: {
                     output: {
                         viewId: canvas.id,

@@ -83,7 +83,7 @@ export function groupLines(canvas: ProjectCanvasView): string[] {
     );
 }
 
-/* The group as it has to become: big enough for what was put in it, and naming it while it is collapsed. */
+/* The group as it has to become: big enough for what was put in it, and naming it once it spells out its members. */
 export function grownGroup(group: ProjectNode, placement: ReturnType<typeof placeInGroup> | null, memberId: string): ProjectNode {
     if (!placement) {
         return group;
@@ -94,7 +94,7 @@ export function grownGroup(group: ProjectNode, placement: ReturnType<typeof plac
         w: placement.grown.w,
         // While it is collapsed its own height is the header; the height it opens to is what grew.
         ...(collapsed ? { expandedHeight: placement.grown.h } : { h: placement.grown.h }),
-        ...(collapsed ? { memberIds: [...(group.memberIds ?? []), memberId] } : {})
+        ...(group.memberIds === undefined ? {} : { memberIds: [...group.memberIds, memberId] })
     };
 }
 

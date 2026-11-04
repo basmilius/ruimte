@@ -49,6 +49,12 @@ describe('node new', () => {
         expect(store.index.locate(id!)).toEqual({ projectId, folder, canvasId: 'main' });
     });
 
+    test('a node placed inside a frame that spells out its members joins it, as a drop would', async () => {
+        await seed(box('inside', 1100, 1100), box('frame', 1000, 1000, { kind: 'group', w: 1200, h: 800, memberIds: ['inside'] }));
+        const id = await madeId(invoke('node_new', { kind: 'note', text: 'hello', beside: 'inside' }));
+        expect((await nodeOnDisk('frame'))!.memberIds).toEqual(['inside', id]);
+    });
+
     test('takes the size a person on this machine gave the kind, and the built-in size of every other kind', async () => {
         knobs.nodeSizes = { note: { w: 400, h: 320 }, chat: { w: 640, h: 720 } };
         const note = await madeId(invoke('node_new', { kind: 'note', text: 'hello' }));
@@ -348,7 +354,8 @@ describe('node group', () => {
             x: snap(400 - GROUP_PADDING),
             y: snap(400 - GROUP_PADDING - GROUP_HEADER),
             w: snap(600 + GROUP_PADDING * 2),
-            h: snap(300 + GROUP_PADDING * 2 + GROUP_HEADER)
+            h: snap(300 + GROUP_PADDING * 2 + GROUP_HEADER),
+            memberIds: ['a', 'b']
         });
     });
 
@@ -398,15 +405,17 @@ describe('node group', () => {
         );
     });
 
-    test('inside a folded group the new frame joins its members in the file', async () => {
+    test('inside a group that spells out its members the new frame takes the place of what it frames', async () => {
         await seed(
             box('one', 400, 400),
             box('two', 700, 400),
-            box('frame', 300, 300, { kind: 'group', w: 800, h: 39, collapsed: true, expandedHeight: 800, memberIds: ['one', 'two'] })
+            box('free', 400, 800),
+            box('frame', 300, 300, { kind: 'group', w: 800, h: 800, memberIds: ['one', 'two', 'free'] })
         );
         const { lines } = await invoke('node_group', { nodes: 'one,two' });
         const id = lines[0]!.split('\t')[0]!;
-        expect((await nodeOnDisk('frame'))!.memberIds).toEqual(['one', 'two', id]);
+        expect((await nodeOnDisk('frame'))!.memberIds).toEqual(['free', id]);
+        expect((await nodeOnDisk(id))!.memberIds).toEqual(['one', 'two']);
     });
 
     test('refuses an id that is not on the canvas, and says nothing about titles', async () => {

@@ -599,8 +599,7 @@ describe('team', () => {
         const canvas = await canvasOnDisk();
         const frame = canvas.nodes.find((node) => node.id === groupId)!;
         expect([frame.kind, frame.title]).toEqual(['group', 'Crew']);
-        // An open group holds whatever has its center inside it, so there is nothing to spell out.
-        expect(frame.memberIds).toBeUndefined();
+        expect(frame.memberIds).toEqual(ids);
         for (const id of ids) {
             const node = canvas.nodes.find((candidate) => candidate.id === id)!;
             expect(node.x + node.w / 2).toBeWithin(frame.x, frame.x + frame.w);

@@ -5,6 +5,7 @@ import { KeyedSerializer } from '@adecore/utils/async';
 import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
 import {
     isCanvasView,
+    joinGroupUnder,
     withView,
     type AgentKind,
     type ModelSelection,
@@ -393,10 +394,12 @@ const startAgentNow: StartHandler = async (input, call) => {
                 }
                 return { edgeId: line.id, from: source.id, to: id };
             });
-            const nodes = [
+            const placed = [
                 ...(canvas?.nodes ?? []).map((candidate) => (group && candidate.id === group.id ? grownGroup(candidate, inGroup, id) : candidate)),
                 node
             ];
+            // Placed beside its opener it may stand in a frame, which it then joins the way a drop would.
+            const nodes = group || !canvas ? placed : joinGroupUnder({ nodes: placed, texts: canvas.texts }, id);
             const output: ActionOutput<'agent.start'> = {
                 nodeId: id,
                 kind: kindName,
@@ -686,8 +689,6 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
                 return id;
             };
 
-            /* A group that is not collapsed holds whatever has its center inside the frame, the same
-                   rule the client reads membership by, so there is no memberIds to fill in here. */
             const groupId = mint('group');
             const group: ProjectNode = { id: groupId, kind: 'group', title: input.label, ...origin };
             const nodes: ProjectNode[] = canvas ? [group] : [];
@@ -817,13 +818,22 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
             if (hidden) {
                 await start();
             }
+            // The team is written in as its group's members, so nothing that stood under the frame joins it, and the group joins the frame it stands in.
+            const members = output.agents.map((made) => made.nodeId);
+            const team = nodes.map((node) => (node.id === groupId ? { ...node, memberIds: members } : node));
             return {
                 landed: hidden ? undefined : start,
                 content: canvas
                     ? {
                           ...content,
                           views: content.views.map((view) =>
-                              view.id === canvas.id ? { ...canvas, nodes: [...canvas.nodes, ...nodes], edges: [...canvas.edges, ...edges] } : view
+                              view.id === canvas.id
+                                  ? {
+                                        ...canvas,
+                                        nodes: joinGroupUnder({ nodes: [...canvas.nodes, ...team], texts: canvas.texts }, groupId),
+                                        edges: [...canvas.edges, ...edges]
+                                    }
+                                  : view
                           )
                       }
                     : null,

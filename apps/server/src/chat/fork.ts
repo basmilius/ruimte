@@ -9,6 +9,7 @@ import {
     idsInViews,
     isCanvasView,
     isDesignView,
+    joinGroupUnder,
     nodeChats,
     withView,
     type AgentKind,
@@ -678,7 +679,13 @@ async function landFork(
         content: {
             ...content,
             views: content.views.map((view) =>
-                view.id === canvas.id ? { ...canvas, nodes: [...canvas.nodes, node], edges: edge ? [...canvas.edges, edge] : canvas.edges } : view
+                view.id === canvas.id
+                    ? {
+                          ...canvas,
+                          nodes: joinGroupUnder({ nodes: [...canvas.nodes, node], texts: canvas.texts }, forkId),
+                          edges: edge ? [...canvas.edges, edge] : canvas.edges
+                      }
+                    : view
             )
         },
         result: { info: forkInfo, nodeId: forkId, viewId: canvas.id, edgeId: edge?.id ?? null, ...answer },

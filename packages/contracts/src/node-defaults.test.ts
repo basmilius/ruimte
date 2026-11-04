@@ -90,6 +90,21 @@ describe('groupMemberIds', () => {
         expect(groupMemberIds(folded, [folded, inside, outside])).toEqual(['outside']);
     });
 
+    test('an open frame that spells out its members holds those, wherever the rest stands', () => {
+        const spelled = { ...frame, memberIds: ['outside', 'gone'] };
+        expect(groupMemberIds(spelled, [spelled, inside, outside, text])).toEqual(['outside']);
+    });
+
+    test('of two overlapping frames read off positions, only the larger holds the other', () => {
+        const large = { ...frame, kind: 'group' };
+        const small = { id: 'small', kind: 'group', x: 400, y: 400, w: 900, h: 900 };
+        const twin = { ...large, id: 'twin', x: 400, y: 400 };
+
+        expect(groupMemberIds(large, [large, small])).toEqual(['small']);
+        expect(groupMemberIds(small, [large, small])).toEqual([]);
+        expect(groupMemberIds(large, [large, twin])).toEqual([]);
+    });
+
     test('preserves item order, repeated ids and sparse inherited entries in both group modes', () => {
         const first = { id: 'a', x: 20, y: 20 };
         const repeated = { id: 'a', x: 30, y: 30 };
