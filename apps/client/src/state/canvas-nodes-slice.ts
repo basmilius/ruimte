@@ -94,8 +94,9 @@ export function createCanvasNodesSlice(
             }));
         },
         bringToFront(id) {
-            const { order } = get();
-            if (order.at(-1) === id) {
+            const { order, nodes } = get();
+            // A node that just went, or stands on another canvas, must never get a place in this one's order.
+            if (nodes[id] === undefined || order.at(-1) === id) {
                 return;
             }
             set({ order: [...order.filter((entry) => entry !== id), id] });

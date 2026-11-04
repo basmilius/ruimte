@@ -110,7 +110,8 @@ export function createCanvasContentSlice(set: CanvasSet, get: CanvasGet): Pick<C
         exportContent() {
             const { nodes, order, texts, edges, layouts, lines } = get();
             return {
-                nodes: order.map((id) => nodes[id]!).map(({ status: _status, ...node }) => node),
+                // A save never stops on an id in the order without a node: it would lose every other change.
+                nodes: order.flatMap((id) => (nodes[id] === undefined ? [] : [nodes[id]])).map(({ status: _status, ...node }) => node),
                 texts: Object.values(texts),
                 edges,
                 ...(get().linesPresent || Object.keys(lines).length > 0 ? { lines: Object.values(lines) } : {}),
