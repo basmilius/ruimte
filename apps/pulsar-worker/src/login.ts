@@ -281,6 +281,9 @@ export async function refreshSession(request: Request, env: Env): Promise<Respon
     if (result === 'clock-skew') {
         return failure('clock-skew', clockSkewMessage(Date.now() - body.value.issuedAt));
     }
+    if (result === 'bad-signature') {
+        return failure('bad-signature', 'The session key did not sign this refresh');
+    }
     return result ? json(result) : signInAgain();
 }
 

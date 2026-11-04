@@ -12,8 +12,8 @@ import { verifySignature } from '@ruimte/pulsar/verify-web';
 
 // Short enough that a leaked access token is worth little; the refresh token is what a device keeps.
 export const ACCESS_LIFETIME_MS = 15 * 60_000;
-// Counted from sign-in, never extended, so a lost device falls out on its own.
-const SESSION_LIFETIME_MS = 30 * 24 * 60 * 60_000;
+// Counted from the last refresh, so a device in use stays signed in and one left alone falls out on its own.
+export const SESSION_LIFETIME_MS = 30 * 24 * 60 * 60_000;
 
 /*
  * The identity an account is shown as, as SQL over the account id `ref` names: the oldest with a login,
@@ -134,9 +134,10 @@ async function replayed(session: SessionRow, spent: string, now: number): Promis
  * while, since the answer to the first may have been lost on the way; after that it is reuse and
  * revokes the session. Both only once the session key verifies, so a stolen token without its
  * private key cannot refresh or revoke the legitimate device. A clock too far off is said apart,
- * so the device keeps a session that is fine once its clock is right.
+ * so the device keeps a session that is fine once its clock is right, and so is a signature that
+ * does not verify, so the device can tell a key it could not read from a session that is over.
  */
-export async function rotateSession(db: D1Database, payload: SessionRefreshPayload): Promise<SessionResult | 'clock-skew' | null> {
+export async function rotateSession(db: D1Database, payload: SessionRefreshPayload): Promise<SessionResult | 'clock-skew' | 'bad-signature' | null> {
     const now = Date.now();
     if (Math.abs(now - payload.issuedAt) > SESSION_REFRESH_MAX_SKEW_MS) {
         return 'clock-skew';
@@ -147,7 +148,7 @@ export async function rotateSession(db: D1Database, payload: SessionRefreshPaylo
         return null;
     }
     if (!(await verifySignature(session.session_key, sessionRefreshMessage(payload.refreshToken, payload.issuedAt), payload.signature))) {
-        return null;
+        return 'bad-signature';
     }
     if (session.current !== 1) {
         const again = await replayed(session, payload.refreshToken, now);
@@ -162,11 +163,11 @@ export async function rotateSession(db: D1Database, payload: SessionRefreshPaylo
     // Guarded on the hash again, so two refreshes that both read the row before either wrote rotate it once.
     const row = await db
         .prepare(
-            `UPDATE session SET access_hash = ?1, access_expires_at = ?2, refresh_hash = ?3, previous_refresh_hash = refresh_hash, rotated_at = ?6, rotation_salt = ?7
+            `UPDATE session SET access_hash = ?1, access_expires_at = ?2, refresh_hash = ?3, previous_refresh_hash = refresh_hash, rotated_at = ?6, rotation_salt = ?7, expires_at = ?8
              WHERE id = ?4 AND refresh_hash = ?5 AND revoked_at IS NULL
              RETURNING expires_at`
         )
-        .bind(await sha256(accessToken), accessExpiresAt, await sha256(nextRefreshToken), session.id, hash, now, salt)
+        .bind(await sha256(accessToken), accessExpiresAt, await sha256(nextRefreshToken), session.id, hash, now, salt, now + SESSION_LIFETIME_MS)
         .first<{ expires_at: number }>();
     if (!row) {
         // The other refresh rotated first, so this one gets that rotation.
