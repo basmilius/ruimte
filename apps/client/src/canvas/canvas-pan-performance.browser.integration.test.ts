@@ -110,7 +110,9 @@ interface Measured {
  * Budgets for the canvas that was slow: a pan that does no React work beyond the nodes it brings into
  * sight, and a new node that routes and renders only what it changed. Each budget sits several times
  * over what a laptop measures here and well under what the canvas cost before (in brackets), so a
- * slower machine passes and the old cost does not. `RUIMTE_CANVAS_REPORT=1` prints the numbers,
+ * slower machine passes and the old cost does not. They hold only under `RUIMTE_CANVAS_BUDGET=1`, which
+ * the perf job of `browser-tests.yml` sets: what a frame costs depends on the machine, what renders in
+ * it does not, so the render counts hold in every run. `RUIMTE_CANVAS_REPORT=1` prints the numbers,
  * `RUIMTE_CANVAS_PROFILE=1` the functions the time went to and `RUIMTE_CANVAS_TRACE=1` the raster.
  */
 const BUDGET = {
@@ -341,13 +343,17 @@ test('a canvas of a chat and a hundred lined notes pans without React work and t
                 }
             }
             expect(wheel.commits).toBeLessThanOrEqual(10);
-            expect(wheel.taskMs / panFrames).toBeLessThan(BUDGET.wheelFrameMs);
-            expect(overview.taskMs / panFrames).toBeLessThan(BUDGET.wheelFrameMs);
-            expect(drag.taskMs / panFrames).toBeLessThan(BUDGET.dragFrameMs);
-            expect(hover.scriptMs / panFrames).toBeLessThan(BUDGET.pointerMoveScriptMs);
-            expect(added.taskMs).toBeLessThan(BUDGET.addMs);
-            // A hundred notes that arrive in one change cost about what one does (1.3 s before).
-            expect(together.taskMs).toBeLessThan(BUDGET.addMs);
+
+            if (process.env.RUIMTE_CANVAS_BUDGET === '1') {
+                expect(wheel.taskMs / panFrames).toBeLessThan(BUDGET.wheelFrameMs);
+                expect(overview.taskMs / panFrames).toBeLessThan(BUDGET.wheelFrameMs);
+                expect(drag.taskMs / panFrames).toBeLessThan(BUDGET.dragFrameMs);
+                expect(hover.scriptMs / panFrames).toBeLessThan(BUDGET.pointerMoveScriptMs);
+                expect(added.taskMs).toBeLessThan(BUDGET.addMs);
+                // A hundred notes that arrive in one change cost about what one does (1.3 s before).
+                expect(together.taskMs).toBeLessThan(BUDGET.addMs);
+            }
+
             // The new note and its line, not the hundred that were there.
             expect(added.renders.NodeFrameContent ?? 0).toBeLessThanOrEqual(2);
             expect(added.renders.EdgeRow ?? 0).toBeLessThanOrEqual(4);
