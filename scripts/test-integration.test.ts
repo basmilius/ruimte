@@ -2,7 +2,7 @@ import { afterAll, beforeAll, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { integrationFiles } from './test-integration.ts';
+import { integrationFiles, shardOf } from './test-integration.ts';
 
 let root: string;
 beforeAll(async () => {
@@ -64,6 +64,15 @@ test('core and package jobs together cover every automatic integration file exac
     expect(packaged).toEqual(['./packages/npm/current.package.integration.test.ts']);
     expect(core).not.toContain(packaged[0]!);
     expect([...core, ...packaged].sort()).toEqual(integrationFiles(root));
+});
+
+test('the shards of a suite take every file exactly once, and a malformed shard is refused', () => {
+    const files = ['a', 'b', 'c', 'd', 'e'];
+    expect(shardOf(files, '1/2')).toEqual(['a', 'c', 'e']);
+    expect(shardOf(files, '2/2')).toEqual(['b', 'd']);
+    expect(() => shardOf(files, '3/2')).toThrow();
+    expect(() => shardOf(files, '0/2')).toThrow();
+    expect(() => shardOf(files, '1')).toThrow();
 });
 
 test('device discovery selects only tests that need a running simulator or device', () => {

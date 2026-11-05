@@ -33,12 +33,25 @@ export function integrationFiles(root: string, suite: IntegrationSuite = 'defaul
     );
 }
 
+/* The files of shard `index/count`, every `count`th from the sorted list, so the long files of one folder spread over the shards. */
+export function shardOf(files: readonly string[], shard: string): string[] {
+    const match = /^(\d+)\/(\d+)$/.exec(shard);
+    const index = Number(match?.[1]);
+    const count = Number(match?.[2]);
+
+    if (!match || count < 1 || index < 1 || index > count) {
+        throw new Error(`A shard is <index>/<count>, from 1: ${shard}`);
+    }
+
+    return files.filter((_, position) => position % count === index - 1);
+}
+
 async function main(): Promise<void> {
     const fixtureRoot = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-integration-')));
     try {
         const { values, positionals: files } = parseArgs({
             args: process.argv.slice(2),
-            options: { suite: { type: 'string' }, browser: { type: 'boolean' } },
+            options: { suite: { type: 'string' }, browser: { type: 'boolean' }, shard: { type: 'string' } },
             allowPositionals: true
         });
         if (values.browser && values.suite !== undefined && values.suite !== 'browser') {
@@ -50,7 +63,8 @@ async function main(): Promise<void> {
         }
         const browser = suite === 'browser';
         const config = browser ? 'browser.bunfig.toml' : 'integration.bunfig.toml';
-        const selected = files.length > 0 ? files : integrationFiles(process.cwd(), suite as IntegrationSuite);
+        const found = files.length > 0 ? files : integrationFiles(process.cwd(), suite as IntegrationSuite);
+        const selected = values.shard === undefined ? found : shardOf(found, values.shard);
         if (selected.length === 0) {
             throw new Error('No integration tests found in apps, extensions, packages or scripts.');
         }
