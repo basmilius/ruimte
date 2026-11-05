@@ -119,6 +119,42 @@ describe('work in a project a person closed', () => {
         expect(turnsOf(daemon, 'chat-lead')).toHaveLength(2);
     });
 
+    test('a project that closes while a wake loads its stored chat opens no turn, and the wake runs after the next open', async () => {
+        await store.openProject({ projectId });
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        await sayAndSettle(daemon, 'chat-lead', 'hello');
+        await daemon.chats.stop('chat-lead', 'nobody has it open');
+        expect(await daemon.chats.unloadIdle('chat-lead')).toBe(true);
+
+        const loading = Promise.withResolvers<void>();
+        const release = Promise.withResolvers<void>();
+        const hasStored = daemon.chats.hasStored.bind(daemon.chats);
+        daemon.chats.hasStored = async (chatId) => {
+            loading.resolve();
+            await release.promise;
+
+            return hasStored(chatId);
+        };
+        const taskId = await finishTaskOf('chat-lead');
+        await loading.promise;
+
+        const closing = store.closeProject(projectId, 'client-1');
+        release.resolve();
+        await closing;
+        await daemon.worker.settled();
+
+        expect(await store.isClosed(projectId)).toBe(true);
+        expect(turnsOf(daemon, 'chat-lead')).toHaveLength(1);
+        expect(owed('wake-parent')).toBe(1);
+
+        await store.openProject({ projectId });
+        await daemon.until(() => daemon.tasks.get(taskId)?.wake === 'sent');
+        await daemon.worker.settled();
+
+        expect(turnsOf(daemon, 'chat-lead')).toHaveLength(2);
+        expect(owed('wake-parent')).toBe(0);
+    });
+
     test('a chat of a person waits for the project, a resume and a finished task alike', async () => {
         await ownedBy('person');
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });

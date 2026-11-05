@@ -265,20 +265,33 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
         return false;
     };
 
+    const openChat = chatOpener({ chats, placed });
+
     // Closing keeps a chat's record for the next open, so nothing may start its CLI while the project is under Recent.
-    const inClosedProject = async (nodeId: string): Promise<boolean> => {
-        const place = projects.index.locate(nodeId);
-
-        return place !== null && !workOfPeerOrRoutine(nodeId) && (await projects.isClosed(place.projectId));
-    };
-
     const unlessClosed =
         <Entry extends { target: string }>(handler: (entry: Entry) => Promise<OutboxOutcome>) =>
-        async (entry: Entry): Promise<OutboxOutcome> =>
-            (await inClosedProject(entry.target)) ? 'wait' : handler(entry);
+        async (entry: Entry): Promise<OutboxOutcome> => {
+            const place = projects.index.locate(entry.target);
+
+            if (place === null || workOfPeerOrRoutine(entry.target)) {
+                return handler(entry);
+            }
+
+            const { projectId } = place;
+
+            return projects.runWake(projectId, async () => {
+                if (await projects.isClosed(projectId)) {
+                    return 'wait';
+                }
+
+                // A stored chat takes I/O to load, in which the project may start closing, so it loads before the last look.
+                await openChat(entry.target);
+
+                return projects.isClosing(projectId) ? 'wait' : handler(entry);
+            });
+        };
 
     const wakeParent = unlessClosed(taskWiring.wakeParent);
-    const openChat = chatOpener({ chats, placed });
     const runParked = resumeRunParked(chats);
     const worker = new OutboxWorker({
         store: outbox,

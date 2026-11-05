@@ -641,6 +641,48 @@ describe('ProjectStore', () => {
         expect(await store.save(projectId, 1, two)).toBe(2);
     });
 
+    test('closing lets a wake under way end before the sessions do, and counts as closed from its first step', async () => {
+        const opened = await store.openProject({ folder });
+        const { projectId } = opened.summary;
+        await store.save(projectId, opened.document.rev, content());
+        store.hold('c1', projectId);
+        const ended: string[] = [];
+        links.endSession = async (_kind, nodeId) => {
+            ended.push(nodeId);
+        };
+        const wake = Promise.withResolvers<void>();
+        const waking = store.runWake(projectId, () => wake.promise);
+
+        const closing = store.closeProject(projectId, 'c1');
+
+        expect(await store.isClosed(projectId)).toBe(true);
+        expect(store.isClosing(projectId)).toBe(true);
+        expect(ended).toEqual([]);
+
+        wake.resolve();
+        await Promise.all([waking, closing]);
+
+        expect(ended).toEqual(['n1']);
+        expect(store.isClosing(projectId)).toBe(false);
+        expect(await store.isClosed(projectId)).toBe(true);
+    });
+
+    test('a close that ends with the project kept open tells who was turned away', async () => {
+        const opened = await store.openProject({ folder });
+        const { projectId } = opened.summary;
+        await store.save(projectId, opened.document.rev, content());
+        store.hold('c1', projectId);
+        const told: string[] = [];
+        store.onReopened((id) => told.push(id));
+        links.endSession = async () => {
+            store.hold('c2', projectId);
+        };
+
+        expect(await store.closeProject(projectId, 'c1')).toEqual({ ended: 1, otherClients: 1 });
+        expect(told).toEqual([projectId]);
+        expect(await store.isClosed(projectId)).toBe(false);
+    });
+
     test('an open that lands before its client holds the project still keeps it open', async () => {
         const opened = await store.openProject({ folder });
         const { projectId } = opened.summary;

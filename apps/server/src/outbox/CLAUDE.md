@@ -26,6 +26,7 @@ Decisions the code cannot show. Do not reverse one without asking Bas.
 - A message is not delivered again on its own after the parent turn that accepted it fails.
 - A chat in a project a person closed is woken by nothing, a resume after a limit included. Its entries wait, and run once the project is open again.
 - That wait holds no work of a peer or a routine, along its whole line of children, and nothing in a project that still has a holder: those start under Recent and nobody comes to open the project for them, so a wait would leave their task open or turn every next run into `overlap`. `start-agent` never waits.
+- A project counts as closed from the first step of closing. Closing waits for a wake under way, which looks again once its stored chat is loaded (`ProjectStore.runWake`, `outbox/wiring.ts`), so a turn it still opened ends with the sessions. A close that ends with the project kept open lets what it turned away run.
 
 ### When a task settles
 
