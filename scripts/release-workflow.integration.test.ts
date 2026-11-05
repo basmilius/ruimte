@@ -42,7 +42,11 @@ function fakeGh(folder: string, answers: string[]): void {
             'esac'
         ].join('\n')
     );
+    // The step asks git whether the tag is annotated. The real one on a macOS runner is Xcode's shim, which can
+    // take seconds to find git, and a lightweight tag only leaves the notes empty.
+    writeFileSync(join(bin, 'git'), '#!/bin/bash\nexit 1\n');
     chmodSync(join(bin, 'gh'), 0o755);
+    chmodSync(join(bin, 'git'), 0o755);
 }
 
 async function draft(name: string, answers: string[]): Promise<{ code: number; creates: number; output: string }> {
