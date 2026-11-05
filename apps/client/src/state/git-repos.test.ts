@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { GitRepo } from '@ruimte/contracts';
 import type { GitFile, GitStatus } from '@ruimte/contracts';
 import { TransportError, type TransportStatus } from '@/transport/transport';
-import { assumeStaged, headMoved, readProjectRepos, soleRepo, visibleRepos, withoutNestedRepos } from './git-repos.ts';
+import { assumeStaged, deadReadDelay, headMoved, readProjectRepos, soleRepo, visibleRepos, withoutNestedRepos } from './git-repos.ts';
 
 function file(path: string, state: GitFile['state']): GitFile {
     return {
@@ -89,6 +89,14 @@ describe('when the log has to be read again', () => {
         expect(headMoved(before, { ...before, detached: true })).toBe(true);
         expect(headMoved(before, { ...before, upstream: 'origin/main' })).toBe(true);
         expect(headMoved(before, { ...before, mergeBase: 'abc' })).toBe(true);
+    });
+});
+
+describe('a checkout the machine does not watch', () => {
+    test('is read again every 10 seconds while a status is quick, and spends at most a twentieth of the time on a slow one', () => {
+        expect(deadReadDelay(80)).toBe(10_000);
+        expect(deadReadDelay(500)).toBe(10_000);
+        expect(deadReadDelay(3_000)).toBe(60_000);
     });
 });
 

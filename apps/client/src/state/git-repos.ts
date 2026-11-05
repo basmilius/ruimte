@@ -90,6 +90,14 @@ export function headMoved(before: GitStatus | null, after: GitStatus): boolean {
    times the status again, which is how a checkout that was only slow for a while gets its watch back. */
 const DEAD_READ_MS = 10_000;
 
+/* The share of the time a slow checkout may spend in `git status` while nothing else asks for it. */
+const DEAD_READ_SHARE = 0.05;
+
+/* When the next clock read of a checkout the daemon does not watch is due, after a read that took `readMs`. */
+export function deadReadDelay(readMs: number): number {
+    return Math.max(DEAD_READ_MS, Math.round(readMs / DEAD_READ_SHARE));
+}
+
 const BLANK: Entry = { status: null, failure: null, revision: 0 };
 
 // One object for "nothing read yet", so the lists below are not rebuilt on a render that changed nothing.
@@ -362,21 +370,29 @@ export function useGitCheckouts(refs: readonly GitCheckoutRef[]): GitCheckouts {
         if (dead === '') {
             return;
         }
-        const readDead = (): void => {
-            for (const cwd of dead.split('\n')) {
-                void read(cwd);
+        let stopped = false;
+        let timer = 0;
+        const readDead = (): Promise<unknown> => Promise.all(dead.split('\n').map((cwd) => read(cwd)));
+        const onFocus = (): void => void readDead();
+        // A commit made from inside Ruimte never takes the focus away, so a window that keeps it reads on a clock too,
+        // and less often the longer a read takes, since a slow status is why the daemon stopped watching it.
+        const tick = async (): Promise<void> => {
+            let delay = DEAD_READ_MS;
+            if (document.visibilityState === 'visible') {
+                const started = performance.now();
+                await readDead();
+                delay = deadReadDelay(performance.now() - started);
+            }
+            if (!stopped) {
+                timer = window.setTimeout(() => void tick(), delay);
             }
         };
-        // A commit made from inside Ruimte never takes the focus away, so a window that keeps it reads on a clock too.
-        const timer = window.setInterval(() => {
-            if (document.visibilityState === 'visible') {
-                readDead();
-            }
-        }, DEAD_READ_MS);
-        window.addEventListener('focus', readDead);
+        timer = window.setTimeout(() => void tick(), DEAD_READ_MS);
+        window.addEventListener('focus', onFocus);
         return () => {
-            window.clearInterval(timer);
-            window.removeEventListener('focus', readDead);
+            stopped = true;
+            window.clearTimeout(timer);
+            window.removeEventListener('focus', onFocus);
         };
     }, [dead, read]);
 
