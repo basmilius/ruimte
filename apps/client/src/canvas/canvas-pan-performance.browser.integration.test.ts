@@ -231,11 +231,10 @@ test.skipIf(process.env.RUIMTE_CANVAS_BUDGET !== '1')(
                     }
                     return measured;
                 };
-                // Each event waits on a frame, which a slow runner takes a second or two to draw: enough frames for a steady average and no more.
-                const panFrames = 10;
+                // The frames each budget was set over: fewer let one node coming into sight, or a drag's start and end, weigh too much.
+                const panFrames = 30;
+                // Each event waits on a frame, which a slow runner is long in drawing, so the warm-ups stay short.
                 const warmFrames = 5;
-                // A drag renders once as it starts and once as it ends; over as many frames as when its budget was set, as a person drags.
-                const dragFrames = 30;
                 const wheelPan = async (frames = panFrames): Promise<void> => {
                     for (let i = 0; i < frames; i++) {
                         await view.cdp('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 640, y: 400, deltaX: 10, deltaY: 0 });
@@ -244,13 +243,13 @@ test.skipIf(process.env.RUIMTE_CANVAS_BUDGET !== '1')(
                 };
                 const dragPan = async (): Promise<void> => {
                     await view.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: 640, y: 760, button: 'middle', buttons: 4, clickCount: 1 });
-                    for (let i = 1; i <= dragFrames; i++) {
+                    for (let i = 1; i <= panFrames; i++) {
                         await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 640 - 10 * i, y: 760, button: 'middle', buttons: 4 });
                         await view.evaluate('new Promise(resolve => requestAnimationFrame(resolve))');
                     }
                     await view.cdp('Input.dispatchMouseEvent', {
                         type: 'mouseReleased',
-                        x: 640 - 10 * dragFrames,
+                        x: 640 - 10 * panFrames,
                         y: 760,
                         button: 'middle',
                         buttons: 0,
@@ -328,7 +327,7 @@ test.skipIf(process.env.RUIMTE_CANVAS_BUDGET !== '1')(
                     );
                     console.log(
                         JSON.stringify({
-                            msPerFrame: [wheel.taskMs / panFrames, drag.taskMs / dragFrames, overview.taskMs / panFrames].map((ms) => Math.round(ms * 10) / 10),
+                            msPerFrame: [wheel, drag, overview].map((measured) => Math.round((measured.taskMs / panFrames) * 10) / 10),
                             commitsPerPan: [wheel, drag, overview].map((measured) => measured.commits),
                             addMs: added.taskMs,
                             pointerMoveMs: Math.round((hover.taskMs / panFrames) * 10) / 10,
@@ -354,7 +353,7 @@ test.skipIf(process.env.RUIMTE_CANVAS_BUDGET !== '1')(
 
                 expect(wheel.taskMs / panFrames).toBeLessThan(BUDGET.wheelFrameMs);
                 expect(overview.taskMs / panFrames).toBeLessThan(BUDGET.wheelFrameMs);
-                expect(drag.taskMs / dragFrames).toBeLessThan(BUDGET.dragFrameMs);
+                expect(drag.taskMs / panFrames).toBeLessThan(BUDGET.dragFrameMs);
                 expect(hover.scriptMs / panFrames).toBeLessThan(BUDGET.pointerMoveScriptMs);
                 expect(added.taskMs).toBeLessThan(BUDGET.addMs);
                 // A hundred notes that arrive in one change cost about what one does (1.3 s before).
