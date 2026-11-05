@@ -126,5 +126,5 @@ A release runs to the end without asking: Bas names a version, and the next thin
 - CI decides. The `ci.yml` run on the tagged commit must be green; nothing is built or tested here for a release, and a published build is never downloaded to try.
 - A red CI is fixed before the tag: fix, push to main, wait for green. Only what Bas alone can decide goes back to him.
 - The notes ride on the tag: `git tag -a v<version> -F <file> --cleanup=verbatim`, or git strips every `##` heading. `release.yml` builds macOS and Linux into the draft and publishes it as Latest once the run succeeds.
-- Publishing starts `npm.yml` (`ruimte` and its three platform packages, same version) and, for a Latest release, `station.yml` and `bench.yml`. A push to main deploys neither web client.
+- Publishing starts `npm.yml` (`ruimte` and its four platform packages, same version) and, for a Latest release, `station.yml` and `bench.yml`. A push to main deploys neither web client.
 - ADE CORE libraries release on their own; Ruimte pins the version in its manifests and lockfile. `libraries-v*` tags publish nothing from this repository.

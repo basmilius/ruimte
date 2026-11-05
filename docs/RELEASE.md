@@ -8,7 +8,7 @@ The release rules are in the root `CLAUDE.md` ("Releasing"). This file is the re
 
 Tag with `git tag -a v<version> -F <notes-file> --cleanup=verbatim`. Without that flag git strips every `##` line as a comment; a lightweight tag has no notes at all. The `draft` job copies the notes from the tag.
 
-The `gate` job reads the `ci.yml` run of the tagged commit on main and stops the release unless it passed, so tag only after CI is green. Only the native checks (`native.yml`: Rust, Swift, computer use) run again on the tag, all of them, since that CI run skipped those whose paths did not change. `publish` publishes the draft once they and every build pass: as a prerelease for a tag with a `-`, otherwise as Latest. It never tries the built daemon.
+The `gate` job reads the `ci.yml` run of the tagged commit on main and stops the release unless it passed, so tag only after CI is green. Only the native checks (`native.yml`: Rust, Swift, computer use) run again on the tag, all of them, since that CI run skipped those whose paths did not change. `publish` publishes the draft once they and every build pass: as a prerelease for a tag with a `-`, otherwise as Latest unless a newer version already is. It runs one release at a time (`concurrency: release-publish`), so two tags cannot set Latest out of order. It never tries the built daemon. The workflow's token reads only; `draft`, the platform builds and `publish` ask for `contents: write` themselves.
 
 - The app shows the notes in About and the update toast. Empty notes read "No notes for this version." until filled in.
 - A draft's tag already appears in `releases.atom`.
@@ -44,7 +44,7 @@ After `release.yml` publishes a Latest release it dispatches `station.yml` and `
 
 ## npm
 
-A published release puts `ruimte`, its three platform packages (`win32-x64` once Windows ships) and `@ruimte/extension` on npm at the app version. `@ruimte/extension` holds the types of the extension API from `packages/extension`, and a project from `ruimte extension create` starts on the version of the Ruimte that made it. Shared libraries come from Adecore; this repository publishes none.
+A published release puts `ruimte`, its four platform packages (`darwin-arm64`, `linux-x64`, `linux-arm64` and `win32-x64`) and `@ruimte/extension` on npm at the app version. `@ruimte/extension` holds the types of the extension API from `packages/extension`, and a project from `ruimte extension create` starts on the version of the Ruimte that made it. Shared libraries come from Adecore; this repository publishes none.
 
 `npm.yml` runs on `release: published`, on the dispatch from `release.yml`, or by hand for an existing tag (`gh workflow run npm.yml -f version=0.2.0`). With `release_run` it publishes the daemons that run compiled (artifacts kept 7 days). Without it, it compiles `darwin-arm64` on macOS and `linux-x64`, `linux-arm64` and `win32-x64` on Ubuntu. `packages/npm/scripts/build.ts` prepares the packages; `publish.ts` publishes the platform binaries and `@ruimte/extension` before the launcher, refuses when one of them is missing or at another version, skips versions already on npm and tags prereleases `next`. A macOS binary must compile on macOS, or `codesign` leaves it with a signature that is killed at launch.
 
@@ -72,9 +72,7 @@ Shipped unsigned from the first release after `WINDOWS_RELEASE` went on ([WINDOW
 
 Without the variable, `build.ts --skip win32-x64` leaves `@ruimte/win32-x64` out of npm. With the variable off the launcher still names the package, so a machine on Windows gets npm's missing-package message.
 
-The build is unsigned (SmartScreen warns). electron-updater checks a signature only when `app-update.yml` names a `publisherName`, which electron-builder writes only for a signed build, so an unsigned app takes an unsigned update and the feed's sha512 is the only check (tried on the PC). A build with a publisher refuses an unsigned update with `ERR_UPDATER_INVALID_SIGNATURE`: once signing starts it cannot stop. Until a Latest release carries `latest.yml`, an installed app's check ends in a 404 (`no-feed`). Before `WINDOWS_RELEASE` goes on, Bas decides:
-
-- How to sign. An OV or EV certificate (`WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD`, or a hardware token), or a cloud signing service with a step where the `windows` job marks it.
+The build is unsigned (SmartScreen warns). electron-updater checks a signature only when `app-update.yml` names a `publisherName`, which electron-builder writes only for a signed build, so an unsigned app takes an unsigned update and the feed's sha512 is the only check (tried on the PC). A build with a publisher refuses an unsigned update with `ERR_UPDATER_INVALID_SIGNATURE`: once signing starts it cannot stop. `WINDOWS_RELEASE` is on, so every release carries `latest.yml`. Signing waits on Bas: an OV or EV certificate (`WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD`, or a hardware token), or a cloud signing service with a step where the `windows` job marks it.
 
 ## Build caches
 
@@ -86,7 +84,7 @@ CI's `packaged (macOS)`, the macOS release and the macOS npm build share native 
 
 ## Signing
 
-A Developer ID Application certificate in the login keychain is enough. The app uses the hardened runtime and `build/entitlements.mac.plist` (JIT for Electron and the daemon's Bun). `mac.binaries` names the daemon; without it Apple refuses notarization.
+A Developer ID Application certificate in the login keychain is enough. The app uses the hardened runtime and `build/entitlements.mac.plist`: JIT, and the microphone. `build/sign.cjs` gives the daemon `build/entitlements.daemon.plist`, which also turns off library validation, since what it runs as Bun (language servers, extensions) loads native addons signed by others. `mac.binaries` names the daemon; without it Apple refuses notarization.
 
 The computer use helper in `Contents/Helpers` (`apps/computer-use/README.md`) is signed through `build/sign.cjs` with the empty `apps/computer-use/Resources/entitlements.plist`. Expect `flags=0x10000(runtime)`, a `Timestamp` and no entitlements:
 
@@ -102,7 +100,7 @@ codesign -dv --entitlements - apps/desktop/release/mac-arm64/Ruimte.app/Contents
 spctl -a -vvv -t exec apps/desktop/release/mac-arm64/Ruimte.app
 ```
 
-The daemon shows `flags=0x10000(runtime)`, a `Timestamp` and five entitlements, `com.apple.security.device.audio-input` among them, because macOS attributes a microphone request from a Ruimte terminal to the daemon. Before notarization `spctl` answers `rejected / source=Unnotarized Developer ID`.
+The daemon shows `flags=0x10000(runtime)`, a `Timestamp` and three entitlements: `allow-jit`, `disable-library-validation` and `com.apple.security.device.audio-input`, the last because macOS attributes a microphone request from a Ruimte terminal to the daemon. Before notarization `spctl` answers `rejected / source=Unnotarized Developer ID`.
 
 ## Notarization
 
