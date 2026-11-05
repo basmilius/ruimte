@@ -35,6 +35,7 @@ import {
     type ChatPromptOptions,
     VISUAL_RESUME_NOTE
 } from '../context/context-note.ts';
+import { RUIMTE_UI_FENCE } from '../context/ui-fence.ts';
 import { errorText } from '../error-text.ts';
 import { passedOverNote, type ProjectAccountChooser } from '../projects/project-accounts.ts';
 import { attachedReferences, type Reference } from '../projects/references.ts';
@@ -47,7 +48,6 @@ import { AgentImages } from './agent-images.ts';
 import { continueOnWake, continuedInForkNote } from './continue-on.ts';
 import { ChatError } from './errors.ts';
 import { InlineEditNotes } from './inline-edit.ts';
-import { RUIMTE_UI_FENCE } from './ui-fence.ts';
 
 export type { InterruptedRun } from '@adecore/agents/chat';
 

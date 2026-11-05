@@ -8,8 +8,8 @@ import { taskFirstPrompt } from '../canvas/tasks.ts';
 import { BRIEF_TITLE } from '../chat/chat-manager.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { START_LINE_ENV } from '../sessions/session.ts';
+import { bootTestDaemon, invokeTool, releasedProject, turnsOf, type TestDaemon } from '../testing/test-daemon.ts';
 import { nextLine } from '../tools/task-tools.ts';
-import { bootTestDaemon, invokeTool, releasedProject, turnsOf, type TestDaemon } from './test-daemon.ts';
 
 type Daemon = TestDaemon;
 

@@ -6,7 +6,7 @@ import { fakeClaude, ManualClock } from '@adecore/agents/testing';
 import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
 
 function content(): ProjectContent {
     return {

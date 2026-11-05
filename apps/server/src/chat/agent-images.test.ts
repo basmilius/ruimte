@@ -5,7 +5,7 @@ import { ManualClock } from '@adecore/agents/testing';
 import { ACTION_DEFINITIONS } from '@ruimte/actions';
 import { AgentFiles } from '../agent-files/files.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, releasedProject, type TestDaemon } from '../testing/test-daemon.ts';
 import { refusalCode, toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { AGENT_ATTACHMENT_LIMIT } from './agent-images.ts';
 import { leadAndShellProject } from './lead-chat-test-helpers.ts';

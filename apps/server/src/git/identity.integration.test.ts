@@ -5,8 +5,8 @@ import { join } from 'node:path';
 import type { GitIdentity } from '@ruimte/contracts';
 import { killQuietly, processAlive } from '../process-test-helpers.ts';
 import { IdentityReader } from './identity.ts';
+import { expectProcessTerminated } from './process-test-helpers.ts';
 import { runGit } from './run.ts';
-import { expectProcessTerminated } from './test-process.ts';
 import { gitIn, initRepo } from './test-repo.ts';
 
 let root: string;

@@ -8,7 +8,7 @@ import { MachineHome } from '../disk/machine-home.ts';
 import { OUTSIDE_CHECKOUT, projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { SnoozeStore } from '../push/snoozes.ts';
-import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
 import { repairChatMoves } from '../wiring/chat-move.ts';
 import { moveClaudeTranscript } from './claude-move.ts';
 import { MoveJournal } from './move-journal.ts';

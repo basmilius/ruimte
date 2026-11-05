@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, releasedProject, invokeTool, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, releasedProject, invokeTool, type TestDaemon } from '../testing/test-daemon.ts';
 
 function content(): ProjectContent {
     return {

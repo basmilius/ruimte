@@ -7,7 +7,7 @@ import { fileExists } from '@adecore/utils/fs';
 import { VISUAL_LIMITS, type ChatVisual } from '@ruimte/contracts';
 import { readBytes } from '../bytes/read-bytes.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../testing/test-daemon.ts';
 import { refusalCode } from '../tools/tool-test-helpers.ts';
 import { SHOWN_LINE } from '../tools/visual-tools.ts';
 import type { VisualHost } from '../visuals/agent-host.ts';

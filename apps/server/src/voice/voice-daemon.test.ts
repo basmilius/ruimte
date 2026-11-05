@@ -10,7 +10,7 @@ import { voiceActionCall } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
 import type { ClientConnection } from '../wire.ts';
 import { FakeClock, FakeLive, settle, type FakeAttach } from './voice-fakes.ts';
 import { VoiceSessions } from './voice-sessions.ts';

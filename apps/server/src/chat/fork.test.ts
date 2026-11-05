@@ -19,7 +19,7 @@ import {
 import { toolsNote } from '../context/context-note.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
-import { bootTestDaemon, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, releasedProject, type TestDaemon } from '../testing/test-daemon.ts';
 import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { retire } from './chat-manager.fixture.test.ts';
 import { ChatManager } from './chat-manager.ts';

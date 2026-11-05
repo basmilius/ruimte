@@ -4,7 +4,7 @@ import { parseArgs } from 'node:util';
 import { ChatStore } from '@adecore/agents/chat';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ProjectContent } from '@ruimte/contracts';
-import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../src/tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../src/testing/test-daemon.ts';
 
 /*
  * The daemon's memory over a long session: a lead with a team of five chat children that keep getting

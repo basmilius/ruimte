@@ -6,7 +6,7 @@ import { fileExists } from '@adecore/utils/fs';
 import type { ChatItem, Plan, ProjectContent } from '@ruimte/contracts';
 import { PLAN_RESUME_PREAMBLE, RESUME_PROMPT } from '../chat/chat-manager.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../testing/test-daemon.ts';
 import type { SessionEvent } from '../wire.ts';
 import { planFileName } from './plan-store.ts';
 

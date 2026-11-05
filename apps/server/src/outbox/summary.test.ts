@@ -5,9 +5,9 @@ import { compileUi } from '@adecore/intelligent-ui';
 import type { ChatItem, ChatNoteItem, ChatTurnItem, ProjectCanvasView } from '@ruimte/contracts';
 import { assistantTexts, turnsOf } from '../chat/chat-test-helpers.ts';
 import { leadProject, removeNodes, sayAndSettle, writeLeadTranscript } from '../chat/lead-chat-test-helpers.ts';
-import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
+import { RUIMTE_UI_FENCE } from '../context/ui-fence.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, releasedProject, type TestDaemon } from '../testing/test-daemon.ts';
 import { answerOf, SUMMARY_MAX_BYTES, summaryNoteId, summaryPrompt, summaryTexts } from './summary.ts';
 
 function summaryNotes(items: readonly ChatItem[]): ChatNoteItem[] {

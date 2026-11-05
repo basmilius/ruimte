@@ -8,7 +8,7 @@ import type { ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
 import { ChatManager, RESUME_PROMPT } from '../chat/chat-manager.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
-import { releasedProject } from '../tasks/test-daemon.ts';
+import { releasedProject } from '../testing/test-daemon.ts';
 import { untilChecked } from '../until-test-helpers.ts';
 import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { refusingHandlers } from './outbox-test-helpers.ts';

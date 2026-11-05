@@ -6,7 +6,7 @@ import { ManualClock } from '@adecore/agents/testing';
 import { MAX_RESULT_LENGTH } from '../canvas/tasks.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, invokeTool, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, type TestDaemon } from '../testing/test-daemon.ts';
 import type { PeerLink } from './peer-connection.ts';
 import { leadContent } from './test-helpers.ts';
 

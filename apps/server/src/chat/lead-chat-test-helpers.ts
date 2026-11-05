@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { claudeProjectSlug } from '@adecore/agents/chat';
 import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import type { TestDaemon } from '../tasks/test-daemon.ts';
+import type { TestDaemon } from '../testing/test-daemon.ts';
 import { turnsOf } from './chat-test-helpers.ts';
 
 /* A canvas with one Claude chat, `chat-lead`, which the fork tests copy and summarize. */

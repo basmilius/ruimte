@@ -9,7 +9,7 @@ import { gitIn, initRepo, repoTemplate, type RepoTemplate, NO_WORKTREE_AGENTS } 
 import { Worktrees } from '../git/worktrees.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, invokeTool, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, type TestDaemon } from '../testing/test-daemon.ts';
 
 function content(): ProjectContent {
     return {

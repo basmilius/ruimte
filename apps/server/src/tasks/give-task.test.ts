@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ChatSubagentItem, ChatTurnItem, ProjectContent, Task } from '@ruimte/contracts';
 import type { ProjectStore } from '../projects/project-store.ts';
+import { bootTestDaemon, invokeTool, releasedProject, turnsOf, type TestDaemon } from '../testing/test-daemon.ts';
 import { nextLine } from '../tools/task-tools.ts';
-import { bootTestDaemon, invokeTool, releasedProject, turnsOf, type TestDaemon } from './test-daemon.ts';
 
 type Daemon = TestDaemon;
 

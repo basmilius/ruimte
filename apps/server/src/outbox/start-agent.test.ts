@@ -13,7 +13,7 @@ import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import { SessionManager } from '../sessions/manager.ts';
-import { releasedProject } from '../tasks/test-daemon.ts';
+import { releasedProject } from '../testing/test-daemon.ts';
 import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { untilChecked } from '../until-test-helpers.ts';
 import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';

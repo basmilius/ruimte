@@ -10,7 +10,7 @@ import type { CanvasHost } from '../canvas/host.ts';
 import { markDrawnChat } from '../projects/drawn-chat.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
 import { extensionChatStarter } from './extension-chat.ts';
 import { ExtensionHost } from './extension-host.ts';
 import { ExtensionStore } from './store.ts';

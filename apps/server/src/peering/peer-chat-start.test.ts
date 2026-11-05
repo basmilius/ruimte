@@ -6,7 +6,7 @@ import { ManualClock } from '@adecore/agents/testing';
 import type { ServerFrame } from '@ruimte/contracts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
 
 const MACHINE = 'machine-a';
 

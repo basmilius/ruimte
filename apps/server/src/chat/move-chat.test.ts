@@ -12,7 +12,7 @@ import { ProjectStore } from '../projects/project-store.ts';
 import { claudeApiConfigDir, createAnthropicClaudeApiProvider } from '../providers/anthropic-claude-api-provider.ts';
 import { AnthropicClaudeApiService } from '../providers/anthropic-claude-api-service.ts';
 import { SnoozeStore } from '../push/snoozes.ts';
-import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
 import { chatMoveDeps, type ChatMoveWiring } from '../wiring/chat-move.ts';
 import { moveChat, type MoveChatDeps } from './move-chat.ts';
 import { MoveJournal } from './move-journal.ts';

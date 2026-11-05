@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ProjectContent } from '@ruimte/contracts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, itemsOf, releasedProject, turnsOf, invokeTool, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, itemsOf, releasedProject, turnsOf, invokeTool, type TestDaemon } from '../testing/test-daemon.ts';
 import { NO_REPLY_NOTICE } from './notices.ts';
 
 /* Two chats a person opened beside each other, plus a note nothing links to: a message travels only along a line. */

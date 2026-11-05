@@ -3,8 +3,8 @@ import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { processAlive } from '../process-test-helpers.ts';
+import { expectProcessTerminated, killFromPidFile } from './process-test-helpers.ts';
 import { streamCommand, streamWithTimeout } from './run.ts';
-import { expectProcessTerminated, killFromPidFile } from './test-process.ts';
 
 let root: string;
 let pidFile: string;

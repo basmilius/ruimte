@@ -12,7 +12,7 @@ import { OUTSIDE_CHECKOUT, projectLinks } from '../projects/project-file-test-he
 import { ProjectProposals } from '../projects/project-proposals.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
-import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
 import { chatMoveDeps, chatMoveHandlers, type ChatMoveWiring } from './chat-move.ts';
 
 describe('what the machine says about moving a chat', () => {

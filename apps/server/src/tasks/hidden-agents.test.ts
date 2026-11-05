@@ -6,7 +6,7 @@ import { ManualClock } from '@adecore/agents/testing';
 import { MAX_OPENED_PER_CALLER } from '../canvas/depth.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, invokeTool, type TestDaemon } from './test-daemon.ts';
+import { bootTestDaemon, invokeTool, type TestDaemon } from '../testing/test-daemon.ts';
 
 let root: string;
 let home: string;

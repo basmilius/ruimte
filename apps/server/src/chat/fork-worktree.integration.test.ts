@@ -10,7 +10,7 @@ import { gitIn, initRepo, repoTemplate, type RepoTemplate, NO_WORKTREE_AGENTS } 
 import { Worktrees } from '../git/worktrees.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
 import { turnsOf } from './chat-test-helpers.ts';
 import { leadProject, removeNodes, sayAndSettle, writeLeadTranscript } from './lead-chat-test-helpers.ts';
 

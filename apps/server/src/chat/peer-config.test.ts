@@ -6,7 +6,7 @@ import { ManualClock } from '@adecore/agents/testing';
 import { PeerLinks } from '../projects/peer-links.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, invokeTool, turnsOf, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, turnsOf, type TestDaemon } from '../testing/test-daemon.ts';
 
 let root: string;
 let folder: string;

@@ -9,7 +9,7 @@ import type { LimitsUpdate } from '@adecore/agents/usage';
 import type { ChatInfo, ChatTurnItem, ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
 import { setProjectAccounts } from '../projects/project-accounts.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../testing/test-daemon.ts';
 import { turnsOf } from './chat-test-helpers.ts';
 import { sayAndSettle, writeLeadTranscript } from './lead-chat-test-helpers.ts';
 

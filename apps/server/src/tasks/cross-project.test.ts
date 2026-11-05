@@ -6,8 +6,8 @@ import { ManualClock } from '@adecore/agents/testing';
 import type { CanvasHost } from '../canvas/host.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
+import { bootTestDaemon, invokeTool, type TestDaemon } from '../testing/test-daemon.ts';
 import { failTasksOfClosedProject } from './closed-project.ts';
-import { bootTestDaemon, invokeTool, type TestDaemon } from './test-daemon.ts';
 
 let root: string;
 let home: string;
