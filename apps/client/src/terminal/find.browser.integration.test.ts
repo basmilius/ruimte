@@ -79,11 +79,9 @@ test('the find key opens the bar over a terminal, steps through the scrollback a
 
         const find = apple ? '{ key: "f", code: "KeyF", metaKey: true }' : '{ key: "F", code: "KeyF", ctrlKey: true, shiftKey: true }';
         await view.evaluate(`window.press(window.term.textarea, ${find})`);
-        await view.evaluate(frame);
-        expect(await view.evaluate<boolean>(`document.activeElement === document.querySelector('[data-find-bar] input')`)).toBe(true);
+        await waitInPage(view, `document.activeElement === document.querySelector('[data-find-bar] input')`);
 
         await view.evaluate(`window.type(document.querySelector('[data-find-bar] input'), 'needle')`);
-        await view.evaluate(frame);
         await waitInPage(view, 'window.current() !== null', () => view.evaluate<string>('JSON.stringify(window.errors)'));
         const first = await view.evaluate<number>('window.current()');
 
@@ -95,8 +93,7 @@ test('the find key opens the bar over a terminal, steps through the scrollback a
         expect(await view.evaluate<string>('window.term.getSelection()')).toBe('needle');
 
         await view.evaluate(`window.press(document.querySelector('[data-find-bar] input'), { key: 'Escape', code: 'Escape' })`);
-        await view.evaluate(frame);
-        expect(await view.evaluate<boolean>(`document.querySelector('[data-find-bar]') === null`)).toBe(true);
+        await waitInPage(view, `document.querySelector('[data-find-bar]') === null`);
         expect(await view.evaluate<boolean>('document.activeElement === window.term.textarea')).toBe(true);
     });
 });

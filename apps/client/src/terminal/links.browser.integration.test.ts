@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { readFile, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
-import { clientDirectory, frame, withBrowserFixture } from '../../testing/browser-fixture';
+import { clientDirectory, frame, waitInPage, withBrowserFixture } from '../../testing/browser-fixture';
 
 type View = InstanceType<typeof Bun.WebView>;
 const github = 'https://github.com/basmilius/ruimte';
@@ -259,7 +259,7 @@ for (const platform of ['darwin', 'browser'] as const) {
         await fixture(platform, false, async (view) => {
             const modifier = platform === 'darwin' || process.platform === 'darwin' ? 4 : 2;
             await view.evaluate('(() => { window.setupProject("local", false); window.showLinkSettings(); })()');
-            await view.evaluate(frame);
+            await waitInPage(view, `[...document.querySelectorAll('[role=radio]')].some(element=>element.textContent==='Ruimte')`);
             const choice = await view.evaluate<{ x: number; y: number }>(`(() => {
                 const button = [...document.querySelectorAll('[role=radio]')].find(element=>element.textContent==='Ruimte');
                 const rect=button.getBoundingClientRect(); return {x:rect.x+rect.width/2,y:rect.y+rect.height/2};
@@ -394,13 +394,13 @@ test('TerminalBody links work through canvas focus, zoom, selection and dragging
             expect(fileAnchor.actual).toBeCloseTo(fileAnchor.expected, 0);
             await view.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', ...filePoint, button: 'right', buttons: 2, clickCount: 1 });
             await view.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', ...filePoint, button: 'right', buttons: 0, clickCount: 1 });
-            await view.evaluate(frame);
+            await waitInPage(view, `[...document.querySelectorAll('[role=menuitem]')].some(element=>element.textContent.includes('Open in preview'))`);
             const menuPoint = await view.evaluate<{ x: number; y: number }>(`(() => {
                 const item=[...document.querySelectorAll('[role=menuitem]')].find(element=>element.textContent.includes('Open in preview'));
                 const rect=item.getBoundingClientRect();return {x:rect.x+rect.width/2,y:rect.y+rect.height/2};
             })()`);
             await click(view, menuPoint, 0);
-            await view.evaluate(frame);
+            await waitInPage(view, 'window.files.getState().revealLine?.nonce===2');
             expect(await view.evaluate<unknown>('window.files.getState().revealLine')).toMatchObject({ key: '/tmp/example.ts', line: 12, nonce: 2 });
             const header = await view.evaluate<{ x: number; y: number }>(
                 `(()=>{const rect=document.querySelector('[data-node-id=a]>header').getBoundingClientRect();return {x:rect.x+150,y:rect.y+20}})()`

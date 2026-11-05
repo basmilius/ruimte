@@ -188,8 +188,7 @@ test('real Markdown copy actions retain exact text, focus, hover and scroll plac
 test('empty fences keep Copy in every Markdown renderer without adding controls to inline code', async () => {
     await fixture(async (view) => {
         await view.evaluate('window.showEmpty()');
-        await view.evaluate(frame);
-        expect(await view.evaluate<number>('document.querySelectorAll("[data-empty] .chat-code").length')).toBe(4);
+        await waitFor(view, 'document.querySelectorAll("[data-empty] .chat-code").length===4');
         await waitFor(view, 'document.querySelectorAll("[data-empty] pre:not(.invisible)").length===4');
         for (const renderer of ['markdown', 'plain', 'message', 'assistant']) {
             const selector = `[data-empty="${renderer}"]`;
@@ -228,7 +227,7 @@ test('touch targets remain fully inside a short code block and accept a lower-ed
         const { x, y } = targets[0]!;
         await view.cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
         await view.cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-        await view.evaluate(frame);
+        await waitFor(view, 'window.copies.length>0');
         expect(await view.evaluate<string[]>('window.copies')).toEqual(['printf ready']);
         await screenshot(view, 'touch-lower-edge');
     });

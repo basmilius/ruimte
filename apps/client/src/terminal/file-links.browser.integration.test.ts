@@ -306,11 +306,15 @@ async function click(view: View, point: { x: number; y: number }, button: 'left'
     await view.evaluate(frame);
 }
 
-function previewItemShown(view: View): Promise<boolean> {
+/* Read once the menu is open; it always offers Copy, so a menu still on its way never reads as one without the item. */
+async function previewItemShown(view: View): Promise<boolean> {
+    await waitInPage(view, `document.querySelector('[role=menuitem]')!==null`);
+
     return view.evaluate<boolean>(`[...document.querySelectorAll('[role=menuitem]')].some(element=>element.textContent.includes('Open in preview'))`);
 }
 
 async function menuOpen(view: View): Promise<void> {
+    await waitInPage(view, `document.querySelector('[role=menuitem]')!==null`);
     const point = await view.evaluate<{ x: number; y: number }>(`(() => {
         const item=[...document.querySelectorAll('[role=menuitem]')].find(element=>element.textContent.includes('Open in preview'));
         if(!item) throw new Error('No file preview menu item');
@@ -544,7 +548,7 @@ for (const route of routes) {
 async function escapeMenu(view: View): Promise<void> {
     await view.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
     await view.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
-    await view.evaluate(frame);
+    await waitInPage(view, `document.querySelector('[role=menu]')===null`);
 }
 
 async function expectCorrectPreviewOrRefusal(view: View, row: number, route: 'click' | 'menu', expectedPath: string): Promise<'opened' | 'refused'> {

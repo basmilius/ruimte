@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { clientDirectory, frame, warmBrowserFixture, withBrowserFixture } from '../../testing/browser-fixture';
+import { clientDirectory, frame, waitInPage, warmBrowserFixture, withBrowserFixture } from '../../testing/browser-fixture';
 
 const assets = join(clientDirectory, 'dist/assets');
 const sheets = (await readdir(assets)).filter((name) => name.endsWith('.css'));
@@ -27,9 +27,8 @@ await warmBrowserFixture(entry, styles);
 test('streaming keeps older messages visible while the chat fits without scrolling', async () => {
     await withBrowserFixture(entry, styles, async (view) => {
         await view.resize(1200, 1600);
-        for (let index = 0; index < 10; index++) {
-            await view.evaluate(frame);
-        }
+        await waitInPage(view, `document.querySelector('[data-item-id="message-11"]')!==null`);
+        await view.evaluate(frame);
         for (let index = 0; index < 13; index++) {
             await view.evaluate('window.grow()');
             await view.evaluate(frame);

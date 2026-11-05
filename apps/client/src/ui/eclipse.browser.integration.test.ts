@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { frame, withBrowserFixture } from '../../testing/browser-fixture';
+import { frame, waitInPage, withBrowserFixture } from '../../testing/browser-fixture';
 
 const directory = import.meta.dir;
 const settle = 'new Promise(resolve => setTimeout(resolve, 180))';
@@ -43,8 +43,7 @@ const entry = `
 
 test('Galaxy renders through Strict Mode, stays free of dark halos across themes, follows motion preferences, and falls back after context loss', async () => {
     await withBrowserFixture(entry, await styles(), async (view) => {
-        await view.evaluate(settle);
-        expect(await view.evaluate<number>('window.litPixels')).toBeGreaterThan(100);
+        await waitInPage(view, 'window.litPixels>100');
         expect(await view.evaluate<number>('document.querySelectorAll(".galaxy-canvas").length')).toBe(1);
         const mode = `(() => { const gl=document.querySelector('canvas').getContext('webgl2'); return gl.getUniform(gl.getParameter(gl.CURRENT_PROGRAM),gl.getUniformLocation(gl.getParameter(gl.CURRENT_PROGRAM),'uMode')); })()`;
         const focalY = `(() => { const gl=document.querySelector('canvas').getContext('webgl2'); return gl.getUniform(gl.getParameter(gl.CURRENT_PROGRAM),gl.getUniformLocation(gl.getParameter(gl.CURRENT_PROGRAM),'uFocal'))[1]; })()`;
@@ -58,13 +57,9 @@ test('Galaxy renders through Strict Mode, stays free of dark halos across themes
         await view.evaluate(frame);
         expect(await view.evaluate<number>('window.haloPixels')).toBe(0);
         await view.resize(360, 600);
-        await view.evaluate(settle);
-        expect(await view.evaluate<number>('document.querySelector("canvas").width')).toBe(
-            await view.evaluate<number>('Math.round(360 * Math.min(window.devicePixelRatio || 1, 2))')
-        );
+        await waitInPage(view, 'document.querySelector("canvas").width===Math.round(360*Math.min(window.devicePixelRatio||1,2))');
         await view.evaluate('document.querySelector(".eclipse").style.height = "500px"');
-        await view.evaluate(settle);
-        expect(await view.evaluate<number>(focalY)).toBeCloseTo(1 - 132 / 500, 5);
+        await waitInPage(view, `Math.abs(${focalY}-${1 - 132 / 500})<1e-5`);
 
         await view.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
         await view.evaluate(settle);
@@ -76,20 +71,17 @@ test('Galaxy renders through Strict Mode, stays free of dark halos across themes
         expect(await view.evaluate<number>('window.draws')).toBe(stopped);
 
         await view.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
-        await view.evaluate(settle);
-        expect(await view.evaluate<number>('window.draws')).toBeGreaterThan(stopped);
+        await waitInPage(view, `window.draws>${stopped}`);
         await view.evaluate('document.querySelector(".fixture").style.transform="translateY(1000px)"');
         await view.evaluate(settle);
         const offscreen = await view.evaluate<number>('window.draws');
         await view.evaluate(settle);
         expect(await view.evaluate<number>('window.draws')).toBe(offscreen);
         await view.evaluate('document.querySelector(".fixture").style.transform=""');
-        await view.evaluate(settle);
-        expect(await view.evaluate<number>('window.draws')).toBeGreaterThan(offscreen);
+        await waitInPage(view, `window.draws>${offscreen}`);
 
         await view.evaluate('document.querySelector("canvas").getContext("webgl2").getExtension("WEBGL_lose_context").loseContext()');
-        await view.evaluate(settle);
-        expect(await view.evaluate<number>('document.querySelectorAll("canvas").length')).toBe(0);
+        await waitInPage(view, 'document.querySelectorAll("canvas").length===0');
         expect(await view.evaluate<number>('document.querySelectorAll(".eclipse-star").length')).toBe(58);
         const fallback = await view.evaluate<number>('window.draws');
         await view.evaluate('window.unmount()');
@@ -107,9 +99,8 @@ test('the original stars remain visible when WebGL is unavailable', async () => 
         };
     `;
     await withBrowserFixture(withoutWebGL + entry, await styles(), async (view) => {
-        await view.evaluate(settle);
+        await waitInPage(view, 'document.querySelectorAll(".eclipse-star").length===58');
         expect(await view.evaluate<number>('document.querySelectorAll("canvas").length')).toBe(0);
-        expect(await view.evaluate<number>('document.querySelectorAll(".eclipse-star").length')).toBe(58);
         expect(await view.evaluate<string>('getComputedStyle(document.querySelector(".eclipse-star")).backgroundColor')).not.toBe('rgba(0, 0, 0, 0)');
         expect(await view.evaluate<string[]>('window.errors')).toEqual([]);
     });

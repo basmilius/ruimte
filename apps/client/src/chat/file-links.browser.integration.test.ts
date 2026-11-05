@@ -47,8 +47,7 @@ async function fixture(run: (view: View) => Promise<void>): Promise<void> {
     `,
         'svg{width:14px;height:14px}',
         async (view) => {
-            await view.evaluate(frame);
-            expect(await view.evaluate<number>('document.querySelectorAll("[data-file-path]").length')).toBe(3);
+            await waitInPage(view, 'document.querySelectorAll("[data-file-path]").length===3');
             await run(view);
             expect(await view.evaluate<string[]>('window.errors')).toEqual([]);
         }

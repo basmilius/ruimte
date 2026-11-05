@@ -104,8 +104,7 @@ for (const change of ['none', 'busy', 'input', 'refused', 'lost-ack', 'lost-ack-
                     await view.evaluate(frame);
                     expect(await view.evaluate<boolean>('!!window.prepareButton()')).toBe(false);
                     await view.evaluate('window.draw(false)');
-                    await view.evaluate(frame);
-                    expect(await view.evaluate<boolean>('!!window.prepareButton()')).toBe(true);
+                    await waitInPage(view, '!!window.prepareButton()');
                     expect(await view.evaluate<boolean>('window.prepareButton().closest(".invisible") === null')).toBe(true);
                     expect(calls).toEqual([]);
                     expect((await f.session.shellPrompt.inspect())?.empty).toBe(true);

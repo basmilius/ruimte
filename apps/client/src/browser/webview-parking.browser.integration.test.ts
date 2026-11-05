@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { frame, withBrowserFixture } from '../../testing/browser-fixture';
+import { frame, waitInPage, withBrowserFixture } from '../../testing/browser-fixture';
 
 const HOST_BOX = '(() => {const rect=document.querySelector(".browser-host").getBoundingClientRect(); return [rect.x,rect.y,rect.width,rect.height];})()';
 
@@ -121,9 +121,7 @@ test('a page past the render distance is hidden in its host after one picture an
             await view.evaluate('fixture.canvas.setState({camera:{x:12,y:16,zoom:0.3}})');
             await view.evaluate(frame);
             expect(await view.evaluate<string>(VISIBILITY)).toBe('visible');
-            await view.evaluate(pause(800));
-            await view.evaluate(frame);
-            expect(await view.evaluate<string>(VISIBILITY)).toBe('hidden');
+            await waitInPage(view, `${VISIBILITY}==='hidden'`);
             expect(await view.evaluate<boolean>('fixture.snapshots.getState().byKey["local:browser"].far')).toBe(true);
             expect(await view.evaluate<number>('window.captures')).toBe(1);
             expect(await view.evaluate<boolean>('fixture.snapshots.getState().byKey["local:browser"].imageUrl.startsWith("blob:")')).toBe(true);
@@ -157,9 +155,7 @@ test('a page past the render distance is hidden in its host after one picture an
             await view.evaluate(frame);
             expect(await view.evaluate<string>(VISIBILITY)).toBe('visible');
             await view.evaluate('fixture.settings.setState({canvasRenderDistance:"standard"})');
-            await view.evaluate(pause(800));
-            await view.evaluate(frame);
-            expect(await view.evaluate<string>(VISIBILITY)).toBe('hidden');
+            await waitInPage(view, `${VISIBILITY}==='hidden'`);
 
             // Maximized, a page is drawn whatever the zoom.
             await view.evaluate('fixture.canvas.setState({maximizedId:"browser"})');
@@ -205,10 +201,8 @@ test('two canvases side by side each hold their own pages to their own camera', 
         async (view) => {
             const visibility = (key: string): Promise<string> =>
                 view.evaluate<string>(`getComputedStyle(document.querySelector('[data-guest="${key}"]').parentElement).visibility`);
-            await view.evaluate(pause(800));
-            await view.evaluate(frame);
+            await waitInPage(view, `getComputedStyle(document.querySelector('[data-guest="local:far"]').parentElement).visibility==='hidden'`);
             expect(await visibility('local:near')).toBe('visible');
-            expect(await visibility('local:far')).toBe('hidden');
             expect(await view.evaluate<string[]>('window.errors')).toEqual([]);
         }
     );
