@@ -67,11 +67,11 @@ async function rightClick(target: HTMLElement): Promise<void> {
     });
 }
 
-/* A few turns and frames, so whatever the closing menu does with the focus has happened. */
+/* A few turns of the event loop, no wall-clock wait, so whatever the closing menu does with the focus has happened. */
 async function settle(): Promise<void> {
     for (let turn = 0; turn < 10; turn++) {
         await act(async () => {
-            await new Promise((resolve) => setTimeout(resolve, 20));
+            await new Promise((resolve) => setTimeout(resolve, 0));
         });
     }
 }

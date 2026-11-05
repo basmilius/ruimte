@@ -78,6 +78,75 @@ export function clockReads(path: string, text: string): ClockRead[] {
         .sort((left, right) => left.line - right.line);
 }
 
+const TIMERS = new Set(['setTimeout', 'setInterval']);
+
+function isPositiveNumber(node: { type: string; value?: unknown } | undefined): boolean {
+    return node?.type === 'Literal' && typeof node.value === 'number' && node.value > 0;
+}
+
+export interface TimerWait {
+    line: number;
+    what: string;
+}
+
+/*
+ * Every timer a test file waits out on the real clock: a literal delay above zero. A zero delay is a turn
+ * of the event loop, and a file that sets up fake timers runs its timers on them.
+ */
+export function timerWaits(path: string, text: string): TimerWait[] {
+    const program = parseSync(path, text).program;
+    const found: Array<{ start: number; what: string }> = [];
+    let faked = false;
+    const sleeps = new Set<string>();
+
+    new Visitor({
+        ImportDeclaration(node) {
+            if (node.source.value !== 'bun' || node.importKind === 'type') {
+                return;
+            }
+
+            for (const specifier of node.specifiers) {
+                if (specifier.type === 'ImportSpecifier' && specifier.imported.type === 'Identifier' && specifier.imported.name === 'sleep') {
+                    sleeps.add(specifier.local.name);
+                }
+            }
+        },
+        CallExpression(node) {
+            const name = calleeName(node.callee);
+
+            if (name === 'useFakeTimers') {
+                faked = true;
+                return;
+            }
+
+            if (name !== null && TIMERS.has(name) && isPositiveNumber(node.arguments[1])) {
+                found.push({ start: node.start, what: `${name} of ${String((node.arguments[1] as { value: number }).value)} ms` });
+                return;
+            }
+
+            const bunSleep =
+                node.callee.type === 'MemberExpression' &&
+                !node.callee.computed &&
+                node.callee.object.type === 'Identifier' &&
+                node.callee.object.name === 'Bun' &&
+                node.callee.property.type === 'Identifier' &&
+                node.callee.property.name === 'sleep';
+
+            if ((bunSleep || (node.callee.type === 'Identifier' && sleeps.has(node.callee.name))) && isPositiveNumber(node.arguments[0])) {
+                found.push({ start: node.start, what: `sleep of ${String((node.arguments[0] as { value: number }).value)} ms` });
+            }
+        }
+    }).visit(program);
+
+    if (faked) {
+        return [];
+    }
+
+    const lineOf = (start: number): number => text.slice(0, start).split('\n').length;
+
+    return found.map(({ start, what }) => ({ line: lineOf(start), what })).sort((left, right) => left.line - right.line);
+}
+
 const PROCESS_MODULES = new Set(['child_process', 'node:child_process']);
 
 // The git fixture helpers start git for the test, out of sight of the file that imports them.
@@ -167,6 +236,9 @@ if (import.meta.main) {
         const text = readFileSync(join(ROOT, path), 'utf8');
         for (const read of clockReads(path, text)) {
             problems.push(`${path}:${read.line}: ${read.what} reads the wall clock; use a fixed epoch or a fake clock`);
+        }
+        for (const wait of timerWaits(path, text)) {
+            problems.push(`${path}:${wait.line}: ${wait.what} waits on the wall clock; use fake timers or wait for what the test expects`);
         }
         for (const started of processStarts(path, text)) {
             problems.push(`${path}:${started.line}: ${started.what} starts a process; use a fake or move the test to an *.integration.test.ts`);

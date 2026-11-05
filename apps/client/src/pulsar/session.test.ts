@@ -14,7 +14,8 @@ function keeperWith(answers: Array<SessionView | null>) {
         exchange: async () => viewFor('x'.repeat(43), NOW),
         refresh: async () => {
             keeper.refreshes += 1;
-            await new Promise((resolve) => setTimeout(resolve, 1));
+            // Answers a turn later, as the address book would, so callers that come meanwhile find it running.
+            await Promise.resolve();
             return answers.shift() ?? null;
         },
         restore: async () => null,

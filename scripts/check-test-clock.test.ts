@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { clockReads, processStarts } from './check-test-clock.ts';
+import { clockReads, processStarts, timerWaits } from './check-test-clock.ts';
 
 function whatIn(text: string): string[] {
     return clockReads('example.test.ts', text).map((read) => read.what);
@@ -84,5 +84,32 @@ describe('processStarts', () => {
             "const listed = new Glob('*.ts');"
         ].join('\n');
         expect(startsIn(text)).toEqual([]);
+    });
+});
+
+function waitsIn(text: string): string[] {
+    return timerWaits('example.test.ts', text).map((wait) => wait.what);
+}
+
+describe('timerWaits', () => {
+    test('finds every timer a test waits out on the real clock', () => {
+        const text = [
+            'await new Promise((resolve) => setTimeout(resolve, 20));',
+            'const id = window.setInterval(poll, 5);',
+            'await Bun.sleep(10);',
+            "import { sleep as pause } from 'bun';",
+            'await pause(1);'
+        ].join('\n');
+        expect(timerWaits('example.test.ts', text)).toEqual([
+            { line: 1, what: 'setTimeout of 20 ms' },
+            { line: 2, what: 'setInterval of 5 ms' },
+            { line: 3, what: 'sleep of 10 ms' },
+            { line: 5, what: 'sleep of 1 ms' }
+        ]);
+    });
+
+    test('a turn of the event loop and a file on fake timers wait on no clock', () => {
+        expect(waitsIn('await new Promise((resolve) => setTimeout(resolve, 0)); await Bun.sleep(0); setTimeout(next);')).toEqual([]);
+        expect(waitsIn('jest.useFakeTimers(); setTimeout(fire, 1000); jest.advanceTimersByTime(1000);')).toEqual([]);
     });
 });
