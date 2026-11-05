@@ -40,7 +40,7 @@ describe('empty canvas groups', () => {
 });
 
 describe('joining the group under a new node', () => {
-    const inner: ProjectNode = { ...frame, id: 'inner', x: 200, y: 200, w: 600, h: 600, memberIds: [] };
+    const inner: ProjectNode = { ...frame, id: 'inner', x: 200, y: 200, w: 600, h: 600, memberIds: [], membersListed: true };
     const outer: ProjectNode = { ...frame, memberIds: ['inner'] };
 
     test('a node joins the smallest frame its center stands in, and only that one', () => {
@@ -59,7 +59,7 @@ describe('joining the group under a new node', () => {
     });
 
     test('a group never joins a group it holds', () => {
-        const holder = { ...frame, id: 'holder', x: 300, y: 300, w: 400, h: 400, memberIds: [] };
+        const holder = { ...frame, id: 'holder', x: 300, y: 300, w: 400, h: 400, memberIds: [], membersListed: true };
         const big = { ...frame, id: 'big', memberIds: ['holder'] };
 
         expect(joinGroupUnder(canvas([holder, big]), 'big')).toEqual([holder, big]);

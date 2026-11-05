@@ -100,11 +100,26 @@ enum CanvasEditing {
             width: snap(bounds.width + groupPadding * 2), height: snap(bounds.height + groupPadding * 2 + groupHeader))
     }
 
+    /// Whether a group holds exactly the ids it spells out, as `spellsOutMembers` in `packages/contracts` reads it.
+    /// 0.29 wrote `memberIds: []` on open groups it read off their frame, so an empty list counts only with
+    /// `membersListed`, which 0.29 never writes.
+    static func spellsOutMembers(_ group: JSONValue) -> Bool {
+        if group["collapsed"]?.boolValue == true { return true }
+        guard group["memberIds"] != nil else { return false }
+        return !group.list("memberIds").isEmpty || group["membersListed"]?.boolValue == true
+    }
+
+    /// The group holding exactly `ids` from now on; an empty list is marked, as `withMemberIds` writes it.
+    static func withMemberIds(_ group: JSONValue, _ ids: [String]) -> JSONValue {
+        let listed = group.setting("memberIds", .array(ids.map { .string($0) }))
+        return ids.isEmpty ? listed.setting("membersListed", .bool(true)) : listed
+    }
+
     /// What a group holds: the ids the file spells out, open or collapsed. A group that spells out none holds
     /// the nodes whose center lies inside its frame, and of two overlapping groups only the larger holds the other.
     static func members(of group: JSONValue, in canvas: JSONValue) -> [JSONValue] {
         let nodes = canvas.list("nodes").filter { $0.stableID != group.stableID }
-        if group["memberIds"] != nil || group["collapsed"]?.boolValue == true {
+        if spellsOutMembers(group) {
             let ids = Set(group.list("memberIds").compactMap(\.stringValue))
             return nodes.filter { ids.contains($0.stableID) }
         }

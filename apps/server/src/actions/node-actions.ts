@@ -18,7 +18,9 @@ import {
     joinGroupUnder,
     lineEndOf,
     nodeChats,
+    spellsOutMembers,
     storedPathOf,
+    withMemberIds,
     type ProjectCanvasView,
     type ProjectContent,
     type ProjectDiagramView,
@@ -537,7 +539,10 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                 .filter((candidate) => !gone.has(candidate.id))
                 .map((candidate) =>
                     candidate.memberIds?.some((member) => gone.has(member))
-                        ? { ...candidate, memberIds: candidate.memberIds.filter((member) => !gone.has(member)) }
+                        ? withMemberIds(
+                              candidate,
+                              candidate.memberIds.filter((member) => !gone.has(member))
+                          )
                         : candidate
                 );
             const removed = going.map((node) => ({
@@ -698,12 +703,22 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
             /* A container that spells out its members trades the framed nodes for the new group, so
                they are in the inner group only. One that reads positions holds the group already. */
             const nodes = canvas.nodes.map((node) =>
-                container !== undefined && node.id === container.id && node.memberIds !== undefined
-                    ? { ...node, memberIds: [...node.memberIds.filter((member) => !held.has(member)), id] }
+                container !== undefined && node.id === container.id && spellsOutMembers(node)
+                    ? { ...node, memberIds: [...(node.memberIds ?? []).filter((member) => !held.has(member)), id] }
                     : node
             );
             return {
-                content: withCanvas(content, { ...canvas, nodes: [...nodes, { ...group, memberIds: inside.map((node) => node.id) }], edges }),
+                content: withCanvas(content, {
+                    ...canvas,
+                    nodes: [
+                        ...nodes,
+                        withMemberIds(
+                            group,
+                            inside.map((node) => node.id)
+                        )
+                    ],
+                    edges
+                }),
                 result: {
                     output: {
                         viewId: canvas.id,

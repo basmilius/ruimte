@@ -69,7 +69,7 @@ struct CanvasStartGrid: View {
                         tile(
                             String(localized: "Group"), detail: String(localized: "Holds nodes"), icon: "layout-grid"
                         ) {
-                            insert(kind: "group", title: "Group", extra: ["memberIds": .array([])])
+                            insert(kind: "group", title: "Group", extra: ["memberIds": .array([]), "membersListed": .bool(true)])
                         }
                     }
                 }

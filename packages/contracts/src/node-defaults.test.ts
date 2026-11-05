@@ -11,6 +11,7 @@ import {
     groupMemberIds,
     knownNodeSizes,
     nodeSizeOf,
+    withMemberIds,
     type GroupItem
 } from './node-defaults.ts';
 
@@ -93,6 +94,15 @@ describe('groupMemberIds', () => {
     test('an open frame that spells out its members holds those, wherever the rest stands', () => {
         const spelled = { ...frame, memberIds: ['outside', 'gone'] };
         expect(groupMemberIds(spelled, [spelled, inside, outside, text])).toEqual(['outside']);
+    });
+
+    test('an open frame with the empty list a 0.29 iPhone wrote holds what lies in it, and one this version emptied holds nothing', () => {
+        const fromOlderPhone = { ...frame, memberIds: [] };
+        const emptied = withMemberIds(frame, []);
+
+        expect(groupMemberIds(fromOlderPhone, [fromOlderPhone, inside, outside])).toEqual(['inside']);
+        expect(groupMemberIds(emptied, [emptied, inside, outside])).toEqual([]);
+        expect(groupMemberIds({ ...frame, collapsed: true, memberIds: [] }, [frame, inside])).toEqual([]);
     });
 
     test('of two overlapping frames read off positions, only the larger holds the other', () => {

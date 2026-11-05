@@ -68,7 +68,10 @@ describe('what a drop does to the groups', () => {
     });
 
     test('a group never joins a group it holds, nor itself', () => {
-        const store = storeWith(group('big', 0, 0, 1000, 1000, { memberIds: ['small'] }), group('small', 400, 400, 300, 300, { memberIds: [] }));
+        const store = storeWith(
+            group('big', 0, 0, 1000, 1000, { memberIds: ['small'] }),
+            group('small', 400, 400, 300, 300, { memberIds: [], membersListed: true })
+        );
 
         drag(store, ['big'], 40, 40);
 
@@ -180,7 +183,7 @@ describe('folding, hiding and deleting', () => {
 
     test('an undo step keeps a node another writer put in a group', () => {
         const before = snapshotOf({
-            nodes: { frame: group('frame', 0, 0, 800, 600, { memberIds: [] }) },
+            nodes: { frame: group('frame', 0, 0, 800, 600, { memberIds: [], membersListed: true }) },
             order: ['frame'],
             texts: {},
             lines: {},

@@ -942,7 +942,10 @@ struct AddProjectItem: View {
             ? ["provider": .string(provider), "providerFixed": .bool(true)] : [:]
         if canvasID != nil {
             item.merge(agent) { _, new in new }
-            if kind == "group" { item["memberIds"] = .array([]) }
+            if kind == "group" {
+                item["memberIds"] = .array([])
+                item["membersListed"] = .bool(true)
+            }
             if kind == "note" { item["body"] = .string(detail) }
         } else {
             item["name"] = .string(title)

@@ -113,6 +113,7 @@ export interface GroupFrame extends NodeRect {
     id: string;
     collapsed?: boolean;
     memberIds?: readonly string[];
+    membersListed?: boolean;
     expandedHeight?: number;
 }
 
@@ -143,6 +144,24 @@ function holds(rect: NodeRect, item: GroupItem): boolean {
 }
 
 /*
+ * Whether a group holds exactly the ids it spells out. 0.29 read an open group off its frame whatever
+ * its list said, and its iPhone app wrote `memberIds: []` on open groups, so an empty list on an open
+ * group counts only with `membersListed`, which 0.29 never writes.
+ */
+export function spellsOutMembers(group: Pick<GroupFrame, 'collapsed' | 'memberIds' | 'membersListed'>): boolean {
+    if (group.collapsed === true) {
+        return true;
+    }
+
+    return group.memberIds !== undefined && (group.memberIds.length > 0 || group.membersListed === true);
+}
+
+/* The group holding exactly `ids` from now on; an empty list is marked, so it does not read as one 0.29 wrote. */
+export function withMemberIds<T extends object>(group: T, ids: readonly string[]): T & { memberIds: string[]; membersListed?: boolean } {
+    return ids.length === 0 ? { ...group, memberIds: [], membersListed: true } : { ...group, memberIds: [...ids] };
+}
+
+/*
  * A group that spells out its members holds exactly those, open or collapsed. One written before
  * groups did (or by an older Ruimte) reads them off the positions, and of two overlapping groups only
  * the larger holds the other, so no two hold each other. Only ids still present come back.
@@ -151,7 +170,7 @@ export function groupMemberIds(group: GroupFrame, items: readonly GroupItem[]): 
     const members: string[] = [];
     const length = items.length;
 
-    if (group.memberIds !== undefined || group.collapsed === true) {
+    if (spellsOutMembers(group)) {
         const ids = new Set(group.memberIds ?? []);
 
         items.forEach((item) => {

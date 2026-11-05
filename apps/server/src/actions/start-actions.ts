@@ -6,6 +6,7 @@ import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
 import {
     isCanvasView,
     joinGroupUnder,
+    withMemberIds,
     withView,
     type AgentKind,
     type ModelSelection,
@@ -164,7 +165,14 @@ function withoutStarted(content: ProjectContent, id: string): ProjectContent {
             }
             const nodes = view.nodes
                 .filter((node) => node.id !== id)
-                .map((node) => (node.memberIds?.includes(id) ? { ...node, memberIds: node.memberIds.filter((member) => member !== id) } : node));
+                .map((node) =>
+                    node.memberIds?.includes(id)
+                        ? withMemberIds(
+                              node,
+                              node.memberIds.filter((member) => member !== id)
+                          )
+                        : node
+                );
             return { ...view, nodes, edges: view.edges.filter((edge) => edge.from !== id && edge.to !== id) };
         });
     return { ...content, views };
@@ -820,7 +828,7 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
             }
             // The team is written in as its group's members, so nothing that stood under the frame joins it, and the group joins the frame it stands in.
             const members = output.agents.map((made) => made.nodeId);
-            const team = nodes.map((node) => (node.id === groupId ? { ...node, memberIds: members } : node));
+            const team = nodes.map((node) => (node.id === groupId ? withMemberIds(node, members) : node));
             return {
                 landed: hidden ? undefined : start,
                 content: canvas

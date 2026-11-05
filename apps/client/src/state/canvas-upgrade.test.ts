@@ -109,6 +109,35 @@ describe('a canvas an older Ruimte wrote', () => {
         expect(store.getState().nodes.x!.y).toBe(left);
     });
 
+    test('open groups a 0.29 iPhone wrote an empty list on keep what stands in them, through a drag and a new group', () => {
+        const view = fromOlderRuimte();
+        // A deletion on a 0.29 iPhone wrote `memberIds: []` on every group without a list.
+        view.nodes = view.nodes.map((candidate) => (candidate.kind === 'group' && candidate.collapsed !== true ? { ...candidate, memberIds: [] } : candidate));
+        const store = loaded(view);
+
+        expect(membership(store)).toEqual(AS_SHOWN);
+
+        drag(store, ['free'], 400, 0);
+        store.getState().addNode('group', { x: 4000, y: 3000 });
+
+        expect(membership(store)).toEqual(AS_SHOWN);
+    });
+
+    test('a group emptied on this version is saved as holding nothing, whatever stands in its frame when it is read again', () => {
+        const store = loaded();
+        drag(store, ['free'], 400, 0);
+        drag(store, ['x'], 0, 2000);
+
+        const saved = store.getState().exportContent();
+        const reread = loaded({
+            ...fromOlderRuimte(),
+            ...saved,
+            nodes: saved.nodes.map((candidate) => (candidate.id === 'x' ? { ...candidate, y: 500 } : candidate))
+        });
+
+        expect(held(reread, 'inner')).toEqual([]);
+    });
+
     test('a group 0.29 folded names what its nested groups hold, and once opened lets those go with them too', () => {
         const view = fromOlderRuimte();
         // 0.29 folded `outer` with every id whose center stood in its frame, the nested ones included.

@@ -82,6 +82,26 @@ import Testing
         #expect(CanvasEditing.members(of: group, in: canvas).map(\.stableID) == ["far"])
     }
 
+    @Test func anOpenGroupWithTheEmptyListA029PhoneWroteHoldsItsFrameAndOneEmptiedSinceHoldsNothing() {
+        let older = node("g", "group", w: 1000, h: 1000).setting("memberIds", .array([]))
+        let emptied = CanvasEditing.withMemberIds(node("g", "group", w: 1000, h: 1000), [])
+        let canvas: JSONValue = .object(["nodes": .array([older, node("near", "chat", x: 10)])])
+        #expect(CanvasEditing.members(of: older, in: canvas).map(\.stableID) == ["near"])
+        #expect(CanvasEditing.members(of: emptied, in: canvas).isEmpty)
+    }
+
+    @Test func deletingANodeLeavesAGroupWithoutAListReadingItsFrame() {
+        let open = node("g", "group", w: 1000, h: 1000)
+        let canvas: JSONValue = .object([
+            "nodes": .array([open, node("kept", "chat", x: 10), node("gone", "note", x: 5000)]), "edges": .array([]),
+            "layouts": .array([]),
+        ])
+        let result = canvasWithoutNode(canvas, id: "gone")
+        let group = result.list("nodes")[0]
+        #expect(group["memberIds"] == nil)
+        #expect(CanvasEditing.members(of: group, in: result).map(\.stableID) == ["kept"])
+    }
+
     @Test func ofTwoOverlappingGroupsOnlyTheLargerHoldsTheOther() {
         let large = node("large", "group", w: 1000, h: 1000)
         let small = node("small", "group", x: 400, y: 400, w: 900, h: 900)

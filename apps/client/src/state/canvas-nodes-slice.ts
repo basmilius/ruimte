@@ -1,4 +1,4 @@
-import { DEFAULT_TITLES, emptyCanvasGroupIds, groupFrame, isUnknownNode, nodeColorPatch } from '@ruimte/contracts';
+import { DEFAULT_TITLES, emptyCanvasGroupIds, groupFrame, isUnknownNode, nodeColorPatch, withMemberIds } from '@ruimte/contracts';
 import { arrangeGroupMembers } from '@/canvas/arrange-group';
 import { snapToGrid } from '@/canvas/math';
 import type { CanvasState } from '@/state/canvas';
@@ -84,7 +84,7 @@ export function createCanvasNodesSlice(
                 x: source.x + 32,
                 y: source.y + 32,
                 resume: undefined,
-                ...(source.kind === 'group' ? { memberIds: [] } : {})
+                ...(source.kind === 'group' ? withMemberIds({}, []) : {})
             };
             set((s) => ({
                 nodes: droppedIntoGroups({ ...s, nodes: { ...s.nodes, [copyId]: copy } }, [copyId]),
@@ -175,7 +175,7 @@ export function createCanvasNodesSlice(
                 ...(options.routine === undefined ? {} : { routine: options.routine })
             };
             // A new group takes in nothing that already stood under it.
-            const added: CanvasNode = kind === 'group' ? { ...node, memberIds: [] } : node;
+            const added: CanvasNode = kind === 'group' ? withMemberIds(node, []) : node;
             set((s) => ({
                 nodes: droppedIntoGroups({ ...s, nodes: { ...s.nodes, [id]: added } }, [id]),
                 order: [...s.order, id],
@@ -201,7 +201,11 @@ export function createCanvasNodesSlice(
             };
 
             const members = selection.filter((selected) => !carried.has(selected) && inFrame(selected));
-            let placed = { nodes: { ...nodes, [id]: { id, kind: 'group', title: DEFAULT_TITLES.group, ...frame, memberIds: [] } as CanvasNode }, texts, lines };
+            let placed = {
+                nodes: { ...nodes, [id]: withMemberIds({ id, kind: 'group', title: DEFAULT_TITLES.group, ...frame } as CanvasNode, []) },
+                texts,
+                lines
+            };
             for (const member of members) {
                 placed = { ...placed, nodes: movedToGroup(placed, member, id) };
             }
@@ -261,7 +265,10 @@ export function createCanvasNodesSlice(
 
             for (const node of Object.values(nextNodes)) {
                 if (node.memberIds?.some((id) => gone.has(id))) {
-                    nextNodes[node.id] = { ...node, memberIds: node.memberIds.filter((id) => !gone.has(id)) };
+                    nextNodes[node.id] = withMemberIds(
+                        node,
+                        node.memberIds.filter((id) => !gone.has(id))
+                    );
                 }
             }
 
@@ -295,7 +302,7 @@ export function createCanvasNodesSlice(
             // What it holds stays as it is either way, so opening it over other nodes never takes them in.
             const next: CanvasNode = group.collapsed
                 ? { ...group, collapsed: false, h: group.expandedHeight ?? group.h, expandedHeight: undefined }
-                : { ...group, collapsed: true, memberIds: membersOf(group, s.nodes, s.texts, s.lines), expandedHeight: group.h, h: GROUP_HEADER_PX };
+                : { ...withMemberIds(group, membersOf(group, s.nodes, s.texts, s.lines)), collapsed: true, expandedHeight: group.h, h: GROUP_HEADER_PX };
             const nodes = { ...s.nodes, [id]: next };
             const hidden = hiddenIn(nodes, s.texts, s.lines);
             set({ nodes, hidden, selection: s.selection.filter((selected) => !hidden.has(selected)), ...remember(s) });

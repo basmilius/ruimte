@@ -38,7 +38,7 @@ describe('stackingOrder', () => {
         const nodes = {
             inner: { ...at('group', 100, 100), w: 280, h: 240 },
             outer: { ...at('group', 0, 0), w: 320, h: 280 },
-            held: { ...at('group', 2000, 0), memberIds: [] },
+            held: { ...at('group', 2000, 0), memberIds: [], membersListed: true },
             holder: { ...at('group', 4000, 0), memberIds: ['held'] }
         };
         expect(stackingOrder(nodes, ['inner', 'held', 'outer', 'holder'])).toEqual({ outer: 1, holder: 2, inner: 3, held: 4 });

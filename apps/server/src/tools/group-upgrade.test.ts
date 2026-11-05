@@ -59,6 +59,18 @@ describe('a project an older Ruimte wrote', () => {
         expect(heldBy(after, 'shelf')).toEqual(['kept']);
     });
 
+    test('node group inside an open group a 0.29 iPhone wrote an empty list on leaves that group holding its frame', async () => {
+        await seed({ ...room, memberIds: [] }, loose, shelf, kept, box('other', 1600, 400));
+        const before = await canvasOnDisk();
+
+        const id = await madeId(invoke('node_group', { nodes: 'loose,other' }));
+        const after = await canvasOnDisk();
+
+        expect((await nodeOnDisk('room'))!.memberIds).toEqual([]);
+        expect(heldBy(after, 'room')).toEqual([...heldBy(before, 'room'), id].sort());
+        expect(heldBy(before, 'room')).toContain('loose');
+    });
+
     test('agent start beside its opener stands in the open group the opener stands in, without writing it out', async () => {
         const before = await seedFromOlderRuimte();
 

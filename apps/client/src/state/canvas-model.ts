@@ -1,5 +1,7 @@
 import {
     groupUnder,
+    spellsOutMembers,
+    withMemberIds,
     type AgentKind,
     type AgentStatus,
     type DeviceReference,
@@ -136,11 +138,8 @@ export function membersOf(
     texts: Record<string, TextElement>,
     lines: Record<string, ProjectCanvasLine> = {}
 ): string[] {
-    if (group.memberIds !== undefined) {
-        return group.memberIds;
-    }
-    if (group.collapsed) {
-        return [];
+    if (spellsOutMembers(group)) {
+        return group.memberIds ?? [];
     }
     const members: string[] = [];
     const area = group.w * group.h;
@@ -249,8 +248,8 @@ export function anchorOf(id: string, { nodes, texts, lines }: Placement): Point 
 export function withMembersWritten(placement: Placement): Record<string, CanvasNode> {
     const nodes = { ...placement.nodes };
     for (const group of Object.values(placement.nodes)) {
-        if (group.kind === 'group' && group.memberIds === undefined) {
-            nodes[group.id] = { ...group, memberIds: membersOf(group, placement.nodes, placement.texts, placement.lines) };
+        if (group.kind === 'group' && !spellsOutMembers(group)) {
+            nodes[group.id] = withMemberIds(group, membersOf(group, placement.nodes, placement.texts, placement.lines));
         }
     }
     return nodes;
@@ -270,11 +269,14 @@ export function movedToGroup(placement: Placement, id: string, targetId: string 
         const members = membersOf(group, placement.nodes, placement.texts, placement.lines);
         const holds = members.includes(id);
         if (group.id === targetId) {
-            if (!holds || group.memberIds === undefined) {
-                nodes[group.id] = { ...group, memberIds: holds ? members : [...members, id] };
+            if (!holds || !spellsOutMembers(group)) {
+                nodes[group.id] = withMemberIds(group, holds ? members : [...members, id]);
             }
         } else if (holds) {
-            nodes[group.id] = { ...group, memberIds: members.filter((member) => member !== id && !carried.has(member)) };
+            nodes[group.id] = withMemberIds(
+                group,
+                members.filter((member) => member !== id && !carried.has(member))
+            );
         }
     }
     return nodes;
@@ -283,14 +285,14 @@ export function movedToGroup(placement: Placement, id: string, targetId: string 
 /* The groups after `id` was resized: an open group lets go of what no longer stands in its frame, and takes in nothing. */
 export function withoutMembersOutside(placement: Placement, id: string): Record<string, CanvasNode> {
     const group = placement.nodes[id];
-    if (group?.kind !== 'group' || group.collapsed || group.memberIds === undefined) {
+    if (group?.kind !== 'group' || group.collapsed || group.memberIds === undefined || !spellsOutMembers(group)) {
         return placement.nodes;
     }
     const kept = group.memberIds.filter((member) => {
         const at = anchorOf(member, placement);
         return at === null || contains(group, at);
     });
-    return kept.length === group.memberIds.length ? placement.nodes : { ...placement.nodes, [id]: { ...group, memberIds: kept } };
+    return kept.length === group.memberIds.length ? placement.nodes : { ...placement.nodes, [id]: withMemberIds(group, kept) };
 }
 
 /*
@@ -365,7 +367,7 @@ export function patchSnapshot(snapshot: Snapshot, patch: CanvasPatch, groups: re
     for (const group of groups) {
         const held = nodes[group.id];
         const joined = group.memberIds?.filter((id) => arrived.has(id) && held?.memberIds?.includes(id) === false) ?? [];
-        if (held?.memberIds !== undefined && joined.length > 0) {
+        if (held?.memberIds !== undefined && spellsOutMembers(held) && joined.length > 0) {
             nodes[group.id] = { ...held, memberIds: [...held.memberIds, ...joined] };
         }
     }

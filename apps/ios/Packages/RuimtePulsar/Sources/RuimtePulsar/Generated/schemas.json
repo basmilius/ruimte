@@ -40025,6 +40025,9 @@
                               "type": "string"
                             }
                           },
+                          "membersListed": {
+                            "type": "boolean"
+                          },
                           "expandedHeight": {
                             "type": "number",
                             "exclusiveMinimum": 0
@@ -44404,6 +44407,9 @@
                             "items": {
                               "type": "string"
                             }
+                          },
+                          "membersListed": {
+                            "type": "boolean"
                           },
                           "expandedHeight": {
                             "type": "number",
@@ -82210,6 +82216,9 @@
                             "items": {
                               "type": "string"
                             }
+                          },
+                          "membersListed": {
+                            "type": "boolean"
                           },
                           "expandedHeight": {
                             "type": "number",

@@ -1,4 +1,4 @@
-import { groupFrame, type ProjectCanvasLine } from '@ruimte/contracts';
+import { groupFrame, spellsOutMembers, withMemberIds, type ProjectCanvasLine } from '@ruimte/contracts';
 import { parentGroupOf } from '@/canvas/editable-gaps';
 import { gapFrames } from '@/canvas/element-frames';
 import { snapLine } from '@/canvas/line-geometry';
@@ -103,8 +103,8 @@ export function createCanvasGestureSlice(
                 }
                 // The handle goes down before the first resize, so this is where the old size is remembered, and what a group holds before it is resized.
                 const group = s.nodes[id];
-                const members = group.kind === 'group' && group.memberIds === undefined ? membersOf(group, s.nodes, s.texts, s.lines) : null;
-                return { resizing: id, ...(members === null ? {} : { nodes: { ...s.nodes, [id]: { ...group, memberIds: members } } }), ...remember(s) };
+                const members = group.kind === 'group' && !spellsOutMembers(group) ? membersOf(group, s.nodes, s.texts, s.lines) : null;
+                return { resizing: id, ...(members === null ? {} : { nodes: { ...s.nodes, [id]: withMemberIds(group, members) } }), ...remember(s) };
             });
         },
         setDerivedCard(id, card) {

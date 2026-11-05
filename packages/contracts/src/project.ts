@@ -140,6 +140,8 @@ export const ProjectNodeSchema = keepingUnknown(
         // Group only: what it holds, open or collapsed. Without it the group holds what stands in its frame
         // (`groupMemberIds`), until the first change to its members writes them out.
         memberIds: z.array(z.string()).optional(),
+        // Group only: an empty `memberIds` on an open group means it holds nothing, not the frame 0.29 read (`spellsOutMembers`).
+        membersListed: z.boolean().optional(),
         expandedHeight: z.number().positive().optional(),
         // Group only: the git worktree every node made inside it starts in.
         worktree: z.object({ path: z.string(), branch: z.string() }).optional(),

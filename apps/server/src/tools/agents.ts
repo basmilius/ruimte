@@ -1,7 +1,7 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { narrowerMode } from '@adecore/agents/providers';
 import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
-import { type AgentKind, type ProjectCanvasView, type ProjectNode, type RuntimeMode } from '@ruimte/contracts';
+import { spellsOutMembers, type AgentKind, type ProjectCanvasView, type ProjectNode, type RuntimeMode } from '@ruimte/contracts';
 import { z } from 'zod';
 import { BUILT_IN_KINDS } from '../providers/kinds.ts';
 import { DEFAULT_RUNTIME_MODE } from '../providers/launch.ts';
@@ -94,7 +94,7 @@ export function grownGroup(group: ProjectNode, placement: ReturnType<typeof plac
         w: placement.grown.w,
         // While it is collapsed its own height is the header; the height it opens to is what grew.
         ...(collapsed ? { expandedHeight: placement.grown.h } : { h: placement.grown.h }),
-        ...(group.memberIds === undefined ? {} : { memberIds: [...group.memberIds, memberId] })
+        ...(spellsOutMembers(group) ? { memberIds: [...(group.memberIds ?? []), memberId] } : {})
     };
 }
 

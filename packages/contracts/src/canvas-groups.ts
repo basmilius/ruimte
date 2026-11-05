@@ -1,4 +1,4 @@
-import { groupMemberIds, type GroupItem, type NodeRect } from './node-defaults.ts';
+import { groupMemberIds, spellsOutMembers, withMemberIds, type GroupItem, type NodeRect } from './node-defaults.ts';
 import type { ProjectCanvasView, ProjectNode } from './project.ts';
 
 /* Every id the named groups hold, through the groups inside them. A cycle a hand-edited file holds ends at the first repeat. */
@@ -80,13 +80,17 @@ export function joinGroupUnder(canvas: Pick<ProjectCanvasView, 'nodes' | 'texts'
     const excluded = new Set([id, ...heldIds(canvas.nodes, items, [id]), ...hiddenIds(canvas.nodes, items)]);
     const target = groupUnder(canvas.nodes, { x: node.x + node.w / 2, y: node.y + node.h / 2 }, excluded);
 
-    const members = target?.memberIds;
-
-    if (target === null || members === undefined || members.includes(id)) {
+    if (target === null || !spellsOutMembers(target)) {
         return canvas.nodes;
     }
 
-    return canvas.nodes.map((candidate) => (candidate.id === target.id ? { ...candidate, memberIds: [...members, id] } : candidate));
+    const members = target.memberIds ?? [];
+
+    if (members.includes(id)) {
+        return canvas.nodes;
+    }
+
+    return canvas.nodes.map((candidate) => (candidate.id === target.id ? withMemberIds(candidate, [...members, id]) : candidate));
 }
 
 /** Finds frames emptied by a deletion, including their empty parent frames. */

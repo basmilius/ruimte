@@ -508,8 +508,9 @@ func canvasWithoutNode(_ canvas: JSONValue, id: String) -> JSONValue {
         "nodes",
         .array(
             canvas.list("nodes").filter { $0.stableID != id }.map { node in
-                node.text("kind") == "group"
-                    ? node.setting("memberIds", .array(node.list("memberIds").filter { $0.stringValue != id })) : node
+                // Only a list that names it changes: one written over a group without a list emptied it.
+                let ids = node.list("memberIds").compactMap(\.stringValue)
+                return ids.contains(id) ? CanvasEditing.withMemberIds(node, ids.filter { $0 != id }) : node
             })
     ).setting("edges", .array(canvas.list("edges").filter { $0.text("from") != id && $0.text("to") != id }))
         .setting("layouts", .array(canvas.list("layouts").map { $0.setting("nodes", $0["nodes"]?.setting(id, nil)) }))
