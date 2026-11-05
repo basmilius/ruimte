@@ -15,7 +15,6 @@ import {
     type ChatItem,
     type ChatForkResult,
     type CliVersion,
-    type GitDiffResult,
     type LaunchConfig,
     type LaunchConfigEntry,
     type LaunchConfigKind,
@@ -29,10 +28,7 @@ import {
     type RoutineRunNowResult,
     type UsageLimitsSnapshot,
     type RuntimeMode,
-    type ModelSelection,
-    type Worktree,
-    type WorktreeMergePayload,
-    type WorktreeMergeResult
+    type ModelSelection
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import type { Artifacts } from '../artifacts/artifacts.ts';
@@ -41,6 +37,7 @@ import type { ComputerUse } from '../computer/computer-use.ts';
 import type { DatabaseAgentHost } from '../database/agent-databases.ts';
 import type { DeviceDriver } from '../devices/agent-driver.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
+import type { CheckoutHost, WorktreeHost } from '../git/worktree-host.ts';
 import type { AgentLanguage } from '../language/agent-language.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
 import type { DiagramStore } from '../projects/diagram-store.ts';
@@ -102,9 +99,6 @@ export interface NoticeDelivery {
     /* Whether the message may join the turn the chat is running. */
     inTurn?: boolean;
 }
-
-/* A worktree a tool asks for: a new branch named after a title, or the branch it was given. */
-export type WorktreeWant = ({ fresh: string } | { branch: string }) & { base?: string };
 
 /* What an agent may read of the CLIs a person installs and updates in Settings, Providers. */
 export interface ProviderInstallHost {
@@ -281,24 +275,6 @@ interface RemoteAgentHost {
     give(projectId: string, nodeId: string, work: StartRemoteAgentPayload): Promise<void>;
 }
 
-/* The repository a project folder is in, as far as a node that starts in it goes. */
-export interface CheckoutHost {
-    /* The worktrees of the repository the folder is in; empty when it is not in one. */
-    paths(folder: string): Promise<string[]>;
-    /* The local branches of the repository the folder is in; null when it is in none. */
-    branches(folder: string): Promise<string[] | null>;
-    /*
-     * A worktree under the machine's worktrees folder, made from HEAD when the branch is new. `fresh`
-     * is always a new one, on the first free branch after that name; `branch` takes that branch and
-     * may answer a worktree it already has, unless that one was made for another node.
-     */
-    add(folder: string, want: WorktreeWant, projectId: string): Promise<{ worktree: Worktree; created: boolean }>;
-    /* Writes the node a worktree was made for into the register, once the node exists. */
-    claim(folder: string, path: string, nodeId: string): Promise<void>;
-    /* Takes back a worktree this call made, when the write it was made for is refused. */
-    remove(folder: string, path: string): Promise<unknown>;
-}
-
 /* What one node says to another, or to a person. */
 export interface MessageHost {
     alert(nodeId: string, text: string): void;
@@ -431,17 +407,6 @@ export type DeviceDriveHost = Pick<
     | 'clipboard'
     | 'record'
 >;
-
-export interface WorktreeHost {
-    list(folder: string): Promise<Worktree[]>;
-    /* Everything a worktree holds over where it was made from, uncommitted and untracked files included. */
-    diff(path: string, base: string | undefined): Promise<GitDiffResult>;
-    /*
-     * Merges a worktree under the limits an agent is held to: its loose work committed first, only
-     * into a clean checkout, a conflict taken back and refused, no agent stopped and nothing removed.
-     */
-    merge(payload: Omit<WorktreeMergePayload, 'actionId' | 'stopAgent' | 'commitFirst' | 'into' | 'remove'>): Promise<WorktreeMergeResult>;
-}
 
 type TaskHost = TaskVerbs;
 

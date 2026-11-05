@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { DatabaseConnection, LanguageRequestResult } from '@ruimte/contracts';
-import type { SqlFileContext } from '../database/sql-analysis.ts';
 import { AgentLanguage, characterColumn, hoverText, locationsOf, symbolsOf, utf16Column } from './agent-language.ts';
 import type { AgentDocument, LanguageHost } from './host.ts';
+import type { SqlFileContext } from './sql-file-context.ts';
 
 const SHOP: DatabaseConnection = { id: 'shop', name: 'Shop', shared: false, config: { engine: 'mysql', host: 'db', user: 'app', database: 'shop' } };
 

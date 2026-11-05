@@ -2,8 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { CheckInfo, ColumnInfo, SchemaInfo, ServerInfo, StatementResult, TableInfo, TableStructure, TriggerInfo } from '@adecore/database/protocol';
-import type { DatabaseConnection, SqlSnapshotInfo } from '@ruimte/contracts';
+import type { DatabaseConnection } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
+import type { SnapshotFacts } from '../language/sql-file-context.ts';
 import { openConfig } from './agent-databases.ts';
 import { inOwnedSession, type DatabaseCalls, type SessionCall } from './owned-session.ts';
 
@@ -20,11 +21,6 @@ const SNAPSHOT_LIMIT_MS = 120_000;
 export interface SnapshotTarget {
     connectionId: string;
     database: string | null;
-}
-
-/* What the settings of the servers need of a snapshot that is there. */
-export interface SnapshotFacts extends SqlSnapshotInfo {
-    path: string;
 }
 
 interface SchemaSnapshotsOptions {

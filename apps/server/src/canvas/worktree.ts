@@ -1,7 +1,8 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { Worktree } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
-import { type AgentCall, type WorktreeWant } from './host.ts';
+import type { WorktreeWant } from '../git/worktree-host.ts';
+import { type AgentCall } from './host.ts';
 
 /* A branch name out of a title: lower case, only what every ref takes, and never empty. */
 export function branchSlug(title: string): string {

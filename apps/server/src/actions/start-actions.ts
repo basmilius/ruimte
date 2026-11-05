@@ -18,7 +18,7 @@ import {
 } from '@ruimte/contracts';
 import { agentNode, groupLines, grownGroup, inheritedAccount, nameOf, readsOf, requireInstalled, startPrompt, terminalMode } from '../canvas/agents.ts';
 import { depthForOpening } from '../canvas/depth.ts';
-import { NEW_NODE, OPENING_OFF_CANVAS, canvasFor, canvasLines, field, newNode, type ProjectHost, type AgentCall, type WorktreeWant } from '../canvas/host.ts';
+import { NEW_NODE, OPENING_OFF_CANVAS, canvasFor, canvasLines, field, newNode, type ProjectHost, type AgentCall } from '../canvas/host.ts';
 import { modeForOpening } from '../canvas/mode.ts';
 import { EFFORT_REFUSALS, selectionForOpening } from '../canvas/model.ts';
 import { MAX_CANVAS_NODES, canvasFull, newId, nodeLines, nodesNamed } from '../canvas/nodes.ts';
@@ -33,6 +33,7 @@ import { MAX_TASK_PROMPT_LENGTH, requireChatParent, taskFirstPrompt } from '../c
 import { MAX_PROJECT_VIEWS } from '../canvas/views.ts';
 import { branchSlug, makeWorktrees, requireRepository } from '../canvas/worktree.ts';
 import { errorText } from '../error-text.ts';
+import type { WorktreeWant } from '../git/worktree-host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { untrustedStartProblem } from '../projects/untrusted.ts';
 import { providerFor } from '../providers/registry.ts';

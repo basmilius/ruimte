@@ -2,8 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { join, relative, resolve, sep } from 'node:path';
 import type { DatabaseConnection, ProjectContent } from '@ruimte/contracts';
 import type { FileChange } from '../language/file-watch.ts';
+import type { SnapshotFacts } from '../language/sql-file-context.ts';
 import type { SessionEvent } from '../wire.ts';
-import type { SchemaSnapshots, SnapshotFacts } from './schema-snapshots.ts';
+import type { SchemaSnapshots } from './schema-snapshots.ts';
 import { boundTargets, choiceFor, consoleConnectionOf, consoleFolderOf, SqlAnalysis, sqlSettingsOf } from './sql-analysis.ts';
 
 const FOLDER = resolve('/work/shop');

@@ -1,6 +1,5 @@
 import { isWithin } from '@adecore/utils/path';
-import type { Worktree } from '@ruimte/contracts';
-import type { CheckoutHost, WorktreeHost, WorktreeWant } from '../canvas/host.ts';
+import type { GitDiffResult, Worktree, WorktreeMergePayload, WorktreeMergeResult } from '@ruimte/contracts';
 import { realOrNull } from '../disk/real-path.ts';
 import { diffCheckout } from './diff.ts';
 import { mergeBaseWith } from './status.ts';
@@ -8,6 +7,38 @@ import type { WorktreeMerge } from './worktree-merge.ts';
 import type { Worktrees } from './worktrees.ts';
 
 let merges = 0;
+
+/* A worktree a tool asks for: a new branch named after a title, or the branch it was given. */
+export type WorktreeWant = ({ fresh: string } | { branch: string }) & { base?: string };
+
+/* The repository a project folder is in, as far as a node that starts in it goes. */
+export interface CheckoutHost {
+    /* The worktrees of the repository the folder is in; empty when it is not in one. */
+    paths(folder: string): Promise<string[]>;
+    /* The local branches of the repository the folder is in; null when it is in none. */
+    branches(folder: string): Promise<string[] | null>;
+    /*
+     * A worktree under the machine's worktrees folder, made from HEAD when the branch is new. `fresh`
+     * is always a new one, on the first free branch after that name; `branch` takes that branch and
+     * may answer a worktree it already has, unless that one was made for another node.
+     */
+    add(folder: string, want: WorktreeWant, projectId: string): Promise<{ worktree: Worktree; created: boolean }>;
+    /* Writes the node a worktree was made for into the register, once the node exists. */
+    claim(folder: string, path: string, nodeId: string): Promise<void>;
+    /* Takes back a worktree this call made, when the write it was made for is refused. */
+    remove(folder: string, path: string): Promise<unknown>;
+}
+
+export interface WorktreeHost {
+    list(folder: string): Promise<Worktree[]>;
+    /* Everything a worktree holds over where it was made from, uncommitted and untracked files included. */
+    diff(path: string, base: string | undefined): Promise<GitDiffResult>;
+    /*
+     * Merges a worktree under the limits an agent is held to: its loose work committed first, only
+     * into a clean checkout, a conflict taken back and refused, no agent stopped and nothing removed.
+     */
+    merge(payload: Omit<WorktreeMergePayload, 'actionId' | 'stopAgent' | 'commitFirst' | 'into' | 'remove'>): Promise<WorktreeMergeResult>;
+}
 
 /* What the `worktree` tool reaches git through: the same register, diff and merge a person's panel uses. */
 export function worktreeHost(worktrees: Worktrees, merge: WorktreeMerge): WorktreeHost {

@@ -3,10 +3,10 @@ import { basename } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
 import { fileUriToPath, type Diagnostic, type Range } from '@adecore/lsp';
 import { storedPathOf, type LanguageMethod } from '@ruimte/contracts';
-import type { SqlAnalysis, SqlChoice } from '../database/sql-analysis.ts';
 import { languageOf } from '../fs/read.ts';
 import type { AgentDocument, LanguageHost } from './host.ts';
 import { KIND_PROFILES, lspLanguageId } from './profiles.ts';
+import type { SqlChoice, SqlFileContext } from './sql-file-context.ts';
 
 /* A place in a file as an agent writes it: lines and columns from 1, a column counting characters. */
 interface AgentPosition {
@@ -273,7 +273,7 @@ function kindOfProcess(process: string): string {
 
 interface AgentLanguageOptions {
     host: Pick<LanguageHost, 'forAgent' | 'programOf' | 'cachedWorkspaceProblems'>;
-    sql: Pick<SqlAnalysis, 'fileContext'>;
+    sql: { fileContext(projectId: string, path: string): Promise<SqlFileContext> };
     /* The text of a file on disk, or null when it cannot be read. */
     readText?: (path: string) => Promise<string | null>;
 }

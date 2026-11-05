@@ -1,4 +1,3 @@
-import type { CheckoutHost } from '../canvas/host.ts';
 import { MachineHome } from '../disk/machine-home.ts';
 import { SharedWatch } from '../disk/shared-watch.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
@@ -11,7 +10,7 @@ import { forgetRepos } from '../git/repo-cache.ts';
 import { GitStatusWatcher } from '../git/status-watcher.ts';
 import { readStatusAt } from '../git/status.ts';
 import { worktreeAgents } from '../git/worktree-agents.ts';
-import { checkoutHost } from '../git/worktree-host.ts';
+import { checkoutHost, type CheckoutHost } from '../git/worktree-host.ts';
 import { WorktreeMerge } from '../git/worktree-merge.ts';
 import { Worktrees } from '../git/worktrees.ts';
 import type { PeerLinks } from '../projects/peer-links.ts';

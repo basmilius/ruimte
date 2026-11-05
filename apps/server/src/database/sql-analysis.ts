@@ -18,11 +18,13 @@ import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import type { FileChange } from '../language/file-watch.ts';
 import type { ProjectSqlSettings } from '../language/profiles.ts';
+import type { SnapshotFacts } from '../language/sql-file-context.ts';
+import type { SqlChoice, SqlFileContext } from '../language/sql-file-context.ts';
 import { CONSOLES_DIR, PRIVATE_DIR, PROJECT_DIR } from '../projects/project-files.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
 import type { SessionSink } from '../wire.ts';
 import { startDatabaseOf } from './agent-databases.ts';
-import type { SchemaSnapshots, SnapshotFacts, SnapshotTarget } from './schema-snapshots.ts';
+import type { SchemaSnapshots, SnapshotTarget } from './schema-snapshots.ts';
 
 type SqlAnalysisErrorCode = 'project-not-found' | 'unknown-connection' | 'bad-path' | 'snapshot-failed';
 
@@ -53,13 +55,6 @@ export function consoleConnectionOf(folder: string, path: string): string | null
         return null;
     }
 }
-
-/* What the SQL of one file is read against, and why: its own choice, the folder of a console, or the project's default. */
-export type SqlChoice =
-    | { source: 'file' | 'console' | 'default'; connection: DatabaseConnection; database: string | null }
-    | { source: 'none' }
-    // A file a person set to no connection.
-    | { source: 'unbound' };
 
 /* The database a choice reads: the one it names, else the one its connection starts in. */
 function databaseOf(binding: SqlBinding, connection: DatabaseConnection): string | null {
@@ -167,15 +162,6 @@ export function sqlSettingsOf(input: SqlSettingsInput): ProjectSqlSettings {
     }
     const settings = { ...(top ?? {}), ...(overrides.length === 0 ? {} : { overrides }) };
     return { sql: settings, php: settings, unbound };
-}
-
-/* What the tools tell an agent about the SQL of a file. */
-export interface SqlFileContext {
-    choice: SqlChoice;
-    /* The snapshot the file is read against, when one was taken. */
-    snapshot: SnapshotFacts | null;
-    /* What agents may do with the connection; `read` for a file read against none. */
-    access: DatabaseAgentAccess;
 }
 
 interface SqlAnalysisOptions {
