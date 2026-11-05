@@ -20,7 +20,7 @@ import { prSplits } from '../git/pr-split.ts';
 import { listRefs, readRefCommit } from '../git/refs.ts';
 import { cachedRepos } from '../git/repo-cache.ts';
 import { resolveWithAgent } from '../git/resolve-ai.ts';
-import { GitError, toplevel } from '../git/run.ts';
+import { GitError, toplevel, type LeftOut } from '../git/run.ts';
 import { discardPaths, stagePaths, unstagePaths } from '../git/stage.ts';
 import type { GitStatusWatcher } from '../git/status-watcher.ts';
 import { mergeBaseWith } from '../git/status.ts';
@@ -62,11 +62,13 @@ export function registerGitHandlers(
     providers: ProviderRegistry,
     prWatches?: PrWatchStore,
     placeOf?: (id: string) => { projectId: string } | null,
-    machineHome?: Pick<MachineHome, 'refuse' | 'refuseHolding'>,
+    machineHome?: Pick<MachineHome, 'refuse' | 'refuseHolding' | 'stateWithin'>,
     bundleHost?: BundleHost,
     oneShotPlace?: Pick<OneShotPlace, 'cwdFor'>
 ): void {
-    const actions = new GitActions();
+    // A checkout may hold the home, so what runs over all of it leaves the machine's state out and keeps the open folders.
+    const leftOut: LeftOut = async (top) => (await machineHome?.stateWithin(top)) ?? [];
+    const actions = new GitActions(leftOut);
     const identities = new IdentityReader();
 
     // Judged before any git runs, like the file requests: a client asks about folders, never about the machine's own state.
@@ -148,10 +150,10 @@ export function registerGitHandlers(
         await refuseFiles(payload.cwd, payload.path === undefined ? [] : [payload.path]);
 
         if (payload.scope === 'commit' && payload.path === undefined) {
-            return await diffCommit(payload.cwd, payload.commit ?? 'HEAD');
+            return await diffCommit(payload.cwd, payload.commit ?? 'HEAD', leftOut);
         }
         if (payload.scope === 'base' && payload.path === undefined) {
-            return await diffCheckout(payload.cwd, await mergeBaseWith(payload.cwd, payload.base));
+            return await diffCheckout(payload.cwd, await mergeBaseWith(payload.cwd, payload.base), leftOut);
         }
         if (payload.path === undefined) {
             throw new RequestError('bad-request', 'A diff of this scope needs a path.');

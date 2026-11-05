@@ -1,7 +1,7 @@
 import { GIT_STATUS_MAX_FILES, type GitFile, type GitStatus } from '@ruimte/contracts';
 import { operationOf } from './conflict.ts';
 import { parseNumstat, type Numstat } from './diff.ts';
-import { git, readGit, repositoryRoot, verifyRev } from './run.ts';
+import { LEAVE_NOTHING_OUT, git, leavingOut, readGit, repositoryRoot, verifyRev, type LeftOut } from './run.ts';
 import { untrackedNumstat } from './untracked-lines.ts';
 
 // Every untracked file is read whole on every run, so only the first ones get real counts.
@@ -224,8 +224,8 @@ export function noRepository(): GitStatus {
 }
 
 /* `readStatus` for a root `repositoryRoot` already found. */
-export async function readStatusAt(root: string): Promise<GitStatus> {
-    const porcelain = await readGit(['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all'], root);
+export async function readStatusAt(root: string, leftOut: LeftOut = LEAVE_NOTHING_OUT): Promise<GitStatus> {
+    const porcelain = await readGit(['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all', ...leavingOut(await leftOut(root))], root);
     if (porcelain === null) {
         return noRepository();
     }

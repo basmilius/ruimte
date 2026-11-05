@@ -6,7 +6,7 @@ import { climbsOut, isWithin } from '@adecore/utils/path';
 import type { ChatCheckpointDiff, ChatCheckpointFile, GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
 import { readCommit } from './log.ts';
 import { nativePath } from './native-path.ts';
-import { git, runGit, runGitBytes, toplevel, verifyRev, GitError } from './run.ts';
+import { git, leavingOut, runGit, runGitBytes, toplevel, verifyRev, GitError, LEAVE_NOTHING_OUT, type LeftOut } from './run.ts';
 import { collectSinglePatch, collectTreePatches } from './tree-patches.ts';
 
 interface DiffCaps {
@@ -84,9 +84,16 @@ function kindsByPath(output: string): Map<string, ChatCheckpointFile['kind']> {
  * the caps of where it shows up. Both the turn's checkpoint diff and the git panel read their file
  * lists through this, so a diff is shaped the same way wherever it shows up.
  */
-export async function diffTrees(top: string, from: string, to: string, prefix = '', caps = CHAT_CAPS): Promise<ChatCheckpointDiff | null> {
+export async function diffTrees(
+    top: string,
+    from: string,
+    to: string,
+    prefix = '',
+    caps = CHAT_CAPS,
+    leftOut: readonly string[] = []
+): Promise<ChatCheckpointDiff | null> {
     // A folder inside the repository narrows the lists to what lies under it; the patches follow the list.
-    const under = prefix === '' ? [] : ['--', `:(literal)${prefix}`];
+    const under = leavingOut(leftOut, prefix === '' ? [] : [`:(literal)${prefix}`]);
     const [numstat, status] = await Promise.all([
         git(['diff', '--numstat', '-z', ...TREE_ARGS, from, to, ...under], top),
         git(['diff', '--name-status', '-z', ...TREE_ARGS, from, to, ...under], top)
@@ -401,13 +408,16 @@ async function parentOf(top: string, commit: string): Promise<string> {
  * the row that names it. The panel's log opens this in a tab of its own, which is why it is one
  * request and not one per file.
  */
-export async function diffCommit(cwd: string, commit: string): Promise<GitDiffResult> {
+export async function diffCommit(cwd: string, commit: string, leftOut: LeftOut = LEAVE_NOTHING_OUT): Promise<GitDiffResult> {
     const top = await toplevel(cwd);
     const hash = await verifyRev(commit, top);
     if (hash === null) {
         throw new GitError('git-failed', `${commit} is not a commit in this repository.`);
     }
-    const [diff, meta] = await Promise.all([parentOf(top, hash).then((parent) => diffTrees(top, parent, hash, '', PANEL_CAPS)), readCommit(top, hash)]);
+    const [diff, meta] = await Promise.all([
+        Promise.all([parentOf(top, hash), leftOut(top)]).then(([parent, paths]) => diffTrees(top, parent, hash, '', PANEL_CAPS, paths)),
+        readCommit(top, hash)
+    ]);
     return { ...filesResult(diff), ...(meta ? { commit: meta } : {}) };
 }
 
@@ -439,8 +449,9 @@ function filesResult(diff: ChatCheckpointDiff | null): GitDiffResult {
  * tree through a throwaway index, started from a copy of the checkout's own so git only hashes what
  * changed; the person's index is never written.
  */
-export async function diffCheckout(cwd: string, from: string | null): Promise<GitDiffResult> {
+export async function diffCheckout(cwd: string, from: string | null, leftOut: LeftOut = LEAVE_NOTHING_OUT): Promise<GitDiffResult> {
     const top = await toplevel(cwd);
+    const paths = await leftOut(top);
     const scratch = await mkdtemp(join(tmpdir(), 'ruimte-diff-'));
     try {
         const index = join(scratch, 'index');
@@ -450,7 +461,7 @@ export async function diffCheckout(cwd: string, from: string | null): Promise<Gi
             await copyFile(isAbsolute(own) ? nativePath(own) : join(top, own), index).catch(() => undefined);
         }
         const env = { GIT_INDEX_FILE: index };
-        if ((await git(['add', '-A'], top, env)) === null) {
+        if ((await git(['add', '-A', ...leavingOut(paths)], top, env)) === null) {
             throw new GitError('git-failed', `Could not read the working tree of ${top}.`);
         }
         const tree = (await git(['write-tree'], top, env))?.trim();
@@ -458,7 +469,8 @@ export async function diffCheckout(cwd: string, from: string | null): Promise<Gi
             throw new GitError('git-failed', `Could not read the working tree of ${top}.`);
         }
         const start = from ?? (await verifyRev('HEAD', top));
-        return filesResult(await diffTrees(top, start || EMPTY_TREE, tree, '', PANEL_CAPS));
+        // The copied index may already hold a tracked file of the home, so the diff leaves it out as well.
+        return filesResult(await diffTrees(top, start || EMPTY_TREE, tree, '', PANEL_CAPS, paths));
     } finally {
         await rm(scratch, { recursive: true, force: true });
     }

@@ -3,8 +3,9 @@ import { mkdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { KeyedSerializer } from '@adecore/utils/async';
 import type { ChatCheckpointDiff } from '@ruimte/contracts';
+import { MachineHome } from '../fs/machine-home.ts';
 import { diffTrees } from './diff.ts';
-import { git, gitOrThrow, repositoryRoot, runGit, toplevel, verifyRev } from './run.ts';
+import { git, gitOrThrow, leavingOut, repositoryRoot, runGit, toplevel, verifyRev } from './run.ts';
 
 export interface CheckpointService {
     take(cwd: string): Promise<string | null>;
@@ -35,9 +36,11 @@ const queue = new KeyedSerializer();
  */
 export class Checkpoints implements CheckpointService {
     readonly root: string;
+    private readonly machineHome: MachineHome;
 
     constructor(home: string) {
         this.root = join(home, 'checkpoints');
+        this.machineHome = new MachineHome(home);
     }
 
     /* The tree of the working tree as it is now, or null when there is nothing to checkpoint. */
@@ -66,7 +69,8 @@ export class Checkpoints implements CheckpointService {
         if (now === null) {
             return null;
         }
-        const diff = await diffTrees(top, tree, now, prefix.trim());
+        // A tree taken before the home was left out still holds it, so the diff leaves it out too.
+        const diff = await diffTrees(top, tree, now, prefix.trim(), undefined, await this.machineHome.stateWithin(top));
         return diff === null ? null : { diff, after: now };
     }
 
@@ -97,9 +101,15 @@ export class Checkpoints implements CheckpointService {
             return null;
         }
         const index = join(this.root, checkpointIndexFile(top));
+        const leftOut = await this.machineHome.stateWithin(top);
         return await queue.run(index, async () => {
             const env = { GIT_INDEX_FILE: index };
-            if ((await git(['add', '-A'], top, env)) === null) {
+            if ((await git(['add', '-A', ...leavingOut(leftOut)], top, env)) === null) {
+                return null;
+            }
+            // The index lives on between turns and may still hold what an earlier daemon added from the home.
+            const stale = leftOut.map((path) => `:(literal)${path}`);
+            if (stale.length > 0 && (await git(['rm', '-r', '--cached', '--quiet', '--ignore-unmatch', '--', ...stale], top, env)) === null) {
                 return null;
             }
             return (await git(['write-tree'], top, env))?.trim() || null;

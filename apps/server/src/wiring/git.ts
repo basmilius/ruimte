@@ -1,10 +1,12 @@
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { errorText } from '../error-text.ts';
+import { MachineHome } from '../fs/machine-home.ts';
 import { SharedWatch } from '../fs/shared-watch.ts';
 import { FolderWatcher } from '../fs/watch.ts';
 import { BundleStore } from '../git/bundles.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { GitStatusWatcher } from '../git/status-watcher.ts';
+import { readStatusAt } from '../git/status.ts';
 import { worktreeAgents } from '../git/worktree-agents.ts';
 import { checkoutHost } from '../git/worktree-host.ts';
 import { WorktreeMerge } from '../git/worktree-merge.ts';
@@ -31,7 +33,8 @@ export interface GitBundle {
 export function wireGit(home: string, identity: EndpointIdentity, agents: AgentsBundle, work: AgentWorkBundle, peers: PeerLinks): GitBundle {
     const watches = new SharedWatch();
     const folders = new FolderWatcher(process.platform, watches);
-    const statuses = new GitStatusWatcher(process.platform, watches);
+    const machineHome = new MachineHome(home);
+    const statuses = new GitStatusWatcher(process.platform, watches, Date.now, (root) => readStatusAt(root, (top) => machineHome.stateWithin(top)));
     const agentsInWorktrees = worktreeAgents({
         chats: () => agents.chats.list(),
         sessions: () => agents.sessions.list(),

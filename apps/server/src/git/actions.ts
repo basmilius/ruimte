@@ -1,6 +1,6 @@
 import type { GitActionPayload, GitActionPhase, GitActionResult } from '@ruimte/contracts';
 import { conflictedFiles } from './conflict.ts';
-import { READ_ONLY_GIT, git, runGit, streamCommand, toplevel, verifyRev, GitError } from './run.ts';
+import { LEAVE_NOTHING_OUT, READ_ONLY_GIT, git, leavingOut, runGit, streamCommand, toplevel, verifyRev, GitError, type LeftOut } from './run.ts';
 import { stashStamp } from './stage.ts';
 
 // A push over a slow link is allowed to take this long before the daemon gives up on it.
@@ -65,6 +65,11 @@ function summaryOf(output: string, fallback: string): string {
  */
 export class GitActions {
     private readonly running = new Map<string, Job>();
+    private readonly leftOut: LeftOut;
+
+    constructor(leftOut: LeftOut = LEAVE_NOTHING_OUT) {
+        this.leftOut = leftOut;
+    }
 
     cancel(actionId: string): void {
         this.running.get(actionId)?.cancel();
@@ -192,7 +197,8 @@ export class GitActions {
             case 'checkout': {
                 const ref = operand(payload.ref, 'a branch to check out');
                 if (payload.stash === true) {
-                    await step('stash', ['stash', 'push', '--include-untracked', '--message', `ruimte-switch-${stashStamp()}`]);
+                    const args = ['stash', 'push', '--include-untracked', '--message', `ruimte-switch-${stashStamp()}`];
+                    await step('stash', [...args, ...leavingOut(await this.leftOut(top))]);
                 }
                 await step('branch', await checkoutArgs(top, ref));
                 return done(`Now on ${ref}.`);
@@ -226,7 +232,7 @@ export class GitActions {
                 if (payload.subject !== undefined && payload.subject.trim() !== '') {
                     args.push('--message', payload.subject.trim());
                 }
-                const text = await step('stash', args);
+                const text = await step('stash', [...args, ...leavingOut(await this.leftOut(top))]);
                 return done(text.includes('No local changes') ? 'There was nothing to stash.' : 'Changes are in a stash.');
             }
             case 'stash-pop': {
@@ -296,7 +302,7 @@ export class GitActions {
 
     private async commit(payload: GitActionPayload, step: Step, top: string): Promise<{ hash: string; subject: string }> {
         if (payload.stageAll === true) {
-            await step('stage', ['add', '--all']);
+            await step('stage', ['add', '--all', ...leavingOut(await this.leftOut(top))]);
         }
         const subject = required(payload.subject?.trim(), 'a commit message');
         const body = payload.body?.trim() ?? '';

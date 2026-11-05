@@ -1,6 +1,7 @@
+import { readdir } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { CodedError } from '@adecore/agents';
-import { isWithin } from '@adecore/utils/path';
+import { isBelow, isWithin } from '@adecore/utils/path';
 import { DEVICE_CAPTURES_FOLDER } from '../shots.ts';
 import { realOrSelf } from './real-path.ts';
 
@@ -26,6 +27,28 @@ function isChatVisuals(home: string, path: string): boolean {
 
 function isMachineState(home: string, path: string): boolean {
     return isWithin(home, path) && !OPEN_FOLDERS.some((folder) => isWithin(join(home, folder), path)) && !isChatVisuals(home, path);
+}
+
+const STATE_LIST_BYTES = 16 * 1024;
+
+/* Whether a folder of the machine's state holds an open folder deeper down, so its entries are judged one by one. */
+function holdsOpenFolder(home: string, folder: string): boolean {
+    return folder === join(home, 'chats') || OPEN_FOLDERS.some((open) => isBelow(folder, join(home, open)));
+}
+
+/* Every entry under `folder` that is the machine's state, as high up as the open folders allow. */
+async function machineStateUnder(home: string, folder: string): Promise<string[]> {
+    const entries = await readdir(folder, { withFileTypes: true }).catch(() => []);
+    const found = await Promise.all(
+        entries.map(async (entry) => {
+            const path = join(folder, entry.name);
+            if (!isMachineState(home, path)) {
+                return [];
+            }
+            return entry.isDirectory() && holdsOpenFolder(home, path) ? await machineStateUnder(home, path) : [path];
+        })
+    );
+    return found.flat();
 }
 
 /* The home as it is named and as it really is: what a search that cannot ask `MachineHome` itself (a worker) judges paths by. */
@@ -72,6 +95,32 @@ export class MachineHome {
     /* Also refuses a folder the home lies in, for a request that acts on everything under the path it names. */
     async refuseHolding(path: string): Promise<void> {
         await this.judge(path, (policy, candidate) => isMachineStatePath(policy, candidate) || holdsMachineHome(policy, candidate));
+    }
+
+    /*
+     * What a request over the whole of `folder` has to leave out: every entry of the machine's state
+     * under a home that lies in it, relative to `folder` with forward slashes, the open folders kept.
+     * Read from disk at the call, so an entry the machine makes after it is not in the list.
+     */
+    async stateWithin(folder: string): Promise<string[]> {
+        const [policy, real] = await Promise.all([this.policy(), realOrSelf(resolve(folder))]);
+        const tops = [...new Set([resolve(folder), real])];
+        const found = new Set<string>();
+
+        const relativeTo = (top: string, path: string): string => relative(top, path).split(sep).join('/');
+
+        for (const top of tops) {
+            for (const home of policy.homes.filter((candidate) => isWithin(top, candidate))) {
+                const paths = (await machineStateUnder(home, home)).map((path) => relativeTo(top, path));
+                const bytes = paths.reduce((total, path) => total + path.length + 20, 0);
+                // The list goes on a git command line, which stops at 32 KB on Windows; past that the whole home stays out, open folders too.
+                for (const path of bytes > STATE_LIST_BYTES ? [relativeTo(top, home)] : paths) {
+                    found.add(path);
+                }
+            }
+        }
+
+        return [...found].sort();
     }
 
     private async judge(path: string, refused: (policy: MachineHomePolicy, path: string) => boolean): Promise<void> {

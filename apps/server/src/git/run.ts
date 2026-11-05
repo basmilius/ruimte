@@ -131,6 +131,20 @@ export function readGit(args: string[], cwd: string): Promise<string | null> {
     return git(args, cwd, READ_ONLY_GIT);
 }
 
+/* What a git run over the whole checkout at `top` leaves out, relative to it: the machine's own state when the checkout holds the home. */
+export type LeftOut = (top: string) => Promise<readonly string[]>;
+
+export const LEAVE_NOTHING_OUT: LeftOut = async () => [];
+
+/* The pathspec tail of a git run over a whole checkout that leaves these paths out, relative to its top; nothing for none. */
+export function leavingOut(paths: readonly string[], include: readonly string[] = []): string[] {
+    if (paths.length === 0 && include.length === 0) {
+        return [];
+    }
+
+    return ['--', ...include, ...paths.map((path) => `:(exclude,literal)${path}`)];
+}
+
 /* A git whose failure is the person's problem, not a result: what it wrote to stderr is the message. */
 export async function gitOrThrow(args: string[], cwd: string, env?: Record<string, string>): Promise<string> {
     const { code, stdout, stderr } = await runGit(args, cwd, { env });
