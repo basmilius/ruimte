@@ -391,7 +391,8 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
     const sameAccount = !switching && account === info.account;
     // Another CLI, or an account that cannot read the original's transcripts, reads the conversation as text instead.
     const handoff = switching || (!sameAccount && deps.accounts?.canContinue(provider, info.account, account) !== true);
-    if (!CHAT_CLIS.has(info.provider) || !CHAT_CLIS.has(provider)) {
+    // A handoff copies only the thread, so a chat on a provider this machine lost can go on elsewhere.
+    if (!CHAT_CLIS.has(provider) || (!handoff && !CHAT_CLIS.has(info.provider))) {
         throw new ChatError('chat-unsupported', `${nameOf(CHAT_CLIS.has(provider) ? info.provider : provider)} has no chat that can be forked`);
     }
     if (!(await deps.installed()).includes(provider)) {

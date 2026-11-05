@@ -399,6 +399,18 @@ describe('forkChat', () => {
         expect(result.info.suggestedTitle).toBeUndefined();
     });
 
+    test('a chat on a provider that is gone goes on with another one as text, and only so', async () => {
+        const items = [turn('turn-1'), user('user-1', 'turn-1')];
+        const { deps, asked } = stub({ info: info('apple'), items });
+
+        const fork = await forkChat(deps, { chatId: 'chat-lead', turnId: 'turn-1', provider: 'claude' });
+
+        expect(fork.info).toMatchObject({ provider: 'claude', agentSessionId: null });
+        expect(asked.claude).toEqual([]);
+        expect(asked.written[0]?.preambles[0]).toContain('user-1');
+        await expect(forkChat(deps, { chatId: 'chat-lead', turnId: 'turn-1' })).rejects.toMatchObject({ code: 'chat-unsupported' });
+    });
+
     test('the bookmarks go along on the messages up to the cut and no further', async () => {
         const items = [turn('turn-1', { lastUuid: 'u-1' }), user('user-1', 'turn-1'), turn('turn-2', { lastUuid: 'u-2' }), user('user-2', 'turn-2')];
         const { deps, asked } = stub({ info: info('claude'), items });

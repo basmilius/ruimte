@@ -7,6 +7,7 @@
 - A chat view forks into a chat view after it; a node forks into a node, or with `asView` into a view after its canvas.
 - A fork in a worktree puts its files to the turn's settled tree (`checkpointAfter`) only in its new worktree, never in a shared folder.
 - A fork into another CLI, or into an account without the original's transcripts, copies no conversation: it gets a handoff preamble (`handoff.ts`) and a mode no wider than the original's. A fork stays on the original's account unless it names another; another CLI starts on its default account.
+- A chat on a provider the machine no longer offers forks only as a handoff, which is how it goes on with another provider. A started chat has no other way to change provider.
 - A fork's summary is delivered through a `deliver-summary` entry, whose note id `summary-<turnId>` lands once.
 - A fork node deleted before anyone wrote in it takes its record and transcript copy along, never its worktree.
 - An agent forks only a chat it opened (`agent_fork`), after its last finished turn, on the original's CLI, account and model. That fork is the agent's child (no `relation`, one level deeper, the agent's mode as ceiling): it counts toward depth and the per-caller cap, ends with the agent, and takes work only through `task_new`, whose result wakes the agent once. A hidden agent's fork is hidden too.

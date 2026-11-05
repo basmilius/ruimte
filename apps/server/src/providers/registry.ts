@@ -5,9 +5,10 @@ import {
     copilotUsageDirectory,
     ProviderRegistry as AgentProviderRegistry,
     detectCli,
+    ModelCatalog,
     type AcpServerLaunch
 } from '@adecore/agents/providers';
-import { pickerGroupsOf, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
+import { pickerGroupsOf, type AgentKind, type ModelSelection, type ProviderInfo } from '@ruimte/contracts';
 import { acpCatalogStore } from './acp-catalog-store.ts';
 import { copilotProvider, createAntigravityProvider, createCopilotProvider, createGrokProvider, grokProvider } from './acp-providers.ts';
 import { anthropicClaudeApiProvider } from './anthropic-claude-api-provider.ts';
@@ -36,9 +37,21 @@ const UNOFFERED = new AgentProviderRegistry({ providers: [] });
 // The providers a person installed while the daemon runs (agents of the ACP registry), kept in step by the registry that offers them.
 const ADDED_PROVIDERS = new Map<AgentKind, ChatProvider>();
 
+/*
+ * Knows no model of a provider that is gone, so it keeps the one a stored chat names: without one the chat's selection
+ * fails the schema of its record and of the wire, and it never opens again after the next write.
+ */
+class StoredSelectionCatalog extends ModelCatalog {
+    override normalize(selection: Partial<ModelSelection> | undefined): ModelSelection {
+        return selection?.model ? { model: selection.model, options: selection.options ?? {} } : super.normalize(selection);
+    }
+}
+
+const UNOFFERED_CATALOG = new StoredSelectionCatalog({ defaultModel: '', profiles: {}, models: [] });
+
 /* The provider of a kind, for the places that have no registry at hand (the hooks). */
 export function providerFor(kind: AgentKind): ChatProvider {
-    return BUILT_IN_PROVIDERS.find((provider) => provider.kind === kind) ?? ADDED_PROVIDERS.get(kind) ?? UNOFFERED.get(kind);
+    return BUILT_IN_PROVIDERS.find((provider) => provider.kind === kind) ?? ADDED_PROVIDERS.get(kind) ?? { ...UNOFFERED.get(kind), catalog: UNOFFERED_CATALOG };
 }
 
 /* The kinds an agent may name: the CLIs the daemon ships with, then the agents a person installed from the ACP registry. */

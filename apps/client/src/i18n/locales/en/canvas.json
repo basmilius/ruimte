@@ -345,7 +345,8 @@
     "missingProvider": {
         "notInstalled": "{{name}} is not installed on this machine.",
         "notOffered": "{{name}} is not available on this machine.",
-        "install": "Install"
+        "install": "Install",
+        "continueElsewhere": "Continue with another provider"
     },
     "workflowBeside": {
         "summary": "Workflow",

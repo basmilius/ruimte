@@ -153,7 +153,7 @@ export function ChatBody({
     return (
         <div className="relative flex h-full flex-col bg-surface" data-surface="chat">
             <ConnectionNotice status={status} />
-            {status === 'open' && !failure && <MissingProviderNote endpointId={endpointId} kind={info?.provider ?? nodeHost?.provider} />}
+            {status === 'open' && !failure && <MissingProviderNote endpointId={endpointId} kind={info?.provider ?? nodeHost?.provider} chatId={id} />}
             {failure && (
                 <NodeNotice
                     tone="error"
