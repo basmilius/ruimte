@@ -21,6 +21,8 @@ jobs:
       rust: ${{ steps.paths.outputs.rust }}
       swift_pulsar: ${{ steps.paths.outputs.RuimtePulsar }}
       swift_transport: ${{ steps.paths.outputs.RuimteTransport }}
+      swift_voice: ${{ steps.paths.outputs.RuimteVoice }}
+      swift_intelligent_ui: ${{ steps.paths.outputs.RuimteIntelligentUI }}
       computer_use: ${{ steps.paths.outputs.computer_use }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -41,6 +43,14 @@ jobs:
               - '.github/**'
               - 'apps/ios/Packages/RuimtePulsar/**'
               - 'apps/ios/Packages/RuimteTransport/**'
+            RuimteVoice:
+              - '.github/**'
+              - 'apps/ios/Packages/RuimtePulsar/**'
+              - 'apps/ios/Packages/RuimteVoice/**'
+            RuimteIntelligentUI:
+              - '.github/**'
+              - 'apps/ios/Packages/RuimtePulsar/**'
+              - 'apps/ios/Packages/RuimteIntelligentUI/**'
             computer_use:
               - '.github/**'
               - 'apps/computer-use/**'
@@ -89,6 +99,30 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: swift test
 
+  swift-voice:
+    name: swift (RuimteVoice)
+    needs: changes
+    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.swift_voice == 'true') }}
+    runs-on: xcode-27
+    defaults:
+      run:
+        working-directory: apps/ios/Packages/RuimteVoice
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: swift test
+
+  swift-intelligent-ui:
+    name: swift (RuimteIntelligentUI)
+    needs: changes
+    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.swift_intelligent_ui == 'true') }}
+    runs-on: xcode-27
+    defaults:
+      run:
+        working-directory: apps/ios/Packages/RuimteIntelligentUI
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: swift test
+
   # The same runner as the iOS packages, for the tests. `packaged` in ci.yml compiles the helper for release
   # on macos-latest, the runner the release itself builds on.
   computer-use:
@@ -110,7 +144,7 @@ jobs:
   native:
     name: Native checks
     if: ${{ always() }}
-    needs: [changes, rust, swift-pulsar, swift-transport, computer-use]
+    needs: [changes, rust, swift-pulsar, swift-transport, swift-voice, swift-intelligent-ui, computer-use]
     runs-on: ubuntu-latest
     steps:
       - name: Check job results
