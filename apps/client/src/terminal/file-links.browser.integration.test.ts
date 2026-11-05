@@ -152,84 +152,129 @@ async function pointAt(view: View, owner: string, row: number, column = 2): Prom
     })()`);
 }
 
+// The first page of a file pays for the bundle, Chrome's start and the first parse of its scripts. Bun does not time
+// out a file's top level, so it is paid here and not in the first test.
+await fixture(false, async () => {});
+
+const tooltipCleanups: readonly (readonly [string, (view: View, text: string) => Promise<void>, (view: View) => Promise<void>])[] = [
+    [
+        'the pointer leaves',
+        async () => {},
+        async (view) => {
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 790, y: 590 });
+        }
+    ],
+    [
+        'output clears the screen',
+        async () => {},
+        async (view) => {
+            await view.evaluate(`window.writeOutput('local',${JSON.stringify('\x1b[2J\x1b[Hremoved\r\n')})`);
+        }
+    ],
+    [
+        'the link scrolls away',
+        async (view, text) => {
+            await view.evaluate(
+                `window.replaceScreen('local',${JSON.stringify('\x1b]7;file://fixture/repo/worktree\x07' + text + '\r\n' + 'filler\r\n'.repeat(40))})`
+            );
+            await view.evaluate('window.instances.local.scrollToTop()');
+        },
+        async (view) => {
+            // Past every row of the wrapped link, so a filler line is under the pointer and not the link's next row.
+            await view.evaluate(
+                '(() => { const term = window.instances.local; let row = 0; while (term.buffer.active.getLine(row + 1)?.isWrapped) { row++; } term.scrollLines(row + 1); })()'
+            );
+        }
+    ],
+    [
+        'the terminal shows another session',
+        async () => {},
+        async (view) => {
+            await view.evaluate('window.switchSource()');
+        }
+    ],
+    [
+        'the terminal unmounts',
+        async () => {},
+        async (view) => {
+            await view.evaluate('window.root.unmount()');
+        }
+    ]
+];
+
 for (const [platform, language, zoom] of [
     ['darwin', 'en', 1],
     ['linux', 'nl', 0.65]
 ] as const) {
-    test(`file tooltip follows wrapped hover, scope and cleanup: ${platform}/${language}/${zoom}`, async () => {
-        await fixture(
+    const text = zoom === 1 ? reference : reference.slice(1, -1);
+
+    const tooltipFixture = (run: (view: View) => Promise<void>): Promise<void> =>
+        fixture(
             zoom !== 1,
             async (view) => {
                 await view.evaluate(
                     `document.querySelector('[data-owner=local]').style.cssText='left:100px;top:160px;transform-origin:top left;transform:scale(${zoom})'`
                 );
                 await view.evaluate(frame);
-                const text = zoom === 1 ? reference : reference.slice(1, -1);
-                const words = language === 'en' ? '⌘+click to preview' : 'Ctrl+klik voor preview';
-                await hover(view, 'local', 0);
+                await run(view);
+            },
+            undefined,
+            { platform, language }
+        );
+
+    test(`file tooltip follows wrapped hover and another link: ${platform}/${language}/${zoom}`, async () => {
+        await tooltipFixture(async (view) => {
+            const words = language === 'en' ? '⌘+click to preview' : 'Ctrl+klik voor preview';
+            await hover(view, 'local', 0);
+            await tooltipSettled(view);
+            expect(await view.evaluate<string>(`document.querySelector('[role=tooltip]').textContent`)).toBe(words + text);
+            expect(await view.evaluate<number>(`document.querySelectorAll('[role=tooltip]').length`)).toBe(1);
+            expect(await view.evaluate<string>(`getComputedStyle(document.querySelector('.tooltip-positioner')).pointerEvents`)).toBe('none');
+            const rows = await view.evaluate<number>(`Math.ceil((${text.length}+1)/window.instances.local.cols)`);
+            expect(rows).toBeGreaterThan(1);
+            // Stay inside the same link while moving onto its next wrapped segment.
+            for (let row = 0; row < rows; row++) {
+                await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', ...(await pointAt(view, 'local', row)) });
                 await tooltipSettled(view);
-                expect(await view.evaluate<string>(`document.querySelector('[role=tooltip]').textContent`)).toBe(words + text);
-                expect(await view.evaluate<number>(`document.querySelectorAll('[role=tooltip]').length`)).toBe(1);
-                expect(await view.evaluate<string>(`getComputedStyle(document.querySelector('.tooltip-positioner')).pointerEvents`)).toBe('none');
-                const rows = await view.evaluate<number>(`Math.ceil((${text.length}+1)/window.instances.local.cols)`);
-                expect(rows).toBeGreaterThan(1);
-                // Stay inside the same link while moving onto its next wrapped segment.
-                for (let row = 0; row < rows; row++) {
-                    await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', ...(await pointAt(view, 'local', row)) });
-                    await tooltipSettled(view);
-                    const geometry = await view.evaluate<{
-                        center: number;
-                        expectedCenter: number;
-                        top: number;
-                        bottom: number;
-                        linkTop: number;
-                        linkBottom: number;
-                    }>(`(()=>{
+                const geometry = await view.evaluate<{
+                    center: number;
+                    expectedCenter: number;
+                    top: number;
+                    bottom: number;
+                    linkTop: number;
+                    linkBottom: number;
+                }>(`(()=>{
                     const term=window.instances.local,screen=term.element.querySelector('.xterm-screen').getBoundingClientRect();
                     const box=document.querySelector('.tooltip-positioner').getBoundingClientRect();
                     const cells=${row}===${rows}-1?(${text.length}+1)%term.cols||term.cols:term.cols;
                     const linkTop=screen.top+${row}*screen.height/term.rows;
                     return {center:box.x+box.width/2,expectedCenter:screen.x+cells*screen.width/term.cols/2,top:box.top,bottom:box.bottom,linkTop,linkBottom:linkTop+screen.height/term.rows};
                 })()`);
-                    // The positioner rounds the anchor's width and its own offset to whole pixels, half a pixel each.
-                    expect(Math.abs(geometry.center - geometry.expectedCenter)).toBeLessThanOrEqual(1);
-                    expect(geometry.bottom <= geometry.linkTop || geometry.top >= geometry.linkBottom).toBe(true);
-                    expect(await view.evaluate<string>(`document.querySelector('[role=tooltip]').textContent`)).toBe(words + text);
-                }
-                await hover(view, 'local', rows + 2);
-                await tooltipSettled(view);
-                expect(await view.evaluate<string>(`document.querySelector('[role=tooltip]').textContent`)).toContain('https://ruimte.app/docs');
-                expect(await view.evaluate<string>(`document.querySelector('[role=tooltip]').textContent`)).not.toContain(text);
-                expect(await view.evaluate<number>(`document.querySelectorAll('[role=tooltip]').length`)).toBe(1);
-                await hover(view, 'local', 0);
-                await tooltipSettled(view);
-                await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 790, y: 590 });
-                await expectNoTooltip(view);
-                await hover(view, 'local', 0);
-                await view.evaluate(`window.writeOutput('local',${JSON.stringify('\x1b[2J\x1b[Hremoved\r\n')})`);
-                await expectNoTooltip(view);
-                await view.evaluate(
-                    `window.replaceScreen('local',${JSON.stringify('\x1b]7;file://fixture/repo/worktree\x07' + text + '\r\n' + 'filler\r\n'.repeat(40))})`
-                );
-                await view.evaluate('window.instances.local.scrollToTop()');
-                await hover(view, 'local', 0);
-                await tooltipSettled(view);
-                await view.evaluate('window.instances.local.scrollLines(1)');
-                await expectNoTooltip(view);
-                await view.evaluate('window.instances.local.scrollToTop()');
-                await hover(view, 'local', 0);
-                await tooltipSettled(view);
-                await view.evaluate('window.switchSource()');
-                await expectNoTooltip(view);
-                await hover(view, 'local', 0);
-                await tooltipSettled(view);
-                await view.evaluate('window.root.unmount()');
-                await expectNoTooltip(view);
-            },
-            undefined,
-            { platform, language }
-        );
+                // The positioner rounds the anchor's width and its own offset to whole pixels, half a pixel each.
+                expect(Math.abs(geometry.center - geometry.expectedCenter)).toBeLessThanOrEqual(1);
+                expect(geometry.bottom <= geometry.linkTop || geometry.top >= geometry.linkBottom).toBe(true);
+                expect(await view.evaluate<string>(`document.querySelector('[role=tooltip]').textContent`)).toBe(words + text);
+            }
+            await hover(view, 'local', rows + 2);
+            await tooltipSettled(view);
+            expect(await view.evaluate<string>(`document.querySelector('[role=tooltip]').textContent`)).toContain('https://ruimte.app/docs');
+            expect(await view.evaluate<string>(`document.querySelector('[role=tooltip]').textContent`)).not.toContain(text);
+            expect(await view.evaluate<number>(`document.querySelectorAll('[role=tooltip]').length`)).toBe(1);
+        });
     });
+
+    for (const [cleanup, prepare, leave] of tooltipCleanups) {
+        test(`file tooltip goes away when ${cleanup}: ${platform}/${language}/${zoom}`, async () => {
+            await tooltipFixture(async (view) => {
+                await prepare(view, text);
+                await hover(view, 'local', 0);
+                await tooltipSettled(view);
+                expect(await view.evaluate<number>(`document.querySelectorAll('[role=tooltip]').length`)).toBe(1);
+                await leave(view);
+                await expectNoTooltip(view);
+            });
+        });
+    }
 }
 
 async function tooltipSettled(view: View): Promise<void> {
@@ -273,12 +318,21 @@ async function menuOpen(view: View): Promise<void> {
     await click(view, point);
 }
 
+const modifier = process.platform === 'darwin' ? 4 : 2;
+
+async function wrappedRows(view: View): Promise<number> {
+    const rows = await view.evaluate<number>(`Math.ceil(${reference.length}/window.instances.local.cols)`);
+    expect(rows).toBeGreaterThan(1);
+
+    return rows;
+}
+
 for (const onCanvas of [false, true]) {
-    test(`wrapped file links preserve cwd, column, range and owner in a terminal ${onCanvas ? 'node' : 'view'}`, async () => {
+    const place = `in a terminal ${onCanvas ? 'node' : 'view'}`;
+
+    test(`a wrapped file link opens its cwd, column and range by click from every row ${place}`, async () => {
         await fixture(onCanvas, async (view) => {
-            const modifier = process.platform === 'darwin' ? 4 : 2;
-            const rows = await view.evaluate<number>(`Math.ceil(${reference.length}/window.instances.local.cols)`);
-            expect(rows).toBeGreaterThan(1);
+            const rows = await wrappedRows(view);
             expect(await view.evaluate<unknown>('window.attaches')).toEqual([
                 ['local', '/repo/worktree'],
                 ['remote', '/repo/worktree']
@@ -296,18 +350,26 @@ for (const onCanvas of [false, true]) {
                     end: { line: 15, character: `local ${path} line 16`.length }
                 });
                 expect(await view.evaluate<string>('window.editor.getText()')).toContain(`local ${path} line 12`);
-                const nonce = await view.evaluate<number>('window.files.getState().revealLine.nonce');
+            }
+        });
+    });
+
+    test(`a wrapped file link opens its cwd, column and range by the menu from every row ${place}`, async () => {
+        await fixture(onCanvas, async (view) => {
+            const rows = await wrappedRows(view);
+            for (let row = 0; row < rows; row++) {
+                const nonce = await view.evaluate<number>('window.files.getState().revealLine?.nonce ?? -1');
                 await click(view, await hover(view, 'local', row), 'right');
                 await menuOpen(view);
-                expect(await view.evaluate<unknown>('window.files.getState().revealLine')).toEqual({
-                    key: path,
-                    line: 12,
-                    column: 4,
-                    endLine: 16,
-                    nonce: nonce + 1
-                });
+                expect(await view.evaluate<unknown>('window.files.getState().revealLine')).toMatchObject({ key: path, line: 12, column: 4, endLine: 16 });
+                expect(await view.evaluate<number>('window.files.getState().revealLine.nonce')).toBeGreaterThan(nonce);
             }
-            const nonce = await view.evaluate<number>('window.files.getState().revealLine.nonce');
+            await waitForEditor(view, path);
+        });
+    });
+
+    test(`a drag across a file link selects without opening it ${place}`, async () => {
+        await fixture(onCanvas, async (view) => {
             const from = await hover(view, 'local', 0);
             const to = await pointAt(view, 'local', 0, 18);
             for (const modifiers of [0, modifier]) {
@@ -315,17 +377,31 @@ for (const onCanvas of [false, true]) {
                 await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', ...to, button: 'left', buttons: 1, modifiers });
                 await view.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', ...to, button: 'left', buttons: 0, clickCount: 1, modifiers });
                 await view.evaluate(frame);
-                expect(await view.evaluate<unknown>('window.files.getState().revealLine.nonce')).toBe(nonce);
+                expect(await view.evaluate<string>('window.instances.local.getSelection()')).not.toBe('');
+                expect(await view.evaluate<unknown>('window.files.getState().revealLine')).toBeNull();
                 await view.evaluate('window.instances.local.clearSelection()');
                 await hover(view, 'local', 0);
             }
+        });
+    });
+
+    test(`a file link of a terminal on another machine than the window's opens nothing ${place}`, async () => {
+        await fixture(onCanvas, async (view) => {
             await click(view, await hover(view, 'remote', 0), 'left', modifier);
-            expect(await view.evaluate<unknown>('window.files.getState().revealLine.nonce')).toBe(nonce);
+            expect(await view.evaluate<unknown>('window.files.getState().revealLine')).toBeNull();
             expect(await view.evaluate<string>('window.toasts.getState().toasts.at(-1).title')).toContain('machine that owns it');
             await click(view, await hover(view, 'local', 0), 'right');
             await view.evaluate("window.switchMachine('remote')");
             await menuOpen(view);
             expect(await view.evaluate<unknown>('window.files.getState().tabs')).toEqual([]);
+            expect(await view.evaluate<unknown>('window.files.getState().revealLine')).toBeNull();
+        });
+    });
+
+    test(`the machine that owns a file link reads it, and says when it is missing ${place}`, async () => {
+        await fixture(onCanvas, async (view) => {
+            const rows = await wrappedRows(view);
+            await view.evaluate("window.switchMachine('remote')");
             await click(view, await hover(view, 'remote', rows - 1), 'left', modifier);
             expect(await view.evaluate<unknown>('window.files.getState().revealLine')).toMatchObject({ key: path, line: 12, column: 4, endLine: 16 });
             await waitForEditor(view, path, 'remote');
@@ -334,22 +410,25 @@ for (const onCanvas of [false, true]) {
             );
             await click(view, await hover(view, 'remote', rows), 'left', modifier);
             expect(await view.evaluate<unknown>('window.files.getState().revealLine')).toMatchObject({ key: '/repo/worktree/missing.ts', line: 3 });
+            await waitInPage(view, `document.querySelector(".editor")?.textContent.includes("File not found on remote") ?? false`);
             expect(await view.evaluate<unknown>('window.reads.filter(([,path])=>!path.endsWith("/.editorconfig"))')).toEqual([
-                ['local', path],
                 ['remote', path],
                 ['remote', '/repo/worktree/missing.ts']
             ]);
-            expect(await view.evaluate<string>('document.querySelector(".editor").textContent')).toContain('File not found on remote');
-            const missingNonce = await view.evaluate<number>('window.files.getState().revealLine.nonce');
-            await click(view, await hover(view, 'remote', rows + 1), 'left', modifier);
-            expect(await view.evaluate<unknown>('window.files.getState().revealLine.nonce')).toBe(missingNonce);
-            await click(view, await hover(view, 'remote', rows + 2), 'left', modifier);
+        });
+    });
+
+    test(`an invalid location opens nothing and a web link goes to the browser ${place}`, async () => {
+        await fixture(onCanvas, async (view) => {
+            const rows = await wrappedRows(view);
+            await click(view, await hover(view, 'local', rows + 1), 'left', modifier);
+            expect(await view.evaluate<unknown>('window.files.getState().revealLine')).toBeNull();
+            await click(view, await hover(view, 'local', rows + 2), 'left', modifier);
             expect(await view.evaluate<unknown>('window.opened')).toEqual(['https://ruimte.app/docs']);
+            expect(await view.evaluate<unknown>('window.files.getState().revealLine')).toBeNull();
         });
     });
 }
-
-const modifier = process.platform === 'darwin' ? 4 : 2;
 
 async function expectLocation(view: View, path: string): Promise<void> {
     expect(await view.evaluate<unknown>('window.files.getState().revealLine')).toMatchObject({ key: path, line: 12, column: 4, endLine: 16 });
@@ -357,7 +436,18 @@ async function expectLocation(view: View, path: string): Promise<void> {
     expect(await view.evaluate<string>('window.editor.getText()')).toContain(`local ${path} line 12`);
 }
 
-test('output cwd follows cd, survives buffer reflow, and old output keeps its own cwd', async () => {
+async function openBy(view: View, route: 'click' | 'menu', row: number): Promise<void> {
+    if (route === 'click') {
+        await click(view, await hover(view, 'local', row), 'left', modifier);
+    } else {
+        await click(view, await hover(view, 'local', row), 'right');
+        await menuOpen(view);
+    }
+}
+
+const routes = ['click', 'menu'] as const;
+
+test('output cwd follows cd for the output after it', async () => {
     await fixture(
         false,
         async (view) => {
@@ -366,29 +456,36 @@ test('output cwd follows cd, survives buffer reflow, and old output keeps its ow
             await view.evaluate(`window.writeOutput('local', '\\x1b]7;file://fixture/repo/worktree/nested\\x07same.ts:12:4-16\\r\\n')`);
             await click(view, await hover(view, 'local', 1), 'left', modifier);
             await expectLocation(view, '/repo/worktree/nested/same.ts');
-            await view.evaluate('window.sizes.local({cols:10,rows:12})');
-            await view.evaluate(`window.writeOutput('local', '\\r\\n'.repeat(16))`);
-            for (const [row, path] of [
-                [0, '/repo/worktree/same.ts'],
-                [2, '/repo/worktree/nested/same.ts']
-            ] as const) {
-                // The rows are old output above the screen; on the runner the view was back at the bottom by the second row.
-                await view.evaluate('window.instances.local.scrollToTop()');
-                await view.evaluate(frame);
-                await click(view, await hover(view, 'local', row), 'left', modifier);
-                await expectLocation(view, path);
-                await view.evaluate('window.instances.local.scrollToTop()');
-                await view.evaluate(frame);
-                await click(view, await hover(view, 'local', row), 'right');
-                await menuOpen(view);
-                await expectLocation(view, path);
-            }
         },
         '\x1b]7;file://fixture/repo/worktree\x07same.ts:12:4-16\r\n'
     );
 });
 
-test('relative links without output cwd, including a replaced screen, never use the launch directory', async () => {
+for (const route of routes) {
+    test(`old output keeps its own cwd after the buffer reflows, by ${route}`, async () => {
+        await fixture(
+            false,
+            async (view) => {
+                await view.evaluate(`window.writeOutput('local', '\\x1b]7;file://fixture/repo/worktree/nested\\x07same.ts:12:4-16\\r\\n')`);
+                await view.evaluate('window.sizes.local({cols:10,rows:12})');
+                await view.evaluate(`window.writeOutput('local', '\\r\\n'.repeat(16))`);
+                for (const [row, path] of [
+                    [0, '/repo/worktree/same.ts'],
+                    [2, '/repo/worktree/nested/same.ts']
+                ] as const) {
+                    // The rows are old output above the screen; on the runner the view was back at the bottom by the second row.
+                    await view.evaluate('window.instances.local.scrollToTop()');
+                    await view.evaluate(frame);
+                    await openBy(view, route, row);
+                    await expectLocation(view, path);
+                }
+            },
+            '\x1b]7;file://fixture/repo/worktree\x07same.ts:12:4-16\r\n'
+        );
+    });
+}
+
+test('a relative link before any output cwd opens nothing, and one after it opens there', async () => {
     await fixture(
         false,
         async (view) => {
@@ -400,10 +497,19 @@ test('relative links without output cwd, including a replaced screen, never use 
             await view.evaluate(`window.writeOutput('local', '\\x1b]7;file://fixture/repo/nested\\x07same.ts:12:4-16\\r\\n')`);
             await click(view, await hover(view, 'local', 1), 'left', modifier);
             await expectLocation(view, '/repo/nested/same.ts');
+        },
+        'same.ts:12:4-16\r\n'
+    );
+});
+
+test('a replaced screen forgets the output cwd for a relative link but still opens an absolute one', async () => {
+    await fixture(
+        false,
+        async (view) => {
+            await view.evaluate(`window.writeOutput('local', '\\x1b]7;file://fixture/repo/nested\\x07same.ts:12:4-16\\r\\n')`);
             await view.evaluate(`window.replaceScreen('local', 'same.ts:12:4-16\\r\\n/absolute.ts:12:4-16\\r\\n')`);
-            const nonce = await view.evaluate<number>('window.files.getState().revealLine.nonce');
             await click(view, await hover(view, 'local', 0), 'left', modifier);
-            expect(await view.evaluate<number>('window.files.getState().revealLine.nonce')).toBe(nonce);
+            expect(await view.evaluate<unknown>('window.files.getState().revealLine')).toBeNull();
             await click(view, await hover(view, 'local', 1), 'left', modifier);
             await expectLocation(view, '/absolute.ts');
         },
@@ -411,28 +517,28 @@ test('relative links without output cwd, including a replaced screen, never use 
     );
 });
 
-test('ten-column wide-character wrap padding is omitted but real path spaces survive click and menu', async () => {
-    await fixture(
-        false,
-        async (view) => {
-            await view.evaluate('window.sizes.local({cols:10,rows:14})');
-            await view.evaluate(
-                `window.writeOutput('local', '\\x1b]7;file://fixture/repo/worktree\\x07"src/abcd例.ts:12:4-16"\\r\\n"src/abc 例.ts:12:4-16"\\r\\n')`
-            );
-            for (const [row, path] of [
-                [0, '/repo/worktree/src/abcd例.ts'],
-                [3, '/repo/worktree/src/abc 例.ts']
-            ] as const) {
-                await click(view, await hover(view, 'local', row), 'left', modifier);
-                await expectLocation(view, path);
-                await click(view, await hover(view, 'local', row + 1), 'right');
-                await menuOpen(view);
-                await expectLocation(view, path);
-            }
-        },
-        ''
-    );
-});
+for (const route of routes) {
+    test(`ten-column wide-character wrap padding is omitted but real path spaces survive, by ${route}`, async () => {
+        await fixture(
+            false,
+            async (view) => {
+                await view.evaluate('window.sizes.local({cols:10,rows:14})');
+                await view.evaluate(
+                    `window.writeOutput('local', '\\x1b]7;file://fixture/repo/worktree\\x07"src/abcd例.ts:12:4-16"\\r\\n"src/abc 例.ts:12:4-16"\\r\\n')`
+                );
+                for (const [row, path] of [
+                    [0, '/repo/worktree/src/abcd例.ts'],
+                    [3, '/repo/worktree/src/abc 例.ts']
+                ] as const) {
+                    // The menu is asked from the link's second row, so both rows of a wrapped link are covered.
+                    await openBy(view, route, route === 'click' ? row : row + 1);
+                    await expectLocation(view, path);
+                }
+            },
+            ''
+        );
+    });
+}
 
 async function escapeMenu(view: View): Promise<void> {
     await view.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
@@ -479,13 +585,27 @@ async function expectCorrectPreviewOrRefusal(view: View, row: number, route: 'cl
     return 'opened';
 }
 
-async function expectKnownAndAbsoluteControls(view: View, cwd: string, file: string): Promise<void> {
-    await view.evaluate('window.sizes.local({cols:80,rows:14})');
-    await view.evaluate(`window.replaceScreen('local', ${JSON.stringify(`\x1b]7;file://fixture${cwd}\x07${file}:12:4-16\r\n/absolute.ts:12:4-16\r\n`)})`);
-    expect(await expectCorrectPreviewOrRefusal(view, 0, 'click', `${cwd}/${file}`)).toBe('opened');
-    expect(await expectCorrectPreviewOrRefusal(view, 0, 'menu', `${cwd}/${file}`)).toBe('opened');
-    expect(await expectCorrectPreviewOrRefusal(view, 1, 'click', '/absolute.ts')).toBe('opened');
-    expect(await expectCorrectPreviewOrRefusal(view, 1, 'menu', '/absolute.ts')).toBe('opened');
+// The cases below may refuse a link; these hold that a terminal of this fixture opens a link it can place, so a refusal below is the case's own.
+for (const [cwd, file] of [
+    ['/repo/worktree/nested', 'same.ts'],
+    ['/repo/b', 'new.ts']
+] as const) {
+    for (const route of routes) {
+        test(`a link under a known output cwd and an absolute one open by ${route}: ${cwd}/${file}`, async () => {
+            await fixture(
+                false,
+                async (view) => {
+                    await view.evaluate('window.sizes.local({cols:80,rows:14})');
+                    await view.evaluate(
+                        `window.replaceScreen('local', ${JSON.stringify(`\x1b]7;file://fixture${cwd}\x07${file}:12:4-16\r\n/absolute.ts:12:4-16\r\n`)})`
+                    );
+                    expect(await expectCorrectPreviewOrRefusal(view, 0, route, `${cwd}/${file}`)).toBe('opened');
+                    expect(await expectCorrectPreviewOrRefusal(view, 1, route, '/absolute.ts')).toBe('opened');
+                },
+                ''
+            );
+        });
+    }
 }
 
 for (const ending of ['', '\r\n']) {
@@ -493,8 +613,7 @@ for (const ending of ['', '\r\n']) {
         await fixture(
             false,
             async (view) => {
-                await expectKnownAndAbsoluteControls(view, '/repo/worktree/nested', 'same.ts');
-                await view.evaluate(`window.replaceScreen('local', '')`);
+                await view.evaluate('window.sizes.local({cols:80,rows:14})');
                 const rewritten =
                     '\x1b]7;file://fixture/repo/worktree\x07same.ts:12:4-16\r\n' +
                     '\x1b]7;file://fixture/repo/worktree/nested\x07same.ts:12:4-16\r\n' +
@@ -503,7 +622,6 @@ for (const ending of ['', '\r\n']) {
                 await view.evaluate(`window.writeOutput('local', ${JSON.stringify(rewritten)})`);
                 const clicked = await expectCorrectPreviewOrRefusal(view, 0, 'click', '/repo/worktree/nested/same.ts');
                 expect(await expectCorrectPreviewOrRefusal(view, 0, 'menu', '/repo/worktree/nested/same.ts')).toBe(clicked);
-                await expectKnownAndAbsoluteControls(view, '/repo/worktree/nested', 'same.ts');
             },
             ''
         );
@@ -514,15 +632,12 @@ test('cwd changes within a wrapped logical row open the new file or refuse ambig
     await fixture(
         false,
         async (view) => {
-            await expectKnownAndAbsoluteControls(view, '/repo/b', 'new.ts');
             await view.evaluate('window.sizes.local({cols:10,rows:14})');
-            await view.evaluate(`window.replaceScreen('local', '')`);
             const mixed = '\x1b]7;file://fixture/repo/a\x07prefixprefixprefix ' + '\x1b]7;file://fixture/repo/b\x07new.ts:12:4-16\r\n';
             await view.evaluate(`window.writeOutput('local', ${JSON.stringify(mixed)})`);
             expect(await view.evaluate<boolean>('window.instances.local.buffer.active.getLine(1).isWrapped')).toBe(true);
             const clicked = await expectCorrectPreviewOrRefusal(view, 2, 'click', '/repo/b/new.ts');
             expect(await expectCorrectPreviewOrRefusal(view, 2, 'menu', '/repo/b/new.ts')).toBe(clicked);
-            await expectKnownAndAbsoluteControls(view, '/repo/b', 'new.ts');
         },
         ''
     );
@@ -532,11 +647,11 @@ test('missing output metadata refuses both preview routes without filesystem rea
     await fixture(
         false,
         async (view) => {
-            await expectKnownAndAbsoluteControls(view, '/repo/worktree/nested', 'same.ts');
+            await view.evaluate('window.sizes.local({cols:80,rows:14})');
+            await view.evaluate(`window.replaceScreen('local', '\\x1b]7;file://fixture/repo/worktree/nested\\x07/absolute.ts:12:4-16\\r\\n')`);
             await view.evaluate(`window.replaceScreen('local', 'same.ts:12:4-16\\r\\n')`);
             expect(await expectCorrectPreviewOrRefusal(view, 0, 'click', '/repo/worktree/nested/same.ts')).toBe('refused');
             expect(await expectCorrectPreviewOrRefusal(view, 0, 'menu', '/repo/worktree/nested/same.ts')).toBe('refused');
-            await expectKnownAndAbsoluteControls(view, '/repo/worktree/nested', 'same.ts');
         },
         ''
     );
