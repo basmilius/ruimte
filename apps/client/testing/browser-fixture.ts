@@ -201,6 +201,18 @@ async function buildPage(entryCode: string, styles: string, production: boolean)
     }
 }
 
+/*
+ * Opens a file's page once from its top level, which Bun does not time out, so its first test does not pay for the
+ * bundle, Chrome's start and the first parse of the scripts.
+ */
+export async function warmBrowserFixture(entryCode: string, styles: string, options: BrowserFixtureOptions = {}): Promise<void> {
+    try {
+        await withBrowserFixture(entryCode, styles, async () => {}, options);
+    } catch {
+        // The page runs without the data a test hands it, so what it throws says nothing; a page that cannot build fails its tests.
+    }
+}
+
 export async function withBrowserFixture(
     entryCode: string,
     styles: string,

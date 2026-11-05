@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { access } from 'node:fs/promises';
 import { join } from 'node:path';
-import { clientDirectory, waitInPage, withBrowserFixture } from '../../../client/testing/browser-fixture.ts';
+import { clientDirectory, waitInPage, warmBrowserFixture, withBrowserFixture } from '../../../client/testing/browser-fixture.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { registerTerminalPrepareHandlers } from '../handlers/terminal-prepare.ts';
 import { hasPrepareSource } from './prepare-source.ts';
@@ -9,14 +9,52 @@ import { PrepareTerminal, shellSyntax } from './prepare-terminal.ts';
 import { realShell } from './shell-editor-test-helpers.ts';
 import { waitForAsync } from './test-helpers.ts';
 
+const command = 'printf "%s" "héllo" > chosen';
+const markdown = '```bash\n' + command + '\n```';
+// The daemon's port rides in the page, so every test loads one bundle.
+const entry = `
+                import { WORKSPACE_CHAT_HOST } from ${JSON.stringify(join(clientDirectory, 'src/chat/workspace-host.ts'))};
+                import { ChatHostProvider, ChatScopeContext } from ${JSON.stringify(Bun.resolveSync('@adecore/agents-react', clientDirectory))};
+                import { AssistantRow } from ${JSON.stringify(Bun.resolveSync('@adecore/agents-react/chat/ui', clientDirectory))};
+                import { terminalPrepareActions } from ${JSON.stringify(join(clientDirectory, 'src/actions/terminal-prepare-actions.ts'))};
+                import { clientActions } from ${JSON.stringify(join(clientDirectory, 'src/actions/client-actions.ts'))};
+                import { TransportError } from ${JSON.stringify(join(clientDirectory, 'src/transport/transport.ts'))};
+                import { ActionRegistry } from ${JSON.stringify(join(clientDirectory, '../../packages/actions/src/index.ts'))};
+                import { useEndpoints } from ${JSON.stringify(join(clientDirectory, 'src/state/endpoints.ts'))};
+                import words from ${JSON.stringify(join(clientDirectory, 'src/i18n/locales/en/chat.json'))};
+                import dutch from ${JSON.stringify(join(clientDirectory, 'src/i18n/locales/nl/chat.json'))};
+                i18next.addResourceBundle('en', 'chat', words, true, true);
+                i18next.addResourceBundle('nl', 'chat', dutch, true, true);
+                window.changeLanguage = language => i18next.changeLanguage(language);
+                window.pasteButton = () => [...document.querySelectorAll('button')].find(button => button.textContent === i18next.t('chat:prepare.paste'));
+                useEndpoints.setState({ endpoints: [{ id: 'remote', daemonId: 'owner', label: 'Remote build machine' }], activeId: 'local' });
+                const transport = { status: 'open', request(type, payload) {
+                    return fetch('http://127.0.0.1:' + window.fixture.port, { method: 'POST', body: JSON.stringify({ id: crypto.randomUUID(), type, payload }) })
+                        .then(response => response.json()).then(reply => { if (!reply.ok) throw new TransportError(reply.error.code, reply.error.message); return reply.result; });
+                }};
+                const registry = new ActionRegistry(terminalPrepareActions({ machineId: id => id === 'remote' ? 'owner' : null, transport: id => id === 'remote' ? transport : null }));
+                clientActions.execute = registry.execute.bind(registry);
+                const fixtureHost = { useStreaming: () => 'blocks' };
+                const scope = { id: 'remote', keyOf: id => 'remote/'+id, owns: key => key.startsWith('remote/'), transport, chats: {} };
+                const root = createRoot(document.getElementById('root'));
+                window.draw = (streaming, text = ${JSON.stringify(markdown)}) => root.render(
+                    <UIProvider i18n={i18next}><ChatHostProvider host={WORKSPACE_CHAT_HOST}><ChatHostProvider host={fixtureHost}><ChatScopeContext.Provider value={scope}>
+                        <AssistantRow chatId="chat" item={{ id:'reply', kind:'assistant', turnId:null, createdAt:0, streaming, text }}/>
+                    </ChatScopeContext.Provider></ChatHostProvider></ChatHostProvider></UIProvider>
+                );
+                window.prepareButton = () => document.querySelector('button[aria-label="Prepare in terminal"]');
+                window.draw(true);
+            `;
+const styles = '.invisible{visibility:hidden}svg{width:14px;height:14px}';
+
+await warmBrowserFixture(entry, styles);
+
 for (const change of ['none', 'busy', 'input', 'refused', 'lost-ack', 'lost-ack-nl'] as const) {
     test(`real Markdown → workspace host → person action → remote owner → ZLE revalidates ${change}`, async () => {
         const lostAck = change.startsWith('lost-ack');
         const f = await realShell(() =>
             lostAck ? `PS1='ack> '\nprint() { if [[ "$*" == *$'\\tprepared' ]]; then return 0; fi; builtin print "$@"; }\n` : "PS1='editor> '\n"
         );
-        const command = 'printf "%s" "héllo" > chosen';
-        const markdown = '```bash\n' + command + '\n```';
         const calls: string[] = [];
         await f.ready();
         const dispatcher = new Dispatcher();
@@ -56,40 +94,8 @@ for (const change of ['none', 'busy', 'input', 'refused', 'lost-ack', 'lost-ack-
         });
         try {
             await withBrowserFixture(
-                `
-                import { WORKSPACE_CHAT_HOST } from ${JSON.stringify(join(clientDirectory, 'src/chat/workspace-host.ts'))};
-                import { ChatHostProvider, ChatScopeContext } from ${JSON.stringify(Bun.resolveSync('@adecore/agents-react', clientDirectory))};
-                import { AssistantRow } from ${JSON.stringify(Bun.resolveSync('@adecore/agents-react/chat/ui', clientDirectory))};
-                import { terminalPrepareActions } from ${JSON.stringify(join(clientDirectory, 'src/actions/terminal-prepare-actions.ts'))};
-                import { clientActions } from ${JSON.stringify(join(clientDirectory, 'src/actions/client-actions.ts'))};
-                import { TransportError } from ${JSON.stringify(join(clientDirectory, 'src/transport/transport.ts'))};
-                import { ActionRegistry } from ${JSON.stringify(join(clientDirectory, '../../packages/actions/src/index.ts'))};
-                import { useEndpoints } from ${JSON.stringify(join(clientDirectory, 'src/state/endpoints.ts'))};
-                import words from ${JSON.stringify(join(clientDirectory, 'src/i18n/locales/en/chat.json'))};
-                import dutch from ${JSON.stringify(join(clientDirectory, 'src/i18n/locales/nl/chat.json'))};
-                i18next.addResourceBundle('en', 'chat', words, true, true);
-                i18next.addResourceBundle('nl', 'chat', dutch, true, true);
-                window.changeLanguage = language => i18next.changeLanguage(language);
-                window.pasteButton = () => [...document.querySelectorAll('button')].find(button => button.textContent === i18next.t('chat:prepare.paste'));
-                useEndpoints.setState({ endpoints: [{ id: 'remote', daemonId: 'owner', label: 'Remote build machine' }], activeId: 'local' });
-                const transport = { status: 'open', request(type, payload) {
-                    return fetch('http://127.0.0.1:${server.port}', { method: 'POST', body: JSON.stringify({ id: crypto.randomUUID(), type, payload }) })
-                        .then(response => response.json()).then(reply => { if (!reply.ok) throw new TransportError(reply.error.code, reply.error.message); return reply.result; });
-                }};
-                const registry = new ActionRegistry(terminalPrepareActions({ machineId: id => id === 'remote' ? 'owner' : null, transport: id => id === 'remote' ? transport : null }));
-                clientActions.execute = registry.execute.bind(registry);
-                const fixtureHost = { useStreaming: () => 'blocks' };
-                const scope = { id: 'remote', keyOf: id => 'remote/'+id, owns: key => key.startsWith('remote/'), transport, chats: {} };
-                const root = createRoot(document.getElementById('root'));
-                window.draw = (streaming, text = ${JSON.stringify(markdown)}) => root.render(
-                    <UIProvider i18n={i18next}><ChatHostProvider host={WORKSPACE_CHAT_HOST}><ChatHostProvider host={fixtureHost}><ChatScopeContext.Provider value={scope}>
-                        <AssistantRow chatId="chat" item={{ id:'reply', kind:'assistant', turnId:null, createdAt:0, streaming, text }}/>
-                    </ChatScopeContext.Provider></ChatHostProvider></ChatHostProvider></UIProvider>
-                );
-                window.prepareButton = () => document.querySelector('button[aria-label="Prepare in terminal"]');
-                window.draw(true);
-            `,
-                '.invisible{visibility:hidden}svg{width:14px;height:14px}',
+                entry,
+                styles,
                 async (view) => {
                     const frame = 'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))';
                     expect(calls).toEqual([]);
@@ -152,7 +158,8 @@ for (const change of ['none', 'busy', 'input', 'refused', 'lost-ack', 'lost-ack-
                     }
                     await expect(access(join(f.home, 'chosen'))).rejects.toThrow();
                     expect(await view.evaluate<string[]>('window.errors')).toEqual([]);
-                }
+                },
+                { head: `window.fixture=${JSON.stringify({ port: server.port })}` }
             );
         } finally {
             await server.stop(true);

@@ -78,6 +78,10 @@ async function fixture(run: (view: View) => Promise<void>): Promise<void> {
     );
 }
 
+// The first page of a file pays for the bundle, Chrome's start and the first parse of its scripts. Bun does not time
+// out a file's top level, so it is paid here and not in the first test.
+await fixture(async () => {});
+
 function waitFor(view: View, expression: string): Promise<void> {
     return waitInPage(view, expression);
 }

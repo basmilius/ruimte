@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { access, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PROTOCOL_VERSION, type ProjectView } from '@ruimte/contracts';
-import { clientDirectory, withBrowserFixture } from '../../../client/testing/browser-fixture.ts';
+import { clientDirectory, warmBrowserFixture, withBrowserFixture } from '../../../client/testing/browser-fixture.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { registerSessionHandlers } from '../handlers/session.ts';
 import { projectTerminalPrepareHost, registerTerminalPrepareHandlers } from '../handlers/terminal-prepare.ts';
@@ -13,6 +13,52 @@ import { waitForAsync } from './test-helpers.ts';
 
 const source = (path: string): string => JSON.stringify(join(clientDirectory, 'src', path));
 const command = 'printf chosen > chosen';
+const entry = `
+            import { WORKSPACE_CHAT_HOST } from ${source('chat/workspace-host.ts')};
+            import { ChatHostProvider } from ${JSON.stringify(Bun.resolveSync('@adecore/agents-react', clientDirectory))};
+            import { AssistantRow } from ${JSON.stringify(Bun.resolveSync('@adecore/agents-react/chat/ui', clientDirectory))};
+            import { clientActions } from ${source('actions/client-actions.ts')};
+            import { terminalPrepareActions } from ${source('actions/terminal-prepare-actions.ts')};
+            import { ActionRegistry } from ${JSON.stringify(join(clientDirectory, '../../packages/actions/src/index.ts'))};
+            import { focusedCanvas } from ${source('state/canvas.ts')};
+            import chatWords from ${source('i18n/locales/en/chat.json')};
+            import { ViewHost } from ${source('shell/ViewHost.tsx')};
+            import { WebSocketTransport } from ${source('transport/websocket-transport.ts')};
+            import { SessionClient } from ${source('terminal/session-client.ts')};
+            import { sessionSinkFor } from ${source('state/sessions.ts')};
+            import { useWindow } from ${source('state/window.ts')};
+            import { useProject } from ${source('state/project.ts')};
+            import { useDocument } from ${source('state/document.ts')};
+            import { useEndpoints } from ${source('state/endpoints.ts')};
+            import { machineFor } from ${source('transport/connections.ts')};
+            import { ConnectionContext } from ${source('transport/context.ts')};
+            import { ChatScopeProvider } from ${source('transport/ChatScopeProvider.tsx')};
+            import words from ${source('i18n/locales/en/canvas.json')};
+            i18next.addResourceBundle('en', 'canvas', words, true, true);
+            useEndpoints.setState({activeId:'local',endpoints:[{id:'local',label:'Local'},{id:'remote',daemonId:'owner',label:'Owner'}]});
+            useWindow.getState().show({kind:'workspace',workspace:{connection:{endpointId:'remote'}}});
+            useProject.setState({current:{folder:window.fixture.home,projectId:'project'},currentEndpointId:'remote'});
+            useDocument.getState().load({version:3,rev:1,name:'Prepare',color:'#000',views:window.fixture.views},null);
+            const wire = new WebSocketTransport(window.fixture.daemon); window.wire=wire;
+            await new Promise(resolve=>{const off=wire.subscribeStatus(status=>{if(status==='open'){off();resolve()}})});
+            const machine=machineFor('remote');machine.transport=wire;machine.sessions=new SessionClient(wire,sessionSinkFor('remote'));
+            useWindow.getState().show({kind:'workspace',workspace:{connection:machine}});
+            const original=clientActions.execute.bind(clientActions);
+            const prepareRegistry=new ActionRegistry(terminalPrepareActions({machineId:()=> 'owner',transport:()=>wire}));
+            clientActions.execute=(name,...args)=>name.startsWith('terminal.prepare')?prepareRegistry.execute(name,...args):original(name,...args);
+            const request=wire.request.bind(wire);wire.request=async(type,payload)=>{const result=await request(type,payload);if(type==='session.preparePreview')window.lastPreview=result;return result};
+            i18next.addResourceBundle('en','chat',chatWords,true,true);const fixtureHost={useStreaming:()=> 'blocks'};
+            window.documentStore=useDocument;window.canvas=focusedCanvas;window.projectStore=useProject;window.windowStore=useWindow;window.endpoints=useEndpoints;
+            window.clickPrepare=()=>{const button=document.querySelector('button[aria-label="Prepare in terminal"]');button.focus();button.click()};
+            window.cancelPrepare=()=>[...document.querySelectorAll("[role=dialog] button")].find(button=>button.textContent===i18next.t("common:action.cancel")).click();
+            window.clickPaste=()=>{const button=[...document.querySelectorAll('button')].find(button=>button.textContent==='Paste without Enter');button.focus();button.click()};
+            createRoot(document.getElementById('root')).render(<UIProvider i18n={i18next}><ChatHostProvider host={WORKSPACE_CHAT_HOST}><ChatHostProvider host={fixtureHost}><ConnectionContext.Provider value={machine}><ChatScopeProvider><ViewHost/><div className="assistant"><AssistantRow chatId="chat" item={{id:"reply",kind:"assistant",createdAt:0,turnId:null,streaming:false,text:${JSON.stringify('```sh\n' + command + '\n```')}}}/></div></ChatScopeProvider></ConnectionContext.Provider></ChatHostProvider></ChatHostProvider></UIProvider>);
+        `;
+const styles =
+    (await readFile(join(clientDirectory, 'node_modules/@xterm/xterm/css/xterm.css'), 'utf8')) +
+    `.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0}.flex{display:flex}.flex-col{flex-direction:column}.flex-1{flex:1}.grow{flex-grow:1}.h-full{height:100%}.w-full{width:100%}.min-h-0{min-height:0}.min-w-0{min-width:0}.invisible{visibility:hidden}.assistant{position:absolute;right:0;bottom:0;width:300px;background:var(--color-surface);z-index:100}svg{width:14px;height:14px}`;
+
+await warmBrowserFixture(entry, styles);
 
 for (const mode of [
     'canvas',
@@ -123,51 +169,9 @@ for (const mode of [
             }
         });
         try {
-            const css = await readFile(join(clientDirectory, 'node_modules/@xterm/xterm/css/xterm.css'), 'utf8');
             await withBrowserFixture(
-                `
-            import { WORKSPACE_CHAT_HOST } from ${source('chat/workspace-host.ts')};
-            import { ChatHostProvider } from ${JSON.stringify(Bun.resolveSync('@adecore/agents-react', clientDirectory))};
-            import { AssistantRow } from ${JSON.stringify(Bun.resolveSync('@adecore/agents-react/chat/ui', clientDirectory))};
-            import { clientActions } from ${source('actions/client-actions.ts')};
-            import { terminalPrepareActions } from ${source('actions/terminal-prepare-actions.ts')};
-            import { ActionRegistry } from ${JSON.stringify(join(clientDirectory, '../../packages/actions/src/index.ts'))};
-            import { focusedCanvas } from ${source('state/canvas.ts')};
-            import chatWords from ${source('i18n/locales/en/chat.json')};
-            import { ViewHost } from ${source('shell/ViewHost.tsx')};
-            import { WebSocketTransport } from ${source('transport/websocket-transport.ts')};
-            import { SessionClient } from ${source('terminal/session-client.ts')};
-            import { sessionSinkFor } from ${source('state/sessions.ts')};
-            import { useWindow } from ${source('state/window.ts')};
-            import { useProject } from ${source('state/project.ts')};
-            import { useDocument } from ${source('state/document.ts')};
-            import { useEndpoints } from ${source('state/endpoints.ts')};
-            import { machineFor } from ${source('transport/connections.ts')};
-            import { ConnectionContext } from ${source('transport/context.ts')};
-            import { ChatScopeProvider } from ${source('transport/ChatScopeProvider.tsx')};
-            import words from ${source('i18n/locales/en/canvas.json')};
-            i18next.addResourceBundle('en', 'canvas', words, true, true);
-            useEndpoints.setState({activeId:'local',endpoints:[{id:'local',label:'Local'},{id:'remote',daemonId:'owner',label:'Owner'}]});
-            useWindow.getState().show({kind:'workspace',workspace:{connection:{endpointId:'remote'}}});
-            useProject.setState({current:{folder:window.fixture.home,projectId:'project'},currentEndpointId:'remote'});
-            useDocument.getState().load({version:3,rev:1,name:'Prepare',color:'#000',views:window.fixture.views},null);
-            const wire = new WebSocketTransport(window.fixture.daemon); window.wire=wire;
-            await new Promise(resolve=>{const off=wire.subscribeStatus(status=>{if(status==='open'){off();resolve()}})});
-            const machine=machineFor('remote');machine.transport=wire;machine.sessions=new SessionClient(wire,sessionSinkFor('remote'));
-            useWindow.getState().show({kind:'workspace',workspace:{connection:machine}});
-            const original=clientActions.execute.bind(clientActions);
-            const prepareRegistry=new ActionRegistry(terminalPrepareActions({machineId:()=> 'owner',transport:()=>wire}));
-            clientActions.execute=(name,...args)=>name.startsWith('terminal.prepare')?prepareRegistry.execute(name,...args):original(name,...args);
-            const request=wire.request.bind(wire);wire.request=async(type,payload)=>{const result=await request(type,payload);if(type==='session.preparePreview')window.lastPreview=result;return result};
-            i18next.addResourceBundle('en','chat',chatWords,true,true);const fixtureHost={useStreaming:()=> 'blocks'};
-            window.documentStore=useDocument;window.canvas=focusedCanvas;window.projectStore=useProject;window.windowStore=useWindow;window.endpoints=useEndpoints;
-            window.clickPrepare=()=>{const button=document.querySelector('button[aria-label="Prepare in terminal"]');button.focus();button.click()};
-            window.cancelPrepare=()=>[...document.querySelectorAll("[role=dialog] button")].find(button=>button.textContent===i18next.t("common:action.cancel")).click();
-            window.clickPaste=()=>{const button=[...document.querySelectorAll('button')].find(button=>button.textContent==='Paste without Enter');button.focus();button.click()};
-            createRoot(document.getElementById('root')).render(<UIProvider i18n={i18next}><ChatHostProvider host={WORKSPACE_CHAT_HOST}><ChatHostProvider host={fixtureHost}><ConnectionContext.Provider value={machine}><ChatScopeProvider><ViewHost/><div className="assistant"><AssistantRow chatId="chat" item={{id:"reply",kind:"assistant",createdAt:0,turnId:null,streaming:false,text:${JSON.stringify('```sh\n' + command + '\n```')}}}/></div></ChatScopeProvider></ConnectionContext.Provider></ChatHostProvider></ChatHostProvider></UIProvider>);
-        `,
-                css +
-                    `.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0}.flex{display:flex}.flex-col{flex-direction:column}.flex-1{flex:1}.grow{flex-grow:1}.h-full{height:100%}.w-full{width:100%}.min-h-0{min-height:0}.min-w-0{min-width:0}.invisible{visibility:hidden}.assistant{position:absolute;right:0;bottom:0;width:300px;background:var(--color-surface);z-index:100}svg{width:14px;height:14px}`,
+                entry,
+                styles,
                 async (view) => {
                     // The browser creates a session and attaches to it in two requests, and a shell can reach its prompt in between;
                     // only an attached session is a destination.
