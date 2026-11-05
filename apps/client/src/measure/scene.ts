@@ -1,7 +1,7 @@
 import type { ProjectContent, ProjectNode, ProjectView } from '@ruimte/contracts';
 
 /*
- * The fixtures the dev-only measurements run on (`docs/NEXT.md` §3). Every variant is built from
+ * The fixtures the dev-only measurements run on. Every variant is built from
  * nothing but its name, so two runs on two machines measure the same scene.
  */
 export type MeasureVariant = 'scene' | 'grid' | 'files' | 'chats' | 'terminals';

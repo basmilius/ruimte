@@ -57,7 +57,7 @@ When disk changes overlap an unsaved draft, the editor compares original, draft 
 
 Explain, rename suggestions and ghost text use the model chosen under Settings > Editor > AI. Automatic picks the cheapest available model, trying Claude, Codex, Grok, then Antigravity. Inline edits also default to the cheapest model. The selected provider receives the code. Ghost text runs on request: Tab accepts, Option+] accepts a word, Escape dismisses. Settings show the resolved model or why it is unavailable. See the [daemon's editor model documentation](../server/README.md#editor-model).
 
-Open acceptance and limits are in [NEXT.md](../../docs/NEXT.md#15-language-servers).
+Further servers and the remaining limits are RP-144 in `basmilius/ruimte-plans`.
 
 ## Icons
 

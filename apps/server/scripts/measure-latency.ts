@@ -21,7 +21,7 @@ import { renderReport, type Channel, type ChannelRun, type Environment, type Pha
 /*
  * How long a client waits for a reply, for a key echoed by a quiet terminal and for the first word of
  * a chat, while another terminal prints as fast as it can. The daemon and the measuring client run in
- * two processes, so the client does not share the daemon's event loop. See `docs/NEXT.md` §3.5.
+ * two processes, so the client does not share the daemon's event loop.
  *
  *   bun apps/server/scripts/measure-latency.ts --channel both --seconds 30 --out latency.json > latency.md
  *

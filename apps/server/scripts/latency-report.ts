@@ -1,6 +1,6 @@
 /*
  * The report of `measure-latency.ts`: percentiles of what a client waited for, laid out as the
- * Markdown that goes in a decision on per-session quotas (`docs/NEXT.md` §3.5). Pure, so the layout
+ * Markdown that goes in a decision on per-session quotas. Pure, so the layout
  * is tested without a daemon, a clock or a machine.
  */
 
