@@ -3,7 +3,7 @@ import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { processAlive } from '../process-test-helpers.ts';
-import { streamWithTimeout } from './run.ts';
+import { streamCommand, streamWithTimeout } from './run.ts';
 import { expectProcessTerminated, killFromPidFile } from './test-process.ts';
 
 let root: string;
@@ -38,4 +38,9 @@ test.skipIf(process.platform === 'win32')('a timeout ends the children that keep
     expect(result.code).toBe(process.platform === 'win32' ? 1 : 143);
     jest.useRealTimers();
     await expectProcessTerminated(pid, 'SIGTERM');
+});
+
+test('a command reads what it is handed on stdin', async () => {
+    const result = await streamCommand('git', ['hash-object', '--stdin'], root, { stdin: 'hello\n' });
+    expect(result.stdout.trim()).toBe('ce013625030ba8dba906f756967f9e9ca394464a');
 });

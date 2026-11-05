@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'bun:test';
 import { lstat, mkdir, readdir, readFile, readlink, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { tempHomes } from '../temp-home-test-helpers.ts';
-import { LanguageInstaller } from './installer.ts';
+import { LanguageInstaller, type CheckoutRevision } from './installer.ts';
 import { NativePolicy, nativeProgramFile, nativeStubsOf, type Download, type NativeRelease } from './native.ts';
 import { PackageStore } from './package-store.ts';
 import { KIND_PROFILES, type CatalogKind } from './profiles.ts';
@@ -257,6 +257,7 @@ const releaseOf = (version: string, stubsCommit = COMMIT, checksum = sha256(BINA
 describe('native install', () => {
     const checkout = () => ({ folder: join(root, 'repo'), version: '0.1.0', stubsCommit: COMMIT });
     const devPolicy = () => new NativePolicy({ checkouts: { 'php-native': checkout() } });
+    const notInGit: CheckoutRevision = async () => null;
 
     /* Plays cargo, which leaves the executable where a build does, and the executable's own `--version`. */
     function building(calls: LanguageProcessSpec[] = [], version = 'php-language-server 0.1.0'): RunCommand {
@@ -292,6 +293,7 @@ describe('native install', () => {
             run: building(calls),
             native: devPolicy(),
             download: downloads(requested),
+            checkoutRevision: notInGit,
             onChange: () => undefined
         });
         expect(await installer.state('php-native')).toBe('missing');
@@ -315,14 +317,30 @@ describe('native install', () => {
 
     it('does nothing again for an install that is whole', async () => {
         const calls: LanguageProcessSpec[] = [];
-        const installer = new LanguageInstaller({ root, runtime, run: building(calls), native: devPolicy(), download: downloads(), onChange: () => undefined });
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run: building(calls),
+            native: devPolicy(),
+            download: downloads(),
+            checkoutRevision: notInGit,
+            onChange: () => undefined
+        });
         await installer.install('php-native');
         await installer.install('php-native');
         expect(calls).toHaveLength(2);
     });
 
     it('reads the kind as missing when the stubs are gone, and offers a build when the checkout moved on to another version', async () => {
-        const installer = new LanguageInstaller({ root, runtime, run: building(), native: devPolicy(), download: downloads(), onChange: () => undefined });
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run: building(),
+            native: devPolicy(),
+            download: downloads(),
+            checkoutRevision: notInGit,
+            onChange: () => undefined
+        });
         await installer.install('php-native');
         await rm(join(nativeStubsOf(join(root, 'php-native'), COMMIT), '.complete'));
         expect(await installer.state('php-native')).toBe('missing');
@@ -332,6 +350,7 @@ describe('native install', () => {
             root,
             runtime,
             native: new NativePolicy({ checkouts: { 'php-native': { ...checkout(), version: '0.2.0' } } }),
+            checkoutRevision: notInGit,
             onChange: () => undefined
         });
         expect(await newer.state('php-native')).toBe('installed');
@@ -371,7 +390,15 @@ describe('native install', () => {
             join(root, 'php-native', 'installed.json'),
             JSON.stringify({ versions: { 'php-language-server': '0.0.9' }, source: 'dev', stubs: COMMIT })
         );
-        const installer = new LanguageInstaller({ root, runtime, run: building(), native: devPolicy(), download: downloads(), onChange: () => undefined });
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run: building(),
+            native: devPolicy(),
+            download: downloads(),
+            checkoutRevision: notInGit,
+            onChange: () => undefined
+        });
         expect(installer.updateOf('php-native')).toBeNull();
         await installer.state('php-native');
         await installer.install('php-native');
@@ -389,11 +416,20 @@ describe('native install', () => {
             },
             native: devPolicy(),
             download: downloads(),
+            checkoutRevision: notInGit,
             onChange: () => undefined
         });
         await missing.install('php-native');
         expect(missing.failureOf('php-native')).toContain('cargo is not installed');
-        const failing = new LanguageInstaller({ root, runtime, run: async () => 101, native: devPolicy(), download: downloads(), onChange: () => undefined });
+        const failing = new LanguageInstaller({
+            root,
+            runtime,
+            run: async () => 101,
+            native: devPolicy(),
+            download: downloads(),
+            checkoutRevision: notInGit,
+            onChange: () => undefined
+        });
         await failing.install('php-native');
         expect(failing.failureOf('php-native')).toBe('cargo build exited with code 101');
     });
@@ -405,6 +441,7 @@ describe('native install', () => {
             run: building([], 'php-language-server 9.9.9'),
             native: devPolicy(),
             download: downloads(),
+            checkoutRevision: notInGit,
             onChange: () => undefined
         });
         await installer.install('php-native');
@@ -419,6 +456,7 @@ describe('native install', () => {
             run: building(),
             native: devPolicy(),
             download: async () => Promise.reject(new Error('offline')),
+            checkoutRevision: notInGit,
             onChange: () => undefined
         });
         await installer.install('php-native');
@@ -624,6 +662,7 @@ describe('the SQL server install', () => {
             download: async (url) => {
                 requested.push(url);
             },
+            checkoutRevision: async () => null,
             onChange: () => undefined
         });
         await installer.install('sql-native');
@@ -665,6 +704,7 @@ describe('the SQL server install', () => {
                 return 0;
             },
             native: new NativePolicy({ checkouts: { 'sql-native': checkout() } }),
+            checkoutRevision: async () => null,
             onChange: () => undefined
         });
         await installer.install('sql-native');

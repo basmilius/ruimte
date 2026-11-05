@@ -3,7 +3,6 @@ import type { ChatProvider } from '@adecore/agents/providers';
 import { splitBlocks, splitLines } from '@adecore/merge';
 import { oneShotRun } from './one-shot.ts';
 import { buildResolvePrompt, parseResolution } from './resolve-ai.ts';
-import { streamCommand } from './run.ts';
 
 const blocks = splitBlocks(splitLines('one\ntwo\nthree\nfour\n'), splitLines('one\nour two\nthree\nfour\n'), splitLines('one\ntheir two\nthree\nfour\n'));
 
@@ -60,11 +59,6 @@ describe('oneShotRun', () => {
 
     test('falls back to the command line for a CLI that only takes it there', () => {
         expect(oneShotRun(provider(), 'the prompt')).toEqual({ args: ['-p', 'the prompt'] });
-    });
-
-    test('a command reads what it is handed on stdin', async () => {
-        const result = await streamCommand('git', ['hash-object', '--stdin'], process.cwd(), { stdin: 'hello\n' });
-        expect(result.stdout.trim()).toBe('ce013625030ba8dba906f756967f9e9ca394464a');
     });
 });
 
