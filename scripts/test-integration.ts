@@ -5,6 +5,7 @@ import { join, sep } from 'node:path';
 import { parseArgs } from 'node:util';
 
 const SUITES = ['default', 'core', 'package', 'devices', 'browser'] as const;
+const BROWSER_TEST_TIMEOUT_MS = 15_000;
 export type IntegrationSuite = (typeof SUITES)[number];
 
 const EXTENSION_HOST_TESTS = /^extensions\/(?:poc\/)?[^/]+\/test\//;
@@ -71,9 +72,11 @@ async function main(): Promise<void> {
 
         // Chrome keeps the first launch flags and profile for a Bun process; browser files need independent backends.
         const batches = browser ? selected.map((file) => [file]) : [selected];
+        // A browser test measures behavior in a real page, not time; on a slow CI runner its fixed cost alone nears 5 s.
+        const timeout = browser ? [`--timeout=${BROWSER_TEST_TIMEOUT_MS}`] : [];
 
         for (const batch of batches) {
-            const child = Bun.spawn([process.execPath, `--config=${config}`, 'test', '--conditions=source', ...batch], {
+            const child = Bun.spawn([process.execPath, `--config=${config}`, 'test', '--conditions=source', ...timeout, ...batch], {
                 env: { ...process.env, RUIMTE_INTEGRATION_FIXTURE_ROOT: fixtureRoot },
                 stdin: 'inherit',
                 stdout: 'inherit',
