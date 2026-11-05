@@ -2,6 +2,7 @@
 // this arch) without a word, which would ship an app that cannot start. Refuse to package that.
 const { existsSync } = require('node:fs');
 const { join } = require('node:path');
+const { applyFuses } = require('./fuses.cjs');
 
 const COMPILE_HINT = 'compile the server resources for this os and arch first';
 
@@ -37,4 +38,5 @@ module.exports = async (context) => {
         );
     }
     expectFiles([join(resources, 'client', 'index.html')], 'No built client; run `bun run --cwd apps/client build` first');
+    await applyFuses(context);
 };
