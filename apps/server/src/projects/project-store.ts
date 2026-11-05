@@ -1,3 +1,4 @@
+import { scratchFolderOf } from './scratch-folder.ts';
 import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, rm, rmdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
@@ -38,7 +39,6 @@ import {
     type ProjectSummary,
     type ProjectView
 } from '@ruimte/contracts';
-import { scratchFolderOf } from '../chat/scratch-project.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { isDirectory } from '../disk/is-directory.ts';
 import { MachineHome } from '../disk/machine-home.ts';

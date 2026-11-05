@@ -1,3 +1,4 @@
+import { scratchFolderOf } from '../projects/scratch-folder.ts';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, readdir, realpath, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -7,7 +8,7 @@ import type { ProjectChatView } from '@ruimte/contracts';
 import { initRepo } from '../git/test-repo.ts';
 import { chatViewsOf, projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { dropEmptyMark, newScratchChat, scratchFolderOf } from './scratch-project.ts';
+import { dropEmptyMark, newScratchChat } from './scratch-project.ts';
 
 let root: string;
 let store: ProjectStore;

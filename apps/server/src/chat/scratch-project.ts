@@ -1,9 +1,9 @@
-import { randomBytes } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { isEmptyChatView, type ProjectChatView, type ProjectNewChatPayload, type ProjectNewChatResult, type ProjectView } from '@ruimte/contracts';
 import { git } from '../git/run.ts';
+import { newChatId } from '../projects/scratch-folder.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 
 class ScratchError extends CodedError<'scratch-unavailable'> {}
@@ -12,14 +12,6 @@ const SCRATCH_NAME = 'Chats';
 
 // Until its first turn renames it, the way any chat view takes the name of what it was asked.
 const NEW_CHAT_NAME = 'New chat';
-
-export function scratchFolderOf(home: string): string {
-    return join(resolve(home), 'scratch');
-}
-
-export function newChatId(): string {
-    return `chat-${randomBytes(6).toString('hex')}`;
-}
 
 /* Whether a person wrote in a chat yet, as its thread says; a chat this daemon has no thread of never had a message. */
 export type ChatWritten = (chatId: string) => Promise<boolean>;

@@ -1,6 +1,6 @@
 import { createChatCompletionsBackend, type BackendHost, type BackendLaunch, type ChatBackend } from '@adecore/agents/chat';
 import { createApiChatProvider } from '@adecore/agents/providers';
-import { ruimteApiTools } from '../chat/ruimte-api-tools.ts';
+import { ruimteApiTools } from './ruimte-api-tools.ts';
 import { NANOGPT_URL, NanoGptService, nanoHttpError } from './nanogpt-service.ts';
 
 /* A chat on NanoGPT's subscription API, its thread kept beside the key as `<session id>.json`, with Ruimte's tools beside the project's. */
