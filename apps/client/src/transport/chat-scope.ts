@@ -1,9 +1,23 @@
 import type { ChatScope } from '@adecore/agents-react';
+import { ChatClient } from '@adecore/agents-react/chat';
+import { chatSinkFor } from '@/state/chats';
 import { endpointKey, isOfEndpoint } from '@/state/keys';
 import { machineTransport } from '@/transport';
-import { chatClient, chatClientFor } from '@/transport/connections';
+import { chatClientFor } from '@/transport/connections';
+import { DormantTransport } from '@/transport/dormant-transport';
 
 const scopes = new Map<string, ChatScope>();
+const strangers = new Map<string, ChatClient>();
+
+/* The chats of a machine this client has no row for: every request refuses with `no-machine`, so none lands on the active machine. */
+function strangerChats(endpointId: string): ChatClient {
+    let chats = strangers.get(endpointId);
+    if (chats === undefined) {
+        chats = new ChatClient(new DormantTransport(), chatSinkFor(endpointId));
+        strangers.set(endpointId, chats);
+    }
+    return chats;
+}
 
 /*
  * One machine as the chat sees it: its rows keyed on the machine, its transport, and its chat client.
@@ -20,9 +34,8 @@ export function chatScopeOf(endpointId: string): ChatScope {
             get transport() {
                 return machineTransport(endpointId);
             },
-            // A machine this client no longer knows has no clients; the active machine's stand in.
             get chats() {
-                return chatClientFor(endpointId) ?? chatClient;
+                return chatClientFor(endpointId) ?? strangerChats(endpointId);
             }
         };
         scopes.set(endpointId, scope);

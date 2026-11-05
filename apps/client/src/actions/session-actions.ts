@@ -24,6 +24,7 @@ import {
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
 import { asksFirst } from '@/actions/developer-actions';
+import { nodeChats, nodeSessions } from '@/actions/node-machine';
 import { refusing, type Requester } from '@/actions/refusal';
 import { plural } from '@/actions/words';
 import { agentsEndedWith } from '@/agents/end-children';
@@ -39,7 +40,7 @@ import { endpointOfNodeId } from '@/state/node-endpoint';
 import { usePlans } from '@/state/plans';
 import { useSessions, type SessionState } from '@/state/sessions';
 import { screenOf } from '@/terminal/registry';
-import { chatClient, chatClientFor, machineFor, sessionClient, sessionClientFor } from '@/transport/connections';
+import { chatClientFor, machineFor } from '@/transport/connections';
 
 type Call = ActionCall<void> & { confirmed: boolean };
 
@@ -80,14 +81,14 @@ const livePlans = new PlanClient((endpointId) => machineFor(endpointId)?.transpo
 const LIVE_MACHINE: SessionMachine = {
     transport: endpointTransport,
     chat: (chatId) => useChats.getState().byKey[endpointKey(endpointOfNodeId(chatId), chatId)] ?? null,
-    isOpen: (chatId) => (chatClientFor(endpointOfNodeId(chatId)) ?? chatClient).isMounted(chatId),
+    isOpen: (chatId) => chatClientFor(endpointOfNodeId(chatId))?.isMounted(chatId) ?? false,
     applyInfo: (chatId, info) => chatSinkFor(endpointOfNodeId(chatId)).apply(chatId, { type: 'info', info }),
     terminal: (terminalId) => useSessions.getState().byKey[endpointKey(endpointOfNodeId(terminalId), terminalId)] ?? null,
     screen: (terminalId) => screenOf(endpointOfNodeId(terminalId), terminalId),
     providers: () => providersOf(currentEndpointId()).providers,
     providerFixed: (chatId) => readNodeHost(chatId)?.providerFixed === true,
     retarget: async (chatId, provider, selection) => {
-        const chats = chatClientFor(endpointOfNodeId(chatId)) ?? chatClient;
+        const chats = nodeChats(chatId);
         if (!chats.isMounted(chatId)) {
             return false;
         }
@@ -107,12 +108,13 @@ const LIVE_MACHINE: SessionMachine = {
     },
     terminalHost: (terminalId) => readNodeHost(terminalId),
     restartTerminal: async (terminalId, resume) => {
+        const sessions = nodeSessions(terminalId);
         // On the node, so it survives a reload; the daemon turns it into the CLI's own resume line.
         if (resume !== null) {
             updateHost(terminalId, { resume });
         }
         try {
-            await (sessionClientFor(endpointOfNodeId(terminalId)) ?? sessionClient).kill(terminalId);
+            await sessions.kill(terminalId);
         } catch {
             // Already gone on the machine; a fresh session is all that matters.
         }

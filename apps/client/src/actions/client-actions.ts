@@ -40,6 +40,7 @@ import { inspectionActions } from '@/actions/inspection-actions';
 import { launchActions, type LaunchReach } from '@/actions/launch-actions';
 import { layoutActions } from '@/actions/layout-actions';
 import { machineActions, type MachineReach } from '@/actions/machine-actions';
+import { nodeChats, nodeSessions } from '@/actions/node-machine';
 import { pageActions, type PageMachine } from '@/actions/page-actions';
 import { projectActions, type ProjectMachine } from '@/actions/project-actions';
 import { refusing } from '@/actions/refusal';
@@ -64,7 +65,7 @@ import { endpointOfNodeId } from '@/state/node-endpoint';
 import { shownFolderOf, useProject } from '@/state/project';
 import { closeTabGuarded, closeTabsAround, type TabsClosing } from '@/state/tab-close';
 import { useToasts } from '@/state/toasts';
-import { chatClient, chatClientFor, diagramClient, drawingClient, sessionClient, sessionClientFor } from '@/transport/connections';
+import { diagramClient, drawingClient } from '@/transport/connections';
 
 export interface ClientActionMachine {
     sendChat(chatId: string, text: string, extras: ChatSendExtras): Promise<{ queued: boolean; turnId?: string }>;
@@ -92,10 +93,10 @@ export interface ClientActionMachine {
 }
 
 const LIVE_MACHINE: ClientActionMachine = {
-    sendChat: (chatId, text, extras) => (chatClientFor(endpointOfNodeId(chatId)) ?? chatClient).send(chatId, text, extras),
-    clearChat: (chatId, force) => (chatClientFor(endpointOfNodeId(chatId)) ?? chatClient).clear(chatId, force),
-    inspectChat: (chatId) => (chatClientFor(endpointOfNodeId(chatId)) ?? chatClient).inspect(chatId),
-    clearTerminal: (terminalId) => (sessionClientFor(endpointOfNodeId(terminalId)) ?? sessionClient).clear(terminalId),
+    sendChat: (chatId, text, extras) => nodeChats(chatId).send(chatId, text, extras),
+    clearChat: (chatId, force) => nodeChats(chatId).clear(chatId, force),
+    inspectChat: (chatId) => nodeChats(chatId).inspect(chatId),
+    clearTerminal: (terminalId) => nodeSessions(terminalId).clear(terminalId),
     providers: () => providersOf(currentEndpointId()).providers,
     copyViewContent: (kind, from, to) => void (kind === 'drawing' ? drawingClient.copy(from, to) : diagramClient.copy(from, to)),
     designFolders: () => designFoldersOnDisk(currentEndpointId(), shownFolderOf(useProject.getState().current)),
