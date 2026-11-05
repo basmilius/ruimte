@@ -18,6 +18,25 @@ const MAX_BODY_BYTES = 4 * 1024 * 1024;
 // The events whose hook stdout becomes context for the model (`hookSpecificOutput.additionalContext`), in Claude Code and Codex alike.
 const CONTEXT_EVENTS = new Set(['SessionStart', 'UserPromptSubmit']);
 
+/* The body as text, or null once it passes `maxBytes`, which a chunked body without `content-length` can only show while it is read. */
+async function bodyUpTo(request: Request, maxBytes: number): Promise<string | null> {
+    const reader = request.body?.getReader();
+    const decoder = new TextDecoder();
+    let text = '';
+    let total = 0;
+
+    for (let chunk = await reader?.read(); chunk !== undefined && !chunk.done; chunk = await reader?.read()) {
+        total += chunk.value.byteLength;
+        if (total > maxBytes) {
+            void reader?.cancel();
+            return null;
+        }
+        text += decoder.decode(chunk.value, { stream: true });
+    }
+
+    return text + decoder.decode();
+}
+
 function eventOf(body: unknown): string | null {
     const event = isRecord(body) ? body.hook_event_name : undefined;
     return typeof event === 'string' ? event : null;
@@ -54,9 +73,13 @@ export async function handleHookRequest(
     if (length > MAX_BODY_BYTES) {
         return new Response('Payload too large', { status: 413 });
     }
+    const text = await bodyUpTo(request, MAX_BODY_BYTES);
+    if (text === null) {
+        return new Response('Payload too large', { status: 413 });
+    }
     let body: unknown;
     try {
-        body = await request.json();
+        body = JSON.parse(text);
     } catch {
         return new Response('Body is not JSON', { status: 400 });
     }

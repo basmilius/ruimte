@@ -65,6 +65,32 @@ describe('handleHookRequest', () => {
         expect(unknown.calls).toEqual([]);
     });
 
+    test('stops reading a chunked body of a known token once it passes the limit', async () => {
+        let pulls = 0;
+        const body = new ReadableStream<Uint8Array>(
+            {
+                pull(controller) {
+                    pulls++;
+                    controller.enqueue(new Uint8Array(1024 * 1024).fill(32));
+                    if (pulls === 8) {
+                        controller.close();
+                    }
+                }
+            },
+            { highWaterMark: 0 }
+        );
+        const request = new Request('http://127.0.0.1/hooks/claude', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', authorization: 'Bearer tok' },
+            body
+        });
+        const known = target('applied');
+
+        expect((await handleHookRequest(request, '/hooks/claude', known)).status).toBe(413);
+        expect(pulls).toBeLessThan(8);
+        expect(known.calls).toEqual([]);
+    });
+
     test('turns away a CLI whose hooks the daemon has no normalizer for', async () => {
         const apple = target('applied');
         expect((await handleHookRequest(post('/hooks/apple', '{}', 'x'), '/hooks/apple', apple)).status).toBe(404);
