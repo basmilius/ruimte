@@ -3,8 +3,9 @@ import { createRequire } from 'node:module';
 
 /*
  * The unit run starts no process, also not through production code a test calls, which
- * `check-test-clock.ts` cannot see from the test file's text. Only `bunfig.toml` and
- * `windows-ci.bunfig.toml` load this; the DOM and integration runs have configs of their own.
+ * `check-test-clock.ts` cannot see from the test file's text. Only the unit configs load this
+ * (`bunfig.toml`, `windows-ci.bunfig.toml`, `apps/client/bunfig.toml`); the DOM and integration
+ * runs have configs of their own.
  *
  * A starter throws, and since code under test may catch that, the test also fails afterwards.
  */
