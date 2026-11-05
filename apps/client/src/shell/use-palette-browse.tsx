@@ -532,25 +532,27 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
         ),
         footer: (
             <>
-                <span className="flex shrink-0 items-center gap-1.5">
-                    <Kbd variant="inline">↑</Kbd>
-                    <Kbd variant="inline">↓</Kbd> {t('palette.navigate')}
-                </span>
-                {/* Once the typed path can be opened, the button in the field already shows Enter. */}
-                {linkWait === null && (entries.length > 0 || query.trim() === '') && (
+                {/* Off macOS the keys are written out, so the hints give way before the button does. */}
+                <span className="flex min-w-0 grow items-center gap-3 overflow-hidden">
                     <span className="flex shrink-0 items-center gap-1.5">
-                        <Kbd shortcut={KEY_SHORTCUTS.enter} variant="inline" /> {t('common:action.select')}
+                        <Kbd variant="inline">↑</Kbd>
+                        <Kbd variant="inline">↓</Kbd> {t('palette.navigate')}
                     </span>
-                )}
-                <span className="flex shrink-0 items-center gap-1.5">
-                    <Kbd shortcut={KEY_SHORTCUTS.backspace} variant="inline" /> {t('projectBanner.back')}
+                    {/* Once the typed path can be opened, the button in the field already shows Enter. */}
+                    {linkWait === null && (entries.length > 0 || query.trim() === '') && (
+                        <span className="flex shrink-0 items-center gap-1.5">
+                            <Kbd shortcut={KEY_SHORTCUTS.enter} variant="inline" /> {t('common:action.select')}
+                        </span>
+                    )}
+                    <span className="flex shrink-0 items-center gap-1.5">
+                        <Kbd shortcut={KEY_SHORTCUTS.backspace} variant="inline" /> {t('projectBanner.back')}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1.5">
+                        <Kbd shortcut={KEY_SHORTCUTS.escape} variant="inline" /> {t('common:action.close')}
+                    </span>
                 </span>
-                <span className="flex shrink-0 items-center gap-1.5">
-                    <Kbd shortcut={KEY_SHORTCUTS.escape} variant="inline" /> {t('common:action.close')}
-                </span>
-                <span className="grow" />
                 {failure && (
-                    <span className="truncate text-status-error" role="alert">
+                    <span className="min-w-0 truncate text-status-error" role="alert">
                         {failure}
                     </span>
                 )}
@@ -559,6 +561,7 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
                     <Button
                         size="sm"
                         variant="secondary"
+                        className="shrink-0"
                         onClick={() => void nativeDialog.pickFolder(listing?.result?.parentPath).then((picked) => (picked ? submitPath(picked) : undefined))}
                     >
                         {t('palette.browseIn', { app: fileManagerName(nativeDialog.platform) })}
