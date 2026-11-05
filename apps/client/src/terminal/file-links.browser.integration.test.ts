@@ -115,6 +115,11 @@ async function fixture(
             `${css}\n${terminalCss}\n.pane{position:absolute;width:360px;height:250px;top:0}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0}.flex{display:flex}.flex-col{flex-direction:column}.flex-1{flex:1}.grow{flex-grow:1}.min-h-0{min-height:0}.h-full{height:100%}.editor{position:absolute;top:310px;left:0;width:790px;height:270px}.editor>div{height:100%}svg{width:14px;height:14px}.tooltip-popup{max-width:288px;overflow-wrap:anywhere}`,
             async (view) => {
                 await view.evaluate('window.ready');
+                // WebGL fits more columns than the DOM renderer, and taking it up refits the grid, claiming it back from a size a test set.
+                await waitInPage(
+                    view,
+                    `!document.createElement('canvas').getContext('webgl2') || Object.values(window.instances).every(term=>[...term.element.querySelectorAll('.xterm-screen canvas')].some(canvas=>canvas.classList.length===0))`
+                );
                 await view.evaluate(frame);
                 await run(view);
                 expect(await view.evaluate<string[]>('window.errors')).toEqual([]);
