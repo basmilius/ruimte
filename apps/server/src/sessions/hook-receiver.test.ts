@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { HookResult } from './manager.ts';
 import { handleHookRequest } from './hook-receiver.ts';
+import type { HookResult } from './manager.ts';
 
 function target(result: HookResult) {
     const calls: Array<{ kind: string; token: string; body: unknown }> = [];

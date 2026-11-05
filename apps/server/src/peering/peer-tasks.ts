@@ -22,8 +22,8 @@ import {
     type RuntimeMode,
     type Task
 } from '@ruimte/contracts';
-import type { PendingPromptStore } from '../canvas/pending-prompts.ts';
 import { MAX_AGENT_DEPTH } from '../canvas/depth.ts';
+import type { PendingPromptStore } from '../canvas/pending-prompts.ts';
 import { checkCwd } from '../canvas/project-paths.ts';
 import { taskFirstPrompt } from '../canvas/tasks.ts';
 import { errorText } from '../error-text.ts';

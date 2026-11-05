@@ -1,6 +1,6 @@
 import { ToolRefusal, field, lengthOf, orNote } from '@adecore/agents/context';
 import type { AgentLineageStore, Notice, ChatRequests, TaskVerbs } from '@adecore/agents/coordination';
-import { MAX_TITLE_LENGTH } from '@ruimte/actions';
+import { MAX_TITLE_LENGTH, type ActionOutput } from '@ruimte/actions';
 import {
     isCanvasView,
     isHiddenCanvasView,
@@ -14,7 +14,6 @@ import {
     type ChatAttachment,
     type ChatItem,
     type ChatForkResult,
-    type ChatVisual,
     type CliVersion,
     type GitDiffResult,
     type LaunchConfig,
@@ -31,9 +30,6 @@ import {
     type UsageLimitsSnapshot,
     type RuntimeMode,
     type ModelSelection,
-    type VisualAppearance,
-    type VisualHeight,
-    type VisualLayout,
     type Worktree,
     type WorktreeMergePayload,
     type WorktreeMergeResult
@@ -41,16 +37,11 @@ import {
 import { z } from 'zod';
 import type { Artifacts } from '../artifacts/artifacts.ts';
 import type { DriveOutcome, ShotOutcome } from '../browser/drive.ts';
-import type { AgentForkInput, ForkOpener } from '../chat/fork.ts';
 import type { ComputerUse } from '../computer/computer-use.ts';
-import type { ContextReading } from '../context/context-store.ts';
-import type { NoticeDelivery } from '../context/notices.ts';
 import type { DatabaseAgentHost } from '../database/agent-databases.ts';
 import type { DeviceDriver } from '../devices/agent-driver.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { AgentLanguage } from '../language/agent-language.ts';
-import type { StartRemoteAgentPayload } from '../outbox/outbox.ts';
-import type { UntrustedFolders } from '../projects/untrusted.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
 import type { DiagramStore } from '../projects/diagram-store.ts';
 import type { DrawingStore } from '../projects/drawing-store.ts';
@@ -59,15 +50,58 @@ import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProposalAnswer, ProposalAsk } from '../projects/project-proposals.ts';
 import type { ProjectMutation, ProjectStore } from '../projects/project-store.ts';
 import { referencesDirectly, type Reference } from '../projects/references.ts';
-import type { SnoozeStore } from '../push/snoozes.ts';
+import type { UntrustedFolders } from '../projects/untrusted.ts';
 import type { SecretAsk, SecretOutcome } from '../secrets/secret-requests.ts';
 import type { TemplateStore } from '../templates/template-store.ts';
-import type { VisualPreview } from '../visuals/renderer.ts';
+import type { VisualHost } from '../visuals/agent-host.ts';
 import type { ReachHost } from './reach.ts';
+import type { StartRemoteAgentPayload } from './remote-agent.ts';
 import type { StartClaims } from './start-claims.ts';
 
 // The tools and actions reach the one sanitizer through the module they already import.
 export { DRY_RUN_PREVIEW, field, lengthOf, orNote, requiredField } from '@adecore/agents/context';
+
+/*
+ * The agent that forks a chat it opened itself. The fork becomes its child: one deeper than the agent,
+ * no wider than its mode, and counted against it. `recount` runs under the lock of the write, since
+ * a start at the same moment read the same count.
+ */
+export interface ForkOpener {
+    id: string;
+    depth: number;
+    ceiling: RuntimeMode;
+    recount(): void;
+}
+
+/* What an agent may ask of a fork: the person's choices of CLI, account, model, view and files stay theirs. */
+export interface AgentForkInput {
+    chatId: string;
+    /* Null forks after the last turn that finished. */
+    turnId: string | null;
+    title?: string;
+    branch?: string;
+}
+
+/* The usage a read of a chat starts with, in the fields `context.read` answers. */
+export type ChatReadUsage = NonNullable<ActionOutput<'context.read'>['usage']>;
+
+/* A source as text, and for a chat the usage its first line says in words. */
+export interface ContextReading {
+    text: string;
+    usage?: ChatReadUsage;
+    /* The png a read in form image wrote. */
+    image?: string;
+}
+
+/* Where a message went: onto a screen now, into a turn the chat is owed, or into a queue it waits in. */
+export interface NoticeDelivery {
+    at: 'now' | 'waiting';
+    detail: string;
+    /* Whether the receiving chat is owed a turn on this message; the daemon's outbox is what opens it. */
+    wake: boolean;
+    /* Whether the message may join the turn the chat is running. */
+    inTurn?: boolean;
+}
 
 /* A worktree a tool asks for: a new branch named after a title, or the branch it was given. */
 export type WorktreeWant = ({ fresh: string } | { branch: string }) & { base?: string };
@@ -158,7 +192,7 @@ export interface CanvasHost {
     /* What came from another machine and so never runs on the configuration of its files; absent on a host that works with none. */
     untrusted?: Pick<UntrustedFolders, 'node' | 'inFolder' | 'fromPeer'>;
     /* When a person's snooze on a node ends, in epoch milliseconds; absent on a host without snoozes. */
-    snoozes?: Pick<SnoozeStore, 'until'>;
+    snoozes?: { until(nodeId: string): number | null };
     /* The Output of the caller's project, where results that should stay are kept; absent on a host that keeps none. */
     artifacts?: Pick<Artifacts, 'publish' | 'list' | 'read'>;
     /* The routines of the caller's project as an agent may reach them; absent on a host that keeps none. */
@@ -288,20 +322,6 @@ export type LanguageAgentHost = Pick<
     AgentLanguage,
     'diagnostics' | 'hover' | 'definition' | 'references' | 'symbols' | 'sqlFile' | 'problems' | 'supertypes' | 'subtypes'
 >;
-
-/* `enabled` is the machine's switch that lets an agent show a new visual. */
-export interface VisualHost {
-    enabled(): boolean;
-    writeSource?(chatId: string, name: string, html: string): Promise<string>;
-    /* Refuses with the store's own code, `visual-invalid` or `visual-too-large`, and a message that says what to change. */
-    publish(chatId: string, input: { title: string; html: string; maxHeight?: number; layout?: VisualLayout; heights?: VisualHeight[] }): Promise<ChatVisual>;
-    list(chatId: string): Promise<ChatVisual[]>;
-    remove(chatId: string, visualId: string): Promise<ChatVisual[]>;
-    /* Refuses with `preview-unavailable`, `preview-timeout` or `preview-failed`; absent on a host that renders no page. */
-    preview?(chatId: string, input: { html: string; width: number; appearance: VisualAppearance }): Promise<VisualPreview>;
-    /* Undefined when measuring took too long or failed, which never stops a page from being shown. */
-    measure?(html: string): Promise<VisualHeight[] | undefined>;
-}
 
 /* Puts an image or a model the caller's agent has of its own in the thread of its chat; the bytes arrive checked. */
 interface AgentImageHost {

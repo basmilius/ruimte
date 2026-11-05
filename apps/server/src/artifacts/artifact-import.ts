@@ -9,9 +9,13 @@ import {
     type ArtifactVersion,
     type PeerArtifactReadResult
 } from '@ruimte/contracts';
-import type { PeerLink } from '../remote/peer-connection.ts';
 import { ArtifactError } from './artifact-names.ts';
 import type { ArtifactStore } from './artifact-store.ts';
+
+/* What an import asks of an open link to another machine. */
+interface PeerRequests {
+    request<T>(type: string, payload: unknown): Promise<T>;
+}
 
 interface ArtifactImportDeps {
     store: ArtifactStore;
@@ -20,7 +24,7 @@ interface ArtifactImportDeps {
     /* The project on that machine the project here is linked to; null without a link. */
     remoteProjectOf(projectId: string, machineId: string): string | null;
     /* An open link to that machine; its `request` reads every answer with the schema of the request (`checkedReply`). */
-    connect(machineId: string): Promise<Pick<PeerLink, 'request'>>;
+    connect(machineId: string): Promise<PeerRequests>;
 }
 
 /* The request id a copy of one version saves under, so asking twice lands once. */
@@ -126,7 +130,7 @@ export class ArtifactImporter {
 
     /* Reads one file a piece at a time into staging and refuses it unless it is exactly the bytes the manifest names. */
     private async fetchFile(
-        link: Pick<PeerLink, 'request'>,
+        link: PeerRequests,
         place: { projectId: string; artifactId: string; version: ArtifactVersion; index: number; file: ArtifactFile },
         stagingId: string
     ): Promise<void> {

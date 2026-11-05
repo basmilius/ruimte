@@ -18,7 +18,6 @@ import {
 } from '@ruimte/contracts';
 import { AccountSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
-import { HOOKS_PATH, handleHookRequest } from '../sessions/hook-receiver.ts';
 import { crossOriginHeaders, decideAccess, handleLocalTicketRequest, isOwner, preflightHeaders, withHeaders } from '../auth/access.ts';
 import { handleLocalProofRequest } from '../auth/local-proof.ts';
 import { MachineAccountError, signForAccount, signLinkRequest } from '../auth/registration.ts';
@@ -36,6 +35,7 @@ import { handleMcpRequest, MCP_PATH, MCP_REQUEST_TIMEOUT_S } from '../mcp/mcp-ro
 import { handleProjectRequest, PROJECTS_PATH } from '../projects/icon-route.ts';
 import { noteOnLine } from '../providers/launch.ts';
 import { handleMachineNotify } from '../push/notify-route.ts';
+import { HOOKS_PATH, handleHookRequest } from '../sessions/hook-receiver.ts';
 import { shotFolders } from '../shots.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from '../streams/http-stream.ts';
 import { BUILD, VERSION } from '../version.ts';

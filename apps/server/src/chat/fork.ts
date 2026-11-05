@@ -34,7 +34,7 @@ import {
     type Worktree
 } from '@ruimte/contracts';
 import { agentNode, nameOf } from '../canvas/agents.ts';
-import type { CanvasHost, MachineHost, ProjectHost, WorktreeWant } from '../canvas/host.ts';
+import type { AgentForkInput, CanvasHost, ForkOpener, MachineHost, ProjectHost, WorktreeWant } from '../canvas/host.ts';
 import { MAX_CANVAS_NODES, newId } from '../canvas/nodes.ts';
 import { placeFree } from '../canvas/placement.ts';
 import { branchSlug } from '../canvas/worktree.ts';
@@ -112,27 +112,6 @@ export interface ChatForkDeps {
 }
 
 const MAX_TITLE = 120;
-
-/*
- * The agent that forks a chat it opened itself. The fork becomes its child: one deeper than the agent,
- * no wider than its mode, and counted against it. `recount` runs under the lock of the write, since
- * a start at the same moment read the same count.
- */
-export interface ForkOpener {
-    id: string;
-    depth: number;
-    ceiling: RuntimeMode;
-    recount(): void;
-}
-
-/* What an agent may ask of a fork: the person's choices of CLI, account, model, view and files stay theirs. */
-export interface AgentForkInput {
-    chatId: string;
-    /* Null forks after the last turn that finished. */
-    turnId: string | null;
-    title?: string;
-    branch?: string;
-}
 
 /* The items up to and including a turn (its own and those of every turn before it), plus what belonged to no turn before its end. */
 export function itemsThrough(items: readonly ChatItem[], turnId: string): ChatItem[] {

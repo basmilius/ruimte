@@ -3,8 +3,9 @@ import { renderTranscript } from '@adecore/agents/context';
 import { renderPlanText } from '@adecore/plan';
 import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
 import type { PageReading } from '../browser/drive.ts';
+import type { ContextReading } from '../canvas/host.ts';
 import type { Reference } from '../projects/references.ts';
-import { chatReadUsage, chatUsageLine, type ChatReadUsage, type ChatUsageInfo } from './chat-usage.ts';
+import { chatReadUsage, chatUsageLine, type ChatUsageInfo } from './chat-usage.ts';
 import { renderPage } from './context-browser.ts';
 import { renderDevice } from './context-device.ts';
 import { renderDiagram } from './context-diagram.ts';
@@ -76,14 +77,6 @@ interface ContextReaders {
     /* The model and usage of a chat, which a read of it starts with; null when there is none. */
     chatInfo?(chatId: string): ChatUsageInfo | null | Promise<ChatUsageInfo | null>;
     now?(): number;
-}
-
-/* A source as text, and for a chat the usage its first line says in words. */
-export interface ContextReading {
-    text: string;
-    usage?: ChatReadUsage;
-    /* The png a read in form image wrote. */
-    image?: string;
 }
 
 /*

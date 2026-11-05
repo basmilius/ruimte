@@ -1,7 +1,5 @@
-import type { ActionOutput } from '@ruimte/actions';
 import type { ChatInfo } from '@ruimte/contracts';
-
-export type ChatReadUsage = NonNullable<ActionOutput<'context.read'>['usage']>;
+import type { ChatReadUsage } from '../canvas/host.ts';
 
 export type ChatUsageInfo = Pick<ChatInfo, 'provider' | 'model' | 'selection' | 'usage'>;
 

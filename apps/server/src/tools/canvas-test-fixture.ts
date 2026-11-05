@@ -20,10 +20,9 @@ import {
     type Worktree
 } from '@ruimte/contracts';
 import { ArtifactError } from '../artifacts/artifact-names.ts';
-import type { AgentStart, CanvasHost } from '../canvas/host.ts';
+import type { AgentStart, CanvasHost, NoticeDelivery } from '../canvas/host.ts';
 import { StartClaims } from '../canvas/start-claims.ts';
 import { ManualTimers } from '../computer/computer-test-helpers.ts';
-import type { NoticeDelivery } from '../context/notices.ts';
 import { DatabaseAccessStore } from '../database/agent-access.ts';
 import { AgentDatabases } from '../database/agent-databases.ts';
 import { DatabasePasswords } from '../database/agent-passwords.ts';
