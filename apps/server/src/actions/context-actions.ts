@@ -6,8 +6,8 @@ import { arrangedCanvas, canvasHolding, isChatView, notOnView, viewRequired } fr
 import { snoozedAt, type ContextHost } from '../canvas/host.ts';
 import { refuseOtherMachine } from '../canvas/remote-node.ts';
 import { ContextRefusal } from '../context/context-store.ts';
-import { readInForm, readReference } from '../context/read-forms.ts';
 import { resolveReference, type Reference } from '../projects/references.ts';
+import { readInForm, readReference } from './context-read-forms.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 function contextOf(context: ServerActionContext): ContextHost {

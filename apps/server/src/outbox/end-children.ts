@@ -1,6 +1,6 @@
 import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { endChildren } from '@adecore/agents/coordination';
-import { isVoiceActor } from '../actions/context.ts';
+import { isVoiceActor } from '../canvas/depth.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
 import type { SessionManager } from '../sessions/manager.ts';

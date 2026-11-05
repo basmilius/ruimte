@@ -1,5 +1,6 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionCall } from '@ruimte/actions';
+import { voiceActorId } from '../canvas/depth.ts';
 import { type CanvasHost, type ProjectHost, type AgentCall } from '../canvas/host.ts';
 import { callerKind } from '../canvas/tasks.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
@@ -177,18 +178,6 @@ export function serverActionCall(
         dryRun,
         ...(expectedRevision === undefined ? {} : { expectedRevision })
     };
-}
-
-const VOICE_ACTOR_PREFIX = 'voice:';
-
-/* The actor id of a Voice session, apart from every node id, which is what a lineage or a claim is kept under. */
-function voiceActorId(sessionId: string): string {
-    return `${VOICE_ACTOR_PREFIX}${sessionId}`;
-}
-
-/* Whether an opener in the lineage is a Voice session, which no project places. */
-export function isVoiceActor(id: string): boolean {
-    return id.startsWith(VOICE_ACTOR_PREFIX);
 }
 
 /*

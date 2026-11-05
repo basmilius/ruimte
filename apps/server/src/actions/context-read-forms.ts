@@ -3,15 +3,15 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { toSvg as diagramSvg } from '@adecore/diagram';
 import { DEFAULT_PALETTE, toSvg as drawingSvg } from '@adecore/drawing';
 import { VISUAL_LIMITS, isCanvasView, type ContextSource, type DrawingElement } from '@ruimte/contracts';
-import type { ServerActionContext } from '../actions/context.ts';
-import { callerChat } from '../actions/visual-actions.ts';
 import type { ContextReading } from '../canvas/host.ts';
+import { canvasSvg, renderCanvas } from '../context/context-canvas.ts';
+import { renderDatabaseView } from '../context/context-database.ts';
+import { ContextRefusal } from '../context/context-store.ts';
 import type { Reference } from '../projects/references.ts';
 import { SHOT_MAX_HEIGHT } from '../visuals/render-protocol.ts';
 import { PREVIEW_WIDTH } from '../visuals/renderer.ts';
-import { canvasSvg, renderCanvas } from './context-canvas.ts';
-import { renderDatabaseView } from './context-database.ts';
-import { ContextRefusal } from './context-store.ts';
+import type { ServerActionContext } from './context.ts';
+import { callerChat } from './visual-actions.ts';
 
 export type ReadForm = 'elements' | 'image';
 

@@ -13,15 +13,10 @@ import {
 import type { Task } from '@ruimte/contracts';
 import type { PendingPromptStore } from '../canvas/pending-prompts.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
-import { wireSummaries, type SummaryWiring } from '../chat/summary.ts';
 import { MESSAGE_WORDS } from '../context/notices.ts';
 import { errorText } from '../error-text.ts';
 import type { PrWatchStore } from '../github/pr-watch.ts';
-import { placesOf } from '../projects/project-index.ts';
-import type { ProjectStore } from '../projects/project-store.ts';
-import type { SessionManager } from '../sessions/manager.ts';
-import { wireTasks, type TaskWiring } from '../tasks/wiring.ts';
-import { wireEndChildren, type EndChildrenWiring } from './end-children.ts';
+import { wireEndChildren, type EndChildrenWiring } from '../outbox/end-children.ts';
 import type {
     ConnectPeerEntry,
     DeliverRemoteResultEntry,
@@ -32,8 +27,13 @@ import type {
     StartRemoteAgentEntry,
     StopRemoteAgentEntry,
     TakeRemoteResultEntry
-} from './outbox.ts';
-import { startAgentHandler } from './start-agent.ts';
+} from '../outbox/outbox.ts';
+import { startAgentHandler } from '../outbox/start-agent.ts';
+import { wireSummaries, type SummaryWiring } from '../outbox/summary.ts';
+import { placesOf } from '../projects/project-index.ts';
+import type { ProjectStore } from '../projects/project-store.ts';
+import type { SessionManager } from '../sessions/manager.ts';
+import { wireTasks, type TaskWiring } from '../tasks/wiring.ts';
 
 interface OutboxLinkOptions {
     outbox: OutboxStore;

@@ -1,6 +1,5 @@
 import { join } from 'node:path';
 import type { OutboxWorker } from '@adecore/agents/coordination';
-import type { SummaryWiring } from '../chat/summary.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { errorText } from '../error-text.ts';
 import { BundleStore } from '../git/bundles.ts';
@@ -10,7 +9,7 @@ import { PrWatchStore } from '../github/pr-watch.ts';
 import { AfterSettleStore } from '../launches/after-settle.ts';
 import type { EndChildrenWiring } from '../outbox/end-children.ts';
 import type { OutboxWork } from '../outbox/outbox.ts';
-import { wireOutbox } from '../outbox/wiring.ts';
+import type { SummaryWiring } from '../outbox/summary.ts';
 import { PeerTasks } from '../peering/peer-tasks.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { PushService } from '../push/service.ts';
@@ -24,6 +23,7 @@ import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { ClientsBundle } from './clients.ts';
 import type { GitBundle } from './git.ts';
 import type { LaunchesBundle } from './launches.ts';
+import { wireOutbox } from './outbox.ts';
 import type { ProvidersBundle } from './providers.ts';
 import type { RemoteBundle } from './remote.ts';
 
