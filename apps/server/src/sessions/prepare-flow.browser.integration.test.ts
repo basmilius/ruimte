@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { access } from 'node:fs/promises';
 import { join } from 'node:path';
-import { withBrowserFixture, clientDirectory } from '../../../client/testing/browser-fixture.ts';
+import { clientDirectory, waitInPage, withBrowserFixture } from '../../../client/testing/browser-fixture.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { registerTerminalPrepareHandlers } from '../handlers/terminal-prepare.ts';
 import { hasPrepareSource } from './prepare-source.ts';
@@ -72,11 +72,9 @@ for (const change of ['none', 'busy', 'input', 'refused', 'lost-ack', 'lost-ack-
                 window.changeLanguage = language => i18next.changeLanguage(language);
                 window.pasteButton = () => [...document.querySelectorAll('button')].find(button => button.textContent === i18next.t('chat:prepare.paste'));
                 useEndpoints.setState({ endpoints: [{ id: 'remote', daemonId: 'owner', label: 'Remote build machine' }], activeId: 'local' });
-                window.pending = Promise.resolve();
                 const transport = { status: 'open', request(type, payload) {
-                    const work = fetch('http://127.0.0.1:${server.port}', { method: 'POST', body: JSON.stringify({ id: crypto.randomUUID(), type, payload }) })
+                    return fetch('http://127.0.0.1:${server.port}', { method: 'POST', body: JSON.stringify({ id: crypto.randomUUID(), type, payload }) })
                         .then(response => response.json()).then(reply => { if (!reply.ok) throw new TransportError(reply.error.code, reply.error.message); return reply.result; });
-                    window.pending = work.catch(() => {}); return work;
                 }};
                 const registry = new ActionRegistry(terminalPrepareActions({ machineId: id => id === 'remote' ? 'owner' : null, transport: id => id === 'remote' ? transport : null }));
                 clientActions.execute = registry.execute.bind(registry);
@@ -106,8 +104,8 @@ for (const change of ['none', 'busy', 'input', 'refused', 'lost-ack', 'lost-ack-
                     expect(calls).toEqual([]);
                     expect((await f.session.shellPrompt.inspect())?.empty).toBe(true);
                     await view.evaluate('window.prepareButton().click()');
-                    await view.evaluate('window.pending');
-                    await view.evaluate(frame);
+                    // The dialog opens once the preview's request has come back, which a frame after the click does not promise.
+                    await waitInPage(view, '!!document.querySelector("[role=dialog] pre")');
                     expect(await view.evaluate<string>('document.querySelector("[role=dialog]").textContent')).toContain('Remote build machine');
                     expect(await view.evaluate<string>('document.querySelector("[role=dialog]").textContent')).toContain(f.home);
                     expect(await view.evaluate<string>('document.querySelector("[role=dialog] pre").textContent')).toBe(command);
@@ -128,8 +126,7 @@ for (const change of ['none', 'busy', 'input', 'refused', 'lost-ack', 'lost-ack-
                         await view.evaluate(frame);
                     }
                     await view.evaluate('window.pasteButton().click()');
-                    await view.evaluate('window.pending');
-                    await view.evaluate(frame);
+                    await waitInPage(view, change === 'none' ? '!document.querySelector("[role=dialog]")' : '!!document.querySelector("[role=alert]")');
                     expect(calls).toEqual(['session.preparePreview', 'session.prepare']);
                     const screen = await f.session.plainText();
                     if (change === 'none' || lostAck) {
