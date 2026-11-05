@@ -5,8 +5,8 @@ import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { ProjectChatView } from '@ruimte/contracts';
 import { initRepo } from '../git/test-repo.ts';
-import { chatViewsOf, projectLinks } from './project-file-test-helpers.ts';
-import { ProjectStore } from './project-store.ts';
+import { chatViewsOf, projectLinks } from '../projects/project-file-test-helpers.ts';
+import { ProjectStore } from '../projects/project-store.ts';
 import { dropEmptyMark, newScratchChat, scratchFolderOf } from './scratch-project.ts';
 
 let root: string;

@@ -3,6 +3,7 @@ import { renderTranscript } from '@adecore/agents/context';
 import { renderPlanText } from '@adecore/plan';
 import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
 import type { PageReading } from '../browser/drive.ts';
+import type { Reference } from '../projects/references.ts';
 import { chatReadUsage, chatUsageLine, type ChatReadUsage, type ChatUsageInfo } from './chat-usage.ts';
 import { renderPage } from './context-browser.ts';
 import { renderDevice } from './context-device.ts';
@@ -10,7 +11,6 @@ import { renderDiagram } from './context-diagram.ts';
 import { renderDrawing } from './context-drawing.ts';
 import { contextChangeNote } from './context-note.ts';
 import { readRefusal } from './read-refusal.ts';
-import type { Reference } from './references.ts';
 
 export const CONTEXT_PATH = '/context';
 

@@ -9,8 +9,8 @@ import {
     type ProjectNewInlineChatPayload,
     type ProjectNewInlineChatResult
 } from '@ruimte/contracts';
+import { newChatId } from '../chat/scratch-project.ts';
 import type { ProjectStore } from './project-store.ts';
-import { newChatId } from './scratch-project.ts';
 
 class InlineChatError extends CodedError<'project-not-found' | 'inline-path-outside' | 'inline-chat-not-found'> {}
 

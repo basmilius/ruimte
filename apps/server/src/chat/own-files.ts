@@ -3,10 +3,10 @@ import { cp, mkdir, readdir, rm, rmdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { hasErrorCode, isNotFound } from '@adecore/utils/errors';
 import { entryExists } from '@adecore/utils/fs';
-import { ChatError } from '../chat/errors.ts';
 import { renameNoReplace } from '../disk/no-replace-rename.ts';
 import { isPathSegment } from '../disk/path-segment.ts';
 import { errorText } from '../error-text.ts';
+import { ChatError } from './errors.ts';
 
 interface MovedOwnFiles {
     /* The top-level names that arrived in the target. */

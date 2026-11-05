@@ -7,6 +7,8 @@ import { ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
 import { FakeWatch, ManualClock } from '@adecore/agents/testing';
 import type { ChatMovePayload } from '@ruimte/contracts';
 import { MachineHome } from '../disk/machine-home.ts';
+import { OUTSIDE_CHECKOUT, privateFileOnDisk, projectLinks } from '../projects/project-file-test-helpers.ts';
+import { ProjectStore } from '../projects/project-store.ts';
 import { claudeApiConfigDir, createAnthropicClaudeApiProvider } from '../providers/anthropic-claude-api-provider.ts';
 import { AnthropicClaudeApiService } from '../providers/anthropic-claude-api-service.ts';
 import { SnoozeStore } from '../push/snoozes.ts';
@@ -15,8 +17,6 @@ import { chatMoveDeps, type ChatMoveWiring } from '../wiring/chat-move.ts';
 import { moveChat, type MoveChatDeps } from './move-chat.ts';
 import { MoveJournal } from './move-journal.ts';
 import { moveOwnFiles } from './own-files.ts';
-import { OUTSIDE_CHECKOUT, privateFileOnDisk, projectLinks } from './project-file-test-helpers.ts';
-import { ProjectStore } from './project-store.ts';
 import { newScratchChat } from './scratch-project.ts';
 
 const FAILED = new Error('injected');

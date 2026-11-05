@@ -23,8 +23,8 @@ import {
     type ViewSessionNode,
     viewChats
 } from '@ruimte/contracts';
-import type { HiddenAgentStore } from '../agents/hidden-agents.ts';
-import { resolveReference, type Reference } from '../context/references.ts';
+import type { HiddenAgentStore } from './hidden-agents.ts';
+import { resolveReference, type Reference } from './references.ts';
 
 /* Where an id sits: the project it belongs to, and the canvas it is a node on (null for a chat,
    terminal or browser that is a view of its own). */

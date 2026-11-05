@@ -29,6 +29,7 @@ import type { CheckpointService } from '../git/checkpoints.ts';
 import { git } from '../git/run.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import type { OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
+import { peerCanvasId, type PeerLinks } from '../projects/peer-links.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { DEFAULT_RUNTIME_MODE } from '../providers/launch.ts';
 import { providerFor } from '../providers/registry.ts';
@@ -36,7 +37,6 @@ import { peerTarget } from '../remote/connect-peer.ts';
 import { MAX_AGENT_DEPTH } from '../tools/depth.ts';
 import { checkCwd } from '../tools/project-paths.ts';
 import { taskFirstPrompt } from '../tools/tasks.ts';
-import { peerCanvasId, type PeerLinks } from './links.ts';
 import { idTakenOutside, nodeOf, sameCanvas, stripHidden } from './peer-canvas.ts';
 
 /* What a machine that works here is given of this one: its tasks, bundles and holds, each judged by the link a person made. */

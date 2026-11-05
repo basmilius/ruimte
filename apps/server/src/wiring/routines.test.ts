@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { referenceNote, type Reference } from '../context/references.ts';
+import { referenceNote, type Reference } from '../projects/references.ts';
 import { continuedBrief } from './routines.ts';
 
 const SKETCH: Reference = { id: 'sketch', kind: 'drawing', name: 'Sketch', canvas: null, sources: [] };

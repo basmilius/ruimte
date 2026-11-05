@@ -1,11 +1,7 @@
 import { join } from 'node:path';
 import { RecordDirectory } from '@adecore/agents';
-import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { ProjectNodeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
-import type { ChatManager } from '../chat/chat-manager.ts';
-import type { OutboxStore } from '../outbox/outbox.ts';
-import type { SessionManager } from '../sessions/manager.ts';
 
 const HiddenAgentSchema = z.object({
     projectId: z.string().min(1),
@@ -14,33 +10,6 @@ const HiddenAgentSchema = z.object({
 });
 
 export type HiddenAgent = z.infer<typeof HiddenAgentSchema>;
-
-/* The agents a caller holds open: a hidden one counts only while it still runs, has an open task or is owed work. */
-export function openedAgentCount(
-    deps: {
-        lineage: AgentLineageStore;
-        hiddenAgents: HiddenAgentStore;
-        tasks: TaskStore;
-        outbox: OutboxStore;
-        chats: Pick<ChatManager, 'get'>;
-        sessions: Pick<SessionManager, 'get'>;
-    },
-    caller: string
-): number {
-    return deps.lineage.openedCount(caller, (id) => {
-        if (deps.hiddenAgents.get(id) === undefined) {
-            return true;
-        }
-        const status = deps.chats.get(id)?.info.status;
-        return (
-            status === 'running' ||
-            status === 'needs-you' ||
-            deps.sessions.get(id)?.exited === false ||
-            deps.tasks.involving(id).some((task) => task.childId === id && task.status === 'open') ||
-            deps.outbox.list().some((entry) => entry.target === id)
-        );
-    });
-}
 
 // Hidden sessions belong to their parent chat, so they never enter a project's views or shared file.
 export class HiddenAgentStore {

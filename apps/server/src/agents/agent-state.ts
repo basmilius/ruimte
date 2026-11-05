@@ -1,6 +1,7 @@
-import type { AgentLineageStore } from '@adecore/agents/coordination';
+import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { OutboxStore } from '../outbox/outbox.ts';
+import type { HiddenAgentStore } from '../projects/hidden-agents.ts';
 import type { SessionManager } from '../sessions/manager.ts';
 import type { AgentStateHost } from '../tools/host.ts';
 
@@ -49,4 +50,31 @@ export function agentStates(sources: AgentStateSources): AgentStateHost {
             return true;
         }
     };
+}
+
+/* The agents a caller holds open: a hidden one counts only while it still runs, has an open task or is owed work. */
+export function openedAgentCount(
+    deps: {
+        lineage: AgentLineageStore;
+        hiddenAgents: HiddenAgentStore;
+        tasks: TaskStore;
+        outbox: Pick<OutboxStore, 'list'>;
+        chats: Pick<ChatManager, 'get'>;
+        sessions: Pick<SessionManager, 'get'>;
+    },
+    caller: string
+): number {
+    return deps.lineage.openedCount(caller, (id) => {
+        if (deps.hiddenAgents.get(id) === undefined) {
+            return true;
+        }
+        const status = deps.chats.get(id)?.info.status;
+        return (
+            status === 'running' ||
+            status === 'needs-you' ||
+            deps.sessions.get(id)?.exited === false ||
+            deps.tasks.involving(id).some((task) => task.childId === id && task.status === 'open') ||
+            deps.outbox.list().some((entry) => entry.target === id)
+        );
+    });
 }

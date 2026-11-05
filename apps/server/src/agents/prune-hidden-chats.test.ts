@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, jest, test } from 'bun:test';
 import { AgentLineageStore } from '@adecore/agents/coordination';
 import type { Task } from '@ruimte/contracts';
+import { HiddenAgentStore } from '../projects/hidden-agents.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
-import { HiddenAgentStore } from './hidden-agents.ts';
 import { HIDDEN_CHAT_KEEP_MS, pruneHiddenChats, type HiddenChatPruning } from './prune-hidden-chats.ts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;

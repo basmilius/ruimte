@@ -13,7 +13,7 @@ import { worktreeAgents } from '../git/worktree-agents.ts';
 import { checkoutHost } from '../git/worktree-host.ts';
 import { WorktreeMerge } from '../git/worktree-merge.ts';
 import { Worktrees } from '../git/worktrees.ts';
-import type { PeerLinks } from '../peering/links.ts';
+import type { PeerLinks } from '../projects/peer-links.ts';
 import type { CheckoutHost } from '../tools/host.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
 import type { AgentsBundle } from './agents.ts';

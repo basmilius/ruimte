@@ -1,7 +1,7 @@
 import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import type { ChatManager } from '../chat/chat-manager.ts';
+import type { HiddenAgentStore } from '../projects/hidden-agents.ts';
 import type { ProjectIndex } from '../projects/project-index.ts';
-import type { HiddenAgentStore } from './hidden-agents.ts';
 
 // How long a hidden agent's chat stays after its task settled; its parent keeps the task's result.
 export const HIDDEN_CHAT_KEEP_MS = 30 * 24 * 60 * 60 * 1000;

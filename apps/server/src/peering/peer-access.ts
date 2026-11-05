@@ -1,6 +1,6 @@
 import { CodedError } from '@adecore/agents';
+import type { PeerLinks } from '../projects/peer-links.ts';
 import type { ClientConnection } from '../wire.ts';
-import type { PeerLinks } from './links.ts';
 
 /*
  * The machine behind this client, once a person here linked a project to it. Every `peer.*` request starts with

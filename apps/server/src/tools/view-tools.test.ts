@@ -13,7 +13,7 @@ import {
     PROJECT_ICON_NAMES,
     type ProjectCanvasView
 } from '@ruimte/contracts';
-import { peerCanvasId } from '../peering/links.ts';
+import { peerCanvasId } from '../projects/peer-links.ts';
 import { rawPrivateViews, setPrivateViews } from '../projects/project-file-test-helpers.ts';
 import {
     canvasFixture,

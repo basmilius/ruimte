@@ -60,8 +60,8 @@ import type {
     LanguageWillSavePayload
 } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
+import { isDirectory } from '../disk/is-directory.ts';
 import { errorText } from '../error-text.ts';
-import { isDirectory } from '../fs/browse.ts';
 import type { SessionEvent, SessionSink } from '../wire.ts';
 import { LanguageChoices } from './choices.ts';
 import { CustomLanguageServers, customProfile, UnsavedRemoval } from './custom.ts';

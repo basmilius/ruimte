@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { isEmptyChatView, type ProjectChatView, type ProjectNewChatPayload, type ProjectNewChatResult, type ProjectView } from '@ruimte/contracts';
 import { git } from '../git/run.ts';
-import type { ProjectStore } from './project-store.ts';
+import type { ProjectStore } from '../projects/project-store.ts';
 
 class ScratchError extends CodedError<'scratch-unavailable'> {}
 

@@ -1,8 +1,8 @@
 import { CodedError } from '@adecore/agents';
 import type { Artifacts } from '../artifacts/artifacts.ts';
 import { type Dispatcher } from '../dispatcher.ts';
-import type { PeerLinks } from '../peering/links.ts';
 import { requirePeerLinks } from '../peering/peer-access.ts';
+import type { PeerLinks } from '../projects/peer-links.ts';
 import type { ClientConnection } from '../wire.ts';
 
 /*

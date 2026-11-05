@@ -33,11 +33,11 @@ import {
     type ProjectView,
     type Worktree
 } from '@ruimte/contracts';
-import type { HiddenAgent, HiddenAgentStore } from '../agents/hidden-agents.ts';
 import { errorText } from '../error-text.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
 import { git } from '../git/run.ts';
 import { freeBranch, type Worktrees } from '../git/worktrees.ts';
+import type { HiddenAgent, HiddenAgentStore } from '../projects/hidden-agents.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
 import { agentNode, nameOf } from '../tools/agents.ts';

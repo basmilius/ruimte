@@ -3,9 +3,9 @@ import { dirname, join, resolve } from 'node:path';
 import { entryExists } from '@adecore/utils/fs';
 import { isWithin } from '@adecore/utils/path';
 import type { ChatItem, ChatMoveInfoPayload, ChatMoveInfoResult, ChatMoveRefusal, ChatMoveTarget } from '@ruimte/contracts';
-import { workedFolders } from '../chat/worked-folders.ts';
-import { referencedIds } from '../context/references.ts';
+import { referencedIds } from '../projects/references.ts';
 import { IGNORED_OWN_NAMES } from './own-files.ts';
+import { workedFolders } from './worked-folders.ts';
 
 const MAX_FOLDERS = 5;
 const MAX_NAMES = 5;

@@ -8,10 +8,10 @@ import { Dispatcher } from '../dispatcher.ts';
 import { BundleStore } from '../git/bundles.ts';
 import { registerPeerTaskHandlers } from '../handlers/peer-tasks.ts';
 import type { OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
+import { PeerLinks, peerCanvasId } from '../projects/peer-links.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { taskFirstPrompt } from '../tools/tasks.ts';
 import type { ClientConnection } from '../wire.ts';
-import { PeerLinks, peerCanvasId } from './links.ts';
 import { PEER_MAX_BRANCH_LENGTH, PEER_MAX_WORKTREES, PeerTasks, peerCaller, type PeerTasksDeps } from './peer-tasks.ts';
 
 const MACHINE = 'machine-a';

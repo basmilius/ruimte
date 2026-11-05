@@ -3,11 +3,11 @@ import type { PeerStatement } from '@ruimte/pulsar';
 import { statementAccountRefusal, type AccountBinding } from '../auth/auth-store.ts';
 import { type Dispatcher } from '../dispatcher.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
+import type { RemoteStore } from '../projects/remote-store.ts';
 import { peerStatementSigned } from '../pulsar/statement.ts';
 import type { PeerMachines } from '../remote/peer-machines.ts';
 import type { PendingAdmissions } from '../remote/pending-admissions.ts';
 import type { RemoteConnections } from '../remote/remote-connections.ts';
-import type { RemoteStore } from '../remote/remote-store.ts';
 
 /* What the link to other machines needs from this one. */
 interface PeerLinkHost {

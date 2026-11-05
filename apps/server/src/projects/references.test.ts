@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { ChatItem, ProjectCanvasView, ProjectView } from '@ruimte/contracts';
 import fixture from '../../../ios/Tests/Fixtures/view-references.json';
-import { ProjectIndex } from '../projects/project-index.ts';
-import { ContextStore } from './context-store.ts';
+import { ContextStore } from '../context/context-store.ts';
+import { ProjectIndex } from './project-index.ts';
 import { attachedReferences, referablesOfViews, referenceNote, referenced, referencedIds, resolveReference, resolveReferences } from './references.ts';
 
 const canvas: ProjectCanvasView = {

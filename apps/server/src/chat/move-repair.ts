@@ -1,15 +1,15 @@
 import type { AgentLineageStore } from '@adecore/agents/coordination';
 import { isWithin } from '@adecore/utils/path';
 import type { ChatInfo, ProjectView } from '@ruimte/contracts';
-import type { moveClaudeTranscript } from '../chat/claude-move.ts';
-import { ChatError } from '../chat/errors.ts';
 import { errorText } from '../error-text.ts';
+import type { MutationApply } from '../projects/project-store.ts';
 import type { SnoozeStore } from '../push/snoozes.ts';
+import type { moveClaudeTranscript } from './claude-move.ts';
+import { ChatError } from './errors.ts';
 import { fileTranscript } from './move-chat.ts';
 import { ownFileNames } from './move-info.ts';
 import type { MoveJournal } from './move-journal.ts';
 import { movedNote } from './move-note.ts';
-import type { MutationApply } from './project-store.ts';
 
 export interface MoveRepairDeps {
     scratchFolder: string;

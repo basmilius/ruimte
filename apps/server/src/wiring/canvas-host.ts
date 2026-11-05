@@ -1,6 +1,5 @@
 import { chatRequests } from '@adecore/agents/coordination';
-import { agentStates } from '../agents/agent-state.ts';
-import { openedAgentCount } from '../agents/hidden-agents.ts';
+import { agentStates, openedAgentCount } from '../agents/agent-state.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { chatForkDeps, forkForAgent } from '../chat/fork.ts';
 import { agentMessages } from '../context/agent-messages.ts';

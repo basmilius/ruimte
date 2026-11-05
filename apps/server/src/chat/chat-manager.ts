@@ -35,9 +35,9 @@ import {
     type ChatPromptOptions,
     VISUAL_RESUME_NOTE
 } from '../context/context-note.ts';
-import { attachedReferences, type Reference } from '../context/references.ts';
 import { errorText } from '../error-text.ts';
 import { passedOverNote, type ProjectAccountChooser } from '../projects/project-accounts.ts';
+import { attachedReferences, type Reference } from '../projects/references.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { codexProvider } from '../providers/codex-provider.ts';
 import { CHAT_TOKEN_VARIABLE, MCP_URL_VARIABLE, mcpUrlOf, ruimteCliMcp } from '../ruimte-mcp.ts';

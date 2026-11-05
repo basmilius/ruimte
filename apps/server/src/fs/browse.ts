@@ -1,9 +1,10 @@
-import { readdir, stat } from 'node:fs/promises';
+import { readdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { fileExists } from '@adecore/utils/fs';
 import type { FsBrowseResult } from '@ruimte/contracts';
+import { isDirectory } from '../disk/is-directory.ts';
 import { PROJECT_DIR, PROJECT_FILE } from '../projects/project-files.ts';
 import { classifyEntry } from './visibility.ts';
 
@@ -94,12 +95,4 @@ export async function browseDirectories(partialPath: string, cwd: string | undef
 /* A separator on the end says "list this", which the answer no longer means; the root keeps its. */
 function trimTrailing(path: string): string {
     return path.endsWith(sep) && path.length > 1 ? path.slice(0, -1) : path;
-}
-
-export async function isDirectory(path: string): Promise<boolean> {
-    try {
-        return (await stat(path)).isDirectory();
-    } catch {
-        return false;
-    }
 }

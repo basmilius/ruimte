@@ -1,8 +1,8 @@
 import { chatOpener } from '@adecore/agents/chat';
 import { WatchedSinks } from '@adecore/agents/host';
 import type { RoutinePicked, RoutineSkillsPayload, RoutineSkillsResult } from '@ruimte/contracts';
-import { attachedReferences, type Reference } from '../context/references.ts';
 import { errorText } from '../error-text.ts';
+import { attachedReferences, type Reference } from '../projects/references.ts';
 import { runCommand } from '../routines/command-run.ts';
 import { RoutineAuthorStore, RoutineRunStore } from '../routines/routine-runs.ts';
 import { RoutineError, RoutineStore } from '../routines/routine-store.ts';

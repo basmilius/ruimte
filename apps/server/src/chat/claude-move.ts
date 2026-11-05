@@ -1,11 +1,11 @@
 import { mkdir, rmdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { claudeProjectSlug, findClaudeSession } from '@adecore/agents/chat';
+import { isDirectory } from '../disk/is-directory.ts';
 import { renameNoReplace } from '../disk/no-replace-rename.ts';
 import { isPathSegment } from '../disk/path-segment.ts';
 import { realOrSelf } from '../disk/real-path.ts';
 import { errorText } from '../error-text.ts';
-import { isDirectory } from '../fs/browse.ts';
 import { ChatError } from './errors.ts';
 
 interface MovedTranscript {

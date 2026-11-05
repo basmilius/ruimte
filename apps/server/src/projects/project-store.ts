@@ -38,18 +38,17 @@ import {
     type ProjectSummary,
     type ProjectView
 } from '@ruimte/contracts';
-import { HiddenAgentStore } from '../agents/hidden-agents.ts';
+import { scratchFolderOf } from '../chat/scratch-project.ts';
 import { ClientSinks } from '../client-sinks.ts';
-import { referablesOfViews } from '../context/references.ts';
+import { isDirectory } from '../disk/is-directory.ts';
 import { MachineHome } from '../disk/machine-home.ts';
 import { errorText } from '../error-text.ts';
-import { isDirectory } from '../fs/browse.ts';
-import { PeerLinks, withHiddenCanvases } from '../peering/links.ts';
-import { RemoteStore, idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines } from '../remote/remote-store.ts';
 import type { SessionSink } from '../wire.ts';
 import { moveDesignFolders, settleDesignFolders, takenDesignFolders, type DesignAtWork, type DesignSides } from './design-folders.ts';
 import { folderToOpen } from './folder-to-open.ts';
+import { HiddenAgentStore } from './hidden-agents.ts';
 import { splitLegacy, type LoadedFiles, type TrackedProbe } from './legacy-split.ts';
+import { PeerLinks, withHiddenCanvases } from './peer-links.ts';
 import { ProjectError } from './project-error.ts';
 import {
     diagramsDirOf,
@@ -77,7 +76,8 @@ import { placesOf, ProjectIndex, type IndexedPlace } from './project-index.ts';
 import { ProjectRegistry, type RegistryEntry } from './project-registry.ts';
 import { isIconFile, sameIcon, ProjectSummaries } from './project-summaries.ts';
 import { PROJECT_WRITE_IO, ProjectWriteRaced, ProjectWriteStuck, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
-import { scratchFolderOf } from './scratch-project.ts';
+import { referablesOfViews } from './references.ts';
+import { RemoteStore, idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines } from './remote-store.ts';
 
 function asProjectError(e: unknown): unknown {
     if (e instanceof ProjectWriteRaced) {
