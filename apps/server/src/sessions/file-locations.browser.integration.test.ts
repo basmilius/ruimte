@@ -128,9 +128,9 @@ for (const mode of [
                 i18next.addResourceBundle('en','canvas',words,true,true);i18next.addResourceBundle('en','panels',panels,true,true);
                 useEndpoints.setState({activeId:'local',endpoints:[{id:'local',label:'Local'},{id:'remote',label:'Shell owner'}]});
                 useWindow.getState().show({kind:'workspace',workspace:{connection:{endpointId:'remote'}}});
-                useProject.setState({current:{folder:${JSON.stringify(shell.home)},projectId:'fixture'}});
-                useDocument.getState().load({version:3,rev:1,name:'Files',color:'#000',views:[{id:'shell',kind:'terminal',name:'Shell',node:{cwd:${JSON.stringify(shell.home)}}}]},null);
-                const wire=new WebSocketTransport('ws://127.0.0.1:${server.port}');window.wire=wire;window.fileReads=[];
+                useProject.setState({current:{folder:window.fixture.home,projectId:'fixture'}});
+                useDocument.getState().load({version:3,rev:1,name:'Files',color:'#000',views:[{id:'shell',kind:'terminal',name:'Shell',node:{cwd:window.fixture.home}}]},null);
+                const wire=new WebSocketTransport(window.fixture.daemon);window.wire=wire;window.fileReads=[];
                 const request=wire.request.bind(wire);wire.request=(type,payload)=>{if(type==='fs.read')window.fileReads.push(payload.path);return request(type,payload)};
                 await new Promise(resolve=>{const off=wire.subscribeStatus(status=>{if(status==='open'){off();resolve()}})});
                 const machine=machineFor('remote');machine.transport=wire;machine.sessions=new SessionClient(wire,sessionSinkFor('remote'));
@@ -262,7 +262,9 @@ for (const mode of [
                     expect(reads).toContain(files[0]!);
                     expect(reads).toContain(files[1]!);
                     expect(await view.evaluate<string[]>('window.errors')).toEqual([]);
-                }
+                },
+                // What differs between tests rides in the page, so they all load one bundle.
+                { head: `window.fixture=${JSON.stringify({ home: shell.home, daemon: `ws://127.0.0.1:${server.port}` })}` }
             );
         } finally {
             await server.stop(true);

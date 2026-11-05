@@ -149,9 +149,9 @@ for (const mode of [
             i18next.addResourceBundle('en', 'canvas', words, true, true);
             useEndpoints.setState({activeId:'local',endpoints:[{id:'local',label:'Local'},{id:'remote',daemonId:'owner',label:'Owner'}]});
             useWindow.getState().show({kind:'workspace',workspace:{connection:{endpointId:'remote'}}});
-            useProject.setState({current:{folder:${JSON.stringify(shell.home)},projectId:'project'},currentEndpointId:'remote'});
-            useDocument.getState().load({version:3,rev:1,name:'Prepare',color:'#000',views:${JSON.stringify(views)}},null);
-            const wire = new WebSocketTransport('ws://127.0.0.1:${server.port}'); window.wire=wire;
+            useProject.setState({current:{folder:window.fixture.home,projectId:'project'},currentEndpointId:'remote'});
+            useDocument.getState().load({version:3,rev:1,name:'Prepare',color:'#000',views:window.fixture.views},null);
+            const wire = new WebSocketTransport(window.fixture.daemon); window.wire=wire;
             await new Promise(resolve=>{const off=wire.subscribeStatus(status=>{if(status==='open'){off();resolve()}})});
             const machine=machineFor('remote');machine.transport=wire;machine.sessions=new SessionClient(wire,sessionSinkFor('remote'));
             useWindow.getState().show({kind:'workspace',workspace:{connection:machine}});
@@ -319,7 +319,9 @@ for (const mode of [
                     );
                     await waitForAsync(() => Bun.file(join(shell.home, 'chosen')).exists(), 'execution after explicit Enter');
                     expect(await readFile(join(shell.home, 'chosen'), 'utf8')).toBe('chosen');
-                }
+                },
+                // What differs between tests rides in the page, so they all load one bundle.
+                { head: `window.fixture=${JSON.stringify({ home: shell.home, views, daemon: `ws://127.0.0.1:${server.port}` })}` }
             );
         } finally {
             await server.stop(true);

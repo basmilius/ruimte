@@ -72,19 +72,39 @@ interface BrowserFixtureOptions {
     production?: boolean;
 }
 
-export async function withBrowserFixture(
-    entryCode: string,
-    styles: string,
-    run: (view: InstanceType<typeof Bun.WebView>) => Promise<void>,
-    options: BrowserFixtureOptions = {}
-): Promise<void> {
-    const diagStart = performance.now();
-    diagFrom = diagStart;
+interface FixturePage {
+    readonly origin: string;
+    /* What runs before the bundle, per navigation. */
+    readonly heads: Map<string, string>;
+}
+
+/*
+ * One bundle and one server per page, kept for the process: the tests of a file that load the same page
+ * build it once, and the browser keeps its scripts between them. A test hands its own data in `head`.
+ */
+const pages = new Map<string, Promise<FixturePage>>();
+let navigations = 0;
+
+function fixturePage(entryCode: string, styles: string, production: boolean): Promise<FixturePage> {
+    const key = JSON.stringify([entryCode, styles, production]);
+    const known = pages.get(key);
+
+    if (known) {
+        return known;
+    }
+
+    const page = buildPage(entryCode, styles, production);
+    pages.set(key, page);
+    page.catch(() => pages.delete(key));
+
+    return page;
+}
+
+async function buildPage(entryCode: string, styles: string, production: boolean): Promise<FixturePage> {
     const directory = await mkdtemp(join(tmpdir(), 'ruimte-canvas-'));
-    let view: InstanceType<typeof Bun.WebView> | null = null;
-    let server: ReturnType<typeof Bun.serve> | null = null;
     const assets = new Map<string, Blob>();
     const workers = new Map<string, string>();
+    const heads = new Map<string, string>();
     let assetIndex = 0;
     try {
         const entry = join(directory, 'entry.tsx');
@@ -107,7 +127,7 @@ export async function withBrowserFixture(
             // Two inputs that bundle to the same CSS would otherwise claim one chunk name.
             naming: { chunk: '[name]-[hash].[ext]' },
             conditions: ['source'],
-            define: options.production ? { ...viteEnv, 'process.env.NODE_ENV': JSON.stringify('production') } : viteEnv,
+            define: production ? { ...viteEnv, 'process.env.NODE_ENV': JSON.stringify('production') } : viteEnv,
             plugins: [
                 // The suite tests what ships, which the compiler made.
                 reactCompilerPlugin,
@@ -163,21 +183,46 @@ export async function withBrowserFixture(
         }
         diag('built', String(build.outputs.length));
         const theme = await readFile(Bun.resolveSync('@adecore/ui/theme.css', clientDirectory), 'utf8');
-        server = Bun.serve({
+        const server = Bun.serve({
             hostname: '127.0.0.1',
             port: 0,
             fetch(request) {
-                const path = new URL(request.url).pathname;
-                const asset = assets.get(path);
+                const url = new URL(request.url);
+                const asset = assets.get(url.pathname);
                 if (asset) {
-                    return new Response(asset, { headers: { 'Content-Type': 'text/javascript' } });
+                    // The same page for every test of the bundle, so the browser parses its scripts once.
+                    return new Response(asset, { headers: { 'Content-Type': 'text/javascript', 'Cache-Control': 'max-age=31536000, immutable' } });
                 }
+                const head = heads.get(url.searchParams.get('fixture') ?? '') ?? '';
                 return new Response(
-                    `<!doctype html><style>${theme}body{margin:0}#root{position:relative;width:800px;height:600px}${styles}</style><div id="root"></div><script>${options.head ?? ''}</script><script>window.errors=[];window.addEventListener("error",event=>window.errors.push(event.message));window.addEventListener("unhandledrejection",event=>window.errors.push(String(event.reason)));</script><script type="module" src="/entry.js"></script>`,
-                    { headers: { 'Content-Type': 'text/html' } }
+                    `<!doctype html><style>${theme}body{margin:0}#root{position:relative;width:800px;height:600px}${styles}</style><div id="root"></div><script>${head}</script><script>window.errors=[];window.addEventListener("error",event=>window.errors.push(event.message));window.addEventListener("unhandledrejection",event=>window.errors.push(String(event.reason)));</script><script type="module" src="/entry.js"></script>`,
+                    { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } }
                 );
             }
         });
+        // The server lives as long as the process and must not hold it open after the last test.
+        server.unref();
+
+        return { origin: `http://127.0.0.1:${server.port}`, heads };
+    } finally {
+        await rm(directory, { recursive: true, force: true });
+    }
+}
+
+export async function withBrowserFixture(
+    entryCode: string,
+    styles: string,
+    run: (view: InstanceType<typeof Bun.WebView>) => Promise<void>,
+    options: BrowserFixtureOptions = {}
+): Promise<void> {
+    const diagStart = performance.now();
+    diagFrom = diagStart;
+    const page = await fixturePage(entryCode, styles, options.production === true);
+    const id = String(navigations++);
+    page.heads.set(id, options.head ?? '');
+    const directory = await mkdtemp(join(tmpdir(), 'ruimte-canvas-'));
+    let view: InstanceType<typeof Bun.WebView> | null = null;
+    try {
         // SwiftShader makes WebGL fixtures work on headless runners without a GPU. A frame comes as soon as
         // the page asks for one instead of on a 60 Hz beat, which took up most of a test on a slow runner.
         view = new Bun.WebView({
@@ -190,7 +235,7 @@ export async function withBrowserFixture(
             dataStore: { directory: join(directory, 'profile') }
         });
         diag('view');
-        await view.navigate(`http://127.0.0.1:${server.port}`);
+        await view.navigate(`${page.origin}/?fixture=${id}`);
         diag('navigated');
         await view.resize(800, 600);
         await view.evaluate(frame);
@@ -200,18 +245,12 @@ export async function withBrowserFixture(
             throw new Error(errors.join('\n'));
         }
         // DIAG: temporary, removed once the runner is understood.
-        console.log(
-            'DIAG fixture',
-            Math.round(performance.now() - diagStart),
-            await view.evaluate<string>(
-                `(() => { const gl = document.createElement('canvas').getContext('webgl2'); const info = gl?.getExtension('WEBGL_debug_renderer_info'); return JSON.stringify({ cores: navigator.hardwareConcurrency, webgl: gl ? gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER) : null, fonts: document.fonts.status }); })()`
-            )
-        );
+        console.log('DIAG fixture', Math.round(performance.now() - diagStart));
         await run(view);
         console.log('DIAG ran', Math.round(performance.now() - diagStart));
     } finally {
         view?.close();
-        await server?.stop(true);
+        page.heads.delete(id);
         await rm(directory, { recursive: true, force: true });
     }
 }
