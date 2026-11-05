@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { rm } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ProjectContent } from '@ruimte/contracts';
 import { sayAndSettle } from '../chat/lead-chat-test-helpers.ts';
+import { documentPathInFolder } from '../projects/project-files.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { routineOpener } from '../routines/routines.ts';
 import { bootTestDaemon, releasedProject, turnsOf, type TestDaemon } from '../tasks/test-daemon.ts';
@@ -85,11 +87,26 @@ async function ownedBy(who: 'peer' | 'routine' | 'child of a routine' | 'holder'
     }
 }
 
-async function finishTaskOf(parentId: string): Promise<string> {
-    const task = await daemon.tasks.open({ projectId, parentId, childId: 'chat-child', title: 'Result', prompt: 'go' }, 1);
+async function finishTaskOf(parentId: string, inProject = projectId): Promise<string> {
+    const task = await daemon.tasks.open({ projectId: inProject, parentId, childId: 'chat-child', title: 'Result', prompt: 'go' }, 1);
     await daemon.wiring.coordinator.done('chat-child', 'the result');
 
     return task.id;
+}
+
+/* A second checkout of the repository, open with the first one's shared canvas while the first is closed, as a person has to do it. */
+async function secondCheckout(): Promise<{ folder: string; projectId: string }> {
+    const opened = await store.openProject({ projectId });
+    await store.save(projectId, opened.document.rev, content(), ['main']);
+
+    const other = join(root, 'repo-2');
+    await mkdir(join(other, '.ruimte'), { recursive: true });
+    await writeFile(documentPathInFolder(other), await readFile(documentPathInFolder(folder), 'utf8'));
+    await store.closeProject(projectId, 'client-1');
+
+    const copy = await store.openProject({ folder: other });
+
+    return { folder: other, projectId: copy.summary.projectId };
 }
 
 describe('work in a project a person closed', () => {
@@ -167,5 +184,38 @@ describe('work in a project a person closed', () => {
         expect(owed('resume-limit')).toBe(1);
         expect(owed('wake-parent')).toBe(1);
         expect(turnsOf(daemon, 'chat-lead')).toHaveLength(1);
+    });
+
+    test('a chat on a shared canvas wakes in the open copy while the first copy stays closed', async () => {
+        const copy = await secondCheckout();
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: copy.folder });
+        await sayAndSettle(daemon, 'chat-lead', 'hello');
+        const taskId = await finishTaskOf('chat-lead', copy.projectId);
+
+        await daemon.until(() => daemon.tasks.get(taskId)?.wake === 'sent');
+        await daemon.worker.settled();
+
+        expect(await store.isClosed(projectId)).toBe(true);
+        expect(owed('wake-parent')).toBe(0);
+        expect(turnsOf(daemon, 'chat-lead')).toHaveLength(2);
+    });
+
+    test('a chat on a shared canvas waits while both copies are closed, and opening the second releases it', async () => {
+        const copy = await secondCheckout();
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: copy.folder });
+        await sayAndSettle(daemon, 'chat-lead', 'hello');
+        await store.closeProject(copy.projectId, 'client-1');
+        const taskId = await finishTaskOf('chat-lead', copy.projectId);
+        await daemon.worker.settled();
+
+        expect(owed('wake-parent')).toBe(1);
+        expect(turnsOf(daemon, 'chat-lead')).toHaveLength(1);
+
+        await store.openProject({ projectId: copy.projectId });
+        await daemon.until(() => daemon.tasks.get(taskId)?.wake === 'sent');
+        await daemon.worker.settled();
+
+        expect(owed('wake-parent')).toBe(0);
+        expect(turnsOf(daemon, 'chat-lead')).toHaveLength(2);
     });
 });

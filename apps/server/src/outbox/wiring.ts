@@ -267,28 +267,34 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
 
     const openChat = chatOpener({ chats, placed });
 
-    // Closing keeps a chat's record for the next open, so nothing may start its CLI while the project is under Recent.
+    // Closing keeps a chat's record for the next open, so nothing may start its CLI while every project that places it is under Recent.
     const unlessClosed =
         <Entry extends { target: string }>(handler: (entry: Entry) => Promise<OutboxOutcome>) =>
         async (entry: Entry): Promise<OutboxOutcome> => {
-            const place = projects.index.locate(entry.target);
+            const placing = projects.index.projectsPlacing(entry.target);
 
-            if (place === null || workOfPeerOrRoutine(entry.target)) {
+            if (placing.length === 0 || workOfPeerOrRoutine(entry.target)) {
                 return handler(entry);
             }
 
-            const { projectId } = place;
+            for (const projectId of placing) {
+                const outcome = await projects.runWake(projectId, async (): Promise<OutboxOutcome | 'closed'> => {
+                    if (await projects.isClosed(projectId)) {
+                        return 'closed';
+                    }
 
-            return projects.runWake(projectId, async () => {
-                if (await projects.isClosed(projectId)) {
-                    return 'wait';
+                    // A stored chat takes I/O to load, in which the project may start closing, so it loads before the last look.
+                    await openChat(entry.target);
+
+                    return projects.isClosing(projectId) ? 'closed' : handler(entry);
+                });
+
+                if (outcome !== 'closed') {
+                    return outcome;
                 }
+            }
 
-                // A stored chat takes I/O to load, in which the project may start closing, so it loads before the last look.
-                await openChat(entry.target);
-
-                return projects.isClosing(projectId) ? 'wait' : handler(entry);
-            });
+            return 'wait';
         };
 
     const wakeParent = unlessClosed(taskWiring.wakeParent);
@@ -363,7 +369,7 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
     link.bind(worker);
     projects.onReopened((projectId) => {
         for (const entry of outbox.list()) {
-            if (projects.index.locate(entry.target)?.projectId === projectId) {
+            if (projects.index.projectsPlacing(entry.target).includes(projectId)) {
                 worker.wake(entry.target);
             }
         }
