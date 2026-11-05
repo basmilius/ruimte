@@ -24,6 +24,8 @@ const loaded = new Map<string, string>();
 let loads = 0;
 // By id, while its stylesheet and module load.
 const loading = new Set<string>();
+// How long a stylesheet may take to answer and load, past which its extension runs unstyled.
+const STYLESHEET_DEADLINE_MS = 15_000;
 let stopActivation: (() => void) | null = null;
 // Counts the syncs begun, so one whose list came in after a newer one began leaves the newer one's to apply.
 let syncs = 0;
@@ -223,30 +225,44 @@ function stylesheetId(id: string): string {
 
 /*
  * The CSS the client part imported, bundled into one file. Linked and loaded before the code runs, so its first frame
- * is styled. A sheet that fails to load leaves the code to run unstyled rather than not at all.
+ * is styled. A sheet that fails to load, or neither loads nor fails within the deadline, leaves the code to run unstyled
+ * rather than not at all, and never keeps its extension loading.
  */
 async function linkStylesheet(id: string, base: string): Promise<void> {
     const href = `${base}client/index.css`;
-    const exists = await fetch(href, { method: 'HEAD' }).then(
-        (answer) => answer.ok,
-        () => false
-    );
-
-    if (!exists) {
-        return;
-    }
-
-    const link = document.createElement('link');
-    const settled = new Promise<void>((resolve) => {
-        link.addEventListener('load', () => resolve(), { once: true });
-        link.addEventListener('error', () => resolve(), { once: true });
+    const abort = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<false>((resolve) => {
+        timer = setTimeout(() => {
+            abort.abort();
+            resolve(false);
+        }, STYLESHEET_DEADLINE_MS);
     });
 
-    link.id = stylesheetId(id);
-    link.rel = 'stylesheet';
-    link.href = href;
-    document.head.append(link);
-    await settled;
+    try {
+        const answered = fetch(href, { method: 'HEAD', signal: abort.signal }).then(
+            (answer) => answer.ok,
+            () => false
+        );
+
+        if (!(await Promise.race([answered, deadline]))) {
+            return;
+        }
+
+        const link = document.createElement('link');
+        const settled = new Promise<void>((resolve) => {
+            link.addEventListener('load', () => resolve(), { once: true });
+            link.addEventListener('error', () => resolve(), { once: true });
+        });
+
+        link.id = stylesheetId(id);
+        link.rel = 'stylesheet';
+        link.href = href;
+        document.head.append(link);
+        await Promise.race([settled, deadline]);
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 function dropStylesheet(id: string): void {

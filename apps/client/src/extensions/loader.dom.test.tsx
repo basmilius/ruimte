@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, spyOn, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, describe, expect, jest, spyOn, test } from 'bun:test';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -43,6 +43,13 @@ afterAll(() => {
     removeDesktop();
     rmSync(folder, { recursive: true, force: true });
 });
+
+async function untilUnderFakeClock(condition: () => boolean): Promise<void> {
+    for (let turn = 0; turn < 200 && !condition(); turn++) {
+        await new Promise((resolve) => setImmediate(resolve));
+    }
+    expect(condition()).toBe(true);
+}
 
 function hasCommand(id: string, command = 'hello'): boolean {
     return useContributions.getState().commands.some((each) => each.id === `extension:${id}/${command}`);
@@ -333,6 +340,48 @@ describe('loading extensions', () => {
             appended.mockRestore();
         }
     });
+
+    for (const hung of ['its HEAD request', 'its load event'] as const) {
+        test(`runs the code unstyled once the stylesheet deadline passed when ${hung} never comes`, async () => {
+            const id = hung === 'its HEAD request' ? 'acme.headless' : 'acme.sheetless';
+            installed = [
+                writeExtension(id, `globalThis.__ruimteExtension.for('${id}').client.defineCommand({ id: 'hello', title: 'Hello', run: () => undefined });\n`)
+            ];
+
+            let sheet: Node | null = null;
+            const fetched = spyOn(globalThis, 'fetch').mockImplementationOnce((async () =>
+                hung === 'its HEAD request' ? new Promise<Response>(() => undefined) : new Response(null, { status: 200 })) as unknown as typeof fetch);
+            const appended = spyOn(document.head, 'append').mockImplementationOnce((node) => {
+                sheet = node as Node;
+            });
+            // Only the stylesheet's deadline runs on the fake clock; the files still come over the real route.
+            jest.useFakeTimers();
+
+            try {
+                const synced = syncExtensions();
+
+                await untilUnderFakeClock(() => fetched.mock.calls.length > 0 && (hung === 'its HEAD request' || sheet !== null));
+                jest.advanceTimersByTime(14_999);
+                for (let turn = 0; turn < 20; turn++) {
+                    await new Promise((resolve) => setImmediate(resolve));
+                }
+
+                const early = hasCommand(id);
+
+                jest.advanceTimersByTime(1);
+                jest.useRealTimers();
+                await synced;
+
+                expect(early).toBe(false);
+                expect(hasCommand(id)).toBe(true);
+                expect(useInstalledExtensions.getState().failures[id]).toBeUndefined();
+            } finally {
+                jest.useRealTimers();
+                fetched.mockRestore();
+                appended.mockRestore();
+            }
+        });
+    }
 
     test('shows no failure and adds nothing for a load that was taken down while its files came in', async () => {
         installed = [
