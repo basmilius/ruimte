@@ -45,13 +45,14 @@ test('embedded visuals let file and view drags reach their cell, then become int
             await view.cdp('Input.dispatchDragEvent', { type: 'dragEnter', x: 20, y: 20, data });
             expect(await view.evaluate<boolean>('document.body.hasAttribute("data-dragging")')).toBe(true);
             expect(await view.evaluate<string>('document.elementFromPoint(300, 250).id')).toBe('cell');
-            // Let the compositor update iframe hit testing before sending native input.
-            await view.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
             await view.evaluate('(() => {window.over = 0; window.dropped = 0;})()');
-            // The first move enters the cell; the second emits dragover.
-            await view.cdp('Input.dispatchDragEvent', { type: 'dragOver', x: 300, y: 250, data });
-            await view.cdp('Input.dispatchDragEvent', { type: 'dragOver', x: 300, y: 250, data });
-            expect(await view.evaluate<number>('window.over')).toBeGreaterThan(0);
+
+            // Chrome hit-tests native input on the compositor's last frame, which on a slow runner still routes a move to the
+            // frame for a while after the page let it go; a person's drag keeps moving, so this one does too.
+            while ((await view.evaluate<number>('window.over')) === 0) {
+                await view.cdp('Input.dispatchDragEvent', { type: 'dragOver', x: 300, y: 250, data });
+            }
+
             await view.cdp('Input.dispatchDragEvent', { type: 'drop', x: 300, y: 250, data });
             expect(await view.evaluate<number>('window.dropped')).toBe(1);
             expect(await view.evaluate<boolean>('document.body.hasAttribute("data-dragging")')).toBe(false);
