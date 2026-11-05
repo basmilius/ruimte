@@ -15,7 +15,7 @@ import { chatMoveDeps, type ChatMoveWiring } from '../wiring/chat-move.ts';
 import { moveChat, type MoveChatDeps } from './move-chat.ts';
 import { MoveJournal } from './move-journal.ts';
 import { moveOwnFiles } from './own-files.ts';
-import { privateFileOnDisk, projectLinks } from './project-file-test-helpers.ts';
+import { OUTSIDE_CHECKOUT, privateFileOnDisk, projectLinks } from './project-file-test-helpers.ts';
 import { ProjectStore } from './project-store.ts';
 import { newScratchChat } from './scratch-project.ts';
 
@@ -80,7 +80,7 @@ describe('moving a chat from Chats into a project', () => {
         await claudeApi.load(home);
         await claudeApi.configure('sk-ant-test-only');
         daemon = await bootTestDaemon({ home, store, clock: new ManualClock(), providers: [createAnthropicClaudeApiProvider(claudeApi)] });
-        const made = await newScratchChat(store, {});
+        const made = await newScratchChat(store, {}, OUTSIDE_CHECKOUT);
         chatId = made.viewId;
         chatsId = made.summary.projectId;
         ownFolder = join(store.scratchFolder, chatId);
@@ -143,10 +143,17 @@ describe('moving a chat from Chats into a project', () => {
 
     test('makes a project in a new folder and puts the chat, its conversation and its files in it', async () => {
         const folder = join(root, 'vinyl');
-        const result = await moveChat({ chatId, to: make('vinyl', { initGit: true }), ownFiles: 'move' }, deps());
+        const initialized: string[] = [];
+        const initGit = async (target: string): Promise<void> => {
+            initialized.push(target);
+        };
+        const result = await moveChat(
+            { chatId, to: make('vinyl', { initGit: true }), ownFiles: 'move' },
+            deps(() => ({ initGit }))
+        );
 
         expect(result).toMatchObject({ viewId: chatId, ownFilesLeftAt: null, summary: { name: 'vinyl', folder } });
-        expect(existsSync(join(folder, '.git'))).toBe(true);
+        expect(initialized).toEqual([folder]);
         expect(await readFile(join(folder, 'notes.md'), 'utf8')).toBe('notes');
         expect(existsSync(ownFolder)).toBe(false);
 
@@ -181,7 +188,7 @@ describe('moving a chat from Chats into a project', () => {
         );
         expect(seen).toEqual([1, 1]);
         expect(journal.pending()).toEqual([]);
-        const second = (await newScratchChat(store, {})).viewId;
+        const second = (await newScratchChat(store, {}, OUTSIDE_CHECKOUT)).viewId;
         await daemon.chats.create({ chatId: second, provider: 'claude', cwd: join(store.scratchFolder, second) });
         await expect(
             moveChat(
@@ -366,7 +373,7 @@ describe('moving a chat from Chats into a project', () => {
     });
 
     test('a fork nobody wrote in keeps its record and its conversation', async () => {
-        const forkId = (await newScratchChat(store, {})).viewId;
+        const forkId = (await newScratchChat(store, {}, OUTSIDE_CHECKOUT)).viewId;
         const forkFolder = join(store.scratchFolder, forkId);
         const original = daemon.chats.get(chatId)!;
         const items = original.thread.list();
@@ -401,7 +408,7 @@ describe('moving a chat from Chats into a project', () => {
     });
 
     test("a Claude API chat takes its conversation along in the Claude API's own config folder", async () => {
-        const apiId = (await newScratchChat(store, { provider: 'anthropic-claude-api' })).viewId;
+        const apiId = (await newScratchChat(store, { provider: 'anthropic-claude-api' }, OUTSIDE_CHECKOUT)).viewId;
         const apiFolder = join(store.scratchFolder, apiId);
         await daemon.chats.create({ chatId: apiId, provider: 'anthropic-claude-api', cwd: apiFolder });
         await say(apiId, 'hello');
@@ -423,7 +430,7 @@ describe('moving a chat from Chats into a project', () => {
     });
 
     test('a Codex chat has no conversation file to move', async () => {
-        const codexId = (await newScratchChat(store, { provider: 'codex' })).viewId;
+        const codexId = (await newScratchChat(store, { provider: 'codex' }, OUTSIDE_CHECKOUT)).viewId;
         await daemon.chats.create({ chatId: codexId, provider: 'codex', cwd: join(store.scratchFolder, codexId) });
         await say(codexId, 'hello');
         await store.mutate(chatsId, (content) => ({
@@ -495,7 +502,7 @@ describe('moving a chat from Chats into a project', () => {
 
     for (const another of [false, true]) {
         test(`the node fields a newer Ruimte keeps one person go along ${another ? 'and stay in Chats while another node needs them' : 'and leave Chats when unused'}`, async () => {
-            const second = another ? (await newScratchChat(store, {})).viewId : null;
+            const second = another ? (await newScratchChat(store, {}, OUTSIDE_CHECKOUT)).viewId : null;
             const privateFile = join(store.scratchFolder, '.ruimte', 'private', 'project.json');
             const file = JSON.parse(await readFile(privateFile, 'utf8')) as {
                 views: Array<{ id: string; node: Record<string, unknown> }>;
@@ -535,7 +542,7 @@ describe('moving a chat from Chats into a project', () => {
     });
 
     test('keeps the place of the chat among the others when a Chats write has to be undone', async () => {
-        const second = (await newScratchChat(store, {})).viewId;
+        const second = (await newScratchChat(store, {}, OUTSIDE_CHECKOUT)).viewId;
         const order = await viewIds(chatsId);
         await expect(failingFiles()).rejects.toBe(FAILED);
         expect(await viewIds(chatsId)).toEqual(order);

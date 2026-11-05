@@ -24,6 +24,18 @@ export function newChatId(): string {
 /* Whether a person wrote in a chat yet, as its thread says; a chat this daemon has no thread of never had a message. */
 export type ChatWritten = (chatId: string) => Promise<boolean>;
 
+/* Whether a folder sits inside a git checkout. */
+export type CheckoutProbe = (folder: string) => Promise<boolean>;
+
+export async function insideGitCheckout(folder: string): Promise<boolean> {
+    return (await git(['rev-parse', '--show-toplevel'], folder)) !== null;
+}
+
+export interface ScratchChatOptions {
+    readonly written?: ChatWritten;
+    readonly insideCheckout?: CheckoutProbe;
+}
+
 function withoutEmptyMark(view: ProjectView): ProjectView {
     if (!isEmptyChatView(view)) {
         return view;
@@ -52,15 +64,12 @@ export function reusableChat(views: readonly ProjectView[], payload: ProjectNewC
  * A chat nobody wrote in yet is hidden from the list, so that one is shown again rather than another
  * made beside it, and every client asking gets the same one.
  */
-export async function newScratchChat(
-    store: ProjectStore,
-    payload: ProjectNewChatPayload,
-    written: ChatWritten = async () => false
-): Promise<ProjectNewChatResult> {
+export async function newScratchChat(store: ProjectStore, payload: ProjectNewChatPayload, options: ScratchChatOptions = {}): Promise<ProjectNewChatResult> {
+    const { written = async () => false, insideCheckout = insideGitCheckout } = options;
     await mkdir(store.home, { recursive: true, mode: 0o700 });
     /* A scratch project inside a checkout would put every chat's folder in someone's repository,
        and its project files in their commits. */
-    if ((await git(['rev-parse', '--show-toplevel'], store.home)) !== null) {
+    if (await insideCheckout(store.home)) {
         throw new ScratchError('scratch-unavailable', `${store.home} is inside a git checkout`);
     }
     const summary = await store.ensureProject(store.scratchFolder, { name: SCRATCH_NAME, icon: { kind: 'lucide', value: 'messages-square' } });

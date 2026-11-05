@@ -2,6 +2,10 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { PROJECT_VERSION, mergeFiles, migrateSharedFile, type ProjectChatView, type ProjectDocument, type ProjectPrivateFile } from '@ruimte/contracts';
 import { documentPathInFolder, parsePrivateFile, privatePathOf } from './project-files.ts';
 import type { ProjectLinks, ProjectStore } from './project-store.ts';
+import type { ScratchChatOptions } from './scratch-project.ts';
+
+/* A home the test made in the temp folder, which no checkout holds, without asking git. */
+export const OUTSIDE_CHECKOUT: ScratchChatOptions = { insideCheckout: async () => false };
 
 export async function chatViewsOf(store: ProjectStore, projectId: string): Promise<ProjectChatView[]> {
     return (await store.read(projectId)).views.filter((view): view is ProjectChatView => view.kind === 'chat');

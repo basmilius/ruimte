@@ -2,13 +2,13 @@ import type { Dispatcher } from '../dispatcher.ts';
 import { newInlineChat, removeInlineChat, showInlineChat, type InlineChatHost } from '../projects/inline-chat.ts';
 import { setProjectAccounts } from '../projects/project-accounts.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { newScratchChat, type ChatWritten } from '../projects/scratch-project.ts';
+import { newScratchChat, type ScratchChatOptions } from '../projects/scratch-project.ts';
 import { countProjectOpened, countViewShown } from '../stats/usage-stats.ts';
 
 export function registerProjectHandlers(
     dispatcher: Dispatcher,
     store: ProjectStore,
-    written?: ChatWritten,
+    scratch: ScratchChatOptions = {},
     inline?: InlineChatHost,
     reachOpenProjects: () => boolean = () => false
 ): void {
@@ -61,7 +61,7 @@ export function registerProjectHandlers(
 
     dispatcher.register('project.setAccounts', async (payload) => ({ accounts: await setProjectAccounts(store, payload) }));
 
-    dispatcher.register('project.newChat', (payload) => newScratchChat(store, payload, written));
+    dispatcher.register('project.newChat', (payload) => newScratchChat(store, payload, scratch));
 
     if (inline !== undefined) {
         dispatcher.register('project.newInlineChat', (payload) => newInlineChat(store, payload, inline));

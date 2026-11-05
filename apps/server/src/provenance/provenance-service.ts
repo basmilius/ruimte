@@ -58,6 +58,8 @@ interface ProvenanceOptions {
     /* The clients that have the project open, which is who hears a change. */
     holders(projectId: string): string[];
     now?: () => number;
+    /* The repository a folder is in; git's answer by default. */
+    repositoryOf?: (directory: string) => Promise<string | null>;
 }
 
 interface Job {
@@ -104,6 +106,7 @@ export class ProvenanceService {
     private readonly store: ProvenanceStore;
     private readonly options: ProvenanceOptions;
     private readonly now: () => number;
+    private readonly repositoryOf: (directory: string) => Promise<string | null>;
     private readonly sinks = new ClientSinks();
     private readonly writes = new KeyedSerializer();
     private readonly pending = new Set<Promise<unknown>>();
@@ -118,6 +121,7 @@ export class ProvenanceService {
         this.options = options;
         this.store = new ProvenanceStore(options.home);
         this.now = options.now ?? Date.now;
+        this.repositoryOf = options.repositoryOf ?? repositoryOf;
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -159,7 +163,7 @@ export class ProvenanceService {
                 return { mtime: current.mtime, lines: current.lines.length, runs: [] };
             }
             const hashes = hashLines(current.lines);
-            const runs = await this.refreshed(stored, hashes, path, await repositoryOf(dirname(path)));
+            const runs = await this.refreshed(stored, hashes, path, await this.repositoryOf(dirname(path)));
             if (!sameLines(stored.lineHashes, hashes) || runs.length !== stored.runs.length || JSON.stringify(runs) !== JSON.stringify(stored.runs)) {
                 await this.persist(projectId, { version: 1, path, lineHashes: hashes, mtime: current.mtime, runs });
             }
@@ -293,7 +297,7 @@ export class ProvenanceService {
         }
         void this.track(
             (async () => {
-                const top = await repositoryOf(chat.cwd);
+                const top = await this.repositoryOf(chat.cwd);
                 if (top === null) {
                     return;
                 }
@@ -375,7 +379,7 @@ export class ProvenanceService {
         }
         const hashes = hashLines(current.lines);
         const stored = await this.store.read(projectId, path);
-        const top = await repositoryOf(dirname(path));
+        const top = await this.repositoryOf(dirname(path));
         const existing = stored === null ? [] : await this.refreshed(stored, hashes, path, top);
         const tree = chat.checkpointOf(job.turnId);
         const previousLines = top !== null && tree !== undefined ? await linesInTree(top, tree, relative(top, path)) : null;

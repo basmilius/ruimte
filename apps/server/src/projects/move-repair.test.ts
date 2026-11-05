@@ -10,7 +10,7 @@ import { SnoozeStore } from '../push/snoozes.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
 import { repairChatMoves } from '../wiring/chat-move.ts';
 import { MoveJournal } from './move-journal.ts';
-import { projectLinks } from './project-file-test-helpers.ts';
+import { OUTSIDE_CHECKOUT, projectLinks } from './project-file-test-helpers.ts';
 import { ProjectStore } from './project-store.ts';
 import { newScratchChat } from './scratch-project.ts';
 
@@ -67,7 +67,7 @@ describe('finishing a chat move the machine stopped in the middle of', () => {
         journal = new MoveJournal(home);
         snoozes = new SnoozeStore({ clock: new ManualClock() });
         daemon = await bootTestDaemon({ home, store, clock: new ManualClock() });
-        const made = await newScratchChat(store, {});
+        const made = await newScratchChat(store, {}, OUTSIDE_CHECKOUT);
         chatId = made.viewId;
         chatsId = made.summary.projectId;
         ownFolder = join(store.scratchFolder, chatId);

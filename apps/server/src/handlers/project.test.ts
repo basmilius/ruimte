@@ -7,7 +7,7 @@ import type { ProjectCanvasView, ProjectContent, ProjectDocument, ProjectSummary
 import { connectionOpener, type ClientChannel, type ConnectionServices, type OpenConnection } from '../connection.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import type { InlineChatHost } from '../projects/inline-chat.ts';
-import { projectLinks } from '../projects/project-file-test-helpers.ts';
+import { OUTSIDE_CHECKOUT, projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { registerProjectHandlers } from './project.ts';
 
@@ -61,7 +61,7 @@ afterEach(async () => {
 /* Two clients of one daemon. A socket and, beside it, a channel that got in the way a direct connection does. */
 function twoClients(inline?: InlineChatHost) {
     const dispatcher = new Dispatcher();
-    registerProjectHandlers(dispatcher, store, undefined, inline);
+    registerProjectHandlers(dispatcher, store, OUTSIDE_CHECKOUT, inline);
     const services: ConnectionServices = {
         dispatcher,
         sessions: { ...quiet, get: () => undefined },

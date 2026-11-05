@@ -284,7 +284,7 @@ export async function registerHandlers(dispatcher: Dispatcher, input: HandlersIn
     registerProjectHandlers(
         dispatcher,
         store,
-        async (chatId) => (await chats.readChat(chatId))?.items.some((item) => item.kind === 'user') ?? false,
+        { written: async (chatId) => (await chats.readChat(chatId))?.items.some((item) => item.kind === 'user') ?? false },
         {
             start: (payload) => chats.create(payload),
             // Loaded first: a chat nobody opened since a restart has no session to end, only a record to remove.

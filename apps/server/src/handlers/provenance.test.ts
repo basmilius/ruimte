@@ -54,6 +54,8 @@ beforeEach(async () => {
         locate: () => ({ projectId: 'p1', folder: project }),
         folderOf: (projectId) => (projectId === 'p1' ? project : null),
         holders: () => [],
+        // The project is in no repository, which the service's own integration tests ask git about.
+        repositoryOf: async () => null,
         chat: () => ({
             provider: 'claude',
             cwd: project,
@@ -104,7 +106,14 @@ describe('provenance.read', () => {
     });
 
     test('refuses what belongs to the state of the machine, even from a project that holds the home', async () => {
-        service = new ProvenanceService({ home, locate: () => null, folderOf: () => root, holders: () => [], chat: () => null });
+        service = new ProvenanceService({
+            home,
+            locate: () => null,
+            folderOf: () => root,
+            holders: () => [],
+            chat: () => null,
+            repositoryOf: async () => null
+        });
         dispatcher = new Dispatcher();
         registerProvenanceHandlers(dispatcher, service, new MachineHome(home));
         await writeFile(join(home, 'local.key'), 'secret');

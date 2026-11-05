@@ -7,7 +7,7 @@ import { Dispatcher } from '../dispatcher.ts';
 import { MachineHome } from '../fs/machine-home.ts';
 import { registerChatHandlers } from '../handlers/chat.ts';
 import { moveChat } from '../projects/move-chat.ts';
-import { projectLinks } from '../projects/project-file-test-helpers.ts';
+import { OUTSIDE_CHECKOUT, projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectProposals } from '../projects/project-proposals.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { newScratchChat } from '../projects/scratch-project.ts';
@@ -36,7 +36,7 @@ describe('what the machine says about moving a chat', () => {
         const home = join(root, 'home');
         store = new ProjectStore(home, projectLinks());
         daemon = await bootTestDaemon({ home, store, clock: new ManualClock() });
-        chatId = (await newScratchChat(store, {})).viewId;
+        chatId = (await newScratchChat(store, {}, OUTSIDE_CHECKOUT)).viewId;
         await daemon.chats.create({ chatId, provider: 'claude', cwd: join(store.scratchFolder, chatId) });
         await writeFile(join(store.scratchFolder, chatId, 'notes.md'), 'x');
     });
