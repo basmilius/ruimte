@@ -1,4 +1,5 @@
 import { ChatHostProvider } from '@adecore/agents-react';
+import { prefetcher } from '@adecore/ui';
 import type { ChatItem, ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { createRoot } from 'react-dom/client';
 import { App } from '../src/App';
@@ -139,5 +140,18 @@ createRoot(document.getElementById('root')!).render(
 );
 
 Object.assign(window, {
-    longSession: { streamTurn, terminalOutput, openNodes, nodeIds, closeOpened, screensOfClosed, show, linesOfShell, shellMounted, shell: SHELL.id }
+    longSession: {
+        streamTurn,
+        terminalOutput,
+        openNodes,
+        nodeIds,
+        closeOpened,
+        screensOfClosed,
+        show,
+        linesOfShell,
+        shellMounted,
+        // Settles once every lazy chunk the workspace prefetches has loaded.
+        prefetched: () => prefetcher.prefetchEverything(),
+        shell: SHELL.id
+    }
 });

@@ -61,6 +61,10 @@ async function replay(rounds: number, round: (view: View) => Promise<void>): Pro
         `${styles}html,body,#root{width:1400px;height:900px}`,
         async (view) => {
             await view.resize(1400, 900);
+            // The fixture opens its workspace after awaits of its own, and the workspace then loads its lazy chunks one
+            // idle moment at a time. On a slow runner both still ran into the rounds and weighed as what a round left.
+            await waitInPage(view, 'window.longSession !== undefined');
+            await view.evaluate('window.longSession.prefetched()');
             await settle(view);
 
             for (let index = 0; index < rounds; index++) {
