@@ -134,36 +134,9 @@
         "extensions": "Extensions"
     },
     "empty": {
-        "sections": {
-            "agents": "Agents",
-            "place": "Add",
-            "project": "From project"
-        },
-        "agent": {
-            "chat": "Chat",
-            "terminal": "Terminal"
-        },
-        "connecting": {
-            "title": "Connecting",
-            "description": "Asking for agents"
-        },
-        "setup": {
-            "title": "Set up an agent",
-            "description": "No agent CLI on this machine"
-        },
-        "node": {
-            "chat": "Pick a model",
-            "terminal": "Shell",
-            "browser": "Web page",
-            "note": "Markdown",
-            "group": "Frame around nodes"
-        },
-        "design": "Pages an agent designs",
-        "file": "From the project folder",
-        "text": "Or double-click",
-        "layout": "Apply layout",
-        "drawing": "Show drawing",
-        "diagram": "Show diagram",
+        "pick": "Pick an agent to start",
+        "orRun": "Or run",
+        "runIn": "{{name}} in a terminal",
         "hint": "Drop files, right-click for more, or press <palette/>."
     },
     "promptStack": {

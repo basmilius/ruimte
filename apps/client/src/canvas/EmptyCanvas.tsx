@@ -1,136 +1,246 @@
-import { AgentIcon } from '@adecore/agents-react/providers';
+import { startingSelection, useChatPreferences } from '@adecore/agents-react/chat';
+import { AgentIcon, modelName } from '@adecore/agents-react/providers';
 import { useProviders } from '@adecore/agents-react/state';
-import { Icon, Kbd, ScrollArea, SectionLabel, Tile } from '@adecore/ui';
-import type { Shortcut } from '@adecore/ui';
-import { LayoutTemplate, Type } from 'lucide-react';
-import { type ReactNode } from 'react';
+import { Icon, IconButton, Kbd } from '@adecore/ui';
+import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
+import clsx from 'clsx';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import { centerWorld } from '@/actions/action-reach';
-import { applyLayoutAction, createNodeAction, createTextAction, showViewOnCanvasAction } from '@/actions/client-actions';
-import { ProviderRows } from '@/agents/ProviderRows';
-import { emptyCanvasSections, type EmptyCanvasTile } from '@/canvas/empty-canvas';
+import { createNodeAction } from '@/actions/client-actions';
+import { availableAgents } from '@/agents/creation';
+import { GHOST_AREA, GHOST_FADE_MS, GHOST_FRAMES, ghostScale, type GhostKind } from '@/canvas/empty-canvas';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';
 import { ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
-import { useDesignOffered } from '@/design/design-create';
-import { DesignTile } from '@/design/DesignAddItem';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { useDocument } from '@/state/document';
-import { shownFolderOf, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
+import { useDetectProviders } from '@/transport/provider-detection';
 
-interface TileLook {
-    icon: ReactNode;
-    title: string;
-    description?: string;
-    shortcut?: Shortcut;
-    run(): void;
-}
+type AddNode = (kind: GhostKind, provider?: AgentKind) => void;
 
-/* The sections of the grid, in the order their tiles take in the tab order. */
-const SECTIONS = ['agents', 'place', 'project'] as const;
-
-/* All start choices remain reachable by scrolling, including inside a small split cell. */
-export function EmptyCanvas() {
+/*
+ * Ghosts of the four nodes a canvas most often starts with. Everything else is a right-click or ⌘K
+ * away. Once the first node lands the ghosts stay a moment longer, so the others fade and the new
+ * node can grow out of its own (`ghost-landing.ts`).
+ */
+export function EmptyCanvas({ empty }: { empty: boolean }) {
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
-    const layouts = useCanvas((s) => s.layouts);
-    const views = useDocument((s) => s.views);
-    const hasFolder = useProject((s) => shownFolderOf(s.current) !== null);
-    const providers = useProviders((s) => s.providers);
-    const design = useDesignOffered();
-    const sections = emptyCanvasSections({ providers, hasFolder, design, layouts, views });
+    const viewport = useCanvas((s) => s.viewport);
+    const landed = useCanvas((s) => (s.order.length === 1 ? (s.nodes[s.order[0]!]?.kind ?? null) : null));
+    const [wasEmpty, setWasEmpty] = useState(empty);
+    const [leaving, setLeaving] = useState(false);
 
-    const center = () => centerWorld(canvasStore.getState());
+    if (wasEmpty !== empty) {
+        setWasEmpty(empty);
+        setLeaving(!empty);
+    }
 
-    const lookOf = (tile: Exclude<EmptyCanvasTile, { kind: 'design' }>): TileLook => {
-        switch (tile.kind) {
-            case 'agent': {
-                return {
-                    icon: <AgentIcon kind={tile.provider} size={16} />,
-                    title: tile.name,
-                    description: t('empty.agent.terminal'),
-                    run: () => void createNodeAction(tile.target, { provider: tile.provider })
-                };
-            }
-            case 'node':
-                return {
-                    icon: <Icon icon={NODE_KIND_ICONS[tile.node]} size={16} />,
-                    title: t(`kinds.${tile.node}`),
-                    description: t(`empty.node.${tile.node}`),
-                    shortcut: ADD_NODE_SHORTCUTS[tile.node],
-                    run: () => void createNodeAction(tile.node)
-                };
-            case 'file':
-                return {
-                    icon: <Icon icon={NODE_KIND_ICONS.file} size={16} />,
-                    title: t('kinds.file'),
-                    description: t('empty.file'),
-                    run: () => useUi.getState().openFilePicker({ kind: 'node', at: center() })
-                };
-            case 'text':
-                return {
-                    icon: <Icon icon={Type} size={16} />,
-                    title: t('kinds.text'),
-                    description: t('empty.text'),
-                    run: () => createTextAction(center())
-                };
-            case 'layout':
-                return {
-                    icon: <Icon icon={LayoutTemplate} size={16} />,
-                    title: tile.name,
-                    description: t('empty.layout'),
-                    run: () => applyLayoutAction(tile.name)
-                };
-            case 'view':
-                return {
-                    icon: <Icon icon={NODE_KIND_ICONS[tile.view]} size={16} />,
-                    title: tile.name,
-                    description: tile.view === 'drawing' ? t('empty.drawing') : t('empty.diagram'),
-                    run: () => void showViewOnCanvasAction(tile.viewId)
-                };
+    useEffect(() => {
+        if (!leaving) {
+            return;
         }
+
+        const timer = setTimeout(() => setLeaving(false), GHOST_FADE_MS);
+        return () => clearTimeout(timer);
+    }, [leaving]);
+
+    if (!empty && !leaving) {
+        return null;
+    }
+
+    const scale = ghostScale(viewport);
+
+    const add: AddNode = (kind, provider) => {
+        void createNodeAction(kind, provider === undefined ? {} : { provider }).then((nodeId) => {
+            // A chat is started to be typed in.
+            if (nodeId !== null && kind === 'chat') {
+                canvasStore.getState().setBodyFocus(nodeId);
+            }
+        });
     };
 
-    return (
-        /* The bottom padding keeps the list clear of the dock, which floats over the same cell. The list shrinks and
-           scrolls while the hint under it keeps its line, so a small cell still says how to reach the rest. */
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 pt-4 pb-20">
-            <ScrollArea className="pointer-events-auto min-h-0 w-full max-w-3xl" viewportClassName="flex flex-col gap-5 *:shrink-0">
-                <ProviderRows onPick={(provider) => void createNodeAction('chat', { provider: provider.kind })} />
-                {SECTIONS.filter((key) => sections[key].length > 0).map((key) => (
-                    <section key={key} className="flex flex-col gap-2">
-                        <SectionLabel render={<h2 />} className="px-1">
-                            {t(`empty.sections.${key}`)}
-                        </SectionLabel>
-                        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))' }}>
-                            {sections[key].map((tile) => {
-                                // A design asks for its CLI in a menu, which the tile opens.
-                                if (tile.kind === 'design') {
-                                    return <DesignTile key={tile.id} at={center} />;
-                                }
+    const ghostOf = (kind: GhostKind, body: ReactNode) => (
+        <Ghost key={kind} kind={kind} title={t(`kinds.${kind}`)} landed={leaving && landed === kind} onAdd={() => add(kind)}>
+            {body}
+        </Ghost>
+    );
 
-                                const look = lookOf(tile);
-                                return (
-                                    <Tile
-                                        key={tile.id}
-                                        icon={look.icon}
-                                        title={look.title}
-                                        description={look.description}
-                                        shortcut={look.shortcut}
-                                        onClick={look.run}
-                                    />
-                                );
-                            })}
-                        </div>
-                    </section>
-                ))}
-                <SlotRow place="emptyCanvas" context={{}} words wrap={(row) => <div className="flex flex-wrap justify-center gap-2">{row}</div>} />
-            </ScrollArea>
+    return (
+        /* The bottom padding keeps the ghosts clear of the dock, which floats over the same cell. */
+        <div
+            className={clsx(
+                'pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-6 overflow-hidden px-6 pt-4 pb-20 transition-opacity duration-220',
+                leaving && 'opacity-0'
+            )}
+            inert={leaving}
+        >
+            <div className="relative shrink-0" style={{ width: Math.round(GHOST_AREA.w * scale), height: Math.round(GHOST_AREA.h * scale) }}>
+                <div className="absolute top-0 left-0 origin-top-left" style={{ width: GHOST_AREA.w, height: GHOST_AREA.h, transform: `scale(${scale})` }}>
+                    {ghostOf('chat', <ChatGhostBody onAdd={add} />)}
+                    {ghostOf('terminal', <TerminalGhostBody onAdd={add} />)}
+                    {ghostOf(
+                        'browser',
+                        <>
+                            <span className="h-7 shrink-0 rounded-md bg-text/5" />
+                            <FaintLine className="w-3/4" />
+                            <FaintLine className="w-1/2" />
+                        </>
+                    )}
+                    {ghostOf(
+                        'note',
+                        <>
+                            <FaintLine className="w-4/5" />
+                            <FaintLine className="w-3/5" />
+                            <FaintLine className="w-2/3" />
+                        </>
+                    )}
+                </div>
+            </div>
+            <SlotRow
+                place="emptyCanvas"
+                context={{}}
+                words
+                wrap={(row) => <div className="pointer-events-auto flex shrink-0 flex-wrap justify-center gap-2">{row}</div>}
+            />
             <p className="pointer-events-auto shrink-0 text-center text-xs text-text-muted">
                 <Trans t={t} i18nKey="empty.hint" components={{ palette: <Kbd shortcut={APP_SHORTCUTS.palette} variant="inline" /> }} />
             </p>
         </div>
+    );
+}
+
+/*
+ * A dashed outline where a node would stand, with the header a node has. The whole ghost adds its node
+ * through one button laid over it, so the buttons inside stay buttons of their own.
+ */
+function Ghost({ kind, title, landed, onAdd, children }: { kind: GhostKind; title: string; landed: boolean; onAdd(): void; children: ReactNode }) {
+    const frame = GHOST_FRAMES[kind];
+
+    return (
+        <div
+            data-ghost={kind}
+            className={clsx(
+                'pointer-events-auto absolute flex flex-col rounded-xl border-2 border-dashed border-text/15 text-xs text-text-muted transition-[border-color] duration-150 focus-within:border-text/30 hover:border-text/30',
+                // The node that landed stands where its ghost was, so that ghost goes at once.
+                landed && 'invisible'
+            )}
+            style={{ left: frame.x, top: frame.y, width: frame.w, height: frame.h }}
+        >
+            <button type="button" aria-label={title} className="absolute -inset-0.5 rounded-xl" onClick={onAdd} />
+            <div className="pointer-events-none flex h-10 shrink-0 items-center gap-2 px-2.5">
+                <Icon icon={NODE_KIND_ICONS[kind]} size={16} />
+                <span className="truncate font-medium text-text">{title}</span>
+                <Kbd shortcut={ADD_NODE_SHORTCUTS[kind]} className="ml-auto text-text-faint" />
+            </div>
+            <div className="pointer-events-none flex min-h-0 flex-1 flex-col gap-2.5 p-3">{children}</div>
+        </div>
+    );
+}
+
+function FaintLine({ className }: { className: string }) {
+    return <span className={clsx('h-2 shrink-0 rounded-sm bg-text/6', className)} />;
+}
+
+/* Drawn as a secondary button, so it answers the pointer the way every other button does. */
+const AGENT_BUTTON = 'border border-field-border bg-field text-text hover:bg-surface-hover';
+
+/* A conversation that has not started: a question, an answer, and the agents, each named with its model while a person points at it. */
+function ChatGhostBody({ onAdd }: { onAdd: AddNode }) {
+    const { t } = useTranslation('canvas');
+    const { t: tAgents } = useTranslation('agents');
+    const providers = useProviders((s) => s.providers);
+    const loaded = useProviders((s) => s.loaded);
+    const preferences = useChatPreferences();
+    const [pointed, setPointed] = useState<ProviderInfo | null>(null);
+    const chats = availableAgents(providers, 'chat');
+    useDetectProviders();
+
+    const modelOf = (provider: ProviderInfo): string => {
+        const model = startingSelection(preferences, provider)?.model ?? null;
+        return model === null ? tAgents('menu.defaultModel') : modelName(model, provider.models);
+    };
+
+    return (
+        <>
+            <span className="self-end rounded-xl border-2 border-dashed border-text/15 px-3 py-2.5">
+                <FaintLine className="block w-30" />
+            </span>
+            <span className="flex flex-col gap-2">
+                <FaintLine className="w-7/8" />
+                <FaintLine className="w-3/4" />
+                <FaintLine className="w-1/2" />
+            </span>
+            <p className="mt-auto truncate" aria-live="polite">
+                {pointed !== null ? (
+                    <>
+                        <span className="font-medium text-text">{pointed.name}</span> {modelOf(pointed)}
+                    </>
+                ) : chats.length > 0 ? (
+                    t('empty.pick')
+                ) : loaded ? (
+                    <button
+                        type="button"
+                        className="pointer-events-auto relative text-text underline-offset-2 hover:underline"
+                        onClick={() => useUi.getState().setSettings({ open: true, section: 'agents' })}
+                    >
+                        {tAgents('menu.setup')}
+                    </button>
+                ) : (
+                    tAgents('menu.connecting')
+                )}
+            </p>
+            {chats.length > 0 && (
+                <span className="pointer-events-auto relative flex flex-wrap gap-1.5">
+                    {chats.map((provider) => (
+                        <IconButton
+                            key={provider.kind}
+                            label={provider.name}
+                            tooltip={false}
+                            className={clsx('size-9 rounded-lg', AGENT_BUTTON)}
+                            onPointerEnter={() => setPointed(provider)}
+                            onPointerLeave={() => setPointed(null)}
+                            onFocus={() => setPointed(provider)}
+                            onBlur={() => setPointed(null)}
+                            onClick={() => onAdd('chat', provider.kind)}
+                        >
+                            <AgentIcon kind={provider.kind} size={18} className={provider.kind === 'claude' ? 'text-chart-claude' : undefined} />
+                        </IconButton>
+                    ))}
+                </span>
+            )}
+        </>
+    );
+}
+
+/* A shell waiting at its prompt, and the agent CLIs that run in a terminal. */
+function TerminalGhostBody({ onAdd }: { onAdd: AddNode }) {
+    const { t } = useTranslation('canvas');
+    const providers = useProviders((s) => s.providers);
+    const agents = availableAgents(providers, 'terminal');
+
+    return (
+        <>
+            <span className="font-mono text-text-faint">
+                $ <span className="ghost-caret inline-block h-4 w-2 bg-current align-middle opacity-60" />
+            </span>
+            {agents.length > 0 && (
+                <span className="pointer-events-auto relative mt-auto flex flex-wrap items-center gap-1.5">
+                    <span className="mr-1">{t('empty.orRun')}</span>
+                    {agents.map((provider) => (
+                        <IconButton
+                            key={provider.kind}
+                            size="sm"
+                            label={t('empty.runIn', { name: provider.name })}
+                            className={clsx('rounded-md', AGENT_BUTTON)}
+                            onClick={() => onAdd('terminal', provider.kind)}
+                        >
+                            <AgentIcon kind={provider.kind} size={14} className={provider.kind === 'claude' ? 'text-chart-claude' : undefined} />
+                        </IconButton>
+                    ))}
+                </span>
+            )}
+        </>
     );
 }

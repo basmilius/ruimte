@@ -447,6 +447,21 @@
         }
     }
 
+    /* A terminal ghost's caret. In whole steps, so the window presents no frame while it holds still. */
+    .ghost-caret {
+        animation: ghost-caret 1s steps(1) infinite;
+    }
+    @keyframes ghost-caret {
+        50% {
+            opacity: 0;
+        }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .ghost-caret {
+            animation: none;
+        }
+    }
+
     /* In the desktop app the top band drags the window. Electron lets children inherit
        the region, so they go back to `initial` (an explicit `none` counts as no-drag and breaks the
        drag), and the controls inside opt out on purpose. */

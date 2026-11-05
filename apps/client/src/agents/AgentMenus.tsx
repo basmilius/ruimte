@@ -4,7 +4,7 @@ import { useProviders } from '@adecore/agents-react/state';
 import { Icon, IconButton, Menu } from '@adecore/ui';
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import { Bot, MessageSquare, type LucideIcon } from 'lucide-react';
-import type { ReactElement, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { agentTargetLabel, type AgentTarget } from '@/agents/nodes';
 import { useDocument } from '@/state/document';
@@ -200,18 +200,6 @@ export function ChatAgentMenu({
         <Menu.Root>
             <IconButton render={<Menu.Trigger />} icon={icon} size="sm" label={label} tabIndex={tabIndex} />
             <Menu.Popup align="end" className="min-w-48">
-                <AgentRows target="chat" onPick={(_target, provider, account) => onPick(provider, account)} />
-            </Menu.Popup>
-        </Menu.Root>
-    );
-}
-
-/* The same rows behind a trigger the surface draws itself, such as a tile. */
-export function ChatAgentPicker({ trigger, onPick }: { trigger: ReactElement; onPick(provider: ProviderInfo, account?: string): void }) {
-    return (
-        <Menu.Root>
-            <Menu.Trigger render={trigger} />
-            <Menu.Popup align="start" className="min-w-48">
                 <AgentRows target="chat" onPick={(_target, provider, account) => onPick(provider, account)} />
             </Menu.Popup>
         </Menu.Root>

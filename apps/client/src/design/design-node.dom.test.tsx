@@ -249,25 +249,4 @@ describe('adding a design', () => {
         expect(offered.length).toBeGreaterThan(0);
         expect(offered).not.toContain('Design');
     });
-
-    function emptyCanvasTitles(): string[] {
-        return [...mounted.host.querySelectorAll('section button')].map((tile) => tile.querySelector('.font-medium')?.textContent ?? '');
-    }
-
-    test('is offered on an empty canvas beside the chat, and asks there for the CLI', async () => {
-        await start([], []);
-        await until(() => emptyCanvasTitles().includes('Chat'));
-        expect(emptyCanvasTitles()).toContain('Design');
-
-        await clickOn([...mounted.host.querySelectorAll('section button')].find((tile) => tile.textContent?.includes('Pages an agent designs')) ?? null);
-        await until(() => document.querySelector('[role="menu"]') !== null);
-    });
-
-    test('is not offered on an empty canvas of a machine older than designs', async () => {
-        await start([], []);
-        await act(async () => machine.answersOnly((Object.keys(REQUEST_SCHEMAS) as RequestType[]).filter((type) => type !== 'artifact.saveFolder')));
-        await until(() => emptyCanvasTitles().includes('Chat'));
-
-        expect(emptyCanvasTitles()).not.toContain('Design');
-    });
 });

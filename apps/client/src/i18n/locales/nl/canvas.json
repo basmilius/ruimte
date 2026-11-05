@@ -134,36 +134,9 @@
         "extensions": "Extensies"
     },
     "empty": {
-        "sections": {
-            "agents": "Agents",
-            "place": "Toevoegen",
-            "project": "Uit project"
-        },
-        "agent": {
-            "chat": "Chat",
-            "terminal": "Terminal"
-        },
-        "connecting": {
-            "title": "Verbinden",
-            "description": "Agents opvragen"
-        },
-        "setup": {
-            "title": "Een agent instellen",
-            "description": "Geen agent-CLI op deze machine"
-        },
-        "node": {
-            "chat": "Kies een model",
-            "terminal": "Shell",
-            "browser": "Webpagina",
-            "note": "Markdown",
-            "group": "Kader om nodes"
-        },
-        "design": "Pagina's die een agent ontwerpt",
-        "file": "Uit de projectmap",
-        "text": "Of dubbelklik",
-        "layout": "Indeling toepassen",
-        "drawing": "Tekening tonen",
-        "diagram": "Diagram tonen",
+        "pick": "Kies een agent om te beginnen",
+        "orRun": "Of start",
+        "runIn": "{{name}} in een terminal",
         "hint": "Sleep bestanden hierheen, klik met rechts voor meer, of druk op <palette/>."
     },
     "promptStack": {

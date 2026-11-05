@@ -1,7 +1,6 @@
 'use client';
 
-import { SectionLabel, Tile } from '@adecore/ui';
-import { ChevronRight, FileText, Globe, Hash, LayoutGrid, MessageSquare, StickyNote, Terminal, Type } from 'lucide-react';
+import { Globe, Hash, MessageSquare, SquareTerminal, StickyNote, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { ClaudeMark } from '../../app/canvas.tsx';
 import { Dock } from '../../app/chrome.tsx';
@@ -9,74 +8,111 @@ import { Stage } from '../../film/Stage.tsx';
 import { Shortcut } from '../Shortcut.tsx';
 import { GuideWindow } from './parts.tsx';
 
-/* `empty-canvas.ts`: the sections of tiles, in the words of `canvas.empty.*`. */
-const SECTIONS: readonly {
-    readonly label: string;
-    readonly tiles: readonly { readonly icon: ReactNode; readonly title: string; readonly description: string }[];
+/* `canvas/empty-canvas.ts`: where each ghost stands, in canvas units. */
+const GHOSTS: readonly {
+    readonly title: string;
+    readonly icon: LucideIcon;
+    readonly keys: string;
+    readonly frame: readonly [number, number, number, number];
 }[] = [
-    {
-        label: 'Agents',
-        tiles: [
-            { icon: <ClaudeMark size={16} />, title: 'Claude Code', description: 'Terminal' },
-            { icon: <MessageSquare size={16} strokeWidth={1.75} />, title: 'Chat', description: 'Pick a model' }
-        ]
-    },
-    {
-        label: 'Add',
-        tiles: [
-            { icon: <Terminal size={16} strokeWidth={1.75} />, title: 'Terminal', description: 'Shell' },
-            { icon: <Globe size={16} strokeWidth={1.75} />, title: 'Browser', description: 'Web page' },
-            { icon: <FileText size={16} strokeWidth={1.75} />, title: 'File', description: 'From the project folder' },
-            { icon: <StickyNote size={16} strokeWidth={1.75} />, title: 'Note', description: 'Markdown' },
-            { icon: <LayoutGrid size={16} strokeWidth={1.75} />, title: 'Group', description: 'Frame around nodes' },
-            { icon: <Type size={16} strokeWidth={1.75} />, title: 'Text', description: 'Or double-click' }
-        ]
-    }
+    { title: 'Chat', icon: MessageSquare, keys: 'Alt+C', frame: [0, 0, 432, 312] },
+    { title: 'Terminal', icon: SquareTerminal, keys: 'Alt+T', frame: [456, 0, 336, 144] },
+    { title: 'Browser', icon: Globe, keys: 'Alt+B', frame: [456, 168, 156, 144] },
+    { title: 'Note', icon: StickyNote, keys: 'Alt+N', frame: [636, 168, 156, 144] }
 ];
 
+function FaintLine({ className }: { readonly className: string }) {
+    return <span className={`h-2 shrink-0 rounded-sm bg-text/6 ${className}`} />;
+}
+
+function AgentButton({ size }: { readonly size: 'md' | 'sm' }) {
+    return (
+        <span
+            className={`grid shrink-0 place-items-center border border-field-border bg-field text-chart-claude ${size === 'md' ? 'size-9 rounded-lg' : 'size-7 rounded-md'}`}
+        >
+            <ClaudeMark size={size === 'md' ? 18 : 14} />
+        </span>
+    );
+}
+
+const BODIES: Record<string, ReactNode> = {
+    Chat: (
+        <>
+            <span className="self-end rounded-xl border-2 border-dashed border-text/15 px-3 py-2.5">
+                <FaintLine className="block w-30" />
+            </span>
+            <span className="flex flex-col gap-2">
+                <FaintLine className="w-7/8" />
+                <FaintLine className="w-3/4" />
+                <FaintLine className="w-1/2" />
+            </span>
+            <p className="mt-auto">Pick an agent to start</p>
+            <span className="flex gap-1.5">
+                <AgentButton size="md" />
+            </span>
+        </>
+    ),
+    Terminal: (
+        <>
+            <span className="font-mono text-text-faint">
+                $ <span className="inline-block h-4 w-2 bg-current align-middle opacity-60" />
+            </span>
+            <span className="mt-auto flex items-center gap-1.5">
+                <span className="mr-1">Or run</span>
+                <AgentButton size="sm" />
+            </span>
+        </>
+    ),
+    Browser: (
+        <>
+            <span className="h-7 shrink-0 rounded-md bg-text/5" />
+            <FaintLine className="w-3/4" />
+            <FaintLine className="w-1/2" />
+        </>
+    ),
+    Note: (
+        <>
+            <FaintLine className="w-4/5" />
+            <FaintLine className="w-3/5" />
+            <FaintLine className="w-2/3" />
+        </>
+    )
+};
+
 /*
- * A new project's empty canvas (`canvas/EmptyCanvas.tsx`): the New chat card of `agents/ProviderRows.tsx`
- * for each chat provider, then the tiles by section, the hint, and the dock under it all.
+ * A new project's empty canvas (`canvas/EmptyCanvas.tsx`): a ghost of a chat, a terminal, a browser and
+ * a note, the hint under them, and the dock under it all.
  */
 export function EmptyCanvas() {
     return (
         <Stage
             width={1040}
             height={640}
-            label="The empty canvas of a new project. Under New chat, Claude Code with its model. Under Agents, a Claude Code terminal and a chat. Under Add, a terminal, a browser, a file, a note, a group and text."
+            label="The empty canvas of a new project: dashed outlines of a chat, a terminal, a browser and a note. The chat says Pick an agent to start, above a Claude Code button; the terminal offers Claude Code under Or run."
         >
             <GuideWindow view={{ icon: Hash, name: 'Canvas' }} rows={[{ id: 'canvas', name: 'Canvas', icon: Hash }]} selected="canvas">
-                <div className="canvas-dots absolute inset-0 grid place-items-center overflow-hidden px-4 pt-4 pb-20">
-                    <div className="flex w-full max-w-[560px] flex-col gap-5">
-                        <section className="flex flex-col gap-2">
-                            <SectionLabel className="px-1">New chat</SectionLabel>
-                            <div className="overflow-hidden rounded-xl border border-border bg-surface-raised">
-                                <div className="flex w-full items-center gap-3 px-4 py-3">
-                                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-sunken text-chart-claude dark:bg-field dark:inset-ring dark:inset-ring-field-border">
-                                        <ClaudeMark size={20} />
+                <div className="canvas-dots absolute inset-0 flex flex-col items-center justify-center gap-6 overflow-hidden px-6 pt-4 pb-20">
+                    <div className="relative shrink-0" style={{ width: 792, height: 312 }}>
+                        {GHOSTS.map(({ title, icon: GhostIcon, keys, frame: [x, y, w, h] }) => (
+                            <div
+                                key={title}
+                                className="absolute flex flex-col rounded-xl border-2 border-dashed border-text/15 text-xs text-text-muted"
+                                style={{ left: x, top: y, width: w, height: h }}
+                            >
+                                <div className="flex h-10 shrink-0 items-center gap-2 px-2.5">
+                                    <GhostIcon size={16} strokeWidth={1.75} />
+                                    <span className="font-medium text-text">{title}</span>
+                                    <span className="ml-auto text-text-faint">
+                                        <Shortcut keys={keys} />
                                     </span>
-                                    <span className="flex min-w-0 flex-1 items-baseline gap-x-3">
-                                        <span className="text-sm font-medium text-text">Claude Code</span>
-                                        <span className="truncate text-xs text-text-muted">Opus 5.5</span>
-                                    </span>
-                                    <ChevronRight size={16} strokeWidth={1.75} className="shrink-0 text-text-faint" />
                                 </div>
+                                <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-3">{BODIES[title]}</div>
                             </div>
-                        </section>
-                        {SECTIONS.map((section) => (
-                            <section key={section.label} className="flex flex-col gap-2">
-                                <SectionLabel className="px-1">{section.label}</SectionLabel>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {section.tiles.map((tile) => (
-                                        <Tile key={tile.title} icon={tile.icon} title={tile.title} description={tile.description} tabIndex={-1} />
-                                    ))}
-                                </div>
-                            </section>
                         ))}
-                        <p className="text-center text-xs text-text-muted">
-                            Drop files, right-click for more, or press <Shortcut keys="Mod+K" />.
-                        </p>
                     </div>
+                    <p className="text-center text-xs text-text-muted">
+                        Drop files, right-click for more, or press <Shortcut keys="Mod+K" />.
+                    </p>
                 </div>
                 <div className="absolute inset-x-0 bottom-4 flex justify-center">
                     <Dock />

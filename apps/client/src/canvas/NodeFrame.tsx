@@ -30,6 +30,7 @@ import { useBrowserDisplayTitle } from '@/browser/title';
 import { accentColor, accentHeaderStyle, accentShades, notePaperClass } from '@/canvas/accents';
 import { useHeldWhileVisible, useNodeInViewport, useRenderZoom } from '@/canvas/culling';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
+import { useGhostLanding } from '@/canvas/ghost-landing';
 import { KindIcon } from '@/canvas/KindIcon';
 import type { Point } from '@/canvas/math';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';
@@ -398,6 +399,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const hiddenNeedsYou = useHiddenNeedsYou(node?.kind === 'group' && node.collapsed === true ? id : null);
     const browserTitle = useBrowserDisplayTitle(id, node?.title ?? '', node?.titleSource);
     const unsavedFile = useUnsavedStoredPath(node?.kind === 'file' ? (node.path ?? null) : null);
+    const landingFrame = useGhostLanding();
 
     if (!node || hidden) {
         return null;
@@ -427,6 +429,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
         <ContextMenu.Root>
             <ContextMenu.Trigger
                 render={<div />}
+                ref={landingFrame}
                 data-node-id={id}
                 data-surface="node"
                 data-paper={isNote ? (notePaperOf(node) ?? 'yellow') : undefined}

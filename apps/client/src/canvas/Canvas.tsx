@@ -937,7 +937,7 @@ export function Canvas() {
                         </div>
                     )}
                 </div>
-                {order.length === 0 && textIds.length === 0 && Object.keys(lines).length === 0 && <EmptyCanvas />}
+                <EmptyCanvas empty={order.length === 0 && textIds.length === 0 && Object.keys(lines).length === 0} />
                 {lineTool !== null && maximizedId === null && <CanvasLineTool key={lineTool} onDraftChange={setLineDraft} />}
                 {/* Over the pages, which the canvas itself cannot draw over. */}
                 <CellOverlay slot="view">
