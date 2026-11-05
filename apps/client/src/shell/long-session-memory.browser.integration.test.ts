@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { clientDirectory, frame, withBrowserFixture } from '../../testing/browser-fixture';
+import { clientDirectory, frame, waitInPage, withBrowserFixture } from '../../testing/browser-fixture';
 
 /*
  * The workspace renderer ran out of memory after hours of work. Each test replays one kind of that work
@@ -30,17 +30,6 @@ async function settle(view: View): Promise<void> {
     for (let index = 0; index < 4; index++) {
         await view.evaluate(frame);
     }
-}
-
-/* Waits frame by frame until `condition` holds in the page, for what lands a few renders later (a view shown). */
-async function until(view: View, condition: string): Promise<void> {
-    for (let index = 0; index < 100; index++) {
-        if (await view.evaluate<boolean>(condition)) {
-            return;
-        }
-        await view.evaluate(frame);
-    }
-    throw new Error(`never held: ${condition}`);
 }
 
 async function weigh(view: View): Promise<Sample> {
@@ -152,21 +141,41 @@ describe('a long session', () => {
     test('a terminal out of sight keeps its last lines, not its scrollback', async () => {
         const kept: number[] = [];
         let round = 0;
-        const samples = await replay(2, async (view) => {
-            await view.evaluate(`window.longSession.show('main')`);
-            await until(view, 'window.longSession.shellMounted()');
-            // The first round weighs the shell out of sight with a screen of output, the second with full scrollback.
-            await view.evaluate(`window.longSession.terminalOutput(window.longSession.shell, ${round === 0 ? 20 : 6000})`);
-            await settle(view);
+
+        /* Writes `lines` into a terminal on the main view, then shows the other view once it holds the last of them. */
+        const writeAndLeave = async (view: View, terminal: string, lines: number) => {
+            await view.evaluate(`window.longSession.terminalOutput(${terminal}, ${lines})`);
+            await waitInPage(view, `window.ruimte.terminalText(${terminal}).includes('✓ ${lines - 1} ')`);
             await view.evaluate(`window.longSession.show('elsewhere')`);
-            await until(view, '!window.longSession.shellMounted()');
-            kept.push(await view.evaluate<number>('window.longSession.linesOfShell()'));
+            await waitInPage(view, '!window.longSession.shellMounted()');
+        };
+
+        const samples = await replay(3, async (view) => {
+            await view.evaluate(`window.longSession.show('main')`);
+            await waitInPage(view, 'window.longSession.shellMounted()');
+
+            if (round === 0) {
+                // A terminal of its own takes the round through the same code first, so what V8 compiles on the way is in the
+                // first weighing; on the runner it weighed 1.6 MB more than here and took the bound.
+                const opened = `window.longSession.nodeIds('terminal')[0]`;
+                await view.evaluate('window.longSession.openNodes()');
+                await waitInPage(view, `window.ruimte.terminalText(${opened}) !== null`);
+                await writeAndLeave(view, opened, 6000);
+                await view.evaluate(`window.longSession.show('main')`);
+                await waitInPage(view, 'window.longSession.shellMounted()');
+                await view.evaluate('window.longSession.closeOpened()');
+            } else {
+                // The first round weighs the shell out of sight with a screen of output, the second with full scrollback.
+                await writeAndLeave(view, 'window.longSession.shell', round === 1 ? 20 : 6000);
+                kept.push(await view.evaluate<number>('window.longSession.linesOfShell()'));
+            }
+
             round += 1;
         });
-        const gained = growth(samples, 0);
+        const gained = growth(samples, 1);
 
         expect(kept[1]).toBe(200);
-        // Its 5000 lines of scrollback, kept as strings, weighed 5.7 MB more here; 200 lines weigh 1.7 MB, most of it code compiled on the way.
+        // Its 5000 lines of scrollback, kept as strings, weighed 4 MB more here; 200 lines weigh 0.8 MB.
         expect(gained.heap).toBeLessThan(3 * MB);
     }, 120_000);
 });
