@@ -26,6 +26,16 @@ describe('ProjectRegistry', () => {
         expect((await new ProjectRegistry(home).load()).map((project) => project.projectId)).toEqual(['a', 'b']);
     });
 
+    test('a change is written durably, so a power loss right after it leaves the old list or the new one', async () => {
+        const writes: Array<{ target: string; durable: boolean | undefined }> = [];
+        const registry = new ProjectRegistry(home, async (target, _content, _mode, options) => {
+            writes.push({ target, durable: options?.durable });
+        });
+        await registry.update((entries) => [...entries, entry('a')]);
+
+        expect(writes).toEqual([{ target: join(home, 'projects.json'), durable: true }]);
+    });
+
     test('an entry that will not read is dropped and the rest is kept', async () => {
         await writeFile(join(home, 'projects.json'), JSON.stringify({ projects: [entry('a'), { projectId: 'loose', folder: null }] }));
 
