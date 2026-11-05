@@ -425,7 +425,7 @@
         "timedOut": "De machine antwoordde niet binnen {{seconds}} seconden op {{type}}"
     },
     "file": {
-        "tooLarge": "Dit bestand is {{size}} MB. Een directe verbinding laadt hoogstens {{max}} MB.",
+        "tooLarge": "Dit bestand is {{size}} MB, te groot om hier te laden. De grens is {{max}} MB.",
         "emptyPiece": "Het bestand stopte met laden voor het einde. Probeer het opnieuw.",
         "changed": "Het bestand veranderde tijdens het laden"
     }

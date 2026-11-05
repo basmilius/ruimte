@@ -26,6 +26,10 @@ function pieceSizes(options: Pick<ReadResourceOptions, 'chunkBytes' | 'piecesInF
     };
 }
 
+export function fileTooLarge(size: number, maxBytes: number): Error {
+    return new Error(i18next.t('machines:file.tooLarge', { size: Math.ceil(size / 1024 / 1024), max: Math.ceil(maxBytes / 1024 / 1024) }));
+}
+
 /*
  * A resource's bytes over the wire, a few pieces on their way at once so a slow link is not one
  * round trip per piece. The first piece is asked alone, since it says how large the resource is;
@@ -39,7 +43,7 @@ export async function readResource(read: ReadPiece, resource: ByteResource, opti
     for (;;) {
         const first = await read({ resource, offset: 0, length: chunkBytes });
         if (first.size > maxBytes) {
-            throw new Error(i18next.t('machines:file.tooLarge', { size: Math.ceil(first.size / 1024 / 1024), max: Math.ceil(maxBytes / 1024 / 1024) }));
+            throw fileTooLarge(first.size, maxBytes);
         }
         const parts: Uint8Array<ArrayBuffer>[] = [];
         if (await readPieces(read, resource, first, chunkBytes, inFlight, (bytes) => void parts.push(bytes))) {

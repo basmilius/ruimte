@@ -425,7 +425,7 @@
         "timedOut": "The machine did not answer {{type}} within {{seconds}} seconds"
     },
     "file": {
-        "tooLarge": "This file is {{size}} MB. A direct connection loads at most {{max}} MB.",
+        "tooLarge": "This file is {{size}} MB, too large to load here. The limit is {{max}} MB.",
         "emptyPiece": "The file stopped loading before the end. Try again.",
         "changed": "The file changed while it was loading"
     }

@@ -194,7 +194,7 @@ describe('readResource', () => {
 
     test('a file larger than the cap stops after the first piece and says how large it is', async () => {
         const fake = daemon(random(5_000));
-        await expect(readResource(fake.read, RESOURCE, { chunkBytes: 1_000, maxBytes: 2_000 })).rejects.toThrow(/at most/);
+        await expect(readResource(fake.read, RESOURCE, { chunkBytes: 1_000, maxBytes: 2_000 })).rejects.toThrow(/too large/);
         expect(fake.asked).toHaveLength(1);
     });
 

@@ -1,12 +1,12 @@
 import { imageForDisplay } from '@adecore/agents-react/images';
-import { CHAT_MODEL_MAX_BYTES, type ByteResource } from '@ruimte/contracts';
+import { BYTES_READ_MAX_BYTES, CHAT_MODEL_MAX_BYTES, type ByteResource } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useEffect, useState } from 'react';
 import { credentialFor } from '@/endpoint/credentials';
 import { endpointById, useEndpoints } from '@/state/endpoints';
 import { transportFor } from '@/transport';
 import { BlobCache, type BlobLease, type BlobState } from './blob-cache';
-import { readResource } from './byte-transfer';
+import { fileTooLarge, readResource } from './byte-transfer';
 import { bytesStreamUrl } from './bytes-stream';
 import { bytesWorkerReady } from './bytes-worker-host';
 import { readPiece } from './piece';
@@ -106,7 +106,39 @@ export async function readMachineFile(
     if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
     }
-    return response.arrayBuffer();
+    return boundedBody(response, maxBytes);
+}
+
+/* A body read up to `maxBytes`, as the pieces are, and cancelled the moment it says or turns out to be larger. */
+async function boundedBody(response: Response, maxBytes: number): Promise<ArrayBuffer> {
+    const declared = Number(response.headers.get('content-length') ?? 0);
+    if (declared > maxBytes) {
+        void response.body?.cancel();
+        throw fileTooLarge(declared, maxBytes);
+    }
+
+    const reader = response.body?.getReader();
+    const parts: Uint8Array[] = [];
+    let total = 0;
+
+    for (let chunk = await reader?.read(); chunk !== undefined && !chunk.done; chunk = await reader?.read()) {
+        total += chunk.value.byteLength;
+        if (total > maxBytes) {
+            void reader?.cancel();
+            throw fileTooLarge(total, maxBytes);
+        }
+        parts.push(chunk.value);
+    }
+
+    const body = new Uint8Array(total);
+    let offset = 0;
+
+    for (const part of parts) {
+        body.set(part, offset);
+        offset += part.byteLength;
+    }
+
+    return body.buffer;
 }
 
 function machineResourceKey(endpointId: string, resource: MachineResource): string {
@@ -154,6 +186,8 @@ export function useMachineUrl(resource: MachineResource | null, endpointId?: str
             return;
         }
         const payload = JSON.parse(wire) as ByteResource;
+        // An attachment may be a model an agent attached, which is larger than any other blob read whole.
+        const maxBytes = payload.kind === 'attachment' ? CHAT_MODEL_MAX_BYTES : BYTES_READ_MAX_BYTES;
         const lease = cache.acquire(key, async () => {
             if (!pieced) {
                 const url = http;
@@ -168,19 +202,16 @@ export function useMachineUrl(resource: MachineResource | null, endpointId?: str
                     throw new Error(`HTTP ${response.status}`);
                 }
 
-                return imageForDisplay(await response.blob());
+                const body = await boundedBody(response, maxBytes);
+
+                return imageForDisplay(new Blob([body], { type: response.headers.get('content-type') ?? '' }));
             }
 
             const transport = transportFor(machineId);
             if (!transport) {
                 return Promise.reject(new Error(i18next.t('machines:connection.unknownMachine')));
             }
-            // An attachment may be a model an agent attached, which is larger than any other blob read whole.
-            const blob = await readResource(
-                (piece) => readPiece(transport, piece),
-                payload,
-                payload.kind === 'attachment' ? { maxBytes: CHAT_MODEL_MAX_BYTES } : {}
-            );
+            const blob = await readResource((piece) => readPiece(transport, piece), payload, { maxBytes });
 
             return imageForDisplay(blob);
         });
