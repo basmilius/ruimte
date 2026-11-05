@@ -165,21 +165,21 @@ async function scenario(mode: Mode, phase: Phase | null): Promise<void> {
                 await waitBrowser(view, 'window.term?.buffer.active.getLine(0)!==undefined');
                 await waitFor(() => attaches > 0, 'browser attaching');
                 manager.write('shell', "print -r -- 'OLD same.ts:12:4-16'\r", 'person');
-                await waitBrowser(view, hasLine('OLD '));
+                await waitBrowser(view, printed('OLD '));
                 if (mode.startsWith('subshell-')) {
                     manager.write(
                         'shell',
                         "stty tostop; ( cd nested >/dev/null 2>&1; print -r -- 'CHILD same.ts:12:4-16' ); print -r -- 'UNCERTAIN same.ts:12:4-16'\r",
                         'person'
                     );
-                    await waitBrowser(view, hasLine('UNCERTAIN '));
+                    await waitBrowser(view, printed('UNCERTAIN '));
                     if (phase === 'child') {
                         for (const prefix of ['CHILD ', 'UNCERTAIN ']) {
                             await openLocation(view, prefix, null, menu, '');
                         }
                     }
                     manager.write('shell', "print -r -- 'PARENT same.ts:12:4-16'\r", 'person');
-                    await waitBrowser(view, hasLine('PARENT '));
+                    await waitBrowser(view, printed('PARENT '));
                     if (phase === 'parent') {
                         await openLocation(view, 'PARENT ', files[0]!, menu, 'ROOT');
                     }
@@ -187,7 +187,7 @@ async function scenario(mode: Mode, phase: Phase | null): Promise<void> {
                 if (mode === 'late-precmd') {
                     await writeFile(join(shell.home, 'change-next'), '');
                     manager.write('shell', 'true\r', 'person');
-                    await waitBrowser(view, hasLine('AFTER '));
+                    await waitBrowser(view, printed('AFTER '));
                     if (phase === 'precmd') {
                         await openLocation(view, 'BEFORE ', files[0]!, false, 'ROOT');
                         await openLocation(view, 'AFTER ', files[1]!, true, 'NESTED');
@@ -203,7 +203,7 @@ async function scenario(mode: Mode, phase: Phase | null): Promise<void> {
                               ? `go_nested() { print -r -- FUNCTION_OUT; print -ru2 -- FUNCTION_ERR; cd '${nestedName}'; }; go_nested >redirected.out 2>redirected.err`
                               : `cd '${nestedName}'`;
                     manager.write('shell', `${cd}; print -r -- 'NEW same.ts:12:4-16'\r`, 'person');
-                    await waitBrowser(view, hasLine('NEW '));
+                    await waitBrowser(view, printed('NEW '));
                 }
                 if (mode === 'reconnect') {
                     const before = attaches;
@@ -211,7 +211,7 @@ async function scenario(mode: Mode, phase: Phase | null): Promise<void> {
                     await view.evaluate('window.wire.reconnect()');
                     await waitFor(() => attaches > before, 'reattaching socket');
                     await waitBrowser(view, `window.snapshots>${snapshots}`);
-                    await waitBrowser(view, hasLine('NEW '));
+                    await waitBrowser(view, printed('NEW '));
                 }
                 if (mode === 'restore') {
                     const store = new SnapshotStore(join(shell.home, 'saved'));
@@ -237,7 +237,7 @@ async function scenario(mode: Mode, phase: Phase | null): Promise<void> {
                     await view.evaluate('window.wire.reconnect()');
                     await waitFor(() => attaches > before, 'restored attach');
                     await waitBrowser(view, `window.snapshots>${snapshots}`);
-                    await waitBrowser(view, hasLine('NEW '));
+                    await waitBrowser(view, printed('NEW '));
                 }
                 if (mode.startsWith('redirected-block') || mode.startsWith('redirected-function')) {
                     manager.write(
@@ -245,7 +245,7 @@ async function scenario(mode: Mode, phase: Phase | null): Promise<void> {
                         "cd .. >/dev/null 2>&1; print -r -- 'BACK same.ts:12:4-16'; cd nested >/dev/null; print -r -- 'AGAIN same.ts:12:4-16'\r",
                         'person'
                     );
-                    await waitBrowser(view, hasLine('AGAIN '));
+                    await waitBrowser(view, printed('AGAIN '));
                 }
                 const newer = mode === 'late-precmd' ? 'AFTER ' : 'NEW ';
                 if (phase === 'back') {
@@ -268,7 +268,7 @@ async function scenario(mode: Mode, phase: Phase | null): Promise<void> {
                     // A real session resize and scrollback move precede the same interactions.
                     await view.evaluate("window.wire.request('session.resize',{sessionId:'shell',cols:18,rows:12})");
                     manager.write('shell', 'repeat 25 print -r -- filler\r', 'person');
-                    await waitBrowser(view, hasLine('filler'));
+                    await waitBrowser(view, printed('filler'));
                     await view.evaluate('window.term.scrollToTop()');
                     await openLocation(view, 'OLD ', files[0]!, true, 'ROOT');
                     await openLocation(view, newer, files[1]!, false, 'NESTED');
@@ -279,7 +279,7 @@ async function scenario(mode: Mode, phase: Phase | null): Promise<void> {
                     await waitBrowser(view, `window.snapshots>${snapshots}`);
                     expect(await view.evaluate<boolean>(hasLine('OLD '))).toBe(false);
                     manager.write('shell', "print -r -- 'CLEAR same.ts:12:4-16'\r", 'person');
-                    await waitBrowser(view, hasLine('CLEAR '));
+                    await waitBrowser(view, printed('CLEAR '));
                     await openLocation(view, 'CLEAR ', files[1]!, false, 'NESTED');
                     await openLocation(view, 'CLEAR ', files[1]!, true, 'NESTED');
                 }
@@ -298,6 +298,14 @@ async function scenario(mode: Mode, phase: Phase | null): Promise<void> {
     }
 }
 
+/*
+ * A line starting with `prefix` under the prompt that follows it. Output that lands after a test measured where a
+ * line is scrolls that line away from the point, so the click there opened nothing.
+ */
+function printed(prefix: string): string {
+    return `${hasLine(prefix)}&&(()=>{const buffer=window.term.buffer.active;let row=buffer.length-1;while(row>0&&buffer.getLine(row).translateToString(true)==='')row--;return buffer.getLine(row).translateToString(true).trimEnd()==='editor>'})()`;
+}
+
 function hasLine(prefix: string): string {
     return `Array.from({length:window.term?.buffer.active.length??0},(_,row)=>window.term.buffer.active.getLine(row).translateToString(true)).some(line=>line.startsWith(${JSON.stringify(prefix)}))`;
 }
@@ -311,7 +319,7 @@ async function openLocation(view: View, prefix: string, path: string | null, men
     await view.evaluate(
         '(()=>{window.files.setState({tabs:[],focusRequest:null,revealLine:null});window.fileReads=[];window.editor=null;window.term.clearSelection()})()'
     );
-    await view.evaluate(frame);
+    await waitBrowser(view, `document.querySelector('.editor')===null&&document.querySelector('[role=menu]')===null`);
     const point = await view.evaluate<{ x: number; y: number }>(`(()=>{
         const term=window.term,buffer=term.buffer.active;let row=0;
         while(row<buffer.length&&!buffer.getLine(row).translateToString(true).startsWith(${JSON.stringify(prefix)}))row++;
@@ -320,22 +328,25 @@ async function openLocation(view: View, prefix: string, path: string | null, men
         term.scrollToLine(row);const rect=term.element.querySelector('.xterm-screen').getBoundingClientRect();
         return {x:rect.x+(column+0.5)*rect.width/term.cols,y:rect.y+(row-buffer.viewportY+0.5)*rect.height/term.rows};
     })()`);
-    await view.evaluate(frame);
     const anotherRow = await view.evaluate<{ x: number; y: number }>(
         `(()=>{const rect=window.term.element.querySelector('.xterm-screen').getBoundingClientRect();const targetRow=Math.floor((${point.y}-rect.y)*window.term.rows/rect.height);return {x:rect.x+2.5*rect.width/window.term.cols,y:rect.y+(targetRow===1?0.5:1.5)*rect.height/window.term.rows}})()`
     );
     await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', ...anotherRow });
-    await view.evaluate(frame);
     await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 790, y: 290 });
     await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x - 9, y: point.y });
     await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
-    await view.evaluate(frame);
+    // xterm opens only the link it hovers when the button goes down; a line the test refuses has none to wait for.
+    await (path === null ? view.evaluate(frame) : waitBrowser(view, `window.term.element.querySelector('.xterm-cursor-pointer')!==null`));
     const click = async (location: { x: number; y: number }, button: 'left' | 'right', modifiers: number): Promise<void> => {
         await view.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', ...location, button, buttons: button === 'left' ? 1 : 2, clickCount: 1, modifiers });
         await view.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', ...location, button, buttons: 0, clickCount: 1, modifiers });
         await view.evaluate(frame);
     };
     await click(point, menu ? 'right' : 'left', menu ? 0 : process.platform === 'darwin' ? 4 : 2);
+    if (menu) {
+        // The menu always offers Copy, so what it lacks is read only once it is open.
+        await waitBrowser(view, `document.querySelector('[role=menuitem]')!==null`);
+    }
     if (path === null) {
         expect(await view.evaluate<unknown>('window.files.getState().tabs')).toEqual([]);
         expect(await view.evaluate<unknown>('window.fileReads')).toEqual([]);
