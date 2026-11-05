@@ -14,8 +14,14 @@ export interface InstalledSecrets {
     handOverVoiceKey(): Promise<void>;
 }
 
+/* The copy of the OpenAI key the app's own daemon keeps for Voice; each says whether the daemon took it. */
+export interface MachineVoiceKey {
+    hand(key: string): Promise<boolean>;
+    clear(): Promise<boolean>;
+}
+
 /* The OpenAI API key and the database passwords, which stay in the shell, encrypted with the OS keychain. */
-export function installSecrets(ipc: AppIpc, handVoiceKey: ((key: string) => Promise<boolean>) | null): InstalledSecrets {
+export function installSecrets(ipc: AppIpc, machineVoiceKey: MachineVoiceKey | null): InstalledSecrets {
     let openAiKeyStore: SecretStore | null = null;
 
     const openAiKeys = (): SecretStore => {
@@ -24,12 +30,12 @@ export function installSecrets(ipc: AppIpc, handVoiceKey: ((key: string) => Prom
     };
 
     const handOverVoiceKey = async (): Promise<void> => {
-        if (handVoiceKey === null) {
+        if (machineVoiceKey === null) {
             return;
         }
         const key = await openAiKeys().read();
         if (key !== null) {
-            await handVoiceKey(key);
+            await machineVoiceKey.hand(key);
         }
     };
 
@@ -74,6 +80,11 @@ export function installSecrets(ipc: AppIpc, handVoiceKey: ((key: string) => Prom
 
     ipc.handle('openai:clear-api-key', async () => {
         await openAiKeys().write(null);
+
+        if (machineVoiceKey !== null && !(await machineVoiceKey.clear())) {
+            throw new Error('This machine still holds the key for Voice. Try again once it runs.');
+        }
+
         return openAiCredentialStatus();
     });
 

@@ -6,7 +6,7 @@ import { createAppIpc, createPageKeys, createTheme, createWindows, type WindowOr
 import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
 import { windowUrl } from './app-windows';
 import { installBrowserRoutes } from './browser-routes';
-import { askDaemonWork, handVoiceKey } from './daemon-proof';
+import { askDaemonWork, clearVoiceKey, handVoiceKey } from './daemon-proof';
 import { LAUNCHER_PIPE_VARIABLE } from './launcher-pipe';
 import { moveLegacyStorage } from './legacy-storage';
 import { MACHINE_ARGUMENT } from './machine-argument';
@@ -363,7 +363,10 @@ function sealAppSession(): void {
 const guests = installGuests(ipc, { windowOf: (contents) => windows.fromContents(contents) });
 installDialogs(ipc, () => interfaceLanguage.current() ?? undefined);
 installExtensions(ipc, clientExtensions);
-const secrets = installSecrets(ipc, localMachine ? (key) => handVoiceKey(machine.daemonPort, key) : null);
+const secrets = installSecrets(
+    ipc,
+    localMachine ? { hand: (key) => handVoiceKey(machine.daemonPort, key), clear: () => clearVoiceKey(machine.daemonPort) } : null
+);
 installSpeech(ipc, { ruimteHome, repoRoot, send: (channel, payload) => windows.send(channel, payload), windows: () => windows.all() });
 const login = installLogin(ipc);
 const usage = installUsage(ipc, { mode: machineMode, ruimteHome, signedIn: login.signedIn });

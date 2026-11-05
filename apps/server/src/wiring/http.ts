@@ -40,6 +40,7 @@ import { shotFolders } from '../shots.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from '../streams/http-stream.ts';
 import type { CanvasHost } from '../tools/host.ts';
 import { BUILD, VERSION } from '../version.ts';
+import { handleVoiceKeyRequest } from '../voice/key-route.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { ArtifactsBundle } from './artifacts.ts';
 import type { ClientsBundle } from './clients.ts';
@@ -62,7 +63,6 @@ const MACHINE_LEAVE_ACCOUNT_PATH = '/machine/leave-account';
 // Where a client of before account-only paired and signed for a ticket over HTTP; each answers that pairing links are gone.
 const LEGACY_PAIRING_PATHS = ['/auth/pair', '/auth/pairing-token', '/auth/challenge', '/auth/ticket'];
 const RegistrationRequestSchema = z.object({ accountId: AccountSchema.shape.id });
-const VoiceKeyRequestSchema = z.object({ key: z.string() });
 // `owner` is the token of one `extension dev` run, so its Ctrl-C ends only the link it set itself.
 const ExtensionLinkSchema = z.object({ folder: z.string().min(1), owner: z.string().min(1).optional() });
 const ExtensionUnlinkSchema = z.object({ id: z.string().min(1), owner: z.string().min(1).optional() });
@@ -132,23 +132,7 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
         },
         {
             exact: [MACHINE_VOICE_KEY_PATH],
-            handle: async ({ request, remote }) => {
-                const refused = await refuseUnlessOwner(request, remote, 'POST');
-                if (refused) {
-                    return refused;
-                }
-                const parsed = VoiceKeyRequestSchema.safeParse(await request.json().catch(() => null));
-                if (!parsed.success) {
-                    return new Response('Expected a key', { status: 400 });
-                }
-                try {
-                    await voice.keys.write(parsed.data.key);
-                } catch (e) {
-                    // The store says what is wrong without quoting the key.
-                    return new Response(e instanceof Error ? e.message : 'The key could not be saved', { status: 400 });
-                }
-                return new Response(null, { status: 204 });
-            }
+            handle: ({ request, remote }) => handleVoiceKeyRequest(request, remote, access, voice.keys)
         },
         {
             exact: [MACHINE_LEAVE_ACCOUNT_PATH],

@@ -103,3 +103,10 @@ export async function handVoiceKey(daemon: DaemonPort, key: string): Promise<boo
     );
     return handed === true;
 }
+
+/* False when the daemon proved nothing or did not remove its copy, which then still starts Voice. */
+export async function clearVoiceKey(daemon: DaemonPort): Promise<boolean> {
+    const cleared = await askWithSecret(daemon, MACHINE_VOICE_KEY_PATH, { method: 'DELETE' }, async (response) => response.ok);
+
+    return cleared === true;
+}
