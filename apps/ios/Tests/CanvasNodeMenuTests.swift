@@ -69,6 +69,18 @@ import Testing
         #expect(CanvasEditing.members(of: group, in: grouped).map(\.stableID) == ["a", "b"])
     }
 
+    @Test func aGroupMadeInsideAGroupThatSpellsOutItsMembersTakesTheirPlaceThere() throws {
+        let outer = node("outer", "group", x: -1000, y: -1000, w: 3000, h: 3000).setting(
+            "memberIds", .array([.string("kept"), .string("other")]))
+        let canvas: JSONValue = .object([
+            "nodes": .array([outer, node("kept", "chat", x: 10, y: 20), node("other", "note", x: 900)])
+        ])
+        let grouped = try #require(CanvasEditing.grouping(canvas, ids: ["kept"], groupID: "inner"))
+        let after = try #require(grouped.list("nodes").first)
+        #expect(after.list("memberIds") == [.string("other"), .string("inner")])
+        #expect(CanvasEditing.members(of: grouped.list("nodes").last!, in: grouped).map(\.stableID) == ["kept"])
+    }
+
     @Test func aCollapsedGroupHoldsTheIdsItSpellsOut() {
         let group = node("g", "group", w: 10, h: 10).setting("collapsed", .bool(true)).setting(
             "memberIds", .array([.string("far"), .string("gone")]))

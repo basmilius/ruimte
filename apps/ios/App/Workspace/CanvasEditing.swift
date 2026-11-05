@@ -133,18 +133,52 @@ enum CanvasEditing {
         }
     }
 
-    /// A group around these nodes, added in front of them; nil when none of them can be held.
+    /// What the collapsed groups put out of sight, through the groups inside them.
+    static func hiddenIDs(in canvas: JSONValue) -> Set<String> {
+        var hidden = Set<String>()
+        var pending = canvas.list("nodes").filter { $0.text("kind") == "group" && $0["collapsed"]?.boolValue == true }
+        while let group = pending.popLast() {
+            for member in members(of: group, in: canvas) where hidden.insert(member.stableID).inserted {
+                if member.text("kind") == "group" { pending.append(member) }
+            }
+        }
+        return hidden
+    }
+
+    /// The smallest open group in sight whose frame holds `point`, as a drop on the desktop picks it (`groupUnder`).
+    static func groupUnder(_ point: CGPoint, in canvas: JSONValue, excluding excluded: Set<String>) -> JSONValue? {
+        canvas.list("nodes")
+            .filter { node in
+                node.text("kind") == "group" && node["collapsed"]?.boolValue != true
+                    && !excluded.contains(node.stableID) && rect(node).contains(point)
+            }
+            .min { rect($0).width * rect($0).height < rect($1).width * rect($1).height }
+    }
+
+    /// A group around these nodes, added in front of them; nil when none of them can be held. As on the desktop
+    /// (`groupSelection`), the grouped nodes leave a group that spells them out, and the new group joins the
+    /// smallest open group it stands in.
     static func grouping(_ canvas: JSONValue, ids: [String], groupID: String) -> JSONValue? {
         let wanted = Set(ids)
         let members = canvas.list("nodes").filter { wanted.contains($0.stableID) && $0.text("kind") != "group" }
         guard let frame = groupFrame(members) else { return nil }
+        let memberIDs = members.map(\.stableID)
         // It holds exactly what was grouped, so nothing else that stands under the frame joins it.
         let group: JSONValue = .object([
             "id": .string(groupID), "kind": .string("group"), "title": .string("Group"),
             "x": .number(frame.minX), "y": .number(frame.minY), "w": .number(frame.width), "h": .number(frame.height),
-            "memberIds": .array(members.map { .string($0.stableID) }),
+            "memberIds": .array(memberIDs.map { .string($0) }),
         ])
-        return canvas.setting("nodes", .array(canvas.list("nodes") + [group]))
+        let around = groupUnder(CGPoint(x: frame.midX, y: frame.midY), in: canvas, excluding: hiddenIDs(in: canvas))
+        // A group that reads its frame holds the new group by position already.
+        let nodes = canvas.list("nodes").map { node -> JSONValue in
+            guard node.text("kind") == "group", spellsOutMembers(node) else { return node }
+            let held = node.list("memberIds").compactMap(\.stringValue)
+            let kept = held.filter { !memberIDs.contains($0) }
+            let joined = node.stableID == around?.stableID ? kept + [groupID] : kept
+            return joined == held ? node : withMemberIds(node, joined)
+        }
+        return canvas.setting("nodes", .array(nodes + [group]))
     }
 
     // MARK: Context links
