@@ -1,5 +1,5 @@
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
-import { isCanvasView, isChatHostView, isDesignView, nodeChats, viewChats, type AgentStatus } from '@ruimte/contracts';
+import { isCanvasView, isChatHostView, isDesignView, nodeChats, viewChats, type AgentStatus, type ChatInfo, type SessionInfo } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { agentActivity } from '@/actions/agent-activity';
 import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
@@ -7,59 +7,105 @@ import { nodesOfView } from '@/project/view-nodes';
 import { chatWorking, sessionWorking } from '@/state/agent-work';
 import { focusedCanvas } from '@/state/canvas';
 import { activeViewOf, type DocumentState } from '@/state/document';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId, endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { transportFor } from '@/transport';
 import { chatClientFor } from '@/transport/connections';
 
-export function projectAgents(document: StoreApi<DocumentState>) {
+interface ProjectAgent {
+    id: string;
+    name: string;
+    kind: 'chat' | 'terminal';
+    viewId: string;
+    view: string;
+    selected: boolean;
+}
+
+/* An agent with the machine it runs on: a node's own, else the workspace's. */
+interface PlacedAgent {
+    agent: ProjectAgent;
+    endpointId: string;
+}
+
+function placedAgents(document: StoreApi<DocumentState>): PlacedAgent[] {
     const state = document.getState();
     const active = activeViewOf(state);
     const canvas = active && isCanvasView(active) ? focusedCanvas().getState() : null;
-    return state.views.flatMap((view) => {
+    const workspace = currentEndpointId();
+    return state.views.flatMap((view): PlacedAgent[] => {
         if (isDesignView(view)) {
             const shown = activeDesignChat(placeOfView(view), useDesignChat.getState().picked);
             return viewChats(view).map((chat) => ({
-                id: chat.id,
-                name: chat.name,
-                kind: 'chat' as const,
-                viewId: view.id,
-                view: view.name,
-                selected: active?.id === view.id && chat.id === shown
+                agent: {
+                    id: chat.id,
+                    name: chat.name,
+                    kind: 'chat',
+                    viewId: view.id,
+                    view: view.name,
+                    selected: active?.id === view.id && chat.id === shown
+                },
+                endpointId: workspace
             }));
         }
         if (isChatHostView(view) || view.kind === 'terminal') {
             return [
                 {
-                    id: view.id,
-                    name: view.name,
-                    kind: view.kind === 'terminal' ? ('terminal' as const) : ('chat' as const),
-                    viewId: view.id,
-                    view: view.name,
-                    selected: active?.id === view.id
+                    agent: {
+                        id: view.id,
+                        name: view.name,
+                        kind: view.kind === 'terminal' ? 'terminal' : 'chat',
+                        viewId: view.id,
+                        view: view.name,
+                        selected: active?.id === view.id
+                    },
+                    endpointId: workspace
                 }
             ];
         }
         if (!isCanvasView(view)) {
             return [];
         }
-        return nodesOfView(view).flatMap((node): { id: string; name: string; kind: 'chat' | 'terminal'; viewId: string; view: string; selected: boolean }[] => {
+        return nodesOfView(view).flatMap((node): PlacedAgent[] => {
             const selected = view.id === active?.id && canvas?.selection.includes(node.id) === true;
+            const endpointId = endpointOfNode(node, workspace);
             if (node.kind === 'terminal') {
-                return [{ id: node.id, name: node.title, kind: 'terminal', viewId: view.id, view: view.name, selected }];
+                return [{ agent: { id: node.id, name: node.title, kind: 'terminal', viewId: view.id, view: view.name, selected }, endpointId }];
             }
             // A design node's chats are each an agent; the one it shows is the selected one.
             const shown = shownChatOfNode(node);
             return nodeChats(node).map((chat) => ({
-                id: chat.id,
-                name: chat.name,
-                kind: 'chat' as const,
-                viewId: view.id,
-                view: view.name,
-                selected: selected && chat.id === shown
+                agent: {
+                    id: chat.id,
+                    name: chat.name,
+                    kind: 'chat',
+                    viewId: view.id,
+                    view: view.name,
+                    selected: selected && chat.id === shown
+                },
+                endpointId
             }));
         });
     });
+}
+
+export function projectAgents(document: StoreApi<DocumentState>): ProjectAgent[] {
+    return placedAgents(document).map((placed) => placed.agent);
+}
+
+type Snapshot = [{ chats: ChatInfo[] }, { sessions: SessionInfo[] }];
+
+/* The chats and sessions of every machine the agents run on, each asked of its own machine; null for one that is not connected. */
+async function snapshotsOf(endpointIds: readonly string[], transport: typeof transportFor): Promise<Map<string, Snapshot | null>> {
+    const entries = await Promise.all(
+        [...new Set(endpointIds)].map(async (endpointId): Promise<[string, Snapshot | null]> => {
+            const link = transport(endpointId);
+            if (link?.status !== 'open') {
+                return [endpointId, null];
+            }
+            return [endpointId, await Promise.all([link.request('chat.list', {}), link.request('session.list', {})])];
+        })
+    );
+    return new Map(entries);
 }
 
 interface InspectionDependencies {
@@ -69,12 +115,13 @@ interface InspectionDependencies {
 export function inspectionActions(document: StoreApi<DocumentState>, dependencies: Partial<InspectionDependencies> = {}): ActionHandlers<void> {
     return {
         'agents.inspect': async () => {
-            const targets = projectAgents(document);
+            const placed = placedAgents(document);
             const project = useProject.getState().current?.name ?? 'Untitled project';
-            const transport = (dependencies.transport ?? transportFor)(currentEndpointId());
-            const connected = transport?.status === 'open';
-            const snapshot = connected ? await Promise.all([transport.request('chat.list', {}), transport.request('session.list', {})]) : null;
-            const agents = targets.flatMap((target) => {
+            const workspace = currentEndpointId();
+            const snapshots = await snapshotsOf([workspace, ...placed.map((entry) => entry.endpointId)], dependencies.transport ?? transportFor);
+            const connected = snapshots.get(workspace) != null;
+            const agents = placed.flatMap(({ agent: target, endpointId }) => {
+                const snapshot = snapshots.get(endpointId) ?? null;
                 const chat = snapshot?.[0].chats.find((row) => row.chatId === target.id);
                 const session = snapshot?.[1].sessions.find((row) => row.sessionId === target.id);
                 if (target.kind === 'terminal' && snapshot && !session?.agent) {
@@ -107,16 +154,19 @@ export function inspectionActions(document: StoreApi<DocumentState>, dependencie
             return { output: { project, connected, observedAt: Date.now(), agents } };
         },
         'agent.activity': async ({ agentId, limit, toolId }) => {
-            const target = projectAgents(document).find((candidate) => candidate.id === agentId);
-            if (!target) {
+            const placed = placedAgents(document).find((candidate) => candidate.agent.id === agentId);
+            if (!placed) {
                 throw new ActionRefusal('unknown-agent', 'The agent does not belong to this project.');
             }
+            const target = placed.agent;
             if (target.kind === 'terminal') {
                 return { output: { agent: target.name, supported: false, tools: [], truncated: false } };
             }
-            const endpointId = currentEndpointId();
-            const client = chatClientFor(endpointId);
-            if (!client || transportFor(endpointId)?.status !== 'open') {
+            const client = chatClientFor(placed.endpointId);
+            if (client === null) {
+                throw new ActionRefusal('no-machine', `“${target.name}” runs on a machine this client does not know, so nothing was asked.`);
+            }
+            if ((dependencies.transport ?? transportFor)(placed.endpointId)?.status !== 'open') {
                 throw new ActionRefusal('offline', 'The machine is disconnected; current activity is unknown.');
             }
             const snapshot = await client.inspect(agentId);
