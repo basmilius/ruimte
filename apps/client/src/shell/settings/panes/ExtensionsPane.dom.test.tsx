@@ -40,7 +40,13 @@ describe('the list of extensions', () => {
 
 describe('installing from a file', () => {
     test('shows what the pack is and asks for before it installs it', async () => {
-        const manifest = { id: 'acme.local', name: 'Local pack', version: '0.2.0', api: 1, permissions: { 'files.read': 'Reads your notes' } };
+        const manifest = {
+            id: 'acme.local',
+            name: 'Local pack',
+            version: '0.2.0',
+            api: 1,
+            permissions: { 'files.read': 'Reads your notes', 'ui.canvasOverlay': 'Walks over the canvas' }
+        };
         const pack = { files: { 'manifest.json': Buffer.from(JSON.stringify(manifest)).toString('base64') } };
         const installs: Uint8Array[] = [];
 
@@ -64,6 +70,8 @@ describe('installing from a file', () => {
         await until(() => mounted.host.textContent?.includes('Local pack') ?? false);
 
         expect(mounted.host.textContent).toContain('Reads your notes');
+        // A name that opens nothing is no permission to show a person.
+        expect(mounted.host.textContent).not.toContain('Walks over the canvas');
         expect(installs).toHaveLength(0);
 
         const install = [...mounted.host.querySelectorAll('button')].find((button) => button.textContent === 'Install');

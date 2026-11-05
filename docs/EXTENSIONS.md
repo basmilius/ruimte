@@ -51,7 +51,7 @@ While `run` is pending, the nodes it is about show a spinner that also stops it 
 
 ## Permissions
 
-Reading what is on screen needs none. These do: `canvas.write`, `views.write`, `artifacts.read`, `artifacts.write`, `browser.control`, `context.read`, `database.read`, `devices.control`, `languages.servers`, `launches.read`, `launches.run`, `routines.read`, `routines.run`, `terminals.read`, `files.read`, `files.write`, `git.read`, `chats.read`, `chats.send`, `agents.run`, `agents.start`, `agents.status`, `agents.tools`, `usage.read`, `clock`.
+Reading what is on screen needs none. The ones that open something are `EXTENSION_PERMISSIONS` in `packages/contracts/src/extension-permissions.ts`, plus `net:<host>` for a frame. `ruimte extension pack`, the machine's install and link, and the shell's install refuse any other name and a `net:` that is no host name (`extensionPermissionProblems`), and only a host name reaches a frame's `connect-src`. An extension already installed with an unknown name keeps loading, and Settings does not show that name. A permission the API gains is a row in that list, in the table on `/docs/extensions/manifest`, and in the call or policy table that needs it.
 
 `chats.send` from `server/` is limited to 20 messages per chat per hour, so a loop with a chat stops on its own. Typing into a terminal and answering a permission prompt stay out of reach.
 

@@ -11,7 +11,9 @@ import {
     EXTENSION_ICON_PATH,
     ExtensionIdSchema,
     ExtensionManifestSchema,
+    extensionFrameHost,
     ExtensionPackSchema,
+    extensionPermissionProblems,
     isSafePackPath,
     type ExtensionManifest
 } from '@ruimte/contracts';
@@ -24,10 +26,21 @@ type IndexEntry = z.infer<typeof IndexSchema>[number];
 
 const LOAD_MARK = /~\d+$/;
 
-function hostsOf(manifest: ExtensionManifest): string[] {
-    return Object.keys(manifest.permissions ?? {}).flatMap((permission) =>
-        permission.startsWith('net:') ? [`https://${permission.slice('net:'.length)}`] : []
-    );
+// Only a host name reaches the frame's policy, so a permission an older shell let in cannot add a directive of its own.
+export function hostsOf(manifest: Pick<ExtensionManifest, 'permissions'>): string[] {
+    return Object.keys(manifest.permissions ?? {}).flatMap((permission) => {
+        const host = extensionFrameHost(permission);
+
+        return host === null ? [] : [`https://${host}`];
+    });
+}
+
+function refuseUnknownPermissions(manifest: ExtensionManifest): void {
+    const problems = extensionPermissionProblems(manifest.permissions);
+
+    if (problems.length > 0) {
+        throw new Error(`${manifest.name}: ${problems.join('; ')}`);
+    }
 }
 
 /*
@@ -158,6 +171,8 @@ export class ClientExtensions {
             throw new Error(`${manifest.name} needs a different version of Ruimte`);
         }
 
+        refuseUnknownPermissions(manifest);
+
         const hash = createHash('sha256').update(bytes).digest('hex');
         const folder = join(this.root, manifest.id, hash);
 
@@ -243,6 +258,7 @@ export class ClientExtensions {
                 throw new Error(`No valid manifest.json in ${folder}`);
             }
 
+            refuseUnknownPermissions(manifest);
             this.links.set(manifest.id, { folder, revision, manifest, enabled: enabled ?? this.links.get(manifest.id)?.enabled ?? true });
             touched();
         });

@@ -85,6 +85,8 @@ Reading what is on screen needs no permission. Everything else does, and the API
 | `clock` | Run work on a clock of its own. |
 | `net:<host>` | Let a `frame` surface reach that host over HTTPS, such as `net:api.example.com`. |
 
+`ruimte extension pack` refuses a name that is not in this table, and a `net:` that names no host. Ruimte refuses to install such a pack as well.
+
 Write the reason for a person: "Writes the summary as a note", not "Needs canvas access". They read it before installing, and again under Settings, Extensions:
 
 <InstallPermissions />

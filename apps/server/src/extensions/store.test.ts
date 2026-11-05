@@ -40,6 +40,20 @@ describe('ExtensionStore', () => {
         expect(await idsIn(store)).toEqual(IDS.slice(4));
     });
 
+    test('refuses an install or a link that asks for a permission this Ruimte does not know, and keeps nothing of it', async () => {
+        const store = new ExtensionStore(join(root, 'unknown-permission'));
+        const manifest = JSON.stringify({ id: 'acme.typo', name: 'Typo', version: '0.1.0', api: EXTENSION_API_VERSION, permissions: { 'chat.send': 'Sends' } });
+        const folder = join(root, 'projects', 'acme.typo');
+        mkdirSync(folder, { recursive: true });
+        writeFileSync(join(folder, 'manifest.json'), manifest);
+
+        await expect(
+            store.install(gzipSync(JSON.stringify({ files: { 'manifest.json': Buffer.from(manifest).toString('base64') } })).toString('base64'))
+        ).rejects.toMatchObject({ code: 'pack-manifest', message: expect.stringContaining('chat.send is not a permission') });
+        await expect(store.link(folder)).rejects.toMatchObject({ code: 'pack-manifest' });
+        expect(await idsIn(store)).toEqual([]);
+    });
+
     test('keeps every link of folders linked at once', async () => {
         const store = new ExtensionStore(join(root, 'links'));
         const folders = IDS.map((id) => {

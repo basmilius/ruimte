@@ -3,7 +3,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, sy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
-import { ClientExtensions } from './extensions';
+import { ClientExtensions, hostsOf } from './extensions';
 
 const ORIGIN = 'ruimte://app';
 let root: string;
@@ -12,8 +12,8 @@ function base64(text: string): string {
     return Buffer.from(text).toString('base64');
 }
 
-function pack(files: Record<string, string>): Uint8Array {
-    const manifest = JSON.stringify({ id: 'acme.builds', name: 'Builds', version: '1.0.0', api: 1, permissions: { 'net:ci.example.com': 'Reads builds' } });
+function pack(files: Record<string, string>, permissions: Record<string, string> = { 'net:ci.example.com': 'Reads builds' }): Uint8Array {
+    const manifest = JSON.stringify({ id: 'acme.builds', name: 'Builds', version: '1.0.0', api: 1, permissions });
 
     return gzipSync(
         JSON.stringify({ files: Object.fromEntries(Object.entries({ 'manifest.json': manifest, ...files }).map(([path, text]) => [path, base64(text)])) })
@@ -49,6 +49,20 @@ describe('the client extensions of the shell', () => {
         expect(await (await store.answer(`${loaded}client/index.js`, ORIGIN)).text()).toBe('export {};');
         expect(await (await store.answer(`${loaded}client/chunks/shared.js`, ORIGIN)).text()).toBe('export const shared = 1;');
         expect((await store.answer(`${base.slice(0, -1)}~/client/index.js`, ORIGIN)).status).toBe(404);
+    });
+
+    test('refuse a pack that asks for a permission this Ruimte does not know, or a net: that is no host', async () => {
+        const store = extensions();
+
+        await expect(store.install(pack({ 'client/index.js': 'export {};' }, { 'chat.send': 'Sends' }))).rejects.toThrow('chat.send is not a permission');
+        await expect(store.install(pack({ 'client/index.js': 'export {};' }, { 'net:a.com; frame-src https:': 'Calls' }))).rejects.toThrow('does not name a host');
+        expect(await store.list()).toEqual([]);
+    });
+
+    test("only a host name reaches a frame's policy", () => {
+        expect(hostsOf({ permissions: { 'net:ci.example.com': 'Reads', 'net:a.com; frame-src https:': 'Calls', 'files.read': 'Reads' } })).toEqual([
+            'https://ci.example.com'
+        ]);
     });
 
     test('refuse a pack with a path outside itself, and leave nothing behind', async () => {

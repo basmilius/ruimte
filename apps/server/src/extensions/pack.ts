@@ -7,6 +7,7 @@ import {
     EXTENSION_API_VERSION,
     EXTENSION_ICON_PATH,
     ExtensionManifestSchema,
+    extensionPermissionProblems,
     ExtensionThemeSchema,
     extensionThemeCssProblem,
     isSafePackPath,
@@ -51,6 +52,12 @@ export function readManifest(folder: string): ExtensionManifest {
 
     if (parsed.data.api !== EXTENSION_API_VERSION) {
         throw new ExtensionBuildError(`manifest.json asks for API ${parsed.data.api}; this Ruimte has ${EXTENSION_API_VERSION}`);
+    }
+
+    const problems = extensionPermissionProblems(parsed.data.permissions);
+
+    if (problems.length > 0) {
+        throw new ExtensionBuildError(`manifest.json: ${problems.join('; ')}`);
     }
 
     return parsed.data;

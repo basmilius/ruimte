@@ -4,7 +4,14 @@ import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { isNotFound } from '@adecore/utils/errors';
-import { EXTENSION_API_VERSION, ExtensionManifestSchema, ExtensionPackSchema, isSafePackPath, type ExtensionManifest } from '@ruimte/contracts';
+import {
+    EXTENSION_API_VERSION,
+    ExtensionManifestSchema,
+    ExtensionPackSchema,
+    extensionPermissionProblems,
+    isSafePackPath,
+    type ExtensionManifest
+} from '@ruimte/contracts';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';
 
@@ -326,6 +333,8 @@ export class ExtensionStore {
             throw new ExtensionPackError('pack-api', `${manifest.id} needs API ${manifest.api}; this machine has ${EXTENSION_API_VERSION}`);
         }
 
+        refuseUnknownPermissions(manifest);
+
         return this.change(async () => {
             const { id } = manifest;
             const links = await this.links();
@@ -408,6 +417,15 @@ export function manifestOfPack(pack: string): ExtensionManifest {
     return manifestOf(unpack(Buffer.from(pack, 'base64')));
 }
 
+// Refused when it comes in, never when it loads, so one already installed keeps working on a Ruimte that knows less.
+function refuseUnknownPermissions(manifest: ExtensionManifest): void {
+    const problems = extensionPermissionProblems(manifest.permissions);
+
+    if (problems.length > 0) {
+        throw new ExtensionPackError('pack-manifest', `${manifest.id}: ${problems.join('; ')}`);
+    }
+}
+
 function manifestOf(files: Record<string, Buffer>): ExtensionManifest {
     const raw = files['manifest.json'];
     const manifest = raw === undefined ? null : ExtensionManifestSchema.safeParse(JSON.parse(raw.toString('utf8')));
@@ -419,6 +437,8 @@ function manifestOf(files: Record<string, Buffer>): ExtensionManifest {
     if (manifest.data.api !== EXTENSION_API_VERSION) {
         throw new ExtensionPackError('pack-api', `${manifest.data.id} needs API ${manifest.data.api}; this machine has ${EXTENSION_API_VERSION}`);
     }
+
+    refuseUnknownPermissions(manifest.data);
 
     return manifest.data;
 }

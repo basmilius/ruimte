@@ -1,5 +1,6 @@
 import { Button, EmptyState, Icon, Pill, SectionLabel, Switch } from '@adecore/ui';
 import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
+import { isExtensionPermission } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { FileUp, HardDrive, Store, type LucideIcon } from 'lucide-react';
 import { createElement, useEffect, useRef, useState } from 'react';
@@ -67,7 +68,8 @@ function ExtensionHeader({
 
 function PermissionsSection({ permissions }: { permissions: Readonly<Record<string, string>> | undefined }) {
     const { t } = useTranslation('settings');
-    const entries = Object.entries(permissions ?? {});
+    // One that opens nothing is no permission to a person, whatever an older pack asked for.
+    const entries = Object.entries(permissions ?? {}).filter(([permission]) => isExtensionPermission(permission));
 
     return (
         <SettingsSection title={t('extensions.permissions')}>
