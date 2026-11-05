@@ -97,6 +97,8 @@ export interface BackgroundServiceBridge {
 export interface OpenAiCredentialStatus {
     configured: boolean;
     persistent: boolean;
+    /* The key is gone from this app, but the machine kept its copy for Voice; the shell asks it again until it lets go. */
+    machineKeyLeft?: boolean;
 }
 
 export interface OpenAiBridge {

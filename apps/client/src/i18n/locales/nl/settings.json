@@ -1226,6 +1226,7 @@
             "persistent": "Versleuteld in de keychain van deze computer en nooit meer getoond.",
             "session": "Versleutelen niet beschikbaar; de key blijft tot Ruimte afsluit.",
             "missing": "Nodig voor GPT-Live. Nooit in een project bewaard.",
+            "machineKeyLeft": "Deze machine heeft de key voor Voice nog. Ruimte verwijdert hem zodra de machine draait, of verwijder hem opnieuw.",
             "replacePlaceholder": "Nieuwe key",
             "remove": "API key verwijderen",
             "saveFailure": "Kon API key niet opslaan.",
