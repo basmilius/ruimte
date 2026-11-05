@@ -1,6 +1,6 @@
-import { expect, test } from 'bun:test';
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { describe, expect, test } from 'bun:test';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { ChatSession, type BackendLaunch } from '@adecore/agents/chat';
 import { ModelCatalog } from '@adecore/agents/providers';
 import { fakeClaude, inProcess } from '@adecore/agents/testing';
@@ -151,7 +151,115 @@ test("Ruimte's server and the HTTP servers of api-mcp.json go along, never the t
     expect(command).toContain('--allowedTools=mcp__ruimte__*');
 });
 
-test('a chat from before Claude Code starts a session of its own, and one Claude Code wrote resumes', async () => {
+describe('a chat from before Claude Code', () => {
+    const SESSION = '3f0c9a52-6d1e-4c2b-9a7f-1e2d3c4b5a69';
+    const THREAD = [
+        { role: 'user', content: 'The codeword is pineapple.' },
+        {
+            role: 'assistant',
+            content: [
+                { type: 'thinking', thinking: 'A secret plan.', signature: 'signed' },
+                { type: 'tool_use', id: 'call-1', name: 'read_file', input: { path: 'a.ts' } }
+            ]
+        },
+        { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'call-1', content: 'const a = 1;' }] },
+        { role: 'assistant', content: [{ type: 'text', text: 'Noted.' }] },
+        { role: 'user', content: 'Stop reading.' },
+        { role: 'assistant', content: [{ type: 'tool_use', id: 'call-2', name: 'shell', input: { command: 'ls' } }] },
+        {
+            role: 'user',
+            content: [
+                { type: 'tool_result', tool_use_id: 'call-2', content: 'Interrupted.', is_error: true },
+                { type: 'text', text: 'What was the codeword?' }
+            ]
+        }
+    ];
+
+    const transcriptPath = (home: string): string => join(home, 'anthropic-claude-api', 'claude-config', 'projects', '-work-repo', `${SESSION}.jsonl`);
+    const keptThread = (home: string): Promise<void> => writeFile(join(home, 'anthropic-claude-api', `${SESSION}.json`), JSON.stringify(THREAD));
+
+    test('goes on from its thread as a Claude Code transcript, with its tool rounds as text in the replies', async () => {
+        const home = await newHome();
+        const service = await keyedService(home);
+        await keptThread(home);
+
+        expect((await started(service, SESSION)).command).toContain(`--resume=${SESSION}`);
+
+        const lines = (await readFile(transcriptPath(home), 'utf8'))
+            .trim()
+            .split('\n')
+            .map((line) => JSON.parse(line));
+        const said = lines.map((line) => [line.type, line.type === 'user' ? line.message.content : line.message.content[0].text]);
+
+        expect(said).toEqual([
+            ['user', expect.stringMatching(/^\[Ruimte: .*\]\n\nThe codeword is pineapple\.$/)],
+            ['assistant', '[Tool call: read_file {"path":"a.ts"}]\n\n[Tool result: const a = 1;]\n\nNoted.'],
+            ['user', 'Stop reading.'],
+            ['assistant', '[Tool call: shell {"command":"ls"}]\n\n[Tool error: Interrupted.]'],
+            ['user', 'What was the codeword?']
+        ]);
+        expect(lines.map((line) => line.parentUuid)).toEqual([null, ...lines.slice(0, -1).map((line) => line.uuid)]);
+        expect(new Set(lines.map((line) => line.sessionId))).toEqual(new Set([SESSION]));
+    });
+
+    test('takes its thread over once, also after a restart between the first start and the first turn', async () => {
+        const home = await newHome();
+        const service = await keyedService(home);
+        await keptThread(home);
+        await started(service, SESSION);
+        const written = await readFile(transcriptPath(home), 'utf8');
+
+        const restarted = new AnthropicClaudeApiService(fetch);
+        await restarted.load(home);
+
+        expect((await started(restarted, SESSION)).command).toContain(`--resume=${SESSION}`);
+        expect(await readFile(transcriptPath(home), 'utf8')).toBe(written);
+    });
+
+    test('leaves a chat on Claude Code alone, also when a thread carries its id', async () => {
+        const home = await newHome();
+        const service = await keyedService(home);
+        await keptThread(home);
+        await mkdir(dirname(transcriptPath(home)), { recursive: true });
+        await writeFile(transcriptPath(home), 'what the CLI wrote\n');
+
+        expect((await started(service, SESSION)).command).toContain(`--resume=${SESSION}`);
+        expect(await readFile(transcriptPath(home), 'utf8')).toBe('what the CLI wrote\n');
+    });
+
+    test.each([
+        ['no thread', null],
+        ['a thread that does not parse', 'not json'],
+        ['an empty thread', '[]']
+    ])('starts a session of its own with %s', async (_name, thread) => {
+        const home = await newHome();
+        const service = await keyedService(home);
+        if (thread !== null) {
+            await writeFile(join(home, 'anthropic-claude-api', `${SESSION}.json`), thread);
+        }
+
+        expect((await started(service, SESSION)).command.some((arg) => arg.startsWith('--resume'))).toBe(false);
+    });
+
+    test('never counts its old turns on the usage page again', async () => {
+        const home = await newHome();
+        const service = await keyedService(home);
+        await keptThread(home);
+        await started(service, SESSION);
+        const transcript = await readFile(transcriptPath(home), 'utf8');
+        const stamped = transcript
+            .replaceAll(/"timestamp":"[^"]+"/g, '"timestamp":"2026-10-13T09:00:00.000Z"')
+            .replaceAll('"input_tokens":0', '"input_tokens":5000');
+        await writeFile(transcriptPath(home), stamped);
+        const usage = new UsageService({ home, allowPriceFetch: false, roots: claudeApiUsageRoots(service), knownProjects: async () => [] });
+        const summary = await usage.summary({ from: '2026-10-13', to: '2026-10-13', resolution: 'day', timeZone: 'UTC' });
+        usage.stop();
+
+        expect(summary.models).toEqual([]);
+    });
+});
+
+test('a session Claude Code wrote resumes, wherever its transcript sits', async () => {
     const home = await newHome();
     const service = await keyedService(home);
     const projects = join(home, 'anthropic-claude-api', 'claude-config', 'projects');
@@ -160,7 +268,6 @@ test('a chat from before Claude Code starts a session of its own, and one Claude
     await mkdir(join(projects, '-elsewhere'), { recursive: true });
     await writeFile(join(projects, '-elsewhere', 'moved-session.jsonl'), '');
 
-    expect((await started(service, '3f0c9a52-6d1e-4c2b-9a7f-1e2d3c4b5a69')).command.some((arg) => arg.startsWith('--resume'))).toBe(false);
     expect((await started(service, 'cli-session')).command).toContain('--resume=cli-session');
     expect((await started(service, 'moved-session')).command).toContain('--resume=moved-session');
 });

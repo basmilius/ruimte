@@ -5,6 +5,7 @@ import { createClaudeProvider, type ChatProvider, type ClaudeCodeRuntime, type C
 import { claudeTranscriptRoot, type UsageRootPath } from '@adecore/agents/usage';
 import { cliMcpServers, readApiMcpConfigSync } from '../chat/api-mcp.ts';
 import { AnthropicClaudeApiService } from './anthropic-claude-api-service.ts';
+import { adoptThread } from './anthropic-claude-api-thread.ts';
 import { claudeProvider } from './claude-provider.ts';
 import { withRuimteMcp } from './ruimte-mcp.ts';
 
@@ -47,14 +48,17 @@ function hasTranscript(projectsDir: string, cwd: string, sessionId: string): boo
 
 /*
  * A chat from before these chats ran in Claude Code holds the id of a thread the daemon kept itself, which the CLI
- * has never seen, so it starts a session of its own instead of failing on that id. Its old messages stay in the thread.
+ * has never seen: that thread becomes a transcript under the same id. An id with neither starts a session of its own
+ * instead of failing in the CLI.
  */
-function withoutForeignResume(launch: BackendLaunch, configDir: string): BackendLaunch {
-    if (launch.resume === null || hasTranscript(join(configDir, 'projects'), launch.cwd, launch.resume)) {
+function withResumableSession(launch: BackendLaunch, threadsDir: string, configDir: string): BackendLaunch {
+    const projectsDir = join(configDir, 'projects');
+
+    if (launch.resume === null || hasTranscript(projectsDir, launch.cwd, launch.resume)) {
         return launch;
     }
 
-    return { ...launch, resume: null };
+    return adoptThread({ threadsDir, projectsDir, cwd: launch.cwd, sessionId: launch.resume }) ? launch : { ...launch, resume: null };
 }
 
 /*
@@ -103,7 +107,10 @@ export function createAnthropicClaudeApiProvider(service: AnthropicClaudeApiServ
             const mcpServers = [...(launch.mcpServers ?? []), ...cliMcpServers(readApiMcpConfigSync(dirname(service.directory)))];
             const limit = service.maxOutputTokensFor(launch.selection.model);
             const env = { ...launch.env, CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(limit) };
-            const backend = claude.createBackend(withRuimteMcp({ ...withoutForeignResume(launch, configDir), env, mcpServers }, 'variable'), host);
+            const backend = claude.createBackend(
+                withRuimteMcp({ ...withResumableSession(launch, service.directory, configDir), env, mcpServers }, 'variable'),
+                host
+            );
             const inPlace = backend.reconfigure?.bind(backend);
             // The CLI reads its output limit only as it starts, so a new limit, or a model with another one, needs a new process.
             const outdated = (change: BackendChange): boolean => service.maxOutputTokensFor(change.selection.model) !== limit;
