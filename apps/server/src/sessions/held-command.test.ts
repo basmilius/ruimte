@@ -127,6 +127,32 @@ describe('a command from a project file', () => {
         harness.manager.runApproved('term-1', 'bun dev', harness.home);
         expect(typed('term-1')).toBe('bun dev\n');
     });
+
+    test('approved before the cwd was bound, holds once more for the cwd the node has at its first start after the update', async () => {
+        const home = await mkdtemp(join(tmpdir(), 'ruimte-unbound-'));
+        const web = join(FOLDER, 'web');
+
+        try {
+            // What a version that did not bind the cwd wrote: an approval for the node and command alone.
+            await new CommandApprovals(home).approve(FOLDER, 'term-web', 'bun dev');
+            await new CommandApprovals(home).approve(FOLDER, 'term-root', 'bun dev');
+            const updated = new CommandApprovals(home);
+            await updated.load();
+
+            expect(updated.has(FOLDER, 'term-web', 'bun dev', web)).toBe(true);
+            expect(updated.has(FOLDER, 'term-web', 'bun dev', web)).toBe(true);
+            expect(updated.has(FOLDER, 'term-web', 'bun dev', join(FOLDER, 'api'))).toBe(false);
+            // A node still in the project folder keeps its approval there, and a cwd a commit sets later is asked for.
+            expect(updated.has(FOLDER, 'term-root', 'bun dev', FOLDER)).toBe(true);
+            expect(updated.has(FOLDER, 'term-root', 'bun dev', web)).toBe(false);
+
+            await updated.approve(FOLDER, 'term-new', 'bun dev');
+
+            expect(updated.has(FOLDER, 'term-new', 'bun dev', web)).toBe(false);
+        } finally {
+            await rm(home, { recursive: true, force: true });
+        }
+    });
 });
 
 function terminal(id: string, command?: string, cwd?: string) {

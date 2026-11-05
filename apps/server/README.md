@@ -187,6 +187,7 @@ $RUIMTE_HOME/
   peers/<machineId>.json           0700, a machine that works in a project here: its label and, per project, the ceiling of its agents
   remote/<projectId>.json          0700, which node of the project runs on another machine, as node id to machine id
   command-approvals/<hash>.json    0700, a command, launch or routine a person approved for a node, or a task for the project's worktrees
+  command-approvals-unbound.json   the approvals made before a terminal's cwd was bound, each carried once to the cwd its node starts in
   editor-templates.json            0600, a person's live and postfix templates and template switches (src/templates/CLAUDE.md)
   routine-runs/<runId>.json        what each run of a routine did here (src/routines/CLAUDE.md)
   routine-authors/<hash>.json      the agent chat that last made or changed a routine, for the approval card
