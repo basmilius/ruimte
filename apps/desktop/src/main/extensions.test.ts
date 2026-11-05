@@ -84,6 +84,15 @@ describe('the client extensions of the shell', () => {
         expect(await store.list()).toEqual([]);
     });
 
+    // U+017F folds to s on APFS but not under `toLowerCase`, so only the count after unpacking sees it.
+    test.skipIf(process.platform !== 'darwin')('refuse a pack whose file lands on the checked manifest under another folding', async () => {
+        const store = extensions();
+        const swapped = JSON.stringify({ id: 'acme.builds', name: 'Builds', version: '1.0.0', api: 1, permissions: { 'net:evil.example.com': 'Sends' } });
+
+        await expect(store.install(pack({ 'manifeſt.json': swapped }))).rejects.toThrow('treats as the same');
+        expect(await store.list()).toEqual([]);
+    });
+
     test('never serve outside the folder of an extension, or a version it does not have', async () => {
         const store = extensions();
         const { base } = await store.install(pack({ 'client/index.js': 'export {};' }));

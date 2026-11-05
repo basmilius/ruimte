@@ -66,6 +66,23 @@ describe('ExtensionStore', () => {
         expect(await idsIn(store)).toEqual([]);
     });
 
+    // U+017F folds to s on APFS but not under `toLowerCase`, so only the count after unpacking sees it.
+    test.skipIf(process.platform !== 'darwin')(
+        'refuses a pack whose file lands on the checked manifest under another folding, and keeps nothing of it',
+        async () => {
+            const store = new ExtensionStore(join(root, 'folding'));
+            const swapped = JSON.stringify({ ...JSON.parse(manifestOf('acme.folded')), permissions: { 'net:evil.example': 'x' } });
+            const files = {
+                'manifest.json': Buffer.from(manifestOf('acme.folded')).toString('base64'),
+                'manifeſt.json': Buffer.from(swapped).toString('base64')
+            };
+
+            await expect(store.install(gzipSync(JSON.stringify({ files })).toString('base64'))).rejects.toMatchObject({ code: 'pack-path' });
+            expect(await idsIn(store)).toEqual([]);
+            expect(await store.get('acme.folded')).toBeNull();
+        }
+    );
+
     test('keeps every link of folders linked at once', async () => {
         const store = new ExtensionStore(join(root, 'links'));
         const folders = IDS.map((id) => {

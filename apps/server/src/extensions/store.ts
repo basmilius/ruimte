@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { isNotFound } from '@adecore/utils/errors';
@@ -266,6 +266,13 @@ export class ExtensionStore {
 
                         await mkdir(dirname(target), { recursive: true });
                         await writeFile(target, content);
+                    }
+
+                    const unpacked = await readdir(unpacking, { recursive: true, withFileTypes: true });
+
+                    // No comparison of names matches every file system's folding, so what landed is counted: fewer files means one replaced another.
+                    if (unpacked.filter((entry) => entry.isFile()).length !== Object.keys(files).length) {
+                        throw new ExtensionPackError('pack-path', 'The pack names one file twice under names this file system treats as the same');
                     }
 
                     await rm(folder, { recursive: true, force: true });
