@@ -566,6 +566,22 @@ describe('node arrange', () => {
         expect(await nodeOnDisk('a')).toMatchObject({ x: 0, y: 0 });
     });
 
+    test('a node it moves leaves the group it stood in and joins the one it lands in, as a drop does', async () => {
+        await seed(
+            box('frame', 0, 0, { kind: 'group', w: 600, h: 600, memberIds: ['a'] }),
+            box('far', 3000, 0, { kind: 'group', w: 1000, h: 1000, memberIds: ['b', 'c'] }),
+            box('a', 50, 50),
+            box('b', 3100, 100),
+            box('c', 3100, 500)
+        );
+
+        await invoke('node_arrange', { nodes: 'a,b', layout: 'row' });
+
+        expect((await nodeOnDisk('b'))!.x).toBeLessThan(600);
+        expect((await nodeOnDisk('frame'))!.memberIds).toEqual(['a', 'b']);
+        expect((await nodeOnDisk('far'))!.memberIds).toEqual(['c']);
+    });
+
     test('nodes that already stand where this would put them are reported and nothing is written', async () => {
         await seed(box('a', 0, 0), box('b', 240, 0));
         await invoke('node_arrange', { nodes: 'a,b', layout: 'row' });

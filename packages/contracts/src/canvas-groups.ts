@@ -66,8 +66,9 @@ export function groupUnder<T extends NodeRect & Pick<ProjectNode, 'id' | 'kind' 
 }
 
 /*
- * The nodes with `id` written into the group its center stands in, the way a drop on the canvas puts it
- * there. A group that still reads its members off positions holds it without being written.
+ * The nodes with `id` written into the group its center stands in and out of any other open group that
+ * spells it out, the way a drop on the canvas puts it there. A group that still reads its members off
+ * positions holds it, or lets it go, without being written.
  */
 export function joinGroupUnder(canvas: Pick<ProjectCanvasView, 'nodes' | 'texts'>, id: string): ProjectNode[] {
     const node = canvas.nodes.find((candidate) => candidate.id === id);
@@ -80,17 +81,25 @@ export function joinGroupUnder(canvas: Pick<ProjectCanvasView, 'nodes' | 'texts'
     const excluded = new Set([id, ...heldIds(canvas.nodes, items, [id]), ...hiddenIds(canvas.nodes, items)]);
     const target = groupUnder(canvas.nodes, { x: node.x + node.w / 2, y: node.y + node.h / 2 }, excluded);
 
-    if (target === null || !spellsOutMembers(target)) {
-        return canvas.nodes;
-    }
+    return canvas.nodes.map((candidate) => {
+        if (candidate.kind !== 'group' || candidate.collapsed === true || !spellsOutMembers(candidate)) {
+            return candidate;
+        }
 
-    const members = target.memberIds ?? [];
+        const members = candidate.memberIds ?? [];
+        const holds = members.includes(id);
 
-    if (members.includes(id)) {
-        return canvas.nodes;
-    }
+        if (candidate.id === target?.id) {
+            return holds ? candidate : withMemberIds(candidate, [...members, id]);
+        }
 
-    return canvas.nodes.map((candidate) => (candidate.id === target.id ? withMemberIds(candidate, [...members, id]) : candidate));
+        return holds && !excluded.has(candidate.id)
+            ? withMemberIds(
+                  candidate,
+                  members.filter((member) => member !== id)
+              )
+            : candidate;
+    });
 }
 
 /** Finds frames emptied by a deletion, including their empty parent frames. */

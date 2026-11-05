@@ -775,7 +775,9 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                 const rect = byId.get(node.id);
                 return rect === undefined ? node : { ...node, x: rect.x, y: rect.y };
             };
-            return { content: withCanvas(content, { ...canvas, nodes: canvas.nodes.map(moved) }), result: { output } };
+            // Each moved node lands in the group it now stands in, as a person's drop puts it there.
+            const nodes = moving.reduce((placedNodes, node) => joinGroupUnder({ nodes: placedNodes, texts: canvas.texts }, node.id), canvas.nodes.map(moved));
+            return { content: withCanvas(content, { ...canvas, nodes }), result: { output } };
         });
     }
 };
