@@ -169,13 +169,21 @@ for (const mode of [
                 css +
                     `.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0}.flex{display:flex}.flex-col{flex-direction:column}.flex-1{flex:1}.grow{flex-grow:1}.h-full{height:100%}.w-full{width:100%}.min-h-0{min-height:0}.min-w-0{min-width:0}.invisible{visibility:hidden}.assistant{position:absolute;right:0;bottom:0;width:300px;background:var(--color-surface);z-index:100}svg{width:14px;height:14px}`,
                 async (view) => {
-                    await waitForAsync(async () => (await shell.manager.get('canvas-shell')?.shellPrompt.inspect())?.empty === true, 'fresh canvas editor');
+                    // The browser creates a session and attaches to it in two requests, and a shell can reach its prompt in between;
+                    // only an attached session is a destination.
+                    const fresh = async (sessionId: string): Promise<boolean> => {
+                        const session = shell.manager.get(sessionId);
+
+                        return session?.isAttached(person) === true && (await session.shellPrompt.inspect())?.empty === true;
+                    };
+
+                    await waitForAsync(() => fresh('canvas-shell'), 'fresh canvas editor');
                     const preview = () =>
                         prepare.preview('owner', { chatId: 'chat', itemId: 'reply', language: 'sh', code: command }, { id: person, send() {} });
                     const canvas = await preview();
                     expect(canvas.targets.map((target) => target.sessionId)).toContain('canvas-shell');
                     await view.evaluate("window.documentStore.getState().setActiveView('view-shell')");
-                    await waitForAsync(async () => (await shell.manager.get('view-shell')?.shellPrompt.inspect())?.empty === true, 'fresh view editor');
+                    await waitForAsync(() => fresh('view-shell'), 'fresh view editor');
                     if (mode === 'view') {
                         await view.evaluate("window.documentStore.getState().setActiveView('canvas')");
                     }
