@@ -87,6 +87,7 @@ import {
     Server,
     Settings,
     Settings2,
+    ShieldOff,
     Square,
     SquareArrowOutUpRight,
     SquareDashed,
@@ -941,6 +942,13 @@ const TABLE = {
         menu: { menu: 'help', group: 'help', order: 20, when: (context) => context.releaseNotes }
     },
     'settings-keyboard': { key: 'keyboardShortcuts', icon: Keyboard, palette: true, menu: { menu: 'help', group: 'help', order: 30 } },
+    // A desktop window has no address to add `?safe-mode` to.
+    'restart-safe-mode': {
+        key: 'restartSafeMode',
+        icon: ShieldOff,
+        palette: false,
+        menu: { menu: 'help', group: 'help', order: 40, when: (context) => context.safeModeRestart }
+    },
     'add-terminal': {
         key: 'addTerminal',
         icon: Terminal,

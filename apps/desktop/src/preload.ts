@@ -142,6 +142,7 @@ const bridge = {
     downloadUpdate: (): Promise<void> => ipcRenderer.invoke('update:download'),
     installUpdate: (confirmed?: boolean): void => ipcRenderer.send('update:install', confirmed === true),
     releaseNotes: (refresh?: boolean): Promise<ReleaseNotesState> => ipcRenderer.invoke('releases:list', refresh === true),
+    restartInSafeMode: (): Promise<void> => ipcRenderer.invoke('app:restart-safe-mode'),
     requestMicrophoneAccess: (): Promise<boolean> => ipcRenderer.invoke('media:request-microphone'),
     openAi: {
         credentialStatus: (): Promise<OpenAiCredentialStatus> => ipcRenderer.invoke('openai:credential-status'),

@@ -18,6 +18,7 @@ import { focusedChatId } from '@/chat/focused-chat';
 import { databaseViewShareRefusal } from '@/database/view-sharing';
 import { shownChatOfNode } from '@/design/design-chat';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
+import { extensionsInSafeMode } from '@/extensions/safe-mode';
 import { availableLanguageForCommand } from '@/language/focused-language';
 import { afterSettleCandidates, chosenLaunchId } from '@/launches/actions';
 import { launchViews } from '@/launches/model';
@@ -250,6 +251,7 @@ export function menuContext(host: MenuHost): MenuContext {
         chosenLaunch: chosenLaunchId(),
         afterSettle: menuAfterSettle(endpointId),
         releaseNotes: typeof desktop()?.releaseNotes === 'function',
+        safeModeRestart: typeof desktop()?.restartInSafeMode === 'function' && !extensionsInSafeMode(),
         fullscreen: typeof document !== 'undefined' && document.fullscreenElement !== null,
         keepAwake: host === 'desktop' && keepAwakeAvailable() ? keepAwakeChoice().keepAwake : null,
         settingsOpen: ui.settings.open,

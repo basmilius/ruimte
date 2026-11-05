@@ -236,6 +236,8 @@ export interface DesktopBridge {
     installUpdate?(confirmed?: boolean): void;
     /* From the shell's copy on disk; `refresh` asks GitHub first. */
     releaseNotes?(refresh?: boolean): Promise<ReleaseNotesState>;
+    /* Quits and starts the app again without extensions and themes, until the next ordinary start. */
+    restartInSafeMode?(): Promise<void>;
     /* The secret in the home of the daemon this app started, which the local row presents to get in,
        since a loopback address proves nothing. Null while the daemon has not written it. A window
        opens while the machine still comes up, and this answers only once it proved itself. */

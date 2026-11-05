@@ -114,6 +114,8 @@ export interface MenuContext {
     /* The tasks that may run after a worktree chat settles, and the one that does, or null for none. */
     afterSettle: { tasks: { id: string; name: string }[]; chosen: string | null };
     releaseNotes: boolean;
+    /* The shell can start the app again without extensions, and this start loads them. */
+    safeModeRestart: boolean;
     /* The page fills the screen, which only the web client asks the page itself. */
     fullscreen: boolean;
     /* When this computer stays awake, or null where the shell cannot hold it awake. */

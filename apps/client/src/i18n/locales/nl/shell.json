@@ -1090,6 +1090,7 @@
         "front": "Alles naar voren",
         "releaseNotes": "Release notes",
         "keyboardShortcuts": "Sneltoetsen",
+        "restartSafeMode": "Herstarten zonder extensies",
         "projectSettings": "Projectinstellingen…",
         "databaseConnections": "Databaseverbindingen…",
         "refreshSqlSchemas": "SQL-schema's vernieuwen",

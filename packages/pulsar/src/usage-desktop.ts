@@ -126,6 +126,7 @@ export const USAGE_DESKTOP_COMMANDS = [
     'onboarding',
     'releaseNotes',
     'settingsKeyboard',
+    'restartSafeMode',
     'addTerminal',
     'addChat',
     'addBrowser',

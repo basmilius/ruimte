@@ -23,6 +23,7 @@ import { installMachineMode } from './main/machine-mode';
 import { installMenu } from './main/menu';
 import { installPower } from './main/power';
 import { installQuickLook } from './main/quick-look';
+import { inSafeMode, installSafeMode, startsInSafeMode } from './main/safe-mode';
 import { installSecrets } from './main/secrets';
 import { createMachine } from './main/service';
 import { installSpeech } from './main/speech';
@@ -55,6 +56,7 @@ const repoRoot = resolve(app.getAppPath(), '..', '..');
 // In development `bun dev` already runs the daemon and Vite; the shell just opens the dev URL.
 const devUrl = process.env.RUIMTE_DEV_URL ?? null;
 const smoke = process.env.RUIMTE_SMOKE === '1';
+const safeMode = startsInSafeMode(process.argv);
 // Where the smoke run writes the top-left of the window, which is how the title bar is measured instead of guessed.
 const capturePath = process.env.RUIMTE_CAPTURE ?? null;
 
@@ -203,13 +205,14 @@ const pageKeys = createPageKeys();
  * installation owns when the choice said so. Under `bun dev` the relaunched app is no longer tied to
  * the launcher's pipe, so Ctrl+C in that terminal does not close it.
  */
-function relaunchApp(): void {
+function relaunchApp(args?: string[]): void {
     quitConfirmed = true;
-    app.relaunch(process.env.APPIMAGE ? { execPath: process.env.APPIMAGE } : undefined);
+    app.relaunch({ ...(process.env.APPIMAGE ? { execPath: process.env.APPIMAGE } : {}), ...(args ? { args } : {}) });
     app.quit();
 }
 
-installMachineMode(ipc, { mode: machineMode, machine, store: machineModeStore, relaunch: relaunchApp });
+installMachineMode(ipc, { mode: machineMode, machine, store: machineModeStore, relaunch: () => relaunchApp() });
+installSafeMode(ipc, { argv: process.argv, relaunch: relaunchApp });
 
 const menu = installMenu(ipc, {
     pageKeys,
@@ -320,7 +323,9 @@ function createWindow(
     browserRoutes.attachApp(contents);
     // The smoke run opens its one window the way a start without a session does.
     // A window back from the last session starts nothing until a person comes to it.
-    void window.loadURL(windowUrl(scheme.url, key, origin === 'first' || smoke, view, state, origin === 'session' && !smoke)).catch(() => undefined);
+    void window
+        .loadURL(inSafeMode(windowUrl(scheme.url, key, origin === 'first' || smoke, view, state, origin === 'session' && !smoke), safeMode))
+        .catch(() => undefined);
     return window;
 }
 

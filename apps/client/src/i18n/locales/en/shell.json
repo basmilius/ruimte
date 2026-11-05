@@ -1090,6 +1090,7 @@
         "front": "Bring All to Front",
         "releaseNotes": "Release Notes",
         "keyboardShortcuts": "Keyboard Shortcuts",
+        "restartSafeMode": "Restart Without Extensions",
         "projectSettings": "Project Settings…",
         "databaseConnections": "Database Connections…",
         "refreshSqlSchemas": "Refresh SQL Schemas",

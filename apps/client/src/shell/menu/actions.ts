@@ -9,6 +9,7 @@ import {
 } from '@/actions/client-actions';
 import { focusPromptStack } from '@/canvas/prompt-stack';
 import { openForkDialog } from '@/chat/open-fork';
+import { desktop } from '@/desktop/bridge';
 import { countCommand } from '@/desktop/usage';
 import { chooseAfterSettle, chooseLaunch, chosenLaunchId, runChosenLaunch, showLaunchOutput, stopAllLaunches, stopChosenLaunch } from '@/launches/actions';
 import { useLaunches } from '@/launches/state';
@@ -76,6 +77,10 @@ const MENU_ACTIONS: Record<MenuOnlyCommandId, () => void> & Partial<Record<Comma
     'focus-down': focusTowards('down'),
     prompts: () => void focusPromptStack(),
     'release-notes': () => openReleaseNotes(null),
+    'restart-safe-mode': () =>
+        void desktop()
+            ?.restartInSafeMode?.()
+            .catch(() => undefined),
     'view-fork': withActiveView(({ view, forkTurn }) => {
         if (forkTurn !== null) {
             openForkDialog(view.id, forkTurn);
