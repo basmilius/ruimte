@@ -1,6 +1,7 @@
+import { CodedError } from '@adecore/agents';
 import type { PeerStatement } from '@ruimte/pulsar';
 import { statementAccountRefusal, type AccountBinding } from '../auth/auth-store.ts';
-import { RequestError, type Dispatcher } from '../dispatcher.ts';
+import { type Dispatcher } from '../dispatcher.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { peerStatementSigned } from '../pulsar/statement.ts';
 import type { PeerMachines } from '../remote/peer-machines.ts';
@@ -66,7 +67,7 @@ async function statementRefusal(statement: PeerStatement, machineId: string, pee
 export function registerRemoteHandlers(dispatcher: Dispatcher, remote: RemoteStore, projects: Pick<ProjectStore, 'known'>, peers: PeerLinkHost): void {
     const requireProject = async (projectId: string): Promise<void> => {
         if (!(await projects.known()).some((project) => project.projectId === projectId)) {
-            throw new RequestError('project-not-found', `No project ${projectId} is on this machine`);
+            throw new CodedError('project-not-found', `No project ${projectId} is on this machine`);
         }
     };
 
@@ -84,7 +85,7 @@ export function registerRemoteHandlers(dispatcher: Dispatcher, remote: RemoteSto
     dispatcher.register('remote.unlink', async (payload) => {
         await requireProject(payload.projectId);
         if (remote.usesMachine(payload.projectId, payload.machineId)) {
-            throw new RequestError('machine-in-use', 'A node of this project still runs on that machine; remove it first');
+            throw new CodedError('machine-in-use', 'A node of this project still runs on that machine; remove it first');
         }
         await remote.unlink(payload.projectId, payload.machineId);
         // The last project that links to a machine takes the link to it along: no reconnect, and no key kept.
@@ -105,17 +106,17 @@ export function registerRemoteHandlers(dispatcher: Dispatcher, remote: RemoteSto
     dispatcher.register('remote.connect', async ({ machineId, statement, brokerUrl }) => {
         const refusal = await statementRefusal(statement, machineId, peers);
         if (refusal !== null) {
-            throw new RequestError('bad-statement', refusal);
+            throw new CodedError('bad-statement', refusal);
         }
         if (brokerUrl && !acceptableBrokerUrl(brokerUrl)) {
-            throw new RequestError('bad-broker', 'A link goes through a broker over wss:// only');
+            throw new CodedError('bad-broker', 'A link goes through a broker over wss:// only');
         }
         await peers.machines.put({ machineId, publicKey: statement.machinePublicKey, ...(brokerUrl ? { brokerUrl } : {}) }, peers.now());
         peers.pending.hold(statement);
         try {
             await peers.connections.connectWithStatement(machineId);
         } catch (e) {
-            throw new RequestError('peer-unreachable', e instanceof Error ? e.message : 'That machine did not answer');
+            throw new CodedError('peer-unreachable', e instanceof Error ? e.message : 'That machine did not answer');
         }
         return {};
     });

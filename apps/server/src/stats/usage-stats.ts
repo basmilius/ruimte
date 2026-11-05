@@ -10,7 +10,7 @@ import {
     type UsageReportTiming
 } from '@ruimte/pulsar';
 import { isOwner } from '../auth/access.ts';
-import type { ClientAccess } from '../dispatcher.ts';
+import type { ClientAccess } from '../wire.ts';
 import type { UsageCounter } from './usage-counter.ts';
 
 /*

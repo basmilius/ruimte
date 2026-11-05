@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { applyTextEdits, fileUriToPath, planWorkspaceEdit, type CodeAction, type DocumentSnapshot, type Position, type WorkspaceEdit } from '@adecore/lsp';
 import type { LanguageRequestResult } from '@ruimte/contracts';
 import { MachineHome } from '../fs/machine-home.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { LanguageHost } from './host.ts';
 import { NativePolicy, phpLanguageServerCheckout } from './native.ts';
 import { spawnLanguageProcess } from './runtime.ts';

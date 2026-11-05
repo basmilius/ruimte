@@ -3,7 +3,7 @@ import { Server, WebStandardStreamableHTTPServerTransport, type CallToolResult }
 import { bearerCaller } from '../agents/bearer.ts';
 import { errorText } from '../error-text.ts';
 import { ProjectError } from '../projects/project-error.ts';
-import { MCP_MAX_IMAGE_BYTES } from '../providers/ruimte-mcp.ts';
+import { MCP_MAX_IMAGE_BYTES } from '../ruimte-mcp.ts';
 import type { CanvasHost } from '../tools/host.ts';
 import { callerKind } from '../tools/tasks.ts';
 import { VERSION } from '../version.ts';
@@ -12,7 +12,7 @@ import { AgentFiles } from './files.ts';
 import { MCP_INSTRUCTIONS } from './instructions.ts';
 import type { ArtifactUploads } from './uploads.ts';
 
-export { MCP_PATH, MCP_REQUEST_TIMEOUT_S } from '../providers/ruimte-mcp.ts';
+export { MCP_PATH, MCP_REQUEST_TIMEOUT_S } from '../ruimte-mcp.ts';
 
 export interface McpDeps {
     /* The session or chat a bearer token speaks for. */

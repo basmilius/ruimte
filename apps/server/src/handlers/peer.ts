@@ -1,7 +1,8 @@
+import { CodedError } from '@adecore/agents';
 import { ToolRefusal } from '@adecore/agents/context';
 import type { AgentLineageStore } from '@adecore/agents/coordination';
 import { isCanvasView, sessionNodesOfView, type PeerLink, type ProjectCanvasView, type ProjectEdge } from '@ruimte/contracts';
-import { RequestError, type Dispatcher } from '../dispatcher.ts';
+import { type Dispatcher } from '../dispatcher.ts';
 import { peerCanvasId, type PeerLinks } from '../peering/links.ts';
 import { idTakenOutside, nodeOf, sameCanvas, stripHidden } from '../peering/peer-canvas.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
@@ -58,14 +59,14 @@ export function registerPeerHandlers(dispatcher: Dispatcher, { links, lineage, t
     dispatcher.register('peer.bind', async (payload) => {
         const names = await namesOf();
         if (!names.has(payload.projectId)) {
-            throw new RequestError('project-not-found', `No project ${payload.projectId} is on this machine`);
+            throw new CodedError('project-not-found', `No project ${payload.projectId} is on this machine`);
         }
         return withName(await links.bind(payload.machineId, payload.label, payload.projectId, payload.ceiling), names);
     });
 
     dispatcher.register('peer.setCeiling', async (payload) => {
         if (!(await links.setCeiling(payload.machineId, payload.projectId, payload.ceiling))) {
-            throw new RequestError('peer-not-linked', 'That machine has no link to this project');
+            throw new CodedError('peer-not-linked', 'That machine has no link to this project');
         }
         return {};
     });
@@ -73,7 +74,7 @@ export function registerPeerHandlers(dispatcher: Dispatcher, { links, lineage, t
     /* The nodes of that machine end first, as a deleted node's do, and then their canvas and the link go. */
     dispatcher.register('peer.unbind', async (payload) => {
         if (links.linkOf(payload.machineId, payload.projectId) === null) {
-            throw new RequestError('peer-not-linked', 'That machine has no link to this project');
+            throw new CodedError('peer-not-linked', 'That machine has no link to this project');
         }
         const canvasId = peerCanvasId(payload.machineId);
         const open = tasks?.openNodesOf(payload.machineId, payload.projectId) ?? [];
@@ -104,20 +105,20 @@ export function registerPeerHandlers(dispatcher: Dispatcher, { links, lineage, t
         const { machineId, projectId, nodes, edges } = payload;
         const link = links.linkOf(machineId, projectId);
         if (link === null) {
-            throw new RequestError('peer-not-linked', 'That machine has no link to this project');
+            throw new CodedError('peer-not-linked', 'That machine has no link to this project');
         }
         const ids = new Set(nodes.map((node) => node.id));
         if (edges.some((edge) => !ids.has(edge.from) || !ids.has(edge.to))) {
-            throw new RequestError('edge-off-machine', 'A line may only join two nodes of the same machine');
+            throw new CodedError('edge-off-machine', 'A line may only join two nodes of the same machine');
         }
         const folder = projects.index.folderOf(projectId);
         if (folder === null) {
-            throw new RequestError('project-not-found', `No project ${projectId} is on this machine`);
+            throw new CodedError('project-not-found', `No project ${projectId} is on this machine`);
         }
         for (const node of nodes) {
             if (node.cwd !== undefined) {
                 await checkCwd(folder, node.cwd, worktreePaths).catch((e: unknown) => {
-                    throw e instanceof ToolRefusal ? new RequestError('cwd-outside', e.message) : e;
+                    throw e instanceof ToolRefusal ? new CodedError('cwd-outside', e.message) : e;
                 });
             }
         }
@@ -125,7 +126,7 @@ export function registerPeerHandlers(dispatcher: Dispatcher, { links, lineage, t
         const gone = await projects.mutate(projectId, async (current) => {
             const placedBefore = links.placedOf(machineId, projectId);
             if (idTakenOutside(current.views, canvasId, ids)) {
-                throw new RequestError('peer-node-taken', 'A node of that machine has the id of a view or node here');
+                throw new CodedError('peer-node-taken', 'A node of that machine has the id of a view or node here');
             }
             const held = current.views.find((view): view is ProjectCanvasView => view.id === canvasId && isCanvasView(view));
             const before = held?.nodes ?? [];

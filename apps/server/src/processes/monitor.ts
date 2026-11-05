@@ -16,7 +16,7 @@ import type {
 } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 import {
     identityOf,
     machineRate,

@@ -5,7 +5,7 @@ import { Serializer } from '@adecore/utils/async';
 import type { ProjectView } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { ProjectError } from './project-error.ts';
 import {
     tooNewMessage,

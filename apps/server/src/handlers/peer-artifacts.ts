@@ -1,7 +1,9 @@
+import { CodedError } from '@adecore/agents';
 import type { Artifacts } from '../artifacts/artifacts.ts';
-import { RequestError, type ClientConnection, type Dispatcher } from '../dispatcher.ts';
+import { type Dispatcher } from '../dispatcher.ts';
 import type { PeerLinks } from '../peering/links.ts';
 import { requirePeerLinks } from '../peering/peer-access.ts';
+import type { ClientConnection } from '../wire.ts';
 
 /*
  * The Output another machine may read here, for a copy a person there asked for: only the project its
@@ -11,7 +13,7 @@ import { requirePeerLinks } from '../peering/peer-access.ts';
 export function registerPeerArtifactHandlers(dispatcher: Dispatcher, links: Pick<PeerLinks, 'list' | 'linkOf'>, artifacts: Artifacts): void {
     const linkedProject = (client: ClientConnection, projectId: string): string => {
         if (links.linkOf(requirePeerLinks(client, links), projectId) === null) {
-            throw new RequestError('peer-not-linked', 'That project here is not linked to this machine');
+            throw new CodedError('peer-not-linked', 'That project here is not linked to this machine');
         }
         return projectId;
     };

@@ -6,7 +6,7 @@ import { FakeWatch } from '@adecore/agents/testing';
 import { fileExists } from '@adecore/utils/fs';
 import type { DatabaseConnection } from '@ruimte/contracts';
 import { PROJECT_WRITE_IO, type ProjectWriteIO } from '../projects/project-write.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { DatabaseConnectionStore } from './connection-store.ts';
 
 let root: string;

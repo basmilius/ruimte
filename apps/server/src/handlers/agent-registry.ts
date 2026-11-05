@@ -1,4 +1,5 @@
-import { RequestError, type Dispatcher } from '../dispatcher.ts';
+import { CodedError } from '@adecore/agents';
+import { type Dispatcher } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import type { CliVersions } from '../providers/cli-versions.ts';
 import type { RegistryAgents } from '../providers/registry-agents.ts';
@@ -35,6 +36,6 @@ async function refusing<T>(code: string, run: () => Promise<T>): Promise<T> {
     try {
         return await run();
     } catch (e) {
-        throw new RequestError(code, errorText(e));
+        throw new CodedError(code, errorText(e));
     }
 }

@@ -1,6 +1,6 @@
 import { CodedError } from '@adecore/agents';
 import { shellCommandLine, type ShellLanguage, type TerminalPreparePreview, type TerminalPrepareSource } from '@ruimte/contracts';
-import type { ClientConnection } from '../dispatcher.ts';
+import type { ClientConnection } from '../wire.ts';
 import type { SessionManager } from './manager.ts';
 import type { Session } from './session.ts';
 

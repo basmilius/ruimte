@@ -4,10 +4,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ServerFrame } from '@ruimte/contracts';
-import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
 import { registerSnoozeHandlers } from '../handlers/snooze.ts';
 import { MAX_WAIT_MS } from '../outbox/wakeful-clock.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent, ClientConnection } from '../wire.ts';
 import { SnoozeStore, type SnoozeChange } from './snoozes.ts';
 
 let home: string;

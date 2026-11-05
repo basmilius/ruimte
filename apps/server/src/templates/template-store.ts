@@ -39,7 +39,7 @@ import {
     type JsonDocumentParse,
     type JsonDocumentRead
 } from '../projects/project-files.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { problemInLiveTemplate, problemInPostfixTemplate } from './template-check.ts';
 import {
     EMPTY_TEMPLATES,

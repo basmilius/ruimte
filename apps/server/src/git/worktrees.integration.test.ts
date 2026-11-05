@@ -3,7 +3,7 @@ import { mkdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises
 import { join } from 'node:path';
 import { fileExists } from '@adecore/utils/fs';
 import type { Worktree } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { checkpointIndexFile, Checkpoints } from './checkpoints.ts';
 import * as runner from './run.ts';
 import { forgetBase } from './status.ts';

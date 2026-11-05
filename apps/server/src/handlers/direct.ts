@@ -1,5 +1,6 @@
 import type { SignalEnvelope } from '@ruimte/pulsar';
-import { sendEvent, type Dispatcher } from '../dispatcher.ts';
+import { type Dispatcher } from '../dispatcher.ts';
+import { sendEvent } from '../wire.ts';
 
 interface SignalSink {
     receive(envelope: SignalEnvelope, reply: (envelope: SignalEnvelope) => void): void;

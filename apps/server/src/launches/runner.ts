@@ -4,9 +4,9 @@ import { KeyedSerializer } from '@adecore/utils/async';
 import type { LaunchConfigKind, LaunchHeld, LaunchStartResult, LaunchState, LaunchStatus } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
-import type { SessionSink } from '../sessions/manager.ts';
 import { countUsage } from '../stats/usage-stats.ts';
 import { realTimers } from '../timers.ts';
+import type { SessionSink } from '../wire.ts';
 import { LaunchError, type LaunchStore, type ResolvedLaunch } from './store.ts';
 
 // How long a stop waits after the interrupt before it sends SIGTERM.

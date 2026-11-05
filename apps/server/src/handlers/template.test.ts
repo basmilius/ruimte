@@ -3,9 +3,10 @@ import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { ServerFrame } from '@ruimte/contracts';
-import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { TemplateStore } from '../templates/template-store.ts';
+import type { ClientAccess } from '../wire.ts';
 import { registerTemplateHandlers } from './template.ts';
 import { askOnce } from './test-helpers.ts';
 

@@ -2,7 +2,7 @@ import { dirname, join, resolve } from 'node:path';
 import { PerClientWatches, settled, supportsRecursive, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import { isWithin } from '@adecore/utils/path';
 import { ClientSinks } from '../client-sinks.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 import { isMachineStatePath, NO_MACHINE_HOME, type MachineHomePolicy } from './machine-home.ts';
 
 // A save, a formatter and a build all touch the same folder in a burst; one event per burst is enough.

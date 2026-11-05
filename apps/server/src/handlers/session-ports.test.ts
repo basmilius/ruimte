@@ -1,7 +1,8 @@
 import { expect, test } from 'bun:test';
 import type { ServerFrame } from '@ruimte/contracts';
-import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
 import { SessionPorts } from '../sessions/ports.ts';
+import type { ClientAccess } from '../wire.ts';
 import { registerSessionPortHandlers } from './session-ports.ts';
 
 test('remote or unproven clients cannot turn a session listener into a local browser URL', async () => {

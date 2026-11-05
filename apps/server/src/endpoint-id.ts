@@ -25,7 +25,7 @@ import { z } from 'zod';
 import { generateKeyPair, signMessage } from './auth/keys.ts';
 import { Binding } from './binding.ts';
 import { ClientSinks } from './client-sinks.ts';
-import type { SessionSink } from './sessions/manager.ts';
+import type { SessionSink } from './wire.ts';
 
 /*
  * The version stays at 1 on purpose as fields are added: zod strips what it does not know, so an older

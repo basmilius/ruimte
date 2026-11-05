@@ -1,6 +1,6 @@
 import type { RemoteStatusEvent } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 
 /*
  * Where the link to each machine this one works in stands, told to every client. A client that

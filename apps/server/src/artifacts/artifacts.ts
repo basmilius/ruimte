@@ -30,8 +30,8 @@ import {
 import type { MachineHome } from '../fs/machine-home.ts';
 import { realOrNull } from '../fs/real-path.ts';
 import { sniffMime } from '../fs/sniff.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { shotFolders } from '../shots.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { cleanupProposals, NO_PINS, removable, type PinnedVersions } from './artifact-cleanup.ts';
 import { copyVersionInto } from './artifact-copy.ts';
 import { ArtifactError, isTextMime, SNIFF_HEAD_BYTES } from './artifact-names.ts';

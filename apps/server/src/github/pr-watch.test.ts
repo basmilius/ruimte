@@ -6,7 +6,7 @@ import { ManualClock } from '@adecore/agents/testing';
 import type { GhRunner } from '../git/github.ts';
 import { GitError } from '../git/run.ts';
 import type { OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { MAX_INTERVAL_MS, MAX_WATCHES, MAX_ERROR_INTERVAL_MS, PrWatchStore, WATCH_LIFETIME_MS } from './pr-watch.ts';
 
 interface FakePr {

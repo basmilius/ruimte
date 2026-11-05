@@ -1,7 +1,7 @@
 import type { ApiHostTools, ApiToolDefinition, BackendHost, BackendLaunch } from '@adecore/agents/chat';
 import type { Tool } from '@modelcontextprotocol/client';
 import { errorText } from '../error-text.ts';
-import { MCP_SERVER } from '../providers/ruimte-mcp.ts';
+import { MCP_SERVER } from '../ruimte-mcp.ts';
 import { connectApiMcp, mcpResultText, RUIMTE_MCP_LIMITS, ruimteMcpServer, type ApiMcpConnection, type ConnectApiMcp } from './api-mcp.ts';
 
 // The name the model and the thread give a tool of Ruimte's MCP server, the one Claude Code gives it too.

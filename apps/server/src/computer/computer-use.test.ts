@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ComputerAppGrants } from '@ruimte/contracts';
 import { codeOf } from '../fs/test-boundary.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { APPROVAL_WAIT_MS, CARD_MS } from './approvals.ts';
 import { chatInfo, computerSetup, SHELL_APP, terminalStatus, TEXT_EDIT, turnEnded, until, type ComputerSetup } from './computer-test-helpers.ts';
 import { agentWords, findInstalledApp, resolveApp, SESSION_POLL_MS } from './computer-use.ts';

@@ -1,6 +1,7 @@
 import { dirname, resolve } from 'node:path';
+import { CodedError } from '@adecore/agents';
 import type { AgentKind, GitActionPhase } from '@ruimte/contracts';
-import { RequestError, sendEvent, type ClientConnection, type Dispatcher } from '../dispatcher.ts';
+import { type Dispatcher } from '../dispatcher.ts';
 import type { MachineHome } from '../fs/machine-home.ts';
 import { GitActions } from '../git/actions.ts';
 import { authorPictures } from '../git/author-pictures.ts';
@@ -29,6 +30,7 @@ import type { Worktrees } from '../git/worktrees.ts';
 import type { PrWatchStore } from '../github/pr-watch.ts';
 import type { OneShotPlace } from '../peering/one-shot-place.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
+import { sendEvent, type ClientConnection } from '../wire.ts';
 
 /* What writing and taking in a bundle needs from the rest of the daemon. */
 interface BundleHost {
@@ -156,7 +158,7 @@ export function registerGitHandlers(
             return await diffCheckout(payload.cwd, await mergeBaseWith(payload.cwd, payload.base), leftOut);
         }
         if (payload.path === undefined) {
-            throw new RequestError('bad-request', 'A diff of this scope needs a path.');
+            throw new CodedError('bad-request', 'A diff of this scope needs a path.');
         }
         const options = {
             scope: payload.scope,
@@ -200,7 +202,7 @@ export function registerGitHandlers(
         dispatcher.register('git.fetchBundle', async (payload) => {
             const folder = await folderOf(payload.projectId);
             if (folder === null) {
-                throw new RequestError('project-not-found', `No project ${payload.projectId} is on this machine`);
+                throw new CodedError('project-not-found', `No project ${payload.projectId} is on this machine`);
             }
             return fetchBundle(bundles, worktrees, folder, payload, payload.untrusted === true ? untrustFolder : undefined);
         });

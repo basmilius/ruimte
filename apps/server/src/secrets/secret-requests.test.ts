@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { ChatEvent, SecretRequest } from '@ruimte/contracts';
 import { ManualTimers } from '../computer/computer-test-helpers.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { SECRET_CARD_MS, SECRET_WAIT_MS, type SecretAsk } from './secret-requests.ts';
 import { SecretService } from './secret-service.ts';
 import type { SecretSlot } from './secret-store.ts';

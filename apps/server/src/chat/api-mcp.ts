@@ -5,7 +5,7 @@ import type { ChatMcpServer } from '@adecore/agents/chat';
 import { isNotFound } from '@adecore/utils/errors';
 import { Client, StreamableHTTPClientTransport, type CallToolResult, type Tool } from '@modelcontextprotocol/client';
 import { z } from 'zod';
-import { CHAT_TOKEN_VARIABLE, MCP_MAX_IMAGE_BYTES, MCP_REQUEST_TIMEOUT_S, MCP_SERVER, MCP_URL_VARIABLE } from '../providers/ruimte-mcp.ts';
+import { CHAT_TOKEN_VARIABLE, MCP_MAX_IMAGE_BYTES, MCP_REQUEST_TIMEOUT_S, MCP_SERVER, MCP_URL_VARIABLE } from '../ruimte-mcp.ts';
 
 const common = { enabled: z.boolean().optional(), allowedTools: z.array(z.string().min(1).max(200)).max(100).optional() };
 const ApiMcpConfigSchema = z.object({

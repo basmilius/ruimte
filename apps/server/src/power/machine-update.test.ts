@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { MachineUpdates, workEndedByInstall } from './machine-update.ts';
 
 function listen(updates: MachineUpdates, clientId: string) {

@@ -10,8 +10,9 @@ import { DatabasePasswords } from '../database/agent-passwords.ts';
 import { DatabaseConnectionStore } from '../database/connection-store.ts';
 import { DatabaseService } from '../database/database-service.ts';
 import { FakeHelper } from '../database/fake-helper.ts';
-import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
 import { MachineHome } from '../fs/machine-home.ts';
+import type { ClientAccess } from '../wire.ts';
 import { registerDatabaseHandlers } from './database.ts';
 import { askOnce } from './test-helpers.ts';
 

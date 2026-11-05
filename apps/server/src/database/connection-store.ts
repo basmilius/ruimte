@@ -35,7 +35,7 @@ import {
     type JsonDocumentRead
 } from '../projects/project-files.ts';
 import type { ProjectWriteIO } from '../projects/project-write.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 
 const DATABASES_FILE = 'databases.json';
 

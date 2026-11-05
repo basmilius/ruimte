@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { BrowserPageState } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { BrowserPages } from './pages.ts';
 
 function stateOf(browserId: string, url = 'https://example.com'): BrowserPageState {

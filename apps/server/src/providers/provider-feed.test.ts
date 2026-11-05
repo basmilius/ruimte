@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { ProviderFeed } from './provider-feed.ts';
 
 function changingProviders() {

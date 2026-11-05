@@ -8,10 +8,10 @@ import type { ChatTurnItem, ProjectContent, ServerFrame, VoiceStartPayload } fro
 import type { LiveEvent } from '@ruimte/voice';
 import { voiceActionCall } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
-import type { ClientConnection } from '../dispatcher.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
+import type { ClientConnection } from '../wire.ts';
 import { FakeClock, FakeLive, settle, type FakeAttach } from './voice-fakes.ts';
 import { VoiceSessions } from './voice-sessions.ts';
 

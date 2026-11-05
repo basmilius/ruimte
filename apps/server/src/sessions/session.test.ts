@@ -4,8 +4,8 @@ import { SerializeAddon } from '@xterm/addon-serialize';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { Terminal } from '@xterm/headless';
 import { HIGH_WATER_MARK, OutputGate, type BackpressuredSocket } from '../backpressure.ts';
+import type { SessionEvent } from '../wire.ts';
 import { SCREEN_MAX_BYTES } from './fit-screen.ts';
-import type { SessionEvent } from './manager.ts';
 import { Recorder, makeHarness, type Harness } from './test-helpers.ts';
 
 let harness: Harness;

@@ -1,8 +1,8 @@
 import { channelBinding, DIRECT_CHANNEL_LABEL } from '@ruimte/contracts';
 import type { IceServer, SignalEnvelope } from '@ruimte/pulsar';
 import type { RTCPeerConnection } from 'werift';
-import type { ClientAccess } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
+import type { ClientAccess } from '../wire.ts';
 import { directChannel, fromWerift, type DirectChannel } from './data-channel.ts';
 
 // Offer to open channel, handshake included; a peer that has not got that far by then is not coming.

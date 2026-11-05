@@ -6,7 +6,7 @@ import type { AgentEvent } from '@adecore/agents/host';
 import type { ChatToolItem, ChatTurnItem, ProvenanceRun } from '@ruimte/contracts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { gitIn, repoTemplate, type RepoTemplate } from '../git/test-repo.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { ProvenanceService, type ProvenanceChat } from './provenance-service.ts';
 import { ProvenanceStore } from './provenance-store.ts';
 

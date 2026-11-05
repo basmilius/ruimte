@@ -9,7 +9,7 @@ import {
     type DrawingDocument,
     type DrawingElement
 } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { ElementChanges } from './element-changes.ts';
 import { drawingsDirOf, privateDrawingsDirOf, readDrawing, tooNewMessage, writeDrawing } from './project-files.ts';
 import type { ProjectStore } from './project-store.ts';

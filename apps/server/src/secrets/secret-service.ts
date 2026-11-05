@@ -1,8 +1,8 @@
 import type { SecretRequest } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import type { Timers } from '../timers.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { SecretRequests, type SecretAsk, type SecretChats, type SecretOutcome } from './secret-requests.ts';
 import type { SecretSlot, SecretStore } from './secret-store.ts';
 

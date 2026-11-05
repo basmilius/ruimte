@@ -1,5 +1,6 @@
+import { CodedError } from '@adecore/agents';
 import type { AgentKind } from '@ruimte/contracts';
-import { RequestError, type Dispatcher } from '../dispatcher.ts';
+import { type Dispatcher } from '../dispatcher.ts';
 import type { AcpServerInstall } from '../providers/acp-server.ts';
 
 export interface AgentServers {
@@ -16,7 +17,7 @@ export function registerAgentServerHandlers(dispatcher: Dispatcher, servers: Age
     const serverOf = (kind: AgentKind): AcpServerInstall => {
         const server = servers.of(kind);
         if (server === undefined) {
-            throw new RequestError('no-agent-server', `${kind} has no server of its own to install`);
+            throw new CodedError('no-agent-server', `${kind} has no server of its own to install`);
         }
         return server;
     };

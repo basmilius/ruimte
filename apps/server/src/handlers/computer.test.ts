@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
 import { computerSetup, FakeHelper } from '../computer/computer-test-helpers.ts';
-import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
+import type { ClientConnection } from '../wire.ts';
 import { registerComputerHandlers } from './computer.ts';
 
 function request(type: string, payload: unknown = {}): string {

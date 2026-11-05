@@ -4,9 +4,9 @@ import { claudeProjectSlug, type BackendChange, type BackendLaunch } from '@adec
 import { createClaudeProvider, type ChatProvider, type ClaudeCodeRuntime, type CliDetection } from '@adecore/agents/providers';
 import { claudeTranscriptRoot, type UsageRootPath } from '@adecore/agents/usage';
 import { cliMcpServers, readApiMcpConfigSync } from '../chat/api-mcp.ts';
+import { withRuimteMcp } from '../ruimte-mcp.ts';
 import { AnthropicClaudeApiService } from './anthropic-claude-api-service.ts';
 import { claudeProvider } from './claude-provider.ts';
-import { withRuimteMcp } from './ruimte-mcp.ts';
 
 // The CLI's own configuration folder for these chats, so the person's sign-in, settings and sessions stay out.
 const CONFIG_FOLDER = 'claude-config';

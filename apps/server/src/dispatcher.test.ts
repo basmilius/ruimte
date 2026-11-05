@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { CodedError } from '@adecore/agents';
 import type { ServerFrame } from '@ruimte/contracts';
-import { Dispatcher, RequestError, sendEvent, type ClientConnection } from './dispatcher.ts';
+import { Dispatcher } from './dispatcher.ts';
+import { sendEvent, type ClientConnection } from './wire.ts';
 
 class FakeSocket implements ClientConnection {
     readonly id = 'client-1';
@@ -77,11 +78,11 @@ describe('Dispatcher', () => {
         expect(socket.last()).toMatchObject({ id: 'r6', ok: false, error: { code: 'bad-request' } });
     });
 
-    test('maps a RequestError to its code and anything else to internal', async () => {
+    test('maps a CodedError to its code and anything else to internal', async () => {
         const socket = new FakeSocket();
         const dispatcher = new Dispatcher();
         dispatcher.register('session.kill', () => {
-            throw new RequestError('session-not-found', 'No such session');
+            throw new CodedError('session-not-found', 'No such session');
         });
         dispatcher.register('session.detach', () => {
             throw new TypeError('boom');

@@ -1,8 +1,9 @@
 import type { AgentKind, SessionInfo } from '@ruimte/contracts';
-import type { ClientConnection, Dispatcher } from '../dispatcher.ts';
+import type { Dispatcher } from '../dispatcher.ts';
 import { refuseBoundNode, type MachineOfNode } from '../remote/bound-nodes.ts';
 import { SessionError, type SessionManager } from '../sessions/manager.ts';
 import { recordTiming } from '../stats/usage-stats.ts';
+import type { ClientConnection } from '../wire.ts';
 
 /* Owes ending the agents a session's node opened, before that session goes; a shell that already exited ends nothing, so a restart does not. */
 export type BeforeKill = (nodeId: string) => Promise<unknown>;

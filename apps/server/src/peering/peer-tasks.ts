@@ -1,4 +1,5 @@
 import { stat } from 'node:fs/promises';
+import { CodedError } from '@adecore/agents';
 import { ToolRefusal } from '@adecore/agents/context';
 import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { narrowerMode } from '@adecore/agents/providers';
@@ -22,7 +23,6 @@ import {
     type Task
 } from '@ruimte/contracts';
 import type { PendingPromptStore } from '../agents/pending-prompts.ts';
-import { RequestError } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import { BundleStore, fetchBundle, makeBundle } from '../git/bundles.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
@@ -127,53 +127,53 @@ export class PeerTasks {
         const { projectId, nodeId } = payload;
         const link = deps.links.linkOf(machineId, projectId);
         if (link === null) {
-            throw new RequestError('peer-not-linked', 'That machine has no link to this project');
+            throw new CodedError('peer-not-linked', 'That machine has no link to this project');
         }
         const folder = deps.projects.index.folderOf(projectId);
         if (folder === null) {
-            throw new RequestError('project-not-found', `No project ${projectId} is on this machine`);
+            throw new CodedError('project-not-found', `No project ${projectId} is on this machine`);
         }
         const held = deps.lineage.peerOf(nodeId);
         if (held !== null && held.machineId !== machineId) {
-            throw new RequestError('peer-node-taken', 'A node of another machine has that id here');
+            throw new CodedError('peer-node-taken', 'A node of another machine has that id here');
         }
         if (held !== null && this.taskOf(machineId, nodeId) !== undefined) {
             // A start the other machine asks again because it never heard the answer.
             return await this.startedAs(machineId, nodeId, folder);
         }
         if (payload.branch !== undefined && payload.branch.length > PEER_MAX_BRANCH_LENGTH) {
-            throw new RequestError('branch-too-long', `A branch from another machine may be ${PEER_MAX_BRANCH_LENGTH} characters long at most here`);
+            throw new CodedError('branch-too-long', `A branch from another machine may be ${PEER_MAX_BRANCH_LENGTH} characters long at most here`);
         }
         const provider = providerFor(payload.provider);
         if (provider.ignoresProjectConfig !== true) {
-            throw new RequestError(
+            throw new CodedError(
                 'peer-provider-unsupported',
                 `${provider.name} cannot run a task from another machine here: it cannot be kept from loading the settings, hooks and tools of the files that machine sent. Give the task to a Claude agent instead`
             );
         }
         if (payload.terminal === true) {
-            throw new RequestError(
+            throw new CodedError(
                 'peer-terminal-unsupported',
                 'A terminal agent cannot run a task from another machine here: it cannot be kept from loading the settings, hooks and tools of the files that machine sent. Give the task to a chat agent instead'
             );
         }
         if (held === null && deps.exists(nodeId)) {
             // Started by someone else before the task came; its prompt and folder could not reach it any more.
-            throw new RequestError('peer-node-taken', 'A chat or terminal with that id already runs on this machine');
+            throw new CodedError('peer-node-taken', 'A chat or terminal with that id already runs on this machine');
         }
         if (this.openCount(machineId) >= PEER_MAX_OPEN_TASKS) {
-            throw new RequestError('peer-busy', `This machine already runs ${PEER_MAX_OPEN_TASKS} tasks for that machine. Try again when one is done`);
+            throw new CodedError('peer-busy', `This machine already runs ${PEER_MAX_OPEN_TASKS} tasks for that machine. Try again when one is done`);
         }
         const depth = Math.max(1, payload.depth);
         if (depth > MAX_AGENT_DEPTH) {
-            throw new RequestError('depth-limit', `An agent from another machine may sit at depth ${MAX_AGENT_DEPTH} here, and this one would be at ${depth}`);
+            throw new CodedError('depth-limit', `An agent from another machine may sit at depth ${MAX_AGENT_DEPTH} here, and this one would be at ${depth}`);
         }
         const caller = peerCaller(machineId, payload.parentId);
         if (deps.lineage.openedCount(caller) >= MAX_OPENED_PER_CALLER) {
-            throw new RequestError('too-many-agents', `That agent has ${MAX_OPENED_PER_CALLER} agents open here already`);
+            throw new CodedError('too-many-agents', `That agent has ${MAX_OPENED_PER_CALLER} agents open here already`);
         }
         if (!(await deps.installed()).includes(payload.provider)) {
-            throw new RequestError('cli-not-installed', `${provider.name} is not installed on this machine`);
+            throw new CodedError('cli-not-installed', `${provider.name} is not installed on this machine`);
         }
         const chat = provider.capabilities.chat;
         // The narrowest of what it asks, what its own parent allows it and what the link here allows.
@@ -190,7 +190,7 @@ export class PeerTasks {
             branch = known.worktree ? await this.branchOf(cwd) : null;
         } else if (payload.bundle !== undefined) {
             if (payload.branch === undefined) {
-                throw new RequestError('bad-request', 'Work that comes as a bundle names its branch');
+                throw new CodedError('bad-request', 'Work that comes as a bundle names its branch');
             }
             await this.refuseWhenFull(machineId, projectId, folder);
             // Untrusted before the folder exists, so there is no moment a folder with the files of that machine is trusted.
@@ -213,7 +213,7 @@ export class PeerTasks {
             await deps.links.recordTask(machineId, nodeId, { projectId, cwd, worktree: made.path !== undefined });
         }
         await checkCwd(folder, cwd, deps.worktreePaths).catch((e: unknown) => {
-            throw e instanceof ToolRefusal ? new RequestError('cwd-outside', e.message) : e;
+            throw e instanceof ToolRefusal ? new CodedError('cwd-outside', e.message) : e;
         });
 
         await this.place(
@@ -289,7 +289,7 @@ export class PeerTasks {
             }
         }
         if (kept >= PEER_MAX_WORKTREES) {
-            throw new RequestError(
+            throw new CodedError(
                 'peer-worktrees-full',
                 `This machine already keeps ${kept} worktrees for tasks of that machine in ${folder}. Remove the ones that are done from the worktrees of this project in the git panel on this machine, then give the task again.`
             );
@@ -314,13 +314,13 @@ export class PeerTasks {
         const canvasId = peerCanvasId(machineId);
         await deps.projects.mutate(projectId, async (content) => {
             if (idTakenOutside(content.views, canvasId, new Set([node.id]))) {
-                throw new RequestError('peer-node-taken', 'A node of that machine has the id of a view or node here');
+                throw new CodedError('peer-node-taken', 'A node of that machine has the id of a view or node here');
             }
             const held = content.views.find((view): view is ProjectCanvasView => view.id === canvasId && isCanvasView(view));
             const existing = held?.nodes.find((other) => other.id === node.id);
             const placed = deps.links.placedOf(machineId, projectId);
             if (existing !== undefined && !placed.has(node.id) && deps.lineage.peerOf(node.id)?.machineId !== machineId) {
-                throw new RequestError('peer-node-taken', 'A node of that machine has the id of a node a person placed here');
+                throw new CodedError('peer-node-taken', 'A node of that machine has the id of a node a person placed here');
             }
             await claim();
             if (placed.has(node.id)) {
@@ -468,15 +468,15 @@ export class PeerTasks {
         const who = this.offered.get(payload.bundleId);
         const path = who?.machineId === machineId ? await this.deps.peerBundles(machineId).made(payload.bundleId) : null;
         if (path === null) {
-            throw new RequestError('bundle-missing', 'That machine was not offered this work, or it is gone. Ask for the result again.');
+            throw new CodedError('bundle-missing', 'That machine was not offered this work, or it is gone. Ask for the result again.');
         }
         const file = Bun.file(path);
         const size = file.size;
         if (size > BUNDLE_MAX_BYTES) {
-            throw new RequestError('bundle-too-large', 'This work is too large to send. Push the branch to origin and fetch it there instead.');
+            throw new CodedError('bundle-too-large', 'This work is too large to send. Push the branch to origin and fetch it there instead.');
         }
         if (payload.offset > size) {
-            throw new RequestError('bad-offset', `Offset ${payload.offset} is past the end of a file of ${size} bytes`);
+            throw new CodedError('bad-offset', `Offset ${payload.offset} is past the end of a file of ${size} bytes`);
         }
         const end = Math.min(payload.offset + payload.length, size);
         const data = Buffer.from(await file.slice(payload.offset, end).arrayBuffer()).toString('base64');

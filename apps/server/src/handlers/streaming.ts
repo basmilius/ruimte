@@ -1,5 +1,3 @@
-import { RequestError } from '../dispatcher.ts';
-
 export const STREAMING_DISABLED_MESSAGE = 'Browser and device streaming is disabled on this machine';
 
 /**
@@ -12,7 +10,8 @@ export const STREAMING_DISABLED_MESSAGE = 'Browser and device streaming is disab
 export function streamingGate(streamingAllowed: () => boolean): () => void {
     return () => {
         if (!streamingAllowed()) {
-            throw new RequestError('streaming-disabled', STREAMING_DISABLED_MESSAGE);
+            throw new CodedError('streaming-disabled', STREAMING_DISABLED_MESSAGE);
         }
     };
 }
+import { CodedError } from '@adecore/agents';

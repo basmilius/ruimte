@@ -2,7 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import type { ServerFrame } from '@ruimte/contracts';
 import type { BrowserManager } from '../browser/manager.ts';
 import { BrowserPages } from '../browser/pages.ts';
-import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
+import type { ClientConnection } from '../wire.ts';
 import { registerBrowserHandlers } from './browser.ts';
 
 const openRequest = JSON.stringify({

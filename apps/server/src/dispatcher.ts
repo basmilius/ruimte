@@ -1,43 +1,11 @@
 import { CodedError } from '@adecore/agents';
-import {
-    REQUEST_SCHEMAS,
-    isRequestType,
-    parseRequest,
-    type EventMap,
-    type EventType,
-    type ReplyError,
-    type RequestMap,
-    type RequestType,
-    type ServerFrame
-} from '@ruimte/contracts';
+import { REQUEST_SCHEMAS, isRequestType, parseRequest, type ReplyError, type RequestMap, type RequestType } from '@ruimte/contracts';
 import { isOwner } from './auth/access.ts';
 import { errorText } from './error-text.ts';
 import { countRequest } from './stats/usage-stats.ts';
 import { noteActivity } from './telemetry/activity.ts';
 import { recordRequestDuration } from './telemetry/reporter.ts';
-
-export interface ClientAccess {
-    reachability: 'loopback' | 'lan' | 'tunnel' | 'public';
-    // The session behind the socket; null for a client that presented the local secret.
-    sessionId: string | null;
-    /* Set when the client is another machine of the account that works here, not a person. It asks for the requests on the peer list and nothing else. */
-    peer?: { machineId: string };
-}
-
-export interface ClientConnection {
-    // Unique per socket for the life of the daemon, so a handler can attach a session to exactly this client.
-    readonly id: string;
-    readonly access?: ClientAccess;
-    /* True once the channel went. Its cleanup already ran, so state a handler leaves for it after an await would outlive it. */
-    readonly closed?: boolean;
-    send(frame: ServerFrame): void;
-    // A channel that carries binary frames; a reply that asked for one goes out this way.
-    sendBinary?(frame: Uint8Array): void;
-}
-
-export function sendEvent<E extends EventType>(client: ClientConnection, event: E, payload: EventMap[E]): void {
-    client.send({ type: 'event', event, payload });
-}
+import type { ClientConnection } from './wire.ts';
 
 /* A result that goes out as one binary frame, which only a handler whose client has `sendBinary` hands back. */
 export class BinaryReply {
@@ -52,9 +20,6 @@ type Handler<T extends RequestType> = (
     payload: RequestMap[T]['payload'],
     client: ClientConnection
 ) => RequestMap[T]['result'] | BinaryReply | Promise<RequestMap[T]['result'] | BinaryReply>;
-
-// Thrown by a handler to answer with a specific error code instead of a generic failure.
-export class RequestError extends CodedError {}
 
 interface HandlerOptions {
     /* Only a client that presented the local secret may ask; any other is refused as `forbidden` before the handler runs. */

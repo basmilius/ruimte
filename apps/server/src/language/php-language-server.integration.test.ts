@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import type { Diagnostic } from '@adecore/lsp';
 import type { LanguageRequestResult } from '@ruimte/contracts';
 import { MachineHome } from '../fs/machine-home.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { LanguageHost } from './host.ts';
 import { cargoCommand, NativePolicy, phpLanguageServerCheckout, type Download } from './native.ts';
 import { sweepPhpCache } from './php-cache.ts';

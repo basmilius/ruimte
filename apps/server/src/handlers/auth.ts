@@ -1,3 +1,4 @@
+import { CodedError } from '@adecore/agents';
 import {
     PROTOCOL_VERSION,
     type AgentIntegrationReport,
@@ -13,7 +14,7 @@ import { INTEGRATION_KINDS, IntegrationsFixed, isIntegrationKind } from '../agen
 import { isOwner } from '../auth/access.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import { signForAccount } from '../auth/registration.ts';
-import { RequestError, type ClientAccess, type Dispatcher } from '../dispatcher.ts';
+import { type Dispatcher } from '../dispatcher.ts';
 import type { EndpointIdentity, IdentityFlags } from '../endpoint-id.ts';
 import { checkWorktreeRoot } from '../git/worktree-root.ts';
 import { DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
@@ -22,6 +23,7 @@ import { gitBash } from '../pty/pty.ts';
 import type { BrokerDescription } from '../pulsar/broker-switch.ts';
 import type { PeerKey } from '../remote/peer-key.ts';
 import { countClient, countUsage, recordStartup, recordTiming } from '../stats/usage-stats.ts';
+import type { ClientAccess } from '../wire.ts';
 
 interface EndpointHost {
     identity: EndpointIdentity;
@@ -146,35 +148,35 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         // Off always goes through, and a switch already on stays on; only turning it on needs the rule.
         if (settings.keepAwakeLidClosed === true && !identity.keepAwake.lidClosed) {
             if (host.closedLid?.available !== true) {
-                throw new RequestError('closed-lid-unavailable', 'Only a Mac can stay awake with its lid closed');
+                throw new CodedError('closed-lid-unavailable', 'Only a Mac can stay awake with its lid closed');
             }
             if (!(await host.closedLid.rule())) {
-                throw new RequestError('closed-lid-no-rule', 'Allow it on the Mac first: Ruimte there installs the rule with an administrator password');
+                throw new CodedError('closed-lid-no-rule', 'Allow it on the Mac first: Ruimte there installs the rule with an administrator password');
             }
         }
         // Where checkouts land decides which folders the daemon makes and writes in, so it is the owner's alone.
         let worktreeRoot: string | undefined;
         if (settings.worktreeRoot !== undefined) {
             if (!isOwner(access)) {
-                throw new RequestError('owner-only', 'Only a person on this machine can choose where it makes worktrees');
+                throw new CodedError('owner-only', 'Only a person on this machine can choose where it makes worktrees');
             }
             if (settings.worktreeRoot === '') {
                 worktreeRoot = '';
             } else {
                 const checked = await checkWorktreeRoot(settings.worktreeRoot, host.home);
                 if ('refusal' in checked) {
-                    throw new RequestError(checked.refusal, checked.message);
+                    throw new CodedError(checked.refusal, checked.message);
                 }
                 worktreeRoot = checked.root;
             }
         }
         // Whether this machine sends anything is the decision of the person who runs it.
         if (settings.usageStats !== undefined && !isOwner(access)) {
-            throw new RequestError('owner-only', 'Only a person on this machine can turn its usage statistics on or off');
+            throw new CodedError('owner-only', 'Only a person on this machine can turn its usage statistics on or off');
         }
         // What the daemon starts as a person's shell is the owner's alone.
         if (settings.terminalShell !== undefined && !isOwner(access)) {
-            throw new RequestError('owner-only', 'Only a person on this machine can choose the shell of its terminals');
+            throw new CodedError('owner-only', 'Only a person on this machine can choose the shell of its terminals');
         }
         await write({
             worktreeRoot,
@@ -245,7 +247,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         async (payload, client) => {
             const closedLid = host.closedLid;
             if (closedLid?.available !== true) {
-                throw new RequestError('closed-lid-unavailable', 'Only a Mac can stay awake with its lid closed');
+                throw new CodedError('closed-lid-unavailable', 'Only a Mac can stay awake with its lid closed');
             }
             await closedLid.setRule(payload.install, payload.prompt ?? DEFAULT_ADMIN_PROMPT[payload.install ? 'install' : 'remove']);
             return info(client.access);
@@ -259,7 +261,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
      */
     const integrations = () => {
         if (host.agentIntegrations === undefined) {
-            throw new RequestError('unavailable', 'This machine does not manage the CLIs’ settings');
+            throw new CodedError('unavailable', 'This machine does not manage the CLIs’ settings');
         }
         return host.agentIntegrations;
     };
@@ -278,11 +280,11 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         async (payload) => {
             const current = integrations();
             if (!isIntegrationKind(payload.provider)) {
-                throw new RequestError('unknown-provider', `Ruimte writes no settings for ${payload.provider}`);
+                throw new CodedError('unknown-provider', `Ruimte writes no settings for ${payload.provider}`);
             }
             const report = await current.set(payload.provider, payload.on).catch((e: unknown) => {
                 if (e instanceof IntegrationsFixed) {
-                    throw new RequestError('integrations-fixed', 'This machine was started with agent status turned off');
+                    throw new CodedError('integrations-fixed', 'This machine was started with agent status turned off');
                 }
                 throw e;
             });
@@ -338,7 +340,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
     dispatcher.register('endpoint.installUpdate', (payload) => {
         const updates = host.updates;
         if (!updates) {
-            throw new RequestError('update-no-app', 'This machine cannot install an update from here');
+            throw new CodedError('update-no-app', 'This machine cannot install an update from here');
         }
         const ending = updates.ending();
         if (!payload.confirm) {
@@ -346,10 +348,10 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         }
         const verdict = updates.requestInstall();
         if (verdict === 'no-app') {
-            throw new RequestError('update-no-app', 'The Ruimte app is not open on this machine; install the update there');
+            throw new CodedError('update-no-app', 'The Ruimte app is not open on this machine; install the update there');
         }
         if (verdict === 'nothing') {
-            throw new RequestError('update-none', 'There is no update to install on this machine');
+            throw new CodedError('update-none', 'There is no update to install on this machine');
         }
         return { started: true, ending };
     });
@@ -374,7 +376,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
      */
     dispatcher.register('endpoint.signPeerAccess', async ({ machineId, nonce }) => {
         if (machineId === identity.id) {
-            throw new RequestError('bad-request', 'A machine cannot work in itself');
+            throw new CodedError('bad-request', 'A machine cannot work in itself');
         }
         const peerPublicKey = await host.peerKey.publicKey();
         const message = peerAccessRequestMessage(machineId, peerPublicKey, identity.id, nonce);
@@ -401,7 +403,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
 
     dispatcher.register('auth.revoke', async (payload) => {
         if (!(await store.revoke(payload.id))) {
-            throw new RequestError('session-not-found', `No client ${payload.id} on this machine`);
+            throw new CodedError('session-not-found', `No client ${payload.id} on this machine`);
         }
         host.disconnect(payload.id);
         return {};

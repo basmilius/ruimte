@@ -1,5 +1,6 @@
-import { sendEvent, type Dispatcher } from '../dispatcher.ts';
+import { type Dispatcher } from '../dispatcher.ts';
 import type { EditorAssistModel } from '../editor-assist/model.ts';
+import { sendEvent } from '../wire.ts';
 
 /* The selected CLI receives only the supplied code, without the project's configuration. */
 export function registerEditorAssistHandlers(dispatcher: Dispatcher, model: Pick<EditorAssistModel, 'generate' | 'status'>): void {

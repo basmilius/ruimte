@@ -4,7 +4,7 @@ import { KeyedSerializer } from '@adecore/utils/async';
 import { fileExists } from '@adecore/utils/fs';
 import type { Worktree, WorktreeWork } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 import { checkpointIndexFile, folderKey } from './checkpoints.ts';
 import { existingGitPaths } from './conflict.ts';
 import { parseWorktreeList, type Listed } from './refs.ts';

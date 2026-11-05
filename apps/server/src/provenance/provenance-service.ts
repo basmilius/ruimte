@@ -17,7 +17,7 @@ import {
 } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 import { filesBetweenCommits, linesAtHead, linesInTree, MAX_TEXT_BYTES, repositoryOf } from './file-versions.ts';
 import { hashLines, sameLines } from './line-hash.ts';
 import { ProvenanceStore } from './provenance-store.ts';

@@ -1,6 +1,6 @@
 import { ClientSinks as Sinks } from '@adecore/agents/host';
 import type { LiveFrame } from '@ruimte/contracts';
-import type { SessionEvent } from './sessions/manager.ts';
+import type { SessionEvent } from './wire.ts';
 
 /* The clients listening to one part of the daemon, the `Subscribable` in `connection.ts` made real. */
 export class ClientSinks extends Sinks<SessionEvent> {}

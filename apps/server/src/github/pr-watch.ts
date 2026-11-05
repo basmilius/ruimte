@@ -10,7 +10,7 @@ import { GitError } from '../git/run.ts';
 import { JsonFileStore } from '../json-file-store.ts';
 import type { OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
 import { wakefulClock } from '../outbox/wakeful-clock.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 
 const START_INTERVAL_MS = 60_000;
 export const MAX_INTERVAL_MS = 600_000;

@@ -1,7 +1,7 @@
 import { ANTIGRAVITY_CLI, cliMcpAllowArgs, cliMcpArgs, type CliMcpServer } from '@adecore/agents/providers';
 import { resumeCommandFor, type AgentKind, type AgentLaunch, type RuntimeMode } from '@ruimte/contracts';
+import { MCP_SERVER } from '../ruimte-mcp.ts';
 import { providerFor } from './registry.ts';
-import { MCP_SERVER } from './ruimte-mcp.ts';
 
 /*
  * The flags each CLI takes for Ruimte's runtime modes, verified against the installed CLIs. A CLI or mode

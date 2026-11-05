@@ -4,7 +4,7 @@ import { isWithin } from '@adecore/utils/path';
 import type { GitStatus } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { MAX_CHANGED_PATHS } from '../fs/watch.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { ignoredPaths } from './ignore.ts';
 import { nativePath } from './native-path.ts';
 import { git, repositoryRoot, rootAsAsked } from './run.ts';

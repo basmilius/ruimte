@@ -20,7 +20,7 @@ import type { FileChange } from '../language/file-watch.ts';
 import type { ProjectSqlSettings } from '../language/profiles.ts';
 import { CONSOLES_DIR, PRIVATE_DIR, PROJECT_DIR } from '../projects/project-files.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 import { startDatabaseOf } from './agent-databases.ts';
 import type { SchemaSnapshots, SnapshotFacts, SnapshotTarget } from './schema-snapshots.ts';
 

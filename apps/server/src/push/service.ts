@@ -27,7 +27,7 @@ import {
     type PushRouting
 } from '@ruimte/pulsar';
 import type { AuthStore } from '../auth/auth-store.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { PushAttention } from './attention.ts';
 import { encryptPush } from './encrypt.ts';
 import { processAlertBody } from './process-alert.ts';

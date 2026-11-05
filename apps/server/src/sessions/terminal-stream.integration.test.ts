@@ -9,9 +9,10 @@ import { EVENT_SCHEMAS, REQUEST_SCHEMAS, parseServerFrame, type RequestMap, type
 import { Terminal } from '@xterm/headless';
 import { SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
 import { connectionOpener, socketChannel, type ConnectionServices, type OpenConnection, type SocketChannel } from '../connection.ts';
-import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
 import { registerSessionHandlers } from '../handlers/session.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
+import type { ClientAccess } from '../wire.ts';
 import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { SessionManager } from './manager.ts';
 import { testPath, testShell, waitFor } from './test-helpers.ts';

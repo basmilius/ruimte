@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import { fileExists } from '@adecore/utils/fs';
 import type { DrawingContent, DrawingElement, ProjectContent } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { DrawingStore } from './drawing-store.ts';
 import { projectLinks } from './project-file-test-helpers.ts';
 import { documentPathInFolder, serializeDrawing } from './project-files.ts';

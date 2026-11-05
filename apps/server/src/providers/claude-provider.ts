@@ -1,5 +1,5 @@
 import { createClaudeProvider, type ChatProvider } from '@adecore/agents/providers';
-import { withRuimteMcp } from './ruimte-mcp.ts';
+import { withRuimteMcp } from '../ruimte-mcp.ts';
 
 const base = createClaudeProvider();
 

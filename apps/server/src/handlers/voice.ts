@@ -1,4 +1,5 @@
-import { RequestError, type Dispatcher } from '../dispatcher.ts';
+import { CodedError } from '@adecore/agents';
+import { type Dispatcher } from '../dispatcher.ts';
 import type { VoiceKeyStore } from '../voice/key-store.ts';
 import type { VoicePreferencesStore } from '../voice/preferences-store.ts';
 import type { VoiceSessions } from '../voice/voice-sessions.ts';
@@ -26,7 +27,7 @@ export function registerVoiceHandlers(dispatcher: Dispatcher, deps: VoiceHandler
                 await keys.write(key);
             } catch (e) {
                 // The store says what is wrong with the key without quoting it; a failed write says nothing more.
-                throw new RequestError('invalid-key', e instanceof Error ? e.message : 'The key could not be saved');
+                throw new CodedError('invalid-key', e instanceof Error ? e.message : 'The key could not be saved');
             }
             return { present: true };
         },

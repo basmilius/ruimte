@@ -3,7 +3,8 @@ import { PEER_ARTIFACT_PIECE_BYTES, type PeerLink, type ServerFrame } from '@rui
 import { ArtifactStore } from '../artifacts/artifact-store.ts';
 import { Artifacts } from '../artifacts/artifacts.ts';
 import { MemoryArtifactFs } from '../artifacts/memory-artifact-fs.ts';
-import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
+import type { ClientConnection } from '../wire.ts';
 import { registerPeerArtifactHandlers } from './peer-artifacts.ts';
 
 class PeerSocket implements ClientConnection {

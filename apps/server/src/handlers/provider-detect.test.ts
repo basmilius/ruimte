@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ProviderInfo, ServerFrame } from '@ruimte/contracts';
-import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
+import type { ClientAccess } from '../wire.ts';
 import { PROVIDER_DETECT_INTERVAL_MS, registerProviderDetectHandler } from './provider-detect.ts';
 
 const GUEST: ClientAccess = { reachability: 'lan', sessionId: 'session-1' };

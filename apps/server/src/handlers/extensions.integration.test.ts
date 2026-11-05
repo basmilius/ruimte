@@ -6,9 +6,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatProvider } from '@adecore/agents/providers';
 import type { ServerFrame } from '@ruimte/contracts';
-import type { ClientConnection, Dispatcher } from '../dispatcher.ts';
+import type { Dispatcher } from '../dispatcher.ts';
 import type { ExtensionHost } from '../extensions/extension-host.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
+import type { ClientConnection } from '../wire.ts';
 import { registerExtensionHandlers, type ExtensionHandlerDeps } from './extensions.ts';
 
 type Handler = (payload: unknown, client: unknown) => Promise<unknown>;

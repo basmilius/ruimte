@@ -3,12 +3,13 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
-import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
 import { MachineHome } from '../fs/machine-home.ts';
 import { CustomLanguageServers } from '../language/custom.ts';
 import { LanguageHost } from '../language/host.ts';
 import { KIND_PROFILES } from '../language/profiles.ts';
 import { fakeSpawner } from '../language/test-fakes.ts';
+import type { ClientAccess } from '../wire.ts';
 import { registerLanguageHandlers } from './language.ts';
 import { askOnce } from './test-helpers.ts';
 

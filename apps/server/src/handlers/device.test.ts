@@ -6,7 +6,8 @@ import type { ServerFrame } from '@ruimte/contracts';
 import { DeviceControl } from '../devices/control.ts';
 import { SIMULATOR } from '../devices/device-test-helpers.ts';
 import { DeviceError, type DeviceManager } from '../devices/manager.ts';
-import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
+import type { ClientConnection } from '../wire.ts';
 import { registerDeviceControlHandlers, registerDeviceHandlers } from './device.ts';
 
 function request(type: string, payload: unknown = {}): string {

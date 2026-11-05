@@ -46,7 +46,7 @@ import { isDirectory } from '../fs/browse.ts';
 import { MachineHome } from '../fs/machine-home.ts';
 import { PeerLinks, withHiddenCanvases } from '../peering/links.ts';
 import { RemoteStore, idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines } from '../remote/remote-store.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 import { moveDesignFolders, settleDesignFolders, takenDesignFolders, type DesignAtWork, type DesignSides } from './design-folders.ts';
 import { folderToOpen } from './folder-to-open.ts';
 import { splitLegacy, type LoadedFiles, type TrackedProbe } from './legacy-split.ts';

@@ -14,8 +14,8 @@ import type {
 } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { realTimers, type Timers } from '../timers.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { APPROVAL_WAIT_MS, ComputerApprovals, MAX_HOLD_MS, type AppRef, type CallerInfo } from './approvals.ts';
 import {
     ActionResultSchema,

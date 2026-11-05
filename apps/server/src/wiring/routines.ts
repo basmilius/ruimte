@@ -7,7 +7,7 @@ import { runCommand } from '../routines/command-run.ts';
 import { RoutineAuthorStore, RoutineRunStore } from '../routines/routine-runs.ts';
 import { RoutineError, RoutineStore } from '../routines/routine-store.ts';
 import { routineOpener, Routines } from '../routines/routines.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { ArtifactsBundle } from './artifacts.ts';
 import type { LaunchesBundle } from './launches.ts';

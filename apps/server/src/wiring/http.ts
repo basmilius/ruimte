@@ -26,7 +26,6 @@ import { SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from '../chat/attachment-route.ts';
 import { socketChannel } from '../connection.ts';
 import { hookContext } from '../context/context-note.ts';
-import type { ClientAccess } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import type { ExtensionHost } from '../extensions/extension-host.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from '../fs/file-route.ts';
@@ -41,6 +40,7 @@ import { handleLiveStreamRequest, LIVE_STREAM_PATH } from '../streams/http-strea
 import type { CanvasHost } from '../tools/host.ts';
 import { BUILD, VERSION } from '../version.ts';
 import { handleVoiceKeyRequest } from '../voice/key-route.ts';
+import type { ClientAccess } from '../wire.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { ArtifactsBundle } from './artifacts.ts';
 import type { ClientsBundle } from './clients.ts';

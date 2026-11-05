@@ -4,7 +4,7 @@ import { HIGH_WATER_MARK } from './backpressure.ts';
 import type { LiveSink } from './client-sinks.ts';
 import { connectionOpener, type ClientChannel, type ConnectionServices } from './connection.ts';
 import { Dispatcher } from './dispatcher.ts';
-import type { SessionEvent, SessionSink } from './sessions/manager.ts';
+import type { SessionEvent, SessionSink } from './wire.ts';
 
 class FakeChannel implements ClientChannel {
     readonly frames: ServerFrame[] = [];

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { PeerStatement } from '@ruimte/pulsar';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import type { PeerLink } from './peer-connection.ts';
 import type { PeerMachine } from './peer-machines.ts';
 import { PendingAdmissions } from './pending-admissions.ts';

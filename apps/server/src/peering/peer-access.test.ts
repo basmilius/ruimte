@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { ClientConnection } from '../dispatcher.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import type { ClientConnection } from '../wire.ts';
 import { PeerLinks } from './links.ts';
 import { requirePeerLinks } from './peer-access.ts';
 

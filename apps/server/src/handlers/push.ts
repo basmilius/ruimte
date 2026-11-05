@@ -1,12 +1,14 @@
+import { CodedError } from '@adecore/agents';
 import { PUSH_NOTIFY_DEFAULT } from '@ruimte/contracts';
 import type { AuthStore } from '../auth/auth-store.ts';
-import { RequestError, type ClientConnection, type Dispatcher } from '../dispatcher.ts';
+import { type Dispatcher } from '../dispatcher.ts';
 import type { PushService } from '../push/service.ts';
+import type { ClientConnection } from '../wire.ts';
 
 function provenSession(client: ClientConnection): string {
     const sessionId = client.access?.sessionId;
     if (!sessionId) {
-        throw new RequestError('unauthorized', 'Push needs a client that proved its key to this machine');
+        throw new CodedError('unauthorized', 'Push needs a client that proved its key to this machine');
     }
     return sessionId;
 }
@@ -23,7 +25,7 @@ export function registerPushHandlers(dispatcher: Dispatcher, auth: AuthStore, ch
     });
     dispatcher.register('push.subscribe', async (payload, client) => {
         if (!(await auth.setPush(provenSession(client), payload))) {
-            throw new RequestError('unauthorized', 'Push needs a client that proved its key to this machine');
+            throw new CodedError('unauthorized', 'Push needs a client that proved its key to this machine');
         }
         changed();
         return {};

@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { narrowerMode, launchEnv, storedAccount, type AccountLaunches, type CliMcpServer } from '@adecore/agents/providers';
 import { SingleFlight } from '@adecore/utils/async';
-import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, RuntimeMode, SessionInfo } from '@ruimte/contracts';
+import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, RuntimeMode, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
 import { codexIndexIn } from '../agents/codex-title.ts';
 import { borrowedHook, modeOfHook, normalizeHook, requestOfHook, settleWaiting } from '../agents/hooks.ts';
@@ -15,9 +15,10 @@ import { contextHint, toolsNote } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
 import { offersKind } from '../providers/kinds.ts';
 import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, quote, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
-import { TERMINAL_TOKEN_VARIABLE, ruimteCliMcp } from '../providers/ruimte-mcp.ts';
 import { defaultShell, defaultShellArgs, gitBash, shellName, type PtyAdapter } from '../pty/pty.ts';
+import { TERMINAL_TOKEN_VARIABLE, ruimteCliMcp } from '../ruimte-mcp.ts';
 import { countUsage } from '../stats/usage-stats.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { Session } from './session.ts';
 import type { ShellEnvironment } from './shell-integration.ts';
 import type { SessionSnapshot, SnapshotStore } from './snapshot-store.ts';
@@ -52,10 +53,6 @@ function motdOf(hint: string | null, notices: readonly string[]): string | undef
 }
 
 export class SessionError extends CodedError<SessionErrorCode> {}
-
-export type SessionEvent = { [E in EventType]: { event: E; payload: EventMap[E] } }[EventType];
-
-export type SessionSink = (event: SessionEvent) => void;
 
 function sizeOf(session: Session): { cols: number; rows: number } {
     return { cols: session.cols, rows: session.rows };

@@ -1,7 +1,8 @@
-import type { ClientConnection, Dispatcher } from '../dispatcher.ts';
+import type { Dispatcher } from '../dispatcher.ts';
 import type { PeerLinks } from '../peering/links.ts';
 import { requirePeerLinks } from '../peering/peer-access.ts';
 import type { PeerTasks } from '../peering/peer-tasks.ts';
+import type { ClientConnection } from '../wire.ts';
 
 /*
  * What a machine that works here may ask. Each request starts with `requirePeerLinks`, because being

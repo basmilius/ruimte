@@ -7,8 +7,8 @@ import { writeAtomic } from '@adecore/utils/fs';
 import { PLAN_LIMITS, PlanSchema, type Plan, type PlanActor, type PlanMeta, type PlanOfChat, type PlanOp } from '@ruimte/contracts';
 import { z } from 'zod';
 import { ClientSinks } from '../client-sinks.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { countUsage } from '../stats/usage-stats.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 
 const SUFFIX = '.plans.json';
 

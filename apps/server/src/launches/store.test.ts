@@ -6,7 +6,7 @@ import { FakeWatch } from '@adecore/agents/testing';
 import { fileExists } from '@adecore/utils/fs';
 import type { LaunchConfigEntry } from '@ruimte/contracts';
 import { CommandApprovals } from '../sessions/command-approvals.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import type { LaunchStore } from './store.ts';
 import { editLaunchOnDisk, launchStoreFor } from './test-helpers.ts';
 

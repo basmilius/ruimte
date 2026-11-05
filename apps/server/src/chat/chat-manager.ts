@@ -40,7 +40,7 @@ import { errorText } from '../error-text.ts';
 import { passedOverNote, type ProjectAccountChooser } from '../projects/project-accounts.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { codexProvider } from '../providers/codex-provider.ts';
-import { CHAT_TOKEN_VARIABLE, MCP_URL_VARIABLE, mcpUrlOf, ruimteCliMcp } from '../providers/ruimte-mcp.ts';
+import { CHAT_TOKEN_VARIABLE, MCP_URL_VARIABLE, mcpUrlOf, ruimteCliMcp } from '../ruimte-mcp.ts';
 import { TurnUsage } from '../stats/turn-usage.ts';
 import { countChatStarted } from '../stats/usage-stats.ts';
 import { AgentImages } from './agent-images.ts';

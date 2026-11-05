@@ -7,7 +7,7 @@ import { isWithin } from '@adecore/utils/path';
 import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { realOrSelf } from '../fs/real-path.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import type { DatabaseAccessStore } from './agent-access.ts';
 import type { DatabasePasswords } from './agent-passwords.ts';
 import { inOwnedSession, type DatabaseCalls, type SessionCall } from './owned-session.ts';

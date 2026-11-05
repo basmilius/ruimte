@@ -4,8 +4,9 @@ import { join } from 'node:path';
 import type { AgentInfo } from '@ruimte/contracts';
 import { AgentStore } from '../agents/agent-store.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
-import { SessionManager, type SessionEvent, type SessionManagerOptions, type SessionSink } from './manager.ts';
+import { SessionManager, type SessionManagerOptions } from './manager.ts';
 import { SnapshotStore } from './snapshot-store.ts';
 
 const DEFAULT_TIMEOUT_MS = 5000;

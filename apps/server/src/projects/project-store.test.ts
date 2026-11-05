@@ -12,7 +12,7 @@ import {
     type ProjectContent,
     type ProjectView
 } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { DiagramStore } from './diagram-store.ts';
 import { DrawingStore } from './drawing-store.ts';
 import { setProjectAccounts } from './project-accounts.ts';

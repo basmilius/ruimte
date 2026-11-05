@@ -1,6 +1,6 @@
 import type { MachineUpdate, MachineUpdateReport, MachineWork } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 
 const NO_APP: MachineUpdate = { app: false, status: 'unsupported' };
 

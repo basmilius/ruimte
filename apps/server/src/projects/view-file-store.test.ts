@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { ProjectContent } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { DiagramStore } from './diagram-store.ts';
 import { DrawingStore } from './drawing-store.ts';
 import { projectLinks } from './project-file-test-helpers.ts';

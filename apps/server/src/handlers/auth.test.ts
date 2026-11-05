@@ -9,12 +9,13 @@ import { AgentIntegrations } from '../agents/integrations.ts';
 import { AuthStore, type StatementAdmission } from '../auth/auth-store.ts';
 import { generateKeyPair } from '../auth/keys.ts';
 import { admitClient } from '../auth/test-admit.ts';
-import { Dispatcher, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
 import { LENT_NOTHING, lendNothing } from '../endpoint-id-test-helpers.ts';
 import { readOrCreateEndpointIdentity, type EndpointIdentity } from '../endpoint-id.ts';
 import { ClosedLidError, DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
 import { MachineUpdates } from '../power/machine-update.ts';
 import { PeerKey } from '../remote/peer-key.ts';
+import type { ClientAccess, ClientConnection } from '../wire.ts';
 import { registerAuthHandlers } from './auth.ts';
 
 let home: string;

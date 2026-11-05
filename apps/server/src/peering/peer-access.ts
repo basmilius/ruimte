@@ -1,4 +1,5 @@
-import { RequestError, type ClientConnection } from '../dispatcher.ts';
+import { CodedError } from '@adecore/agents';
+import type { ClientConnection } from '../wire.ts';
 import type { PeerLinks } from './links.ts';
 
 /*
@@ -10,7 +11,7 @@ export function requirePeerLinks(client: ClientConnection, links: Pick<PeerLinks
     const machineId = client.access?.peer?.machineId;
 
     if (machineId === undefined || !links.list().some((link) => link.machineId === machineId)) {
-        throw new RequestError('peer-not-linked', 'No project here is linked to this machine');
+        throw new CodedError('peer-not-linked', 'No project here is linked to this machine');
     }
 
     return machineId;

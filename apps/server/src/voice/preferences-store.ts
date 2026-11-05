@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { VoicePreferencesSchema, type LiveVoice, type VoiceLanguage, type VoicePreferences } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { JsonFileStore } from '../json-file-store.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 import { VOICE_DIR } from './key-store.ts';
 
 const PREFERENCES_FILE = 'preferences.json';

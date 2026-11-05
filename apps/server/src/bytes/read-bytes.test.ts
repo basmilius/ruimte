@@ -3,10 +3,11 @@ import { mkdtemp, rm, truncate, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { BUNDLE_MAX_BYTES, BYTES_CHUNK_MAX, decodeBytesReply, type ByteResource } from '@ruimte/contracts';
-import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
 import { MachineHome } from '../fs/machine-home.ts';
 import { readServedFile } from '../fs/read.ts';
 import { registerBytesHandlers } from '../handlers/bytes.ts';
+import type { ClientConnection } from '../wire.ts';
 import { BytesError, readBytes, type ByteSources } from './read-bytes.ts';
 
 let folder: string;

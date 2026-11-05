@@ -4,7 +4,7 @@ import { RecordDirectory } from '@adecore/agents';
 import { RuntimeModeSchema, isCanvasView, type PeerLink, type ProjectContent, type RuntimeMode } from '@ruimte/contracts';
 import { z } from 'zod';
 import { ClientSinks } from '../client-sinks.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 
 const LinkSchema = z.looseObject({
     projectId: z.string().min(1),

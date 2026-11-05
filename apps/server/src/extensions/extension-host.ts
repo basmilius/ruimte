@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import { bunRuntime } from '../language/runtime.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 import { clientFilesOf } from './client-files.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
 import runtimeSource from './generated/server-runtime.js' with { type: 'text' };

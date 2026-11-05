@@ -40,7 +40,7 @@ import {
     closeLoaded,
     type JsonDocumentRead
 } from '../projects/project-files.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 import { detectLaunches } from './detect.ts';
 
 const LAUNCHES_FILE = 'launches.json';

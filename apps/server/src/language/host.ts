@@ -62,7 +62,7 @@ import type {
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import { isDirectory } from '../fs/browse.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { LanguageChoices } from './choices.ts';
 import { CustomLanguageServers, customProfile, UnsavedRemoval } from './custom.ts';
 import { ProjectFileWatcher, type FileChange, type StatPath } from './file-watch.ts';

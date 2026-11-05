@@ -10,8 +10,8 @@ import {
 } from '@ruimte/contracts';
 import type { ChannelGrant } from '../auth/handshake.ts';
 import { sameSecret } from '../auth/local-secret.ts';
-import type { ClientAccess } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
+import type { ClientAccess } from '../wire.ts';
 import { AUTHENTICATED_FRAME_CHARS, UNAUTHENTICATED_FRAME_CHARS, type DirectChannel } from './data-channel.ts';
 
 // Two round trips over a slow link fit easily; a peer that says nothing for this long is closed.

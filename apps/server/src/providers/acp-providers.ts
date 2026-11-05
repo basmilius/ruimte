@@ -9,9 +9,9 @@ import {
     type AcpVendorOptions,
     type ChatProvider
 } from '@adecore/agents/providers';
+import { MCP_SERVER, withRuimteMcp } from '../ruimte-mcp.ts';
 import { parseAcpServerRelease } from './acp-server.ts';
 import antigravityRelease from './antigravity-acp-release.json' with { type: 'json' };
-import { MCP_SERVER, withRuimteMcp } from './ruimte-mcp.ts';
 
 // How the daemon names itself to every ACP agent it starts.
 export const RUIMTE_ACP_CLIENT: AcpClientInfo = { name: 'ruimte', title: 'Ruimte', version: '0.1.0' };

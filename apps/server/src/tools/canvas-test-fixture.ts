@@ -35,7 +35,7 @@ import { DiagramStore } from '../projects/diagram-store.ts';
 import { DrawingStore } from '../projects/drawing-store.ts';
 import { documentOnDisk, projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import type { AgentStart, CanvasHost } from './host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 

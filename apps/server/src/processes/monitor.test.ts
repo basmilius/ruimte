@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { FINE_POINTS } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { COARSE_INTERVAL_MS, ProcessMonitor } from './monitor.ts';
 import { type ProcessSampler, type RawProcess, type RawSample } from './sampler.ts';
 import { STUCK_THRESHOLDS } from './stuck.ts';
