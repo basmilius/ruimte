@@ -14,6 +14,7 @@ test('the find key opens the bar over a terminal, steps through the scrollback a
     await withBrowserFixture(
         `
         import { TerminalView } from ${JSON.stringify(Bun.resolveSync('@adecore/terminal', clientDirectory))};
+        import { FitAddon } from ${JSON.stringify(Bun.resolveSync('@xterm/addon-fit', clientDirectory))};
         import { FindBar } from ${JSON.stringify(join(import.meta.dir, '../find/FindBar.tsx'))};
         import { openFocusedFind } from ${JSON.stringify(join(import.meta.dir, '../find/hosts.ts'))};
         import { useFind } from ${JSON.stringify(join(import.meta.dir, '../find/use-find.ts'))};
@@ -36,6 +37,12 @@ test('the find key opens the bar over a terminal, steps through the scrollback a
             React.useEffect(() => {
                 const term = view.current.terminal;
                 window.term = term;
+                const fit = new FitAddon();
+                term.loadAddon(fit);
+                window.fitted = () => {
+                    const size = fit.proposeDimensions();
+                    return size !== undefined && size.cols === term.cols && size.rows === term.rows;
+                };
                 // MachineTerminal does this for every terminal of the client, and the search addon needs the proposed API it turns on.
                 matchDaemonWidths(term);
                 bindTerminalKeys(term, { write: () => {}, clear: () => {}, find: () => openFocusedFind(), leaves: false });
@@ -64,6 +71,8 @@ test('the find key opens the bar over a terminal, steps through the scrollback a
         `${css}\n${terminalCss}\nhtml,body,#root{margin:0;width:100%;height:100%}.surface{position:absolute;inset:0}.absolute{position:absolute}.inset-0{inset:0}.relative{position:relative}svg{width:14px;height:14px}`,
         async (view) => {
             await view.evaluate('window.ready');
+            // The view refits once its glyphs are measured, and a resize makes the search addon search again from the end.
+            await waitInPage(view, 'window.fitted()');
             await view.evaluate(frame);
             await view.evaluate('window.term.focus()');
 
@@ -78,11 +87,10 @@ test('the find key opens the bar over a terminal, steps through the scrollback a
             const first = await view.evaluate<number>('window.current()');
 
             await view.evaluate(`window.press(document.querySelector('[data-find-bar] input'), { key: 'Enter', code: 'Enter' })`);
-            await view.evaluate(frame);
+            // The search addon counts and selects the next match a while after the step.
+            await waitInPage(view, `window.current() !== ${first} && window.term.getSelection() !== ""`);
             const second = await view.evaluate<number>('window.current()');
             expect(second).toBe((first % NEEDLES) + 1);
-            // The search addon selects the match a while after it counts it.
-            await waitInPage(view, 'window.term.getSelection() !== ""');
             expect(await view.evaluate<string>('window.term.getSelection()')).toBe('needle');
 
             await view.evaluate(`window.press(document.querySelector('[data-find-bar] input'), { key: 'Escape', code: 'Escape' })`);
