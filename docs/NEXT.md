@@ -37,7 +37,7 @@ The beta notes leave these out, and someone coming from 0.29.x needs them. They 
 Fixes since 0.30.0-beta.3, for the same notes:
 
 - A chat an extension draws shows in the sidebar, the chat chooser and `#` again once that extension is off or removed, or in safe mode.
-- A new output limit, or a model with another limit, reaches a running Claude API chat at its next message. This one needs the ADE CORE release with `ChatBackend.outdated` and its bump first.
+- A new output limit, or a model with another limit, reaches a running Claude API chat at its next message.
 
 ## 3. Measurements
 
