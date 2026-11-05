@@ -35,8 +35,8 @@ function rsaPair(): Promise<CryptoKeyPair> {
     ]);
 }
 
-async function signed(claims: Record<string, unknown>, key = appleKeys.privateKey): Promise<string> {
-    const signingInput = `${part({ alg: 'RS256', kid: KID })}.${part(claims)}`;
+async function signed(claims: Record<string, unknown>, key = appleKeys.privateKey, kid = KID): Promise<string> {
+    const signingInput = `${part({ alg: 'RS256', kid })}.${part(claims)}`;
     const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, encoder.encode(signingInput));
 
     return `${signingInput}.${toBase64Url(signature)}`;
@@ -108,5 +108,21 @@ describe('the id_token of a Sign in with Apple', () => {
             await expect(identify()).rejects.toThrow('cannot read');
         }
         expect(fetched.mock.calls.some(([input]) => String(input).endsWith('/auth/keys'))).toBe(false);
+    });
+
+    test('a key id Apple does not have fetches the keys at most once a minute', async () => {
+        const keyFetches = () => fetched.mock.calls.filter(([input]) => String(input).endsWith('/auth/keys')).length;
+        // Past the lifetime of what an earlier test left in the cache.
+        const later = NOW + 2 * 60 * 60_000;
+        setSystemTime(new Date(later));
+        idToken = await signed(await claims(), appleKeys.privateKey, 'made-up-key');
+
+        await expect(identify()).rejects.toThrow('not signed by Apple');
+        await expect(identify()).rejects.toThrow('not signed by Apple');
+        expect(keyFetches()).toBe(1);
+
+        setSystemTime(new Date(later + 61_000));
+        await expect(identify()).rejects.toThrow('not signed by Apple');
+        expect(keyFetches()).toBe(2);
     });
 });

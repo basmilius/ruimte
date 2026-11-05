@@ -12,8 +12,10 @@ const REVOKE_URL = 'https://appleid.apple.com/auth/revoke';
 
 // Apple allows six months; an hour is plenty for one exchange and keeps a secret that leaks from a log short-lived.
 const CLIENT_SECRET_LIFETIME_S = 60 * 60;
-// Apple rotates its signing keys rarely; a key id this isolate has not seen fetches the set again anyway.
+// Apple rotates its signing keys rarely; a key id this isolate has not seen fetches the set again, at most once a minute.
 const KEYS_LIFETIME_MS = 60 * 60_000;
+// The least time between two fetches for a key id the set does not hold.
+const UNKNOWN_KID_REFETCH_MS = 60_000;
 // Room for a clock between Apple and the Worker that is a little off.
 const CLOCK_SKEW_S = 60;
 
@@ -69,9 +71,30 @@ function keyWithId(set: JsonWebKey[], kid: string): JsonWebKey | undefined {
     return set.find((key) => (key as { kid?: unknown }).kid === kid);
 }
 
+let fetching: Promise<JsonWebKey[]> | null = null;
+
+/* One fetch at a time per isolate, so a burst of logins shares it. */
+function freshKeys(): Promise<JsonWebKey[]> {
+    fetching ??= fetchKeys().finally(() => {
+        fetching = null;
+    });
+
+    return fetching;
+}
+
 async function appleKey(kid: string): Promise<JsonWebKey | undefined> {
-    const cached = keys && Date.now() - keys.fetchedAt < KEYS_LIFETIME_MS ? keyWithId(keys.keys, kid) : undefined;
-    return cached ?? keyWithId(await fetchKeys(), kid);
+    const age = keys === null ? Number.POSITIVE_INFINITY : Date.now() - keys.fetchedAt;
+
+    if (keys !== null && age < KEYS_LIFETIME_MS) {
+        const cached = keyWithId(keys.keys, kid);
+
+        // A key id the client made up is not worth a fetch per login; a set this fresh already says it is not Apple's.
+        if (cached !== undefined || age < UNKNOWN_KID_REFETCH_MS) {
+            return cached;
+        }
+    }
+
+    return keyWithId(await freshKeys(), kid);
 }
 
 /*
