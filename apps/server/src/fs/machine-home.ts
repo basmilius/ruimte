@@ -3,7 +3,7 @@ import { join, relative, resolve, sep } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { isBelow, isWithin } from '@adecore/utils/path';
 import { DEVICE_CAPTURES_FOLDER } from '../shots.ts';
-import { realOrSelf } from './real-path.ts';
+import { realOfNearest, realOrSelf } from './real-path.ts';
 
 export class MachineHomeError extends CodedError<'machine-state'> {}
 
@@ -125,7 +125,7 @@ export class MachineHome {
 
     private async judge(path: string, refused: (policy: MachineHomePolicy, path: string) => boolean): Promise<void> {
         const lexical = resolve(path);
-        const [policy, real] = await Promise.all([this.policy(), realOrSelf(lexical)]);
+        const [policy, real] = await Promise.all([this.policy(), realOfNearest(lexical)]);
 
         if (refused(policy, lexical) || refused(policy, real)) {
             throw new MachineHomeError('machine-state', `${path} belongs to this machine's own state and is not handed out`);

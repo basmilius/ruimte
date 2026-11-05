@@ -179,6 +179,33 @@ describe('the machine home', () => {
         expect(await request('fs.rename', { path: join(home, 'portrait.gif'), to: join(home, 'command-approvals', 'portrait.gif') })).toMatchObject(refused);
     });
 
+    test('a symlink in the project to the local secret is refused to a read and a write', async () => {
+        const link = join(root, 'key-link');
+        await symlink(join(home, 'local.key'), link);
+        const { mtimeMs } = await stat(link);
+
+        expect(await request('fs.read', { path: link })).toMatchObject(refused);
+        expect(await request('bytes.read', { resource: { kind: 'file', path: link }, offset: 0, length: 6 })).toMatchObject(refused);
+        expect(await request('fs.write', { path: link, text: 'taken', expectedMtime: Math.round(mtimeMs) })).toMatchObject(refused);
+        expect(await readFile(join(home, 'local.key'), 'utf8')).toBe('the local secret');
+    });
+
+    test('a path that is not there yet is judged by where its folder really leads', async () => {
+        const through = join(root, 'linked', 'command-approvals', 'new.json');
+
+        expect(await request('fs.create', { path: through, kind: 'file' })).toMatchObject(refused);
+        expect(await request('fs.rename', { path: join(home, 'portrait.gif'), to: join(root, 'linked', 'command-approvals', 'moved.gif') })).toMatchObject(
+            refused
+        );
+        expect(await stat(join(home, 'command-approvals', 'new.json')).catch(() => null)).toBeNull();
+    });
+
+    // APFS, as macOS sets it up, finds a file by any case of its name.
+    test.skipIf(process.platform !== 'darwin')('nor by another case of the home on a volume that ignores case', async () => {
+        expect(await request('fs.create', { path: join(root, 'RUIMTE-HOME', 'command-approvals', 'new.json'), kind: 'file' })).toMatchObject(refused);
+        expect(await stat(join(home, 'command-approvals', 'new.json')).catch(() => null)).toBeNull();
+    });
+
     test('fs.rename moves a file of the project', async () => {
         await writeFile(join(root, 'a.txt'), 'a');
         expect(await request('fs.rename', { path: join(root, 'a.txt'), to: join(root, 'moved', 'b.txt') })).toMatchObject({ ok: true, result: {} });
