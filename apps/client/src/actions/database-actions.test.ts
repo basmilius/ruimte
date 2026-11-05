@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { PERSON_ACTION_CALL } from '@/action-port/perform';
+import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from '@/action-port/perform';
 import { useDocument } from '@/state/document';
 import { TransportError } from '@/transport-api/transport';
-import { createClientActionRegistry, VOICE_ACTION_CALL } from './client-actions';
+import { createClientActionRegistry } from './client-actions';
 import type { DatabaseMachine } from './database-actions';
 
 function registry(database: Partial<DatabaseMachine>) {

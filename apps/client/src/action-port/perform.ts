@@ -62,3 +62,8 @@ export type CreatableNodeKind = ActionInput<'node.create'>['kind'];
 
 /* The id prefix of an operation a git run streams its progress under. */
 export const GIT_OPERATION = 'git:';
+
+export const VOICE_ACTION_CALL: ActionCall<void> = {
+    actor: { kind: 'voice', id: 'voice-session' },
+    context: undefined
+};

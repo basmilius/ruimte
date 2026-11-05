@@ -9,7 +9,7 @@ import {
     type VoiceWatchedSession
 } from '@ruimte/voice';
 import i18next from 'i18next';
-import { clientActions, VOICE_ACTION_CALL } from '@/actions/client-actions';
+import { clientRegistry, VOICE_ACTION_CALL } from '@/action-port/perform';
 import { accentLabel } from '@/canvas-model/accents';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
@@ -74,7 +74,7 @@ function completed(name: ActionName, output: Record<string, unknown>, undoToken:
         execution.action = { ...reply.entry };
         if (undoToken) {
             execution.action.undo = () => {
-                void clientActions.undo(undoToken, VOICE_ACTION_CALL);
+                void clientRegistry().undo(undoToken, VOICE_ACTION_CALL);
             };
         }
     }
@@ -86,7 +86,7 @@ function completed(name: ActionName, output: Record<string, unknown>, undoToken:
 
 async function executed(name: ActionName, input: Record<string, unknown>): Promise<ActionResult> {
     const revision = voiceWorkspaceRevision();
-    const result = await clientActions.execute(name, input, VOICE_ACTION_CALL);
+    const result = await clientRegistry().execute(name, input, VOICE_ACTION_CALL);
     if (result.status !== 'needs_confirmation') {
         return result;
     }
@@ -100,7 +100,7 @@ async function executed(name: ActionName, input: Record<string, unknown>): Promi
     if (!DELETIONS.has(name) || useSettings.getState().voiceConfirmDestructiveActions) {
         return result;
     }
-    return clientActions.confirm(result.confirmationToken, true, VOICE_ACTION_CALL);
+    return clientRegistry().confirm(result.confirmationToken, true, VOICE_ACTION_CALL);
 }
 
 /* Every prompt Voice sends is followed, since the speech model only asked for a report when a person happened to say so. */
@@ -167,7 +167,7 @@ async function controlAction(args: Record<string, unknown>): Promise<VoiceToolEx
         return failed('Choose confirm or cancel and provide the confirmation token.', { code: 'invalid-confirmation' });
     }
     const endpointId = currentEndpointId();
-    const result = await clientActions.confirm(answer.token, answer.approved, VOICE_ACTION_CALL);
+    const result = await clientRegistry().confirm(answer.token, answer.approved, VOICE_ACTION_CALL);
     return result.status === 'completed' ? completed(result.action, result.output as Record<string, unknown>, result.undoToken, endpointId) : failureOf(result);
 }
 

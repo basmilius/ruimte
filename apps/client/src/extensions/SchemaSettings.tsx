@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { settingKey, subscribeStorage, writeExtensionStorage } from '@/extensions/host/extension-storage';
 import { useInstalledExtensions } from '@/extensions/loader';
-import { useContributions, type SettingField } from '@/extensions/registry';
+import { useContributions, type SettingField } from '@/state/extension-registry';
 import { storedText } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
 import { SettingsSection } from '@/surface/settings/SettingsSection';

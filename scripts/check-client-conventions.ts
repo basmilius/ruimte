@@ -21,7 +21,7 @@ function clientSources(): Array<{ path: string; text: string }> {
 
 const KEY_LISTENERS = new Set([
     'apps/client/src/shell/app-shortcuts.ts',
-    'apps/client/src/canvas/canvas-shortcuts.ts',
+    'apps/client/src/shell/canvas-shortcuts.ts',
     'apps/client/src/drawing/use-drawing-keys.ts'
 ]);
 

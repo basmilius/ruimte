@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { type FakeEditor, FakeEditorEngine } from '@adecore/editor/fake';
 import type { FsReadResult, FsWriteResult, ProvenanceReadResult, ProvenanceRun } from '@ruimte/contracts';
+import { bindDraftEditor } from '@/files/draft-editor';
 import { FakeLanguageTransport } from '@/language/fake-daemon';
-import { bindDraftEditor } from '@/shell/panels/draft-editor';
 import { endpointKey } from '@/state/keys';
 import { type DraftLink, TextDrafts, useTextDrafts } from '@/state/text-drafts';
 import { TransportError } from '@/transport-api/transport';

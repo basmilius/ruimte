@@ -1,5 +1,5 @@
 import type { GitPrCheck, GitPrThread, GitPullRequest } from '@ruimte/contracts';
-import { selectionBlock } from '@/chat/selection-to-chat';
+import { selectionBlock } from '@/language/selection-to-chat';
 
 interface ThreadFilter {
     showBots: boolean;

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { renderMessageActions, renderToolResult } from '@/extensions/chat-seams';
-import { contribute } from '@/extensions/registry';
+import { contribute } from '@/state/extension-registry';
 import { mount, type Mounted } from '../../testing/dom';
 
 let mounted: Mounted | null = null;

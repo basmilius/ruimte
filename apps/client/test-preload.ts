@@ -8,6 +8,7 @@ import editorWords from '@adecore/editor-react/locales/en.json' with { type: 'js
 import { UI_NAMESPACE, UI_RESOURCES } from '@adecore/ui';
 import i18next from 'i18next';
 import './src/actions/client-actions';
+import './src/editor-ai/inline-edit';
 import './src/extensions/built-in';
 import { connectFormat } from './src/format/source';
 import { defaultCanvases, focusedCanvas } from './src/state/canvas';

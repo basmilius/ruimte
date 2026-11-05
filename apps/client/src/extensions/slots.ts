@@ -3,11 +3,11 @@ import { extensionAgentStatus, type ExtensionAgentStatus, type ProjectNode, type
 import type { LucideIcon } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { useContributions, type SlotEntry, type SlotName } from '@/extensions/registry';
 import { canvasOfNode, focusedCanvas, useCanvas, type CanvasState } from '@/state/canvas';
 import { membersOf } from '@/state/canvas-model';
 import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
+import { useContributions, type SlotEntry, type SlotName } from '@/state/extension-registry';
 import { useProject } from '@/state/project';
 import { nodeProvider, nodeStatus, nodeWaitAsk, useSessions, type SessionsByKey } from '@/state/sessions';
 

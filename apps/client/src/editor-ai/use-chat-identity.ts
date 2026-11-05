@@ -1,6 +1,6 @@
 import { useProviders } from '@adecore/agents-react/state';
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
-import { chooserChats } from '@/chat/chat-chooser';
+import { chooserChats } from '@/language/chat-chooser';
 import { useSidebarSource } from '@/surface/sidebar-source';
 
 /* The chat that wrote something, as the project shows it now. */

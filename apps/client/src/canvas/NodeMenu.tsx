@@ -51,10 +51,10 @@ import { workflowCandidates, type WorkflowCandidate } from '@/chat/workflow/besi
 import { useWorkflowBesideSwitch } from '@/chat/workflow/workflow-beside-state';
 import { useGroupWorktrees, useWorktreeOf } from '@/controllers/worktrees';
 import { NodeMenuSlot } from '@/extensions/SlotSurfaces';
+import { FileActionItems } from '@/files/FileActionItems';
 import { FlagSubmenu } from '@/project/FlagSubmenu';
 import { askOpenAsView, canOpenAsView, showView } from '@/project/views';
 import { setRunsHidden, useRunsHidden } from '@/routines/runs-hidden';
-import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { canvasOfNode, maximizedNodeOf, useCanvas, useCanvasStore, type CanvasNode } from '@/state/canvas';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useFiles } from '@/state/files';

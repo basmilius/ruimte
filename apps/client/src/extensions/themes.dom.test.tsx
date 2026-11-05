@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { defineTheme } from '@/extensions/internal';
-import { contribute, type BuiltInThemeContribution } from '@/extensions/registry';
 import {
     activeExtensionTheme,
     applyStoredExtensionTheme,
@@ -10,6 +9,7 @@ import {
     type ThemeChoice
 } from '@/extensions/themes';
 import { AppearancePane } from '@/shell/settings/panes/AppearancePane';
+import { contribute, type BuiltInThemeContribution } from '@/state/extension-registry';
 import { useSettings } from '@/state/settings';
 import { mount } from '../../testing/dom';
 

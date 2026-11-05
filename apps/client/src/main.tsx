@@ -18,6 +18,7 @@ import { startDeviceOperatedWatch } from '@/devices/operated';
 import { applyStoredExtensionTheme } from '@/extensions/themes';
 import { connectFormat } from '@/format/source';
 import { initI18n } from '@/i18n';
+import { provideExtensionChat } from '@/nodes/extension-chat';
 import { startOnboarding } from '@/onboarding/open';
 import { startPlanPanelWatch } from '@/plan/plan-panel-watch';
 import { startProcessWarnings } from '@/processes/watch';
@@ -68,6 +69,7 @@ startTelemetry();
 // Before anything that writes a date or a number, so none of it is written in the default region first.
 connectFormat();
 configureChat();
+provideExtensionChat();
 
 /* The desktop app carries its own chunks, so one failing there is no deploy, and a reload would only drop every page. */
 if (!desktop()) {

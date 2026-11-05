@@ -1,7 +1,7 @@
 import { ExtensionThemeSchema, extensionThemeCssProblem, type ExtensionTheme } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { z } from 'zod';
-import { useContributions } from '@/extensions/registry';
+import { useContributions } from '@/state/extension-registry';
 import { useExtensionTheme } from '@/state/extension-theme';
 import { previewColors } from '@/state/settings';
 import { storedJson } from '@/state/stored-json';

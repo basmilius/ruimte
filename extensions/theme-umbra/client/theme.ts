@@ -1,4 +1,4 @@
-import type { BuiltInThemeContribution } from '@/extensions/registry';
+import type { BuiltInThemeContribution } from '@/state/extension-registry';
 
 /*
  * Every ground a few steps under Dark's, the lowest just short of black. The steps between them shrink

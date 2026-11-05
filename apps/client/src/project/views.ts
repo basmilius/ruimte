@@ -16,11 +16,11 @@ import {
 } from '@/action-port/person-actions';
 import { askBeforeEndingAgents } from '@/agents/end-children';
 import { GRID, type Point } from '@/canvas-model/math';
-import { databaseTargetOf, databaseViewName } from '@/database/view-name';
 import { basenameOf } from '@/paths/file-path';
 import { filesOfView } from '@/project/view-deletion';
 import { focusedCanvas, liveCanvas, revealWhenItLands } from '@/state/canvas';
 import { currentEndpointId } from '@/state/current-endpoint';
+import { databaseTargetOf, databaseViewName } from '@/state/database-view-name';
 import { useDesignChat } from '@/state/design-chat';
 import { useDocument, viewOfNode } from '@/state/document';
 import { fileTabOf, isDatabaseTab, useFiles } from '@/state/files';

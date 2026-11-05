@@ -1,14 +1,13 @@
-import { IconButton } from '@adecore/ui';
+import { IconButton, type Shortcut } from '@adecore/ui';
 import { Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { awaitingApproval, runsWaiting } from '@/routines/agenda';
 import { useRoutineList } from '@/routines/routine-list';
-import { COMMANDS } from '@/shell/command-table';
 import { useEndpointId } from '@/state/current-endpoint';
 import { toggleRoutines } from '@/state/routines-stage';
 
 /* The clock in the rail, with a dot while a routine waits for approval or a run waits for a person. Absent on a machine without routines. */
-export function RoutinesButton() {
+export function RoutinesButton({ shortcut }: { shortcut?: Shortcut }) {
     const { t } = useTranslation('routines');
     const endpointId = useEndpointId();
     const list = useRoutineList(endpointId);
@@ -21,7 +20,7 @@ export function RoutinesButton() {
         <IconButton
             icon={Clock}
             label={attention > 0 ? t('toolbar.attention', { count: attention }) : t('toolbar.routines')}
-            kbd={COMMANDS.routines.shortcut}
+            kbd={shortcut}
             tooltipSide="left"
             className={attention > 0 ? 'relative' : undefined}
             onClick={toggleRoutines}

@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useStore } from 'zustand';
 import type { EditorLanguage as RuimteEditorLanguage } from '@/language/ruimte-editor-language';
+import { InlineEditFeature } from './inline-edit';
 import { InlinePromptCard } from './InlinePromptCard';
 import { InlineProposalCard } from './InlineProposalCard';
 
@@ -13,6 +14,10 @@ type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'inlineEdit'>;
  */
 export function InlineEditLayer({ language }: { language: EditorLanguage }) {
     const feature = language.inlineEdit;
+    return feature instanceof InlineEditFeature ? <InlineEditCards feature={feature} language={language} /> : null;
+}
+
+function InlineEditCards({ feature, language }: { feature: InlineEditFeature; language: EditorLanguage }) {
     const { prompt, promptContainer, session, container } = useStore(feature.store, (view) => view);
 
     return (

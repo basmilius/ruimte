@@ -44,7 +44,6 @@ import {
     unknownView
 } from '@/actions/action-reach';
 import { addAgentView, addDesignView } from '@/agents/nodes';
-import { databaseViewName } from '@/database/view-name';
 import { databaseViewShareRefusal } from '@/database/view-sharing';
 import { freeDesignFolder } from '@/design/design-folder';
 import { locateView } from '@/layout/split';
@@ -52,6 +51,7 @@ import { basenameOf } from '@/paths/file-path';
 import { saveViewFiles, viewDeletionFacts, type ViewDeletionMachine } from '@/project/view-deletion';
 import { offerViewUndo } from '@/project/view-trash';
 import { canvasInReach } from '@/state/canvas-target';
+import { databaseViewName } from '@/state/database-view-name';
 import type { DocumentState } from '@/state/document';
 import { nodesOfView } from '@/state/view-nodes';
 

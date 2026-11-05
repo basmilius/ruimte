@@ -1,7 +1,7 @@
 import { Button, Dialog, ScrollArea } from '@adecore/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DraftBar } from '@/shell/panels/DraftBar';
+import { DraftBar } from '@/files/DraftBar';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';

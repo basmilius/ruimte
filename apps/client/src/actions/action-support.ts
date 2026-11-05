@@ -1,5 +1,5 @@
 import type { ActionRegistry, ActionResult } from '@ruimte/actions';
-import { VOICE_ACTION_CALL } from './client-actions';
+import { VOICE_ACTION_CALL } from '@/action-port/perform';
 
 export function completed<Result extends ActionResult>(result: Result): Extract<Result, { status: 'completed' }> {
     if (result.status !== 'completed') {

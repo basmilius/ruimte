@@ -2,7 +2,8 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { useChats } from '@adecore/agents-react/state';
 import { ActionRefusal } from '@ruimte/actions';
 import type { ChatItem, ProjectDocument } from '@ruimte/contracts';
-import { createClientActionRegistry, VOICE_ACTION_CALL } from '@/actions/client-actions';
+import { VOICE_ACTION_CALL } from '@/action-port/perform';
+import { createClientActionRegistry } from '@/actions/client-actions';
 import { useDocument } from '@/state/document';
 
 const document: ProjectDocument = {

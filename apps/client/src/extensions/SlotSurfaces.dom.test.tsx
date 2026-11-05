@@ -2,11 +2,11 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { ContextMenu } from '@adecore/ui';
 import { act } from 'react';
 import { useActionRuns } from '@/extensions/action-runs';
-import { contribute, type SlotEntry } from '@/extensions/registry';
 import { useSlotOutlines } from '@/extensions/slot-outlines';
 import { NodeHeaderSlot, SelectionBar, SlotMenuItems, SlotRow } from '@/extensions/SlotSurfaces';
 import { focusedCanvas } from '@/state/canvas';
 import type { CanvasNode } from '@/state/canvas-model';
+import { contribute, type SlotEntry } from '@/state/extension-registry';
 import { useToasts } from '@/state/toasts';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 

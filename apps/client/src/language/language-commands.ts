@@ -1,6 +1,6 @@
 import type { Shortcut } from '@adecore/ui';
 import i18next from 'i18next';
-import { agentReviewOf } from '@/editor-ai/agent-review-registry';
+import { agentReviewOf } from '@/language/agent-review-registry';
 import { LANGUAGE_COMMANDS, LANGUAGE_COMMAND_IDS, type LanguageCommandId } from './command-table';
 import { languageForCommand } from './focused-language';
 import type { EditorLanguage } from './ruimte-editor-language';

@@ -9,7 +9,6 @@ import { desktop } from '@/desktop/bridge';
 import { ExtensionTile } from '@/extensions/ExtensionTile';
 import { readDisabled } from '@/extensions/internal';
 import { extensionIconUrl, extensionsInSafeMode, syncExtensions, useInstalledExtensions } from '@/extensions/loader';
-import { useContributions } from '@/extensions/registry';
 import { SchemaSettings } from '@/extensions/SchemaSettings';
 import {
     installFromStore,
@@ -25,6 +24,7 @@ import {
     type PackPreview,
     type StoreAnswer
 } from '@/extensions/store';
+import { useContributions } from '@/state/extension-registry';
 import { useToasts } from '@/state/toasts';
 import { IS_STATION } from '@/station';
 import { SettingsSection } from '@/surface/settings/SettingsSection';

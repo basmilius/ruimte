@@ -1,0 +1,33 @@
+import { EmptyState } from '@adecore/ui';
+import { resolveStoredPath } from '@ruimte/contracts';
+import { FileQuestion } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { FileSurfaceKind } from '@/files/FileActionItems';
+import { FileBody } from '@/files/FileBody';
+import { basenameOf } from '@/paths/file-path';
+import { useProject } from '@/state/project';
+
+/*
+ * The file a node or a view points at. Both hold a path and nothing else, so both resolve it
+ * against the project folder here and hand the rest to the same reading layer the preview uses.
+ */
+export function FileSurface({ path, on, nodeId }: { path: string | null; on: FileSurfaceKind; nodeId?: string }) {
+    const { t } = useTranslation('panels');
+    const folder = useProject((s) => s.current?.folder ?? null);
+    const resolved = path === null ? null : resolveStoredPath(folder, path);
+
+    if (resolved === null) {
+        return (
+            <EmptyState icon={FileQuestion} className="h-full">
+                {t('file.noFile')}
+            </EmptyState>
+        );
+    }
+
+    return (
+        // Keyed on the path, so pointing at another file starts a read of its own.
+        <div className="flex h-full min-h-0 w-full flex-col">
+            <FileBody key={resolved} path={resolved} name={basenameOf(resolved)} on={on} nodeId={nodeId} />
+        </div>
+    );
+}

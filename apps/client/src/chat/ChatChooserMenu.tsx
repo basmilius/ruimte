@@ -4,8 +4,8 @@ import { ContextMenu, Kbd } from '@adecore/ui';
 import { Plus } from 'lucide-react';
 import { Fragment, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useChatChooser, useChooserSections, type ChooserChat } from '@/chat/chat-chooser';
-import { linkedChatsOfNode, sendToChat, startLinkedChatOrTell, type SelectionOffer } from '@/chat/selection-to-chat';
+import { useChatChooser, useChooserSections, type ChooserChat } from '@/language/chat-chooser';
+import { linkedChatsOfNode, sendToChat, startLinkedChatOrTell, type SelectionOffer } from '@/language/selection-to-chat';
 import { availableAgents, separatesGroups } from '@/state/agent-availability';
 import { useDetectProviders } from '@/transport/provider-detection';
 

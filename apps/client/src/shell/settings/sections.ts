@@ -16,7 +16,7 @@ import {
     SquareTerminal,
     type LucideIcon
 } from 'lucide-react';
-import { useContributions, type SettingsSectionContribution } from '@/extensions/registry';
+import { useContributions, type SettingsSectionContribution } from '@/state/extension-registry';
 import type { SettingsSectionId } from '@/state/ui';
 
 export interface SettingsSectionMeta {

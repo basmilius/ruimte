@@ -1,0 +1,68 @@
+import { Button, EmptyState } from '@adecore/ui';
+import { FileWarning } from 'lucide-react';
+import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ExtensionFileViewer } from '@/extensions/ExtensionFileViewer';
+import { FileActionsContext } from '@/files/file-actions';
+import type { FileSurfaceKind } from '@/files/FileActionItems';
+import { FileTextMenu, FileToolbar } from '@/files/FileToolbar';
+import { renderFile } from '@/files/renderers';
+import { useFileRead } from '@/files/use-file-read';
+import { useMountCount } from '@/measure/mounts';
+
+/* The two states no renderer draws still carry the bar, so a file that will not read can be
+   revealed, copied or put somewhere else, which is exactly what a path that went missing needs. */
+function WithoutRenderer({ children }: { children: ReactNode }) {
+    return (
+        <div className="flex min-h-0 min-w-0 grow flex-col">
+            <FileToolbar />
+            <FileTextMenu className="grid min-h-0 grow place-items-center">{children}</FileTextMenu>
+        </div>
+    );
+}
+
+/*
+ * One file, read and drawn. The read lives here and not in the renderers, so every surface that
+ * shows a file (a preview tab, a node on the canvas, a view of its own) has one loading state and
+ * one error state, and a renderer only ever sees a file that is there.
+ */
+export function FileBody({ path, name, on, tabKey, nodeId }: { path: string; name: string; on: FileSurfaceKind; tabKey?: string; nodeId?: string }) {
+    useMountCount('file');
+    const { t } = useTranslation('panels');
+    const { state, retry } = useFileRead(path);
+    const actions = { path, name, on, tabKey, nodeId, refresh: retry };
+
+    const body = (): ReactNode => {
+        if (state.status === 'loading') {
+            return (
+                <WithoutRenderer>
+                    <EmptyState busy>{t('file.reading', { name })}</EmptyState>
+                </WithoutRenderer>
+            );
+        }
+        if (state.status === 'error') {
+            return (
+                <WithoutRenderer>
+                    <EmptyState
+                        className="select-text"
+                        icon={FileWarning}
+                        action={
+                            <Button variant="secondary" size="sm" onClick={retry}>
+                                {t('common:action.retry')}
+                            </Button>
+                        }
+                    >
+                        {state.message}
+                    </EmptyState>
+                </WithoutRenderer>
+            );
+        }
+        return (
+            <ExtensionFileViewer path={path} name={name} text={state.read.kind === 'text' ? state.read.text : null}>
+                {renderFile({ path, name, read: state.read })}
+            </ExtensionFileViewer>
+        );
+    };
+
+    return <FileActionsContext.Provider value={actions}>{body()}</FileActionsContext.Provider>;
+}

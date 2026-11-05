@@ -41,7 +41,7 @@ async function open(text = TEXT): Promise<{ editor: FakeEditor; language: Editor
 /* The feature the language made for itself, which takes the key and the gutter, answering to the test's deps. */
 async function openOwn(text = TEXT): Promise<{ editor: FakeEditor; language: EditorLanguage; feature: InlineEditFeature }> {
     const { editor, language } = await open(text);
-    const feature = language.inlineEdit;
+    const feature = language.inlineEdit as InlineEditFeature;
     (feature as unknown as { depsFor: unknown }).depsFor = () => harness.deps;
     return { editor, language, feature };
 }
@@ -86,11 +86,11 @@ describe('Mod+I in the editor', () => {
 
         expect(editor.press(eventOf(CANVAS_SHORTCUTS.inlineEdit))).toBe(true);
 
-        const { prompt } = language.inlineEdit.store.getState();
+        const { prompt } = (language.inlineEdit as InlineEditFeature).store.getState();
         expect(prompt).toMatchObject({ range: RANGE, selectedText: SELECTED, span: { startLine: 2, endLine: 3 }, instruction: '' });
         expect(prompt?.problems).toEqual([{ line: 3, severity: 'error', message: 'on the lines', code: 'ts(2345)' }]);
         expect(editor.press(eventOf(shortcutOf('Escape')))).toBe(true);
-        expect(language.inlineEdit.store.getState().prompt).toBeNull();
+        expect((language.inlineEdit as InlineEditFeature).store.getState().prompt).toBeNull();
     });
 
     test('takes the line under the caret when nothing is selected', async () => {
@@ -99,7 +99,7 @@ describe('Mod+I in the editor', () => {
 
         language.inlineEdit.start();
 
-        expect(language.inlineEdit.store.getState().prompt).toMatchObject({
+        expect((language.inlineEdit as InlineEditFeature).store.getState().prompt).toMatchObject({
             range: { start: at(1, 0), end: at(1, 34) },
             selectedText: '  if (need.length === 0) return 1;',
             span: { startLine: 2, endLine: 2 }

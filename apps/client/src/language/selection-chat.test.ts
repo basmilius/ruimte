@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { EMPTY_DRAFT, readDraft, writeDraft } from '@adecore/agents-react/chat';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import type { ProjectDocument } from '@ruimte/contracts';
-import { useChatChooser } from '@/chat/chat-chooser';
+import { useChatChooser } from '@/language/chat-chooser';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';

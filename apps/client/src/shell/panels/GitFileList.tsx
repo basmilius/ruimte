@@ -20,8 +20,8 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { GitCheckout } from '@/controllers/git-repos';
-import { FileActionItems } from '@/shell/panels/FileActionItems';
-import { FileCopyRow } from '@/shell/panels/FileCopyRow';
+import { FileActionItems } from '@/files/FileActionItems';
+import { FileCopyRow } from '@/files/FileCopyRow';
 import {
     buildGitTree,
     byCheckout,
@@ -42,9 +42,9 @@ import {
     type GitItem,
     type GitTreeLayout,
     type GitTreeNode
-} from '@/shell/panels/git-tree';
-import { GitTreeMarks } from '@/shell/panels/GitTreeMarks';
-import { revealFile } from '@/shell/panels/reveal-file';
+} from '@/files/git-tree';
+import { GitTreeMarks } from '@/files/GitTreeMarks';
+import { revealFile } from '@/files/reveal-file';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import { useProject } from '@/state/project';

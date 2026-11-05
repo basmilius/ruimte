@@ -1,7 +1,7 @@
 import type { ChatSendExtras } from '@adecore/agents-react/chat';
 import { recentChatMessages } from '@adecore/agents-react/chat';
 import { useChats, providersOf } from '@adecore/agents-react/state';
-import { ActionRefusal, ActionRegistry, type ActionCall, type ActionHandlers } from '@ruimte/actions';
+import { ActionRefusal, ActionRegistry, type ActionHandlers } from '@ruimte/actions';
 import type { ChatItem, ProviderInfo } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { provideClientActions } from '@/action-port/perform';
@@ -210,8 +210,3 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
 
 export const clientActions = createClientActionRegistry(useDocument);
 provideClientActions(clientActions);
-
-export const VOICE_ACTION_CALL: ActionCall<void> = {
-    actor: { kind: 'voice', id: 'voice-session' },
-    context: undefined
-};

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { SlotEntry } from '@/extensions/registry';
+import type { SlotEntry } from '@/state/extension-registry';
 import { useToasts } from '@/state/toasts';
 
 export interface ActionRun {

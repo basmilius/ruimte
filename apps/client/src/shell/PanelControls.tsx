@@ -5,6 +5,7 @@ import { useFolderInRepo } from '@/controllers/git-repos';
 import { useGitStatus } from '@/controllers/git-watch';
 import { useRoutineList } from '@/routines/routine-list';
 import { RoutinesButton } from '@/routines/RoutinesButton';
+import { COMMANDS } from '@/shell/command-table';
 import { useToolbarPanels, type PanelGroup } from '@/shell/panels';
 import { useEndpointId } from '@/state/current-endpoint';
 import { isThisMachine } from '@/state/local-machine';
@@ -67,7 +68,7 @@ export function PanelControls() {
                             </IconButton>
                         );
                     })}
-                    {group.key === 'made' && <RoutinesButton />}
+                    {group.key === 'made' && <RoutinesButton shortcut={COMMANDS.routines.shortcut} />}
                 </Fragment>
             ))}
         </>

@@ -17,6 +17,7 @@ import { storedPathOf, type AgentKind } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
 import type { HostLanguage as EditorLanguage } from '@/language/host-language';
+import { provideInlineEdit, type InlineEdit } from '@/language/ruimte-editor-language';
 import { isShortcut } from '@/language/shortcut-keys';
 import { inlineEditAccountOn, inlineEditAgentOn } from '@/state/ai-settings';
 import { currentEndpointId } from '@/state/current-endpoint';
@@ -74,7 +75,7 @@ export function inlineAgentNow(endpointId: string): { provider: AgentKind; model
  * answer as a proposal under the selection that only Apply writes into the file. The session behind it
  * (`inline-edit-session.ts`) outlives this editor; this class draws it while an editor holds the file.
  */
-export class InlineEditFeature {
+export class InlineEditFeature implements InlineEdit {
     readonly store: StoreApi<InlineEditView> = createStore<InlineEditView>(() => ({ prompt: null, promptContainer: null, session: null, container: null }));
     private readonly language: EditorLanguage;
     private readonly depsFor: (endpointId: string) => InlineEditDeps;
@@ -397,3 +398,5 @@ export class InlineEditFeature {
 function tintOf(span: LineSpan) {
     return { startLine: span.startLine, endLine: span.endLine, color: '--accent', fill: '--editor-selection' };
 }
+
+provideInlineEdit((language) => new InlineEditFeature(language));

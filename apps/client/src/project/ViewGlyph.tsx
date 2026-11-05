@@ -20,11 +20,11 @@ import {
     Workflow,
     type LucideIcon
 } from 'lucide-react';
-import { Favicon } from '@/browser/Favicon';
-import { extensionKeyOf, useContributions } from '@/extensions/registry';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
+import { extensionKeyOf, useContributions } from '@/state/extension-registry';
 import { nodeProvider } from '@/state/sessions';
+import { Favicon } from '@/surface/Favicon';
 import { projectIconGlyphOf } from '@/surface/project-icons';
 
 /* The default mark for a view, when nobody picked an icon. */

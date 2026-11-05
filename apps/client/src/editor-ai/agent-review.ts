@@ -4,9 +4,9 @@ import { replaceAllLines, replacedWords, type LineReplacement } from '@adecore/e
 import { splitLines } from '@adecore/merge';
 import type { ProvenanceReviewState, ProvenanceRun } from '@ruimte/contracts';
 import { createStore, type StoreApi } from 'zustand';
-import { lineRangeLabel, selectionBlock } from '@/chat/selection-to-chat';
+import { lineRangeLabel, selectionBlock } from '@/language/selection-to-chat';
+import { registerAgentReview } from '../language/agent-review-registry';
 import type { AgentChanges, DrawFrame } from './agent-changes';
-import { registerAgentReview } from './agent-review-registry';
 
 const ROW_OWNER = 'review';
 const ACTION_OWNER = 'review';

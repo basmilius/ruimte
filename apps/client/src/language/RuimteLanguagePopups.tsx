@@ -2,9 +2,9 @@ import { AgentIcon } from '@adecore/agents-react/providers';
 import { EditorRenderingProvider, LanguagePopups, type HoverView } from '@adecore/editor-react';
 import { Button, ContextMenu, Icon, Kbd, Tooltip } from '@adecore/ui';
 import { Bot, Cpu, MessageSquarePlus, Sparkles } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
-import { InlineEditLayer } from '@/editor-ai/InlineEditLayer';
 import { useCodeTheme } from '@/state/code-theme';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { highlightCode } from '@/surface/panels/highlight';
@@ -97,8 +97,8 @@ function MenuActions({ language }: { language: EditorLanguage }) {
     );
 }
 
-/* The shared cards, with Ruimte's actions in the hover card and the context menu and its inline edit over the editor. */
-export function RuimteLanguagePopups({ language }: { language: EditorLanguage }) {
+/* The shared cards, with Ruimte's actions in the hover card and the context menu and what `children` draws over the editor. */
+export function RuimteLanguagePopups({ language, children }: { language: EditorLanguage; children?: ReactNode }) {
     const theme = useCodeTheme();
     return (
         <EditorRenderingProvider value={{ theme, highlight: highlightCode }}>
@@ -107,7 +107,7 @@ export function RuimteLanguagePopups({ language }: { language: EditorLanguage })
                 hoverFooter={(view, shown) => <HoverActions language={shown} view={view} />}
                 contextMenuItems={(shown) => <MenuActions language={shown} />}
             >
-                <InlineEditLayer language={language} />
+                {children}
             </LanguagePopups>
         </EditorRenderingProvider>
     );

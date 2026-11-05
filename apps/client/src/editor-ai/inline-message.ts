@@ -1,5 +1,5 @@
 import type { LineSpan, InlineProblem } from '@adecore/editor-react/models';
-import { fenceOf, lineRangeLabel } from '@/chat/selection-to-chat';
+import { fenceOf, lineRangeLabel } from '@/language/selection-to-chat';
 
 interface InlineRequest {
     readonly instruction: string;

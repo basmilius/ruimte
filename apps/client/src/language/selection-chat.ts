@@ -4,7 +4,7 @@ import type { Problem } from '@adecore/editor-react/models';
 import { fileUriToPath } from '@adecore/lsp';
 import { storedPathOf, type AgentKind } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { lineRangeLabel, offerSelection, selectionBlock, startLinkedChatOrTell, type SelectionOffer } from '@/chat/selection-to-chat';
+import { lineRangeLabel, offerSelection, selectionBlock, startLinkedChatOrTell, type SelectionOffer } from '@/language/selection-to-chat';
 import { basenameOf } from '@/paths/file-path';
 import { useProject } from '@/state/project';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';

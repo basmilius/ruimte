@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
-import { contribute } from '@/extensions/registry';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { contribute } from '@/state/extension-registry';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';

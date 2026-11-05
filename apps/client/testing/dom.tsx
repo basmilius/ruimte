@@ -7,6 +7,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { App } from '@/App';
 import { CHAT_HOST, configureChat } from '@/chat/host';
 import { folderWatches } from '@/controllers/fs-watch';
+import { provideExtensionChat } from '@/nodes/extension-chat';
 import { startFileReadPreparation } from '@/project/file-read-preparation';
 import { defaultDocumentStore } from '@/state/document';
 import { useFiles } from '@/state/files';
@@ -16,6 +17,7 @@ import { closedAfterTest, currentTest, waitTurn } from './test-scope';
 
 // Once for the process, before any chat store is read, as `main.tsx` does it.
 configureChat();
+provideExtensionChat();
 startFileReadPreparation(defaultProjectStore, defaultDocumentStore, folderWatches, useFiles);
 
 /*

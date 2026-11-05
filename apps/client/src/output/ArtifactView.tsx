@@ -47,6 +47,7 @@ import {
 import { useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { FileToolbarToggle } from '@/files/FileToolbar';
 import { pinArtifact, useCanRemove, useCopyToThisMachine, usePinCanvases } from '@/output/artifact-actions';
 import { canDownload, downloadArtifactFile, useArtifactText, type ArtifactFileRef } from '@/output/artifact-bytes';
 import { comparable } from '@/output/artifact-list';
@@ -57,7 +58,6 @@ import { showChat, useChatName } from '@/output/kinds';
 import { selectArtifactVersion, useArtifactSelection } from '@/output/open';
 import { RemoveArtifactDialog, type RemoveArtifactRequest } from '@/output/RemoveArtifactDialog';
 import { useArtifact } from '@/output/use-artifact';
-import { FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpointIdOfMachine, useEndpoints } from '@/state/endpoints';
 import { artifactTabKey } from '@/state/files';

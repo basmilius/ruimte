@@ -1,7 +1,7 @@
 import { FileIcon } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
+import { FileSurface } from '@/files/FileSurface';
 import { basenameOf } from '@/paths/file-path';
-import { FileSurface } from '@/shell/panels/FileSurface';
 import { useCanvas } from '@/state/canvas';
 import { FileNodeGateContext } from '@/surface/panels/edit-gate';
 

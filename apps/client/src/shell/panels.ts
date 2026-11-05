@@ -1,5 +1,5 @@
 import { Activity, CircleAlert, Database, Folder, GitBranch, Mic, Package, Rocket, TabletSmartphone, type LucideIcon } from 'lucide-react';
-import { useContributions, type PanelContribution, type PanelGroup } from '@/extensions/registry';
+import { useContributions, type PanelContribution, type PanelGroup } from '@/state/extension-registry';
 import { panelHidden, type PanelKind } from '@/state/ui';
 
 export type { PanelGroup };

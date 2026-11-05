@@ -1,9 +1,9 @@
 import { ErrorBoundary, lazyNamed, LazyBoundary } from '@adecore/ui';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FileBody } from '@/files/FileBody';
 import { basenameOf } from '@/paths/file-path';
 import { DiffFile } from '@/shell/panels/DiffFile';
-import { FileBody } from '@/shell/panels/FileBody';
 import { keptTabs, shownAfter } from '@/shell/panels/kept-tabs';
 import { isArtifactTab, isDatabaseTab, useFiles, type Tab } from '@/state/files';
 import { fixedSlot, FileToolbarSlotProvider, useFileToolbarSlot } from '@/surface/panels/file-toolbar-slot';

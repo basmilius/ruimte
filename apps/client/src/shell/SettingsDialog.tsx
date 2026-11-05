@@ -3,7 +3,6 @@ import { SettingsDialog as Dialog, type SettingsSectionEntry } from '@adecore/ui
 import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isApplePlatform } from '@/desktop/bridge';
-import { useContributions, type SettingsSectionContribution } from '@/extensions/registry';
 import { AccountTab } from '@/shell/settings/AccountTab';
 import { findSettings } from '@/shell/settings/find-settings';
 import {
@@ -15,6 +14,7 @@ import {
     settingsGroupsWith,
     type SettingsSectionMeta
 } from '@/shell/settings/sections';
+import { useContributions, type SettingsSectionContribution } from '@/state/extension-registry';
 import { useUi, type CoreSettingsSectionId, type SettingsSectionId } from '@/state/ui';
 import { APP_SHORTCUTS } from '@/surface/shortcuts';
 

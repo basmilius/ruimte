@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { ExtensionManifest } from '@ruimte/contracts';
 import type { ComponentType } from 'react';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
-import { useContributions } from '@/extensions/registry';
+import { useContributions } from '@/state/extension-registry';
 import { mount, until } from '../../testing/dom';
 
 const FOLDER = join(import.meta.dir, '../../../../extensions/poc/surfaces');

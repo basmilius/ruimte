@@ -1,6 +1,6 @@
 import { Tooltip } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
-import { chooserChats } from '@/chat/chat-chooser';
+import { chooserChats } from '@/language/chat-chooser';
 import { focusChat } from '@/plan/plan-actions';
 import { useSidebarSource } from '@/surface/sidebar-source';
 import type { LiveWriter } from './agent-changes';

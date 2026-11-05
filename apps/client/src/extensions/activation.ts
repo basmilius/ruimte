@@ -1,7 +1,7 @@
-import { extensionKeyOf } from '@/extensions/registry';
 import { shownViewIdsIn } from '@/layout/split';
 import { defaultCanvases, focusedCanvas, liveCanvas, type CanvasState } from '@/state/canvas';
 import { useDocument, type DocumentState } from '@/state/document';
+import { extensionKeyOf } from '@/state/extension-registry';
 import { useFiles } from '@/state/files';
 
 type Shown = Pick<DocumentState, 'views' | 'activeViewId' | 'layout'>;

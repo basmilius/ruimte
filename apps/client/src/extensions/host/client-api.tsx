@@ -41,6 +41,12 @@ import { ExtensionChat } from '@/extensions/host/ExtensionChat';
 import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-dialog-state';
 import { useMachineStorage } from '@/extensions/host/machine-storage';
 import { extensionRequest } from '@/extensions/machine-request';
+import { baseContext, nodeInfoIn, useNodeSources, type NodeInfo } from '@/extensions/slots';
+import { isUnderFolder } from '@/paths/file-path';
+import { revealNode } from '@/project/views';
+import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
+import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
+import { useDocument } from '@/state/document';
 import {
     contribute,
     useContributions,
@@ -49,13 +55,7 @@ import {
     type SettingGroup,
     type SlotEntry,
     type SlotName
-} from '@/extensions/registry';
-import { baseContext, nodeInfoIn, useNodeSources, type NodeInfo } from '@/extensions/slots';
-import { isUnderFolder } from '@/paths/file-path';
-import { revealNode } from '@/project/views';
-import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
-import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
-import { useDocument } from '@/state/document';
+} from '@/state/extension-registry';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { nodeStatus, nodeWaitAsk, useSessions } from '@/state/sessions';

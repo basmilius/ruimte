@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
 import { useGitSignal } from '@/controllers/git-watch';
 import { fileInfoOf } from '@/extensions/file-info';
-import { useContributions } from '@/extensions/registry';
+import { useContributions } from '@/state/extension-registry';
 import type { FileTabView } from '@/state/files';
 import { useTransport } from '@/workspace/context';
 

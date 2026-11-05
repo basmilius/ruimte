@@ -8,11 +8,11 @@ import { createElement } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { dictationRange, dictationRangeEffect, dictationPreview, dictationPreviewEffect } from '@/dictation/editor';
+import { FileEditor } from '@/files/FileEditor';
 import { initI18n } from '@/i18n';
 import dutchPanels from '@/i18n/locales/nl/panels.json' with { type: 'json' };
 import { FakeLanguageTransport } from '@/language/fake-daemon';
 import { ProjectLanguage } from '@/language/ruimte-project-language';
-import { FileEditor } from '@/shell/panels/FileEditor';
 
 export async function probeEditorLabels() {
     // The probe page boots no app, so nothing set the words up yet.

@@ -4,15 +4,15 @@ import { injectVisualBootstrap, type ArtifactFile } from '@ruimte/contracts';
 import { CircleAlert } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CodeText } from '@/files/CodeFile';
+import { FileActionsContext } from '@/files/file-actions';
+import { FileMarkdown } from '@/files/FileMarkdown';
+import { ImageFile } from '@/files/ImageFile';
+import { MediaFile } from '@/files/MediaFile';
+import { ModelPreview } from '@/files/ModelPreview';
+import { PdfPreview } from '@/files/PdfPreview';
 import { readArtifactFile, useArtifactText, type ArtifactFileRef } from '@/output/artifact-bytes';
 import { artifactBinaryRead, artifactSource, fileViewOf, languageOfName } from '@/output/file-view';
-import { CodeText } from '@/shell/panels/CodeFile';
-import { FileActionsContext } from '@/shell/panels/file-actions';
-import { FileMarkdown } from '@/shell/panels/FileMarkdown';
-import { ImageFile } from '@/shell/panels/ImageFile';
-import { MediaFile } from '@/shell/panels/MediaFile';
-import { ModelPreview } from '@/shell/panels/ModelPreview';
-import { PdfPreview } from '@/shell/panels/PdfPreview';
 
 interface ArtifactFileProps {
     endpointId: string;

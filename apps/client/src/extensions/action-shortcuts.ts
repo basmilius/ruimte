@@ -1,8 +1,8 @@
 import { shortcutProblem } from '@ruimte/contracts';
 import { runAction } from '@/extensions/action-runs';
-import { useContributions, type SlotEntry } from '@/extensions/registry';
 import { baseContext, nodeInfoOf } from '@/extensions/slots';
 import { focusedCanvas } from '@/state/canvas';
+import { useContributions, type SlotEntry } from '@/state/extension-registry';
 
 const MODIFIERS = new Set(['mod', 'shift', 'alt']);
 

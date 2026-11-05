@@ -16,6 +16,7 @@ import { keepAwakeAvailable, keepAwakeChoice } from '@/controllers/keep-awake';
 import { prReposOfCurrent } from '@/controllers/pr-repos';
 import { databaseViewShareRefusal } from '@/database/view-sharing';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
+import { diffInFront } from '@/files/diff-caret';
 import { availableLanguageForCommand } from '@/language/focused-language';
 import { afterSettleCandidates, chosenLaunchId } from '@/launches/actions';
 import { launchViews } from '@/launches/model';
@@ -27,7 +28,6 @@ import { canOpenAsView, viewStepTarget, type SessionHandoff } from '@/project/vi
 import { canOpenWindows } from '@/project/windows';
 import type { MenuContext, MenuHost, MenuLaunch } from '@/shell/menu/model';
 import { nextWaitingTitle } from '@/shell/next-waiting';
-import { diffInFront } from '@/shell/panels/diff-caret';
 import { sessionHandoffs, viewOffers, type ViewOffers } from '@/shell/view-offers';
 import { inPickerOrder } from '@/state/agent-availability';
 import { groupArrangeable } from '@/state/arrange-group';

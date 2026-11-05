@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import type { ChatState } from '@adecore/agents-react/state';
 import type { ProjectCanvasView } from '@ruimte/contracts';
+import { VOICE_ACTION_CALL } from '@/action-port/perform';
 import { useDocument } from '@/state/document';
 import type { SessionState } from '@/state/sessions';
 import { pool } from '@/transport';
 import { chatScopeOf } from '@/workspace/chat-scope';
 import { fakeProvider } from '../../testing/fake-provider';
 import { confirmed } from './action-support';
-import { createClientActionRegistry, VOICE_ACTION_CALL } from './client-actions';
+import { createClientActionRegistry } from './client-actions';
 
 const GONE = 'machine-gone';
 const refused = { status: 'failed', error: { code: 'no-machine' } };

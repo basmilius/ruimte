@@ -1,12 +1,12 @@
 import { rememberChatSelection } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
+import { openChatInMode } from '@/action-port/opening-mode';
 import { createNodeAction, createViewAction } from '@/action-port/person-actions';
 import { newChatOn } from '@/project/new-chat';
 import { canvasOfNode, liveCanvases } from '@/state/canvas';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
-import { openChatInMode } from '@/state/opening-mode';
 import { isScratchProject, useProject } from '@/state/project';
 import { readNodeHost } from '@/surface/nodes/node-host';
 

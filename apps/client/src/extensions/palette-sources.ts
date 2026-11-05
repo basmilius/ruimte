@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { runAction } from '@/extensions/action-runs';
-import { useContributions, type PaletteSourceContribution as Source } from '@/extensions/registry';
+import { useContributions, type PaletteSourceContribution as Source } from '@/state/extension-registry';
 
 const SEARCH_WAIT_MS = 150;
 const NO_HITS: readonly PaletteHit[] = [];

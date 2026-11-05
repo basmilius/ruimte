@@ -80,7 +80,7 @@ import {
     VIEW_DRAG_TYPE
 } from '@/surface/view-drag';
 import { Brand } from '@/ui/Brand';
-import { NeedsYouCard } from './NeedsYouCard';
+import { NeedsYouCard } from '../attention/NeedsYouCard';
 import { useSidebarGroups } from './sidebar-groups';
 import { openSidebarTarget } from './sidebar-navigation';
 

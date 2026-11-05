@@ -3,10 +3,10 @@ import { Blocks, Package, Square } from 'lucide-react';
 import { createElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isRunning, nodeIdsOf, runAction, useActionRuns } from '@/extensions/action-runs';
-import { useContributions, type SlotEntry, type SlotMenuItem, type SlotName } from '@/extensions/registry';
 import { useSlotOutlines } from '@/extensions/slot-outlines';
 import { nodeInfoOf, resolveSlot, useSlot, type ResolvedEntry } from '@/extensions/slots';
 import { useCanvas } from '@/state/canvas';
+import { useContributions, type SlotEntry, type SlotMenuItem, type SlotName } from '@/state/extension-registry';
 
 type MenuKit = typeof Menu | typeof ContextMenu;
 

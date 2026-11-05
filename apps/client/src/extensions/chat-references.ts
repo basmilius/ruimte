@@ -1,6 +1,6 @@
 import type { Referable } from '@adecore/agents-react/chat';
 import { useEffect, useState } from 'react';
-import { useContributions } from '@/extensions/registry';
+import { useContributions } from '@/state/extension-registry';
 
 /* Things from outside the project for `#`, asked for once per chat box. They come down to text in the prompt. */
 export function useExtensionReferables(): readonly Referable[] {
