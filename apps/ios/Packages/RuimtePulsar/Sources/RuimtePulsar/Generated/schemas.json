@@ -15560,8 +15560,7 @@
                                       "required": [
                                         "type",
                                         "path"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -15579,8 +15578,7 @@
                                       "required": [
                                         "type",
                                         "path"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -15597,8 +15595,7 @@
                                       "required": [
                                         "type",
                                         "sha"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -15616,8 +15613,7 @@
                                       "required": [
                                         "type",
                                         "id"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     }
                                   ]
                                 },
@@ -18019,8 +18015,7 @@
                                       "required": [
                                         "type",
                                         "path"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -18038,8 +18033,7 @@
                                       "required": [
                                         "type",
                                         "path"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -18056,8 +18050,7 @@
                                       "required": [
                                         "type",
                                         "sha"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -18075,8 +18068,7 @@
                                       "required": [
                                         "type",
                                         "id"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     }
                                   ]
                                 },
@@ -19712,8 +19704,7 @@
                                       "required": [
                                         "type",
                                         "path"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -19731,8 +19722,7 @@
                                       "required": [
                                         "type",
                                         "path"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -19749,8 +19739,7 @@
                                       "required": [
                                         "type",
                                         "sha"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -19768,8 +19757,7 @@
                                       "required": [
                                         "type",
                                         "id"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     }
                                   ]
                                 },
@@ -21399,8 +21387,7 @@
                                               "required": [
                                                 "type",
                                                 "path"
-                                              ],
-                                              "additionalProperties": false
+                                              ]
                                             },
                                             {
                                               "type": "object",
@@ -21418,8 +21405,7 @@
                                               "required": [
                                                 "type",
                                                 "path"
-                                              ],
-                                              "additionalProperties": false
+                                              ]
                                             },
                                             {
                                               "type": "object",
@@ -21436,8 +21422,7 @@
                                               "required": [
                                                 "type",
                                                 "sha"
-                                              ],
-                                              "additionalProperties": false
+                                              ]
                                             },
                                             {
                                               "type": "object",
@@ -21455,8 +21440,7 @@
                                               "required": [
                                                 "type",
                                                 "id"
-                                              ],
-                                              "additionalProperties": false
+                                              ]
                                             }
                                           ]
                                         },
@@ -22837,8 +22821,7 @@
                                       "required": [
                                         "type",
                                         "path"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -22856,8 +22839,7 @@
                                       "required": [
                                         "type",
                                         "path"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -22874,8 +22856,7 @@
                                       "required": [
                                         "type",
                                         "sha"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -22893,8 +22874,7 @@
                                       "required": [
                                         "type",
                                         "id"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     }
                                   ]
                                 },
@@ -24818,8 +24798,7 @@
                                                 "required": [
                                                   "type",
                                                   "path"
-                                                ],
-                                                "additionalProperties": false
+                                                ]
                                               },
                                               {
                                                 "type": "object",
@@ -24837,8 +24816,7 @@
                                                 "required": [
                                                   "type",
                                                   "path"
-                                                ],
-                                                "additionalProperties": false
+                                                ]
                                               },
                                               {
                                                 "type": "object",
@@ -24855,8 +24833,7 @@
                                                 "required": [
                                                   "type",
                                                   "sha"
-                                                ],
-                                                "additionalProperties": false
+                                                ]
                                               },
                                               {
                                                 "type": "object",
@@ -24874,8 +24851,7 @@
                                                 "required": [
                                                   "type",
                                                   "id"
-                                                ],
-                                                "additionalProperties": false
+                                                ]
                                               }
                                             ]
                                           },
@@ -27031,8 +27007,7 @@
                                       "required": [
                                         "type",
                                         "path"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -27050,8 +27025,7 @@
                                       "required": [
                                         "type",
                                         "path"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -27068,8 +27042,7 @@
                                       "required": [
                                         "type",
                                         "sha"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -27087,8 +27060,7 @@
                                       "required": [
                                         "type",
                                         "id"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     }
                                   ]
                                 },
@@ -28678,8 +28650,7 @@
             "required": [
               "type",
               "path"
-            ],
-            "additionalProperties": false
+            ]
           },
           {
             "type": "object",
@@ -28697,8 +28668,7 @@
             "required": [
               "type",
               "path"
-            ],
-            "additionalProperties": false
+            ]
           },
           {
             "type": "object",
@@ -28715,8 +28685,7 @@
             "required": [
               "type",
               "sha"
-            ],
-            "additionalProperties": false
+            ]
           },
           {
             "type": "object",
@@ -28734,8 +28703,7 @@
             "required": [
               "type",
               "id"
-            ],
-            "additionalProperties": false
+            ]
           }
         ]
       },
@@ -32284,8 +32252,7 @@
                                       "required": [
                                         "type",
                                         "path"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -32303,8 +32270,7 @@
                                       "required": [
                                         "type",
                                         "path"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -32321,8 +32287,7 @@
                                       "required": [
                                         "type",
                                         "sha"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     },
                                     {
                                       "type": "object",
@@ -32340,8 +32305,7 @@
                                       "required": [
                                         "type",
                                         "id"
-                                      ],
-                                      "additionalProperties": false
+                                      ]
                                     }
                                   ]
                                 },
@@ -75398,8 +75362,7 @@
                                             "required": [
                                               "type",
                                               "path"
-                                            ],
-                                            "additionalProperties": false
+                                            ]
                                           },
                                           {
                                             "type": "object",
@@ -75417,8 +75380,7 @@
                                             "required": [
                                               "type",
                                               "path"
-                                            ],
-                                            "additionalProperties": false
+                                            ]
                                           },
                                           {
                                             "type": "object",
@@ -75435,8 +75397,7 @@
                                             "required": [
                                               "type",
                                               "sha"
-                                            ],
-                                            "additionalProperties": false
+                                            ]
                                           },
                                           {
                                             "type": "object",
@@ -75454,8 +75415,7 @@
                                             "required": [
                                               "type",
                                               "id"
-                                            ],
-                                            "additionalProperties": false
+                                            ]
                                           }
                                         ]
                                       },
@@ -76836,8 +76796,7 @@
                                     "required": [
                                       "type",
                                       "path"
-                                    ],
-                                    "additionalProperties": false
+                                    ]
                                   },
                                   {
                                     "type": "object",
@@ -76855,8 +76814,7 @@
                                     "required": [
                                       "type",
                                       "path"
-                                    ],
-                                    "additionalProperties": false
+                                    ]
                                   },
                                   {
                                     "type": "object",
@@ -76873,8 +76831,7 @@
                                     "required": [
                                       "type",
                                       "sha"
-                                    ],
-                                    "additionalProperties": false
+                                    ]
                                   },
                                   {
                                     "type": "object",
@@ -76892,8 +76849,7 @@
                                     "required": [
                                       "type",
                                       "id"
-                                    ],
-                                    "additionalProperties": false
+                                    ]
                                   }
                                 ]
                               },
@@ -78817,8 +78773,7 @@
                                               "required": [
                                                 "type",
                                                 "path"
-                                              ],
-                                              "additionalProperties": false
+                                              ]
                                             },
                                             {
                                               "type": "object",
@@ -78836,8 +78791,7 @@
                                               "required": [
                                                 "type",
                                                 "path"
-                                              ],
-                                              "additionalProperties": false
+                                              ]
                                             },
                                             {
                                               "type": "object",
@@ -78854,8 +78808,7 @@
                                               "required": [
                                                 "type",
                                                 "sha"
-                                              ],
-                                              "additionalProperties": false
+                                              ]
                                             },
                                             {
                                               "type": "object",
@@ -78873,8 +78826,7 @@
                                               "required": [
                                                 "type",
                                                 "id"
-                                              ],
-                                              "additionalProperties": false
+                                              ]
                                             }
                                           ]
                                         },
