@@ -1,47 +1,280 @@
-import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { appendFile, cp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { processAlive } from '../process-test-helpers.ts';
-import { GitActions } from './actions.ts';
-import { expectProcessTerminated, installHangingHook, killFromPidFile } from './test-process.ts';
-import { gitIn, initRepo } from './test-repo.ts';
+import type { GitActionPayload, GitActionPhase } from '@ruimte/contracts';
+import { GitActions, isDirty } from './actions.ts';
+import { readLog } from './log.ts';
+import { listRefs } from './refs.ts';
+import { forgetBase, readStatus } from './status.ts';
+import { gitIn, initRepo, repoTemplate, type RepoTemplate } from './test-repo.ts';
 
+let template: RepoTemplate;
 let root: string;
 let repo: string;
-let pidFile: string;
+let remote: string;
+let actions: GitActions;
+
+function run(args: string[], cwd: string = repo): Promise<string> {
+    return gitIn(cwd, args);
+}
+
+function write(name: string, body: string): Promise<void> {
+    return writeFile(join(repo, name), body);
+}
+
+interface Progress {
+    phases: GitActionPhase[];
+    lines: string[];
+}
+
+async function act(payload: Omit<GitActionPayload, 'cwd' | 'actionId'> & { cwd?: string }, progress?: Progress) {
+    return await actions.run({ cwd: repo, actionId: `action-${Math.random()}`, ...payload }, (phase, line) => {
+        progress?.phases.push(phase);
+        if (line !== '') {
+            progress?.lines.push(line);
+        }
+    });
+}
+
+beforeAll(async () => {
+    template = await repoTemplate('ruimte-actions', async (dir) => {
+        await gitIn(dir, ['init', '--quiet', '--bare', '--initial-branch=main', join(dir, 'remote.git')]);
+        await initRepo(join(dir, 'repo'), { 'one.txt': 'one\n' });
+    });
+});
+
+afterAll(async () => {
+    await template.dispose();
+});
 
 beforeEach(async () => {
-    root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-action-cancel-')));
+    root = await template.copy();
+    remote = join(root, 'remote.git');
     repo = join(root, 'repo');
-    pidFile = join(root, 'hook.pid');
-    await initRepo(repo, { 'README.md': 'hi\n' });
-    await installHangingHook(repo, pidFile, 'waiting');
+    // Added per copy rather than in the template, so every test pushes to a bare repository of its own.
+    await appendFile(
+        join(repo, '.git', 'config'),
+        `[remote "origin"]\n\turl = ${remote.replaceAll('\\', '/')}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+    );
+    actions = new GitActions();
+    forgetBase();
 });
 
 afterEach(async () => {
-    await killFromPidFile(pidFile);
     await rm(root, { recursive: true, force: true });
 });
 
-test('cancel ends a commit a hook holds up, the hook included', async () => {
-    const before = (await gitIn(repo, ['rev-parse', 'HEAD'])).trim();
-    await writeFile(join(repo, 'two.txt'), 'two\n');
-    const actions = new GitActions();
-    const { promise: waiting, resolve } = Promise.withResolvers<void>();
-    const committing = actions.run({ cwd: repo, actionId: 'commit-1', kind: 'commit', subject: 'two', stageAll: true }, (phase, line) => {
-        if (phase === 'commit' && line === 'waiting') {
-            resolve();
-        }
+describe('branches', () => {
+    test('a branch is created, renamed and deleted', async () => {
+        await act({ kind: 'create-branch', name: 'feature' });
+        expect((await listRefs(repo)).current).toBe('feature');
+
+        await act({ kind: 'rename-branch', name: 'feature-2' });
+        const refs = await listRefs(repo);
+        expect(refs.current).toBe('feature-2');
+        expect(refs.refs.map((ref) => ref.name)).toContain('main');
+
+        await act({ kind: 'checkout', ref: 'main' });
+        await act({ kind: 'delete-branch', ref: 'feature-2' });
+        expect((await listRefs(repo)).refs.map((ref) => ref.name)).not.toContain('feature-2');
     });
 
-    await waiting;
-    const pid = Number.parseInt(await readFile(pidFile, 'utf8'), 10);
-    expect(Number.isSafeInteger(pid)).toBe(true);
-    expect(processAlive(pid)).toBe(true);
-    actions.cancel('commit-1');
+    test('a branch with commits of its own only goes away with force', async () => {
+        await act({ kind: 'create-branch', name: 'work' });
+        await write('two.txt', 'two\n');
+        await act({ kind: 'commit', subject: 'add two', stageAll: true });
+        await act({ kind: 'checkout', ref: 'main' });
 
-    await expect(committing).rejects.toThrow('The action was canceled.');
-    await expectProcessTerminated(pid, 'SIGTERM');
-    expect((await gitIn(repo, ['rev-parse', 'HEAD'])).trim()).toBe(before);
+        await expect(act({ kind: 'delete-branch', ref: 'work' })).rejects.toThrow();
+        await act({ kind: 'delete-branch', ref: 'work', force: true });
+        expect((await listRefs(repo)).refs.map((ref) => ref.name)).not.toContain('work');
+    });
+
+    test('a dirty tree switches branch by parking its changes in a stash', async () => {
+        await act({ kind: 'create-branch', name: 'other' });
+        await act({ kind: 'checkout', ref: 'main' });
+        await write('one.txt', 'changed\n');
+        expect(await isDirty(repo)).toBe(true);
+
+        await act({ kind: 'checkout', ref: 'other', stash: true });
+        expect((await listRefs(repo)).current).toBe('other');
+        expect(await isDirty(repo)).toBe(false);
+
+        await act({ kind: 'stash-pop' });
+        expect(await isDirty(repo)).toBe(true);
+    });
+
+    test('a remote branch is checked out as a local one that follows it', async () => {
+        await run(['push', '--quiet', 'origin', 'main']);
+        await run(['branch', 'published']);
+        await run(['push', '--quiet', 'origin', 'published']);
+        await run(['branch', '--delete', 'published']);
+        await run(['fetch', '--quiet', 'origin']);
+
+        await act({ kind: 'checkout', ref: 'origin/published' });
+        expect((await listRefs(repo)).current).toBe('published');
+        expect((await readStatus(repo)).upstream).toBe('origin/published');
+    });
+
+    test('a ref or a name with a leading dash never reaches git as an option', async () => {
+        await act({ kind: 'create-branch', name: 'other' });
+        await act({ kind: 'checkout', ref: 'main' });
+        await write('one.txt', 'changed\n');
+        const progress: Progress = { phases: [], lines: [] };
+
+        await expect(act({ kind: 'checkout', ref: '--force' }, progress)).rejects.toThrow(/dash/);
+        await expect(act({ kind: 'merge', ref: '--abort' })).rejects.toThrow(/dash/);
+        await expect(act({ kind: 'rebase', ref: `--exec=touch ${join(root, 'ran')}` })).rejects.toThrow(/dash/);
+        await expect(act({ kind: 'stash-pop', ref: '--index' })).rejects.toThrow(/dash/);
+        await expect(act({ kind: 'create-branch', name: '-f' })).rejects.toThrow(/dash/);
+        await expect(act({ kind: 'create-branch', name: 'next', ref: '--orphan' })).rejects.toThrow(/dash/);
+        await expect(act({ kind: 'rename-branch', name: '--force' })).rejects.toThrow(/dash/);
+        await expect(act({ kind: 'delete-branch', ref: '--remotes' })).rejects.toThrow(/dash/);
+
+        expect(progress.phases).toEqual([]);
+        expect(await Bun.file(join(repo, 'one.txt')).text()).toBe('changed\n');
+        expect(await Bun.file(join(root, 'ran')).exists()).toBe(false);
+        expect((await listRefs(repo)).current).toBe('main');
+    });
+
+    test('a named stash and a rebase onto a branch still read their operand as a ref', async () => {
+        await act({ kind: 'create-branch', name: 'base' });
+        await write('two.txt', 'two\n');
+        await act({ kind: 'commit', subject: 'add two', stageAll: true });
+        await act({ kind: 'checkout', ref: 'main' });
+        await act({ kind: 'rebase', ref: 'base' });
+        expect(await Bun.file(join(repo, 'two.txt')).exists()).toBe(true);
+
+        await write('one.txt', 'changed\n');
+        await act({ kind: 'stash' });
+        await act({ kind: 'stash-pop', ref: 'stash@{0}' });
+        expect(await isDirty(repo)).toBe(true);
+    });
+});
+
+describe('stashing', () => {
+    test('a stash takes the changes and a pop brings them back', async () => {
+        await write('one.txt', 'changed\n');
+        await act({ kind: 'stash', subject: 'later' });
+        expect((await readStatus(repo)).files).toHaveLength(0);
+
+        await act({ kind: 'stash-pop' });
+        expect((await readStatus(repo)).files).toHaveLength(1);
+    });
+
+    test('the stash list names what can be popped', async () => {
+        await write('one.txt', 'changed\n');
+        await act({ kind: 'stash', subject: 'later' });
+        const { stashes } = await listRefs(repo);
+
+        expect(stashes[0]?.ref).toBe('stash@{0}');
+        expect(stashes[0]?.message).toContain('later');
+    });
+});
+
+describe('committing', () => {
+    test('a commit stages everything when asked and answers the hash it wrote', async () => {
+        await write('two.txt', 'two\n');
+        const result = await act({ kind: 'commit', subject: 'feat: two', body: 'because', stageAll: true });
+
+        expect(result.commit?.hash).toMatch(/^[0-9a-f]{40}$/);
+        expect(result.summary).toContain('feat: two');
+        const log = await readLog(repo, 5);
+        expect(log.commits[0]?.subject).toBe('feat: two');
+        expect((await readStatus(repo)).files).toHaveLength(0);
+    });
+
+    test('a commit without anything staged fails with what git said', async () => {
+        await expect(act({ kind: 'commit', subject: 'nothing' })).rejects.toThrow(/nothing to commit/i);
+    });
+
+    test('an amend with nothing staged rewords the last commit in place', async () => {
+        const before = (await run(['rev-parse', 'HEAD'])).trim();
+        const result = await act({ kind: 'commit', subject: 'feat: renamed', body: 'more words', amend: true });
+
+        expect(result.commit?.hash).not.toBe(before);
+        expect((await run(['rev-list', '--count', 'HEAD'])).trim()).toBe('1');
+        expect(await run(['log', '-1', '--format=%B'])).toBe('feat: renamed\n\nmore words\n\n');
+    });
+
+    test('an amend takes what is staged into the last commit', async () => {
+        await write('two.txt', 'two\n');
+        await run(['add', 'two.txt']);
+        await act({ kind: 'commit', subject: 'init and two', amend: true });
+
+        expect((await run(['rev-list', '--count', 'HEAD'])).trim()).toBe('1');
+        expect((await run(['show', '--name-only', '--format=', 'HEAD'])).split('\n')).toContain('two.txt');
+        expect((await readStatus(repo)).files).toHaveLength(0);
+    });
+
+    test('an amend in a repository without commits is refused', async () => {
+        const empty = join(root, 'empty');
+        await run(['init', '--quiet', '--initial-branch=main', empty], root);
+        await writeFile(join(empty, 'one.txt'), 'one\n');
+        await run(['add', '.'], empty);
+
+        await expect(act({ cwd: empty, kind: 'commit', subject: 'first', amend: true })).rejects.toThrow('There is no commit to amend yet.');
+        expect(await run(['rev-parse', '--verify', '--quiet', 'HEAD'], empty).catch(() => null)).toBeNull();
+    });
+});
+
+describe('the remote', () => {
+    test('a push without an upstream publishes the branch, and a pull takes the other side back', async () => {
+        const progress: Progress = { phases: [], lines: [] };
+        const published = await act({ kind: 'publish' }, progress);
+
+        expect(published.summary).toContain('Published main');
+        expect(progress.phases).toContain('push');
+        expect(progress.phases).toContain('done');
+        expect(await run(['rev-parse', 'HEAD'])).toBe(await run(['rev-parse', 'main'], remote));
+
+        // A second checkout of the same remote is what a commit from elsewhere looks like.
+        const other = join(root, 'other');
+        await cp(repo, other, { recursive: true });
+        await writeFile(join(other, 'three.txt'), 'three\n');
+        await run(['add', '.'], other);
+        await run(['commit', '--quiet', '--message', 'from elsewhere'], other);
+        await run(['push', '--quiet'], other);
+
+        await act({ kind: 'fetch' });
+        expect((await readStatus(repo)).behind).toBe(1);
+        await act({ kind: 'pull' });
+        expect((await readStatus(repo)).behind).toBe(0);
+        expect((await readLog(repo, 5)).commits[0]?.subject).toBe('from elsewhere');
+    });
+
+    test('a commit and push does both and streams a phase for each', async () => {
+        await act({ kind: 'publish' });
+        await write('four.txt', 'four\n');
+        const progress: Progress = { phases: [], lines: [] };
+        const result = await act({ kind: 'commit-push', subject: 'feat: four', stageAll: true }, progress);
+
+        expect(progress.phases).toEqual(expect.arrayContaining(['stage', 'commit', 'push', 'done']));
+        expect(result.summary).toContain('feat: four');
+        expect(await run(['rev-parse', 'HEAD'])).toBe(await run(['rev-parse', 'main'], remote));
+    });
+
+    test('a branch that moved on both sides asks how it comes together, and merges when told', async () => {
+        await act({ kind: 'publish' });
+        const other = join(root, 'other');
+        await cp(repo, other, { recursive: true });
+        await writeFile(join(other, 'one.txt'), 'from elsewhere\n');
+        await run(['commit', '--quiet', '--all', '--message', 'from elsewhere'], other);
+        await run(['push', '--quiet'], other);
+        await write('one.txt', 'from here\n');
+        await act({ kind: 'commit', subject: 'from here', stageAll: true });
+
+        // Without a strategy the pull only fast-forwards, and says the two sides went their own way.
+        await expect(act({ kind: 'pull' })).rejects.toThrow(/moved on/);
+
+        const merged = await act({ kind: 'pull', strategy: 'merge' });
+        expect(merged.conflicts).toEqual(['one.txt']);
+        expect((await readStatus(repo)).operation).toBe('merge');
+    });
+
+    test('a failure carries what git wrote', async () => {
+        const progress: Progress = { phases: [], lines: [] };
+        await expect(act({ kind: 'merge', ref: 'nope' }, progress)).rejects.toThrow(/nope/);
+        expect(progress.phases).toContain('failed');
+    });
 });
