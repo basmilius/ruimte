@@ -17,8 +17,8 @@ import type {
 } from '@ruimte/contracts';
 import { contextChunks, daemonVoiceTools, liveSessionBody, VoiceCompletionDelivery, VoiceToolLoop, type LiveEvent } from '@ruimte/voice';
 import { voiceActionCall, type ServerActionContext, type VoiceCaller, type VoiceOpenProject } from '../actions/context.ts';
+import { type CanvasHost } from '../canvas/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import { type CanvasHost } from '../tools/host.ts';
 import { voicePolicy } from './action-policy.ts';
 import type { VoiceClock } from './clock.ts';
 import { LiveError, type OpenAiLive } from './openai-live.ts';

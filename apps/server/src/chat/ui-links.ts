@@ -6,10 +6,10 @@ import { isNotFound } from '@adecore/utils/errors';
 import { fileExists } from '@adecore/utils/fs';
 import { isWithin } from '@adecore/utils/path';
 import type { ChatInfo } from '@ruimte/contracts';
+import { checkCwd } from '../canvas/project-paths.ts';
 import { locateFile } from '../fs/locate.ts';
 import { cachedRepos } from '../git/repo-cache.ts';
 import { git, toplevel } from '../git/run.ts';
-import { checkCwd } from '../tools/project-paths.ts';
 import { UiSourceAccessSchema, type UiSourceAccess } from './ui-access.ts';
 import type { UiSourceHosts } from './ui-sources.ts';
 

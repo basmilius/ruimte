@@ -2,8 +2,8 @@ import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionOutput } from '@ruimte/actions';
 import { z } from 'zod';
 import { READ_MAX_CHARS } from '../actions/computer-actions.ts';
+import { field, requiredField, yesNo } from '../canvas/host.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { field, requiredField, yesNo } from './host.ts';
 import { defineTool, defineToolkit, type ToolCall } from './tool.ts';
 
 type ComputerState = ActionOutput<'computer.state'>;

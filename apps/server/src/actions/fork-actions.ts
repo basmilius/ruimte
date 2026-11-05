@@ -1,8 +1,8 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
-import { depthForOpening } from '../tools/depth.ts';
-import { modeForOpening } from '../tools/mode.ts';
-import { refuseOtherMachine } from '../tools/remote-node.ts';
+import { depthForOpening } from '../canvas/depth.ts';
+import { modeForOpening } from '../canvas/mode.ts';
+import { refuseOtherMachine } from '../canvas/remote-node.ts';
 import { hostService, agentCallOf, type ServerActionContext } from './context.ts';
 
 export const forkActions: ActionHandlers<ServerActionContext> = {

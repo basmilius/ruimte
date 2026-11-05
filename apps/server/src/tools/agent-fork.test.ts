@@ -4,9 +4,9 @@ import { join } from 'node:path';
 import { ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ChatTurnItem, ProjectCanvasView, ProjectContent, ProjectNode, RuntimeMode } from '@ruimte/contracts';
+import { MAX_AGENT_DEPTH, MAX_OPENED_PER_CALLER } from '../canvas/depth.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
-import { MAX_AGENT_DEPTH, MAX_OPENED_PER_CALLER } from './depth.ts';
 
 function chatNode(id: string, title: string, x: number): ProjectNode {
     return { id, kind: 'chat', title, x, y: 0, w: 560, h: 640, provider: 'claude', providerFixed: true };

@@ -1,7 +1,7 @@
 import { LIVE_STREAM_MAGIC, encodeLiveStreamFrame, liveStreamContentType } from '@ruimte/contracts';
 import { decideAccess, originAllowed, type AccessOptions } from '../auth/access.ts';
-import { STREAMING_DISABLED_MESSAGE } from '../handlers/streaming.ts';
 import type { LiveStreamHub } from './live-stream.ts';
+import { STREAMING_DISABLED_MESSAGE } from './streaming-gate.ts';
 
 export const LIVE_STREAM_PATH = '/live-stream';
 

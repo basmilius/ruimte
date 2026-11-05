@@ -1,8 +1,8 @@
 import { isRecord } from '@adecore/utils/record';
 import { AgentKindSchema, type AgentKind } from '@ruimte/contracts';
-import type { HookResult } from '../sessions/manager.ts';
-import { bearerToken } from './bearer.ts';
-import { hasHooks, takesHookContext } from './hooks.ts';
+import type { HookResult } from './manager.ts';
+import { bearerToken } from '../agents/bearer.ts';
+import { hasHooks, takesHookContext } from '../agents/hooks.ts';
 
 interface HookTarget {
     // Asked before the body is read, so a request with a made-up token costs no buffering.

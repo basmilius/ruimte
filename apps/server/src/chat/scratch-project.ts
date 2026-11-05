@@ -3,8 +3,8 @@ import { join } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { isEmptyChatView, type ProjectChatView, type ProjectNewChatPayload, type ProjectNewChatResult, type ProjectView } from '@ruimte/contracts';
 import { git } from '../git/run.ts';
-import { newChatId } from '../projects/scratch-folder.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
+import { newChatId } from '../projects/scratch-folder.ts';
 
 class ScratchError extends CodedError<'scratch-unavailable'> {}
 

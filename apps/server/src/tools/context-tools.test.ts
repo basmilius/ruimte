@@ -4,9 +4,9 @@ import { join } from 'node:path';
 import type { ActionResult } from '@ruimte/actions';
 import { serverActionCall } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
+import { type CanvasHost } from '../canvas/host.ts';
+import { projectReach, reachedPlace } from '../canvas/reach.ts';
 import { canvasFixture, root, store, projectId, pointAt, host, invoke } from './canvas-test-fixture.ts';
-import { type CanvasHost } from './host.ts';
-import { projectReach, reachedPlace } from './reach.ts';
 
 canvasFixture();
 

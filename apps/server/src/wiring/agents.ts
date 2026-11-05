@@ -2,7 +2,7 @@ import { AttachmentStore, BookmarkStore, ChatStore, ClaudeTitleReader, VisualSto
 import { AgentLineageStore, NoticeNotes, NoticeStore, TaskStore, restartBackgroundLimits, unshownNotes } from '@adecore/agents/coordination';
 import { AgentStore } from '../agents/agent-store.ts';
 import { CodexTitleReader } from '../agents/codex-title.ts';
-import { PendingPromptStore } from '../agents/pending-prompts.ts';
+import { PendingPromptStore } from '../canvas/pending-prompts.ts';
 import { artifactReport } from '../artifacts/artifact-report.ts';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { MoveJournal } from '../chat/move-journal.ts';
@@ -22,7 +22,7 @@ import { OutboxStore } from '../outbox/outbox.ts';
 import { agentChatOpening } from '../outbox/start-agent.ts';
 import { OutboxLink } from '../outbox/wiring.ts';
 import { OneShotPlace } from '../peering/one-shot-place.ts';
-import { UntrustedFolders } from '../peering/untrusted.ts';
+import { UntrustedFolders } from '../projects/untrusted.ts';
 import { isPlanFileName, PlanStore } from '../plans/plan-store.ts';
 import { projectAccountChooser } from '../projects/project-accounts.ts';
 import { ProjectProposals } from '../projects/project-proposals.ts';

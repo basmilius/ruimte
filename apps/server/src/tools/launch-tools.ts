@@ -1,6 +1,6 @@
 import { z } from 'zod';
+import { field, orNote, requiredField } from '../canvas/host.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { field, orNote, requiredField } from './host.ts';
 import { TAIL_INPUT, defineTool, defineToolkit } from './tool.ts';
 
 const HELD_LINE =

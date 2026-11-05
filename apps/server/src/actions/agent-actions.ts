@@ -2,8 +2,8 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { answerQuestion } from '@adecore/agents/coordination';
 import type { ActionHandlers } from '@ruimte/actions';
 import { chatNameOf, isAgentKind, isCanvasView, nodeChats, viewChats, type CanvasNodeKind, type ProjectView } from '@ruimte/contracts';
-import { field } from '../tools/host.ts';
-import { refuseOtherMachine } from '../tools/remote-node.ts';
+import { field } from '../canvas/host.ts';
+import { refuseOtherMachine } from '../canvas/remote-node.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 /* The caller's name as a message signs it: any chat by its own name, a later one of a design too, else its node on a canvas or the view it is. */

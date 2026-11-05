@@ -1,7 +1,7 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { z } from 'zod';
+import { field, orNote } from '../canvas/host.ts';
 import { jsonLines, runAction } from './action-tool.ts';
-import { field, orNote } from './host.ts';
 import { defineTool, defineToolkit, type ToolCall } from './tool.ts';
 
 const PERSON_INSTALLS =

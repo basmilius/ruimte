@@ -1,8 +1,8 @@
 import { CustomLanguageServerInputSchema, extensionChatOf } from '@ruimte/contracts';
 import { serverActionCall } from './actions/context.ts';
 import { serverActions } from './actions/server-actions.ts';
-import { HOOKS_PATH } from './agents/hook-receiver.ts';
-import { pruneHiddenChats } from './agents/prune-hidden-chats.ts';
+import { HOOKS_PATH } from './sessions/hook-receiver.ts';
+import { pruneHiddenChats } from './wiring/prune-hidden-chats.ts';
 import { dropEmptyMark } from './chat/scratch-project.ts';
 import { greetingLines } from './cli/greeting.ts';
 import type { ServerConfig } from './config.ts';

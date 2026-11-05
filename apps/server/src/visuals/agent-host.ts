@@ -1,7 +1,7 @@
 import type { VisualStore } from '@adecore/agents/chat';
+import type { VisualHost } from '../canvas/host.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { countUsage } from '../stats/usage-stats.ts';
-import type { VisualHost } from '../tools/host.ts';
 import { previewVisual, type VisualRenderer } from './renderer.ts';
 
 interface AgentVisualDeps {

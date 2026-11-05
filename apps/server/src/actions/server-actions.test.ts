@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import type { Notice } from '@adecore/agents/coordination';
 import { MAX_TITLE_LENGTH, type ActionInput } from '@ruimte/actions';
 import { NODE_SIZE, type ContextSource, type ProjectContent, type ProjectNode, type Task } from '@ruimte/contracts';
+import type { AgentState, CanvasHost } from '../canvas/host.ts';
 import { ContextRefusal, SubagentUnreadable } from '../context/context-store.ts';
 import { PlanStore } from '../plans/plan-store.ts';
 import { ProjectError } from '../projects/project-error.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
-import type { AgentState, CanvasHost } from '../tools/host.ts';
 import { serverActionCall } from './context.ts';
 import { serverActions } from './server-actions.ts';
 

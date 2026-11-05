@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
+import type { CanvasHost } from '../canvas/host.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { TemplateStore } from '../templates/template-store.ts';
-import type { CanvasHost } from './host.ts';
 import { templateToolkit } from './template-tools.ts';
 import { refusalCode, toolAnswer, toolCall } from './tool-test-helpers.ts';
 

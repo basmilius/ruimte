@@ -1,7 +1,7 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { MAX_PER_CALL } from '@ruimte/actions';
 import { z } from 'zod';
-import { placeOf, type AgentCall, type ProjectHost } from './host.ts';
+import { placeOf, type AgentCall, type ProjectHost } from '../canvas/host.ts';
 
 /* What every tool that changes several at once says of it, so an agent reaches for the one call and not a loop. */
 export const ONE_WRITE = 'one write of the project, one update on every screen, and the call changes all of them or, refused, none';

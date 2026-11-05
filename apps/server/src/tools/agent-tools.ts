@@ -2,11 +2,11 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { modeField } from '@adecore/agents/providers';
 import { MAX_OPENED_PER_CALLER, MAX_PROMPT_LENGTH } from '@ruimte/actions';
 import { z } from 'zod';
+import { AGENT_KINDS, agentKindField, chatKinds } from '../canvas/agents.ts';
+import { MAX_TITLE_LENGTH, field, lengthOf, titleField } from '../canvas/host.ts';
+import { effortFlag, modelFlag, modelLines } from '../canvas/model.ts';
+import { idList } from '../canvas/nodes.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { AGENT_KINDS, agentKindField, chatKinds } from './agents.ts';
-import { MAX_TITLE_LENGTH, field, lengthOf, titleField } from './host.ts';
-import { effortFlag, modelFlag, modelLines } from './model.ts';
-import { idList } from './nodes.ts';
 import { nextLine } from './task-tools.ts';
 import { defineToolkit, PROJECT_INPUT, VIEW_INPUT, type GuideTopic } from './tool.ts';
 

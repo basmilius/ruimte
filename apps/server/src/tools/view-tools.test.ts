@@ -13,6 +13,7 @@ import {
     PROJECT_ICON_NAMES,
     type ProjectCanvasView
 } from '@ruimte/contracts';
+import { MAX_PROJECT_VIEWS, VIEW_KINDS } from '../canvas/views.ts';
 import { peerCanvasId } from '../projects/peer-links.ts';
 import { rawPrivateViews, setPrivateViews } from '../projects/project-file-test-helpers.ts';
 import {
@@ -42,7 +43,6 @@ import {
     viewOnDisk
 } from './canvas-test-fixture.ts';
 import { DIAGRAM_EXAMPLE, viewToolkit } from './view-tools.ts';
-import { MAX_PROJECT_VIEWS, VIEW_KINDS } from './views.ts';
 
 canvasFixture();
 

@@ -1,11 +1,11 @@
 import { chatNoticeTargets, showNotices, steerNotices, withinHops, type NoticeChat, type NoticeStore } from '@adecore/agents/coordination';
+import type { MessageHost } from '../canvas/host.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
 import type { OutboxWork } from '../outbox/outbox.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { PushService } from '../push/service.ts';
 import type { SessionManager } from '../sessions/manager.ts';
-import type { MessageHost } from '../tools/host.ts';
 import { deliverNotice, MESSAGE_WORDS } from './notices.ts';
 
 interface AgentMessageDeps {

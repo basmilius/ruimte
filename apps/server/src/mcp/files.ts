@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
 import { isWithin } from '@adecore/utils/path';
+import { outsidePath } from '../canvas/project-paths.ts';
 import { realOrNull } from '../disk/real-path.ts';
-import { outsidePath } from '../tools/project-paths.ts';
 import type { ImageFiles } from './visual-images.ts';
 
 /* A file the caller may hand a tool, open, which its user reads from and closes. */

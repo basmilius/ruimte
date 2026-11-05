@@ -1,4 +1,3 @@
-import { scratchFolderOf } from './scratch-folder.ts';
 import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, rm, rmdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
@@ -78,6 +77,7 @@ import { isIconFile, sameIcon, ProjectSummaries } from './project-summaries.ts';
 import { PROJECT_WRITE_IO, ProjectWriteRaced, ProjectWriteStuck, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
 import { referablesOfViews } from './references.ts';
 import { RemoteStore, idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines } from './remote-store.ts';
+import { scratchFolderOf } from './scratch-folder.ts';
 
 function asProjectError(e: unknown): unknown {
     if (e instanceof ProjectWriteRaced) {

@@ -2,7 +2,7 @@ import { probeDevServers } from '../browser/dev-servers.ts';
 import type { BrowserManager } from '../browser/manager.ts';
 import type { BrowserPages } from '../browser/pages.ts';
 import type { Dispatcher } from '../dispatcher.ts';
-import { streamingGate } from './streaming.ts';
+import { streamingGate } from '../streams/streaming-gate.ts';
 
 export function registerBrowserHandlers(dispatcher: Dispatcher, browsers: BrowserManager, pages: BrowserPages, streamingAllowed: () => boolean): void {
     const requireStreaming = streamingGate(streamingAllowed);

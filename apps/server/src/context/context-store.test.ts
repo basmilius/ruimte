@@ -3,9 +3,9 @@ import { renderTranscript } from '@adecore/agents/context';
 import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
 import { ArtifactError } from '../artifacts/artifact-names.ts';
 import { artifactReport } from '../artifacts/artifact-report.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { catalog } from '../mcp/catalog.ts';
 import { callTool } from '../mcp/mcp-route.ts';
-import type { CanvasHost } from '../tools/host.ts';
 import type { ChatUsageInfo } from './chat-usage.ts';
 import { ContextStore, MAX_SCREEN_LINES } from './context-store.ts';
 

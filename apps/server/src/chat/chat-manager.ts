@@ -25,7 +25,7 @@ import type {
     Task
 } from '@ruimte/contracts';
 import { HOST_TASK_ORIGIN } from '@ruimte/contracts';
-import type { FirstPrompt } from '../agents/pending-prompts.ts';
+import type { FirstPrompt } from '../canvas/pending-prompts.ts';
 import {
     chatNote,
     chatPrompt,

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
+import type { CanvasHost } from '../canvas/host.ts';
 import type { ProposalAnswer, ProposalAsk } from '../projects/project-proposals.ts';
-import type { CanvasHost } from './host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 let asks: ProposalAsk[];

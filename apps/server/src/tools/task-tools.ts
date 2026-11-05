@@ -1,7 +1,7 @@
 import { z } from 'zod';
+import { titleField } from '../canvas/host.ts';
+import { taskLine } from '../canvas/tasks.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { titleField } from './host.ts';
-import { taskLine } from './tasks.ts';
 import { defineToolkit, PROJECT_INPUT } from './tool.ts';
 
 const NEEDS_TARGET = 'task_new needs id, the agent to give the task to';

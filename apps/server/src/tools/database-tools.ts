@@ -4,9 +4,9 @@ import { DATABASE_QUERY_MAX_ROWS, DATABASE_QUERY_ROWS } from '@ruimte/actions';
 import { VISUAL_LIMITS } from '@ruimte/contracts';
 import { z } from 'zod';
 import { visualRow } from '../actions/visual-actions.ts';
+import { field, orNote } from '../canvas/host.ts';
 import { binarySize } from '../database/table-visual.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { field, orNote } from './host.ts';
 import { defineToolkit } from './tool.ts';
 import { SHOWN_LINE } from './visual-tools.ts';
 

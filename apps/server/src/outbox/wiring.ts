@@ -11,7 +11,7 @@ import {
     type TaskStore
 } from '@adecore/agents/coordination';
 import type { Task } from '@ruimte/contracts';
-import type { PendingPromptStore } from '../agents/pending-prompts.ts';
+import type { PendingPromptStore } from '../canvas/pending-prompts.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { wireSummaries, type SummaryWiring } from '../chat/summary.ts';
 import { MESSAGE_WORDS } from '../context/notices.ts';

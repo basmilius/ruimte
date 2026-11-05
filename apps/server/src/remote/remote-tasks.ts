@@ -1,12 +1,12 @@
 import { CodedError } from '@adecore/agents';
 import type { TaskCoordinator, TaskStore } from '@adecore/agents/coordination';
 import { BYTES_CHUNK_MAX, type PeerResultResult, type PeerTaskStartPayload, type PeerTaskStartResult } from '@ruimte/contracts';
+import { MAX_RESULT_LENGTH } from '../canvas/tasks.ts';
 import { errorText } from '../error-text.ts';
 import { BundleStore, bundleIdFor, fetchBundle, makeBundle } from '../git/bundles.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import type { OutboxEntry, OutboxWork, StartRemoteAgentEntry, StopRemoteAgentEntry, TakeRemoteResultEntry } from '../outbox/outbox.ts';
-import { MAX_RESULT_LENGTH } from '../tools/tasks.ts';
 import { RECONNECT_LIFETIME_MS, peerTarget } from './connect-peer.ts';
 import type { PeerLink } from './peer-connection.ts';
 import type { RemoteConnections } from './remote-connections.ts';

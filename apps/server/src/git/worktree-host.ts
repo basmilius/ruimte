@@ -1,7 +1,7 @@
 import { isWithin } from '@adecore/utils/path';
 import type { Worktree } from '@ruimte/contracts';
+import type { CheckoutHost, WorktreeHost, WorktreeWant } from '../canvas/host.ts';
 import { realOrNull } from '../disk/real-path.ts';
-import type { CheckoutHost, WorktreeHost, WorktreeWant } from '../tools/host.ts';
 import { diffCheckout } from './diff.ts';
 import { mergeBaseWith } from './status.ts';
 import type { WorktreeMerge } from './worktree-merge.ts';

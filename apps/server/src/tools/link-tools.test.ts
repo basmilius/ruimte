@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { EDGE_ROLES } from '@ruimte/contracts';
+import { MAX_LINKS } from '../canvas/links.ts';
 import { canvasFixture, knobs, store, projectId, elsewhere, invoke, onDisk, canvasOnDisk, madeId, seed } from './canvas-test-fixture.ts';
-import { MAX_LINKS } from './links.ts';
 
 canvasFixture();
 

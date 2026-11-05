@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { join } from 'node:path';
 import type { ProjectContent } from '@ruimte/contracts';
-import type { CanvasHost } from '../tools/host.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import type { InputSchema, Tool } from './catalog.ts';
 import { visibleTools } from './mcp-route.ts';
 import FIXTURE from './tool-list.fixture.json';

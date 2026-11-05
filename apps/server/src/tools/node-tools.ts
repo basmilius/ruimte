@@ -2,12 +2,12 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { NODE_ACCENT_NAMES, isCanvasView, isNodeAccent, type NodeAccent } from '@ruimte/contracts';
 import { z } from 'zod';
 import { COLOR_LINES } from '../actions/node-actions.ts';
+import { field, placeOf, requiredField, titleField } from '../canvas/host.ts';
+import { JSON_NODE_KINDS, NODE_NEW_KINDS, kindLine } from '../canvas/node-kinds.ts';
+import { idList } from '../canvas/nodes.ts';
+import { ARRANGE_LAYOUTS, type ArrangeLayout } from '../canvas/placement.ts';
 import { canvasIdFor, defineActionTool, pointedCanvas, runAction } from './action-tool.ts';
 import { ONE_WRITE, idsInput, jsonBatch, oneWrite } from './batch.ts';
-import { field, placeOf, requiredField, titleField } from './host.ts';
-import { JSON_NODE_KINDS, NODE_NEW_KINDS, kindLine } from './node-kinds.ts';
-import { idList } from './nodes.ts';
-import { ARRANGE_LAYOUTS, type ArrangeLayout } from './placement.ts';
 import { defineTool, defineToolkit, PROJECT_INPUT, REVISION_INPUT, VIEW_INPUT } from './tool.ts';
 
 const OFF_CANVAS = 'This session is not on a canvas; name one with view';

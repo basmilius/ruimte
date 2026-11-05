@@ -1,9 +1,9 @@
 import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
+import type { AgentStateHost } from '../canvas/host.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { OutboxStore } from '../outbox/outbox.ts';
 import type { HiddenAgentStore } from '../projects/hidden-agents.ts';
 import type { SessionManager } from '../sessions/manager.ts';
-import type { AgentStateHost } from '../tools/host.ts';
 
 export interface AgentStateSources {
     outbox: Pick<OutboxStore, 'list'>;

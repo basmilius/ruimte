@@ -1,11 +1,11 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
 import { EDGE_ROLES, isAgentKind, lineEndOf, type EdgeRole, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
-import { canvasNamed } from '../tools/host.ts';
-import { MAX_LINKS, ROLE_LINES, edgeLines, ownEnd } from '../tools/links.ts';
-import { newId, nodeLines } from '../tools/nodes.ts';
-import { refuseMissingNodes } from '../tools/own-view.ts';
-import { refuseOtherMachine } from '../tools/remote-node.ts';
+import { canvasNamed } from '../canvas/host.ts';
+import { MAX_LINKS, ROLE_LINES, edgeLines, ownEnd } from '../canvas/links.ts';
+import { newId, nodeLines } from '../canvas/nodes.ts';
+import { refuseMissingNodes } from '../canvas/own-view.ts';
+import { refuseOtherMachine } from '../canvas/remote-node.ts';
 import { agentCallOf, type ServerActionCall, type ServerActionContext } from './context.ts';
 
 type DrawnEdge = ActionOutput<'link.create'>['edges'][number];

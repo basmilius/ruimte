@@ -7,12 +7,12 @@ import {
     type ToolSpec as CoreToolSpec
 } from '@adecore/agents/context';
 import { z } from 'zod';
+import type { AgentCall } from '../canvas/host.ts';
+import { reachedPlace } from '../canvas/reach.ts';
 import type { AgentFiles } from '../mcp/files.ts';
 import type { ArtifactUploads } from '../mcp/uploads.ts';
 import { countToolCall } from '../stats/usage-stats.ts';
 import { noteActivity } from '../telemetry/activity.ts';
-import type { AgentCall } from './host.ts';
-import { reachedPlace } from './reach.ts';
 
 /* Who sees a tool: every caller, only an AI chat, only while computer use is on, only in a project with a database connection. */
 export type Audience = 'everyone' | 'chat' | 'computer' | 'database';

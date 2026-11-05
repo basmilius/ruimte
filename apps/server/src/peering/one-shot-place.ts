@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { UntrustedFolders } from './untrusted.ts';
+import type { UntrustedFolders } from '../projects/untrusted.ts';
 
 /*
  * Where a one-shot CLI run (commit message, conflict help, chat title) has its working directory. A

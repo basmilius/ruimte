@@ -1,4 +1,4 @@
-import type { RoutineAgentHost } from '../tools/host.ts';
+import type { RoutineAgentHost } from '../canvas/host.ts';
 import type { Routines } from './routines.ts';
 
 /*

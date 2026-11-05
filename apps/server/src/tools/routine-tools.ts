@@ -9,9 +9,9 @@ import {
     type RoutineSchedule
 } from '@ruimte/contracts';
 import { z } from 'zod';
+import { field, orNote, requiredField } from '../canvas/host.ts';
+import { modelFlag } from '../canvas/model.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { field, orNote, requiredField } from './host.ts';
-import { modelFlag } from './model.ts';
 import { defineTool, defineToolkit } from './tool.ts';
 
 const DAY_NAMES = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;

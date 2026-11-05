@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { withViewAsNode, type ProjectCanvasView } from '@ruimte/contracts';
+import { NEW_NODE, type CanvasHost } from '../canvas/host.ts';
+import { projectReach } from '../canvas/reach.ts';
 import {
     canvasFixture,
     root,
@@ -23,8 +25,6 @@ import {
     watchWrites,
     CANVAS_LINES
 } from './canvas-test-fixture.ts';
-import { NEW_NODE, type CanvasHost } from './host.ts';
-import { projectReach } from './reach.ts';
 
 canvasFixture();
 

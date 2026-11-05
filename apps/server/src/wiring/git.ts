@@ -1,3 +1,4 @@
+import type { CheckoutHost } from '../canvas/host.ts';
 import { MachineHome } from '../disk/machine-home.ts';
 import { SharedWatch } from '../disk/shared-watch.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
@@ -14,7 +15,6 @@ import { checkoutHost } from '../git/worktree-host.ts';
 import { WorktreeMerge } from '../git/worktree-merge.ts';
 import { Worktrees } from '../git/worktrees.ts';
 import type { PeerLinks } from '../projects/peer-links.ts';
-import type { CheckoutHost } from '../tools/host.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
 import type { AgentsBundle } from './agents.ts';
 

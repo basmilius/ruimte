@@ -1,6 +1,6 @@
 import type { ActionRegistry } from '@ruimte/actions';
 import { voiceActionCall, type ServerActionContext } from '../actions/context.ts';
-import type { CanvasHost } from '../tools/host.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import type { ExtensionHostOptions } from './extension-host.ts';
 import { outputOf } from './machine-actions.ts';
 import { ExtensionRefusal } from './refusal.ts';

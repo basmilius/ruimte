@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { MAX_KEY_COMBOS, MAX_TYPED_LENGTH } from '@ruimte/actions';
 import { READ_MAX_CHARS } from '../actions/computer-actions.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { computerSetup, SAMPLE_STATE, turnEnded, until, type ComputerSetup } from '../computer/computer-test-helpers.ts';
-import type { CanvasHost } from './host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 /* Only what a computer tool reaches: where the caller stands, and the machine's computer use. */

@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises';
 import { VisualStore } from '@adecore/agents/chat';
 import { showNotices, NoticeNotes, unshownNotes, NoticeStore, type Notice } from '@adecore/agents/coordination';
 import type { ContextSource } from '@ruimte/contracts';
-import type { FirstPrompt } from '../agents/pending-prompts.ts';
+import type { FirstPrompt } from '../canvas/pending-prompts.ts';
 import { chatPrompt, toolsNote } from '../context/context-note.ts';
 import { deliverNotice, MESSAGE_WORDS } from '../context/notices.ts';
 import { referenceNote, type Reference } from '../projects/references.ts';

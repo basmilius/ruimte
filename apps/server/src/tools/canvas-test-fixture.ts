@@ -19,8 +19,9 @@ import {
     type RuntimeMode,
     type Worktree
 } from '@ruimte/contracts';
-import { StartClaims } from '../actions/start-claims.ts';
 import { ArtifactError } from '../artifacts/artifact-names.ts';
+import type { AgentStart, CanvasHost } from '../canvas/host.ts';
+import { StartClaims } from '../canvas/start-claims.ts';
 import { ManualTimers } from '../computer/computer-test-helpers.ts';
 import type { NoticeDelivery } from '../context/notices.ts';
 import { DatabaseAccessStore } from '../database/agent-access.ts';
@@ -36,7 +37,6 @@ import { documentOnDisk, projectLinks } from '../projects/project-file-test-help
 import { ProjectStore } from '../projects/project-store.ts';
 import { resolveReference, resolveReferences, type Reference } from '../projects/references.ts';
 import type { SessionEvent } from '../wire.ts';
-import type { AgentStart, CanvasHost } from './host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 /* What a test turns between the fakes and the machine, reset before every test. */

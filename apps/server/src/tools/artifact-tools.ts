@@ -2,9 +2,9 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { ARTIFACT_KINDS, type Artifact, type ArtifactSummary, type ArtifactVersion } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_READ_BYTES } from '../artifacts/artifacts.ts';
+import { field, orNote, requiredField } from '../canvas/host.ts';
 import { stageArtifact } from '../mcp/uploads.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { field, orNote, requiredField } from './host.ts';
 import { defineToolkit } from './tool.ts';
 
 function versionLine(artifact: Artifact, version: ArtifactVersion): string {

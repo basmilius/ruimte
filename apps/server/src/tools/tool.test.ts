@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import type { CanvasHost } from './host.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 // The input is checked before the tool reaches the host, so a host with nothing in it is enough.

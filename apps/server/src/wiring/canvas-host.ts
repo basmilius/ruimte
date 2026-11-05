@@ -1,5 +1,7 @@
 import { chatRequests } from '@adecore/agents/coordination';
-import { agentStates, openedAgentCount } from '../agents/agent-state.ts';
+import { agentStates, openedAgentCount } from './agent-state.ts';
+import type { CanvasHost } from '../canvas/host.ts';
+import { projectReach } from '../canvas/reach.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { chatForkDeps, forkForAgent } from '../chat/fork.ts';
 import { agentMessages } from '../context/agent-messages.ts';
@@ -11,8 +13,6 @@ import { agentStartHost } from '../outbox/start-agent.ts';
 import type { PushService } from '../push/service.ts';
 import { agentRoutines } from '../routines/agent-host.ts';
 import type { SessionManager } from '../sessions/manager.ts';
-import type { CanvasHost } from '../tools/host.ts';
-import { projectReach } from '../tools/reach.ts';
 import { agentVisuals } from '../visuals/agent-host.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';

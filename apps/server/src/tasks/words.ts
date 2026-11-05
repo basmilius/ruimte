@@ -1,5 +1,5 @@
 import type { TaskWords } from '@adecore/agents/coordination';
-import { taskBrief } from '../tools/tasks.ts';
+import { taskBrief } from '../canvas/tasks.ts';
 
 /* What Ruimte's tasks say in a parent's and a child's thread, in the tools of its MCP server. */
 export const TASK_WORDS: TaskWords = {

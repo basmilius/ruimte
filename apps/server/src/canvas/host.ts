@@ -39,7 +39,6 @@ import {
     type WorktreeMergeResult
 } from '@ruimte/contracts';
 import { z } from 'zod';
-import type { StartClaims } from '../actions/start-claims.ts';
 import type { Artifacts } from '../artifacts/artifacts.ts';
 import type { DriveOutcome, ShotOutcome } from '../browser/drive.ts';
 import type { AgentForkInput, ForkOpener } from '../chat/fork.ts';
@@ -51,7 +50,7 @@ import type { DeviceDriver } from '../devices/agent-driver.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { AgentLanguage } from '../language/agent-language.ts';
 import type { StartRemoteAgentPayload } from '../outbox/outbox.ts';
-import type { UntrustedFolders } from '../peering/untrusted.ts';
+import type { UntrustedFolders } from '../projects/untrusted.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
 import type { DiagramStore } from '../projects/diagram-store.ts';
 import type { DrawingStore } from '../projects/drawing-store.ts';
@@ -65,6 +64,7 @@ import type { SecretAsk, SecretOutcome } from '../secrets/secret-requests.ts';
 import type { TemplateStore } from '../templates/template-store.ts';
 import type { VisualPreview } from '../visuals/renderer.ts';
 import type { ReachHost } from './reach.ts';
+import type { StartClaims } from './start-claims.ts';
 
 // The tools and actions reach the one sanitizer through the module they already import.
 export { DRY_RUN_PREVIEW, field, lengthOf, orNote, requiredField } from '@adecore/agents/context';

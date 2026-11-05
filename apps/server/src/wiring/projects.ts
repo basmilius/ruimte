@@ -1,5 +1,5 @@
 import { chatIsWorking } from '@ruimte/contracts';
-import { StartClaims } from '../actions/start-claims.ts';
+import { StartClaims } from '../canvas/start-claims.ts';
 import type { ComputerUse } from '../computer/computer-use.ts';
 import { errorText } from '../error-text.ts';
 import { isTrackedPath } from '../git/ignore.ts';

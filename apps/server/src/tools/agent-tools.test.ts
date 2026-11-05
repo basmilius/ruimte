@@ -6,8 +6,13 @@ import type { ActionOutput, ActionResult } from '@ruimte/actions';
 import { type ProjectCanvasView } from '@ruimte/contracts';
 import { serverActionCall, voiceActionCall, type VoiceCaller } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
+import { AGENT_KINDS } from '../canvas/agents.ts';
+import { MAX_AGENT_DEPTH, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH } from '../canvas/depth.ts';
+import { MAX_TITLE_LENGTH, NEW_NODE, type CanvasHost } from '../canvas/host.ts';
+import { MAX_LINKS } from '../canvas/links.ts';
+import { PLACEMENT_GAP, TEAM_COLUMNS } from '../canvas/placement.ts';
+import { projectReach } from '../canvas/reach.ts';
 import { MAX_ROLES, ROLES_SHAPE } from './agent-tools.ts';
-import { AGENT_KINDS } from './agents.ts';
 import {
     canvasFixture,
     knobs,
@@ -34,11 +39,6 @@ import {
     viewOnDisk,
     reloadLineage
 } from './canvas-test-fixture.ts';
-import { MAX_AGENT_DEPTH, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH } from './depth.ts';
-import { MAX_TITLE_LENGTH, NEW_NODE, type CanvasHost } from './host.ts';
-import { MAX_LINKS } from './links.ts';
-import { PLACEMENT_GAP, TEAM_COLUMNS } from './placement.ts';
-import { projectReach } from './reach.ts';
 
 canvasFixture();
 

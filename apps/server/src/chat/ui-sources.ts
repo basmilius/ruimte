@@ -15,10 +15,10 @@ import {
     type Task
 } from '@ruimte/contracts';
 import { z } from 'zod';
+import type { LaunchReading } from '../canvas/host.ts';
+import { checkCwd } from '../canvas/project-paths.ts';
 import type { AgentDatabases, DatabasePlace } from '../database/agent-databases.ts';
 import { realOrNull } from '../disk/real-path.ts';
-import type { LaunchReading } from '../tools/host.ts';
-import { checkCwd } from '../tools/project-paths.ts';
 import { UiSourceAccessSchema } from './ui-access.ts';
 import { resolveUiProjectLink } from './ui-links.ts';
 import { UI_SOURCE_ARGS } from './ui-source-args.ts';

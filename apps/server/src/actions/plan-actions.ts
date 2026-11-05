@@ -2,8 +2,8 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { parsePlanDraft, parsePlanMarkdown, progressText, type PlanApplied, type PlanRefusal } from '@adecore/plan';
 import type { ActionActor, ActionHandlers } from '@ruimte/actions';
 import type { Plan, PlanActor, PlanOp } from '@ruimte/contracts';
-import { field, orNote, type CanvasHost } from '../tools/host.ts';
-import { callerKind } from '../tools/tasks.ts';
+import { field, orNote, type CanvasHost } from '../canvas/host.ts';
+import { callerKind } from '../canvas/tasks.ts';
 import { youAre, type ServerActionContext } from './context.ts';
 import { parseJson } from './json-input.ts';
 

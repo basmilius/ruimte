@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { CanvasHost, LanguageAgentHost } from './host.ts';
+import type { CanvasHost, LanguageAgentHost } from '../canvas/host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 let root = '';

@@ -9,7 +9,7 @@ import { PrSplits } from '../git/pr-split.ts';
 import { GitError } from '../git/run.ts';
 import { JsonFileStore } from '../json-file-store.ts';
 import type { OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
-import { wakefulClock } from '../outbox/wakeful-clock.ts';
+import { wakefulClock } from '../timers.ts';
 import type { SessionSink } from '../wire.ts';
 
 const START_INTERVAL_MS = 60_000;

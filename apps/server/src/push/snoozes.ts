@@ -2,7 +2,7 @@ import type { Clock } from '@adecore/agents/coordination';
 import { SnoozeListSchema, type Snooze } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { JsonFileStore } from '../json-file-store.ts';
-import { wakefulClock } from '../outbox/wakeful-clock.ts';
+import { wakefulClock } from '../timers.ts';
 import type { SessionSink } from '../wire.ts';
 
 /* Woke: the snooze ran out by itself, so a node still waiting is a new wait. Cleared: a person ended it early, and knows. */

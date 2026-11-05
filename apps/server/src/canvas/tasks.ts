@@ -1,7 +1,7 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
 import { designNodeChats, isCanvasView, isChatNode, isDesignView, viewChats, type ProjectContent, type Task } from '@ruimte/contracts';
-import type { FirstPrompt } from '../agents/pending-prompts.ts';
+import type { FirstPrompt } from './pending-prompts.ts';
 import { field } from './host.ts';
 
 /* A result past this is a document, not an answer; the wake shows at most the first 8 KiB of it anyway. */

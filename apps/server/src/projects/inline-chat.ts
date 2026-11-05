@@ -1,4 +1,3 @@
-import { newChatId } from './scratch-folder.ts';
 import { resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { isWithin } from '@adecore/utils/path';
@@ -11,6 +10,7 @@ import {
     type ProjectNewInlineChatResult
 } from '@ruimte/contracts';
 import type { ProjectStore } from './project-store.ts';
+import { newChatId } from './scratch-folder.ts';
 
 class InlineChatError extends CodedError<'project-not-found' | 'inline-path-outside' | 'inline-chat-not-found'> {}
 

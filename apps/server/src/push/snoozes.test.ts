@@ -6,7 +6,7 @@ import { ManualClock } from '@adecore/agents/testing';
 import type { ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
 import { registerSnoozeHandlers } from '../handlers/snooze.ts';
-import { MAX_WAIT_MS } from '../outbox/wakeful-clock.ts';
+import { MAX_WAIT_MS } from '../timers.ts';
 import type { SessionEvent, ClientConnection } from '../wire.ts';
 import { SnoozeStore, type SnoozeChange } from './snoozes.ts';
 

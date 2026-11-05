@@ -1,8 +1,8 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionOutput } from '@ruimte/actions';
 import { z } from 'zod';
+import { field, yesNo } from '../canvas/host.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { field, yesNo } from './host.ts';
 import { defineTool, defineToolkit, VIEW_INPUT } from './tool.ts';
 
 const NEEDS_ID = 'id needs the id of a browser node';

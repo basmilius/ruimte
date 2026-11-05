@@ -1,6 +1,6 @@
 import { z } from 'zod';
+import { field, requiredField } from '../canvas/host.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { field, requiredField } from './host.ts';
 import { defineToolkit } from './tool.ts';
 
 const ID_TEXT = 'As agent_start or agent_team answered it';

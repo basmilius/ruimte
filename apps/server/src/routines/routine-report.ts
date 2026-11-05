@@ -1,5 +1,5 @@
 import type { RoutineListResult } from '@ruimte/contracts';
-import { field } from '../tools/host.ts';
+import { field } from '../canvas/host.ts';
 import { approvalOf, runStateOf, scheduleText } from '../tools/routine-tools.ts';
 
 // The newest runs a read prints; the stage and `routine_list` reach the rest.

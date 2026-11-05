@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { ProjectContent } from '@ruimte/contracts';
-import type { CanvasHost } from '../tools/host.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { DeviceDriver } from './agent-driver.ts';
 import { IosSimulatorBackend } from './ios-simulator.ts';

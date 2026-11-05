@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { connectionOpener, type ClientChannel, type ConnectionServices } from '../connection.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
-import type { CanvasHost } from '../tools/host.ts';
 import { VoiceKeyStore } from '../voice/key-store.ts';
 import { VoicePreferencesStore } from '../voice/preferences-store.ts';
 import type { ClientAccess, ClientConnection } from '../wire.ts';

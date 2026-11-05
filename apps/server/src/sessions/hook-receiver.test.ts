@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { HookResult } from '../sessions/manager.ts';
+import type { HookResult } from './manager.ts';
 import { handleHookRequest } from './hook-receiver.ts';
 
 function target(result: HookResult) {

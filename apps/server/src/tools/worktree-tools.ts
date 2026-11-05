@@ -1,7 +1,7 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { z } from 'zod';
+import { field, orNote, requiredField } from '../canvas/host.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { field, orNote, requiredField } from './host.ts';
 import { TAIL_INPUT, defineToolkit } from './tool.ts';
 
 function branchInput(tool: string) {

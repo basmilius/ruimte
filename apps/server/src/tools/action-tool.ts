@@ -4,8 +4,8 @@ import { z } from 'zod';
 import { serverActionCall } from '../actions/context.ts';
 import { PROJECT_WRITES } from '../actions/revision.ts';
 import { serverActions } from '../actions/server-actions.ts';
+import { canvasLines, placeOf, type AgentCall } from '../canvas/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import { canvasLines, placeOf, type AgentCall } from './host.ts';
 import { defineTool, REVISION_INPUT, type Tool, type ToolSpec } from './tool.ts';
 
 /* What the daemon's registry answers when a handler failed outright rather than refused. */

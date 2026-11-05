@@ -4,8 +4,8 @@ import { DrawingEditSchema, type DrawingEditMint } from '@adecore/drawing';
 import type { ActionHandlers } from '@ruimte/actions';
 import { isCanvasView, isDrawingView, type ProjectContent, type ProjectDrawingView } from '@ruimte/contracts';
 import type { z } from 'zod';
+import { field, orNote, type CanvasHost } from '../canvas/host.ts';
 import { DrawingError } from '../projects/drawing-store.ts';
-import { field, orNote, type CanvasHost } from '../tools/host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 import { MAX_PROBLEMS, parseJson, pathOf, problemsRefusal } from './json-input.ts';
 

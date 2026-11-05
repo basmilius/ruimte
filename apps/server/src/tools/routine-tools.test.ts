@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { narrowerMode } from '@adecore/agents/providers';
 import type { Routine, RoutineEntry, RoutineMadeBy, RoutineRunNowResult, RuntimeMode } from '@ruimte/contracts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { agentRoutines } from '../routines/agent-host.ts';
 import type { Routines } from '../routines/routines.ts';
-import type { CanvasHost } from './host.ts';
 import { parseSchedule, routineToolkit, scheduleText } from './routine-tools.ts';
 import { launchReading, toolAnswer, toolCall } from './tool-test-helpers.ts';
 

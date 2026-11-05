@@ -13,8 +13,8 @@ import {
 import type { ActionOutput } from '@ruimte/actions';
 import { PLAN_LIMITS, PlanChecksSchema, PlanKindSchema, PlanStepStateSchema, type PlanItem } from '@ruimte/contracts';
 import { z } from 'zod';
+import { field } from '../canvas/host.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { field } from './host.ts';
 import { fieldLines } from './schema-lines.ts';
 import { defineTool, defineToolkit, type GuideTopic } from './tool.ts';
 

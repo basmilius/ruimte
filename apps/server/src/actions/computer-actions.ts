@@ -1,9 +1,9 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
+import { type ComputerHost } from '../canvas/host.ts';
 import type { OperateInput } from '../computer/computer-use.ts';
 import type { ActionResult, AppCommand, StateResult } from '../computer/helper-protocol.ts';
 import type { TreeView } from '../computer/tree-diff.ts';
-import { type ComputerHost } from '../tools/host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 type ComputerState = ActionOutput<'computer.state'>;

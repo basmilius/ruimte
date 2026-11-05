@@ -2,7 +2,7 @@ import type { DeviceControl } from '../devices/control.ts';
 import { DeviceError, type DeviceManager } from '../devices/manager.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import { captureFile, keepCapture, pngSize, writeCapture } from '../shots.ts';
-import { streamingGate } from './streaming.ts';
+import { streamingGate } from '../streams/streaming-gate.ts';
 
 export function registerDeviceHandlers(dispatcher: Dispatcher, devices: DeviceManager, streamingAllowed: () => boolean, home: string): void {
     const requireStreaming = streamingGate(streamingAllowed);

@@ -1,8 +1,8 @@
 import { PROJECT_PROPOSAL_LIMITS } from '@ruimte/contracts';
 import { z } from 'zod';
+import { field, orNote } from '../canvas/host.ts';
+import { reachableLines, reachableProjects } from '../canvas/reach.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { field, orNote } from './host.ts';
-import { reachableLines, reachableProjects } from './reach.ts';
 import { defineTool, defineToolkit, textInput } from './tool.ts';
 
 const projectList = defineTool('project', {

@@ -22,7 +22,10 @@ import {
     type RuntimeMode,
     type Task
 } from '@ruimte/contracts';
-import type { PendingPromptStore } from '../agents/pending-prompts.ts';
+import type { PendingPromptStore } from '../canvas/pending-prompts.ts';
+import { MAX_AGENT_DEPTH } from '../canvas/depth.ts';
+import { checkCwd } from '../canvas/project-paths.ts';
+import { taskFirstPrompt } from '../canvas/tasks.ts';
 import { errorText } from '../error-text.ts';
 import { BundleStore, fetchBundle, makeBundle } from '../git/bundles.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
@@ -34,9 +37,6 @@ import type { ProjectStore } from '../projects/project-store.ts';
 import { DEFAULT_RUNTIME_MODE } from '../providers/launch.ts';
 import { providerFor } from '../providers/registry.ts';
 import { peerTarget } from '../remote/connect-peer.ts';
-import { MAX_AGENT_DEPTH } from '../tools/depth.ts';
-import { checkCwd } from '../tools/project-paths.ts';
-import { taskFirstPrompt } from '../tools/tasks.ts';
 import { idTakenOutside, nodeOf, sameCanvas, stripHidden } from './peer-canvas.ts';
 
 /* What a machine that works here is given of this one: its tasks, bundles and holds, each judged by the link a person made. */

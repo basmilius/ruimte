@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { compileUiBlock, evaluateUiBlock, UI_GROUPS } from '@adecore/intelligent-ui';
-import type { CanvasHost } from './host.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 async function catalog(group: string): Promise<string[]> {

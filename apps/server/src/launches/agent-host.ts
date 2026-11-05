@@ -1,4 +1,4 @@
-import type { LaunchHost } from '../tools/host.ts';
+import type { LaunchHost } from '../canvas/host.ts';
 import type { LaunchRunner } from './runner.ts';
 import type { LaunchStore } from './store.ts';
 

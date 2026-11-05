@@ -2,11 +2,11 @@ import { CodedError } from '@adecore/agents';
 import { ToolRefusal } from '@adecore/agents/context';
 import type { AgentLineageStore } from '@adecore/agents/coordination';
 import { isCanvasView, sessionNodesOfView, type PeerLink, type ProjectCanvasView, type ProjectEdge } from '@ruimte/contracts';
+import { checkCwd } from '../canvas/project-paths.ts';
 import { type Dispatcher } from '../dispatcher.ts';
 import { idTakenOutside, nodeOf, sameCanvas, stripHidden } from '../peering/peer-canvas.ts';
 import { peerCanvasId, type PeerLinks } from '../projects/peer-links.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { checkCwd } from '../tools/project-paths.ts';
 
 /* What the requests of another machine's links reach of this one. */
 interface PeerHost {
