@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import type { OutboxClock } from '@adecore/agents/coordination';
+import type { Clock } from '@adecore/agents/coordination';
 import { GitPrWatchSchema, type ChangeSplit, type GitPrWatch, type GitPrWatchEndReason, type GitPullRequest } from '@ruimte/contracts';
 import { z } from 'zod';
 import { ClientSinks } from '../client-sinks.ts';
@@ -36,7 +36,7 @@ const FileSchema = z.object({ watches: z.array(RecordSchema) });
 
 interface PrWatchOptions {
     path?: string;
-    clock?: OutboxClock;
+    clock?: Clock;
     gh: GhRunner;
     /* Where the size of a pull request comes from; one of its own over `gh` without it. */
     splits?: PrSplits;
@@ -150,7 +150,7 @@ export class PrWatchStore {
     private readonly flying = new Set<Promise<void>>();
     private readonly sinks = new ClientSinks();
     private readonly options: PrWatchOptions;
-    private readonly clock: OutboxClock;
+    private readonly clock: Clock;
     private readonly random: () => number;
     private readonly splits: PrSplits;
     private readonly file: JsonFileStore<z.infer<typeof FileSchema>>;

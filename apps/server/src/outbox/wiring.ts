@@ -7,7 +7,7 @@ import {
     resumeRunParked,
     type AgentLineageStore,
     type NoticeStore,
-    type OutboxClock,
+    type Clock,
     type TaskStore
 } from '@adecore/agents/coordination';
 import type { Task } from '@ruimte/contracts';
@@ -123,7 +123,7 @@ interface OutboxWiringDeps {
     sessions: SessionManager;
     /* Raises attention on a node; the daemon pushes, a test only writes down that it happened. */
     alert(target: 'chat' | 'terminal', nodeId: string, title: string, body: string): void;
-    clock?: OutboxClock;
+    clock?: Clock;
     now?: () => number;
     log?: (line: string) => void;
     /* Refuses a directory an agent node may not start in, the same check the managers make. */

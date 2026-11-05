@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, readdir, rm, symlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { AttachmentStore, ChatStore } from '@adecore/agents/chat';
-import { AgentLineageStore, OutboxWorker, type OutboxClock } from '@adecore/agents/coordination';
+import { AgentLineageStore, OutboxWorker, type Clock } from '@adecore/agents/coordination';
 import { fakeClaude, fakeCodex, inProcess, type InProcessCli } from '@adecore/agents/testing';
 import { NODE_SIZE, type ChatItem, type ProjectContent } from '@ruimte/contracts';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
@@ -22,7 +22,7 @@ import { OutboxStore, type OutboxWork, type StartAgentEntry } from './outbox.ts'
 import { HEADLESS_TERMINAL, nodeMode, startAgentHandler, startAgentWork, type StartAgentDeps } from './start-agent.ts';
 
 /* Nothing here fails, so no retry is ever timed; the clock only has to say one moment. */
-const stillClock: OutboxClock = { now: () => 1, setTimeout: () => null, clearTimeout: () => undefined };
+const stillClock: Clock = { now: () => 1, setTimeout: () => null, clearTimeout: () => undefined };
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
