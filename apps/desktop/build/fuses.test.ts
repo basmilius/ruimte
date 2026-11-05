@@ -2,7 +2,13 @@ import { expect, test } from 'bun:test';
 import { FUSES, fuseProblems, readFuseWire } from './fuses.cjs';
 
 function binaryWith(states: string): Buffer {
-    return Buffer.concat([Buffer.from('some code before'), Buffer.from('dL7pKGdnNz796PbbjQWNKmHXBZaB9tsX'), Buffer.from([1, states.length]), Buffer.from(states), Buffer.from('after')]);
+    return Buffer.concat([
+        Buffer.from('some code before'),
+        Buffer.from('dL7pKGdnNz796PbbjQWNKmHXBZaB9tsX'),
+        Buffer.from([1, states.length]),
+        Buffer.from(states),
+        Buffer.from('after')
+    ]);
 }
 
 test('reads each fuse of the wire, a removed one included', () => {

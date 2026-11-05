@@ -55,7 +55,9 @@ describe('the client extensions of the shell', () => {
         const store = extensions();
 
         await expect(store.install(pack({ 'client/index.js': 'export {};' }, { 'chat.send': 'Sends' }))).rejects.toThrow('chat.send is not a permission');
-        await expect(store.install(pack({ 'client/index.js': 'export {};' }, { 'net:a.com; frame-src https:': 'Calls' }))).rejects.toThrow('does not name a host');
+        await expect(store.install(pack({ 'client/index.js': 'export {};' }, { 'net:a.com; frame-src https:': 'Calls' }))).rejects.toThrow(
+            'does not name a host'
+        );
         expect(await store.list()).toEqual([]);
     });
 

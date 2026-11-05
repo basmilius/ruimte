@@ -38,7 +38,7 @@ afterAll(async () => {
 
 const ask = (type: string, payload: unknown) => askOnce(dispatcher, { id: 'phone' }, type, payload);
 
-test("git requests on a file under the home answer machine-state and leave it where it is", async () => {
+test('git requests on a file under the home answer machine-state and leave it where it is', async () => {
     const secret = join('ruimte-home', 'local.key');
 
     expect(await ask('git.diff', { cwd: repo, path: secret, scope: 'worktree' })).toMatchObject(refused);
