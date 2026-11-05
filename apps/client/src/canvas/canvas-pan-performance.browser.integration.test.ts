@@ -115,8 +115,9 @@ interface Measured {
  * `RUIMTE_CANVAS_PROFILE=1` the functions the time went to and `RUIMTE_CANVAS_TRACE=1` the raster.
  */
 const BUDGET = {
-    // 1 to 3 ms (2 to 3 ms).
-    wheelFrameMs: 8,
+    // 1 to 3 ms (2 to 3 ms). GitHub's macOS runner, three virtual cores drawing on SwiftShader, measured 8.3 ms over 30 frames
+    // (run 42004168344) for a pan that does the same work, so it gets 10 ms there.
+    wheelFrameMs: process.env.GITHUB_ACTIONS === 'true' ? 10 : 8,
     // 4 to 7 ms (75 to 85 ms, waiting on the whole world being painted again every frame).
     dragFrameMs: 25,
     // Script alone, since the rest is the dots and handles near the pointer being painted: under 1 ms (800 ms, every line routed again for a dot near the pointer).
