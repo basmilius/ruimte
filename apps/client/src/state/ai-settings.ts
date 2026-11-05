@@ -1,7 +1,11 @@
 import prices from '@adecore/agents/usage/prices-snapshot.json' with { type: 'json' };
 import { cheapestEditorModel, EDITOR_ASSIST_PROVIDERS, type ProviderInfo, AgentKindSchema, type AgentKind, type ProviderAccounts } from '@ruimte/contracts';
+import { availableAgents } from '@/agents/creation';
 
-/* Which agent answers an inline edit; a null model is that CLI's cheapest available model, and no account is the CLI's default account. */
+/*
+ * Which agent answers an inline edit, or which one is the editor model. A null model is the CLI's own
+ * default for an inline edit and the cheapest available one for the editor model; no account is the CLI's default account.
+ */
 export interface InlineEditAgent {
     provider: AgentKind;
     model: string | null;
@@ -17,7 +21,7 @@ export type AgentChangesMode = (typeof AGENT_CHANGES_MODES)[number];
 
 export const DEFAULT_AGENT_CHANGES_MODE: AgentChangesMode = 'gutter';
 
-/* A stored pick that names no known CLI falls back to the default, and an unset model uses its cheapest available model. */
+/* A stored pick that names no known CLI falls back to the default, and an unset model stays unset. */
 export function inlineEditAgentFrom(stored: unknown): InlineEditAgent {
     const pick: Partial<Record<keyof InlineEditAgent, unknown>> = typeof stored === 'object' && stored !== null ? stored : {};
     const provider = AgentKindSchema.safeParse(pick.provider);
@@ -51,6 +55,17 @@ export const DEFAULT_GHOST_TEXT_MODE: GhostTextMode = 'request';
 
 export function ghostTextModeFrom(stored: unknown): GhostTextMode {
     return GHOST_TEXT_MODES.find((mode) => mode === stored) ?? DEFAULT_GHOST_TEXT_MODE;
+}
+
+/* The agent of an inline edit: the one the setting names while it is installed, else the first chat agent that is, on its CLI's own model. */
+export function inlineEditAgentOn(providers: readonly ProviderInfo[], wanted: InlineEditAgent): InlineEditAgent {
+    const offered = availableAgents(providers, 'chat');
+
+    if (offered.length === 0 || offered.some((provider) => provider.kind === wanted.provider)) {
+        return wanted;
+    }
+
+    return { provider: offered[0]!.kind, model: null };
 }
 
 /* An unset model follows the economy default; a concrete model remains the person's choice. */

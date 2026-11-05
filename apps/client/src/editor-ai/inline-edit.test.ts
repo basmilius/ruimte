@@ -396,7 +396,7 @@ describe('the mark in the gutter', () => {
 });
 
 describe('the agent of an inline edit', () => {
-    test('uses Haiku for an unset Claude model, even when the CLI defaults to Sonnet', () => {
+    test('leaves an unset Claude model to the CLI, which defaults to Sonnet, rather than the cheapest', () => {
         useSettings.setState({ aiInlineAgent: { provider: 'claude', model: null } });
         useProvidersStore.getState().setProviders('e1', [
             {
@@ -411,9 +411,18 @@ describe('the agent of an inline edit', () => {
                 ]
             } as never
         ]);
-        expect(inlineAgentNow('e1')).toEqual({ provider: 'claude', model: 'claude-haiku-5-5' });
+        expect(inlineAgentNow('e1')).toEqual({ provider: 'claude', model: null });
         useSettings.setState({ aiInlineAgent: { provider: 'claude', model: 'claude-sonnet-5-5' } });
         expect(inlineAgentNow('e1')).toEqual({ provider: 'claude', model: 'claude-sonnet-5-5' });
+    });
+
+    test('falls back on the chat agent that is installed when that is only Copilot or NanoGPT', () => {
+        useSettings.setState({ aiInlineAgent: { provider: 'claude', model: null } });
+        installed('copilot');
+        expect(inlineAgentNow('e1')).toEqual({ provider: 'copilot', model: null });
+
+        installed('nanogpt');
+        expect(inlineAgentNow('e1')).toEqual({ provider: 'nanogpt', model: null });
     });
 
     function installed(...kinds: string[]): void {

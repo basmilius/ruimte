@@ -8,11 +8,11 @@ import { ChevronDown } from 'lucide-react';
 import { useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { availableAgents } from '@/agents/creation';
-import { editorAgentOn } from '@/state/ai-settings';
+import { editorAgentOn, inlineEditAgentOn } from '@/state/ai-settings';
 
 interface InlineAgent {
     readonly provider: AgentKind;
-    /* Null chooses the cheapest available model. */
+    /* Null is the CLI's own default model for an inline edit, and the cheapest available one for the editor model. */
     readonly model: string | null;
     /* Absent is the CLI's default account. */
     readonly account?: string;
@@ -76,7 +76,9 @@ export function InlineAgentPicker({
     const providers = useProviders((row) => row.providers);
     const [open, setOpen] = useState(false);
     // An inline edit is no chat of its own yet; the project in view gives the rule.
-    const resolved = editorAgentOn(providers, agent, capability);
+    // The editor model names the kinds it offers; an inline edit offers every chat agent.
+    const resolved = kinds === undefined ? inlineEditAgentOn(providers, agent) : editorAgentOn(providers, agent, capability);
+    const owner = providers.find((provider) => provider.kind === resolved.provider);
     const choice = useAccountChoice(resolved.provider, resolved.account, '');
     const offered = availableAgents(providers, capability).filter((provider) => kinds === undefined || kinds.includes(provider.kind));
 
@@ -88,7 +90,7 @@ export function InlineAgentPicker({
             <ModelPicker
                 providers={offered}
                 provider={resolved.provider}
-                selection={{ model: resolved.model ?? '', options: {} }}
+                selection={{ model: resolved.model ?? owner?.defaultModel ?? '', options: {} }}
                 open={open}
                 onOpenChange={setOpen}
                 onChange={(provider, model) => onChange(provider === agent.provider ? { ...agent, model } : { provider, model })}

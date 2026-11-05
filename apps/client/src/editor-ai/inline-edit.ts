@@ -19,7 +19,7 @@ import { createStore, type StoreApi } from 'zustand';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import type { HostLanguage as EditorLanguage } from '@/language/host-language';
 import { isShortcut } from '@/language/shortcut-keys';
-import { editorAgentOn, inlineEditAccountOn } from '@/state/ai-settings';
+import { inlineEditAccountOn, inlineEditAgentOn } from '@/state/ai-settings';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
@@ -63,7 +63,7 @@ interface InlineEditView {
 
 /* The agent the setting names, or the first one installed when that one is not. */
 export function inlineAgentNow(endpointId: string): { provider: AgentKind; model: string | null; account?: string } {
-    const wanted = editorAgentOn(providersOf(endpointId).providers, useSettings.getState().aiInlineAgent);
+    const wanted = inlineEditAgentOn(providersOf(endpointId).providers, useSettings.getState().aiInlineAgent);
     const account = inlineEditAccountOn(knownAccounts(providerAccountsOf(endpointId)), wanted.provider, wanted.account);
 
     return { provider: wanted.provider, model: wanted.model, ...(account === undefined ? {} : { account }) };
