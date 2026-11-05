@@ -79,7 +79,8 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         enqueue: (projectId, chatId, work) => outboxLink.enqueue(projectId, chatId, work),
         entries: () => outbox.list(),
         removeEntry: (id) => outbox.remove(id),
-        onError: (what, error) => console.error(`${what}:`, errorText(error))
+        onError: (what, error) => console.error(`${what}:`, errorText(error)),
+        paused: (projectId) => projects.isClosed(projectId)
     });
     // The worker exists only after `wireOutbox`, and the reconnect is one of the handlers it is built with.
     let worker: OutboxWorker<OutboxWork> | null = null;

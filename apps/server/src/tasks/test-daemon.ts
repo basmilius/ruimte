@@ -284,7 +284,8 @@ export async function bootTestDaemon({
         random: () => 0.5,
         enqueue: (projectId, chatId, work) => outboxLink.enqueue(projectId, chatId, work),
         entries: () => outbox.list(),
-        removeEntry: (id) => outbox.remove(id)
+        removeEntry: (id) => outbox.remove(id),
+        paused: (projectId) => store.isClosed(projectId)
     });
     let remoteTasks: RemoteTasks | null = null;
     let peerTasks: PeerTasks | null = null;

@@ -135,13 +135,29 @@ describe('a pull request watch waking a chat', () => {
         expect(daemon.outbox.list()).toEqual([]);
     });
 
+    test('a chat in a closed project keeps the wake until the project opens again', async () => {
+        await daemon.chats.create({ chatId: 'chat-watcher', provider: 'claude', cwd: folder });
+        await store.closeProject(projectId, 'client-1');
+        await owe();
+        await daemon.worker.settled();
+
+        expect(turnsOf()).toEqual([]);
+        expect(daemon.outbox.list()).toMatchObject([{ kind: 'deliver-pr-watch', target: 'chat-watcher', attempts: 0 }]);
+
+        await store.openProject({ projectId });
+        await daemon.until(() => turnsOf().some((turn) => turn.label === 'PR #12: checks failed' && turn.state === 'done'));
+
+        expect(daemon.outbox.list()).toEqual([]);
+    });
+
     test('a watch that ended takes its wake along', async () => {
         await daemon.chats.create({ chatId: 'chat-watcher', provider: 'claude', cwd: folder });
         await daemon.worker.enqueue(projectId, 'chat-watcher', {
             kind: 'deliver-pr-watch',
             payload: { watchId: 'gone', key: 'k', text: 'Checks finished.', label: 'PR #12: checks failed' }
         });
-        await daemon.until(() => daemon.outbox.list().length === 0);
+        await daemon.worker.settled();
+        expect(daemon.outbox.list()).toEqual([]);
         expect(turnsOf()).toEqual([]);
     });
 });

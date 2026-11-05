@@ -287,6 +287,7 @@ export class ProjectStore {
     private readonly projectLocks = new KeyedSerializer();
     // Opening by folder decides which project a folder is, so two opens of one new folder never make two.
     private readonly opens = new Serializer();
+    private readonly reopenListeners = new Set<(projectId: string) => void>();
 
     // A folder a client names to open stops at the machine's own state, as its file requests do.
     private readonly machineHome: MachineHome;
@@ -598,6 +599,12 @@ export class ProjectStore {
         await this.registry.update((entries) => [...entries.filter((candidate) => candidate.projectId !== opened.projectId), opened]);
         // Every other client lists it too: a project new to this machine, or one moving to the top.
         this.publish(entry);
+
+        if (found.closedAt != null) {
+            for (const listener of this.reopenListeners) {
+                listener(entry.projectId);
+            }
+        }
 
         this.release(entry.projectId);
         await this.settleDesigns(entry.projectId, entry.folder, { views: document.views, shared: document.shared ?? [] });
@@ -1076,6 +1083,22 @@ export class ProjectStore {
         state.watcher?.close();
         state.cancelSettle?.();
         this.open.delete(projectId);
+    }
+
+    /* Whether the last client out closed this project, which puts it under Recent until someone opens it again. */
+    async isClosed(projectId: string): Promise<boolean> {
+        const entry = await this.registry.entry(projectId).catch(() => null);
+
+        return entry?.closedAt != null;
+    }
+
+    /* Hears a project that was closed open again, after the registry says so. */
+    onReopened(listener: (projectId: string) => void): () => void {
+        this.reopenListeners.add(listener);
+
+        return () => {
+            this.reopenListeners.delete(listener);
+        };
     }
 
     /*

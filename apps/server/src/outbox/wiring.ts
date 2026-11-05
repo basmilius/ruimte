@@ -8,6 +8,7 @@ import {
     type AgentLineageStore,
     type NoticeStore,
     type OutboxClock,
+    type OutboxOutcome,
     type TaskStore
 } from '@adecore/agents/coordination';
 import type { Task } from '@ruimte/contracts';
@@ -117,7 +118,7 @@ interface OutboxWiringDeps {
     lineage: AgentLineageStore;
     prompts: PendingPromptStore;
     notices: NoticeStore;
-    prWatches: Pick<PrWatchStore, 'has' | 'prune'>;
+    prWatches: Pick<PrWatchStore, 'has' | 'prune' | 'resume'>;
     tasks: TaskStore;
     chats: ChatManager;
     sessions: SessionManager;
@@ -244,6 +245,18 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
         enqueue
     });
 
+    // Closing keeps a chat's record for the next open, so nothing may start its CLI while the project is under Recent.
+    const inClosedProject = async (nodeId: string): Promise<boolean> => {
+        const place = projects.index.locate(nodeId);
+
+        return place !== null && (await projects.isClosed(place.projectId));
+    };
+
+    const unlessClosed =
+        <Entry extends { target: string }>(handler: (entry: Entry) => Promise<OutboxOutcome>) =>
+        async (entry: Entry): Promise<OutboxOutcome> =>
+            (await inClosedProject(entry.target)) ? 'wait' : handler(entry);
+
     const openChat = chatOpener({ chats, placed });
     const runParked = resumeRunParked(chats);
     const worker = new OutboxWorker({
@@ -265,25 +278,31 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
             }),
             'resume-run': resumeRunHandler(chats),
             // A node that left the document takes its entry along through the prune; one that is still owed runs here.
-            'resume-limit': (entry) => (placed(entry.target) ? chats.takeUpAfterLimit(entry.target, entry.payload.turnId) : Promise.resolve()),
+            'resume-limit': unlessClosed(async (entry) => {
+                if (placed(entry.target)) {
+                    await chats.takeUpAfterLimit(entry.target, entry.payload.turnId);
+                }
+            }),
             'background-limit': taskWiring.backgroundLimit,
             // A task another machine gave has no chat here to wake; its result goes back over the link instead.
-            'wake-parent': (entry) => {
+            'wake-parent': unlessClosed((entry) => {
                 const task = tasks.get(entry.payload.taskId);
                 return task !== undefined && deps.peerTasks?.isPeerTask(task) === true ? Promise.resolve() : taskWiring.wakeParent(entry);
-            },
-            'give-task': taskWiring.giveTask,
-            'deliver-message': deliverMessageHandler({
-                notices,
-                chat: openChat,
-                placed,
-                words: MESSAGE_WORDS
             }),
+            'give-task': taskWiring.giveTask,
+            'deliver-message': unlessClosed(
+                deliverMessageHandler({
+                    notices,
+                    chat: openChat,
+                    placed,
+                    words: MESSAGE_WORDS
+                })
+            ),
             'end-children': endChildren.handler,
             'deliver-summary': summaries.handler,
             'deliver-waiting': taskWiring.deliverWaiting,
             // A watch that ended takes its wake along; a chat in a turn keeps it until the turn ends.
-            'deliver-pr-watch': async (entry) => {
+            'deliver-pr-watch': unlessClosed(async (entry) => {
                 if (!prWatches.has(entry.payload.watchId)) {
                     return;
                 }
@@ -296,7 +315,7 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
                     return 'wait';
                 }
                 return chat.wake({ text: entry.payload.text, label: entry.payload.label, taskIds: [] }) ? undefined : 'wait';
-            },
+            }),
             'run-after-settle': (entry) => deps.runAfterSettle?.(entry) ?? Promise.resolve(),
             'connect-peer': (entry) => deps.connectPeer?.(entry) ?? Promise.resolve(),
             'routine-run': (entry) => deps.runRoutine?.(entry) ?? Promise.resolve(),
@@ -312,6 +331,14 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
         }
     });
     link.bind(worker);
+    projects.onReopened((projectId) => {
+        for (const entry of outbox.list()) {
+            if (projects.index.locate(entry.target)?.projectId === projectId) {
+                worker.wake(entry.target);
+            }
+        }
+        prWatches.resume(projectId);
+    });
 
     return {
         worker,

@@ -94,8 +94,9 @@ const fakeGh: GhRunner = (args) => {
     return Promise.resolve({ code: 0, stdout: JSON.stringify(page), stderr: '' });
 };
 
-function open(): PrWatchStore {
+function open(closedProjects?: ReadonlySet<string>): PrWatchStore {
     const store = new PrWatchStore({
+        ...(closedProjects ? { paused: (projectId: string) => Promise.resolve(closedProjects.has(projectId)) } : {}),
         path: join(home, 'pr-watches.json'),
         clock,
         gh: fakeGh,
@@ -346,6 +347,28 @@ describe('a pull request watch', () => {
         expect(polls).toBe(last + 1);
         await tick(store, 1);
         expect(polls).toBe(last + 2);
+    });
+
+    test('asks GitHub nothing while its project is closed, and polls at once when it opens again', async () => {
+        const closed = new Set<string>();
+        const store = open(closed);
+        await store.start('p', 'chat-1', '/repo');
+        closed.add('p');
+        finish('FAILURE');
+        const before = polls;
+
+        for (let step = 0; step < 10; step += 1) {
+            await tick(store, MAX_INTERVAL_MS);
+        }
+
+        expect(polls).toBe(before);
+        expect(wakes).toEqual([]);
+
+        closed.delete('p');
+        store.resume('p');
+        await tick(store, 0);
+
+        expect(polls).toBe(before + 1);
     });
 
     test('doubles the wait after a gh error, up to half an hour', async () => {
