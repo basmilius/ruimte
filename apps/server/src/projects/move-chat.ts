@@ -16,8 +16,8 @@ import {
 } from '@ruimte/contracts';
 import { moveClaudeTranscript } from '../chat/claude-move.ts';
 import { ChatError } from '../chat/errors.ts';
+import { realOrNull } from '../disk/real-path.ts';
 import { errorText } from '../error-text.ts';
-import { realOrNull } from '../fs/real-path.ts';
 import type { SnoozeStore } from '../push/snoozes.ts';
 import { ownFileConflicts, ownFileNames } from './move-info.ts';
 import type { MoveJournal } from './move-journal.ts';

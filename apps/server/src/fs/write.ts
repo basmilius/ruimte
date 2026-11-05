@@ -5,9 +5,9 @@ import { CodedError } from '@adecore/agents';
 import { KeyedSerializer } from '@adecore/utils/async';
 import { isWithin } from '@adecore/utils/path';
 import { FS_READ_MAX_TEXT_BYTES, type FsWriteResult } from '@ruimte/contracts';
+import { realOrNull } from '../disk/real-path.ts';
 import { isRuimteState } from '../projects/project-files.ts';
 import { ReadError, UTF8_BOM, inspect } from './read.ts';
-import { realOrNull } from './real-path.ts';
 
 type WriteErrorCode = 'stale' | 'too-large' | 'not-text' | 'ruimte-state' | 'not-writable';
 

@@ -4,7 +4,7 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { KeyedSerializer } from '@adecore/utils/async';
 import { ActionRefusal } from '@ruimte/actions';
 import { z } from 'zod';
-import { sha256 } from '../artifacts/artifact-fs.ts';
+import { sha256 } from '../disk/hash.ts';
 
 // How long a request id answers a retry; a claim older than this is forgotten at load and ignored after.
 const CLAIM_TTL_MS = 24 * 60 * 60 * 1000;

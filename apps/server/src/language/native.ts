@@ -3,8 +3,9 @@ import { access, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import type { LanguageServerKind } from '@ruimte/contracts';
-import { sha256, type FileDownload } from '../artifacts/artifact-fs.ts';
-import { extractEntries, readArchive, type ArchiveFormat } from './archive.ts';
+import { extractEntries, readArchive, type ArchiveFormat } from '../disk/archive.ts';
+import type { FileDownload } from '../disk/download.ts';
+import { sha256 } from '../disk/hash.ts';
 import phpRelease from './php-native-release.json' with { type: 'json' };
 import sqlRelease from './sql-native-release.json' with { type: 'json' };
 import { cargoBin } from './toolchain.ts';

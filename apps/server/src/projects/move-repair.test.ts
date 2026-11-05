@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { claudeProjectSlug } from '@adecore/agents/chat';
 import { ManualClock } from '@adecore/agents/testing';
 import { moveClaudeTranscript } from '../chat/claude-move.ts';
-import { MachineHome } from '../fs/machine-home.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { SnoozeStore } from '../push/snoozes.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
 import { repairChatMoves } from '../wiring/chat-move.ts';

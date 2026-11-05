@@ -1,6 +1,6 @@
 import { CodedError } from '@adecore/agents';
 import { ARTIFACT_KEY_PATTERN, ARTIFACT_LIMITS, type ArtifactKind } from '@ruimte/contracts';
-import { sniffMime } from '../fs/sniff.ts';
+import { sniffMime } from '../disk/sniff.ts';
 
 type ArtifactErrorCode =
     | 'not-found'

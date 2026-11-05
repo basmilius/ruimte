@@ -10,7 +10,7 @@ import type {
     GitOperation,
     GitResolvePayload
 } from '@ruimte/contracts';
-import { sha256 } from '../artifacts/artifact-fs.ts';
+import { sha256 } from '../disk/hash.ts';
 import type { ProgressSink } from './actions.ts';
 import { parseNumstat } from './diff.ts';
 import { nativePath } from './native-path.ts';

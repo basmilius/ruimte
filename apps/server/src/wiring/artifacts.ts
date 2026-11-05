@@ -4,7 +4,7 @@ import { pinnedVersionsOf } from '../artifacts/artifact-cleanup.ts';
 import { agentProvenance } from '../artifacts/artifact-provenance.ts';
 import { ArtifactStore } from '../artifacts/artifact-store.ts';
 import { Artifacts } from '../artifacts/artifacts.ts';
-import type { MachineHome } from '../fs/machine-home.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import type { Routines } from '../routines/routines.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { ProjectsBundle } from './projects.ts';

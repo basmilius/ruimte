@@ -73,4 +73,4 @@ export function zip(files: readonly FixtureFile[]): Uint8Array {
     return Buffer.concat([...parts, central, end]);
 }
 
-export { sha256 } from '../artifacts/artifact-fs.ts';
+export { sha256 } from './hash.ts';

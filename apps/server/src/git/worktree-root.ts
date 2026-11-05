@@ -3,7 +3,7 @@ import { access, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { isWithin } from '@adecore/utils/path';
-import { realOrSelf } from '../fs/real-path.ts';
+import { realOrSelf } from '../disk/real-path.ts';
 
 type WorktreeRootCheck = { root: string } | { refusal: 'root-refused' | 'not-a-folder'; message: string };
 

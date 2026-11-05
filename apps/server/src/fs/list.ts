@@ -2,8 +2,8 @@ import { lstat, readdir, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { FS_LIST_MAX_ENTRIES, type FsEntry, type FsEntryKind, type FsListResult } from '@ruimte/contracts';
+import { isMachineStatePath, NO_MACHINE_HOME, type MachineHomePolicy } from '../disk/machine-home.ts';
 import { ignoredPaths } from '../git/ignore.ts';
-import { isMachineStatePath, NO_MACHINE_HOME, type MachineHomePolicy } from './machine-home.ts';
 import { firstInOrder } from './ordered.ts';
 import { classifyEntry, isBuildOutput } from './visibility.ts';
 

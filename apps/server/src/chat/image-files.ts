@@ -14,7 +14,7 @@ import {
     type ChatImageTargetResult,
     sniffImageMime
 } from '@ruimte/contracts';
-import { realOrNull } from '../fs/real-path.ts';
+import { realOrNull } from '../disk/real-path.ts';
 import { isRuimteState } from '../projects/project-files.ts';
 
 class ImageFileError extends CodedError {}

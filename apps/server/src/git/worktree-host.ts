@@ -1,6 +1,6 @@
 import { isWithin } from '@adecore/utils/path';
 import type { Worktree } from '@ruimte/contracts';
-import { realOrNull } from '../fs/real-path.ts';
+import { realOrNull } from '../disk/real-path.ts';
 import type { CheckoutHost, WorktreeHost, WorktreeWant } from '../tools/host.ts';
 import { diffCheckout } from './diff.ts';
 import { mergeBaseWith } from './status.ts';

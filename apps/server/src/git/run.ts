@@ -1,7 +1,7 @@
 import { relative, resolve, sep } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { isBelow } from '@adecore/utils/path';
-import { realOrNull } from '../fs/real-path.ts';
+import { realOrNull } from '../disk/real-path.ts';
 import { nativePath } from './native-path.ts';
 
 export interface GitResult<Output = string> {

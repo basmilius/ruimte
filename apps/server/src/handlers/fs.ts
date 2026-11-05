@@ -1,4 +1,5 @@
 import { FS_WRITE_MAX_BYTES, type FsCreateResult } from '@ruimte/contracts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import { browseDirectories, browseTarget } from '../fs/browse.ts';
 import { createEntry, planCreate } from '../fs/create.ts';
@@ -6,7 +7,6 @@ import { planDelete } from '../fs/delete.ts';
 import { grepFiles } from '../fs/grep.ts';
 import { listDirectory } from '../fs/list.ts';
 import { locateFile } from '../fs/locate.ts';
-import type { MachineHome } from '../fs/machine-home.ts';
 import { readFile } from '../fs/read.ts';
 import { planRename } from '../fs/rename.ts';
 import { revealInFileManager } from '../fs/reveal.ts';

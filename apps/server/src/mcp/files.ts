@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
 import { isWithin } from '@adecore/utils/path';
-import { realOrNull } from '../fs/real-path.ts';
+import { realOrNull } from '../disk/real-path.ts';
 import { outsidePath } from '../tools/project-paths.ts';
 import type { ImageFiles } from './visual-images.ts';
 

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { supportsRecursive, type DirectoryWatcher } from '@adecore/agents';
 import type { FsChangedEvent } from '@ruimte/contracts';
-import { SharedWatch } from './shared-watch.ts';
+import { SharedWatch } from '../disk/shared-watch.ts';
 import { FolderWatcher } from './watch.ts';
 
 // FSEvents on a loaded runner can take seconds, and a pass still ends the moment the change lands.
@@ -58,7 +58,7 @@ test(
 test(
     'a folder watched under the shared watch hears a write inside it, named from itself',
     async () => {
-        const shared = new SharedWatch({ forget: () => undefined });
+        const shared = new SharedWatch();
         const outer = new FolderWatcher(process.platform, shared);
         let inner: DirectoryWatcher | undefined;
         const unsubscribe = outer.subscribe('client-2', () => undefined);

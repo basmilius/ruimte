@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Diagnostic, Position } from '@adecore/lsp';
 import type { LanguageServerKind, LanguageRequestResult } from '@ruimte/contracts';
-import { MachineHome } from '../fs/machine-home.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import type { SessionEvent } from '../wire.ts';
 import { LanguageHost } from './host.ts';
 import { runCommand, spawnLanguageProcess, type LanguageExit, type LanguageProcessSpec, type LanguageRuntime } from './runtime.ts';

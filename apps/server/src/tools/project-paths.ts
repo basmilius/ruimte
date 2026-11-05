@@ -2,7 +2,7 @@ import { lstat, readdir, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
 import { isWithin } from '@adecore/utils/path';
-import { realOrNull } from '../fs/real-path.ts';
+import { realOrNull } from '../disk/real-path.ts';
 
 interface InsideRule {
     flag: string;

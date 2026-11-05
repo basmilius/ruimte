@@ -3,7 +3,7 @@ import { mkdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { KeyedSerializer } from '@adecore/utils/async';
 import type { ChatCheckpointDiff } from '@ruimte/contracts';
-import { MachineHome } from '../fs/machine-home.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { diffTrees } from './diff.ts';
 import { git, gitOrThrow, leavingOut, repositoryRoot, runGit, toplevel, verifyRev } from './run.ts';
 

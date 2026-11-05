@@ -2,7 +2,8 @@ import { lstat, mkdir, readdir, readFile, readlink, rename, rm, symlink, unlink,
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileExists } from '@adecore/utils/fs';
 import { LanguageServerKindSchema, type LanguageServerKind } from '@ruimte/contracts';
-import { downloadFile, sha256 } from '../artifacts/artifact-fs.ts';
+import { downloadFile } from '../disk/download.ts';
+import { sha256 } from '../disk/hash.ts';
 import { errorText } from '../error-text.ts';
 import { LanguageLog } from './log.ts';
 import {

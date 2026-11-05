@@ -3,8 +3,8 @@ import { lstat, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { FS_READ_MAX_TEXT_BYTES, type FsCreatePayload, type FsCreateResult } from '@ruimte/contracts';
+import { realOrNull } from '../disk/real-path.ts';
 import { withCreateParent } from './create-parent.ts';
-import { realOrNull } from './real-path.ts';
 import { assertOpenGround, realRoots, rootOf, type WriteBoundary } from './write.ts';
 
 type CreateErrorCode = 'bad-path' | 'exists' | 'not-a-directory' | 'too-large' | 'not-writable';

@@ -1,10 +1,12 @@
+import { MachineHome } from '../disk/machine-home.ts';
+import { SharedWatch } from '../disk/shared-watch.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { errorText } from '../error-text.ts';
-import { MachineHome } from '../fs/machine-home.ts';
-import { SharedWatch } from '../fs/shared-watch.ts';
+import { forgetSearchCache } from '../fs/search.ts';
 import { FolderWatcher } from '../fs/watch.ts';
 import { BundleStore } from '../git/bundles.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
+import { forgetRepos } from '../git/repo-cache.ts';
 import { GitStatusWatcher } from '../git/status-watcher.ts';
 import { readStatusAt } from '../git/status.ts';
 import { worktreeAgents } from '../git/worktree-agents.ts';
@@ -32,6 +34,8 @@ export interface GitBundle {
 
 export function wireGit(home: string, identity: EndpointIdentity, agents: AgentsBundle, work: AgentWorkBundle, peers: PeerLinks): GitBundle {
     const watches = new SharedWatch();
+    watches.onBurst(forgetSearchCache);
+    watches.onBurst(forgetRepos);
     const folders = new FolderWatcher(process.platform, watches);
     const machineHome = new MachineHome(home);
     const statuses = new GitStatusWatcher(process.platform, watches, Date.now, (root) => readStatusAt(root, (top) => machineHome.stateWithin(top)));

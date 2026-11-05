@@ -1,6 +1,6 @@
 import type { AccessOptions } from '../auth/access.ts';
 import { bytesResponse, guardBytesRequest, parseByteRange } from '../bytes/byte-route.ts';
-import { MachineHomeError, type MachineHome } from './machine-home.ts';
+import { MachineHomeError, type MachineHome } from '../disk/machine-home.ts';
 import { readServedFile } from './read.ts';
 
 export const FS_FILE_PATH = '/fs/file';

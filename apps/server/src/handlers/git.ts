@@ -1,8 +1,8 @@
 import { dirname, resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import type { AgentKind, GitActionPhase } from '@ruimte/contracts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import { type Dispatcher } from '../dispatcher.ts';
-import type { MachineHome } from '../fs/machine-home.ts';
 import { GitActions } from '../git/actions.ts';
 import { authorPictures } from '../git/author-pictures.ts';
 import { blameFile } from '../git/blame.ts';

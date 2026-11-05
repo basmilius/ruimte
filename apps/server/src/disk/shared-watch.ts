@@ -1,11 +1,12 @@
 import { dirname, join, relative, resolve } from 'node:path';
 import { settled, supportsRecursive, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import { isWithin } from '@adecore/utils/path';
-import { forgetRepos } from '../git/repo-cache.ts';
-import { forgetSearchCache } from './search.ts';
 
 // Long enough to take an install or a checkout as one burst, short enough that a list read after it is fresh.
 const FORGET_SETTLE_MS = 250;
+
+// Past this many paths a burst names no files: a hint costs every client more than rereading, and without one a client takes everything as touched.
+export const MAX_CHANGED_PATHS = 1000;
 
 type Listener = (event: string, filename: string | null) => void;
 
@@ -21,37 +22,28 @@ interface PlatformWatch {
     subscribers: Set<Subscriber>;
 }
 
-/* The `@` picker and the repository list read folders from caches of their own; a write there is stale news. */
-function forgetCaches(paths: readonly string[]): void {
-    forgetSearchCache(paths);
-    forgetRepos(paths);
-}
-
 interface SharedWatchOptions {
     platform?: NodeJS.Platform;
     seams?: WatchSeams;
-    /* Told the directories every burst touched, whoever watched them. */
-    forget?: (paths: readonly string[]) => void;
 }
 
 /*
  * The watch seam every watcher of the daemon goes through: the file tree, git status and the language
  * servers each ask for the folders they need, and this opens one platform watcher per folder for all of
  * them. Where the platform watches a tree in one call, a folder under one already watched rides on that
- * one. Every burst it hears also drops what the daemon's caches hold of the directories it touched.
+ * one. A cache that keys on folders subscribes to its bursts (`onBurst`) and drops what it holds of the directories they touched.
  */
 export class SharedWatch implements WatchSeams {
     private readonly watches: PlatformWatch[] = [];
     private readonly seams: WatchSeams;
     private readonly treeWatch: boolean;
-    private readonly forget: (paths: readonly string[]) => void;
+    private readonly burstListeners = new Set<(paths: readonly string[]) => void>();
     private readonly touched = new Set<string>();
     private readonly forgetting: Settled;
 
     constructor(options: SharedWatchOptions = {}) {
         this.seams = options.seams ?? SYSTEM_WATCH;
         this.treeWatch = supportsRecursive(options.platform ?? process.platform);
-        this.forget = options.forget ?? forgetCaches;
         this.forgetting = settled(this.seams, FORGET_SETTLE_MS, () => this.flush());
     }
 
@@ -77,6 +69,14 @@ export class SharedWatch implements WatchSeams {
             }
         };
         return handle;
+    }
+
+    /* Told the directories every burst touched, whoever watched them. */
+    onBurst(listener: (paths: readonly string[]) => void): () => void {
+        this.burstListeners.add(listener);
+        return () => {
+            this.burstListeners.delete(listener);
+        };
     }
 
     schedule(callback: () => unknown, ms: number): () => void {
@@ -117,7 +117,9 @@ export class SharedWatch implements WatchSeams {
         const paths = [...this.touched].sort();
         this.touched.clear();
         if (paths.length > 0) {
-            this.forget(paths);
+            for (const listener of [...this.burstListeners]) {
+                listener(paths);
+            }
         }
     }
 }

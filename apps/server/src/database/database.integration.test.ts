@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import type { Cell, DatabaseResponse } from '@adecore/database/protocol';
 import type { DatabaseConnection } from '@ruimte/contracts';
-import { MachineHome } from '../fs/machine-home.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { DatabaseAccessStore } from './agent-access.ts';
 import { AgentDatabases, type DatabasePlace } from './agent-databases.ts';
 import { DatabasePasswords } from './agent-passwords.ts';

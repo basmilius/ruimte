@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { lstat, mkdir, readdir, readFile, readlink, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { fileExists } from '@adecore/utils/fs';
-import { sha256, sha256Of } from '../artifacts/artifact-fs.ts';
+import { sha256, sha256Of } from '../disk/hash.ts';
 import type { LanguageRuntime, RunCommand } from './runtime.ts';
 
 const SETS = 'packages';

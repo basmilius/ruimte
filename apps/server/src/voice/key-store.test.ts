@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { mkdir, readdir, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { runVoice, type VoiceCliOptions } from '../cli/voice.ts';
-import { MachineHome } from '../fs/machine-home.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { VoiceKeyStore } from './key-store.ts';
 

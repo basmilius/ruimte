@@ -4,10 +4,10 @@ import { lstat, mkdir, rmdir, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { isWithin } from '@adecore/utils/path';
-import { retryingRename } from './busy-retry.ts';
+import { retryingRename } from '../disk/busy-retry.ts';
+import { renameNoReplace } from '../disk/no-replace-rename.ts';
+import { realOrNull } from '../disk/real-path.ts';
 import { deepestEntry } from './create.ts';
-import { renameNoReplace } from './no-replace-rename.ts';
-import { realOrNull } from './real-path.ts';
 import { trashPath } from './trash.ts';
 import { assertOpenGround, realEntryPath, realRoots, rootOf, type WriteBoundary } from './write.ts';
 

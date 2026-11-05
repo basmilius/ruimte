@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import type { SqlAnalysis } from '../database/sql-analysis.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
+import type { SharedWatch } from '../disk/shared-watch.ts';
 import { EditorAssistModel } from '../editor-assist/model.ts';
-import type { MachineHome } from '../fs/machine-home.ts';
-import type { SharedWatch } from '../fs/shared-watch.ts';
 import { LanguageHost } from '../language/host.ts';
 import { NativePolicy, phpLanguageServerCheckout, sqlLanguageServerCheckout } from '../language/native.ts';
 import type { ProjectStore } from '../projects/project-store.ts';

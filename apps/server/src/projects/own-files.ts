@@ -4,9 +4,9 @@ import { basename, dirname, join } from 'node:path';
 import { hasErrorCode, isNotFound } from '@adecore/utils/errors';
 import { entryExists } from '@adecore/utils/fs';
 import { ChatError } from '../chat/errors.ts';
+import { renameNoReplace } from '../disk/no-replace-rename.ts';
+import { isPathSegment } from '../disk/path-segment.ts';
 import { errorText } from '../error-text.ts';
-import { renameNoReplace } from '../fs/no-replace-rename.ts';
-import { isPathSegment } from '../fs/path-segment.ts';
 
 interface MovedOwnFiles {
     /* The top-level names that arrived in the target. */

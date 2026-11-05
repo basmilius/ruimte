@@ -34,8 +34,8 @@ import {
     type SharedFileRead,
     mapDesignChats
 } from '@ruimte/contracts';
+import { retryingRename } from '../disk/busy-retry.ts';
 import { errorText } from '../error-text.ts';
-import { retryingRename } from '../fs/busy-retry.ts';
 
 export const PROJECT_DIR = '.ruimte';
 export const PROJECT_FILE = 'project.json';

@@ -6,8 +6,8 @@ import { fileExists, writeAtomic } from '@adecore/utils/fs';
 import { isRecord } from '@adecore/utils/record';
 import type { AgentIntegrationFile, AgentIntegrationReport, AgentIntegrationsSummary, AgentKind } from '@ruimte/contracts';
 import { z } from 'zod';
+import { realOrSelf } from '../disk/real-path.ts';
 import { errorText } from '../error-text.ts';
-import { realOrSelf } from '../fs/real-path.ts';
 import {
     CODEX_RULES,
     HookFileRefused,

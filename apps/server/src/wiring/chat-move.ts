@@ -5,7 +5,7 @@ import type { AgentLineageStore, NoticeStore, TaskStore } from '@adecore/agents/
 import { chatIsWorking, type ChatInfo } from '@ruimte/contracts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { ChatError } from '../chat/errors.ts';
-import type { MachineHome } from '../fs/machine-home.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import { gitOrThrow, readGit } from '../git/run.ts';
 import { repositoryRoot } from '../git/status.ts';
 import type { PrWatchStore } from '../github/pr-watch.ts';

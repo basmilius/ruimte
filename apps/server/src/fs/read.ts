@@ -2,7 +2,7 @@ import { lstat, stat } from 'node:fs/promises';
 import { basename, isAbsolute, resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { FS_READ_MAX_TEXT_BYTES, isAudioMime, isImageMime, isModelMime, isPdfMime, isVideoMime, type FsReadResult } from '@ruimte/contracts';
-import { looksLikeSvg, sniffMime } from './sniff.ts';
+import { looksLikeSvg, sniffMime } from '../disk/sniff.ts';
 
 type ReadErrorCode = 'not-found' | 'not-a-file' | 'bad-path';
 

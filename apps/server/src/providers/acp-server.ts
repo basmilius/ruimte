@@ -6,8 +6,9 @@ import type { AcpServerLaunch } from '@adecore/agents/providers';
 import { writeAtomic } from '@adecore/utils/fs';
 import type { AgentKind, AgentServerStatus } from '@ruimte/contracts';
 import { z } from 'zod';
-import { downloadFile, sha256Of, type FileDownload } from '../artifacts/artifact-fs.ts';
-import { extractZipFile } from '../language/archive.ts';
+import { extractZipFile } from '../disk/archive.ts';
+import { downloadFile, type FileDownload } from '../disk/download.ts';
+import { sha256Of } from '../disk/hash.ts';
 
 const AssetSchema = z.object({
     url: z.string().url(),

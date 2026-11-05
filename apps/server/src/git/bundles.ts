@@ -10,7 +10,7 @@ import {
     type GitFetchBundlePayload,
     type GitFetchBundleResult
 } from '@ruimte/contracts';
-import { sha256, sha256Of } from '../artifacts/artifact-fs.ts';
+import { sha256, sha256Of } from '../disk/hash.ts';
 import type { CheckpointService } from './checkpoints.ts';
 import { GitError, git, gitOrThrow, runGit, toplevel, verifyRev } from './run.ts';
 import type { Worktrees } from './worktrees.ts';

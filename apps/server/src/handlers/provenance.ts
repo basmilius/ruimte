@@ -1,5 +1,5 @@
+import type { MachineHome } from '../disk/machine-home.ts';
 import type { Dispatcher } from '../dispatcher.ts';
-import type { MachineHome } from '../fs/machine-home.ts';
 import type { ProvenanceService } from '../provenance/provenance-service.ts';
 
 /* The records are the daemon's own and a client only reads them or sets a review state, so a path gets the same checks a file request does. */

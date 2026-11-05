@@ -1,8 +1,8 @@
 import type { ArchiveExtractResult } from '@ruimte/contracts';
 import { listArchive } from '../archive/archive.ts';
 import { planExtract } from '../archive/extract.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import type { Dispatcher } from '../dispatcher.ts';
-import type { MachineHome } from '../fs/machine-home.ts';
 import type { WriteBoundary } from '../fs/write.ts';
 import type { FileMove, LanguageHost } from '../language/host.ts';
 

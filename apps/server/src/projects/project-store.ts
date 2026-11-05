@@ -41,9 +41,9 @@ import {
 import { HiddenAgentStore } from '../agents/hidden-agents.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { referablesOfViews } from '../context/references.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { errorText } from '../error-text.ts';
 import { isDirectory } from '../fs/browse.ts';
-import { MachineHome } from '../fs/machine-home.ts';
 import { PeerLinks, withHiddenCanvases } from '../peering/links.ts';
 import { RemoteStore, idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines } from '../remote/remote-store.ts';
 import type { SessionSink } from '../wire.ts';

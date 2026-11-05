@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { writeFile } from 'node:fs/promises';
 import type { ServerFrame } from '@ruimte/contracts';
+import { sha256, zip } from '../disk/test-archives.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { sha256, zip } from '../language/test-archives.ts';
 import { AcpServerInstall, parseAcpServerRelease } from '../providers/acp-server.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import type { ClientAccess } from '../wire.ts';

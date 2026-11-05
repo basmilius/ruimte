@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { isMachineStatePath } from '../fs/machine-home.ts';
+import { isMachineStatePath } from '../disk/machine-home.ts';
 import { UsageCounter, usageStatePath, type UsageStateStore } from './usage-counter.ts';
 
 const DAY = 86_400_000;

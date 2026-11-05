@@ -17,7 +17,7 @@ import { ScrcpyServerFile, scrcpyServerDirectory } from '../devices/scrcpy-serve
 import { adbScrcpyHost, ScrcpySource } from '../devices/scrcpy-source.ts';
 import { realCameraHost, SimulatorCamera, simctlWithEnv } from '../devices/simulator-camera.ts';
 import { createTreeLauncher, SimulatorTreeReader } from '../devices/simulator-tree.ts';
-import { MachineHome } from '../fs/machine-home.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { LiveStreamHub } from '../streams/live-stream.ts';
 import { childLauncher, renderCommand, VisualRenderer } from '../visuals/renderer.ts';
 import type { AgentsBundle } from './agents.ts';

@@ -6,7 +6,7 @@ import type { DatabaseError, RowsResult, SchemaInfo, StatementResult, TableInfo,
 import { isWithin } from '@adecore/utils/path';
 import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import { realOrSelf } from '../fs/real-path.ts';
+import { realOrSelf } from '../disk/real-path.ts';
 import type { SessionEvent, SessionSink } from '../wire.ts';
 import type { DatabaseAccessStore } from './agent-access.ts';
 import type { DatabasePasswords } from './agent-passwords.ts';

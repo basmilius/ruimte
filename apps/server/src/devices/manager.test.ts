@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { DeviceInfo, DeviceInput, LiveFrame, LiveFrameHeader, LiveStreamFrame } from '@ruimte/contracts';
-import { MachineHome } from '../fs/machine-home.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { DeviceError, DeviceManager, type DeviceBackend, type DeviceSource } from './manager.ts';
 
 const phone: DeviceInfo = {

@@ -3,7 +3,7 @@ import { PerClientWatches, settled, supportsRecursive, SYSTEM_WATCH, type Direct
 import { isWithin } from '@adecore/utils/path';
 import type { GitStatus } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import { MAX_CHANGED_PATHS } from '../fs/watch.ts';
+import { MAX_CHANGED_PATHS } from '../disk/shared-watch.ts';
 import type { SessionEvent, SessionSink } from '../wire.ts';
 import { ignoredPaths } from './ignore.ts';
 import { nativePath } from './native-path.ts';

@@ -2,17 +2,15 @@ import { dirname, join, resolve } from 'node:path';
 import { PerClientWatches, settled, supportsRecursive, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import { isWithin } from '@adecore/utils/path';
 import { ClientSinks } from '../client-sinks.ts';
+import { isMachineStatePath, NO_MACHINE_HOME, type MachineHomePolicy } from '../disk/machine-home.ts';
+import { MAX_CHANGED_PATHS } from '../disk/shared-watch.ts';
 import type { SessionSink } from '../wire.ts';
-import { isMachineStatePath, NO_MACHINE_HOME, type MachineHomePolicy } from './machine-home.ts';
 
 // A save, a formatter and a build all touch the same folder in a burst; one event per burst is enough.
 const SETTLE_MS = 250;
 
 // FSEvents can miss writes immediately after `fs.watch`; delay readiness until its stream is running.
 const STREAM_START_MS = 200;
-
-// Past this a hint costs every client more than rereading; without one a client takes everything as touched.
-export const MAX_CHANGED_PATHS = 1000;
 
 interface Watch {
     root: string;

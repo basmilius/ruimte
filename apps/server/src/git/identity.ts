@@ -1,5 +1,5 @@
 import type { GitIdentity, GitIdentityMiss, GitIdentityResult } from '@ruimte/contracts';
-import { realOrSelf } from '../fs/real-path.ts';
+import { realOrSelf } from '../disk/real-path.ts';
 import { nativePath } from './native-path.ts';
 import { READ_ONLY_GIT, runGit } from './run.ts';
 

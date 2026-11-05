@@ -15,7 +15,7 @@ import {
     type LanguageErrorCode
 } from '@ruimte/contracts';
 import { z } from 'zod';
-import { sha256 } from '../artifacts/artifact-fs.ts';
+import { sha256 } from '../disk/hash.ts';
 import type { KindProfile } from './profiles.ts';
 
 class CustomServerError extends CodedError<LanguageErrorCode> {}

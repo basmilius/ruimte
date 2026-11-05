@@ -2,11 +2,7 @@ import { createReadStream } from 'node:fs';
 import { mkdir, open, readdir, readFile, rename, rm, stat, statfs } from 'node:fs/promises';
 import { isNotFound } from '@adecore/utils/errors';
 import { writeAtomic } from '@adecore/utils/fs';
-
-export interface FileDigest {
-    size: number;
-    sha256: string;
-}
+import { digestStream, type FileDigest } from '../disk/hash.ts';
 
 /*
  * Everything the store does to a disk, so a test can stop it between two steps or fill the disk
@@ -50,39 +46,6 @@ async function syncPath(path: string): Promise<void> {
     } finally {
         await handle.close();
     }
-}
-
-export function sha256(data: string | Uint8Array): string {
-    return new Bun.CryptoHasher('sha256').update(data).digest('hex');
-}
-
-/* Hashes a file without holding it in memory. */
-export async function sha256Of(path: string): Promise<string> {
-    return (await digestStream(Bun.file(path).stream())).sha256;
-}
-
-/* Writes the body at the address to the file. The default streams it; tests answer from memory. */
-export type FileDownload = (url: string, destination: string) => Promise<void>;
-
-export const downloadFile: FileDownload = async (url, destination) => {
-    const response = await fetch(url, { redirect: 'follow' });
-
-    if (!response.ok) {
-        throw new Error(`${url} answered ${response.status}`);
-    }
-
-    await Bun.write(destination, response);
-};
-
-async function digestStream(stream: AsyncIterable<Uint8Array>, write?: (chunk: Uint8Array) => Promise<void>): Promise<FileDigest> {
-    const hasher = new Bun.CryptoHasher('sha256');
-    let size = 0;
-    for await (const chunk of stream) {
-        hasher.update(chunk);
-        size += chunk.byteLength;
-        await write?.(chunk);
-    }
-    return { size, sha256: hasher.digest('hex') };
 }
 
 async function unlessMissing<T>(read: Promise<T>, missing: T): Promise<T> {

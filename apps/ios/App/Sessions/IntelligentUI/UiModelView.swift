@@ -5,7 +5,7 @@ import SceneKit
 import SceneKit.ModelIO
 import SwiftUI
 
-/// The formats an agent attaches as a model, told from the bytes as the daemon tells them (`apps/server/src/fs/sniff.ts`),
+/// The formats an agent attaches as a model, told from the bytes as the daemon tells them (`apps/server/src/disk/sniff.ts`),
 /// since the name says nothing about them.
 enum UiModelFormat: Equatable {
     case gltfBinary

@@ -2,8 +2,8 @@ import { AuthStore } from '../auth/auth-store.ts';
 import { Handshake } from '../auth/handshake.ts';
 import { readOrCreateLocalSecret } from '../auth/local-secret.ts';
 import type { ServerConfig } from '../config.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { readOrCreateEndpointIdentity, type EndpointIdentity } from '../endpoint-id.ts';
-import { MachineHome } from '../fs/machine-home.ts';
 import { PeerKey } from '../remote/peer-key.ts';
 import { PendingAdmissions } from '../remote/pending-admissions.ts';
 

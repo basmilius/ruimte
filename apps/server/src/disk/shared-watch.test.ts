@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { join, resolve } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { FsChangedEvent } from '@ruimte/contracts';
+import { FolderWatcher } from '../fs/watch.ts';
 import { ProjectFileWatcher, type FileChange } from '../language/file-watch.ts';
 import { SharedWatch } from './shared-watch.ts';
-import { FolderWatcher } from './watch.ts';
 
 // Nothing touches the disk: the fake watch reports whatever a test emits.
 const root = resolve('/work/project');
@@ -13,7 +13,9 @@ let fake: FakeWatch;
 let forgotten: Array<readonly string[]>;
 
 function sharedOn(platform: NodeJS.Platform): SharedWatch {
-    return new SharedWatch({ platform, seams: fake, forget: (paths) => forgotten.push(paths) });
+    const watch = new SharedWatch({ platform, seams: fake });
+    watch.onBurst((paths) => forgotten.push(paths));
+    return watch;
 }
 
 /* What a listener heard, as `filename` per event. */

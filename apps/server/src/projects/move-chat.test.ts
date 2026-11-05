@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
 import { FakeWatch, ManualClock } from '@adecore/agents/testing';
 import type { ChatMovePayload } from '@ruimte/contracts';
-import { MachineHome } from '../fs/machine-home.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { claudeApiConfigDir, createAnthropicClaudeApiProvider } from '../providers/anthropic-claude-api-provider.ts';
 import { AnthropicClaudeApiService } from '../providers/anthropic-claude-api-service.ts';
 import { SnoozeStore } from '../push/snoozes.ts';

@@ -1,5 +1,5 @@
 import { CHAT_MODEL_MAX_BYTES } from '@ruimte/contracts';
-import { sniffMime } from '../fs/sniff.ts';
+import { sniffMime } from '../disk/sniff.ts';
 import { imageType, VISUAL_IMAGE_BYTES } from '../mcp/visual-images.ts';
 
 /*

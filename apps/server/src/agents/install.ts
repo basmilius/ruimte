@@ -7,8 +7,8 @@ import { isNotFound } from '@adecore/utils/errors';
 import { writeAtomic } from '@adecore/utils/fs';
 import { isRecord } from '@adecore/utils/record';
 import type { AgentKind } from '@ruimte/contracts';
+import { realOrSelf } from '../disk/real-path.ts';
 import { errorText } from '../error-text.ts';
-import { realOrSelf } from '../fs/real-path.ts';
 import { HOOK_EVENTS } from './hooks.ts';
 
 // The one string the installer recognizes its own hook by, across versions of the command.

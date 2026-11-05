@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createDatabaseHost, helperPath, spawnHelper, type DatabaseHost, type HelperProcess } from '@adecore/database/host';
 import type { ConnectionConfig, DatabaseResponse } from '@adecore/database/protocol';
-import type { MachineHome } from '../fs/machine-home.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import { reportHelperExit, StderrTail } from '../telemetry/reporter.ts';
 
 const HELPER_FILE = process.platform === 'win32' ? 'adecore-database.exe' : 'adecore-database';

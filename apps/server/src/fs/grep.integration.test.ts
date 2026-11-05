@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { MachineHome } from '../disk/machine-home.ts';
 import { GrepError, grepFiles } from './grep.ts';
-import { MachineHome } from './machine-home.ts';
 import { forgetSearchCache } from './search.ts';
 import * as searchable from './searchable.ts';
 

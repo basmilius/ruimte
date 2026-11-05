@@ -6,8 +6,8 @@ import { DatabaseConnectionStore } from '../database/connection-store.ts';
 import { DatabaseService } from '../database/database-service.ts';
 import { SchemaSnapshots } from '../database/schema-snapshots.ts';
 import { SqlAnalysis } from '../database/sql-analysis.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import { errorText } from '../error-text.ts';
-import type { MachineHome } from '../fs/machine-home.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { LanguageBundle } from './language.ts';
 

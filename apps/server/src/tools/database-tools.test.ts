@@ -8,7 +8,7 @@ import { AgentDatabases, connectionTarget } from '../database/agent-databases.ts
 import { DatabasePasswords } from '../database/agent-passwords.ts';
 import { DatabaseService } from '../database/database-service.ts';
 import { FakeHelper, type FakeAnswer } from '../database/fake-helper.ts';
-import { MachineHome } from '../fs/machine-home.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import type { CanvasHost } from './host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 import { SHOWN_LINE } from './visual-tools.ts';

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import { LAUNCH_SECRET_REFERENCE, type LaunchConfigEntry } from '@ruimte/contracts';
-import { MachineHome } from '../fs/machine-home.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { LaunchRunner, type LaunchSessions } from '../launches/runner.ts';
 import { LaunchStore } from '../launches/store.ts';
 import { CommandApprovals } from '../sessions/command-approvals.ts';
