@@ -1,18 +1,15 @@
 import { expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { clientDirectory, frame, waitInPage, withBrowserFixture } from '../../testing/browser-fixture';
+import { clientDirectory, frame, waitInPage, warmBrowserFixture, withBrowserFixture } from '../../testing/browser-fixture';
 
 const apple = process.platform === 'darwin';
 const NEEDLES = 30;
 // A needle on every tenth row of 300, far more than one screen holds, so a step has to scroll.
 const OUTPUT = Array.from({ length: 300 }, (_, i) => `row ${i} ${i % 10 === 0 ? 'needle' : 'hay'}`).join('\r\n');
-
-test('the find key opens the bar over a terminal, steps through the scrollback and hands the keyboard back', async () => {
-    const css = await readFile(join(clientDirectory, 'node_modules/@xterm/xterm/css/xterm.css'), 'utf8');
-    const terminalCss = await readFile(Bun.resolveSync('@adecore/terminal/terminal.css', clientDirectory), 'utf8');
-    await withBrowserFixture(
-        `
+const css = await readFile(join(clientDirectory, 'node_modules/@xterm/xterm/css/xterm.css'), 'utf8');
+const terminalCss = await readFile(Bun.resolveSync('@adecore/terminal/terminal.css', clientDirectory), 'utf8');
+const entry = `
         import { TerminalView } from ${JSON.stringify(Bun.resolveSync('@adecore/terminal', clientDirectory))};
         import { FitAddon } from ${JSON.stringify(Bun.resolveSync('@xterm/addon-fit', clientDirectory))};
         import { FindBar } from ${JSON.stringify(join(import.meta.dir, '../find/FindBar.tsx'))};
@@ -67,36 +64,39 @@ test('the find key opens the bar over a terminal, steps through the scrollback a
             return match ? Number(match[1]) : null;
         };
         createRoot(document.getElementById('root')).render(<UIProvider i18n={i18next}><Probe /></UIProvider>);
-        `,
-        `${css}\n${terminalCss}\nhtml,body,#root{margin:0;width:100%;height:100%}.surface{position:absolute;inset:0}.absolute{position:absolute}.inset-0{inset:0}.relative{position:relative}svg{width:14px;height:14px}`,
-        async (view) => {
-            await view.evaluate('window.ready');
-            // The view refits once its glyphs are measured, and a resize makes the search addon search again from the end.
-            await waitInPage(view, 'window.fitted()');
-            await view.evaluate(frame);
-            await view.evaluate('window.term.focus()');
+        `;
+const styles = `${css}\n${terminalCss}\nhtml,body,#root{margin:0;width:100%;height:100%}.surface{position:absolute;inset:0}.absolute{position:absolute}.inset-0{inset:0}.relative{position:relative}svg{width:14px;height:14px}`;
 
-            const find = apple ? '{ key: "f", code: "KeyF", metaKey: true }' : '{ key: "F", code: "KeyF", ctrlKey: true, shiftKey: true }';
-            await view.evaluate(`window.press(window.term.textarea, ${find})`);
-            await view.evaluate(frame);
-            expect(await view.evaluate<boolean>(`document.activeElement === document.querySelector('[data-find-bar] input')`)).toBe(true);
+await warmBrowserFixture(entry, styles);
 
-            await view.evaluate(`window.type(document.querySelector('[data-find-bar] input'), 'needle')`);
-            await view.evaluate(frame);
-            await waitInPage(view, 'window.current() !== null', () => view.evaluate<string>('JSON.stringify(window.errors)'));
-            const first = await view.evaluate<number>('window.current()');
+test('the find key opens the bar over a terminal, steps through the scrollback and hands the keyboard back', async () => {
+    await withBrowserFixture(entry, styles, async (view) => {
+        await view.evaluate('window.ready');
+        // The view refits once its glyphs are measured, and a resize makes the search addon search again from the end.
+        await waitInPage(view, 'window.fitted()');
+        await view.evaluate(frame);
+        await view.evaluate('window.term.focus()');
 
-            await view.evaluate(`window.press(document.querySelector('[data-find-bar] input'), { key: 'Enter', code: 'Enter' })`);
-            // The search addon counts and selects the next match a while after the step.
-            await waitInPage(view, `window.current() !== ${first} && window.term.getSelection() !== ""`);
-            const second = await view.evaluate<number>('window.current()');
-            expect(second).toBe((first % NEEDLES) + 1);
-            expect(await view.evaluate<string>('window.term.getSelection()')).toBe('needle');
+        const find = apple ? '{ key: "f", code: "KeyF", metaKey: true }' : '{ key: "F", code: "KeyF", ctrlKey: true, shiftKey: true }';
+        await view.evaluate(`window.press(window.term.textarea, ${find})`);
+        await view.evaluate(frame);
+        expect(await view.evaluate<boolean>(`document.activeElement === document.querySelector('[data-find-bar] input')`)).toBe(true);
 
-            await view.evaluate(`window.press(document.querySelector('[data-find-bar] input'), { key: 'Escape', code: 'Escape' })`);
-            await view.evaluate(frame);
-            expect(await view.evaluate<boolean>(`document.querySelector('[data-find-bar]') === null`)).toBe(true);
-            expect(await view.evaluate<boolean>('document.activeElement === window.term.textarea')).toBe(true);
-        }
-    );
+        await view.evaluate(`window.type(document.querySelector('[data-find-bar] input'), 'needle')`);
+        await view.evaluate(frame);
+        await waitInPage(view, 'window.current() !== null', () => view.evaluate<string>('JSON.stringify(window.errors)'));
+        const first = await view.evaluate<number>('window.current()');
+
+        await view.evaluate(`window.press(document.querySelector('[data-find-bar] input'), { key: 'Enter', code: 'Enter' })`);
+        // The search addon counts and selects the next match a while after the step.
+        await waitInPage(view, `window.current() !== ${first} && window.term.getSelection() !== ""`);
+        const second = await view.evaluate<number>('window.current()');
+        expect(second).toBe((first % NEEDLES) + 1);
+        expect(await view.evaluate<string>('window.term.getSelection()')).toBe('needle');
+
+        await view.evaluate(`window.press(document.querySelector('[data-find-bar] input'), { key: 'Escape', code: 'Escape' })`);
+        await view.evaluate(frame);
+        expect(await view.evaluate<boolean>(`document.querySelector('[data-find-bar]') === null`)).toBe(true);
+        expect(await view.evaluate<boolean>('document.activeElement === window.term.textarea')).toBe(true);
+    });
 });

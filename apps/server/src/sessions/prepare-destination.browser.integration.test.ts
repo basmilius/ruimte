@@ -60,6 +60,12 @@ const styles =
 
 await warmBrowserFixture(entry, styles);
 
+// From the top level, which Bun does not time out, so the first test does not pay for a cold zsh and the prepare path.
+const warmShell = await realShell();
+await warmShell.ready();
+await warmShell.preview(command);
+await warmShell.cleanup();
+
 for (const mode of [
     'canvas',
     'view',
@@ -79,7 +85,8 @@ for (const mode of [
     'wrong-cwd',
     'wrong-project',
     'closed',
-    'busy'
+    'busy',
+    'enter'
 ] as const) {
     test(`real canvas/view preview and destination focus: ${mode}`, async () => {
         const delayed = ['workspace', 'machine', 'removed', 'replaced'].includes(mode);
@@ -326,6 +333,10 @@ for (const mode of [
                     expect(await shell.manager.get(targetId)!.plainText()).toContain(command);
                     await expect(access(join(shell.home, 'chosen'))).rejects.toThrow();
                     expect(calls).not.toContain('session.write');
+                    // One mode runs the line, so the three that only choose a destination stay short on a slow runner.
+                    if (mode !== 'enter') {
+                        return;
+                    }
                     await view.evaluate(
                         'document.activeElement.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",code:"Enter",keyCode:13,which:13,bubbles:true}))'
                     );
