@@ -36,4 +36,4 @@ pathIgnorePatterns = [
     "apps/server/src/voice/voice-daemon.test.ts",
     "apps/server/src/wiring/chat-move.test.ts",
 ]
-preload = ["./apps/client/node_modules/@adecore/ui/src/testing/dedupe.ts", "./apps/client/test-preload.ts"]
+preload = ["./apps/client/node_modules/@adecore/ui/src/testing/dedupe.ts", "./apps/client/test-preload.ts", "./scripts/no-process-preload.ts"]
