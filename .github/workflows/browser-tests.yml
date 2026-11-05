@@ -35,5 +35,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
-      - run: bun run --cwd apps/client build
+      # The stylesheets the test reads come from the bundle; types are ci.yml's.
+      - run: bun run --cwd apps/client build:bundle
       - run: bun scripts/test-integration.ts --browser apps/client/src/canvas/canvas-pan-performance.browser.integration.test.ts
