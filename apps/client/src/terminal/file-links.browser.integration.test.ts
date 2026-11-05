@@ -28,6 +28,7 @@ async function fixture(
             `
         import { Terminal } from ${JSON.stringify(Bun.resolveSync('@xterm/xterm', terminalPackage))};
         import { TerminalBody } from ${JSON.stringify(join(import.meta.dir, '../nodes/TerminalBody.tsx'))};
+        import { FitAddon } from ${JSON.stringify(Bun.resolveSync('@xterm/addon-fit', clientDirectory))};
         import { FileBody } from ${JSON.stringify(join(import.meta.dir, '../shell/panels/FileBody.tsx'))};
         import { WebSocketTransport } from ${JSON.stringify(join(import.meta.dir, '../transport/websocket-transport.ts'))};
         import { loadEditorEngine } from ${JSON.stringify(join(import.meta.dir, '../shell/panels/editor-engine.ts'))};
@@ -48,14 +49,16 @@ async function fixture(
         i18next.addResourceBundle('en', 'canvas', words, true, true);
         i18next.addResourceBundle('en', 'panels', panelWords, true, true);
         i18next.addResourceBundle('nl', 'canvas', dutchWords, true, true);
-        await i18next.changeLanguage(${JSON.stringify(options.language ?? 'en')});
-        window.instances={}; window.outputs={}; window.screens={}; window.sizes={}; window.opened=[]; window.reads=[]; window.attaches=[]; window.files=useFiles; window.toasts=useToasts;
-        window.ruimteDesktop={platform:${JSON.stringify(options.platform ?? process.platform)},openExternal:async uri=>window.opened.push(uri)};
+        const {terminalOutput, onCanvas, language, platform, backend} = window.fixture;
+        await i18next.changeLanguage(language);
+        const probe=document.createElement('canvas').getContext('webgl2'); window.webgl=probe!==null; probe?.getExtension('WEBGL_lose_context')?.loseContext();
+        window.FitAddon=FitAddon; window.instances={}; window.outputs={}; window.screens={}; window.sizes={}; window.opened=[]; window.reads=[]; window.attaches=[]; window.files=useFiles; window.toasts=useToasts;
+        window.ruimteDesktop={platform,openExternal:async uri=>window.opened.push(uri)};
         useEndpoints.setState({activeId:'elsewhere',endpoints:[{id:'local',label:'Local'},{id:'remote',label:'Remote'}]});
         useProject.setState({current:{folder:'/repo',projectId:'fixture'}});
         const views=['local','remote'].map(id=>({id,kind:'terminal',name:id,node:{cwd:'/repo/worktree'}}));
         useDocument.getState().load({version:3,rev:1,name:'Files',color:'#000',views},null);
-        if (${onCanvas}) {
+        if (onCanvas) {
             defaultCanvasStore.setState({viewId:'canvas',nodes:Object.fromEntries(views.map(view=>[view.id,{id:view.id,kind:'terminal',title:view.name,cwd:'/repo/worktree',x:0,y:0,w:360,h:250}]))});
         }
         window.switchMachine = endpointId => {
@@ -67,16 +70,16 @@ async function fixture(
         let ready; window.ready=new Promise(resolve=>ready=resolve); let count=0;
         const write=Terminal.prototype.write;
         Terminal.prototype.write=function(data,done){
-            return write.call(this,data,()=>{done?.();window.written?.();window.written=null;if(data===${JSON.stringify(terminalOutput)}){
+            return write.call(this,data,()=>{done?.();window.written?.();window.written=null;if(data===terminalOutput){
                 window.instances[this.element.closest('[data-owner]').dataset.owner]=this;
                 if(++count===2) ready();
             }});
         };
         const machines=await Promise.all(['local','remote'].map(async endpointId=>{
-            const wire=new WebSocketTransport(${JSON.stringify(backend.url)}+'/'+endpointId);
+            const wire=new WebSocketTransport(backend+'/'+endpointId);
             await new Promise(resolve=>{if(wire.status==='open')resolve();else {const off=wire.subscribeStatus(status=>{if(status==='open'){off();resolve()}})}});
             const machine=machineFor(endpointId);
-            machine.sessions.open=async(id,options,grid)=>{window.attaches.push([endpointId,options.cwd]);return {...(grid ?? {cols:80,rows:24}),screen:${JSON.stringify(terminalOutput)}}};
+            machine.sessions.open=async(id,options,grid)=>{window.attaches.push([endpointId,options.cwd]);return {...(grid ?? {cols:80,rows:24}),screen:terminalOutput}};
             machine.sessions.onOutput=(id,handler)=>{window.outputs[endpointId]=handler;return ()=>{}};
             machine.sessions.onSize=(id,handler)=>{window.sizes[endpointId]=handler;return ()=>{}};
             machine.sessions.onScreen=(id,handler)=>{window.screens[endpointId]=handler;return ()=>{}};
@@ -115,14 +118,26 @@ async function fixture(
             `${css}\n${terminalCss}\n.pane{position:absolute;width:360px;height:250px;top:0}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0}.flex{display:flex}.flex-col{flex-direction:column}.flex-1{flex:1}.grow{flex-grow:1}.min-h-0{min-height:0}.h-full{height:100%}.editor{position:absolute;top:310px;left:0;width:790px;height:270px}.editor>div{height:100%}svg{width:14px;height:14px}.tooltip-popup{max-width:288px;overflow-wrap:anywhere}`,
             async (view) => {
                 await view.evaluate('window.ready');
-                // WebGL fits more columns than the DOM renderer, and taking it up refits the grid, claiming it back from a size a test set.
+                // A view refits once its glyphs are measured and again once WebGL draws it (which fits more columns), and
+                // claims that grid back from a size a test set, so a test starts after both.
                 await waitInPage(
                     view,
-                    `!document.createElement('canvas').getContext('webgl2') || Object.values(window.instances).every(term=>[...term.element.querySelectorAll('.xterm-screen canvas')].some(canvas=>canvas.classList.length===0))`
+                    `(() => {
+                        return Object.values(window.instances).every(term => {
+                            term.fitProbe ??= (() => { const fit = new window.FitAddon(); term.loadAddon(fit); return fit; })();
+                            const size = term.fitProbe.proposeDimensions();
+                            const drawn = !window.webgl || [...term.element.querySelectorAll('.xterm-screen canvas')].some(canvas => canvas.classList.length === 0);
+                            return drawn && size !== undefined && size.cols === term.cols && size.rows === term.rows;
+                        });
+                    })()`
                 );
                 await view.evaluate(frame);
                 await run(view);
                 expect(await view.evaluate<string[]>('window.errors')).toEqual([]);
+            },
+            {
+                // What differs between tests rides in the page, so they all load one bundle.
+                head: `window.fixture=${JSON.stringify({ terminalOutput, onCanvas, language: options.language ?? 'en', platform: options.platform ?? process.platform, backend: backend.url })}`
             }
         );
     } finally {
@@ -356,20 +371,21 @@ test('output cwd follows cd, survives buffer reflow, and old output keeps its ow
             await expectLocation(view, '/repo/worktree/nested/same.ts');
             await view.evaluate('window.sizes.local({cols:10,rows:12})');
             await view.evaluate(`window.writeOutput('local', '\\r\\n'.repeat(16))`);
-            await view.evaluate('window.instances.local.scrollToTop()');
-            await view.evaluate(frame);
+            await view.evaluate(
+                `(() => { window.scrolls = []; window.instances.local.onScroll(() => window.scrolls.push(window.instances.local.buffer.active.viewportY + ' ' + new Error().stack.split('\\n').slice(2, 9).join(' < '))); })()`
+            );
             for (const [row, path] of [
                 [0, '/repo/worktree/same.ts'],
                 [2, '/repo/worktree/nested/same.ts']
             ] as const) {
-                diag(
-                    'grid',
-                    await view.evaluate<string>(
-                        `(() => { const term = window.instances.local; const buffer = term.buffer.active; return JSON.stringify({ cols: term.cols, rows: term.rows, viewportY: buffer.viewportY, lines: Array.from({ length: 5 }, (_, row) => buffer.getLine(buffer.viewportY + row)?.translateToString(true)), canvases: term.element.querySelectorAll('.xterm-screen canvas').length, point: ${JSON.stringify(row)} }); })()`
-                    )
-                );
+                diag('scrolls', await view.evaluate<string>('JSON.stringify(window.scrolls)'));
+                // The rows are old output above the screen; on the runner the view was back at the bottom by the second row.
+                await view.evaluate('window.instances.local.scrollToTop()');
+                await view.evaluate(frame);
                 await click(view, await hover(view, 'local', row), 'left', modifier);
                 await expectLocation(view, path);
+                await view.evaluate('window.instances.local.scrollToTop()');
+                await view.evaluate(frame);
                 await click(view, await hover(view, 'local', row), 'right');
                 await menuOpen(view);
                 await expectLocation(view, path);
