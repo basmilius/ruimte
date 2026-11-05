@@ -4,11 +4,12 @@
 // is built with and nothing is loaded into it.
 const { createRequire } = require('node:module');
 const { existsSync } = require('node:fs');
-const { join, sep } = require('node:path');
+const { join } = require('node:path');
 
-const helper = `${sep}Contents${sep}Helpers${sep}Ruimte Computer Use.app`;
+// Paths inside a macOS bundle, which this hook only ever signs on macOS.
+const helper = '/Contents/Helpers/Ruimte Computer Use.app';
 const helperEntitlements = join(__dirname, '..', '..', 'computer-use', 'Resources', 'entitlements.plist');
-const daemon = `${sep}Contents${sep}Resources${sep}bin${sep}ruimte`;
+const daemon = '/Contents/Resources/bin/ruimte';
 const daemonEntitlements = join(__dirname, 'entitlements.daemon.plist');
 
 /* The entitlements a file gets in place of `entitlementsInherit`, or null to keep those. */

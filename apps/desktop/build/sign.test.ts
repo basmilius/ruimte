@@ -27,7 +27,7 @@ test('only the daemon turns off library validation, for the native addons of wha
 });
 
 test('the computer use helper keeps its own entitlements', () => {
-    expect(entitlementsFor(`${APP}/Contents/Helpers/Ruimte Computer Use.app/Contents/MacOS/Ruimte Computer Use`)).toEndWith(
-        'computer-use/Resources/entitlements.plist'
+    expect(entitlementsFor(`${APP}/Contents/Helpers/Ruimte Computer Use.app/Contents/MacOS/Ruimte Computer Use`)).toBe(
+        join(import.meta.dir, '..', '..', 'computer-use', 'Resources', 'entitlements.plist')
     );
 });
