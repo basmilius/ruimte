@@ -160,13 +160,11 @@ test('the canvas keeps selection anchored during scroll, pans over focused bodie
             const gliding = await view.evaluate<number>('window.canvas.getState().camera.zoom');
             expect(gliding).toBeGreaterThan(1);
             expect(gliding).toBeLessThan(1.1);
-            await view.evaluate('new Promise(resolve => setTimeout(resolve, 500))');
-            expect(await view.evaluate<number>('window.canvas.getState().camera.zoom')).toBeCloseTo(1.1, 6);
+            expect(await settledZoom(view)).toBeCloseTo(1.1, 6);
             for (let i = 0; i < 3; i++) {
                 await view.cdp('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 400, y: 300, deltaX: 0, deltaY: 100, modifiers: 2 });
             }
-            await view.evaluate('new Promise(resolve => setTimeout(resolve, 500))');
-            expect(await view.evaluate<number>('window.canvas.getState().camera.zoom')).toBeCloseTo(0.83, 6);
+            expect(await settledZoom(view)).toBeCloseTo(0.83, 6);
             expect(await view.evaluate<string[]>('window.errors')).toEqual([]);
         }
     );
@@ -381,3 +379,21 @@ test('two overlapping groups drag apart, the inner one closes from its own butto
         }
     );
 }, 15000);
+
+/* The zoom once a wheel glide has arrived and settled: a glide moves it every frame until then. */
+async function settledZoom(view: InstanceType<typeof Bun.WebView>): Promise<number> {
+    let zoom = await view.evaluate<number>('window.canvas.getState().camera.zoom');
+
+    for (let attempt = 0; attempt < 120; attempt++) {
+        await view.evaluate('new Promise(resolve => requestAnimationFrame(resolve))');
+        const next = await view.evaluate<number>('window.canvas.getState().camera.zoom');
+
+        if (next === zoom) {
+            return zoom;
+        }
+
+        zoom = next;
+    }
+
+    return zoom;
+}
