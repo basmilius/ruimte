@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import { MAX_MESSAGE_HOPS } from '@adecore/agents/coordination';
 import type { OutboxWork } from '../outbox/outbox.ts';
 import { wakeForWaitingMessages } from './agent-messages.ts';
@@ -25,5 +25,20 @@ describe('wakeForWaitingMessages', () => {
         expect(await woken(MAX_MESSAGE_HOPS + 1, 'done')).toEqual([]);
         expect(await woken(undefined, 'done')).toEqual([]);
         expect(await woken(1, 'done', null)).toEqual([]);
+    });
+
+    test('an outbox that cannot write, such as on a full disk, is logged and never rejects', async () => {
+        const logged = spyOn(console, 'error').mockImplementation(() => undefined);
+        const notices = { waiting: () => [{ projectId: 'project', targetId: 'chat', from: 'other', fromTitle: '', text: 'hi', createdAt: 0, hop: 1 }] };
+
+        try {
+            await wakeForWaitingMessages(notices, 'chat', 'done', 'project', async () => {
+                throw new Error('ENOSPC: no space left on device');
+            });
+
+            expect(logged).toHaveBeenCalledWith(expect.stringContaining('chat'), expect.stringContaining('ENOSPC'));
+        } finally {
+            logged.mockRestore();
+        }
     });
 });

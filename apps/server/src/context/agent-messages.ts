@@ -21,7 +21,8 @@ interface AgentMessageDeps {
 
 /*
  * The turn messages that landed during a turn are owed once it ends. Only after a turn that finished:
- * a person's Stop or an error is no moment to start another on its own.
+ * a person's Stop or an error is no moment to start another on its own. Never rejects: the end of a turn
+ * does not wait for it, and an outbox write that fails (a full disk) must not end the daemon.
  */
 export async function wakeForWaitingMessages(
     notices: Pick<NoticeStore, 'waiting'>,
@@ -30,8 +31,14 @@ export async function wakeForWaitingMessages(
     projectId: string | null,
     enqueue: (projectId: string, work: OutboxWork) => Promise<void>
 ): Promise<void> {
-    if (state === 'done' && projectId !== null && notices.waiting(chatId).some(withinHops)) {
+    if (state !== 'done' || projectId === null || !notices.waiting(chatId).some(withinHops)) {
+        return;
+    }
+
+    try {
         await enqueue(projectId, { kind: 'deliver-message', payload: { from: chatId } });
+    } catch (e) {
+        console.error(`Waking chat ${chatId} for the messages that waited failed:`, errorText(e));
     }
 }
 
