@@ -38,3 +38,22 @@ describe('disconnecting a session', () => {
         expect(other.closed).toEqual([]);
     });
 });
+
+describe('registering a direct channel', () => {
+    test('refuses a grant revoked while the channel opened, and registers one that still holds', () => {
+        const handshake = { granted: (sessionId: string) => sessionId !== 'revoked-session' } as unknown as Handshake;
+        const clients = wireClients(handshake, {} as ConnectionServices);
+        // Machines that work here, which subscribe to nothing, so the opener needs no services.
+        const revokedAccess = { reachability: 'lan' as const, sessionId: 'revoked-session', peer: { machineId: 'machine-a' } };
+        const keptAccess = { reachability: 'lan' as const, sessionId: 'kept-session', peer: { machineId: 'machine-b' } };
+        const revoked = directClient(revokedAccess);
+        const kept = directClient(keptAccess);
+
+        expect(clients.addDirect(revoked.state.channel, revokedAccess)).toBeNull();
+        expect(clients.addDirect(kept.state.channel, keptAccess)).not.toBeNull();
+
+        expect(revoked.closed).toEqual([{ code: 4001, reason: 'Access revoked' }]);
+        expect(kept.closed).toEqual([]);
+        expect([...clients.direct].map((state) => state.connection.client.access?.sessionId)).toEqual(['kept-session']);
+    });
+});

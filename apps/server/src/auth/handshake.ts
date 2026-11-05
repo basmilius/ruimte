@@ -68,6 +68,7 @@ export class Handshake {
     // One per direct channel, under its binding, so the pool is as large as the attempts `DirectPeers` lets open.
     private readonly channelChallenges = new Map<string, ChannelChallenge>();
     private readonly tickets = new Map<string, Ticket>();
+    private readonly revokedSessions = new Set<string>();
 
     constructor(store: AuthStore, identity: SigningIdentity, now: () => number = Date.now) {
         this.store = store;
@@ -109,14 +110,23 @@ export class Handshake {
         if (!verifySignature(payload.publicKey, clientChannelMessage(this.identity.id, payload.challenge, payload.publicKey, binding), payload.signature)) {
             return null;
         }
-        if (!(await this.store.noteSeen(sessionId))) {
+        // Validity and role come from one read, so a session revoked in between is refused rather than read as a client.
+        const standing = await this.store.noteSeen(sessionId);
+        if (standing === null || !this.granted(sessionId)) {
             return null;
         }
-        const peer = await this.store.peerOf(sessionId);
-        if (peer !== null) {
-            return { sessionId, ticket: null, peer: { machineId: peer.machineId } };
+        if (standing.peer !== null) {
+            return { sessionId, ticket: null, peer: { machineId: standing.peer.machineId } };
         }
         return { sessionId, ticket: { ticket: this.issueTicket(sessionId), expiresIn: TICKET_TTL_MS }, peer: null };
+    }
+
+    /*
+     * Whether a session was not revoked while this daemon runs, asked again as a channel is registered: a revoke
+     * closes only the channels already registered, so one that lands while a channel opens would otherwise miss it.
+     */
+    granted(sessionId: string): boolean {
+        return !this.revokedSessions.has(sessionId);
     }
 
     /* A ticket for the app on this machine, which the caller already saw present the local secret. */
@@ -157,9 +167,12 @@ export class Handshake {
             entry.socket = 'open';
         }
         entry.expiresAt = this.now() + TICKET_TTL_MS;
-        if (entry.sessionId !== null && (!(await this.store.hasSession(entry.sessionId)) || (await this.store.peerOf(entry.sessionId)) !== null)) {
-            this.tickets.delete(ticket);
-            return null;
+        if (entry.sessionId !== null) {
+            const standing = await this.store.standing(entry.sessionId);
+            if (standing === null || standing.peer !== null) {
+                this.tickets.delete(ticket);
+                return null;
+            }
         }
         return { sessionId: entry.sessionId };
     }
@@ -175,6 +188,8 @@ export class Handshake {
 
     /* Takes every ticket of a client away; revoking has to bite now, not at the next connection. */
     revoke(sessionId: string): void {
+        // A revoked session never comes back under the same id, and a revoke is rare, so the set stays small.
+        this.revokedSessions.add(sessionId);
         for (const [ticket, entry] of this.tickets) {
             if (entry.sessionId === sessionId) {
                 this.tickets.delete(ticket);

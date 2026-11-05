@@ -73,6 +73,20 @@ function statementRecord(record: z.infer<typeof StoredRecordSchema>): SessionRec
     return null;
 }
 
+// What a session that still has its access is: a client (`peer` null) or the machine a peer is.
+export interface SessionStanding {
+    peer: { machineId: string; machinePublicKey: string } | null;
+}
+
+function standingOf(record: SessionRecord): SessionStanding {
+    return {
+        peer:
+            record.origin === 'peer' && record.machineId !== undefined && record.machinePublicKey !== undefined
+                ? { machineId: record.machineId, machinePublicKey: record.machinePublicKey }
+                : null
+    };
+}
+
 const AccountBindingSchema = z.object({ id: z.string().min(1), since: z.number() });
 export type AccountBinding = z.infer<typeof AccountBindingSchema>;
 
@@ -310,28 +324,34 @@ export class AuthStore {
     /* The machine a session is, or null for a client; a peer is a machine of the account and never an owner. */
     async peerOf(sessionId: string): Promise<{ machineId: string; machinePublicKey: string } | null> {
         const record = (await this.load()).sessions.find((entry) => entry.id === sessionId);
-        return record?.origin === 'peer' && record.machineId !== undefined && record.machinePublicKey !== undefined
-            ? { machineId: record.machineId, machinePublicKey: record.machinePublicKey }
-            : null;
+
+        return record === undefined ? null : standingOf(record).peer;
     }
 
     /* Whether a session still has its access, which a credential handed out before a revoke has to ask again. */
     async hasSession(sessionId: string): Promise<boolean> {
-        return (await this.load()).sessions.some((entry) => entry.id === sessionId && this.attested(entry));
+        return (await this.standing(sessionId)) !== null;
     }
 
-    /* Notes that a client proved its key just now; false when it was revoked since it was looked up. */
-    async noteSeen(sessionId: string): Promise<boolean> {
+    /* Whether a session still has its access and as what, read together; null once it is gone or ran out. */
+    async standing(sessionId: string): Promise<SessionStanding | null> {
+        const record = (await this.load()).sessions.find((entry) => entry.id === sessionId);
+
+        return record === undefined || !this.attested(record) ? null : standingOf(record);
+    }
+
+    /* Notes that a client proved its key just now, answering what it is; null when it was revoked since it was looked up. */
+    async noteSeen(sessionId: string): Promise<SessionStanding | null> {
         return this.transition(async (state) => {
             const record = state.sessions.find((entry) => entry.id === sessionId);
             if (!record || !this.attested(record)) {
-                return false;
+                return null;
             }
 
             record.lastSeenAt = this.now();
             await this.save(state);
 
-            return true;
+            return standingOf(record);
         });
     }
 

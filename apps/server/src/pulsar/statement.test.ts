@@ -535,7 +535,7 @@ describe('StatementGate', () => {
         now += 1;
         expect(await store.sessionForPublicKey(peer.publicKey)).toBeNull();
         expect(await store.hasSession(sessionId)).toBe(false);
-        expect(await store.noteSeen(sessionId)).toBe(false);
+        expect(await store.noteSeen(sessionId)).toBeNull();
         // It stays on record as the machine it was, never as a client, and a person can still see and revoke it.
         expect(await store.peerOf(sessionId)).toMatchObject({ machineId: 'machine-a' });
         expect(await store.list(null)).toEqual([expect.objectContaining({ id: sessionId, machineId: 'machine-a' })]);

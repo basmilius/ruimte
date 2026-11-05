@@ -70,11 +70,11 @@ describe('AuthStore', () => {
     test('a client that proves its key is seen now, and one revoked since it was looked up is not', async () => {
         const sessionId = await admitClient(store, generateKeyPair().publicKey);
         clock += 5_000;
-        expect(await store.noteSeen(sessionId)).toBe(true);
+        expect(await store.noteSeen(sessionId)).toEqual({ peer: null });
         expect((await store.list(null))[0]?.lastSeenAt).toBe(clock);
         expect(await store.revoke(sessionId)).toBe(true);
         expect(await store.revoke(sessionId)).toBe(false);
-        expect(await store.noteSeen(sessionId)).toBe(false);
+        expect(await store.noteSeen(sessionId)).toBeNull();
         expect(await store.hasSession(sessionId)).toBe(false);
     });
 

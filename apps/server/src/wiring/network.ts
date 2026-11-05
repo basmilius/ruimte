@@ -59,11 +59,10 @@ export function wireNetwork(
                 reachability: reachabilityOf(remoteAddress ?? '')
             }),
         open: (channel, channelAccess) => {
-            const clients = later.clients();
-            const state = { channel, connection: clients.open(channel, channelAccess) };
-            clients.direct.add(state);
-            channel.receiveWith((frame) => state.connection.receive(frame), AUTHENTICATED_FRAME_CHARS);
-            channel.onClose(() => clients.direct.delete(state));
+            const state = later.clients().addDirect(channel, channelAccess);
+            if (state !== null) {
+                channel.receiveWith((frame) => state.connection.receive(frame), AUTHENTICATED_FRAME_CHARS);
+            }
         }
     });
     registerDirectHandlers(dispatcher, peers);

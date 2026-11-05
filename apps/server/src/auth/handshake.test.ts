@@ -210,9 +210,12 @@ describe('Handshake', () => {
         expect(await store.hasSession(sessionId)).toBe(false);
     });
 
-    test('a revoke that lands while the ticket is written leaves a ticket that opens nothing', async () => {
+    test.each([
+        ['client', undefined],
+        ['peer', { machineId: 'machine-a', machinePublicKey: generateKeyPair().publicKey }]
+    ])('a %s revoked right after it was seen gets nothing, never a client grant', async (_kind, peer) => {
         const key = generateKeyPair();
-        const sessionId = await admit(key);
+        const sessionId = await admitClient(store, key.publicKey, 'Laptop', 'owner', peer);
         const racing = Object.create(store) as AuthStore;
         racing.noteSeen = async (sessionId) => {
             const noted = await store.noteSeen(sessionId);
@@ -221,11 +224,21 @@ describe('Handshake', () => {
             return noted;
         };
         handshake = new Handshake(racing, identity, () => clock);
-        const ticket = await signIn(key);
-        expect(ticket).not.toBeNull();
-        expect(await handshake.ticketAccess(ticket!.ticket, 'socket')).toBeNull();
-        expect(await handshake.ticketAccess(ticket!.ticket, 'bytes')).toBeNull();
+        expect(await handshake.redeemChannel(proof(key), BINDING)).toBeNull();
         expect(await store.hasSession(sessionId)).toBe(false);
+    });
+
+    test('a grant revoked before its channel is registered is no longer granted', async () => {
+        const key = generateKeyPair();
+        const sessionId = await admit(key);
+        const grant = await handshake.redeemChannel(proof(key), BINDING);
+        expect(grant).toMatchObject({ sessionId });
+        expect(handshake.granted(sessionId)).toBe(true);
+
+        handshake.revoke(sessionId);
+
+        expect(handshake.granted(sessionId)).toBe(false);
+        expect(await handshake.ticketAccess(grant!.ticket!.ticket, 'socket')).toBeNull();
     });
 });
 
@@ -287,8 +300,8 @@ describe('Handshake and a peer', () => {
         const swappable = {
             sessionForPublicKey: (publicKey: string) => store.sessionForPublicKey(publicKey),
             noteSeen: (id: string) => store.noteSeen(id),
-            hasSession: (id: string) => store.hasSession(id),
-            peerOf: async (id: string) => (becamePeer ? { machineId: 'machine-a', machinePublicKey: generateKeyPair().publicKey } : store.peerOf(id))
+            standing: async (id: string) =>
+                becamePeer ? { peer: { machineId: 'machine-a', machinePublicKey: generateKeyPair().publicKey } } : store.standing(id)
         };
         const own = new Handshake(swappable as unknown as AuthStore, identity, () => clock);
         const client = generateKeyPair();

@@ -18,6 +18,8 @@ export interface ClientsBundle {
     sockets: Map<ServerWebSocket<ClientAccess>, SocketConnection>;
     direct: Set<DirectConnection>;
     open(channel: ClientChannel, access: ClientAccess): OpenConnection;
+    /* Opens and registers a direct channel that proved itself, or closes it when its session was revoked while it opened. */
+    addDirect(channel: ClientChannel, access: ClientAccess): DirectConnection | null;
     /* Revoking must take effect now, not at the next connection, so a session's sockets and channels close here. */
     disconnectSession(sessionId: string): void;
     /* Tells a machine that works here its task settled, over the link it holds now; nothing when it holds none. */
@@ -42,5 +44,22 @@ export function wireClients(handshake: Handshake, services: ConnectionServices):
             }
         }
     };
-    return { sockets, direct, open: connectionOpener(services), disconnectSession, notifyPeer };
+    const open = connectionOpener(services);
+
+    const addDirect = (channel: ClientChannel, access: ClientAccess): DirectConnection | null => {
+        // Checked as it is registered, with no await between, so a later revoke finds it in `direct` instead.
+        if (access.sessionId !== null && !handshake.granted(access.sessionId)) {
+            channel.close(4001, 'Access revoked');
+
+            return null;
+        }
+
+        const state = { channel, connection: open(channel, access) };
+        direct.add(state);
+        channel.onClose(() => direct.delete(state));
+
+        return state;
+    };
+
+    return { sockets, direct, open, addDirect, disconnectSession, notifyPeer };
 }
