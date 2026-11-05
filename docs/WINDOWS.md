@@ -41,18 +41,17 @@ Unit tested. "Unverified" means nobody tried it on a PC.
 
 On the PC, 2026-10-30: `check:types`, `lint` and `format:check` pass. `bun run test:windows` (8 workers) takes 2 minutes with 11485 pass and 0 fail, `bun run test:dom` 626 pass and 0 fail, and `bun run test:integration` 255 pass, 178 skip and 0 fail.
 
-- `unit (Windows)` in CI leaves out the unit test files that run real git or boot a whole test daemon (`windows-ci.bunfig.toml`): a runner is over three times slower than the PC and they failed at random, in other tests every run. Git and worktrees on Windows are therefore proven only by `bun run test:windows` on a real machine. Run it before a release.
-- `bun run test` uses a worker per core. With 16 it has timeouts in tests that run real git (`git/repos`, `tools/worktree-tools`); with 8 it has none and the same tests pass alone, so load is the likely cause.
+- `unit (Windows)` in CI leaves out the unit test files that boot a whole test daemon (`windows-ci.bunfig.toml`): a runner is over three times slower than the PC and they failed at random, in other tests every run. The tests that run real git are integration tests (`git/test-repo.ts`), which no Windows job runs, so git and worktrees on Windows are proven only by `bun run test:integration` on a real machine. Run it and `bun run test:windows` before a release.
 - `check:generated` fails: the floats in `apps/ios/Tests/Fixtures/document-scenes.json` differ in their last digits (`37.23045369887423` here, `37.230453698874236` on the PC), so the math libraries disagree. The check stays off on Windows.
 - Skipped on Windows, and so proven only by hand or not at all:
   - PHP: Intelephense was removed. The own server finds a class created on disk on Windows, once it is built on `language-server-core` with the fix to `crates/server/src/paths.rs` (not yet released).
   - `sessions/terminal-stream`: ConPTY draws a screen, so a burst does not arrive whole.
   - `pty/bun-pty`, the resize in Git Bash: its `stty` reads no size from a ConPTY. A test of its own holds the resize in PowerShell.
-  - `git/run`, the timeout that ends a background job, and `git/identity`, a fake `git` script. The hook tests in `git/actions` and `git/worktree-merge` do hold the process tree.
+  - `git/run`, the timeout that ends a background job, and `git/identity`, a fake `git` script. The hook tests in `git/actions-cancel` and `git/worktree-merge-cancel` do hold the process tree.
   - `sessions/shell-editor`, `shell-editor-review`, `background-cwd`, `shell-integration` and `prepare-terminal`: POSIX shells, with zsh among them.
   - `peering/one-shot-place`, `providers/acp-providers` (a fake CLI as a shell script) and `devices/helper-source` (Bun answers `EMFILE`). Apple's model and the launcher, which refuses Windows until the release.
   - Bun's watcher hears no edit through a junction, so a daemon on a linked ADE CORE may not restart for a source edit.
-- `unit (Windows)` in `ci.yml` runs on two workers and only with `WINDOWS_RELEASE` set to `true`, outside the final check, and may fail without failing the run. It stays off until everything works on the PC. `canvas/worktree-verb.test.ts` and `git/worktree-merge.test.ts` passed in the baseline, but did time out on the runner, leaving a folder Windows holds (`EBUSY`).
+- `unit (Windows)` in `ci.yml` runs on two workers and only with `WINDOWS_RELEASE` set to `true`, outside the final check, and may fail without failing the run. It stays off until everything works on the PC. `canvas/worktree-verb.test.ts` and `git/worktree-merge.test.ts` (now an integration test) passed in the baseline, but did time out on the runner, leaving a folder Windows holds (`EBUSY`).
 - On build 26300 an elevated process refuses a junction a non-elevated process made ("untrusted mount point"); a non-elevated process reads it fine, and a junction an elevated process made works for both. So run `bun install` on the PC over SSH: one from a person's PowerShell crashed every test in the elevated SSH session. Whether this reaches an elevated Ruimte, or other Windows builds, is not known.
 
 ### 2. Daemon start and stop

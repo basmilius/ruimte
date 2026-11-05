@@ -57,7 +57,9 @@ describe('processStarts', () => {
             "const later = await import('node:child_process');",
             "await Bun.spawn(['git', 'init']).exited;",
             "Bun.spawnSync(['ls']);",
-            'await Bun.$`ls`;'
+            'await Bun.$`ls`;',
+            "import { initRepo } from '../git/test-repo.ts';",
+            "import { gitIn } from './test-repo';"
         ].join('\n');
         expect(processStarts('example.test.ts', text)).toEqual([
             { line: 1, what: 'node:child_process' },
@@ -67,13 +69,16 @@ describe('processStarts', () => {
             { line: 4, what: 'node:child_process' },
             { line: 5, what: 'Bun.spawn' },
             { line: 6, what: 'Bun.spawnSync' },
-            { line: 7, what: 'Bun.$' }
+            { line: 7, what: 'Bun.$' },
+            { line: 8, what: '../git/test-repo.ts' },
+            { line: 9, what: './test-repo' }
         ]);
     });
 
     test('a type, a fake and the rest of bun start nothing', () => {
         const text = [
             "import type { ChildProcess } from 'node:child_process';",
+            "import type { RepoTemplate } from '../git/test-repo.ts';",
             "import { type Subprocess, Glob } from 'bun';",
             "spyOn(Bun, 'spawn').mockImplementation(fakeSpawn);",
             "const listed = new Glob('*.ts');"

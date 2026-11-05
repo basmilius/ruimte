@@ -8,7 +8,7 @@ import { checkpointIndexFile, Checkpoints } from './checkpoints.ts';
 import * as runner from './run.ts';
 import { forgetBase } from './status.ts';
 import { gitIn, initRepo, repoSnapshots, type RepoSnapshots, NO_WORKTREE_AGENTS } from './test-repo.ts';
-import { countStatus, Worktrees } from './worktrees.ts';
+import { Worktrees } from './worktrees.ts';
 
 let snapshots: RepoSnapshots;
 let madeLexer: Worktree;
@@ -395,20 +395,5 @@ describe('Worktrees', () => {
         // Each call reads the repository before it queues, so which of the two queues first is not fixed; that one removes it.
         expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
         expect(results.find((result) => result.status === 'rejected')).toMatchObject({ reason: { code: 'worktree-not-found' } });
-    });
-});
-
-describe('countStatus', () => {
-    test('a rename is one change and its old path is not read as an entry of its own', () => {
-        const output = [
-            '1 .M N... 100644 100644 100644 a b README.md',
-            '2 R. N... 100644 100644 100644 a b R100 new.md',
-            '? looks-untracked.md',
-            '? notes.md',
-            'u UU N... 1 2 3 4 a b c x.md',
-            '! build/out.js',
-            ''
-        ].join('\0');
-        expect(countStatus(output)).toEqual({ changed: 3, untracked: 1 });
     });
 });

@@ -80,6 +80,9 @@ export function clockReads(path: string, text: string): ClockRead[] {
 
 const PROCESS_MODULES = new Set(['child_process', 'node:child_process']);
 
+// The git fixture helpers start git for the test, out of sight of the file that imports them.
+const PROCESS_HELPERS = /(^|\/)test-repo(\.ts)?$/;
+
 // What `bun` exports that starts a process: `$` runs a real shell.
 const BUN_STARTERS = new Set(['spawn', 'spawnSync', '$']);
 
@@ -88,12 +91,12 @@ export interface ProcessStart {
     what: string;
 }
 
-/* Every place a test file starts a process itself: `Bun.spawn`, Bun's shell or `node:child_process`. */
+/* Every place a test file starts a process itself: `Bun.spawn`, Bun's shell, `node:child_process` or the git fixtures. */
 export function processStarts(path: string, text: string): ProcessStart[] {
     const program = parseSync(path, text).program;
     const found: Array<{ start: number; what: string }> = [];
     const noteModule = (start: number, source: string): void => {
-        if (PROCESS_MODULES.has(source)) {
+        if (PROCESS_MODULES.has(source) || PROCESS_HELPERS.test(source)) {
             found.push({ start, what: source });
         }
     };

@@ -7,7 +7,7 @@ import type { ProjectChatView } from '@ruimte/contracts';
 import { initRepo } from '../git/test-repo.ts';
 import { chatViewsOf, projectLinks } from './project-file-test-helpers.ts';
 import { ProjectStore } from './project-store.ts';
-import { dropEmptyMark, newScratchChat, reusableChat, scratchFolderOf } from './scratch-project.ts';
+import { dropEmptyMark, newScratchChat, scratchFolderOf } from './scratch-project.ts';
 
 let root: string;
 let store: ProjectStore;
@@ -112,24 +112,5 @@ describe('a new chat outside any project', () => {
 
         expect((await chatViews(first.summary.projectId)).map((view) => view.empty)).toEqual([undefined]);
         expect((await newScratchChat(store, {})).viewId).not.toBe(first.viewId);
-    });
-});
-
-describe('the empty chat a new chat reuses', () => {
-    const view = (id: string, node: ProjectChatView['node'], empty?: boolean): ProjectChatView => ({
-        kind: 'chat',
-        id,
-        name: 'New chat',
-        node,
-        ...(empty ? { empty } : {})
-    });
-
-    test('is one nobody wrote in, of the CLI and account asked for when the request names them', () => {
-        const views = [view('written', {}), view('codex', { provider: 'codex' }, true), view('claude', { provider: 'claude', account: 'work' }, true)];
-
-        expect(reusableChat(views, {})?.id).toBe('codex');
-        expect(reusableChat(views, { provider: 'claude' })?.id).toBe('claude');
-        expect(reusableChat(views, { provider: 'claude', account: 'home' })).toBeNull();
-        expect(reusableChat([view('written', {})], {})).toBeNull();
     });
 });
