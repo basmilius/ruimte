@@ -34,7 +34,7 @@ import { quitQuestion } from './quit-question';
 import { runSmoke } from './smoke';
 import { installSocketTypeOfServiceGuard } from './socket-tos-guard';
 import { startApp } from './startup';
-import { appSubframeNavigation, isExternalLink } from './web-guards';
+import { allowAppPermission, appSubframeNavigation, isExternalLink } from './web-guards';
 
 const { app, BrowserWindow, dialog, ipcMain, nativeTheme, protocol, screen, session, shell, webContents } = electron;
 
@@ -333,30 +333,24 @@ const windows = createWindows({
     onFront: (window) => menu.applyOf(window)
 });
 
-// Audio for the app's own pages only. Set once on the shared session: a handler per window would leave only the last one able to ask.
+// Set once on the shared session: a handler per window would leave only the last one able to ask.
 function sealAppSession(): void {
     const own = session.defaultSession;
-    // Electron 45 reports a screen capture as display-capture instead of media; no page of ours captures the screen.
-    own.setPermissionCheckHandler((requester, permission, _origin, details) => {
-        if (permission === 'display-capture') {
-            return false;
-        }
-        if (permission !== 'media') {
-            return true;
-        }
-        return requester !== null && windows.fromPage(requester) !== null && details.isMainFrame && details.mediaType === 'audio';
-    });
+    own.setPermissionCheckHandler((requester, permission, _origin, details) =>
+        allowAppPermission({
+            permission,
+            appMainFrame: requester !== null && windows.fromPage(requester) !== null && details.isMainFrame,
+            mediaTypes: details.mediaType === undefined ? [] : [details.mediaType]
+        })
+    );
     own.setPermissionRequestHandler((requester, permission, callback, details) => {
-        if (permission === 'display-capture') {
-            callback(false);
-            return;
-        }
-        if (permission !== 'media') {
-            callback(true);
-            return;
-        }
-        const mediaTypes = 'mediaTypes' in details ? details.mediaTypes : undefined;
-        callback(windows.fromPage(requester) !== null && details.isMainFrame && mediaTypes?.length === 1 && mediaTypes[0] === 'audio');
+        callback(
+            allowAppPermission({
+                permission,
+                appMainFrame: windows.fromPage(requester) !== null && details.isMainFrame,
+                mediaTypes: 'mediaTypes' in details ? (details.mediaTypes ?? []) : []
+            })
+        );
     });
 }
 

@@ -1,6 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import { createDesktopAppScheme } from './app-scheme';
-import { allowGuestPermission, appSubframeNavigation, hardenGuestPreferences, isSystemSettingsPane, type GuestWebPreferences } from './web-guards';
+import {
+    allowAppPermission,
+    allowGuestPermission,
+    appSubframeNavigation,
+    hardenGuestPreferences,
+    isSystemSettingsPane,
+    type GuestWebPreferences
+} from './web-guards';
 
 const APP = createDesktopAppScheme('/client', 'http://127.0.0.1:4210').isAppUrl;
 const PACKAGED = createDesktopAppScheme('/client').isAppUrl;
@@ -56,6 +63,32 @@ describe('appSubframeNavigation', () => {
     test('a frame Electron no longer knows gets the rule of a frame of the page', () => {
         expect(appSubframeNavigation('http://127.0.0.1:4210/__visual/', null, APP)).toBe('allow');
         expect(appSubframeNavigation('https://example.com/', null, APP)).toBe('refuse');
+    });
+});
+
+describe('allowAppPermission', () => {
+    const main = (permission: string, mediaTypes: string[] = []) => allowAppPermission({ permission, appMainFrame: true, mediaTypes });
+
+    test('the main frame of an app window gets what the page uses', () => {
+        for (const permission of ['notifications', 'clipboard-read', 'clipboard-sanitized-write', 'fullscreen']) {
+            expect(main(permission)).toBe(true);
+        }
+        expect(main('media', ['audio'])).toBe(true);
+    });
+
+    test('and nothing else: no camera, screen capture or other permission', () => {
+        expect(main('media', ['video'])).toBe(false);
+        expect(main('media', ['audio', 'video'])).toBe(false);
+        expect(main('media')).toBe(false);
+        for (const permission of ['display-capture', 'geolocation', 'openExternal', 'hid', 'usb', 'serial', 'midi', 'pointerLock', 'fileSystem', 'unknown']) {
+            expect(main(permission)).toBe(false);
+        }
+    });
+
+    test('a subframe or a page outside the app windows gets nothing', () => {
+        for (const permission of ['notifications', 'clipboard-sanitized-write', 'fullscreen', 'media']) {
+            expect(allowAppPermission({ permission, appMainFrame: false, mediaTypes: ['audio'] })).toBe(false);
+        }
     });
 });
 

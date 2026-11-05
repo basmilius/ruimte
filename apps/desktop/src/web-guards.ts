@@ -77,6 +77,32 @@ export function allowGuestPermission(permission: string): boolean {
     return GUEST_PERMISSIONS.has(permission);
 }
 
+/*
+ * What the app's own page uses: notifications for agents, reading and writing the clipboard, full screen
+ * from the menu, and the microphone for dictation and Voice (`media`, audio alone). A screen capture
+ * reaches Electron as `display-capture` or as `media` with video.
+ */
+const APP_PERMISSIONS: ReadonlySet<string> = new Set(['notifications', 'clipboard-read', 'clipboard-sanitized-write', 'fullscreen']);
+
+export interface AppPermissionAsk {
+    readonly permission: string;
+    /* Whether the asking page is the main frame of one of the app's windows; a subframe (a visual, an extension's frame) never is. */
+    readonly appMainFrame: boolean;
+    readonly mediaTypes: readonly string[];
+}
+
+/* What the default session grants, refusing anything the app's page does not use and every subframe. */
+export function allowAppPermission(ask: AppPermissionAsk): boolean {
+    if (!ask.appMainFrame) {
+        return false;
+    }
+    if (ask.permission === 'media') {
+        return ask.mediaTypes.length === 1 && ask.mediaTypes[0] === 'audio';
+    }
+
+    return APP_PERMISSIONS.has(ask.permission);
+}
+
 /* The part of a `<webview>`'s preferences a guest could use to reach Node or another session. */
 export interface GuestWebPreferences {
     partition?: string;
