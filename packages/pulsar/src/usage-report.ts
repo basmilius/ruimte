@@ -7,7 +7,6 @@ import {
     USAGE_VERB_COUNTERS,
     USAGE_VIEW_COUNTERS,
     usageCohortProblem,
-    type UsageBatch,
     type UsageCounter
 } from './usage.ts';
 
@@ -227,24 +226,4 @@ export function usageReportCounterOfV1(counter: UsageCounter): UsageReportCounte
         return `${chat[1] as 'chats' | 'turns'}.${provider}`;
     }
     return null;
-}
-
-/*
- * An older daemon's batch as a report, for the address book's relay until `/v1/usage` goes: the same day, its
- * counters under their report names, summed where two land on one (Gemini in `other`), and its verb groups left out,
- * since a group names no single verb.
- */
-export function usageReportOfV1(batch: UsageBatch): UsageReportBatch {
-    return {
-        days: batch.days.map(({ counts, ...day }) => {
-            const report: Partial<Record<UsageReportCounter, number>> = {};
-            for (const [counter, value] of Object.entries(counts) as [UsageCounter, number | undefined][]) {
-                const name = usageReportCounterOfV1(counter);
-                if (name !== null && value !== undefined && value > 0) {
-                    report[name] = Math.min((report[name] ?? 0) + value, USAGE_MAX_COUNT);
-                }
-            }
-            return { ...day, counts: report };
-        })
-    };
 }

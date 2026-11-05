@@ -1,4 +1,4 @@
-import { PEER_STATEMENTS_PATH, ProviderIdSchema, USAGE_PATH } from '@ruimte/pulsar';
+import { PEER_STATEMENTS_PATH, ProviderIdSchema } from '@ruimte/pulsar';
 import { captureException, withSentry } from '@sentry/cloudflare';
 import { deleteAccount } from './account-deletion.ts';
 import { readBenchmarks, refreshBenchmarks } from './benchmarks.ts';
@@ -20,7 +20,6 @@ import { PROVIDERS } from './providers.ts';
 import { changePushDevice, registerPushDevice, sendPush } from './push.ts';
 import { issueStatement } from './statements.ts';
 import { telemetryOptions } from './telemetry.ts';
-import { acceptUsage, rateLimitCleanup, usageRelay, type UsageDeps } from './usage.ts';
 
 // Rows past use for this long are dropped by the daily cleanup; the statement log is kept.
 const REVOKED_SESSION_RETENTION_MS = 30 * 24 * 60 * 60_000;
@@ -52,9 +51,6 @@ const ROUTES: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
     '/v1/statements': { POST: issueStatement },
     [PEER_STATEMENTS_PATH]: { POST: issuePeerStatement },
     '/v1/maps/ticket': { POST: issueMapsTicket },
-    [USAGE_PATH]: {
-        POST: (request, env, ctx) => acceptUsage(request, { db: env.DB, burst: env.USAGE_LIMIT, relay: relayOf(env, ctx), now: Date.now })
-    },
     '/v1/session': { POST: exchangeLoginCode, DELETE: endSession },
     '/v1/session/refresh': { POST: refreshSession }
 };
@@ -79,13 +75,6 @@ const DEVICE_ROUTES: Readonly<Record<string, Handler>> = {
 
 function ownEntry<Value>(table: Readonly<Record<string, Value>> | undefined, key: string): Value | undefined {
     return table !== undefined && Object.hasOwn(table, key) ? table[key] : undefined;
-}
-
-function relayOf(env: Env, ctx: ExecutionContext): UsageDeps['relay'] {
-    if (!env.OBSERVATORY_USAGE_URL || !env.OBSERVATORY_UPLOAD_TOKEN) {
-        return undefined;
-    }
-    return usageRelay({ url: env.OBSERVATORY_USAGE_URL, token: env.OBSERVATORY_UPLOAD_TOKEN }, (promise) => ctx.waitUntil(promise));
 }
 
 async function health(env: Env): Promise<Response> {
@@ -208,7 +197,7 @@ async function cleanUp(env: Env): Promise<void> {
         env.DB.prepare('DELETE FROM identity_link_request WHERE expires_at <= ?1').bind(now),
         env.DB.prepare('DELETE FROM identity_link_code WHERE expires_at <= ?1').bind(now),
         env.DB.prepare('DELETE FROM device_link WHERE expires_at <= ?1').bind(now),
-        ...rateLimitCleanup(env.DB, now),
+        env.DB.prepare('DELETE FROM rate_limit WHERE window_start < ?1').bind(now - 60 * 60_000),
         env.DB.prepare('DELETE FROM session WHERE expires_at <= ?1 OR revoked_at <= ?2').bind(now, now - REVOKED_SESSION_RETENTION_MS)
     ]);
 }

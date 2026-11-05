@@ -1,14 +1,8 @@
 import type { RateLimitBinding, RateLimiter } from './rate-window.ts';
-import type { UsageDeps } from './usage.ts';
 
 // The limiters of `LIMITS`, one per distinct limit (`rate-window.ts`).
 export interface Env extends Record<RateLimitBinding, RateLimiter> {
     DB: D1Database;
-    // The per-minute limit per address in front of the usage relay.
-    USAGE_LIMIT?: UsageDeps['burst'];
-    // Where every accepted batch goes on to (`usageRelay`), and the upload token of Ruimte's product there. Never logged.
-    OBSERVATORY_USAGE_URL?: string;
-    OBSERVATORY_UPLOAD_TOKEN?: string;
     // Observatory's envelope ingest of the address book's app, for the check-ins of the nightly cleanup.
     OBSERVATORY_CHECK_IN_URL?: string;
     // The address book's app in Observatory, for its errors and log lines (`src/telemetry.ts`), and the release the deploy names.

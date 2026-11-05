@@ -23,7 +23,7 @@ describe('the telemetry of the address book', () => {
             {
                 type: undefined,
                 message: 'unhandled',
-                request: { url: 'https://pulsar.ruimte.app/v1/usage', headers: { 'cf-connecting-ip': '192.0.2.7' } },
+                request: { url: 'https://pulsar.ruimte.app/v1/machines', headers: { 'cf-connecting-ip': '192.0.2.7' } },
                 user: { ip_address: '192.0.2.7' }
             },
             {}

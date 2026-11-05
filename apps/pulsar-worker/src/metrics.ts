@@ -49,7 +49,3 @@ export function pushOutcomeOf(status: number, ok: boolean): Exclude<PushOutcome,
 export function countPush(pushType: string, outcome: PushOutcome): void {
     metrics.count('pulsar.push', 1, { attributes: { push_type: pushType, outcome } });
 }
-
-export function countUsageRelay(outcome: string): void {
-    metrics.count('pulsar.usage_relay', 1, { attributes: { outcome } });
-}

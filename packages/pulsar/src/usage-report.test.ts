@@ -5,8 +5,7 @@ import {
     UsageReportBatchSchema,
     usageModelFamilyOf,
     usageProviderOf,
-    usageReportOfV1,
-    type UsageDay,
+    usageReportCounterOfV1,
     type UsageReportDay
 } from './index.ts';
 
@@ -82,35 +81,13 @@ describe('what a turn and a chat are counted under', () => {
     });
 });
 
-describe('an older daemon batch as a report', () => {
-    test('renames legacy counters, omits verb groups and zeros, and keeps startup and day metadata', () => {
-        const old: UsageDay = {
-            date: '2026-10-15',
-            version: '0.21.0',
-            platform: 'linux',
-            arch: 'x64',
-            launcher: 'service',
-            signedIn: false,
-            firstThisWeek: true,
-            firstThisMonth: false,
-            cohortWeek: '2026-W40',
-            startupMs: 1200,
-            counts: { chatsClaude: 2, chatsGemini: 1, turnsApple: 3, viewsChat: 4, terminalsStarted: 5, verbsRead: 6, launchesRun: 0 }
-        };
-        const report = usageReportOfV1({ days: [old] });
-        expect(report.days[0]).toEqual({
-            date: '2026-10-15',
-            version: '0.21.0',
-            platform: 'linux',
-            arch: 'x64',
-            launcher: 'service',
-            signedIn: false,
-            firstThisWeek: true,
-            firstThisMonth: false,
-            cohortWeek: '2026-W40',
-            startupMs: 1200,
-            counts: { 'chats.claude': 2, 'chats.other': 1, 'turns.apple': 3, 'views.chat': 4, 'terminals.started': 5 }
-        });
-        expect(UsageReportBatchSchema.safeParse(report).success).toBe(true);
+describe('a counter an older daemon kept', () => {
+    test('takes its report name, with Gemini in other and a verb group dropped', () => {
+        expect(usageReportCounterOfV1('chatsClaude')).toBe('chats.claude');
+        expect(usageReportCounterOfV1('chatsGemini')).toBe('chats.other');
+        expect(usageReportCounterOfV1('turnsApple')).toBe('turns.apple');
+        expect(usageReportCounterOfV1('viewsChat')).toBe('views.chat');
+        expect(usageReportCounterOfV1('terminalsStarted')).toBe('terminals.started');
+        expect(usageReportCounterOfV1('verbsRead')).toBeNull();
     });
 });

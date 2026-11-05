@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { pushOutcomeOf, routeOf } from './metrics.ts';
 
-const KNOWN = new Set(['/v1/usage', '/health']);
+const KNOWN = new Set(['/v1/providers', '/health']);
 
 describe('the route of a request metric', () => {
     test('is a known path as it is', () => {
-        expect(routeOf('/v1/usage', KNOWN)).toBe('/v1/usage');
+        expect(routeOf('/v1/providers', KNOWN)).toBe('/v1/providers');
         expect(routeOf('/health', KNOWN)).toBe('/health');
     });
 

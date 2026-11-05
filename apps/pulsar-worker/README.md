@@ -43,7 +43,6 @@ The Cloudflare Worker behind `https://pulsar.ruimte.app`. It knows which machine
 | `PUT /v1/push/devices/<handle>/activities` | Its Live Activity update tokens |
 | `PUT /v1/push/devices/<handle>/start-activity` | Its Live Activity push-to-start token |
 | `POST /v1/push` | A signed, encrypted push from a machine, relayed to APNs (`APNS.md`) |
-| `POST /v1/usage` | Finished days of anonymous usage counts from a machine, without a token (see below) |
 | `POST /internal/benchmarks/refresh` | The benchmark refresh after a deploy, with a one-time bearer |
 
 ## The account
@@ -66,19 +65,7 @@ A peer statement (`POST /v1/peer-statements`) carries one `signature` over `peer
 
 ## Usage statistics
 
-From 0.22.0 a daemon sends usage straight to Observatory. `/v1/usage` stays for older daemons and goes once 0.23.0 is out.
-
-`POST /v1/usage` takes `{ days: UsageDay[] }` (`UsageBatchSchema` in `packages/pulsar/src/usage.ts`) and answers 204. Nothing in it names a person, machine or project. The whole batch is refused with `bad-request` (400) for:
-
-- any key the schema does not name, at every level
-- a count that is not a whole number from 0 to 100,000, or a `startupMs` outside 1 to 600,000
-- no days, more than seven, or one date twice
-- a cohort week after the day's week
-- a body over 32 KB
-
-A machine drops refused days and keeps them on `rate-limited` (429) or any other failure. Each address may send three batches a minute (`USAGE_LIMIT`) and twenty a day (a `rate_limit` bucket named by a SHA-256 of day and address). Address and body are never logged.
-
-The address book stores no usage. After answering (`ctx.waitUntil`) it relays each accepted batch to Observatory (`OBSERVATORY_USAGE_URL` in `wrangler.jsonc`, `usageRelay` in `src/usage.ts`) with `OBSERVATORY_UPLOAD_TOKEN`, without the address. A failed relay is logged by status only. Without the URL or token the route answers `not-configured`.
+The address book takes no usage. From 0.22.0 a daemon sends it straight to Observatory; `/v1/usage`, which older daemons sent to, answers `not-found`, and they keep their days until they are too old to send.
 
 ## Local dev
 
@@ -153,7 +140,6 @@ A login may only return to redirects `isAppRedirectUri` in `packages/pulsar` all
 | `APPLE_CLIENT_ID` | The Services ID, `app.ruimte.pulsar` |
 | `ARTIFICIAL_ANALYSIS_API_KEY` | The key of the free Data API of Artificial Analysis |
 | `MAP_TICKET_SECRET` | At least 32 random bytes in base64url (`openssl rand -base64 32 \| tr '+/' '-_' \| tr -d '='`) that sign map tickets; the maps service holds the same value. A shorter or malformed value answers `not-configured` |
-| `OBSERVATORY_UPLOAD_TOKEN` | Optional, an upload token of Ruimte's product in Observatory; without it no usage is relayed |
 | `APPLE_DOMAIN_ASSOCIATION` | Optional, the domain verification file Apple hands out |
 | `DEVICE_LINK_PAGE_URL` | Optional, the device link page when it is not the station's |
 | `APNS_*` | The APNs keys per environment, see [`APNS.md`](APNS.md) |
@@ -168,7 +154,6 @@ bunx wrangler secret put APPLE_CLIENT_ID
 bunx wrangler secret put APPLE_PRIVATE_KEY < ~/.private/AuthKey_XXXXXXXXXX.p8
 bunx wrangler secret put ARTIFICIAL_ANALYSIS_API_KEY
 bunx wrangler secret put MAP_TICKET_SECRET
-bunx wrangler secret put OBSERVATORY_UPLOAD_TOKEN
 ```
 
 A provider without its secrets answers `503` with `not-configured`, reads `false` in `/health` and stays out of `/v1/providers`, so the Worker deploys safely first. The private statement key is also in `~/.private/ruimte.secrets.env` as `PULSAR_STATEMENT_PRIVATE_KEY`.

@@ -5,8 +5,6 @@ import { z } from 'zod';
  * day names a person, a machine or a project: no ids, no keys, no names, no paths, only the counts below.
  */
 
-export const USAGE_PATH = '/v1/usage';
-
 // A machine sends at most the last seven finished days it missed; one day more absorbs a slow clock.
 export const USAGE_MAX_DAYS_PER_BATCH = 7;
 

@@ -18,10 +18,8 @@
       "migrations_dir": "migrations"
     }
   ],
-  // In front of the usage relay of daemons before 0.22 (`src/usage.ts`).
-  // Below it one per distinct number in `LIMITS` (`src/rate-window.ts`); the key holds the route, so they share one.
+  // One per distinct number in `LIMITS` (`src/rate-window.ts`); the key holds the route, so they share one.
   "ratelimits": [
-    { "name": "USAGE_LIMIT", "namespace_id": "2001", "simple": { "limit": 3, "period": 60 } },
     { "name": "RATE_LIMIT_5", "namespace_id": "2002", "simple": { "limit": 5, "period": 60 } },
     { "name": "RATE_LIMIT_10", "namespace_id": "2003", "simple": { "limit": 10, "period": 60 } },
     { "name": "RATE_LIMIT_20", "namespace_id": "2004", "simple": { "limit": 20, "period": 60 } },
@@ -35,8 +33,6 @@
     "APNS_TOPIC": "app.ruimte.mobile",
     "APNS_TEAM_ID": "7RGV9KKX87",
     "ALLOWED_ORIGINS": "https://station.ruimte.app,https://bench.ruimte.app",
-    // Every accepted usage batch goes on here; the upload token beside it is the secret OBSERVATORY_UPLOAD_TOKEN.
-    "OBSERVATORY_USAGE_URL": "https://ingest.bmnw.nl/api/3/usage/?sentry_key=ace29cdab42746249e5753874d74c401",
     // The nightly cleanup checks in here (`src/check-in.ts`), so a run that is missed or fails opens an issue.
     "OBSERVATORY_CHECK_IN_URL": "https://ingest.bmnw.nl/api/7/envelope/?sentry_key=9ff9af7a3b804d228a025d52b6040176",
     // Errors and log lines (`src/telemetry.ts`); the deploy adds OBSERVATORY_RELEASE, `pulsar@<commit>`.
