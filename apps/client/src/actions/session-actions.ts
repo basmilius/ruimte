@@ -24,7 +24,7 @@ import {
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
 import { asksFirst } from '@/actions/developer-actions';
-import { nodeChats, nodeSessions } from '@/actions/node-machine';
+import { chatClientOfNode, sessionClientOfNode } from '@/actions/node-machine';
 import { refusing, type Requester } from '@/actions/refusal';
 import { plural } from '@/actions/words';
 import { agentsEndedWith } from '@/agents/end-children';
@@ -88,7 +88,7 @@ const LIVE_MACHINE: SessionMachine = {
     providers: () => providersOf(currentEndpointId()).providers,
     providerFixed: (chatId) => readNodeHost(chatId)?.providerFixed === true,
     retarget: async (chatId, provider, selection) => {
-        const chats = nodeChats(chatId);
+        const chats = chatClientOfNode(chatId);
         if (!chats.isMounted(chatId)) {
             return false;
         }
@@ -108,7 +108,7 @@ const LIVE_MACHINE: SessionMachine = {
     },
     terminalHost: (terminalId) => readNodeHost(terminalId),
     restartTerminal: async (terminalId, resume) => {
-        const sessions = nodeSessions(terminalId);
+        const sessions = sessionClientOfNode(terminalId);
         // On the node, so it survives a reload; the daemon turns it into the CLI's own resume line.
         if (resume !== null) {
             updateHost(terminalId, { resume });

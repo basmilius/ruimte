@@ -9,7 +9,7 @@ function unknownMachine(nodeId: string): ActionRefusal {
 }
 
 /* The chats of the machine a node runs on. A machine this client has no row for refuses, so nothing lands on the active machine. */
-export function nodeChats(nodeId: string): ChatClient {
+export function chatClientOfNode(nodeId: string): ChatClient {
     const chats = chatClientFor(endpointOfNodeId(nodeId));
     if (chats === null) {
         throw unknownMachine(nodeId);
@@ -18,7 +18,7 @@ export function nodeChats(nodeId: string): ChatClient {
 }
 
 /* The sessions of the machine a node runs on, refused the same way. */
-export function nodeSessions(nodeId: string): SessionClient {
+export function sessionClientOfNode(nodeId: string): SessionClient {
     const sessions = sessionClientFor(endpointOfNodeId(nodeId));
     if (sessions === null) {
         throw unknownMachine(nodeId);

@@ -40,7 +40,7 @@ import { inspectionActions } from '@/actions/inspection-actions';
 import { launchActions, type LaunchReach } from '@/actions/launch-actions';
 import { layoutActions } from '@/actions/layout-actions';
 import { machineActions, type MachineReach } from '@/actions/machine-actions';
-import { nodeChats, nodeSessions } from '@/actions/node-machine';
+import { chatClientOfNode, sessionClientOfNode } from '@/actions/node-machine';
 import { pageActions, type PageMachine } from '@/actions/page-actions';
 import { projectActions, type ProjectMachine } from '@/actions/project-actions';
 import { refusing } from '@/actions/refusal';
@@ -93,10 +93,10 @@ export interface ClientActionMachine {
 }
 
 const LIVE_MACHINE: ClientActionMachine = {
-    sendChat: (chatId, text, extras) => nodeChats(chatId).send(chatId, text, extras),
-    clearChat: (chatId, force) => nodeChats(chatId).clear(chatId, force),
-    inspectChat: (chatId) => nodeChats(chatId).inspect(chatId),
-    clearTerminal: (terminalId) => nodeSessions(terminalId).clear(terminalId),
+    sendChat: (chatId, text, extras) => chatClientOfNode(chatId).send(chatId, text, extras),
+    clearChat: (chatId, force) => chatClientOfNode(chatId).clear(chatId, force),
+    inspectChat: (chatId) => chatClientOfNode(chatId).inspect(chatId),
+    clearTerminal: (terminalId) => sessionClientOfNode(terminalId).clear(terminalId),
     providers: () => providersOf(currentEndpointId()).providers,
     copyViewContent: (kind, from, to) => void (kind === 'drawing' ? drawingClient.copy(from, to) : diagramClient.copy(from, to)),
     designFolders: () => designFoldersOnDisk(currentEndpointId(), shownFolderOf(useProject.getState().current)),
