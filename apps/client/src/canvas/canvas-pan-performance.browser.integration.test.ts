@@ -110,14 +110,14 @@ interface Measured {
  * Budgets for the canvas that was slow: a pan that does no React work beyond the nodes it brings into
  * sight, and a new node that routes and renders only what it changed. Each budget sits several times
  * over what a laptop measures here and well under what the canvas cost before (in brackets), so a
- * slower machine passes and the old cost does not. The test runs only under `RUIMTE_CANVAS_BUDGET=1`,
- * which the perf job of `browser-tests.yml` sets. `RUIMTE_CANVAS_REPORT=1` prints the numbers,
+ * slower machine passes and the old cost does not. The test runs only on request, under
+ * `RUIMTE_CANVAS_BUDGET=1`: a CI runner's virtual cores and software renderer cannot measure these
+ * budgets. `RUIMTE_CANVAS_REPORT=1` prints the numbers,
  * `RUIMTE_CANVAS_PROFILE=1` the functions the time went to and `RUIMTE_CANVAS_TRACE=1` the raster.
  */
 const BUDGET = {
-    // 1 to 3 ms (2 to 3 ms). GitHub's macOS runner, three virtual cores drawing on SwiftShader, measured 8.3 ms over 30 frames
-    // (run 42004168344) for a pan that does the same work, so it gets 10 ms there, for the median of three pans.
-    wheelFrameMs: process.env.GITHUB_ACTIONS === 'true' ? 10 : 8,
+    // 1 to 3 ms (2 to 3 ms).
+    wheelFrameMs: 8,
     // 4 to 7 ms (75 to 85 ms, waiting on the whole world being painted again every frame).
     dragFrameMs: 25,
     // Script alone, since the rest is the dots and handles near the pointer being painted: under 1 ms (800 ms, every line routed again for a dot near the pointer).
@@ -126,7 +126,6 @@ const BUDGET = {
     addMs: 400
 };
 
-// Only the perf job of `browser-tests.yml` runs it: drawn on a runner's software renderer it takes most of its timeout, which the suite's other files should not wait out.
 test.skipIf(process.env.RUIMTE_CANVAS_BUDGET !== '1')(
     'a canvas of a chat and a hundred lined notes pans without React work and takes a node in without drawing it all again',
     async () => {
@@ -263,22 +262,9 @@ test.skipIf(process.env.RUIMTE_CANVAS_BUDGET !== '1')(
                     window.canvas.getState().loadView(${JSON.stringify(canvas)}, { camera: { center: { x: 1200, y: 400 }, zoom: 1 } });
                 })()`);
                 });
-                // GitHub's runner measured the same pan at 7 to 22 ms per frame from run to run, so there the median of three is held to the budget.
-                const wheels: Measured[] = [];
-                for (let run = 0; run < (process.env.GITHUB_ACTIONS === 'true' ? 3 : 1); run++) {
-                    // A first pan warms the caches and the JIT, as a person's second pan finds them.
-                    await wheelPan(warmFrames);
-                    wheels.push(await scenario('wheel pan at 100%', () => wheelPan()));
-                }
-
-                if (wheels.length > 1) {
-                    console.log(
-                        'wheel pan at 100%, ms per frame',
-                        JSON.stringify(wheels.map((measured) => Math.round((measured.taskMs / panFrames) * 10) / 10))
-                    );
-                }
-
-                const wheel = [...wheels].sort((first, second) => first.taskMs - second.taskMs)[Math.floor(wheels.length / 2)]!;
+                // A first pan warms the caches and the JIT, as a person's second pan finds them.
+                await wheelPan(warmFrames);
+                const wheel = await scenario('wheel pan at 100%', () => wheelPan());
                 const drag = await scenario('drag pan at 100%', dragPan);
                 await view.evaluate('window.canvas.getState().fitAll()');
                 await wheelPan(warmFrames);
