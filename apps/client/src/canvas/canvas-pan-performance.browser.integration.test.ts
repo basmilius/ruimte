@@ -116,7 +116,7 @@ interface Measured {
  */
 const BUDGET = {
     // 1 to 3 ms (2 to 3 ms). GitHub's macOS runner, three virtual cores drawing on SwiftShader, measured 8.3 ms over 30 frames
-    // (run 42004168344) for a pan that does the same work, so it gets 10 ms there.
+    // (run 42004168344) for a pan that does the same work, so it gets 10 ms there, for the median of three pans.
     wheelFrameMs: process.env.GITHUB_ACTIONS === 'true' ? 10 : 8,
     // 4 to 7 ms (75 to 85 ms, waiting on the whole world being painted again every frame).
     dragFrameMs: 25,
@@ -263,9 +263,22 @@ test.skipIf(process.env.RUIMTE_CANVAS_BUDGET !== '1')(
                     window.canvas.getState().loadView(${JSON.stringify(canvas)}, { camera: { center: { x: 1200, y: 400 }, zoom: 1 } });
                 })()`);
                 });
-                // A first pan warms the caches and the JIT, as a person's second pan finds them.
-                await wheelPan(warmFrames);
-                const wheel = await scenario('wheel pan at 100%', () => wheelPan());
+                // GitHub's runner measured the same pan at 7 to 22 ms per frame from run to run, so there the median of three is held to the budget.
+                const wheels: Measured[] = [];
+                for (let run = 0; run < (process.env.GITHUB_ACTIONS === 'true' ? 3 : 1); run++) {
+                    // A first pan warms the caches and the JIT, as a person's second pan finds them.
+                    await wheelPan(warmFrames);
+                    wheels.push(await scenario('wheel pan at 100%', () => wheelPan()));
+                }
+
+                if (wheels.length > 1) {
+                    console.log(
+                        'wheel pan at 100%, ms per frame',
+                        JSON.stringify(wheels.map((measured) => Math.round((measured.taskMs / panFrames) * 10) / 10))
+                    );
+                }
+
+                const wheel = [...wheels].sort((first, second) => first.taskMs - second.taskMs)[Math.floor(wheels.length / 2)]!;
                 const drag = await scenario('drag pan at 100%', dragPan);
                 await view.evaluate('window.canvas.getState().fitAll()');
                 await wheelPan(warmFrames);
