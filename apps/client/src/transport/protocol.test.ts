@@ -9,7 +9,7 @@ function gateWith(client = 2) {
     const gate = protocolGate(
         {
             send: (data) => log.push(`send ${data}`),
-            open: (features) => log.push(features === undefined ? 'open' : `open ${features.join(',')}`),
+            open: (features) => log.push(`open ${features.join(',')}`),
             message: (data) => log.push(`message ${data}`),
             refuse: (failure) => log.push(`refuse ${failure}`)
         },
@@ -84,10 +84,11 @@ describe('protocolGate', () => {
         expect(log).toEqual(['open ', 'message {"type":"event","event":"processes.alerts","payload":[]}', 'message {"id":"1","ok":true,"result":{}}']);
     });
 
-    test('a refused endpoint.info is not judged', () => {
+    test('refuses a machine that refuses endpoint.info as older and delivers nothing it held', () => {
         const { gate, log } = gateWith();
+        gate.received('{"type":"event","event":"processes.alerts","payload":[]}');
         gate.received(JSON.stringify({ id: 'protocol', ok: false, error: { code: 'x', message: 'no' } }));
-        expect(log).toEqual(['open']);
+        expect(log).toEqual([`refuse ${OLDER}`]);
     });
 });
 

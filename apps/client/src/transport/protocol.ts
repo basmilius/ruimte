@@ -27,8 +27,7 @@ function parseFrame(data: string): CheckFrame | null {
 
 export interface ProtocolGateEvents {
     send(data: string): void;
-    /* `features` is what the machine answered; absent when it refused `endpoint.info`, which this check cannot judge. */
-    open(features?: readonly string[]): void;
+    open(features: readonly string[]): void;
     message(data: string | Uint8Array): void;
     refuse(failure: string, mismatch: ProtocolMismatch): void;
 }
@@ -57,16 +56,16 @@ export function protocolGate(events: ProtocolGateEvents, client: number = PROTOC
                 return;
             }
             checked = true;
-            // A refused `endpoint.info` is a daemon this check cannot judge, and the transport has its own ways to fail.
-            const mismatch =
-                frame.ok !== true
-                    ? null
-                    : (protocolMismatch(frame.result?.protocol, client) ?? (Array.isArray(frame.result?.features) ? null : 'daemon-older'));
-            if (mismatch !== null) {
-                events.refuse(protocolRefusal(mismatch), mismatch);
+            // A machine that refuses `endpoint.info` names no version or features, so it is refused as older.
+            const result = frame.ok === true ? frame.result : undefined;
+            const features = result?.features;
+            const mismatch = protocolMismatch(result?.protocol, client);
+            if (mismatch !== null || !Array.isArray(features)) {
+                const refusal = mismatch ?? 'daemon-older';
+                events.refuse(protocolRefusal(refusal), refusal);
                 return;
             }
-            events.open(frame.ok === true ? frame.result?.features : undefined);
+            events.open(features);
             for (const entry of held.splice(0)) {
                 events.message(entry);
             }

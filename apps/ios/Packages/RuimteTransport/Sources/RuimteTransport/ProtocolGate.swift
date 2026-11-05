@@ -45,9 +45,9 @@ import RuimtePulsar
             return
         }
         checked = true
-        // A refused `endpoint.info` is a machine this check cannot judge; it opens with no features.
+        // A machine that refuses `endpoint.info` names no features either, so it is refused as older.
         let answered = frame["ok"]?.boolValue == true
-        let features = answered ? frame["result"]?["features"]?.arrayValue : []
+        let features = answered ? frame["result"]?["features"]?.arrayValue : nil
         guard let features else {
             held.removeAll()
             LinkProblems.report(.refused(mismatch: .daemonOlder))

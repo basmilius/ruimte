@@ -54,11 +54,13 @@ private func event(_ name: String) -> String {
         #expect(probe.refusal == nil)
     }
 
-    @Test func aRefusedEndpointInfoOpensWithoutFeatures() {
+    @Test func aMachineThatRefusesTheEndpointInfoIsRefusedAsOlder() {
         let probe = GateProbe()
+        probe.gate.receive(event("chat.status"))
         probe.gate.receive(#"{"id":"protocol","ok":false,"error":{"code":"internal","message":"No"}}"#)
-        #expect(probe.features == [])
-        #expect(probe.refusal == nil)
+        #expect(probe.refusal as? TransportFailure == .invalid(TransportWords.olderMachine))
+        #expect(probe.features == nil)
+        #expect(probe.delivered.isEmpty)
     }
 
     @Test func aLinkThatReportsFeaturesHandsThemToEveryMemberBeforeItOpens() {
