@@ -122,6 +122,38 @@ describe('inspection of a node on another machine', () => {
         expect(result).toMatchObject({ output: { agents: [{ id: 'chat-here' }, { id: 'chat-far', status: 'unknown', working: null }] } });
     });
 
+    test('agents.inspect leaves a node on a machine that fails to answer unknown and still tells the others', async () => {
+        loadFarCanvas();
+        const here = machineWith(
+            [
+                { chatId: 'chat-here', status: 'idle' },
+                { chatId: 'chat-far', status: 'needs-you' }
+            ] as ChatInfo[],
+            [],
+            'here'
+        );
+        const far: Transport = {
+            ...here,
+            request: (async () => {
+                throw new Error('timeout');
+            }) as Transport['request']
+        };
+        const actions = new ActionRegistry(inspectionActions(useDocument, { transport: (endpointId) => (endpointId === FAR ? far : here) }));
+
+        const result = await actions.execute('agents.inspect', {}, call);
+
+        expect(result).toMatchObject({
+            status: 'completed',
+            output: {
+                connected: true,
+                agents: [
+                    { id: 'chat-here', status: 'idle' },
+                    { id: 'chat-far', status: 'unknown', working: null }
+                ]
+            }
+        });
+    });
+
     test('agent.activity of a node on a machine this client does not know refuses and asks no machine', async () => {
         loadFarCanvas();
         const asked: string[] = [];

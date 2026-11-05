@@ -94,7 +94,10 @@ export function projectAgents(document: StoreApi<DocumentState>): ProjectAgent[]
 
 type Snapshot = [{ chats: ChatInfo[] }, { sessions: SessionInfo[] }];
 
-/* The chats and sessions of every machine the agents run on, each asked of its own machine; null for one that is not connected. */
+/*
+ * The chats and sessions of every machine the agents run on, each asked of its own machine; null for one that is not connected
+ * or did not answer, so one machine never takes down what the others tell.
+ */
 async function snapshotsOf(endpointIds: readonly string[], transport: typeof transportFor): Promise<Map<string, Snapshot | null>> {
     const entries = await Promise.all(
         [...new Set(endpointIds)].map(async (endpointId): Promise<[string, Snapshot | null]> => {
@@ -102,7 +105,8 @@ async function snapshotsOf(endpointIds: readonly string[], transport: typeof tra
             if (link?.status !== 'open') {
                 return [endpointId, null];
             }
-            return [endpointId, await Promise.all([link.request('chat.list', {}), link.request('session.list', {})])];
+            const snapshot = await Promise.all([link.request('chat.list', {}), link.request('session.list', {})]).catch(() => null);
+            return [endpointId, snapshot];
         })
     );
     return new Map(entries);
