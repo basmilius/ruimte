@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PROTOCOL_VERSION } from '@ruimte/contracts';
-import { clientDirectory, withBrowserFixture } from '../../../client/testing/browser-fixture.ts';
+import { clientDirectory, waitInPage, withBrowserFixture } from '../../../client/testing/browser-fixture.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { registerSessionHandlers } from '../handlers/session.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
@@ -278,13 +278,7 @@ function hasLine(prefix: string): string {
 }
 
 async function waitBrowser(view: View, condition: string): Promise<void> {
-    for (let attempt = 0; attempt < 80; attempt++) {
-        if (await view.evaluate<boolean>(condition)) {
-            return;
-        }
-        await view.evaluate(frame);
-    }
-    throw new Error('Browser did not settle: ' + condition + ' ' + (await view.evaluate<string>('JSON.stringify(window.errors)')));
+    await waitInPage(view, condition, async () => condition + ' ' + (await view.evaluate<string>('JSON.stringify(window.errors)')));
 }
 
 async function openLocation(view: View, prefix: string, path: string | null, menu: boolean, content: string): Promise<void> {

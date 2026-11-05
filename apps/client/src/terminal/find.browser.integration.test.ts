@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { clientDirectory, frame, withBrowserFixture } from '../../testing/browser-fixture';
+import { clientDirectory, frame, waitInPage, withBrowserFixture } from '../../testing/browser-fixture';
 
 const apple = process.platform === 'darwin';
 const NEEDLES = 30;
@@ -74,16 +74,15 @@ test('the find key opens the bar over a terminal, steps through the scrollback a
 
             await view.evaluate(`window.type(document.querySelector('[data-find-bar] input'), 'needle')`);
             await view.evaluate(frame);
-            // Bounded, so a count that never shows fails with the bar's text instead of hanging.
-            await view.evaluate(
-                'new Promise((resolve, reject) => { let turns = 0; const check = () => (window.current() !== null ? resolve() : ++turns > 120 ? reject(new Error(JSON.stringify(window.errors))) : requestAnimationFrame(check)); check(); })'
-            );
+            await waitInPage(view, 'window.current() !== null', () => view.evaluate<string>('JSON.stringify(window.errors)'));
             const first = await view.evaluate<number>('window.current()');
 
             await view.evaluate(`window.press(document.querySelector('[data-find-bar] input'), { key: 'Enter', code: 'Enter' })`);
             await view.evaluate(frame);
             const second = await view.evaluate<number>('window.current()');
             expect(second).toBe((first % NEEDLES) + 1);
+            // The search addon selects the match a while after it counts it.
+            await waitInPage(view, 'window.term.getSelection() !== ""');
             expect(await view.evaluate<string>('window.term.getSelection()')).toBe('needle');
 
             await view.evaluate(`window.press(document.querySelector('[data-find-bar] input'), { key: 'Escape', code: 'Escape' })`);

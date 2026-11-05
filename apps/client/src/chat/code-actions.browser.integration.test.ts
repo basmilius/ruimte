@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { clientDirectory, frame, withBrowserFixture } from '../../testing/browser-fixture';
+import { clientDirectory, frame, waitInPage, withBrowserFixture } from '../../testing/browser-fixture';
 
 type View = InstanceType<typeof Bun.WebView>;
 const plain = '  héllo  \n\tkeep spaces\n\n';
@@ -78,15 +78,8 @@ async function fixture(run: (view: View) => Promise<void>): Promise<void> {
     );
 }
 
-async function waitFor(view: View, expression: string): Promise<void> {
-    const deadline = Date.now() + 2000;
-    while (Date.now() < deadline) {
-        if (await view.evaluate<boolean>(expression)) {
-            return;
-        }
-        await view.evaluate(frame);
-    }
-    throw new Error(`Browser condition did not settle: ${expression}`);
+function waitFor(view: View, expression: string): Promise<void> {
+    return waitInPage(view, expression);
 }
 
 async function mouse(view: View, selector: string | null, click = false): Promise<void> {

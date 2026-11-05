@@ -8,6 +8,41 @@ export const clientDirectory = join(import.meta.dir, '..');
 /* Evaluates once the page has laid out and painted what the last step changed. */
 export const frame = 'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))';
 
+// Longer than any test that waits here runs, so the test's own timeout fails it first; this only stops a timed-out test from polling on.
+const WAIT_GUARD_MS = 30_000;
+
+/*
+ * Waits in the page until an expression holds. The page draws frames as fast as it can, so a count of
+ * frames would bound nothing.
+ */
+export async function waitInPage(
+    view: InstanceType<typeof Bun.WebView>,
+    condition: string,
+    describe: () => Promise<string> = async () => condition
+): Promise<void> {
+    const held = await view.evaluate<boolean>(`new Promise((resolve, reject) => {
+        const deadline = performance.now() + ${WAIT_GUARD_MS};
+        const check = () => {
+            try {
+                if (${condition}) {
+                    resolve(true);
+                } else if (performance.now() > deadline) {
+                    resolve(false);
+                } else {
+                    setTimeout(check, 10);
+                }
+            } catch (error) {
+                reject(error);
+            }
+        };
+        check();
+    })`);
+
+    if (!held) {
+        throw new Error(`The page did not settle: ${await describe()}`);
+    }
+}
+
 // What Vite puts in `import.meta.env` for the client; Bun.build leaves it undefined.
 const viteEnv = { 'import.meta.env': JSON.stringify({ DEV: false, PROD: true, MODE: 'test', BASE_URL: '/' }) };
 
@@ -130,9 +165,14 @@ export async function withBrowserFixture(
                 );
             }
         });
-        // SwiftShader makes WebGL fixtures work on headless runners without a GPU.
+        // SwiftShader makes WebGL fixtures work on headless runners without a GPU. A frame comes as soon as
+        // the page asks for one instead of on a 60 Hz beat, which took up most of a test on a slow runner.
         view = new Bun.WebView({
-            backend: { type: 'chrome', url: false, argv: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
+            backend: {
+                type: 'chrome',
+                url: false,
+                argv: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-frame-rate-limit', '--disable-gpu-vsync']
+            },
             headless: true,
             dataStore: { directory: join(directory, 'profile') }
         });

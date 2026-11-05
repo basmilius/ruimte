@@ -3,7 +3,7 @@ import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PROTOCOL_VERSION } from '@ruimte/contracts';
-import { clientDirectory, frame, withBrowserFixture } from '../../testing/browser-fixture';
+import { clientDirectory, frame, waitInPage, withBrowserFixture } from '../../testing/browser-fixture';
 
 type View = InstanceType<typeof Bun.WebView>;
 const relative = 'src/例 folder with spaces/a sufficiently long file name.ts';
@@ -520,13 +520,11 @@ test('missing output metadata refuses both preview routes without filesystem rea
 });
 
 async function waitForEditor(view: View, path: string, owner = 'local'): Promise<void> {
-    for (let attempt = 0; attempt < 60; attempt++) {
-        if (await view.evaluate<boolean>(`window.editor?.getText().includes(${JSON.stringify(owner + ' ' + path)}) ?? false`)) {
-            return;
-        }
-        await view.evaluate(frame);
-    }
-    throw new Error(`Preview did not load ${owner}:${path}: ${await view.evaluate<string>('JSON.stringify({errors:window.errors,reads:window.reads})')}`);
+    await waitInPage(
+        view,
+        `window.editor?.getText().includes(${JSON.stringify(owner + ' ' + path)}) ?? false`,
+        async () => `preview of ${owner}:${path}: ${await view.evaluate<string>('JSON.stringify({errors:window.errors,reads:window.reads})')}`
+    );
 }
 
 async function fileServer(): Promise<{ url: string; close(): Promise<void> }> {

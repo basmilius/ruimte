@@ -111,8 +111,17 @@ async function hover(view: View, id: string, row: number): Promise<{ x: number; 
     const point = await pointAt(view, id, row);
     await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x - 9, y: point.y });
     await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
-    await view.evaluate(frame);
+    await tooltipSettled(view);
     return point;
+}
+
+/* The tooltip of the link left behind fades out before it leaves the page; until then a query can find it first. */
+async function tooltipSettled(view: View): Promise<void> {
+    await view.evaluate(frame);
+    await view.evaluate(
+        `Promise.all([...document.querySelectorAll('.tooltip-positioner,.tooltip-popup')].flatMap(element=>element.getAnimations()).map(animation=>animation.finished.catch(()=>undefined)))`
+    );
+    await view.evaluate(frame);
 }
 
 async function drag(view: View, start: { x: number; y: number }, end: { x: number; y: number }, modifiers: number): Promise<void> {

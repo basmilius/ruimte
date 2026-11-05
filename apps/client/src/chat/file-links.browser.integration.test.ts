@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { join } from 'node:path';
-import { clientDirectory, frame, withBrowserFixture } from '../../testing/browser-fixture';
+import { clientDirectory, frame, waitInPage, withBrowserFixture } from '../../testing/browser-fixture';
 
 type View = InstanceType<typeof Bun.WebView>;
 const path = '/repo/a folder/a file.ts';
@@ -133,12 +133,7 @@ test('a newly rendered subthread keeps the parent machine and its own cwd after 
             window.workspace.getState().show({kind:'workspace',workspace:{connection:{endpointId:'remote'}}});
             window.showChild();
         })()`);
-        for (let attempt = 0; attempt < 60; attempt++) {
-            if (await view.evaluate<boolean>('document.querySelector("[data-item-id=child-reply] [data-file-path]")!==null')) {
-                break;
-            }
-            await view.evaluate(frame);
-        }
+        await waitInPage(view, 'document.querySelector("[data-item-id=child-reply] [data-file-path]")!==null');
         await click(view, '[data-item-id=child-reply] [data-file-path]');
         expect(await view.evaluate<unknown>('window.files.getState().tabs')).toEqual([]);
         await click(view, '[data-item-id=child-user] [data-file-path]', 'right');
