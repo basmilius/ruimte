@@ -37,6 +37,9 @@ jobs:
       # verify owns the client's typecheck; public builds still run tsc -b before bundling.
       - run: bun run --cwd apps/client build:bundle
       - run: bun run --cwd apps/desktop build
+      # Station and Bench otherwise build first after a release is published, when they deploy.
+      - run: bun run --cwd apps/station build
+      - run: bun run --cwd apps/bench build
       # The unit shards run on Linux; a case-insensitive volume is what only a Mac has under these tests.
       - run: bun test --conditions=source apps/server/src/fs
 
