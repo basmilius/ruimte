@@ -1,6 +1,6 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { reactCompilerPlugin } from './react-compiler-transform';
 
 export const clientDirectory = join(import.meta.dir, '..');
@@ -102,6 +102,10 @@ export async function withBrowserFixture(
         const build = await Bun.build({
             entrypoints: [entry],
             target: 'browser',
+            // What a fixture imports lazily (the editor's languages, Shiki's grammars) stays out of the page until it asks: one file was 37 MB to parse per test.
+            splitting: true,
+            // Two inputs that bundle to the same CSS would otherwise claim one chunk name.
+            naming: { chunk: '[name]-[hash].[ext]' },
             conditions: ['source'],
             define: options.production ? { ...viteEnv, 'process.env.NODE_ENV': JSON.stringify('production') } : viteEnv,
             plugins: [
@@ -154,7 +158,10 @@ export async function withBrowserFixture(
             }
             assets.set(route, result.outputs[0]!);
         }
-        const script = await build.outputs[0]!.text();
+        for (const output of build.outputs) {
+            assets.set(`/${basename(output.path)}`, output);
+        }
+        diag('built', String(build.outputs.length));
         const theme = await readFile(Bun.resolveSync('@adecore/ui/theme.css', clientDirectory), 'utf8');
         server = Bun.serve({
             hostname: '127.0.0.1',
@@ -164,9 +171,6 @@ export async function withBrowserFixture(
                 const asset = assets.get(path);
                 if (asset) {
                     return new Response(asset, { headers: { 'Content-Type': 'text/javascript' } });
-                }
-                if (path === '/entry.js') {
-                    return new Response(script, { headers: { 'Content-Type': 'text/javascript' } });
                 }
                 return new Response(
                     `<!doctype html><style>${theme}body{margin:0}#root{position:relative;width:800px;height:600px}${styles}</style><div id="root"></div><script>${options.head ?? ''}</script><script>window.errors=[];window.addEventListener("error",event=>window.errors.push(event.message));window.addEventListener("unhandledrejection",event=>window.errors.push(String(event.reason)));</script><script type="module" src="/entry.js"></script>`,
@@ -185,9 +189,12 @@ export async function withBrowserFixture(
             headless: true,
             dataStore: { directory: join(directory, 'profile') }
         });
+        diag('view');
         await view.navigate(`http://127.0.0.1:${server.port}`);
+        diag('navigated');
         await view.resize(800, 600);
         await view.evaluate(frame);
+        diag('framed');
         const errors = await view.evaluate<string[]>('window.errors');
         if (errors.length > 0) {
             throw new Error(errors.join('\n'));
