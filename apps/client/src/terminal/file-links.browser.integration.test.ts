@@ -3,7 +3,7 @@ import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PROTOCOL_VERSION } from '@ruimte/contracts';
-import { clientDirectory, diag, frame, waitInPage, withBrowserFixture } from '../../testing/browser-fixture';
+import { clientDirectory, frame, waitInPage, withBrowserFixture } from '../../testing/browser-fixture';
 
 type View = InstanceType<typeof Bun.WebView>;
 const relative = 'src/例 folder with spaces/a sufficiently long file name.ts';
@@ -237,7 +237,6 @@ async function tooltipSettled(view: View): Promise<void> {
     await view.evaluate(
         `Promise.all([...document.querySelectorAll('.tooltip-positioner,.tooltip-popup')].flatMap(element=>element.getAnimations()).map(animation=>animation.finished.catch(()=>undefined)))`
     );
-    diag('tooltipSettled');
 }
 
 async function expectNoTooltip(view: View): Promise<void> {
@@ -252,7 +251,6 @@ async function hover(view: View, owner: string, row: number): Promise<{ x: numbe
     await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x - 9, y: point.y });
     await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
     await view.evaluate(frame);
-    diag('hover', `${owner} ${row}`);
     return point;
 }
 
@@ -260,7 +258,6 @@ async function click(view: View, point: { x: number; y: number }, button: 'left'
     await view.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', ...point, button, buttons: button === 'left' ? 1 : 2, clickCount: 1, modifiers });
     await view.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', ...point, button, buttons: 0, clickCount: 1, modifiers });
     await view.evaluate(frame);
-    diag('click', button);
 }
 
 function previewItemShown(view: View): Promise<boolean> {
@@ -371,14 +368,10 @@ test('output cwd follows cd, survives buffer reflow, and old output keeps its ow
             await expectLocation(view, '/repo/worktree/nested/same.ts');
             await view.evaluate('window.sizes.local({cols:10,rows:12})');
             await view.evaluate(`window.writeOutput('local', '\\r\\n'.repeat(16))`);
-            await view.evaluate(
-                `(() => { window.scrolls = []; window.instances.local.onScroll(() => window.scrolls.push(window.instances.local.buffer.active.viewportY + ' ' + new Error().stack.split('\\n').slice(2, 9).join(' < '))); })()`
-            );
             for (const [row, path] of [
                 [0, '/repo/worktree/same.ts'],
                 [2, '/repo/worktree/nested/same.ts']
             ] as const) {
-                diag('scrolls', await view.evaluate<string>('JSON.stringify(window.scrolls)'));
                 // The rows are old output above the screen; on the runner the view was back at the bottom by the second row.
                 await view.evaluate('window.instances.local.scrollToTop()');
                 await view.evaluate(frame);
@@ -555,7 +548,6 @@ async function waitForEditor(view: View, path: string, owner = 'local'): Promise
         `window.editor?.getText().includes(${JSON.stringify(owner + ' ' + path)}) ?? false`,
         async () => `preview of ${owner}:${path}: ${await view.evaluate<string>('JSON.stringify({errors:window.errors,reads:window.reads})')}`
     );
-    diag('editor', path);
 }
 
 async function fileServer(): Promise<{ url: string; close(): Promise<void> }> {

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PROTOCOL_VERSION } from '@ruimte/contracts';
-import { clientDirectory, diag, waitInPage, withBrowserFixture } from '../../../client/testing/browser-fixture.ts';
+import { clientDirectory, waitInPage, withBrowserFixture } from '../../../client/testing/browser-fixture.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { registerSessionHandlers } from '../handlers/session.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
@@ -50,9 +50,7 @@ for (const mode of [
         }
         await writeFile(join(shell.home, '.editorconfig'), '[*]\nindent_style = space\n');
         await writeFile(join(shell.home, nestedName, '.editorconfig'), '');
-        const shellStarted = performance.now();
         await shell.ready();
-        console.log('DIAG shell ready', Math.round(performance.now() - shellStarted));
         let manager = shell.manager;
         const restarted: SessionManager[] = [];
         let dispatcher: Dispatcher;
@@ -283,11 +281,9 @@ function hasLine(prefix: string): string {
 
 async function waitBrowser(view: View, condition: string): Promise<void> {
     await waitInPage(view, condition, async () => condition + ' ' + (await view.evaluate<string>('JSON.stringify(window.errors)')));
-    diag('waited', condition.slice(-40));
 }
 
 async function openLocation(view: View, prefix: string, path: string | null, menu: boolean, content: string): Promise<void> {
-    diag('open', `${prefix} ${menu}`);
     // Unmount the previous preview so neither route can pass with cached content or an old selection.
     await view.evaluate(
         '(()=>{window.files.setState({tabs:[],focusRequest:null,revealLine:null});window.fileReads=[];window.editor=null;window.term.clearSelection()})()'

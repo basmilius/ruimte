@@ -20,8 +20,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/cache-native-builds
       - uses: ./.github/actions/install
-      # DIAG: temporary, removed once the runner is understood.
-      - run: zsh --version; sw_vers; sysctl -n hw.ncpu hw.memsize machdep.cpu.brand_string; ls -la /etc/zshrc /etc/zshenv /etc/zprofile 2>&1 || true
       - run: bun run test:browser
 
   # The canvas's frame budgets, which depend on the runner. A miss marks this job and leaves the

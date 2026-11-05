@@ -43,13 +43,6 @@ export async function waitInPage(
     }
 }
 
-// DIAG: temporary, removed once the runner is understood.
-let diagFrom = 0;
-
-export function diag(label: string, detail = ''): void {
-    console.log('DIAG', Math.round(performance.now() - diagFrom), label, detail);
-}
-
 // What Vite puts in `import.meta.env` for the client; Bun.build leaves it undefined.
 const viteEnv = { 'import.meta.env': JSON.stringify({ DEV: false, PROD: true, MODE: 'test', BASE_URL: '/' }) };
 
@@ -181,7 +174,6 @@ async function buildPage(entryCode: string, styles: string, production: boolean)
         for (const output of build.outputs) {
             assets.set(`/${basename(output.path)}`, output);
         }
-        diag('built', String(build.outputs.length));
         const theme = await readFile(Bun.resolveSync('@adecore/ui/theme.css', clientDirectory), 'utf8');
         const server = Bun.serve({
             hostname: '127.0.0.1',
@@ -215,8 +207,6 @@ export async function withBrowserFixture(
     run: (view: InstanceType<typeof Bun.WebView>) => Promise<void>,
     options: BrowserFixtureOptions = {}
 ): Promise<void> {
-    const diagStart = performance.now();
-    diagFrom = diagStart;
     const page = await fixturePage(entryCode, styles, options.production === true);
     const id = String(navigations++);
     page.heads.set(id, options.head ?? '');
@@ -234,20 +224,14 @@ export async function withBrowserFixture(
             headless: true,
             dataStore: { directory: join(directory, 'profile') }
         });
-        diag('view');
         await view.navigate(`${page.origin}/?fixture=${id}`);
-        diag('navigated');
         await view.resize(800, 600);
         await view.evaluate(frame);
-        diag('framed');
         const errors = await view.evaluate<string[]>('window.errors');
         if (errors.length > 0) {
             throw new Error(errors.join('\n'));
         }
-        // DIAG: temporary, removed once the runner is understood.
-        console.log('DIAG fixture', Math.round(performance.now() - diagStart));
         await run(view);
-        console.log('DIAG ran', Math.round(performance.now() - diagStart));
     } finally {
         view?.close();
         page.heads.delete(id);
