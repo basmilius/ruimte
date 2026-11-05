@@ -54,6 +54,18 @@ describe('ExtensionStore', () => {
         expect(await idsIn(store)).toEqual([]);
     });
 
+    // On a file system that ignores case the later file would land on the manifest that was checked.
+    test('refuses a pack that names one file twice in another case, and keeps nothing of it', async () => {
+        const store = new ExtensionStore(join(root, 'case-clash'));
+        const files = {
+            'manifest.json': Buffer.from(manifestOf('acme.clash')).toString('base64'),
+            'MANIFEST.json': Buffer.from(manifestOf('acme.other')).toString('base64')
+        };
+
+        await expect(store.install(gzipSync(JSON.stringify({ files })).toString('base64'))).rejects.toMatchObject({ code: 'pack-path' });
+        expect(await idsIn(store)).toEqual([]);
+    });
+
     test('keeps every link of folders linked at once', async () => {
         const store = new ExtensionStore(join(root, 'links'));
         const folders = IDS.map((id) => {

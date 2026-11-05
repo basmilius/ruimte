@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { isNotFound } from '@adecore/utils/errors';
 import {
+    clashingPackPath,
     EXTENSION_API_VERSION,
     ExtensionManifestSchema,
     ExtensionPackSchema,
@@ -399,6 +400,12 @@ function unpack(bytes: Buffer): Record<string, Buffer> {
 
     if (!pack.success) {
         throw new ExtensionPackError('pack-unreadable', 'This is not an extension pack');
+    }
+
+    const clash = clashingPackPath(Object.keys(pack.data.files));
+
+    if (clash !== null) {
+        throw new ExtensionPackError('pack-path', `The pack names ${clash} twice, in another case`);
     }
 
     return Object.fromEntries(

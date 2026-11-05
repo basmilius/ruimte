@@ -7,6 +7,7 @@ import type { AppIpc } from '@adecore/shell';
 import { Serializer } from '@adecore/utils/async';
 import { writeAtomic } from '@adecore/utils/fs';
 import {
+    clashingPackPath,
     EXTENSION_API_VERSION,
     EXTENSION_ICON_PATH,
     ExtensionIdSchema,
@@ -163,6 +164,12 @@ export class ClientExtensions {
 
         if (!paths.every(isSafePackPath)) {
             throw new Error('The pack names a path outside itself');
+        }
+
+        const clash = clashingPackPath(paths);
+
+        if (clash !== null) {
+            throw new Error(`The pack names ${clash} twice, in another case`);
         }
 
         const manifest = ExtensionManifestSchema.parse(JSON.parse(Buffer.from(parsed.files['manifest.json'] ?? '', 'base64').toString('utf8')));

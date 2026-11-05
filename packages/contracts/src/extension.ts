@@ -116,6 +116,27 @@ export function isSafePackPath(path: string): boolean {
     return !path.startsWith('/') && !path.includes('\\') && !path.split('/').some((part) => part === '' || part === '.' || part === '..');
 }
 
+/*
+ * A path of a pack that names the same file as an earlier one on a file system that ignores case or
+ * Unicode form, as macOS and Windows do by default, so unpacking it would write over what was checked;
+ * null when every path is its own.
+ */
+export function clashingPackPath(paths: readonly string[]): string | null {
+    const seen = new Set<string>();
+
+    for (const path of paths) {
+        const folded = path.normalize('NFC').toLowerCase();
+
+        if (seen.has(folded)) {
+            return path;
+        }
+
+        seen.add(folded);
+    }
+
+    return null;
+}
+
 export const ExtensionStatusSchema = z.enum(['idle', 'running', 'crashed', 'disabled']);
 export type ExtensionStatus = z.infer<typeof ExtensionStatusSchema>;
 
