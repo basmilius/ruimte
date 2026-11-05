@@ -2,10 +2,10 @@ import { afterEach } from 'bun:test';
 import { createRequire } from 'node:module';
 
 /*
- * The unit run starts no process, also not through production code a test calls, which
- * `check-test-clock.ts` cannot see from the test file's text. Only the unit configs load this
- * (`bunfig.toml`, `windows-ci.bunfig.toml`, `apps/client/bunfig.toml`); the DOM and integration
- * runs have configs of their own.
+ * The unit and DOM runs start no process, also not through production code a test calls, which
+ * `check-test-clock.ts` cannot see from the test file's text. Their configs load this
+ * (`bunfig.toml`, `windows-ci.bunfig.toml`, `apps/client/bunfig.toml`, `dom.bunfig.toml`); the
+ * integration runs have configs of their own.
  *
  * A starter throws, and since code under test may catch that, the test also fails afterwards.
  */
