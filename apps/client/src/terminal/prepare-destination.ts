@@ -1,5 +1,5 @@
 import { isCanvasView, type ProjectNode, type ProjectView, type SessionInfo } from '@ruimte/contracts';
-import { focusNodeAction, focusViewAction } from '@/actions/client-actions';
+import { focusNodeAction, focusViewAction } from '@/action-port/person-actions';
 import { liveCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { endpointById, useEndpoints } from '@/state/endpoints';

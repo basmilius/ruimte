@@ -6,7 +6,7 @@ import { Ban, Check, ChevronDown, ChevronUp, FileWarning, LoaderCircle, Sparkles
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
-import { cancelGitRunAction } from '@/actions/client-actions';
+import { cancelGitRunAction } from '@/action-port/person-actions';
 import {
     answerInto,
     conflictIndexes,

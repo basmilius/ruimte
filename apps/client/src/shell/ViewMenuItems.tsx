@@ -30,8 +30,7 @@ import {
     placeViewOnCanvasAction,
     showViewOnCanvasAction,
     splitAction
-} from '@/actions/client-actions';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+} from '@/action-port/person-actions';
 import { ForkMenuItem } from '@/chat/ForkMenuItem';
 import { useOffersFork } from '@/chat/use-offers-fork';
 import { useDatabaseViewShareRefusal } from '@/database/view-sharing';
@@ -47,6 +46,7 @@ import { isScratchProject, useProject } from '@/state/project';
 import { useNodeProposals } from '@/state/proposals';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSessionRow } from '@/state/sessions';
+import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { useMachineAnswers } from '@/transport/features';
 import { useTransport } from '@/workspace/context';
 

@@ -5,8 +5,8 @@ import { MessageSquare, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ChatAgentMenu } from '@/agents/AgentMenus';
 import { addDesignChat } from '@/agents/nodes';
-import { useDesignOfChat } from '@/design/design-places';
 import { useDesignChat } from '@/state/design-chat';
+import { useDesignOfChat } from '@/state/design-places';
 
 function itemOf(chat: ViewChat): ProjectSwitcherItem {
     return { id: chat.id, name: chat.name, icon: <Icon icon={MessageSquare} size={14} className="shrink-0 text-text-muted" /> };

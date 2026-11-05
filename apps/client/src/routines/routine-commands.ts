@@ -1,12 +1,12 @@
 import { messageOf } from '@adecore/ui';
 import { isCanvasView, type RoutineEntry } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { createNodeAction } from '@/actions/client-actions';
+import { createNodeAction } from '@/action-port/person-actions';
 import { showView } from '@/project/views';
 import { refreshRoutines } from '@/routines/routine-list';
-import { leaveRoutines } from '@/routines/stage';
 import { canvasSettled } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { leaveRoutines } from '@/state/routines-stage';
 import { useToasts } from '@/state/toasts';
 import { machineTransport } from '@/transport';
 

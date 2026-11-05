@@ -3,7 +3,7 @@ import { SettingsRow } from '@adecore/ui/settings';
 import type { AgentServerStatus, ProviderInfo } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
 import type { AcpServer } from '@/shell/settings/providers/use-acp-server';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 function useServerWords(acp: AcpServer, server: AgentServerStatus) {
     const { t } = useTranslation('settings');

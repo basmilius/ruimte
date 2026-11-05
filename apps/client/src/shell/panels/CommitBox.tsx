@@ -5,7 +5,7 @@ import { ArrowUp, FolderGit2, LoaderCircle, Sparkles } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
-import { cancelGitRunAction } from '@/actions/client-actions';
+import { cancelGitRunAction } from '@/action-port/person-actions';
 import { isApplePlatform } from '@/desktop/bridge';
 import { useGit } from '@/state/git';
 import { useToasts } from '@/state/toasts';

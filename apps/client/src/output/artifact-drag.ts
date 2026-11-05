@@ -1,9 +1,9 @@
-import { moveViewAction } from '@/actions/client-actions';
+import { moveViewAction } from '@/action-port/person-actions';
 import type { CellAt, SplitZone } from '@/layout/split';
-import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
 import { artifactTabKey, openArtifactTab, useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
+import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
 
 /*
  * An artifact of this machine's Output dragged out of the panel. It travels as a view drag of the key

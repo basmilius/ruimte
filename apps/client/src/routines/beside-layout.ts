@@ -1,7 +1,7 @@
 import type { RoutineRun } from '@ruimte/contracts';
 import { GRID, snapToGrid, type Rect } from '@/canvas-model/math';
-import { COLUMN_W, GUTTER, LINE_H, OPEN_H, OPEN_MIN_H, STACK_GAP } from '@/canvas/beside-metrics';
-import type { CardSize } from '@/routines/output-size';
+import { COLUMN_W, GUTTER, LINE_H, OPEN_H, OPEN_MIN_H, STACK_GAP } from '@/surface/canvas/beside-metrics';
+import type { CardSize } from '@/surface/canvas/output-size';
 
 /* What a person or the open run's thread set beside the layout's own sizes; null keeps the layout's. */
 interface BesideSizes {

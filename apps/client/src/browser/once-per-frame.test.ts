@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { FrameClock } from '@/canvas/pan-batch';
+import type { FrameClock } from '@/surface/canvas/pan-batch';
 import { oncePerFrame } from './once-per-frame';
 
 /* Frames and the end of a task only come when the test says so. */

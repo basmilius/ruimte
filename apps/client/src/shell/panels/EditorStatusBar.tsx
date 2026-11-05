@@ -10,8 +10,8 @@ import { LanguageStatusItem } from '@/language/LanguageStatusItem';
 import type { EditorLanguage } from '@/language/ruimte-editor-language';
 import { encodingLabelOf, languageNameOf, symbolBadgeOf } from '@/shell/panels/status-bar-model';
 import { useEditorCaret } from '@/shell/panels/use-editor-caret';
-import { useFileBranch } from '@/shell/panels/use-git-root';
 import { useUi } from '@/state/ui';
+import { useFileBranch } from '@/surface/panels/use-git-root';
 
 const ITEM = 'inline-flex h-5 shrink-0 items-center gap-1.5 rounded-md px-1.5';
 

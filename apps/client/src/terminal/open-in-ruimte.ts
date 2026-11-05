@@ -1,4 +1,4 @@
-import { createNodeAction, createViewAction } from '@/actions/client-actions';
+import { createNodeAction, createViewAction } from '@/action-port/person-actions';
 import { browserBeside } from '@/browser/open-beside';
 import { canvasOfNode } from '@/state/canvas';
 import { windowWorkspace } from '@/workspace/window';

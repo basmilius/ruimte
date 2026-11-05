@@ -7,7 +7,7 @@ import { OutputShownBesideContext } from '@/output/chat-scope';
 import { KindTile } from '@/output/look';
 import { savedPreviewOf } from '@/output/saved-preview';
 import { SavedPreview } from '@/output/SavedPreview';
-import { setDragging } from '@/shell/view-drag';
+import { setDragging } from '@/surface/view-drag';
 
 export interface Saved {
     artifact: Pick<ArtifactSummary, 'artifactId' | 'title' | 'kind'>;

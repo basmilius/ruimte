@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { ManualTimers } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
-import { RUIMTE_EDITOR_KEYMAP } from '@/shell/editor-keymap';
+import { RUIMTE_EDITOR_KEYMAP } from '@/surface/editor-keymap';
 import { FakeLanguageTransport } from './fake-daemon';
 import { EditorLanguage } from './ruimte-editor-language';
 import { ProjectLanguage } from './ruimte-project-language';

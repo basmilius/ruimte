@@ -15,11 +15,11 @@ import { useRoutineApproval } from '@/routines/routine-approval';
 import { useRoutineWhat } from '@/routines/routine-what';
 import { RoutinePrompt } from '@/routines/RoutinePrompt';
 import { RoutineRunChat } from '@/routines/RoutineRunChat';
-import { leaveRoutines, showRoutine } from '@/routines/stage';
 import { dayClockWords, dayWords, runWords, scheduleWords, weekdayClock } from '@/routines/words';
-import { FileToolbarSlotProvider, fixedSlot } from '@/shell/panels/file-toolbar-slot';
 import { useEndpoints } from '@/state/endpoints';
 import { isThisMachine } from '@/state/local-machine';
+import { leaveRoutines, showRoutine } from '@/state/routines-stage';
+import { FileToolbarSlotProvider, fixedSlot } from '@/surface/panels/file-toolbar-slot';
 
 /* A routine opened inside Routines: its definition and runs on the left, the run picked on the right. */
 export function RoutineDetail({ endpointId, entry, runId, timeZone }: { endpointId: string; entry: RoutineEntry; runId: string | null; timeZone: string }) {

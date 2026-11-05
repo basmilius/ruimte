@@ -9,8 +9,8 @@ import { copyOf, draftOfLive, draftOfPostfix, emptyDraft, type TemplateDraft } f
 import { TemplateDialog } from '@/language/TemplateDialog';
 import { useTemplates, type TemplatesTracker } from '@/language/templates';
 import { useWindowProjectLanguage } from '@/shell/settings/panes/window-project-language';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useToasts } from '@/state/toasts';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 import { machineAnswers } from '@/transport/features';
 import { useEndpointConnection } from '@/transport/status';
 import { useWindow, workspaceOf } from '@/workspace/window';

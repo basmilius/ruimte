@@ -57,14 +57,14 @@ import { showChat, useChatName } from '@/output/kinds';
 import { selectArtifactVersion, useArtifactSelection } from '@/output/open';
 import { RemoveArtifactDialog, type RemoveArtifactRequest } from '@/output/RemoveArtifactDialog';
 import { useArtifact } from '@/output/use-artifact';
-import { showRoutine } from '@/routines/stage';
-import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpointIdOfMachine, useEndpoints } from '@/state/endpoints';
 import { artifactTabKey } from '@/state/files';
 import { endpointKey } from '@/state/keys';
+import { showRoutine } from '@/state/routines-stage';
 import { useToasts } from '@/state/toasts';
+import { useFileToolbarSlot } from '@/surface/panels/file-toolbar-slot';
 import { useMachineAnswers } from '@/transport/features';
 import { useMachineUrl } from '@/transport/machine-url';
 

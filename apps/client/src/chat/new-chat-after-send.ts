@@ -1,14 +1,14 @@
 import { rememberChatSelection } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
-import { createNodeAction, createViewAction } from '@/actions/client-actions';
-import { openChatInMode } from '@/chat/opening-mode';
-import { readNodeHost } from '@/nodes/node-host';
+import { createNodeAction, createViewAction } from '@/action-port/person-actions';
 import { newChatOn } from '@/project/new-chat';
 import { canvasOfNode, liveCanvases } from '@/state/canvas';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
+import { openChatInMode } from '@/state/opening-mode';
 import { isScratchProject, useProject } from '@/state/project';
+import { readNodeHost } from '@/surface/nodes/node-host';
 
 /*
  * The new chat Mod+Alt+Enter opens once its message went: beside the chat it was sent from, on the

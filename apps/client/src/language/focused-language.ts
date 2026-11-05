@@ -1,6 +1,6 @@
 import { cellElement } from '@/layout/cell-rects';
-import { createFocusRegistry } from '@/shell/panels/focus-registry';
 import { useDocument } from '@/state/document';
+import { createFocusRegistry } from '@/surface/panels/focus-registry';
 import type { EditorLanguage } from './ruimte-editor-language';
 
 const languages = createFocusRegistry<EditorLanguage>();

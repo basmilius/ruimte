@@ -5,9 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { RENDER_DISTANCES, type RenderDistance } from '@/canvas-model/render-distance';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
 import { NodeSizeSection } from '@/shell/settings/NodeSizeSection';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { useSettings } from '@/state/settings';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 type ViewTab = 'canvas' | 'drawing' | 'browser';
 

@@ -7,7 +7,7 @@ if (!baselineRoot) {
     throw new Error('Usage: bun --conditions=source scripts/check-route-equivalence.ts <baseline checkout>');
 }
 
-const after = await import(resolve(import.meta.dir, '../apps/client/src/canvas/edge-route.ts'));
+const after = await import(resolve(import.meta.dir, '../apps/client/src/surface/canvas/edge-route.ts'));
 const before = await import(resolve(baselineRoot, 'apps/client/src/canvas/edge-route.ts'));
 const sides = ['top', 'right', 'bottom', 'left'] as const;
 let seed = 20261101;

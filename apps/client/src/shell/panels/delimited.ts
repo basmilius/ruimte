@@ -1,6 +1,6 @@
 import type { GridColumn, GridRow, GridSort } from '@adecore/database';
 import { labelCollator } from '@adecore/ui/format';
-import { extensionOf } from '@/shell/panels/file-kind';
+import { extensionOf } from '@/surface/panels/file-kind';
 
 export type Delimiter = ',' | ';' | '\t';
 

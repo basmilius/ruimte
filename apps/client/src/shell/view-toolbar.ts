@@ -2,10 +2,10 @@ import { RUNTIME_MODES } from '@adecore/agents-react/chat';
 import { useChatRow } from '@adecore/agents-react/state';
 import type { ProjectViewKind, RuntimeMode } from '@ruimte/contracts';
 import { useDictation } from '@/dictation/controller';
-import { useNodeHost, type NodeHost } from '@/nodes/node-host';
-import { isLooseView, type CellView } from '@/shell/cell-view';
 import { isFileTab } from '@/state/files';
 import { useHasPlans } from '@/state/plans';
+import { isLooseView, type CellView } from '@/surface/cell-view';
+import { useNodeHost, type NodeHost } from '@/surface/nodes/node-host';
 import { useSessionPortControl } from '@/terminal/session-port-controls';
 
 /* The kinds that put something in the toolbar; the bar draws its separators around that part. */

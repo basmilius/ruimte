@@ -17,3 +17,10 @@ export function separatesGroups(previous: AgentKind | undefined, kind: AgentKind
 export function availableAgents(providers: readonly ProviderInfo[], target: AgentTarget): ProviderInfo[] {
     return inPickerOrder(providers.filter((provider) => provider.installed && provider.capabilities[target]));
 }
+
+/* Where an agent picks up: a CLI session handed on from another chat or terminal, the folder it works in and the account it ran under. */
+export interface AgentSession {
+    resume?: string;
+    cwd?: string;
+    account?: string;
+}

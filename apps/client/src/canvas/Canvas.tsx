@@ -12,7 +12,7 @@ import {
     type RefObject
 } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { createTextAction } from '@/actions/client-actions';
+import { createTextAction } from '@/action-port/person-actions';
 import { editableGaps, gapOffsets, type EditableGap } from '@/canvas-model/editable-gaps';
 import { lineBounds } from '@/canvas-model/line-geometry';
 import { groundPlacement, snapToGrid, toWorld, type Camera, type Point, type Rect } from '@/canvas-model/math';
@@ -23,38 +23,38 @@ import { CanvasLineLayer, CanvasLineTool, CanvasLineToolbar } from '@/canvas/Can
 import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
 import { farNodeKey } from '@/canvas/culling';
 import { DerivedCards } from '@/canvas/DerivedCards';
-import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
 import { EdgeLayer } from '@/canvas/EdgeLayer';
 import { EmptyCanvas } from '@/canvas/EmptyCanvas';
-import { finderPaths } from '@/canvas/finder-drop';
 import { framePressHandsKeyboard } from '@/canvas/frame-press';
-import { isGapModifierDown, subscribeGapModifier } from '@/canvas/gap-modifier';
 import { GapHandles } from '@/canvas/GapHandles';
 import { registerGestureCancellation } from '@/canvas/gesture-cancel';
 import { GroupHover } from '@/canvas/GroupHover';
 import { Minimap } from '@/canvas/Minimap';
-import { cardHolds, derivedCardOf, derivedOwnerOf } from '@/canvas/node-body';
 import { NodeFrame } from '@/canvas/NodeFrame';
 import { notePointer } from '@/canvas/pointer';
 import { PortHints } from '@/canvas/PortHints';
 import { resizedRect } from '@/canvas/resize';
 import { ResizeHandles } from '@/canvas/ResizeHandles';
-import { isSpaceDown, subscribeSpacePan } from '@/canvas/space-pan';
-import { stackingOrder } from '@/canvas/stacking';
 import { resizedText } from '@/canvas/text-resize';
 import { TextElementView } from '@/canvas/TextElementView';
 import { TextToolbar } from '@/canvas/TextToolbar';
-import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { CanvasLayers } from '@/extensions/ContributedSlots';
 import { SelectionBar } from '@/extensions/SlotSurfaces';
 import { showFileOnCanvas } from '@/project/views';
-import { CellOverlay } from '@/shell/CellOverlay';
-import { gridTakesPath } from '@/shell/view-drag';
 import { carriedByGroups, isNodeActive, maximizedNodeOf, useCanvas, useCanvasCamera, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { useEndpointId } from '@/state/current-endpoint';
 import { canLink } from '@/state/edge-lines';
 import { gapFrames } from '@/state/element-frames';
 import { defaultNodeSize } from '@/state/node-size';
+import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/surface/canvas/drop';
+import { finderPaths } from '@/surface/canvas/finder-drop';
+import { isGapModifierDown, subscribeGapModifier } from '@/surface/canvas/gap-modifier';
+import { cardHolds, derivedCardOf, derivedOwnerOf } from '@/surface/canvas/node-body';
+import { isSpaceDown, subscribeSpacePan } from '@/surface/canvas/space-pan';
+import { stackingOrder } from '@/surface/canvas/stacking';
+import { useWheelCamera } from '@/surface/canvas/use-wheel-camera';
+import { CellOverlay } from '@/surface/CellOverlay';
+import { gridTakesPath } from '@/surface/view-drag';
 
 type Gesture =
     | { kind: 'pan'; last: Point }

@@ -58,13 +58,13 @@ import { useLinkedMachines } from '@/output/linked-machines';
 import { KindTile, OutputProjectGlyph } from '@/output/look';
 import { openArtifact, useOutputRequest } from '@/output/open';
 import { RemoveArtifactDialog, type RemoveArtifactRequest } from '@/output/RemoveArtifactDialog';
-import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
-import { FILE_TOOLBAR } from '@/shell/panels/classes';
-import { setDragging } from '@/shell/view-drag';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpointIdOfMachine, useEndpoints } from '@/state/endpoints';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
+import { PanelHeaderActions, PanelHeaderSlot } from '@/surface/PanelHeaderSlot';
+import { FILE_TOOLBAR } from '@/surface/panels/classes';
+import { setDragging } from '@/surface/view-drag';
 import { useMachineAnswers } from '@/transport/features';
 
 const CopyToProjectDialog = lazyNamed(() => import('@/output/CopyToProjectDialog'), 'CopyToProjectDialog');

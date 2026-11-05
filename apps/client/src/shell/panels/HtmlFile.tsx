@@ -4,7 +4,6 @@ import type { FsReadText } from '@ruimte/contracts';
 import { Eye, FileWarning } from 'lucide-react';
 import { useContext, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { focusCellOfView, watchGuestFocus } from '@/browser/guest-focus';
 import { registerPreviewGuest } from '@/clients/browser/preview-guests';
 import { isDesktop } from '@/desktop/bridge';
 import { FindBar } from '@/find/FindBar';
@@ -18,6 +17,7 @@ import { isPageReady, trackPageReady, usePreviewFind, type FindablePage, type Fo
 import { useSourceToggle } from '@/shell/panels/use-source-toggle';
 import { useEndpoints } from '@/state/endpoints';
 import { CellViewContext } from '@/state/workspace-stores';
+import { focusCellOfView, watchGuestFocus } from '@/surface/guest-focus';
 import { useTransport } from '@/workspace/context';
 
 const PREVIEW_PARTITION = 'preview';

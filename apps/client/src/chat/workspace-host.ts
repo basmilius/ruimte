@@ -1,7 +1,7 @@
 import type { ChatHost } from '@adecore/agents-react';
 import i18next from 'i18next';
 import { createElement, useMemo } from 'react';
-import { answerComputerAsPerson } from '@/actions/client-actions';
+import { answerComputerAsPerson } from '@/action-port/person-actions';
 import { ChatModelView } from '@/chat/ChatModelView';
 import { ComposerDictation } from '@/chat/ComposerDictation';
 import { CHAT_HOST } from '@/chat/host';
@@ -15,7 +15,6 @@ import { openUiLink, openUiUrl } from '@/chat/ui-links';
 import { useTimelineFind } from '@/chat/use-chat-find';
 import { useChatPlace } from '@/chat/use-chat-place';
 import { useContextSources } from '@/context/sources';
-import { useDesignHidesToolCalls } from '@/design/design-tool-calls';
 import { DesignComposerHeader } from '@/design/DesignChats';
 import { isApplePlatform } from '@/desktop/bridge';
 import { DictationTextarea } from '@/dictation/DictationTextarea';
@@ -26,12 +25,13 @@ import { answerRuimtePrompt, computerPrompt, isRuimtePrompt, proposalPrompt, sec
 import { RuimtePromptView } from '@/prompts/RuimtePromptView';
 import { proposalAnswers } from '@/proposals/answer';
 import { secretAnswers } from '@/secrets/answer';
-import { openFileLink, parseFileRef, resolveFileRef, type FileRef } from '@/shell/panels/file-links';
 import { useNodeComputerApprovals } from '@/state/computer';
+import { useDesignHidesToolCalls } from '@/state/design-tool-calls';
 import { useNodeProposals } from '@/state/proposals';
 import { useNodeSecretRequests } from '@/state/secrets';
 import { useToasts } from '@/state/toasts';
-import { isComposerShortcut } from '@/terminal/keymap';
+import { openFileLink, parseFileRef, resolveFileRef, type FileRef } from '@/surface/panels/file-links';
+import { isComposerShortcut } from '@/surface/terminal-keymap';
 
 /*
  * What the chat takes from Ruimte that only a workspace draws: the find over a thread, dictation, the

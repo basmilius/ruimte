@@ -17,9 +17,9 @@ import {
 } from '@/controllers/keep-awake';
 import { MachineSwitchSection } from '@/shell/settings/MachineSwitchSection';
 import { ComputerSections } from '@/shell/settings/panes/ComputerSections';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { useUi } from '@/state/ui';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 /* Both mode rows offer the same choices, and each one explains itself in the popup. Built while the
    pane draws, so the words are the ones the interface is in right now. */

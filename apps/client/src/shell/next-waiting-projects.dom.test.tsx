@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import { projectSidebarViews, type ChatInfo, type ProjectSummary, type ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
-import { usePromptFront } from '@/canvas/prompt-stack';
 import { isApplePlatform } from '@/desktop/bridge';
 import { projectSwitch } from '@/project/open';
 import { startWindowTabs, useWindowTabs } from '@/project/window-tabs';
@@ -13,6 +12,7 @@ import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
 import { startWaitingSinceWatch, useWaitingSince } from '@/state/waiting';
+import { usePromptFront } from '@/surface/canvas/prompt-stack';
 import { dropMachine } from '@/workspace/connections';
 import { chatInfoOf } from '../../testing/chat-info';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';

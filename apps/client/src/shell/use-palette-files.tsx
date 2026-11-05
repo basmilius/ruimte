@@ -4,7 +4,7 @@ import { FileText } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ignoreRefusal, perform } from '@/action-port/perform';
-import { createViewAction } from '@/actions/client-actions';
+import { createViewAction } from '@/action-port/person-actions';
 import { basenameOf } from '@/paths/file-path';
 import { showFileOnCanvas } from '@/project/views';
 import { groupBySection, type Entry, type PaletteContext, type PaletteModeView } from '@/shell/palette-entries';

@@ -1,7 +1,7 @@
 import { isCanvasView, type Artifact, type ArtifactVersion } from '@ruimte/contracts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { createNodeAction } from '@/actions/client-actions';
+import { createNodeAction } from '@/action-port/person-actions';
 import { useLinkedMachines } from '@/output/linked-machines';
 import { openArtifact } from '@/output/open';
 import { showView } from '@/project/views';

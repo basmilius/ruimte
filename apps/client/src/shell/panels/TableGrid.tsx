@@ -6,9 +6,9 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FindBar } from '@/find/FindBar';
 import { useFind } from '@/find/use-find';
-import { FILE_FOOTER } from '@/shell/panels/classes';
 import { findCells, parseDelimited, sortRows, tableOf, type CellMatch, type Delimiter } from '@/shell/panels/delimited';
 import { EditorNotice } from '@/shell/panels/DraftBar';
+import { FILE_FOOTER } from '@/surface/panels/classes';
 
 const NO_SORTS: readonly GridSort[] = [];
 

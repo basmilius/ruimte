@@ -28,16 +28,38 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
-import { PATHS_DRAG_TYPE } from '@/canvas/drop';
 import { folderWatches } from '@/controllers/fs-watch';
 import { soleRepo, useGitCheckouts, useProjectRepos, withoutNestedCheckouts, type GitCheckoutRef } from '@/controllers/git-repos';
 import { useProjectNodes, useWorktrees, worktreeLists } from '@/controllers/worktrees';
 import { fileInfoOf } from '@/extensions/file-info';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { basenameOf, dirnameOf } from '@/paths/file-path';
-import { PanelHeaderActions, PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeaderTitleHidden } from '@/shell/PanelHeaderSlot';
 import { BranchMenu } from '@/shell/panels/BranchMenu';
-import type { CopyTarget } from '@/shell/panels/file-copy';
+import { dropMovesOf } from '@/shell/panels/file-rename';
+import { FileSearch as FileSearchFlow, type FileSearchResult } from '@/shell/panels/file-search';
+import { FileActionItems } from '@/shell/panels/FileActionItems';
+import { FileCopyRow } from '@/shell/panels/FileCopyRow';
+import { repoParts } from '@/shell/panels/git-tree';
+import { GitTreeMarks } from '@/shell/panels/GitTreeMarks';
+import { NewEntryRow } from '@/shell/panels/NewEntryRow';
+import { isQuickLookKey, useQuickLook } from '@/shell/panels/quick-look';
+import { revealFile } from '@/shell/panels/reveal-file';
+import { WorktreeBar } from '@/shell/panels/WorktreeMenu';
+import { useCanvas } from '@/state/canvas';
+import { useEndpointId } from '@/state/current-endpoint';
+import { useFiles } from '@/state/files';
+import { filesRootOf, useFilesRoot } from '@/state/files-root';
+import { useGit } from '@/state/git';
+import { gitTargets, type GitTarget } from '@/state/git-target';
+import { endpointKey } from '@/state/keys';
+import { useProject } from '@/state/project';
+import { fileManagerName, useServer } from '@/state/server';
+import { useSettings } from '@/state/settings';
+import { useToasts } from '@/state/toasts';
+import { useUi } from '@/state/ui';
+import { PATHS_DRAG_TYPE } from '@/surface/canvas/drop';
+import { PanelHeaderActions, PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeaderTitleHidden } from '@/surface/PanelHeaderSlot';
+import type { CopyTarget } from '@/surface/panels/file-copy';
 import {
     creationParentOf,
     newEntryPathOf,
@@ -47,11 +69,7 @@ import {
     type Creation,
     type NameFault,
     type NewEntryKind
-} from '@/shell/panels/file-create';
-import { dropMovesOf } from '@/shell/panels/file-rename';
-import { FileSearch as FileSearchFlow, type FileSearchResult } from '@/shell/panels/file-search';
-import { FileActionItems } from '@/shell/panels/FileActionItems';
-import { FileCopyRow } from '@/shell/panels/FileCopyRow';
+} from '@/surface/panels/file-create';
 import {
     LOADING_NAME,
     ancestorDirsOf,
@@ -68,26 +86,8 @@ import {
     withoutClosedBranches,
     sameEntries,
     type EntryCache
-} from '@/shell/panels/files-tree';
-import { repoParts } from '@/shell/panels/git-tree';
-import { GitTreeMarks } from '@/shell/panels/GitTreeMarks';
-import { NewEntryRow } from '@/shell/panels/NewEntryRow';
-import { isQuickLookKey, useQuickLook } from '@/shell/panels/quick-look';
-import { revealFile } from '@/shell/panels/reveal-file';
-import { WorktreeBar } from '@/shell/panels/WorktreeMenu';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
-import { useCanvas } from '@/state/canvas';
-import { useEndpointId } from '@/state/current-endpoint';
-import { useFiles } from '@/state/files';
-import { filesRootOf, useFilesRoot } from '@/state/files-root';
-import { useGit } from '@/state/git';
-import { gitTargets, type GitTarget } from '@/state/git-target';
-import { endpointKey } from '@/state/keys';
-import { useProject } from '@/state/project';
-import { fileManagerName, useServer } from '@/state/server';
-import { useSettings } from '@/state/settings';
-import { useToasts } from '@/state/toasts';
-import { useUi } from '@/state/ui';
+} from '@/surface/panels/files-tree';
+import { APP_SHORTCUTS } from '@/surface/shortcuts';
 import { useTransport } from '@/workspace/context';
 import { nodeNames, nodesInWorktree, worktreeBase } from '@/worktree-rules/worktree-rows';
 

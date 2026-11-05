@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bu
 import { zonedTime, type ArtifactGetResult, type ProjectCanvasView, type ProjectNode, type RoutineEntry, type RoutineRun } from '@ruimte/contracts';
 import { act } from 'react';
 import { setRunsHidden } from '@/routines/runs-hidden';
-import { showRoutine, useRoutinesStage } from '@/routines/stage';
 import { liveCanvas } from '@/state/canvas';
+import { showRoutine, useRoutinesStage } from '@/state/routines-stage';
 import { useSettings } from '@/state/settings';
 import { windowWorkspace } from '@/workspace/window';
 import { chatInfoOf } from '../../testing/chat-info';

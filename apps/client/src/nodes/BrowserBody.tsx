@@ -19,10 +19,10 @@ import { useSwipeOverlay } from '@/clients/browser/swipe-overlay';
 import { desktop, isApplePlatform, isDesktop } from '@/desktop/bridge';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
-import { useNodeHost } from '@/nodes/node-host';
 import { useLocalDaemonId, usePage } from '@/nodes/use-page';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
+import { useNodeHost } from '@/surface/nodes/node-host';
 
 /* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
 export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }) {

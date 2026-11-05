@@ -20,14 +20,13 @@ import {
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
+import { applyLayoutAction, createNodeAction, createTextAction, deleteLayoutAction, fitAction, setLocksAction } from '@/action-port/person-actions';
 import { centerWorld } from '@/actions/action-reach';
-import { applyLayoutAction, createNodeAction, createTextAction, deleteLayoutAction, fitAction, setLocksAction } from '@/actions/client-actions';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import type { Point } from '@/canvas-model/math';
 import { LOCK_KEYS, lockHint, lockLabel } from '@/canvas/locks';
 import { OVERLAY_LEDGE_ATTRIBUTE } from '@/canvas/overlay-attributes';
 import { RemoteMachineItems } from '@/canvas/RemoteMachineItems';
-import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { DesignAddItem } from '@/design/DesignAddItem';
 import { useDictation } from '@/dictation/controller';
 import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
@@ -38,6 +37,7 @@ import { activeViewOf, useDocument } from '@/state/document';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
+import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 
 /*
  * The canvas's own controls: zoom, locks, layouts and the plus that adds a node. A view of its own

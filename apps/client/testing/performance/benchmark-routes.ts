@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import * as after from '../../src/canvas/edge-route';
+import * as after from '../../src/surface/canvas/edge-route';
 import { measurePairs } from './paired';
 import { routeCases } from './route-cases';
 

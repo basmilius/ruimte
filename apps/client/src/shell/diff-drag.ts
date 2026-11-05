@@ -1,5 +1,5 @@
 import { ProjectFileTabViewSchema, type ProjectFileTabView } from '@ruimte/contracts';
-import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
+import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
 
 /*
  * A change dragged out of the git panel. It travels as a view drag of its own id, so the grid draws

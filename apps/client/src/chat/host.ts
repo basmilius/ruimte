@@ -5,7 +5,7 @@ import { type AgentKind, CHAT_MODEL_MAX_BYTES } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createElement } from 'react';
 import { perform } from '@/action-port/perform';
-import { PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
+import { PERSON_PROMPT_CLIENTS } from '@/action-port/person-actions';
 import { askBeforeStoppingSubagents, askBeforeStoppingTask } from '@/agents/end-children';
 import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel, type AccentId } from '@/canvas-model/accents';
 import DiffSyntaxWorker from '@/chat/diff-syntax.worker?worker';
@@ -207,7 +207,7 @@ export const CHAT_HOST: Partial<ChatHost> = {
             try {
                 const transport = requireTransport(endpointId);
                 // The dialog and its folder tree belong to a workspace, so the start screen loads none of it.
-                const { requestImageSave } = await import('@/chat/image-save');
+                const { requestImageSave } = await import('@/surface/image-save');
                 return await requestImageSave(transport, chatId, attachmentId);
             } catch (error) {
                 useToasts.getState().show({
@@ -227,7 +227,7 @@ export const CHAT_HOST: Partial<ChatHost> = {
         highlighter: codeHighlighter,
         syntaxWorker: () => new DiffSyntaxWorker(),
         editor: async () => {
-            const { loadEditorEngine } = await import('@/shell/panels/editor-engine');
+            const { loadEditorEngine } = await import('@/surface/panels/editor-engine');
             return loadEditorEngine();
         }
     },

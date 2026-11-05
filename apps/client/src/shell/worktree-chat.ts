@@ -1,5 +1,5 @@
 import type { AgentKind } from '@ruimte/contracts';
-import { createNodeAction, createViewAction } from '@/actions/client-actions';
+import { createNodeAction, createViewAction } from '@/action-port/person-actions';
 import { hasActiveCanvas, useDocument } from '@/state/document';
 
 interface WorktreeChat {

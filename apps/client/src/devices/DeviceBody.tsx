@@ -38,7 +38,6 @@ import {
 } from 'lucide-react';
 import { useEffect, useState, type DragEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PATHS_DRAG_TYPE } from '@/canvas/drop';
 import { useDeviceList, useDevices, useRecordingEnded, useRecordingSince, useResolvedDevice } from '@/clients/devices/state';
 import { restartDevice, runDeviceAction, toastDeviceFailure } from '@/devices/control';
 import { stopRecording } from '@/devices/device-capture';
@@ -46,10 +45,11 @@ import { dropAction } from '@/devices/device-files';
 import { DevicePowerPill } from '@/devices/DevicePowerPill';
 import { DeviceStream } from '@/devices/DeviceStream';
 import { ANDROID_BUTTONS } from '@/devices/operated';
-import { useNodeHost } from '@/nodes/node-host';
-import { failed } from '@/shell/surface-failure';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
+import { PATHS_DRAG_TYPE } from '@/surface/canvas/drop';
+import { useNodeHost } from '@/surface/nodes/node-host';
+import { failed } from '@/surface/surface-failure';
 import { deviceClientFor } from '@/workspace/connections';
 
 const DeviceToolsPanel = lazyNamed(() => import('@/devices/DeviceToolsPanel'), 'DeviceToolsPanel');

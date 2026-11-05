@@ -7,9 +7,7 @@ import { ArrowDown, ArrowUp, Plus } from 'lucide-react';
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-import { moveViewAction } from '@/actions/client-actions';
-import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
-import { finderPaths } from '@/canvas/finder-drop';
+import { moveViewAction } from '@/action-port/person-actions';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { hasLogoMenu } from '@/desktop/bridge';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
@@ -19,28 +17,11 @@ import { SlotRow } from '@/extensions/SlotSurfaces';
 import { addArtifactToSidebar, carriesArtifact, droppedArtifact } from '@/output/artifact-drag';
 import { newChat } from '@/project/new-chat';
 import { askDeleteView, newFileViewsAfter, promoteLooseDatabase, promoteLooseFile, revealNode } from '@/project/views';
-import { viewGlyphOf } from '@/shell/cell-view';
 import { StationMenu } from '@/shell/menu/StationMenu';
 import { NewViewItems } from '@/shell/NewViewMenu';
 import { usePanelGap } from '@/shell/panel-layout';
 import { useProjectMenu } from '@/shell/project-menu-model';
 import { foldedProjects, movableKeys, separatorKey, useSidebarProjects, type SeparatorPlaces, type SidebarSeparator } from '@/shell/sidebar-projects';
-import {
-    buildCombinedSidebar,
-    buildSidebar,
-    buildSidebarEverywhere,
-    gapIndex,
-    isSessionKind,
-    rowAfterArrow,
-    rowOrder,
-    withChats,
-    type SidebarGroup,
-    type SidebarNode,
-    type SidebarProject,
-    type SidebarRow,
-    type SidebarSection
-} from '@/shell/sidebar-rows';
-import { useSidebarSource } from '@/shell/sidebar-source';
 import { SIDEBAR_WIDTH_PX, SidebarGlow } from '@/shell/SidebarGlow';
 import {
     BackgroundRow,
@@ -55,7 +36,6 @@ import {
 } from '@/shell/SidebarListRows';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { useInstantWidth } from '@/shell/useInstantWidth';
-import { draggedViewId, dragging as draggedView, draggingWholeCell, PROJECT_DRAG_TYPE, setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { nodeWork } from '@/state/agent-work';
 import { isUnseen, useAttention } from '@/state/attention';
 import { useEndpointId } from '@/state/current-endpoint';
@@ -72,6 +52,33 @@ import { childTask, useTasks } from '@/state/tasks';
 import { useUi } from '@/state/ui';
 import { useWaitingSince, waitDetailsOf } from '@/state/waiting';
 import { IS_STATION } from '@/station';
+import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/surface/canvas/drop';
+import { finderPaths } from '@/surface/canvas/finder-drop';
+import { viewGlyphOf } from '@/surface/cell-view';
+import {
+    buildCombinedSidebar,
+    buildSidebar,
+    buildSidebarEverywhere,
+    gapIndex,
+    isSessionKind,
+    rowAfterArrow,
+    rowOrder,
+    withChats,
+    type SidebarGroup,
+    type SidebarNode,
+    type SidebarProject,
+    type SidebarRow,
+    type SidebarSection
+} from '@/surface/sidebar-rows';
+import { useSidebarSource } from '@/surface/sidebar-source';
+import {
+    draggedViewId,
+    dragging as draggedView,
+    draggingWholeCell,
+    PROJECT_DRAG_TYPE,
+    setDragging as setDraggedView,
+    VIEW_DRAG_TYPE
+} from '@/surface/view-drag';
 import { Brand } from '@/ui/Brand';
 import { NeedsYouCard } from './NeedsYouCard';
 import { useSidebarGroups } from './sidebar-groups';

@@ -5,7 +5,7 @@ import type { GitActionKind, GitActionPayload, GitActionResult } from '@ruimte/c
 import i18next from 'i18next';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { perform } from '@/action-port/perform';
-import { cancelGitRunAction } from '@/actions/client-actions';
+import { cancelGitRunAction } from '@/action-port/person-actions';
 import { useToasts } from '@/state/toasts';
 import { useTransport } from '@/workspace/context';
 import { actionTitle, manySummary, manyTitle, nextActionId, phaseLabel } from '@/worktree-rules/git-actions';

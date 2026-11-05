@@ -4,24 +4,19 @@ import { ContextMenu, DocumentTab, TabStrip as CoreTabStrip } from '@adecore/ui'
 import type { AgentStatus, ProjectView } from '@ruimte/contracts';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { closeTabAction } from '@/actions/client-actions';
+import { closeTabAction } from '@/action-port/person-actions';
 import { WaitingCount } from '@/attention/WaitingCount';
 import { useBrowserDisplayTitle } from '@/browser/title';
-import { PATHS_DRAG_TYPE } from '@/canvas/drop';
 import { StatusDot } from '@/canvas/NodeFrame';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useDatabaseConnectionList } from '@/database/connections';
-import { databaseTabTitle } from '@/database/tab-look';
 import { isSameCell, type CellAt } from '@/layout/split';
 import { basenameOf } from '@/paths/file-path';
 import { ViewGlyph } from '@/project/ViewGlyph';
-import { isLooseView, viewGlyphOf, type LooseCellView } from '@/shell/cell-view';
 import { splitSentence } from '@/shell/change-size';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { LooseGlyph } from '@/shell/panels/LooseGlyph';
 import { TabMenuItems } from '@/shell/TabMenuItems';
 import { useCellView } from '@/shell/use-cell-view';
-import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useWaitingCount } from '@/state/attention';
 import { useEndpointId } from '@/state/current-endpoint';
@@ -33,6 +28,11 @@ import { sessionStatus, useSessionRow } from '@/state/sessions';
 import { setTabPinned } from '@/state/tab-close';
 import { isUnsavedDraft, useTextDrafts } from '@/state/text-drafts';
 import { useViewPinned } from '@/state/view-pins';
+import { PATHS_DRAG_TYPE } from '@/surface/canvas/drop';
+import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { isLooseView, viewGlyphOf, type LooseCellView } from '@/surface/cell-view';
+import { databaseTabTitle } from '@/surface/tab-look';
+import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
 
 interface TabShellProps {
     id: string;

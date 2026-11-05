@@ -27,11 +27,6 @@ import { useTranslation } from 'react-i18next';
 import { accentColor, accentHeaderStyle, accentShades } from '@/canvas-model/accents';
 import type { ResizeEdge } from '@/canvas-model/derived-frame';
 import type { Rect } from '@/canvas-model/math';
-import { CHROME_H, FRAME, frameStyle, HEADER, HEADER_MIDDLE } from '@/canvas/derived-card-look';
-import { CardLine } from '@/canvas/DerivedCardLook';
-import { DerivedSet, type DerivedCard } from '@/canvas/DerivedSet';
-import { KindIcon } from '@/canvas/KindIcon';
-import { derivedCardId } from '@/canvas/node-body';
 import { shownWorkflow, workflowCandidates, type WorkflowCandidate } from '@/chat/workflow/beside-workflows';
 import { phaseCardKey, workflowBesideLayout, type WorkflowBesideCard } from '@/chat/workflow/workflow-beside-layout';
 import {
@@ -46,11 +41,16 @@ import {
     useWorkflowBeside
 } from '@/chat/workflow/workflow-beside-state';
 import { AGENT_MIN, storedAgentSize } from '@/chat/workflow/workflow-size';
-import type { CardSize } from '@/routines/output-size';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
+import { CHROME_H, FRAME, frameStyle, HEADER, HEADER_MIDDLE } from '@/surface/canvas/derived-card-look';
+import { CardLine } from '@/surface/canvas/DerivedCardLook';
+import { DerivedSet, type DerivedCard } from '@/surface/canvas/DerivedSet';
+import { KindIcon } from '@/surface/canvas/KindIcon';
+import { derivedCardId } from '@/surface/canvas/node-body';
+import type { CardSize } from '@/surface/canvas/output-size';
 import { useEndpointConnection } from '@/transport/status';
 
 const NONE: readonly WorkflowCandidate[] = [];

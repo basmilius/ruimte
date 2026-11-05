@@ -1,6 +1,6 @@
 import type { DrawingElement } from '@ruimte/contracts';
-import { createViewMirror } from '@/canvas/view-mirror';
 import { liveDrawing, subscribeDrawings } from '@/state/drawing';
+import { createViewMirror } from '@/surface/canvas/view-mirror';
 
 /* What a drawing node shows: the elements of a drawing view, and null until they have been read. */
 export const useDrawingMirror = createViewMirror<DrawingElement[]>({

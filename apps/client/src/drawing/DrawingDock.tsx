@@ -3,7 +3,7 @@ import { DRAWING_COLORS, type DrawingColor } from '@ruimte/contracts';
 import { Circle, Diamond, Eraser, Hand, Lock, LockOpen, Minus, MousePointer2, MoveUpRight, Palette, Pencil, Square, StickyNote, Type } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-import { fitAction } from '@/actions/client-actions';
+import { fitAction } from '@/action-port/person-actions';
 import { DockExportHistory } from '@/drawing/DockExportHistory';
 import { copyDrawing, exportDrawing, styleSelection, unlockEverything } from '@/drawing/drawing-actions';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';

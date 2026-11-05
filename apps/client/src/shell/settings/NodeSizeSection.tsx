@@ -6,12 +6,12 @@ import { Scaling } from 'lucide-react';
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatNodeSize, setDefaultSize } from '@/canvas/default-size';
-import { NODE_KIND_ICONS } from '@/canvas/node-icons';
 import { readNodeSide, storedNodeSize, type NodeSide } from '@/shell/settings/node-size-fields';
-import { usePickedMachine } from '@/shell/settings/picked-machine';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import type { Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
+import { NODE_KIND_ICONS } from '@/surface/canvas/node-icons';
+import { usePickedMachine } from '@/surface/settings/picked-machine';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 import { useEndpointConnection } from '@/transport/status';
 
 /* The search lands on the first row. */

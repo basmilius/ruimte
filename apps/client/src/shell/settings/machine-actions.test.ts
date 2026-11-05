@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { Machine } from '@ruimte/pulsar';
 import { LOCAL_ENDPOINT_ID, type Endpoint } from '@/state/endpoints';
+import type { MachineEntry } from '../../surface/settings/machine-list';
 import { forgetOnClient, machineDialogModel, removeFromAccount, type MachineActionDeps } from './machine-actions';
-import type { MachineEntry } from './machine-list';
 
 function endpoint(id: string, overrides: Partial<Endpoint> = {}): Endpoint {
     return {

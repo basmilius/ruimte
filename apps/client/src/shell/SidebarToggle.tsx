@@ -1,8 +1,8 @@
 import { IconButton } from '@adecore/ui';
 import { PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useUi } from '@/state/ui';
+import { APP_SHORTCUTS } from '@/surface/shortcuts';
 
 /* The toolbar keeps this control available when the sidebar is closed. */
 export function SidebarToggle() {

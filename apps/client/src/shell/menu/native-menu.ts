@@ -1,7 +1,6 @@
 import { useProvidersStore } from '@adecore/agents-react/state';
 import i18next from 'i18next';
 import { useEffect } from 'react';
-import { usePromptStacks } from '@/canvas/prompt-stack';
 import { usePrRepos } from '@/controllers/pr-repos';
 import { desktop } from '@/desktop/bridge';
 import { subscribeFocusedLanguages } from '@/language/focused-language';
@@ -10,7 +9,6 @@ import { useNewChat } from '@/project/new-chat';
 import { runMenuCommand } from '@/shell/menu/actions';
 import { menuContext } from '@/shell/menu/context';
 import { menuModel } from '@/shell/menu/model';
-import { subscribeFocusedEditors } from '@/shell/panels/focused-editor';
 import { subscribeCameraHistories } from '@/state/camera-history';
 import { subscribeCanvases } from '@/state/canvas';
 import { subscribeChatThreads } from '@/state/chats';
@@ -22,6 +20,8 @@ import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
 import { useUi } from '@/state/ui';
+import { usePromptStacks } from '@/surface/canvas/prompt-stack';
+import { subscribeFocusedEditors } from '@/surface/panels/focused-editor';
 import { useWindow } from '@/workspace/window';
 
 /* A chat streams word by word and a camera moves every frame; the menu only needs where things settled. */

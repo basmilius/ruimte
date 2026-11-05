@@ -23,6 +23,7 @@ import {
     nodeChats
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
+import type { CreatableViewKind } from '@/action-port/perform';
 import {
     agentFor,
     canvasNow,
@@ -40,8 +41,7 @@ import {
     sessionsEnded,
     storedFilePath,
     unknownCanvas,
-    unknownView,
-    type CreatableViewKind
+    unknownView
 } from '@/actions/action-reach';
 import { addAgentView, addDesignView } from '@/agents/nodes';
 import { databaseViewName } from '@/database/view-name';

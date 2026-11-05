@@ -2,7 +2,7 @@
 
 Where a page lives and how an agent drives it: `apps/server/src/browser/CLAUDE.md`.
 
-- Electron destroys a `<webview>` guest when the element or an ancestor changes parent, so every page is parked in one layer over the canvas (`WebviewParking.tsx`), cells draw over it through `apps/client/src/shell/CellOverlay.tsx`, and a page cuts holes for the nodes on top of it (`page-clip.ts`).
+- Electron destroys a `<webview>` guest when the element or an ancestor changes parent, so every page is parked in one layer over the canvas (`WebviewParking.tsx`), cells draw over it through `apps/client/src/surface/CellOverlay.tsx`, and a page cuts holes for the nodes on top of it (`page-clip.ts`).
 - Render distance only hides a page (`visibility: hidden`) while its node shows the last picture (`page-distance.ts`, `BrowserPlate.tsx`). Never `suspend`, `destroy`, `remove`, reparent, `ensure()` or set a new `src` for distance. Only the layer writes `far`.
 - Chromium never captures a hidden guest, so a far page is redrawn transparently for its picture (`revealing`); anything else hidden fails rather than hangs.
 

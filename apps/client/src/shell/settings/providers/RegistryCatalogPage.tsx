@@ -7,7 +7,7 @@ import { PackagePlus, RefreshCw, Search } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { RegistryCatalogState } from '@/shell/settings/providers/use-provider-installs';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 function AgentControl({ agent, registry, onOpen }: { agent: RegistryAgent; registry: RegistryCatalogState; onOpen(kind: AgentKind): void }) {
     const { t } = useTranslation('settings');

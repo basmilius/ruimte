@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { RoutineRun } from '@ruimte/contracts';
-import { OPEN_H, OPEN_MIN_H } from '@/canvas/beside-metrics';
 import { besideLayout } from '@/routines/beside-layout';
+import { OPEN_H, OPEN_MIN_H } from '@/surface/canvas/beside-metrics';
 
 const NODE = { x: 0, y: 0, w: 400, h: 560 };
 

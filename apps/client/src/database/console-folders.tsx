@@ -8,9 +8,9 @@ import { perform } from '@/action-port/perform';
 import { openConsoleFile } from '@/database/console-file';
 import { useConsoleFiles } from '@/database/use-console-files';
 import { basenameOf, dirnameOf } from '@/paths/file-path';
-import { newEntryPathOf, segmentsOf, validateNewEntry } from '@/shell/panels/file-create';
 import { useServer } from '@/state/server';
 import { useToasts } from '@/state/toasts';
+import { newEntryPathOf, segmentsOf, validateNewEntry } from '@/surface/panels/file-create';
 
 /* What a console's menu asked for, which waits for the person in a dialog. */
 type ConsoleQuestion = { kind: 'rename' | 'delete'; path: string };

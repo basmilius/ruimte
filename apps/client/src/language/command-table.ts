@@ -39,9 +39,9 @@ import {
     WandSparkles,
     type LucideIcon
 } from 'lucide-react';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { RENDERED_DOC_COMMENTS } from '@/features';
-import { editorShortcut } from '@/shell/editor-keymap';
+import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { editorShortcut } from '@/surface/editor-keymap';
 
 /*
  * The commands that act on the editor with the keyboard in it: the id the menu and the palette share, the

@@ -3,11 +3,11 @@ import { SettingsRow } from '@adecore/ui/settings';
 import { Folder, FolderGit2, GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { WorktreeFolderRow } from '@/shell/settings/MachineSettings';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { FILES_TAB_LIMIT_RANGE, useSettings } from '@/state/settings';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 import { useEndpointConnection } from '@/transport/status';
 
 /* The two panels beside the canvas, what the Files panel shows and keeps open, and how the Git panel lists what changed. */

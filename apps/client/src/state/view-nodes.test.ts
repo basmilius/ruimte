@@ -19,7 +19,7 @@ const READS_THE_DOCUMENT: Record<string, string> = {
     'state/document-model.ts': 'renames a node in the document',
     'state/document-nodes-slice.ts': 'moves a node between views of the document',
     'actions/view-actions.ts': 'an undo holds the exported copy it checks against',
-    'shell/sidebar-rows.ts': 'the nodes of a sidebar row, which are no view',
+    'surface/sidebar-rows.ts': 'the nodes of a sidebar row, which are no view',
     'shell/sidebar-groups.ts': 'the nodes of a sidebar row, which are no view',
     'shell/SidebarListRows.tsx': 'the nodes of a sidebar row, which are no view'
 };

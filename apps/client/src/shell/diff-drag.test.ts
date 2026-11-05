@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { dragging, setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
+import { dragging, setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
 import { carriesDiff, DIFF_DRAG_ID, DIFF_DRAG_TYPE, droppedDiff, startDiffDrag } from './diff-drag.ts';
 
 function transfer(data: Record<string, string> = {}): DataTransfer {

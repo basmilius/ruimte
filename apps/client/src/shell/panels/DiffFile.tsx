@@ -10,7 +10,6 @@ import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
 import { useGitSignal } from '@/controllers/git-watch';
 import { ExtensionDiffViewer } from '@/extensions/ExtensionDiffViewer';
-import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { pickedFile } from '@/shell/panels/commit-tree';
 import { CommitFileTree } from '@/shell/panels/CommitFileTree';
 import { useDiffCaret, useDiffCarets } from '@/shell/panels/diff-caret';
@@ -20,6 +19,7 @@ import { COMMIT_TREE_MIN_WIDTH, TreeSplit } from '@/shell/panels/TreeSplit';
 import { isCheckoutDiff, useFiles, type FileTabView } from '@/state/files';
 import { useGit } from '@/state/git';
 import { useSettings } from '@/state/settings';
+import { FILE_TOOLBAR } from '@/surface/panels/classes';
 import { useTransport } from '@/workspace/context';
 
 const UnifiedDiff = lazyNamed(() => import('@adecore/agents-react/chat/ui'), 'UnifiedDiff');

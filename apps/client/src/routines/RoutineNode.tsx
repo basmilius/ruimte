@@ -7,18 +7,18 @@ import clsx from 'clsx';
 import { CalendarClock, CircleAlert, CirclePause, Clock, Folder, Hand, Play, Rocket, WifiOff } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { NodeHeaderControls, NodePlate } from '@/nodes/node-chrome';
 import { lookOfRun, type BlockLook } from '@/routines/agenda';
 import { blockClass } from '@/routines/look-class';
 import { runRoutineNow, setRoutinePaused } from '@/routines/routine-commands';
 import { useRoutineList } from '@/routines/routine-list';
 import { useRoutineWhat } from '@/routines/routine-what';
 import { RoutinePrompt } from '@/routines/RoutinePrompt';
-import { showRoutine } from '@/routines/stage';
 import { dayWords, rowStatus, runWords, scheduleWords, weekdayClock } from '@/routines/words';
 import { useCanvas } from '@/state/canvas';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
+import { showRoutine } from '@/state/routines-stage';
+import { NodeHeaderControls, NodePlate } from '@/surface/nodes/node-chrome';
 
 // The newest runs the strip shows; the stage has the rest.
 const STRIP_RUNS = 14;

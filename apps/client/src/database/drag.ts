@@ -1,10 +1,10 @@
 import type { TableRef } from '@adecore/database';
 import type { TableKind } from '@adecore/database/protocol';
 import { ProjectDatabaseViewSchema } from '@ruimte/contracts';
-import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { applyDatabaseAction, databaseViewFor, type DatabaseTabAction } from '@/state/database-tabs';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
+import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
 
 export const DATABASE_DRAG_TYPE = 'application/x-ruimte-database-table';
 const tableSchema = ProjectDatabaseViewSchema.pick({ connectionId: true, schema: true, table: true, tableKind: true });

@@ -2,17 +2,17 @@ import { clampColumnSize, CloseButton, ErrorBoundary, SlidingColumn, lazyNamed, 
 import clsx from 'clsx';
 import { createElement, useState, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { usePanelGap } from '@/shell/panel-layout';
-import { PanelHeaderProvider } from '@/shell/PanelHeaderSlot';
 import { closesFromRail, usePanelEntries, type CorePanel, type PanelEntry } from '@/shell/panels';
 import { DevicesPanel } from '@/shell/panels/DevicesPanel';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useShownPanel, useUi } from '@/state/ui';
+import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { PanelHeaderProvider } from '@/surface/PanelHeaderSlot';
 
 const GitPanel = lazyNamed(() => import('@/shell/panels/GitPanel'), 'GitPanel');
 const ProblemsPanel = lazyNamed(() => import('@/language/ProblemsPanel'), 'ProblemsPanel');

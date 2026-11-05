@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { closeRoutineForm, useRoutineForm } from '@/routines/form-state';
 import { useRoutineList } from '@/routines/routine-list';
 import { RoutineForm } from '@/routines/RoutineForm';
-import { showRoutine } from '@/routines/stage';
 import { useEndpointId } from '@/state/current-endpoint';
+import { showRoutine } from '@/state/routines-stage';
 
 /* The routine form as a dialog of the workspace: New routine, Edit, the canvas menu, the palette and a chat's Repeat. */
 export function RoutineFormDialog() {

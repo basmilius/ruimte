@@ -8,10 +8,10 @@ import { useConnectionDotShown } from '@/shell/connection-dot';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 import { PanelControls } from '@/shell/PanelControls';
 import { useToolbarPanels } from '@/shell/panels';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { isScratchProject, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { hasUpdate, useUpdates } from '@/state/updates';
+import { APP_SHORTCUTS } from '@/surface/shortcuts';
 import { useVoice } from '@/voice/state';
 import { VoiceButton } from '@/voice/VoiceButton';
 

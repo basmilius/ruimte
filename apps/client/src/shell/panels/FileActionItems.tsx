@@ -3,19 +3,19 @@ import { relativeTo } from '@ruimte/contracts';
 import { Columns2, CornerUpRight, Folder, Frame, Globe, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ignoreRefusal, perform } from '@/action-port/perform';
-import { createNodeAction, createViewAction } from '@/actions/client-actions';
+import { createNodeAction, createViewAction } from '@/action-port/person-actions';
 import { fileInfoOf } from '@/extensions/file-info';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { basenameOf } from '@/paths/file-path';
 import { showFileOnCanvas } from '@/project/views';
-import { isHtmlName } from '@/shell/panels/file-kind';
 import { localFileUrl } from '@/shell/panels/file-url';
 import { FileCopyRow } from '@/shell/panels/FileCopyRow';
-import { revealableInFiles } from '@/shell/panels/files-tree';
 import { revealFile } from '@/shell/panels/reveal-file';
 import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
+import { isHtmlName } from '@/surface/panels/file-kind';
+import { revealableInFiles } from '@/surface/panels/files-tree';
 import { useTransport } from '@/workspace/context';
 
 /* Where these items are drawn, since a file already there does not offer to go there again: a node is

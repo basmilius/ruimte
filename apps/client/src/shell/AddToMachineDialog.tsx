@@ -14,14 +14,14 @@ import {
     type CopyOutcome,
     type RemoteProtocol
 } from '@/project/add-to-machine';
-import { MachineGlyph } from '@/project/MachineGlyph';
 import { RemoteFolderPicker } from '@/shell/RemoteFolderPicker';
-import { iconOfEntry } from '@/shell/settings/machine-icon';
-import { nameOf } from '@/shell/settings/machine-list';
 import { firstIdentity } from '@/shell/use-remote-checkouts';
 import { endpointById } from '@/state/endpoints';
 import { useProject } from '@/state/project';
 import { useUi, type AddToMachineRequest } from '@/state/ui';
+import { MachineGlyph } from '@/surface/MachineGlyph';
+import { iconOfEntry } from '@/surface/settings/machine-icon';
+import { nameOf } from '@/surface/settings/machine-list';
 import { pool, transportFor } from '@/transport';
 import type { Transport } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';

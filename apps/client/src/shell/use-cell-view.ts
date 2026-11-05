@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import type { CellView } from '@/shell/cell-view';
-import { looseTabLabel } from '@/shell/panels/tab-label';
 import { cellViewOf, useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
+import type { CellView } from '@/surface/cell-view';
+import { looseTabLabel } from '@/surface/panels/tab-label';
 
 /*
  * What stands in a cell, by the id the layout holds: a view of the project, else the loose view

@@ -5,7 +5,7 @@ import { isCanvasView, isChatHostView, type Plan, type PlanStepState } from '@ru
 import i18next from 'i18next';
 import { create } from 'zustand';
 import { perform } from '@/action-port/perform';
-import { focusNodeAction } from '@/actions/client-actions';
+import { focusNodeAction } from '@/action-port/person-actions';
 import { viewIdsIn } from '@/layout/split';
 import { foldableIds, resultsText, revealOptions, type PlanFilter } from '@/plan/plan-view';
 import { revealNode, showView } from '@/project/views';

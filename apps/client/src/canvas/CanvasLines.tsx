@@ -6,9 +6,9 @@ import { useTranslation } from 'react-i18next';
 import { accentColor, accentLabel, NODE_ACCENTS } from '@/canvas-model/accents';
 import { constrainedLineEnd, LINE_GRID, lineArrow, lineBounds, lineDash } from '@/canvas-model/line-geometry';
 import { snapPoint, toWorld, type Point } from '@/canvas-model/math';
-import { isSpaceDown } from '@/canvas/space-pan';
 import { useCanvas, useCanvasCamera, useCanvasStore } from '@/state/canvas';
 import { DEFAULT_LINE_STYLE } from '@/state/canvas-lines-slice';
+import { isSpaceDown } from '@/surface/canvas/space-pan';
 
 type LinePatch = Partial<Omit<ProjectCanvasLine, 'id'>>;
 type Drag = { at: Point; line: ProjectCanvasLine; handle: 'start' | 'end' | 'move'; moved: boolean };

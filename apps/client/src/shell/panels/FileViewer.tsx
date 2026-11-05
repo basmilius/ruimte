@@ -3,10 +3,10 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { basenameOf } from '@/paths/file-path';
 import { DiffFile } from '@/shell/panels/DiffFile';
-import { fixedSlot, FileToolbarSlotProvider, useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { FileBody } from '@/shell/panels/FileBody';
 import { keptTabs, shownAfter } from '@/shell/panels/kept-tabs';
 import { isArtifactTab, isDatabaseTab, useFiles, type Tab } from '@/state/files';
+import { fixedSlot, FileToolbarSlotProvider, useFileToolbarSlot } from '@/surface/panels/file-toolbar-slot';
 
 const DatabaseTabBody = lazyNamed(() => import('@/database/DatabaseTabBody'), 'DatabaseTabBody');
 const ArtifactView = lazyNamed(() => import('@/output/ArtifactView'), 'ArtifactView');

@@ -6,8 +6,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CountField } from '@/shell/settings/providers/CountField';
 import { listProvidersAgain } from '@/shell/settings/providers/use-provider-installs';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useUi } from '@/state/ui';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 import { transportFor, type Transport } from '@/transport';
 
 type ClaudeApiWindow = NonNullable<ClaudeApiSettings['contextWindow']>;

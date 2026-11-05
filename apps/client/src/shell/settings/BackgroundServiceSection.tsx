@@ -6,9 +6,9 @@ import { useTranslation } from 'react-i18next';
 import { desktop, type BackgroundServiceState } from '@/desktop/bridge';
 import { pendingRestartLine } from '@/shell/machine-update';
 import { backgroundServiceRow } from '@/shell/settings/background-service';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { StopMachineRow } from '@/shell/settings/StopMachineRow';
 import { hasLocalMachine } from '@/state/local-machine';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 type Confirming = 'stop' | 'linger' | 'restart' | null;
 

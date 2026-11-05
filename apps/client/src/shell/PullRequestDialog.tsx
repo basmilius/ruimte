@@ -27,12 +27,12 @@ import { sendToChat } from '@/chat/selection-to-chat';
 import { openInSystemBrowser } from '@/desktop/bridge';
 import { splitRows } from '@/shell/change-size';
 import { groupChecks, mergeStateKey, threadBlock, visibleThreads } from '@/shell/pr-view';
-import { stopPrWatch } from '@/shell/pr-watch-actions';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey, isOfEndpoint } from '@/state/keys';
 import { usePrWatches } from '@/state/pr-watches';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
+import { stopPrWatch } from '@/surface/pr-watch-actions';
 import { useMachineAnswers } from '@/transport/features';
 import { useTransport } from '@/workspace/context';
 

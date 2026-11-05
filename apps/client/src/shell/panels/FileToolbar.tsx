@@ -5,11 +5,11 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { fileInfoOf } from '@/extensions/file-info';
 import { SlotRow } from '@/extensions/SlotSurfaces';
-import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { FileMenuRowsContext, useFileActions, type FileActions } from '@/shell/panels/file-actions';
-import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
+import { FILE_TOOLBAR } from '@/surface/panels/classes';
+import { useFileToolbarSlot } from '@/surface/panels/file-toolbar-slot';
 
 /*
  * The bar above every file renderer, one for all of them so a control keeps its place when the file

@@ -1,8 +1,8 @@
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import type { DocumentState } from '@/state/document';
 import { useToasts } from '@/state/toasts';
+import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 
 type DocumentStore = Pick<StoreApi<DocumentState>, 'getState' | 'subscribe'>;
 

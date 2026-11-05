@@ -3,12 +3,12 @@ import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
 import { Search, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform, isDesktop } from '@/desktop/bridge';
 import { keyboardGroups } from '@/shell/settings/keyboard-groups';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { filterShortcuts, shortcutGroupOf, shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
 import { useUi } from '@/state/ui';
+import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 function GroupCard({ group, footer }: { group: ShortcutGroup; footer?: ReactNode }) {
     return (

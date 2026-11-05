@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { Editor } from '@adecore/editor';
 import { registerCell } from '@/layout/cell-rects';
-import { registerFocusedEditor } from '@/shell/panels/focused-editor';
 import { useDocument } from '@/state/document';
+import { registerFocusedEditor } from '@/surface/panels/focused-editor';
 import { findReturnTarget } from './use-find';
 
 class FakeBox extends EventTarget {

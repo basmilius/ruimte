@@ -1,8 +1,8 @@
 import type { FixedSides } from '@/canvas-model/fixed-sides';
-import type { Obstacle } from '../../src/canvas/edge-route';
+import type { Obstacle } from '../../src/surface/canvas/edge-route';
 import type { PerformanceCase } from './paired';
 
-type RouteApi = Pick<typeof import('../../src/canvas/edge-route'), 'routeEdge' | 'routeDraft'>;
+type RouteApi = Pick<typeof import('../../src/surface/canvas/edge-route'), 'routeEdge' | 'routeDraft'>;
 
 export function routeCases(before: RouteApi, after: RouteApi): PerformanceCase[] {
     const source = { x: 0, y: 0, w: 100, h: 100 };

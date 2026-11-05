@@ -1,14 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { BrowserContextMenu } from '@/browser/BrowserContextMenu';
 import { createGuestCanvasInput } from '@/browser/guest-canvas-input';
-import { focusCellOfView, watchGuestFocus } from '@/browser/guest-focus';
 import { oncePerFrame } from '@/browser/once-per-frame';
-import { pageClipPath, type PageHole } from '@/browser/page-clip';
 import { belowSinceOf, pageFar, wakeAt } from '@/browser/page-distance';
 import { pageSnapshots, usePageSnapshots } from '@/browser/page-snapshots';
+import { pageClipPath, type PageHole } from '@/canvas-model/page-clip';
 import { RENDER_DISTANCE_ZOOM, rendersAtZoom } from '@/canvas-model/render-distance';
-import { isSpaceDown, subscribeSpacePan } from '@/canvas/space-pan';
-import { nodesOverBrowsers } from '@/canvas/stacking';
 import { browserRegistry, useBrowser } from '@/clients/browser/registry';
 import { isDesktop } from '@/desktop/bridge';
 import { cellElement, subscribeCells } from '@/layout/cell-rects';
@@ -17,6 +14,9 @@ import { defaultCanvases, GROUP_HEADER_PX, isNodeActive, liveCanvas, maximizedNo
 import { useDocument } from '@/state/document';
 import { splitKey } from '@/state/keys';
 import { useSettings } from '@/state/settings';
+import { isSpaceDown, subscribeSpacePan } from '@/surface/canvas/space-pan';
+import { nodesOverBrowsers } from '@/surface/canvas/stacking';
+import { focusCellOfView, watchGuestFocus } from '@/surface/guest-focus';
 
 // The browser toolbar sits under the frame's header, both above the page.
 const TOOLBAR_PX = 37;

@@ -17,14 +17,14 @@ import { useNativeMenu } from '@/shell/menu/native-menu';
 import { DormantScreen, ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
 import { allSettingsSections } from '@/shell/settings/sections';
 import { StartScreen } from '@/shell/StartScreen';
-import { FLOATING_FAILURE, failed } from '@/shell/surface-failure';
 import { Toasts } from '@/shell/Toasts';
-import { watchDrags } from '@/shell/view-drag';
 import { useProject } from '@/state/project';
 import { useReleaseNotes } from '@/state/release-notes';
 import { useSettings } from '@/state/settings';
 import { useUi, type SettingsSectionId } from '@/state/ui';
 import { startUpdates } from '@/state/updates';
+import { FLOATING_FAILURE, failed } from '@/surface/surface-failure';
+import { watchDrags } from '@/surface/view-drag';
 import { ChatScopeProvider } from '@/workspace/ChatScopeProvider';
 import { useWindow } from '@/workspace/window';
 

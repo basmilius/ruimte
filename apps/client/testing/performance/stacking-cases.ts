@@ -1,9 +1,9 @@
-import type { StackedNode } from '../../src/canvas/stacking';
+import type { StackedNode } from '../../src/surface/canvas/stacking';
 import { measurePairs, type PerformanceCase } from './paired';
 
 interface StackingApi {
-    stackingOrder: typeof import('../../src/canvas/stacking').stackingOrder;
-    nodesOverBrowsers: typeof import('../../src/canvas/stacking').nodesOverBrowsers;
+    stackingOrder: typeof import('../../src/surface/canvas/stacking').stackingOrder;
+    nodesOverBrowsers: typeof import('../../src/surface/canvas/stacking').nodesOverBrowsers;
 }
 
 export function measureStacking(before: StackingApi, after: StackingApi) {

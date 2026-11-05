@@ -49,7 +49,6 @@ import {
     type AlertAction
 } from '@/processes/format';
 import { revealNode } from '@/project/views';
-import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { ProcessChart } from '@/shell/panels/ProcessChart';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
@@ -57,6 +56,7 @@ import { EMPTY_PROCESSES, useProcessAlerts, useProcesses } from '@/state/process
 import { useProjectList } from '@/state/project-list';
 import { useToasts } from '@/state/toasts';
 import { useProjectNodes } from '@/state/view-nodes';
+import { PanelHeaderActions, PanelHeaderSlot } from '@/surface/PanelHeaderSlot';
 import { useEndpointConnection } from '@/transport/status';
 import { useTransport } from '@/workspace/context';
 

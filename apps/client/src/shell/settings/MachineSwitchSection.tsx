@@ -3,10 +3,10 @@ import { SettingsRow } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
 import { useMachineSetting } from '@/shell/settings/machine-setting';
 import { MACHINE_SWITCHES, type MachineSwitch } from '@/shell/settings/machine-switches';
-import { usePickedMachine } from '@/shell/settings/picked-machine';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import type { Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
+import { usePickedMachine } from '@/surface/settings/picked-machine';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 import { useEndpointConnection } from '@/transport/status';
 
 // The i18n group under `agents` each switch reads its words from.

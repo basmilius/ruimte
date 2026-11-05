@@ -1,5 +1,5 @@
 import type { ChatPlace } from '@adecore/agents-react';
-import { focusNodeAction } from '@/actions/client-actions';
+import { focusNodeAction } from '@/action-port/person-actions';
 import { forkOriginIn } from '@/chat/fork-origin';
 import { revealNode, showView } from '@/project/views';
 import { useCanvas, useCanvasStore } from '@/state/canvas';

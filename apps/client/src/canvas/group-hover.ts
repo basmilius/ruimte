@@ -1,5 +1,5 @@
 import { containsPoint, type Point } from '@/canvas-model/math';
-import type { StackedNode } from '@/canvas/stacking';
+import type { StackedNode } from '@/surface/canvas/stacking';
 
 /*
  * The group a pointer at `point` is in: the topmost one whose frame holds it, so of two nested groups

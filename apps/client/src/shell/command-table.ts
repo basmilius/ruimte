@@ -106,13 +106,13 @@ import {
     X,
     type LucideIcon
 } from 'lucide-react';
-import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, NODE_NAVIGATION_SHORTCUTS } from '@/canvas/shortcuts';
 import { LANGUAGE_COMMAND_IDS, LANGUAGE_COMMANDS, type LanguageCommandId } from '@/language/command-table';
 import { EDITOR_COMMAND_IDS, EDITOR_COMMANDS, type EditorCommandGroup, type EditorCommandId } from '@/shell/editor-commands';
-import { editorShortcut } from '@/shell/editor-keymap';
 import type { MenuContext } from '@/shell/menu/model';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
-import { CLEAR_SHORTCUT, platformShortcut, TERMINAL_FIND_SHORTCUT } from '@/terminal/keymap';
+import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, NODE_NAVIGATION_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { editorShortcut } from '@/surface/editor-keymap';
+import { APP_SHORTCUTS } from '@/surface/shortcuts';
+import { CLEAR_SHORTCUT, platformShortcut, TERMINAL_FIND_SHORTCUT } from '@/surface/terminal-keymap';
 
 /* A menu of the bar or a submenu with a fixed place, whose groups `menu/model.ts` lays out. */
 export type MenuContainer =

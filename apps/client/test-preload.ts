@@ -7,6 +7,7 @@ import { CHARTS_NAMESPACE, CHARTS_RESOURCES } from '@adecore/charts';
 import editorWords from '@adecore/editor-react/locales/en.json' with { type: 'json' };
 import { UI_NAMESPACE, UI_RESOURCES } from '@adecore/ui';
 import i18next from 'i18next';
+import './src/actions/client-actions';
 import './src/extensions/built-in';
 import { connectFormat } from './src/format/source';
 import { defaultCanvases, focusedCanvas } from './src/state/canvas';

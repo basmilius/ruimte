@@ -6,8 +6,6 @@ import { Trans, useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { fitTextBox } from '@/canvas-model/drawing-measure';
 import { groundPlacement, toWorld } from '@/canvas-model/math';
-import { isSpaceDown } from '@/canvas/space-pan';
-import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { isApplePlatform } from '@/desktop/bridge';
 import { DrawingDock } from '@/drawing/DrawingDock';
 import { DrawingMenuPopup } from '@/drawing/DrawingMenu';
@@ -35,6 +33,8 @@ import { useDocument } from '@/state/document';
 import { isWritten, newSeed, useDrawing, useDrawingStore } from '@/state/drawing';
 import { useSettings } from '@/state/settings';
 import { usePaletteKey } from '@/state/theme';
+import { isSpaceDown } from '@/surface/canvas/space-pan';
+import { useWheelCamera } from '@/surface/canvas/use-wheel-camera';
 import { nearestHandle } from './handle-hit';
 
 /*

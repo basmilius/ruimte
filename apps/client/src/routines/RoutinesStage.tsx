@@ -27,13 +27,13 @@ import { refreshRoutines, useRoutineList } from '@/routines/routine-list';
 import { AgendaLegend, RoutineAgenda, RoutineWeekList, type AgendaGroup } from '@/routines/RoutineAgenda';
 import { RoutineDetail } from '@/routines/RoutineDetail';
 import { RoutineSide } from '@/routines/RoutineSide';
-import { leaveRoutines, setRoutinesFilter, setRoutinesLayout, showRoutine, stepWeek, useRoutinesStage } from '@/routines/stage';
-import { failed } from '@/shell/surface-failure';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { isThisMachine } from '@/state/local-machine';
 import { useProject } from '@/state/project';
+import { leaveRoutines, setRoutinesFilter, setRoutinesLayout, showRoutine, stepWeek, useRoutinesStage } from '@/state/routines-stage';
+import { failed } from '@/surface/surface-failure';
 import { machineTransport } from '@/transport';
 
 const MINUTE_MS = 60_000;

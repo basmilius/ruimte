@@ -11,7 +11,6 @@ import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody } from '@/nodes/TerminalBody';
 import { usePage } from '@/nodes/use-page';
 import { newChatOn } from '@/project/new-chat';
-import { isLooseView, type CellView } from '@/shell/cell-view';
 import { FileSurface } from '@/shell/panels/FileSurface';
 import { FileViewer } from '@/shell/panels/FileViewer';
 import { ProjectStartScreen } from '@/shell/ProjectStartScreen';
@@ -21,6 +20,7 @@ import { useDocument } from '@/state/document';
 import { useDrawing } from '@/state/drawing';
 import { useFiles } from '@/state/files';
 import { isScratchProject, useProject } from '@/state/project';
+import { isLooseView, type CellView } from '@/surface/cell-view';
 
 const DrawingView = lazyNamed(() => import('@/drawing/DrawingView'), 'DrawingView');
 const DiagramView = lazyNamed(() => import('@/diagram/DiagramView'), 'DiagramView');

@@ -5,7 +5,7 @@ import i18next from 'i18next';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
-import { cancelGitRunAction } from '@/actions/client-actions';
+import { cancelGitRunAction } from '@/action-port/person-actions';
 import { agentsEndedWith } from '@/agents/end-children';
 import { useProjectNodes, worktreeLists, type WorktreeNode } from '@/controllers/worktrees';
 import {

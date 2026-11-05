@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { isCanvasView, type ProjectCanvasView, type ProjectNode, type ProjectSavePayload, type ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
-import { moveNodeToViewAction } from '@/actions/client-actions';
+import { moveNodeToViewAction } from '@/action-port/person-actions';
 import { setViewShared } from '@/project/views';
 import { useToasts } from '@/state/toasts';
 import { TransportError } from '@/transport-api/transport';

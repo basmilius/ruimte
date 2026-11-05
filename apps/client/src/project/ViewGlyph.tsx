@@ -22,10 +22,10 @@ import {
 } from 'lucide-react';
 import { Favicon } from '@/browser/Favicon';
 import { extensionKeyOf, useContributions } from '@/extensions/registry';
-import { projectIconGlyphOf } from '@/project/project-icons';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { nodeProvider } from '@/state/sessions';
+import { projectIconGlyphOf } from '@/surface/project-icons';
 
 /* The default mark for a view, when nobody picked an icon. */
 const VIEW_KIND_GLYPHS: Record<ProjectViewKind, LucideIcon> = {

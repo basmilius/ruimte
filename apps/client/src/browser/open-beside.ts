@@ -1,4 +1,4 @@
-import { createNodeAction, createViewAction } from '@/actions/client-actions';
+import { createNodeAction, createViewAction } from '@/action-port/person-actions';
 import { browserRegistry } from '@/clients/browser/registry';
 import { canvasOfNode, type CanvasNode } from '@/state/canvas';
 import { currentEndpointId } from '@/state/current-endpoint';

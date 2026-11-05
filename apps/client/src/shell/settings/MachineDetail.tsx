@@ -3,12 +3,9 @@ import { ConfirmDialog, DetailHeader, SettingsRow, useSettingsTarget } from '@ad
 import { CloudUpload, Plug } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MachineGlyph } from '@/project/MachineGlyph';
 import { usePulsarAccount, withAccessToken } from '@/pulsar/account';
 import { BackgroundServiceSection } from '@/shell/settings/BackgroundServiceSection';
 import { forgetOnClient, machineDialogModel, removeFromAccount, type MachineActionDeps, type MachineDialogModel } from '@/shell/settings/machine-actions';
-import { useMachineIcon } from '@/shell/settings/machine-icon';
-import { nameOf, reachLabel, type MachineEntry } from '@/shell/settings/machine-list';
 import { MachineIdentityForm } from '@/shell/settings/MachineIdentityForm';
 import {
     BrokerRow,
@@ -22,11 +19,14 @@ import {
     WithReason
 } from '@/shell/settings/MachineSettings';
 import { MachineStorage } from '@/shell/settings/MachineStorage';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import type { Endpoint } from '@/state/endpoints';
 import { usePulsarMachines } from '@/state/pulsar-machines';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
+import { MachineGlyph } from '@/surface/MachineGlyph';
+import { useMachineIcon } from '@/surface/settings/machine-icon';
+import { nameOf, reachLabel, type MachineEntry } from '@/surface/settings/machine-list';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
 import { addMachineToAccount, leaveAccount, openAccountMachine, refreshAccountMachines } from '@/workspace/account-machines';
 import { useRegistrationFailures } from '@/workspace/auto-register-watch';

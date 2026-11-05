@@ -3,7 +3,6 @@ import { useProviderAccountsStore, useProvidersStore } from '@adecore/agents-rea
 import type { Editor } from '@adecore/editor';
 import { highlightLayers } from '@adecore/editor-react';
 import { FakeEditorEngine } from '@adecore/editor/fake';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { LANGUAGE_COMMANDS } from '@/language/command-table';
 import { FakeLanguageTransport } from '@/language/fake-daemon';
 import { eventOf } from '@/language/key-events';
@@ -13,6 +12,7 @@ import { currentEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
+import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { InlineEditFeature, inlineAgentNow } from './inline-edit';
 import { forgetInlineEdit, saveInlineEdit } from './inline-edit-record';
 import { forgetInlineSessions, inlineSessionOf } from './inline-edit-session';

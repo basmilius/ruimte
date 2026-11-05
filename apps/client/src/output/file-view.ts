@@ -10,8 +10,8 @@ import {
     type FsReadBinary
 } from '@ruimte/contracts';
 import type { ArtifactFileRef } from '@/output/artifact-bytes';
-import { extensionOf, isHtmlName, isMarkdownName } from '@/shell/panels/file-kind';
-import type { FileSource } from '@/shell/panels/file-source';
+import { extensionOf, isHtmlName, isMarkdownName } from '@/surface/panels/file-kind';
+import type { FileSource } from '@/surface/panels/file-source';
 
 /*
  * How a file of a version is drawn, decided by what the file is and never by the artifact's kind: an

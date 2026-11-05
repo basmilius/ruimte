@@ -2,8 +2,8 @@ import { ChatHostProvider, onLazyOpenError as onChatLazyOpenError } from '@adeco
 import { onLazyOpenError, prefetcher, syncAnimations } from '@adecore/ui';
 import { createRoot } from 'react-dom/client';
 import { App } from '@/App';
+import '@/actions/client-actions';
 import { startPageHolds } from '@/browser/page-hold';
-import { refuseStrayDrops } from '@/canvas/drop';
 import { CHAT_HOST, configureChat } from '@/chat/host';
 import { startProjectList } from '@/clients/project/list';
 import { exposeTerminalTestHooks } from '@/clients/terminal/registry';
@@ -41,6 +41,7 @@ import { defaultProjectStore } from '@/state/project';
 import { startSnoozeClock } from '@/state/snooze';
 import { useTheme } from '@/state/theme';
 import { startWaitingSinceWatch } from '@/state/waiting';
+import { refuseStrayDrops } from '@/surface/canvas/drop';
 import { startTaskWatch } from '@/tasks/watch';
 import { reportCaught, startTelemetry } from '@/telemetry/report';
 import { pool } from '@/transport';

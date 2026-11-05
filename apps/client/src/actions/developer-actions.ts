@@ -25,6 +25,7 @@ import {
     relativeTo
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
+import { GIT_OPERATION } from '@/action-port/perform';
 import { refusing, type Requester } from '@/actions/refusal';
 import { listed, plural } from '@/actions/words';
 import { visibleRepos } from '@/controllers/git-repos';
@@ -63,9 +64,6 @@ interface Checkout {
 type GitRun = ActionOutput<'git.publishBranch'>;
 type GitRuns = ActionOutput<'git.push'>;
 type Call = ActionCall<void> & { confirmed: boolean };
-
-/* What operation.cancel names a git run by: the id its progress streams under. */
-export const GIT_OPERATION = 'git:';
 
 function sameActor(left: ActionActor, right: ActionActor): boolean {
     return left.kind === right.kind && left.id === right.id;

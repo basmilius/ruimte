@@ -11,10 +11,10 @@ import { lookOfRun } from '@/routines/agenda';
 import { openRoutineForm } from '@/routines/form-state';
 import { LookIcon } from '@/routines/look';
 import { runRoutineNow } from '@/routines/routine-commands';
-import { showRoutine } from '@/routines/stage';
 import { dayWords, runWords } from '@/routines/words';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
+import { showRoutine } from '@/state/routines-stage';
 import { nodesOfView } from '@/state/view-nodes';
 import { useMachineAnswers } from '@/transport/features';
 

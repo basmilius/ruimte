@@ -2,9 +2,9 @@ import type { ProviderInfo } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
 import { AgentSubmenu } from '@/agents/AgentMenus';
 import type { Point } from '@/canvas-model/math';
-import { NODE_KIND_ICONS } from '@/canvas/node-icons';
 import { addDesignNode, useDesignOffered } from '@/design/design-create';
 import { useCanvasStore } from '@/state/canvas';
+import { NODE_KIND_ICONS } from '@/surface/canvas/node-icons';
 
 function useAddDesign(at: () => Point): (provider: ProviderInfo, account?: string) => void {
     const canvasStore = useCanvasStore();

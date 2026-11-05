@@ -4,9 +4,9 @@ import { Icon } from '@adecore/ui';
 import { useReachedReferables } from '@/chat/reached-referables';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
-import { viewGlyphOf } from '@/shell/cell-view';
-import { useSidebarSource } from '@/shell/sidebar-source';
 import { useProject } from '@/state/project';
+import { viewGlyphOf } from '@/surface/cell-view';
+import { useSidebarSource } from '@/surface/sidebar-source';
 
 /*
  * The mark a `#` reference wears, the same as its row in the sidebar: a view with the icon a person picked

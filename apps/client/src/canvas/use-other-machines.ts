@@ -1,8 +1,8 @@
 import { usePulsarAccount } from '@/pulsar/account';
-import { machineIdOf, mergeMachines, type MachineEntry } from '@/shell/settings/machine-list';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { usePulsarMachines } from '@/state/pulsar-machines';
+import { machineIdOf, mergeMachines, type MachineEntry } from '@/surface/settings/machine-list';
 import { useWorkspace } from '@/workspace/connections';
 
 /* The machines other than the one the project lives on, which a node can be put on. */

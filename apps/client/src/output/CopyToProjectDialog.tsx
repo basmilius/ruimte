@@ -3,11 +3,11 @@ import type { Artifact, ArtifactVersion } from '@ruimte/contracts';
 import { TriangleAlert } from 'lucide-react';
 import { useRef, useState, type FormEvent, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { validImageFileName } from '@/chat/image-save';
 import { suggestedCopyName } from '@/output/artifact-list';
-import { ProjectFolderPicker } from '@/shell/panels/ProjectFolderPicker';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
+import { validImageFileName } from '@/surface/image-save';
+import { ProjectFolderPicker } from '@/surface/panels/ProjectFolderPicker';
 import { machineTransport } from '@/transport';
 import { TransportError } from '@/transport-api/transport';
 

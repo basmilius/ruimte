@@ -14,17 +14,12 @@ import {
     selectAllAction,
     splitAction,
     toggleFlagAction
-} from '@/actions/client-actions';
+} from '@/action-port/person-actions';
 import { openAttentionQueue } from '@/attention/queue';
 import { answerCanvasPaste } from '@/canvas/canvas-paste';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
-import { setGapModifierDown } from '@/canvas/gap-modifier';
 import { cancelCanvasGesture } from '@/canvas/gesture-cancel';
-import { isInNodeBody } from '@/canvas/node-body';
 import { pointerInWorld } from '@/canvas/pointer';
-import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/prompt-stack';
-import { CANVAS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
-import { followSpaceRelease, holdSpace, releaseSpace, spaceWorksTarget } from '@/canvas/space-pan';
 import { focusedChatComposerKey, keyboardChatKey } from '@/chat/focused-chat';
 import { browserRegistry } from '@/clients/browser/registry';
 import { isApplePlatform } from '@/desktop/bridge';
@@ -34,7 +29,6 @@ import { runChosenLaunch, stopChosenLaunch } from '@/launches/actions';
 import { cellAt, cellCount, focusDirection, isTabHost, type SplitDirection } from '@/layout/split';
 import { undoLatestDeletion } from '@/project/view-trash';
 import { showView, stepView, viewAtIndex, viewStepTarget } from '@/project/views';
-import { toggleRoutines } from '@/routines/stage';
 import { commandForKey, type WorkspaceCommandId } from '@/shell/command-table';
 import { countCommand } from '@/shell/command-usage';
 import { revealNextWaiting } from '@/shell/next-waiting';
@@ -47,8 +41,14 @@ import { activeViewOf, useDocument } from '@/state/document';
 import { drawingHasSomethingToClear, focusedDrawing } from '@/state/drawing';
 import { endpointKey } from '@/state/keys';
 import { isScratchProject, useProject } from '@/state/project';
+import { toggleRoutines } from '@/state/routines-stage';
 import { useUi } from '@/state/ui';
-import { isLeaveNodeShortcut } from '@/terminal/keymap';
+import { setGapModifierDown } from '@/surface/canvas/gap-modifier';
+import { isInNodeBody } from '@/surface/canvas/node-body';
+import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/surface/canvas/prompt-stack';
+import { CANVAS_SHORTCUTS, VIEW_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { followSpaceRelease, holdSpace, releaseSpace, spaceWorksTarget } from '@/surface/canvas/space-pan';
+import { isLeaveNodeShortcut } from '@/surface/terminal-keymap';
 import { pool, transportFor } from '@/transport';
 import { machineAnswers } from '@/transport/features';
 import { startVoice, stopVoice } from '@/voice/controller';

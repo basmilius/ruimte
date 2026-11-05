@@ -3,10 +3,10 @@ import type { ProjectDesignView } from '@ruimte/contracts';
 import { SwatchBook } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDesignFolder } from '@/design/design-places';
 import { DesignStage } from '@/design/DesignStage';
 import { ChatBody } from '@/nodes/ChatBody';
 import { activeDesignChat, placeOfView, useDesignChat } from '@/state/design-chat';
+import { useDesignFolder } from '@/state/design-places';
 
 const CHAT_WIDTH = 400;
 const CHAT_MIN_WIDTH = 320;

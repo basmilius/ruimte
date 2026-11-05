@@ -6,7 +6,6 @@ import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
-import { focusCellOfView } from '@/browser/guest-focus';
 import { useFolderWatch } from '@/controllers/fs-watch';
 import { editsCss, editsOf, withEdits, withTweakValues, type DesignEdits } from '@/design/design-file';
 import { runtimeAssets } from '@/design/design-inline';
@@ -33,6 +32,7 @@ import { useEndpointId } from '@/state/current-endpoint';
 import { designCameraKey, useDesignChat } from '@/state/design-chat';
 import { useToasts } from '@/state/toasts';
 import { CellViewContext } from '@/state/workspace-stores';
+import { focusCellOfView } from '@/surface/guest-focus';
 import { useTransport } from '@/workspace/context';
 
 const MINUTE_MS = 60_000;

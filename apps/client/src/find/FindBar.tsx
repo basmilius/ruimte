@@ -22,7 +22,7 @@ import { useTranslation } from 'react-i18next';
 import { isApplePlatform } from '@/desktop/bridge';
 import { FIND_SHORTCUTS } from '@/find/shortcuts';
 import type { FindState } from '@/find/use-find';
-import { requiredShortcut } from '@/shell/editor-keymap';
+import { requiredShortcut } from '@/surface/editor-keymap';
 
 const OPTIONS: readonly { key: keyof FindOptions; icon: LucideIcon; label: string }[] = [
     { key: 'caseSensitive', icon: CaseSensitive, label: 'find.caseSensitive' },

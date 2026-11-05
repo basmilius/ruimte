@@ -3,7 +3,7 @@ import type { FileTree } from '@pierre/trees';
 import clsx from 'clsx';
 import { ChevronRight } from 'lucide-react';
 import { useEffect, useRef, type KeyboardEvent } from 'react';
-import type { NewEntryKind } from '@/shell/panels/file-create';
+import type { NewEntryKind } from '@/surface/panels/file-create';
 
 const ICON_SIZE = 16;
 const CHEVRON_SIZE = 12;

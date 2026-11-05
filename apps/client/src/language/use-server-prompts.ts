@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { openFileLink } from '@/shell/panels/file-links';
 import { useProject } from '@/state/project';
+import { openFileLink } from '@/surface/panels/file-links';
 import type { Transport } from '@/transport-api/transport';
 import { watchServerPrompts } from './server-prompts';
 

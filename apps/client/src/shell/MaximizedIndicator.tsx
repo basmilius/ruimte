@@ -1,9 +1,9 @@
 import { Button, Kbd, Tooltip } from '@adecore/ui';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { cellCount, cellViewIds, isSameCell, type CellAt } from '@/layout/split';
 import { useDocument } from '@/state/document';
+import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 
 /*
  * What stands in for the cells a maximized one hides: their shape, how many there are, and the way back.

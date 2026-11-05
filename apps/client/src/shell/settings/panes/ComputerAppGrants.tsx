@@ -5,7 +5,7 @@ import type { ComputerAppEntry, ComputerAppGrants as Grants, ComputerRevokePaylo
 import { AppWindow, Clock, SquareTerminal, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 interface ComputerAppGrantsProps {
     readonly grants: Grants;

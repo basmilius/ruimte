@@ -2,9 +2,9 @@ import { isPathBelow, relativeTo } from '@ruimte/contracts';
 import { useEffect, useRef } from 'react';
 import { useGitSignal } from '@/controllers/git-watch';
 import type { EditorLanguage } from '@/language/ruimte-editor-language';
-import { useGitRoot } from '@/shell/panels/use-git-root';
 import { useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
+import { useGitRoot } from '@/surface/panels/use-git-root';
 import { useTransport } from '@/workspace/context';
 
 /*

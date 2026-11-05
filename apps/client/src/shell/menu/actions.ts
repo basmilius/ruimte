@@ -6,8 +6,7 @@ import {
     historyAction,
     placeViewOnCanvasAction,
     splitAction
-} from '@/actions/client-actions';
-import { focusPromptStack } from '@/canvas/prompt-stack';
+} from '@/action-port/person-actions';
 import { openForkDialog } from '@/chat/open-fork';
 import { chooseAfterSettle, chooseLaunch, chosenLaunchId, runChosenLaunch, showLaunchOutput, stopAllLaunches, stopChosenLaunch } from '@/launches/actions';
 import { useLaunches } from '@/launches/state';
@@ -23,6 +22,7 @@ import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { openReleaseNotes } from '@/state/release-notes';
 import { useUi } from '@/state/ui';
+import { focusPromptStack } from '@/surface/canvas/prompt-stack';
 import { transportFor } from '@/transport';
 
 function focusTowards(direction: SplitDirection) {

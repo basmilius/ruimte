@@ -1,7 +1,7 @@
 import { nodeChats, resolveStoredPath, type Worktree } from '@ruimte/contracts';
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
-import { deleteNodesAction } from '@/actions/client-actions';
+import { deleteNodesAction } from '@/action-port/person-actions';
 import { askBeforeEndingAgents, type PendingEnd } from '@/agents/end-children';
 import type { CanvasState } from '@/state/canvas';
 import { goingWithDelete } from '@/state/canvas-model';

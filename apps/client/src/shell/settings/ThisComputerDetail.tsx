@@ -3,8 +3,8 @@ import { DetailHeader, SettingsRow } from '@adecore/ui/settings';
 import { Laptop } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SetUpMachineDialog } from '@/shell/settings/SetUpMachineDialog';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 /*
  * What a desktop app without a machine of its own offers for this computer. It never starts one by

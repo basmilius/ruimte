@@ -2,10 +2,10 @@ import { useEffect } from 'react';
 import { localBrowserRouteAvailable } from '@/clients/browser/owner-route';
 import { browserRegistry } from '@/clients/browser/registry';
 import { isDesktop } from '@/desktop/bridge';
-import { useNodeHost } from '@/nodes/node-host';
 import { useEndpointId } from '@/state/current-endpoint';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { endpointKey } from '@/state/keys';
+import { useNodeHost } from '@/surface/nodes/node-host';
 
 /* The local machine's daemon id, which decides whether a page's route is open; a caller may only need the redraw. */
 export function useLocalDaemonId(): string | null | undefined {

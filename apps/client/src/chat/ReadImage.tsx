@@ -6,9 +6,9 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useOutputChat } from '@/output/chat-scope';
 import { saveToOutput, useOutputProject } from '@/output/save';
-import { drawsImageMime, imageFormatName } from '@/shell/panels/file-kind';
 import { useEndpointId } from '@/state/current-endpoint';
 import { fileManagerName, useServer } from '@/state/server';
+import { drawsImageMime, imageFormatName } from '@/surface/panels/file-kind';
 import { useMachineUrl } from '@/transport/machine-url';
 import { useTransport } from '@/workspace/context';
 

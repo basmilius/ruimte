@@ -1,5 +1,4 @@
 import { chatNameOf } from '@ruimte/contracts';
-import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { revealNode } from '@/project/views';
 import { useWindowTabs } from '@/project/window-tabs';
 import { sidebarWaitingNodes } from '@/state/attention';
@@ -11,6 +10,7 @@ import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
 import { projectNodes } from '@/state/view-nodes';
 import { nextWaiting, projectWaiting, useWaitingSince, type Waiting } from '@/state/waiting';
+import { bringPromptToFront } from '@/surface/canvas/prompt-stack';
 import { showSidebarProject } from './sidebar-navigation';
 import { sidebarMachineSnapshot } from './sidebar-projects';
 

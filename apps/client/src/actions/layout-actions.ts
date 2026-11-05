@@ -5,7 +5,6 @@ import { kindOf, kindOfNode, unknownView } from '@/actions/action-reach';
 import { projectPathOf } from '@/actions/files-actions';
 import { canDropAsTab, canSplit, cellAt, cellViewIds, focusedViewId, freeViewFor, isSameCell, locateView } from '@/layout/split';
 import { positionAfterLifting } from '@/layout/tab-drop';
-import { looseTabLabel } from '@/shell/panels/tab-label';
 import { sightOf, visibleNodes } from '@/state/attention';
 import { focusedCanvas } from '@/state/canvas';
 import { closeCellGuarded } from '@/state/cell-close';
@@ -13,6 +12,7 @@ import { activeViewOf, cellViewOf, type DocumentState } from '@/state/document';
 import { openTab, useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
+import { looseTabLabel } from '@/surface/panels/tab-label';
 
 /* What stands in a cell: a view of the project, or a loose view of this client, which the document does not have. */
 function cellName(state: DocumentState, viewId: string): string {

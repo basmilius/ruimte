@@ -4,7 +4,7 @@ import type { CliVersion, ProviderInfo } from '@ruimte/contracts';
 import { RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { CliVersionsState } from '@/shell/settings/providers/use-provider-installs';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 function useVersionWords(version: CliVersion) {
     const { t } = useTranslation('settings');

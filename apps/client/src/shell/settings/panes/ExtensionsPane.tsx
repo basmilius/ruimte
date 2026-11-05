@@ -25,9 +25,9 @@ import {
     type PackPreview,
     type StoreAnswer
 } from '@/extensions/store';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useToasts } from '@/state/toasts';
 import { IS_STATION } from '@/station';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 const BROWSE = 'browse';
 const DISK = 'disk';

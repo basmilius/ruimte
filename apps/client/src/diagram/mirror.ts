@@ -1,6 +1,6 @@
 import type { DiagramContent } from '@ruimte/contracts';
-import { createViewMirror } from '@/canvas/view-mirror';
 import { contentOf, liveDiagram, subscribeDiagrams } from '@/state/diagram';
+import { createViewMirror } from '@/surface/canvas/view-mirror';
 
 /* What a diagram node shows: the graph of a diagram view, and null until it has been read. */
 export const useDiagramMirror = createViewMirror<DiagramContent>({

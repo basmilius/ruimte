@@ -1,7 +1,7 @@
 import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@adecore/ui';
 import { useEffect } from 'react';
 import type { StoreApi } from 'zustand';
-import { fitAction, historyAction } from '@/actions/client-actions';
+import { fitAction, historyAction } from '@/action-port/person-actions';
 import { GRID } from '@/canvas-model/math';
 import { isApplePlatform } from '@/desktop/bridge';
 import {

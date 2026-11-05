@@ -5,13 +5,13 @@ import { copyTextOrRefuse } from '@/actions/clipboard';
 import { refusing, type Requester } from '@/actions/refusal';
 import { desktop } from '@/desktop/bridge';
 import { basenameOf } from '@/paths/file-path';
-import { canCopyFilesOn } from '@/shell/panels/file-copy';
-import { revealableInFiles } from '@/shell/panels/files-tree';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { forgetDeleted, moveFile } from '@/state/file-moves';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
+import { canCopyFilesOn } from '@/surface/panels/file-copy';
+import { revealableInFiles } from '@/surface/panels/files-tree';
 import { machineFor } from '@/workspace/connections';
 
 /* What the file actions reach outside the document; a test hands in a fake of each. */

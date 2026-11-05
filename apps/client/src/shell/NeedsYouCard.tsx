@@ -15,7 +15,7 @@ import type { ChatAttachResult, ComputerApproval, ProjectProposal, SecretRequest
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
+import { PERSON_PROMPT_CLIENTS } from '@/action-port/person-actions';
 import { WaitAge } from '@/attention/WaitLabel';
 import { canvasPrompts, stackFront, type CanvasPrompt } from '@/canvas/prompts';
 import { useComputer } from '@/state/computer';
@@ -29,7 +29,7 @@ import { machineTransport } from '@/transport';
 import { useEndpointConnection } from '@/transport/status';
 import { chatScopeOf } from '@/workspace/chat-scope';
 import { chatClientFor } from '@/workspace/connections';
-import type { SidebarNode } from './sidebar-rows';
+import type { SidebarNode } from '../surface/sidebar-rows';
 
 const NO_APPROVALS: readonly ComputerApproval[] = [];
 const EXCERPT_LENGTH = 280;

@@ -8,15 +8,15 @@ import { DeviceToolbar } from '@/devices/DeviceBody';
 import { useDictation } from '@/dictation/controller';
 import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
 import { BrowserToolbar } from '@/nodes/BrowserBody';
-import { useNodeHost } from '@/nodes/node-host';
 import { PlanPill } from '@/plan/PlanPill';
-import { isLooseView, type CellView } from '@/shell/cell-view';
-import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { chatIdOf, hostIdOf, KINDS_WITH_TOOLBAR, modeOf, useIsFork } from '@/shell/view-toolbar';
 import { useEndpointId } from '@/state/current-endpoint';
 import { placeOfView } from '@/state/design-chat';
 import { isFileTab } from '@/state/files';
 import { useHasPlans } from '@/state/plans';
+import { isLooseView, type CellView } from '@/surface/cell-view';
+import { useNodeHost } from '@/surface/nodes/node-host';
+import { useFileToolbarSlot } from '@/surface/panels/file-toolbar-slot';
 import { useSessionPortControl } from '@/terminal/session-port-controls';
 import { SessionPorts } from '@/terminal/SessionPorts';
 

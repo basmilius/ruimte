@@ -4,12 +4,12 @@ import { GitPullRequestArrow } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { bringBack } from '@/project/bring-back';
-import { nameOf } from '@/shell/settings/machine-list';
-import { useMachineEntry } from '@/shell/use-machine-entry';
 import { endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
+import { nameOf } from '@/surface/settings/machine-list';
+import { useMachineEntry } from '@/surface/use-machine-entry';
 import { useWorkspace } from '@/workspace/connections';
 import { useTransport } from '@/workspace/context';
 

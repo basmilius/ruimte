@@ -1,6 +1,6 @@
 import { PromptDialog, Dialog } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
-import { createViewAction, promoteNodeAction } from '@/actions/client-actions';
+import { createViewAction, promoteNodeAction } from '@/action-port/person-actions';
 import { ViewSettingsDialog } from '@/shell/ViewSettingsDialog';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';

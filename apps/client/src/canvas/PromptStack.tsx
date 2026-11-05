@@ -9,9 +9,20 @@ import { AlarmClock, AlarmClockOff, ChevronDown, ChevronLeft, ChevronRight, Chev
 import { useEffect, useRef, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { focusNodeAction, PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
+import { focusNodeAction, PERSON_PROMPT_CLIENTS } from '@/action-port/person-actions';
 import { isTypingTarget } from '@/canvas/canvas-shortcuts';
 import { StatusDot } from '@/canvas/NodeFrame';
+import { stackFront, type CanvasPrompt } from '@/canvas/prompts';
+import { useCanvasPrompts } from '@/canvas/use-canvas-prompts';
+import { isApplePlatform } from '@/desktop/bridge';
+import { agentName } from '@/processes/format';
+import { designChatInFront } from '@/project/views';
+import { promptHeadline } from '@/prompts/prompt-headline';
+import { useCanvas, useCanvasStore } from '@/state/canvas';
+import { useNodeStatus } from '@/state/chats';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointOfNode } from '@/state/keys';
+import { snoozeOf, useSnoozes } from '@/state/snooze';
 import {
     bringPromptToFront,
     leavePromptStack,
@@ -20,19 +31,8 @@ import {
     usePromptFold,
     usePromptFront,
     useSnoozedList
-} from '@/canvas/prompt-stack';
-import { stackFront, type CanvasPrompt } from '@/canvas/prompts';
-import { useCanvasPrompts } from '@/canvas/use-canvas-prompts';
-import { isApplePlatform } from '@/desktop/bridge';
-import { agentName } from '@/processes/format';
-import { designChatInFront } from '@/project/views';
-import { promptHeadline } from '@/prompts/prompt-headline';
-import { SnoozeButton } from '@/shell/Snooze';
-import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { useNodeStatus } from '@/state/chats';
-import { useEndpointId } from '@/state/current-endpoint';
-import { endpointOfNode } from '@/state/keys';
-import { snoozeOf, useSnoozes } from '@/state/snooze';
+} from '@/surface/canvas/prompt-stack';
+import { SnoozeButton } from '@/surface/Snooze';
 import { useTransportStatus } from '@/transport/status';
 
 /* Marks the chevron that folds or opens the stack, which keeps the keyboard across the change. */

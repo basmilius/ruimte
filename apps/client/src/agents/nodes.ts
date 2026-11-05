@@ -1,19 +1,12 @@
 import { readChatPreferences } from '@adecore/agents-react/chat';
 import type { DesignPlace, ProviderInfo } from '@ruimte/contracts';
 import i18next from 'i18next';
-import type { AgentTarget } from '@/state/agent-availability';
+import type { AgentSession, AgentTarget } from '@/state/agent-availability';
 import { canvasOfNode, nextId, type AddNodeOptions } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 
 export function agentTargetLabel(target: AgentTarget): string {
     return i18next.t(`agents:target.${target}`);
-}
-
-/* Where an agent picks up: a CLI session handed on from another chat or terminal, the folder it works in and the account it ran under. */
-export interface AgentSession {
-    resume?: string;
-    cwd?: string;
-    account?: string;
 }
 
 /*

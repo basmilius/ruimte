@@ -5,12 +5,12 @@ import clsx from 'clsx';
 import { Box, Cuboid, Grid3x3, Pause, Play, RotateCcw, Spotlight } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FILE_FOOTER } from '@/shell/panels/classes';
-import { readSourceBytes, revealablePath, useEndpointIdOf, type FileSource } from '@/shell/panels/file-source';
 import { FileContextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
-import { canDrawWebgl, ModelViewer, type LoadedModel } from '@/shell/panels/model-viewer';
 import { RevealButton } from '@/shell/panels/RevealButton';
 import { useTheme } from '@/state/theme';
+import { FILE_FOOTER } from '@/surface/panels/classes';
+import { readSourceBytes, revealablePath, useEndpointIdOf, type FileSource } from '@/surface/panels/file-source';
+import { canDrawWebgl, ModelViewer, type LoadedModel } from '@/surface/panels/model-viewer';
 
 type Phase = { kind: 'loading' } | { kind: 'ready'; model: LoadedModel } | { kind: 'failed'; reason: string } | { kind: 'no-webgl' };
 

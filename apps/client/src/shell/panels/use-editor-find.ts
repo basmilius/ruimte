@@ -7,9 +7,9 @@ import { useTranslation } from 'react-i18next';
 import { isApplePlatform } from '@/desktop/bridge';
 import { openFocusedFind } from '@/find/hosts';
 import { lastFindQuery, type FindSeed, type FindState } from '@/find/use-find';
-import { requiredShortcut } from '@/shell/editor-keymap';
 import { escapeRegExp } from '@/shell/panels/editor-config';
-import { editorForCommand } from '@/shell/panels/focused-editor';
+import { requiredShortcut } from '@/surface/editor-keymap';
+import { editorForCommand } from '@/surface/panels/focused-editor';
 
 const NOTHING: EditorFindState = { count: 0, current: null };
 

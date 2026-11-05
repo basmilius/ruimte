@@ -13,13 +13,12 @@ import {
     promoteNodeAction,
     shareViewAction,
     showViewOnCanvasAction
-} from '@/actions/client-actions';
+} from '@/action-port/person-actions';
 import { askBeforeEndingAgents } from '@/agents/end-children';
 import { GRID, type Point } from '@/canvas-model/math';
 import { databaseTargetOf, databaseViewName } from '@/database/view-name';
 import { basenameOf } from '@/paths/file-path';
 import { filesOfView } from '@/project/view-deletion';
-import { leaveRoutines } from '@/routines/stage';
 import { focusedCanvas, liveCanvas, revealWhenItLands } from '@/state/canvas';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useDesignChat } from '@/state/design-chat';
@@ -28,6 +27,7 @@ import { fileTabOf, isDatabaseTab, useFiles } from '@/state/files';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { defaultNodeSize } from '@/state/node-size';
 import { useProject } from '@/state/project';
+import { leaveRoutines } from '@/state/routines-stage';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { closeAfterSaving } from '@/state/unsaved-close';

@@ -7,7 +7,6 @@ import { isDesktop } from '@/desktop/bridge';
 import { usePulsarAccount } from '@/pulsar/account';
 import { accountName } from '@/pulsar/account-name';
 import { AccountAvatar } from '@/shell/settings/AccountAvatar';
-import { currentPick, mergeMachines, pickForTarget, type MachinePick } from '@/shell/settings/machine-list';
 import { MachineDetail } from '@/shell/settings/MachineDetail';
 import { MachineListItem } from '@/shell/settings/MachineListItem';
 import { RuimteAccountDetail } from '@/shell/settings/RuimteAccountDetail';
@@ -17,6 +16,7 @@ import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { usePulsarMachines } from '@/state/pulsar-machines';
 import { useUi } from '@/state/ui';
+import { currentPick, mergeMachines, pickForTarget, type MachinePick } from '@/surface/settings/machine-list';
 import { forgetAccountMachines, refreshAccountMachines } from '@/workspace/account-machines';
 
 /*

@@ -5,10 +5,9 @@ import i18next from 'i18next';
 import { ArrowLeft, CornerLeftUp, Folder, FolderCheck } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { openFolderAction } from '@/actions/client-actions';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
-import { MachineGlyph } from '@/project/MachineGlyph';
 import { newChatOn } from '@/project/new-chat';
+import { openFolderAction } from '@/project/open-actions';
 import { usePulsarAccount } from '@/pulsar/account';
 import {
     browseBack,
@@ -31,8 +30,6 @@ import {
 } from '@/shell/palette-browse';
 import { groupBySection, matches, type Entry, type PaletteContext, type PaletteModeView } from '@/shell/palette-entries';
 import { PaletteEntryItem } from '@/shell/PaletteEntryItem';
-import { iconOfEntry } from '@/shell/settings/machine-icon';
-import { mergeMachines } from '@/shell/settings/machine-list';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine, isRealMachine } from '@/state/local-machine';
 import { shownFolderOf, useProject } from '@/state/project';
@@ -40,6 +37,9 @@ import { usePulsarMachines } from '@/state/pulsar-machines';
 import { fileManagerName, serverInfoOf, useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
+import { MachineGlyph } from '@/surface/MachineGlyph';
+import { iconOfEntry } from '@/surface/settings/machine-icon';
+import { mergeMachines } from '@/surface/settings/machine-list';
 import { pool, transportFor, type ConnectionState } from '@/transport';
 import type { Transport } from '@/transport-api/transport';
 import { useConnections } from '@/transport/status';

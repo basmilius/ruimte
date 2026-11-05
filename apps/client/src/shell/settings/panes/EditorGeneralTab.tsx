@@ -3,11 +3,11 @@ import { SettingsRow } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
 import { RENDERED_DOC_COMMENTS } from '@/features';
 import { CodeThemePreview } from '@/shell/settings/panes/CodeSection';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { useCodeTheme } from '@/state/code-theme';
 import { CODE_LINE_HEIGHT_RANGE, FONT_SIZE_RANGE, MONO_FONTS, TRAILING_WHITESPACE_MODES, type TrailingWhitespaceMode, useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 const CODE_SIZE_PREVIEW = ['export function greet(name: string): string {', '    return `Hello ${name}.`;', '}'].join('\n');
 

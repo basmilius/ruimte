@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { ManualTimers } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
+import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { FakeLanguageTransport } from './fake-daemon';
 import { eventOf } from './key-events';
 import { EditorLanguage } from './ruimte-editor-language';

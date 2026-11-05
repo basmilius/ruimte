@@ -1,7 +1,7 @@
 import { EMPTY_FIND_QUERY, type FindQuery } from '@adecore/editor-react/models';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { registerFindHost } from '@/find/hosts';
-import { activeViewEditorFor } from '@/shell/panels/focused-editor';
+import { activeViewEditorFor } from '@/surface/panels/focused-editor';
 
 export interface FindState {
     open: boolean;

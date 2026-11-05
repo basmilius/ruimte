@@ -5,9 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { settingKey, subscribeStorage, writeExtensionStorage } from '@/extensions/host/extension-storage';
 import { useInstalledExtensions } from '@/extensions/loader';
 import { useContributions, type SettingField } from '@/extensions/registry';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { storedText } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 function Field({ id, field }: { id: string; field: SettingField }) {
     const { t } = useTranslation('shell');

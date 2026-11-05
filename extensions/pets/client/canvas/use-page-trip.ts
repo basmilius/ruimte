@@ -5,13 +5,13 @@ import { PET_HEIGHT, PET_WIDTH, WORLD_CELL } from '@extensions/pets/client/pet-s
 import { deviceMatches } from '@ruimte/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { useNodeInViewport } from '@/canvas/culling';
-import { lineRoutes } from '@/canvas/line-routes';
 import { useDevices } from '@/clients/devices/state';
 import { operatedOf, useDeviceOperated } from '@/devices/operated';
-import { readNodeHost } from '@/nodes/node-host';
 import { useCanvas, useCanvasStore, type CanvasNode, type CanvasState } from '@/state/canvas';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey, endpointOfNode } from '@/state/keys';
+import { lineRoutes } from '@/surface/canvas/line-routes';
+import { readNodeHost } from '@/surface/nodes/node-host';
 
 /* How often a pet with pages looks again whether to go, stay or walk home: the quiet spell ends on its own. */
 const CHECK_MS = 500;

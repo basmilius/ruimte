@@ -6,12 +6,12 @@ import { getDocument, GlobalWorkerOptions, TextLayer, version, type PDFDocumentP
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FILE_FOOTER } from '@/shell/panels/classes';
-import { machineResourceOf, revealablePath, sourceKey, useEndpointIdOf, wireResourceOf, type FileSource } from '@/shell/panels/file-source';
 import { FileTextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { PDF_PAGE_GAP, pdfPageBox, pdfPageScale, pdfPageTops, pdfReadingPage, type PdfPageSize, type PdfZoom } from '@/shell/panels/pdf-layout';
 import { RevealButton } from '@/shell/panels/RevealButton';
 import { useEndpoints } from '@/state/endpoints';
+import { FILE_FOOTER } from '@/surface/panels/classes';
+import { machineResourceOf, revealablePath, sourceKey, useEndpointIdOf, wireResourceOf, type FileSource } from '@/surface/panels/file-source';
 import { machineTransport } from '@/transport';
 import { readPiece } from '@/transport-api/piece';
 import { readResource } from '@/transport/byte-transfer';

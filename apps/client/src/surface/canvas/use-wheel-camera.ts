@@ -1,0 +1,148 @@
+import { isModHeld } from '@adecore/ui';
+import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
+import type { StoreApi } from 'zustand';
+import type { CameraSlice } from '@/canvas-model/camera-slice';
+import { isApplePlatform } from '@/desktop/bridge';
+import { createPanBatch } from '@/surface/canvas/pan-batch';
+import { createWheelPanSession, PAN_IDLE_MS } from '@/surface/canvas/wheel-pan-session';
+import { createZoomGlide, wheelZoomOf } from '@/surface/canvas/wheel-zoom';
+
+/* How long after the last wheel event a zoom settles on a whole percent. */
+const ZOOM_SETTLE_MS = 160;
+
+/* Chromium reports a trackpad pinch as a wheel with Ctrl held on every platform, so Ctrl always
+   zooms and Cmd joins it on macOS; the Windows key never does. */
+function wheelZooms(e: WheelEvent): boolean {
+    return e.ctrlKey || isModHeld(e, isApplePlatform());
+}
+
+export interface WheelCameraOptions {
+    /* A canvas refuses a pan or a zoom while that lock is on; a drawing and a diagram have none. */
+    locks?: () => { pan: boolean; zoom: boolean };
+    /* True when the wheel belongs to something on the surface rather than to the camera. */
+    defer?: (e: WheelEvent, zooming: boolean) => boolean;
+    ownsWheel?: () => boolean;
+    onPan?: (active: boolean) => void;
+}
+
+/*
+ * The wheel over a canvas, a drawing or a diagram: two fingers pan, a pinch zooms around the pointer
+ * and the zoom settles on a whole percent once the fingers stop. A notch of a mouse wheel with the
+ * modifier is a small step the camera glides to (`wheel-zoom.ts`). React's wheel listeners are passive
+ * and cannot stop the browser's pinch zoom, so this is a native one, in the capture phase because a
+ * scrollable body inside (a terminal's scrollback, a thread) would otherwise scroll and pan at once.
+ */
+export function useWheelCamera(rootRef: RefObject<HTMLElement | null>, store: StoreApi<CameraSlice>, options: WheelCameraOptions = {}): () => void {
+    const latest = useRef(options);
+    const flushRef = useRef<(() => void) | null>(null);
+
+    useLayoutEffect(() => {
+        latest.current = options;
+    });
+
+    useEffect(() => {
+        const root = rootRef.current;
+        if (!root) {
+            return;
+        }
+        let anchor = { x: 0, y: 0 };
+        let timer: number | null = null;
+        // Only a zoom settles. Without this a pan right after one would snap the camera back.
+        let zoomed = false;
+        const pan = createPanBatch((dx, dy) => store.getState().panBy(dx, dy));
+        flushRef.current = pan.flush;
+        const session = createWheelPanSession();
+        const glide = createZoomGlide({ zoom: () => store.getState().camera.zoom, zoomAt: (factor, at) => store.getState().zoomAt(factor, at) }, (at) =>
+            store.getState().settleZoom(at)
+        );
+        let panTimer: number | null = null;
+        const endPan = (): void => {
+            session.reset();
+            latest.current.onPan?.(false);
+        };
+
+        const onWheel = (e: WheelEvent): void => {
+            const zooming = wheelZooms(e);
+            const owns = session.owns(latest.current.ownsWheel?.() === true, e.timeStamp);
+            if ((zooming || !owns) && latest.current.defer?.(e, zooming) === true) {
+                return;
+            }
+            e.stopPropagation();
+            e.preventDefault();
+            const rect = root.getBoundingClientRect();
+            const at = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            const locks = latest.current.locks?.();
+            if (!zooming) {
+                if (locks?.pan !== true) {
+                    session.record(e.timeStamp);
+                    latest.current.onPan?.(true);
+                    pan.add(-e.deltaX, -e.deltaY);
+                    if (panTimer !== null) {
+                        window.clearTimeout(panTimer);
+                    }
+                    panTimer = window.setTimeout(endPan, PAN_IDLE_MS);
+                }
+                return;
+            }
+            if (locks?.zoom === true) {
+                return;
+            }
+            pan.flush();
+            if (panTimer !== null) {
+                window.clearTimeout(panTimer);
+                panTimer = null;
+            }
+            endPan();
+            if (timer !== null) {
+                window.clearTimeout(timer);
+                timer = null;
+            }
+            const step = wheelZoomOf(e);
+            if (step.kind === 'notch') {
+                // The glide settles once it arrives, so a settle due from an earlier pinch would only cut it short.
+                zoomed = false;
+                glide.add(step.factor, at);
+                return;
+            }
+            glide.stop();
+            store.getState().zoomAt(step.factor, at);
+            anchor = at;
+            zoomed = true;
+            timer = window.setTimeout(() => {
+                if (zoomed) {
+                    store.getState().settleZoom(anchor);
+                    zoomed = false;
+                }
+            }, ZOOM_SETTLE_MS);
+        };
+        /* Outside the surface (sidebar, dock) a pinch must not zoom the page either. */
+        const swallowPinch = (e: WheelEvent): void => {
+            if (wheelZooms(e) && !root.contains(e.target as Node)) {
+                e.preventDefault();
+            }
+        };
+        const swallowGesture = (e: Event): void => e.preventDefault();
+
+        root.addEventListener('wheel', onWheel, { passive: false, capture: true });
+        document.addEventListener('wheel', swallowPinch, { passive: false });
+        document.addEventListener('gesturestart', swallowGesture);
+        document.addEventListener('gesturechange', swallowGesture);
+        return () => {
+            pan.flush();
+            glide.stop();
+            flushRef.current = null;
+            if (panTimer !== null) {
+                window.clearTimeout(panTimer);
+            }
+            endPan();
+            if (timer !== null) {
+                window.clearTimeout(timer);
+            }
+            root.removeEventListener('wheel', onWheel, { capture: true });
+            document.removeEventListener('wheel', swallowPinch);
+            document.removeEventListener('gesturestart', swallowGesture);
+            document.removeEventListener('gesturechange', swallowGesture);
+        };
+    }, [rootRef, store]);
+    return () => flushRef.current?.();
+}

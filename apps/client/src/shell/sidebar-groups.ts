@@ -10,8 +10,8 @@ import { useSessions } from '@/state/sessions';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
 import { useWaitingSince, waitDetailsOf } from '@/state/waiting';
 import { machineTransport } from '@/transport';
+import { heaviestStatus, type SidebarGroup, type SidebarNode, type SidebarProject } from '../surface/sidebar-rows';
 import { placeSeparators, sidebarProjectKey, useSidebarMachines, useSidebarProjects, type SeparatorPlaces } from './sidebar-projects';
-import { heaviestStatus, type SidebarGroup, type SidebarNode, type SidebarProject } from './sidebar-rows';
 import { sidebarSelection } from './sidebar-selection';
 
 export function useSidebarGroups(enabled: boolean, active: SidebarProject, expandedIds: ReadonlySet<string>) {

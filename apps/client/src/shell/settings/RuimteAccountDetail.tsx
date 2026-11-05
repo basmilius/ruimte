@@ -11,9 +11,9 @@ import { PROVIDER_ORDER, identityDetail, signedInLabel, takeoverWarning } from '
 import { dismissAccountConfirmation, useAccountConfirmation } from '@/pulsar/confirmation';
 import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
 import { DeleteAccountDialog } from '@/shell/settings/DeleteAccountDialog';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { ProviderButton, SignInButtons } from '@/shell/SignInButtons';
 import { hasLocalMachine } from '@/state/local-machine';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 import { SignInMark } from '@/ui/SignInMark';
 
 /* One way to sign in to the account. Remove it while another remains, or add it when the address book offers it. */

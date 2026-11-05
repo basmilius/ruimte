@@ -4,10 +4,10 @@ import { ChevronDown, Cloud, Copy, GitCommitHorizontal } from 'lucide-react';
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
-import { GIT_GROUP } from '@/shell/panels/classes';
 import { githubPicture, groupCommits, mergeLogs, shownRefs, type LoadedLog, type LogRow } from '@/shell/panels/commit-log';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useGit } from '@/state/git';
+import { GIT_GROUP } from '@/surface/panels/classes';
 import { useMachineAnswers } from '@/transport/features';
 import { useTransport } from '@/workspace/context';
 

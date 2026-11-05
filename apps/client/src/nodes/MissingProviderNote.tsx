@@ -2,8 +2,8 @@ import { useProvidersStore } from '@adecore/agents-react/state';
 import type { AgentKind } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
 import { missingProvider } from '@/nodes/missing-provider';
-import { NodeNotice } from '@/nodes/NodeNotice';
 import { useUi } from '@/state/ui';
+import { NodeNotice } from '@/surface/nodes/NodeNotice';
 
 /* What a terminal or a chat says when its machine has no CLI of its kind. */
 export function MissingProviderNote({ endpointId, kind }: { endpointId: string; kind: AgentKind | undefined }) {

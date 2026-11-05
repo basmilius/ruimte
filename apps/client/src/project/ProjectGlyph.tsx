@@ -5,9 +5,9 @@ import clsx from 'clsx';
 import { MessagesSquare } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { projectIconAppearance } from '@/clients/project/icon-appearance';
-import { projectIconGlyphOf } from '@/project/project-icons';
 import { useEndpoints } from '@/state/endpoints';
 import { useTheme } from '@/state/theme';
+import { projectIconGlyphOf } from '@/surface/project-icons';
 import { transportFor } from '@/transport';
 import { useMachineUrl } from '@/transport/machine-url';
 

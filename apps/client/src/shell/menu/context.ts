@@ -11,7 +11,6 @@ import {
     type SplitLayout
 } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { usePromptStacks } from '@/canvas/prompt-stack';
 import { focusedChatId } from '@/chat/focused-chat';
 import { keepAwakeAvailable, keepAwakeChoice } from '@/controllers/keep-awake';
 import { prReposOfCurrent } from '@/controllers/pr-repos';
@@ -29,8 +28,6 @@ import { canOpenWindows } from '@/project/windows';
 import type { MenuContext, MenuHost, MenuLaunch } from '@/shell/menu/model';
 import { nextWaitingTitle } from '@/shell/next-waiting';
 import { diffInFront } from '@/shell/panels/diff-caret';
-import { availableEditorForCommand } from '@/shell/panels/focused-editor';
-import { hasPrWatch } from '@/shell/pr-watch-actions';
 import { sessionHandoffs, viewOffers, type ViewOffers } from '@/shell/view-offers';
 import { inPickerOrder } from '@/state/agent-availability';
 import { groupArrangeable } from '@/state/arrange-group';
@@ -49,6 +46,9 @@ import { proposalsOf } from '@/state/proposals';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useSessions } from '@/state/sessions';
 import { useUi } from '@/state/ui';
+import { usePromptStacks } from '@/surface/canvas/prompt-stack';
+import { availableEditorForCommand } from '@/surface/panels/focused-editor';
+import { hasPrWatch } from '@/surface/pr-watch-actions';
 import { terminalHasFind, terminalHasKeyboard } from '@/terminal/xterm';
 import { pool } from '@/transport';
 import { machineAnswers } from '@/transport/features';

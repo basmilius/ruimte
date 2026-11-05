@@ -8,13 +8,13 @@ import { GrantRows, SetupLine } from '@/computer/ComputerSetupRows';
 import { canSwitch, showsGrants, type ComputerSetup } from '@/computer/setup';
 import { useComputerMachine } from '@/computer/use-computer-machine';
 import { desktop, isDesktop } from '@/desktop/bridge';
-import { useListedMachines } from '@/shell/settings/machine-list';
 import { WithReason } from '@/shell/settings/MachineSettings';
 import { ComputerAppGrants } from '@/shell/settings/panes/ComputerAppGrants';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SetUpMachineDialog } from '@/shell/settings/SetUpMachineDialog';
 import type { Endpoint } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
+import { useListedMachines } from '@/surface/settings/machine-list';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 /* Computer use under Agents: it is something an agent may do, held to by the machine that runs it. */
 export function ComputerSections() {

@@ -8,8 +8,8 @@ import { perform } from '@/action-port/perform';
 import { useResolvedDevice } from '@/clients/devices/state';
 import { toastDeviceFailure } from '@/devices/control';
 import { operatedOf, stripLook, tapPoint, useDeviceOperated, useOperatedDevice } from '@/devices/operated';
-import { useNodeHost } from '@/nodes/node-host';
 import { useEndpointId } from '@/state/current-endpoint';
+import { useNodeHost } from '@/surface/nodes/node-host';
 import { transportFor } from '@/transport';
 
 /* How long the ring of a tap stays; with motion off it stands still for as long. */

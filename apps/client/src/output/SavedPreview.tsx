@@ -11,9 +11,9 @@ import type { SavedPreviewOf } from '@/output/saved-preview';
 import type { Saved } from '@/output/SavedCard';
 import { CodeText } from '@/shell/panels/CodeFile';
 import { FileActionsContext } from '@/shell/panels/file-actions';
-import { FileToolbarSlotProvider, fixedSlot } from '@/shell/panels/file-toolbar-slot';
 import { FileMarkdown } from '@/shell/panels/FileMarkdown';
 import { PdfPreview } from '@/shell/panels/PdfPreview';
+import { FileToolbarSlotProvider, fixedSlot } from '@/surface/panels/file-toolbar-slot';
 import { useMachineUrl } from '@/transport/machine-url';
 
 const MAX_IMAGES = 4;

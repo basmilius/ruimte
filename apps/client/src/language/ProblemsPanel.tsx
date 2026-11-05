@@ -9,9 +9,9 @@ import { CircleCheck, CircleX, Info, ScanSearch, Search, TriangleAlert } from 'l
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { basenameOf } from '@/paths/file-path';
-import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
+import { PanelHeaderActions, PanelHeaderSlot } from '@/surface/PanelHeaderSlot';
 import { useMachineAnswers } from '@/transport/features';
 import { useTransport } from '@/workspace/context';
 import { draftFiles } from './project-files';

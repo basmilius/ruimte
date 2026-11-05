@@ -12,7 +12,6 @@ import {
     type SplitLayout
 } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { centerWorld } from '@/actions/action-reach';
 import {
     applyLayoutAction,
     closeCellsRightOfAction,
@@ -30,7 +29,8 @@ import {
     setLocksAction,
     showViewOnCanvasAction,
     toggleFlagAction
-} from '@/actions/client-actions';
+} from '@/action-port/person-actions';
+import { centerWorld } from '@/actions/action-reach';
 import { openAttentionQueue } from '@/attention/queue';
 import { focusedChatId } from '@/chat/focused-chat';
 import { restartChatSession } from '@/chat/restart-session';
@@ -60,7 +60,6 @@ import { askDeleteView, askOpenAsView, askViewSettings, canOpenAsView, newSubhea
 import { stepMove, stepWindowTab, useWindowTabs } from '@/project/window-tabs';
 import { canMoveToNewWindow, canOpenWindows, moveToNewWindow, openNewWindow } from '@/project/windows';
 import { openRoutineForm } from '@/routines/form-state';
-import { toggleRoutines } from '@/routines/stage';
 import { runAppShortcut } from '@/shell/app-shortcuts';
 import { COMMANDS, type PaletteCommandId } from '@/shell/command-table';
 import { editorCommandRows } from '@/shell/editor-commands';
@@ -68,7 +67,6 @@ import { activeViewFacts } from '@/shell/menu/context';
 import { nextWaitingTitle, revealNextWaiting } from '@/shell/next-waiting';
 import { diffInFront, openFileAtDiffCaret } from '@/shell/panels/diff-caret';
 import { stepFocusedEditorFind } from '@/shell/panels/use-editor-find';
-import { hasPrWatch, stopPrWatch } from '@/shell/pr-watch-actions';
 import { pullRequestCommands } from '@/shell/pull-request-commands';
 import { availableAgents, type AgentTarget } from '@/state/agent-availability';
 import { groupArrangeable } from '@/state/arrange-group';
@@ -84,10 +82,12 @@ import { hasLocalMachine } from '@/state/local-machine';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { isNotePreviewLocked, setNotePreviewLocked } from '@/state/note-previews';
 import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
+import { toggleRoutines } from '@/state/routines-stage';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
+import { hasPrWatch, stopPrWatch } from '@/surface/pr-watch-actions';
 import { pool, transportFor } from '@/transport';
 import { machineAnswers } from '@/transport/features';
 import { windowWorkspace } from '@/workspace/window';

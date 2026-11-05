@@ -4,8 +4,8 @@ import { RotateCw } from 'lucide-react';
 import { Fragment, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CliSession } from '@/chat/cli-session';
-import { NodeNotice } from '@/nodes/NodeNotice';
 import { useSettings } from '@/state/settings';
+import { NodeNotice } from '@/surface/nodes/NodeNotice';
 import { MachineTerminal } from '@/terminal/MachineTerminal';
 import { sessionClientFor } from '@/workspace/connections';
 

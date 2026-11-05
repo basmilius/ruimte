@@ -2,7 +2,7 @@ import { messageOf } from '@adecore/ui';
 import { deviceMatches, type DeviceInfo, type DeviceReference, type LaunchConfigEntry, type LaunchesDocument } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { OctagonX, Play, RotateCw, Square, type LucideIcon } from 'lucide-react';
-import { createNodeAction, createViewAction } from '@/actions/client-actions';
+import { createNodeAction, createViewAction } from '@/action-port/person-actions';
 import { chosenLaunch, type LaunchView } from '@/launches/model';
 import { useLaunches, type LaunchOwner } from '@/launches/state';
 import { revealNode } from '@/project/views';

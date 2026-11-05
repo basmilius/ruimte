@@ -1,8 +1,8 @@
 import { formatShortcut, Icon, shortcut } from '@adecore/ui';
 import { Cpu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
+import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 
 const TAB = shortcut('Tab');
 const ESCAPE = shortcut('Escape');

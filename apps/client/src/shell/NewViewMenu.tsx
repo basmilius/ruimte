@@ -4,17 +4,17 @@ import type { ProviderInfo } from '@ruimte/contracts';
 import { Blocks, FileText, Frame, Globe, Heading, Minus, PenTool, SwatchBook, Workflow, Terminal, type LucideIcon } from 'lucide-react';
 import { Fragment, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { createViewAction } from '@/actions/client-actions';
+import { createViewAction } from '@/action-port/person-actions';
 import { AgentSubmenu } from '@/agents/AgentMenus';
 import { agentTargetLabel } from '@/agents/nodes';
 import { ProviderRows } from '@/agents/ProviderRows';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useContributions } from '@/extensions/registry';
 import { newSubheaderView } from '@/project/views';
 import type { AgentTarget } from '@/state/agent-availability';
 import { useEndpointId } from '@/state/current-endpoint';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
+import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { useMachineAnswers } from '@/transport/features';
 
 /* A row of one of the two lists below, with the label it is put in order by. */

@@ -22,10 +22,14 @@ export function provideClientActions(clientActions: ActionRegistry<void>): void 
  * surface that says how it went can tell a diverged branch from a failure.
  */
 export async function perform<Name extends ActionName>(name: Name, input: ActionInput<Name>, options: PerformOptions = {}): Promise<ActionOutput<Name>> {
+    return performIn(clientRegistry(), name, input, options);
+}
+
+export function clientRegistry(): ActionRegistry<void> {
     if (registry === null) {
         throw new Error('No action registry is provided yet.');
     }
-    return performIn(registry, name, input, options);
+    return registry;
 }
 
 export async function performIn<Name extends ActionName>(
@@ -52,3 +56,9 @@ export async function performIn<Name extends ActionName>(
 export function ignoreRefusal(): null {
     return null;
 }
+
+export type CreatableViewKind = ActionInput<'view.create'>['kind'];
+export type CreatableNodeKind = ActionInput<'node.create'>['kind'];
+
+/* The id prefix of an operation a git run streams its progress under. */
+export const GIT_OPERATION = 'git:';

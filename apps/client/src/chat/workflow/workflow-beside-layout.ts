@@ -1,6 +1,6 @@
 import { GRID, snapToGrid, type Rect } from '@/canvas-model/math';
-import { COLUMN_W, GUTTER, LINE_H, OPEN_H, OPEN_MIN_H, STACK_GAP } from '@/canvas/beside-metrics';
-import type { CardSize } from '@/routines/output-size';
+import { COLUMN_W, GUTTER, LINE_H, OPEN_H, OPEN_MIN_H, STACK_GAP } from '@/surface/canvas/beside-metrics';
+import type { CardSize } from '@/surface/canvas/output-size';
 
 /* The column of phases is narrow and fixed, so it leaves the canvas beside the chat as free as it can. */
 export const PHASES_W = 320;

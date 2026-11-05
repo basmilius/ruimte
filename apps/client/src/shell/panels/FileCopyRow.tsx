@@ -2,10 +2,10 @@ import { copyText, Icon, Menu, messageOf } from '@adecore/ui';
 import { AtSign, ChevronRight, Copy, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
-import { canCopyFilesOn, copiedText, copyableFiles, type CopyTarget, type CopyTextKind } from '@/shell/panels/file-copy';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
+import { canCopyFilesOn, copiedText, copyableFiles, type CopyTarget, type CopyTextKind } from '@/surface/panels/file-copy';
 
 /*
  * Copy in every menu of a file, a folder or a selection of them. The row copies them as mentions; its

@@ -48,8 +48,8 @@ import {
     ZoomOut,
     type LucideIcon
 } from 'lucide-react';
-import { editorShortcut } from '@/shell/editor-keymap';
-import { editorForCommand } from '@/shell/panels/focused-editor';
+import { editorShortcut } from '@/surface/editor-keymap';
+import { editorForCommand } from '@/surface/panels/focused-editor';
 
 /*
  * The editing commands of a file editor that have a place in the menu and the palette, with their words

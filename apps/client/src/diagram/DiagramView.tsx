@@ -8,7 +8,6 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { ignoreRefusal, perform } from '@/action-port/perform';
 import { groundPlacement, type Point } from '@/canvas-model/math';
-import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { copyDiagram, openDiagramJson } from '@/diagram/diagram-actions';
 import { DiagramDock } from '@/diagram/DiagramDock';
 import { DiagramScene } from '@/diagram/DiagramScene';
@@ -16,9 +15,10 @@ import { exampleDiagram } from '@/diagram/example';
 import { Swatches } from '@/drawing/DrawingDock';
 import { useViewportSize } from '@/drawing/use-viewport-size';
 import { askAgentAboutDiagram } from '@/project/views';
-import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
 import { useProject } from '@/state/project';
+import { useWheelCamera } from '@/surface/canvas/use-wheel-camera';
+import { useFileToolbarSlot } from '@/surface/panels/file-toolbar-slot';
 
 function isChrome(target: EventTarget | null): boolean {
     return isInFloatingLayer(target) || (target instanceof Element && target.closest('[data-diagram-chrome]') !== null);

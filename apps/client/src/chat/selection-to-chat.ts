@@ -2,7 +2,7 @@ import { offerDraft } from '@adecore/agents-react/chat';
 import type { Shortcut } from '@adecore/ui';
 import type { AgentKind } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { createNodeAction, linkNodesAction } from '@/actions/client-actions';
+import { createNodeAction, linkNodesAction } from '@/action-port/person-actions';
 import { useChatChooser } from '@/chat/chat-chooser';
 import { chatsLinkedTo } from '@/context/sources';
 import { focusChat } from '@/plan/plan-actions';

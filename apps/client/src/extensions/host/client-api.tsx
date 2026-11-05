@@ -53,7 +53,6 @@ import {
 import { baseContext, nodeInfoIn, useNodeSources, type NodeInfo } from '@/extensions/slots';
 import { isUnderFolder } from '@/paths/file-path';
 import { revealNode } from '@/project/views';
-import { openFileLink } from '@/shell/panels/file-links';
 import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
@@ -64,6 +63,7 @@ import { useTheme as useUiTheme } from '@/state/theme';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { IS_STATION } from '@/station';
+import { openFileLink } from '@/surface/panels/file-links';
 import { machineTransport, TransportError, type Transport } from '@/transport';
 import { machineAnswers } from '@/transport/features';
 import { useFocusedMachine } from '@/workspace/connections';

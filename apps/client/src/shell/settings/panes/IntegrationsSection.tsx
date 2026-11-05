@@ -6,8 +6,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { INTEGRATION_NAMES, loadIntegrationFiles, useAgentIntegrations, useIntegrationChoice } from '@/controllers/agent-integrations';
 import { IntegrationDetails, IntegrationReports } from '@/shell/AgentIntegrationsDialog';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { hasLocalMachine } from '@/state/local-machine';
+import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 /* What Ruimte may write into the CLIs' global settings, per CLI, so a terminal shows its agent's status. Only this computer's own machine has it. */
 export function IntegrationsSection() {

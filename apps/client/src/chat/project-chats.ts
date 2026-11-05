@@ -1,7 +1,7 @@
 import type { ProjectChat } from '@adecore/agents-react/chat';
 import { designNodeChats, isChatHostView, isHiddenChatView, viewChats, type ProjectNode, type ProjectView } from '@ruimte/contracts';
-import { useSidebarSource } from '@/shell/sidebar-source';
 import type { NodesOfView } from '@/state/view-nodes';
+import { useSidebarSource } from '@/surface/sidebar-source';
 
 /* Every chat of the project under the name it has right now, node or view, in sidebar order. */
 export function projectChats(views: readonly ProjectView[], nodesOf: NodesOfView<Pick<ProjectNode, 'id' | 'kind' | 'title' | 'chats'>>): ProjectChat[] {

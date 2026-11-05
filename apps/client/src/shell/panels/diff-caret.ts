@@ -6,10 +6,10 @@ import { create } from 'zustand';
 import { ignoreRefusal, perform } from '@/action-port/perform';
 import { isApplePlatform } from '@/desktop/bridge';
 import { cellElement } from '@/layout/cell-rects';
-import { requiredShortcut } from '@/shell/editor-keymap';
-import { createFocusRegistry } from '@/shell/panels/focus-registry';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
+import { requiredShortcut } from '@/surface/editor-keymap';
+import { createFocusRegistry } from '@/surface/panels/focus-registry';
 
 interface DiffCaretStore {
     /* Where the caret of each diff tab stands in its file, keyed by the tab, so the tab's menu can say the line. In memory only. */

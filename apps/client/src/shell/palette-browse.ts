@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { nameOf, type MachineEntry } from '@/shell/settings/machine-list';
+import { nameOf, type MachineEntry } from '@/surface/settings/machine-list';
 import type { ConnectionState } from '@/transport-api/transport';
 
 /* The daemon's separator, not this browser's: a Windows daemon answers in backslashes. */

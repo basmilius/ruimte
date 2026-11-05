@@ -22,7 +22,6 @@ import { useTranslation } from 'react-i18next';
 import type { GitCheckout } from '@/controllers/git-repos';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { FileCopyRow } from '@/shell/panels/FileCopyRow';
-import { revealableInFiles } from '@/shell/panels/files-tree';
 import {
     buildGitTree,
     byCheckout,
@@ -46,11 +45,12 @@ import {
 } from '@/shell/panels/git-tree';
 import { GitTreeMarks } from '@/shell/panels/GitTreeMarks';
 import { revealFile } from '@/shell/panels/reveal-file';
-import { setDragging } from '@/shell/view-drag';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
+import { revealableInFiles } from '@/surface/panels/files-tree';
+import { setDragging } from '@/surface/view-drag';
 import { useTransport } from '@/workspace/context';
 
 const { applyExpansion, directoryHandle, menuTargetsOf, mergeCollapsedPaths, rebuildPaths, rowPathOf, selectOnly, visibleRows } = FileTree;

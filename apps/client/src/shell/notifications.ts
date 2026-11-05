@@ -1,7 +1,6 @@
 import { useChats } from '@adecore/agents-react/state';
 import type { EventMap } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { revealNode } from '@/project/views';
 import { openSidebarTarget } from '@/shell/sidebar-navigation';
 import { subscribeChatStatuses } from '@/state/chats';
@@ -12,6 +11,7 @@ import { nodeStatus, nodeWaitAsk, useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
 import { projectNodes } from '@/state/view-nodes';
+import { bringPromptToFront } from '@/surface/canvas/prompt-stack';
 import { watchEveryMachine } from '@/workspace/connections';
 import { waitAskLine } from './wait-ask';
 

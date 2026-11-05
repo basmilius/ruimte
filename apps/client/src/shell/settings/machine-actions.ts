@@ -1,4 +1,4 @@
-import type { MachineEntry } from './machine-list';
+import type { MachineEntry } from '../../surface/settings/machine-list';
 
 interface MachineContext {
     connected: boolean;

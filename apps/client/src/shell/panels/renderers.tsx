@@ -11,8 +11,6 @@ import {
 } from '@ruimte/contracts';
 import { ArchivePreview } from '@/shell/panels/ArchivePreview';
 import { CodeFile } from '@/shell/panels/CodeFile';
-import { isDelimitedName, isHtmlName, isMarkdownName, isPatchName } from '@/shell/panels/file-kind';
-import { fileSource, type FileSource } from '@/shell/panels/file-source';
 import { HtmlFile } from '@/shell/panels/HtmlFile';
 import { ImageFile } from '@/shell/panels/ImageFile';
 import { MarkdownFile } from '@/shell/panels/MarkdownFile';
@@ -22,6 +20,8 @@ import { PatchFileSlot } from '@/shell/panels/patch-file-lazy';
 import { PdfPreview } from '@/shell/panels/PdfPreview';
 import { TableFile } from '@/shell/panels/TableFile';
 import { UnsupportedFile } from '@/shell/panels/UnsupportedFile';
+import { isDelimitedName, isHtmlName, isMarkdownName, isPatchName } from '@/surface/panels/file-kind';
+import { fileSource, type FileSource } from '@/surface/panels/file-source';
 
 interface FileRendererProps {
     /* Absolute on the daemon's machine. */

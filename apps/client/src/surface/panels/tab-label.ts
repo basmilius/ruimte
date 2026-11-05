@@ -1,0 +1,22 @@
+import i18next from 'i18next';
+import { basenameOf } from '@/paths/file-path';
+import { isArtifactTab, isCheckoutDiff, isDatabaseTab, type Tab } from '@/state/files';
+import { databaseTabTitle } from '@/surface/tab-look';
+
+/* What a loose view is called wherever it is named: the strip, the bar of a cell on its own, a menu. A commit uses its hash because no file represents it. */
+export function looseTabLabel(tab: Tab): string {
+    if (isDatabaseTab(tab)) {
+        return databaseTabTitle(tab);
+    }
+    if (isArtifactTab(tab)) {
+        return tab.title;
+    }
+    const commit = tab.view?.commit;
+    if (commit !== undefined) {
+        return commit.slice(0, 7);
+    }
+    if (isCheckoutDiff(tab.path, tab.view) || tab.view === undefined) {
+        return basenameOf(tab.path);
+    }
+    return i18next.t('panels:git.tab.changes');
+}

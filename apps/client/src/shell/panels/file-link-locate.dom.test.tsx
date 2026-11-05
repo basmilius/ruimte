@@ -6,7 +6,7 @@ import { chatInfoOf } from '../../../testing/chat-info';
 import { clickOn, layOutChat, mount, until, type Mounted } from '../../../testing/dom';
 import { FakeMachine } from '../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';
-import { useFileChoice } from './file-links';
+import { useFileChoice } from '../../surface/panels/file-links';
 
 const CLAUDE = {
     kind: 'claude',

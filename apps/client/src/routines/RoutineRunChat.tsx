@@ -5,9 +5,9 @@ import { LazyBoundary, messageOf } from '@adecore/ui';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
-import { ConnectionNotice, NodeNotice } from '@/nodes/NodeNotice';
 import { OutputChatContext } from '@/output/chat-scope';
 import { useEndpointId } from '@/state/current-endpoint';
+import { ConnectionNotice, NodeNotice } from '@/surface/nodes/NodeNotice';
 import { useTransportStatus } from '@/transport/status';
 import { chatClientFor } from '@/workspace/connections';
 

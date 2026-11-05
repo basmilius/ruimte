@@ -12,8 +12,8 @@ import { blockClass, HATCH } from '@/routines/look-class';
 import { setRoutinePaused } from '@/routines/routine-commands';
 import { useRoutineWhat } from '@/routines/routine-what';
 import { RoutineRunPopover, type PickedRun } from '@/routines/RoutineRunPopover';
-import { showRoutine } from '@/routines/stage';
 import { blockWords, dayWords, foldWords, rowStatus, scheduleWords } from '@/routines/words';
+import { showRoutine } from '@/state/routines-stage';
 
 const NAME_COLUMN = 248;
 // A day never narrower than a block that says "09:00 · 3m"; a narrow stage scrolls sideways instead.

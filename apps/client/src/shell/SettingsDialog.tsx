@@ -15,8 +15,8 @@ import {
     settingsGroupsWith,
     type SettingsSectionMeta
 } from '@/shell/settings/sections';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useUi, type CoreSettingsSectionId, type SettingsSectionId } from '@/state/ui';
+import { APP_SHORTCUTS } from '@/surface/shortcuts';
 
 // Each pane is a chunk of its own, loaded when it is opened; the search index in `search.ts` never imports one.
 const PANES: Record<CoreSettingsSectionId, ComponentType> = {

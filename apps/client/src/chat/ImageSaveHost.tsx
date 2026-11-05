@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
 import { GeneratedImageSaveDialog } from '@/chat/GeneratedImageSaveDialog';
-import { imageSaveDialog, ImageSaveSession } from '@/chat/image-save';
-import { ProjectFolderPicker } from '@/shell/panels/ProjectFolderPicker';
+import { imageSaveDialog, ImageSaveSession } from '@/surface/image-save';
+import { ProjectFolderPicker } from '@/surface/panels/ProjectFolderPicker';
 import type { Transport } from '@/transport';
 
 function ImageSaveBody({ session, transport }: { session: ImageSaveSession; transport: Transport }) {

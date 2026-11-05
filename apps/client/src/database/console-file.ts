@@ -6,7 +6,6 @@ import { useDatabasePanel } from '@/clients/database/state';
 import { databaseConnections, ensureDatabaseConnections } from '@/database/connections';
 import { databaseStorageKey } from '@/database/environment';
 import { basenameOf } from '@/paths/file-path';
-import { extensionOf } from '@/shell/panels/file-kind';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { moveFile } from '@/state/file-moves';
@@ -15,6 +14,7 @@ import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { storedText } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
+import { extensionOf } from '@/surface/panels/file-kind';
 import { TransportError, type Transport } from '@/transport-api/transport';
 import { windowWorkspace } from '@/workspace/window';
 
