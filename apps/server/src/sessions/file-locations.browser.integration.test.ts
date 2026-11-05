@@ -19,9 +19,10 @@ const source = (path: string): string => JSON.stringify(join(clientDirectory, 's
 
 /*
  * A mode is one shell history; each of its phases is a test that opens only part of its output, so no test pays for
- * every preview of a history. `open`, `back`, `child` and `parent` take the route the mode names.
+ * every preview of a history. Every phase but `click`, `menu`, `resized`, `cleared` and `precmd` takes the route the
+ * mode names; `child` refuses a subshell's output before the cd and `uncertain` after it.
  */
-type Phase = 'click' | 'menu' | 'resized' | 'cleared' | 'precmd' | 'back' | 'child' | 'parent' | 'open';
+type Phase = 'click' | 'menu' | 'resized' | 'cleared' | 'precmd' | 'back' | 'child' | 'parent' | 'uncertain' | 'open';
 
 const MODES = [
     ['live', ['click', 'menu', 'resized', 'cleared']],
@@ -39,8 +40,8 @@ const MODES = [
     ['redirected-block-menu', ['back', 'open']],
     ['redirected-function-click', ['back', 'open']],
     ['redirected-function-menu', ['back', 'open']],
-    ['subshell-tostop-click', ['child', 'parent', 'open']],
-    ['subshell-tostop-menu', ['child', 'parent', 'open']]
+    ['subshell-tostop-click', ['child', 'parent', 'uncertain', 'open']],
+    ['subshell-tostop-menu', ['child', 'parent', 'uncertain', 'open']]
 ] as const satisfies readonly (readonly [string, readonly Phase[]])[];
 
 type Mode = (typeof MODES)[number][0];
@@ -257,7 +258,7 @@ async function scenario(mode: Mode, phase: Phase | null): Promise<void> {
                     await openLocation(view, 'OLD ', files[0]!, menu, 'ROOT');
                     await openLocation(view, newer, files[1]!, menu, 'NESTED');
                 }
-                if (phase === 'open' && mode.startsWith('subshell-')) {
+                if (phase === 'uncertain') {
                     for (const prefix of ['CHILD ', 'UNCERTAIN ']) {
                         await openLocation(view, prefix, null, menu, '');
                     }
