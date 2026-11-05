@@ -159,7 +159,8 @@ export interface SessionManagerOptions {
 }
 
 export interface CommandGate {
-    approved(sessionId: string, command: string, cwd: string): boolean;
+    /* May settle later, while an approval from before the cwd was bound moves to this cwd on disk. */
+    approved(sessionId: string, command: string, cwd: string): boolean | Promise<boolean>;
     /* Writes down that a person let this node type this command in this folder. */
     approve(sessionId: string, command: string, cwd: string): Promise<void>;
 }
@@ -344,7 +345,9 @@ export class SessionManager {
         }
 
         const held =
-            options.command && options.forClient === undefined && !this.commands.approved(options.sessionId, options.command, cwd) ? options.command : null;
+            options.command && options.forClient === undefined && !(await this.commands.approved(options.sessionId, options.command, cwd))
+                ? options.command
+                : null;
         const startLine = held === null ? (options.command ?? (await this.startLine(options.sessionId, launch, restoredAgent !== undefined))) : undefined;
         const command = startLine === undefined ? undefined : this.handingBack(startLine);
         const session = this.spawn({

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { RecordDirectory } from '@adecore/agents';
+import { Serializer } from '@adecore/utils/async';
 import { isNotFound } from '@adecore/utils/errors';
 import { isCanvasView, type ProjectView, type StandaloneNode } from '@ruimte/contracts';
 import { z } from 'zod';
@@ -42,10 +43,14 @@ export class CommandApprovals {
     private readonly unboundPath: string;
     /* Approvals written before the cwd was bound, which a terminal with a cwd of its own may still carry over once. */
     private unbound = new Set<string>();
+    // One change to the ledger at a time, so an older snapshot of `unbound` never lands after a newer one.
+    private readonly ledger = new Serializer();
+    private readonly writeDocument: (path: string, text: string) => Promise<void>;
 
-    constructor(home: string) {
+    constructor(home: string, options: { writeDocument?: (path: string, text: string) => Promise<void> } = {}) {
         this.approvals = new RecordDirectory({ dir: join(home, 'command-approvals'), schema: ApprovalSchema, idOf: (approval) => approval.hash });
         this.unboundPath = join(home, 'command-approvals-unbound.json');
+        this.writeDocument = options.writeDocument ?? ((path, text) => writeJsonDocument(path, text, (same) => same).then(() => undefined));
     }
 
     /* Reads what an earlier run of the daemon wrote down. Call before any session is made. */
@@ -65,42 +70,64 @@ export class CommandApprovals {
         }
     }
 
-    /*
-     * `cwd` is where a terminal types the command; a launch or a routine binds its own in the digest it passes as `command`.
-     * An approval from before the cwd was bound holds at the first start after the update for the cwd the node has then,
-     * and from then on only there, so a cwd a commit sets later is asked for again.
-     */
+    /* `cwd` is where a terminal types the command; a launch or a routine binds its own in the digest it passes as `command`. */
     has(folder: string, nodeId: string, command: string, cwd?: string): boolean {
-        const hash = hashOf(folder, nodeId, command, cwd);
-        const unbound = approvalHash(folder, nodeId, command);
-        const carried = this.unbound.delete(unbound);
-
-        if (carried) {
-            void this.saveUnbound().catch(() => undefined);
-        }
-
-        if (this.approvals.has(hash)) {
-            return true;
-        }
-
-        if (hash === unbound || !carried || !this.approvals.has(unbound)) {
-            return false;
-        }
-
-        void this.approvals.write({ hash, approvedAt: Date.now() }).catch(() => undefined);
-
-        return true;
+        return this.approvals.has(hashOf(folder, nodeId, command, cwd));
     }
 
-    async approve(folder: string, nodeId: string, command: string, cwd?: string): Promise<void> {
-        if (this.has(folder, nodeId, command, cwd)) {
-            return;
-        }
-        await this.approvals.write({ hash: hashOf(folder, nodeId, command, cwd), approvedAt: Date.now() });
+    /*
+     * Whether a terminal starting now may type its command. An approval from before the cwd was bound moves,
+     * at the first start after the update, to the cwd the node has then, and from then on holds only there,
+     * so a cwd a commit sets later is asked for again. It answers only once that move is on disk.
+     */
+    admit(folder: string, nodeId: string, command: string, cwd?: string): Promise<boolean> {
+        return this.ledger.run(async () => {
+            const hash = hashOf(folder, nodeId, command, cwd);
+            const unbound = approvalHash(folder, nodeId, command);
+
+            if (!this.unbound.has(unbound)) {
+                return this.approvals.has(hash);
+            }
+
+            const carried = this.approvals.has(unbound);
+
+            // Spent first, so a crash in between only ever asks again and never carries the approval twice.
+            this.unbound.delete(unbound);
+
+            try {
+                await this.saveUnbound();
+            } catch {
+                this.unbound.add(unbound);
+
+                return false;
+            }
+
+            if (hash === unbound || !carried) {
+                return this.approvals.has(hash);
+            }
+
+            try {
+                await this.approvals.remove(unbound);
+
+                return await this.approvals.write({ hash, approvedAt: Date.now() });
+            } catch {
+                return false;
+            }
+        });
+    }
+
+    approve(folder: string, nodeId: string, command: string, cwd?: string): Promise<void> {
+        return this.ledger.run(async () => {
+            if (this.has(folder, nodeId, command, cwd)) {
+                return;
+            }
+
+            await this.approvals.write({ hash: hashOf(folder, nodeId, command, cwd), approvedAt: Date.now() });
+        });
     }
 
     private async saveUnbound(): Promise<void> {
-        await writeJsonDocument(this.unboundPath, { hashes: [...this.unbound] }, (document) => JSON.stringify(document));
+        await this.writeDocument(this.unboundPath, JSON.stringify({ hashes: [...this.unbound] }));
     }
 }
 

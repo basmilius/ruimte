@@ -4,7 +4,7 @@ import { SessionError, type CommandGate } from '../sessions/manager.ts';
 import { startCwdGuard } from '../tools/project-paths.ts';
 
 interface AgentBoundsDeps {
-    commandApprovals: Pick<CommandApprovals, 'has' | 'approve'>;
+    commandApprovals: Pick<CommandApprovals, 'admit' | 'approve'>;
     /* The widest mode the lineage gives a node; null for no limit. */
     ceilingOf(nodeId: string): RuntimeMode | null;
     madeByAgent(nodeId: string): boolean;
@@ -28,7 +28,7 @@ export function agentBounds(deps: AgentBoundsDeps): AgentBounds {
             approved: (nodeId, command, cwd) => {
                 const folder = deps.folderOf(nodeId);
 
-                return folder !== null && deps.commandApprovals.has(folder, nodeId, command, cwd);
+                return folder !== null && deps.commandApprovals.admit(folder, nodeId, command, cwd);
             },
             approve: async (nodeId, command, cwd) => {
                 const folder = deps.folderOf(nodeId);
