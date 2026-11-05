@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { clientDirectory, frame, waitInPage, withBrowserFixture } from '../../testing/browser-fixture';
+import { WARM_LOADS, clientDirectory, frame, waitInPage, withBrowserFixture } from '../../testing/browser-fixture';
 
 type View = InstanceType<typeof Bun.WebView>;
 const plain = '  héllo  \n\tkeep spaces\n\n';
@@ -78,9 +78,10 @@ async function fixture(run: (view: View) => Promise<void>): Promise<void> {
     );
 }
 
-// The first page of a file pays for the bundle, Chrome's start and the first parse of its scripts. Bun does not time
-// out a file's top level, so it is paid here and not in the first test.
-await fixture(async () => {});
+// What `warmBrowserFixture` does, with the fixture's own check that the page drew.
+for (let load = 0; load < WARM_LOADS; load++) {
+    await fixture(async () => {});
+}
 
 function waitFor(view: View, expression: string): Promise<void> {
     return waitInPage(view, expression);

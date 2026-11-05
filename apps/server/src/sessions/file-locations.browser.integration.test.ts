@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PROTOCOL_VERSION } from '@ruimte/contracts';
-import { clientDirectory, waitInPage, withBrowserFixture } from '../../../client/testing/browser-fixture.ts';
+import { WARM_LOADS, clientDirectory, waitInPage, withBrowserFixture } from '../../../client/testing/browser-fixture.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { registerSessionHandlers } from '../handlers/session.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
@@ -46,9 +46,10 @@ const MODES = [
 
 type Mode = (typeof MODES)[number][0];
 
-// The first page of a file pays for the bundle, Chrome's start and the first parse of its scripts. Bun does not time
-// out a file's top level, so it is paid here and not in the first test.
-await scenario('live', null);
+// What `warmBrowserFixture` does, with the shell and daemon the page needs.
+for (let load = 0; load < WARM_LOADS; load++) {
+    await scenario('live', null);
+}
 
 for (const [mode, phases] of MODES) {
     for (const phase of phases) {

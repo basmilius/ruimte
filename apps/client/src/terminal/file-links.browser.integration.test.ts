@@ -3,7 +3,7 @@ import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PROTOCOL_VERSION } from '@ruimte/contracts';
-import { clientDirectory, frame, waitInPage, withBrowserFixture } from '../../testing/browser-fixture';
+import { WARM_LOADS, clientDirectory, frame, waitInPage, withBrowserFixture } from '../../testing/browser-fixture';
 
 type View = InstanceType<typeof Bun.WebView>;
 const relative = 'src/例 folder with spaces/a sufficiently long file name.ts';
@@ -152,9 +152,10 @@ async function pointAt(view: View, owner: string, row: number, column = 2): Prom
     })()`);
 }
 
-// The first page of a file pays for the bundle, Chrome's start and the first parse of its scripts. Bun does not time
-// out a file's top level, so it is paid here and not in the first test.
-await fixture(false, async () => {});
+// What `warmBrowserFixture` does, with the data the page needs.
+for (let load = 0; load < WARM_LOADS; load++) {
+    await fixture(false, async () => {});
+}
 
 const tooltipCleanups: readonly (readonly [string, (view: View, text: string) => Promise<void>, (view: View) => Promise<void>])[] = [
     [

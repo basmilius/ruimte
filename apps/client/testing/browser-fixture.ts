@@ -202,14 +202,22 @@ async function buildPage(entryCode: string, styles: string, production: boolean)
 }
 
 /*
- * Opens a file's page once from its top level, which Bun does not time out, so its first test does not pay for the
- * bundle, Chrome's start and the first parse of the scripts.
+ * How often a file opens its page before its tests. Chrome keeps a script's compiled code only from its second load
+ * on, so the tests find it compiled from the third; on the CI runner a file's first tests got faster test by test.
+ */
+export const WARM_LOADS = 2;
+
+/*
+ * Opens a file's page from its top level, which Bun does not time out, so its first tests do not pay for the bundle,
+ * Chrome's start and compiling the scripts.
  */
 export async function warmBrowserFixture(entryCode: string, styles: string, options: BrowserFixtureOptions = {}): Promise<void> {
-    try {
-        await withBrowserFixture(entryCode, styles, async () => {}, options);
-    } catch {
-        // The page runs without the data a test hands it, so what it throws says nothing; a page that cannot build fails its tests.
+    for (let load = 0; load < WARM_LOADS; load++) {
+        try {
+            await withBrowserFixture(entryCode, styles, async () => {}, options);
+        } catch {
+            // The page runs without the data a test hands it, so what it throws says nothing; a page that cannot build fails its tests.
+        }
     }
 }
 
