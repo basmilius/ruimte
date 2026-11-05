@@ -47,7 +47,7 @@ afterEach(async () => {
     useSettings.setState({ aiInlineAgent: { provider: 'claude', model: null }, aiAssistAgent: null });
 });
 
-test('Editor AI shows Haiku for an automatic Claude choice even when the CLI defaults to Sonnet', async () => {
+test("Editor AI shows the CLI's own Sonnet for an inline edit with no model chosen, and Haiku once it is chosen", async () => {
     const machine = new FakeMachine();
     machine.answer('provider.list', () => ({ providers: [CLAUDE] }));
     machine.answer('editor.status', () => ({ available: true, provider: 'claude' as const, model: 'claude-haiku-5-5', modelName: 'Claude Haiku 5.5' }));
@@ -57,11 +57,11 @@ test('Editor AI shows Haiku for an automatic Claude choice even when the CLI def
     await page.renderApp();
     await act(async () => useUi.getState().setSettings({ open: true, section: 'editor', target: 'editor.ai.inlineAgent' }));
     const modelButtons = (): HTMLButtonElement[] => [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')];
-    await until(() => modelButtons().some((button) => button.textContent?.includes('Claude Haiku 5.5')));
-    expect(modelButtons().some((button) => button.textContent?.includes('Claude Sonnet 5.5'))).toBe(false);
-    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Code is sent to the selected provider.');
-
-    await act(async () => useSettings.setState({ aiInlineAgent: { provider: 'claude', model: 'claude-sonnet-5-5' } }));
     await until(() => modelButtons().some((button) => button.textContent?.includes('Claude Sonnet 5.5')));
     expect(modelButtons().some((button) => button.textContent?.includes('Claude Haiku 5.5'))).toBe(false);
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Code is sent to the selected provider.');
+
+    await act(async () => useSettings.setState({ aiInlineAgent: { provider: 'claude', model: 'claude-haiku-5-5' } }));
+    await until(() => modelButtons().some((button) => button.textContent?.includes('Claude Haiku 5.5')));
+    expect(modelButtons().some((button) => button.textContent?.includes('Claude Sonnet 5.5'))).toBe(false);
 });

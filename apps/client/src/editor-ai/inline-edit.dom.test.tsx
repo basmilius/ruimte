@@ -121,7 +121,7 @@ describe('an inline edit', () => {
         await pressKey(question()!, 'Enter');
         await until(() => machine.requests('chat.send').length > 0);
 
-        expect(machine.requests('project.newInlineChat')).toEqual([{ projectId: 'project-atlas', path: 'greet.ts', provider: 'claude', model: 'model' }]);
+        expect(machine.requests('project.newInlineChat')).toEqual([{ projectId: 'project-atlas', path: 'greet.ts', provider: 'claude' }]);
         expect(machine.requests('chat.send')[0]).toMatchObject({ chatId: CHAT_ID, mentions: ['greet.ts'] });
         expect(machine.requests('chat.send')[0]?.text).toContain('greet with hello');
         expect(machine.requests('chat.send')[0]?.text).toContain('return "hi " + name;');
