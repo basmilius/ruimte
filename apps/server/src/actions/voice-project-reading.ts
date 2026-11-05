@@ -14,8 +14,8 @@ import {
     type ProjectView,
     nodeChats
 } from '@ruimte/contracts';
-import type { VoiceOpenProject } from '../actions/context.ts';
 import type { IndexedPlace, ProjectIndex } from '../projects/project-index.ts';
+import type { VoiceOpenProject } from './context.ts';
 
 /*
  * What Voice on the daemon reads of a project file: the views a person can open and the nodes of the

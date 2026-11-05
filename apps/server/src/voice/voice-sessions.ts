@@ -1,9 +1,9 @@
 import { CodedError } from '@adecore/agents';
 import type { VoiceConfirmPayload, VoiceStartPayload, VoiceStartResult, VoiceStopPayload } from '@ruimte/contracts';
+import { voicePlace } from '../actions/voice-project-reading.ts';
 import type { IndexedPlace, ProjectIndex } from '../projects/project-index.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { sendEvent, type ClientConnection } from '../wire.ts';
-import { voicePlace } from './project-reading.ts';
 import { VoiceSession, type VoiceSessionDeps } from './voice-session.ts';
 
 // Each session costs money by the minute and holds a sideband, so a machine runs a few at most.

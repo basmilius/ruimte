@@ -1,8 +1,8 @@
 import { VISUAL_LIMITS, VisualLayoutSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 import { visualRow, visualRows } from '../actions/visual-actions.ts';
+import { prepareVisualPage, type ImageFiles } from '../agent-files/visual-images.ts';
 import { field, requiredField } from '../canvas/host.ts';
-import { prepareVisualPage, type ImageFiles } from '../mcp/visual-images.ts';
 import { PREVIEW_WIDTH } from '../visuals/renderer.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
 import { defineToolkit, type ToolCall } from './tool.ts';

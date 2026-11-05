@@ -1,6 +1,6 @@
 import { CHAT_MODEL_MAX_BYTES } from '@ruimte/contracts';
+import { imageType, VISUAL_IMAGE_BYTES } from '../agent-files/visual-images.ts';
 import { sniffMime } from '../disk/sniff.ts';
-import { imageType, VISUAL_IMAGE_BYTES } from '../mcp/visual-images.ts';
 
 /*
  * What an agent may attach to its chat, read off the bytes and never the name. The daemon checks

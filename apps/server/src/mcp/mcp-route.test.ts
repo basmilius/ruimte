@@ -4,12 +4,12 @@ import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { NODE_SIZE, type ProjectContent } from '@ruimte/contracts';
 import { z } from 'zod';
+import { AgentFiles, readOpened } from '../agent-files/files.ts';
 import type { CanvasHost } from '../canvas/host.ts';
 import { ContextRefusal } from '../context/context-store.ts';
 import { ProjectError } from '../projects/project-error.ts';
 import { defineTool, defineToolkit } from '../tools/tool.ts';
 import { buildCatalog, type ToolContext } from './catalog.ts';
-import { AgentFiles, readOpened } from './files.ts';
 import { callTool, handleMcpRequest, visibleTools } from './mcp-route.ts';
 
 const PLACE = { projectId: 'p1', folder: '/nowhere/repo', canvasId: 'main' };

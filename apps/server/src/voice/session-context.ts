@@ -1,8 +1,8 @@
 import type { VoiceOpenProject } from '../actions/context.ts';
+import { agentReading } from '../actions/voice-agent-reading.ts';
+import { openableViews, projectAgents, visibleCanvas } from '../actions/voice-project-reading.ts';
 import type { CanvasHost } from '../canvas/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import { agentReading } from './agent-reading.ts';
-import { openableViews, projectAgents, visibleCanvas } from './project-reading.ts';
 
 // The nodes and views a context names; past these it says how many more there are.
 const LISTED = 30;

@@ -8,6 +8,7 @@ import {
     type VoiceChatFollowUp,
     type VoiceCompletionDelivery
 } from '@ruimte/voice';
+import type { VoiceFollowedChat, VoiceFollowHost, VoicePromptTicket, VoiceStartTicket } from '../actions/context.ts';
 import type { VoiceClock } from './clock.ts';
 
 /* How long a chat Voice started may take from its node to the turn its first prompt opens, before Voice says it is not confirmed. */
@@ -40,32 +41,6 @@ interface VoiceFollowerDeps {
     delivery: Pick<VoiceCompletionDelivery, 'enqueue' | 'report' | 'cancelChat'>;
     clock: VoiceClock;
     activity(entry: VoiceFollowActivity): void;
-}
-
-/* Where a chat stands in the eyes of Voice, by name, to say which one it means. */
-interface VoiceFollowedChat {
-    chat: string;
-    project: string;
-}
-
-/* Taken before a prompt goes out, so no turn it opens can end unheard; bound to the turn once the chat names it. */
-interface VoicePromptTicket {
-    bind(turnId: string): void;
-    drop(): void;
-}
-
-/* Taken before a start, bound to the node the start made. */
-interface VoiceStartTicket {
-    bind(chatId: string, chat: VoiceFollowedChat): void;
-    drop(): void;
-}
-
-/* What the actions of a session reach the follower through. */
-export interface VoiceFollowHost {
-    expectPrompt(chatId: string, chat: VoiceFollowedChat): VoicePromptTicket;
-    expectStart(): VoiceStartTicket;
-    /* A chat Voice cleared: what was followed in it and what waits to be told of it go. */
-    cleared(chatId: string): void;
 }
 
 interface Followed {

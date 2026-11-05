@@ -78,7 +78,7 @@ describe('findImageReferences', () => {
             '<img src="data:image/png;base64,iVBORw0KGgo=">',
             '<img src="blob:https://example.com/0f6c.png">',
             '<img src="images/a.png">',
-            '<img src="./a.png">',
+            '<img src="../mcp/a.png">',
             '<img src="../a.png">',
             '<a href="/tmp/notes.txt">',
             '<img src="/tmp/a.png?v=2">',

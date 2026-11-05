@@ -7,10 +7,10 @@ import {
     type ToolSpec as CoreToolSpec
 } from '@adecore/agents/context';
 import { z } from 'zod';
+import type { AgentFiles } from '../agent-files/files.ts';
+import type { ArtifactUploads } from '../agent-files/uploads.ts';
 import type { AgentCall } from '../canvas/host.ts';
 import { reachedPlace } from '../canvas/reach.ts';
-import type { AgentFiles } from '../mcp/files.ts';
-import type { ArtifactUploads } from '../mcp/uploads.ts';
 import { countToolCall } from '../stats/usage-stats.ts';
 import { noteActivity } from '../telemetry/activity.ts';
 

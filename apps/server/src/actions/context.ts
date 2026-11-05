@@ -3,7 +3,32 @@ import type { ActionCall } from '@ruimte/actions';
 import { type CanvasHost, type ProjectHost, type AgentCall } from '../canvas/host.ts';
 import { callerKind } from '../canvas/tasks.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import type { VoiceFollowHost } from '../voice/voice-follower.ts';
+
+/* Where a chat stands in the eyes of Voice, by name, to say which one it means. */
+export interface VoiceFollowedChat {
+    chat: string;
+    project: string;
+}
+
+/* Taken before a prompt goes out, so no turn it opens can end unheard; bound to the turn once the chat names it. */
+export interface VoicePromptTicket {
+    bind(turnId: string): void;
+    drop(): void;
+}
+
+/* Taken before a start, bound to the node the start made. */
+export interface VoiceStartTicket {
+    bind(chatId: string, chat: VoiceFollowedChat): void;
+    drop(): void;
+}
+
+/* What the actions of a session reach the follower through. */
+export interface VoiceFollowHost {
+    expectPrompt(chatId: string, chat: VoiceFollowedChat): VoicePromptTicket;
+    expectStart(): VoiceStartTicket;
+    /* A chat Voice cleared: what was followed in it and what waits to be told of it go. */
+    cleared(chatId: string): void;
+}
 
 export interface ServerActionContext {
     host: CanvasHost;

@@ -3,8 +3,9 @@ import { MAX_PROMPT_LENGTH, pendingRequestsOf, type ActionHandlers, type ActionI
 import { isChatNode, type ChatItem, type ProjectContent } from '@ruimte/contracts';
 import { matchName, resolveNames, type VoiceNameMatch } from '@ruimte/voice';
 import { type CanvasHost } from '../canvas/host.ts';
-import { agentReading } from '../voice/agent-reading.ts';
-import { chatExcerpt } from '../voice/chat-excerpt.ts';
+import { hostService, noVoiceProject, type ServerActionContext, type VoiceCaller, type VoiceOpenProject } from './context.ts';
+import { agentReading } from './voice-agent-reading.ts';
+import { chatExcerpt } from './voice-chat-excerpt.ts';
 import {
     nodeKindOf,
     nodeTarget,
@@ -16,8 +17,7 @@ import {
     visibleCanvas,
     type VoiceAgentPlace,
     type VoiceTarget
-} from '../voice/project-reading.ts';
-import { hostService, noVoiceProject, type ServerActionContext, type VoiceCaller, type VoiceOpenProject } from './context.ts';
+} from './voice-project-reading.ts';
 
 const DEFAULT_READ = 20;
 

@@ -17,13 +17,13 @@ import type {
 } from '@ruimte/contracts';
 import { contextChunks, daemonVoiceTools, liveSessionBody, VoiceCompletionDelivery, VoiceToolLoop, type LiveEvent } from '@ruimte/voice';
 import { voiceActionCall, type ServerActionContext, type VoiceCaller, type VoiceOpenProject } from '../actions/context.ts';
+import { openProjects } from '../actions/voice-project-reading.ts';
 import { type CanvasHost } from '../canvas/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { voicePolicy } from './action-policy.ts';
 import type { VoiceClock } from './clock.ts';
 import { LiveError, type OpenAiLive } from './openai-live.ts';
 import { voicePreferencesFor } from './preferences-store.ts';
-import { openProjects } from './project-reading.ts';
 import { phonePrompts } from './prompts.ts';
 import { sessionContext, timeContext } from './session-context.ts';
 import type { LiveSideband } from './sideband.ts';

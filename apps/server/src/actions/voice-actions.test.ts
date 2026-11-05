@@ -3,8 +3,7 @@ import type { ActionOutput } from '@ruimte/actions';
 import type { AgentInfo, ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
 import type { CanvasHost } from '../canvas/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import type { VoiceFollowHost } from '../voice/voice-follower.ts';
-import { serverActionCall, voiceActionCall, type VoiceCaller } from './context.ts';
+import { serverActionCall, voiceActionCall, type VoiceCaller, type VoiceFollowHost } from './context.ts';
 import { serverActions } from './server-actions.ts';
 
 const PLACE: IndexedPlace = { projectId: 'project-1', folder: '/work/app', canvasId: 'main' };
