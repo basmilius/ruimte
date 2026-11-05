@@ -1,4 +1,4 @@
-import { containsPoint, type Point } from '@/canvas/math';
+import { containsPoint, type Point } from '@/canvas-model/math';
 import type { StackedNode } from '@/canvas/stacking';
 
 /*

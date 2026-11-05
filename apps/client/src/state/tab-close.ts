@@ -1,4 +1,4 @@
-import { cellAt, cellViewIds, locateView } from '@/shell/split';
+import { cellAt, cellViewIds, locateView } from '@/layout/split';
 import { asksOnClose } from '@/state/cell-close';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';

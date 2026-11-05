@@ -3,7 +3,7 @@ import { FakeEditorEngine } from '@adecore/editor/fake';
 import type { FsReadResult, FsWriteResult } from '@ruimte/contracts';
 import { bindDraftEditor, mountDraftEditor } from '@/shell/panels/draft-editor';
 import { AUTOSAVE_DELAY_MS, type DraftLink, TextDrafts, useTextDrafts } from '@/state/text-drafts';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 
 const MACHINE = 'm1';
 const PATH = '/repo/a.ts';

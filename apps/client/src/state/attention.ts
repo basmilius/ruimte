@@ -10,11 +10,11 @@ import {
     type SplitLayout
 } from '@ruimte/contracts';
 import { create } from 'zustand';
-import { intersects, isMeasured, visibleRect, type Rect } from '@/canvas/math';
+import { intersects, isMeasured, visibleRect, type Rect } from '@/canvas-model/math';
 import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
 import { desktop } from '@/desktop/bridge';
+import { shownViewIdsIn } from '@/layout/split';
 import { nodeRefsOfView, projectNodes, useViewNodes } from '@/project/view-nodes';
-import { shownViewIdsIn } from '@/shell/split';
 import { nodeWorking } from '@/state/agent-work';
 import { liveCanvas, subscribeCanvases } from '@/state/canvas';
 import { subscribeChatStatuses } from '@/state/chats';

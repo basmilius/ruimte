@@ -6,7 +6,7 @@ import { readLargeText } from '@/shell/panels/large-text';
 import { endpointKey } from '@/state/keys';
 import { windowWorkspace } from '@/state/window';
 import { transportFor } from '@/transport';
-import { isConnectionError, TransportError } from '@/transport/transport';
+import { isConnectionError, TransportError } from '@/transport-api/transport';
 import { writeMachineText } from '@/transport/write-text';
 
 /* How long typing has to pause before the draft goes to disk. */

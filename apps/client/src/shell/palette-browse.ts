@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import { nameOf, type MachineEntry } from '@/shell/settings/machine-list';
-import type { ConnectionState } from '@/transport/transport';
+import type { ConnectionState } from '@/transport-api/transport';
 
 /* The daemon's separator, not this browser's: a Windows daemon answers in backslashes. */
 export function separatorFor(platform: string | null): string {

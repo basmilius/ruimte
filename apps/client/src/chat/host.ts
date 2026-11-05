@@ -6,7 +6,7 @@ import i18next from 'i18next';
 import { createElement } from 'react';
 import { perform, PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
 import { askBeforeStoppingSubagents, askBeforeStoppingTask } from '@/agents/end-children';
-import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel, type AccentId } from '@/canvas/accents';
+import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel, type AccentId } from '@/canvas-model/accents';
 import DiffSyntaxWorker from '@/chat/diff-syntax.worker?worker';
 import { searchFiles } from '@/chat/file-search';
 import { openLogin } from '@/chat/login';
@@ -37,10 +37,10 @@ import { useTheme } from '@/state/theme';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { transportFor, type Transport } from '@/transport';
+import { readPiece } from '@/transport-api/piece';
 import { readResource } from '@/transport/byte-transfer';
 import { useMachineAnswers } from '@/transport/features';
 import { useMachineUrl } from '@/transport/machine-url';
-import { readPiece } from '@/transport/piece';
 import { RuimteMark } from '@/ui/RuimteMark';
 
 /* Every action goes through the registry as the person who clicked, the same door Voice uses. */

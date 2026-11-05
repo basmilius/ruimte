@@ -1,6 +1,6 @@
 import type { LiveStreamFrame } from '@ruimte/contracts';
+import type { Transport } from '@/transport-api/transport';
 import { HandlerTable } from '@/transport/handler-table';
-import type { Transport } from '@/transport/transport';
 
 /* The live frames of the pages and devices a client follows, by key, with the last one of each kept. */
 export class LatestFrames {

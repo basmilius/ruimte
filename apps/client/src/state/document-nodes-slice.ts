@@ -12,7 +12,7 @@ import {
     type ProjectView,
     type SplitLayout
 } from '@ruimte/contracts';
-import { activateTab, closeTab, locateView, replaceViewId } from '@/shell/split';
+import { activateTab, closeTab, locateView, replaceViewId } from '@/layout/split';
 import type { DocumentState } from '@/state/document';
 import { centerOfView, withRenamedNode, type DocumentKit } from '@/state/document-model';
 import { defaultNodeSize, machineNodeSizes } from '@/state/node-size';

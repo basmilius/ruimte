@@ -1,7 +1,7 @@
 import type { ProjectPanels } from '@ruimte/contracts';
 import { faviconsOfProject, useBrowser } from '@/browser/registry';
 import { useDatabasePanel } from '@/database/state';
-import { shownViewIdsIn } from '@/shell/split';
+import { shownViewIdsIn } from '@/layout/split';
 import { useDocument } from '@/state/document';
 import { useFiles, type Tab } from '@/state/files';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE, useGit } from '@/state/git';

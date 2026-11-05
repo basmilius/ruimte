@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ConnectionState } from './transport';
+import type { ConnectionState } from '../transport-api/transport';
 import { reconnectStale, startWakeReconnect, type WakePool } from './wake';
 
 function fakePool(states: Record<string, ConnectionState>): WakePool & { reconnected: string[] } {

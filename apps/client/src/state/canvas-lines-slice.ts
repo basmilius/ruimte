@@ -1,5 +1,5 @@
 import type { ProjectCanvasLine } from '@ruimte/contracts';
-import { snapLine } from '@/canvas/line-geometry';
+import { snapLine } from '@/canvas-model/line-geometry';
 import type { CanvasState } from '@/state/canvas';
 import { droppedIntoGroups, nextId, remember, type CanvasGet, type CanvasSet } from '@/state/canvas-model';
 

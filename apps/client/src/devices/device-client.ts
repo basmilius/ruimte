@@ -15,10 +15,10 @@ import i18next from 'i18next';
 import { powerKey, useDevicePowers } from '@/devices/device-power';
 import { eventStreamFields, LatestFrames } from '@/devices/latest-frames';
 import { useDevices } from '@/devices/state';
+import { decodeBase64 } from '@/transport-api/piece';
+import { isConnectionError, type Transport, type TransportStatus } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { HandlerTable } from '@/transport/handler-table';
-import { decodeBase64 } from '@/transport/piece';
-import { isConnectionError, type Transport, type TransportStatus } from '@/transport/transport';
 
 interface MountedDevice extends MountedEntry {
     refs: number;

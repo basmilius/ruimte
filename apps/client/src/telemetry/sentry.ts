@@ -19,7 +19,7 @@ import {
     withScope
 } from '@sentry/browser';
 import { useProjectList } from '@/state/project-list';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { CLIENT_TAGS, connectionEvent, storageDedupeStore, type ConnectionProblem } from './events';
 import type { PageMetric } from './metrics';
 

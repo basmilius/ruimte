@@ -12,8 +12,8 @@ import { useSessions, type SessionsByKey } from '@/state/sessions';
 import { useSettings, type Settings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
+import { TransportError } from '@/transport-api/transport';
 import { adoptEndpointInfo } from '@/transport/server-info';
-import { TransportError } from '@/transport/transport';
 
 export type KeepAwakeSettings = Pick<Settings, 'keepAwake' | 'keepAwakeOnBattery' | 'keepAwakeDisplay'>;
 

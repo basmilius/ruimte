@@ -47,11 +47,11 @@ import { addAgentView, addDesignView } from '@/agents/nodes';
 import { databaseViewName } from '@/database/view-name';
 import { databaseViewShareRefusal } from '@/database/view-sharing';
 import { freeDesignFolder } from '@/design/design-folder';
+import { locateView } from '@/layout/split';
 import { saveViewFiles, viewDeletionFacts, type ViewDeletionMachine } from '@/project/view-deletion';
 import { nodesOfView } from '@/project/view-nodes';
 import { offerViewUndo } from '@/project/view-trash';
 import { basenameOf } from '@/shell/panels/files-tree';
-import { locateView } from '@/shell/split';
 import { canvasInReach } from '@/state/canvas-target';
 import type { DocumentState } from '@/state/document';
 

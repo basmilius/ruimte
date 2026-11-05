@@ -62,7 +62,7 @@ public enum RuimteColors {
     /// The ground a Live Activity puts under its own card, which the system never lightens.
     public static let activityTint = RuimteColorToken(light: 0x1b1b21, dark: 0x1b1b21)
 
-    /// The node accents by id, as `apps/client/src/canvas/accents.ts` paints them; an account wears one of these.
+    /// The node accents by id, as `apps/client/src/canvas-model/accents.ts` paints them; an account wears one of these.
     public static let nodeAccents: [String: UInt32] = [
         "red": 0xe7000b, "orange": 0xf54900, "amber": 0xe17100, "yellow": 0xd08700, "lime": 0x5ea500,
         "green": 0x00a63e, "emerald": 0x009966, "teal": 0x009689, "cyan": 0x0092b8, "sky": 0x0084d1,

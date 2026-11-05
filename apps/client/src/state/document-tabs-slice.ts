@@ -15,7 +15,7 @@ import {
     replaceViewId,
     showViewIn,
     ungroup
-} from '@/shell/split';
+} from '@/layout/split';
 import type { DocumentState } from '@/state/document';
 import { canStandInCell, cellViewOf, type DocumentKit } from '@/state/document-model';
 

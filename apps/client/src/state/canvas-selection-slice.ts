@@ -1,5 +1,5 @@
-import { lineBounds } from '@/canvas/line-geometry';
-import { intersects } from '@/canvas/math';
+import { lineBounds } from '@/canvas-model/line-geometry';
+import { intersects } from '@/canvas-model/math';
 import type { CanvasState } from '@/state/canvas';
 import { maximizedNodeOf, type CanvasGet, type CanvasSet } from '@/state/canvas-model';
 import { mergeSelection } from '@/state/selection';

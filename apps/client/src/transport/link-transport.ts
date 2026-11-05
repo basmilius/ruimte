@@ -16,10 +16,10 @@ import {
 import i18next from 'i18next';
 import type { LinkProblem } from '@/telemetry/events';
 import type { LinkOutcome, ReconnectReason } from '@/telemetry/metrics';
-import type { BytesPiece } from './piece';
+import type { BytesPiece } from '../transport-api/piece';
+import { TransportError, type ConnectionState, type LiveFrameHandler, type SignalRoute, type TransportStatus } from '../transport-api/transport';
 import type { PooledTransport } from './pool';
 import { protocolGate } from './protocol';
-import { TransportError, type ConnectionState, type LiveFrameHandler, type SignalRoute, type TransportStatus } from './transport';
 
 const RECONNECT_MIN_MS = 500;
 const RECONNECT_MAX_MS = 10_000;

@@ -5,7 +5,7 @@ import { useRef, type RefObject } from 'react';
 import { create } from 'zustand';
 import { ignoreRefusal, perform } from '@/actions/client-actions';
 import { isApplePlatform } from '@/desktop/bridge';
-import { cellElement } from '@/shell/cell-rects';
+import { cellElement } from '@/layout/cell-rects';
 import { requiredShortcut } from '@/shell/editor-keymap';
 import { createFocusRegistry } from '@/shell/panels/focus-registry';
 import { useDocument } from '@/state/document';

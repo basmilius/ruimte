@@ -1,7 +1,7 @@
 import { isChatNode } from '@ruimte/contracts';
-import type { EdgeLine } from '@/canvas/edge-lines';
 import { lineMeaning } from '@/canvas/edge-look';
 import type { CanvasNode } from '@/state/canvas';
+import type { EdgeLine } from '@/state/edge-lines';
 
 /* How long a page goes without an ask before the pet walks home. */
 export const TRIP_QUIET_MS = 5_000;

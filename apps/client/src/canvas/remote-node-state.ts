@@ -1,8 +1,8 @@
 import { useRemoteRefusals } from '@/project/remote-refusals';
 import { useEndpoints } from '@/state/endpoints';
+import type { ConnectionState } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { useEndpointConnection } from '@/transport/status';
-import type { ConnectionState } from '@/transport/transport';
 
 /*
  * What a node that runs on another machine can do right now. `ready` is the usual body, loading

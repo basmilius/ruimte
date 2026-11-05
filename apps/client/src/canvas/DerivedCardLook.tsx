@@ -2,7 +2,7 @@ import { Icon } from '@adecore/ui';
 import clsx from 'clsx';
 import { ChevronRight } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
-import { accentShades } from '@/canvas/accents';
+import { accentShades } from '@/canvas-model/accents';
 import { FRAME } from '@/canvas/derived-card-look';
 
 /*

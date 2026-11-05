@@ -4,7 +4,7 @@ import { Copy, Pencil, Trash } from 'lucide-react';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { deleteNodesAction } from '@/actions/client-actions';
-import { accentColor } from '@/canvas/accents';
+import { accentColor } from '@/canvas-model/accents';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { FONT_STACK } from '@/canvas/text-font';
 import { loadDrawingFont } from '@/drawing/fonts';

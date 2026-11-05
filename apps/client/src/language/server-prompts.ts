@@ -2,8 +2,8 @@ import { resolveStoredPath } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { openInSystemBrowser } from '@/desktop/bridge';
 import { useToasts } from '@/state/toasts';
+import type { Transport } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
-import type { Transport } from '@/transport/transport';
 import { nameOf } from './status-view';
 
 /* Type 1 and 2 of LSP's `MessageType` are the error and the warning. */

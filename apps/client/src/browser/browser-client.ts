@@ -4,8 +4,8 @@ import type { BrowserInfo, BrowserInput, LiveFrameHeader, LiveStreamFrame } from
 import i18next from 'i18next';
 import { eventStreamFields, LatestFrames } from '@/devices/latest-frames';
 import { endpointKey } from '@/state/keys';
-import { decodeBase64 } from '@/transport/piece';
-import { isConnectionError, type Transport, type TransportStatus } from '@/transport/transport';
+import { decodeBase64 } from '@/transport-api/piece';
+import { isConnectionError, type Transport, type TransportStatus } from '@/transport-api/transport';
 import { useBrowser } from './registry';
 
 interface MountedBrowser extends MountedEntry {

@@ -12,12 +12,12 @@ import {
 } from '@ruimte/contracts';
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
-import type { LooseStrip } from '@/shell/legacy-files-cell';
+import type { LooseStrip } from '@/layout/legacy-files-cell';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { stripOf } from '@/state/panel-state';
 import { browserStorage } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
-import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport/transport';
+import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport-api/transport';
 import { overlayLocal, readClientLocal, withoutClientBrowserState, writeClientLocal } from './client-local';
 import { forgetClosedProject, rememberClosedProject } from './closed-projects';
 import { readDeletedViews, writeDeletedViews } from './deleted-views';

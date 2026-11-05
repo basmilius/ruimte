@@ -1,5 +1,5 @@
 import { moveViewAction } from '@/actions/client-actions';
-import type { CellAt, SplitZone } from '@/shell/split';
+import type { CellAt, SplitZone } from '@/layout/split';
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
 import { artifactTabKey, openArtifactTab, useFiles } from '@/state/files';

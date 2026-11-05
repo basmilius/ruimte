@@ -5,7 +5,7 @@ import i18next from 'i18next';
 import { FolderSearch, ImageUp } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
+import { accentLabel, NODE_ACCENTS } from '@/canvas-model/accents';
 import { PROJECT_ICON_KEYWORDS } from '@/project/project-icons';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { useProjectIconGroups } from '@/project/use-project-icon-groups';

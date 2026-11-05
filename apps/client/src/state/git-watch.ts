@@ -4,7 +4,7 @@ import { pathAffected } from '@/state/changed-paths';
 import { HeldWatches, type HeldWatch } from '@/state/held-watches';
 import { currentEndpointId, endpointKey, useEndpointId } from '@/state/keys';
 import { machineTransport, transportFor } from '@/transport';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 /* The checkouts this client is watching, counted, so the files panel letting go of what the git panel still looks at leaves neither blind. */
 export class GitWatches extends HeldWatches<GitWatchResult> {

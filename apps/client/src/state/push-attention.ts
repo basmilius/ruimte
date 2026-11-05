@@ -1,5 +1,5 @@
 import type { PushAttentionEntry } from '@ruimte/contracts';
-import { readOnEveryOpen, type Transport } from '@/transport/transport';
+import { readOnEveryOpen, type Transport } from '@/transport-api/transport';
 
 const changeListeners = new Set<() => void>();
 

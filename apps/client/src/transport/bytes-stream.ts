@@ -1,4 +1,4 @@
-import { blobTypeFor, type BytesPiece } from './piece';
+import { blobTypeFor, type BytesPiece } from '../transport-api/piece';
 
 // At the root, since a service worker only controls the pages under the folder its script is in.
 export const BYTES_WORKER_SCRIPT = '/bytes-worker.js';

@@ -1,4 +1,4 @@
-import type { Rect } from '@/canvas/math';
+import type { Rect } from '@/canvas-model/math';
 
 /* A node standing on a page, as the shape the page has to leave open for it. */
 export interface PageHole extends Rect {

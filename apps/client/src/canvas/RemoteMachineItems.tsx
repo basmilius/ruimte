@@ -3,7 +3,7 @@ import type { RemoteLink } from '@ruimte/contracts';
 import { Monitor, MonitorUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Point } from '@/canvas/math';
+import type { Point } from '@/canvas-model/math';
 import { useOtherMachines } from '@/canvas/use-other-machines';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { machineLost } from '@/shell/machine-lost';

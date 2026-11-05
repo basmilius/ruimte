@@ -4,7 +4,7 @@ import { act } from 'react';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { installDesktop, removeDesktop } from '../../testing/dom-helpers';

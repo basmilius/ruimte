@@ -3,7 +3,7 @@ import type { PromptSubject } from '@adecore/agents-react/prompts';
 import { useChats } from '@adecore/agents-react/state';
 import { nodeChats } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
-import { onlyCameraMoved } from '@/canvas/camera-slice';
+import { onlyCameraMoved } from '@/canvas-model/camera-slice';
 import { canvasPrompts, samePrompts, type CanvasPrompt } from '@/canvas/prompts';
 import { useCanvasStore } from '@/state/canvas';
 import { subscribeChatThreads } from '@/state/chats';

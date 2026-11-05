@@ -1,4 +1,4 @@
-import { cellElement } from '@/shell/cell-rects';
+import { cellElement } from '@/layout/cell-rects';
 import { createFocusRegistry } from '@/shell/panels/focus-registry';
 import { useDocument } from '@/state/document';
 import type { EditorLanguage } from './ruimte-editor-language';

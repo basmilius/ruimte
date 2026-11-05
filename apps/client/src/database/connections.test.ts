@@ -7,7 +7,7 @@ import type {
     DatabaseConnectionsChangedEvent,
     DatabaseConnectionsSavePayload
 } from '@ruimte/contracts';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { createDatabaseConnections, isOutsideProject, keepUnchanged, type ConnectionsTarget } from './connections.ts';
 import { isSavable } from './savable.ts';
 import { boundPasswordOf, memorySecretStore, passwordTarget, secretKeyOf, storedSecretOf, withheldPasswords, type DatabaseSecretStore } from './secrets.ts';

@@ -12,8 +12,8 @@ import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { machineTransport } from '@/transport';
+import { TransportError } from '@/transport-api/transport';
 import { useMachineAnswers } from '@/transport/features';
-import { TransportError } from '@/transport/transport';
 
 /* The canvases of the window's project an artifact can be pinned to. */
 export function usePinCanvases() {

@@ -3,7 +3,7 @@ import { Maximize, Minus, Scan, SquareDashedMousePointer, Type } from 'lucide-re
 import { useTranslation } from 'react-i18next';
 import { createNodeAction, createTextAction, fitAction, groupSelectionAction, selectAllAction } from '@/actions/client-actions';
 import { AgentSubmenus } from '@/agents/AgentMenus';
-import type { Point } from '@/canvas/math';
+import type { Point } from '@/canvas-model/math';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';
 import { RemoteMachineItems } from '@/canvas/RemoteMachineItems';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';

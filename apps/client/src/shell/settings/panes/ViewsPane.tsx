@@ -2,7 +2,7 @@ import { Segmented, Switch, Keys, shortcut } from '@adecore/ui';
 import { SettingsRow, useSettingsTarget } from '@adecore/ui/settings';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RENDER_DISTANCES, type RenderDistance } from '@/canvas/render-distance';
+import { RENDER_DISTANCES, type RenderDistance } from '@/canvas-model/render-distance';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
 import { NodeSizeSection } from '@/shell/settings/NodeSizeSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';

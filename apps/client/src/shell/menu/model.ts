@@ -4,6 +4,7 @@ import type { MenuNode, MenuRole, MenuShellAction, MenuSpec } from '@ruimte/desk
 import i18next from 'i18next';
 import { separatesGroups } from '@/agents/creation';
 import { viewShortcut } from '@/canvas/shortcuts';
+import type { SplitDirection } from '@/layout/split';
 import {
     COMMAND_IDS,
     COMMANDS,
@@ -16,7 +17,6 @@ import {
 } from '@/shell/command-table';
 import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, LAUNCH_CHOOSE_PREFIX, PR_SHOW_IN_PREFIX } from '@/shell/menu/ids';
 import { BROWSER_KEEPS } from '@/shell/shortcuts';
-import type { SplitDirection } from '@/shell/split';
 import type { ViewOffers } from '@/shell/view-offers';
 import type { KeepAwakeMode } from '@/state/settings';
 import type { PanelKind } from '@/state/ui';

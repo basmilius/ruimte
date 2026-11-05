@@ -5,7 +5,7 @@ import { ActionRegistry } from '@ruimte/actions';
 import type { ChatForkResult, ChatInfo, ChatItem, Plan, PlanPersonOp, RequestMap, RequestType } from '@ruimte/contracts';
 import { useDocument } from '@/state/document';
 import type { SessionState } from '@/state/sessions';
-import { TransportError, type Transport } from '@/transport/transport';
+import { TransportError, type Transport } from '@/transport-api/transport';
 import { fakeProvider } from '../../testing/fake-provider';
 import { confirmed, questionOf } from './action-support';
 import { createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';

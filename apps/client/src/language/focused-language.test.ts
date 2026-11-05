@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { registerCell } from '@/shell/cell-rects';
+import { registerCell } from '@/layout/cell-rects';
 import { useDocument } from '@/state/document';
 import { languageForCommand, registerFocusedLanguage } from './focused-language';
 import type { EditorLanguage } from './ruimte-editor-language';

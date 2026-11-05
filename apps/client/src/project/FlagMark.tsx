@@ -2,7 +2,7 @@ import { Icon, Tooltip } from '@adecore/ui';
 import { flagOf, isFlagColor } from '@ruimte/contracts';
 import { Flag } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { accentColor, accentLabel } from '@/canvas/accents';
+import { accentColor, accentLabel } from '@/canvas-model/accents';
 import { useDocument } from '@/state/document';
 
 /* The flag a person put on a view or a node, in its own color; nothing for none, or for a color a newer Ruimte picked. */

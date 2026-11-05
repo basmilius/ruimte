@@ -4,8 +4,8 @@ import { reportPageAsk } from '@/browser/page-asks';
 import { pageSnapshots } from '@/browser/page-snapshots';
 import { browserRegistry, useBrowser, type BrowserState } from '@/browser/registry';
 import { endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
+import type { Transport } from '@/transport-api/transport';
 import { watchPool } from '@/transport/pool-watch';
-import type { Transport } from '@/transport/transport';
 
 /* How long a page is given to come to rest before this client answers with wherever it got to. Under
    the daemon's own wait, so an agent hears the page and not a timer. */

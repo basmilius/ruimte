@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { ProjectCanvasView } from '@ruimte/contracts';
+import { cellViewIds } from '@/layout/split';
 import { dismissClose, useUnsavedClose } from '@/shell/panels/unsaved-close';
-import { cellViewIds } from '@/shell/split';
 import { closeCellGuarded, closeCellsRightOfGuarded, closeOtherCellsGuarded } from './cell-close.ts';
 import { useDocument } from './document.ts';
 import { useFiles, type DatabaseTab } from './files.ts';

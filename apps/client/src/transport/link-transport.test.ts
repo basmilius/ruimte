@@ -3,8 +3,8 @@ import { PROTOCOL_VERSION, REQUEST_SCHEMAS, encodeBytesReply, encodeLiveFrame } 
 import i18next from 'i18next';
 import type { LinkProblem } from '@/telemetry/events';
 import { linkMetrics, type PageMetric } from '@/telemetry/metrics';
+import type { SignalRoute, TransportError, TransportStatus } from '../transport-api/transport';
 import { LinkTransport, type Link, type LinkEvents } from './link-transport';
-import type { SignalRoute, TransportError, TransportStatus } from './transport';
 
 class FakeLink implements Link {
     // The frames of requests; the protocol check the transport sends on its own lands in `checks`.

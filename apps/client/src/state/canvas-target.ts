@@ -1,5 +1,5 @@
 import { isCanvasView, type ProjectCanvasView } from '@ruimte/contracts';
-import { focusedViewId, shownViewIdsIn } from '@/shell/split';
+import { focusedViewId, shownViewIdsIn } from '@/layout/split';
 import type { DocumentState } from '@/state/document';
 
 /*

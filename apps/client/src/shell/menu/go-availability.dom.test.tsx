@@ -6,7 +6,7 @@ import { act } from 'react';
 import { isApplePlatform } from '@/desktop/bridge';
 import { registerFocusedLanguage } from '@/language/focused-language';
 import type { EditorLanguage } from '@/language/ruimte-editor-language';
-import { cellElement } from '@/shell/cell-rects';
+import { cellElement } from '@/layout/cell-rects';
 import { registerFocusedEditor } from '@/shell/panels/focused-editor';
 import { historyOf, setHistory } from '@/state/camera-history';
 import { focusedCanvas } from '@/state/canvas';

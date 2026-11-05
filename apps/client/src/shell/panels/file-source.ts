@@ -1,9 +1,9 @@
 import type { ByteResource } from '@ruimte/contracts';
 import { useEndpointId } from '@/state/keys';
 import { machineTransport } from '@/transport';
+import { readPiece } from '@/transport-api/piece';
 import { readResource } from '@/transport/byte-transfer';
 import { readMachineFile, type MachineResource } from '@/transport/machine-url';
-import { readPiece } from '@/transport/piece';
 
 /*
  * Where the bytes a binary renderer draws come from: a file on the machine, one entry of an archive

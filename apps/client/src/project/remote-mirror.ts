@@ -3,7 +3,7 @@ import { isCanvasView } from '@ruimte/contracts';
 import { markUnlinked } from '@/project/remote-refusals';
 import type { NodesOfView } from '@/project/view-nodes';
 import type { CanvasNode } from '@/state/canvas';
-import { TransportError, type Transport } from '@/transport/transport';
+import { TransportError, type Transport } from '@/transport-api/transport';
 
 /* What one machine is to draw of this project: the nodes that run there and the lines between them. */
 export interface MachineMirror {

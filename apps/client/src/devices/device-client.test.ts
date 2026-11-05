@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import type { DeviceInfo, EventMap, EventType, LiveFrameHeader, RequestMap, RequestType } from '@ruimte/contracts';
-import type { LiveFrameHandler, Transport, TransportStatus } from '@/transport/transport';
+import type { LiveFrameHandler, Transport, TransportStatus } from '@/transport-api/transport';
 import { DeviceClient } from './device-client';
 import { powerKey, useDevicePowers } from './device-power';
 import { useDevices } from './state';

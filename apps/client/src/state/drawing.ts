@@ -13,8 +13,8 @@ import type {
     ProjectViewLocal
 } from '@ruimte/contracts';
 import { createStore, type StoreApi } from 'zustand';
-import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
-import { intersects, type Rect } from '@/canvas/math';
+import { createCameraSlice, type CameraSlice } from '@/canvas-model/camera-slice';
+import { intersects, type Rect } from '@/canvas-model/math';
 import { fitTextBox } from '@/drawing/measure';
 import { editorBindings } from '@/state/editor-bindings';
 import { createEditorRegistry, finishLoad, savedFileSetters, type SavedFileSetters } from '@/state/editors';

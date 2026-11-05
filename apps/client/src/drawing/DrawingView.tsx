@@ -4,7 +4,7 @@ import type { DrawingElement } from '@ruimte/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-import { groundPlacement, toWorld } from '@/canvas/math';
+import { groundPlacement, toWorld } from '@/canvas-model/math';
 import { isSpaceDown } from '@/canvas/space-pan';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { isApplePlatform } from '@/desktop/bridge';

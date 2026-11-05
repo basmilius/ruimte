@@ -1,6 +1,6 @@
 import { defaultProjectStore } from '@/state/project';
 import { useWindow, windowWorkspace } from '@/state/window';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 interface WindowProject {
     endpointId: string;

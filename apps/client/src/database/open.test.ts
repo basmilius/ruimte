@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { viewIdsIn } from '@/shell/split';
+import { viewIdsIn } from '@/layout/split';
 import { useDocument } from '@/state/document';
 import { useFiles, type DatabaseTab } from '@/state/files';
 import { actOnDatabase } from './open.ts';

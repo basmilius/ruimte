@@ -6,7 +6,7 @@ import { act } from 'react';
 import { registerPromptStack } from '@/canvas/prompt-stack';
 import { registerFocusedLanguage } from '@/language/focused-language';
 import type { EditorLanguage } from '@/language/ruimte-editor-language';
-import { registerCell } from '@/shell/cell-rects';
+import { registerCell } from '@/layout/cell-rects';
 import { registerFocusedEditor } from '@/shell/panels/focused-editor';
 import { setHistory } from '@/state/camera-history';
 import { defaultCanvases } from '@/state/canvas';

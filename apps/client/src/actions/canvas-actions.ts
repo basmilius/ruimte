@@ -36,8 +36,8 @@ import {
     unknownCanvas
 } from '@/actions/action-reach';
 import { agentNodeOptions } from '@/agents/nodes';
+import { isMeasured, visibleRect } from '@/canvas-model/math';
 import { LOCK_KEYS } from '@/canvas/locks';
-import { isMeasured, visibleRect } from '@/canvas/math';
 import { liesWithin, nearestFreeNodeRect } from '@/canvas/place-node';
 import { useDesignChat } from '@/design/design-chat';
 import { nodeDeletionFacts, saveNodeFiles, type ViewDeletionMachine } from '@/project/view-deletion';

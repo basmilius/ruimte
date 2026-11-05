@@ -6,7 +6,7 @@ import { draftPathsUnder, forgetDeleted, moveFile } from '@/state/file-moves';
 import { endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
 import { isUnsavedDraft, textDrafts, useTextDrafts, type TextDrafts } from '@/state/text-drafts';
 import { useToasts } from '@/state/toasts';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 /* How many files a toast names before it says how many more there are. */
 const NAMED_FILES = 3;

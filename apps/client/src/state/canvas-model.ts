@@ -15,11 +15,11 @@ import {
     type ViewLocks
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
-import { textRect } from '@/canvas/edge-lines';
-import { lineBounds } from '@/canvas/line-geometry';
-import type { Point, Rect } from '@/canvas/math';
+import { lineBounds } from '@/canvas-model/line-geometry';
+import type { Point, Rect } from '@/canvas-model/math';
 import type { CanvasPatch } from '@/project/merge';
 import type { CanvasState } from '@/state/canvas';
+import { textRect } from '@/state/edge-lines';
 
 export type CanvasSet = StoreApi<CanvasState>['setState'];
 export type CanvasGet = () => CanvasState;

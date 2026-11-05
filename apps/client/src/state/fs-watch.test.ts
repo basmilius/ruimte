@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { FolderWatches, isUnderFolder } from '@/state/fs-watch';
-import type { Transport, TransportStatus } from '@/transport/transport';
+import type { Transport, TransportStatus } from '@/transport-api/transport';
 
 interface Call {
     endpointId: string;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { lineBounds } from '@/canvas/line-geometry';
+import { lineBounds } from '@/canvas-model/line-geometry';
 import { createCanvasStore, type CanvasNode } from '@/state/canvas';
 import { editableGaps, gapOffsets } from './editable-gaps';
 

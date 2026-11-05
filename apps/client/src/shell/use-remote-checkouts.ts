@@ -5,8 +5,8 @@ import { ensureMachine } from '@/endpoint/reach';
 import { rankCandidates, type RemoteCandidate } from '@/project/remote-candidates';
 import { endpointById } from '@/state/endpoints';
 import { pool, transportFor } from '@/transport';
+import type { Transport } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
-import type { Transport } from '@/transport/transport';
 
 /* What the dialog knows of the checkouts a machine could offer: still looking, not reachable, or the possibilities. */
 export type Checkouts =

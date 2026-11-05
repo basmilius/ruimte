@@ -1,4 +1,4 @@
-import type { ConnectionState } from './transport';
+import type { ConnectionState } from '../transport-api/transport';
 
 /* The part of the pool a wake-up needs. */
 export interface WakePool {

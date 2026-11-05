@@ -1,6 +1,6 @@
-import type { Viewport } from '@/canvas/camera-slice';
-import { unionOf, type Camera, type Point, type Rect } from '@/canvas/math';
-import type { DerivedFrame } from '@/canvas/node-body';
+import type { Viewport } from '@/canvas-model/camera-slice';
+import type { DerivedFrame } from '@/canvas-model/derived-frame';
+import { unionOf, type Camera, type Point, type Rect } from '@/canvas-model/math';
 import { membersOf, type CanvasNode } from '@/state/canvas-model';
 
 /* The map itself, in screen pixels inside its card. */

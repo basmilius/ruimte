@@ -17,7 +17,7 @@ import type { EditorRegistry } from '@/state/editors';
 import type { FileEditorClient, FileEditorClientOptions } from '@/state/file-editor-client';
 import { createWorkspaceStores } from '@/state/workspace';
 import type { WorkspaceStores } from '@/state/workspace-stores';
-import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
+import { TransportError, type Transport, type TransportStatus } from '@/transport-api/transport';
 
 type Call = { type: RequestType; payload: unknown };
 

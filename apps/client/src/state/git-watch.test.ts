@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { GitWatches } from '@/state/git-watch';
-import type { Transport, TransportStatus } from '@/transport/transport';
+import type { Transport, TransportStatus } from '@/transport-api/transport';
 
 /* One machine's link that records what was asked of it and drops and comes back when a test says so. */
 function fakeLink(): { link: Transport; calls: string[]; setStatus(status: TransportStatus): void } {

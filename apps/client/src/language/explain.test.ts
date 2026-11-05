@@ -4,7 +4,7 @@ import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { innermostFunction } from './explain';
 import { FakeLanguageTransport } from './fake-daemon';
 import { EditorLanguage } from './ruimte-editor-language';

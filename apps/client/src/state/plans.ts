@@ -1,7 +1,7 @@
 import type { Plan, PlanOfChat } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { dropEndpoint, endpointKey, isOfEndpoint, useEndpointId } from '@/state/keys';
-import { readOnEveryOpen, type Transport } from '@/transport/transport';
+import { readOnEveryOpen, type Transport } from '@/transport-api/transport';
 
 /* A chat's plans, newest first. The panel and the pill show the first one unless a person picks another. */
 export type ChatPlans = readonly Plan[];

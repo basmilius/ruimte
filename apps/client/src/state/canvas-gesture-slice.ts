@@ -1,8 +1,7 @@
 import { groupFrame, spellsOutMembers, withMemberIds, type ProjectCanvasLine } from '@ruimte/contracts';
-import { parentGroupOf } from '@/canvas/editable-gaps';
-import { gapFrames } from '@/canvas/element-frames';
-import { snapLine } from '@/canvas/line-geometry';
-import { snapToGrid, unionOf, type Point } from '@/canvas/math';
+import { parentGroupOf } from '@/canvas-model/editable-gaps';
+import { snapLine } from '@/canvas-model/line-geometry';
+import { snapToGrid, unionOf, type Point } from '@/canvas-model/math';
 import type { CanvasState } from '@/state/canvas';
 import {
     boundsOfElement,
@@ -17,6 +16,7 @@ import {
     type CanvasGet,
     type CanvasSet
 } from '@/state/canvas-model';
+import { gapFrames } from '@/state/element-frames';
 
 /* What is selected, and what its groups carry, each put where `place` and `line` say. */
 function movedSelection(

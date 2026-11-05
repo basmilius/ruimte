@@ -1,7 +1,7 @@
 import type { RequestMap, RequestType } from '@ruimte/contracts';
 import { machineTransport, pool } from '@/transport';
 import { machineAnswers } from '@/transport/features';
-import type { Transport } from './transport';
+import type { Transport } from '../transport-api/transport';
 
 /* A request the machine takes with nothing in it, which is what a watch and its end are. */
 export type BareRequest = { [K in RequestType]: Record<string, never> extends RequestMap[K]['payload'] ? K : never }[RequestType];

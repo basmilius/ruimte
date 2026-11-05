@@ -1,6 +1,6 @@
 import { isCanvasView } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
-import { locateView } from '@/shell/split';
+import { locateView } from '@/layout/split';
 import { useDocument } from '@/state/document';
 import { webContentsIdOf } from './preview-guests';
 

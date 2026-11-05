@@ -1,5 +1,5 @@
 import type { ViewCamera } from '@ruimte/contracts';
-import { cameraOfView, cameraToFit, clampZoom, isMeasured, snapZoom, viewCameraOf, zoomAround, type Camera, type Point, type Rect } from '@/canvas/math';
+import { cameraOfView, cameraToFit, clampZoom, isMeasured, snapZoom, viewCameraOf, zoomAround, type Camera, type Point, type Rect } from '@/canvas-model/math';
 
 export interface Viewport {
     w: number;

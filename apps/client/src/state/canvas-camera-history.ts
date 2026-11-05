@@ -1,4 +1,4 @@
-import { noteJump, noteMove, settle, step } from '@/canvas/camera-history';
+import { noteJump, noteMove, settle, step } from '@/canvas-model/camera-history';
 import { historyOf, setHistory } from '@/state/camera-history';
 import type { CanvasState } from '@/state/canvas';
 import { zoomNodeTargetOf, type CanvasGet, type CanvasSet } from '@/state/canvas-model';

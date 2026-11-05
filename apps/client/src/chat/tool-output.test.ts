@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { RequestType } from '@ruimte/contracts';
-import type { ConnectionState } from '@/transport/transport';
+import type { ConnectionState } from '@/transport-api/transport';
 import { readToolOutput } from './tool-output';
 
 function machine(features: RequestType[]) {

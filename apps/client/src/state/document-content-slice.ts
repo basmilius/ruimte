@@ -1,6 +1,6 @@
 import { withFlags, isCanvasView } from '@ruimte/contracts';
-import { migrateFilesCell, NO_LOOSE } from '@/shell/legacy-files-cell';
-import { focusedViewId, layoutOf, viewIdsIn } from '@/shell/split';
+import { migrateFilesCell, NO_LOOSE } from '@/layout/legacy-files-cell';
+import { focusedViewId, layoutOf, viewIdsIn } from '@/layout/split';
 import { forgetCameraHistories } from '@/state/camera-history';
 import type { DocumentState } from '@/state/document';
 import { keptNotice, localOfView, looseIdsOf, openEditors, settledOn, splitTrash, type DocumentKit } from '@/state/document-model';

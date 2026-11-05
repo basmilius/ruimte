@@ -2,7 +2,7 @@ import { isDiagramView, type DiagramContent, type DiagramDocument } from '@ruimt
 import type { DiagramState } from '@/state/diagram';
 import type { EditorRegistry } from '@/state/editors';
 import { FileEditorClient, type DocumentAccess, type FileEditorChannel, type FileEditorClientOptions, type ProjectAccess } from '@/state/file-editor-client';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 const DIAGRAMS: FileEditorChannel<DiagramDocument, DiagramContent> = {
     isView: isDiagramView,

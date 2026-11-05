@@ -1,5 +1,5 @@
 import { useTopRowSlot } from '@adecore/ui';
-import { cellCount } from '@/shell/split';
+import { cellCount } from '@/layout/split';
 import { useDocument } from '@/state/document';
 
 /*

@@ -1,7 +1,7 @@
 import type { EditorLanguage } from '@adecore/editor-react';
 import { fileUriToPath } from '@adecore/lsp';
 import { isPathBelow, relativeTo } from '@/shell/panels/files-tree';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 export type HostLanguage = Pick<EditorLanguage, 'editor' | 'uri' | 'languageId' | 'popups' | 'onDispose' | 'served'> & {
     project: Pick<EditorLanguage['project'], 'folder' | 'service' | 'readText'> & { transport: Transport };

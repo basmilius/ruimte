@@ -7,8 +7,8 @@ import { worktreeOfPath } from '@/shell/panels/worktree-rows';
 import { carriedByGroups, useCanvas } from '@/state/canvas';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
+import type { Transport } from '@/transport-api/transport';
 import { useOptionalConnection } from '@/transport/context';
-import type { Transport } from '@/transport/transport';
 
 interface WorktreesStore {
     /* The worktrees of a project folder's repository, per machine and folder. */

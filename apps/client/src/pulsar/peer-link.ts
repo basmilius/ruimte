@@ -1,6 +1,6 @@
 import { randomToken, type PeerAccessRequestPayload, type PeerStatement } from '@ruimte/pulsar';
 import i18next from 'i18next';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 import { withAccessToken } from './account';
 import { usePulsarMachines } from './machines';
 

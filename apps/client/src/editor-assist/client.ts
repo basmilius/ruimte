@@ -1,8 +1,8 @@
 import type { EditorAssistGenerateResult, EditorAssistPurpose, EditorAssistStatusResult } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useSettings } from '@/state/settings';
+import { TransportError, type Transport } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
-import { TransportError, type Transport } from '@/transport/transport';
 
 export interface EditorAssistRequest {
     readonly purpose: EditorAssistPurpose;

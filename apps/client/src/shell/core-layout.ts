@@ -1,6 +1,6 @@
 import type { SplitBranch, SplitLayout as CoreSplitLayout, SplitNode, SplitPane } from '@adecore/ui';
 import type { SplitLayout } from '@ruimte/contracts';
-import { cellViewIds, maximizedCell, type CellAt } from '@/shell/split';
+import { cellViewIds, maximizedCell, type CellAt } from '@/layout/split';
 
 function paneId(at: CellAt): string {
     return `cell:${at.column}:${at.cell}`;

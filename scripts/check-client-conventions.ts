@@ -33,7 +33,7 @@ const INTL_OUTSIDE_FORMAT = new Set(['apps/client/src/voice/controller.ts']);
 // canvas that no theme reaches, the pets' pixel art among them.
 const COLOR_LITERALS = new Set([
     'apps/client/src/shell/panels/code-themes.ts',
-    'apps/client/src/canvas/accents.ts',
+    'apps/client/src/canvas-model/accents.ts',
     'apps/client/src/ui/EclipseStars.tsx',
     'apps/client/src/ui/galaxy/Galaxy.tsx',
     'apps/client/src/measure/scene.ts',

@@ -1,5 +1,5 @@
 import { endpointKey } from '@/state/keys';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 interface Held<A> {
     endpointId: string;

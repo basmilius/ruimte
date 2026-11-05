@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { currentEndpointId, dropEndpoint, endpointKey, patchIn, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { transportFor } from '@/transport';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 /* What one node shows of the view it points at. `snapshot` is null until the file has been read. */
 export interface ViewMirror<TSnapshot> {

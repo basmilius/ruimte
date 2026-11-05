@@ -6,7 +6,7 @@ import { consoleConnectionOf } from '@/database/console-file';
 import { windowProjectFollower } from '@/database/window-project';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 interface SqlBindingsState {
     /* The machine and the project these are of (`endpointKey`); null while nothing asked for any. */

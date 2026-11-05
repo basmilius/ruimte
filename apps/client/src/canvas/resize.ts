@@ -1,5 +1,5 @@
 import { NODE_SIZE_MIN } from '@ruimte/contracts';
-import { GRID, snapToGrid, type Rect } from '@/canvas/math';
+import { GRID, snapToGrid, type Rect } from '@/canvas-model/math';
 
 export interface ResizeModifiers {
     centered?: boolean;

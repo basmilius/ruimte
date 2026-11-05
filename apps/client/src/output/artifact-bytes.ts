@@ -6,8 +6,8 @@ import { desktop, type SaveFileStreamBridge } from '@/desktop/bridge';
 import { saveBlob } from '@/download';
 import { useToasts } from '@/state/toasts';
 import { machineTransport } from '@/transport';
+import { readPiece } from '@/transport-api/piece';
 import { readResource, streamResource } from '@/transport/byte-transfer';
-import { readPiece } from '@/transport/piece';
 
 export interface ArtifactFileRef {
     artifactId: string;

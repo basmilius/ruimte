@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { onlyCameraMoved } from '@/canvas/camera-slice';
+import { onlyCameraMoved } from '@/canvas-model/camera-slice';
 
 describe('onlyCameraMoved', () => {
     const before = { camera: { x: 0, y: 0, zoom: 1 }, nodes: {}, selection: [] as string[] };

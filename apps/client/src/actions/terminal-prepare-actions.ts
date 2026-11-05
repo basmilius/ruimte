@@ -1,7 +1,7 @@
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
 import { endpointById } from '@/state/endpoints';
 import { transportFor } from '@/transport';
-import { TransportError, type Transport } from '@/transport/transport';
+import { TransportError, type Transport } from '@/transport-api/transport';
 
 export interface TerminalPrepareMachine {
     machineId(endpointId: string): string | null;

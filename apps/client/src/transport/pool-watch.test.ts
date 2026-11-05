@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { FakeLink } from '../../testing/fake-link';
+import type { Transport } from '../transport-api/transport';
 import { watchPool, type WatchablePool } from './pool-watch';
-import type { Transport } from './transport';
 
 class FakePool implements WatchablePool {
     private readonly links = new Map<string, FakeLink>();

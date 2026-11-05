@@ -1,7 +1,7 @@
 import { bubbleCell, PET_HEIGHT, PET_WIDTH, samePet, WORLD_CELL, type AgentPet } from '@extensions/pets/client/pet-state';
 import { BUBBLE_SIZE, JUMP_ROWS, SPRITE_ROWS } from '@extensions/pets/client/pixel';
 import { isChatNode } from '@ruimte/contracts';
-import type { Rect } from '@/canvas/math';
+import type { Rect } from '@/canvas-model/math';
 import type { CanvasNode, CanvasState } from '@/state/canvas';
 
 /* A pet and the node it stands on, kept together so one whose node was removed beams out where it stood (`useTeleport`). */

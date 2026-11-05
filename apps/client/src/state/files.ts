@@ -1,8 +1,8 @@
 import type { TableKind } from '@adecore/database/protocol';
 import { isPathBelow, type FileLocation, type GitDiffScope, type ProjectConsoleBinding, type ProjectFileTabView } from '@ruimte/contracts';
 import { create } from 'zustand';
+import { canDropAsTab, canSplit, cellAt, cellViewIds, locateView, viewIdsIn, type CellAt, type SplitZone } from '@/layout/split';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
-import { canDropAsTab, canSplit, cellAt, cellViewIds, locateView, viewIdsIn, type CellAt, type SplitZone } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
 import { textDrafts } from '@/state/text-drafts';

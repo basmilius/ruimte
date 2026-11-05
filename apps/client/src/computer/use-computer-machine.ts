@@ -7,8 +7,8 @@ import { activeLanguage } from '@/i18n/active';
 import { useComputer } from '@/state/computer';
 import { useServers } from '@/state/server';
 import { transportFor } from '@/transport';
+import type { Transport } from '@/transport-api/transport';
 import { useEndpointConnection } from '@/transport/status';
-import type { Transport } from '@/transport/transport';
 
 /* Accessibility shows up in a running helper, so while one is missing the machine is asked again this often. */
 const POLL_MS = 2_000;

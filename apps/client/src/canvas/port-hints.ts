@@ -1,6 +1,6 @@
+import type { Point, Rect } from '@/canvas-model/math';
 import { portPoint, type Side } from '@/canvas/edge-route';
 import type { LineRoutes } from '@/canvas/line-routes';
-import type { Point, Rect } from '@/canvas/math';
 import { memoByIdentity } from '@/state/identity-memo';
 
 const SIDES: readonly Side[] = ['top', 'right', 'bottom', 'left'];

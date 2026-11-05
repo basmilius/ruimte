@@ -1,5 +1,5 @@
 import { centerOf } from '@adecore/drawing';
-import type { Camera, Point, Rect } from '@/canvas/math';
+import type { Camera, Point, Rect } from '@/canvas-model/math';
 
 export type NodeDirection = 'left' | 'right' | 'up' | 'down';
 export interface NavigationNode extends Rect {

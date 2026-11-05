@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { DeviceAgentStep, DeviceOperated, EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
+import type { Transport, TransportStatus } from '@/transport-api/transport';
 import type { WatchablePool } from '@/transport/pool-watch';
-import type { Transport, TransportStatus } from '@/transport/transport';
 import { startDeviceOperatedWatch, stepWords, stripLook, tapPoint, useDeviceOperated } from './operated';
 
 function step(kind: string, more: Partial<DeviceAgentStep> = {}): DeviceAgentStep {

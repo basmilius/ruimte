@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { nextVisit, tripPagesOf, TRIP_MIN_STAY_MS, TRIP_QUIET_MS } from '@extensions/pets/client/canvas/page-trip';
-import { edgeLines } from '@/canvas/edge-lines';
 import type { CanvasNode, Edge } from '@/state/canvas';
+import { edgeLines } from '@/state/edge-lines';
 
 function node(id: string, kind: CanvasNode['kind']): CanvasNode {
     return { id, kind, x: 0, y: 0, w: 400, h: 300 } as CanvasNode;

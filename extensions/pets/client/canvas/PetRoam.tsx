@@ -14,7 +14,7 @@ import { usePetLook } from '@extensions/pets/client/use-pet-look';
 import { nodeColorOf } from '@ruimte/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { accentColor } from '@/canvas/accents';
+import { accentColor } from '@/canvas-model/accents';
 import { OVERLAY_LEDGE_ATTRIBUTE, OVERLAY_WALL_ATTRIBUTE } from '@/canvas/overlay-attributes';
 import { PROMPT_STACK_ATTRIBUTE } from '@/canvas/prompt-stack';
 import { useCanvas, useCanvasStore } from '@/state/canvas';

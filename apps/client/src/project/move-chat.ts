@@ -3,7 +3,7 @@ import { ensureMachine } from '@/endpoint/reach';
 import { listProjects } from '@/project/list';
 import { showChatIn } from '@/project/new-chat';
 import { transportFor } from '@/transport';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 
 /*
  * Asks a machine to move a chat of Chats into a project and follows it only after the answer, along

@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { accentShades } from '@/canvas/accents';
+import { accentShades } from '@/canvas-model/accents';
 
 /* What every card beside a node draws in (`DerivedSet`): a node's frame and header, at the node's sizes. */
 export const FRAME = 'flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-clip-padding shadow-node';

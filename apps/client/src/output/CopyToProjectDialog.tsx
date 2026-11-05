@@ -9,7 +9,7 @@ import { ProjectFolderPicker } from '@/shell/panels/ProjectFolderPicker';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { machineTransport } from '@/transport';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 
 /*
  * One opening of the dialog. It stays after a close, so the dialog keeps what it showed while it

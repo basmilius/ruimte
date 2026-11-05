@@ -2,8 +2,8 @@ import { spyOn } from 'bun:test';
 import { EVENT_SCHEMAS, REQUEST_SCHEMAS, type EventMap, type EventType, type RequestMap, type RequestType } from '@ruimte/contracts';
 import { LOCAL_ENDPOINT_ID, endpointById, type Endpoint } from '@/state/endpoints';
 import { pool } from '@/transport';
+import { TransportError, type ConnectionState, type TransportStatus } from '@/transport-api/transport';
 import type { PooledTransport } from '@/transport/pool';
-import { TransportError, type ConnectionState, type TransportStatus } from '@/transport/transport';
 
 const OPEN: ConnectionState = { status: 'open', attempts: 0, retryAt: null, features: Object.keys(REQUEST_SCHEMAS) };
 

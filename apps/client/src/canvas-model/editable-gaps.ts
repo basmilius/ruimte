@@ -1,5 +1,5 @@
-import { LINE_GRID } from '@/canvas/line-geometry';
-import { overlapSpan, snapToGrid, type Point, type Rect } from '@/canvas/math';
+import { LINE_GRID } from '@/canvas-model/line-geometry';
+import { overlapSpan, snapToGrid, type Point, type Rect } from '@/canvas-model/math';
 
 export interface GapNode extends Rect {
     id: string;

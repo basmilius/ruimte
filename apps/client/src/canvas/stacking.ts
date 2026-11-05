@@ -1,6 +1,6 @@
 import { groupMemberIds, type CanvasNodeKind, type GroupFrame } from '@ruimte/contracts';
 import type { PageHole } from '@/browser/page-clip';
-import { intersects, type Rect } from '@/canvas/math';
+import { intersects, type Rect } from '@/canvas-model/math';
 
 /* What stacking needs of a node: where it stands, whether it is a group and what a group holds. */
 export interface StackedNode extends Rect, Pick<GroupFrame, 'collapsed' | 'memberIds' | 'expandedHeight'> {

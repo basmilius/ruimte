@@ -31,10 +31,10 @@ import { workspaceOpening } from '@/telemetry/workspace-load';
 import { forgetProjectSessions } from '@/terminal/lifecycle';
 import { SessionClient } from '@/terminal/session-client';
 import { machineTransport, pool } from '@/transport';
+import type { Transport } from '@/transport-api/transport';
 import { useOptionalConnection } from '@/transport/context';
 import { machineAnswers } from '@/transport/features';
 import { reportPresence } from '@/transport/presence';
-import type { Transport } from '@/transport/transport';
 
 /*
  * One daemon, as everything inside a workspace sees it. The address and the credential are

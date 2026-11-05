@@ -1,9 +1,9 @@
 import { useContext, useLayoutEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { focusCellOfView } from '@/browser/guest-focus';
-import { cellElement, subscribeCells } from '@/shell/cell-rects';
+import { cellElement, subscribeCells } from '@/layout/cell-rects';
+import { shownViewIdsIn } from '@/layout/split';
 import { DropPreview } from '@/shell/DropPreview';
-import { shownViewIdsIn } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { CellViewContext } from '@/state/workspace-stores';
 

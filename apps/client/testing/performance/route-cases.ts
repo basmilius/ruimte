@@ -1,4 +1,5 @@
-import type { FixedSides, Obstacle } from '../../src/canvas/edge-route';
+import type { FixedSides } from '@/canvas-model/fixed-sides';
+import type { Obstacle } from '../../src/canvas/edge-route';
 import type { PerformanceCase } from './paired';
 
 type RouteApi = Pick<typeof import('../../src/canvas/edge-route'), 'routeEdge' | 'routeDraft'>;

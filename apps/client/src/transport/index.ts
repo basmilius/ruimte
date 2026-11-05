@@ -10,6 +10,7 @@ import { IS_STATION } from '@/station';
 import type { LinkKind, MachineKind } from '@/telemetry/events';
 import { linkMetrics, linkPathOf } from '@/telemetry/metrics';
 import { recordPageMetric, reportConnectionProblem } from '@/telemetry/report';
+import type { Transport } from '../transport-api/transport';
 import { ActiveTransport } from './active-transport';
 import { brokerSignaling } from './broker-signaling';
 import { directProof } from './direct-auth';
@@ -21,12 +22,11 @@ import { MachineTransports } from './machine-transport';
 import { TransportPool } from './pool';
 import { lanDoorUrls, lanSkips, routedLink } from './route-race';
 import type { SignalingOpener } from './signaling';
-import type { Transport } from './transport';
 import { webRtcLink, type WebRtcLinkOptions } from './webrtc-link';
 import { socketLink } from './websocket-transport';
 
-export type { ConnectionState, SignalRoute, Transport, TransportStatus } from './transport';
-export { TransportError } from './transport';
+export type { ConnectionState, SignalRoute, Transport, TransportStatus } from '../transport-api/transport';
+export { TransportError } from '../transport-api/transport';
 
 /* What a direct connection to a row needs whatever carries its signals. */
 function directOptions(endpointId: () => string): Omit<WebRtcLinkOptions, 'signaling'> {

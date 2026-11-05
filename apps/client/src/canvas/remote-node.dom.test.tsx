@@ -11,7 +11,7 @@ import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { useUi } from '@/state/ui';
 import { windowWorkspace } from '@/state/window';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';

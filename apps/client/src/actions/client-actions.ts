@@ -50,13 +50,13 @@ import { sessionActions, sessionTitle, type SessionMachine } from '@/actions/ses
 import { terminalPrepareActions } from '@/actions/terminal-prepare-actions';
 import { viewActions } from '@/actions/view-actions';
 import type { AgentSession } from '@/agents/nodes';
-import type { Point } from '@/canvas/math';
+import type { Point } from '@/canvas-model/math';
 import { designFoldersOnDisk } from '@/design/design-read';
+import type { CellAt, SplitDirection, SplitZone } from '@/layout/split';
 import { lastFlagColor, rememberFlagColor } from '@/project/flag-color';
 import { liveViewDeletion, type ViewDeletionMachine } from '@/project/view-deletion';
 import { nodesOfView } from '@/project/view-nodes';
 import { openInNewWindow, wantsNewWindow } from '@/project/windows';
-import type { CellAt, SplitDirection, SplitZone } from '@/shell/split';
 import { defaultCanvases, focusedCanvas, type CanvasState, type Locks } from '@/state/canvas';
 import { closeCellsRightOfGuarded, closeOtherCellsGuarded } from '@/state/cell-close';
 import { activeViewOf, useDocument, viewOfNode, type DocumentState } from '@/state/document';

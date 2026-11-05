@@ -1,4 +1,4 @@
-import { clampZoom, type Point } from '@/canvas/math';
+import { clampZoom, type Point } from '@/canvas-model/math';
 import { windowFrames, type FrameClock } from '@/canvas/pan-batch';
 
 /* The zoom one notch of a mouse wheel takes: ten percent, so a few notches cross a node rather than the whole canvas. */

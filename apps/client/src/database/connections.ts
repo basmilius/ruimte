@@ -28,7 +28,7 @@ import {
 import { windowProjectFollower } from '@/database/window-project';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
-import { isConnectionError, TransportError, type Transport } from '@/transport/transport';
+import { isConnectionError, TransportError, type Transport } from '@/transport-api/transport';
 
 export type ConnectionsStatus = 'idle' | 'loading' | 'ready' | 'failed';
 

@@ -45,12 +45,12 @@ import {
 } from '@/actions/client-actions';
 import { ChatAgentSubmenu } from '@/agents/AgentMenus';
 import { askBeforeClearingChat, askBeforeStoppingTask } from '@/agents/end-children';
-import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
+import { accentLabel, NODE_ACCENTS } from '@/canvas-model/accents';
+import type { Point } from '@/canvas-model/math';
 import { BringBackItem } from '@/canvas/BringBackItem';
 import { CanvasCreateItems } from '@/canvas/CanvasMenu';
 import { formatNodeSize, makeDefaultSize } from '@/canvas/default-size';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
-import type { Point } from '@/canvas/math';
 import { useUnstartedTask } from '@/canvas/remote-wait';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useShownChatOfNode } from '@/chat/focused-chat';

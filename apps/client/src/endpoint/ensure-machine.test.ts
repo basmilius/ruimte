@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import type { Endpoint } from '@/state/endpoints';
-import type { ConnectionState } from '@/transport/transport';
+import type { ConnectionState } from '@/transport-api/transport';
 import { MachineLinks, MachineWaitCancelled } from './ensure-machine';
 
 function row(id: string): Endpoint {

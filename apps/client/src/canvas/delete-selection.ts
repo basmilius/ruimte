@@ -12,7 +12,7 @@ import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { transportFor } from '@/transport';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 /*
  * Deletes what is selected on a canvas, the way `deleteSelected` does, but asks first when the chats

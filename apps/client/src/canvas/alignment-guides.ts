@@ -1,4 +1,4 @@
-import { overlapSpan, unionOf, type Rect } from '@/canvas/math';
+import { overlapSpan, unionOf, type Rect } from '@/canvas-model/math';
 
 const EPSILON = 0.001;
 

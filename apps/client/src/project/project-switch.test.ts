@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { ProjectSwitch, REVEAL_DELAY_MS, type SwitchClock, type SwitchContext, type SwitchRun, type SwitchTarget } from './project-switch';
 
 /* A clock that only moves when a test says so. */

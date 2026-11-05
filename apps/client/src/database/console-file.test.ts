@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { FsEntry } from '@ruimte/contracts';
 import { fileTabOf, useFiles, type DatabaseTab, type FileTab } from '@/state/files';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import {
     consoleBaseName,
     consoleConnectionOf,

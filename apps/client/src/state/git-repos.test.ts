@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { GitRepo } from '@ruimte/contracts';
 import type { GitFile, GitStatus } from '@ruimte/contracts';
-import { TransportError, type TransportStatus } from '@/transport/transport';
+import { TransportError, type TransportStatus } from '@/transport-api/transport';
 import { assumeStaged, deadReadDelay, headMoved, readProjectRepos, soleRepo, visibleRepos, withoutNestedRepos } from './git-repos.ts';
 
 function file(path: string, state: GitFile['state']): GitFile {

@@ -1,10 +1,10 @@
 import { measurePairs, type PerformanceCase } from './paired';
 
 interface SweepApi {
-    edgeLines: typeof import('../../src/canvas/edge-lines').edgeLines;
-    neighboringNode: typeof import('../../src/canvas/node-navigation').neighboringNode;
-    parentGroupOf: typeof import('../../src/canvas/editable-gaps').parentGroupOf;
-    editableGaps: typeof import('../../src/canvas/editable-gaps').editableGaps;
+    edgeLines: typeof import('../../src/state/edge-lines').edgeLines;
+    neighboringNode: typeof import('../../src/canvas-model/node-navigation').neighboringNode;
+    parentGroupOf: typeof import('../../src/canvas-model/editable-gaps').parentGroupOf;
+    editableGaps: typeof import('../../src/canvas-model/editable-gaps').editableGaps;
     base64Of: typeof import('../../src/base64').base64Of;
 }
 

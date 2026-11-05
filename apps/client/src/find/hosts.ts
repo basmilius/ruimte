@@ -1,5 +1,5 @@
 import { isCanvasView } from '@ruimte/contracts';
-import { cellElement } from '@/shell/cell-rects';
+import { cellElement } from '@/layout/cell-rects';
 import { focusedCanvas } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 

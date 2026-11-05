@@ -1,5 +1,5 @@
+import type { SignalRoute } from '@/transport-api/transport';
 import type { LinkMeter } from '@/transport/link-transport';
-import type { SignalRoute } from '@/transport/transport';
 
 /*
  * The fixed values of the page's metrics, which Observatory's Connections dashboard filters on. Every attribute is one

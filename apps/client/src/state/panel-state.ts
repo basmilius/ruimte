@@ -7,7 +7,7 @@ import {
     type ProjectStripTab
 } from '@ruimte/contracts';
 import { databaseTabId, databaseTabKey } from '@/database/tabs';
-import type { LooseStrip } from '@/shell/legacy-files-cell';
+import type { LooseStrip } from '@/layout/legacy-files-cell';
 import { artifactTabKey, isArtifactTab, isDatabaseTab, isFileTab, tabKey, type DatabaseTab, type FileTab, type Tab } from '@/state/files';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE } from '@/state/git';
 import type { PanelDefaults, PanelKind } from '@/state/ui';

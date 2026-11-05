@@ -1,4 +1,4 @@
-import { snapToGrid } from '@/canvas/math';
+import { snapToGrid } from '@/canvas-model/math';
 import type { CanvasState } from '@/state/canvas';
 import { droppedIntoGroups, nextId, remember, type CanvasSet, type TextElement } from '@/state/canvas-model';
 

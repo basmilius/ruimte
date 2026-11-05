@@ -12,7 +12,7 @@ import {
     type StandaloneNode
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
-import { cellAt, collapseTabHosts, focusedViewId, isTabHost, locateView, viewIdsIn, type ShownView } from '@/shell/split';
+import { cellAt, collapseTabHosts, focusedViewId, isTabHost, locateView, viewIdsIn, type ShownView } from '@/layout/split';
 import type { CanvasState } from '@/state/canvas';
 import type { DiagramState } from '@/state/diagram';
 import type { DocumentState } from '@/state/document';

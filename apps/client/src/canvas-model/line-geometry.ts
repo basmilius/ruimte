@@ -1,5 +1,5 @@
 import type { ProjectCanvasLine } from '@ruimte/contracts';
-import { snapPoint, snapToGrid, type Point, type Rect } from '@/canvas/math';
+import { snapPoint, snapToGrid, type Point, type Rect } from '@/canvas-model/math';
 
 type LineEnds = Pick<ProjectCanvasLine, 'x' | 'y' | 'endX' | 'endY'>;
 export const LINE_GRID = 4;

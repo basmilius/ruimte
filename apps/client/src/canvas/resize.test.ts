@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { GRID, type Rect } from '@/canvas/math';
+import { GRID, type Rect } from '@/canvas-model/math';
 import { resizedRect } from './resize';
 
 const rect: Rect = { x: 80, y: 160, w: 480, h: 320 };

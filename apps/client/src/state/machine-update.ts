@@ -1,8 +1,8 @@
 import { MachineUpdateStatusSchema, type MachineUpdateReport } from '@ruimte/contracts';
 import type { UpdateState } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import type { Transport } from '@/transport-api/transport';
 import { watchPool, type WatchablePool } from '@/transport/pool-watch';
-import type { Transport } from '@/transport/transport';
 
 /*
  * The shell's updater told to this computer's own machine, so a phone sees the update of this computer

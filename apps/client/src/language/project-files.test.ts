@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { RequestType } from '@ruimte/contracts';
 import { TextDrafts, textDrafts, type DraftLink } from '@/state/text-drafts';
-import type { Transport } from '@/transport/transport';
-import { TransportError } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
+import { TransportError } from '@/transport-api/transport';
 import { FakeLanguageTransport } from './fake-daemon';
 import { draftFiles } from './project-files';
 import { ProjectLanguage } from './ruimte-project-language';

@@ -1,4 +1,4 @@
-import type { Camera } from '@/canvas/math';
+import type { Camera } from '@/canvas-model/math';
 
 /* A place the camera was, and the node it had been taken to when it got there (null where a person panned). */
 export interface CameraStop {

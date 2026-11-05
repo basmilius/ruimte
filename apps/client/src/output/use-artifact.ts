@@ -2,8 +2,8 @@ import type { ArtifactGetResult } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { holdArtifacts, useArtifactRevision } from '@/output/artifacts';
 import { machineTransport } from '@/transport';
+import { isConnectionError } from '@/transport-api/transport';
 import { useEndpointConnection } from '@/transport/status';
-import { isConnectionError } from '@/transport/transport';
 
 type ArtifactState =
     | { status: 'loading' }

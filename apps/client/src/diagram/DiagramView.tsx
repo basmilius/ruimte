@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { ignoreRefusal, perform } from '@/actions/client-actions';
-import { groundPlacement, type Point } from '@/canvas/math';
+import { groundPlacement, type Point } from '@/canvas-model/math';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { copyDiagram, openDiagramJson } from '@/diagram/diagram-actions';
 import { DiagramDock } from '@/diagram/DiagramDock';

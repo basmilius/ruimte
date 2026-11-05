@@ -1,5 +1,5 @@
 import { useEffect, useState, type RefObject } from 'react';
-import { toWorld, type Point } from '@/canvas/math';
+import { toWorld, type Point } from '@/canvas-model/math';
 import { useCanvasStore } from '@/state/canvas';
 
 /* Where the pointer is on the canvas in world units, once per frame, or null while it is elsewhere. */

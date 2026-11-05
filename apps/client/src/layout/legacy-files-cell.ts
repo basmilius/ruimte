@@ -1,5 +1,5 @@
 import type { ProjectLocal, SplitCell } from '@ruimte/contracts';
-import { cellViewIds } from '@/shell/split';
+import { cellViewIds } from '@/layout/split';
 
 /* The id the files cell had in a layout written before every cell could be a tab host. */
 const LEGACY_FILES_ID = 'files';

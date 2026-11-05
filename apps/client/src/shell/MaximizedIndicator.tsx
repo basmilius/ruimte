@@ -2,7 +2,7 @@ import { Button, Kbd, Tooltip } from '@adecore/ui';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { cellCount, cellViewIds, isSameCell, type CellAt } from '@/shell/split';
+import { cellCount, cellViewIds, isSameCell, type CellAt } from '@/layout/split';
 import { useDocument } from '@/state/document';
 
 /*

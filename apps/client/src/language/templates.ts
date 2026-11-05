@@ -16,8 +16,8 @@ import {
 import i18next from 'i18next';
 import { useSyncExternalStore } from 'react';
 import { useToasts } from '@/state/toasts';
+import { TransportError, type Transport } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
-import { TransportError, type Transport } from '@/transport/transport';
 import { SnapshotTracker, upsert } from './snapshot-tracker';
 
 /* A template to save, with the kind that says which list it joins. */

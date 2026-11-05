@@ -1,4 +1,4 @@
-import type { ConnectionState } from './transport';
+import type { ConnectionState } from '../transport-api/transport';
 
 /* What the watch reads of the pool, so a test can hand it a pool in memory. */
 export interface OpenMachineSource {

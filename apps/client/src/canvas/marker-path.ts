@@ -1,4 +1,4 @@
-import type { Point } from '@/canvas/math';
+import type { Point } from '@/canvas-model/math';
 
 /*
  * What a line wears where it meets a node. A line reads one way, which is its whole meaning, and the

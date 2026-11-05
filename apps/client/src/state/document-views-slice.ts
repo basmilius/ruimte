@@ -10,7 +10,7 @@ import {
     withoutView,
     type ProjectView
 } from '@ruimte/contracts';
-import { closeTab, collapseTabHosts, locateView, singleLayout } from '@/shell/split';
+import { closeTab, collapseTabHosts, locateView, singleLayout } from '@/layout/split';
 import { nextId } from '@/state/canvas';
 import type { DocumentState } from '@/state/document';
 import { keptNotice, type DocumentKit } from '@/state/document-model';

@@ -1,6 +1,6 @@
 import i18next from 'i18next';
+import { TransportError, type ConnectionState } from '../transport-api/transport';
 import type { PooledTransport } from './pool';
-import { TransportError, type ConnectionState } from './transport';
 
 const CLOSED: ConnectionState = { status: 'closed', attempts: 0, retryAt: null, failure: null };
 

@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { Endpoint } from '@/state/endpoints';
-import type { ConnectionState } from '@/transport/transport';
+import type { ConnectionState } from '@/transport-api/transport';
 
 /*
  * Longer than any attempt that ends with a reason of its own (a direct connection gives up after 20

@@ -1,5 +1,5 @@
 import type { SplitRect } from '@adecore/ui';
-import type { CellAt, SplitZone } from '@/shell/split';
+import type { CellAt, SplitZone } from '@/layout/split';
 
 /*
  * What a dragged view carries. A sidebar row and a grid cell are the same gesture with two targets and

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { TemplateRegistry } from '@adecore/editor-react';
 import type { PersonalTemplates, ProjectTemplates } from '@ruimte/contracts';
 import { useToasts } from '@/state/toasts';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { FakeLanguageTransport } from './fake-daemon';
 import { TemplatesTracker } from './templates';
 

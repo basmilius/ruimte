@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { renderDistanceFrom, rendersAtZoom } from '@/canvas/render-distance';
+import { renderDistanceFrom, rendersAtZoom } from '@/canvas-model/render-distance';
 
 describe('render distance', () => {
     test('standard draws live from 0.4 up, on the line included', () => {

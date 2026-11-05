@@ -1,7 +1,7 @@
 import type { BackgroundServiceBridge, BackgroundServiceState } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import type { ConnectionState } from '@/transport-api/transport';
 import { protocolRefusal } from '@/transport/protocol';
-import type { ConnectionState } from '@/transport/transport';
 
 /* Whether the link of the workspace's machine is down and at least one try to bring it back failed; a link that is merely opening says nothing yet. */
 export function machineLost(connection: Pick<ConnectionState, 'status' | 'attempts' | 'failure'>): boolean {

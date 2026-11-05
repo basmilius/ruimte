@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { FakeLanguageTransport } from '@/language/fake-daemon';
 import { useSettings } from '@/state/settings';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { EditorAssistClient } from './client';
 import { FakeEditorAssistModel } from './fake-model';
 

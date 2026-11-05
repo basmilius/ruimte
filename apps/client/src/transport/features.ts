@@ -1,6 +1,6 @@
 import type { RequestType } from '@ruimte/contracts';
+import type { ConnectionState } from '../transport-api/transport';
 import { useEndpointConnection } from './status';
-import type { ConnectionState } from './transport';
 
 /*
  * Whether the machine behind a link names this request in its `endpoint.info`. False while the link has

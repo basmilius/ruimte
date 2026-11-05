@@ -1,6 +1,6 @@
 import { shortcut, type Shortcut } from '@adecore/ui';
+import type { SplitDirection } from '@/layout/split';
 import { requiredShortcut } from '@/shell/editor-keymap';
-import type { SplitDirection } from '@/shell/split';
 import type { NodeKind } from '@/state/canvas';
 
 /*

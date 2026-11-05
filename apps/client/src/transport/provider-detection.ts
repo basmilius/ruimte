@@ -3,8 +3,8 @@ import type { ProviderInfo } from '@ruimte/contracts';
 import { useEffect } from 'react';
 import { currentEndpointId, useEndpointId } from '@/state/keys';
 import { pool, transportFor } from '@/transport';
+import type { Transport } from '../transport-api/transport';
 import { machineAnswers } from './features';
-import type { Transport } from './transport';
 
 // The machine guards its own probes as well; this only keeps one client from asking on every menu it opens.
 const DETECT_INTERVAL_MS = 10_000;

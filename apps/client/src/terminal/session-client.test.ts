@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentInfo, EventMap, EventType, RequestMap, RequestType, SessionInfo } from '@ruimte/contracts';
 import type { SessionSink } from '../state/sessions';
-import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
+import { TransportError, type Transport, type TransportStatus } from '../transport-api/transport';
 import { SessionClient } from './session-client';
 
 type Call = { type: RequestType; payload: unknown };

@@ -1,5 +1,5 @@
 import type { Editor } from '@adecore/editor';
-import { cellElement } from '@/shell/cell-rects';
+import { cellElement } from '@/layout/cell-rects';
 import { useDocument } from '@/state/document';
 import { createFocusRegistry } from './focus-registry';
 

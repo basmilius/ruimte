@@ -1,5 +1,5 @@
-import type { GapNode } from '@/canvas/editable-gaps';
-import { lineBounds } from '@/canvas/line-geometry';
+import type { GapNode } from '@/canvas-model/editable-gaps';
+import { lineBounds } from '@/canvas-model/line-geometry';
 import type { CanvasState } from '@/state/canvas';
 
 export function gapFrames(state: Pick<CanvasState, 'nodes' | 'lines' | 'hidden'>): Record<string, GapNode> {

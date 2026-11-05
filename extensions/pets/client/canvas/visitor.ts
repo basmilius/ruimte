@@ -1,6 +1,6 @@
 import { coversOtherNode, hitBoxAt, visitorPlace } from '@extensions/pets/client/canvas/placement';
 import { PET_HEIGHT, PET_WIDTH } from '@extensions/pets/client/pet-state';
-import type { Rect } from '@/canvas/math';
+import type { Rect } from '@/canvas-model/math';
 import type { CanvasNode } from '@/state/canvas';
 
 /* How long after the last visit, or after a canvas opened, a pet may drop by: somewhere in this window. */

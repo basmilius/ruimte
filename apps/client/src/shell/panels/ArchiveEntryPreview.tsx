@@ -12,10 +12,10 @@ import { fixedSlot, FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-
 import { basenameOf } from '@/shell/panels/files-tree';
 import { FileTextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
 import { renderBinary } from '@/shell/panels/renderers';
+import { readPiece } from '@/transport-api/piece';
+import { TransportError } from '@/transport-api/transport';
 import { readResource } from '@/transport/byte-transfer';
 import { useTransport } from '@/transport/context';
-import { readPiece } from '@/transport/piece';
-import { TransportError } from '@/transport/transport';
 
 export interface ArchiveVersion {
     path: string;

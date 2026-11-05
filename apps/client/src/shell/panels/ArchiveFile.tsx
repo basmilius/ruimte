@@ -29,10 +29,10 @@ import { FileTextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
 import { TreeSplit } from '@/shell/panels/TreeSplit';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
+import { readPiece } from '@/transport-api/piece';
+import type { Transport } from '@/transport-api/transport';
 import { readResource } from '@/transport/byte-transfer';
 import { useTransport } from '@/transport/context';
-import { readPiece } from '@/transport/piece';
-import type { Transport } from '@/transport/transport';
 
 const { rowPathOf } = FileTree;
 

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { create } from 'zustand';
 import { dropEndpoint, endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
 import { storedJson } from '@/state/stored-json';
-import { isConnectionError, readOnEveryOpen, type Transport } from '@/transport/transport';
+import { isConnectionError, readOnEveryOpen, type Transport } from '@/transport-api/transport';
 
 /*
  * A node that needs you, put aside for a while. It leaves every count and every notification until

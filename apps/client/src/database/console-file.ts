@@ -15,7 +15,7 @@ import { useSettings } from '@/state/settings';
 import { storedText } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
 import { windowWorkspace } from '@/state/window';
-import { TransportError, type Transport } from '@/transport/transport';
+import { TransportError, type Transport } from '@/transport-api/transport';
 
 /* A name past this many characters is the start of one; a file system takes 255 bytes and the number still has to fit. */
 const BASE_NAME_LENGTH = 80;

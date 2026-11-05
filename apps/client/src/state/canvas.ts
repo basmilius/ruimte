@@ -1,14 +1,13 @@
 import type { ProjectCanvasLine, ProjectCanvasView, ProjectLayout, ProjectViewLocal, NodeAccent, NodeKind, NodeTitleSource } from '@ruimte/contracts';
 import { DEFAULT_TITLES, NODE_SIZE, isAgentKind } from '@ruimte/contracts';
 import { createStore, useStore, type StoreApi } from 'zustand';
-import type { ArrangeRefusal } from '@/canvas/arrange-group';
-import { createCameraSlice, onlyCameraMoved, type CameraSlice } from '@/canvas/camera-slice';
-import { textRect } from '@/canvas/edge-lines';
-import { lineBounds } from '@/canvas/line-geometry';
-import { isMeasured, unionOf, type Point, type Rect } from '@/canvas/math';
-import type { DerivedFrame } from '@/canvas/node-body';
-import type { NodeDirection } from '@/canvas/node-navigation';
+import { createCameraSlice, onlyCameraMoved, type CameraSlice } from '@/canvas-model/camera-slice';
+import type { DerivedFrame } from '@/canvas-model/derived-frame';
+import { lineBounds } from '@/canvas-model/line-geometry';
+import { isMeasured, unionOf, type Point, type Rect } from '@/canvas-model/math';
+import type { NodeDirection } from '@/canvas-model/node-navigation';
 import type { CanvasPatch } from '@/project/merge';
+import type { ArrangeRefusal } from '@/state/arrange-group';
 import { withCameraHistory } from '@/state/canvas-camera-history';
 import { createCanvasContentSlice } from '@/state/canvas-content-slice';
 import { createCanvasEdgesSlice } from '@/state/canvas-edges-slice';
@@ -32,12 +31,13 @@ import { createCanvasNavigationSlice } from '@/state/canvas-navigation-slice';
 import { createCanvasNodesSlice } from '@/state/canvas-nodes-slice';
 import { createCanvasSelectionSlice } from '@/state/canvas-selection-slice';
 import { createCanvasTextsSlice } from '@/state/canvas-texts-slice';
+import { textRect } from '@/state/edge-lines';
 import { editorBindings } from '@/state/editor-bindings';
 import { createEditorRegistry } from '@/state/editors';
 import type { EditorHook } from '@/state/workspace-stores';
 
 export type { AgentStatus, NodeKind } from '@ruimte/contracts';
-export type { CameraRequest, Viewport } from '@/canvas/camera-slice';
+export type { CameraRequest, Viewport } from '@/canvas-model/camera-slice';
 export { setCameraClock } from '@/state/canvas-camera-history';
 export {
     carriedByGroups,

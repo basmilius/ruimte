@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { Camera } from '@/canvas/math';
+import type { Camera } from '@/canvas-model/math';
 import { BURST_QUIET_MS, CAMERA_HISTORY_LIMIT, emptyCameraHistory, noteJump, noteMove, samePlace, settle, step, type CameraHistory } from './camera-history';
 
 function at(x: number, zoom = 1): Camera {

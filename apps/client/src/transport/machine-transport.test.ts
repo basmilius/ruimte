@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { endpoint, FakeLink } from '../../testing/fake-link';
+import type { TransportStatus } from '../transport-api/transport';
 import { MachineTransports } from './machine-transport';
 import { TransportPool } from './pool';
-import type { TransportStatus } from './transport';
 
 function setup() {
     const opened: FakeLink[] = [];

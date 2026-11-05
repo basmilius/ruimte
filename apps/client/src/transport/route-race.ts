@@ -1,9 +1,9 @@
 import type { LanDoor } from '@ruimte/contracts';
 import { lanDoorUrl } from '@ruimte/pulsar';
 import i18next from 'i18next';
+import type { SignalRoute } from '../transport-api/transport';
 import type { LinkOpener } from './link-transport';
 import type { Signaling, SignalingOpener } from './signaling';
-import type { SignalRoute } from './transport';
 
 /* How long the doors on the local network have to themselves before the broker is asked as well. */
 export const LAN_HEAD_START_MS = 1_000;

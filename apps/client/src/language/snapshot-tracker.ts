@@ -1,4 +1,4 @@
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 /*
  * What a machine says about its language servers, as a snapshot a store reads with

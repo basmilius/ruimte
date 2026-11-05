@@ -1,15 +1,10 @@
 import { centerOf } from '@adecore/drawing';
 import type { NodeSide } from '@ruimte/contracts';
-import { containsPoint, type Point, type Rect } from '@/canvas/math';
+import type { FixedSides } from '@/canvas-model/fixed-sides';
+import { containsPoint, type Point, type Rect } from '@/canvas-model/math';
 
 /* The edge of a node a connector leaves from or lands on. */
 export type Side = NodeSide;
-
-/* The sides a line is held to, because a person drew it from that port. An end left out is free. */
-export interface FixedSides {
-    fromSide?: Side;
-    toSide?: Side;
-}
 
 /* Air between a node and the connector that touches it: the line stops short of the border and its
    dot sits in the gap, so a port reads as something beside the node instead of drawn onto it. */

@@ -17,7 +17,7 @@ import {
     showViewIn,
     singleLayout,
     undoShowView
-} from '@/shell/split';
+} from '@/layout/split';
 import type { DocumentState } from '@/state/document';
 import { canStandInCell, type DocumentKit } from '@/state/document-model';
 

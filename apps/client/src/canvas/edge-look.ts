@@ -1,6 +1,6 @@
 import { edgeRole, type EdgeRole } from '@ruimte/contracts';
-import type { EdgeLine } from '@/canvas/edge-lines';
 import type { MarkerShape } from '@/canvas/marker-path';
+import type { EdgeLine } from '@/state/edge-lines';
 
 /* Every meaning a line can have on screen, the plain one included: a line nobody gave a role. */
 export type LineRole = EdgeRole | 'plain';

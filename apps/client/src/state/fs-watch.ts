@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { HeldWatches, type HeldWatch } from '@/state/held-watches';
 import { endpointKey } from '@/state/keys';
 import { machineTransport } from '@/transport';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 /* Whether a path sits inside another, on either kind of machine. */
 export function isUnderFolder(path: string, ancestor: string): boolean {

@@ -5,7 +5,7 @@ import { FakeLanguageTransport } from '@/language/fake-daemon';
 import { bindDraftEditor } from '@/shell/panels/draft-editor';
 import { endpointKey } from '@/state/keys';
 import { type DraftLink, TextDrafts, useTextDrafts } from '@/state/text-drafts';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { useConflictInfo } from './conflict-info';
 import { mountConflictResolution, reviewConflict } from './conflict-wiring';
 

@@ -1,6 +1,6 @@
 import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, type ByteResource, type BytesReadPayload } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { blobTypeFor, type BytesPiece } from './piece';
+import { blobTypeFor, type BytesPiece } from '../transport-api/piece';
 
 export type ReadPiece = (payload: BytesReadPayload) => Promise<BytesPiece>;
 

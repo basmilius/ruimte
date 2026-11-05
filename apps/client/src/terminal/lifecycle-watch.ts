@@ -1,5 +1,5 @@
 import type { CanvasNodeKind } from '@ruimte/contracts';
-import { onlyCameraMoved } from '@/canvas/camera-slice';
+import { onlyCameraMoved } from '@/canvas-model/camera-slice';
 import { nodeRefsOfView, projectNodes } from '@/project/view-nodes';
 import { liveCanvases, subscribeCanvases } from '@/state/canvas';
 import { useDocument } from '@/state/document';

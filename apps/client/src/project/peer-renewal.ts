@@ -1,5 +1,5 @@
 import { markPeerLapsed } from '@/project/peer-lapse';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 // The address book's word on a peer lasts 30 days on the machine worked in; it is renewed while a week of it is left.
 export const RENEW_WITHIN_MS = 7 * 24 * 60 * 60 * 1000;

@@ -7,8 +7,8 @@ import { GIT_PANEL_PACE_MS, paced, type Pace } from '@/shell/panels/pace';
 import { watchGit } from '@/state/git-watch';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { transportFor } from '@/transport';
+import { isConnectionError, TransportError, type Transport } from '@/transport-api/transport';
 import { useTransport } from '@/transport/context';
-import { isConnectionError, TransportError, type Transport } from '@/transport/transport';
 
 /* A checkout the panel can draw: a repository of the project folder, or the worktree a selection on
    the canvas points it at. A worktree is never one of the folder's repositories, which is why the

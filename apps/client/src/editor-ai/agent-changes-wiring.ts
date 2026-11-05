@@ -5,7 +5,7 @@ import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import { isPathBelow, relativeTo } from '@/shell/panels/files-tree';
 import { endpointKey } from '@/state/keys';
 import { type TextDraft, useTextDrafts } from '@/state/text-drafts';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 import { AgentChanges } from './agent-changes';
 import { AgentReview, type ReviewSource } from './agent-review';
 import { providerNameOf } from './use-chat-identity';

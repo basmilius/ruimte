@@ -1,7 +1,7 @@
 import type { Worktree } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 export interface PendingEnd {
     /* What a delete or a stop names in its title; stopping a turn with its sub-agents has a title of its own. */

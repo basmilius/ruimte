@@ -1,6 +1,6 @@
 import i18next from 'i18next';
+import { TransportError, type Transport } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
-import { TransportError, type Transport } from '@/transport/transport';
 
 /*
  * The whole output of a tool call whose item carries only its beginning. Only a machine that answers

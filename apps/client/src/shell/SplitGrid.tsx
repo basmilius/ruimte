@@ -7,8 +7,10 @@ import { finderPaths } from '@/canvas/finder-drop';
 import { PromptStack } from '@/canvas/PromptStack';
 import { carriesDatabase, droppedDatabase } from '@/database/drag';
 import { dropDatabaseTab } from '@/database/open';
+import { cellsMoved, registerCell } from '@/layout/cell-rects';
+import { canDropAsTab, canMoveCell, canSplit, cellAt, cellViewIds, locateView, MIN_SHARE, type CellAt, type SplitZone } from '@/layout/split';
+import { clampTabLeft, DEFAULT_TAB_WIDTH, gapLeft, positionAfterLifting } from '@/layout/tab-drop';
 import { carriesArtifact, dropArtifactTab, droppedArtifact } from '@/output/artifact-drag';
-import { cellsMoved, registerCell } from '@/shell/cell-rects';
 import { isLooseView } from '@/shell/cell-view';
 import { CellOverlay } from '@/shell/CellOverlay';
 import { CellToolbar } from '@/shell/CellToolbar';
@@ -16,8 +18,6 @@ import { cellForPane, columnForSplit, coreLayout } from '@/shell/core-layout';
 import { carriesDiff, droppedDiff } from '@/shell/diff-drag';
 import { Dock } from '@/shell/Dock';
 import { hideDropPreview, showDropPreview } from '@/shell/drop-preview';
-import { canDropAsTab, canMoveCell, canSplit, cellAt, cellViewIds, locateView, MIN_SHARE, type CellAt, type SplitZone } from '@/shell/split';
-import { clampTabLeft, DEFAULT_TAB_WIDTH, gapLeft, positionAfterLifting } from '@/shell/tab-drop';
 import { useCellView } from '@/shell/use-cell-view';
 import {
     carriesView,

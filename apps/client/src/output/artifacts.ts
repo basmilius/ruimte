@@ -3,9 +3,9 @@ import { useEffect } from 'react';
 import { create } from 'zustand';
 import { endpointKey } from '@/state/keys';
 import { machineTransport, pool } from '@/transport';
+import type { Transport } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { startMachineWatch } from '@/transport/machine-watch';
-import type { Transport } from '@/transport/transport';
 
 /*
  * What a machine keeps in Output, as the surfaces on screen asked for it: the panel the whole list, a

@@ -1,6 +1,6 @@
 import type { LanguageLogLine, LanguageServerKind, LanguageServerStatus, LanguageTraceValue } from '@ruimte/contracts';
+import type { Transport } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
-import type { Transport } from '@/transport/transport';
 import { SnapshotTracker, upsert } from './snapshot-tracker';
 
 /*

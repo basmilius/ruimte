@@ -1,16 +1,4 @@
-import type { Rect } from '@/canvas/math';
-import type { CardResize } from '@/canvas/resize-handles';
 import { isNodeActive, type CanvasState } from '@/state/canvas';
-
-/*
- * A card drawn beside a node as the canvas knows it, by an id no node has (`DerivedSet.tsx`): where it
- * stands, for the resize handles and for moving between nodes with the keys, and never stored.
- */
-export interface DerivedFrame {
-    owner: string;
-    rect: Rect;
-    resize: CardResize | null;
-}
 
 export function derivedCardId(owner: string, key: string): string {
     return `derived:${owner}:${key}`;

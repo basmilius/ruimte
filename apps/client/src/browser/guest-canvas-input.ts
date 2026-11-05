@@ -1,6 +1,6 @@
 import type { StoreApi } from 'zustand';
+import type { Point } from '@/canvas-model/math';
 import { setGapModifierDown } from '@/canvas/gap-modifier';
-import type { Point } from '@/canvas/math';
 import { maximizedNodeOf, type CanvasState } from '@/state/canvas';
 
 export function createGuestCanvasInput(nodeId: string, canvas: () => StoreApi<CanvasState> | null, leave: () => void) {

@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
+import type { Transport } from '../transport-api/transport';
 import type { Connection } from './connections';
-import type { Transport } from './transport';
 
 export const ConnectionContext = createContext<Connection | null>(null);
 

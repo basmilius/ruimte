@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import type { IceServer } from '@ruimte/pulsar';
 import i18next from 'i18next';
+import type { SignalRoute } from '../transport-api/transport';
 import type { LinkEvents, LinkOpener } from './link-transport';
 import { LAN_HEAD_START_MS, LanSkips, lanDoorUrls, raceSignaling, routedLink, type RaceClock } from './route-race';
 import type { Signal, SignalingEvents, SignalingOpener } from './signaling';
-import type { SignalRoute } from './transport';
 
 /* One route an attempt may take: it records what the race asked of it and lets the test answer for it. */
 function fakeRoute() {

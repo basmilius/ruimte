@@ -5,11 +5,11 @@ import { useEffect, useState } from 'react';
 import { credentialFor } from '@/endpoint/credentials';
 import { endpointById, useEndpoints } from '@/state/endpoints';
 import { transportFor } from '@/transport';
+import { readPiece } from '../transport-api/piece';
 import { BlobCache, type BlobLease, type BlobState } from './blob-cache';
 import { fileTooLarge, readResource } from './byte-transfer';
 import { bytesStreamUrl } from './bytes-stream';
 import { bytesWorkerReady } from './bytes-worker-host';
-import { readPiece } from './piece';
 import { useEndpointConnection } from './status';
 
 /*

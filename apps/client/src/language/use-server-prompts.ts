@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { openFileLink } from '@/shell/panels/file-links';
 import { useProject } from '@/state/project';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 import { watchServerPrompts } from './server-prompts';
 
 /* Answers what the language servers of the open project ask, also while no editor is open. Mounted once by the workspace. */

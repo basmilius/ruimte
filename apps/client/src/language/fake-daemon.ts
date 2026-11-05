@@ -1,7 +1,7 @@
 import type { ProjectFiles } from '@adecore/editor-react';
 import { applyContentChanges, type ContentChange } from '@adecore/lsp';
 import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
-import { TransportError, type ConnectionState, type Transport, type TransportStatus } from '@/transport/transport';
+import { TransportError, type ConnectionState, type Transport, type TransportStatus } from '@/transport-api/transport';
 
 interface Call {
     type: string;

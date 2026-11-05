@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
 import type { UpdateState } from '@/desktop/bridge';
+import type { Transport, TransportStatus } from '@/transport-api/transport';
 import type { WatchablePool } from '@/transport/pool-watch';
-import type { Transport, TransportStatus } from '@/transport/transport';
 import { installStep, machineReportOf, startMachineUpdate } from './machine-update';
 
 class FakeLink implements Transport {

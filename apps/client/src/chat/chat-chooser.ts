@@ -12,9 +12,9 @@ import {
 import { create } from 'zustand';
 import type { SelectionOffer } from '@/chat/selection-to-chat';
 import { useChatDrawers } from '@/extensions/drawn-chats';
+import { viewIdsIn } from '@/layout/split';
 import type { NodesOfView } from '@/project/view-nodes';
 import { useSidebarSource } from '@/shell/sidebar-source';
-import { viewIdsIn } from '@/shell/split';
 import { useDocument } from '@/state/document';
 
 export interface ChooserChat {

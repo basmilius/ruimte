@@ -1,7 +1,7 @@
 import type { GitPrWatch, GitPrWatchEndReason } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { dropEndpoint, endpointKey, useEndpointId } from '@/state/keys';
-import { readOnEveryOpen, type Transport } from '@/transport/transport';
+import { readOnEveryOpen, type Transport } from '@/transport-api/transport';
 
 /*
  * The pull requests a machine watches, per chat. A person turns one on from the pull request dialog;

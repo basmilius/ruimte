@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
 import { endpointKey } from '@/state/keys';
-import type { Transport, TransportStatus } from '@/transport/transport';
+import type { Transport, TransportStatus } from '@/transport-api/transport';
 import { BrowserClient } from './browser-client';
 import { initialStreamUrl, normalizeUrl, useBrowser } from './registry';
 

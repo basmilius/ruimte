@@ -1,4 +1,5 @@
-import { containsPoint, type Point, type Rect } from '@/canvas/math';
+import type { ResizeEdge } from '@/canvas-model/derived-frame';
+import { containsPoint, type Point, type Rect } from '@/canvas-model/math';
 import { HINT_HOT, HINT_REACH } from '@/canvas/port-hints';
 
 /* Screen pixels: a handle keeps its size at every zoom, the way a port does. */
@@ -11,8 +12,6 @@ const PORT_CLEAR = 14;
 const PORT_FADE = 12;
 /* How far out the pill sits, the middle of the band a press takes. */
 const OUT = HINT_HOT / 2;
-
-export type ResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
 type ResizeSide = 'n' | 's' | 'e' | 'w';
 
@@ -37,19 +36,6 @@ export interface ResizeCandidate extends Rect {
     selected: boolean;
     /* The only edges it offers; every edge when absent. */
     edges?: readonly ResizeEdge[];
-}
-
-/*
- * How a card drawn beside a node (`canvas/DerivedSet.tsx`) resizes from the handles a node has. A
- * resize goes to `apply`, never to the canvas's nodes, so it is never stored in the project and
- * leaves no undo step.
- */
-export interface CardResize {
-    /* The edges its layout leaves free: a card placed by its top-left corner offers only e, s and se. */
-    edges: readonly ResizeEdge[];
-    minimum: { w: number; h: number };
-    /* Each new rect of a resize, on the grid and at least `minimum`. */
-    apply(rect: Rect): void;
 }
 
 /*

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { Machine } from '@ruimte/pulsar';
 import { mergeMachines } from '@/shell/settings/machine-list';
 import type { Endpoint } from '@/state/endpoints';
-import type { ConnectionState } from '@/transport/transport';
+import type { ConnectionState } from '@/transport-api/transport';
 import {
     browseBack,
     browseMachines,

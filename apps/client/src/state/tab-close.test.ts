@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectSummary } from '@ruimte/contracts';
-import { cellViewIds } from '@/shell/split';
+import { cellViewIds } from '@/layout/split';
 import { useDocument } from './document.ts';
 import { useFiles } from './files.ts';
 import { endpointKey } from './keys.ts';

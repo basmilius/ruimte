@@ -1,7 +1,7 @@
 import { isCanvasView, isDesignView, isSessionView, type ProjectNode, type ProjectView, type SplitLayout } from '@ruimte/contracts';
-import { intersects, isMeasured, visibleRect, type Camera, type Rect } from '@/canvas/math';
+import { intersects, isMeasured, visibleRect, type Camera, type Rect } from '@/canvas-model/math';
 import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
-import { shownViewIdsIn } from '@/shell/split';
+import { shownViewIdsIn } from '@/layout/split';
 import { liveCanvas, maximizedNodeOf, type CanvasNode, type CanvasState } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 

@@ -24,9 +24,9 @@ import { endpointById } from '@/state/endpoints';
 import { useProject } from '@/state/project';
 import { useUi, type AddToMachineRequest } from '@/state/ui';
 import { pool, transportFor } from '@/transport';
+import type { Transport } from '@/transport-api/transport';
 import { useWorkspace } from '@/transport/connections';
 import { machineAnswers } from '@/transport/features';
-import type { Transport } from '@/transport/transport';
 
 const PROTOCOLS: readonly RemoteProtocol[] = ['ssh', 'https'];
 

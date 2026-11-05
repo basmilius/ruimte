@@ -3,7 +3,7 @@ import { isDrawingView, type DrawingContent, type DrawingDocument } from '@ruimt
 import type { DrawingState } from '@/state/drawing';
 import type { EditorRegistry } from '@/state/editors';
 import { FileEditorClient, type DocumentAccess, type FileEditorChannel, type FileEditorClientOptions, type ProjectAccess } from '@/state/file-editor-client';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 const DRAWINGS: FileEditorChannel<DrawingDocument, DrawingContent> = {
     isView: isDrawingView,

@@ -15,8 +15,8 @@ import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
 import { bundledThemesInfo } from 'shiki/themes';
 import { z } from 'zod';
 import { create } from 'zustand';
-import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
-import { renderDistanceFrom, type RenderDistance } from '@/canvas/render-distance';
+import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas-model/accents';
+import { renderDistanceFrom, type RenderDistance } from '@/canvas-model/render-distance';
 import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
 import { CODE_THEMES } from '@/shell/panels/code-themes';
 import {

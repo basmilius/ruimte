@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { GRID } from '@/canvas-model/math';
 import { COLUMN_W, GUTTER, LINE_H, OPEN_H, OPEN_MIN_H, STACK_GAP } from '@/canvas/beside-metrics';
-import { GRID } from '@/canvas/math';
 import { PHASES_W, workflowBesideLayout, type WorkflowBesideCard } from '@/chat/workflow/workflow-beside-layout';
 
 const NODE = { x: 100, y: 200, w: 480, h: 640 };

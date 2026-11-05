@@ -16,9 +16,9 @@ import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { machineTransport, pool } from '@/transport';
+import { isConnectionError } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { useEndpointConnection } from '@/transport/status';
-import { isConnectionError } from '@/transport/transport';
 
 // The categorical series of the theme, a project per color in the order of their size.
 const SERIES = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', 'var(--chart-6)'];

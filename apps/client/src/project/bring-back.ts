@@ -1,7 +1,7 @@
 import type { GitFetchBundleResult } from '@ruimte/contracts';
 import { handOff, type BundleSource, type BundleTarget } from '@/project/bundle-transfer';
+import type { Transport } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
-import type { Transport } from '@/transport/transport';
 
 export interface BringBackRequest {
     /* The machine the node works on. */

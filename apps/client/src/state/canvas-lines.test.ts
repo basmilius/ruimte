@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { NODE_ACCENT_NAMES, ProjectCanvasViewSchema, type ProjectCanvasLine, type ProjectCanvasView } from '@ruimte/contracts';
-import { constrainedLineEnd, lineDash } from '@/canvas/line-geometry';
+import { constrainedLineEnd, lineDash } from '@/canvas-model/line-geometry';
 import { mergeProject } from '@/project/merge';
 import { createCanvasStore } from './canvas';
 

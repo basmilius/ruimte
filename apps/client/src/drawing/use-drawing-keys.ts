@@ -2,7 +2,7 @@ import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@adecore/ui';
 import { useEffect } from 'react';
 import type { StoreApi } from 'zustand';
 import { fitAction, historyAction } from '@/actions/client-actions';
-import { GRID } from '@/canvas/math';
+import { GRID } from '@/canvas-model/math';
 import { isApplePlatform } from '@/desktop/bridge';
 import {
     copyDrawing,

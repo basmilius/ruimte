@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { ActionRegistry } from '@ruimte/actions';
-import { TransportError, type Transport } from '@/transport/transport';
+import { TransportError, type Transport } from '@/transport-api/transport';
 import { terminalPrepareActions } from './terminal-prepare-actions';
 
 function fixture() {

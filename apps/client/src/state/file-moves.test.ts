@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { viewStateKey, viewStates } from '@adecore/editor-react';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 import { useDocument } from './document.ts';
 import { followMove, moveFile, saveBeforeMove } from './file-moves.ts';
 import { useFiles } from './files.ts';

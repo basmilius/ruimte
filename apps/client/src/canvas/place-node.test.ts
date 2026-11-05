@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { intersects } from '@/canvas/math';
+import { intersects } from '@/canvas-model/math';
 import { liesWithin, nearestFreeNodeRect } from './place-node';
 
 describe('nearestFreeNodeRect', () => {

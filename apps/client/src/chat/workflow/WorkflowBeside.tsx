@@ -24,14 +24,14 @@ import clsx from 'clsx';
 import { ArrowLeft, ChevronLeft, ChevronRight, CloudOff, MessageSquareText, Square, TriangleAlert, Workflow, X } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { accentColor, accentHeaderStyle, accentShades } from '@/canvas/accents';
+import { accentColor, accentHeaderStyle, accentShades } from '@/canvas-model/accents';
+import type { ResizeEdge } from '@/canvas-model/derived-frame';
+import type { Rect } from '@/canvas-model/math';
 import { CHROME_H, FRAME, frameStyle, HEADER, HEADER_MIDDLE } from '@/canvas/derived-card-look';
 import { CardLine } from '@/canvas/DerivedCardLook';
 import { DerivedSet, type DerivedCard } from '@/canvas/DerivedSet';
 import { KindIcon } from '@/canvas/KindIcon';
-import type { Rect } from '@/canvas/math';
 import { derivedCardId } from '@/canvas/node-body';
-import type { ResizeEdge } from '@/canvas/resize-handles';
 import { shownWorkflow, workflowCandidates, type WorkflowCandidate } from '@/chat/workflow/beside-workflows';
 import { phaseCardKey, workflowBesideLayout, type WorkflowBesideCard } from '@/chat/workflow/workflow-beside-layout';
 import {

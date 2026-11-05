@@ -1,8 +1,8 @@
 import { imageForDisplay } from '@adecore/agents-react/images';
 import type { ProjectIcon, ProjectSummary } from '@ruimte/contracts';
 import type { Transport } from '@/transport';
+import { readPiece } from '@/transport-api/piece';
 import { readResource } from '@/transport/byte-transfer';
-import { readPiece } from '@/transport/piece';
 
 export interface IconAppearance {
     color: string | null;

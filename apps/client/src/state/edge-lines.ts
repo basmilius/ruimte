@@ -1,5 +1,5 @@
-import type { FixedSides } from '@/canvas/edge-route';
-import type { Rect } from '@/canvas/math';
+import type { FixedSides } from '@/canvas-model/fixed-sides';
+import type { Rect } from '@/canvas-model/math';
 import type { Edge } from '@/state/canvas';
 
 /*

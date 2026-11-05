@@ -1,5 +1,5 @@
 import { desktop, type SystemIdleState } from '@/desktop/bridge';
-import type { Transport } from './transport';
+import type { Transport } from '../transport-api/transport';
 
 // Well within the machine's lease of a minute, so one lost report never reads as leaving.
 const REPORT_MS = 20_000;

@@ -15,7 +15,7 @@ import {
     showViewOnCanvasAction
 } from '@/actions/client-actions';
 import { askBeforeEndingAgents } from '@/agents/end-children';
-import { GRID, type Point } from '@/canvas/math';
+import { GRID, type Point } from '@/canvas-model/math';
 import { databaseTargetOf, databaseViewName } from '@/database/view-name';
 import { useDesignChat } from '@/design/design-chat';
 import { filesOfView } from '@/project/view-deletion';

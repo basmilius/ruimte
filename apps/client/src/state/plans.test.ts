@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import type { EventMap, EventType, Plan, PlanOfChat, RequestMap, RequestType } from '@ruimte/contracts';
 import { PlanClient, type PlanWriteSink } from '@/plan/plan-client';
 import { findPlan, PlanSync, plansOf, subscribePlanCreated, usePlans } from '@/state/plans';
-import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
+import { TransportError, type Transport, type TransportStatus } from '@/transport-api/transport';
 
 function planOf(id: string, createdAt: string, rev = 1): Plan {
     return {

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ActionRefusal, ActionRegistry, MAX_TITLE_LENGTH, type ActionInput } from '@ruimte/actions';
 import type { ProjectCanvasView, ProjectDocument, ProjectSummary } from '@ruimte/contracts';
-import { visibleRect } from '@/canvas/math';
+import { visibleRect } from '@/canvas-model/math';
 import { liesWithin } from '@/canvas/place-node';
-import { viewIdsIn } from '@/shell/split';
+import { viewIdsIn } from '@/layout/split';
 import { defaultCanvases } from '@/state/canvas';
 import { defaultDiagrams } from '@/state/diagram';
 import { useDocument } from '@/state/document';

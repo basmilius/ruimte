@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { Editor } from '@adecore/editor';
-import { registerCell } from '@/shell/cell-rects';
+import { registerCell } from '@/layout/cell-rects';
 import { registerFocusedEditor } from '@/shell/panels/focused-editor';
 import { useDocument } from '@/state/document';
 import { findReturnTarget } from './use-find';

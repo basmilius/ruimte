@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { NODE_ACCENT_NAMES } from '@ruimte/contracts';
-import { notePaperClass } from './accents';
+import { notePaperClass } from '../canvas-model/accents';
 
 const STYLES = await Bun.file(new URL('../styles.css', import.meta.url)).text();
 const SWIFT = await Bun.file(new URL('../../../ios/Packages/RuimtePulsar/Sources/RuimtePulsar/RuimteColors.swift', import.meta.url)).text();

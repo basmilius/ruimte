@@ -13,11 +13,11 @@ import { PDF_PAGE_GAP, pdfPageBox, pdfPageScale, pdfPageTops, pdfReadingPage, ty
 import { RevealButton } from '@/shell/panels/RevealButton';
 import { useEndpoints } from '@/state/endpoints';
 import { machineTransport } from '@/transport';
+import { readPiece } from '@/transport-api/piece';
 import { readResource } from '@/transport/byte-transfer';
 import { bytesWorkerReady } from '@/transport/bytes-worker-host';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
-import { readPiece } from '@/transport/piece';
 
 // From this page's own origin, so the worker stays inside `worker-src 'self'`.
 GlobalWorkerOptions.workerSrc = workerUrl;

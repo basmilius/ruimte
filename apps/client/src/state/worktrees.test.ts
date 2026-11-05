@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 import { COUNTS_QUIET_MS, WorktreeLists } from './worktrees';
 
 type Call = { type: RequestType; payload: unknown };

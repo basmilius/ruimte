@@ -32,8 +32,8 @@ import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useUi, type WorktreeMergeRequest } from '@/state/ui';
 import { useProjectNodes, worktreeLists, type WorktreeNode } from '@/state/worktrees';
+import type { Transport } from '@/transport-api/transport';
 import { useTransport } from '@/transport/context';
-import type { Transport } from '@/transport/transport';
 
 type Reading = { request: WorktreeMergeRequest; worktrees: Worktree[]; error: { message: string | null } | null };
 

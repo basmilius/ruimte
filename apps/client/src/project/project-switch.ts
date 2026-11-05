@@ -2,7 +2,7 @@ import { messageOf } from '@adecore/ui';
 import type { ProjectSummary } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 
 /* Long enough that a switch on a machine that is already connected never flashes a screen, short enough that a wait is never silent. */
 export const REVEAL_DELAY_MS = 300;

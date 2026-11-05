@@ -3,7 +3,7 @@ import type { PersonalTemplates, TemplateListResult } from '@ruimte/contracts';
 import { act } from 'react';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
 import { buttonWithText, everything, typeInto } from '../../../../testing/dom-helpers';
 import { FakeMachine } from '../../../../testing/fake-machine';

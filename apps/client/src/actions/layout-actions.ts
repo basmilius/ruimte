@@ -3,9 +3,9 @@ import { isCanvasView, isOpenableView, type ProjectNode } from '@ruimte/contract
 import type { StoreApi } from 'zustand';
 import { kindOf, kindOfNode, unknownView } from '@/actions/action-reach';
 import { projectPathOf } from '@/actions/files-actions';
+import { canDropAsTab, canSplit, cellAt, cellViewIds, focusedViewId, freeViewFor, isSameCell, locateView } from '@/layout/split';
+import { positionAfterLifting } from '@/layout/tab-drop';
 import { looseTabLabel } from '@/shell/panels/tab-label';
-import { canDropAsTab, canSplit, cellAt, cellViewIds, focusedViewId, freeViewFor, isSameCell, locateView } from '@/shell/split';
-import { positionAfterLifting } from '@/shell/tab-drop';
 import { sightOf, visibleNodes } from '@/state/attention';
 import { focusedCanvas } from '@/state/canvas';
 import { closeCellGuarded } from '@/state/cell-close';

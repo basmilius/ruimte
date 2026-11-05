@@ -1,5 +1,5 @@
 import { ActionRefusal } from '@ruimte/actions';
-import { TransportError, type Transport } from '@/transport/transport';
+import { TransportError, type Transport } from '@/transport-api/transport';
 
 export type Requester = Pick<Transport, 'request'>;
 

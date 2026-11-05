@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { create } from 'zustand';
 import { storedJson } from '@/state/stored-json';
-import type { ConnectionState } from '@/transport/transport';
+import type { ConnectionState } from '@/transport-api/transport';
 
 const lastSeen = storedJson('ruimte.lastSeen', z.record(z.string(), z.number()));
 

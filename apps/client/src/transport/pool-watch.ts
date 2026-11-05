@@ -1,7 +1,7 @@
 import type { EventMap, EventType, RequestMap } from '@ruimte/contracts';
 import { pool } from '@/transport';
+import { readOnEveryOpen, type Transport } from '../transport-api/transport';
 import type { BareRequest } from './machine-watch';
-import { readOnEveryOpen, type Transport } from './transport';
 
 export interface LinkWatch {
     /*

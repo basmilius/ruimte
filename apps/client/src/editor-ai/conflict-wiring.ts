@@ -1,7 +1,7 @@
 import type { Editor } from '@adecore/editor';
 import { endpointKey } from '@/state/keys';
 import { type TextDrafts, textDrafts, useTextDrafts } from '@/state/text-drafts';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 import { ConflictResolution } from './conflict-resolution';
 
 export interface ConflictFile {

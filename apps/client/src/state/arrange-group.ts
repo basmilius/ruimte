@@ -1,5 +1,5 @@
 import { arrangeRects, CANVAS_GRID, GROUP_HEADER, GROUP_PADDING, groupMemberIds, type GroupItem } from '@ruimte/contracts';
-import { snapToGrid as snap, type Point, type Rect } from '@/canvas/math';
+import { snapToGrid as snap, type Point, type Rect } from '@/canvas-model/math';
 import type { CanvasNode, TextElement } from '@/state/canvas';
 
 /* Whether the arrange command is offered for this selection; the menu and the palette share it. */

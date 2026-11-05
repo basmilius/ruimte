@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, jest, test } from 'bun:test';
 import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
-import type { Transport, TransportStatus } from '../transport/transport';
+import type { Transport, TransportStatus } from '../transport-api/transport';
 import { SidebarWatch, type SidebarWatchOptions } from './sidebar-watch';
 
 class FakeTransport implements Transport {

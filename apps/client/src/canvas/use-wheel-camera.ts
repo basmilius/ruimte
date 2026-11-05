@@ -1,7 +1,7 @@
 import { isModHeld } from '@adecore/ui';
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import type { StoreApi } from 'zustand';
-import type { CameraSlice } from '@/canvas/camera-slice';
+import type { CameraSlice } from '@/canvas-model/camera-slice';
 import { createPanBatch } from '@/canvas/pan-batch';
 import { createWheelPanSession, PAN_IDLE_MS } from '@/canvas/wheel-pan-session';
 import { createZoomGlide, wheelZoomOf } from '@/canvas/wheel-zoom';

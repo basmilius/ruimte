@@ -20,6 +20,7 @@ import { isApplePlatform } from '@/desktop/bridge';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
+import { wantsNewTab } from '@/layout/tab-drop';
 import { resetTitle } from '@/nodes/node-host';
 import { FlagMark } from '@/project/FlagMark';
 import type { ProjectMenuRow } from '@/project/list';
@@ -33,7 +34,6 @@ import { openSidebarTarget, showSidebarProject } from '@/shell/sidebar-navigatio
 import { separatorKey, useSidebarProjects, type SidebarSeparator } from '@/shell/sidebar-projects';
 import { heaviestWork, snoozeTargetOf, viewNameOf, type SidebarGroup, type SidebarNodeRow, type SidebarRow, type SidebarViewRow } from '@/shell/sidebar-rows';
 import { SnoozeButton, SnoozedMark, SnoozeMenuItems } from '@/shell/Snooze';
-import { wantsNewTab } from '@/shell/tab-drop';
 import { ViewMenuItems } from '@/shell/ViewMenuItems';
 import type { AgentWork } from '@/state/agent-work';
 import { useCanvas } from '@/state/canvas';

@@ -4,8 +4,8 @@ import { nodeColorOf } from '@ruimte/contracts';
 import clsx from 'clsx';
 import { useEffect, useLayoutEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { accentColor } from '@/canvas/accents';
-import { unionOf, visibleRect, type Point } from '@/canvas/math';
+import { accentColor } from '@/canvas-model/accents';
+import { unionOf, visibleRect, type Point } from '@/canvas-model/math';
 import {
     cameraLookingAt,
     mappedCards,

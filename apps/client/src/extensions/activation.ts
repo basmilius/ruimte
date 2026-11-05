@@ -1,5 +1,5 @@
 import { extensionKeyOf } from '@/extensions/registry';
-import { shownViewIdsIn } from '@/shell/split';
+import { shownViewIdsIn } from '@/layout/split';
 import { defaultCanvases, focusedCanvas, liveCanvas, type CanvasState } from '@/state/canvas';
 import { useDocument, type DocumentState } from '@/state/document';
 import { useFiles } from '@/state/files';

@@ -1,5 +1,5 @@
+import type { BytesPiece } from '../transport-api/piece';
 import { BYTES_STREAM_PATH, answerRange, type PieceQuestion } from '../transport/bytes-stream';
-import type { BytesPiece } from '../transport/piece';
 
 /*
  * The service worker behind a video over a direct connection. A media element can only ask HTTP for

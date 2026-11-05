@@ -1,7 +1,7 @@
 import { isCanvasView, type ProjectView } from '@ruimte/contracts';
 import { useSyncExternalStore } from 'react';
+import { viewIdsIn } from '@/layout/split';
 import { nodesOfView, type NodesOfView } from '@/project/view-nodes';
-import { viewIdsIn } from '@/shell/split';
 import { defaultCanvases, type CanvasNode } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { memoByIdentity } from '@/state/identity-memo';

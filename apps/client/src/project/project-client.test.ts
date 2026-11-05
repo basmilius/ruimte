@@ -20,7 +20,7 @@ import { useFiles } from '../state/files';
 import { useUi } from '../state/ui';
 import { createWorkspaceStores, defaultWorkspaceStores } from '../state/workspace';
 import type { WorkspaceStores } from '../state/workspace-stores';
-import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
+import { TransportError, type Transport, type TransportStatus } from '../transport-api/transport';
 import { withClientClosedProject } from './closed-projects';
 import { fakeStorage } from './fixtures';
 import { rekeyLastProject } from './last-project';

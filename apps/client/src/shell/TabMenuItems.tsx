@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { closeTabAction, closeTabsAction } from '@/actions/client-actions';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
-import { canSplit, cellAt, locateView } from '@/shell/split';
+import { canSplit, cellAt, locateView } from '@/layout/split';
 import { SplitItems } from '@/shell/ViewMenuItems';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';

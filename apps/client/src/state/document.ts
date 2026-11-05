@@ -20,9 +20,9 @@ import {
 } from '@ruimte/contracts';
 import { useContext } from 'react';
 import { createStore, type StoreApi } from 'zustand';
+import type { LooseStrip } from '@/layout/legacy-files-cell';
+import type { CellAt, ShownView, SplitDirection, SplitZone } from '@/layout/split';
 import type { CanvasPatch } from '@/project/merge';
-import type { LooseStrip } from '@/shell/legacy-files-cell';
-import type { CellAt, ShownView, SplitDirection, SplitZone } from '@/shell/split';
 import { defaultCanvases } from '@/state/canvas';
 import { defaultDiagrams } from '@/state/diagram';
 import { createDocumentContentSlice } from '@/state/document-content-slice';

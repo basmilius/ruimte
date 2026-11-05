@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectView } from '@ruimte/contracts';
-import { cellViewIds } from '@/shell/split';
+import { cellViewIds } from '@/layout/split';
 import { dragging, setDragging } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
 import { isDatabaseTab, useFiles } from '@/state/files';

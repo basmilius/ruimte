@@ -1,6 +1,6 @@
 import { ColorWheelPicker } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
-import { NODE_ACCENTS, accentColor, accentLabel, type AccentId } from '@/canvas/accents';
+import { NODE_ACCENTS, accentColor, accentLabel, type AccentId } from '@/canvas-model/accents';
 import { PALETTE_NEUTRALS, presetSwatch, type PalettePreset } from '@/state/palette-presets';
 import { previewColors, useSettings } from '@/state/settings';
 import { TAILWIND_COLORS } from '@/state/tailwind-palettes';
