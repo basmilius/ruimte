@@ -144,10 +144,41 @@ jobs:
       - uses: ./.github/actions/install
       - run: bun run --cwd apps/server docker:test
 
+  # A pull request builds the site only when what it renders changed; site.yml deploys it after main's run.
+  site-changes:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    outputs:
+      site: ${{ steps.paths.outputs.site }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
+        id: paths
+        with:
+          token: ''
+          filters: |
+            site:
+              - '.github/workflows/ci.yml'
+              - 'bun.lock'
+              - 'apps/site/**'
+              - 'packages/extension/**'
+
+  # The site's typecheck and tests already run in verify and unit; a page that fails to compile or
+  # prerender shows only in the build.
+  site:
+    name: site build
+    needs: site-changes
+    if: ${{ !cancelled() && (github.event_name == 'push' || needs.site-changes.outputs.site == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/install
+      - run: bun run --cwd apps/site build
+
   checks:
     name: CI checks
     if: ${{ always() }}
-    needs: [native, verify, build, unit, windows, dom, integration, packaged, integration-linux, packaged-linux, docker-changes, docker]
+    needs: [native, verify, build, unit, windows, dom, integration, packaged, integration-linux, packaged-linux, docker-changes, docker, site-changes, site]
     runs-on: ubuntu-latest
     steps:
       - name: Check job results
