@@ -286,7 +286,7 @@ An agent in an AI chat asks for a secret a launch needs with `secret_request` (`
 
 A person answers with `secret.save` or `secret.decline`. The value goes into `$RUIMTE_HOME/secrets/<hash>.json` (`src/secrets/secret-store.ts`), one 0600 file per project. The launch gets the marker `ruimte:secret` (`LAUNCH_SECRET_REFERENCE`) in this machine's own launch file, and the approval covers the marker, not the value. A new value changes nothing an approval covers; a marker added or removed outside a person's save asks again. Only the started process gets the value (`resolveEnv` in `src/launches/runner.ts`); a marker without a secret leaves the variable unset.
 
-The value is never in a project file, chat log, event, agent reply or log line, and no tool or client file request reaches `secrets/` (`src/fs/machine-home.ts`).
+The value is never in a project file, chat log, event, agent reply or log line, and no tool or client file request reaches `secrets/` (`src/disk/machine-home.ts`).
 
 ## Sessions
 
@@ -377,7 +377,7 @@ Each agent CLI is one `ChatProvider` (`@adecore/agents`). The daemon's list is `
 
 A kind is an open word on the wire (`AgentKindSchema`, lowercase, at most 32 characters), so an older client draws an unknown kind with a neutral mark. A kind this daemon does not offer starts nothing and is not counted in usage.
 
-Copilot and Grok chat over the Agent Client Protocol (`createAcpProvider`). The daemon starts `copilot --acp --stdio --no-auto-update --allow-tool=ruimte` and `grok --no-auto-update agent stdio`, hands every ACP agent Ruimte's MCP server in `session/new` when it advertises MCP over HTTP (`withRuimteMcp` in `src/providers/ruimte-mcp.ts`), keeps the models, effort and commands they report in `models/agents/<kind>.json`, and sends `provider.changed` when that changes. Only `supervised` maps to a session mode (`agent` for Copilot, `default` for Grok); the backend answers permission requests a wider mode allows. Grok signs in with `XAI_API_KEY`, else the login `grok login` left in `GROK_HOME` (default `~/.grok`), and checks it with `grok --no-auto-update models`. Copilot keeps its login in the system credential store (`copilot login`, or `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`) and has only its default account. Install Copilot with `npm install -g @github/copilot` (or Homebrew `copilot-cli`) and Grok with `curl -fsSL https://x.ai/cli/install.sh | bash`.
+Copilot and Grok chat over the Agent Client Protocol (`createAcpProvider`). The daemon starts `copilot --acp --stdio --no-auto-update --allow-tool=ruimte` and `grok --no-auto-update agent stdio`, hands every ACP agent Ruimte's MCP server in `session/new` when it advertises MCP over HTTP (`withRuimteMcp` in `src/ruimte-mcp.ts`), keeps the models, effort and commands they report in `models/agents/<kind>.json`, and sends `provider.changed` when that changes. Only `supervised` maps to a session mode (`agent` for Copilot, `default` for Grok); the backend answers permission requests a wider mode allows. Grok signs in with `XAI_API_KEY`, else the login `grok login` left in `GROK_HOME` (default `~/.grok`), and checks it with `grok --no-auto-update models`. Copilot keeps its login in the system credential store (`copilot login`, or `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`) and has only its default account. Install Copilot with `npm install -g @github/copilot` (or Homebrew `copilot-cli`) and Grok with `curl -fsSL https://x.ai/cli/install.sh | bash`.
 
 Antigravity's terminal is `agy`, installed with `curl -fsSL https://antigravity.google/cli/install.sh | bash` into `~/.local/bin` (Windows: `irm https://antigravity.google/cli/install.ps1 | iex`); it signs in through the browser on first start. Runtime modes map to `--mode=accept-edits` (`auto-accept-edits`, `auto`) or `--dangerously-skip-permissions` (`full-access`); a first prompt is `-i`, a resume `--conversation <id>`.
 
@@ -391,7 +391,7 @@ Ruimte no longer offers Gemini: a node with `provider: 'gemini'` keeps it and op
 
 A release ships model catalogs as `<kind>-models.json` in `@adecore/agents/providers`. The address book serves the live ones on `GET /v2/models/catalog` (`apps/pulsar-worker/README.md`). The daemon asks at start and on `provider.list` once the last answer is fifteen minutes old, keeps it in `models/catalogs-v2.json`, and never takes a catalog older than the bundled one. `--no-model-fetch` turns this off.
 
-The runtime mode (`supervised`, `auto-accept-edits`, `auto`, `full-access`) is one vocabulary that each provider maps to its own flags. Ruimte's MCP tools run without a prompt in every mode, since the daemon checks each call itself: a Claude Code terminal gets `--allowedTools=mcp__ruimte`, a Claude chat the server in its launch with `allowTools` (`mcp__ruimte__*`), Copilot `--allow-tool=ruimte`, and Codex `default_tools_approval_mode="approve"` on the server (`src/providers/ruimte-mcp.ts`).
+The runtime mode (`supervised`, `auto-accept-edits`, `auto`, `full-access`) is one vocabulary that each provider maps to its own flags. Ruimte's MCP tools run without a prompt in every mode, since the daemon checks each call itself: a Claude Code terminal gets `--allowedTools=mcp__ruimte`, a Claude chat the server in its launch with `allowTools` (`mcp__ruimte__*`), Copilot `--allow-tool=ruimte`, and Codex `default_tools_approval_mode="approve"` on the server (`src/ruimte-mcp.ts`).
 
 ### Claude API
 
@@ -401,7 +401,7 @@ A chat runs the person's installed `claude` through the same Agent SDK backend a
 
 ### NanoGPT
 
-NanoGPT's subscription API is a chat with no CLI (`src/providers/nanogpt-provider.ts`, on the chat completions backend of `@adecore/agents`, with Ruimte's tools from `src/chat/ruimte-api-tools.ts`). `nanogpt.configure` checks a key against `/usage` before keeping it. The daemon only calls `https://nano-gpt.com/api/subscription/v1`, so no setting or redirect reaches pay as you go, and slugs with a suffix (`:online`) are never offered.
+NanoGPT's subscription API is a chat with no CLI (`src/providers/nanogpt-provider.ts`, on the chat completions backend of `@adecore/agents`, with Ruimte's tools from `src/providers/ruimte-api-tools.ts`). `nanogpt.configure` checks a key against `/usage` before keeping it. The daemon only calls `https://nano-gpt.com/api/subscription/v1`, so no setting or redirect reaches pay as you go, and slugs with a suffix (`:online`) are never offered.
 
 The key is a 0600 file in `$RUIMTE_HOME/nanogpt`, which no client reads; only the owner sets or removes it. `supervised` asks for every tool, `auto-accept-edits` and `auto` ask only for commands, `full-access` for none. An `ask_user` tool opens a question card in every mode. Settings (`nanogpt/settings.json`): `roundsPerRun` (40 by default, 5 to 200) and, with continuing on by default, `runs` (5 by default, 1 to 20). Models group by `vendor` (`nanoGptVendorOf` of `@adecore/agents`). Every call appends to `nanogpt/usage/<year>-<month>.jsonl`, which the scanner reads without prices; plan windows come from `/usage` on the limits monitor's clock.
 
@@ -431,9 +431,9 @@ The chat lifecycle and backends live in `@adecore/agents/chat`; `src/chat/chat-m
 - A chat no client reads, without a CLI and with nothing under way, leaves memory after ten minutes and keeps only its status for `chat.list`. Opening it loads it from its record.
 - A turn running when the daemon went down resumes at start through a `resume-run` outbox entry, or ends `aborted` with a note.
 - Attachments are any type, at most 25 MB each and 8 per message, in `attachments/<chatId>/<id>.<ext>`. `GET /attachments/<chatId>/<id>` serves them behind the `/ws` access rules, `inline` only for what a browser paints, with `nosniff` and an immutable cache; a visual's page is always a download.
-- An agent's `chat_attach` names a path, which the daemon reads only inside the folders `src/mcp/files.ts` allows. `/mcp` takes bodies up to 72 MiB; every other route stops at 24 MiB.
+- An agent's `chat_attach` names a path, which the daemon reads only inside the folders `src/agent-files/files.ts` allows. `/mcp` takes bodies up to 72 MiB; every other route stops at 24 MiB.
 - A turn checkpoints the chat's folder as a git tree through a private index under `checkpoints/` (`src/git/checkpoints.ts`), leaving the person's index, stashes and commits alone.
-- A hidden agent's chat is pruned at daemon start once its tasks settled over 30 days ago, no view holds it and no agent it opened lives (`src/agents/prune-hidden-chats.ts`). Its worktree stays.
+- A hidden agent's chat is pruned at daemon start once its tasks settled over 30 days ago, no view holds it and no agent it opened lives (`src/wiring/prune-hidden-chats.ts`). Its worktree stays.
 - `chat.imageTarget` and `chat.saveImage` copy a generated image into the project, never into `.git`, `.ruimte` or machine state, refuse a symlink target and overwrite only with `replace` against the revision read.
 
 ## Maps
@@ -489,7 +489,7 @@ The CLI runs in an empty folder under `$RUIMTE_HOME/editor-assist`, outside the 
 
 File requests (`fs.read`, `fs.write`, `fs.create`, `fs.rename`, `fs.delete`, `fs.grep`, `fs.locate`, `fs.list`, `fs.browse`, `bytes.read`) live in `src/fs`, archive requests (`archive.list`, `archive.extract`) in `src/archive`.
 
-- No file request reaches under `$RUIMTE_HOME`, by name or link, except the Chats project, worktrees, screenshots and attachments (`src/fs/machine-home.ts`); such a path answers `machine-state`.
+- No file request reaches under `$RUIMTE_HOME`, by name or link, except the Chats project, worktrees, screenshots and attachments (`src/disk/machine-home.ts`); such a path answers `machine-state`.
 - `fs.write`, `fs.create`, `fs.rename`, `fs.delete` and `archive.extract` work only inside a project folder the client holds or a worktree the daemon made of its repository, compared on real paths (`outside-project`). `.ruimte` at its root is closed (`ruimte-state`) except `.ruimte/private/consoles`, and `.git` at any level.
 - `fs.rename` refuses a move across volumes (`other-volume`). With `overwrite` the replaced file goes to the trash (`~/.Trash` on macOS, with a `.trashinfo` on Linux).
 - `fs.read` and `fs.write` refuse files over 2 MB. `fs.write` checks the mtime it read (`stale`) and never overwrites a non-text file.
@@ -571,13 +571,13 @@ A worktree the daemon makes lives under `$RUIMTE_HOME/worktrees/<repo>-<hash>/<b
 
 A line on the canvas into a terminal or chat lets that agent read the source. Every shell gets `RUIMTE_CONTEXT_URL` (`http://127.0.0.1:<port>/context`) and its `RUIMTE_HOOK_TOKEN`. A chat gets the same URL, a token of its own per load in `RUIMTE_CONTEXT_TOKEN`, and `RUIMTE_MCP_URL` for a backend that runs inside the daemon.
 
-`context_list` lists the linked sources and `context_read` reads one (`tail`, `subagent`, `form`). A chat view names a canvas with `view` instead of a line (`src/tools/chat-view.ts`).
+`context_list` lists the linked sources and `context_read` reads one (`tail`, `subagent`, `form`). A chat view names a canvas with `view` instead of a line (`src/canvas/chat-view.ts`).
 
 ## Agent tools
 
-An agent Ruimte starts gets the daemon's MCP server: `/mcp` on the daemon's port, with the session's token (`src/providers/ruimte-mcp.ts`). Claude Code, Codex and Copilot take it on their command line and read the token from the environment. An ACP chat (Grok, Antigravity, Copilot, the registry agents) gets it in `session/new` with its tools allowed, when the agent advertises MCP over HTTP. The backends inside the daemon (Apple's model, the API providers) reach it through `RUIMTE_MCP_URL`. A Grok or Antigravity terminal gets no tools, since those CLIs take no server on their command line, and neither does a CLI a person types by hand in a terminal.
+An agent Ruimte starts gets the daemon's MCP server: `/mcp` on the daemon's port, with the session's token (`src/ruimte-mcp.ts`). Claude Code, Codex and Copilot take it on their command line and read the token from the environment. An ACP chat (Grok, Antigravity, Copilot, the registry agents) gets it in `session/new` with its tools allowed, when the agent advertises MCP over HTTP. The backends inside the daemon (Apple's model, the API providers) reach it through `RUIMTE_MCP_URL`. A Grok or Antigravity terminal gets no tools, since those CLIs take no server on their command line, and neither does a CLI a person types by hand in a terminal.
 
-`/mcp` speaks Streamable HTTP in stateless mode (`src/mcp/mcp-route.ts`). Every request carries the bearer token, which names the caller; an unknown one gets 401, and the `Mcp-Session-Id` names nobody. The catalog (`src/mcp/catalog.ts`) lists the tools of the toolkits in `src/tools/toolkits.ts` and `guide`, which prints the guide topics the toolkits keep. Their JSON input runs through `runTool` (`src/tools/tool.ts`), which also checks `project`. The answer is one text block of tab-separated lines; a picture a tool wrote and handed back (`ToolCall.image`, never a path in the text) comes back as image content too, read only inside the caller's folders and the machine's shot folders. A refusal is an error result starting with `refused <code>: <message>`. A tool that takes a file takes a path, read only inside the folders of `src/mcp/files.ts`, from the one handle the check was made on. `src/tools/CLAUDE.md` and `src/outbox/CLAUDE.md` have the invariants.
+`/mcp` speaks Streamable HTTP in stateless mode (`src/mcp/mcp-route.ts`). Every request carries the bearer token, which names the caller; an unknown one gets 401, and the `Mcp-Session-Id` names nobody. The catalog (`src/mcp/catalog.ts`) lists the tools of the toolkits in `src/tools/toolkits.ts` and `guide`, which prints the guide topics the toolkits keep. Their JSON input runs through `runTool` (`src/tools/tool.ts`), which also checks `project`. The answer is one text block of tab-separated lines; a picture a tool wrote and handed back (`ToolCall.image`, never a path in the text) comes back as image content too, read only inside the caller's folders and the machine's shot folders. A refusal is an error result starting with `refused <code>: <message>`. A tool that takes a file takes a path, read only inside the folders of `src/agent-files/files.ts`, from the one handle the check was made on. `src/tools/CLAUDE.md` and `src/outbox/CLAUDE.md` have the invariants.
 
 ## Usage
 

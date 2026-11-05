@@ -8,14 +8,14 @@ import { AuthStore } from '../src/auth/auth-store.ts';
 import { Handshake } from '../src/auth/handshake.ts';
 import { generateKeyPair, signMessage } from '../src/auth/keys.ts';
 import { SOCKET_BACKPRESSURE_LIMIT } from '../src/backpressure.ts';
-import { connectionOpener, socketChannel, type ClientChannel, type ConnectionServices, type SocketChannel } from '../src/connection.ts';
+import { connectionOpener, socketChannel, type ConnectionServices, type SocketChannel } from '../src/connection.ts';
 import { BunPtyAdapter } from '../src/pty/bun-pty.ts';
 import { authenticateChannel } from '../src/pulsar/channel-auth.ts';
 import { AUTHENTICATED_FRAME_CHARS } from '../src/pulsar/data-channel.ts';
 import { DirectClient } from '../src/pulsar/direct-client.ts';
 import { DirectPeers } from '../src/pulsar/peers.ts';
 import { bootTestDaemon, releasedProject } from '../src/testing/test-daemon.ts';
-import type { ClientAccess } from '../src/wire.ts';
+import type { ClientAccess, ClientChannel } from '../src/wire.ts';
 import { renderReport, type Channel, type ChannelRun, type Environment, type PhaseData, type Run } from './latency-report.ts';
 
 /*

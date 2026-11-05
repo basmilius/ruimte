@@ -2,9 +2,6 @@ import { CodedError } from '@adecore/agents';
 import { REQUEST_SCHEMAS, isRequestType, parseRequest, type ReplyError, type RequestMap, type RequestType } from '@ruimte/contracts';
 import { isOwner } from './auth/access.ts';
 import { errorText } from './error-text.ts';
-import { countRequest } from './stats/usage-stats.ts';
-import { noteActivity } from './telemetry/activity.ts';
-import { recordRequestDuration } from './telemetry/reporter.ts';
 import type { ClientConnection } from './wire.ts';
 
 /* A result that goes out as one binary frame, which only a handler whose client has `sendBinary` hands back. */
@@ -20,6 +17,12 @@ type Handler<T extends RequestType> = (
     payload: RequestMap[T]['payload'],
     client: ClientConnection
 ) => RequestMap[T]['result'] | BinaryReply | Promise<RequestMap[T]['result'] | BinaryReply>;
+
+/* Told of every request the dispatcher answers, so what counts or times them stays out of its imports. */
+export interface RequestObserver {
+    started?(type: RequestType): void;
+    answered?(type: RequestType, payload: unknown, ms: number): void;
+}
 
 interface HandlerOptions {
     /* Only a client that presented the local secret may ask; any other is refused as `forbidden` before the handler runs. */
@@ -44,6 +47,7 @@ export class Dispatcher {
     private readonly handlers = new Map<RequestType, Handler<RequestType>>();
     private readonly ownerOnly = new Set<RequestType>();
     private readonly peerAllowed = new Set<RequestType>();
+    private readonly observers: RequestObserver[] = [];
 
     register<T extends RequestType>(type: T, handler: Handler<T>, options: HandlerOptions = {}): void {
         if (this.handlers.has(type)) {
@@ -59,6 +63,10 @@ export class Dispatcher {
         if (options.peer === true) {
             this.peerAllowed.add(type);
         }
+    }
+
+    observe(observer: RequestObserver): void {
+        this.observers.push(observer);
     }
 
     has(type: RequestType): boolean {
@@ -114,12 +122,16 @@ export class Dispatcher {
         }
 
         const started = performance.now();
-        noteActivity(`request ${type}`);
+        for (const observer of this.observers) {
+            observer.started?.(type);
+        }
 
         try {
             const result = await handler(payloadParse.data, client);
-            recordRequestDuration(type, performance.now() - started);
-            countRequest(type, payloadParse.data);
+            const elapsed = performance.now() - started;
+            for (const observer of this.observers) {
+                observer.answered?.(type, payloadParse.data, elapsed);
+            }
             if (result instanceof BinaryReply && client.sendBinary) {
                 client.sendBinary(result.encode(id));
                 return;

@@ -1,6 +1,6 @@
 # Output
 
-- Bytes are read only by artifact id and version id (`artifact.get`, `bytes.read` kind `artifact`), a file by its index, never its name, which is only a label. `$RUIMTE_HOME/artifacts` is not in `OPEN_FOLDERS` (`src/fs/machine-home.ts`).
+- Bytes are read only by artifact id and version id (`artifact.get`, `bytes.read` kind `artifact`), a file by its index, never its name, which is only a label. `$RUIMTE_HOME/artifacts` is not in `OPEN_FOLDERS` (`src/disk/machine-home.ts`).
 - Provenance comes from the call's context (chat, turn, task, node, CLI, model, machine), never an argument.
 - A publish never shows half: bytes to `.staging` with fsync, the manifest, one `rename`, then `register.json`. Every start clears staging and rebuilds the register.
 - A version joins an artifact by key, by origin for a copy from another machine, or for a keyless agent publish by a name its own chat published before (`republished`).

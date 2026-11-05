@@ -1,7 +1,7 @@
 import type { DeviceFoldPose, DeviceSettings } from '@ruimte/contracts';
+import { DeviceError } from './device-error.ts';
 import { FoldPanelMonitor, PANEL_SIZES, panelOfAngle, POSE_DEGREES, type FoldPanel } from './fold-panel.ts';
 import type { DeviceHelperCall } from './helper-protocol.ts';
-import { DeviceError } from './manager.ts';
 
 /* The part of the native helper a fold goes through. */
 interface FoldHelper {

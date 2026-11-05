@@ -539,7 +539,7 @@
     "apps/server/src/devices/native-helper.test.ts": 3,
     "apps/server/src/extensions/machine-actions.test.ts": 3,
     "apps/server/src/extensions/scaffold.test.ts": 3,
-    "apps/server/src/fs/shared-watch.test.ts": 3,
+    "apps/server/src/disk/shared-watch.test.ts": 3,
     "apps/server/src/git/log.test.ts": 3,
     "apps/server/src/handlers/extensions.test.ts": 3,
     "apps/server/src/handlers/peer-artifacts.test.ts": 3,

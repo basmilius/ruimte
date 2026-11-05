@@ -1,26 +1,10 @@
 import type { ServerWebSocket } from 'bun';
 import type { EventMap, PushAttentionEntry, ServerFrame } from '@ruimte/contracts';
-import { OutputGate, type OutputShare } from './backpressure.ts';
+import { OutputGate } from './backpressure.ts';
 import { isLiveFrame, type LiveSink } from './client-sinks.ts';
 import { type Dispatcher } from './dispatcher.ts';
 import { clientClosed, clientKindOf, clientOpened } from './telemetry/reporter.ts';
-import { sendEvent, type ClientAccess, type ClientConnection } from './wire.ts';
-import type { SessionSink } from './wire.ts';
-
-/* What a connected client needs from whatever carries its frames, a Bun WebSocket or a WebRTC DataChannel. */
-export interface ClientChannel {
-    // Answers like Bun's `ServerWebSocket.send`: 0 when the frame was dropped, -1 when it was queued under backpressure, else the byte count.
-    send(data: string | Uint8Array): number;
-    // Bytes written but not yet on the wire; the output gate pauses a client above its high-water mark.
-    bufferedAmount(): number;
-    close(code: number, reason: string): void;
-    // Called once, when the channel is gone for whatever reason.
-    onClose(listener: () => void): void;
-    // Called when the buffered amount fell back, so the output the gate dropped can be repaired.
-    onDrain(listener: () => void): void;
-    /* For a channel slower than a terminal can print; without it every frame goes in the order it was sent. */
-    readonly outputShare?: OutputShare;
-}
+import { sendEvent, type ClientAccess, type ClientChannel, type ClientConnection, type SessionSink } from './wire.ts';
 
 interface Subscribable {
     subscribe(clientId: string, sink: SessionSink): () => void;

@@ -17,9 +17,10 @@ import type {
 import { locateAndroidSdk, type AndroidSdk } from './android-sdk.ts';
 import { androidTree, parseWmSize } from './android-tree.ts';
 import { runCommand, type CommandResult } from './command.ts';
+import { DeviceError } from './device-error.ts';
 import { isVideo, requireExtension, requireMedia } from './device-paths.ts';
 import type { DeviceTree } from './device-tree.ts';
-import { DeviceError, PASTE_SETTLE_MS, typeInRuns, type DeviceBackend, type DeviceKeyboard, type DeviceSource } from './manager.ts';
+import { PASTE_SETTLE_MS, typeInRuns, type DeviceBackend, type DeviceKeyboard, type DeviceSource } from './manager.ts';
 import { DeviceRecordings } from './recordings.ts';
 
 type AndroidRunner = (command: string, arguments_: string[]) => Promise<CommandResult>;

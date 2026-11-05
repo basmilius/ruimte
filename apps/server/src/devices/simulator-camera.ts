@@ -3,8 +3,8 @@ import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cancellableTimeout, type Timer } from '@adecore/utils/async';
+import { DeviceError } from './device-error.ts';
 import { isVideo, requireMedia } from './device-paths.ts';
-import { DeviceError } from './manager.ts';
 import { besideDaemon, serveSimFolder } from './serve-sim.ts';
 
 /* A running camera helper, as far as this daemon needs it. */

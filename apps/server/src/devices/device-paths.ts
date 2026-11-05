@@ -1,6 +1,6 @@
 import { extname } from 'node:path';
 import type { DeviceAction } from '@ruimte/contracts';
-import { DeviceError } from './manager.ts';
+import { DeviceError } from './device-error.ts';
 
 /* What the photos app of either platform imports. */
 const MEDIA_IMAGES: readonly string[] = ['.png', '.jpg', '.jpeg', '.heic', '.gif'];

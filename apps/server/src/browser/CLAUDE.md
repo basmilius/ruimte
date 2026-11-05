@@ -8,4 +8,4 @@ The page in the desktop app: `apps/client/src/browser/CLAUDE.md`. The tools: `ap
 
 Decisions the code cannot show. Do not reverse one without asking Bas.
 
-- A browser node is driven only over a line to the agent, and only by address: where the page goes, its history and a picture of it (the `browser_*` tools), never a click, keystroke or scroll. The one exception to the line is a chat view, which drives any browser node of the canvas it names with `--view` (`src/tools/chat-view.ts`).
+- A browser node is driven only over a line to the agent, and only by address: where the page goes, its history and a picture of it (the `browser_*` tools), never a click, keystroke or scroll. The one exception to the line is a chat view, which drives any browser node of the canvas it names with `--view` (`src/canvas/chat-view.ts`).

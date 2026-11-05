@@ -28,6 +28,17 @@ function makeDispatcher(): Dispatcher {
 }
 
 describe('Dispatcher', () => {
+    test('tells its observers when a request starts and when it was answered', async () => {
+        const heard: string[] = [];
+        const dispatcher = makeDispatcher();
+        dispatcher.observe({
+            started: (type) => heard.push(`started ${type}`),
+            answered: (type, payload) => heard.push(`answered ${type} ${JSON.stringify(payload)}`)
+        });
+        await dispatcher.handle(new FakeSocket(), JSON.stringify({ id: 'r1', type: 'server.hello', payload: {} }));
+        expect(heard).toEqual(['started server.hello', 'answered server.hello {}']);
+    });
+
     test('answers a known request with ok and the result', async () => {
         const socket = new FakeSocket();
         await makeDispatcher().handle(socket, JSON.stringify({ id: 'r1', type: 'server.hello', payload: {} }));

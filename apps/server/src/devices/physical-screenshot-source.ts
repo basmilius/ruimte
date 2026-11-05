@@ -5,7 +5,8 @@ import { wait } from '@adecore/utils/async';
 import type { DeviceInput, LiveStreamFrame } from '@ruimte/contracts';
 import { z } from 'zod';
 import { runCommand } from './command.ts';
-import { DeviceError, type DeviceSource } from './manager.ts';
+import { DeviceError } from './device-error.ts';
+import { type DeviceSource } from './manager.ts';
 
 export type PhysicalFrameCapture = (deviceId: string, sequence: number, directory: string, signal: AbortSignal) => Promise<LiveStreamFrame>;
 

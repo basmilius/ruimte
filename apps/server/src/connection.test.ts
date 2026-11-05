@@ -2,9 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { decodeLiveFrame, type EventMap, type LiveFrame, type ServerFrame } from '@ruimte/contracts';
 import { HIGH_WATER_MARK } from './backpressure.ts';
 import type { LiveSink } from './client-sinks.ts';
-import { connectionOpener, type ClientChannel, type ConnectionServices } from './connection.ts';
+import { connectionOpener, type ConnectionServices } from './connection.ts';
 import { Dispatcher } from './dispatcher.ts';
-import type { SessionEvent, SessionSink } from './wire.ts';
+import type { SessionEvent, SessionSink, ClientChannel } from './wire.ts';
 
 class FakeChannel implements ClientChannel {
     readonly frames: ServerFrame[] = [];

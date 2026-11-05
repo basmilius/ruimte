@@ -14,10 +14,11 @@ import {
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import { collect, type CommandResult } from './command.ts';
+import { DeviceError } from './device-error.ts';
 import { requireExtension, requireMedia } from './device-paths.ts';
 import { simulatorTree, type DeviceTree } from './device-tree.ts';
 import { DeviceHelperSource, type DeviceHelperLauncher } from './helper-source.ts';
-import { DeviceError, KEY_LEFT_COMMAND, KEY_V, PASTE_SETTLE_MS, typeInRuns, type DeviceBackend, type DeviceKeyboard, type DeviceSource } from './manager.ts';
+import { KEY_LEFT_COMMAND, KEY_V, PASTE_SETTLE_MS, typeInRuns, type DeviceBackend, type DeviceKeyboard, type DeviceSource } from './manager.ts';
 import { DeviceRecordings } from './recordings.ts';
 import { serveSimFile } from './serve-sim.ts';
 import type { SimulatorCamera } from './simulator-camera.ts';

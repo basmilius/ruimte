@@ -1,7 +1,7 @@
 import type { ServerWebSocket } from 'bun';
 import type { Handshake } from '../auth/handshake.ts';
-import { connectionOpener, type ClientChannel, type ConnectionServices, type OpenConnection, type SocketChannel } from '../connection.ts';
-import { sendEvent, type ClientAccess } from '../wire.ts';
+import { connectionOpener, type ConnectionServices, type OpenConnection, type SocketChannel } from '../connection.ts';
+import { sendEvent, type ClientAccess, type ClientChannel } from '../wire.ts';
 
 interface SocketConnection {
     channel: SocketChannel;

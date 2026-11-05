@@ -1,5 +1,6 @@
 import type { DeviceControl } from '../devices/control.ts';
-import { DeviceError, type DeviceManager } from '../devices/manager.ts';
+import { DeviceError } from '../devices/device-error.ts';
+import { type DeviceManager } from '../devices/manager.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import { captureFile, keepCapture, pngSize, writeCapture } from '../shots.ts';
 import { streamingGate } from '../streams/streaming-gate.ts';

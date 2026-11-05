@@ -90,7 +90,7 @@ Done, unit tested with Windows paths, untried on the PC.
 
 - Git's absolute paths go through `nativePath` (`apps/server/src/git/native-path.ts`) where they enter the daemon (`rev-parse --show-toplevel`, `--git-common-dir`, `--git-path`, `--absolute-git-dir`, `worktree list`, `check-ignore`) and compare with `resolve()` after. Checkout-relative paths (status, diff, blame) stay POSIX on the wire, as do a repository's `label` and a detected launch's `cwd` and `path`.
 - `isPathBelow` (`packages/contracts/src/stored-path.ts`) takes either separator; `database/sql-analysis.ts`, the client's `database/console-file.ts` and `holdsUnder` in `language/host.ts` use it. The client handles paths through `shell/panels/files-tree.ts`.
-- `projects/project-files.ts` and `fs/rename.ts` rename through `retryingRename` (`fs/busy-retry.ts`), retrying about a second on EPERM, EBUSY and EACCES. `writeAtomic` in `@adecore/agents` does not.
+- `projects/project-files.ts` and `fs/rename.ts` rename through `retryingRename` (`disk/busy-retry.ts`), retrying about a second on EPERM, EBUSY and EACCES. `writeAtomic` in `@adecore/agents` does not.
 
 ### 6. Packaging and the service
 

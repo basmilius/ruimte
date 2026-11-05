@@ -4,11 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { ProjectCanvasView, ProjectContent, ProjectDocument, ProjectSummaryEvent, ServerFrame } from '@ruimte/contracts';
-import { connectionOpener, type ClientChannel, type ConnectionServices, type OpenConnection } from '../connection.ts';
+import { connectionOpener, type ConnectionServices, type OpenConnection } from '../connection.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import type { InlineChatHost } from '../projects/inline-chat.ts';
 import { OUTSIDE_CHECKOUT, projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
+import type { ClientChannel } from '../wire.ts';
 import { registerProjectHandlers } from './project.ts';
 
 class FakeChannel implements ClientChannel {

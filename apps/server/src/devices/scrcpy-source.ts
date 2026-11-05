@@ -1,6 +1,7 @@
 import type { DeviceInput, LiveStreamFrame } from '@ruimte/contracts';
 import { runCommand, type CommandResult } from './command.ts';
-import { DeviceError, type DeviceSource } from './manager.ts';
+import { DeviceError } from './device-error.ts';
+import { type DeviceSource } from './manager.ts';
 import {
     controlMessages,
     encodeGetClipboard,

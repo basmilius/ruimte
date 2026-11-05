@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { realTimers, type Timers } from '../timers.ts';
+import { DeviceError } from './device-error.ts';
 import { SimulatorTreeReplySchema, type SimulatorTreeReply } from './device-tree.ts';
-import { DeviceError } from './manager.ts';
 
 /* How long the bridge may take to load its frameworks and find the simulator. */
 const READY_MS = 15_000;

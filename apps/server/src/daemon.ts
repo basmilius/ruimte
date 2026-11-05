@@ -23,7 +23,9 @@ import { markDrawnChat } from './projects/drawn-chat.ts';
 import { probeCodexNoDaemon } from './providers/launch.ts';
 import { HOOKS_PATH } from './sessions/hook-receiver.ts';
 import { armShutdownDeadline } from './shutdown-deadline.ts';
-import { noteMoment, noteShutdown, rememberSecret, stopTelemetry, watchProjects, type Launcher } from './telemetry/reporter.ts';
+import { countRequest } from './stats/usage-stats.ts';
+import { noteActivity } from './telemetry/activity.ts';
+import { noteMoment, noteShutdown, recordRequestDuration, rememberSecret, stopTelemetry, watchProjects, type Launcher } from './telemetry/reporter.ts';
 import { COMPILED as compiled, VERSION } from './version.ts';
 import { wireAgentWork } from './wiring/agent-work.ts';
 import { loadAgentStores, wireAgents } from './wiring/agents.ts';
@@ -211,6 +213,13 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     });
 
     const dispatcher = new Dispatcher();
+    dispatcher.observe({
+        started: (type) => noteActivity(`request ${type}`),
+        answered: (type, payload, ms) => {
+            recordRequestDuration(type, ms);
+            countRequest(type, payload);
+        }
+    });
     await registerHandlers(dispatcher, {
         machineModel,
         runtime,
