@@ -44,7 +44,22 @@ jobs:
           if [ "$(git cat-file -t "$GITHUB_REF_NAME" 2>/dev/null)" = tag ]; then
               git tag -l --format='%(contents)' "$GITHUB_REF_NAME" > "$notes"
           fi
-          gh release create "$GITHUB_REF_NAME" --draft --title "Release ${GITHUB_REF_NAME#v}" --notes-file "$notes"
+          # GitHub answers a 500 or 502 now and then, which once kept a release from being made. A create
+          # that landed before its answer was lost leaves a release behind, which is what was asked for.
+          for attempt in 1 2 3 4 5; do
+              if output=$(gh release create "$GITHUB_REF_NAME" --draft --title "Release ${GITHUB_REF_NAME#v}" --notes-file "$notes" 2>&1); then
+                  exit 0
+              fi
+              echo "$output"
+              if echo "$output" | grep -qi 'already exists' || gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+                  exit 0
+              fi
+              if [ "$attempt" -lt 5 ]; then
+                  sleep "${RELEASE_RETRY_PAUSE:-15}"
+              fi
+          done
+          echo "::error::GitHub would not create the draft release after 5 attempts"
+          exit 1
 
   # A release ships only a commit whose ci.yml run on main passed, so that run is the check and this
   # job only reads its result. Anything else (red, still running, never pushed to main) stops the
