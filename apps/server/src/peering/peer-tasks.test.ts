@@ -333,6 +333,30 @@ describe('starting a task for another machine', () => {
             }
         });
 
+        test('uploads the store refused are not kept for the channel, so only the accepted one is dropped when it closes', async () => {
+            const bundles = new BundleStore(home, MACHINE, { bundles: 1, bytes: 1024 });
+            const peerTasks = new PeerTasks({ ...deps(), peerBundles: () => bundles });
+            const dropped: string[] = [];
+            const dropIncoming = bundles.dropIncoming.bind(bundles);
+            bundles.dropIncoming = (id) => {
+                dropped.push(id);
+                return dropIncoming(id);
+            };
+
+            await peerTasks.bundlePut(MACHINE, 'client-1', { bundleId: 'accepted', offset: 0, data: PIECE, total: 4 });
+            for (let i = 0; i < 50; i++) {
+                await expect(peerTasks.bundlePut(MACHINE, 'client-1', { bundleId: `refused-${i}`, offset: 0, data: PIECE, total: 4 })).rejects.toMatchObject({
+                    code: 'peer-bundle-limit'
+                });
+            }
+            peerTasks.channelClosed('client-1');
+            // Behind the drop in the machine's queue.
+            await expect(peerTasks.start(MACHINE, 'client-1', start({ branch: LONG_BRANCH }))).rejects.toMatchObject({ code: 'branch-too-long' });
+
+            expect(dropped).toEqual(['accepted']);
+            expect(await Bun.file(bundles.incomingPathOf('accepted')).exists()).toBe(false);
+        });
+
         test('a person removing one frees a place, and nothing here removes a worktree', async () => {
             const paths = await keepWorktrees(PEER_MAX_WORKTREES);
             await rm(paths[0]!, { recursive: true });

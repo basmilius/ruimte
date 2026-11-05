@@ -445,11 +445,22 @@ export class PeerTasks {
     }
 
     /* A piece of a bundle that machine sends; the pieces come in order and a bundle is held apart from every other machine's. */
-    bundlePut(machineId: string, clientId: string, payload: PeerBundlePutPayload): Promise<number> {
+    async bundlePut(machineId: string, clientId: string, payload: PeerBundlePutPayload): Promise<number> {
+        // Held before the piece is written, so a drop of the broken channel's copy queued meanwhile leaves this one alone.
         const begun = this.uploads.get(clientId) ?? { machineId, bundleIds: new Set<string>() };
+        const added = !begun.bundleIds.has(payload.bundleId);
         begun.bundleIds.add(payload.bundleId);
         this.uploads.set(clientId, begun);
-        return this.deps.peerBundles(machineId).receive(payload.bundleId, payload.offset, Buffer.from(payload.data, 'base64'), payload.total);
+
+        try {
+            return await this.deps.peerBundles(machineId).receive(payload.bundleId, payload.offset, Buffer.from(payload.data, 'base64'), payload.total);
+        } catch (error) {
+            // A refused first piece leaves nothing in the store, and keeping its id would let a refused peer grow this map.
+            if (added) {
+                begun.bundleIds.delete(payload.bundleId);
+            }
+            throw error;
+        }
     }
 
     /* A piece of a bundle offered to that machine, and only to it. */
