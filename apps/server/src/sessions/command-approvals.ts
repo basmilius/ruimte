@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { RecordDirectory } from '@adecore/agents';
 import { isCanvasView, type ProjectView, type StandaloneNode } from '@ruimte/contracts';
 import { z } from 'zod';
@@ -44,29 +44,50 @@ export class CommandApprovals {
         return this.approvals.load();
     }
 
-    has(folder: string, nodeId: string, command: string): boolean {
-        return this.approvals.has(approvalHash(folder, nodeId, command));
+    /* `cwd` is where a terminal types the command; a launch or a routine binds its own in the digest it passes as `command`. */
+    has(folder: string, nodeId: string, command: string, cwd?: string): boolean {
+        return this.approvals.has(hashOf(folder, nodeId, command, cwd));
     }
 
-    async approve(folder: string, nodeId: string, command: string): Promise<void> {
-        if (this.has(folder, nodeId, command)) {
+    async approve(folder: string, nodeId: string, command: string, cwd?: string): Promise<void> {
+        if (this.has(folder, nodeId, command, cwd)) {
             return;
         }
-        await this.approvals.write({ hash: approvalHash(folder, nodeId, command), approvedAt: Date.now() });
+        await this.approvals.write({ hash: hashOf(folder, nodeId, command, cwd), approvedAt: Date.now() });
     }
+}
+
+// A terminal in its project folder hashes as it did before the cwd was bound, so the approvals made then still hold.
+function hashOf(folder: string, nodeId: string, command: string, cwd: string | undefined): string {
+    if (cwd === undefined || resolve(cwd) === resolve(folder)) {
+        return approvalHash(folder, nodeId, command);
+    }
+
+    return approvalHash(folder, nodeId, command, resolve(cwd));
 }
 
 interface NodeCommand {
     nodeId: string;
     command: string;
+    // The node's own cwd; without one the terminal runs in the project folder.
+    cwd?: string;
 }
 
-function commandsOf(views: readonly ProjectView[]): Map<string, string> {
-    return new Map(terminalsOf(views).flatMap(({ id, node }) => (node.command ? [[id, node.command] as const] : [])));
+function commandsOf(views: readonly ProjectView[]): Map<string, NodeCommand> {
+    return new Map(
+        terminalsOf(views).flatMap(({ id, node }) =>
+            node.command ? [[id, { nodeId: id, command: node.command, ...(node.cwd ? { cwd: node.cwd } : {}) }] as const] : []
+        )
+    );
 }
 
-/* The commands a save sets or changes: what `after` has that `before` did not have for the same node. */
+/* The commands a save sets or changes: what `after` has that `before` did not have for the same node, its cwd included. */
 export function commandsSet(before: readonly ProjectView[], after: readonly ProjectView[]): NodeCommand[] {
     const had = commandsOf(before);
-    return [...commandsOf(after)].filter(([nodeId, command]) => had.get(nodeId) !== command).map(([nodeId, command]) => ({ nodeId, command }));
+
+    return [...commandsOf(after).values()].filter((set) => {
+        const old = had.get(set.nodeId);
+
+        return old?.command !== set.command || old.cwd !== set.cwd;
+    });
 }

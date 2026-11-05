@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { narrowerMode, launchEnv, storedAccount, type AccountLaunches, type CliMcpServer } from '@adecore/agents/providers';
 import { SingleFlight } from '@adecore/utils/async';
@@ -159,9 +159,9 @@ export interface SessionManagerOptions {
 }
 
 export interface CommandGate {
-    approved(sessionId: string, command: string): boolean;
-    /* Writes down that a person let this node type this command. */
-    approve(sessionId: string, command: string): Promise<void>;
+    approved(sessionId: string, command: string, cwd: string): boolean;
+    /* Writes down that a person let this node type this command in this folder. */
+    approve(sessionId: string, command: string, cwd: string): Promise<void>;
 }
 
 // How often a hook of a turn in flight may look for a name the session does not have yet.
@@ -343,7 +343,8 @@ export class SessionManager {
             restoredScreen = (await this.snapshots?.read(options.sessionId)) ?? undefined;
         }
 
-        const held = options.command && options.forClient === undefined && !this.commands.approved(options.sessionId, options.command) ? options.command : null;
+        const held =
+            options.command && options.forClient === undefined && !this.commands.approved(options.sessionId, options.command, cwd) ? options.command : null;
         const startLine = held === null ? (options.command ?? (await this.startLine(options.sessionId, launch, restoredAgent !== undefined))) : undefined;
         const command = startLine === undefined ? undefined : this.handingBack(startLine);
         const session = this.spawn({
@@ -449,7 +450,7 @@ export class SessionManager {
         }
         session.heldCommand = null;
         try {
-            await this.commands.approve(sessionId, command);
+            await this.commands.approve(sessionId, command, session.cwd);
         } catch (e) {
             session.heldCommand = command;
             throw e;
@@ -457,10 +458,10 @@ export class SessionManager {
         this.typeHeld(session, command);
     }
 
-    /* A person's save approved this command for this node; a session holding exactly that one types it now. */
-    runApproved(sessionId: string, command: string): void {
+    /* A person's save approved this command for this node and cwd; a session holding exactly that one there types it now. */
+    runApproved(sessionId: string, command: string, cwd: string): void {
         const session = this.sessions.get(sessionId);
-        if (session && !session.exited && session.heldCommand === command) {
+        if (session && !session.exited && session.heldCommand === command && resolve(session.cwd) === resolve(cwd)) {
             session.heldCommand = null;
             this.typeHeld(session, command);
         }

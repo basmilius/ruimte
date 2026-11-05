@@ -25,19 +25,19 @@ export function agentBounds(deps: AgentBoundsDeps): AgentBounds {
     return {
         // A node no project places yet has no folder to approve against, so its command waits for the save that adds it.
         commands: {
-            approved: (nodeId, command) => {
+            approved: (nodeId, command, cwd) => {
                 const folder = deps.folderOf(nodeId);
 
-                return folder !== null && deps.commandApprovals.has(folder, nodeId, command);
+                return folder !== null && deps.commandApprovals.has(folder, nodeId, command, cwd);
             },
-            approve: async (nodeId, command) => {
+            approve: async (nodeId, command, cwd) => {
                 const folder = deps.folderOf(nodeId);
 
                 if (folder === null) {
                     throw new SessionError('session-not-found', `No project this machine knows places ${nodeId}`);
                 }
 
-                await deps.commandApprovals.approve(folder, nodeId, command);
+                await deps.commandApprovals.approve(folder, nodeId, command, cwd);
             }
         },
         modeCeiling: (nodeId) => deps.ceilingOf(nodeId),

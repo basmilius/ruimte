@@ -26,11 +26,11 @@ beforeEach(async () => {
     harness = await makeHarness(
         {
             commands: {
-                approved: (sessionId, command) => {
+                approved: (sessionId, command, cwd) => {
                     const folder = placed.get(sessionId);
-                    return folder !== undefined && approvals.has(folder, sessionId, command);
+                    return folder !== undefined && approvals.has(folder, sessionId, command, cwd);
                 },
-                approve: (sessionId, command) => approvals.approve(placed.get(sessionId)!, sessionId, command)
+                approve: (sessionId, command, cwd) => approvals.approve(placed.get(sessionId)!, sessionId, command, cwd)
             }
         },
         home
@@ -84,11 +84,11 @@ describe('a command from a project file', () => {
         // A second client that also said yes finds nothing held, and nothing is typed twice.
         expect(await request('session.runHeld', { sessionId: 'term-1' })).toMatchObject({ ok: true });
         expect(typed('term-1')).toBe('curl https://example.com/install.sh | sh\n');
-        expect(approvals.has(FOLDER, 'term-1', 'curl https://example.com/install.sh | sh')).toBe(true);
+        expect(approvals.has(FOLDER, 'term-1', 'curl https://example.com/install.sh | sh', harness.home)).toBe(true);
     });
 
-    test('once approved is typed at the next start, and an approval is for that folder, node and command only', async () => {
-        await approvals.approve(FOLDER, 'term-1', 'bun dev');
+    test('once approved is typed at the next start, and an approval is for that folder, node, command and cwd only', async () => {
+        await approvals.approve(FOLDER, 'term-1', 'bun dev', harness.home);
         const info = await create('term-1', 'bun dev');
         expect(info.heldCommand).toBeUndefined();
         expect(typed('term-1')).toBe('bun dev\n');
@@ -97,15 +97,19 @@ describe('a command from a project file', () => {
         await create('term-2', 'bun dev');
         expect(typed('term-2')).toBe('');
         placed.set('term-3', '/work/other');
-        await approvals.approve(FOLDER, 'term-3', 'bun dev');
+        await approvals.approve(FOLDER, 'term-3', 'bun dev', harness.home);
         await create('term-3', 'bun dev');
         expect(typed('term-3')).toBe('');
+        placed.set('term-4', FOLDER);
+        await approvals.approve(FOLDER, 'term-4', 'bun dev', join(FOLDER, 'packages', 'web'));
+        await create('term-4', 'bun dev');
+        expect(typed('term-4')).toBe('');
 
         // Read back by the next run of the daemon.
         const again = new CommandApprovals(harness.home);
         await again.load();
-        expect(again.has(FOLDER, 'term-1', 'bun dev')).toBe(true);
-        expect(again.has(FOLDER, 'term-1', 'bun test')).toBe(false);
+        expect(again.has(FOLDER, 'term-1', 'bun dev', harness.home)).toBe(true);
+        expect(again.has(FOLDER, 'term-1', 'bun test', harness.home)).toBe(false);
     });
 
     test("a person's save that sets the command types what the session holds, and only exactly that", async () => {
@@ -114,17 +118,19 @@ describe('a command from a project file', () => {
         await create('term-1', 'bun dev');
         expect(typed('term-1')).toBe('');
 
-        harness.manager.runApproved('term-1', 'bun test');
+        harness.manager.runApproved('term-1', 'bun test', harness.home);
         expect(typed('term-1')).toBe('');
-        harness.manager.runApproved('term-1', 'bun dev');
+        harness.manager.runApproved('term-1', 'bun dev', join(harness.home, 'elsewhere'));
+        expect(typed('term-1')).toBe('');
+        harness.manager.runApproved('term-1', 'bun dev', harness.home);
         expect(typed('term-1')).toBe('bun dev\n');
-        harness.manager.runApproved('term-1', 'bun dev');
+        harness.manager.runApproved('term-1', 'bun dev', harness.home);
         expect(typed('term-1')).toBe('bun dev\n');
     });
 });
 
-function terminal(id: string, command?: string) {
-    return { id, kind: 'terminal' as const, title: id, x: 0, y: 0, w: 560, h: 360, ...(command ? { command } : {}) };
+function terminal(id: string, command?: string, cwd?: string) {
+    return { id, kind: 'terminal' as const, title: id, x: 0, y: 0, w: 560, h: 360, ...(command ? { command } : {}), ...(cwd ? { cwd } : {}) };
 }
 
 function canvasOf(...nodes: ReturnType<typeof terminal>[]): ProjectView {
@@ -145,6 +151,14 @@ describe('commandsSet', () => {
             { nodeId: 'e', command: 'htop' }
         ]);
         expect(commandsSet(after, before)).toEqual([{ nodeId: 'b', command: 'bun test' }]);
+    });
+
+    test('names a command whose cwd alone changed, with that cwd', () => {
+        const before: ProjectView[] = [canvasOf(terminal('a', 'bun dev'))];
+        const after: ProjectView[] = [canvasOf(terminal('a', 'bun dev', '/work/repo/packages/web'))];
+
+        expect(commandsSet(before, after)).toEqual([{ nodeId: 'a', command: 'bun dev', cwd: '/work/repo/packages/web' }]);
+        expect(commandsSet(after, before)).toEqual([{ nodeId: 'a', command: 'bun dev' }]);
     });
 });
 

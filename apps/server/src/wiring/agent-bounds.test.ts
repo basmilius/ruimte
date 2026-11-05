@@ -31,17 +31,32 @@ afterEach(async () => {
 
 describe('the bounds the daemon builds its terminals and chats with', () => {
     test('hold a command until a person approved it for its node', async () => {
-        expect(bounds.commands.approved('node', 'bun dev')).toBe(false);
+        expect(bounds.commands.approved('node', 'bun dev', project)).toBe(false);
 
-        await bounds.commands.approve('node', 'bun dev');
-        expect(bounds.commands.approved('node', 'bun dev')).toBe(true);
-        expect(bounds.commands.approved('node', 'rm -rf .')).toBe(false);
-        expect(bounds.commands.approved('other', 'bun dev')).toBe(false);
+        await bounds.commands.approve('node', 'bun dev', project);
+        expect(bounds.commands.approved('node', 'bun dev', project)).toBe(true);
+        expect(bounds.commands.approved('node', 'rm -rf .', project)).toBe(false);
+        expect(bounds.commands.approved('other', 'bun dev', project)).toBe(false);
+    });
+
+    test('hold an approved command again once it would run in another folder', async () => {
+        await bounds.commands.approve('node', 'bun dev', join(project, 'src'));
+
+        expect(bounds.commands.approved('node', 'bun dev', join(project, 'src'))).toBe(true);
+        expect(bounds.commands.approved('node', 'bun dev', join(project, 'other'))).toBe(false);
+        expect(bounds.commands.approved('node', 'bun dev', project)).toBe(false);
+    });
+
+    test('keep an approval made before the folder was bound for a terminal in its project folder', async () => {
+        await approvals.approve(project, 'node', 'bun dev');
+
+        expect(bounds.commands.approved('node', 'bun dev', project)).toBe(true);
+        expect(bounds.commands.approved('node', 'bun dev', join(project, 'src'))).toBe(false);
     });
 
     test('hold every command of a node no project places, and refuse to approve one', async () => {
-        expect(bounds.commands.approved('unplaced', 'bun dev')).toBe(false);
-        await expect(bounds.commands.approve('unplaced', 'bun dev')).rejects.toThrow('No project this machine knows places unplaced');
+        expect(bounds.commands.approved('unplaced', 'bun dev', project)).toBe(false);
+        await expect(bounds.commands.approve('unplaced', 'bun dev', project)).rejects.toThrow('No project this machine knows places unplaced');
     });
 
     test('cap a node at the ceiling its lineage gives', () => {

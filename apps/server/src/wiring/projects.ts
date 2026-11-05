@@ -67,15 +67,17 @@ export async function wireProjects({ home, machineId, stores, agents, computer, 
         tracked: isTrackedPath,
         endSession,
         personSaved: async (folder, before, after) => {
-            for (const { nodeId, command } of commandsSet(before, after)) {
+            for (const { nodeId, command, cwd: nodeCwd } of commandsSet(before, after)) {
+                // A terminal without a cwd of its own starts in the project folder, as the client creates it.
+                const cwd = nodeCwd ?? folder;
                 try {
-                    await stores.commandApprovals.approve(folder, nodeId, command);
+                    await stores.commandApprovals.approve(folder, nodeId, command, cwd);
                 } catch (e) {
                     // Not approved is only asked again; the save itself already landed.
                     console.error(`Approving the command of ${nodeId} failed:`, errorText(e));
                     continue;
                 }
-                sessions.runApproved(nodeId, command);
+                sessions.runApproved(nodeId, command, cwd);
             }
             for (const { nodeId, mode } of modesSet(before, after)) {
                 // Not written down narrows the node to the mode its person picks for new terminals, which is safe to retry.
