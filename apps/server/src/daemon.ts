@@ -456,7 +456,10 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
             return;
         }
         shuttingDown = true;
-        armShutdownDeadline((code) => process.exit(code));
+        armShutdownDeadline(
+            (code) => process.exit(code),
+            () => sessions.killAllSettled()
+        );
         noteShutdown();
         console.log(`ruimte server stopping for ${reason}, writing snapshots`);
         processes.selfUpdate.stop();
