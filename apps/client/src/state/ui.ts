@@ -209,6 +209,8 @@ interface UiStore {
     paletteOpen: boolean;
     paletteMode: PaletteMode;
     usageOpen: boolean;
+    /* Option is held on its own, which shows the usage card (`shell/usage-peek.ts`). */
+    usagePeek: boolean;
     modelsOpen: boolean;
     login: LoginRequest | null;
     providerCommand: ProviderCommandRequest | null;
@@ -276,6 +278,7 @@ interface UiStore {
     chosenLaunches: Record<string, string>;
     chooseLaunch(projectKey: string, launchId: string): void;
     setUsageOpen(open: boolean): void;
+    setUsagePeek(peek: boolean): void;
     setModelsOpen(open: boolean): void;
     setLogin(login: LoginRequest | null): void;
     setProviderCommand(request: ProviderCommandRequest | null): void;
@@ -346,6 +349,7 @@ export const useUi = create<UiStore>((set, get) => {
         paletteOpen: false,
         paletteMode: 'default',
         usageOpen: false,
+        usagePeek: false,
         modelsOpen: false,
         login: null,
         providerCommand: null,
@@ -393,6 +397,9 @@ export const useUi = create<UiStore>((set, get) => {
         },
         setUsageOpen(open) {
             set({ usageOpen: open });
+        },
+        setUsagePeek(peek) {
+            set({ usagePeek: peek });
         },
         setModelsOpen(open) {
             set({ modelsOpen: open });

@@ -671,7 +671,8 @@
     "gesture": {
         "drag": "drag",
         "scroll": "scroll",
-        "click": "click"
+        "click": "click",
+        "hold": "hold"
     },
     "views": {
         "tabs": "Kinds of view",
@@ -793,6 +794,7 @@
         },
         "canvas": {
             "palette": "Command palette",
+            "usagePeek": "Show plan limits",
             "pan": "Pan canvas",
             "zoomPointer": "Zoom at pointer",
             "zoomIn": "Zoom in",
