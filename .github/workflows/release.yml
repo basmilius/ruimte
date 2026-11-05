@@ -10,8 +10,10 @@ on:
     tags:
       - 'v*'
 
+# Read only, so a job's `bun install` runs without a write token; a job that creates, uploads to or
+# publishes the release asks for `contents: write` itself.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   # Two artifacts that finish at once both find no release and both create one. One of the races
@@ -20,6 +22,8 @@ jobs:
   draft:
     needs: gate
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       # Checkout writes a tag ref as a lightweight tag on the commit, and fetch-tags beside it
       # fails the fetch outright, so the annotated tag is fetched over it on its own.
@@ -88,9 +92,12 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # The platform builds upload to the draft (`--publish always`), so they write.
   mac:
     needs: [draft, client]
     runs-on: macos-latest
+    permissions:
+      contents: write
     steps:
       # Without them the build goes out unsigned or unnotarized, which Squirrel refuses as an update
       # and Gatekeeper blocks as a download, so a missing one stops the release here and the draft
@@ -176,6 +183,8 @@ jobs:
           - arch: arm64
             runner: ubuntu-22.04-arm
     runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install rpmbuild when the runner lacks it
@@ -225,6 +234,8 @@ jobs:
     needs: [draft, client]
     if: vars.WINDOWS_RELEASE == 'true'
     runs-on: windows-latest
+    permissions:
+      contents: write
     defaults:
       run:
         shell: bash
@@ -305,6 +316,11 @@ jobs:
     # A skipped Windows build (WINDOWS_RELEASE off) holds nothing up; a failed one keeps the draft a draft.
     if: ${{ !cancelled() && needs.native.result == 'success' && needs.mac.result == 'success' && needs.linux.result == 'success' && (needs.windows.result == 'success' || needs.windows.result == 'skipped') }}
     runs-on: ubuntu-latest
+    # One publish at a time across every release run, so two runs cannot both read the Latest before
+    # either wrote it and set it out of order. Never cancelled: a publish cut short leaves a draft.
+    concurrency:
+      group: release-publish
+      cancel-in-progress: false
     permissions:
       contents: write
       actions: write
