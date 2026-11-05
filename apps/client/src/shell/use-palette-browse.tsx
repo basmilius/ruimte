@@ -7,11 +7,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { openFolderAction } from '@/actions/client-actions';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { ensureMachine } from '@/endpoint/reach';
+import { MachineGlyph } from '@/project/MachineGlyph';
 import { newChatOn } from '@/project/new-chat';
 import { usePulsarAccount } from '@/pulsar/account';
-import { refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import {
     browseBack,
     browseMachines,
@@ -38,13 +36,16 @@ import { mergeMachines } from '@/shell/settings/machine-list';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine, isRealMachine } from '@/state/local-machine';
 import { shownFolderOf, useProject } from '@/state/project';
+import { usePulsarMachines } from '@/state/pulsar-machines';
 import { fileManagerName, serverInfoOf, useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { pool, transportFor, type ConnectionState } from '@/transport';
 import type { Transport } from '@/transport-api/transport';
-import { useFocusedMachine } from '@/transport/connections';
 import { useConnections } from '@/transport/status';
+import { refreshAccountMachines } from '@/workspace/account-machines';
+import { useFocusedMachine } from '@/workspace/connections';
+import { ensureMachine } from '@/workspace/reach';
 
 // Typing a path turns the palette into a folder browser; anything else searches nodes and actions.
 function isPathQuery(query: string): boolean {

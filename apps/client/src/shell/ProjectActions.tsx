@@ -2,7 +2,7 @@ import { copyText, Icon, Menu } from '@adecore/ui';
 import { AppWindow, Copy, ExternalLink, Settings2, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ProjectMenuRow } from '@/project/list';
+import type { ProjectMenuRow } from '@/clients/project/list';
 import { canOpenWindows, moveToNewWindow, openInNewWindow } from '@/project/windows';
 import { fileManagerName } from '@/state/server';
 import { transportFor } from '@/transport';

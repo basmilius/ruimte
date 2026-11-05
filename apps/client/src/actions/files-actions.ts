@@ -12,7 +12,7 @@ import { forgetDeleted, moveFile } from '@/state/file-moves';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
-import { machineFor } from '@/transport/connections';
+import { machineFor } from '@/workspace/connections';
 
 /* What the file actions reach outside the document; a test hands in a fake of each. */
 export interface FilesMachine {

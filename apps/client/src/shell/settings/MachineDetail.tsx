@@ -3,11 +3,8 @@ import { ConfirmDialog, DetailHeader, SettingsRow, useSettingsTarget } from '@ad
 import { CloudUpload, Plug } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { forgetEndpoint } from '@/endpoint';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { MachineGlyph } from '@/project/MachineGlyph';
 import { usePulsarAccount, withAccessToken } from '@/pulsar/account';
-import { useRegistrationFailures } from '@/pulsar/auto-register-watch';
-import { addMachineToAccount, leaveAccount, openAccountMachine, refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { BackgroundServiceSection } from '@/shell/settings/BackgroundServiceSection';
 import { forgetOnClient, machineDialogModel, removeFromAccount, type MachineActionDeps, type MachineDialogModel } from '@/shell/settings/machine-actions';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
@@ -27,9 +24,13 @@ import {
 import { MachineStorage } from '@/shell/settings/MachineStorage';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import type { Endpoint } from '@/state/endpoints';
+import { usePulsarMachines } from '@/state/pulsar-machines';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
+import { addMachineToAccount, leaveAccount, openAccountMachine, refreshAccountMachines } from '@/workspace/account-machines';
+import { useRegistrationFailures } from '@/workspace/auto-register-watch';
+import { forgetEndpoint } from '@/workspace/forget-endpoint';
 
 const ACTION_DEPS: MachineActionDeps = {
     forgetEndpoint,

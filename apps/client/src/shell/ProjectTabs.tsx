@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { openProjectAction } from '@/actions/client-actions';
 import { WaitingCount } from '@/attention/WaitingCount';
 import { desktop } from '@/desktop/bridge';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
+import { MachineGlyph } from '@/project/MachineGlyph';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import {
     dragsWindow,

@@ -52,7 +52,7 @@ import { useUi } from '@/state/ui';
 import { terminalHasFind, terminalHasKeyboard } from '@/terminal/xterm';
 import { pool } from '@/transport';
 import { machineAnswers } from '@/transport/features';
-import { windowWorkspace } from '@/transport/window';
+import { windowWorkspace } from '@/workspace/window';
 
 interface ActiveViewFacts {
     view: ProjectView;

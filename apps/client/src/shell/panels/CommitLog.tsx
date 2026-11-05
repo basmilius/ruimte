@@ -8,8 +8,8 @@ import { GIT_GROUP } from '@/shell/panels/classes';
 import { githubPicture, groupCommits, mergeLogs, shownRefs, type LoadedLog, type LogRow } from '@/shell/panels/commit-log';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useGit } from '@/state/git';
-import { useTransport } from '@/transport/context';
 import { useMachineAnswers } from '@/transport/features';
+import { useTransport } from '@/workspace/context';
 
 // One screen of rows at a time; the button at the end asks for the next.
 const PAGE = 30;

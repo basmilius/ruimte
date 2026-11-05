@@ -28,6 +28,7 @@ import { chatClientOfNode, sessionClientOfNode } from '@/actions/node-machine';
 import { refusing, type Requester } from '@/actions/refusal';
 import { plural } from '@/actions/words';
 import { agentsEndedWith } from '@/agents/end-children';
+import { screenOf } from '@/clients/terminal/registry';
 import { readNodeHost, updateHost, type NodeHost } from '@/nodes/node-host';
 import { PlanClient } from '@/plan/plan-client';
 import { revealForkWhenItLands, showViewWhenItLands } from '@/project/views';
@@ -40,8 +41,7 @@ import { endpointOfNodeId } from '@/state/node-endpoint';
 import { usePlans } from '@/state/plans';
 import { useSessions, type SessionState } from '@/state/sessions';
 import { nodesOfView } from '@/state/view-nodes';
-import { screenOf } from '@/terminal/registry';
-import { chatClientFor, machineFor } from '@/transport/connections';
+import { chatClientFor, machineFor } from '@/workspace/connections';
 
 type Call = ActionCall<void> & { confirmed: boolean };
 

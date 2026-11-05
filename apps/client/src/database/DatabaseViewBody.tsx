@@ -2,8 +2,8 @@ import { Button, EmptyState } from '@adecore/ui';
 import type { ProjectDatabaseView } from '@ruimte/contracts';
 import { Unplug } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useDatabasePanel } from '@/clients/database/state';
 import { DatabaseBody } from '@/database/DatabaseTabBody';
-import { useDatabasePanel } from '@/database/state';
 
 /*
  * A database view of the project, drawn the way the same table is in a loose tab. A connection this machine

@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { EndpointInfo, ProjectCanvasView } from '@ruimte/contracts';
 import { act } from 'react';
-import { startEndpointWatch } from '@/endpoint/watch';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
-import { startServerInfo } from '@/transport/server-info';
+import { startServerInfo } from '@/workspace/server-info';
+import { startEndpointWatch } from '@/workspace/watch';
 import { openCanvasPage, type CanvasPage } from '../../../testing/canvas-page';
 import { clickOn, until } from '../../../testing/dom';
 import { FakeMachine } from '../../../testing/fake-machine';

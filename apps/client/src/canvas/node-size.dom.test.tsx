@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { EndpointInfo, NodeSizes, ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { act } from 'react';
-import { startEndpointWatch } from '@/endpoint/watch';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { pool } from '@/transport';
-import { startServerInfo } from '@/transport/server-info';
-import { windowWorkspace } from '@/transport/window';
+import { startServerInfo } from '@/workspace/server-info';
+import { startEndpointWatch } from '@/workspace/watch';
+import { windowWorkspace } from '@/workspace/window';
 import { menuItem, openCanvasPage, openContextMenu, savedNodes, type CanvasPage } from '../../testing/canvas-page';
 import { clickOn, openSubmenu, pressKey, until } from '../../testing/dom';
 import { typeInto } from '../../testing/dom-helpers';

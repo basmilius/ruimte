@@ -7,7 +7,7 @@ import { useGitSignal } from '@/controllers/git-watch';
 import { fileInfoOf } from '@/extensions/file-info';
 import { useContributions } from '@/extensions/registry';
 import type { FileTabView } from '@/state/files';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
 /* A changed file an extension knows how to show, with Ruimte's own diff one click away. It reads the diff that one shows. */
 export function ExtensionDiffViewer({ path, view, children }: { path: string; view: FileTabView; children: ReactNode }) {

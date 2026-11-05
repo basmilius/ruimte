@@ -5,6 +5,7 @@ import type { DatabaseConnection } from '@ruimte/contracts';
 import { CircleAlert, Container, Database, KeyRound, Plus, Settings2, SquareTerminal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDatabasePanel } from '@/clients/database/state';
 import {
     asViewConnections,
     connectionName,
@@ -21,7 +22,6 @@ import { useConsoleFolders } from '@/database/console-folders';
 import { containersFor } from '@/database/docker';
 import { startDatabaseDrag } from '@/database/drag';
 import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
-import { useDatabasePanel } from '@/database/state';
 import { basenameOf } from '@/paths/file-path';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { setDragging } from '@/shell/view-drag';

@@ -1,9 +1,8 @@
 import type { UsageCountPayload, UsageTimingPayload } from '@ruimte/contracts';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
-import type { ReconnectReason } from '@/telemetry/metrics';
+import type { LinkMeter, ReconnectReason } from '@/telemetry/metrics';
 import type { Transport } from '../transport-api/transport';
 import { machineAnswers } from './features';
-import type { LinkMeter } from './link-transport';
 
 /*
  * What only this app sees, handed to the machine it runs for that machine's anonymous usage counts: a dictation, how

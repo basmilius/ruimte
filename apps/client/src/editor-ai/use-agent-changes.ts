@@ -11,7 +11,7 @@ import { useSidebarSource } from '@/shell/sidebar-source';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 import type { AgentChanges, AgentChangesState } from './agent-changes';
 import { mountAgentChanges } from './agent-changes-wiring';
 import type { AgentReview } from './agent-review';

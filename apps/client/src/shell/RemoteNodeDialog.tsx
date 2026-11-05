@@ -7,11 +7,11 @@ import { Server } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { deleteNodesAction } from '@/actions/client-actions';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { linkToPeerOrMark } from '@/clients/project/peer-linker';
+import { remoteMirrorsOf } from '@/clients/project/remote-mirror';
 import { handOff } from '@/project/bundle-transfer';
-import { linkToPeerOrMark } from '@/project/peer-linker';
+import { MachineGlyph } from '@/project/MachineGlyph';
 import type { RemoteCandidate } from '@/project/remote-candidates';
-import { remoteMirrorsOf } from '@/project/remote-mirror';
 import { createRemoteNode } from '@/project/remote-node';
 import { strandedBy } from '@/project/remote-relink';
 import { describeLastSeen } from '@/shell/connection-info';
@@ -29,10 +29,10 @@ import { useProject } from '@/state/project';
 import { useUi, type RemoteNodeRequest } from '@/state/ui';
 import { nodesOfView } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
-import { remoteMirror, useWorkspace } from '@/transport/connections';
 import { machineAnswers, useMachineAnswers } from '@/transport/features';
-import { NodeMachineScope } from '@/transport/node-machine';
 import { useLastSeenAt } from '@/transport/status';
+import { remoteMirror, useWorkspace } from '@/workspace/connections';
+import { NodeMachineScope } from '@/workspace/node-machine';
 
 type Kind = RemoteNodeRequest['kind'];
 

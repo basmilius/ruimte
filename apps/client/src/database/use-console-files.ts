@@ -4,7 +4,7 @@ import { useFolderWatch } from '@/controllers/fs-watch';
 import { consoleFilesOf, consolesFolderOf } from '@/database/console-file';
 import { isUnderFolder } from '@/paths/file-path';
 import { useProject } from '@/state/project';
-import { useConnection } from '@/transport/context';
+import { useConnection } from '@/workspace/context';
 
 /* The console files of the open project by connection id, read again whenever something under the private state changes. */
 export function useConsoleFiles(): Record<string, string[]> {

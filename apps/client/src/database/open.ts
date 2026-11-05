@@ -1,6 +1,6 @@
 import type { DatabaseAction } from '@adecore/database';
+import { useDatabasePanel } from '@/clients/database/state';
 import { openNewConsole } from '@/database/console-file';
-import { useDatabasePanel } from '@/database/state';
 import { canSplit, type CellAt, type SplitZone } from '@/layout/split';
 import { showView } from '@/project/views';
 import { applyDatabaseAction, databaseViewFor, type DatabaseTabAction } from '@/state/database-tabs';

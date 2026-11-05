@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { viewIdsIn } from '@/layout/split';
 import { useDocument } from '@/state/document';
 import { useFiles, type DatabaseTab } from '@/state/files';
+import { useDatabasePanel } from '../clients/database/state.ts';
 import { actOnDatabase } from './open.ts';
-import { useDatabasePanel } from './state.ts';
 
 const ORDERS = { connectionId: 'shop', schema: 'shop', table: 'orders' };
 

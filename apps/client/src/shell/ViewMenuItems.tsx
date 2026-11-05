@@ -47,8 +47,8 @@ import { isScratchProject, useProject } from '@/state/project';
 import { useNodeProposals } from '@/state/proposals';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSessionRow } from '@/state/sessions';
-import { useTransport } from '@/transport/context';
 import { useMachineAnswers } from '@/transport/features';
+import { useTransport } from '@/workspace/context';
 
 interface ViewMenuItemsProps {
     viewId: string;

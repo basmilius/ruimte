@@ -11,7 +11,7 @@ import { startFileReadPreparation } from '@/project/file-read-preparation';
 import { defaultDocumentStore } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { defaultProjectStore } from '@/state/project';
-import { ChatScopeProvider } from '@/transport/ChatScopeProvider';
+import { ChatScopeProvider } from '@/workspace/ChatScopeProvider';
 import { closedAfterTest, currentTest, waitTurn } from './test-scope';
 
 // Once for the process, before any chat store is read, as `main.tsx` does it.

@@ -15,9 +15,9 @@ import { useServers, type ServerInfo } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { previewUpdate, type UpdatePreview } from '@/state/update-preview';
 import { describeUpdate, setAutoDownload, setUpdateTrack, updateTrackOf, useUpdates } from '@/state/updates';
-import { useFocusedMachine } from '@/transport/connections';
 import { BrandSymbol } from '@/ui/Brand';
 import { Eclipse, type EclipseOrbit } from '@/ui/Eclipse';
+import { useFocusedMachine } from '@/workspace/connections';
 
 /* The links, each with its words under `about.links.<id>`. */
 const LINKS = [

@@ -1,4 +1,4 @@
-import type { SessionClient } from '@/terminal/session-client';
+import type { SessionClient } from '@/clients/terminal/session-client';
 
 // How long a shell stays silent before its prompt counts as drawn.
 const QUIET_MS = 300;

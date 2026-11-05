@@ -8,7 +8,7 @@ import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useViewNodes } from '@/state/view-nodes';
 import type { Transport } from '@/transport-api/transport';
-import { useOptionalConnection } from '@/transport/context';
+import { useOptionalConnection } from '@/workspace/context';
 import { worktreeOfPath } from '@/worktree-rules/worktree-rows';
 
 interface WorktreesStore {

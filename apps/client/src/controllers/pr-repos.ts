@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
 import { shownFolderOf, useProject } from '@/state/project';
-import { machineFor } from '@/transport/connections';
+import { machineFor } from '@/workspace/connections';
 
 /* A repository of the project folder that has a branch out, which is what a pull request hangs on. */
 export interface PrRepo {

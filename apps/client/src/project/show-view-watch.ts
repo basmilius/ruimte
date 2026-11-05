@@ -7,7 +7,7 @@ import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { nodesOfView } from '@/state/view-nodes';
 import { watchPool } from '@/transport/pool-watch';
-import { windowWorkspace } from '@/transport/window';
+import { windowWorkspace } from '@/workspace/window';
 
 /* The answer of the open project, on the cell the person was last in. */
 function showInWorkspace(payload: ProjectShowViewEvent): void {

@@ -7,7 +7,7 @@ import type { CliSession } from '@/chat/cli-session';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { useSettings } from '@/state/settings';
 import { MachineTerminal } from '@/terminal/MachineTerminal';
-import { sessionClientFor } from '@/transport/connections';
+import { sessionClientFor } from '@/workspace/connections';
 
 /*
  * The dialog a CLI session draws in. Mounted once beside the other dialogs, and `nested` puts it over

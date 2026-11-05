@@ -13,7 +13,7 @@ import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useToasts } from '@/state/toasts';
 import { machineAnswers } from '@/transport/features';
 import { useEndpointConnection } from '@/transport/status';
-import { useWindow, workspaceOf } from '@/transport/window';
+import { useWindow, workspaceOf } from '@/workspace/window';
 
 type Origin = 'builtIn' | 'personal' | 'project' | 'agent';
 

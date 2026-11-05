@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { clearTerminalAction, restartTerminalAction, resumeTerminalAgentAction } from '@/actions/client-actions';
 import { carriesFiles } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
+import { lastScreenOf, registerTerminal } from '@/clients/terminal/registry';
 import { isApplePlatform } from '@/desktop/bridge';
 import { TerminalDictation } from '@/dictation/TerminalDictation';
 import { nodeInfoOf } from '@/extensions/slots';
@@ -33,12 +34,11 @@ import type { TerminalFileLink } from '@/terminal/file-links';
 import { CLEAR_SHORTCUT, platformShortcut } from '@/terminal/keymap';
 import { MachineTerminal } from '@/terminal/MachineTerminal';
 import { osc52Text } from '@/terminal/osc52';
-import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { SessionPortMonitor } from '@/terminal/SessionPorts';
 import { useTerminalFind } from '@/terminal/use-terminal-find';
 import { bindTerminalKeys, drawSession, fittedGrid } from '@/terminal/xterm';
-import { sessionClientFor } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';
+import { sessionClientFor } from '@/workspace/connections';
 
 // A terminal loads the WebGL addon on its first context; prefetched, it is there by then.
 prefetcher.register(() => import('@xterm/addon-webgl'));

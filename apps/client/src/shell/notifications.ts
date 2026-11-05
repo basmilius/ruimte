@@ -12,6 +12,7 @@ import { nodeStatus, nodeWaitAsk, useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
 import { projectNodes } from '@/state/view-nodes';
+import { watchEveryMachine } from '@/workspace/connections';
 import { waitAskLine } from './wait-ask';
 
 /* Whether this window may raise anything at all. What a person is looking at is asked per node. */
@@ -171,8 +172,10 @@ export function startAgentNotifications(now: () => number = Date.now): () => voi
     const offChats = subscribeChatStatuses(check);
     const offSettings = useSettings.subscribe(check);
     const offSnoozes = useSnoozes.subscribe(check);
+    const offPush = watchEveryMachine((endpointId, transport) => transport.on('push.notification', (alert) => notifyRequested(endpointId, alert)));
     return () => {
         window.removeEventListener('pointerdown', askOnce);
+        offPush();
         offSessions();
         offChats();
         offSettings();

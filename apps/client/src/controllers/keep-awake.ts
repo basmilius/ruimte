@@ -13,7 +13,7 @@ import { useSettings, type Settings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { TransportError } from '@/transport-api/transport';
 import { transportFor } from '@/transport/index';
-import { adoptEndpointInfo } from '@/transport/server-info';
+import { adoptEndpointInfo } from '@/workspace/server-info';
 
 export type KeepAwakeSettings = Pick<Settings, 'keepAwake' | 'keepAwakeOnBattery' | 'keepAwakeDisplay'>;
 

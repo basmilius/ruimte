@@ -2,8 +2,8 @@ import { Button } from '@adecore/ui';
 import i18next from 'i18next';
 import { Moon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { basenameOf } from '@/paths/file-path';
+import { MachineGlyph } from '@/project/MachineGlyph';
 import { projectSwitch, useProjectSwitch } from '@/project/open';
 import type { SwitchState, SwitchTarget } from '@/project/project-switch';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
@@ -15,7 +15,7 @@ import { StatusCard } from '@/shell/StatusCard';
 import { useMachineEntry } from '@/shell/use-machine-entry';
 import { useProjectList } from '@/state/project-list';
 import { useEndpointConnection } from '@/transport/status';
-import { useWindow } from '@/transport/window';
+import { useWindow } from '@/workspace/window';
 
 /* What is being opened, in the words a person picked it by. */
 function titleOf(target: SwitchTarget, machine: string): string {

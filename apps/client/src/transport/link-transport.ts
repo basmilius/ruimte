@@ -15,7 +15,7 @@ import {
 } from '@ruimte/contracts';
 import i18next from 'i18next';
 import type { LinkProblem } from '@/telemetry/events';
-import type { LinkOutcome, ReconnectReason } from '@/telemetry/metrics';
+import type { LinkMeter, ReconnectReason } from '@/telemetry/metrics';
 import type { BytesPiece } from '../transport-api/piece';
 import { TransportError, type ConnectionState, type LiveFrameHandler, type SignalRoute, type TransportStatus } from '../transport-api/transport';
 import type { PooledTransport } from './pool';
@@ -112,15 +112,6 @@ export interface LinkTransportOptions {
     /* A link that dropped while open and stayed down, a request without an answer in time, a machine refused at the check: for a crash report. */
     report?: (problem: LinkProblem) => void;
     meter?: LinkMeter;
-}
-
-/* How long links take to open or fail, why a new one opens, and how long a request waits for its answer: for the page's metrics. */
-export interface LinkMeter {
-    /* From the start of an attempt until the protocol check passed, or until the attempt failed. */
-    connected(link: { relayed: boolean; signaled: SignalRoute | null }, outcome: LinkOutcome, ms: number): void;
-    reconnecting(reason: ReconnectReason): void;
-    /* A request the link answered, measured only where its wait is the link's (`measuredRequest`), over the link it went. */
-    answered(link: { relayed: boolean; signaled: SignalRoute | null }, ms: number): void;
 }
 
 const NO_METER: LinkMeter = { connected: () => undefined, reconnecting: () => undefined, answered: () => undefined };

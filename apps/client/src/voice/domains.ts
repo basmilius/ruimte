@@ -3,7 +3,7 @@ import type { ProjectNode, ProjectView } from '@ruimte/contracts';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { nodesOfView, type NodesOfView } from '@/state/view-nodes';
-import { windowWorkspace } from '@/transport/window';
+import { windowWorkspace } from '@/workspace/window';
 
 /* What a project holds, as far as the tools Voice gets are concerned. */
 interface VoiceProjectFacts {

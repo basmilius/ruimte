@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEV_SERVER_PROBE_PORTS, devServerTiles, type DevServerTile } from '@/browser/dev-servers';
 import { openPage } from '@/browser/open-page';
-import { useOptionalConnection } from '@/transport/context';
+import { useOptionalConnection } from '@/workspace/context';
 
 /* How often the machine is asked again, so a server started after this node was opened shows up. */
 const REFRESH_MS = 5_000;

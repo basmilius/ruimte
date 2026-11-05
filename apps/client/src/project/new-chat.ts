@@ -3,22 +3,22 @@ import type { ProjectNewChatPayload, RuntimeMode } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
 import { openChatInMode } from '@/chat/opening-mode';
+import { listProjects } from '@/clients/project/list';
 import { desktop } from '@/desktop/bridge';
-import { ensureMachine } from '@/endpoint/reach';
-import { listProjects } from '@/project/list';
 import { isOpenHere, openProject } from '@/project/open';
 import { showViewOnceThere } from '@/project/show-view-once';
 import { usePulsarAccount } from '@/pulsar/account';
-import { usePulsarMachines } from '@/pulsar/machines';
 import { mergeMachines } from '@/shell/settings/machine-list';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { endpointKey } from '@/state/keys';
 import { hasLocalMachine } from '@/state/local-machine';
+import { usePulsarMachines } from '@/state/pulsar-machines';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { TransportError } from '@/transport-api/transport';
-import { useWindow, windowWorkspace, workspaceOf } from '@/transport/window';
+import { ensureMachine } from '@/workspace/reach';
+import { useWindow, windowWorkspace, workspaceOf } from '@/workspace/window';
 
 /* A machine whose home sits in a git checkout has no Chats project. It says no word: the ways in go. */
 const REFUSALS: readonly string[] = ['scratch-unavailable'];

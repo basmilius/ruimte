@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { LastProjectStorage } from '@/project/last-project';
+import type { LastProjectStorage } from '@/clients/project/last-project';
 import { TransportError } from '@/transport-api/transport';
 import { pruneInlineEdits } from './inline-edit-prune';
 import { inlineEditFor, saveInlineEdit, type InlineEditRecord } from './inline-edit-record';

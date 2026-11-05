@@ -15,7 +15,7 @@ import { renderBinary } from '@/shell/panels/renderers';
 import { readPiece } from '@/transport-api/piece';
 import { TransportError } from '@/transport-api/transport';
 import { readResource } from '@/transport/byte-transfer';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
 export interface ArchiveVersion {
     path: string;

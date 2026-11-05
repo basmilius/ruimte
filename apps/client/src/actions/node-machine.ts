@@ -1,8 +1,8 @@
 import type { ChatClient } from '@adecore/agents-react/chat';
 import { ActionRefusal } from '@ruimte/actions';
+import type { SessionClient } from '@/clients/terminal/session-client';
 import { endpointOfNodeId } from '@/state/node-endpoint';
-import type { SessionClient } from '@/terminal/session-client';
-import { chatClientFor, sessionClientFor } from '@/transport/connections';
+import { chatClientFor, sessionClientFor } from '@/workspace/connections';
 
 function unknownMachine(nodeId: string): ActionRefusal {
     return new ActionRefusal('no-machine', `“${nodeId}” runs on a machine this client does not know, so nothing was sent.`);

@@ -3,8 +3,8 @@ import { confirmLeavingConflict } from '@/project/leave-conflict';
 import { detachWindowTab, dropWindowTab, restoreWindowTabs, tabAfterClosing, useWindowTabs } from '@/project/window-tabs';
 import { endpointKey, splitKey } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { leaveWorkspace, showStart } from '@/transport/connections';
-import { windowWorkspace } from '@/transport/window';
+import { leaveWorkspace, showStart } from '@/workspace/connections';
+import { windowWorkspace } from '@/workspace/window';
 
 /* Whether this app opens windows of its own. The desktop shell does; a browser tab has its own ways. */
 export function canOpenWindows(shell: Pick<DesktopBridge, 'openWindow'> | null = desktop()): boolean {

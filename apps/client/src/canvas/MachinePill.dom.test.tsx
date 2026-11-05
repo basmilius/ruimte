@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { act } from 'react';
-import { usePeerLapse } from '@/project/peer-lapse';
-import { swapPeerLinker } from '@/project/peer-linker';
+import { usePeerLapse } from '@/clients/project/peer-lapse';
+import { swapPeerLinker } from '@/clients/project/peer-linker';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';

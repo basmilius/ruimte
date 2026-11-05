@@ -3,8 +3,8 @@ import type { ProjectSummary } from '@ruimte/contracts';
 import type { DesktopBridge } from '@/desktop/bridge';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
-import type { Workspace } from '@/transport/connections';
-import { useWindow } from '@/transport/window';
+import type { Workspace } from '@/workspace/connections';
+import { useWindow } from '@/workspace/window';
 import { machineBridge } from '../../testing/machine-bridge';
 import {
     dragsWindow,

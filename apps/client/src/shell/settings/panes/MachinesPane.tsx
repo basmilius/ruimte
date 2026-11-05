@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { isDesktop } from '@/desktop/bridge';
 import { usePulsarAccount } from '@/pulsar/account';
 import { accountName } from '@/pulsar/account-name';
-import { forgetAccountMachines, refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { AccountAvatar } from '@/shell/settings/AccountAvatar';
 import { currentPick, mergeMachines, pickForTarget, type MachinePick } from '@/shell/settings/machine-list';
 import { MachineDetail } from '@/shell/settings/MachineDetail';
@@ -16,7 +15,9 @@ import { ThisComputerDetail } from '@/shell/settings/ThisComputerDetail';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
+import { usePulsarMachines } from '@/state/pulsar-machines';
 import { useUi } from '@/state/ui';
+import { forgetAccountMachines, refreshAccountMachines } from '@/workspace/account-machines';
 
 /*
  * The Ruimte account and one list of machines beside the detail of what is picked. The list joins the

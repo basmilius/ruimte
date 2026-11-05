@@ -34,11 +34,11 @@ import {
 import { openAttentionQueue } from '@/attention/queue';
 import { focusedChatId } from '@/chat/focused-chat';
 import { restartChatSession } from '@/chat/restart-session';
+import { useDatabasePanel } from '@/clients/database/state';
 import { keepAwakeAvailable, setKeepAwake } from '@/controllers/keep-awake';
 import { prReposOfCurrent, type PrRepo } from '@/controllers/pr-repos';
 import { openNewConsole } from '@/database/console-file';
 import { refreshSqlSchemas } from '@/database/sql-bindings';
-import { useDatabasePanel } from '@/database/state';
 import { copyDiagram, exportDiagram, openDiagramJson } from '@/diagram/diagram-actions';
 import { copyDrawing, exportDrawing } from '@/drawing/drawing-actions';
 import { runAction } from '@/extensions/action-runs';
@@ -90,7 +90,7 @@ import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
 import { pool, transportFor } from '@/transport';
 import { machineAnswers } from '@/transport/features';
-import { windowWorkspace } from '@/transport/window';
+import { windowWorkspace } from '@/workspace/window';
 
 export interface Command {
     id: string;

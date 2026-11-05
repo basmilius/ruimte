@@ -22,7 +22,7 @@ import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
 import { useUi } from '@/state/ui';
-import { useWindow } from '@/transport/window';
+import { useWindow } from '@/workspace/window';
 
 /* A chat streams word by word and a camera moves every frame; the menu only needs where things settled. */
 const SETTLE_MS = 100;

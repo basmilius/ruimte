@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useGitSignal } from '@/controllers/git-watch';
 import { dirnameOf } from '@/paths/file-path';
 import { useEndpointId } from '@/state/current-endpoint';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
 interface Checkout {
     root: string | null;

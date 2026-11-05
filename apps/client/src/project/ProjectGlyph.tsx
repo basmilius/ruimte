@@ -4,7 +4,7 @@ import type { ProjectIcon } from '@ruimte/contracts';
 import clsx from 'clsx';
 import { MessagesSquare } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { projectIconAppearance } from '@/project/icon-appearance';
+import { projectIconAppearance } from '@/clients/project/icon-appearance';
 import { projectIconGlyphOf } from '@/project/project-icons';
 import { useEndpoints } from '@/state/endpoints';
 import { useTheme } from '@/state/theme';

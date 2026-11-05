@@ -25,8 +25,8 @@ import { useReleaseNotes } from '@/state/release-notes';
 import { useSettings } from '@/state/settings';
 import { useUi, type SettingsSectionId } from '@/state/ui';
 import { startUpdates } from '@/state/updates';
-import { ChatScopeProvider } from '@/transport/ChatScopeProvider';
-import { useWindow } from '@/transport/window';
+import { ChatScopeProvider } from '@/workspace/ChatScopeProvider';
+import { useWindow } from '@/workspace/window';
 
 const WorkspaceShell = lazyNamed(() => import('@/shell/WorkspaceShell'), 'WorkspaceShell');
 const FirstRunScreen = lazyNamed(() => import('@/onboarding/FirstRunScreen'), 'FirstRunScreen');

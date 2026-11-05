@@ -14,15 +14,13 @@ import i18next from 'i18next';
 import { create } from 'zustand';
 import { currentClientLabel } from '@/endpoint/client-label';
 import { useUi } from '@/state/ui';
+import type { AccountStatus } from '@/station';
 import { offeredProviders } from './account-name';
 import { confirmAccount, dismissAccountConfirmation, linkedConfirmation, signedInConfirmation } from './confirmation';
 import { desktopPulsar, type PulsarPlatform } from './desktop';
 import { linkIdentity, signIn } from './login';
 import { AccessTokens } from './session';
 import { beginWebLogin, completeWebLogin, webPulsar } from './web';
-
-/* `unavailable` is a page with no platform to sign in on: a browser on an origin the address book does not send a login back to. */
-export type AccountStatus = 'unavailable' | 'loading' | 'signed-out' | 'signing-in' | 'signed-in';
 
 interface AccountState {
     status: AccountStatus;

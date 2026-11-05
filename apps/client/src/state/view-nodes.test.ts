@@ -14,7 +14,7 @@ import { nodeRefsOfView, nodesOfView, projectNodes } from '@/state/view-nodes';
  */
 const READS_THE_DOCUMENT: Record<string, string> = {
     'state/view-nodes.ts': 'the one reader',
-    'project/merge.ts': 'merges three versions of the document',
+    'clients/project/merge.ts': 'merges three versions of the document',
     'state/canvas-content-slice.ts': 'loads a view into its editor',
     'state/document-model.ts': 'renames a node in the document',
     'state/document-nodes-slice.ts': 'moves a node between views of the document',

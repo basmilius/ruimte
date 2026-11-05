@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useGitSignal } from '@/controllers/git-watch';
 import { useGitRoot } from '@/shell/panels/use-git-root';
 import { useEndpointId } from '@/state/current-endpoint';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
 /*
  * What the file is compared against in the editor's margin: its text in the last commit, or null when

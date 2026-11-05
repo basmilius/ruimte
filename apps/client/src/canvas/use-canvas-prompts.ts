@@ -15,7 +15,7 @@ import { secretRequestsOf, useSecrets } from '@/state/secrets';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { useWaitingSince } from '@/state/waiting';
-import { chatScopeOf } from '@/transport/chat-scope';
+import { chatScopeOf } from '@/workspace/chat-scope';
 
 export interface StackPrompts {
     prompts: CanvasPrompt[];

@@ -18,7 +18,7 @@ import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { nodesOfView, useViewNodes } from '@/state/view-nodes';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
 // How long a new chat node gets to register its chat with the machine before the prompt is left as a draft.
 const CHAT_OPEN_TIMEOUT_MS = 10_000;

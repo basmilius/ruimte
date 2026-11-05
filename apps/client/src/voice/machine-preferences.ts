@@ -8,7 +8,7 @@ import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { machineTransport, pool } from '@/transport';
 import { machineAnswers, useMachineAnswers } from '@/transport/features';
-import { useWindow, workspaceOf } from '@/transport/window';
+import { useWindow, workspaceOf } from '@/workspace/window';
 
 /*
  * How Voice talks is the machine's (`voice.preferences`), so the desktop and a phone that start Voice there

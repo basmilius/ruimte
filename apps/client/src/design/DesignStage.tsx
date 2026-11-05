@@ -33,7 +33,7 @@ import { useEndpointId } from '@/state/current-endpoint';
 import { designCameraKey, useDesignChat } from '@/state/design-chat';
 import { useToasts } from '@/state/toasts';
 import { CellViewContext } from '@/state/workspace-stores';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
 const MINUTE_MS = 60_000;
 

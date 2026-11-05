@@ -1,4 +1,4 @@
-import { chatsProjects, menuProjects, openableRows } from '@/project/list';
+import { chatsProjects, menuProjects, openableRows } from '@/clients/project/list';
 import type { Endpoint } from '@/state/endpoints';
 import type { ProjectRow } from '@/state/project-list';
 

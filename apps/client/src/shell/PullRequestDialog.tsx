@@ -33,8 +33,8 @@ import { endpointKey, isOfEndpoint } from '@/state/keys';
 import { usePrWatches } from '@/state/pr-watches';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { useTransport } from '@/transport/context';
 import { useMachineAnswers } from '@/transport/features';
+import { useTransport } from '@/workspace/context';
 
 /*
  * A pull request read-only: its checks, how it stands to merge and its review threads. A thread can be

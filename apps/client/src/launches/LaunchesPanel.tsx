@@ -6,9 +6,9 @@ import i18next from 'i18next';
 import { ChevronDown, ExternalLink, Play, Plus, Rocket, Smartphone } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDeviceList } from '@/clients/devices/state';
 import { useProjectRepos } from '@/controllers/git-repos';
 import { isApplePlatform } from '@/desktop/bridge';
-import { useDeviceList } from '@/devices/state';
 import { openLaunchAddress, showLaunchDevice, startLaunch } from '@/launches/actions';
 import { deviceTargetOf, matchLaunchDevice, type DeviceTarget } from '@/launches/device-target';
 import { LaunchMenu } from '@/launches/LaunchChip';
@@ -24,7 +24,7 @@ import { useUi } from '@/state/ui';
 import { isAppShortcut, isTerminalPaste, macMotionSequence } from '@/terminal/keymap';
 import { MachineTerminal } from '@/terminal/MachineTerminal';
 import { drawSession, fittedGrid } from '@/terminal/xterm';
-import { deviceClientFor, sessionClientFor } from '@/transport/connections';
+import { deviceClientFor, sessionClientFor } from '@/workspace/connections';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 

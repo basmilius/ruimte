@@ -7,7 +7,7 @@ import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { dropEndpoint, endpointKey, isOfEndpoint } from '@/state/keys';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useProject } from '@/state/project';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
 /* The project a launch belongs to. Ids such as `dev` repeat from project to project, so whatever
    outlives a switch of project (a toast, a notification, a question) names its own. */

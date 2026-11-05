@@ -2,7 +2,7 @@ import { DEVICE_LINK_LIFETIME_MS, USER_CODE_LENGTH } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { create } from 'zustand';
 import { storedJson } from '@/state/stored-json';
-import type { AccountStatus } from './account';
+import type { AccountStatus } from '@/station';
 import type { LoginStorage } from './web';
 
 /*

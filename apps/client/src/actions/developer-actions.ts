@@ -33,7 +33,7 @@ import type { DocumentState } from '@/state/document';
 import { useGit } from '@/state/git';
 import { useProject } from '@/state/project';
 import { nodesOfView } from '@/state/view-nodes';
-import { windowWorkspace } from '@/transport/window';
+import { windowWorkspace } from '@/workspace/window';
 import { commitTargets, nextActionId } from '@/worktree-rules/git-actions';
 import { nodesInWorktree, worktreeSessionsOf } from '@/worktree-rules/worktree-rows';
 

@@ -9,8 +9,8 @@ import { basenameOf } from '@/paths/file-path';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
 import { isConnectionError, TransportError, type Transport } from '@/transport-api/transport';
-import { useTransport } from '@/transport/context';
 import { transportFor } from '@/transport/index';
+import { useTransport } from '@/workspace/context';
 
 /* A checkout the panel can draw: a repository of the project folder, or the worktree a selection on
    the canvas points it at. A worktree is never one of the folder's repositories, which is why the

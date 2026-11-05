@@ -4,12 +4,12 @@ import i18next from 'i18next';
 import { CircleAlert } from 'lucide-react';
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { followLiveStream } from '@/endpoint/live-stream-fetch';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
-import { browserClientFor } from '@/transport/connections';
 import { FramePainter } from '@/transport/live-stream';
-import { initialStreamUrl, useBrowserRow } from './registry';
+import { followLiveStream } from '@/transport/live-stream-fetch';
+import { browserClientFor } from '@/workspace/connections';
+import { initialStreamUrl, useBrowserRow } from '../clients/browser/registry';
 import { browserStreamScaleLimit, clampBrowserStreamScale, useBrowserStreamQuality } from './stream-quality';
 
 function modifiersOf(event: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }): number {

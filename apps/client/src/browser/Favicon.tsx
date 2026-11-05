@@ -2,7 +2,7 @@ import { Icon } from '@adecore/ui';
 import clsx from 'clsx';
 import { Globe } from 'lucide-react';
 import { useState } from 'react';
-import { useBrowserRow } from '@/browser/registry';
+import { useBrowserRow } from '@/clients/browser/registry';
 
 /* The page's own favicon where there is one, otherwise the globe. A URL that fails to load stays
    failed, so the row never flashes a broken image. */

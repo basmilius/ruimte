@@ -20,7 +20,7 @@ import { COMMIT_TREE_MIN_WIDTH, TreeSplit } from '@/shell/panels/TreeSplit';
 import { isCheckoutDiff, useFiles, type FileTabView } from '@/state/files';
 import { useGit } from '@/state/git';
 import { useSettings } from '@/state/settings';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
 const UnifiedDiff = lazyNamed(() => import('@adecore/agents-react/chat/ui'), 'UnifiedDiff');
 

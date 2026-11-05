@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { localBrowserRouteAvailable } from '@/browser/owner-route';
-import { browserRegistry } from '@/browser/registry';
+import { localBrowserRouteAvailable } from '@/clients/browser/owner-route';
+import { browserRegistry } from '@/clients/browser/registry';
 import { isDesktop } from '@/desktop/bridge';
 import { useNodeHost } from '@/nodes/node-host';
 import { useEndpointId } from '@/state/current-endpoint';

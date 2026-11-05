@@ -3,7 +3,7 @@ import { MasterItem } from '@adecore/ui/settings';
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { MachineGlyph } from '@/project/MachineGlyph';
 import { describeConnection, describeLastSeen, describePing, describeRoute, reachabilityLabel } from '@/shell/connection-info';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf, reachLabel, type MachineEntry } from '@/shell/settings/machine-list';

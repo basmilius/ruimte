@@ -58,7 +58,7 @@ import { shownFolderOf, useProject } from '@/state/project';
 import { closeTabGuarded, closeTabsAround, type TabsClosing } from '@/state/tab-close';
 import { useToasts } from '@/state/toasts';
 import { nodesOfView } from '@/state/view-nodes';
-import { diagramClient, drawingClient } from '@/transport/connections';
+import { diagramClient, drawingClient } from '@/workspace/connections';
 
 export interface ClientActionMachine {
     sendChat(chatId: string, text: string, extras: ChatSendExtras): Promise<{ queued: boolean; turnId?: string }>;

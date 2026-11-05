@@ -29,7 +29,6 @@ import { useProject } from '@/state/project';
 import { sessionStatus, useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { pool, transportFor } from '@/transport';
-import { chatClientFor } from '@/transport/connections';
 import { chatCompletion, chatWaits } from '@/voice/chat-follow-up';
 import { finishVoiceDiagnostics, noteVoiceError, startVoiceDiagnostics, voiceDeliveryObserver, voiceDiagnosticsObserver } from '@/voice/diagnostics-log';
 import { currentVoiceDomains } from '@/voice/domains';
@@ -40,6 +39,7 @@ import { addTranscriptDelta, nextVoiceTimelineOrder, useVoice, type VoiceAction,
 import { VoiceToolQueue } from '@/voice/tool-queue';
 import { bypassesQueue, executeVoiceTool } from '@/voice/tools';
 import { voiceWorkspaceRevision } from '@/voice/workspace-context';
+import { chatClientFor } from '@/workspace/connections';
 
 let session: LiveSession | null = null;
 let releaseMicrophone: (() => void) | null = null;

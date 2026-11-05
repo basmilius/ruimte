@@ -10,7 +10,7 @@ import { useEndpoints } from '@/state/endpoints';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSnoozes } from '@/state/snooze';
-import { enterWorkspace } from '@/transport/connections';
+import { enterWorkspace } from '@/workspace/connections';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';

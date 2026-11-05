@@ -2,7 +2,7 @@ import { isCanvasView } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
 import { locateView } from '@/layout/split';
 import { useDocument } from '@/state/document';
-import { webContentsIdOf } from './preview-guests';
+import { webContentsIdOf } from '../clients/browser/preview-guests';
 
 const watched = new Map<HTMLElement, () => void>();
 let installed = false;

@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { worktreeLists } from '@/controllers/worktrees';
 import { useEndpointId } from '@/state/current-endpoint';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 import { removeVerdict, type RemoveVerdict } from '@/worktree-rules/worktree-rows';
 
 export interface Inspection {

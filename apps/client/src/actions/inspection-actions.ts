@@ -11,7 +11,7 @@ import { endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { nodesOfView } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
-import { chatClientFor } from '@/transport/connections';
+import { chatClientFor } from '@/workspace/connections';
 
 interface ProjectAgent {
     id: string;

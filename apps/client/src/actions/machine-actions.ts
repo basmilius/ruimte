@@ -23,8 +23,8 @@ import { useProcesses, useProcessWarnings } from '@/state/processes';
 import { serverInfoOf } from '@/state/server';
 import { projectNodes } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
-import { machineFor } from '@/transport/connections';
-import { adoptEndpointInfo } from '@/transport/server-info';
+import { machineFor } from '@/workspace/connections';
+import { adoptEndpointInfo } from '@/workspace/server-info';
 
 /* What the process and usage actions reach outside the document; a test hands in a fake of each. */
 export interface MachineReach {

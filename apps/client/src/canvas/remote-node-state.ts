@@ -1,4 +1,4 @@
-import { useRemoteRefusals } from '@/project/remote-refusals';
+import { useRemoteRefusals } from '@/clients/project/remote-refusals';
 import { useEndpoints } from '@/state/endpoints';
 import type { ConnectionState } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';

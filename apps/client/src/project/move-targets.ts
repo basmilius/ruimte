@@ -1,5 +1,5 @@
 import type { ProjectSummary } from '@ruimte/contracts';
-import { openableRows, recentProjects } from '@/project/list';
+import { openableRows, recentProjects } from '@/clients/project/list';
 import type { Endpoint } from '@/state/endpoints';
 import type { ProjectRow } from '@/state/project-list';
 

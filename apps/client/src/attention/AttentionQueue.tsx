@@ -19,7 +19,7 @@ import { nodeProvider, nodeStatus, useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { projectNodes, useProjectNodes, type ProjectNodeRef } from '@/state/view-nodes';
 import { compareWaits, useWaitingSince, waitDetailsOf } from '@/state/waiting';
-import { chatScopeOf } from '@/transport/chat-scope';
+import { chatScopeOf } from '@/workspace/chat-scope';
 import { closeAttentionQueue, useAttentionQueue } from './queue';
 import { WaitLabel } from './WaitLabel';
 

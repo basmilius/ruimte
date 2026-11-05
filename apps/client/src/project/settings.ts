@@ -1,9 +1,9 @@
 import type { ProjectIconChoice, ProjectSummary } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { ensureMachine } from '@/endpoint/reach';
 import { useProjectList } from '@/state/project-list';
 import { transportFor, type Transport } from '@/transport';
-import { projectIconAppearance } from './icon-appearance';
+import { ensureMachine } from '@/workspace/reach';
+import { projectIconAppearance } from '../clients/project/icon-appearance';
 
 export interface ProjectSettingsResult {
     endpointId: string;

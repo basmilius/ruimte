@@ -10,8 +10,8 @@ import { endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { useWorkspace } from '@/transport/connections';
-import { useTransport } from '@/transport/context';
+import { useWorkspace } from '@/workspace/connections';
+import { useTransport } from '@/workspace/context';
 
 /*
  * "Bring back to this machine" in the menu of a node that works on another machine: its branch comes

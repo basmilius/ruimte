@@ -16,8 +16,8 @@ import { machineTransport } from '@/transport';
 import { readPiece } from '@/transport-api/piece';
 import { readResource } from '@/transport/byte-transfer';
 import { bytesWorkerReady } from '@/transport/bytes-worker-host';
-import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
+import { useTransport } from '@/workspace/context';
 
 // From this page's own origin, so the worker stays inside `worker-src 'self'`.
 GlobalWorkerOptions.workerSrc = workerUrl;

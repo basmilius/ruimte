@@ -13,7 +13,7 @@ import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
 import { startWaitingSinceWatch, useWaitingSince } from '@/state/waiting';
-import { dropMachine } from '@/transport/connections';
+import { dropMachine } from '@/workspace/connections';
 import { chatInfoOf } from '../../testing/chat-info';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';

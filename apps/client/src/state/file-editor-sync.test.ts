@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { EventMap, EventType, RequestMap, RequestType, ServerFrame } from '@ruimte/contracts';
-import { DiagramClient } from '../diagram/diagram-client';
-import { DrawingClient } from '../drawing/drawing-client';
+import { DiagramClient } from '../clients/diagram/diagram-client';
+import { DrawingClient } from '../clients/drawing/drawing-client';
 import { TransportError, type Transport } from '../transport-api/transport';
 import { createWorkspaceStores } from './workspace';
 

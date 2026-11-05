@@ -13,15 +13,15 @@ import type { StoreApi } from 'zustand';
 import { asksFirst } from '@/actions/developer-actions';
 import { asRefusal, refusing } from '@/actions/refusal';
 import { plural } from '@/actions/words';
-import type { ProjectClient } from '@/project/project-client';
-import { sessionNodesOf } from '@/project/project-sessions';
+import type { ProjectClient } from '@/clients/project/project-client';
+import { sessionNodesOf } from '@/clients/project/project-sessions';
 import type { SwitchOutcome } from '@/project/project-switch';
 import { currentEndpointId } from '@/state/current-endpoint';
 import type { DocumentState } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
-import { windowWorkspace } from '@/transport/window';
+import { windowWorkspace } from '@/workspace/window';
 
 export interface ListedProject {
     endpointId: string;

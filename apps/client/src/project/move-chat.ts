@@ -1,9 +1,9 @@
 import type { ChatMovePayload, ChatMoveResult } from '@ruimte/contracts';
-import { ensureMachine } from '@/endpoint/reach';
-import { listProjects } from '@/project/list';
+import { listProjects } from '@/clients/project/list';
 import { showChatIn } from '@/project/new-chat';
 import { transportFor } from '@/transport';
 import { TransportError } from '@/transport-api/transport';
+import { ensureMachine } from '@/workspace/reach';
 
 /*
  * Asks a machine to move a chat of Chats into a project and follows it only after the answer, along

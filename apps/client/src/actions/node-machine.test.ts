@@ -4,7 +4,7 @@ import type { ProjectCanvasView } from '@ruimte/contracts';
 import { useDocument } from '@/state/document';
 import type { SessionState } from '@/state/sessions';
 import { pool } from '@/transport';
-import { chatScopeOf } from '@/transport/chat-scope';
+import { chatScopeOf } from '@/workspace/chat-scope';
 import { fakeProvider } from '../../testing/fake-provider';
 import { confirmed } from './action-support';
 import { createClientActionRegistry, VOICE_ACTION_CALL } from './client-actions';

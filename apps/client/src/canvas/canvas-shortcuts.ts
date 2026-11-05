@@ -16,7 +16,6 @@ import {
     toggleFlagAction
 } from '@/actions/client-actions';
 import { openAttentionQueue } from '@/attention/queue';
-import { browserRegistry } from '@/browser/registry';
 import { answerCanvasPaste } from '@/canvas/canvas-paste';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { setGapModifierDown } from '@/canvas/gap-modifier';
@@ -27,6 +26,7 @@ import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/pr
 import { CANVAS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
 import { followSpaceRelease, holdSpace, releaseSpace, spaceWorksTarget } from '@/canvas/space-pan';
 import { focusedChatComposerKey, keyboardChatKey } from '@/chat/focused-chat';
+import { browserRegistry } from '@/clients/browser/registry';
 import { isApplePlatform } from '@/desktop/bridge';
 import { cancelDictation, stopDictation, toggleFocusedDictation, useDictation } from '@/dictation/controller';
 import { openFocusedFind } from '@/find/hosts';
@@ -51,10 +51,10 @@ import { useUi } from '@/state/ui';
 import { isLeaveNodeShortcut } from '@/terminal/keymap';
 import { pool, transportFor } from '@/transport';
 import { machineAnswers } from '@/transport/features';
-import { windowWorkspace } from '@/transport/window';
 import { startVoice, stopVoice } from '@/voice/controller';
 import { createVoiceShortcut } from '@/voice/shortcut';
 import { useVoice } from '@/voice/state';
+import { windowWorkspace } from '@/workspace/window';
 
 function workspaceEndpointId(): string | null {
     return windowWorkspace()?.connection.endpointId ?? null;

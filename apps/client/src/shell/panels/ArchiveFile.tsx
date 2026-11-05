@@ -32,7 +32,7 @@ import { useToasts } from '@/state/toasts';
 import { readPiece } from '@/transport-api/piece';
 import type { Transport } from '@/transport-api/transport';
 import { readResource } from '@/transport/byte-transfer';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
 const { rowPathOf } = FileTree;
 

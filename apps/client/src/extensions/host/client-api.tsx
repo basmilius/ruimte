@@ -65,8 +65,8 @@ import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { IS_STATION } from '@/station';
 import { machineTransport, TransportError, type Transport } from '@/transport';
-import { useFocusedMachine } from '@/transport/connections';
 import { machineAnswers } from '@/transport/features';
+import { useFocusedMachine } from '@/workspace/connections';
 import type * as PublicClient from '../../../../../packages/extension/client';
 
 export interface LoadedExtension {

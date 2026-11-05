@@ -88,7 +88,7 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 import { nodeNames, nodesInWorktree, worktreeBase } from '@/worktree-rules/worktree-rows';
 
 const { directoryHandle, menuTargetsOf, resetExpandedPaths, rowPathOf } = FileTree;

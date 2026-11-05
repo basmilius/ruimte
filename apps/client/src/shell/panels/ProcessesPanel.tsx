@@ -57,8 +57,8 @@ import { EMPTY_PROCESSES, useProcessAlerts, useProcesses } from '@/state/process
 import { useProjectList } from '@/state/project-list';
 import { useToasts } from '@/state/toasts';
 import { useProjectNodes } from '@/state/view-nodes';
-import { useTransport } from '@/transport/context';
 import { useEndpointConnection } from '@/transport/status';
+import { useTransport } from '@/workspace/context';
 
 /* The two scopes and the three sortable columns as ids; their words come from `panels:processes`. */
 const SCOPES = ['ruimte', 'all'] as const;

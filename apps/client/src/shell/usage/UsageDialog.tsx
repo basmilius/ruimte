@@ -6,15 +6,15 @@ import clsx from 'clsx';
 import i18next from 'i18next';
 import { LoaderCircle, TriangleAlert, Unplug } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { MachineGlyph } from '@/project/MachineGlyph';
 import { usageEndpointFor } from '@/shell/usage/picker';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
-import { chatScopeOf } from '@/transport/chat-scope';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
+import { chatScopeOf } from '@/workspace/chat-scope';
 
 /*
  * A machine that is not answering says so, rather than leaving the page on a skeleton that never

@@ -5,7 +5,7 @@ import type { EditorLanguage } from '@/language/ruimte-editor-language';
 import { useGitRoot } from '@/shell/panels/use-git-root';
 import { useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
 /*
  * Tells the rows above declarations who wrote the file, which git answers for the text on disk. It is

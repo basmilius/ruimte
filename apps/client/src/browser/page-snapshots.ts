@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { browserRegistry } from '@/browser/registry';
+import { browserRegistry } from '@/clients/browser/registry';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
 

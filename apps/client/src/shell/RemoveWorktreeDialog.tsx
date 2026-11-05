@@ -13,7 +13,7 @@ import { useEndpointId } from '@/state/current-endpoint';
 import { useSessions } from '@/state/sessions';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 import { nodesInWorktree, removeAllQuestion, removedToast, worktreeSessionsOf } from '@/worktree-rules/worktree-rows';
 
 type Reading = { key: string; worktrees: Worktree[]; error: { message: string | null } | null };

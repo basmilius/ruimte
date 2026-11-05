@@ -1,6 +1,6 @@
-import { usePulsarMachines } from '@/pulsar/machines';
 import { mergeMachines, type MachineEntry } from '@/shell/settings/machine-list';
 import { useEndpoints } from '@/state/endpoints';
+import { usePulsarMachines } from '@/state/pulsar-machines';
 
 /* A machine as the Machines pane knows it: a row of this client, or only the account's record. */
 export function useMachineEntry(endpointId: string): MachineEntry {

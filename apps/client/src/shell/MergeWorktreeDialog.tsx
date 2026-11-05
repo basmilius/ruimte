@@ -33,7 +33,7 @@ import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useUi, type WorktreeMergeRequest } from '@/state/ui';
 import type { Transport } from '@/transport-api/transport';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 import { nextActionId, phaseLabel } from '@/worktree-rules/git-actions';
 import { nodesInWorktree, worktreeSessionsOf } from '@/worktree-rules/worktree-rows';
 

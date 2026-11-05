@@ -9,7 +9,7 @@ import { pathAffected } from '@/state/changed-paths';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { textDrafts } from '@/state/text-drafts';
-import { useOptionalConnection } from '@/transport/context';
+import { useOptionalConnection } from '@/workspace/context';
 
 interface FileEditing {
     endpointId: string;

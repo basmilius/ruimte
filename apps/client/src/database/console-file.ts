@@ -2,9 +2,9 @@ import { messageOf } from '@adecore/ui';
 import { absoluteOf, isPathBelow, relativeTo } from '@ruimte/contracts';
 import type { DatabaseConnection } from '@ruimte/contracts';
 import i18next from 'i18next';
+import { useDatabasePanel } from '@/clients/database/state';
 import { databaseConnections, ensureDatabaseConnections } from '@/database/connections';
 import { databaseStorageKey } from '@/database/environment';
-import { useDatabasePanel } from '@/database/state';
 import { basenameOf } from '@/paths/file-path';
 import { extensionOf } from '@/shell/panels/file-kind';
 import { currentEndpointId } from '@/state/current-endpoint';
@@ -16,7 +16,7 @@ import { useSettings } from '@/state/settings';
 import { storedText } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
 import { TransportError, type Transport } from '@/transport-api/transport';
-import { windowWorkspace } from '@/transport/window';
+import { windowWorkspace } from '@/workspace/window';
 
 /* A name past this many characters is the start of one; a file system takes 255 bytes and the number still has to fit. */
 const BASE_NAME_LENGTH = 80;

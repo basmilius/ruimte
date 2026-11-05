@@ -2,7 +2,7 @@ import type { RemoteStatusEvent, Task } from '@ruimte/contracts';
 import { isUnstarted, isUntaken, useRemoteStatus } from '@/controllers/remote-status';
 import { useCanvas } from '@/state/canvas';
 import { useTasks } from '@/state/tasks';
-import { useWorkspace } from '@/transport/connections';
+import { useWorkspace } from '@/workspace/connections';
 
 type TasksById = Readonly<Record<string, Task>>;
 type StatusByMachine = Readonly<Record<string, RemoteStatusEvent>> | undefined;

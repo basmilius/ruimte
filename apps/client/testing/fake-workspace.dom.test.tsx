@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from 'bun:test';
 import './dom';
-import { writeClientLocal } from '@/project/client-local';
+import { writeClientLocal } from '@/clients/project/client-local';
 import { useDocument } from '@/state/document';
 import { FakeMachine } from './fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from './fake-workspace';

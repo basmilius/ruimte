@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { useEndpoints } from '../state/endpoints';
-import type { OpenRequest } from '../transport/connections';
-import { useWindow } from '../transport/window';
+import type { OpenRequest } from '../workspace/connections';
+import { useWindow } from '../workspace/window';
 import { fakeStorage, lanEndpoint } from './fixtures';
 import { bootWindow, switchRun, type SwitchDeps, type SwitchPlan, type Whereabouts } from './open';
 

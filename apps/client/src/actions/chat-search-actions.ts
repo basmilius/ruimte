@@ -2,7 +2,7 @@ import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
 import { refusing, type Requester } from '@/actions/refusal';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
-import { machineFor } from '@/transport/connections';
+import { machineFor } from '@/workspace/connections';
 
 /* What the chat search reaches outside the document; a test hands in a fake. */
 export interface ChatSearchMachine {

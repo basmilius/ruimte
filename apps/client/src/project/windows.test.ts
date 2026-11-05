@@ -2,8 +2,8 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import type { ProjectSummary } from '@ruimte/contracts';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
-import type { Workspace } from '@/transport/connections';
-import { useWindow } from '@/transport/window';
+import type { Workspace } from '@/workspace/connections';
+import { useWindow } from '@/workspace/window';
 import { NO_TABS, startWindowTabs, useWindowTabs, type TabsShell } from './window-tabs';
 import { moveToNewWindow, tearOutTab, wantsNewWindow, type MoveDeps, type TearOutDeps } from './windows';
 

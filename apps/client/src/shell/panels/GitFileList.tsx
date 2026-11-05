@@ -51,7 +51,7 @@ import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
 const { applyExpansion, directoryHandle, menuTargetsOf, mergeCollapsedPaths, rebuildPaths, rowPathOf, selectOnly, visibleRows } = FileTree;
 

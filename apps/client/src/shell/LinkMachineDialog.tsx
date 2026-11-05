@@ -5,12 +5,12 @@ import i18next from 'i18next';
 import { Check, KeyRound, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { MachineGlyph } from '@/project/MachineGlyph';
 import { usePulsarAccount, withAccessToken } from '@/pulsar/account';
 import { accountName } from '@/pulsar/account-name';
 import { linkStep, typedCode } from '@/pulsar/link-request';
-import { refreshAccountMachines } from '@/pulsar/machines';
 import { SignInButtons } from '@/shell/SignInButtons';
+import { refreshAccountMachines } from '@/workspace/account-machines';
 
 interface LinkMachineDialogProps {
     open: boolean;

@@ -26,9 +26,9 @@ import { useSecrets } from '@/state/secrets';
 import { useSessions } from '@/state/sessions';
 import { useWaitingSince, type WaitDetails } from '@/state/waiting';
 import { machineTransport } from '@/transport';
-import { chatScopeOf } from '@/transport/chat-scope';
-import { chatClientFor } from '@/transport/connections';
 import { useEndpointConnection } from '@/transport/status';
+import { chatScopeOf } from '@/workspace/chat-scope';
+import { chatClientFor } from '@/workspace/connections';
 import type { SidebarNode } from './sidebar-rows';
 
 const NO_APPROVALS: readonly ComputerApproval[] = [];

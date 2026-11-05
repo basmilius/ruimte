@@ -5,15 +5,14 @@ import { FolderOpen, LogIn, MessageSquarePlus, MessagesSquare, MonitorSmartphone
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { openProjectAction, openProjectClickAction } from '@/actions/client-actions';
+import { chatsProjects, openableRows, recentProjects, type ProjectMenuRow } from '@/clients/project/list';
 import { isDesktop } from '@/desktop/bridge';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { chatsProjects, openableRows, recentProjects, type ProjectMenuRow } from '@/project/list';
+import { MachineGlyph } from '@/project/MachineGlyph';
 import { newChat, useOffersNewChat } from '@/project/new-chat';
 import { openProject } from '@/project/open';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { usePulsarAccount } from '@/pulsar/account';
-import { usePulsarMachines } from '@/pulsar/machines';
 import { runAppShortcut } from '@/shell/app-shortcuts';
 import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
 import { linkDot, linkHint, machineLink } from '@/shell/palette-browse';
@@ -26,14 +25,15 @@ import { SignInButtons } from '@/shell/SignInButtons';
 import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine, startScreenMachine } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';
+import { usePulsarMachines } from '@/state/pulsar-machines';
 import { canShowReleaseNotes, openReleaseNotes } from '@/state/release-notes';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { useUpdates } from '@/state/updates';
 import { stationBoot } from '@/station';
 import { useEndpointConnection, useMachineHold, useOpenEndpoints } from '@/transport/status';
-import { useWindow, type BootFailure } from '@/transport/window';
 import { BrandIntro } from '@/ui/Brand';
+import { useWindow, type BootFailure } from '@/workspace/window';
 
 const ROW = 'flex min-h-10 w-full min-w-0 items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-surface-hover disabled:opacity-50';
 

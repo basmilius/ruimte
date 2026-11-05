@@ -35,7 +35,7 @@ import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 import { isUnmergedRefusal, popStashStep, pushButton, pushable, pushEntries, type CommitCandidate } from '@/worktree-rules/git-actions';
 import { nodeNames, nodesInWorktree, worktreeBase, worktreeDiffTab } from '@/worktree-rules/worktree-rows';
 

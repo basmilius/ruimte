@@ -9,7 +9,7 @@ import { matches } from '@/shell/palette-entries';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
-import { machineFor } from '@/transport/connections';
+import { machineFor } from '@/workspace/connections';
 
 // The same pause the search in files takes: a typed word is one search.
 const CHAT_SEARCH_DEBOUNCE_MS = 140;

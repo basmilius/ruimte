@@ -9,8 +9,8 @@ import type {
     RequestMap,
     RequestType
 } from '@ruimte/contracts';
-import { DiagramClient } from '@/diagram/diagram-client';
-import { DrawingClient } from '@/drawing/drawing-client';
+import { DiagramClient } from '@/clients/diagram/diagram-client';
+import { DrawingClient } from '@/clients/drawing/drawing-client';
 import type { DiagramState } from '@/state/diagram';
 import type { DrawingState } from '@/state/drawing';
 import type { EditorRegistry } from '@/state/editors';

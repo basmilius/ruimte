@@ -41,7 +41,7 @@ import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
 import { useUi, type MoveChatRequest } from '@/state/ui';
 import { useViewNodes } from '@/state/view-nodes';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
 type OwnFiles = 'move' | 'leave';
 

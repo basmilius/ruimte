@@ -4,8 +4,6 @@ import type { GitIgnoredFilesResult } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useOtherMachines } from '@/canvas/use-other-machines';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { ensureMachine } from '@/endpoint/reach';
 import {
     copyCandidates,
     copyIgnoredFiles,
@@ -16,6 +14,7 @@ import {
     type CopyOutcome,
     type RemoteProtocol
 } from '@/project/add-to-machine';
+import { MachineGlyph } from '@/project/MachineGlyph';
 import { RemoteFolderPicker } from '@/shell/RemoteFolderPicker';
 import { iconOfEntry } from '@/shell/settings/machine-icon';
 import { nameOf } from '@/shell/settings/machine-list';
@@ -25,8 +24,9 @@ import { useProject } from '@/state/project';
 import { useUi, type AddToMachineRequest } from '@/state/ui';
 import { pool, transportFor } from '@/transport';
 import type { Transport } from '@/transport-api/transport';
-import { useWorkspace } from '@/transport/connections';
 import { machineAnswers } from '@/transport/features';
+import { useWorkspace } from '@/workspace/connections';
+import { ensureMachine } from '@/workspace/reach';
 
 const PROTOCOLS: readonly RemoteProtocol[] = ['ssh', 'https'];
 

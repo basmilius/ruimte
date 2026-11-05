@@ -1,12 +1,12 @@
 import { messageOf } from '@adecore/ui';
 import type { DeviceInfo, GitIdentity, GitIdentityResult, RemoteLink } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
-import { ensureMachine } from '@/endpoint/reach';
 import { rankCandidates, type RemoteCandidate } from '@/project/remote-candidates';
 import { endpointById } from '@/state/endpoints';
 import { pool, transportFor } from '@/transport';
 import type { Transport } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
+import { ensureMachine } from '@/workspace/reach';
 
 /* What the dialog knows of the checkouts a machine could offer: still looking, not reachable, or the possibilities. */
 export type Checkouts =

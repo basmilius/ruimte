@@ -6,7 +6,7 @@ import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
 import { TransportError } from '@/transport-api/transport';
-import { chatClientFor } from '@/transport/connections';
+import { chatClientFor } from '@/workspace/connections';
 import { forgetInlineEdit, saveInlineEdit } from './inline-edit-record';
 import type { InlineEditDeps } from './inline-edit-session';
 

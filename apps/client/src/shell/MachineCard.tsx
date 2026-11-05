@@ -1,6 +1,6 @@
 import { useNow } from '@adecore/ui';
 import type { ReactNode } from 'react';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { MachineGlyph } from '@/project/MachineGlyph';
 import { describeLastSeen } from '@/shell/connection-info';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf } from '@/shell/settings/machine-list';

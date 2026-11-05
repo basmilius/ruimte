@@ -6,7 +6,7 @@ import { snapshotTrigger } from '@/database/snapshot-triggers';
 import { ensureSqlBindings, sqlBindings } from '@/database/sql-bindings';
 import { endpointKey } from '@/state/keys';
 import { defaultProjectStore } from '@/state/project';
-import { useWindow, windowWorkspace } from '@/transport/window';
+import { useWindow, windowWorkspace } from '@/workspace/window';
 
 let current: { key: string; client: DatabaseClient } | null = null;
 let following = false;

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { perform } from '@/action-port/perform';
 import { proposedBranch } from '@/shell/new-worktree-chat';
 import { availableAgents } from '@/state/agent-availability';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
 type BaseCommit = { ref: string; commit: string; subject: string } | 'missing' | null;
 

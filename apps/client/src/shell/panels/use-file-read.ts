@@ -6,8 +6,8 @@ import { dirnameOf } from '@/paths/file-path';
 import { pathAffected } from '@/state/changed-paths';
 import { useEndpointId } from '@/state/current-endpoint';
 import { TransportError } from '@/transport';
-import { useTransport } from '@/transport/context';
 import { readLargeText } from '@/transport/large-text';
+import { useTransport } from '@/workspace/context';
 
 type FileRead = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; read: FsReadResult };
 

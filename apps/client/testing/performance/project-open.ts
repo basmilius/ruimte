@@ -1,5 +1,5 @@
-import { PanelsPort } from '../../src/project/panels-port';
-import { ProjectClient, type ProjectSink } from '../../src/project/project-client';
+import { PanelsPort } from '../../src/clients/project/panels-port';
+import { ProjectClient, type ProjectSink } from '../../src/clients/project/project-client';
 import { createWorkspaceStores } from '../../src/state/workspace';
 import type { Transport } from '../../src/transport-api/transport';
 

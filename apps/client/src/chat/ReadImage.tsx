@@ -9,8 +9,8 @@ import { saveToOutput, useOutputProject } from '@/output/save';
 import { drawsImageMime, imageFormatName } from '@/shell/panels/file-kind';
 import { useEndpointId } from '@/state/current-endpoint';
 import { fileManagerName, useServer } from '@/state/server';
-import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
+import { useTransport } from '@/workspace/context';
 
 const PLACES = {
     tool: { box: 'mb-1 ml-8', image: 'max-h-48 max-w-full object-contain' },

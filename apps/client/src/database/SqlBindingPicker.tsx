@@ -4,6 +4,7 @@ import { storedPathOf, type DatabaseConnection, type SqlBinding } from '@ruimte/
 import { ChevronDown, Database } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDatabasePanel } from '@/clients/database/state';
 import { databaseClientFor } from '@/database/client';
 import { asViewConnections, connectionName, ensureDatabaseConnections, useDatabaseConnectionList } from '@/database/connections';
 import {
@@ -16,10 +17,9 @@ import {
     useSqlBindings,
     type SqlFileChoice
 } from '@/database/sql-bindings';
-import { useDatabasePanel } from '@/database/state';
 import { endpointKey } from '@/state/keys';
 import { shownFolderOf, useProject } from '@/state/project';
-import { useConnection } from '@/transport/context';
+import { useConnection } from '@/workspace/context';
 
 /* The value of the choices that are no connection, which no connection id can be. */
 const DEFAULT = 'default:';

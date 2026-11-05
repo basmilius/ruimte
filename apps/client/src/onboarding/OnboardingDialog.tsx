@@ -33,11 +33,11 @@ import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoint
 import { useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
-import { chatScopeOf } from '@/transport/chat-scope';
-import { machineFor } from '@/transport/connections';
 import { useMachineHold } from '@/transport/status';
 import { BrandSymbol } from '@/ui/Brand';
 import { Eclipse } from '@/ui/Eclipse';
+import { chatScopeOf } from '@/workspace/chat-scope';
+import { machineFor } from '@/workspace/connections';
 
 /*
  * The machine this window runs beside, held for as long as the onboarding is up. Its clients are

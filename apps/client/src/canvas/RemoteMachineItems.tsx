@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Point } from '@/canvas-model/math';
 import { useOtherMachines } from '@/canvas/use-other-machines';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { MachineGlyph } from '@/project/MachineGlyph';
 import { machineLost } from '@/shell/machine-lost';
 import { iconOfEntry } from '@/shell/settings/machine-icon';
 import { nameOf, type MachineEntry } from '@/shell/settings/machine-list';
@@ -15,9 +15,9 @@ import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
-import { useWorkspace } from '@/transport/connections';
 import { machineAnswers } from '@/transport/features';
 import { useEndpointConnection } from '@/transport/status';
+import { useWorkspace } from '@/workspace/connections';
 
 /* The checkouts this project is linked to on the machines, so a row can say which one it would work in. */
 function useLinks(): RemoteLink[] {

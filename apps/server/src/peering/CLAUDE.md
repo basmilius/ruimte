@@ -6,7 +6,7 @@
 
 - Nothing is granted without a link a person made on B (`links.ts`, `$RUIMTE_HOME/peers/<machineIdA>.json`): one project of B per machine A and a mode ceiling, `supervised` until a person chooses. Only a client acting as a person changes it (`peer.bind`, `peer.setCeiling`, `peer.unbind`).
 - A peer gets in on a statement the address book signed for it (`checkPeerStatement`, ten minutes, its own signing prefix). Its `auth.json` record has `origin: 'peer'`, never `statement`. A peer gets no ticket and subscribes to no event.
-- A peer is vouched for 30 days after its last statement (`PEER_ATTESTATION_TTL_MS`); after that a new statement brings it back with its links. A's window renews it silently while a person uses the link (`apps/client/src/project/peer-renewal.ts`). A forgets its peer key, known machines and statements when it leaves its account.
+- A peer is vouched for 30 days after its last statement (`PEER_ATTESTATION_TTL_MS`); after that a new statement brings it back with its links. A's window renews it silently while a person uses the link (`apps/client/src/clients/project/peer-renewal.ts`). A forgets its peer key, known machines and statements when it leaves its account.
 - Unlinking ends that machine's nodes here and removes the canvas and the link. Revoking its session puts its peer key on the revoked keys, which no later statement undoes.
 
 ## What a peer may ask

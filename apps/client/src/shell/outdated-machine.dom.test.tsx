@@ -6,7 +6,7 @@ import { useUi } from '@/state/ui';
 import { pool } from '@/transport';
 import { LinkTransport, type Link, type LinkEvents } from '@/transport/link-transport';
 import type { PooledTransport } from '@/transport/pool';
-import { useWindow } from '@/transport/window';
+import { useWindow } from '@/workspace/window';
 import { mount, until, type Mounted } from '../../testing/dom';
 
 const OLDER = 'This machine runs an older Ruimte. Update Ruimte there, or restart it to pick up the update.';

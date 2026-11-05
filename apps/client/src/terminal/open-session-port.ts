@@ -1,6 +1,6 @@
 import { createNodeAction, createViewAction, linkNodesAction } from '@/actions/client-actions';
 import { browserBeside } from '@/browser/open-beside';
-import { localBrowserRouteAvailable } from '@/browser/owner-route';
+import { localBrowserRouteAvailable } from '@/clients/browser/owner-route';
 import { readNodeHost } from '@/nodes/node-host';
 import { canvasOfNode } from '@/state/canvas';
 import { currentEndpointId } from '@/state/current-endpoint';

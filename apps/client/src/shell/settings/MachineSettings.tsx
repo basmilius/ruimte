@@ -9,7 +9,6 @@ import { useEffect, useRef, useState, type ReactElement, type ReactNode } from '
 import { Trans, useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
 import { desktop, openInSystemBrowser } from '@/desktop/bridge';
-import { forgetEndpoint } from '@/endpoint';
 import { saveMachineSetting, useMachineSetting, type MachineSettingPatch } from '@/shell/settings/machine-setting';
 import { reachText } from '@/shell/settings/reach-text';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -18,6 +17,7 @@ import { useServers } from '@/state/server';
 import { pool, transportFor, type Transport } from '@/transport';
 import { useMachineAnswers } from '@/transport/features';
 import { useEndpointConnection } from '@/transport/status';
+import { forgetEndpoint } from '@/workspace/forget-endpoint';
 
 const MINUTE_MS = 60_000;
 

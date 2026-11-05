@@ -2,7 +2,7 @@ import { messageOf } from '@adecore/ui';
 import type { DeviceAction, DeviceInfo } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useToasts } from '@/state/toasts';
-import { deviceClientFor } from '@/transport/connections';
+import { deviceClientFor } from '@/workspace/connections';
 
 export interface DeviceControl {
     boot(device: DeviceInfo): Promise<unknown>;

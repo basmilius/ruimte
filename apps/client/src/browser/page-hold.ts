@@ -2,7 +2,7 @@ import type { BrowserDriveEvent, BrowserDriveResult, BrowserPageState } from '@r
 import { base64Of } from '@/base64';
 import { reportPageAsk } from '@/browser/page-asks';
 import { pageSnapshots } from '@/browser/page-snapshots';
-import { browserRegistry, useBrowser, type BrowserState } from '@/browser/registry';
+import { browserRegistry, useBrowser, type BrowserState } from '@/clients/browser/registry';
 import { endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
 import type { Transport } from '@/transport-api/transport';
 import { watchPool } from '@/transport/pool-watch';

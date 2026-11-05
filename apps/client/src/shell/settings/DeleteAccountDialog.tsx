@@ -3,7 +3,7 @@ import { ACCOUNT_DELETE_WORD, accountConfirmationName, confirmsAccountDeletion, 
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { deleteAccountHere } from '@/pulsar/account-deletion';
+import { deleteAccountHere } from '@/workspace/account-deletion';
 
 const WHAT_GOES = ['account', 'sessions', 'push', 'machines'] as const;
 

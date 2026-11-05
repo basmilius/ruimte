@@ -11,7 +11,7 @@ import { participateInSave } from '@/language/save-participation';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { textDrafts } from '@/state/text-drafts';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
 /*
  * The language id of a file that no catalog server knows but a server of a person's own serves, once the

@@ -1,16 +1,15 @@
 import type { ProjectClosingResult, ProjectSummary } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useStore } from 'zustand';
+import { dropClientLocal } from '@/clients/project/client-local';
+import { readLastProject, type LastProjectStorage } from '@/clients/project/last-project';
+import { closeListedProjectLocally, listProjects } from '@/clients/project/list';
+import { closingCount } from '@/clients/project/project-sessions';
+import { claimWindow } from '@/clients/project/window-claim';
 import { desktop } from '@/desktop/bridge';
-import { ensureMachine } from '@/endpoint/reach';
-import { dropClientLocal } from '@/project/client-local';
-import { readLastProject, type LastProjectStorage } from '@/project/last-project';
 import { confirmLeavingConflict } from '@/project/leave-conflict';
-import { closeListedProjectLocally, listProjects } from '@/project/list';
-import { closingCount } from '@/project/project-sessions';
 import { ProjectSwitch, type SwitchOutcome, type SwitchRun, type SwitchState, type SwitchTarget } from '@/project/project-switch';
 import { showViewOnceThere } from '@/project/show-view-once';
-import { claimWindow } from '@/project/window-claim';
 import { isOnlyTab, tabAfterClosing } from '@/project/window-tabs';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { endpointKey, splitKey } from '@/state/keys';
@@ -21,8 +20,9 @@ import { useSettings } from '@/state/settings';
 import { browserStorage } from '@/state/stored-json';
 import { pageWindowTarget, type WindowTarget } from '@/state/window-target';
 import { transportFor } from '@/transport';
-import { enterWorkspace, leaveWorkspace, machineFor, showStart, type OpenRequest } from '@/transport/connections';
-import { useWindow, windowWorkspace } from '@/transport/window';
+import { enterWorkspace, leaveWorkspace, machineFor, showStart, type OpenRequest } from '@/workspace/connections';
+import { ensureMachine } from '@/workspace/reach';
+import { useWindow, windowWorkspace } from '@/workspace/window';
 
 /* Where the window is going. */
 export type SwitchPlan =

@@ -1,5 +1,5 @@
 import { createNodeAction, createViewAction } from '@/actions/client-actions';
-import { browserRegistry } from '@/browser/registry';
+import { browserRegistry } from '@/clients/browser/registry';
 import { canvasOfNode, type CanvasNode } from '@/state/canvas';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { splitKey } from '@/state/keys';

@@ -16,7 +16,7 @@ import { revealFile } from '@/shell/panels/reveal-file';
 import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
 /* Where these items are drawn, since a file already there does not offer to go there again: a node is
    not shown on the canvas twice, a view is not opened as one, and the files panel does not reveal a row

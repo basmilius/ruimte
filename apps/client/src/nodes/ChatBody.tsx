@@ -31,8 +31,8 @@ import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { chatClientFor } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';
+import { chatClientFor } from '@/workspace/connections';
 
 /*
  * The body of a chat, the same on a canvas inside a frame and filling a view of its own. In a view what a built-in

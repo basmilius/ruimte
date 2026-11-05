@@ -8,8 +8,8 @@ import { workflowCandidates } from '@/chat/workflow/beside-workflows';
 import { forgetWorkflowBeside } from '@/chat/workflow/workflow-beside-state';
 import { useCanvas, type CanvasNode } from '@/state/canvas';
 import { useEndpoints } from '@/state/endpoints';
-import { useWorkspace } from '@/transport/connections';
-import { NodeMachineScope } from '@/transport/node-machine';
+import { useWorkspace } from '@/workspace/connections';
+import { NodeMachineScope } from '@/workspace/node-machine';
 
 const RoutineBeside = lazyNamed(() => import('@/routines/RoutineBeside'), 'RoutineBeside');
 const DesignBeside = lazyNamed(() => import('@/design/DesignNode'), 'DesignBeside');

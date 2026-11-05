@@ -18,20 +18,20 @@ import {
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createViewAction, placeViewOnCanvasAction } from '@/actions/client-actions';
+import { EMPTY_DEVICE_LIST, useDevices } from '@/clients/devices/state';
 import { AndroidMark } from '@/devices/AndroidMark';
 import { controlDevice } from '@/devices/control';
 import { deviceStateText, unavailableNotes } from '@/devices/device-text';
 import { DeviceControls, DeviceSurface } from '@/devices/DeviceBody';
-import { EMPTY_DEVICE_LIST, useDevices } from '@/devices/state';
 import { PanelHeaderActions, PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeaderTitleHidden } from '@/shell/PanelHeaderSlot';
 import { canvasInReach } from '@/state/canvas-target';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { useServer } from '@/state/server';
-import { deviceClientFor } from '@/transport/connections';
 import { useEndpointConnection } from '@/transport/status';
 import { SignInMark } from '@/ui/SignInMark';
+import { deviceClientFor } from '@/workspace/connections';
 
 function referenceOf({ platform, kind, name, runtime }: DeviceInfo): DeviceReference {
     return { platform, kind, name, runtime };

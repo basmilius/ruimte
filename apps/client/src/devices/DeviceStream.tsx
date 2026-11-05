@@ -27,11 +27,11 @@ import {
 import { DeviceTapPing } from '@/devices/DeviceOperatedStrip';
 import { hidUsageOf } from '@/devices/hid-usages';
 import { videoFrameDecoder } from '@/devices/video-decoder';
-import { followLiveStream } from '@/endpoint/live-stream-fetch';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
-import { deviceClientFor } from '@/transport/connections';
 import { FramePainter } from '@/transport/live-stream';
+import { followLiveStream } from '@/transport/live-stream-fetch';
+import { deviceClientFor } from '@/workspace/connections';
 
 const BOTTOM_EDGE_START = 0.92;
 const TRACKPAD_DRAG_GAIN = 0.42;

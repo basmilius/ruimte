@@ -68,9 +68,9 @@ import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useViewNodes } from '@/state/view-nodes';
-import { useWorkspace } from '@/transport/connections';
-import { useTransport } from '@/transport/context';
-import { NodeMachineScope } from '@/transport/node-machine';
+import { useWorkspace } from '@/workspace/connections';
+import { useTransport } from '@/workspace/context';
+import { NodeMachineScope } from '@/workspace/node-machine';
 import { workFolderOf, worktreeDiffTab } from '@/worktree-rules/worktree-rows';
 
 interface NodeMenuProps {

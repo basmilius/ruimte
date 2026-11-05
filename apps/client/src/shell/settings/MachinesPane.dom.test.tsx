@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import type { DesktopBridge } from '@/desktop/bridge';
 import { useUi } from '@/state/ui';
-import { useWindow } from '@/transport/window';
+import { useWindow } from '@/workspace/window';
 import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
 import { buttonWithText, everything, installDesktop, removeDesktop } from '../../../testing/dom-helpers';
 import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';

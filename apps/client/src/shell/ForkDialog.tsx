@@ -27,7 +27,7 @@ import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
 import { useOtherMachines } from '@/canvas/use-other-machines';
 import { forkOriginIn } from '@/chat/fork-origin';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { MachineGlyph } from '@/project/MachineGlyph';
 import { iconOfEntry } from '@/shell/settings/machine-icon';
 import { nameOf } from '@/shell/settings/machine-list';
 import { defaultCanvases } from '@/state/canvas';
@@ -37,10 +37,10 @@ import { endpointById } from '@/state/endpoints';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { useViewNodes } from '@/state/view-nodes';
-import { useWorkspace } from '@/transport/connections';
-import { useTransport } from '@/transport/context';
 import { useMachineAnswers } from '@/transport/features';
-import { NodeMachineScope } from '@/transport/node-machine';
+import { useWorkspace } from '@/workspace/connections';
+import { useTransport } from '@/workspace/context';
+import { NodeMachineScope } from '@/workspace/node-machine';
 
 /*
  * Forks a chat after one of its turns, with the history up to and including that turn: a chat view

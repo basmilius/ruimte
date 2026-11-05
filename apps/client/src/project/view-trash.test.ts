@@ -4,11 +4,11 @@ import type { ActionCall } from '@ruimte/actions';
 import type { ProjectCanvasView, ProjectDocument } from '@ruimte/contracts';
 import { PERSON_ACTION_CALL } from '@/action-port/perform';
 import { createClientActionRegistry, VOICE_ACTION_CALL } from '@/actions/client-actions';
+import { watchNodes } from '@/clients/terminal/lifecycle-watch';
 import { undoLatestDeletion } from '@/project/view-trash';
 import { focusedCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useToasts } from '@/state/toasts';
-import { watchNodes } from '@/terminal/lifecycle-watch';
 
 const board: ProjectCanvasView = {
     kind: 'canvas',

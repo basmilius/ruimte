@@ -4,6 +4,7 @@ import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts'
 import { Database, KeyRound, TriangleAlert } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDatabasePanel } from '@/clients/database/state';
 import {
     asViewConnections,
     databaseConnections,
@@ -17,11 +18,10 @@ import {
 import { databaseBrowse } from '@/database/environment';
 import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
 import { databaseSecretStore, type SecretPersistence } from '@/database/secrets';
-import { useDatabasePanel } from '@/database/state';
 import { desktop } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { useProject } from '@/state/project';
-import { useConnection } from '@/transport/context';
+import { useConnection } from '@/workspace/context';
 
 /*
  * The connections of the project: every add, edit and delete is saved as it happens, the passwords

@@ -12,8 +12,8 @@ import {
 import type { StoreApi } from 'zustand';
 import { listed } from '@/actions/words';
 import type { AgentSession } from '@/agents/nodes';
-import { browserRouteAvailable } from '@/browser/owner-route';
 import { toWorld } from '@/canvas-model/math';
+import { browserRouteAvailable } from '@/clients/browser/owner-route';
 import { locateView } from '@/layout/split';
 import { basenameOf } from '@/paths/file-path';
 import type { ViewDeletionFacts } from '@/project/view-deletion';
