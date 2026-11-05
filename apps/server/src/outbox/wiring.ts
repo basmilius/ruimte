@@ -278,11 +278,7 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
             }),
             'resume-run': resumeRunHandler(chats),
             // A node that left the document takes its entry along through the prune; one that is still owed runs here.
-            'resume-limit': unlessClosed(async (entry) => {
-                if (placed(entry.target)) {
-                    await chats.takeUpAfterLimit(entry.target, entry.payload.turnId);
-                }
-            }),
+            'resume-limit': unlessClosed((entry) => (placed(entry.target) ? chats.takeUpAfterLimit(entry.target, entry.payload.turnId) : Promise.resolve())),
             'background-limit': taskWiring.backgroundLimit,
             // A task another machine gave has no chat here to wake; its result goes back over the link instead.
             'wake-parent': unlessClosed((entry) => {
