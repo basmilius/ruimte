@@ -92,6 +92,7 @@ Decisions the code cannot show. Do not reverse one without asking Bas. Each area
 - Closing a project is one client's. The machine keeps it and its sessions while another client has it open; only the last client out ends them and drops it under Recent. Closing a window is not closing its project. Which projects a person keeps in their menu is that client's. A dropped socket ends nothing.
 - A page never sees a refresh token, a daemon never holds an account token, and accounts are never merged.
 - A machine is on at most one account and shared only with its owner. Only the local secret puts it on one; another account gets `machine-has-account` until a person there leaves the first (`apps/server/README.md`, "One account per machine").
+- Ruimte has no tests that drive a real browser or Electron window; real-page behavior is checked by dogfooding and beta testers, by Bas's choice (November 5, 2026). Ruimte worked without them, and the suite found almost no product bugs while it cost a lot of upkeep on the slow CI runner.
 
 ## Conventions
 
