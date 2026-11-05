@@ -3,7 +3,7 @@ import type { DiffSourceLine } from '@adecore/merge';
 import { matchesShortcut } from '@adecore/ui';
 import { useRef, type RefObject } from 'react';
 import { create } from 'zustand';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
+import { ignoreRefusal, perform } from '@/action-port/perform';
 import { isApplePlatform } from '@/desktop/bridge';
 import { cellElement } from '@/layout/cell-rects';
 import { requiredShortcut } from '@/shell/editor-keymap';

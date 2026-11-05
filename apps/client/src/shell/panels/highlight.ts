@@ -1,6 +1,6 @@
 import type { ShikiTransformer } from 'shiki';
 import { codeHighlighter } from '@/code-highlighter';
-import { shikiThemeOf } from '@/shell/panels/code-themes';
+import { shikiThemeOf } from '@/code-themes';
 
 type Highlight = (code: string, language: string, theme: string, document: boolean) => Promise<string>;
 

@@ -8,7 +8,7 @@ import { useEndpoints } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { useWindow, workspaceOf } from '@/state/window';
+import { useWindow, workspaceOf } from '@/transport/window';
 import { bindTerminalFileLinks, type TerminalFileLink } from './file-links';
 import { isTerminalLinkClick, openTerminalLink, terminalLinkTarget } from './links';
 import { openTerminalLinkInRuimte } from './open-in-ruimte';

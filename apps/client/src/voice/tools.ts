@@ -11,8 +11,9 @@ import {
 import i18next from 'i18next';
 import { clientActions, VOICE_ACTION_CALL } from '@/actions/client-actions';
 import { accentLabel } from '@/canvas-model/accents';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';

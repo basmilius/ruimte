@@ -2,7 +2,7 @@ import { isFileView, resolveStoredPath, type ProjectView, type SplitLayout } fro
 import { shownViewIdsIn } from '@/layout/split';
 import type { Tab } from '@/state/files';
 import { endpointKey } from '@/state/keys';
-import { dirnameOf } from './file-path';
+import { dirnameOf } from '../paths/file-path';
 
 const NO_TABS: readonly Tab[] = [];
 

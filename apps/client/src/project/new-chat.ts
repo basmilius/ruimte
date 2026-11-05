@@ -16,9 +16,9 @@ import { endpointKey } from '@/state/keys';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { useWindow, windowWorkspace, workspaceOf } from '@/state/window';
 import { transportFor } from '@/transport';
 import { TransportError } from '@/transport-api/transport';
+import { useWindow, windowWorkspace, workspaceOf } from '@/transport/window';
 
 /* A machine whose home sits in a git checkout has no Chats project. It says no word: the ways in go. */
 const REFUSALS: readonly string[] = ['scratch-unavailable'];

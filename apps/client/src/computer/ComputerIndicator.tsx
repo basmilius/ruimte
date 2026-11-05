@@ -4,10 +4,10 @@ import clsx from 'clsx';
 import i18next from 'i18next';
 import { Pause, Play, Square, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { indicatorLook, useNodeComputerSession } from '@/computer/indicator';
+import { useEndpointId } from '@/state/current-endpoint';
 import { localEndpointLabel, useEndpoints } from '@/state/endpoints';
-import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
 

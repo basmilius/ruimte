@@ -10,9 +10,9 @@ import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoint
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSessions } from '@/state/sessions';
-import { useWindow, windowWorkspace } from '@/state/window';
 import { defaultWorkspaceStores } from '@/state/workspace';
 import { machineTransport, pool } from '@/transport';
+import { useWindow, windowWorkspace } from '@/transport/window';
 import { dropMachine, enterWorkspace, leaveWorkspace, machineFor, showStart, startConnections } from './connections';
 
 // Past the pool's idle countdown, which is what closes a socket nobody holds.

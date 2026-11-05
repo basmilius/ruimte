@@ -1,6 +1,6 @@
 import { chatNameOf, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import i18next from 'i18next';
-import type { NodesOfView } from '@/project/view-nodes';
+import type { NodesOfView } from '@/state/view-nodes';
 
 /*
  * What to call the caller, out of the document this client already has: the title of its node, or

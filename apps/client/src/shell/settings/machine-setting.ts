@@ -3,7 +3,7 @@ import type { TerminalShell } from '@ruimte/contracts';
 import type { BrokerSetting } from '@ruimte/pulsar';
 import i18next from 'i18next';
 import { useState } from 'react';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import type { MachineSwitch } from '@/shell/settings/machine-switches';
 import type { Endpoint } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';

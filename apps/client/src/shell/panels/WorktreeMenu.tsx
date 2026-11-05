@@ -20,13 +20,13 @@ import {
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StatusDot } from '@/canvas/NodeFrame';
+import type { WorktreeNode } from '@/controllers/worktrees';
 import type { Inspection } from '@/shell/panels/use-worktree-inspection';
-import { hasWork, nodeNames, nodesInWorktree, workBadgesLabel } from '@/shell/panels/worktree-rows';
 import { nodeWorking } from '@/state/agent-work';
+import { useEndpointId } from '@/state/current-endpoint';
 import { hasActiveCanvas, useDocument } from '@/state/document';
-import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
-import type { WorktreeNode } from '@/state/worktrees';
+import { hasWork, nodeNames, nodesInWorktree, workBadgesLabel } from '@/worktree-rules/worktree-rows';
 
 /* What a worktree row can be asked besides being entered. */
 export interface WorktreeActions {

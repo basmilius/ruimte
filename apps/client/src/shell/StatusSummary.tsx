@@ -6,14 +6,14 @@ import { useTranslation } from 'react-i18next';
 import { openAttentionQueue } from '@/attention/queue';
 import { WaitLabel } from '@/attention/WaitLabel';
 import { StatusDot } from '@/canvas/NodeFrame';
-import { shownChatOfNode } from '@/design/design-chat';
-import { useProjectNodes, type ProjectNodeRef } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { groupAttention, useAttention } from '@/state/attention';
 import { useCanvasStore } from '@/state/canvas';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { shownChatOfNode } from '@/state/design-chat';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
+import { useProjectNodes, type ProjectNodeRef } from '@/state/view-nodes';
 import { oldestWaitingFirst, useWaitingSince, waitDetailsOf } from '@/state/waiting';
 import { waitAskLine } from './wait-ask';
 

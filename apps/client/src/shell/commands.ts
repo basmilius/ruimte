@@ -31,15 +31,14 @@ import {
     showViewOnCanvasAction,
     toggleFlagAction
 } from '@/actions/client-actions';
-import { availableAgents } from '@/agents/creation';
-import type { AgentTarget } from '@/agents/nodes';
 import { openAttentionQueue } from '@/attention/queue';
 import { focusedChatId } from '@/chat/focused-chat';
 import { restartChatSession } from '@/chat/restart-session';
+import { keepAwakeAvailable, setKeepAwake } from '@/controllers/keep-awake';
+import { prReposOfCurrent, type PrRepo } from '@/controllers/pr-repos';
 import { openNewConsole } from '@/database/console-file';
 import { refreshSqlSchemas } from '@/database/sql-bindings';
 import { useDatabasePanel } from '@/database/state';
-import { shownChatOfNode } from '@/design/design-chat';
 import { copyDiagram, exportDiagram, openDiagramJson } from '@/diagram/diagram-actions';
 import { copyDrawing, exportDrawing } from '@/drawing/drawing-actions';
 import { runAction } from '@/extensions/action-runs';
@@ -71,26 +70,27 @@ import { diffInFront, openFileAtDiffCaret } from '@/shell/panels/diff-caret';
 import { stepFocusedEditorFind } from '@/shell/panels/use-editor-find';
 import { hasPrWatch, stopPrWatch } from '@/shell/pr-watch-actions';
 import { pullRequestCommands } from '@/shell/pull-request-commands';
+import { availableAgents, type AgentTarget } from '@/state/agent-availability';
 import { groupArrangeable } from '@/state/arrange-group';
 import { focusedCanvas, maximizedNodeOf, maximizeTargetOf, zoomNodeTargetOf, type CanvasState } from '@/state/canvas';
+import { currentEndpointId } from '@/state/current-endpoint';
+import { shownChatOfNode } from '@/state/design-chat';
 import { focusedDiagram } from '@/state/diagram';
 import { activeViewOf, useDocument } from '@/state/document';
 import { focusedDrawing } from '@/state/drawing';
 import { useFiles } from '@/state/files';
-import { keepAwakeAvailable, setKeepAwake } from '@/state/keep-awake';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
 import { hasLocalMachine } from '@/state/local-machine';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { isNotePreviewLocked, setNotePreviewLocked } from '@/state/note-previews';
-import { prReposOfCurrent, type PrRepo } from '@/state/pr-repos';
 import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
-import { windowWorkspace } from '@/state/window';
 import { pool, transportFor } from '@/transport';
 import { machineAnswers } from '@/transport/features';
+import { windowWorkspace } from '@/transport/window';
 
 export interface Command {
     id: string;

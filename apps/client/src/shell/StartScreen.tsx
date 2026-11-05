@@ -30,9 +30,9 @@ import { canShowReleaseNotes, openReleaseNotes } from '@/state/release-notes';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { useUpdates } from '@/state/updates';
-import { useWindow, type BootFailure } from '@/state/window';
 import { stationBoot } from '@/station';
 import { useEndpointConnection, useMachineHold, useOpenEndpoints } from '@/transport/status';
+import { useWindow, type BootFailure } from '@/transport/window';
 import { BrandIntro } from '@/ui/Brand';
 
 const ROW = 'flex min-h-10 w-full min-w-0 items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-surface-hover disabled:opacity-50';

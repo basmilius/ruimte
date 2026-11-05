@@ -3,11 +3,11 @@ import { formatAgo, formatClock, formatElapsedShort, isSameDay } from '@adecore/
 import { ChevronDown, Cloud, Copy, GitCommitHorizontal } from 'lucide-react';
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { GIT_GROUP } from '@/shell/panels/classes';
 import { githubPicture, groupCommits, mergeLogs, shownRefs, type LoadedLog, type LogRow } from '@/shell/panels/commit-log';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useGit } from '@/state/git';
-import { useEndpointId } from '@/state/keys';
 import { useTransport } from '@/transport/context';
 import { useMachineAnswers } from '@/transport/features';
 

@@ -3,8 +3,8 @@ import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync, Visitor } from 'oxc-parser';
-import { APP_LANGUAGES, FALLBACK_LANGUAGE } from '@/i18n/languages';
 import { NAMESPACES } from '@/i18n/namespaces';
+import { APP_LANGUAGES, FALLBACK_LANGUAGE } from '@/state/languages';
 
 const HERE = fileURLToPath(new URL('.', import.meta.url));
 function localeDir(language: string): string {

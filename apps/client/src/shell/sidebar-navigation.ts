@@ -1,11 +1,11 @@
 import i18next from 'i18next';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
-import { nodesOfView } from '@/project/view-nodes';
+import { ignoreRefusal, perform } from '@/action-port/perform';
 import { revealNode, showView } from '@/project/views';
 import { useDocument, viewOfNode } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
+import { nodesOfView } from '@/state/view-nodes';
 import { sidebarProjectKey, useSidebarProjects } from './sidebar-projects';
 import { sidebarNavigator } from './sidebar-target';
 export type { SidebarTarget } from './sidebar-target';

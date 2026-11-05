@@ -8,7 +8,7 @@ import { VersionBody } from '@/output/ArtifactView';
 import { openArtifact } from '@/output/open';
 import { useArtifact } from '@/output/use-artifact';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useMachineAnswers } from '@/transport/features';
 
 // A version id is the machine's and never empty, so the empty string is free to mean no version at all.

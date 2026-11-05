@@ -4,10 +4,10 @@ import { useChatRow } from '@adecore/agents-react/state';
 import { LazyBoundary, messageOf } from '@adecore/ui';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { ConnectionNotice, NodeNotice } from '@/nodes/NodeNotice';
 import { OutputChatContext } from '@/output/chat-scope';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { chatClientFor } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';
 

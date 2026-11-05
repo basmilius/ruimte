@@ -9,7 +9,7 @@ import { FakeLanguageTransport } from '@/language/fake-daemon';
 import { eventOf } from '@/language/key-events';
 import { EditorLanguage } from '@/language/ruimte-editor-language';
 import { ProjectLanguage } from '@/language/ruimte-project-language';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';

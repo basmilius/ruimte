@@ -4,10 +4,11 @@ import { ActionRefusal, type ActionOutput } from '@ruimte/actions';
 import type { GitActionKind, GitActionPayload, GitActionResult } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { cancelGitRunAction, perform } from '@/actions/client-actions';
-import { actionTitle, manySummary, manyTitle, nextActionId, phaseLabel } from '@/shell/panels/git-actions';
+import { perform } from '@/action-port/perform';
+import { cancelGitRunAction } from '@/actions/client-actions';
 import { useToasts } from '@/state/toasts';
 import { useTransport } from '@/transport/context';
+import { actionTitle, manySummary, manyTitle, nextActionId, phaseLabel } from '@/worktree-rules/git-actions';
 
 type GitRun = ActionOutput<'git.publishBranch'>;
 

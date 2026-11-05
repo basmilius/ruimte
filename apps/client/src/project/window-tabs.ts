@@ -7,7 +7,7 @@ import { isRealMachine } from '@/state/local-machine';
 import { isScratchProject, useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useSettings } from '@/state/settings';
-import { useWindow } from '@/state/window';
+import { useWindow } from '@/transport/window';
 
 /* The projects this window opened, as `endpointKey`s in the order of its tabs, and the one on screen. */
 export interface WindowTabs {

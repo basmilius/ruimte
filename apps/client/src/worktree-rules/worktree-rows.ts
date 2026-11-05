@@ -1,6 +1,6 @@
 import { designNodeChats, type ProjectFileTabView, type Worktree, type WorktreeRemoveResult, type WorktreeWork } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { isUnderFolder } from '@/state/fs-watch';
+import { isUnderFolder } from '@/paths/file-path';
 
 /* The branch the commits are counted against, in words; a worktree the register does not know was measured against the base. */
 function targetOf(worktree: Worktree): string {

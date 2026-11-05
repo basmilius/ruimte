@@ -5,7 +5,8 @@ import clsx from 'clsx';
 import { Ban, Check, ChevronDown, ChevronUp, FileWarning, LoaderCircle, Sparkles, Wand2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cancelGitRunAction, perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
+import { cancelGitRunAction } from '@/actions/client-actions';
 import {
     answerInto,
     conflictIndexes,
@@ -21,13 +22,13 @@ import {
 import { ConflictEditor, type EditorHandle } from '@/conflicts/ConflictEditor';
 import { ConflictSides } from '@/conflicts/ConflictSides';
 import type { ConflictDraft } from '@/conflicts/editor';
+import { useGitStatus } from '@/controllers/git-watch';
+import { basenameOf } from '@/paths/file-path';
 import { DiffRowMenuItems } from '@/shell/panels/DiffRowMenuItems';
-import { basenameOf } from '@/shell/panels/files-tree';
-import { nextActionId } from '@/shell/panels/git-actions';
-import { useGitStatus } from '@/state/git-watch';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
+import { nextActionId } from '@/worktree-rules/git-actions';
 
 type Reading = { cwd: string; answer: GitConflictsResult } | { cwd: string; failure: string };
 

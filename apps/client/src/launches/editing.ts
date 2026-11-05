@@ -1,6 +1,6 @@
 import { isAbsolutePath, type GitRepo, type LaunchConfigEntry, type LaunchConfigKind, type LaunchesDocument, type LaunchSuggestion } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { basenameOf } from '@/shell/panels/files-tree';
+import { basenameOf } from '@/paths/file-path';
 
 /* The daemon's import writes ids the same way, so an imported launch and a typed one read alike. */
 export function slugOf(name: string): string {

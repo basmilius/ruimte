@@ -1,6 +1,7 @@
 import { followViewStates } from '@adecore/editor-react';
+import { isPathBelow } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { basenameOf, isPathBelow } from '@/shell/panels/files-tree';
+import { basenameOf } from '@/paths/file-path';
 import { useDocument } from '@/state/document';
 import { isFileTab, useFiles } from '@/state/files';
 import { endpointKey, splitKey } from '@/state/keys';

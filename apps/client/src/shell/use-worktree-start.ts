@@ -3,9 +3,9 @@ import { useProviders } from '@adecore/agents-react/state';
 import { messageOf } from '@adecore/ui';
 import type { AgentKind, GitRefsResult, ModelSelection, Worktree } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
-import { perform } from '@/actions/client-actions';
-import { availableAgents } from '@/agents/creation';
+import { perform } from '@/action-port/perform';
 import { proposedBranch } from '@/shell/new-worktree-chat';
+import { availableAgents } from '@/state/agent-availability';
 import { useTransport } from '@/transport/context';
 
 type BaseCommit = { ref: string; commit: string; subject: string } | 'missing' | null;

@@ -48,12 +48,12 @@ import { databaseViewName } from '@/database/view-name';
 import { databaseViewShareRefusal } from '@/database/view-sharing';
 import { freeDesignFolder } from '@/design/design-folder';
 import { locateView } from '@/layout/split';
+import { basenameOf } from '@/paths/file-path';
 import { saveViewFiles, viewDeletionFacts, type ViewDeletionMachine } from '@/project/view-deletion';
-import { nodesOfView } from '@/project/view-nodes';
 import { offerViewUndo } from '@/project/view-trash';
-import { basenameOf } from '@/shell/panels/files-tree';
 import { canvasInReach } from '@/state/canvas-target';
 import type { DocumentState } from '@/state/document';
+import { nodesOfView } from '@/state/view-nodes';
 
 /* What the view actions reach outside the document; a test hands in a fake of each. */
 export interface ViewReach {

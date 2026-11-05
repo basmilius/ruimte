@@ -2,13 +2,13 @@ import { useChats } from '@adecore/agents-react/state';
 import { isFileView, resolveStoredPath, sessionNodesOfView, type ProjectNode, type ProjectView, nodeChats } from '@ruimte/contracts';
 import { agentsEndedBy } from '@/agents/end-children';
 import { callerName } from '@/project/show-view';
-import { nodeRefsOf, nodeRefsOfView, nodesOfView } from '@/project/view-nodes';
 import { nodeWorking } from '@/state/agent-work';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { useProject } from '@/state/project';
 import { useSessions, type StatusOf } from '@/state/sessions';
 import { textDrafts } from '@/state/text-drafts';
+import { nodeRefsOf, nodeRefsOfView, nodesOfView } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
 
 function resolved(stored: readonly string[], folder: string | null): string[] {

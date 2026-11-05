@@ -11,9 +11,10 @@ import { markerPath, type MarkerShape } from '@/canvas/marker-path';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { isAgentKind, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
+import { useEndpointId } from '@/state/current-endpoint';
 import type { EdgeLine } from '@/state/edge-lines';
 import { useEndpoints } from '@/state/endpoints';
-import { endpointOfNodeIn, useEndpointId } from '@/state/keys';
+import { endpointOfNodeIn } from '@/state/keys';
 import { edgeTask, taskEdgeLabel, useTasks } from '@/state/tasks';
 
 function EdgeLabel({

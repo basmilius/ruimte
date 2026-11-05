@@ -1,10 +1,11 @@
 import type { CanvasNodeKind } from '@ruimte/contracts';
 import { onlyCameraMoved } from '@/canvas-model/camera-slice';
-import { nodeRefsOfView, projectNodes } from '@/project/view-nodes';
 import { liveCanvases, subscribeCanvases } from '@/state/canvas';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
-import { currentEndpointId, endpointKey, endpointOfNode, splitKey } from '@/state/keys';
+import { endpointKey, endpointOfNode, splitKey } from '@/state/keys';
+import { nodeRefsOfView, projectNodes } from '@/state/view-nodes';
 
 /*
  * How a node left the document. `closed` is this client taking it out, which ends its session. `gone`

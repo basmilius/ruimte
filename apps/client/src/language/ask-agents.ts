@@ -1,6 +1,6 @@
 import { useProviders } from '@adecore/agents-react/state';
 import type { ProviderInfo } from '@ruimte/contracts';
-import { availableAgents } from '@/agents/creation';
+import { availableAgents } from '@/state/agent-availability';
 
 /* The two CLIs the editor offers a question to; the chooser lists every agent the app has. */
 const ASKED: readonly string[] = ['claude', 'codex'];

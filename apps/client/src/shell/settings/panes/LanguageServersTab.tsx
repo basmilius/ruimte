@@ -15,7 +15,7 @@ import type { LanguageStatusTracker } from '@/language/status';
 import { actionsOf, groupedStatuses, isOwn, kindOf, nameOf, packageOf, toneOf } from '@/language/status-view';
 import { useWindowProjectLanguage } from '@/shell/settings/panes/window-project-language';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { useWindow, workspaceOf } from '@/state/window';
+import { useWindow, workspaceOf } from '@/transport/window';
 
 /* The servers a person added on the machine of this window, for as long as the tab is up. */
 function useWindowCustomServers(): { tracker: CustomServersTracker; endpointId: string } | null {

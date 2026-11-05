@@ -14,8 +14,8 @@ import type {
 } from '@ruimte/contracts';
 import { createStore, type StoreApi } from 'zustand';
 import { createCameraSlice, type CameraSlice } from '@/canvas-model/camera-slice';
+import { fitTextBox } from '@/canvas-model/drawing-measure';
 import { intersects, type Rect } from '@/canvas-model/math';
-import { fitTextBox } from '@/drawing/measure';
 import { editorBindings } from '@/state/editor-bindings';
 import { createEditorRegistry, finishLoad, savedFileSetters, type SavedFileSetters } from '@/state/editors';
 import { mergeSelection } from '@/state/selection';

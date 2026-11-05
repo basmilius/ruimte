@@ -4,8 +4,8 @@ import { providerSinkFor } from '@adecore/agents-react/state';
 import type { ProjectDocument, ProviderInfo } from '@ruimte/contracts';
 import { useChatChooser } from '@/chat/chat-chooser';
 import { focusedCanvas } from '@/state/canvas';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { currentEndpointId } from '@/state/keys';
 import { fenceOf, lineRangeLabel, offerSelection, selectionBlock, startLinkedChat, type SelectionOffer } from './selection-to-chat';
 
 const node = (id: string, kind: 'file' | 'chat', x: number, extra: Record<string, unknown> = {}) => ({

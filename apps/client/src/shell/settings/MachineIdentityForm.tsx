@@ -3,7 +3,7 @@ import { SettingsRow } from '@adecore/ui/settings';
 import { type ProjectIconChoice } from '@ruimte/contracts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { PROJECT_ICON_KEYWORDS } from '@/project/project-icons';
 import { useProjectIconGroups } from '@/project/use-project-icon-groups';
 import { WithReason } from '@/shell/settings/MachineSettings';

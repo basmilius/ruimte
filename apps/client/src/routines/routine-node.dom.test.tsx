@@ -5,7 +5,7 @@ import { setRunsHidden } from '@/routines/runs-hidden';
 import { showRoutine, useRoutinesStage } from '@/routines/stage';
 import { liveCanvas } from '@/state/canvas';
 import { useSettings } from '@/state/settings';
-import { windowWorkspace } from '@/state/window';
+import { windowWorkspace } from '@/transport/window';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, layOut, layOutChat, mount, openSubmenu, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';

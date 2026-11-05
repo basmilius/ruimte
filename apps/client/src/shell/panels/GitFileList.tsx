@@ -1,5 +1,6 @@
 import { ContextMenu, FileTree, Icon, PanelEmpty, useFileTree, type FoldKeyOf } from '@adecore/ui';
 import type { FileTreeVisibleRow } from '@pierre/trees';
+import { absoluteOf } from '@ruimte/contracts';
 import type { GitFile, GitStatus } from '@ruimte/contracts';
 import {
     ChevronsDownUp,
@@ -18,9 +19,10 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { GitCheckout } from '@/controllers/git-repos';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { FileCopyRow } from '@/shell/panels/FileCopyRow';
-import { absoluteOf, revealableInFiles } from '@/shell/panels/files-tree';
+import { revealableInFiles } from '@/shell/panels/files-tree';
 import {
     buildGitTree,
     byCheckout,
@@ -47,7 +49,6 @@ import { revealFile } from '@/shell/panels/reveal-file';
 import { setDragging } from '@/shell/view-drag';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
-import type { GitCheckout } from '@/state/git-repos';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';

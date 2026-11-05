@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { useChats, type ChatState } from '@adecore/agents-react/state';
 import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
-import type { DesktopBridge, KeepAwakeRequest } from '@/desktop/bridge';
-import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import {
     closedLidOf,
     keepAwakeAvailable,
@@ -12,7 +10,9 @@ import {
     keepAwakeWanted,
     startKeepAwake,
     type KeepAwakeSettings
-} from '@/state/keep-awake';
+} from '@/controllers/keep-awake';
+import type { DesktopBridge, KeepAwakeRequest } from '@/desktop/bridge';
+import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { serverInfoOf, useServers, type ServerInfo } from '@/state/server';
 import { useSessions, type SessionState } from '@/state/sessions';
 import { useSettings } from '@/state/settings';

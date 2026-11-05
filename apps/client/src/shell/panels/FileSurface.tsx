@@ -1,9 +1,10 @@
 import { EmptyState } from '@adecore/ui';
+import { resolveStoredPath } from '@ruimte/contracts';
 import { FileQuestion } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { basenameOf } from '@/paths/file-path';
 import type { FileSurfaceKind } from '@/shell/panels/FileActionItems';
 import { FileBody } from '@/shell/panels/FileBody';
-import { basenameOf, resolveStoredPath } from '@/shell/panels/files-tree';
 import { useProject } from '@/state/project';
 
 /*

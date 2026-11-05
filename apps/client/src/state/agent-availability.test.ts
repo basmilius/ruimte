@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProviderInfo } from '@ruimte/contracts';
-import { availableAgents, separatesGroups } from './creation';
+import { availableAgents, separatesGroups } from './agent-availability';
 
 const provider = (kind: string, name: string, installed = true): ProviderInfo =>
     ({ kind, name, installed, capabilities: { chat: true, terminal: true } }) as ProviderInfo;

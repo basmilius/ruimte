@@ -1,11 +1,13 @@
 import { ErrorBoundary, ShortcutHints, UIProvider, lazyDialog, lazyNamed, prefetcher, LazyBoundary } from '@adecore/ui';
 import i18next from 'i18next';
 import { useEffect, type ReactNode } from 'react';
+import { startMachineUpdate } from '@/controllers/machine-update';
 import { desktop, machineMode } from '@/desktop/bridge';
 import { HostDialogs, HostOverlays } from '@/extensions/host/host-dialogs';
 import '@/extensions/built-in';
 import { startExtensions } from '@/extensions/watch';
 import { formatSource } from '@/format/source';
+import { useTemplateRequest } from '@/language/template-request';
 import { useProjectSwitch } from '@/project/open';
 import { closeLinkRequest, useLinkRequest } from '@/pulsar/link-request';
 import { useAppShortcuts } from '@/shell/app-shortcuts';
@@ -23,8 +25,8 @@ import { useReleaseNotes } from '@/state/release-notes';
 import { useSettings } from '@/state/settings';
 import { useUi, type SettingsSectionId } from '@/state/ui';
 import { startUpdates } from '@/state/updates';
-import { useWindow } from '@/state/window';
 import { ChatScopeProvider } from '@/transport/ChatScopeProvider';
+import { useWindow } from '@/transport/window';
 
 const WorkspaceShell = lazyNamed(() => import('@/shell/WorkspaceShell'), 'WorkspaceShell');
 const FirstRunScreen = lazyNamed(() => import('@/onboarding/FirstRunScreen'), 'FirstRunScreen');
@@ -67,8 +69,8 @@ const ProviderCommandDialog = lazyDialog(
 const TemplateRequestDialog = lazyDialog(
     () => import('@/language/TemplateDialog'),
     'TemplateRequestDialog',
-    useUi,
-    (s) => s.templateRequest !== null
+    useTemplateRequest,
+    (s) => s.request !== null
 );
 const OnboardingDialog = lazyDialog(
     () => import('@/onboarding/OnboardingDialog'),
@@ -158,7 +160,7 @@ export function App() {
     }, [name]);
 
     // Once, with the preference as it stands. The shell reads it again from About.
-    useEffect(() => startUpdates(useSettings.getState().updatesAutoDownload, useSettings.getState().updatesTrack) ?? undefined, []);
+    useEffect(() => startUpdates(useSettings.getState().updatesAutoDownload, useSettings.getState().updatesTrack, startMachineUpdate) ?? undefined, []);
 
     // Every embedded page steps aside while a drag lasts, so it never swallows a drop meant for the cell under it.
     useEffect(() => watchDrags(), []);

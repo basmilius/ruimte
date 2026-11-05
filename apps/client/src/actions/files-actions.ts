@@ -1,13 +1,15 @@
 import { ActionRefusal, FILE_READ_MAX_LINES, type ActionActorKind, type ActionHandlers } from '@ruimte/actions';
+import { absoluteOf, isAbsolutePath, isPathBelow, relativeTo } from '@ruimte/contracts';
 import type { FileLocation } from '@ruimte/contracts';
 import { copyTextOrRefuse } from '@/actions/clipboard';
 import { refusing, type Requester } from '@/actions/refusal';
 import { desktop } from '@/desktop/bridge';
+import { basenameOf } from '@/paths/file-path';
 import { canCopyFilesOn } from '@/shell/panels/file-copy';
-import { absoluteOf, basenameOf, isAbsolutePath, isPathBelow, relativeTo, revealableInFiles } from '@/shell/panels/files-tree';
+import { revealableInFiles } from '@/shell/panels/files-tree';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { forgetDeleted, moveFile } from '@/state/file-moves';
 import { useFiles } from '@/state/files';
-import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { machineFor } from '@/transport/connections';

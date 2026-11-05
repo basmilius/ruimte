@@ -13,8 +13,8 @@ import { MachineDetail } from '@/shell/settings/MachineDetail';
 import { MachineListItem } from '@/shell/settings/MachineListItem';
 import { RuimteAccountDetail } from '@/shell/settings/RuimteAccountDetail';
 import { ThisComputerDetail } from '@/shell/settings/ThisComputerDetail';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
-import { useEndpointId } from '@/state/keys';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useUi } from '@/state/ui';
 

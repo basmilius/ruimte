@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { ActionRefusal } from '@ruimte/actions';
 import type { Worktree, WorktreeMergeResult } from '@ruimte/contracts';
+import { removeAllQuestion } from '../../worktree-rules/worktree-rows.ts';
 import {
     checkedOutBranch,
     defaultSubject,
@@ -13,7 +14,6 @@ import {
     type MergeOutcome,
     type MergeRun
 } from './worktree-merge.ts';
-import { removeAllQuestion } from './worktree-rows.ts';
 
 function worktree(branch: string, extra: Partial<Worktree> = {}): Worktree {
     return {

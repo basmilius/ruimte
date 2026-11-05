@@ -8,7 +8,7 @@ import { draftFiles } from '@/language/project-files';
 import { EditorLanguage } from '@/language/ruimte-editor-language';
 import { acquireProjectLanguage } from '@/language/ruimte-project-language';
 import { participateInSave } from '@/language/save-participation';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { textDrafts } from '@/state/text-drafts';
 import { useTransport } from '@/transport/context';

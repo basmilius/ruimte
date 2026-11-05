@@ -37,7 +37,7 @@ import { copyScreenshot, placeScreenshotOnCanvas, saveScreenshot, startRecording
 import { isInstallable, isMedia } from '@/devices/device-files';
 import { MachineFilePicker } from '@/devices/MachineFilePicker';
 import { recordingKey, useDevices, useRecordingEnded, useRecordingSince } from '@/devices/state';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { deviceClientFor } from '@/transport/connections';
 import { useMachineAnswers } from '@/transport/features';

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { GitIssue, ProjectCanvasView, ProjectView } from '@ruimte/contracts';
-import { nodesOfView } from '@/project/view-nodes';
 import { defaultCanvases } from '@/state/canvas';
+import { nodesOfView } from '@/state/view-nodes';
 import { findIssueNode, issueBranch, issuePrompt } from './issue-start';
 
 const issue: GitIssue = {

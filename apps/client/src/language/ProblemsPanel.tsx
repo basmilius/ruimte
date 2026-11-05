@@ -8,9 +8,9 @@ import { resolveStoredPath, type LanguageServerStatus } from '@ruimte/contracts'
 import { CircleCheck, CircleX, Info, ScanSearch, Search, TriangleAlert } from 'lucide-react';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
+import { basenameOf } from '@/paths/file-path';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
-import { basenameOf } from '@/shell/panels/files-tree';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { useTransport } from '@/transport/context';
 import { useMachineAnswers } from '@/transport/features';

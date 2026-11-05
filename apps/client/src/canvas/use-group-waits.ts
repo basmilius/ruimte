@@ -2,7 +2,7 @@ import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
 import { waitingOnMap } from '@/canvas/minimap-geometry';
 import { groupAttention } from '@/state/attention';
 import { useCanvas, type CanvasNode } from '@/state/canvas';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useSessions, type SessionsByKey } from '@/state/sessions';
 import { useSnoozes, type Snoozes } from '@/state/snooze';
 

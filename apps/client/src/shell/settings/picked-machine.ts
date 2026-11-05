@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { useListedMachines } from '@/shell/settings/machine-list';
+import { useEndpointId } from '@/state/current-endpoint';
 import type { Endpoint } from '@/state/endpoints';
-import { useEndpointId } from '@/state/keys';
 
 interface PickedMachineState {
     /* The endpoint a person picked in a section's tag, or null for the machine this window works on. */

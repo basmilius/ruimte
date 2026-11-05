@@ -5,7 +5,7 @@ import { isApplePlatform } from '@/desktop/bridge';
 import { canvasOfNode } from '@/state/canvas';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
-import { windowWorkspace } from '@/state/window';
+import { windowWorkspace } from '@/transport/window';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';

@@ -20,7 +20,7 @@ import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import type { HostLanguage as EditorLanguage } from '@/language/host-language';
 import { isShortcut } from '@/language/shortcut-keys';
 import { inlineEditAccountOn, inlineEditAgentOn } from '@/state/ai-settings';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';

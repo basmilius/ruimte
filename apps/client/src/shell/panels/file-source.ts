@@ -1,5 +1,5 @@
 import type { ByteResource } from '@ruimte/contracts';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { machineTransport } from '@/transport';
 import { readPiece } from '@/transport-api/piece';
 import { readResource } from '@/transport/byte-transfer';

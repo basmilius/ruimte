@@ -3,7 +3,6 @@ import { compareVersions, isVersion, type UpdateTrack } from '@ruimte/desktop-br
 import i18next from 'i18next';
 import { create } from 'zustand';
 import { desktop, type UpdateState } from '@/desktop/bridge';
-import { startMachineUpdate } from '@/state/machine-update';
 import { openReleaseNotes, setPreviousSeenVersion } from '@/state/release-notes';
 import { browserStorage } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
@@ -136,18 +135,24 @@ export function noteVersionChange(current: string, storage: Pick<Storage, 'getIt
     return change;
 }
 
+/* Tells this computer's own machine what the shell's updater does, which `controllers/machine-update.ts` does over the link. */
+export type StartMachineUpdate = (shell: { state(): UpdateState; download(): Promise<void>; install(): void }) => {
+    apply(state: UpdateState): void;
+    stop(): void;
+};
+
 /*
  * Wires the store to the shell. The state it already has and every change after it. The first check
  * waits until the auto-download preference has landed, so nothing downloads behind the back of
  * someone who turned it off. This computer's machine hears every step, so another client sees the
  * update and can ask for it. Returns the unsubscribe, or null where there is no shell to talk to.
  */
-export function startUpdates(autoDownload: boolean, track: UpdateTrack | null): (() => void) | null {
+export function startUpdates(autoDownload: boolean, track: UpdateTrack | null, startMachine: StartMachineUpdate): (() => void) | null {
     const bridge = desktop();
     if (!bridge?.updateState || !bridge.onUpdateState) {
         return null;
     }
-    const machine = startMachineUpdate({
+    const machine = startMachine({
         state: () => useUpdates.getState(),
         download: () => useUpdates.getState().download(),
         install: () => bridge.installUpdate?.(true)

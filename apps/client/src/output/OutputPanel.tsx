@@ -61,8 +61,8 @@ import { RemoveArtifactDialog, type RemoveArtifactRequest } from '@/output/Remov
 import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { setDragging } from '@/shell/view-drag';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpointIdOfMachine, useEndpoints } from '@/state/endpoints';
-import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { useMachineAnswers } from '@/transport/features';

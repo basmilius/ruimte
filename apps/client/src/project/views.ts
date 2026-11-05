@@ -1,5 +1,5 @@
 import { offerDraft } from '@adecore/agents-react/chat';
-import { designOfChat, isCanvasView, isOpenableView, sessionNodesOfView, type AgentKind, type ProjectView } from '@ruimte/contracts';
+import { designOfChat, isCanvasView, isOpenableView, sessionNodesOfView, type AgentKind, type ProjectView, storedPathOf } from '@ruimte/contracts';
 import i18next from 'i18next';
 import {
     createNodeAction,
@@ -17,21 +17,21 @@ import {
 import { askBeforeEndingAgents } from '@/agents/end-children';
 import { GRID, type Point } from '@/canvas-model/math';
 import { databaseTargetOf, databaseViewName } from '@/database/view-name';
-import { useDesignChat } from '@/design/design-chat';
+import { basenameOf } from '@/paths/file-path';
 import { filesOfView } from '@/project/view-deletion';
-import { nodesOfView } from '@/project/view-nodes';
 import { leaveRoutines } from '@/routines/stage';
-import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
-import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { focusedCanvas, liveCanvas, revealWhenItLands } from '@/state/canvas';
+import { currentEndpointId } from '@/state/current-endpoint';
+import { useDesignChat } from '@/state/design-chat';
 import { useDocument, viewOfNode } from '@/state/document';
 import { fileTabOf, isDatabaseTab, useFiles } from '@/state/files';
-import { currentEndpointId } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { defaultNodeSize } from '@/state/node-size';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
+import { closeAfterSaving } from '@/state/unsaved-close';
+import { nodesOfView } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
 
 export function showView(id: string, options: { newTab?: boolean } = {}): void {

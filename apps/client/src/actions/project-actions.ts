@@ -16,12 +16,12 @@ import { plural } from '@/actions/words';
 import type { ProjectClient } from '@/project/project-client';
 import { sessionNodesOf } from '@/project/project-sessions';
 import type { SwitchOutcome } from '@/project/project-switch';
+import { currentEndpointId } from '@/state/current-endpoint';
 import type { DocumentState } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
-import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
-import { windowWorkspace } from '@/state/window';
+import { windowWorkspace } from '@/transport/window';
 
 export interface ListedProject {
     endpointId: string;

@@ -1,6 +1,6 @@
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
 import { refusing, type Requester } from '@/actions/refusal';
-import { windowWorkspace } from '@/state/window';
+import { windowWorkspace } from '@/transport/window';
 
 /* What the database actions reach outside the document; a test hands in a fake. */
 export interface DatabaseMachine {

@@ -1,6 +1,6 @@
 import prices from '@adecore/agents/usage/prices-snapshot.json' with { type: 'json' };
 import { cheapestEditorModel, EDITOR_ASSIST_PROVIDERS, type ProviderInfo, AgentKindSchema, type AgentKind, type ProviderAccounts } from '@ruimte/contracts';
-import { availableAgents } from '@/agents/creation';
+import { availableAgents } from '@/state/agent-availability';
 
 /*
  * Which agent answers an inline edit, or which one is the editor model. A null model is the CLI's own

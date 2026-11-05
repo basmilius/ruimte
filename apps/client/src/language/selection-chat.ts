@@ -6,7 +6,7 @@ import { storedPathOf, type AgentKind } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { lineRangeLabel, offerSelection, selectionBlock, startLinkedChatOrTell, type SelectionOffer } from '@/chat/selection-to-chat';
-import { basenameOf } from '@/shell/panels/files-tree';
+import { basenameOf } from '@/paths/file-path';
 import { useProject } from '@/state/project';
 import type { HostLanguage as EditorLanguage } from './host-language';
 import { isShortcut } from './shortcut-keys';

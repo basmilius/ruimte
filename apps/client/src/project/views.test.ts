@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { readDraft, useDrafts } from '@adecore/agents-react/chat';
 import { providerSinkFor } from '@adecore/agents-react/state';
 import type { ProjectDocument, ProviderInfo } from '@ruimte/contracts';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { focusedCanvas } from '../state/canvas';
 import { useDocument } from '../state/document';
 import { useFiles } from '../state/files';
-import { currentEndpointId } from '../state/keys';
 import { askAgentAboutDiagram, newFileViewsAfter, openSessionInKind, promoteLooseDatabase, promoteLooseFile } from './views';
 
 function installed(kind: string, name: string) {

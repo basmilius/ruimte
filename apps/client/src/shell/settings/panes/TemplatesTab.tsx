@@ -11,9 +11,9 @@ import { useTemplates, type TemplatesTracker } from '@/language/templates';
 import { useWindowProjectLanguage } from '@/shell/settings/panes/window-project-language';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useToasts } from '@/state/toasts';
-import { useWindow, workspaceOf } from '@/state/window';
 import { machineAnswers } from '@/transport/features';
 import { useEndpointConnection } from '@/transport/status';
+import { useWindow, workspaceOf } from '@/transport/window';
 
 type Origin = 'builtIn' | 'personal' | 'project' | 'agent';
 

@@ -1,14 +1,14 @@
 import type { EditorEngine, EditorIndentation } from '@adecore/editor';
 import { absoluteOf, type FsReadText } from '@ruimte/contracts';
 import { useEffect, useMemo, useState } from 'react';
+import { useWorktrees } from '@/controllers/worktrees';
 import { type EditBlock, editBlockOf, isCoarsePointer, useFileNodeGate } from '@/shell/panels/edit-gate';
 import { DEFAULT_INDENTATION, editorConfigDirs, type EditorStyle, editorStyleFor } from '@/shell/panels/editor-config';
 import { loadEditorEngine, loadedEditorEngine } from '@/shell/panels/editor-engine';
 import { pathAffected } from '@/state/changed-paths';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { textDrafts } from '@/state/text-drafts';
-import { useWorktrees } from '@/state/worktrees';
 import { useOptionalConnection } from '@/transport/context';
 
 interface FileEditing {

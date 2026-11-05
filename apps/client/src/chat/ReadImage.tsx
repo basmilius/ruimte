@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useOutputChat } from '@/output/chat-scope';
 import { saveToOutput, useOutputProject } from '@/output/save';
 import { drawsImageMime, imageFormatName } from '@/shell/panels/file-kind';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';

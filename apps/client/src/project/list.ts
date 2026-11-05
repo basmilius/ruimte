@@ -6,7 +6,7 @@ import { useProjectList, type ProjectRow } from '@/state/project-list';
 import { browserStorage, storedJson, type KeyValueStorage, type StoredValue } from '@/state/stored-json';
 import { pool, transportFor, type ConnectionState } from '@/transport';
 import { watchPool } from '@/transport/pool-watch';
-import { rememberClosedProject } from './closed-projects';
+import { rememberClosedProject } from '../state/closed-projects';
 import { readLastProject, rememberProject } from './last-project';
 
 const CACHE_PREFIX = 'ruimte.projects.';

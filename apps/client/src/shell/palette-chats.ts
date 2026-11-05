@@ -3,10 +3,11 @@ import { messageOf } from '@adecore/ui';
 import type { ChatExternalResult, ChatExternalSession, ChatSearchHit, ChatSearchResult } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useEffect, useRef, useState } from 'react';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { focusChat } from '@/plan/plan-actions';
 import { matches } from '@/shell/palette-entries';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { machineFor } from '@/transport/connections';
 

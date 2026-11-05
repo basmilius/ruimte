@@ -28,8 +28,8 @@ import { DeviceTapPing } from '@/devices/DeviceOperatedStrip';
 import { hidUsageOf } from '@/devices/hid-usages';
 import { videoFrameDecoder } from '@/devices/video-decoder';
 import { followLiveStream } from '@/endpoint/live-stream-fetch';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
-import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
 import { FramePainter } from '@/transport/live-stream';
 

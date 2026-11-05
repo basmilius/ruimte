@@ -8,7 +8,7 @@ import { CliVersionSection } from '@/shell/settings/providers/CliVersionSection'
 import { RegistryCatalogPage } from '@/shell/settings/providers/RegistryCatalogPage';
 import { useAcpServer } from '@/shell/settings/providers/use-acp-server';
 import { useCliVersions, useRegistryCatalog } from '@/shell/settings/providers/use-provider-installs';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useUi } from '@/state/ui';
 import { useMachineAnswers } from '@/transport/features';
 import { useDetectProviders } from '@/transport/provider-detection';

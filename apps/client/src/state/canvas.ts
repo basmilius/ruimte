@@ -6,7 +6,6 @@ import type { DerivedFrame } from '@/canvas-model/derived-frame';
 import { lineBounds } from '@/canvas-model/line-geometry';
 import { isMeasured, unionOf, type Point, type Rect } from '@/canvas-model/math';
 import type { NodeDirection } from '@/canvas-model/node-navigation';
-import type { CanvasPatch } from '@/project/merge';
 import type { ArrangeRefusal } from '@/state/arrange-group';
 import { withCameraHistory } from '@/state/canvas-camera-history';
 import { createCanvasContentSlice } from '@/state/canvas-content-slice';
@@ -35,6 +34,7 @@ import { textRect } from '@/state/edge-lines';
 import { editorBindings } from '@/state/editor-bindings';
 import { createEditorRegistry } from '@/state/editors';
 import type { EditorHook } from '@/state/workspace-stores';
+import type { CanvasPatch } from './canvas-model';
 
 export type { AgentStatus, NodeKind } from '@ruimte/contracts';
 export type { CameraRequest, Viewport } from '@/canvas-model/camera-slice';

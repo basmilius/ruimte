@@ -1,11 +1,12 @@
 import { afterAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { ProjectCanvasView } from '@ruimte/contracts';
 import { cellViewIds } from '@/layout/split';
-import { dismissClose, useUnsavedClose } from '@/shell/panels/unsaved-close';
+import { dismissClose, useUnsavedClose } from '@/state/unsaved-close';
 import { closeCellGuarded, closeCellsRightOfGuarded, closeOtherCellsGuarded } from './cell-close.ts';
+import { currentEndpointId } from './current-endpoint';
 import { useDocument } from './document.ts';
 import { useFiles, type DatabaseTab } from './files.ts';
-import { currentEndpointId, endpointKey } from './keys.ts';
+import { endpointKey } from './keys.ts';
 import { textDrafts, useTextDrafts } from './text-drafts.ts';
 
 const ORDERS: DatabaseTab = { key: 'database:orders', kind: 'table', pinned: false, connectionId: 'shop', schema: 'shop', table: 'orders' };

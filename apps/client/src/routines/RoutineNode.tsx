@@ -17,7 +17,7 @@ import { RoutinePrompt } from '@/routines/RoutinePrompt';
 import { showRoutine } from '@/routines/stage';
 import { dayWords, rowStatus, runWords, scheduleWords, weekdayClock } from '@/routines/words';
 import { useCanvas } from '@/state/canvas';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 
 // The newest runs the strip shows; the stage has the rest.

@@ -5,7 +5,7 @@ import { awaitingApproval, runsWaiting } from '@/routines/agenda';
 import { useRoutineList } from '@/routines/routine-list';
 import { toggleRoutines } from '@/routines/stage';
 import { COMMANDS } from '@/shell/command-table';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 
 /* The clock in the rail, with a dot while a routine waits for approval or a run waits for a person. Absent on a machine without routines. */
 export function RoutinesButton() {

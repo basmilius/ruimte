@@ -6,10 +6,6 @@ import { CLOSED_LID_BATTERY_FLOOR, type RuntimeMode } from '@ruimte/contracts';
 import { BatteryCharging } from 'lucide-react';
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import { MachineSwitchSection } from '@/shell/settings/MachineSwitchSection';
-import { ComputerSections } from '@/shell/settings/panes/ComputerSections';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import {
     setClosedLidRule,
     setKeepAwake,
@@ -18,7 +14,11 @@ import {
     useKeepAwakeAvailable,
     useKeepAwakeChoice,
     useMachineKeepsAwake
-} from '@/state/keep-awake';
+} from '@/controllers/keep-awake';
+import { MachineSwitchSection } from '@/shell/settings/MachineSwitchSection';
+import { ComputerSections } from '@/shell/settings/panes/ComputerSections';
+import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { useUi } from '@/state/ui';
 
 /* Both mode rows offer the same choices, and each one explains itself in the popup. Built while the

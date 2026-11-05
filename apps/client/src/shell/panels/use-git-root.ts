@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { dirnameOf } from '@/shell/panels/files-tree';
-import { useGitSignal } from '@/state/git-watch';
-import { useEndpointId } from '@/state/keys';
+import { useGitSignal } from '@/controllers/git-watch';
+import { dirnameOf } from '@/paths/file-path';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useTransport } from '@/transport/context';
 
 interface Checkout {

@@ -1,7 +1,7 @@
 import { CopyButton, Toasts as ToastStack } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
 import { useToasts, type Toast } from '@/state/toasts';
-import { useWindow } from '@/state/window';
+import { useWindow } from '@/transport/window';
 
 /* Keep copy feedback on this button rather than opening another toast. */
 function CopyOutput({ output }: { output: string }) {

@@ -23,8 +23,8 @@ import {
 import { Favicon } from '@/browser/Favicon';
 import { extensionKeyOf, useContributions } from '@/extensions/registry';
 import { projectIconGlyphOf } from '@/project/project-icons';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { useEndpointId } from '@/state/keys';
 import { nodeProvider } from '@/state/sessions';
 
 /* The default mark for a view, when nobody picked an icon. */

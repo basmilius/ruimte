@@ -4,7 +4,7 @@ import { verifySignature } from '@ruimte/pulsar/verify-web';
 import { desktop } from '@/desktop/bridge';
 import { syncExtensions } from '@/extensions/loader';
 import { extensionRequest } from '@/extensions/machine-request';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { machineTransport, TransportError, type Transport } from '@/transport';
 
 const STORE_BASE = 'https://cdn.jsdelivr.net/gh/ruimte-app/extensions@main/';

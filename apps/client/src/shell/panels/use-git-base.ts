@@ -1,8 +1,8 @@
+import { isPathBelow, relativeTo } from '@ruimte/contracts';
 import { useEffect, useRef, useState } from 'react';
-import { isPathBelow, relativeTo } from '@/shell/panels/files-tree';
+import { useGitSignal } from '@/controllers/git-watch';
 import { useGitRoot } from '@/shell/panels/use-git-root';
-import { useGitSignal } from '@/state/git-watch';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useTransport } from '@/transport/context';
 
 /*

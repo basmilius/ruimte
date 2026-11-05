@@ -17,9 +17,26 @@ import {
 import type { StoreApi } from 'zustand';
 import { lineBounds } from '@/canvas-model/line-geometry';
 import type { Point, Rect } from '@/canvas-model/math';
-import type { CanvasPatch } from '@/project/merge';
 import type { CanvasState } from '@/state/canvas';
 import { textRect } from '@/state/edge-lines';
+
+/*
+ * What one canvas this client has to take in from the other side, in the shape the editor takes it
+ * in. Everything in here is already on disk, so the editor applies it as a load and not as an edit.
+ */
+export interface CanvasPatch {
+    /* Whole entries to put in by id: the ones that arrived, and the ones that took a field from the other side. */
+    nodes: ProjectNode[];
+    texts: ProjectText[];
+    lines?: ProjectCanvasLine[];
+    edges: ProjectEdge[];
+    /* Ids the other side deleted while this client left them as they were. */
+    removed: { nodes: string[]; texts: string[]; edges: string[]; lines?: string[] };
+    /* The stacking order of the merged canvas, which is this client's unless only the other side moved it. */
+    order: string[];
+    /* The arrangements, when only the other side changed them; null keeps this client's. */
+    layouts: ProjectLayout[] | null;
+}
 
 export type CanvasSet = StoreApi<CanvasState>['setState'];
 export type CanvasGet = () => CanvasState;

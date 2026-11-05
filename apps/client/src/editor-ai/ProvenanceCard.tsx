@@ -2,7 +2,7 @@ import { AnchoredPopup } from '@adecore/editor-react';
 import { Button, RelativeTime } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
 import { useTranslation } from 'react-i18next';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import type { AgentHover } from './agent-changes';
 import { colorOfChat } from './agent-runs';
 import { openChatAtTurn } from './chat-turn';

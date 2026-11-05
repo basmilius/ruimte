@@ -1,5 +1,5 @@
-import { pool } from '@/transport';
-import { useLastSeen, watchLastSeen } from './last-seen';
+import { pool } from '@/transport/index';
+import { useLastSeen, watchLastSeen } from '../state/last-seen';
 
 /* Keeps `useLastSeen` in step with the pool, and notes every open link once more when the page goes. */
 export function startLastSeen(): () => void {

@@ -1,6 +1,6 @@
 import { useProjectSwitch } from '@/project/open';
 import { machineLost } from '@/shell/machine-lost';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpointConnection } from '@/transport/status';
 
 /* Whether the lost screen stands over the workspace now; a switch has a screen of its own, which says more about the same wait. */

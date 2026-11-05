@@ -2,10 +2,10 @@ import { messageOf } from '@adecore/ui';
 import type { Worktree } from '@ruimte/contracts';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { removeVerdict, type RemoveVerdict } from '@/shell/panels/worktree-rows';
-import { useEndpointId } from '@/state/keys';
-import { worktreeLists } from '@/state/worktrees';
+import { worktreeLists } from '@/controllers/worktrees';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useTransport } from '@/transport/context';
+import { removeVerdict, type RemoveVerdict } from '@/worktree-rules/worktree-rows';
 
 export interface Inspection {
     worktree: Worktree;

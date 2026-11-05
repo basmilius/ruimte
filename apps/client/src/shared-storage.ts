@@ -1,7 +1,7 @@
 import { CHAT_PREFERENCES_KEY, reloadChatPreferences } from '@adecore/agents-react/chat';
 import { reloadUsagePreferences, USAGE_PREFERENCES_KEY } from '@adecore/agents-react/state';
 import { useContributions } from '@/extensions/registry';
-import { followLanguageAndRegion } from '@/i18n';
+import { followLanguageAndRegion } from '@/i18n/index';
 import { ENDPOINTS_STORAGE_KEY, useEndpoints } from '@/state/endpoints';
 import { followOtherWindows, type StorageTarget } from '@/state/other-windows';
 import { SETTINGS_STORAGE_KEY, useSettings } from '@/state/settings';

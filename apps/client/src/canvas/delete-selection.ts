@@ -3,16 +3,17 @@ import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
 import { deleteNodesAction } from '@/actions/client-actions';
 import { askBeforeEndingAgents, type PendingEnd } from '@/agents/end-children';
-import { nodesOfView } from '@/project/view-nodes';
-import { closeAfterSaving } from '@/shell/panels/unsaved-close';
-import { worktreeSessionsOf, worktreesLeftBy } from '@/shell/panels/worktree-rows';
 import type { CanvasState } from '@/state/canvas';
 import { goingWithDelete } from '@/state/canvas-model';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { currentEndpointId, endpointOfNode } from '@/state/keys';
+import { endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
+import { closeAfterSaving } from '@/state/unsaved-close';
+import { nodesOfView } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
 import type { Transport } from '@/transport-api/transport';
+import { worktreeSessionsOf, worktreesLeftBy } from '@/worktree-rules/worktree-rows';
 
 /*
  * Deletes what is selected on a canvas, the way `deleteSelected` does, but asks first when the chats

@@ -1,7 +1,7 @@
 import { readClipboardText } from '@adecore/ui';
 import type { ActionInput } from '@ruimte/actions';
 import type { StoreApi } from 'zustand';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
+import { ignoreRefusal, perform } from '@/action-port/perform';
 import { readDrawingElements } from '@/drawing/export';
 import type { DrawingState, DrawingStyle } from '@/state/drawing';
 

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { act } from 'react';
-import { folderWatches } from '@/state/fs-watch';
-import type { HeldWatch } from '@/state/held-watches';
-import { windowWorkspace } from '@/state/window';
+import { folderWatches } from '@/controllers/fs-watch';
+import type { HeldWatch } from '@/controllers/held-watches';
 import { ConnectionProvider } from '@/transport/ConnectionProvider';
+import { windowWorkspace } from '@/transport/window';
 import { mount, until, type Mounted } from '../../../testing/dom';
 import { FakeMachine } from '../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';

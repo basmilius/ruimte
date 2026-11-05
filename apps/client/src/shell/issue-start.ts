@@ -1,6 +1,6 @@
 import { isCanvasView, isChatHostView, type GitIssue, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import { fenceOf } from '@/chat/selection-to-chat';
-import type { NodesOfView } from '@/project/view-nodes';
+import type { NodesOfView } from '@/state/view-nodes';
 
 /* The branch an issue starts on: `issue-12-` and what its title leaves of a ref. */
 export function issueBranch(issue: Pick<GitIssue, 'number' | 'title'>): string {

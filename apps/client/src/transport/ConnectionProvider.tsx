@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from 'react';
+import { WorkspaceEndpointContext } from '@/state/current-endpoint';
 import { ChatScopeProvider } from './ChatScopeProvider';
 import type { Connection } from './connections';
 import { ConnectionContext } from './context';
@@ -7,7 +8,9 @@ import { ConnectionContext } from './context';
 export function ConnectionProvider({ connection, children }: { connection: Connection; children: ReactNode }): ReactElement {
     return (
         <ConnectionContext.Provider value={connection}>
-            <ChatScopeProvider>{children}</ChatScopeProvider>
+            <WorkspaceEndpointContext.Provider value={connection.endpointId}>
+                <ChatScopeProvider>{children}</ChatScopeProvider>
+            </WorkspaceEndpointContext.Provider>
         </ConnectionContext.Provider>
     );
 }

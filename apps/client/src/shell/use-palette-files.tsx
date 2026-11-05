@@ -1,12 +1,14 @@
 import { FileIcon, Icon } from '@adecore/ui';
+import { absoluteOf } from '@ruimte/contracts';
 import { FileText } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { createViewAction, ignoreRefusal, perform } from '@/actions/client-actions';
+import { ignoreRefusal, perform } from '@/action-port/perform';
+import { createViewAction } from '@/actions/client-actions';
+import { basenameOf } from '@/paths/file-path';
 import { showFileOnCanvas } from '@/project/views';
 import { groupBySection, type Entry, type PaletteContext, type PaletteModeView } from '@/shell/palette-entries';
 import { PaletteEntryItem } from '@/shell/PaletteEntryItem';
-import { absoluteOf, basenameOf } from '@/shell/panels/files-tree';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 

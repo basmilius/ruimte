@@ -1,13 +1,13 @@
 import { isCanvasView, type ProjectNode, type ProjectView, type SessionInfo } from '@ruimte/contracts';
 import { focusNodeAction, focusViewAction } from '@/actions/client-actions';
-import { nodesOfView, type NodesOfView } from '@/project/view-nodes';
 import { liveCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { endpointById, useEndpoints } from '@/state/endpoints';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSessions } from '@/state/sessions';
-import { useWindow, windowWorkspace } from '@/state/window';
+import { nodesOfView, type NodesOfView } from '@/state/view-nodes';
+import { useWindow, windowWorkspace } from '@/transport/window';
 import { focusTerminal } from './registry';
 
 function destinations(views: readonly ProjectView[], nodesOf: NodesOfView<ProjectNode>): Map<string, { viewId: string; canvas: boolean; signature: string }> {

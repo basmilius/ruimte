@@ -5,18 +5,19 @@ import type { GitIssue } from '@ruimte/contracts';
 import { CircleDot } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { focusChat } from '@/plan/plan-actions';
-import { nodesOfView, useViewNodes } from '@/project/view-nodes';
 import { findIssueNode, issueBranch, issuePrompt } from '@/shell/issue-start';
 import { submitOnEnter } from '@/shell/submit-on-enter';
 import { createStartWorktree, useWorktreeStart } from '@/shell/use-worktree-start';
 import { createWorktreeChat } from '@/shell/worktree-chat';
 import { WorktreeStartFields } from '@/shell/WorktreeStartFields';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
+import { nodesOfView, useViewNodes } from '@/state/view-nodes';
 import { useTransport } from '@/transport/context';
 
 // How long a new chat node gets to register its chat with the machine before the prompt is left as a draft.

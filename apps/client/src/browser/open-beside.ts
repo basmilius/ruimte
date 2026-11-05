@@ -1,7 +1,8 @@
 import { createNodeAction, createViewAction } from '@/actions/client-actions';
 import { browserRegistry } from '@/browser/registry';
 import { canvasOfNode, type CanvasNode } from '@/state/canvas';
-import { currentEndpointId, splitKey } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
+import { splitKey } from '@/state/keys';
 import { defaultNodeSize } from '@/state/node-size';
 
 // The room between a node and the browser opened beside it, the same step a duplicate takes.

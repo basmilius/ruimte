@@ -7,7 +7,7 @@ import { LOCAL_ENDPOINT_ID, endpointById, endpointForDaemon, useEndpoints, type 
 import { browserStorage } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
 import { connectionAddressFor, pool, rekeyMachineTransport } from '@/transport';
-import { rekeyTicket } from './credentials';
+import { rekeyTicket } from '../transport-api/credentials';
 
 /*
  * What the daemon behind an endpoint just said it is, and the id that row ends up on. A row keyed on

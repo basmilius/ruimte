@@ -5,13 +5,13 @@ import { OctagonX, Play, RotateCw, Square, type LucideIcon } from 'lucide-react'
 import { createNodeAction, createViewAction } from '@/actions/client-actions';
 import { chosenLaunch, type LaunchView } from '@/launches/model';
 import { useLaunches, type LaunchOwner } from '@/launches/state';
-import { nodesOfView } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
 import { defaultProjectStore } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
+import { nodesOfView } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
 
 interface Target {

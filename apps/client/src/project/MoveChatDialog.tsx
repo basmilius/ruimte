@@ -20,7 +20,7 @@ import type { ChatMoveInfoResult, ChatMoveRefusal, ProjectSummary } from '@ruimt
 import { AtSign, Folder, FolderInput, FolderOpen, FolderPlus, TriangleAlert, type LucideIcon } from 'lucide-react';
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { desktop } from '@/desktop/bridge';
 import {
     baseName,
@@ -36,11 +36,11 @@ import {
 } from '@/project/move-chat-form';
 import { moveCandidatesOf } from '@/project/move-targets';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
-import { useViewNodes } from '@/project/view-nodes';
+import { useEndpointId } from '@/state/current-endpoint';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { useEndpointId } from '@/state/keys';
 import { useProjectList } from '@/state/project-list';
 import { useUi, type MoveChatRequest } from '@/state/ui';
+import { useViewNodes } from '@/state/view-nodes';
 import { useTransport } from '@/transport/context';
 
 type OwnFiles = 'move' | 'leave';

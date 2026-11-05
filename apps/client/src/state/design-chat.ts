@@ -1,6 +1,11 @@
 import { designNodeChats, viewChats, type DesignPlace, type ProjectDesignView, type ProjectNode } from '@ruimte/contracts';
 import { create } from 'zustand';
-import type { DesignCamera } from '@/design/design-protocol';
+
+export interface DesignCamera {
+    x: number;
+    y: number;
+    zoom: number;
+}
 
 interface DesignChatState {
     /* The chat a person picked per design, by the design's view id. One window's, never saved. */

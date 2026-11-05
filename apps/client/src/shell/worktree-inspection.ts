@@ -1,5 +1,5 @@
 import type { Worktree } from '@ruimte/contracts';
-import type { WorktreeNode } from '@/state/worktrees';
+import type { WorktreeNode } from '@/controllers/worktrees';
 import type { Transport } from '@/transport-api/transport';
 
 /* The worktrees at these paths with their work counted now, in the order asked; one the machine no longer lists is left out. */

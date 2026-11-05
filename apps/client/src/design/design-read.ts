@@ -5,10 +5,10 @@ import { DESIGN_FOLDERS } from '@/design/design-folder';
 import { inlineDesignPage } from '@/design/design-inline';
 import { DESIGN_ASSET_MAX_BYTES, DESIGN_PAGE_MAX_BYTES } from '@/design/design-page';
 import { withDesignRuntime } from '@/design/design-runtime';
-import { readLargeText } from '@/shell/panels/large-text';
 import { machineTransport } from '@/transport';
 import { readPiece } from '@/transport-api/piece';
 import { readResource } from '@/transport/byte-transfer';
+import { readLargeText } from '@/transport/large-text';
 import { writeMachineText } from '@/transport/write-text';
 
 /* What the design folder holds, or null while the folder is not there yet: the chat makes it with its first file. */

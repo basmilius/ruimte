@@ -5,7 +5,7 @@ import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { serverInfoOf, useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
-import { transportFor } from '@/transport';
+import { transportFor } from '@/transport/index';
 
 /* The CLIs' own names, which no language translates. */
 export const INTEGRATION_NAMES: Partial<Record<AgentKind, string>> = {

@@ -1,12 +1,12 @@
 import { createDatabaseClient, type DatabaseClient } from '@adecore/database';
 import type { DatabaseResponse } from '@adecore/database/protocol';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { databaseConnections, useDatabaseConnections } from '@/database/connections';
 import { snapshotTrigger } from '@/database/snapshot-triggers';
 import { ensureSqlBindings, sqlBindings } from '@/database/sql-bindings';
 import { endpointKey } from '@/state/keys';
 import { defaultProjectStore } from '@/state/project';
-import { useWindow, windowWorkspace } from '@/state/window';
+import { useWindow, windowWorkspace } from '@/transport/window';
 
 let current: { key: string; client: DatabaseClient } | null = null;
 let following = false;

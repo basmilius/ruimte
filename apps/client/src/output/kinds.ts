@@ -1,9 +1,9 @@
 import { chatNameOf, type KnownArtifactKind, type ProjectView } from '@ruimte/contracts';
 import { AppWindow, Box, FileText, Image, Sheet, Video, type LucideIcon } from 'lucide-react';
 import { drawnKind } from '@/output/artifact-list';
-import { nodesOfView } from '@/project/view-nodes';
 import { revealNode, showView } from '@/project/views';
 import { useDocument } from '@/state/document';
+import { nodesOfView } from '@/state/view-nodes';
 
 const KIND_ICONS: Record<KnownArtifactKind, LucideIcon> = {
     report: FileText,

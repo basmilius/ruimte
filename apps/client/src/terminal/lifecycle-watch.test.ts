@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectDocument, ProjectNode } from '@ruimte/contracts';
-import type { CanvasPatch } from '@/project/merge';
 import { focusedCanvas } from '@/state/canvas';
+import type { CanvasPatch } from '@/state/canvas-model';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { watchNodes } from '@/terminal/lifecycle-watch';

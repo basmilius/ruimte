@@ -1,6 +1,4 @@
 import { endpointIdIn, endpointIdOfMachine, useEndpoints, type Endpoint } from '@/state/endpoints';
-import { windowWorkspace } from '@/state/window';
-import { useOptionalConnection } from '@/transport/context';
 
 /*
  * A row in a store is about one daemon, and its key says which. Node ids are random, so this is not
@@ -61,22 +59,4 @@ export function dropEndpoint<T>(rows: Record<string, T>, endpointId: string): Re
         }
     }
     return next;
-}
-
-/*
- * Which machine the code on screen is about: the daemon of the workspace it is rendered in, and the
- * active one for the shell around it (the palette, the settings, a toast), which is about the window rather than a project.
- */
-export function useEndpointId(): string {
-    const connection = useOptionalConnection();
-    const activeId = useEndpoints((s) => s.activeId);
-    return connection?.endpointId ?? activeId;
-}
-
-/*
- * The same answer outside a render, where there is no subtree to ask: the machine of the workspace on
- * screen, and the active one on the start screen.
- */
-export function currentEndpointId(): string {
-    return windowWorkspace()?.connection.endpointId ?? useEndpoints.getState().activeId;
 }

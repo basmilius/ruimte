@@ -2,7 +2,8 @@ import type { ChatStatuses } from '@adecore/agents-react/state';
 import { chatWaitAsk, terminalWaitAsk, type AgentInfo, type AgentKind, type AgentStatus, type WaitAsk } from '@ruimte/contracts';
 import { create } from 'zustand';
 import type { CanvasNode } from '@/state/canvas';
-import { dropEndpoint, endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
+import { dropEndpoint, endpointKey, endpointOfNode } from '@/state/keys';
+import { useEndpointId } from './current-endpoint';
 
 export interface SessionState {
     /* True while this client holds a live attachment on the daemon. */

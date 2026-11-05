@@ -9,7 +9,7 @@ import { menuContext } from '@/shell/menu/context';
 import { menuModel } from '@/shell/menu/model';
 import { searchSettings } from '@/shell/settings/search';
 import { useUi } from '@/state/ui';
-import { useWindow } from '@/state/window';
+import { useWindow } from '@/transport/window';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { removeDesktop } from '../../testing/dom-helpers';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';

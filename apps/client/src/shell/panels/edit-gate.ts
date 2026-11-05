@@ -1,6 +1,6 @@
 import { absoluteOf } from '@ruimte/contracts';
 import { createContext, useContext } from 'react';
-import { isUnderFolder } from '@/state/fs-watch';
+import { isUnderFolder } from '@/paths/file-path';
 
 /* Why a file is read only here. Binary files, files too large to read and diffs never reach an editor at all. */
 export type EditBlock = 'outside-project' | 'ruimte-state' | 'large' | 'plain' | 'long-lines' | 'touch';

@@ -9,12 +9,12 @@ import { UI_NAMESPACE, UI_RESOURCES } from '@adecore/ui';
 import i18next from 'i18next';
 import './src/extensions/built-in';
 import { connectFormat } from './src/format/source';
-import { FALLBACK_LANGUAGE } from './src/i18n/languages';
 import { defaultCanvases, focusedCanvas } from './src/state/canvas';
 import { defaultDiagrams } from './src/state/diagram';
 import { useDocument } from './src/state/document';
 import { defaultDrawings } from './src/state/drawing';
 import { useEndpoints } from './src/state/endpoints';
+import { FALLBACK_LANGUAGE } from './src/state/languages';
 import { useToasts } from './src/state/toasts';
 
 /*

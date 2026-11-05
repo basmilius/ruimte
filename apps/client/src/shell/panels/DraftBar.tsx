@@ -5,9 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { useConflictInfo } from '@/editor-ai/conflict-info';
 import { reviewConflict } from '@/editor-ai/conflict-wiring';
 import { useProviderName } from '@/editor-ai/use-chat-identity';
-import { basenameOf } from '@/shell/panels/files-tree';
+import { basenameOf } from '@/paths/file-path';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useFiles } from '@/state/files';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
 import { useSettings } from '@/state/settings';
 import { textDrafts, useTextDraft } from '@/state/text-drafts';
 

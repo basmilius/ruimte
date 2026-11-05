@@ -18,11 +18,11 @@ import { matchName, resolveNames, type VoiceNameMatch } from '@ruimte/voice';
 import type { StoreApi } from 'zustand';
 import { projectAgents } from '@/actions/inspection-actions';
 import { listedProjects } from '@/actions/project-actions';
-import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
-import { nodesOfView } from '@/project/view-nodes';
 import { sightOf, visibleNodes } from '@/state/attention';
 import { focusedCanvas, type CanvasState } from '@/state/canvas';
+import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/state/design-chat';
 import { activeViewOf, type DocumentState } from '@/state/document';
+import { nodesOfView } from '@/state/view-nodes';
 
 type Resolved = ActionOutput<'target.resolve'>;
 type Target = Resolved['found'][number];

@@ -10,7 +10,6 @@ import type { ResizeEdge } from '@/canvas-model/derived-frame';
 import type { Rect } from '@/canvas-model/math';
 import { DerivedSet, type DerivedCard } from '@/canvas/DerivedSet';
 import { KindIcon } from '@/canvas/KindIcon';
-import { activeDesignChat, useDesignChat } from '@/design/design-chat';
 import { useDesignPages } from '@/design/design-files';
 import { arrangePages, pageName } from '@/design/design-page';
 import { useDesignFolder } from '@/design/design-places';
@@ -19,7 +18,8 @@ import { DesignStage } from '@/design/DesignStage';
 import { ChatBody } from '@/nodes/ChatBody';
 import { NodeHeaderControls, NodePlate } from '@/nodes/node-chrome';
 import { useCanvas } from '@/state/canvas';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { activeDesignChat, useDesignChat } from '@/state/design-chat';
 import { storedJson } from '@/state/stored-json';
 
 const FRAME = 'flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-clip-padding shadow-node';

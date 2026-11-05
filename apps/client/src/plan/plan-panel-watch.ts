@@ -1,8 +1,9 @@
 import { PlanPanelRules, type PlanClock, type PlanPanelIo } from '@/plan/panel-rules';
 import { chatsInSight, liveChatSight } from '@/state/attention';
 import { subscribeCanvases } from '@/state/canvas';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
 import { findPlan, subscribePlanCreated, usePlans } from '@/state/plans';
 import { useUi } from '@/state/ui';
 

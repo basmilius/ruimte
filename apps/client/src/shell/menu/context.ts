@@ -11,11 +11,11 @@ import {
     type SplitLayout
 } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { inPickerOrder } from '@/agents/creation';
 import { usePromptStacks } from '@/canvas/prompt-stack';
 import { focusedChatId } from '@/chat/focused-chat';
+import { keepAwakeAvailable, keepAwakeChoice } from '@/controllers/keep-awake';
+import { prReposOfCurrent } from '@/controllers/pr-repos';
 import { databaseViewShareRefusal } from '@/database/view-sharing';
-import { shownChatOfNode } from '@/design/design-chat';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
 import { availableLanguageForCommand } from '@/language/focused-language';
 import { afterSettleCandidates, chosenLaunchId } from '@/launches/actions';
@@ -32,26 +32,27 @@ import { diffInFront } from '@/shell/panels/diff-caret';
 import { availableEditorForCommand } from '@/shell/panels/focused-editor';
 import { hasPrWatch } from '@/shell/pr-watch-actions';
 import { sessionHandoffs, viewOffers, type ViewOffers } from '@/shell/view-offers';
+import { inPickerOrder } from '@/state/agent-availability';
 import { groupArrangeable } from '@/state/arrange-group';
 import { focusedCanvas, maximizedNodeOf, maximizeTargetOf, zoomNodeTargetOf } from '@/state/canvas';
 import { cameraHistoryStep } from '@/state/canvas-camera-history';
 import { nodeNavigationTarget } from '@/state/canvas-navigation-slice';
+import { currentEndpointId } from '@/state/current-endpoint';
+import { shownChatOfNode } from '@/state/design-chat';
 import { activeViewOf, hasActiveCanvas, useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
-import { keepAwakeAvailable, keepAwakeChoice } from '@/state/keep-awake';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
 import { hasLocalMachine } from '@/state/local-machine';
-import { prReposOfCurrent } from '@/state/pr-repos';
 import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { proposalsOf } from '@/state/proposals';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useSessions } from '@/state/sessions';
 import { useUi } from '@/state/ui';
-import { windowWorkspace } from '@/state/window';
 import { terminalHasFind, terminalHasKeyboard } from '@/terminal/xterm';
 import { pool } from '@/transport';
 import { machineAnswers } from '@/transport/features';
+import { windowWorkspace } from '@/transport/window';
 
 interface ActiveViewFacts {
     view: ProjectView;

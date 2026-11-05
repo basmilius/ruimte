@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { useArtifactText } from '@/output/artifact-bytes';
 import { isTextMime } from '@/output/artifact-list';
 import { useArtifact } from '@/output/use-artifact';
-import { nodesOfView } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { lookOfRun } from '@/routines/agenda';
 import { openRoutineForm } from '@/routines/form-state';
@@ -16,6 +15,7 @@ import { showRoutine } from '@/routines/stage';
 import { dayWords, runWords } from '@/routines/words';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
+import { nodesOfView } from '@/state/view-nodes';
 import { useMachineAnswers } from '@/transport/features';
 
 // The lines of a result the card shows; the rest is a click away in Routines.

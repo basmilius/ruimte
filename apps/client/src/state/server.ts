@@ -10,7 +10,7 @@ import type {
 } from '@ruimte/contracts';
 import type { BrokerSetting } from '@ruimte/pulsar';
 import { create } from 'zustand';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from './current-endpoint';
 
 export interface ServerInfo {
     /* The daemon's platform (`darwin`, `win32`, `linux`); null until the first hello. */

@@ -2,8 +2,8 @@ import type { LanDoor, Reachability } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
 import { desktop } from '@/desktop/bridge';
-import { credentialFor } from '@/endpoint/credentials';
 import { storedText } from '@/state/stored-json';
+import { credentialFor } from '@/transport-api/credentials';
 
 export const ENDPOINTS_STORAGE_KEY = 'ruimte.endpoints';
 /* Version 1 keyed a row on its address; version 2 keys it on the id the daemon answers with; version 3 pins its key;

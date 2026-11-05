@@ -4,7 +4,7 @@ import i18next from 'i18next';
 import { Eraser, Square, Trash } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import {
     clearsWarning,
     endingTitle,
@@ -14,10 +14,10 @@ import {
     useEndingAgents,
     type PendingEnd
 } from '@/agents/end-children';
-import { hasWork, leftBehindLine, removedToast } from '@/shell/panels/worktree-rows';
-import { useEndpointId } from '@/state/keys';
+import { worktreeLists } from '@/controllers/worktrees';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useToasts } from '@/state/toasts';
-import { worktreeLists } from '@/state/worktrees';
+import { hasWork, leftBehindLine, removedToast } from '@/worktree-rules/worktree-rows';
 
 function warningOf(pending: PendingEnd | null): string | null {
     const agents = pending?.agents ?? 0;

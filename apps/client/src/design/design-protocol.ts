@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { assetPathOf, isPagePath } from '@/design/design-page';
+import type { DesignCamera } from '@/state/design-chat';
 
 /* The methods between the stage and the runtime in a design page, beside the bridge of every visual. */
 export const DESIGN_METHODS = {
@@ -39,8 +40,7 @@ export const DesignCameraSchema = z.object({
     x: z.number().finite(),
     y: z.number().finite(),
     zoom: z.number().finite().min(0.01).max(16)
-});
-export type DesignCamera = z.infer<typeof DesignCameraSchema>;
+}) satisfies z.ZodType<DesignCamera>;
 
 /* A zoom around the middle of the stage, or the whole board fitted into it. */
 export type DesignZoom = { action: 'set'; zoom: number } | { action: 'fit' };

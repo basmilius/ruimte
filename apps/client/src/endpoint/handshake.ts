@@ -2,7 +2,7 @@ import { AuthTicketResultSchema } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { desktop } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID, socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
-import { rememberLocalSecret, rememberTicket } from './credentials';
+import { rememberLocalSecret, rememberTicket } from '../transport-api/credentials';
 
 /*
  * Trades the local secret for a ticket over the Authorization header, so the secret never sits in a

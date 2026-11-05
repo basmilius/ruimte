@@ -1,4 +1,4 @@
-import { isUnderFolder } from '@/state/fs-watch';
+import { isUnderFolder } from '@/paths/file-path';
 
 const MAX_FOLDERS = 3;
 

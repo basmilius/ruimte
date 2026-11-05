@@ -1,4 +1,5 @@
 import { Button, EmptyState } from '@adecore/ui';
+import { isPathBelow } from '@ruimte/contracts';
 import type { FsReadText } from '@ruimte/contracts';
 import { Eye, FileWarning } from 'lucide-react';
 import { useContext, useEffect, useRef, useState } from 'react';
@@ -8,9 +9,9 @@ import { registerPreviewGuest } from '@/browser/preview-guests';
 import { isDesktop } from '@/desktop/bridge';
 import { FindBar } from '@/find/FindBar';
 import { useFind } from '@/find/use-find';
+import { dirnameOf } from '@/paths/file-path';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { localFileUrl } from '@/shell/panels/file-url';
-import { dirnameOf, isPathBelow } from '@/shell/panels/files-tree';
 import { FileToolbar } from '@/shell/panels/FileToolbar';
 import { htmlPreviewDocument } from '@/shell/panels/html-preview';
 import { isPageReady, trackPageReady, usePreviewFind, type FindablePage, type FoundInPage } from '@/shell/panels/use-preview-find';

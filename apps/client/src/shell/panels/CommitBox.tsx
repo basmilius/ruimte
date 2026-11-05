@@ -4,11 +4,12 @@ import clsx from 'clsx';
 import { ArrowUp, FolderGit2, LoaderCircle, Sparkles } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cancelGitRunAction, perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
+import { cancelGitRunAction } from '@/actions/client-actions';
 import { isApplePlatform } from '@/desktop/bridge';
-import { amendTarget, commitTargets, nextActionId, splitMessage, type CommitCandidate } from '@/shell/panels/git-actions';
 import { useGit } from '@/state/git';
 import { useToasts } from '@/state/toasts';
+import { amendTarget, commitTargets, nextActionId, splitMessage, type CommitCandidate } from '@/worktree-rules/git-actions';
 import { CommitSuggestion } from './commit-suggestion';
 
 interface CommitBoxProps {

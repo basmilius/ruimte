@@ -2,12 +2,12 @@ import { isOpenableView, type ProjectShowViewEvent } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
 import { callerName, showViewNotice } from '@/project/show-view';
 import { showViewOnceThere } from '@/project/show-view-once';
-import { nodesOfView } from '@/project/view-nodes';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
-import { windowWorkspace } from '@/state/window';
+import { nodesOfView } from '@/state/view-nodes';
 import { watchPool } from '@/transport/pool-watch';
+import { windowWorkspace } from '@/transport/window';
 
 /* The answer of the open project, on the cell the person was last in. */
 function showInWorkspace(payload: ProjectShowViewEvent): void {

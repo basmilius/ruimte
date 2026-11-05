@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { getSingletonHighlighter } from 'shiki';
 import { codeHighlighter } from '@/code-highlighter';
-import { CODE_PALETTES } from './code-themes';
+import { CODE_PALETTES } from '../../code-themes';
 import { highlightCode, highlightDocumentChunks } from './highlight';
 
 // The grammar compiles its patterns on first use, which on a loaded runner outlasts the 500 ms Shiki gives a line

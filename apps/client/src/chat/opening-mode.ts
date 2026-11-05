@@ -1,6 +1,6 @@
 import { useChats } from '@adecore/agents-react/state';
 import type { RuntimeMode } from '@ruimte/contracts';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { endpointKey } from '@/state/keys';
 
 /* The mode a chat made a moment ago opens in, until its body opened it. */

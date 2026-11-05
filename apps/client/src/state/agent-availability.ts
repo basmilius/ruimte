@@ -1,5 +1,7 @@
 import { pickerGroupsOf, providerGroupOf, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
-import type { AgentTarget } from './nodes';
+
+// The two kinds of node an agent CLI can live in; every menu offers a provider under one of them.
+export type AgentTarget = 'chat' | 'terminal';
 
 /* The providers in the order a picker lists them; a machine older than that order sends them in its own. */
 export function inPickerOrder<T extends { kind: AgentKind; name: string }>(providers: readonly T[]): T[] {

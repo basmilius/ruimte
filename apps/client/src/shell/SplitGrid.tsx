@@ -33,9 +33,9 @@ import {
     zoneAt
 } from '@/shell/view-drag';
 import { ViewSurface } from '@/shell/ViewHost';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { canStandInCell, useDocument } from '@/state/document';
 import { tabKey, useFiles } from '@/state/files';
-import { currentEndpointId } from '@/state/keys';
 import { useSettings } from '@/state/settings';
 import { CellViewContext } from '@/state/workspace-stores';
 

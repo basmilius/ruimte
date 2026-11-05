@@ -21,8 +21,8 @@ import { closeHost, readNodeHost, useNodeHost, useSuggestedTitle } from '@/nodes
 import { ConnectionNotice, NodeNotice } from '@/nodes/NodeNotice';
 import { openFileLink } from '@/shell/panels/file-links';
 import { canvasOfNode, useCanvas } from '@/state/canvas';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { serverInfoOf } from '@/state/server';
 import { useSessionRestarts, useSessionRow } from '@/state/sessions';

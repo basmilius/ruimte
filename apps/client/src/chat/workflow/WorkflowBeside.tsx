@@ -48,7 +48,8 @@ import {
 import { AGENT_MIN, storedAgentSize } from '@/chat/workflow/workflow-size';
 import type { CardSize } from '@/routines/output-size';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { useEndpointConnection } from '@/transport/status';
 

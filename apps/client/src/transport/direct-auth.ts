@@ -10,8 +10,8 @@ import { toBase64Url } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-web';
 import i18next from 'i18next';
 import { clientKey, type ClientKey } from '@/endpoint/client-key';
-import { localSecretOf } from '@/endpoint/credentials';
 import { endpointById } from '@/state/endpoints';
+import { localSecretOf } from '@/transport-api/credentials';
 
 export interface ProofCredentials {
     /* The daemon this row pinned; null for the row of the machine this app runs on, which holds the local secret instead. */

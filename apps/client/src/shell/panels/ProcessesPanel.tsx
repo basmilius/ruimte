@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
+import { ignoreRefusal, perform } from '@/action-port/perform';
 import {
     actionLabel,
     alertActions,
@@ -48,15 +48,15 @@ import {
     groupTitle,
     type AlertAction
 } from '@/processes/format';
-import { useProjectNodes } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { ProcessChart } from '@/shell/panels/ProcessChart';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
-import { useEndpointId } from '@/state/keys';
 import { EMPTY_PROCESSES, useProcessAlerts, useProcesses } from '@/state/processes';
 import { useProjectList } from '@/state/project-list';
 import { useToasts } from '@/state/toasts';
+import { useProjectNodes } from '@/state/view-nodes';
 import { useTransport } from '@/transport/context';
 import { useEndpointConnection } from '@/transport/status';
 

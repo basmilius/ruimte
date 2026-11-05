@@ -2,15 +2,16 @@ import { useChats } from '@adecore/agents-react/state';
 import type { EventMap } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
-import { projectNodes } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { openSidebarTarget } from '@/shell/sidebar-navigation';
 import { subscribeChatStatuses } from '@/state/chats';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { seenNodeIds } from '@/state/in-sight';
-import { currentEndpointId, endpointOfNode } from '@/state/keys';
+import { endpointOfNode } from '@/state/keys';
 import { nodeStatus, nodeWaitAsk, useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
+import { projectNodes } from '@/state/view-nodes';
 import { waitAskLine } from './wait-ask';
 
 /* Whether this window may raise anything at all. What a person is looking at is asked per node. */

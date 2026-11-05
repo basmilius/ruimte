@@ -8,7 +8,8 @@ import { canvasPrompts, samePrompts, type CanvasPrompt } from '@/canvas/prompts'
 import { useCanvasStore } from '@/state/canvas';
 import { subscribeChatThreads } from '@/state/chats';
 import { computerApprovalsOf, useComputer } from '@/state/computer';
-import { endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey, endpointOfNode } from '@/state/keys';
 import { proposalsOf, useProposals } from '@/state/proposals';
 import { secretRequestsOf, useSecrets } from '@/state/secrets';
 import { useSessions } from '@/state/sessions';

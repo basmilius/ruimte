@@ -5,7 +5,7 @@ import { useEffect, useRef, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { lineRangeLabel } from '@/chat/selection-to-chat';
 import type { EditorLanguage as RuimteEditorLanguage } from '@/language/ruimte-editor-language';
-import { basenameOf } from '@/shell/panels/files-tree';
+import { basenameOf } from '@/paths/file-path';
 import type { InlineEditFeature, InlinePrompt } from './inline-edit';
 import { problemChips, problemDetail, problemLabel } from './inline-edit-layout';
 import { InlineAgentPicker } from './InlineAgentPicker';

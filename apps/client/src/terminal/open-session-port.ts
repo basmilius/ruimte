@@ -3,7 +3,7 @@ import { browserBeside } from '@/browser/open-beside';
 import { localBrowserRouteAvailable } from '@/browser/owner-route';
 import { readNodeHost } from '@/nodes/node-host';
 import { canvasOfNode } from '@/state/canvas';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
 
 export async function openVerifiedSessionPort(id: string, url: string, machineId: string): Promise<void> {
     const host = readNodeHost(id);

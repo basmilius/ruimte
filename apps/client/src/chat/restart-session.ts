@@ -1,6 +1,6 @@
 import { messageOf } from '@adecore/ui';
 import i18next from 'i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { useToasts } from '@/state/toasts';
 
 /* Ends the chat's CLI and keeps its conversation, and says how that went. */

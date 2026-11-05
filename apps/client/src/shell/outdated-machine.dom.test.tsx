@@ -3,10 +3,10 @@ import { PROTOCOL_VERSION, REQUEST_SCHEMAS } from '@ruimte/contracts';
 import { act } from 'react';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useUi } from '@/state/ui';
-import { useWindow } from '@/state/window';
 import { pool } from '@/transport';
 import { LinkTransport, type Link, type LinkEvents } from '@/transport/link-transport';
 import type { PooledTransport } from '@/transport/pool';
+import { useWindow } from '@/transport/window';
 import { mount, until, type Mounted } from '../../testing/dom';
 
 const OLDER = 'This machine runs an older Ruimte. Update Ruimte there, or restart it to pick up the update.';

@@ -3,12 +3,13 @@ import type { ChatState } from '@adecore/agents-react/state';
 import { applyPlanOps } from '@adecore/plan';
 import { ActionRegistry } from '@ruimte/actions';
 import type { ChatForkResult, ChatInfo, ChatItem, Plan, PlanPersonOp, RequestMap, RequestType } from '@ruimte/contracts';
+import { PERSON_ACTION_CALL } from '@/action-port/perform';
 import { useDocument } from '@/state/document';
 import type { SessionState } from '@/state/sessions';
 import { TransportError, type Transport } from '@/transport-api/transport';
 import { fakeProvider } from '../../testing/fake-provider';
 import { confirmed, questionOf } from './action-support';
-import { createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
+import { createClientActionRegistry, VOICE_ACTION_CALL } from './client-actions';
 import { sessionActions, sessionTitle, type SessionMachine } from './session-actions';
 
 type Answers = { [Type in RequestType]?: (payload: RequestMap[Type]['payload']) => RequestMap[Type]['result'] | Promise<RequestMap[Type]['result']> };

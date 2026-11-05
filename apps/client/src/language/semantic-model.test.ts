@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { shikiScopeColors } from '@adecore/editor';
 import { decodeSemanticTokens, scopesOf } from '@adecore/editor-react/models';
 import { createHighlighter } from 'shiki';
-import { CODE_PALETTES, CODE_THEMES, type CodeRole } from '@/shell/panels/code-themes';
+import { CODE_PALETTES, CODE_THEMES, type CodeRole } from '@/code-themes';
 
 describe('the PHP server legend', () => {
     test("reads the PHP server's legend by name, with the five types of its SQL appended after its own", () => {

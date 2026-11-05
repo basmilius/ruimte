@@ -1,10 +1,10 @@
 import type { DiffSourceLine } from '@adecore/merge';
 import { copyText, Icon, Menu } from '@adecore/ui';
+import { absoluteOf } from '@ruimte/contracts';
 import { Copy, FileDiff, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
+import { ignoreRefusal, perform } from '@/action-port/perform';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
-import { absoluteOf } from '@/shell/panels/files-tree';
 
 interface DiffRowMenuItemsProps {
     /* The folder the row's path counts from: the repository of a commit or a checkout. */

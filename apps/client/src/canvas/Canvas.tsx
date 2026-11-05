@@ -51,9 +51,9 @@ import { showFileOnCanvas } from '@/project/views';
 import { CellOverlay } from '@/shell/CellOverlay';
 import { gridTakesPath } from '@/shell/view-drag';
 import { carriedByGroups, isNodeActive, maximizedNodeOf, useCanvas, useCanvasCamera, useCanvasStore, type CanvasState } from '@/state/canvas';
+import { useEndpointId } from '@/state/current-endpoint';
 import { canLink } from '@/state/edge-lines';
 import { gapFrames } from '@/state/element-frames';
-import { useEndpointId } from '@/state/keys';
 import { defaultNodeSize } from '@/state/node-size';
 
 type Gesture =

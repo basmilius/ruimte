@@ -1,9 +1,9 @@
 import { ACTION_DOMAINS, type ActionDomain } from '@ruimte/actions';
 import type { ProjectNode, ProjectView } from '@ruimte/contracts';
-import { nodesOfView, type NodesOfView } from '@/project/view-nodes';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
-import { windowWorkspace } from '@/state/window';
+import { nodesOfView, type NodesOfView } from '@/state/view-nodes';
+import { windowWorkspace } from '@/transport/window';
 
 /* What a project holds, as far as the tools Voice gets are concerned. */
 interface VoiceProjectFacts {

@@ -1,7 +1,7 @@
 import { ErrorBoundary } from '@adecore/ui';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { observeSpeech, toggleDictation, useDictation } from './controller';
 import { DictationButton } from './DictationButton';
 import { terminalTargetKey, useTerminalDictationTargets } from './terminal-targets';

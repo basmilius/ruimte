@@ -1,6 +1,5 @@
 import { verifySignature } from '@ruimte/pulsar/verify-web';
 import { clientKey, type ClientKey } from '@/endpoint/client-key';
-import { rememberTicket } from '@/endpoint/credentials';
 import { socketAddressFor } from '@/endpoint/handshake';
 import { machineAccess } from '@/pulsar/statements';
 import { LOCAL_ENDPOINT_ID, brokerRouteOf, endpointById, useEndpoints, type Endpoint } from '@/state/endpoints';
@@ -10,6 +9,7 @@ import { IS_STATION } from '@/station';
 import type { LinkKind, MachineKind } from '@/telemetry/events';
 import { linkMetrics, linkPathOf } from '@/telemetry/metrics';
 import { recordPageMetric, reportConnectionProblem } from '@/telemetry/report';
+import { rememberTicket } from '@/transport-api/credentials';
 import type { Transport } from '../transport-api/transport';
 import { ActiveTransport } from './active-transport';
 import { brokerSignaling } from './broker-signaling';

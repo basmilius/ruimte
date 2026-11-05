@@ -1,6 +1,8 @@
 import { FileTree, useFileTree, messageOf } from '@adecore/ui';
+import { absoluteOf } from '@ruimte/contracts';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { absoluteOf, basenameOf, buildTreeInput, LOADING_NAME, type EntryCache } from '@/shell/panels/files-tree';
+import { basenameOf } from '@/paths/file-path';
+import { buildTreeInput, LOADING_NAME, type EntryCache } from '@/shell/panels/files-tree';
 import type { Transport } from '@/transport';
 
 /*

@@ -26,7 +26,7 @@ import { showRoutine } from '@/routines/stage';
 import { dayWords, runWords } from '@/routines/words';
 import { FileToolbarSlotProvider, fixedSlot } from '@/shell/panels/file-toolbar-slot';
 import { useCanvas } from '@/state/canvas';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 
 /* The card is placed by its top-left corner beside the node, so only its right and bottom edges move. */

@@ -1,10 +1,10 @@
 import { isCanvasView, type ProjectView } from '@ruimte/contracts';
 import { useSyncExternalStore } from 'react';
 import { viewIdsIn } from '@/layout/split';
-import { nodesOfView, type NodesOfView } from '@/project/view-nodes';
 import { defaultCanvases, type CanvasNode } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { memoByIdentity } from '@/state/identity-memo';
+import { nodesOfView, type NodesOfView } from '@/state/view-nodes';
 
 /* What a sidebar row reads of a node. A drag or a resize changes none of it. */
 export type SidebarCanvasNode = Pick<CanvasNode, 'id' | 'kind' | 'title' | 'titleSource' | 'provider' | 'status' | 'machine' | 'chats'>;

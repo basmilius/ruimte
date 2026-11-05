@@ -1,8 +1,8 @@
 import type { GitRepo, Worktree } from '@ruimte/contracts';
-import { shownChatOfNode } from '@/design/design-chat';
-import { basenameOf } from '@/shell/panels/files-tree';
-import { workFolderOf, worktreeOfPath } from '@/shell/panels/worktree-rows';
+import { basenameOf } from '@/paths/file-path';
 import { carriedByGroups, type CanvasNode } from '@/state/canvas';
+import { shownChatOfNode } from '@/state/design-chat';
+import { workFolderOf, worktreeOfPath } from '@/worktree-rules/worktree-rows';
 
 export interface GitTarget {
     /* The checkout every request of the panel acts on; null when no project is open. */

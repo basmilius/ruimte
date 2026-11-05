@@ -37,7 +37,7 @@ import { SnoozeButton, SnoozedMark, SnoozeMenuItems } from '@/shell/Snooze';
 import { ViewMenuItems } from '@/shell/ViewMenuItems';
 import type { AgentWork } from '@/state/agent-work';
 import { useCanvas } from '@/state/canvas';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { CellViewContext } from '@/state/workspace-stores';

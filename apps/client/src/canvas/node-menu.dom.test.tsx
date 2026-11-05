@@ -3,7 +3,7 @@ import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { act } from 'react';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
-import { windowWorkspace } from '@/state/window';
+import { windowWorkspace } from '@/transport/window';
 import { menuItem, openCanvasPage, openContextMenu, savedNodes, type CanvasPage } from '../../testing/canvas-page';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, openSubmenu, pressKey, until } from '../../testing/dom';

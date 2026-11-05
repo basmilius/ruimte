@@ -1,12 +1,12 @@
 import { Button, ScrollArea } from '@adecore/ui';
+import { relativeTo } from '@ruimte/contracts';
 import { createElement, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
+import { useGitSignal } from '@/controllers/git-watch';
 import { fileInfoOf } from '@/extensions/file-info';
 import { useContributions } from '@/extensions/registry';
-import { relativeTo } from '@/shell/panels/files-tree';
 import type { FileTabView } from '@/state/files';
-import { useGitSignal } from '@/state/git-watch';
 import { useTransport } from '@/transport/context';
 
 /* A changed file an extension knows how to show, with Ruimte's own diff one click away. It reads the diff that one shows. */

@@ -3,19 +3,19 @@ import i18next from 'i18next';
 import { Moon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { basenameOf } from '@/paths/file-path';
 import { projectSwitch, useProjectSwitch } from '@/project/open';
 import type { SwitchState, SwitchTarget } from '@/project/project-switch';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { describeRoute } from '@/shell/connection-info';
 import { MachineCard } from '@/shell/MachineCard';
-import { basenameOf } from '@/shell/panels/files-tree';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf } from '@/shell/settings/machine-list';
 import { StatusCard } from '@/shell/StatusCard';
 import { useMachineEntry } from '@/shell/use-machine-entry';
 import { useProjectList } from '@/state/project-list';
-import { useWindow } from '@/state/window';
 import { useEndpointConnection } from '@/transport/status';
+import { useWindow } from '@/transport/window';
 
 /* What is being opened, in the words a person picked it by. */
 function titleOf(target: SwitchTarget, machine: string): string {

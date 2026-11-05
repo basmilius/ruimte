@@ -26,6 +26,7 @@ import { icons, Package, type LucideIcon } from 'lucide-react';
 import { createContext, createElement, lazy, Suspense, use, useContext, useEffect, useRef, useState, useSyncExternalStore, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
+import { folderWatches } from '@/controllers/fs-watch';
 import { databaseConnections } from '@/database/connections';
 import { desktop } from '@/desktop/bridge';
 import { runAction, trackRun, useActionRuns } from '@/extensions/action-runs';
@@ -50,13 +51,13 @@ import {
     type SlotName
 } from '@/extensions/registry';
 import { baseContext, nodeInfoIn, useNodeSources, type NodeInfo } from '@/extensions/slots';
+import { isUnderFolder } from '@/paths/file-path';
 import { revealNode } from '@/project/views';
 import { openFileLink } from '@/shell/panels/file-links';
 import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
+import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { folderWatches, isUnderFolder } from '@/state/fs-watch';
-import { currentEndpointId } from '@/state/keys';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { nodeStatus, nodeWaitAsk, useSessions } from '@/state/sessions';
 import { useTheme as useUiTheme } from '@/state/theme';

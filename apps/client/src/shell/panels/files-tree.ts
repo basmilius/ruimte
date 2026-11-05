@@ -1,7 +1,7 @@
 import { chipText } from '@adecore/agents-react/chat';
 import { FileTree } from '@adecore/ui';
 import type { GitStatus, GitStatusEntry } from '@pierre/trees';
-import { absoluteOf, isAbsolutePath, isPathBelow, relativeTo, resolveStoredPath, storedPathOf, type FsEntry, type GitFile } from '@ruimte/contracts';
+import { absoluteOf, isPathBelow, relativeTo, type FsEntry, type GitFile } from '@ruimte/contracts';
 
 /* A directory whose children have not arrived yet gets one child nobody sees, so the row keeps its
    chevron. The rule that hides it is in `FilesPanel`. */
@@ -16,9 +16,6 @@ interface TreeInput {
     /* The paths of the entries git ignores, in the shape the tree's git lane matches on. */
     ignored: string[];
 }
-
-export { absoluteOf, isAbsolutePath, isPathBelow, relativeTo, resolveStoredPath, storedPathOf };
-export { dirnameOf } from '@/project/file-path';
 
 /* Whether a folder listed again says what it said before, so the tree is not built again for nothing. */
 export function sameEntries(before: readonly FsEntry[], after: readonly FsEntry[]): boolean {
@@ -59,11 +56,6 @@ export function mentionOf(folder: string | null, path: string): string | null {
 /* The tree marks a directory with a trailing slash, on a row and in a git status entry alike. */
 export function isDirectoryPath(treePath: string): boolean {
     return treePath.endsWith('/');
-}
-
-/* The last segment of a path, whichever separator the daemon's machine uses. */
-export function basenameOf(path: string): string {
-    return path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);
 }
 
 export function treePathOf(root: string, entry: FsEntry): string {

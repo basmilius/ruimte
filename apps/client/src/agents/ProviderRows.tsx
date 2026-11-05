@@ -7,7 +7,7 @@ import { ChevronRight, Bot, LoaderCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useUi } from '@/state/ui';
 import { useDetectProviders } from '@/transport/provider-detection';
-import { availableAgents } from './creation';
+import { availableAgents } from '../state/agent-availability';
 
 export function ProviderRows({ onPick }: { onPick(provider: ProviderInfo): void }) {
     const { t } = useTranslation('agents');

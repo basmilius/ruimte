@@ -17,8 +17,7 @@ import { z } from 'zod';
 import { create } from 'zustand';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas-model/accents';
 import { renderDistanceFrom, type RenderDistance } from '@/canvas-model/render-distance';
-import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
-import { CODE_THEMES } from '@/shell/panels/code-themes';
+import { CODE_THEMES } from '@/code-themes';
 import {
     agentChangesModeFrom,
     DEFAULT_AGENT_CHANGES_MODE,
@@ -32,6 +31,7 @@ import {
 } from '@/state/ai-settings';
 import { type CodeFolding, codeFoldingFrom, DEFAULT_CODE_FOLDING } from '@/state/code-folding';
 import { useExtensionTheme } from '@/state/extension-theme';
+import { LANGUAGE_SYSTEM, languageFrom } from '@/state/languages';
 import { applyPalette } from '@/state/palette';
 import { palettePresetFrom, presetTokens, type PalettePreset } from '@/state/palette-presets';
 import { storedJson, switchesFrom } from '@/state/stored-json';

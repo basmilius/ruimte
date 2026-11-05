@@ -1,7 +1,7 @@
 import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui';
 import { useChatRow, useProviders } from '@adecore/agents-react/state';
 import { Icon, Kbd, KEY_SHORTCUTS, Menu, Tooltip } from '@adecore/ui';
-import { canShareView, chatIsWorking, isCanvasView, isChatHostView, isEmptyChatView, type ProjectView } from '@ruimte/contracts';
+import { canShareView, chatIsWorking, isCanvasView, isChatHostView, isEmptyChatView, type ProjectView, resolveStoredPath } from '@ruimte/contracts';
 import {
     ArrowRightToLine,
     Copy,
@@ -41,7 +41,6 @@ import { FlagSubmenu } from '@/project/FlagSubmenu';
 import { MoveChatItems } from '@/project/MoveChatItems';
 import { askDeleteView, askViewSettings, openSessionInKind, setViewShared } from '@/project/views';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
-import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { sessionHandoffs, viewOffers } from '@/shell/view-offers';
 import { cellViewOf, hasActiveCanvas, useDocument } from '@/state/document';
 import { isScratchProject, useProject } from '@/state/project';

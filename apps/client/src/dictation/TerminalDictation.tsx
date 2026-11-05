@@ -1,7 +1,7 @@
 import { Button, ErrorBoundary, ScrollArea, TextArea } from '@adecore/ui';
 import { useEffect, useId, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { observeSpeech, registerDictationTarget, useDictation } from './controller';
 import { terminalDictationText } from './terminal';
 import { registerTerminalDictationTarget, terminalTargetKey } from './terminal-targets';

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectView } from '@ruimte/contracts';
 import { forkOriginIn } from '@/chat/fork-origin';
-import { nodesOfView } from '@/project/view-nodes';
+import { nodesOfView } from '@/state/view-nodes';
 
 describe('the original of a fork', () => {
     test('the original is found as a chat view or a chat node on any canvas, and nowhere once it is gone', () => {

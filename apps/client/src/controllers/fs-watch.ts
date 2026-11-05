@@ -1,13 +1,9 @@
 import { useEffect } from 'react';
-import { HeldWatches, type HeldWatch } from '@/state/held-watches';
+import { HeldWatches, type HeldWatch } from '@/controllers/held-watches';
+import { isUnderFolder } from '@/paths/file-path';
 import { endpointKey } from '@/state/keys';
-import { machineTransport } from '@/transport';
 import type { Transport } from '@/transport-api/transport';
-
-/* Whether a path sits inside another, on either kind of machine. */
-export function isUnderFolder(path: string, ancestor: string): boolean {
-    return path.startsWith(`${ancestor}/`) || path.startsWith(`${ancestor}\\`);
-}
+import { machineTransport } from '@/transport/index';
 
 /*
  * The folders this client is watching, counted. The files panel closing while a file node reads the

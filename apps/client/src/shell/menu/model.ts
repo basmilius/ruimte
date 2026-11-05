@@ -2,7 +2,6 @@ import { formatShortcut, type Shortcut } from '@adecore/ui';
 import type { ProjectView } from '@ruimte/contracts';
 import type { MenuNode, MenuRole, MenuShellAction, MenuSpec } from '@ruimte/desktop-bridge';
 import i18next from 'i18next';
-import { separatesGroups } from '@/agents/creation';
 import { viewShortcut } from '@/canvas/shortcuts';
 import type { SplitDirection } from '@/layout/split';
 import {
@@ -18,6 +17,7 @@ import {
 import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, LAUNCH_CHOOSE_PREFIX, PR_SHOW_IN_PREFIX } from '@/shell/menu/ids';
 import { BROWSER_KEEPS } from '@/shell/shortcuts';
 import type { ViewOffers } from '@/shell/view-offers';
+import { separatesGroups } from '@/state/agent-availability';
 import type { KeepAwakeMode } from '@/state/settings';
 import type { PanelKind } from '@/state/ui';
 

@@ -2,13 +2,14 @@ import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
 import { isCanvasView, isChatHostView, isDesignView, nodeChats, viewChats, type AgentStatus, type ChatInfo, type SessionInfo } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { agentActivity } from '@/actions/agent-activity';
-import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
-import { nodesOfView } from '@/project/view-nodes';
 import { chatWorking, sessionWorking } from '@/state/agent-work';
 import { focusedCanvas } from '@/state/canvas';
+import { currentEndpointId } from '@/state/current-endpoint';
+import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/state/design-chat';
 import { activeViewOf, type DocumentState } from '@/state/document';
-import { currentEndpointId, endpointOfNode } from '@/state/keys';
+import { endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
+import { nodesOfView } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
 import { chatClientFor } from '@/transport/connections';
 

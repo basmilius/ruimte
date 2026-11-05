@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectChatView, ProjectContent, ProjectNode, ProjectView } from '@ruimte/contracts';
 import { carriedByGroups, createCanvasStore } from '@/state/canvas';
-import { mergeProject, type CanvasPatch, type ProjectMerge } from './merge';
+import type { CanvasPatch } from '@/state/canvas-model';
+import { mergeProject, type ProjectMerge } from './merge';
 
 function node(id: string, patch: Partial<ProjectNode> = {}): ProjectNode {
     return {

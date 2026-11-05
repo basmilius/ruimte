@@ -1,8 +1,8 @@
 import { designFolderOf, designPlaces, isCanvasView, isSharedDesign, resolveStoredPath, type DesignPlace, type ProjectView } from '@ruimte/contracts';
-import { useViewNodes, type NodesOfView } from '@/project/view-nodes';
 import type { CanvasNode } from '@/state/canvas-model';
 import { useDocument } from '@/state/document';
 import { shownFolderOf, useProject } from '@/state/project';
+import { useViewNodes, type NodesOfView } from '@/state/view-nodes';
 
 /* Every design of the project, a node's as the editor of its canvas holds it now, ahead of the document. */
 function liveDesignPlaces(views: readonly ProjectView[], nodesOf: NodesOfView<CanvasNode>): DesignPlace[] {

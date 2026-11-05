@@ -3,7 +3,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { draftFiles } from '@/language/project-files';
 import { acquireProjectLanguage, type ProjectLanguage } from '@/language/ruimte-project-language';
 import { useProject } from '@/state/project';
-import { useWindow, workspaceOf } from '@/state/window';
+import { useWindow, workspaceOf } from '@/transport/window';
 
 /* The language side of the project this window shows, for as long as the tab is up. Null on the start screen, where no project runs a server. */
 export function useWindowProjectLanguage(): ProjectLanguage | null {

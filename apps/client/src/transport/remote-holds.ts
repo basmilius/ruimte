@@ -1,8 +1,8 @@
 import type { ProjectView } from '@ruimte/contracts';
 import { useEffect, useRef } from 'react';
 import { shallow } from 'zustand/shallow';
-import { useViewNodes, type NodesOfView } from '@/project/view-nodes';
 import { endpointById, endpointIdOfMachine, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { useViewNodes, type NodesOfView } from '@/state/view-nodes';
 import { pool } from '@/transport';
 
 /* The machines other than the workspace's that a node of the project runs on, each once. */

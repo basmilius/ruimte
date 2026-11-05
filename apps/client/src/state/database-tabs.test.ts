@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectView } from '@ruimte/contracts';
 import { closeTab, pinTab, type DatabaseTab, type Tab, type TabState } from '@/state/files';
-import { applyDatabaseAction as apply, databaseTabId, databaseTabKey, databaseViewFor, type DatabaseTabAction } from './tabs.ts';
+import { applyDatabaseAction as apply, databaseTabId, databaseTabKey, databaseViewFor, type DatabaseTabAction } from './database-tabs.ts';
 
 const ORDERS = { connectionId: 'shop', schema: 'shop', table: 'orders' };
 const EMPTY: TabState = { tabs: [], active: null };

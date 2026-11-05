@@ -1,8 +1,6 @@
 import type { AgentKind, ProjectPanelKind, ProjectPanels } from '@ruimte/contracts';
 import { z } from 'zod';
 import { create } from 'zustand';
-import type { TemplateDraft } from '@/language/template-draft';
-import type { TemplatesTracker } from '@/language/templates';
 import { isScratchProject, useProject } from '@/state/project';
 import { storedJson, storedText } from '@/state/stored-json';
 
@@ -199,12 +197,6 @@ export interface ProviderCommandRequest {
     command: string;
 }
 
-/* The template form Save as Live Template opens, with the tracker of the project it was asked in. */
-export interface TemplateRequest {
-    tracker: TemplatesTracker;
-    draft: TemplateDraft;
-}
-
 interface UiStore {
     paletteOpen: boolean;
     paletteMode: PaletteMode;
@@ -212,7 +204,6 @@ interface UiStore {
     modelsOpen: boolean;
     login: LoginRequest | null;
     providerCommand: ProviderCommandRequest | null;
-    templateRequest: TemplateRequest | null;
     onboarding: OnboardingStep | null;
     /* The consent for the CLIs' global settings is up (`state/agent-integrations.ts`). */
     agentIntegrations: boolean;
@@ -279,7 +270,6 @@ interface UiStore {
     setModelsOpen(open: boolean): void;
     setLogin(login: LoginRequest | null): void;
     setProviderCommand(request: ProviderCommandRequest | null): void;
-    setTemplateRequest(request: TemplateRequest | null): void;
     setOnboarding(step: OnboardingStep | null): void;
     setAgentIntegrations(open: boolean): void;
     askProjectSettings(asked: boolean): void;
@@ -349,7 +339,6 @@ export const useUi = create<UiStore>((set, get) => {
         modelsOpen: false,
         login: null,
         providerCommand: null,
-        templateRequest: null,
         onboarding: null,
         agentIntegrations: false,
         paletteSeed: '',
@@ -402,9 +391,6 @@ export const useUi = create<UiStore>((set, get) => {
         },
         setProviderCommand(request) {
             set({ providerCommand: request });
-        },
-        setTemplateRequest(request) {
-            set({ templateRequest: request });
         },
         setOnboarding(step) {
             set({ onboarding: step });

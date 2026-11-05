@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { setWorkspaceEndpointId } from '@/state/current-endpoint';
 import type { Workspace } from '@/transport/connections';
 
 /*
@@ -57,3 +58,7 @@ export function workspaceOf(content: WindowContent): Workspace | null {
 export function windowWorkspace(): Workspace | null {
     return workspaceOf(useWindow.getState().content);
 }
+
+useWindow.subscribe((state) => {
+    setWorkspaceEndpointId(workspaceOf(state.content)?.connection?.endpointId ?? null);
+});

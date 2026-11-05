@@ -13,18 +13,19 @@ import {
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
 import type { LooseStrip } from '@/layout/legacy-files-cell';
+import type { CanvasPatch } from '@/state/canvas-model';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { stripOf } from '@/state/panel-state';
 import { browserStorage } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
+import { forgetClosedProject, rememberClosedProject } from '../state/closed-projects';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport-api/transport';
 import { overlayLocal, readClientLocal, withoutClientBrowserState, writeClientLocal } from './client-local';
-import { forgetClosedProject, rememberClosedProject } from './closed-projects';
 import { readDeletedViews, writeDeletedViews } from './deleted-views';
 import { restoreDesignFolders } from './design-folder-refusal';
 import { projectIconAppearance } from './icon-appearance';
 import { rememberProject, type LastProjectStorage } from './last-project';
-import { mergeProject, type CanvasPatch } from './merge';
+import { mergeProject } from './merge';
 import type { PanelsPort } from './panels-port';
 import { dropProjectDraft, readProjectDraft, writeProjectDraft } from './project-draft';
 

@@ -1,7 +1,7 @@
 import { Button, Dialog, FileIcon } from '@adecore/ui';
+import { relativeTo } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
 import { openLocatedFile, useFileChoice } from '@/shell/panels/file-links';
-import { relativeTo } from '@/shell/panels/files-tree';
 import { useProject } from '@/state/project';
 
 /* A link an agent wrote that more than one folder of the project holds: the person picks which file it meant. */

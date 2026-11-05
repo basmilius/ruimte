@@ -18,7 +18,7 @@ import { accentColor } from '@/canvas-model/accents';
 import { OVERLAY_LEDGE_ATTRIBUTE, OVERLAY_WALL_ATTRIBUTE } from '@/canvas/overlay-attributes';
 import { PROMPT_STACK_ATTRIBUTE } from '@/canvas/prompt-stack';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { useTasks } from '@/state/tasks';

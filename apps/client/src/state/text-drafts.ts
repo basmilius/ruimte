@@ -1,13 +1,9 @@
 import type { FsReadResult, FsWriteResult } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import { collapseBlankLines } from '@/shell/panels/blank-lines';
-import { readLargeText } from '@/shell/panels/large-text';
+import { collapseBlankLines } from '@/state/blank-lines';
 import { endpointKey } from '@/state/keys';
-import { windowWorkspace } from '@/state/window';
-import { transportFor } from '@/transport';
 import { isConnectionError, TransportError } from '@/transport-api/transport';
-import { writeMachineText } from '@/transport/write-text';
 
 /* How long typing has to pause before the draft goes to disk. */
 export const AUTOSAVE_DELAY_MS = 1000;
@@ -86,12 +82,16 @@ function messageOf(error: unknown): string {
  * moved under unsaved text, found by a refused write or by a read, stops saving until a person decides.
  */
 export class TextDrafts {
-    private readonly linkFor: (endpointId: string) => DraftLink | null;
+    private linkFor: (endpointId: string) => DraftLink | null;
     private readonly pending = new Map<string, Pending>();
     private readonly preparers = new Map<string, Set<() => void>>();
     private readonly participants = new Map<string, Set<SaveParticipant>>();
 
-    constructor(linkFor: (endpointId: string) => DraftLink | null) {
+    constructor(linkFor: (endpointId: string) => DraftLink | null = () => null) {
+        this.linkFor = linkFor;
+    }
+
+    provideLinks(linkFor: (endpointId: string) => DraftLink | null): void {
         this.linkFor = linkFor;
     }
 
@@ -480,26 +480,8 @@ export class TextDrafts {
     }
 }
 
-function liveLink(endpointId: string): DraftLink | null {
-    const transport = transportFor(endpointId);
-    if (transport === null) {
-        return null;
-    }
-    return {
-        read: async (path) => {
-            const read = await transport.request('fs.read', { path });
-
-            return read.kind === 'too-large' ? readLargeText(endpointId, path, read, null) : read;
-        },
-        write: (path, text, expectedMtime) => writeMachineText(transport, path, text, expectedMtime),
-        projectOpen: () => {
-            const connection = windowWorkspace()?.connection;
-            return connection?.endpointId === endpointId ? connection.projects.whenOpen() : Promise.resolve();
-        }
-    };
-}
-
-export const textDrafts = new TextDrafts(liveLink);
+/* Reaches no machine until `transport/draft-link.ts` hands it the links of the live ones. */
+export const textDrafts = new TextDrafts();
 
 export function useTextDraft(endpointId: string, path: string | null): TextDraft | undefined {
     return useTextDrafts((state) => (path === null ? undefined : state.rows[endpointKey(endpointId, path)]));

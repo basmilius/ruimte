@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { FALLBACK_LANGUAGE, LANGUAGE_SYSTEM, languageFrom, languageOf } from '@/i18n/languages';
+import { FALLBACK_LANGUAGE, LANGUAGE_SYSTEM, languageFrom, languageOf } from '@/state/languages';
 
 describe('a stored language', () => {
     test('is kept when this version speaks it', () => {

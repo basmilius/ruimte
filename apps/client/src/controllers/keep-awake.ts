@@ -1,7 +1,7 @@
 import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
 import { messageOf } from '@adecore/ui';
 import i18next from 'i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { canKeepAwake, desktop, type DesktopBridge, type KeepAwakeRequest } from '@/desktop/bridge';
 import { agentsWorking } from '@/state/agent-work';
 import { subscribeChatStatuses } from '@/state/chats';
@@ -11,8 +11,8 @@ import { serverInfoOf, useServers, type ServerInfo } from '@/state/server';
 import { useSessions, type SessionsByKey } from '@/state/sessions';
 import { useSettings, type Settings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { transportFor } from '@/transport';
 import { TransportError } from '@/transport-api/transport';
+import { transportFor } from '@/transport/index';
 import { adoptEndpointInfo } from '@/transport/server-info';
 
 export type KeepAwakeSettings = Pick<Settings, 'keepAwake' | 'keepAwakeOnBattery' | 'keepAwakeDisplay'>;

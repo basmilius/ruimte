@@ -48,7 +48,7 @@ import { ANDROID_BUTTONS } from '@/devices/operated';
 import { useDeviceList, useDevices, useRecordingEnded, useRecordingSince, useResolvedDevice } from '@/devices/state';
 import { useNodeHost } from '@/nodes/node-host';
 import { failed } from '@/shell/surface-failure';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { deviceClientFor } from '@/transport/connections';
 

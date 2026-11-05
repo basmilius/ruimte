@@ -18,7 +18,7 @@ import { accentColor } from '@/canvas-model/accents';
 import { visibleRect } from '@/canvas-model/math';
 import { useNodeInViewport } from '@/canvas/culling';
 import { maximizedNodeOf, useCanvas, useCanvasStore } from '@/state/canvas';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { useTasks } from '@/state/tasks';

@@ -1,8 +1,8 @@
 import type { TableRef } from '@adecore/database';
 import type { TableKind } from '@adecore/database/protocol';
 import { ProjectDatabaseViewSchema } from '@ruimte/contracts';
-import { applyDatabaseAction, databaseViewFor, type DatabaseTabAction } from '@/database/tabs';
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
+import { applyDatabaseAction, databaseViewFor, type DatabaseTabAction } from '@/state/database-tabs';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 

@@ -15,7 +15,7 @@ import type { AgentKind, ModelSelection } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { peekOpeningMode, settleOpeningMode } from '@/chat/opening-mode';
 import { deriveNodeTitle } from '@/chat/title';
@@ -28,7 +28,8 @@ import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/node
 import { ConnectionNotice, NodeNotice } from '@/nodes/NodeNotice';
 import { OutputChatContext } from '@/output/chat-scope';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { chatClientFor } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';

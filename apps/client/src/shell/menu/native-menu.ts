@@ -2,6 +2,7 @@ import { useProvidersStore } from '@adecore/agents-react/state';
 import i18next from 'i18next';
 import { useEffect } from 'react';
 import { usePromptStacks } from '@/canvas/prompt-stack';
+import { usePrRepos } from '@/controllers/pr-repos';
 import { desktop } from '@/desktop/bridge';
 import { subscribeFocusedLanguages } from '@/language/focused-language';
 import { useLaunches } from '@/launches/state';
@@ -14,7 +15,6 @@ import { subscribeCameraHistories } from '@/state/camera-history';
 import { subscribeCanvases } from '@/state/canvas';
 import { subscribeChatThreads } from '@/state/chats';
 import { useDocument } from '@/state/document';
-import { usePrRepos } from '@/state/pr-repos';
 import { useProject } from '@/state/project';
 import { useProposals } from '@/state/proposals';
 import { useServers } from '@/state/server';
@@ -22,7 +22,7 @@ import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
 import { useUi } from '@/state/ui';
-import { useWindow } from '@/state/window';
+import { useWindow } from '@/transport/window';
 
 /* A chat streams word by word and a camera moves every frame; the menu only needs where things settled. */
 const SETTLE_MS = 100;

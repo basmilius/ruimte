@@ -4,16 +4,16 @@ import { readFileSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import type { ProjectCanvasView, ProjectView } from '@ruimte/contracts';
 import { parseSync, Visitor } from 'oxc-parser';
-import { nodeRefsOfView, nodesOfView, projectNodes } from '@/project/view-nodes';
 import { defaultCanvases } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { nodeRefsOfView, nodesOfView, projectNodes } from '@/state/view-nodes';
 
 /*
  * The files that read the nodes of a view from the document itself: the one reader, the file layer
  * that loads and writes the document, and the sidebar's own rows, whose `nodes` are no view's.
  */
 const READS_THE_DOCUMENT: Record<string, string> = {
-    'project/view-nodes.ts': 'the one reader',
+    'state/view-nodes.ts': 'the one reader',
     'project/merge.ts': 'merges three versions of the document',
     'state/canvas-content-slice.ts': 'loads a view into its editor',
     'state/document-model.ts': 'renames a node in the document',

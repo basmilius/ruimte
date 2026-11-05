@@ -4,12 +4,12 @@ import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, isArchiveMime, type ArchiveEntry
 import { Download, FileArchive, FileLock, FileQuestion, FileWarning, Link2, PackageOpen, type LucideIcon } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { basenameOf } from '@/paths/file-path';
 import { canSaveEntry, hasArchiveName } from '@/shell/panels/archive-tree';
 import { CodeText } from '@/shell/panels/CodeFile';
 import { FileActionsContext, FileMenuRowsContext } from '@/shell/panels/file-actions';
 import type { FileSource } from '@/shell/panels/file-source';
 import { fixedSlot, FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
-import { basenameOf } from '@/shell/panels/files-tree';
 import { FileTextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
 import { renderBinary } from '@/shell/panels/renderers';
 import { readPiece } from '@/transport-api/piece';

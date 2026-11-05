@@ -30,15 +30,16 @@ import { plural } from '@/actions/words';
 import { agentsEndedWith } from '@/agents/end-children';
 import { readNodeHost, updateHost, type NodeHost } from '@/nodes/node-host';
 import { PlanClient } from '@/plan/plan-client';
-import { nodesOfView } from '@/project/view-nodes';
 import { revealForkWhenItLands, showViewWhenItLands } from '@/project/views';
 import { chatSinkFor } from '@/state/chats';
 import { useComputer } from '@/state/computer';
+import { currentEndpointId } from '@/state/current-endpoint';
 import type { DocumentState } from '@/state/document';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { usePlans } from '@/state/plans';
 import { useSessions, type SessionState } from '@/state/sessions';
+import { nodesOfView } from '@/state/view-nodes';
 import { screenOf } from '@/terminal/registry';
 import { chatClientFor, machineFor } from '@/transport/connections';
 

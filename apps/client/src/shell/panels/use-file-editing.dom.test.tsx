@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from 'bun:test';
 import { act } from 'react';
-import { windowWorkspace } from '@/state/window';
 import { ConnectionProvider } from '@/transport/ConnectionProvider';
+import { windowWorkspace } from '@/transport/window';
 import { mount, until, type Mounted } from '../../../testing/dom';
 import { FakeMachine } from '../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';

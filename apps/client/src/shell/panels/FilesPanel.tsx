@@ -4,6 +4,7 @@ import { Button, ButtonGroup, EmptyState, Icon, IconButton, Input, Menu, Kbd, Pa
 import { formatNumber } from '@adecore/ui/format';
 import type { FileTreeDropResult, FileTreeVisibleRow } from '@pierre/trees';
 import { ActionRefusal } from '@ruimte/actions';
+import { absoluteOf, relativeTo } from '@ruimte/contracts';
 import type { Worktree } from '@ruimte/contracts';
 import {
     ArrowLeft,
@@ -26,10 +27,14 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { PATHS_DRAG_TYPE } from '@/canvas/drop';
+import { folderWatches } from '@/controllers/fs-watch';
+import { soleRepo, useGitCheckouts, useProjectRepos, withoutNestedCheckouts, type GitCheckoutRef } from '@/controllers/git-repos';
+import { useProjectNodes, useWorktrees, worktreeLists } from '@/controllers/worktrees';
 import { fileInfoOf } from '@/extensions/file-info';
 import { SlotRow } from '@/extensions/SlotSurfaces';
+import { basenameOf, dirnameOf } from '@/paths/file-path';
 import { PanelHeaderActions, PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeaderTitleHidden } from '@/shell/PanelHeaderSlot';
 import { BranchMenu } from '@/shell/panels/BranchMenu';
 import type { CopyTarget } from '@/shell/panels/file-copy';
@@ -49,18 +54,14 @@ import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { FileCopyRow } from '@/shell/panels/FileCopyRow';
 import {
     LOADING_NAME,
-    absoluteOf,
     ancestorDirsOf,
-    basenameOf,
     buildTreeInput,
     checkoutOfPath,
     checkoutStatusEntries,
     compareRows,
-    dirnameOf,
     isDirectoryPath,
     mergeExpanded,
     newlyExpanded,
-    relativeTo,
     repoRowsOf,
     revealableInFiles,
     treePathOf,
@@ -73,24 +74,22 @@ import { GitTreeMarks } from '@/shell/panels/GitTreeMarks';
 import { NewEntryRow } from '@/shell/panels/NewEntryRow';
 import { isQuickLookKey, useQuickLook } from '@/shell/panels/quick-look';
 import { revealFile } from '@/shell/panels/reveal-file';
-import { nodeNames, nodesInWorktree, worktreeBase } from '@/shell/panels/worktree-rows';
 import { WorktreeBar } from '@/shell/panels/WorktreeMenu';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useCanvas } from '@/state/canvas';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useFiles } from '@/state/files';
 import { filesRootOf, useFilesRoot } from '@/state/files-root';
-import { folderWatches } from '@/state/fs-watch';
 import { useGit } from '@/state/git';
-import { soleRepo, useGitCheckouts, useProjectRepos, withoutNestedCheckouts, type GitCheckoutRef } from '@/state/git-repos';
 import { gitTargets, type GitTarget } from '@/state/git-target';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { useProjectNodes, useWorktrees, worktreeLists } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
+import { nodeNames, nodesInWorktree, worktreeBase } from '@/worktree-rules/worktree-rows';
 
 const { directoryHandle, menuTargetsOf, resetExpandedPaths, rowPathOf } = FileTree;
 

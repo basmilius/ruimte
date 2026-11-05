@@ -4,7 +4,7 @@ import { act } from 'react';
 import { useDocument } from '@/state/document';
 import { artifactTabKey, useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
-import { windowWorkspace } from '@/state/window';
+import { windowWorkspace } from '@/transport/window';
 import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';

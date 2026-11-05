@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { REQUEST_SCHEMAS, type FsEntry, type ProjectCanvasView, type ProjectNode, type RequestType } from '@ruimte/contracts';
 import { act } from 'react';
-import { useDesignChat } from '@/design/design-chat';
 import { canvasOfNode } from '@/state/canvas';
+import { useDesignChat } from '@/state/design-chat';
 import { TransportError } from '@/transport-api/transport';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, layOutChat, mount, until, type Mounted } from '../../testing/dom';

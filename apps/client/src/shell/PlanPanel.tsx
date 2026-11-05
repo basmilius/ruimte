@@ -33,12 +33,12 @@ import {
 import { closePlanPanel, pickPlan, PLAN_DEFAULT_WIDTH, PLAN_MIN_WIDTH } from '@/plan/plan-panel-watch';
 import { resultsText, type PlanFilter } from '@/plan/plan-view';
 import { PlanList } from '@/plan/PlanList';
-import { useViewNodes } from '@/project/view-nodes';
 import { usePanelGap } from '@/shell/panel-layout';
 import { useInstantWidth } from '@/shell/useInstantWidth';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useChatPlans } from '@/state/plans';
 import { useShownPanel, useUi } from '@/state/ui';
+import { useViewNodes } from '@/state/view-nodes';
 
 // The grid beside the panel keeps at least this much, whatever the drag asks for.
 const MIN_GRID_WIDTH = 360;

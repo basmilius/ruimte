@@ -1,8 +1,9 @@
 import { chatSink, useChats, type ChatsById, type ChatSink, type ChatStatuses } from '@adecore/agents-react/state';
 import type { AgentStatus } from '@ruimte/contracts';
 import { nodeWork, type AgentWork } from '@/state/agent-work';
-import { endpointKey, useEndpointId, useEndpointOfNode } from '@/state/keys';
+import { endpointKey, useEndpointOfNode } from '@/state/keys';
 import { nodeStatus, useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
+import { useEndpointId } from './current-endpoint';
 
 /* The sink of one daemon's chat client: it hands over node ids, this puts them under its machine. */
 export function chatSinkFor(endpointId: string): ChatSink {

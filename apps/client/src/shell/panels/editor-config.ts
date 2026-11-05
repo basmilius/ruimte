@@ -1,7 +1,7 @@
 import type { EditorIndentation } from '@adecore/editor';
+import { absoluteOf } from '@ruimte/contracts';
 import type { FsReadResult } from '@ruimte/contracts';
-import { absoluteOf, dirnameOf } from '@/shell/panels/files-tree';
-import { isUnderFolder } from '@/state/fs-watch';
+import { dirnameOf, isUnderFolder } from '@/paths/file-path';
 
 export const DEFAULT_INDENTATION: EditorIndentation = { tabSize: 4, insertSpaces: true };
 

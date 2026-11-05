@@ -2,13 +2,14 @@ import { type CanvasNodeKind, type Worktree } from '@ruimte/contracts';
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import { shallow } from 'zustand/shallow';
-import { useViewNodes } from '@/project/view-nodes';
-import { worktreeOfPath } from '@/shell/panels/worktree-rows';
 import { carriedByGroups, useCanvas } from '@/state/canvas';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
+import { useViewNodes } from '@/state/view-nodes';
 import type { Transport } from '@/transport-api/transport';
 import { useOptionalConnection } from '@/transport/context';
+import { worktreeOfPath } from '@/worktree-rules/worktree-rows';
 
 interface WorktreesStore {
     /* The worktrees of a project folder's repository, per machine and folder. */

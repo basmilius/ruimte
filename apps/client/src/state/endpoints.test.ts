@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { forgetTicket, rememberLocalSecret, rememberTicket } from '@/endpoint/credentials';
+import { forgetTicket, rememberLocalSecret, rememberTicket } from '@/transport-api/credentials';
 import {
     LOCAL_ENDPOINT_ID,
     endpointForDaemon,

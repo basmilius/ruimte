@@ -22,7 +22,6 @@ import { useContext } from 'react';
 import { createStore, type StoreApi } from 'zustand';
 import type { LooseStrip } from '@/layout/legacy-files-cell';
 import type { CellAt, ShownView, SplitDirection, SplitZone } from '@/layout/split';
-import type { CanvasPatch } from '@/project/merge';
 import { defaultCanvases } from '@/state/canvas';
 import { defaultDiagrams } from '@/state/diagram';
 import { createDocumentContentSlice } from '@/state/document-content-slice';
@@ -34,6 +33,7 @@ import { createDocumentTabsSlice } from '@/state/document-tabs-slice';
 import { createDocumentViewsSlice } from '@/state/document-views-slice';
 import { defaultDrawings } from '@/state/drawing';
 import { CellViewContext, storeHook } from '@/state/workspace-stores';
+import type { CanvasPatch } from './canvas-model';
 
 export { canStandInCell, cellViewOf, type DocumentPeers, type StandaloneRequest, type TrashedView, type ViewNotice } from '@/state/document-model';
 

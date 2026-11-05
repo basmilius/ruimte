@@ -9,7 +9,7 @@ import { useTeleport, type Teleport } from '@extensions/pets/client/teleport';
 import { usePetLook } from '@extensions/pets/client/use-pet-look';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useSessions, type StatusOf } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { useTasks } from '@/state/tasks';

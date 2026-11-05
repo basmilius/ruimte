@@ -5,7 +5,7 @@ import { startComputerWatch } from '@/computer/watch';
 import type { DesktopBridge } from '@/desktop/bridge';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useUi } from '@/state/ui';
-import { useWindow } from '@/state/window';
+import { useWindow } from '@/transport/window';
 import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
 import { buttonWithText, everything, installDesktop, removeDesktop } from '../../../../testing/dom-helpers';
 import { connectFakeMachine, FakeMachine } from '../../../../testing/fake-machine';

@@ -2,7 +2,8 @@ import { MAX_TERMINAL_READ_LINES } from '@ruimte/actions';
 import type { Terminal } from '@xterm/xterm';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { focusedCanvas } from '@/state/canvas';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
 
 /* What a window keeps of a terminal out of sight: the lines `terminal.read` may ask for, and how many of them its screen showed. */
 interface LastScreen {

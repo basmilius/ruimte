@@ -6,10 +6,10 @@ import { recordingKey, useDevices } from '@/devices/state';
 import { downloadBlob } from '@/download';
 import { canvasInReach } from '@/state/canvas-target';
 import { useDocument } from '@/state/document';
-import { windowWorkspace } from '@/state/window';
 import { deviceClientFor } from '@/transport/connections';
 import { machineAnswers } from '@/transport/features';
 import { readMachineFile } from '@/transport/machine-url';
+import { windowWorkspace } from '@/transport/window';
 
 const SCREENSHOT_MAX_BYTES = 64 * 1024 * 1024;
 const RECORDING_MAX_BYTES = 1024 * 1024 * 1024;

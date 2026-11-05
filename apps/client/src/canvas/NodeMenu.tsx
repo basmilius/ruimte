@@ -2,7 +2,7 @@ import { EMPTY_DRAFT, writeDraft } from '@adecore/agents-react/chat';
 import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui';
 import { useChatRow, useProviders } from '@adecore/agents-react/state';
 import { DisabledReason, Icon, Kbd, ContextMenu, ScrollArea } from '@adecore/ui';
-import { nodeColorOf, type NodeAccent, type ProviderInfo, type Task } from '@ruimte/contracts';
+import { nodeColorOf, type NodeAccent, type ProviderInfo, type Task, resolveStoredPath } from '@ruimte/contracts';
 import {
     ChevronsDownUp,
     ChevronsUpDown,
@@ -33,16 +33,8 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-    arrangeGroupAction,
-    clearTerminalAction,
-    colorNodeAction,
-    createNodeAction,
-    duplicateNodeAction,
-    ignoreRefusal,
-    linkNodesAction,
-    perform
-} from '@/actions/client-actions';
+import { ignoreRefusal, perform } from '@/action-port/perform';
+import { arrangeGroupAction, clearTerminalAction, colorNodeAction, createNodeAction, duplicateNodeAction, linkNodesAction } from '@/actions/client-actions';
 import { ChatAgentSubmenu } from '@/agents/AgentMenus';
 import { askBeforeClearingChat, askBeforeStoppingTask } from '@/agents/end-children';
 import { accentLabel, NODE_ACCENTS } from '@/canvas-model/accents';
@@ -58,18 +50,16 @@ import { ForkMenuItem } from '@/chat/ForkMenuItem';
 import { useOffersFork } from '@/chat/use-offers-fork';
 import { workflowCandidates, type WorkflowCandidate } from '@/chat/workflow/beside-workflows';
 import { useWorkflowBesideSwitch } from '@/chat/workflow/workflow-beside-state';
+import { useGroupWorktrees, useWorktreeOf } from '@/controllers/worktrees';
 import { NodeMenuSlot } from '@/extensions/SlotSurfaces';
 import { FlagSubmenu } from '@/project/FlagSubmenu';
-import { useViewNodes } from '@/project/view-nodes';
 import { askOpenAsView, canOpenAsView, showView } from '@/project/views';
 import { setRunsHidden, useRunsHidden } from '@/routines/runs-hidden';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
-import { resolveStoredPath } from '@/shell/panels/files-tree';
-import { workFolderOf, worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { stopPrWatch } from '@/shell/pr-watch-actions';
 import { canvasOfNode, maximizedNodeOf, useCanvas, useCanvasStore, type CanvasNode } from '@/state/canvas';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useFiles } from '@/state/files';
-import { useEndpointId } from '@/state/keys';
 import { useChatPrWatch } from '@/state/pr-watches';
 import { isScratchProject, useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
@@ -77,10 +67,11 @@ import { useSessionRow } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
+import { useViewNodes } from '@/state/view-nodes';
 import { useWorkspace } from '@/transport/connections';
 import { useTransport } from '@/transport/context';
 import { NodeMachineScope } from '@/transport/node-machine';
+import { workFolderOf, worktreeDiffTab } from '@/worktree-rules/worktree-rows';
 
 interface NodeMenuProps {
     id: string;

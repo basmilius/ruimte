@@ -1,33 +1,13 @@
 import {
     isCanvasView,
     type ProjectCanvasView,
-    type ProjectCanvasLine,
     type ProjectContent,
-    type ProjectEdge,
     type ProjectFlags,
     type ProjectLayout,
     type ProjectNode,
-    type ProjectText,
     type ProjectView
 } from '@ruimte/contracts';
-
-/*
- * What one canvas this client has to take in from the other side, in the shape the editor takes it
- * in. Everything in here is already on disk, so the editor applies it as a load and not as an edit.
- */
-export interface CanvasPatch {
-    /* Whole entries to put in by id: the ones that arrived, and the ones that took a field from the other side. */
-    nodes: ProjectNode[];
-    texts: ProjectText[];
-    lines?: ProjectCanvasLine[];
-    edges: ProjectEdge[];
-    /* Ids the other side deleted while this client left them as they were. */
-    removed: { nodes: string[]; texts: string[]; edges: string[]; lines?: string[] };
-    /* The stacking order of the merged canvas, which is this client's unless only the other side moved it. */
-    order: string[];
-    /* The arrangements, when only the other side changed them; null keeps this client's. */
-    layouts: ProjectLayout[] | null;
-}
+import type { CanvasPatch } from '@/state/canvas-model';
 
 /* What the incoming document changes on this client, in the shape the stores take it in. */
 export interface DocumentChanges {

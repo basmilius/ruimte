@@ -21,7 +21,8 @@ import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { useNodeHost } from '@/nodes/node-host';
 import { useLocalDaemonId, usePage } from '@/nodes/use-page';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
 
 /* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
 export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }) {

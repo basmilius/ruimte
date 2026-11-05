@@ -4,7 +4,7 @@ import { POSTFIX_TEMPLATE_LANGUAGES, TEMPLATE_LANGUAGES, TEMPLATE_LIMITS, TEMPLA
 import { ChevronDown } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useUi } from '@/state/ui';
+import { useTemplateRequest } from '@/language/template-request';
 import { inputOf, problemOf, type TemplateDraft } from './template-draft';
 import type { TemplatesTracker } from './templates';
 
@@ -42,8 +42,8 @@ export function TemplateDialog({ draft, tracker, onClose }: { draft: TemplateDra
 
 /* The form Save as Live Template opens, for the tracker of the project it was asked in. */
 export function TemplateRequestDialog() {
-    const request = useUi((s) => s.templateRequest);
-    const setRequest = useUi((s) => s.setTemplateRequest);
+    const request = useTemplateRequest((s) => s.request);
+    const setRequest = useTemplateRequest((s) => s.setRequest);
 
     if (request === null) {
         return null;

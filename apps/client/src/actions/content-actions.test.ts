@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { DrawingElement, ProjectCanvasView, ProjectDocument } from '@ruimte/contracts';
+import { PERSON_ACTION_CALL } from '@/action-port/perform';
 import { defaultCanvases } from '@/state/canvas';
 import { defaultDiagrams } from '@/state/diagram';
 import { useDocument } from '@/state/document';
 import { defaultDrawings } from '@/state/drawing';
 import { useProject } from '@/state/project';
 import { completed, confirmed } from './action-support';
-import { createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
+import { createClientActionRegistry, VOICE_ACTION_CALL } from './client-actions';
 import type { ContentMachine } from './content-actions';
 
 const main: ProjectCanvasView = {

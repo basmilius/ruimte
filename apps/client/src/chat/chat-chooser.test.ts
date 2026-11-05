@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectView, SplitLayout } from '@ruimte/contracts';
-import { nodesOfView } from '@/project/view-nodes';
+import { nodesOfView } from '@/state/view-nodes';
 import { chatsOpenHere, chooserChats, chooserSections } from './chat-chooser';
 
 const chatNode = (id: string, title: string, provider?: 'claude' | 'codex') => ({

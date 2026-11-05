@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { FsLocatePayload, RequestType } from '@ruimte/contracts';
 import { normalizedPath, openFileLink, parseFileRef, resolveFileRef, useFileChoice } from '@/shell/panels/file-links';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
-import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { machineTransport } from '@/transport';

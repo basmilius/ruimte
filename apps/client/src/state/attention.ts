@@ -11,19 +11,20 @@ import {
 } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { intersects, isMeasured, visibleRect, type Rect } from '@/canvas-model/math';
-import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
 import { desktop } from '@/desktop/bridge';
 import { shownViewIdsIn } from '@/layout/split';
-import { nodeRefsOfView, projectNodes, useViewNodes } from '@/project/view-nodes';
 import { nodeWorking } from '@/state/agent-work';
 import { liveCanvas, subscribeCanvases } from '@/state/canvas';
 import { subscribeChatStatuses } from '@/state/chats';
+import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/state/design-chat';
 import { useDocument } from '@/state/document';
 import { nodesInSight, seenNodes, sightOf, type CanvasSight } from '@/state/in-sight';
-import { currentEndpointId, endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
+import { endpointKey, endpointOfNode } from '@/state/keys';
 import { seePushNotifications, subscribePushAttention, unreadOnMachine } from '@/state/push-attention';
 import { nodeStatus, useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
 import { snoozeOf, useSnoozes, type Snoozes } from '@/state/snooze';
+import { nodeRefsOfView, projectNodes, useViewNodes } from '@/state/view-nodes';
+import { currentEndpointId, useEndpointId } from './current-endpoint';
 
 export { readableNodes, seenNodes, sightOf, visibleNodes, type CanvasSight } from '@/state/in-sight';
 

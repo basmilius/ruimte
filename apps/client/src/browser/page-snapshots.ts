@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { browserRegistry } from '@/browser/registry';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
 
 /*
  * The last picture of every page past the render distance, and whether it is past it. Only the parking

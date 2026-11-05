@@ -1,7 +1,7 @@
 import type { Task } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from './current-endpoint';
 
 export type TasksById = Readonly<Record<string, Task>>;
 

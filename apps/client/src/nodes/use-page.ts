@@ -3,8 +3,9 @@ import { localBrowserRouteAvailable } from '@/browser/owner-route';
 import { browserRegistry } from '@/browser/registry';
 import { isDesktop } from '@/desktop/bridge';
 import { useNodeHost } from '@/nodes/node-host';
+import { useEndpointId } from '@/state/current-endpoint';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
 
 /* The local machine's daemon id, which decides whether a page's route is open; a caller may only need the redraw. */
 export function useLocalDaemonId(): string | null | undefined {

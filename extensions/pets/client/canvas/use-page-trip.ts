@@ -10,7 +10,8 @@ import { operatedOf, useDeviceOperated } from '@/devices/operated';
 import { useDevices } from '@/devices/state';
 import { readNodeHost } from '@/nodes/node-host';
 import { useCanvas, useCanvasStore, type CanvasNode, type CanvasState } from '@/state/canvas';
-import { endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey, endpointOfNode } from '@/state/keys';
 
 /* How often a pet with pages looks again whether to go, stay or walk home: the quiet spell ends on its own. */
 const CHECK_MS = 500;

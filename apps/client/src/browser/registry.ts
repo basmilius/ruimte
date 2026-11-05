@@ -12,8 +12,9 @@ import {
 } from '@/browser/swipe';
 import { useSwipeOverlay } from '@/browser/swipe-overlay';
 import { canSwipeBetweenPages, desktop, type DesktopBridge } from '@/desktop/bridge';
+import { useEndpointId } from '@/state/current-endpoint';
 import { endpointById, LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { dropEndpoint, endpointKey, isOfEndpoint, splitKey, useEndpointId } from '@/state/keys';
+import { dropEndpoint, endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
 import { useSettings } from '@/state/settings';
 import { localBrowserRouteAvailable } from './owner-route';
 import { webContentsIdOf } from './preview-guests';

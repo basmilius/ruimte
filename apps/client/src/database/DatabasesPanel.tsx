@@ -22,8 +22,8 @@ import { containersFor } from '@/database/docker';
 import { startDatabaseDrag } from '@/database/drag';
 import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
 import { useDatabasePanel } from '@/database/state';
+import { basenameOf } from '@/paths/file-path';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
-import { basenameOf } from '@/shell/panels/files-tree';
 import { setDragging } from '@/shell/view-drag';
 import { useProject } from '@/state/project';
 

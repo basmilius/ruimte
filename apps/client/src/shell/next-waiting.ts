@@ -1,14 +1,15 @@
 import { chatNameOf } from '@ruimte/contracts';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
-import { projectNodes } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { useWindowTabs } from '@/project/window-tabs';
 import { sidebarWaitingNodes } from '@/state/attention';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { currentEndpointId, endpointKey, splitKey } from '@/state/keys';
+import { endpointKey, splitKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
+import { projectNodes } from '@/state/view-nodes';
 import { nextWaiting, projectWaiting, useWaitingSince, type Waiting } from '@/state/waiting';
 import { showSidebarProject } from './sidebar-navigation';
 import { sidebarMachineSnapshot } from './sidebar-projects';

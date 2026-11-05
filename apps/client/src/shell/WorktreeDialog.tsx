@@ -1,7 +1,7 @@
 import { PromptDialog } from '@adecore/ui';
 import { GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { branchFromTitle } from '@/shell/new-worktree-chat';
 import { focusedCanvas, useCanvas } from '@/state/canvas';
 import { useProject } from '@/state/project';

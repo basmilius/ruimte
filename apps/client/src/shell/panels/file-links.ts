@@ -1,9 +1,9 @@
-import { FileLocationSchema, type FileLocation } from '@ruimte/contracts';
+import { FileLocationSchema, type FileLocation, absoluteOf, isAbsolutePath } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
-import { absoluteOf, basenameOf, isAbsolutePath } from '@/shell/panels/files-tree';
-import { currentEndpointId } from '@/state/keys';
+import { ignoreRefusal, perform } from '@/action-port/perform';
+import { basenameOf } from '@/paths/file-path';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { machineTransport } from '@/transport';

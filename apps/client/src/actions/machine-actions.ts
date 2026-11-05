@@ -17,11 +17,11 @@ import {
 } from '@ruimte/contracts';
 import { refusing, type Requester } from '@/actions/refusal';
 import { useDeviceOperated } from '@/devices/operated';
-import { projectNodes } from '@/project/view-nodes';
 import { useComputer } from '@/state/computer';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useProcesses, useProcessWarnings } from '@/state/processes';
 import { serverInfoOf } from '@/state/server';
+import { projectNodes } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
 import { machineFor } from '@/transport/connections';
 import { adoptEndpointInfo } from '@/transport/server-info';

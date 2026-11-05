@@ -1,6 +1,6 @@
 import { messageOf } from '@adecore/ui';
 import { LiveStreamDecoder, type LiveStreamFrame } from '@ruimte/contracts';
-import { credentialFor } from '@/endpoint/credentials';
+import { credentialFor } from '@/transport-api/credentials';
 import { wait } from '@/transport/live-stream';
 
 const RETRY_MS = 1_000;

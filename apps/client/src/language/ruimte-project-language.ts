@@ -12,14 +12,15 @@ import {
     type RenameSuggestionsRequest
 } from '@adecore/editor-react';
 import { fileUriToPath, pathToFileUri, type Diagnostic } from '@adecore/lsp';
+import { isPathBelow } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { isApplePlatform, openInSystemBrowser } from '@/desktop/bridge';
 import { editorAssistClientFor } from '@/editor-assist/client';
 import { parseNames } from '@/editor-assist/names-model';
 import { namesPrompt } from '@/editor-assist/prompts';
+import { useTemplateRequest } from '@/language/template-request';
 import { RUIMTE_EDITOR_KEYMAP } from '@/shell/editor-keymap';
 import { openFileLink } from '@/shell/panels/file-links';
-import { isPathBelow } from '@/shell/panels/files-tree';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
@@ -70,7 +71,7 @@ export class ProjectLanguage extends SharedProjectLanguage {
             saveAsLiveTemplate: (draft) => {
                 // A machine that does not know templates has nowhere to keep one.
                 if (templateSync !== undefined && templateSync.getSnapshot() !== null) {
-                    useUi.getState().setTemplateRequest({ tracker: templateSync, draft: draftOfSelection(draft) });
+                    useTemplateRequest.getState().setRequest({ tracker: templateSync, draft: draftOfSelection(draft) });
                 }
             },
             i18n: i18next,

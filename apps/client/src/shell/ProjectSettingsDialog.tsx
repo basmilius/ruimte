@@ -11,7 +11,7 @@ import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { useProjectIconGroups } from '@/project/use-project-icon-groups';
 import { ProjectAccountsSection } from '@/shell/ProjectAccountsSection';
 import { submitOnEnter } from '@/shell/submit-on-enter';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 
 // The daemon rejects larger files, so the picker catches them before sending the bytes.

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { FsEntry, ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
-import { useDesignChat } from '@/design/design-chat';
 import { DESIGN_METHODS } from '@/design/design-protocol';
+import { useDesignChat } from '@/state/design-chat';
 import { useDocument } from '@/state/document';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, layOutChat, mount, until, type Mounted } from '../../testing/dom';

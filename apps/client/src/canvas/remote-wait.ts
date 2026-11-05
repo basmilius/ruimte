@@ -1,6 +1,6 @@
 import type { RemoteStatusEvent, Task } from '@ruimte/contracts';
+import { isUnstarted, isUntaken, useRemoteStatus } from '@/controllers/remote-status';
 import { useCanvas } from '@/state/canvas';
-import { isUnstarted, isUntaken, useRemoteStatus } from '@/state/remote-status';
 import { useTasks } from '@/state/tasks';
 import { useWorkspace } from '@/transport/connections';
 

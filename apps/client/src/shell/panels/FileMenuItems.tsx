@@ -1,11 +1,11 @@
 import { copyText, Icon, Menu } from '@adecore/ui';
+import { relativeTo } from '@ruimte/contracts';
 import { Copy, FileText, Minus, PanelLeftOpen, Plus, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
+import { ignoreRefusal, perform } from '@/action-port/perform';
 import { promoteLooseDatabase } from '@/project/views';
 import { useDiffCarets } from '@/shell/panels/diff-caret';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
-import { relativeTo } from '@/shell/panels/files-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
 import { isArtifactTab, isCheckoutDiff, isDatabaseTab, isPromotableTab, useFiles } from '@/state/files';
 

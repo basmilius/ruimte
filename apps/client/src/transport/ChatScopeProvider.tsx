@@ -1,6 +1,6 @@
 import { ChatScopeContext } from '@adecore/agents-react';
 import type { ReactElement, ReactNode } from 'react';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { chatScopeOf } from '@/transport/chat-scope';
 
 /* The machine a chat under it runs on: the workspace's inside one, the active machine around it, the way `useEndpointId` reads it. */

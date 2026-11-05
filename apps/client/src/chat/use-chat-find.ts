@@ -9,7 +9,7 @@ import { findRanges } from '@/find/dom-text';
 import { FindBar } from '@/find/FindBar';
 import { clearFindHighlights, setFindHighlights } from '@/find/highlights';
 import { useFind, type FindState } from '@/find/use-find';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 
 // A fold that opens but still hides the hit would otherwise be asked again on every render.
 const MAX_SEEK_STEPS = 4;

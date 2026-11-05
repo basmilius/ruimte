@@ -4,8 +4,8 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFileActions } from '@/shell/panels/file-actions';
 import { FileToolbarToggle } from '@/shell/panels/FileToolbar';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useFiles } from '@/state/files';
-import { useEndpointId } from '@/state/keys';
 import { useUnsaved } from '@/state/text-drafts';
 
 interface RenderedLabels {

@@ -15,13 +15,13 @@ import type {
 import { ProjectDocumentSchema } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { focusedCanvas, type CanvasState } from '../state/canvas';
+import { withClientClosedProject } from '../state/closed-projects';
 import { useDocument } from '../state/document';
 import { useFiles } from '../state/files';
 import { useUi } from '../state/ui';
 import { createWorkspaceStores, defaultWorkspaceStores } from '../state/workspace';
 import type { WorkspaceStores } from '../state/workspace-stores';
 import { TransportError, type Transport, type TransportStatus } from '../transport-api/transport';
-import { withClientClosedProject } from './closed-projects';
 import { fakeStorage } from './fixtures';
 import { rekeyLastProject } from './last-project';
 import { PanelsPort } from './panels-port';

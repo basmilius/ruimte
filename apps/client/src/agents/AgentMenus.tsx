@@ -6,11 +6,12 @@ import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import { Bot, MessageSquare, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { agentTargetLabel, type AgentTarget } from '@/agents/nodes';
+import { agentTargetLabel } from '@/agents/nodes';
+import type { AgentTarget } from '@/state/agent-availability';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { useDetectProviders } from '@/transport/provider-detection';
-import { availableAgents, separatesGroups } from './creation';
+import { availableAgents, separatesGroups } from '../state/agent-availability';
 
 function Submenu({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
     return (

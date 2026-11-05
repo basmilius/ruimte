@@ -4,9 +4,9 @@ import { ContextMenu, Kbd } from '@adecore/ui';
 import { Plus } from 'lucide-react';
 import { Fragment, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { availableAgents, separatesGroups } from '@/agents/creation';
 import { useChatChooser, useChooserSections, type ChooserChat } from '@/chat/chat-chooser';
 import { linkedChatsOfNode, sendToChat, startLinkedChatOrTell, type SelectionOffer } from '@/chat/selection-to-chat';
+import { availableAgents, separatesGroups } from '@/state/agent-availability';
 import { useDetectProviders } from '@/transport/provider-detection';
 
 function ChatRows({

@@ -7,7 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { openPlanFromPill } from '@/plan/plan-panel-watch';
 import { hasFailedStep, planCounter } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
 import { useChatPlans, usePlans } from '@/state/plans';
 import { useUi } from '@/state/ui';
 

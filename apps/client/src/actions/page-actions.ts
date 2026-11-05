@@ -5,9 +5,10 @@ import { pageStateOf } from '@/browser/page-hold';
 import { browserRegistry, normalizeUrl, useBrowser, type BrowserState } from '@/browser/registry';
 import { isDesktop } from '@/desktop/bridge';
 import { readNodeHost, updateHost } from '@/nodes/node-host';
-import { nodesOfView } from '@/project/view-nodes';
+import { currentEndpointId } from '@/state/current-endpoint';
 import type { DocumentState } from '@/state/document';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
+import { nodesOfView } from '@/state/view-nodes';
 import { browserClientFor } from '@/transport/connections';
 
 /* Only what a page's address and its own history do; a click, a keystroke and a scroll are never one of these. */

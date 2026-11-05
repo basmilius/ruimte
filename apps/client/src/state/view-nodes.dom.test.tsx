@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView } from '@ruimte/contracts';
 import { act, useEffect } from 'react';
 import { shallow } from 'zustand/shallow';
-import { useViewNodes } from '@/project/view-nodes';
 import { defaultCanvases } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { useViewNodes } from '@/state/view-nodes';
 import { mount, type Mounted } from '../../testing/dom';
 
 const MAIN: ProjectCanvasView = {

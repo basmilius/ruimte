@@ -7,7 +7,7 @@ import { brokerUrlProblem, type BrokerSetting } from '@ruimte/pulsar';
 import { Trash } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { desktop, openInSystemBrowser } from '@/desktop/bridge';
 import { forgetEndpoint } from '@/endpoint';
 import { saveMachineSetting, useMachineSetting, type MachineSettingPatch } from '@/shell/settings/machine-setting';

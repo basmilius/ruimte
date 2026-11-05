@@ -1,5 +1,5 @@
 import type { ProcessAlert } from '@ruimte/contracts';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useProcessAlerts } from '@/state/processes';
 
 export function useNodeAlerts(nodeId: string): ProcessAlert[] {

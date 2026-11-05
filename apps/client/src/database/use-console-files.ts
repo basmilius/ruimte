@@ -1,7 +1,8 @@
+import { absoluteOf } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
+import { useFolderWatch } from '@/controllers/fs-watch';
 import { consoleFilesOf, consolesFolderOf } from '@/database/console-file';
-import { absoluteOf } from '@/shell/panels/files-tree';
-import { isUnderFolder, useFolderWatch } from '@/state/fs-watch';
+import { isUnderFolder } from '@/paths/file-path';
 import { useProject } from '@/state/project';
 import { useConnection } from '@/transport/context';
 

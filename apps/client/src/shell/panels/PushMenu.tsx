@@ -3,7 +3,7 @@ import { formatNumber } from '@adecore/ui/format';
 import type { GitActionKind } from '@ruimte/contracts';
 import { ArrowUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { pushAllButton, pushable, type PushButton, type PushEntry } from '@/shell/panels/git-actions';
+import { pushAllButton, pushable, type PushButton, type PushEntry } from '@/worktree-rules/git-actions';
 
 interface PushMenuProps {
     /* What a folder with a single repository pushes; with more than one the button pushes them all. */

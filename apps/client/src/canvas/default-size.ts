@@ -1,7 +1,7 @@
 import { formatNumber } from '@adecore/ui/format';
 import { fitNodeSize, type NodeKind, type NodeSize } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { endpointById } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
 

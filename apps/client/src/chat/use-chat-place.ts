@@ -1,9 +1,9 @@
 import type { ChatPlace } from '@adecore/agents-react';
 import { focusNodeAction } from '@/actions/client-actions';
 import { forkOriginIn } from '@/chat/fork-origin';
-import { useViewNodes } from '@/project/view-nodes';
 import { revealNode, showView } from '@/project/views';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
+import { useViewNodes } from '@/state/view-nodes';
 
 /*
  * The camera to a chat node on this canvas, over to the canvas of a node elsewhere, or the chat's

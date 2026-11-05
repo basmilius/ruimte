@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { act } from 'react';
 import { liveCanvas } from '@/state/canvas';
-import { windowWorkspace } from '@/state/window';
+import { windowWorkspace } from '@/transport/window';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';

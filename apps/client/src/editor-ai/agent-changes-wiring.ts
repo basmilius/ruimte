@@ -1,8 +1,8 @@
 import { useChats } from '@adecore/agents-react/state';
 import type { Editor } from '@adecore/editor';
 import { joinReviewGroup } from '@adecore/editor-react';
+import { isPathBelow, relativeTo } from '@ruimte/contracts';
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
-import { isPathBelow, relativeTo } from '@/shell/panels/files-tree';
 import { endpointKey } from '@/state/keys';
 import { type TextDraft, useTextDrafts } from '@/state/text-drafts';
 import type { Transport } from '@/transport-api/transport';

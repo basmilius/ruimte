@@ -7,7 +7,8 @@ import { classifyLoadError } from '@/browser/load-error';
 import { usePageSnapshots } from '@/browser/page-snapshots';
 import { prettyUrl } from '@/browser/pretty-url';
 import { useBrowserRow } from '@/browser/registry';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
 
 /*
  * What a page past the render distance shows in its node while it keeps running out of sight: the last

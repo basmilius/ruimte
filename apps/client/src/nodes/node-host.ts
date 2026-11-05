@@ -16,10 +16,10 @@ import {
 import { useEffect } from 'react';
 import { deleteNodesAction, deleteViewAction } from '@/actions/client-actions';
 import { suggestedTitleFor } from '@/chat/title';
-import { nodesOfView, useViewNodes } from '@/project/view-nodes';
 import { canvasOfNode, DEFAULT_TITLES, useCanvas } from '@/state/canvas';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { currentEndpointId } from '@/state/keys';
+import { nodesOfView, useViewNodes } from '@/state/view-nodes';
 
 /*
  * What a body needs to run, wherever it is drawn. A node on a canvas and a view of its own are the

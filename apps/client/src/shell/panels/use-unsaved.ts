@@ -1,5 +1,5 @@
 import { resolveStoredPath } from '@ruimte/contracts';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { useUnsaved } from '@/state/text-drafts';
 

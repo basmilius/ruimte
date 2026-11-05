@@ -30,7 +30,8 @@ import { promptHeadline } from '@/prompts/prompt-headline';
 import { SnoozeButton } from '@/shell/Snooze';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
-import { endpointOfNode, useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointOfNode } from '@/state/keys';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
 import { useTransportStatus } from '@/transport/status';
 

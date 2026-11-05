@@ -20,20 +20,22 @@ import {
     type GitStatus,
     type RequestMap,
     type RequestType,
-    type Worktree
+    type Worktree,
+    isPathBelow,
+    relativeTo
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { refusing, type Requester } from '@/actions/refusal';
 import { listed, plural } from '@/actions/words';
-import { nodesOfView } from '@/project/view-nodes';
-import { basenameOf, isPathBelow, relativeTo } from '@/shell/panels/files-tree';
-import { commitTargets, nextActionId } from '@/shell/panels/git-actions';
-import { nodesInWorktree, worktreeSessionsOf } from '@/shell/panels/worktree-rows';
+import { visibleRepos } from '@/controllers/git-repos';
+import { basenameOf } from '@/paths/file-path';
 import type { DocumentState } from '@/state/document';
 import { useGit } from '@/state/git';
-import { visibleRepos } from '@/state/git-repos';
 import { useProject } from '@/state/project';
-import { windowWorkspace } from '@/state/window';
+import { nodesOfView } from '@/state/view-nodes';
+import { windowWorkspace } from '@/transport/window';
+import { commitTargets, nextActionId } from '@/worktree-rules/git-actions';
+import { nodesInWorktree, worktreeSessionsOf } from '@/worktree-rules/worktree-rows';
 
 /* What the git actions reach outside the document; a test hands in a fake of each. */
 export interface DeveloperMachine {

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { act } from 'react';
-import { useGitSignal } from '@/state/git-watch';
-import { windowWorkspace } from '@/state/window';
+import { useGitSignal } from '@/controllers/git-watch';
 import { ConnectionProvider } from '@/transport/ConnectionProvider';
+import { windowWorkspace } from '@/transport/window';
 import { mount, until, type Mounted } from '../../../testing/dom';
 import { FakeMachine } from '../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';

@@ -1,6 +1,7 @@
 import type { GitRepo } from '@ruimte/contracts';
 import { create } from 'zustand';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
 import { shownFolderOf, useProject } from '@/state/project';
 import { machineFor } from '@/transport/connections';
 

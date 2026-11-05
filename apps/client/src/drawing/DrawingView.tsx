@@ -4,6 +4,7 @@ import type { DrawingElement } from '@ruimte/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
+import { fitTextBox } from '@/canvas-model/drawing-measure';
 import { groundPlacement, toWorld } from '@/canvas-model/math';
 import { isSpaceDown } from '@/canvas/space-pan';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
@@ -25,7 +26,6 @@ import {
     snapPoint,
     textElement
 } from '@/drawing/gestures';
-import { fitTextBox } from '@/drawing/measure';
 import { applyCamera, clearPathCache, paintElements, paintOptions } from '@/drawing/paint';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { useDrawingKeys } from '@/drawing/use-drawing-keys';

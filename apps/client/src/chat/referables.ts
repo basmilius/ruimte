@@ -14,12 +14,12 @@ import { useReachedProjects, useReachedReferables } from '@/chat/reached-referab
 import { useExtensionReferables } from '@/extensions/chat-references';
 import { useChatDrawers } from '@/extensions/drawn-chats';
 import { openProject } from '@/project/open';
-import { useViewNodes, type NodesOfView } from '@/project/view-nodes';
 import { revealNode, showView } from '@/project/views';
 import { liveCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useServers } from '@/state/server';
+import { useViewNodes, type NodesOfView } from '@/state/view-nodes';
 
 type ReachedProject = ProjectReferablesResult['projects'][number];
 

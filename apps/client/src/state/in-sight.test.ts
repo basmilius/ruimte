@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectView, SplitLayout } from '@ruimte/contracts';
-import { useDesignChat } from '@/design/design-chat';
+import { useDesignChat } from '@/state/design-chat';
 import { nodesInSightOf, type NodeSightWorkspace } from '@/state/in-sight';
 
 describe('what a person has in sight of a design', () => {

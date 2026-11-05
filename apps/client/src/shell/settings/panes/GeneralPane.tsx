@@ -3,9 +3,9 @@ import { formatDayClock, useFormatLocale, formatMoney, FORMAT_LANGUAGE, FORMAT_R
 import { SettingsRow } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
 import { chooseLanguage, chooseRegion } from '@/i18n';
-import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/i18n/languages';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
+import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/state/languages';
 import { useSettings } from '@/state/settings';
 
 /* A date with a weekday, a month and a clock, so every part a region writes differently is in it. */

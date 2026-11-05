@@ -1,10 +1,11 @@
 import type { GitStatus, GitWatchResult } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
+import { HeldWatches, type HeldWatch } from '@/controllers/held-watches';
 import { pathAffected } from '@/state/changed-paths';
-import { HeldWatches, type HeldWatch } from '@/state/held-watches';
-import { currentEndpointId, endpointKey, useEndpointId } from '@/state/keys';
-import { machineTransport, transportFor } from '@/transport';
+import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
 import type { Transport } from '@/transport-api/transport';
+import { machineTransport, transportFor } from '@/transport/index';
 
 /* The checkouts this client is watching, counted, so the files panel letting go of what the git panel still looks at leaves neither blind. */
 export class GitWatches extends HeldWatches<GitWatchResult> {

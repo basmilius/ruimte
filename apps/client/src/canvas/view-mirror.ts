@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { create } from 'zustand';
-import { currentEndpointId, dropEndpoint, endpointKey, patchIn, useEndpointId } from '@/state/keys';
+import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
+import { dropEndpoint, endpointKey, patchIn } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { transportFor } from '@/transport';
 import type { Transport } from '@/transport-api/transport';

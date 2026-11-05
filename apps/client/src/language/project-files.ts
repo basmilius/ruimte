@@ -1,7 +1,7 @@
 import type { ProjectFiles, StagedFile } from '@adecore/editor-react';
 import { messageOf } from '@adecore/ui';
 import i18next from 'i18next';
-import { basenameOf } from '@/shell/panels/files-tree';
+import { basenameOf } from '@/paths/file-path';
 import { draftPathsUnder, forgetDeleted, moveFile } from '@/state/file-moves';
 import { endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
 import { isUnsavedDraft, textDrafts, useTextDrafts, type TextDrafts } from '@/state/text-drafts';

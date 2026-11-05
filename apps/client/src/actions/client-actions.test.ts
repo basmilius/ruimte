@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ActionRefusal, ActionRegistry, MAX_TITLE_LENGTH, type ActionInput } from '@ruimte/actions';
 import type { ProjectCanvasView, ProjectDocument, ProjectSummary } from '@ruimte/contracts';
+import { ignoreRefusal, performIn, PERSON_ACTION_CALL } from '@/action-port/perform';
 import { visibleRect } from '@/canvas-model/math';
 import { liesWithin } from '@/canvas/place-node';
 import { viewIdsIn } from '@/layout/split';
@@ -13,17 +14,7 @@ import { useProject } from '@/state/project';
 import { fakeProvider } from '../../testing/fake-provider';
 import { emptyCanvas } from '../../testing/project-fixtures';
 import { completed, confirmed, expectQuestion, expectUndoable } from './action-support';
-import {
-    clientActions,
-    createClientActionRegistry,
-    createNodeAction,
-    ignoreRefusal,
-    performIn,
-    PERSON_ACTION_CALL,
-    selectAllAction,
-    toggleFlagAction,
-    VOICE_ACTION_CALL
-} from './client-actions';
+import { clientActions, createClientActionRegistry, createNodeAction, selectAllAction, toggleFlagAction, VOICE_ACTION_CALL } from './client-actions';
 
 const PROJECT: ProjectSummary = {
     projectId: 'atlas',

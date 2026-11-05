@@ -11,10 +11,10 @@ import { useServers } from '@/state/server';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { browserStorage } from '@/state/stored-json';
-import { windowWorkspace } from '@/state/window';
 import { pool } from '@/transport';
 import { dropMachine, leaveWorkspace, showStart } from '@/transport/connections';
-import { forgetTicket } from './credentials';
+import { windowWorkspace } from '@/transport/window';
+import { forgetTicket } from '../transport-api/credentials';
 
 /* Forgetting the machine the open project is on takes the window back to the start screen first, so nothing is left on a daemon nothing talks to. */
 export async function forgetEndpoint(id: string): Promise<void> {

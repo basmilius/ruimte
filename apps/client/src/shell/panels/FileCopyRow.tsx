@@ -1,9 +1,9 @@
 import { copyText, Icon, Menu, messageOf } from '@adecore/ui';
 import { AtSign, ChevronRight, Copy, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { canCopyFilesOn, copiedText, copyableFiles, type CopyTarget, type CopyTextKind } from '@/shell/panels/file-copy';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 

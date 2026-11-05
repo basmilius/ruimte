@@ -3,16 +3,7 @@ import { recentChatMessages } from '@adecore/agents-react/chat';
 import type { ChatPromptClients } from '@adecore/agents-react/prompts';
 import { useChats, providersOf } from '@adecore/agents-react/state';
 import { messageOf } from '@adecore/ui';
-import {
-    ActionRefusal,
-    ActionRegistry,
-    MAX_TITLE_LENGTH,
-    type ActionCall,
-    type ActionHandlers,
-    type ActionInput,
-    type ActionName,
-    type ActionOutput
-} from '@ruimte/actions';
+import { ActionRefusal, ActionRegistry, MAX_TITLE_LENGTH, type ActionCall, type ActionHandlers } from '@ruimte/actions';
 import {
     clipText,
     flagOf,
@@ -28,6 +19,7 @@ import {
 } from '@ruimte/contracts';
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
+import { ignoreRefusal, PERSON_ACTION_CALL, perform, provideClientActions } from '@/action-port/perform';
 import type { CreatableNodeKind, CreatableViewKind } from '@/actions/action-reach';
 import { canvasActions } from '@/actions/canvas-actions';
 import { chatSearchActions, type ChatSearchMachine } from '@/actions/chat-search-actions';
@@ -55,16 +47,17 @@ import { designFoldersOnDisk } from '@/design/design-read';
 import type { CellAt, SplitDirection, SplitZone } from '@/layout/split';
 import { lastFlagColor, rememberFlagColor } from '@/project/flag-color';
 import { liveViewDeletion, type ViewDeletionMachine } from '@/project/view-deletion';
-import { nodesOfView } from '@/project/view-nodes';
 import { openInNewWindow, wantsNewWindow } from '@/project/windows';
 import { defaultCanvases, focusedCanvas, type CanvasState, type Locks } from '@/state/canvas';
 import { closeCellsRightOfGuarded, closeOtherCellsGuarded } from '@/state/cell-close';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { activeViewOf, useDocument, viewOfNode, type DocumentState } from '@/state/document';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { shownFolderOf, useProject } from '@/state/project';
 import { closeTabGuarded, closeTabsAround, type TabsClosing } from '@/state/tab-close';
 import { useToasts } from '@/state/toasts';
+import { nodesOfView } from '@/state/view-nodes';
 import { diagramClient, drawingClient } from '@/transport/connections';
 
 export interface ClientActionMachine {
@@ -242,53 +235,12 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
 }
 
 export const clientActions = createClientActionRegistry(useDocument);
+provideClientActions(clientActions);
 
-export const PERSON_ACTION_CALL: ActionCall<void> = {
-    actor: { kind: 'person', id: 'local-person' },
-    context: undefined
-};
 export const VOICE_ACTION_CALL: ActionCall<void> = {
     actor: { kind: 'voice', id: 'voice-session' },
     context: undefined
 };
-
-export interface PerformOptions {
-    /* The person already answered the app's own dialog before this runs, so the action's question is theirs to answer. */
-    confirmed?: boolean;
-}
-
-/*
- * Runs an action as the person at this window. Throws the refusal with the machine's own code, so a
- * surface that says how it went can tell a diverged branch from a failure.
- */
-export async function perform<Name extends ActionName>(name: Name, input: ActionInput<Name>, options: PerformOptions = {}): Promise<ActionOutput<Name>> {
-    return performIn(clientActions, name, input, options);
-}
-
-export async function performIn<Name extends ActionName>(
-    registry: ActionRegistry<void>,
-    name: Name,
-    input: ActionInput<Name>,
-    { confirmed = false }: PerformOptions = {}
-): Promise<ActionOutput<Name>> {
-    const asked = await registry.execute(name, input, PERSON_ACTION_CALL);
-    if (asked.status === 'needs_confirmation' && !confirmed) {
-        throw new ActionRefusal('confirmation-required', `“${name}” asked a person for a confirmation their own dialog should have given.`);
-    }
-    const result = asked.status === 'needs_confirmation' ? await registry.confirm(asked.confirmationToken, true, PERSON_ACTION_CALL) : asked;
-    if (result.status === 'failed') {
-        throw new ActionRefusal(result.error.code, result.error.message, result.error.details);
-    }
-    if (result.status === 'needs_confirmation') {
-        throw new ActionRefusal('confirmation-loop', `“${name}” asked a second time.`);
-    }
-    return result.output as ActionOutput<Name>;
-}
-
-/* A person sees what happened on screen, so a surface that says nothing itself catches a refusal with this. */
-export function ignoreRefusal(): null {
-    return null;
-}
 
 /* The prompt cards answer as the person whose click it was, through the actions Voice asks for too. */
 export const PERSON_PROMPT_CLIENTS: ChatPromptClients = {

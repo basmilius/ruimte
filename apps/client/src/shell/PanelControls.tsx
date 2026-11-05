@@ -1,12 +1,12 @@
 import { IconButton, WorkspaceRailSeparator } from '@adecore/ui';
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useFolderInRepo } from '@/controllers/git-repos';
+import { useGitStatus } from '@/controllers/git-watch';
 import { useRoutineList } from '@/routines/routine-list';
 import { RoutinesButton } from '@/routines/RoutinesButton';
 import { useToolbarPanels, type PanelGroup } from '@/shell/panels';
-import { useFolderInRepo } from '@/state/git-repos';
-import { useGitStatus } from '@/state/git-watch';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { isThisMachine } from '@/state/local-machine';
 import { isScratchProject, useProject } from '@/state/project';
 import { useShownPanel, useUi } from '@/state/ui';

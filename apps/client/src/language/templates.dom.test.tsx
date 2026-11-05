@@ -4,7 +4,7 @@ import type { Shortcut } from '@adecore/ui';
 import { act } from 'react';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
-import { useUi } from '@/state/ui';
+import { useTemplateRequest } from '@/language/template-request';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
@@ -66,7 +66,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
     // The store outlives the page, and the next file would open on this form.
-    useUi.getState().setTemplateRequest(null);
+    useTemplateRequest.getState().setRequest(null);
     await page.unmount();
     workspace.close();
 });

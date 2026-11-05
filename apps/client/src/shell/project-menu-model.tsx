@@ -3,7 +3,7 @@ import type { ActionInput } from '@ruimte/actions';
 import { X } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
+import { ignoreRefusal, perform } from '@/action-port/perform';
 import { chatsProjects, menuProjects, openableRows, type ProjectMenuRow } from '@/project/list';
 import { useOffersNewChat } from '@/project/new-chat';
 import { closingProject } from '@/project/open';

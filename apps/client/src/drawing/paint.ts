@@ -1,7 +1,7 @@
 import { LINE_HEIGHT, pathsOfElement, writingFrameOf, type ElementPath, type WrittenElement } from '@adecore/drawing';
 import type { DrawingElement, DrawingFont } from '@ruimte/contracts';
-import { fontOfElement, linesOn } from '@/drawing/measure';
-import { readEdge, readFontStacks, readPalette, readPaper, type DrawingPalette } from '@/drawing/palette';
+import { fontOfElement, linesOn } from '@/canvas-model/drawing-measure';
+import { readEdge, readFontStacks, readPalette, readPaper, type DrawingPalette } from '@/canvas-model/drawing-palette';
 
 interface PaintOptions {
     palette: DrawingPalette;

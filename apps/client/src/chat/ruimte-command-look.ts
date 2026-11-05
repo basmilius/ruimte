@@ -12,8 +12,8 @@ import { unescapeText } from '@ruimte/actions/text-escapes';
 import type { ContextVerb } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useSidebarSource, type SidebarSource } from '@/shell/sidebar-source';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { memoByIdentity } from '@/state/identity-memo';
-import { currentEndpointId } from '@/state/keys';
 import { RuimteMark } from '@/ui/RuimteMark';
 
 /* What a verb reads as: the name after "Ruimte", and the word the detail starts at, the verb itself being 0. */

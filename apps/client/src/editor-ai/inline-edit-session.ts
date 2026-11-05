@@ -5,7 +5,7 @@ import { messageOf } from '@adecore/ui';
 import type { AgentKind, ProjectNewInlineChatPayload, ProjectNewInlineChatResult } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
-import { basenameOf } from '@/shell/panels/files-tree';
+import { basenameOf } from '@/paths/file-path';
 import type { DiskText } from '@/state/text-drafts';
 import type { InlineEditRecord } from './inline-edit-record';
 import { inlineMessage } from './inline-message';

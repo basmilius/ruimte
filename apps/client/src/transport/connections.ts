@@ -3,7 +3,6 @@ import { useChats, knownAccounts, providerAccountsOf, useProviderAccountsStore, 
 import type { ProjectSummary } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { BrowserClient } from '@/browser/browser-client';
-import { claimWindow } from '@/desktop/window-claim';
 import { DeviceClient } from '@/devices/device-client';
 import { DiagramClient } from '@/diagram/diagram-client';
 import { DrawingClient } from '@/drawing/drawing-client';
@@ -13,7 +12,7 @@ import { linkToPeer, takeLinkFailure } from '@/project/peer-linker';
 import { PeerRenewal } from '@/project/peer-renewal';
 import { ProjectClient, type ProjectSink } from '@/project/project-client';
 import { RemoteMirror } from '@/project/remote-mirror';
-import { nodesOfView, subscribeViewNodes } from '@/project/view-nodes';
+import { claimWindow } from '@/project/window-claim';
 import { notifyRequested } from '@/shell/notifications';
 import { chatSinkFor } from '@/state/chats';
 import { activeEndpoint, endpointById, endpointIdOfMachine, useEndpoints, type Endpoint } from '@/state/endpoints';
@@ -25,7 +24,8 @@ import { useProjectList } from '@/state/project-list';
 import { watchPushAttention } from '@/state/push-attention';
 import { sessionSinkFor, useSessions } from '@/state/sessions';
 import { watchSnoozes } from '@/state/snooze';
-import { workspaceOf, useWindow, windowWorkspace } from '@/state/window';
+import { textDrafts } from '@/state/text-drafts';
+import { nodesOfView, subscribeViewNodes } from '@/state/view-nodes';
 import { defaultWorkspaceStores } from '@/state/workspace';
 import { workspaceOpening } from '@/telemetry/workspace-load';
 import { forgetProjectSessions } from '@/terminal/lifecycle';
@@ -33,8 +33,10 @@ import { SessionClient } from '@/terminal/session-client';
 import { machineTransport, pool } from '@/transport';
 import type { Transport } from '@/transport-api/transport';
 import { useOptionalConnection } from '@/transport/context';
+import { liveDraftLink } from '@/transport/draft-link';
 import { machineAnswers } from '@/transport/features';
 import { reportPresence } from '@/transport/presence';
+import { workspaceOf, useWindow, windowWorkspace } from '@/transport/window';
 
 /*
  * One daemon, as everything inside a workspace sees it. The address and the credential are
@@ -76,6 +78,8 @@ export interface Workspace {
 
 /* What one payload of `project.open` asks for: a project by id, a folder, or a new project by name. */
 export type OpenRequest = { projectId: string } | { folder: string; createFolder: boolean };
+
+textDrafts.provideLinks(liveDraftLink);
 
 const stores = defaultWorkspaceStores;
 const machines = new Map<string, Machine>();

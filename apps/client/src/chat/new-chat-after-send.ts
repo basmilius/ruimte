@@ -5,8 +5,9 @@ import { openChatInMode } from '@/chat/opening-mode';
 import { readNodeHost } from '@/nodes/node-host';
 import { newChatOn } from '@/project/new-chat';
 import { canvasOfNode, liveCanvases } from '@/state/canvas';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
 import { isScratchProject, useProject } from '@/state/project';
 
 /*

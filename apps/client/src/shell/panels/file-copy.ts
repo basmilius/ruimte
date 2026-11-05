@@ -1,5 +1,6 @@
 import { desktop, type DesktopBridge } from '@/desktop/bridge';
-import { basenameOf, mentionOf } from '@/shell/panels/files-tree';
+import { basenameOf } from '@/paths/file-path';
+import { mentionOf } from '@/shell/panels/files-tree';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 
 /* A file or folder a copy menu acts on. */

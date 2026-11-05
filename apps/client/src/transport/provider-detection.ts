@@ -1,7 +1,7 @@
 import { useProvidersStore } from '@adecore/agents-react/state';
 import type { ProviderInfo } from '@ruimte/contracts';
 import { useEffect } from 'react';
-import { currentEndpointId, useEndpointId } from '@/state/keys';
+import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
 import { pool, transportFor } from '@/transport';
 import type { Transport } from '../transport-api/transport';
 import { machineAnswers } from './features';

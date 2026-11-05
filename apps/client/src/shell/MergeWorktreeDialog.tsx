@@ -4,9 +4,10 @@ import type { Worktree, WorktreeMergeResult, WorktreeMergeStrategy } from '@ruim
 import i18next from 'i18next';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cancelGitRunAction, perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
+import { cancelGitRunAction } from '@/actions/client-actions';
 import { agentsEndedWith } from '@/agents/end-children';
-import { nextActionId, phaseLabel } from '@/shell/panels/git-actions';
+import { useProjectNodes, worktreeLists, type WorktreeNode } from '@/controllers/worktrees';
 import {
     checkedOutBranch,
     defaultSubject,
@@ -23,17 +24,18 @@ import {
     type MergeOutcome,
     type MergeRun
 } from '@/shell/panels/worktree-merge';
-import { nodesInWorktree, worktreeSessionsOf } from '@/shell/panels/worktree-rows';
 import { inspectWorktrees, nodeNames } from '@/shell/worktree-inspection';
 import { nodeWorking } from '@/state/agent-work';
-import { useEndpointId, endpointKey } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useUi, type WorktreeMergeRequest } from '@/state/ui';
-import { useProjectNodes, worktreeLists, type WorktreeNode } from '@/state/worktrees';
 import type { Transport } from '@/transport-api/transport';
 import { useTransport } from '@/transport/context';
+import { nextActionId, phaseLabel } from '@/worktree-rules/git-actions';
+import { nodesInWorktree, worktreeSessionsOf } from '@/worktree-rules/worktree-rows';
 
 type Reading = { request: WorktreeMergeRequest; worktrees: Worktree[]; error: { message: string | null } | null };
 

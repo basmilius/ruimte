@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { parseMarkdownDocument, markdownImagePath, markdownImageStyle } from '@/shell/panels/markdown-document';
 import { FILE_HTML_PLUGINS } from '@/shell/panels/markdown-html';
 import { useFileRead } from '@/shell/panels/use-file-read';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useMachineUrl } from '@/transport/machine-url';
 
 type ImageProps = Pick<ComponentProps<'img'>, 'src' | 'alt' | 'title' | 'width' | 'height' | 'style'>;

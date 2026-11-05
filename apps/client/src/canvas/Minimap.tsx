@@ -21,7 +21,7 @@ import {
 import { OVERLAY_WALL_ATTRIBUTE } from '@/canvas/overlay-attributes';
 import { waitingShown } from '@/canvas/use-group-waits';
 import { maximizedNodeOf, useCanvas, useCanvasStore, type CanvasNode, type CanvasState } from '@/state/canvas';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';

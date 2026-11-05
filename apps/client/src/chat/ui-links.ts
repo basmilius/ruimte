@@ -1,9 +1,9 @@
 import type { ChatUiLinkReading } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
+import { ignoreRefusal, perform } from '@/action-port/perform';
 import { openInSystemBrowser } from '@/desktop/bridge';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useFiles } from '@/state/files';
-import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';

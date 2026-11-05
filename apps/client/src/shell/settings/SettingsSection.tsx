@@ -6,8 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
 import { useListedMachines } from '@/shell/settings/machine-list';
 import { usePickedMachine, usePickedMachineState } from '@/shell/settings/picked-machine';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
-import { useEndpointId } from '@/state/keys';
 
 /*
  * Where a setting applies when it is not this device, which goes without a tag: the computer this

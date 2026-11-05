@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { FileTree as SharedFileTree } from '@adecore/ui';
 import { FileTree } from '@pierre/trees';
 import type { FsEntry, GitFile } from '@ruimte/contracts';
+import { dirnameOf } from '@/paths/file-path';
 import {
     LOADING_NAME,
     ancestorDirsOf,
@@ -9,7 +10,6 @@ import {
     checkoutOfPath,
     checkoutStatusEntries,
     compareRows,
-    dirnameOf,
     gitStatusEntries,
     isDirectoryPath,
     mentionOf,

@@ -1,6 +1,6 @@
 import { nodeSizeOf, type NodeKind, type NodeSize, type NodeSizes } from '@ruimte/contracts';
-import { currentEndpointId } from '@/state/keys';
 import { serverInfoOf } from '@/state/server';
+import { currentEndpointId } from './current-endpoint';
 
 /*
  * The sizes a person gave new nodes on a machine. A window shows one project on one machine, so

@@ -1,13 +1,13 @@
 import type { FsReadResult, FsReadText } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useEffect, useRef, useState } from 'react';
-import { dirnameOf } from '@/shell/panels/files-tree';
-import { readLargeText } from '@/shell/panels/large-text';
+import { folderWatches } from '@/controllers/fs-watch';
+import { dirnameOf } from '@/paths/file-path';
 import { pathAffected } from '@/state/changed-paths';
-import { folderWatches } from '@/state/fs-watch';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { TransportError } from '@/transport';
 import { useTransport } from '@/transport/context';
+import { readLargeText } from '@/transport/large-text';
 
 type FileRead = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; read: FsReadResult };
 
