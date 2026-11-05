@@ -7,8 +7,10 @@
         "dev": "vite",
         "build": "tsc -b && vite build",
         "build:bundle": "vite build",
-        "build:station": "tsc -b && vite build --mode station --outDir ../station/dist --emptyOutDir",
-        "build:bench": "tsc -b && vite build --mode bench --outDir ../bench/dist --emptyOutDir",
+        "build:station": "tsc -b && bun run bundle:station",
+        "build:bench": "tsc -b && bun run bundle:bench",
+        "bundle:station": "vite build --mode station --outDir ../station/dist --emptyOutDir",
+        "bundle:bench": "vite build --mode bench --outDir ../bench/dist --emptyOutDir",
         "typecheck": "bun check --no-script -b",
         "preview": "vite preview"
     },
