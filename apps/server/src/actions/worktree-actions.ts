@@ -6,9 +6,6 @@ import { GitError } from '../git/run.ts';
 import { field, orNote, type CanvasHost, type WorktreeHost } from '../tools/host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
-// How far up the chain of openers a merge looks for the caller; a chain this deep is refused by `agent_start` long before.
-const MAX_LINEAGE = 64;
-
 function worktreeHostOf(context: ServerActionContext): WorktreeHost {
     return hostService(context, 'worktrees', 'not-a-repository', 'This machine has no git to read worktrees with');
 }
@@ -71,16 +68,9 @@ function named(worktrees: readonly Worktree[], branch: string): Worktree {
     return worktree;
 }
 
-/* Whether the caller opened this node, or opened the agent that did, however far down. */
+// Only the caller's own child: a grandchild's worktree is its own parent's to merge, as a grandchild is its parent's to read.
 function openedBy(host: CanvasHost, caller: string, nodeId: string): boolean {
-    let current: string | null = nodeId;
-    for (let i = 0; i < MAX_LINEAGE && current !== null; i++) {
-        current = host.lineage.madeBy(current);
-        if (current === caller) {
-            return true;
-        }
-    }
-    return false;
+    return host.lineage.madeBy(nodeId) === caller;
 }
 
 export const worktreeActions: ActionHandlers<ServerActionContext> = {

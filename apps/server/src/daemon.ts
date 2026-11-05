@@ -8,6 +8,7 @@ import type { ServerConfig } from './config.ts';
 import { CONTEXT_PATH } from './context/context-store.ts';
 import { Dispatcher } from './dispatcher.ts';
 import { errorText } from './error-text.ts';
+import { armShutdownDeadline } from './shutdown-deadline.ts';
 import { extensionChatStarter } from './extensions/extension-chat.ts';
 import { ExtensionHost } from './extensions/extension-host.ts';
 import type { ExtensionAsks, ExtensionHostOptions } from './extensions/extension-host.ts';
@@ -455,6 +456,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
             return;
         }
         shuttingDown = true;
+        armShutdownDeadline((code) => process.exit(code));
         noteShutdown();
         console.log(`ruimte server stopping for ${reason}, writing snapshots`);
         processes.selfUpdate.stop();

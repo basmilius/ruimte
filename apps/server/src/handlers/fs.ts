@@ -188,6 +188,11 @@ export function registerFsHandlers(
         await machineHome.refuse(payload.path);
         await watcher.watch(client.id, payload.path, await machineHome.policy());
 
+        // The socket may have closed while the path was judged, and its cleanup ran before this watch existed.
+        if (client.closed) {
+            watcher.detachAll(client.id);
+        }
+
         return {};
     });
 

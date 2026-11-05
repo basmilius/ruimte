@@ -66,9 +66,19 @@ export class MachineHome {
     }
 
     async refuse(path: string): Promise<void> {
+        await this.judge(path, isMachineStatePath);
+    }
+
+    /* Also refuses a folder the home lies in, for a request that acts on everything under the path it names. */
+    async refuseHolding(path: string): Promise<void> {
+        await this.judge(path, (policy, candidate) => isMachineStatePath(policy, candidate) || holdsMachineHome(policy, candidate));
+    }
+
+    private async judge(path: string, refused: (policy: MachineHomePolicy, path: string) => boolean): Promise<void> {
         const lexical = resolve(path);
         const [policy, real] = await Promise.all([this.policy(), realOrSelf(lexical)]);
-        if (isMachineStatePath(policy, lexical) || isMachineStatePath(policy, real)) {
+
+        if (refused(policy, lexical) || refused(policy, real)) {
             throw new MachineHomeError('machine-state', `${path} belongs to this machine's own state and is not handed out`);
         }
     }

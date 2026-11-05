@@ -131,6 +131,18 @@ describe('the machine home', () => {
         expect(changed).toEqual([{ root, paths: [join(home, 'scratch')], changedPaths: [join(home, 'scratch', 'notes.md')] }]);
     });
 
+    test('a client that closed while its fs.watch was judged leaves no watcher behind', async () => {
+        const client = { id: 'phone', closed: false, send: (_frame: ServerFrame) => undefined };
+
+        const handled = dispatcher.handle(client, JSON.stringify({ id: 'watch', type: 'fs.watch', payload: { path: root } }));
+        // The socket goes before the path was judged, and its cleanup ran with nothing to clean yet.
+        client.closed = true;
+        folders.detachAll('phone');
+        await handled;
+
+        expect(watches.openOn(root)).toHaveLength(0);
+    });
+
     test('fs.browse completes nothing in the home, neither by its path nor from its cwd', async () => {
         expect(await request('fs.browse', { partialPath: `${home}/` })).toMatchObject(refused);
         expect(await request('fs.browse', { partialPath: join(home, 'cha') })).toMatchObject(refused);

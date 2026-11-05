@@ -182,6 +182,18 @@ test('a node that is not an opener of the worktree gets not-yours, and nothing i
     expect(await fileExists(join(folder, 'lexer.txt'))).toBe(false);
 });
 
+test('a lead gets not-yours for the worktree of a grandchild, which only its own parent merges', async () => {
+    const [lexer] = (await team(LEXER)) as [string];
+    const projectId = store.index.locate('chat-lead')!.projectId;
+    await daemon.lineage.put({ projectId, nodeId: 'chat-middle', openedBy: 'chat-lead', depth: 1, agent: true, ceiling: 'auto' });
+    await daemon.lineage.put({ projectId, nodeId: lexer, openedBy: 'chat-middle', depth: 2, agent: true, ceiling: 'auto' });
+
+    const refused = await invokeTool(daemon, 'chat-lead', 'worktree_merge', { branch: 'lexer' });
+
+    expect(refused[0]).toStartWith('refused\tnot-yours\t');
+    expect(await fileExists(join(folder, 'lexer.txt'))).toBe(false);
+});
+
 test('a conflict is taken back and refused, leaving the target clean', async () => {
     const [parser] = await team({ title: 'Parser', writes: 'shared.txt from the parser' });
     // main moves on under the parser by a commit of its own, which costs fewer processes than a merge of another role.

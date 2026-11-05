@@ -1,4 +1,4 @@
-import { dirname } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import type { AgentKind, GitActionPhase } from '@ruimte/contracts';
 import { RequestError, sendEvent, type ClientConnection, type Dispatcher } from '../dispatcher.ts';
 import type { MachineHome } from '../fs/machine-home.ts';
@@ -20,7 +20,7 @@ import { prSplits } from '../git/pr-split.ts';
 import { listRefs, readRefCommit } from '../git/refs.ts';
 import { cachedRepos } from '../git/repo-cache.ts';
 import { resolveWithAgent } from '../git/resolve-ai.ts';
-import { GitError } from '../git/run.ts';
+import { GitError, toplevel } from '../git/run.ts';
 import { discardPaths, stagePaths, unstagePaths } from '../git/stage.ts';
 import type { GitStatusWatcher } from '../git/status-watcher.ts';
 import { mergeBaseWith } from '../git/status.ts';
@@ -62,42 +62,74 @@ export function registerGitHandlers(
     providers: ProviderRegistry,
     prWatches?: PrWatchStore,
     placeOf?: (id: string) => { projectId: string } | null,
-    machineHome?: Pick<MachineHome, 'refuse'>,
+    machineHome?: Pick<MachineHome, 'refuse' | 'refuseHolding'>,
     bundleHost?: BundleHost,
     oneShotPlace?: Pick<OneShotPlace, 'cwdFor'>
 ): void {
     const actions = new GitActions();
     const identities = new IdentityReader();
 
-    dispatcher.register('git.worktree-add', (payload) =>
-        worktrees.add(
+    // Judged before any git runs, like the file requests: a client asks about folders, never about the machine's own state.
+    const refuse = async (...folders: string[]): Promise<void> => {
+        await Promise.all(folders.map((folder) => machineHome?.refuse(folder)));
+    };
+
+    // A file is named relative to the root of its checkout, which may hold the home, so each is judged where it really lies.
+    const refuseFiles = async (cwd: string, paths: readonly string[]): Promise<void> => {
+        if (machineHome === undefined) {
+            return;
+        }
+
+        await machineHome.refuse(cwd);
+        const top = await toplevel(cwd);
+        await Promise.all(paths.map((path) => machineHome.refuseHolding(resolve(top, path))));
+    };
+
+    dispatcher.register('git.worktree-add', async (payload) => {
+        await refuse(payload.repo);
+
+        return await worktrees.add(
             payload.repo,
             payload.branch,
             { madeBy: 'client', ...(payload.projectId === undefined ? {} : { projectId: payload.projectId }) },
             payload.base === undefined ? {} : { base: payload.base }
-        )
-    );
+        );
+    });
 
-    dispatcher.register('git.worktree-list', async (payload) => ({ worktrees: await worktrees.list(payload.repo, { inspect: payload.inspect === true }) }));
+    dispatcher.register('git.worktree-list', async (payload) => {
+        await refuse(payload.repo);
+        return { worktrees: await worktrees.list(payload.repo, { inspect: payload.inspect === true }) };
+    });
 
-    dispatcher.register('git.worktree-remove', (payload) =>
-        worktrees.remove(payload.repo, payload.path, {
+    dispatcher.register('git.worktree-remove', async (payload) => {
+        await refuse(payload.repo, payload.path);
+
+        return await worktrees.remove(payload.repo, payload.path, {
             ...(payload.force === undefined ? {} : { force: payload.force }),
             ...(payload.keepBranch === undefined ? {} : { keepBranch: payload.keepBranch }),
             ...(payload.stopAgent === undefined ? {} : { stopAgent: payload.stopAgent })
-        })
-    );
+        });
+    });
 
-    dispatcher.register('git.worktree-merge', (payload, client) => merges.merge(payload, progressTo(client, payload.path, payload.actionId)));
+    dispatcher.register('git.worktree-merge', async (payload, client) => {
+        await refuse(payload.repo, payload.path);
+        return await merges.merge(payload, progressTo(client, payload.path, payload.actionId));
+    });
 
     dispatcher.register('git.worktree-abort', async (payload) => {
+        await refuse(payload.cwd);
         await merges.abort(payload.cwd);
+
         return {};
     });
 
-    dispatcher.register('git.status', (payload) => statuses.status(payload.cwd));
+    dispatcher.register('git.status', async (payload) => {
+        await refuse(payload.cwd);
+        return await statuses.status(payload.cwd);
+    });
 
     dispatcher.register('git.watch', async (payload, client) => {
+        await refuse(payload.cwd);
         await statuses.watch(client.id, payload.cwd);
         if (client.closed) {
             statuses.detachAll(client.id);
@@ -113,6 +145,8 @@ export function registerGitHandlers(
     });
 
     dispatcher.register('git.diff', async (payload) => {
+        await refuseFiles(payload.cwd, payload.path === undefined ? [] : [payload.path]);
+
         if (payload.scope === 'commit' && payload.path === undefined) {
             return await diffCommit(payload.cwd, payload.commit ?? 'HEAD');
         }
@@ -131,11 +165,13 @@ export function registerGitHandlers(
         return await diffFile(payload.cwd, payload.path, options, await mergeBaseWith(payload.cwd, payload.base));
     });
 
-    dispatcher.register('git.blame', (payload) => blameFile(payload.cwd, payload.path));
+    dispatcher.register('git.blame', async (payload) => {
+        await refuseFiles(payload.cwd, [payload.path]);
+        return await blameFile(payload.cwd, payload.path);
+    });
 
     dispatcher.register('git.identity', async (payload) => {
-        // Judged before any git runs, like the file requests: a client asks about folders, never about the machine's own state.
-        await Promise.all(payload.paths.map((path) => machineHome?.refuse(path)));
+        await refuse(...payload.paths);
         return identities.read(payload.paths);
     });
 
@@ -169,15 +205,24 @@ export function registerGitHandlers(
     }
 
     dispatcher.register('git.stage', async (payload) => {
+        await refuseFiles(payload.cwd, payload.paths);
         await (payload.staged ? stagePaths(payload.cwd, payload.paths) : unstagePaths(payload.cwd, payload.paths));
+
         return {};
     });
 
-    dispatcher.register('git.discard', (payload) => discardPaths(payload.cwd, payload.paths));
+    dispatcher.register('git.discard', async (payload) => {
+        await refuseFiles(payload.cwd, payload.paths);
+        return await discardPaths(payload.cwd, payload.paths);
+    });
 
-    dispatcher.register('git.refs', (payload) => listRefs(payload.cwd));
+    dispatcher.register('git.refs', async (payload) => {
+        await refuse(payload.cwd);
+        return await listRefs(payload.cwd);
+    });
 
     dispatcher.register('git.issue', async (payload) => {
+        await refuse(payload.cwd);
         const ref = parseIssueRef(payload.ref);
         if (ref === null) {
             throw new GitError('issue-not-found', 'Name the issue as a link, owner/repo#12 or #12.');
@@ -187,6 +232,7 @@ export function registerGitHandlers(
 
     // The split waits on every page of GitHub's file list, so it is a request of its own and the dialog draws before it.
     dispatcher.register('git.pr', async (payload) => {
+        await refuse(payload.cwd);
         const pr = await readPullRequest(runGh, payload.cwd, payload.number);
         if (pr !== null) {
             prSplits.note(payload.cwd, pr);
@@ -194,9 +240,13 @@ export function registerGitHandlers(
         return { pr };
     });
 
-    dispatcher.register('git.prSplit', async (payload) => ({
-        split: await prSplits.splitAt(payload.cwd, payload.number, payload.headSha, () => readPullRequest(runGh, payload.cwd, payload.number))
-    }));
+    dispatcher.register('git.prSplit', async (payload) => {
+        await refuse(payload.cwd);
+
+        return {
+            split: await prSplits.splitAt(payload.cwd, payload.number, payload.headSha, () => readPullRequest(runGh, payload.cwd, payload.number))
+        };
+    });
 
     const watching = (): PrWatchStore => {
         if (!prWatches) {
@@ -209,6 +259,7 @@ export function registerGitHandlers(
         if (placeOf?.(payload.chatId)?.projectId !== payload.projectId) {
             throw new GitError('pr-watch-refused', 'That chat is not part of this project.');
         }
+        await refuse(payload.cwd);
         return { watch: await watching().start(payload.projectId, payload.chatId, payload.cwd, payload.number) };
     });
     dispatcher.register('git.pr-unwatch', async (payload) => {
@@ -217,18 +268,33 @@ export function registerGitHandlers(
     });
     dispatcher.register('git.pr-watches', (payload) => ({ watches: watching().list(payload.projectId) }));
 
-    dispatcher.register('git.ref-commit', (payload) => readRefCommit(payload.cwd, payload.ref));
+    dispatcher.register('git.ref-commit', async (payload) => {
+        await refuse(payload.cwd);
+        return await readRefCommit(payload.cwd, payload.ref);
+    });
 
-    dispatcher.register('git.repos', (payload) => cachedRepos(payload.folder, payload.fresh === true));
+    dispatcher.register('git.repos', async (payload) => {
+        await refuse(payload.folder);
+        return await cachedRepos(payload.folder, payload.fresh === true);
+    });
 
-    dispatcher.register('git.log', (payload) => readLog(payload.cwd, payload.limit, payload.cursor));
+    dispatcher.register('git.log', async (payload) => {
+        await refuse(payload.cwd);
+        return await readLog(payload.cwd, payload.limit, payload.cursor);
+    });
 
-    dispatcher.register('git.authors', async (payload) => ({ authors: await authorPictures.authorsOf(payload.cwd) }));
+    dispatcher.register('git.authors', async (payload) => {
+        await refuse(payload.cwd);
+        return { authors: await authorPictures.authorsOf(payload.cwd) };
+    });
 
     dispatcher.register('git.capabilities', () => readCapabilities(providers));
 
     /* Progress streams while the git runs; the reply lands after. */
-    dispatcher.register('git.action', (payload, client) => actions.run(payload, progressTo(client, payload.cwd, payload.actionId)));
+    dispatcher.register('git.action', async (payload, client) => {
+        await refuse(payload.cwd);
+        return await actions.run(payload, progressTo(client, payload.cwd, payload.actionId));
+    });
 
     /*
      * A person's client putting a project on this machine: the folder is judged like a file request's
@@ -260,7 +326,7 @@ export function registerGitHandlers(
     });
 
     dispatcher.register('git.ignoredFiles', async (payload) => {
-        await machineHome?.refuse(payload.cwd);
+        await refuse(payload.cwd);
         return listIgnoredFiles(payload.cwd);
     });
 
@@ -270,15 +336,25 @@ export function registerGitHandlers(
         return {};
     });
 
-    dispatcher.register('git.conflicts', (payload) => readConflicts(payload.cwd));
+    dispatcher.register('git.conflicts', async (payload) => {
+        await refuse(payload.cwd);
+        return await readConflicts(payload.cwd);
+    });
 
-    dispatcher.register('git.conflict', (payload) => readConflict(payload.cwd, payload.path));
+    dispatcher.register('git.conflict', async (payload) => {
+        await refuseFiles(payload.cwd, [payload.path]);
+        return await readConflict(payload.cwd, payload.path);
+    });
 
-    dispatcher.register('git.resolve', async (payload) => ({ remaining: await resolveConflict(payload) }));
+    dispatcher.register('git.resolve', async (payload) => {
+        await refuseFiles(payload.cwd, [payload.path]);
+        return { remaining: await resolveConflict(payload) };
+    });
 
-    dispatcher.register('git.operation', (payload, client) =>
-        runOperation(payload.cwd, payload.action, payload.actionId, progressTo(client, payload.cwd, payload.actionId))
-    );
+    dispatcher.register('git.operation', async (payload, client) => {
+        await refuse(payload.cwd);
+        return await runOperation(payload.cwd, payload.action, payload.actionId, progressTo(client, payload.cwd, payload.actionId));
+    });
 
     /* An agent CLI behind a cancellable action: `git.cancel` with its id kills what it spawned. */
     const runAgent = async <T>(actionId: string, provider: AgentKind | undefined, run: (options: AgentRunOptions) => Promise<T>): Promise<T> => {
@@ -294,13 +370,16 @@ export function registerGitHandlers(
         }
     };
 
-    dispatcher.register('git.resolveAi', (payload) =>
-        runAgent(payload.actionId, payload.provider, async (options) =>
-            resolveWithAgent(payload.cwd, payload.path, await readConflicts(payload.cwd), providers, options)
-        )
-    );
+    dispatcher.register('git.resolveAi', async (payload) => {
+        await refuseFiles(payload.cwd, [payload.path]);
 
-    dispatcher.register('git.suggestMessage', (payload) =>
-        runAgent(payload.actionId, payload.provider, (options) => suggestMessage(payload.cwd, providers, options))
-    );
+        return await runAgent(payload.actionId, payload.provider, async (options) =>
+            resolveWithAgent(payload.cwd, payload.path, await readConflicts(payload.cwd), providers, options)
+        );
+    });
+
+    dispatcher.register('git.suggestMessage', async (payload) => {
+        await refuse(payload.cwd);
+        return await runAgent(payload.actionId, payload.provider, (options) => suggestMessage(payload.cwd, providers, options));
+    });
 }
