@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { connect } from 'node:net';
+import { KeyedSerializer } from '@adecore/utils/async';
 import type { LaunchConfigKind, LaunchHeld, LaunchStartResult, LaunchState, LaunchStatus } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
@@ -122,6 +123,8 @@ export class LaunchRunner {
     private readonly resolveEnv: LaunchEnvResolver;
     private readonly sinks = new ClientSinks();
     private readonly runs = new Map<string, Run>();
+    // Per project, since a group starts several launches: a start checks what runs and only sets its run after awaits.
+    private readonly starts = new KeyedSerializer();
     // The projects whose autostart already ran since they were opened, so a second client opening one starts nothing.
     private readonly autostarted = new Set<string>();
     private readonly stopExit: () => void;
@@ -179,14 +182,18 @@ export class LaunchRunner {
      * Runs a task in a worktree for the daemon itself, after a chat there settled; the caller checked its
      * approval for worktrees. A launch that runs already, wherever it runs, is left alone.
      */
-    async startIn(resolved: ResolvedLaunch, worktree: string): Promise<WorktreeRun> {
-        await this.checkCwd(resolved.folder, resolved.cwd);
-        const previous = this.runs.get(launchSessionIdOf(resolved.projectId, resolved.launch.id));
-        if (previous && previous.state !== 'exited') {
-            return { outcome: 'running' };
-        }
-        const run = await this.spawn(resolved, worktree);
-        return { outcome: 'started', ended: run.exited.then(() => statusOf(run)) };
+    startIn(resolved: ResolvedLaunch, worktree: string): Promise<WorktreeRun> {
+        return this.starts.run(resolved.projectId, async () => {
+            await this.checkCwd(resolved.folder, resolved.cwd);
+            const previous = this.runs.get(launchSessionIdOf(resolved.projectId, resolved.launch.id));
+            if (previous && previous.state !== 'exited') {
+                return { outcome: 'running' };
+            }
+
+            const run = await this.spawn(resolved, worktree);
+
+            return { outcome: 'started', ended: run.exited.then(() => statusOf(run)) };
+        });
     }
 
     /* Stops what runs of the launch and starts it again; a launch that did not run just starts. */
@@ -262,7 +269,11 @@ export class LaunchRunner {
         }
     }
 
-    private async run(projectId: string, launchId: string, options: LaunchStartOptions, restart: boolean): Promise<LaunchStartResult> {
+    private run(projectId: string, launchId: string, options: LaunchStartOptions, restart: boolean): Promise<LaunchStartResult> {
+        return this.starts.run(projectId, () => this.runNow(projectId, launchId, options, restart));
+    }
+
+    private async runNow(projectId: string, launchId: string, options: LaunchStartOptions, restart: boolean): Promise<LaunchStartResult> {
         const members = await this.membersOf(projectId, launchId);
         for (const member of members) {
             await this.checkCwd(member.folder, member.cwd);

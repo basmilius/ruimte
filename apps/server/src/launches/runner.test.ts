@@ -115,6 +115,20 @@ describe('LaunchRunner', () => {
         expect(runner.labelOf(launchSessionIdOf('p1', 'run-server'))).toBe('Run server');
     });
 
+    test('two starts of one launch at once run it once, and a start from the worktree beside them leaves it alone', async () => {
+        await store.save('p1', 0, [server]);
+        const [resolved] = await store.resolveAll('p1');
+        const results = await Promise.all([
+            runner.start('p1', 'run-server', { actor: 'person' }),
+            runner.start('p1', 'run-server', { actor: 'person' }),
+            runner.startIn(resolved!, folder)
+        ]);
+
+        expect(results).toEqual([{ outcome: 'started' }, { outcome: 'started' }, { outcome: 'running' }]);
+        expect(adapter.spawned).toHaveLength(1);
+        expect(runner.list()).toEqual([expect.objectContaining({ launchId: 'run-server', state: 'starting' })]);
+    });
+
     test('a task runs at once and ends with the exit code of its command', async () => {
         await store.save('p1', 0, [tests]);
         await runner.start('p1', 'run-tests', { actor: 'person' });
