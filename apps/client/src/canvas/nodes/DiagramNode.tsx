@@ -35,7 +35,7 @@ export function DiagramNode({ id }: { id: string }) {
     const box = layout?.bounds;
 
     return (
-        <div className="h-full w-full" onDoubleClick={() => viewId && showView(viewId)}>
+        <div className="h-full w-full" data-opens-view onDoubleClick={() => viewId && showView(viewId)}>
             {mirror?.gone && (
                 <EmptyState icon={Workflow} className="h-full">
                     {t('diagram.gone')}

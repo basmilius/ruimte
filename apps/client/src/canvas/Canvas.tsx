@@ -116,12 +116,12 @@ type PointerCapture = { element: HTMLElement; pointerId: number };
 /* Where a press began and whether its node had the keyboard then, read again by the double-click it may start. */
 type Press = { nodeId: string | null; active: boolean; group: boolean };
 
-/* Parts of a node that keep their own double-click: a control or a port answers its own press. */
-const OWN_DOUBLE_CLICK = 'button, input, select, [data-port]';
+/* Parts of a node that keep their own double-click: a control or a port answers its own press, and a drawing or diagram opens its view. */
+const OWN_DOUBLE_CLICK = 'button, input, select, [data-port], [data-opens-view]';
 
 /*
- * A double-click whose first press found a node without the keyboard zooms to that node, wherever on it,
- * its title too: that press hands the keyboard to the body, which would take it from a rename field. The
+ * A double-click whose first press found a node without the keyboard zooms to that node, wherever on it
+ * but `OWN_DOUBLE_CLICK`, its title too: that press hands the keyboard to the body, which would take it from a rename field. The
  * first press is the one that counts, since by the second the node has the keyboard already.
  */
 function zoomPressOf(presses: [Press | null, Press | null], target: HTMLElement): string | null {

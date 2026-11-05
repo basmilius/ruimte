@@ -3,12 +3,14 @@ import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { act } from 'react';
 import { liveCanvas } from '@/state/canvas';
 import { menuItem, openCanvasPage, openContextMenu, type CanvasPage } from '../../testing/canvas-page';
-import { clickOn, openSubmenu } from '../../testing/dom';
+import { clickOn, openSubmenu, until } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 
 const SMALL: ProjectNode = { id: 'small', kind: 'note', title: 'Small', body: 'Hi', x: 2000, y: 0, w: 200, h: 100 };
 const LARGE: ProjectNode = { id: 'large', kind: 'note', title: 'Large', body: 'Hello', x: 0, y: 0, w: 1800, h: 1000 };
-const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [SMALL, LARGE], texts: [], edges: [], layouts: [] };
+const SKETCH: ProjectNode = { id: 'sketch', kind: 'drawing', title: 'Sketch', viewId: 'drawing-sketch', x: 5000, y: 0, w: 400, h: 300 };
+const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [SMALL, LARGE, SKETCH], texts: [], edges: [], layouts: [] };
+const DRAWING = { kind: 'drawing', id: 'drawing-sketch', name: 'Sketch' } as unknown as ProjectCanvasView;
 
 let canvas: CanvasPage;
 
@@ -55,7 +57,9 @@ async function doubleClickAsChromium(element: Element, clicksTo: Element = eleme
 }
 
 beforeEach(async () => {
-    canvas = await openCanvasPage(new FakeMachine(), [MAIN], SMALL.id);
+    const machine = new FakeMachine();
+    machine.answer('drawing.open', () => ({ document: { version: 1, rev: 1, elements: [] } }) as never);
+    canvas = await openCanvasPage(machine, [MAIN, DRAWING], SMALL.id);
     await act(async () => {
         liveCanvas('main')!.setViewport({ w: 1280, h: 800 });
         liveCanvas('main')!.setCamera({ x: 0, y: 0, zoom: 0.3 });
@@ -114,6 +118,18 @@ describe('zoom to node', () => {
         await doubleClickAsChromium(titleOf(LARGE.id));
         expect(zoom()).toBe(0.3);
         expect(frameOf(LARGE.id).querySelector('header input')).not.toBeNull();
+    });
+
+    test('a double-click on the title of a drawing without the keyboard zooms', async () => {
+        await doubleClickAsChromium(titleOf(SKETCH.id));
+        expect(zoom()).toBeGreaterThan(0.3);
+    });
+
+    test('a double-click on what a drawing shows opens its view, as before zoom to node', async () => {
+        await doubleClickAsChromium(bodyOf(SKETCH.id).querySelector('[data-opens-view]')!);
+        // The drawing's own dock is up in place of the canvas.
+        await until(() => canvas.page.host.querySelector('[data-drawing-chrome]') !== null);
+        expect(frameOf(SKETCH.id)).toBeNull();
     });
 
     test('a double-click on the empty canvas still places a text', async () => {

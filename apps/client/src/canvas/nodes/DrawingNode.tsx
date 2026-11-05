@@ -64,7 +64,7 @@ export function DrawingNode({ id }: { id: string }) {
     }, [elements, width, height, paletteKey, fontReady]);
 
     return (
-        <div ref={boxRef} className="h-full w-full" onDoubleClick={() => viewId && showView(viewId)}>
+        <div ref={boxRef} className="h-full w-full" data-opens-view onDoubleClick={() => viewId && showView(viewId)}>
             {mirror?.gone && (
                 <EmptyState icon={PenTool} className="h-full">
                     {t('drawing.gone')}
