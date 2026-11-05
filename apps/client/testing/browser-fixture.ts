@@ -43,6 +43,13 @@ export async function waitInPage(
     }
 }
 
+// DIAG: temporary, removed once the runner is understood.
+let diagFrom = 0;
+
+export function diag(label: string, detail = ''): void {
+    console.log('DIAG', Math.round(performance.now() - diagFrom), label, detail);
+}
+
 // What Vite puts in `import.meta.env` for the client; Bun.build leaves it undefined.
 const viteEnv = { 'import.meta.env': JSON.stringify({ DEV: false, PROD: true, MODE: 'test', BASE_URL: '/' }) };
 
@@ -71,6 +78,8 @@ export async function withBrowserFixture(
     run: (view: InstanceType<typeof Bun.WebView>) => Promise<void>,
     options: BrowserFixtureOptions = {}
 ): Promise<void> {
+    const diagStart = performance.now();
+    diagFrom = diagStart;
     const directory = await mkdtemp(join(tmpdir(), 'ruimte-canvas-'));
     let view: InstanceType<typeof Bun.WebView> | null = null;
     let server: ReturnType<typeof Bun.serve> | null = null;
@@ -183,7 +192,16 @@ export async function withBrowserFixture(
         if (errors.length > 0) {
             throw new Error(errors.join('\n'));
         }
+        // DIAG: temporary, removed once the runner is understood.
+        console.log(
+            'DIAG fixture',
+            Math.round(performance.now() - diagStart),
+            await view.evaluate<string>(
+                `(() => { const gl = document.createElement('canvas').getContext('webgl2'); const info = gl?.getExtension('WEBGL_debug_renderer_info'); return JSON.stringify({ cores: navigator.hardwareConcurrency, webgl: gl ? gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER) : null, fonts: document.fonts.status }); })()`
+            )
+        );
         await run(view);
+        console.log('DIAG ran', Math.round(performance.now() - diagStart));
     } finally {
         view?.close();
         await server?.stop(true);
