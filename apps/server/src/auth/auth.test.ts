@@ -84,6 +84,39 @@ describe('AuthStore', () => {
         expect(await store.admitStatement(statement(publicKey))).toEqual({ refused: 'revoked' });
         expect(await store.sessionForPublicKey(publicKey)).toBeNull();
     });
+
+    test.each([
+        ['leaving first', 'leave' as const],
+        ['admitting first', 'admit' as const]
+    ])('leaving the account holds against a statement admitted at the same time, %s', async (_order, first) => {
+        await store.bindAccount('owner');
+        const { publicKey } = generateKeyPair();
+        const leave = () => store.leaveAccount();
+        const admit = () => store.admitStatement(statement(publicKey));
+        await (first === 'leave' ? Promise.all([leave(), admit()]) : Promise.all([admit(), leave()]));
+
+        const reopened = new AuthStore(home, () => clock);
+        expect(await reopened.accountBinding()).toBeNull();
+        expect(await reopened.sessionForPublicKey(publicKey)).toBeNull();
+    });
+
+    test.each([
+        ['revoking first', 'revoke' as const],
+        ['admitting first', 'admit' as const]
+    ])('a revoke holds against another key admitted at the same time, %s', async (_order, first) => {
+        const revokedKey = generateKeyPair().publicKey;
+        const otherKey = generateKeyPair().publicKey;
+        const sessionId = await admitClient(store, revokedKey);
+        const reloaded = new AuthStore(home, () => clock);
+        const revoke = () => reloaded.revoke(sessionId);
+        const admit = () => reloaded.admitStatement(statement(otherKey));
+        await (first === 'revoke' ? Promise.all([revoke(), admit()]) : Promise.all([admit(), revoke()]));
+
+        const reopened = new AuthStore(home, () => clock);
+        expect(await reopened.sessionForPublicKey(revokedKey)).toBeNull();
+        expect(await reopened.sessionForPublicKey(otherKey)).toEqual(expect.any(String));
+        expect(await reopened.admitStatement({ ...statement(revokedKey), nonce: 'm'.repeat(22) })).toEqual({ refused: 'revoked' });
+    });
 });
 
 describe('access', () => {

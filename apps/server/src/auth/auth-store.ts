@@ -154,8 +154,9 @@ export interface AccountChange {
  */
 export class AuthStore {
     readonly path: string;
-    private state: State | null = null;
-    private readonly writes = new Serializer();
+    private state: Promise<State> | null = null;
+    // Every change reads, decides and writes inside one turn here, so two changes at once never undo each other.
+    private readonly transitions = new Serializer();
     private readonly now: () => number;
     private readonly leftListeners: Array<() => Promise<void> | void> = [];
 
@@ -174,7 +175,11 @@ export class AuthStore {
         if (!isPublicKey(entry.publicKey)) {
             return { refused: 'bad-key' };
         }
-        const state = await this.load();
+
+        return this.transition((state) => this.admit(state, entry));
+    }
+
+    private async admit(state: State, entry: StatementEntry): Promise<StatementAdmission> {
         const now = this.now();
         const spentNonces = state.spentNonces.filter((spent) => spent.until >= now);
         if (spentNonces.some((spent) => spent.nonce === entry.nonce)) {
@@ -235,17 +240,21 @@ export class AuthStore {
      * likely came from this account before accounts were written down, and nothing says otherwise.
      */
     async bindAccount(accountId: string): Promise<AccountChange> {
-        const state = await this.load();
-        if (state.account !== undefined && state.account !== null) {
-            return { bound: state.account.id === accountId, revoked: [] };
-        }
-        const revoked = state.sessions.filter((record) => record.account !== undefined && record.account !== accountId);
-        await this.save({
-            ...state,
-            sessions: state.sessions.filter((record) => !revoked.includes(record)),
-            account: { id: accountId, since: this.now() }
+        return this.transition(async (state) => {
+            if (state.account !== undefined && state.account !== null) {
+                return { bound: state.account.id === accountId, revoked: [] };
+            }
+
+            const revoked = state.sessions.filter((record) => record.account !== undefined && record.account !== accountId);
+
+            await this.save({
+                ...state,
+                sessions: state.sessions.filter((record) => !revoked.includes(record)),
+                account: { id: accountId, since: this.now() }
+            });
+
+            return { bound: true, revoked: revoked.map((record) => record.id) };
         });
-        return { bound: true, revoked: revoked.map((record) => record.id) };
     }
 
     /*
@@ -254,10 +263,15 @@ export class AuthStore {
      * A key that loses its access this way is not revoked: the same device may come back through the next account.
      */
     async leaveAccount(): Promise<string[]> {
-        const state = await this.load();
-        const left = state.account?.id;
-        const revoked = state.sessions.filter((record) => record.account === undefined || record.account === left);
-        await this.save({ ...state, sessions: state.sessions.filter((record) => !revoked.includes(record)), account: null });
+        const revoked = await this.transition(async (state) => {
+            const left = state.account?.id;
+            const leaving = state.sessions.filter((record) => record.account === undefined || record.account === left);
+            await this.save({ ...state, sessions: state.sessions.filter((record) => !leaving.includes(record)), account: null });
+
+            return leaving;
+        });
+
+        // Outside the transition, so a listener that asks the store something does not wait on itself.
         for (const listener of this.leftListeners) {
             await listener();
         }
@@ -308,34 +322,41 @@ export class AuthStore {
 
     /* Notes that a client proved its key just now; false when it was revoked since it was looked up. */
     async noteSeen(sessionId: string): Promise<boolean> {
-        const state = await this.load();
-        const record = state.sessions.find((entry) => entry.id === sessionId);
-        if (!record || !this.attested(record)) {
-            return false;
-        }
-        record.lastSeenAt = this.now();
-        await this.save(state);
-        return true;
+        return this.transition(async (state) => {
+            const record = state.sessions.find((entry) => entry.id === sessionId);
+            if (!record || !this.attested(record)) {
+                return false;
+            }
+
+            record.lastSeenAt = this.now();
+            await this.save(state);
+
+            return true;
+        });
     }
 
     async setPush(sessionId: string, subscription: PushSubscribePayload): Promise<boolean> {
-        const state = await this.load();
-        const record = state.sessions.find((entry) => entry.id === sessionId);
-        if (!record) {
-            return false;
-        }
-        record.push = PushSubscribePayloadSchema.parse(subscription);
-        await this.save(state);
-        return true;
+        return this.transition(async (state) => {
+            const record = state.sessions.find((entry) => entry.id === sessionId);
+            if (!record) {
+                return false;
+            }
+
+            record.push = PushSubscribePayloadSchema.parse(subscription);
+            await this.save(state);
+
+            return true;
+        });
     }
 
     async removePush(sessionId: string, handle: string): Promise<void> {
-        const state = await this.load();
-        const record = state.sessions.find((entry) => entry.id === sessionId && entry.push?.handle === handle);
-        if (record) {
-            delete record.push;
-            await this.save(state);
-        }
+        await this.transition(async (state) => {
+            const record = state.sessions.find((entry) => entry.id === sessionId && entry.push?.handle === handle);
+            if (record) {
+                delete record.push;
+                await this.save(state);
+            }
+        });
     }
 
     async pushSubscriptions(): Promise<Array<{ sessionId: string; subscription: PushSubscribePayload }>> {
@@ -359,25 +380,37 @@ export class AuthStore {
      * signed in to the account comes back only under a key of its own that is new.
      */
     async revoke(id: string): Promise<boolean> {
-        const state = await this.load();
-        const record = state.sessions.find((entry) => entry.id === id);
-        if (!record) {
-            return false;
-        }
-        const key = record.publicKey;
-        const revokedKeys = state.revokedKeys.includes(key) ? state.revokedKeys : [...state.revokedKeys, key];
-        const sessions = state.sessions.filter((entry) => entry.id !== id && entry.publicKey !== key);
-        await this.save({ ...state, sessions, revokedKeys });
-        return true;
+        return this.transition(async (state) => {
+            const record = state.sessions.find((entry) => entry.id === id);
+            if (!record) {
+                return false;
+            }
+
+            const key = record.publicKey;
+            const revokedKeys = state.revokedKeys.includes(key) ? state.revokedKeys : [...state.revokedKeys, key];
+            const sessions = state.sessions.filter((entry) => entry.id !== id && entry.publicKey !== key);
+            await this.save({ ...state, sessions, revokedKeys });
+
+            return true;
+        });
     }
 
-    private async load(): Promise<State> {
-        if (this.state) {
-            return this.state;
-        }
+    private transition<T>(work: (state: State) => Promise<T>): Promise<T> {
+        return this.transitions.run(async () => work(await this.load()));
+    }
+
+    // One read of the file per store, shared by every caller, so a late first read never replaces a change made since.
+    private load(): Promise<State> {
+        this.state ??= this.read();
+
+        return this.state;
+    }
+
+    private async read(): Promise<State> {
         try {
             const parsed = FileSchema.safeParse(JSON.parse(await readFile(this.path, 'utf8')));
-            this.state = parsed.success
+
+            return parsed.success
                 ? {
                       sessions: parsed.data.sessions.flatMap((record) => statementRecord(record) ?? []),
                       spentNonces: parsed.data.spentNonces ?? [],
@@ -389,17 +422,15 @@ export class AuthStore {
             if (!isNotFound(e)) {
                 console.warn('The auth file would not parse; starting with no sessions:', errorText(e));
             }
-            this.state = emptyState(isNotFound(e) ? undefined : null);
+
+            return emptyState(isNotFound(e) ? undefined : null);
         }
-        return this.state;
     }
 
+    /* Only from inside a transition, which keeps the writes in order as well. */
     private async save(state: State): Promise<void> {
-        this.state = state;
-        const text = `${JSON.stringify(state, null, 2)}\n`;
-        await this.writes.run(async () => {
-            await mkdir(join(this.path, '..'), { recursive: true, mode: 0o700 });
-            await writeAtomic(this.path, text, 0o600, { durable: true });
-        });
+        this.state = Promise.resolve(state);
+        await mkdir(join(this.path, '..'), { recursive: true, mode: 0o700 });
+        await writeAtomic(this.path, `${JSON.stringify(state, null, 2)}\n`, 0o600, { durable: true });
     }
 }
