@@ -5,6 +5,7 @@ import { ProjectNodeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { OutboxStore } from '../outbox/outbox.ts';
+import { isRoutineOpener } from '../routines/routines.ts';
 import type { SessionManager } from '../sessions/manager.ts';
 
 const HiddenAgentSchema = z.object({
@@ -86,7 +87,7 @@ export class HiddenAgentStore {
     /* A routine's run chats stay without a place of their own, and outlive their routine. */
     async pruneOrphans(projectId: string, placed: ReadonlySet<string>): Promise<void> {
         const agents = this.inProject(projectId);
-        const kept = new Set([...placed, ...agents.flatMap((agent) => (agent.openedBy.startsWith('routine:') ? [agent.openedBy] : []))]);
+        const kept = new Set([...placed, ...agents.flatMap((agent) => (isRoutineOpener(agent.openedBy) ? [agent.openedBy] : []))]);
         let added = true;
         while (added) {
             added = false;

@@ -102,6 +102,10 @@ export function routineOpener(routineId: string): string {
     return `routine:${routineId}`;
 }
 
+export function isRoutineOpener(openedBy: string): boolean {
+    return openedBy.startsWith('routine:');
+}
+
 /* Everything an approval covers, so a change to any of it asks again. Title and output key only label the run. */
 export function digestOf(routine: Routine): string {
     const what =

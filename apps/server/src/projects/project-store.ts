@@ -1085,8 +1085,15 @@ export class ProjectStore {
         this.open.delete(projectId);
     }
 
-    /* Whether the last client out closed this project, which puts it under Recent until someone opens it again. */
+    /*
+     * Whether the last client out closed this project, which puts it under Recent until someone opens it again.
+     * A holder still works in it: another machine's channel holds a project without taking it out of Recent.
+     */
     async isClosed(projectId: string): Promise<boolean> {
+        if (this.holds.holders(projectId) > 0) {
+            return false;
+        }
+
         const entry = await this.registry.entry(projectId).catch(() => null);
 
         return entry?.closedAt != null;

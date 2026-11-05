@@ -25,6 +25,7 @@ Decisions the code cannot show. Do not reverse one without asking Bas.
 - The wake runs through the outbox; an observer only notes. Each message is one hop past the turn that sent it (`deliverToChat` in `@adecore/agents`); a turn a person or task opened is hop 0, and past hop 4 a message only waits. One that lands in a turn opens a turn when that one finishes (not after a Stop or an error), or joins it through `steerNotices` while `steerMessages` is on, which raises that turn's hop. A PR-watch's turn wakes nobody. A terminal is never woken.
 - A message is not delivered again on its own after the parent turn that accepted it fails.
 - A chat in a project a person closed is woken by nothing, a resume after a limit included. Its entries wait, and run once the project is open again.
+- That wait holds no work of a peer or a routine, along its whole line of children, and nothing in a project that still has a holder: those start under Recent and nobody comes to open the project for them, so a wait would leave their task open or turn every next run into `overlap`. `start-agent` never waits.
 
 ### When a task settles
 
