@@ -1,8 +1,7 @@
-import { webglTerminals } from '@adecore/terminal';
 import { MAX_TERMINAL_READ_LINES } from '@ruimte/actions';
 import type { Terminal } from '@xterm/xterm';
 import { browserRegistry, useBrowser } from '@/browser/registry';
-import { focusedCanvas, type CanvasState } from '@/state/canvas';
+import { focusedCanvas } from '@/state/canvas';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 
 /* What a window keeps of a terminal out of sight: the lines `terminal.read` may ask for, and how many of them its screen showed. */
@@ -18,7 +17,6 @@ interface LastScreen {
  */
 const live = new Map<string, Terminal>();
 const lastScreens = new Map<string, LastScreen>();
-const nodeOf = new WeakMap<Terminal, string>();
 /* Live terminals whose node left the document; the node leaves before React unmounts it, so its unmount must not keep a screen. */
 const forgotten = new WeakSet<Terminal>();
 
@@ -44,7 +42,6 @@ function screenLines(term: Terminal, limit = Infinity): string[] {
 export function registerTerminal(endpointId: string, nodeId: string, term: Terminal): () => void {
     const key = endpointKey(endpointId, nodeId);
     live.set(key, term);
-    nodeOf.set(term, nodeId);
     return () => {
         if (live.get(key) === term) {
             live.delete(key);
@@ -90,19 +87,12 @@ export function forgetScreen(endpointId: string, nodeId: string): void {
     lastScreens.delete(key);
 }
 
+/* What the desktop smoke run (`apps/desktop/src/smoke.ts`) drives a browser node through. */
 interface TerminalTestHooks {
-    /* The machine defaults to the active one, which is the only one a canvas shows today. */
-    terminalText(nodeId: string, endpointId?: string): string | null;
-    terminalSize(nodeId: string, endpointId?: string): { cols: number; rows: number } | null;
     /* Node ids on the canvas, in stacking order. */
     nodeIds(): string[];
-    /* Node ids holding a WebGL renderer, highest ranked first. */
-    webglContexts(): string[];
-    /* What a browser node's page reports, for the desktop smoke test. */
     browserState(nodeId: string): unknown;
     browserNavigate(nodeId: string, url: string): void;
-    /* The canvas store itself, for driving the app from a test. */
-    canvas(): CanvasState;
 }
 
 declare global {
@@ -111,31 +101,16 @@ declare global {
     }
 }
 
-/* The WebGL renderer leaves no text in the DOM, so an end-to-end test reads the buffer through here. */
 export function exposeTerminalTestHooks(): void {
     window.ruimte = {
-        terminalText(nodeId, endpointId) {
-            const term = live.get(endpointKey(endpointId ?? currentEndpointId(), nodeId));
-            return term ? screenLines(term).join('\n') : null;
-        },
-        terminalSize(nodeId, endpointId) {
-            const term = live.get(endpointKey(endpointId ?? currentEndpointId(), nodeId));
-            return term ? { cols: term.cols, rows: term.rows } : null;
-        },
         nodeIds() {
             return focusedCanvas().getState().order;
-        },
-        webglContexts() {
-            return webglTerminals().flatMap((term) => nodeOf.get(term) ?? []);
         },
         browserState(nodeId) {
             return useBrowser.getState().byKey[endpointKey(currentEndpointId(), nodeId)] ?? null;
         },
         browserNavigate(nodeId, url) {
             browserRegistry.navigate(endpointKey(currentEndpointId(), nodeId), url);
-        },
-        canvas() {
-            return focusedCanvas().getState();
         }
     };
 }

@@ -1,6 +1,6 @@
 [test]
-# Real shells, watchers and sockets run through `test:integration`, browser checks through `test:browser`
-# and the tests that need a page through `test:dom`. An extension's `test/` runs under `ruimte extension test`,
+# Real shells, watchers and sockets run through `test:integration` and the tests that need a page
+# through `test:dom`. An extension's `test/` runs under `ruimte extension test`,
 # against its fake host (`apps/server/src/cli/extension-test.integration.test.ts`).
 pathIgnorePatterns = ["**/*.integration.test.ts", "**/*.dom.test.tsx", "**/docs/reports/**", "extensions/*/test/**", "extensions/poc/*/test/**"]
 # The client's English words, so a pure function that reads one off i18next is testable
@@ -8,6 +8,6 @@ pathIgnorePatterns = ["**/*.integration.test.ts", "**/*.dom.test.tsx", "**/docs/
 # since the root has no copy of the library under the isolated install.
 # No React Compiler here: a unit test renders once, to static markup, where its memoizing cannot
 # show, and Babel in every isolated test file made the run many times slower. The DOM run
-# (`dom.bunfig.toml`) and the browser suite test the compiled client.
+# (`dom.bunfig.toml`) tests the compiled client.
 # The last one makes every process start fail (`scripts/no-process-preload.ts`).
 preload = ["./apps/client/node_modules/@adecore/ui/src/testing/dedupe.ts", "./apps/client/test-preload.ts", "./scripts/no-process-preload.ts"]

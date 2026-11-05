@@ -69,7 +69,7 @@ Terminal file links resolve a relative path only with cwd metadata attached to t
 
 The output-cwd hooks share the isolated bootstrap and keep their incoming status. A cwd notification never acknowledges input readiness or bypasses the permit claim.
 
-Run the cwd performance gate on its own, apart from the browser tests and typechecks; the unit suite does not run it:
+Run the cwd performance gate on its own, apart from the typechecks; the unit suite does not run it:
 
 ```sh
 bun --conditions=source apps/server/scripts/benchmark-output-cwd.ts \
@@ -87,4 +87,4 @@ Each case writes 50,000 rows after filling scrollback, in one burst or in 128-ro
 - A profile that removes or replaces the ZLE hooks turns the integration off.
 - Real-shell validation covers zsh on macOS. Linux and two physical machines are untried.
 
-A browser test drives a fence from ADE CORE's real chat rendering through Ruimte's host and dispatcher into a real zsh editor. Real-shell regressions for each race are in `apps/server/src/sessions`.
+Real-shell regressions for each race are in `apps/server/src/sessions`.

@@ -9,8 +9,7 @@ import { withViteGlobs } from './vite-glob-transform';
 
 /*
  * The React Compiler over the client and ADE CORE's React sources the way Vite hands it them
- * (`react-compiler.ts`), with the runtime behind the client's own: for the DOM run's preload and the
- * browser fixture's bundle alike. What it made is kept on disk with Vite's (`react-compiler-cache.ts`).
+ * (`react-compiler.ts`), with the runtime behind the client's own, for the DOM run's preload. What it made is kept on disk with Vite's (`react-compiler-cache.ts`).
  */
 
 const cache = new CompilerCache();

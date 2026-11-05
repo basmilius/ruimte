@@ -1,3 +1,2 @@
 [test]
-# Browser checks run separately through `bun run test:browser`.
-pathIgnorePatterns = ["**/node_modules/**", "**/*.browser.integration.test.ts"]
+pathIgnorePatterns = ["**/node_modules/**"]

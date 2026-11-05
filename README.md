@@ -59,7 +59,6 @@ bun dev
 | `bun run test:integration` | All automatic integration tests, including the compiled daemon and npm launcher (`--suite core` for the core only) |
 | `bun run test:package` | The packaged daemon |
 | `bun run test:devices` | Tests that need a running simulator or device, on request only |
-| `bun run test:browser` | Browser and Electron checks, on request and nightly in CI (builds the client first) |
 | `bun run test:timings` | Measures the per-file durations CI balances its shards by |
 
 How CI splits these jobs is in `CLAUDE.md` ("Conventions") and `.github/workflows/ci.yml`.
