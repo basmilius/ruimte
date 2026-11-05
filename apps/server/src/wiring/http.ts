@@ -1,5 +1,4 @@
 import type { Server } from 'bun';
-import { join } from 'node:path';
 import {
     MACHINE_HEALTH_PATH,
     MACHINE_NOTIFY_PATH,
@@ -18,6 +17,7 @@ import {
 } from '@ruimte/contracts';
 import { AccountSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
+import { callerFolders } from '../agents/caller-folders.ts';
 import { HOOKS_PATH, handleHookRequest } from '../agents/hook-receiver.ts';
 import { crossOriginHeaders, decideAccess, handleLocalTicketRequest, isOwner, preflightHeaders, withHeaders } from '../auth/access.ts';
 import { handleLocalProofRequest } from '../auth/local-proof.ts';
@@ -300,7 +300,7 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     targetForToken: agents.targetForToken,
                     host: canvasHost,
                     uploads: input.artifacts.artifacts,
-                    callerFolders: (caller) => [join(config.home, 'attachments', caller), agents.visuals.workspacePath(caller)],
+                    callerFolders: (caller) => callerFolders(config.home, caller),
                     shotFolders: shotFolders(config.home)
                 });
             }

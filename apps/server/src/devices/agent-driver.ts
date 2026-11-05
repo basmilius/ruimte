@@ -1,5 +1,4 @@
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import {
     deviceTools,
@@ -11,6 +10,7 @@ import {
     type DeviceReference,
     type DeviceTool
 } from '@ruimte/contracts';
+import { callerFolders } from '../agents/caller-folders.ts';
 import { captureFile, pngSize, writeShot } from '../shots.ts';
 import { realTimers, type Timers } from '../timers.ts';
 import { DeviceClaims } from './device-claims.ts';
@@ -240,7 +240,7 @@ export class DeviceDriver {
 
     /* Where beside the project an agent may hand a device a file from: its chat's own folders and the system's temporary ones. */
     pathFolders(caller: string): string[] {
-        return [join(this.home, 'attachments', caller), join(this.home, 'chats', `${caller}.visuals`), ...this.tempFolders];
+        return [...callerFolders(this.home, caller), ...this.tempFolders];
     }
 
     find(reference: DeviceReference): Promise<DeviceInfo | null> {
