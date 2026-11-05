@@ -619,12 +619,12 @@ final class ChatPresentation {
         return nil
     }
 
-    /// Images stay a turn's visible result, and a workflow or a background sub-agent may still run after its turn ended.
+    /// Images and sub-agents stay a turn's visible result, and a workflow may still run after its turn ended.
     private static func stands(_ row: ChatTimelineEntry) -> Bool {
         switch row.items.first?.item {
         case .tool(let tool)? where row.kind == .message:
             UiGeneratedImage.isGeneration(tool) || tool.workflow != nil && tool.state == .running
-        case .subagent(let agent)? where row.kind == .subagent: agent.status == .running
+        case .subagent? where row.kind == .subagent: true
         default: false
         }
     }
