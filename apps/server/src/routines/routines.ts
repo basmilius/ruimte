@@ -5,6 +5,7 @@ import { isWithin } from '@adecore/utils/path';
 import {
     chatActivity,
     dueTimesBetween,
+    isDeclined,
     nextDue,
     ROUTINE_LIMITS,
     type AgentRoutine,
@@ -686,7 +687,6 @@ export class Routines {
                 };
             });
         const latest = this.deps.output.latest(projectId, routine.outputKey);
-        const declined = local.declined === digest;
         return {
             routine,
             projectId,
@@ -695,7 +695,7 @@ export class Routines {
             local,
             digest,
             approved,
-            ...(approved || declined ? {} : { held: madeBy === undefined ? ('outside' as const) : ('agent' as const) }),
+            ...(approved || isDeclined({ local, digest }) ? {} : { held: madeBy === undefined ? ('outside' as const) : ('agent' as const) }),
             ...(madeBy === undefined ? {} : { madeBy }),
             next: this.nextOf(folder, stored, this.deps.now()),
             runs,

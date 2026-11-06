@@ -1,5 +1,5 @@
 import { formatClock, formatDateTime, formatDay, formatDuration, formatElapsedShort } from '@adecore/ui/format';
-import type { CronProblem, RoutineEntry, RoutineRun, RoutineSchedule } from '@ruimte/contracts';
+import { isDeclined, type CronProblem, type RoutineEntry, RoutineRun, RoutineSchedule } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { awaitsApproval, type AgendaBlock, type CellItem } from '@/routines/agenda';
 
@@ -164,7 +164,7 @@ export function rowStatus(entry: RoutineEntry, timeZone: string): { tone: 'needs
     if (awaitsApproval(entry)) {
         return { tone: 'needs', text: i18next.t('routines:row.held') };
     }
-    if (entry.local.declined === entry.digest) {
+    if (isDeclined(entry)) {
         return { tone: 'muted', text: i18next.t('routines:row.declined') };
     }
     if (entry.local.pausedAt !== undefined) {

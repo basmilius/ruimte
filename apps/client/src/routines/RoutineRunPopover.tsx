@@ -4,7 +4,7 @@ import type { RoutineEntry, RoutineRun } from '@ruimte/contracts';
 import { LayoutGrid, Pencil, Play, SquareArrowOutUpRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useArtifactText } from '@/output/artifact-bytes';
-import { isTextMime } from '@/output/artifact-list';
+import { isPlainTextMime } from '@/output/artifact-list';
 import { useArtifact } from '@/output/use-artifact';
 import { revealNode } from '@/project/views';
 import { lookOfRun } from '@/routines/agenda';
@@ -136,7 +136,7 @@ function RunResult({ endpointId, artifactId, versionId, fallback }: { endpointId
     const artifact = useArtifact(endpointId, artifactId, answers);
     const version = artifact.status === 'ready' ? artifact.result.versions.find((candidate) => candidate.versionId === versionId) : undefined;
     const file = version?.files[0];
-    const textual = file !== undefined && isTextMime(file.mime);
+    const textual = file !== undefined && isPlainTextMime(file.mime);
     const text = useArtifactText(endpointId, textual ? { artifactId, versionId, file: 0 } : null, textual ? file : null);
     const lines =
         text.status === 'ready'

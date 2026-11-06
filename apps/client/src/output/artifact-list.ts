@@ -116,10 +116,11 @@ export function routinesOf(artifacts: readonly ArtifactSummary[]): string[] {
 /* A version Compare can put beside another: one file of text. */
 export function comparable(version: ArtifactVersion): boolean {
     const file = version.files[0];
-    return version.files.length === 1 && file !== undefined && isTextMime(file.mime);
+    return version.files.length === 1 && file !== undefined && isPlainTextMime(file.mime);
 }
 
-export function isTextMime(mime: string): boolean {
+/* Whether a file shows as lines of plain text; HTML is a page, so it is not. The daemon's `isTextMime` is wider: it asks what an agent can read. */
+export function isPlainTextMime(mime: string): boolean {
     return mime.startsWith('text/') && mime !== 'text/html';
 }
 

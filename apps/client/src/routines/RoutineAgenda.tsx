@@ -1,6 +1,6 @@
 import { EmptyState, Icon, Popover, ScrollArea, Switch } from '@adecore/ui';
 import { formatClock, formatDateTime } from '@adecore/ui/format';
-import type { RoutineEntry, RoutineKind } from '@ruimte/contracts';
+import { isDeclined, type RoutineEntry, type RoutineKind } from '@ruimte/contracts';
 import clsx from 'clsx';
 import { Bot, Pause, Rocket, SquareTerminal, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
@@ -235,7 +235,7 @@ function AgendaRow({
     const band = pausedBand(entry, blocks, week, now);
     const status = rowStatus(entry, timeZone);
     const paused = entry.local.pausedAt !== undefined;
-    const declined = entry.local.declined === entry.digest;
+    const declined = isDeclined(entry);
     const target = { projectId: entry.projectId, routineId: entry.routine.id };
     const subtitle =
         status.tone === 'needs' || declined

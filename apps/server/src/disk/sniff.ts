@@ -1,3 +1,5 @@
+import { isAsciiStl, isBinaryGltf, isBinaryStl, isUsdz } from '@ruimte/contracts';
+
 /*
  * What a file is, read from its first bytes. The name is what a person typed; these are what a
  * browser will act on, and the two are allowed to disagree.
@@ -103,39 +105,6 @@ function frameSync(bytes: Uint8Array): 'aac' | 'mpeg' | null {
     return known ? 'mpeg' : null;
 }
 
-// The extensions a USD layer can carry; the first one in a package is its root layer.
-const USD_LAYER = /\.usd[ac]?$/;
-
-/*
- * A USDZ package is a plain zip, so it is told from every other zip by the name of its first entry,
- * which the format requires to be the root layer.
- */
-function isUsdz(bytes: Uint8Array): boolean {
-    if (bytes.length < 30 || !startsWith(bytes, [0x50, 0x4b, 0x03, 0x04])) {
-        return false;
-    }
-    const nameLength = bytes[26] | (bytes[27] << 8);
-    return nameLength > 0 && bytes.length >= 30 + nameLength && USD_LAYER.test(latin1(bytes.subarray(30, 30 + nameLength)).toLowerCase());
-}
-
-// An STL has no magic: a binary one is an 80-byte header, a triangle count and 50 bytes per triangle.
-const STL_HEADER_BYTES = 84;
-const STL_TRIANGLE_BYTES = 50;
-
-function isBinaryStl(bytes: Uint8Array, size: number): boolean {
-    if (bytes.length < STL_HEADER_BYTES) {
-        return false;
-    }
-    const triangles = uint32(bytes, 80, true);
-    return triangles > 0 && size === STL_HEADER_BYTES + STL_TRIANGLE_BYTES * triangles;
-}
-
-// An ASCII STL opens a solid and says `facet normal` soon after, or closes it at once when it is empty.
-function isAsciiStl(bytes: Uint8Array): boolean {
-    const head = latin1(bytes).trimStart().toLowerCase();
-    return /^solid(\s|$)/.test(head) && (/\bfacet\s+normal\b/.test(head) || /\bendsolid\b/.test(head));
-}
-
 /*
  * The mime a file's first bytes claim, or null when nothing recognizes them. `size` is the whole
  * file's, which a binary STL is recognized by; it defaults to the bytes given, for a file read whole.
@@ -146,8 +115,7 @@ export function sniffMime(bytes: Uint8Array, size = bytes.length): string | null
             return mime;
         }
     }
-    // A binary glTF names its container version right after the magic; version 1 was a different format.
-    if (bytes.length >= 8 && startsWith(bytes, ascii('glTF')) && uint32(bytes, 4, true) === 2) {
+    if (isBinaryGltf(bytes)) {
         return 'model/gltf-binary';
     }
     if (isUsdz(bytes)) {
