@@ -1,8 +1,9 @@
-import { createGestureGate, type AppIpc } from '@adecore/shell';
+import { createGestureGate } from '@adecore/shell';
 import { editFrameOf, runGuestEdit } from '../guest-edit';
 import { contextMenuPayload, editableMenuTemplate, PREVIEW_ACTIONS, type BrowserContextAction, type GuestKind } from '../guest-menu';
 import { BROWSER_PARTITION, isExternalLink, PREVIEW_PARTITION } from '../web-guards';
 import { electron } from './electron';
+import type { DesktopIpc } from './ipc';
 
 const { BrowserWindow, Menu, session, shell, webContents } = electron;
 
@@ -57,7 +58,7 @@ export function routePreviewLinks(contents: Electron.WebContents): void {
 }
 
 /* The pages of browser and preview nodes: their context menu, their inspector and a picture of them. */
-export function installGuests(ipc: AppIpc, options: GuestsOptions): Guests {
+export function installGuests(ipc: DesktopIpc, options: GuestsOptions): Guests {
     const devtoolsWindows = new Map<number, Electron.BrowserWindow>();
     // The frame each guest's last right-click landed in, so copy and select all act where the person pointed.
     const menuFrames = new WeakMap<Electron.WebContents, Electron.WebFrameMain>();

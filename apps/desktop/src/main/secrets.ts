@@ -1,11 +1,11 @@
 import { join } from 'node:path';
-import type { AppIpc } from '@adecore/shell';
 import type { OpenAiCredentialStatus } from '@ruimte/desktop-bridge';
 import { liveTools, mintLiveSession, parseOpenAiLivePreferences } from '@ruimte/voice';
 import { databaseSecretFile, parseSecret, parseSecretKey } from '../database-bridge';
 import { heedBodyless } from '../net-response';
 import { fileSecretStore, type SecretStore } from '../secret-store';
 import { electron } from './electron';
+import type { DesktopIpc } from './ipc';
 
 const { app, net, safeStorage } = electron;
 
@@ -21,7 +21,7 @@ export interface MachineVoiceKey {
 }
 
 /* The OpenAI API key and the database passwords, which stay in the shell, encrypted with the OS keychain. */
-export function installSecrets(ipc: AppIpc, machineVoiceKey: MachineVoiceKey | null): InstalledSecrets {
+export function installSecrets(ipc: DesktopIpc, machineVoiceKey: MachineVoiceKey | null): InstalledSecrets {
     let openAiKeyStore: SecretStore | null = null;
 
     const openAiKeys = (): SecretStore => {

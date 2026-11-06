@@ -1,10 +1,10 @@
 import { join } from 'node:path';
-import type { AppIpc } from '@adecore/shell';
 import type { MachineMode } from '@ruimte/desktop-bridge';
 import { TELEMETRY_DSN, usageIngestUrl } from '@ruimte/telemetry';
 import { heedBodyless } from '../net-response';
 import { countFromPage, DesktopUsage, fileDesktopUsageStore, flushDesktopUsage, sendDesktopUsage, usageCounts, usageSettingOf } from '../usage';
 import { electron } from './electron';
+import type { DesktopIpc } from './ipc';
 import { telemetryBuild } from './telemetry';
 
 const { app, net } = electron;
@@ -30,7 +30,7 @@ interface UsageOptions {
 }
 
 /* Counts only in a release with a machine of its own; any other app takes no count from its page and keeps no file. */
-export function installUsage(ipc: AppIpc, options: UsageOptions): UsageHandle {
+export function installUsage(ipc: DesktopIpc, options: UsageOptions): UsageHandle {
     // Whatever the switch says: a build or a mode that never counts reads no file of the machine either.
     if (!usageCounts({ release: telemetryBuild(), mode: options.mode, setting: true })) {
         return IDLE;

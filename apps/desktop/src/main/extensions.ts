@@ -3,7 +3,6 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize, sep } from 'node:path';
 import { gunzipSync } from 'node:zlib';
-import type { AppIpc } from '@adecore/shell';
 import { Serializer } from '@adecore/utils/async';
 import { writeAtomic } from '@adecore/utils/fs';
 import {
@@ -19,6 +18,7 @@ import {
 import { EXTENSION_FILE_TYPES, EXTENSION_FILES_PATH, extensionFrameCsp } from '@ruimte/csp';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { z } from 'zod';
+import type { DesktopIpc } from './ipc';
 
 const IndexSchema = z.array(z.object({ id: z.string(), hash: z.string(), enabled: z.boolean(), fromStore: z.boolean().optional() }));
 type IndexEntry = z.infer<typeof IndexSchema>[number];
@@ -340,7 +340,7 @@ export class ClientExtensions {
 }
 
 /* The page installs, links and switches its extensions; the shell keeps them and serves their files. */
-export function installExtensions(ipc: AppIpc, extensions: ClientExtensions): void {
+export function installExtensions(ipc: DesktopIpc, extensions: ClientExtensions): void {
     ipc.handle('extensions:list', () => extensions.list());
     ipc.handle('extensions:install', (_event, pack: Uint8Array, options?: { fromStore?: unknown }) => extensions.install(pack, options?.fromStore === true));
     ipc.handle('extensions:remove', (_event, id: string) => extensions.remove(id));

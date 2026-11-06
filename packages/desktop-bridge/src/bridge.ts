@@ -99,11 +99,16 @@ export interface OpenAiCredentialStatus {
     persistent: boolean;
 }
 
+export interface OpenAiLiveSession {
+    session: { id: string };
+    transport: { type: 'webrtc'; sdp: string };
+}
+
 export interface OpenAiBridge {
     credentialStatus(): Promise<OpenAiCredentialStatus>;
     saveApiKey(apiKey: string): Promise<OpenAiCredentialStatus>;
     clearApiKey(): Promise<OpenAiCredentialStatus>;
-    createLiveSession(sdp: string, preferences: OpenAiLivePreferences): Promise<{ session: { id: string }; transport: { type: 'webrtc'; sdp: string } }>;
+    createLiveSession(sdp: string, preferences: OpenAiLivePreferences): Promise<OpenAiLiveSession>;
 }
 
 /*

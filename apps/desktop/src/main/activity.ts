@@ -1,7 +1,7 @@
-import type { AppIpc } from '@adecore/shell';
 import type { AgentActivity } from '@ruimte/desktop-bridge';
 import { totalActivity } from '../app-windows';
 import { electron } from './electron';
+import type { DesktopIpc } from './ipc';
 
 const { app } = electron;
 
@@ -13,7 +13,7 @@ export interface AgentActivities {
 }
 
 /* What the agents in each window are doing, for the dock badge and the quit question. */
-export function installAgentActivity(ipc: AppIpc): AgentActivities {
+export function installAgentActivity(ipc: DesktopIpc): AgentActivities {
     // By window id. The shell counts nothing itself, so the badge and the quit dialog agree with the toolbar.
     const activities = new Map<number, AgentActivity>();
     let total: AgentActivity = { working: 0, attention: 0 };

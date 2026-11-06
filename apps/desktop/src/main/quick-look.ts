@@ -1,7 +1,7 @@
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import type { AppIpc } from '@adecore/shell';
 import { quickLookPath, type QuickLookFiles } from '../quick-look';
+import type { DesktopIpc } from './ipc';
 
 function diskFiles(ruimteHome: string): QuickLookFiles {
     return {
@@ -15,7 +15,7 @@ function diskFiles(ruimteHome: string): QuickLookFiles {
 }
 
 /* Quick Look on a file of the project a window shows, for a shell on macOS with a machine of its own. */
-export function installQuickLook(ipc: AppIpc, options: { ruimteHome: string; keyOf: (window: Electron.BrowserWindow) => string | null }): void {
+export function installQuickLook(ipc: DesktopIpc, options: { ruimteHome: string; keyOf: (window: Electron.BrowserWindow) => string | null }): void {
     const files = diskFiles(options.ruimteHome);
     // Stepping through files asks again before a check is done, so only the last ask of a window opens anything.
     const asks = new WeakMap<Electron.BrowserWindow, number>();

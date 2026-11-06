@@ -2,13 +2,13 @@ import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { AppIpc } from '@adecore/shell';
 import { allFilesLabel, openDialogPlan, parseOpenPathRequest, parseSavePathRequest } from '../database-bridge';
 import { copyablePaths, copyFilesOnWindows, fileClipboard, osClipboardFormat } from '../file-clipboard';
 import { openImageCopy } from '../open-image';
 import { SaveStreams } from '../save-streams';
 import { isSystemSettingsPane, isWebLink } from '../web-guards';
 import { electron } from './electron';
+import type { DesktopIpc } from './ipc';
 
 const { app, clipboard, ClipboardItem, dialog, shell } = electron;
 
@@ -33,7 +33,7 @@ async function askSavePath(window: Electron.BrowserWindow, suggestedName: string
 }
 
 /* The native dialogs, the system's own apps and the clipboard, for files a page names. */
-export function installDialogs(ipc: AppIpc, language: () => string | undefined): void {
+export function installDialogs(ipc: DesktopIpc, language: () => string | undefined): void {
     ipc.handle('dialog:pick-folder', async (event, initialPath?: string) => {
         const window = ipc.senderWindow(event);
         if (!window) {
@@ -128,7 +128,7 @@ export function installDialogs(ipc: AppIpc, language: () => string | undefined):
 }
 
 /* A machine's file saved as its pieces arrive, owned by the page that asked, which loses its saves when it goes. */
-function installSaveStreams(ipc: AppIpc): void {
+function installSaveStreams(ipc: DesktopIpc): void {
     const streams = new SaveStreams();
     const watched = new Set<number>();
 

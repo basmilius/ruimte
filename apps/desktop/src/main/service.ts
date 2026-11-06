@@ -5,7 +5,6 @@ import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { serviceDefinition as definitionFor, type ServiceManager } from '@adecore/service';
-import type { AppIpc } from '@adecore/shell';
 import type { BuildIdentity } from '@ruimte/contracts';
 import type { BackgroundServiceState, MachineMode, MachineStopPreview, ServiceSupport } from '@ruimte/desktop-bridge';
 import { probeHealth, waitForHealth } from '@ruimte/service/health';
@@ -21,12 +20,13 @@ import { keepRunningSetting, serviceSupport } from '../service/settings';
 import { createSecretGate } from '../startup';
 import type { DaemonStartupDiagnostics } from '../telemetry';
 import { electron } from './electron';
+import type { DesktopIpc } from './ipc';
 import { reportShellProblem } from './telemetry';
 
 const { app, dialog } = electron;
 
 export interface MachineOptions {
-    ipc: AppIpc;
+    ipc: DesktopIpc;
     port: number;
     /* The home the daemon runs with, where its local secret lives. */
     ruimteHome: string;

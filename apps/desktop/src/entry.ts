@@ -17,6 +17,7 @@ import { installDialogs } from './main/dialogs';
 import { electron } from './main/electron';
 import { ClientExtensions, installExtensions } from './main/extensions';
 import { installGuests, isBrowserGuest, isPreviewGuest, routePreviewLinks, sealPreviewSession } from './main/guests';
+import { desktopIpc } from './main/ipc';
 import { installLanguage } from './main/language';
 import { installLogin } from './main/login';
 import { installMachineMode } from './main/machine-mode';
@@ -98,7 +99,7 @@ function fromAppWindow(event: Electron.IpcMainEvent | Electron.IpcMainInvokeEven
     return scheme.isAppSender(windows.fromPage(event.sender) !== null, event.senderFrame);
 }
 
-const ipc = createAppIpc(ipcMain, fromAppWindow, (contents) => windows.fromPage(contents));
+const ipc = desktopIpc(createAppIpc(ipcMain, fromAppWindow, (contents) => windows.fromPage(contents)));
 
 const machine = createMachine({ ipc, port, ruimteHome, repoRoot, devUrl, mode: machineMode, publish: (state) => windows.send('service:state', state) });
 

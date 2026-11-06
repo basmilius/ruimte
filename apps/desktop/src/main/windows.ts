@@ -1,8 +1,9 @@
-import type { AppIpc, Theme, Windows } from '@adecore/shell';
+import type { Theme, Windows } from '@adecore/shell';
 import type { ThemeState } from '@adecore/shell/bridge';
 import { isWindowKey, isWindowState, isWindowView, tabStripOf, windowPointOf } from '../app-windows';
 import { createTabDrag } from '../tab-drag';
 import { electron } from './electron';
+import type { DesktopIpc } from './ipc';
 
 const { screen } = electron;
 
@@ -32,7 +33,7 @@ function onScreen(at: { x: number; y: number }, size: { width: number; height: n
 }
 
 /* A window per project: which project it holds, its tabs, tearing one off and its theme. */
-export function installWindows(ipc: AppIpc, options: WindowChannelOptions): WindowChannels {
+export function installWindows(ipc: DesktopIpc, options: WindowChannelOptions): WindowChannels {
     const { windows, theme } = options;
     let openingView: string | null = null;
     // A window a tab tears off into opens without the focus, so the window that holds the press keeps getting its pointer.
