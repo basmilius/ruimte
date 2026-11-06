@@ -28,6 +28,8 @@ import { assistantTexts, turnsOf } from './chat-test-helpers.ts';
 import { chatForkDeps, forkChat, itemsThrough, type ChatForkDeps } from './fork.ts';
 import { leadProject, removeNodes, sayAndSettle, writeLeadTranscript } from './lead-chat-test-helpers.ts';
 
+const forkProviders = new ProviderRegistry();
+
 /* A canvas kept in memory, read and rewritten through the two calls the project store gives a fork. */
 function inMemoryCanvas(initial: ProjectContent) {
     let document = initial;
@@ -344,6 +346,7 @@ describe('forkChat', () => {
         const deps: ChatForkDeps = {
             source: async () => source,
             installed: async () => ['claude', 'codex'],
+            provider: (kind) => forkProviders.get(kind),
             startingPoint: (_provider, selection) => ({
                 selection: selection ?? { model: 'picked', options: {} },
                 runtimeMode: 'full-access',
@@ -674,7 +677,7 @@ describe('forking a Codex chat', () => {
         const leadView = leadProject().views[0] as ProjectCanvasView;
         const canvas = inMemoryCanvas({ ...leadProject(), views: [{ ...leadView, nodes: [{ ...leadView.nodes[0]!, provider: 'codex' as const }] }] });
         const host: Parameters<typeof chatForkDeps>[0]['host'] = {
-            starts: { installedAgents: async () => ['codex'] },
+            starts: { installedAgents: async () => ['codex'], provider: (kind) => forkProviders.get(kind) },
             machine: { nodeSize: (kind) => NODE_SIZE[kind] },
             projects: {
                 locate: () => ({ projectId: 'p1', folder: home, canvasId: 'main' }),
