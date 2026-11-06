@@ -2,12 +2,12 @@ import type { EditorRange } from '@adecore/editor';
 import { shikiLanguageOf, type EditorLanguage, type HoverView } from '@adecore/editor-react';
 import { isEmptyRange } from '@adecore/editor-react/models';
 import { messageOf } from '@adecore/ui';
+import { explainPrompt } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
 import { type EditorAssistClient } from '@/editor-assist/client';
 import { functionSourceAt, isFunctionSignature } from '@/editor-assist/explain-model';
 import { promptFileName } from '@/editor-assist/prompt-file';
-import { explainPrompt } from '@/editor-assist/prompts';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 

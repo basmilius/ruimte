@@ -1,7 +1,7 @@
 import { CodedError } from '@adecore/agents';
 import type { ChatProvider, ProviderAccountsService } from '@adecore/agents/providers';
 import prices from '@adecore/agents/usage/prices-snapshot.json' with { type: 'json' };
-import { EDITOR_ASSIST_PROVIDERS, type EditorAssistAgent, cheapestEditorModel } from '@ruimte/contracts';
+import { EDITOR_ASSIST_PROVIDER_LIST, EDITOR_ASSIST_PROVIDERS, type EditorAssistAgent, cheapestEditorModel } from '@ruimte/contracts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 
 export interface AssistProviders {
@@ -61,6 +61,6 @@ export async function selectAssistAgent({ registry, accounts }: AssistProviders,
 
     throw new CodedError(
         'unavailable',
-        'No configured editor model is available. Sign in to Claude, Codex, Grok or Antigravity, or choose a model in Settings, Editor, AI.'
+        `No configured editor model is available. Sign in to ${EDITOR_ASSIST_PROVIDER_LIST}, or choose a model in Settings, Editor, AI.`
     );
 }

@@ -3,9 +3,14 @@ import { join } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { ChatChild, type SpawnChatProcess } from '@adecore/agents/chat';
 import { cliExecutable } from '@adecore/agents/providers';
-import type { EditorAssistAgent, EditorAssistGenerateResult, EditorAssistPurpose, EditorAssistStatusResult } from '@ruimte/contracts';
+import {
+    EDITOR_ASSIST_INSTRUCTIONS,
+    type EditorAssistAgent,
+    type EditorAssistGenerateResult,
+    type EditorAssistPurpose,
+    type EditorAssistStatusResult
+} from '@ruimte/contracts';
 import { oneShotRun } from '../git/one-shot.ts';
-import { PURPOSES } from './instructions.ts';
 import { selectAssistAgent, type AssistProviders } from './selection.ts';
 
 interface EditorAssistModelOptions extends AssistProviders {
@@ -78,8 +83,7 @@ export class EditorAssistModel {
                 return this.aborted(timedOut);
             }
 
-            const spec = PURPOSES[request.purpose];
-            const prompt = `${spec.instructions}\nDo not use tools, read files or run commands. Answer using only the following text.\n\n${request.prompt}`;
+            const prompt = `${EDITOR_ASSIST_INSTRUCTIONS[request.purpose]}\nDo not use tools, read files or run commands. Answer using only the following text.\n\n${request.prompt}`;
             const run = oneShotRun(provider, prompt);
 
             if (run === null) {

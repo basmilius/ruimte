@@ -1,6 +1,40 @@
-/* What the model returns for a continuation, trimmed to what belongs at the caret. */
+import { boundHead, boundTail, UNTRUSTED_CODE } from './editor-assist-text.ts';
 
-const GHOST_MAX_LINES = 8;
+/* The most lines a continuation keeps, which the model is told as well. */
+export const GHOST_MAX_LINES = 8;
+
+const GHOST_BEFORE_LINES = 60;
+const GHOST_BEFORE_MAX = 3000;
+const GHOST_AFTER_LINES = 15;
+const GHOST_AFTER_MAX = 1000;
+
+export const GHOST_INSTRUCTIONS = [
+    'You continue source code at the cursor, which sits where the text in <before> ends and the text in <after> starts.',
+    'Reply with only the text that belongs at the cursor, so the file reads on correctly after it.',
+    `Keep the indentation and style of the code around it. Write at most ${GHOST_MAX_LINES} lines and stop at a natural end of a statement or block.`,
+    'No explanation, no markdown fence, no repeat of the text before the cursor.',
+    UNTRUSTED_CODE
+].join(' ');
+
+export interface GhostInput {
+    readonly language: string;
+    readonly file: string;
+    readonly before: string;
+    readonly after: string;
+}
+
+/* The text before and after the caret, cut to what the model can take: the lines nearest the caret win. */
+export function ghostPrompt(input: GhostInput): string {
+    return [
+        `Language: ${input.language}`,
+        `File: ${input.file}`,
+        'Insert code at the cursor, between the text before and the text after.',
+        '',
+        // The tags touch the text, so the cursor is where the text before ends and the text after starts.
+        `<before>\n${boundTail(input.before, GHOST_BEFORE_LINES, GHOST_BEFORE_MAX)}</before>`,
+        `<after>${boundHead(input.after, GHOST_AFTER_LINES, GHOST_AFTER_MAX)}</after>`
+    ].join('\n');
+}
 
 const FENCE_OPEN = /^```[\w+#.-]*[ \t]*\n/;
 const FENCE_CLOSE = /\n?```[ \t]*$/;

@@ -1,13 +1,12 @@
 import type { EditorPosition } from '@adecore/editor';
 import { shikiLanguageOf, type EditorLanguage, type InlineSuggestion, type InlineSuggestionRequest, type InlineSuggestionSource } from '@adecore/editor-react';
 import { messageOf } from '@adecore/ui';
+import { cleanGhost, ghostPrompt } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { type EditorAssistClient } from '@/editor-assist/client';
-import { cleanGhost } from '@/editor-assist/ghost-model';
 import { promptFileName } from '@/editor-assist/prompt-file';
-import { ghostPrompt } from '@/editor-assist/prompts';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { GhostHint } from './GhostHint';

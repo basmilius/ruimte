@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { cleanGhost } from './ghost-model';
+import { cleanGhost, ghostPrompt } from './editor-assist-ghost.ts';
 
 describe('cleanGhost', () => {
     test('drops the line before the cursor that the model wrote again, and the closing line the file has', () => {
@@ -40,5 +40,17 @@ describe('cleanGhost', () => {
     test('says nothing when nothing is left', () => {
         expect(cleanGhost('   \n', '', '')).toBe('');
         expect(cleanGhost('}', 'function a() {\n    return 1;\n', '}\n')).toBe('');
+    });
+});
+
+describe('ghostPrompt', () => {
+    test('keeps the lines nearest the caret on each side', () => {
+        const before = Array.from({ length: 200 }, (_, index) => `before${index}`).join('\n');
+        const after = Array.from({ length: 200 }, (_, index) => `after${index}`).join('\n');
+        const prompt = ghostPrompt({ language: 'typescript', file: 'a.ts', before, after });
+        expect(prompt).toContain('before199</before>');
+        expect(prompt).not.toContain('before0\n');
+        expect(prompt).toContain('<after>after0');
+        expect(prompt).not.toContain('after100');
     });
 });

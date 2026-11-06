@@ -1,4 +1,49 @@
-/* What the model is given to name a symbol, and what comes back, as names a language would accept. */
+import { boundLines, UNTRUSTED_CODE } from './editor-assist-text.ts';
+
+/* How many names the model is asked for; the editor shows the first few it can use. */
+export const NAMES_ASKED = 5;
+
+const NAMES_SAMPLE_LINES = 8;
+const NAMES_LINE_MAX = 160;
+const NAMES_CONTEXT_MAX = 700;
+const NAMES_KIND = /^[a-z]+(?: [a-z]+)?$/;
+
+export const NAMES_INSTRUCTIONS = [
+    'You suggest names for a symbol in source code, from how it is declared and used.',
+    `Reply with exactly ${NAMES_ASKED} different names, one per line, best first.`,
+    'Each name fits the kind of symbol the request names: a function or method says what it does, a class, type or variable what it holds or is.',
+    'Each name is a single identifier in the naming style of the code around it. No numbering, no punctuation, no explanation, no code blocks.',
+    UNTRUSTED_CODE
+].join(' ');
+
+export interface NamesInput {
+    readonly language: string;
+    readonly name: string;
+    /* What the name belongs to (`function`, `class`), when the editor knows it. */
+    readonly kind?: string;
+    /* The lines around the one the rename started on. */
+    readonly context: string;
+    /* Lines the name appears on, in file order, the declaration first when the servers list it. */
+    readonly uses: readonly string[];
+}
+
+export function namesPrompt(input: NamesInput): string {
+    const uses = input.uses.slice(0, NAMES_SAMPLE_LINES).map((line) => line.trim().slice(0, NAMES_LINE_MAX));
+    // The kind is written into the request itself, so only a plain word from an outline gets there.
+    const kind = input.kind !== undefined && NAMES_KIND.test(input.kind) ? input.kind : null;
+    return [
+        `Suggest new names for the ${kind ?? 'symbol'} ${input.name}.`,
+        `Language: ${input.language}`,
+        ...(kind === null ? [] : [`Kind: ${kind}`]),
+        `Current name: ${input.name}`,
+        '',
+        'Code around it:',
+        boundLines(input.context, NAMES_CONTEXT_MAX),
+        '',
+        'Lines that use it:',
+        ...uses
+    ].join('\n');
+}
 
 /* Words that are a keyword in one of the common languages, so a name can never be one of them. */
 const RESERVED = new Set(

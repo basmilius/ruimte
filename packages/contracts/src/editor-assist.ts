@@ -6,6 +6,18 @@ export const EditorAssistProviderSchema = z.enum(['claude', 'codex', 'grok', 'an
 /* Absent or null chooses the cheapest model of the first available provider in this order. */
 export const EDITOR_ASSIST_PROVIDERS = EditorAssistProviderSchema.options;
 
+const EDITOR_ASSIST_PROVIDER_NAMES: Record<z.infer<typeof EditorAssistProviderSchema>, string> = {
+    claude: 'Claude',
+    codex: 'Codex',
+    grok: 'Grok',
+    antigravity: 'Antigravity'
+};
+
+/* The providers in the order they are tried, as a person reads them: "Claude, Codex, Grok or Antigravity". */
+export const EDITOR_ASSIST_PROVIDER_LIST = `${EDITOR_ASSIST_PROVIDERS.slice(0, -1)
+    .map((provider) => EDITOR_ASSIST_PROVIDER_NAMES[provider])
+    .join(', ')} or ${EDITOR_ASSIST_PROVIDER_NAMES[EDITOR_ASSIST_PROVIDERS.at(-1)!]}`;
+
 export const EditorAssistAgentSchema = z.object({
     provider: EditorAssistProviderSchema,
     model: z.string().min(1).max(200).nullable(),
@@ -27,10 +39,13 @@ export const EditorAssistStatusResultSchema = z.object({
 });
 export type EditorAssistStatusResult = z.infer<typeof EditorAssistStatusResultSchema>;
 
+/* What a request may hold, which the bounds of every purpose keep under. */
+export const EDITOR_ASSIST_PROMPT_MAX = 12_000;
+
 export const EditorAssistGeneratePayloadSchema = z.object({
     id: z.string().min(1).max(80),
     purpose: EditorAssistPurposeSchema,
-    prompt: z.string().min(1).max(12_000),
+    prompt: z.string().min(1).max(EDITOR_ASSIST_PROMPT_MAX),
     agent: EditorAssistAgentSchema.nullable().optional(),
     stream: z.boolean().optional()
 });
