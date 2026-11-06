@@ -1,4 +1,3 @@
-import { onLazyOpenError as onChatLazyOpenError } from '@adecore/agents-react';
 import { onLazyOpenError, prefetcher, syncAnimations } from '@adecore/ui';
 import { startAgentNotifications } from '@/attention/notifications';
 import { startPageHolds } from '@/browser/page-hold';
@@ -98,8 +97,7 @@ function reloadOnStaleChunks(): void {
         // The entry chunk's address carries the hash of the build.
         build: import.meta.url,
         prefetching: () => prefetcher.busy,
-        // The chat's surfaces load through `agents-react`'s own `lazyNamed`, so it reports apart.
-        failedOpens: [onLazyOpenError, onChatLazyOpenError]
+        failedOpen: onLazyOpenError
     });
 }
 

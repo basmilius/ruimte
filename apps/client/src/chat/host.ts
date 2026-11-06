@@ -1,6 +1,6 @@
-import { type AgentMark, configureChatStorage, type ChatActions, type ChatHostLayer, setLazyPrefetch } from '@adecore/agents-react';
+import { type AgentMark, configureChatStorage, type ChatActions, type ChatHostLayer } from '@adecore/agents-react';
 import { useChats } from '@adecore/agents-react/state';
-import { prefetcher, messageOf } from '@adecore/ui';
+import { messageOf } from '@adecore/ui';
 import { type AgentKind, CHAT_MODEL_MAX_BYTES } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createElement } from 'react';
@@ -111,7 +111,6 @@ const AGENT_MARKS: Partial<Record<AgentKind, AgentMark>> = {
 /* The stores every chat view shares, set up before the first render. */
 export function configureChat(): void {
     configureChatStorage({ namespace: 'ruimte' });
-    setLazyPrefetch((load) => prefetcher.register(load));
 }
 
 /*
