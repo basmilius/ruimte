@@ -19,6 +19,7 @@ import { adbScrcpyHost, ScrcpySource } from '../devices/scrcpy-source.ts';
 import { realCameraHost, SimulatorCamera, simctlWithEnv } from '../devices/simulator-camera.ts';
 import { createTreeLauncher, SimulatorTreeReader } from '../devices/simulator-tree.ts';
 import type { MachineHome } from '../disk/machine-home.ts';
+import type { NodeLifecycle } from '../node-lifecycle.ts';
 import { LiveStreamHub } from '../streams/live-stream.ts';
 import { childLauncher, renderCommand, VisualRenderer } from '../visuals/renderer.ts';
 import type { DaemonBundles } from './bundles.ts';
@@ -26,9 +27,14 @@ import type { Later } from './later.ts';
 import type { DaemonRuntime } from './runtime.ts';
 
 /* What lets agents operate this machine's apps; made before the providers, since its helper starts beside their files. */
-export function createComputer(runtime: DaemonRuntime, store: ComputerUseStore, later: Later<Pick<DaemonBundles, 'agents' | 'projects'>>): ComputerUse {
+export function createComputer(
+    runtime: DaemonRuntime,
+    store: ComputerUseStore,
+    lifecycle: NodeLifecycle,
+    later: Later<Pick<DaemonBundles, 'agents' | 'projects'>>
+): ComputerUse {
     const { config } = runtime;
-    return new ComputerUse({
+    const computer = new ComputerUse({
         home: config.home,
         store,
         helper: new ComputerHelper({
@@ -56,6 +62,8 @@ export function createComputer(runtime: DaemonRuntime, store: ComputerUseStore, 
             };
         }
     });
+    computer.follow(lifecycle);
+    return computer;
 }
 
 /* The pages, devices and apps an agent or a person can see and operate through this machine. */
@@ -73,7 +81,7 @@ export interface DevicesBundle {
     deviceDriver: DeviceDriver;
 }
 
-export function wireDevices(runtime: DaemonRuntime, computer: ComputerUse, machineHome: MachineHome): DevicesBundle {
+export function wireDevices(runtime: DaemonRuntime, computer: ComputerUse, lifecycle: NodeLifecycle, machineHome: MachineHome): DevicesBundle {
     const { config, compiled, sourceDir } = runtime;
     const liveStreams = new LiveStreamHub();
     const browsers = BrowserManager.withBun(config.home, liveStreams);
@@ -112,6 +120,7 @@ export function wireDevices(runtime: DaemonRuntime, computer: ComputerUse, machi
     );
     const deviceControl = new DeviceControl();
     const deviceDriver = new DeviceDriver({ home: config.home, manager: devices, gate: deviceControl });
+    deviceDriver.follow(lifecycle);
     return { computer, liveStreams, browsers, browserPages, browserDriver, visualRenderer, devices, deviceControl, deviceDriver };
 }
 

@@ -7,7 +7,7 @@ import { z } from 'zod';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
 import { JsonFileStore } from '../json-file-store.ts';
-import type { OutboxEntry, OutboxWork, RunAfterSettleEntry } from '../outbox/outbox.ts';
+import type { OutboxWork, RunAfterSettleEntry } from '../outbox/outbox.ts';
 import type { LaunchRunner, WorktreeRun } from './runner.ts';
 import type { AfterSettleChoices, LaunchStore, ResolvedLaunch } from './store.ts';
 
@@ -87,7 +87,7 @@ export interface AfterSettleDeps {
     worktreesOf(folder: string): Promise<string[]>;
     /* The top of the repository the folder is in. */
     repoRootOf(folder: string): Promise<string>;
-    entries(): readonly OutboxEntry[];
+    ofKind(kind: 'run-after-settle'): readonly RunAfterSettleEntry[];
     enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;
 }
 
@@ -235,7 +235,7 @@ export class AfterSettleLaunches {
     }
 
     private owes(chatId: string, turnId: string): boolean {
-        return this.deps.entries().some((entry) => entry.kind === 'run-after-settle' && entry.target === chatId && entry.payload.turnId === turnId);
+        return this.deps.ofKind('run-after-settle').some((entry) => entry.target === chatId && entry.payload.turnId === turnId);
     }
 
     private async worktreeOf(projectId: string, chatId: string): Promise<string | null> {

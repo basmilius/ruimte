@@ -99,10 +99,10 @@ export function authDeps(input: AreaInput, later: AreaLater): AuthDeps {
     };
 }
 
-export function sessionDeps({ agents, providers, work, projects }: AreaInput): SessionDeps {
+export function sessionDeps({ agents, providers, stores, projects }: AreaInput): SessionDeps {
     return {
         manager: agents.sessions,
-        beforeKill: work.endChildren.owe,
+        beforeKill: (sessionId) => stores.lifecycle.emit('closed', sessionId),
         logins: {
             commandOf: (kind) => providers.providers.get(kind).home?.loginCommand,
             nameOf: providers.nameOfCli
@@ -112,7 +112,7 @@ export function sessionDeps({ agents, providers, work, projects }: AreaInput): S
 }
 
 export function chatDeps(input: AreaInput): ChatDeps {
-    const { agents, providers, stores, projects, work, git, devices, launches, canvasHost, chatMover } = input;
+    const { agents, providers, stores, projects, work, git, canvasHost, chatMover } = input;
     const { chats } = agents;
     const store = projects.store;
     const forkDeps = chatForkDeps({
@@ -127,13 +127,7 @@ export function chatDeps(input: AreaInput): ChatDeps {
     return {
         manager: chats,
         providers: providers.providers,
-        beforeKill: (chatId) => {
-            devices.computer.nodeClosed(chatId);
-            devices.deviceDriver.nodeClosed(chatId);
-            launches.secrets.nodeClosed(chatId);
-            agents.proposals.forget(chatId);
-            return work.endChildren.owe(chatId);
-        },
+        beforeKill: (chatId) => stores.lifecycle.emit('closed', chatId),
         stopNode: work.endChildren.stopNode,
         forks: {
             fork: (payload) => forkChat(forkDeps, payload),
@@ -145,8 +139,7 @@ export function chatDeps(input: AreaInput): ChatDeps {
         killed: (chatId) => work.prWatches.stop(chatId),
         moves: chatMover,
         machineOf: (nodeId) => store.machineOfNode(nodeId),
-        starting: (chatId) =>
-            stores.lineage.peerOf(chatId) !== null && stores.outbox.list().some((entry) => entry.kind === 'start-agent' && entry.target === chatId)
+        starting: (chatId) => stores.lineage.peerOf(chatId) !== null && stores.outbox.owes('start-agent', chatId)
     };
 }
 

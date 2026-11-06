@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { moveRefusal, type MoveRefusalDeps } from './move-refusal.ts';
 
 type Task = ReturnType<MoveRefusalDeps['tasks']['involving']>[number];
-type Entry = ReturnType<MoveRefusalDeps['outbox']['list']>[number];
+type Entry = { target: string; kind: string; notBefore: number };
 
 function deps(overrides: Partial<MoveRefusalDeps> = {}): MoveRefusalDeps {
     return {
@@ -10,7 +10,7 @@ function deps(overrides: Partial<MoveRefusalDeps> = {}): MoveRefusalDeps {
         working: () => false,
         lineage: { openedCount: () => 0, startedBy: () => null },
         tasks: { involving: () => [] },
-        outbox: { list: () => [] },
+        outbox: outbox(),
         notices: { waiting: () => [] },
         prWatches: { watchOf: () => null },
         ...overrides
@@ -22,7 +22,10 @@ function tasks(...rows: Task[]): MoveRefusalDeps['tasks'] {
 }
 
 function outbox(...rows: Entry[]): MoveRefusalDeps['outbox'] {
-    return { list: () => rows };
+    return {
+        ofTarget: (target) => rows.filter((entry) => entry.target === target),
+        owed: (kind, target) => rows.find((entry) => entry.kind === kind && entry.target === target)
+    };
 }
 
 describe('moveRefusal', () => {

@@ -6,7 +6,7 @@ import type { ComputerAppGrants } from '@ruimte/contracts';
 import { codeOf } from '../fs/test-boundary.ts';
 import type { SessionEvent } from '../wire.ts';
 import { APPROVAL_WAIT_MS, CARD_MS } from './approvals.ts';
-import { chatInfo, computerSetup, SHELL_APP, terminalStatus, TEXT_EDIT, turnEnded, until, type ComputerSetup } from './computer-test-helpers.ts';
+import { chatInfo, computerSetup, SHELL_APP, terminalStatus, TEXT_EDIT, until, type ComputerSetup } from './computer-test-helpers.ts';
 import { agentWords, findInstalledApp, resolveApp, SESSION_POLL_MS } from './computer-use.ts';
 import { ComputerUseStore } from './store.ts';
 
@@ -166,7 +166,7 @@ describe('the approval of an app', () => {
         await until(() => computer.pendingApprovals().length === 1);
         await computer.answer(computer.pendingApprovals()[0]!.requestId, 'deny');
         expect(await again).toBe('declined');
-        computer.observe(turnEnded('chat-1', 'done'));
+        computer.turnEnded('chat-1', 'done');
         const other = codeOf(computer.operate('term-1', 'state', 'TextEdit', {}));
         await until(() => computer.pendingApprovals().length === 1);
         expect(computer.pendingApprovals()[0]!.surface).toBe('terminal');
@@ -260,7 +260,7 @@ describe('"this time"', () => {
         setup.computer.observe(chatInfo('chat-1', 'running'));
         await allowOnce(setup.computer, 'chat-1');
         expect(await asksAgain(setup, 'chat-1')).toBe(false);
-        setup.computer.observe(turnEnded('chat-1', 'done'));
+        setup.computer.turnEnded('chat-1', 'done');
         expect(await asksAgain(setup, 'chat-1')).toBe(true);
     });
 
@@ -449,7 +449,7 @@ describe('taking a grant back', () => {
 
         await allowOnce(computer, 'chat-1');
         expect(events.at(-1)?.thisTime).toHaveLength(1);
-        computer.observe(turnEnded('chat-1', 'done'));
+        computer.turnEnded('chat-1', 'done');
         expect(events.at(-1)?.thisTime).toEqual([]);
     });
 });
@@ -549,7 +549,7 @@ describe('the presence at the cursor', () => {
         await until(() => helper.presences.length === 3);
         computer.observe(chatInfo('chat-1', 'running'));
         await until(() => helper.presences.length === 4);
-        computer.observe(turnEnded('chat-1', 'done'));
+        computer.turnEnded('chat-1', 'done');
         computer.observe(chatInfo('chat-1', 'idle'));
         await until(() => helper.presences.length === 5);
         expect(helper.presences).toEqual(['permission: Waiting for permission for TextEdit', 'think', 'waiting', 'think', 'done']);
@@ -561,7 +561,7 @@ describe('the presence at the cursor', () => {
         await letIn(setup);
         computer.observe(terminalStatus('term-1', 'needs-you'));
         computer.observe(chatInfo('chat-2', 'idle'));
-        computer.observe(turnEnded('chat-1', 'aborted'));
+        computer.turnEnded('chat-1', 'aborted');
         await until(() => helper.presences.length === 1);
         expect(helper.presences).toEqual(['end']);
         await until(() => computer.status().session === null);
@@ -569,7 +569,7 @@ describe('the presence at the cursor', () => {
         await computer.operate('term-1', 'state', 'TextEdit', {});
         computer.observe(terminalStatus('term-1', 'running'));
         await until(() => helper.presences.at(-1) === 'think');
-        computer.observe({ event: 'session.exit', payload: { sessionId: 'term-1' } } as unknown as SessionEvent);
+        computer.exited('term-1');
         await until(() => helper.presences.at(-1) === 'end');
         const shown = helper.presences.length;
         computer.observe(terminalStatus('term-1', 'running'));
@@ -597,7 +597,7 @@ describe('the presence at the cursor', () => {
         };
         const call = computer.operate('chat-1', 'type', 'TextEdit', { text: 'hello' });
         await until(() => reached);
-        computer.observe(turnEnded('chat-1', 'aborted'));
+        computer.turnEnded('chat-1', 'aborted');
         for (let i = 0; i < 5; i++) {
             await new Promise<void>((resolve) => setImmediate(resolve));
         }
@@ -615,7 +615,7 @@ describe('the presence at the cursor', () => {
         const { computer, helper } = setup;
         await letIn(setup);
         await computer.control('pause');
-        computer.observe(turnEnded('chat-1', 'aborted'));
+        computer.turnEnded('chat-1', 'aborted');
         await until(() => computer.status().session === null);
         expect(helper.presences).toEqual(['end']);
         expect(helper.session.active).toBe(false);
@@ -635,7 +635,7 @@ describe('the presence at the cursor', () => {
         const setup = await computerSetup();
         const { computer, helper } = setup;
         await letIn(setup);
-        computer.observe(turnEnded('chat-1', 'error'));
+        computer.turnEnded('chat-1', 'error');
         await until(() => computer.status().session === null);
         expect(helper.presences).toEqual(['error: The agent stopped with an error']);
         expect(helper.requests.at(-1)).toMatchObject({ command: 'presence', state: 'error', ends: true });
@@ -835,7 +835,7 @@ describe('one agent at a time', () => {
         expect(computer.status().waiting).toEqual(['term-1']);
         timers.advance(30_000);
         expect(helper.acted).toEqual([]);
-        computer.observe(turnEnded('chat-1', 'done'));
+        computer.turnEnded('chat-1', 'done');
         await call;
         expect(helper.acted.map((request) => request.command)).toEqual(['click']);
         expect(computer.holder).toBe('term-1');
@@ -854,7 +854,7 @@ describe('one agent at a time', () => {
         await inLine(computer, 2);
         expect(computer.status().waiting).toEqual(['term-1', 'chat-2']);
         // The chat whose turn ended asks again, and goes to the back of the line.
-        computer.observe(turnEnded('chat-1', 'done'));
+        computer.turnEnded('chat-1', 'done');
         const last = computer.operate('chat-1', 'click', 'TextEdit', { element: 3 }, 60_000).then(() => order.push('chat-1'));
         await second;
         await inLine(computer, 2);
@@ -862,7 +862,7 @@ describe('one agent at a time', () => {
         computer.observe(terminalStatus('term-1', 'running'));
         computer.observe(terminalStatus('term-1', 'idle'));
         await third;
-        computer.observe(turnEnded('chat-2', 'done'));
+        computer.turnEnded('chat-2', 'done');
         await last;
         expect(order).toEqual(['term-1', 'chat-2', 'chat-1']);
         expect(helper.acted.map((request) => request.element)).toEqual([1, 2, 3]);
@@ -884,7 +884,7 @@ describe('one agent at a time', () => {
         // The cursor still speaks for the holder: no permission for the agent in line.
         expect(helper.presences).toEqual([]);
         expect(helper.acted).toEqual([]);
-        computer.observe(turnEnded('chat-1', 'done'));
+        computer.turnEnded('chat-1', 'done');
         await call;
         expect(helper.acted.at(-1)).toMatchObject({ command: 'state', app: '502' });
         expect(computer.pendingApprovals()).toEqual([]);
@@ -944,7 +944,7 @@ describe('one agent at a time', () => {
         helper.apps = [...helper.apps, NOTES];
         const call = codeOf(computer.operate('chat-1', 'state', 'Notes', {}, 60_000));
         await until(() => computer.pendingApprovals().length === 1);
-        computer.observe(turnEnded('chat-1', 'aborted'));
+        computer.turnEnded('chat-1', 'aborted');
         await computer.operate('term-1', 'click', 'TextEdit', { element: 1 });
         await computer.answer(computer.pendingApprovals()[0]!.requestId, 'once');
         expect(await call).toBe('busy');
@@ -1001,7 +1001,7 @@ describe('the status of the session', () => {
         await computer.refreshStatus();
         expect(computer.status().session).toEqual({ mode: 'paused', nodeId: 'chat-1' });
         helper.hold('running');
-        computer.observe(turnEnded('chat-1', 'done'));
+        computer.turnEnded('chat-1', 'done');
         await until(() => computer.status().session === null);
         const sessions = events.flatMap((event) => (event.event === 'computer.status' ? [event.payload.session] : []));
         expect(sessions).toContainEqual({ mode: 'paused', nodeId: 'chat-1' });

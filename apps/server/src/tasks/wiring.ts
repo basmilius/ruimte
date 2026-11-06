@@ -2,7 +2,7 @@ import type { TaskCoordinator, TaskCoordinatorDeps, TaskStore, WaitingObserver, 
 import { wireTasks as wireTaskCore, type TaskVerbs } from '@adecore/agents/coordination';
 import type { Task } from '@ruimte/contracts';
 import type { ChatManager } from '../chat/chat-manager.ts';
-import type { OutboxEntry, OutboxWork, StartAgentEntry } from '../outbox/outbox.ts';
+import type { OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
 import { parkedNote } from './parked-note.ts';
 import { terminalTasks, type TerminalTasks } from './terminal-tasks.ts';
 import { TASK_WORDS } from './words.ts';
@@ -37,8 +37,8 @@ export interface TaskWiring {
     backgroundLimit: OutboxHandlers<OutboxWork>['background-limit'];
     giveTask: OutboxHandlers<OutboxWork>['give-task'];
     deliverWaiting: OutboxHandlers<OutboxWork>['deliver-waiting'];
+    /* Given up on: what waited on the entry hears it, and the chat is told in the words of the kind. */
     onParked(entry: OutboxEntry, error: unknown): void;
-    onStartGaveUp(entry: StartAgentEntry, error: unknown): void;
     /* What the daemon does with the child's own prune of the project: cancel, then look at the parents again. */
     prune(projectId: string, ids: ReadonlySet<string>): Promise<void>;
 }
@@ -81,10 +81,9 @@ export function wireTasks(deps: TaskWiringDeps): TaskWiring {
         deliverWaiting: core.handlers['deliver-waiting'],
         onParked: (entry, error) => {
             core.onParked(entry, error);
-            onParked(entry, error);
-        },
-        onStartGaveUp: (entry, error) => {
-            core.coordinator.startFailed(entry.target, error);
+            if (entry.kind === 'start-agent') {
+                core.coordinator.startFailed(entry.target, error);
+            }
             onParked(entry, error);
         },
         prune: core.prune

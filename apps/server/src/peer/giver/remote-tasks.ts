@@ -6,7 +6,7 @@ import { errorText } from '../../error-text.ts';
 import { BundleStore, bundleIdFor, fetchBundle, makeBundle } from '../../git/bundles.ts';
 import type { CheckpointService } from '../../git/checkpoints.ts';
 import type { Worktrees } from '../../git/worktrees.ts';
-import type { OutboxEntry, OutboxWork, StartRemoteAgentEntry, StopRemoteAgentEntry, TakeRemoteResultEntry } from '../../outbox/outbox.ts';
+import type { OutboxStore, OutboxWork, StartRemoteAgentEntry, StopRemoteAgentEntry, TakeRemoteResultEntry } from '../../outbox/outbox.ts';
 import { RECONNECT_LIFETIME_MS, peerLane } from './connect-peer.ts';
 import type { PeerLink } from './peer-connection.ts';
 import type { RemoteConnections } from './remote-connections.ts';
@@ -26,7 +26,7 @@ export interface RemoteTasksDeps {
     reconnect: { owe(machineId: string): Promise<void> };
     /* Tells the clients again which tasks wait for the machine; `except` is an entry that is done. */
     refresh?: (machineId: string, except?: string) => void;
-    tasks: Pick<TaskStore, 'get' | 'all'>;
+    tasks: Pick<TaskStore, 'get' | 'all' | 'ofProject'>;
     coordinator: Pick<TaskCoordinator, 'settleFromElsewhere'>;
     /* Whether a project still places the node. */
     placed(nodeId: string): boolean;
@@ -37,7 +37,7 @@ export interface RemoteTasksDeps {
     labelOf(projectId: string, machineId: string): string;
     /* Writes down the folder of work that came back as one this machine never vouched for, before git makes it. */
     untrustFolder(path: string, branch: string): Promise<void>;
-    outbox: { list(): readonly OutboxEntry[]; remove(id: string): Promise<void>; update(entry: OutboxEntry): Promise<void> };
+    outbox: Pick<OutboxStore, 'ofKind' | 'ofKinds' | 'has' | 'remove' | 'update'>;
     enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;
     /* Looks again at whatever waits on this target. */
     wake(target: string): void;
@@ -162,9 +162,7 @@ export class RemoteTasks {
      */
     peerSettled(machineId: string, nodeId: string): void {
         const { deps } = this;
-        const owed = deps.outbox
-            .list()
-            .some((entry) => entry.target === nodeId && (entry.kind === 'start-remote-agent' || entry.kind === 'take-remote-result'));
+        const owed = deps.outbox.ofKinds('start-remote-agent', 'take-remote-result').some((entry) => entry.target === nodeId);
         const open = deps.tasks.all().some((task) => task.machine === machineId && task.childId === nodeId && task.status === 'open');
         if (!owed && !open) {
             deps.connections
@@ -208,20 +206,20 @@ export class RemoteTasks {
     }
 
     private owes(entryId: string): boolean {
-        return this.deps.outbox.list().some((entry) => entry.id === entryId);
+        return this.deps.outbox.has(entryId);
     }
 
     /* Owes a stop until the machine heard it, unless one is owed already. */
     private async oweStopTo(projectId: string, machineId: string, nodeId: string): Promise<void> {
-        if (this.deps.outbox.list().some((entry) => entry.kind === 'stop-remote-agent' && entry.payload.nodeId === nodeId && entry.payload.once !== true)) {
+        if (this.deps.outbox.ofKind('stop-remote-agent').some((entry) => entry.payload.nodeId === nodeId && entry.payload.once !== true)) {
             return;
         }
         await this.deps.enqueue(projectId, peerLane(machineId), { kind: 'stop-remote-agent', payload: { machineId, nodeId } });
     }
 
     private wakeStarts(machineId: string, except: string): void {
-        for (const entry of this.deps.outbox.list()) {
-            if (entry.kind === 'start-remote-agent' && entry.payload.machineId === machineId && entry.target !== except) {
+        for (const entry of this.deps.outbox.ofKind('start-remote-agent')) {
+            if (entry.payload.machineId === machineId && entry.target !== except) {
                 this.deps.wake(entry.target);
             }
         }
@@ -448,12 +446,7 @@ export class RemoteTasks {
         const { deps } = this;
         const days = Math.round(RECONNECT_LIFETIME_MS / (24 * 60 * 60 * 1000));
         const why = refusal === undefined ? `could not be reached for ${days} days` : `refused this one (${refusal})`;
-        const owed = deps.outbox
-            .list()
-            .filter(
-                (entry): entry is StartRemoteAgentEntry | TakeRemoteResultEntry =>
-                    (entry.kind === 'start-remote-agent' || entry.kind === 'take-remote-result') && entry.payload.machineId === machineId
-            );
+        const owed = deps.outbox.ofKinds('start-remote-agent', 'take-remote-result').filter((entry) => entry.payload.machineId === machineId);
         for (const entry of owed) {
             await deps.outbox.remove(entry.id);
             const text =
@@ -461,7 +454,7 @@ export class RemoteTasks {
                     ? `The other machine ${why}, so this task was never started there.`
                     : `The other machine ${why}, so what became of this task is not known. The agent there may still run until a person stops it on that machine.`;
             await this.fail(entry.payload.taskId, text);
-            const stopOwed = deps.outbox.list().some((other) => other.kind === 'stop-remote-agent' && other.payload.nodeId === entry.target);
+            const stopOwed = deps.outbox.ofKind('stop-remote-agent').some((other) => other.payload.nodeId === entry.target);
             // A start may have reached the machine without its answer reaching this one, so it too may have an agent to stop.
             if (!stopOwed) {
                 const task = deps.tasks.get(entry.payload.taskId);
@@ -525,9 +518,7 @@ export class RemoteTasks {
         if (task?.machine === undefined) {
             return;
         }
-        const own = deps.outbox
-            .list()
-            .filter((entry) => entry.target === nodeId && (entry.kind === 'start-remote-agent' || entry.kind === 'take-remote-result'));
+        const own = deps.outbox.ofKinds('start-remote-agent', 'take-remote-result').filter((entry) => entry.target === nodeId);
         for (const entry of own) {
             await deps.outbox.remove(entry.id);
         }
@@ -539,6 +530,15 @@ export class RemoteTasks {
         }
     }
 
+    /* For the `placed` event of the node lifecycle: a node that ran an agent on another machine and is gone ends that agent as well. */
+    places(projectId: string, ids: ReadonlySet<string>): void {
+        for (const task of this.deps.tasks.ofProject(projectId)) {
+            if (task.machine !== undefined && task.status === 'open' && !ids.has(task.childId)) {
+                void this.oweStop(task.childId).catch((e: unknown) => this.deps.log?.(`Stopping an agent on another machine failed: ${errorText(e)}`));
+            }
+        }
+    }
+
     /*
      * The machine left its account and forgot the machines it knew, so none of them is reached again. Each
      * task given to one fails with a line that says so, which wakes its parent once, and what was owed to them goes.
@@ -547,10 +547,7 @@ export class RemoteTasks {
         const { deps } = this;
         this.leaves += 1;
         const machines = new Set<string>();
-        for (const entry of deps.outbox.list()) {
-            if (entry.kind !== 'start-remote-agent' && entry.kind !== 'take-remote-result' && entry.kind !== 'stop-remote-agent') {
-                continue;
-            }
+        for (const entry of deps.outbox.ofKinds('start-remote-agent', 'take-remote-result', 'stop-remote-agent')) {
             await deps.outbox.remove(entry.id);
             machines.add(entry.payload.machineId);
             if (entry.kind === 'stop-remote-agent') {

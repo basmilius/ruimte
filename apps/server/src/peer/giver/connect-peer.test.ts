@@ -5,17 +5,8 @@ import { join } from 'node:path';
 import { OutboxWorker, type OutboxHandlers } from '@adecore/agents/coordination';
 import { ManualClock } from '@adecore/agents/testing';
 import { refusingHandlers } from '../../outbox/outbox-test-helpers.ts';
-import { OutboxStore, type ConnectPeerEntry, type OutboxWork } from '../../outbox/outbox.ts';
-import {
-    ConnectPeer,
-    PEERS_PROJECT,
-    RECONNECT_LIFETIME_MS,
-    RECONNECT_MAX_MS,
-    RECONNECT_START_MS,
-    machineOwed,
-    peerLane,
-    restartConnectPeers
-} from './connect-peer.ts';
+import { machineOwed, OutboxStore, type ConnectPeerEntry, type OutboxWork } from '../../outbox/outbox.ts';
+import { ConnectPeer, PEERS_PROJECT, RECONNECT_LIFETIME_MS, RECONNECT_MAX_MS, RECONNECT_START_MS, peerLane, restartConnectPeers } from './connect-peer.ts';
 import { RemoteLinkError } from './remote-connections.ts';
 
 const MACHINE = 'machine-b';

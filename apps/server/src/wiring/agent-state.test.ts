@@ -9,7 +9,7 @@ function sources(
     stored: readonly string[] = []
 ): AgentStateSources {
     return {
-        outbox: { list: () => [] },
+        outbox: { owes: () => false },
         lineage: { endedAt: () => null, startedBy: () => null },
         chats: {
             get: (id: string) => (statuses[id] === undefined ? undefined : { info: { status: statuses[id] } }),

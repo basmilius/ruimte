@@ -6,7 +6,7 @@ import type { HiddenAgentStore } from '../projects/hidden-agents.ts';
 import type { SessionManager } from '../sessions/manager.ts';
 
 export interface AgentStateSources {
-    outbox: Pick<OutboxStore, 'list'>;
+    outbox: Pick<OutboxStore, 'owes'>;
     lineage: Pick<AgentLineageStore, 'endedAt' | 'startedBy'>;
     chats: Pick<ChatManager, 'get' | 'hasStored' | 'cancel' | 'lastTurn'>;
     sessions: Pick<SessionManager, 'get'>;
@@ -20,7 +20,7 @@ export interface AgentStateSources {
 export function agentStates(sources: AgentStateSources): AgentStateHost {
     return {
         stateOf: async (nodeId) => {
-            if (sources.outbox.list().some((entry) => entry.kind === 'start-agent' && entry.target === nodeId)) {
+            if (sources.outbox.owes('start-agent', nodeId)) {
                 return 'owed';
             }
             if (sources.lineage.endedAt(nodeId) !== null) {
@@ -58,7 +58,7 @@ export function openedAgentCount(
         lineage: AgentLineageStore;
         hiddenAgents: HiddenAgentStore;
         tasks: TaskStore;
-        outbox: Pick<OutboxStore, 'list'>;
+        outbox: Pick<OutboxStore, 'ofTarget'>;
         chats: Pick<ChatManager, 'get'>;
         sessions: Pick<SessionManager, 'get'>;
     },
@@ -74,7 +74,7 @@ export function openedAgentCount(
             status === 'needs-you' ||
             deps.sessions.get(id)?.exited === false ||
             deps.tasks.involving(id).some((task) => task.childId === id && task.status === 'open') ||
-            deps.outbox.list().some((entry) => entry.target === id)
+            deps.outbox.ofTarget(id).length > 0
         );
     });
 }

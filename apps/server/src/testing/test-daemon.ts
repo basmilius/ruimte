@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { AttachmentStore, ChatStore, VisualStore } from '@adecore/agents/chat';
+import { AttachmentStore, ChatStore, VisualStore, chatOpener } from '@adecore/agents/chat';
 import { chatRequests, AgentLineageStore, NoticeNotes, NoticeStore, restartBackgroundLimits, TaskStore } from '@adecore/agents/coordination';
 import type { OutboxWorker } from '@adecore/agents/coordination';
 import type { AccountLaunches, ChatProvider, ProviderAccountsService } from '@adecore/agents/providers';
@@ -9,6 +9,7 @@ import { fakeClaude, fakeCodex, inProcess, type FakeCli, type InProcessCli } fro
 import type { ManualClock } from '@adecore/agents/testing';
 import type { LimitsUpdate } from '@adecore/agents/usage';
 import { NODE_SIZE, type AgentKind, type ChatItem, type ChatTurnItem, type ProjectContent, type ServerFrame } from '@ruimte/contracts';
+import { chatAccess } from '../agent-features/voice.ts';
 import type { CanvasHost } from '../canvas/host.ts';
 import { PendingPromptStore } from '../canvas/pending-prompts.ts';
 import { StartClaims } from '../canvas/start-claims.ts';
@@ -24,11 +25,12 @@ import { worktreeAgents } from '../git/worktree-agents.ts';
 import { checkoutHost, worktreeHost } from '../git/worktree-host.ts';
 import { WorktreeMerge } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
-import { PrWatchStore } from '../github/pr-watch.ts';
+import { PrWatchStore, prWatchHandler } from '../github/pr-watch.ts';
 import { chatArea } from '../handlers/chat.ts';
 import { planArea } from '../handlers/plan.ts';
 import { sessionArea } from '../handlers/session.ts';
 import { tasksArea } from '../handlers/tasks.ts';
+import { NodeLifecycle } from '../node-lifecycle.ts';
 import type { EndChildrenWiring } from '../outbox/end-children.ts';
 import { OutboxStore, type OutboxWork } from '../outbox/outbox.ts';
 import { agentChatOpening, agentStartHost } from '../outbox/start-agent.ts';
@@ -53,7 +55,6 @@ import { untilChecked } from '../until-test-helpers.ts';
 import { agentVisuals, type VisualHost } from '../visuals/agent-host.ts';
 import { agentMessages } from '../wiring/agent-messages.ts';
 import { agentStates, openedAgentCount } from '../wiring/agent-state.ts';
-import { chatAccess } from '../agent-features/voice.ts';
 import { OutboxLink, wireOutbox } from '../wiring/outbox.ts';
 import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 
@@ -218,8 +219,10 @@ export async function bootTestDaemon({
     const attachments = new AttachmentStore(home);
     const drops: Promise<void>[] = [];
     const enqueued: OutboxWork[] = [];
+    const lifecycle = new NodeLifecycle();
     const outboxLink = new OutboxLink({
         outbox,
+        clock,
         projectOf: (chatId) => store.index.locate(chatId)?.projectId ?? null,
         /* Owed after the entry is written, so a wait on the outbox looks again once it is there. A
            running worker may already have taken the entry off by then, so the work is kept too. */
@@ -295,37 +298,35 @@ export async function bootTestDaemon({
         lineage,
         prompts,
         notices,
-        prWatches,
         tasks,
         chats,
         sessions,
+        lifecycle,
         alert: (_target, nodeId, title, body) => alerts.push(`${nodeId}\t${title}\t${body}`),
-        clock,
         now: () => clock.now(),
         log: () => undefined,
         onDropped: (drop) => drops.push(drop),
         onFailed: () => undefined,
         resumeAtReset: () => machine.resumeAtReset,
-        ...(peer
-            ? {
-                  peerTasks: {
-                      deliver: (entry) => peerTasks!.deliver(entry),
-                      isPeerTask: (task) => peerTasks!.isPeerTask(task),
-                      parents: (projectId) => peer.links.canvasIdsOf(projectId)
-                  }
-              }
-            : {}),
-        ...(remote
-            ? {
-                  remoteTasks: {
-                      start: (entry) => remoteTasks!.start(entry),
-                      stop: (entry) => remoteTasks!.stop(entry),
-                      take: (entry) => remoteTasks!.take(entry),
-                      oweStop: (nodeId) => remoteTasks!.oweStop(nodeId)
-                  }
-              }
-            : {})
+        isPeerTask: (task) => peerTasks?.isPeerTask(task) === true,
+        peerParents: (projectId) => peer?.links.canvasIdsOf(projectId) ?? new Set<string>(),
+        remoteStop: async (nodeId) => remoteTasks?.oweStop(nodeId)
     });
+    // What this host owes that no test of it runs lapses, as an entry of a kind it has no feature for always did.
+    const lapse = async (): Promise<undefined> => undefined;
+    outboxLink.worker.handle(
+        'deliver-pr-watch',
+        prWatchHandler({ watches: prWatches, openChat: chatOpener({ chats, placed: (nodeId) => store.index.locate(nodeId) !== null }) })
+    );
+    outboxLink.worker.handle('run-after-settle', lapse);
+    outboxLink.worker.handle('routine-run', lapse);
+    outboxLink.worker.handle('connect-peer', lapse);
+    outboxLink.worker.handle('start-remote-agent', (entry) => remoteTasks?.start(entry) ?? lapse());
+    outboxLink.worker.handle('stop-remote-agent', (entry) => remoteTasks?.stop(entry) ?? lapse());
+    outboxLink.worker.handle('take-remote-result', (entry) => remoteTasks?.take(entry) ?? lapse());
+    outboxLink.worker.handle('deliver-remote-result', (entry) => peerTasks?.deliver(entry) ?? lapse());
+    lifecycle.on('placed', (projectId, ids) => prWatches.prune(projectId, ids));
+    lifecycle.on('placed', (projectId, ids) => remoteTasks?.places(projectId, ids));
     if (remote) {
         remoteTasks = new RemoteTasks({
             connections: remote.connections,
@@ -352,11 +353,11 @@ export async function bootTestDaemon({
     endChildren.start();
     sessions.onProcessChange = (sessionId, phase) => {
         if (phase === 'changed' && sessions.get(sessionId)?.exited !== false) {
-            wiring.terminals.ended(sessionId);
+            void lifecycle.emit('exited', sessionId);
         }
     };
     sessions.observe((event) => wiring.terminals.sessionEvent(event));
-    store.index.onPlaces = outboxWiring.places;
+    store.index.onPlaces = (projectId, ids) => void lifecycle.emit('placed', projectId, ids);
 
     sessions.observe(recheck);
     chats.observe(recheck);
@@ -461,7 +462,7 @@ export async function bootTestDaemon({
     }
     sessionArea({
         manager: sessions,
-        beforeKill: endChildren.owe,
+        beforeKill: (nodeId) => lifecycle.emit('closed', nodeId),
         logins: { commandOf: () => undefined, nameOf: (kind) => kind },
         machineOf: () => null
     }).handlers?.(dispatcher);
@@ -479,7 +480,7 @@ export async function bootTestDaemon({
     chatArea({
         manager: chats,
         providers,
-        beforeKill: endChildren.owe,
+        beforeKill: (nodeId) => lifecycle.emit('closed', nodeId),
         stopNode: endChildren.stopNode,
         forks: {
             fork: (payload) => forkChat(forkDeps, payload),
@@ -491,7 +492,7 @@ export async function bootTestDaemon({
         killed: async () => undefined,
         moves: { info: noMoves, move: noMoves },
         machineOf: () => null,
-        starting: (chatId) => lineage.peerOf(chatId) !== null && outbox.list().some((entry) => entry.kind === 'start-agent' && entry.target === chatId)
+        starting: (chatId) => lineage.peerOf(chatId) !== null && outbox.owes('start-agent', chatId)
     }).handlers?.(dispatcher);
     tasksArea({ tasks, children: endChildren.children }).handlers?.(dispatcher);
     planArea({ plans }).handlers?.(dispatcher);

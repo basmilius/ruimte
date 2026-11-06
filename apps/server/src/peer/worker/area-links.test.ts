@@ -33,7 +33,7 @@ function makePeerTasks(): PeerTasks {
         projects: store,
         lineage,
         tasks,
-        outbox: { list: () => [], remove: async () => undefined },
+        outbox: { ofKind: () => [], remove: async () => undefined },
         enqueue: async () => undefined,
         prompts: { put: async () => undefined, take: async () => null },
         stopNode: async () => undefined,

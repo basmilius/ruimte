@@ -71,14 +71,11 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     const { identity } = machine;
     rememberSecret(machine.access.localSecret);
     const stores = provide('stores', await loadAgentStores(home));
-    const computer = provide('computer', createComputer(runtime, stores.computerStore, later));
+    const computer = provide('computer', createComputer(runtime, stores.computerStore, stores.lifecycle, later));
     const stats = provide('stats', await wireUsageStats(home, identity, machine.auth, launcher));
     const providers = provide('providers', await wireProviders(config, identity, () => computer.start(), stats.flush));
     const agents = provide('agents', await wireAgents({ runtime, identity, stores, providers, computer, machineHome: machine.machineHome, codexProbe, later }));
-    const projects = provide(
-        'projects',
-        await wireProjects({ home, machineId: identity.id, machineHome: machine.machineHome, stores, agents, computer, later })
-    );
+    const projects = provide('projects', await wireProjects({ home, machineId: identity.id, machineHome: machine.machineHome, stores, agents, later }));
     const templates = provide('templates', wireTemplates(home, projects));
     watchProjects(projects.store);
     const artifacts = provide(
@@ -93,7 +90,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.
     await projects.store.warmIndex();
     const git = provide('git', wireGit(home, identity, machine.machineHome, agents, work, projects.store.peers));
-    const devices = provide('devices', wireDevices(runtime, computer, machine.machineHome));
+    const devices = provide('devices', wireDevices(runtime, computer, stores.lifecycle, machine.machineHome));
     const usage = provide('usage', wireUsage(config, providers, agents, projects.store));
     const processes = provide(
         'processes',
@@ -101,10 +98,9 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
             config,
             machineId: identity.id,
             agents,
-            work,
             launches,
             projects: projects.store,
-            devices: devices.deviceDriver,
+            lifecycle: stores.lifecycle,
             shutdown: (reason) => shutdown(reason)
         })
     );

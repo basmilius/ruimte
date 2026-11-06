@@ -3,11 +3,11 @@ import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { isCanvasView, type PeerTaskStartPayload, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
-import { peerOpener } from '../../canvas/opener.ts';
 import type { FirstPrompt } from '../../canvas/pending-prompts.ts';
 import { taskFirstPrompt } from '../../canvas/tasks.ts';
 import { Dispatcher } from '../../dispatcher.ts';
 import { BundleStore } from '../../git/bundles.ts';
+import { peerOpener } from '../../opener.ts';
 import type { OutboxEntry, OutboxWork } from '../../outbox/outbox.ts';
 import { PeerLinks, peerCanvasId } from '../../projects/peer-links.ts';
 import { tempHomes } from '../../temp-home-test-helpers.ts';
@@ -68,7 +68,7 @@ function deps(): PeerTasksDeps {
         } as unknown as PeerTasksDeps['projects'],
         lineage,
         tasks,
-        outbox: { list: () => [] as readonly OutboxEntry[], remove: async () => undefined },
+        outbox: { ofKind: () => [], remove: async () => undefined },
         enqueue: async (_projectId, target, work) => {
             if (failEnqueue) {
                 throw new Error('the outbox is full');
@@ -412,7 +412,10 @@ describe('starting a task for another machine', () => {
         const removed: string[] = [];
         const peerTasks = new PeerTasks({
             ...deps(),
-            outbox: { list: () => owed, remove: async (id) => void removed.push(id) },
+            outbox: {
+                ofKind: (kind) => owed.filter((entry) => entry.kind === kind) as never,
+                remove: async (id) => void removed.push(id)
+            },
             enqueue: async (projectId, target, work) => {
                 enqueued.push({ target, work });
                 owed.push({ ...work, id: `entry-${owed.length}`, projectId, target, createdAt: 0, attempts: 0, notBefore: 0 } as OutboxEntry);

@@ -1,8 +1,8 @@
 import { chatOpener } from '@adecore/agents/chat';
 import { WatchedSinks } from '@adecore/agents/host';
 import type { RoutinePicked, RoutineSkillsPayload, RoutineSkillsResult } from '@ruimte/contracts';
-import { routineOpener } from '../canvas/opener.ts';
 import { errorText } from '../error-text.ts';
+import { routineOpener } from '../opener.ts';
 import { attachedReferences, type Reference } from '../projects/references.ts';
 import { runCommand } from '../routines/command-run.ts';
 import { RoutineAuthorStore, RoutineRunStore } from '../routines/routine-runs.ts';
@@ -74,7 +74,7 @@ export async function wireRoutines({ home, machineId, stores, agents, projects, 
         projects: async () => (await project.known()).filter((known) => project.index.has(known.projectId)),
         outbox: {
             enqueue: (projectId, target, work, notBefore) => outboxLink.enqueue(projectId, target, work, notBefore),
-            list: () => stores.outbox.list(),
+            ofKind: (kind) => stores.outbox.ofKind(kind),
             remove: (id) => stores.outbox.remove(id)
         },
         agents: {
@@ -101,7 +101,7 @@ export async function wireRoutines({ home, machineId, stores, agents, projects, 
                 });
             },
             info: (chatId) => chats.get(chatId)?.info,
-            starting: (chatId) => stores.outbox.list().some((entry) => entry.kind === 'start-agent' && entry.target === chatId),
+            starting: (chatId) => stores.outbox.owes('start-agent', chatId),
             continueIn: async (chatId, { prompt, brief }, routine) => {
                 const chat = await openChat(chatId);
                 if (chat === null || chat.relocating?.() === true) {
@@ -176,6 +176,7 @@ export async function wireRoutines({ home, machineId, stores, agents, projects, 
         timeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
         onChanged: (projectId) => watchers.changed(projectId)
     });
+    outboxLink.worker.handle('routine-run', (entry) => routines.handle(entry));
     store.onOutsideChange = (projectId) => {
         void routines
             .schedule(projectId)

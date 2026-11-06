@@ -54,7 +54,7 @@ async function build(): Promise<{ routines: Routines; store: RoutineStore; runs:
             enqueue: async (projectId, target, work, notBefore) => {
                 await outbox.put(projectId, target, work, now, notBefore ?? now);
             },
-            list: () => outbox.list(),
+            ofKind: (kind) => outbox.ofKind(kind),
             remove: (id) => outbox.remove(id)
         },
         agents: {

@@ -328,10 +328,6 @@ export function chatInfo(chatId: string, status: AgentStatus): SessionEvent {
     return { event: 'chat.event', payload: { chatId, event: { type: 'info', info: { chatId, status } } } } as unknown as SessionEvent;
 }
 
-export function turnEnded(chatId: string, state: 'done' | 'aborted' | 'error'): SessionEvent {
-    return { event: 'chat.event', payload: { chatId, event: { type: 'item', item: { kind: 'turn', id: 'turn-1', state } } } } as unknown as SessionEvent;
-}
-
 export function terminalStatus(sessionId: string, status: AgentStatus): SessionEvent {
     return { event: 'session.status', payload: { sessionId, agent: { status } } } as unknown as SessionEvent;
 }

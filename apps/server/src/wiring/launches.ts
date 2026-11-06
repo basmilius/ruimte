@@ -55,6 +55,7 @@ export function wireLaunches({ home, stores, agents, work, projects, later }: La
         launches: store,
         chats: { hold: (nodeId, key) => void chats.holdForPerson(nodeId, key), release: (nodeId, key) => chats.releaseHold(nodeId, key) }
     });
+    secrets.follow(stores.lifecycle);
     const agentHost = agentLaunches(store, runner, (sessionId) => sessions.get(sessionId)?.plainText() ?? Promise.resolve(null));
     const afterSettle = new AfterSettleLaunches({
         store: work.afterSettleStore,
@@ -71,8 +72,9 @@ export function wireLaunches({ home, stores, agents, work, projects, later }: La
                 .then((list) => list.filter((worktree) => worktree.missing !== true).map((worktree) => worktree.path))
                 .catch(() => []),
         repoRootOf: (folder) => toplevel(folder),
-        entries: () => stores.outbox.list(),
+        ofKind: (kind) => stores.outbox.ofKind(kind),
         enqueue: (projectId, chatId, entryWork) => agents.outboxLink.enqueue(projectId, chatId, entryWork)
     });
+    agents.outboxLink.worker.handle('run-after-settle', (entry) => afterSettle.handle(entry));
     return { store, runner, secrets, agentHost, afterSettle };
 }

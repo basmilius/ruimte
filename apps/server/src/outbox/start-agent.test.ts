@@ -9,6 +9,7 @@ import type { AgentStart, CanvasHost } from '../canvas/host.ts';
 import { PendingPromptStore } from '../canvas/pending-prompts.ts';
 import { startCwdGuard } from '../canvas/project-paths.ts';
 import { ChatManager } from '../chat/chat-manager.ts';
+import { errorText } from '../error-text.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
@@ -137,6 +138,8 @@ async function boot(): Promise<Daemon> {
         store: outbox,
         clock: stillClock,
         handlers: refusingHandlers({
+        retries: outboxRetries(),
+        onParked: (entry, error) => logged.push(`Starting the agent of ${entry.target} failed: ${errorText(error)}`),
             'start-agent': startAgentHandler({
                 placed: (nodeId) => store.index.locate(nodeId) !== null,
                 hasChat: (chatId) => chats.get(chatId) !== undefined,
@@ -146,8 +149,7 @@ async function boot(): Promise<Daemon> {
                 hasSession: (sessionId) => sessions.get(sessionId) !== undefined,
                 createSession: (options) => sessions.create(options),
                 killSession: (sessionId) => sessions.kill(sessionId),
-                checkCwd,
-                log: (line) => logged.push(line)
+                checkCwd
             })
         })
     });
@@ -435,7 +437,6 @@ describe('the start of one agent node', () => {
             killSession: async (sessionId) => {
                 calls.push(`kill session ${sessionId}`);
             },
-            log: (line) => calls.push(`log ${line}`),
             ...overrides
         };
         return { calls, deps };
@@ -570,7 +571,7 @@ describe('the start of one agent node', () => {
         expect(calls).toEqual(['kill session terminal-1']);
     });
 
-    test('a client that made the session first is no failure, and a real failure is logged without a throw', async () => {
+    test('a client that made the session first is no failure, and a real failure reaches the worker, which gives up at once', async () => {
         const exists = fakeDeps({
             createSession: async () => {
                 throw Object.assign(new Error('Session terminal-1 already exists'), { code: 'session-exists' });
@@ -584,7 +585,7 @@ describe('the start of one agent node', () => {
                 throw new Error('spawn failed');
             }
         });
-        await startAgentHandler(broken.deps)(entry('chat'));
-        expect(broken.calls).toEqual(['log Starting the agent of chat-1 failed: spawn failed']);
+        await expect(startAgentHandler(broken.deps)(entry('chat'))).rejects.toThrow('spawn failed');
+        expect(broken.calls).toEqual([]);
     });
 });

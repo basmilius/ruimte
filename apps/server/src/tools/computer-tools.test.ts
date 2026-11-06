@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { MAX_KEY_COMBOS, MAX_TYPED_LENGTH } from '@ruimte/actions';
 import { READ_MAX_CHARS } from '../actions/computer-actions.ts';
 import type { CanvasHost } from '../canvas/host.ts';
-import { computerSetup, SAMPLE_STATE, turnEnded, until, type ComputerSetup } from '../computer/computer-test-helpers.ts';
+import { computerSetup, SAMPLE_STATE, until, type ComputerSetup } from '../computer/computer-test-helpers.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 /* Only what a computer tool reaches: where the caller stands, and the machine's computer use. */
@@ -207,7 +207,7 @@ describe('computer tools', () => {
         setup.helper.state = { ...SAMPLE_STATE, tree: ['[8] Window:StandardWindow "Other" (0,0 10x10)'] };
         expect(await run(setup, 'computer_act', { action: 'click', app: 'TextEdit', element: 1, state: 'on' })).toContain('full\ta new window');
         // The terminal's agent has read nothing of this app yet; it gets the Mac once the chat's turn ended.
-        setup.computer.observe(turnEnded('chat-1', 'done'));
+        setup.computer.turnEnded('chat-1', 'done');
         expect(await run(setup, 'computer_act', { action: 'click', app: 'TextEdit', element: 1, state: 'on' }, 'term-1')).toContain(
             'full\tthe first state of this app you got'
         );

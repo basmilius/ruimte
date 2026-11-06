@@ -14,6 +14,7 @@ import type {
 } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
+import type { NodeLifecycle } from '../node-lifecycle.ts';
 import { realTimers, type Timers } from '../timers.ts';
 import type { SessionEvent, SessionSink } from '../wire.ts';
 import { APPROVAL_WAIT_MS, ComputerApprovals, MAX_HOLD_MS, type AppRef, type CallerInfo } from './approvals.ts';
@@ -370,19 +371,31 @@ export class ComputerUse {
                     this.approvals.forget(sessionId);
                 }
             }
-        } else if (event.event === 'session.exit') {
-            this.approvals.forget(event.payload.sessionId);
-            this.presence.closed(event.payload.sessionId);
         } else if (event.event === 'chat.event') {
             const { chatId, event: chat } = event.payload;
-            if (chat.type === 'item' && chat.item.kind === 'turn' && chat.item.state !== 'running') {
-                this.approvals.turnEnded(chatId);
-                this.presence.turnEnded(chatId, chat.item.state);
-            } else if (chat.type === 'info') {
+            if (chat.type === 'info') {
                 this.approvals.agentStatus(chatId, chat.info.status);
                 this.presence.status(chatId, chat.info.status);
             }
         }
+    }
+
+    /* Hears the end of a turn, the exit of a terminal and the close of a node from the node lifecycle. */
+    follow(lifecycle: NodeLifecycle): void {
+        lifecycle.on('turnEnded', (chatId, state) => this.turnEnded(chatId, state));
+        lifecycle.on('exited', (nodeId) => this.exited(nodeId));
+        lifecycle.on('closed', (nodeId) => this.nodeClosed(nodeId));
+    }
+
+    /* A turn ending takes back what was given for it, and its agent stops being shown at work. */
+    turnEnded(chatId: string, state: 'done' | 'aborted' | 'error'): void {
+        this.approvals.turnEnded(chatId);
+        this.presence.turnEnded(chatId, state);
+    }
+
+    exited(nodeId: string): void {
+        this.approvals.forget(nodeId);
+        this.presence.closed(nodeId);
     }
 
     /* A chat or terminal goes; a chat says nothing to an observer when it does. */

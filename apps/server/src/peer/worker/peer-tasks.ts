@@ -23,7 +23,6 @@ import {
     type Task
 } from '@ruimte/contracts';
 import { MAX_AGENT_DEPTH } from '../../canvas/depth.ts';
-import { peerOpener } from '../../canvas/opener.ts';
 import type { PendingPromptStore } from '../../canvas/pending-prompts.ts';
 import { checkCwd } from '../../canvas/project-paths.ts';
 import { taskFirstPrompt } from '../../canvas/tasks.ts';
@@ -32,7 +31,8 @@ import { BundleStore, fetchBundle, makeBundle } from '../../git/bundles.ts';
 import type { CheckpointService } from '../../git/checkpoints.ts';
 import { git } from '../../git/run.ts';
 import type { Worktrees } from '../../git/worktrees.ts';
-import type { OutboxEntry, OutboxWork } from '../../outbox/outbox.ts';
+import { peerOpener } from '../../opener.ts';
+import type { DeliverRemoteResultEntry, OutboxStore, OutboxWork } from '../../outbox/outbox.ts';
 import { peerCanvasId, type PeerLinks } from '../../projects/peer-links.ts';
 import type { ProjectStore } from '../../projects/project-store.ts';
 import { DEFAULT_RUNTIME_MODE } from '../../providers/launch.ts';
@@ -49,7 +49,7 @@ export interface PeerTasksDeps {
     projects: Pick<ProjectStore, 'read' | 'mutate' | 'hold' | 'letGo'> & { index: Pick<ProjectStore['index'], 'folderOf'> };
     lineage: Pick<AgentLineageStore, 'put' | 'peerOf' | 'openedCount'>;
     tasks: Pick<TaskStore, 'open' | 'all' | 'get' | 'markWoken' | 'settle'>;
-    outbox: { list(): readonly OutboxEntry[]; remove(id: string): Promise<void> };
+    outbox: Pick<OutboxStore, 'ofKind' | 'remove'>;
     enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;
     prompts: Pick<PendingPromptStore, 'put' | 'take'>;
     /* Ends the agent and cancels its task, so nobody is woken by a stopped one. */
@@ -390,8 +390,8 @@ export class PeerTasks {
         if (task !== undefined) {
             await this.deps.tasks.markWoken([task.id]);
         }
-        for (const entry of this.deps.outbox.list()) {
-            if (entry.kind === 'deliver-remote-result' && entry.payload.nodeId === nodeId) {
+        for (const entry of this.deps.outbox.ofKind('deliver-remote-result')) {
+            if (entry.payload.nodeId === nodeId) {
                 await this.deps.outbox.remove(entry.id);
             }
         }
@@ -553,8 +553,8 @@ export class PeerTasks {
     /* The link of that machine to this project is gone, so the results owed for it can never be acknowledged and are not owed any more. */
     async lapseDeliveries(machineId: string, projectId: string): Promise<void> {
         const { deps } = this;
-        for (const entry of deps.outbox.list()) {
-            if (entry.kind === 'deliver-remote-result' && entry.payload.machineId === machineId && entry.projectId === projectId) {
+        for (const entry of deps.outbox.ofKind('deliver-remote-result')) {
+            if (entry.payload.machineId === machineId && entry.projectId === projectId) {
                 await deps.outbox.remove(entry.id);
             }
         }
@@ -594,7 +594,7 @@ export class PeerTasks {
     }
 
     private async oweResult(machineId: string, task: Task): Promise<void> {
-        const owed = this.deps.outbox.list().some((entry) => entry.kind === 'deliver-remote-result' && entry.payload.taskId === task.id);
+        const owed = this.deps.outbox.ofKind('deliver-remote-result').some((entry) => entry.payload.taskId === task.id);
         if (!owed) {
             await this.deps.enqueue(task.projectId, peerLane(machineId), {
                 kind: 'deliver-remote-result',
@@ -604,7 +604,7 @@ export class PeerTasks {
     }
 
     /* The work of the `deliver-remote-result` entry: say once that the result waits, then wait for the acknowledgment. */
-    readonly deliver = async (entry: Extract<OutboxEntry, { kind: 'deliver-remote-result' }>): Promise<'wait' | undefined> => {
+    readonly deliver = async (entry: DeliverRemoteResultEntry): Promise<'wait' | undefined> => {
         const task = this.deps.tasks.get(entry.payload.taskId);
         if (task === undefined || task.wake !== 'pending') {
             return undefined;

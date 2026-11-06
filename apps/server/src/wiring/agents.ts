@@ -19,6 +19,7 @@ import type { MachineHome } from '../disk/machine-home.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { readLog } from '../git/log.ts';
+import { NodeLifecycle } from '../node-lifecycle.ts';
 import { OutboxStore } from '../outbox/outbox.ts';
 import { agentChatOpening } from '../outbox/start-agent.ts';
 import { restartConnectPeers } from '../peer/giver/connect-peer.ts';
@@ -36,6 +37,7 @@ import { SessionManager } from '../sessions/manager.ts';
 import { ModeApprovals, personModeOf } from '../sessions/mode-approvals.ts';
 import { prepareShellIntegration, type ShellEnvironment } from '../sessions/shell-integration.ts';
 import { SnapshotStore, scheduleSnapshots, type SnapshotSchedule } from '../sessions/snapshot-store.ts';
+import { wakefulClock } from '../timers.ts';
 import { agentBounds } from './agent-bounds.ts';
 import { wakeForWaitingMessages } from './agent-messages.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
@@ -55,6 +57,8 @@ const CHAT_UNLOAD_AFTER_MS = 10 * 60_000;
 
 /* What the daemon keeps for agents across a restart, loaded before anything can take from it. */
 export interface AgentStores {
+    /* What happens to a node, which every store that keeps something per node subscribes to where it is wired. */
+    lifecycle: NodeLifecycle;
     shellEnvironment: ShellEnvironment;
     snapshots: SnapshotStore;
     prompts: PendingPromptStore;
@@ -98,7 +102,20 @@ export async function loadAgentStores(home: string): Promise<AgentStores> {
         computerStore.load(),
         chatMoves.load()
     ]);
-    return { shellEnvironment, snapshots, prompts, lineage, notices, outbox, tasks, commandApprovals, modeApprovals, computerStore, chatMoves };
+    return {
+        lifecycle: new NodeLifecycle(),
+        shellEnvironment,
+        snapshots,
+        prompts,
+        lineage,
+        notices,
+        outbox,
+        tasks,
+        commandApprovals,
+        modeApprovals,
+        computerStore,
+        chatMoves
+    };
 }
 
 /* What the agents reach that is wired after them, asked only once a session or a chat runs. */
@@ -180,6 +197,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
     const proposals = new ProjectProposals({
         chats: { hold: (chatId, key) => void chats.holdForPerson(chatId, key), release: (chatId, key) => chats.releaseHold(chatId, key) }
     });
+    stores.lifecycle.on('closed', (chatId) => proposals.forget(chatId));
     const messagesFor = (targetId: string): string[] => notices.take(targetId).map(renderNotice);
     // One reader for chats and terminals, so a transcript both look at is only read on from where either stopped.
     const claudeTitles = new ClaudeTitleReader();
@@ -250,7 +268,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             return project ? routineReport(later.routines().routines, project, routineId) : null;
         }
     });
-    const outboxLink = new OutboxLink({ outbox, projectOf: (id) => index().locate(id)?.projectId ?? null });
+    const outboxLink = new OutboxLink({ outbox, projectOf: (id) => index().locate(id)?.projectId ?? null, clock: wakefulClock() });
     const attachments = new AttachmentStore(config.home);
     const checkpoints = new Checkpoints(config.home, machineHome);
     const plans = new PlanStore(config.home);
@@ -308,6 +326,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         inlineChat: (chatId) => index().isHiddenChat(chatId),
         design: (chatId) => index().designOf(chatId),
         turnEnded: (chatId, state) => {
+            void stores.lifecycle.emit('turnEnded', chatId, state);
             if (index().designOf(chatId) !== null) {
                 void later.projects().store.settleDesignsAfterTurn(chatId);
             }

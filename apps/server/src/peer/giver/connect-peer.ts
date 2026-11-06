@@ -1,4 +1,4 @@
-import type { OutboxEntry, OutboxWork, ConnectPeerEntry } from '../../outbox/outbox.ts';
+import type { ConnectPeerEntry, OutboxStore, OutboxWork } from '../../outbox/outbox.ts';
 import { RemoteLinkError, refusalWords, type RemoteConnections } from './remote-connections.ts';
 
 // The wait after the first failed attempt, like the first poll of a PR-watch; each failure after it doubles the wait up to the cap.
@@ -15,20 +15,8 @@ export function peerLane(machineId: string): string {
     return `peer:${machineId}`;
 }
 
-// What an entry that is owed to another machine is called: a task given to it, its result taken in, a stop.
-const OWED_KINDS: ReadonlySet<string> = new Set(['start-remote-agent', 'take-remote-result', 'deliver-remote-result', 'stop-remote-agent']);
-
-/* The machine a piece of work for another machine is owed to, or null for any other entry. */
-export function machineOwed(entry: { kind: string; payload?: unknown }): string | null {
-    if (!OWED_KINDS.has(entry.kind)) {
-        return null;
-    }
-    const machineId = (entry.payload as { machineId?: unknown } | undefined)?.machineId;
-    return typeof machineId === 'string' ? machineId : null;
-}
-
 interface ConnectPeerDeps {
-    outbox: { list(): readonly OutboxEntry[] };
+    outbox: { ofKind(kind: 'connect-peer'): ConnectPeerEntry[] };
     /* The targets of the work owed to a machine: a task given to it, its result, a stop. */
     owedTargets(machineId: string): string[];
     enqueue(projectId: string, target: string, work: OutboxWork, notBefore?: number): Promise<void>;
@@ -90,10 +78,8 @@ export class ConnectPeer {
     /* Ends every reconnect, as leaving the account does. */
     async lapseAll(remove: (id: string) => Promise<void>): Promise<void> {
         this.firstOwed.clear();
-        for (const entry of this.deps.outbox.list()) {
-            if (entry.kind === 'connect-peer') {
-                await remove(entry.id);
-            }
+        for (const entry of this.deps.outbox.ofKind('connect-peer')) {
+            await remove(entry.id);
         }
     }
 
@@ -162,7 +148,7 @@ export class ConnectPeer {
     }
 
     private entriesOf(machineId: string): ConnectPeerEntry[] {
-        return this.deps.outbox.list().filter((entry): entry is ConnectPeerEntry => entry.kind === 'connect-peer' && entry.payload.machineId === machineId);
+        return this.deps.outbox.ofKind('connect-peer').filter((entry) => entry.payload.machineId === machineId);
     }
 
     private owedTo(machineId: string): number {
@@ -176,22 +162,12 @@ export class ConnectPeer {
     }
 }
 
-/* The outbox as `ConnectPeerDeps` wants to count what waits on a machine. */
-export function owedTargetsIn(outbox: { list(): readonly { kind: string; target: string; payload?: unknown }[] }): (machineId: string) => string[] {
-    return (machineId) => outbox.list().flatMap((entry) => (machineOwed(entry) === machineId ? [entry.target] : []));
-}
-
 /*
  * Every reconnect still owed when the daemon starts was waiting out a delay an earlier run set, and the
  * machine may well be back: each is due now. Call after the outbox loaded and before its worker starts.
  */
-export async function restartConnectPeers(
-    outbox: { list(): readonly OutboxEntry[]; update(entry: ConnectPeerEntry): Promise<void> },
-    now: number
-): Promise<void> {
-    for (const entry of outbox.list()) {
-        if (entry.kind === 'connect-peer') {
-            await outbox.update({ ...entry, notBefore: now, attempts: 0 });
-        }
+export async function restartConnectPeers(outbox: Pick<OutboxStore, 'ofKind' | 'update'>, now: number): Promise<void> {
+    for (const entry of outbox.ofKind('connect-peer')) {
+        await outbox.update({ ...entry, notBefore: now, attempts: 0 });
     }
 }

@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
-import type { Clock } from '@adecore/agents/coordination';
+import type { WakeChat } from '@adecore/agents/chat';
+import type { Clock, OutboxOutcome } from '@adecore/agents/coordination';
 import { GitPrWatchSchema, type ChangeSplit, type GitPrWatch, type GitPrWatchEndReason, type GitPullRequest } from '@ruimte/contracts';
 import { z } from 'zod';
 import { ClientSinks } from '../client-sinks.ts';
@@ -8,7 +9,7 @@ import { isTerminal } from '../git/pr-checks.ts';
 import { PrSplits } from '../git/pr-split.ts';
 import { GitError } from '../git/run.ts';
 import { JsonFileStore } from '../json-file-store.ts';
-import type { OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
+import type { DeliverPrWatchEntry, OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
 import { wakefulClock } from '../timers.ts';
 import type { SessionSink } from '../wire.ts';
 
@@ -137,6 +138,26 @@ function reviewWake(pr: GitPullRequest, review: PrReview): { text: string; label
 }
 
 /*
+ * Hands the wake a poll wrote to its chat, in one turn that wakes nobody. A watch that ended took its
+ * wake along; a chat in a turn, or on its way to another folder, keeps it until it can take a turn.
+ */
+export function prWatchHandler(deps: { watches: Pick<PrWatchStore, 'has'>; openChat(chatId: string): Promise<WakeChat | null> }) {
+    return async (entry: DeliverPrWatchEntry): Promise<OutboxOutcome> => {
+        if (!deps.watches.has(entry.payload.watchId)) {
+            return;
+        }
+        const chat = await deps.openChat(entry.target);
+        if (chat === null) {
+            return;
+        }
+        if (chat.relocating?.() === true) {
+            return 'wait';
+        }
+        return chat.wake({ text: entry.payload.text, label: entry.payload.label, taskIds: [] }) ? undefined : 'wait';
+    };
+}
+
+/*
  * The pull requests this machine watches for a chat, one per chat. A watch polls on a clock of its own
  * (it is the only reader of GitHub here), backs off while nothing changes, and writes a `deliver-pr-watch`
  * to the outbox when the head's checks finish or a review comes in. It lives under `$RUIMTE_HOME`, since
@@ -241,7 +262,7 @@ export class PrWatchStore {
         }
     }
 
-    /* For `wireOutbox.places`: a chat that left its project takes its watch along. */
+    /* For the `placed` event of the node lifecycle: a chat that left its project takes its watch along. */
     prune(projectId: string, ids: ReadonlySet<string>): void {
         for (const record of [...this.records.values()]) {
             if (record.projectId === projectId && !ids.has(record.chatId)) {

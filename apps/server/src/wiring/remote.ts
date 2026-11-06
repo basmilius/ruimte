@@ -1,6 +1,5 @@
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { OutboxStore } from '../outbox/outbox.ts';
-import { owedTargetsIn } from '../peer/giver/connect-peer.ts';
 import { PeerMachines } from '../peer/giver/peer-machines.ts';
 import { RemoteConnections, brokerDialer } from '../peer/giver/remote-connections.ts';
 import { RemoteStatus } from '../peer/giver/remote-status.ts';
@@ -29,18 +28,13 @@ export async function wireRemote({ home, identity, machine, outbox, later }: Rem
     const machines = new PeerMachines(home);
     await machines.load();
     const status = new RemoteStatus();
-    const owedTargets = owedTargetsIn(outbox);
     const connections = new RemoteConnections({
         machines,
         pending: machine.pendingAdmissions,
         status,
-        owed: (machineId) => owedTargets(machineId).length,
+        owed: (machineId) => outbox.targetsOwedTo(machineId).length,
         unstarted: (machineId, except) =>
-            outbox
-                .list()
-                .flatMap((entry) =>
-                    entry.kind === 'start-remote-agent' && entry.payload.machineId === machineId && entry.id !== except ? [entry.target] : []
-                ),
+            outbox.ofKind('start-remote-agent').flatMap((entry) => (entry.payload.machineId === machineId && entry.id !== except ? [entry.target] : [])),
         dialer: brokerDialer({ signer: machine.peerKey, defaultBroker: () => later.network().brokerSwitch.describe().brokerUrl, label: () => identity.label })
     });
     const leaving: Array<() => Promise<void> | void> = [];

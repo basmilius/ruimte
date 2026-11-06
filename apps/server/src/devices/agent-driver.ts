@@ -11,6 +11,7 @@ import {
     type DeviceReference,
     type DeviceTool
 } from '@ruimte/contracts';
+import type { NodeLifecycle } from '../node-lifecycle.ts';
 import { captureFile, pngSize, writeShot } from '../shots.ts';
 import { realTimers, type Timers } from '../timers.ts';
 import { DeviceClaims } from './device-claims.ts';
@@ -204,6 +205,12 @@ export class DeviceDriver {
     /* Claims the device for this agent, or refuses with `device-in-use` while another agent holds it. */
     claim(caller: string, device: DeviceInfo): void {
         this.claims.take(caller, device);
+    }
+
+    /* The claim ends when the terminal of its holder exits or its chat or node closes, so the device is free for another agent. */
+    follow(lifecycle: NodeLifecycle): void {
+        lifecycle.on('exited', (caller) => this.nodeClosed(caller));
+        lifecycle.on('closed', (caller) => this.nodeClosed(caller));
     }
 
     /* The terminal or chat behind `caller` ended, so the devices it claimed are free for another agent. */

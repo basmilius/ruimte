@@ -91,7 +91,7 @@ beforeEach(async () => {
         } as unknown as ConstructorParameters<typeof PeerTasks>[0]['projects'],
         lineage,
         tasks,
-        outbox: { list: () => [], remove: async () => undefined },
+        outbox: { ofKind: () => [], remove: async () => undefined },
         enqueue: async (_projectId, _target, work) => void enqueued.push(work),
         prompts: { put: async () => undefined, take: async () => null },
         stopNode: async () => undefined,

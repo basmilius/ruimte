@@ -24,7 +24,7 @@ import {
 } from '@ruimte/contracts';
 import { PUBLISHED_INLINE_NOTE } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
-import type { OutboxEntry, OutboxWork, RoutineRunEntry } from '../outbox/outbox.ts';
+import type { OutboxWork, RoutineRunEntry } from '../outbox/outbox.ts';
 import type { RoutineAuthorStore, RoutineRunStore } from './routine-runs.ts';
 import { RoutineError, type RoutinesDocument, type RoutineStore, type StoredRoutine } from './routine-store.ts';
 
@@ -62,7 +62,7 @@ interface RoutineDeps {
     projects(): Promise<Array<{ projectId: string; name: string; folder: string }>>;
     outbox: {
         enqueue(projectId: string, target: string, work: OutboxWork, notBefore?: number): Promise<void>;
-        list(): OutboxEntry[];
+        ofKind(kind: 'routine-run'): RoutineRunEntry[];
         remove(id: string): Promise<void>;
     };
     agents: {
@@ -473,7 +473,7 @@ export class Routines {
     /* Owes the next time of every routine of a project that runs here, and drops what is owed for one that no longer does. */
     async schedule(projectId: string): Promise<void> {
         const document = await this.deps.store.fresh(projectId);
-        const owed = this.deps.outbox.list().filter((entry) => entry.kind === 'routine-run' && entry.projectId === projectId);
+        const owed = this.deps.outbox.ofKind('routine-run').filter((entry) => entry.projectId === projectId);
         const known = new Set(document.routines.map((stored) => routineTarget(projectId, stored.routine.id)));
         for (const entry of owed) {
             if (!known.has(entry.target)) {
@@ -494,10 +494,10 @@ export class Routines {
     private async owe(projectId: string, folder: string, stored: StoredRoutine, handled?: string): Promise<void> {
         const target = routineTarget(projectId, stored.routine.id);
         const now = this.deps.now();
-        const owed = this.deps.outbox.list().filter((entry) => entry.kind === 'routine-run' && entry.target === target && entry.id !== handled);
+        const owed = this.deps.outbox.ofKind('routine-run').filter((entry) => entry.target === target && entry.id !== handled);
         const next = this.nextOf(folder, stored, now);
         // A time that passed while the machine was off or asleep is still owed, so it runs once now.
-        const pending = owed.find((entry) => entry.kind === 'routine-run' && entry.payload.due <= now);
+        const pending = owed.find((entry) => entry.payload.due <= now);
         if (pending !== undefined && next !== null) {
             for (const entry of owed) {
                 if (entry !== pending) {
@@ -506,7 +506,7 @@ export class Routines {
             }
             return;
         }
-        if (owed.length === 1 && owed[0]!.kind === 'routine-run' && owed[0]!.payload.due === next) {
+        if (owed.length === 1 && owed[0]!.payload.due === next) {
             return;
         }
         for (const entry of owed) {

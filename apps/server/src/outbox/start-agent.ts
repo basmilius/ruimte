@@ -5,7 +5,6 @@ import type { AgentInfo, AgentKind, AgentLaunch, ChatCreatePayload, ChatInfo, Ru
 import type { AgentStart, AgentStartHost, NodeAccount } from '../canvas/host.ts';
 import type { PendingPromptStore } from '../canvas/pending-prompts.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
-import { errorText } from '../error-text.ts';
 import { DEFAULT_RUNTIME_MODE, launchedMode } from '../providers/launch.ts';
 import type { SessionManager } from '../sessions/manager.ts';
 import type { OutboxStore, OutboxWork, StartAgentEntry } from './outbox.ts';
@@ -135,9 +134,6 @@ export interface StartAgentDeps {
     killSession(sessionId: string): Promise<void>;
     /* Refuses a directory the node may not start in; asked right before the start, not when the tool ran. */
     checkCwd?: (nodeId: string, cwd: string) => Promise<void>;
-    log?: (line: string) => void;
-    /* A start that failed and will not be tried again. What was waiting on the agent hears it here. */
-    onGaveUp?: (entry: StartAgentEntry, error: unknown) => void;
 }
 
 function agentChatPayload(entry: StartAgentEntry, preference: ComposerPreference): ChatCreatePayload {
@@ -155,23 +151,23 @@ function agentChatPayload(entry: StartAgentEntry, preference: ComposerPreference
     };
 }
 
-export function agentChatOpening(outbox: Pick<OutboxStore, 'list'>, composerPreference: StartAgentDeps['composerPreference']) {
+export function agentChatOpening(outbox: Pick<OutboxStore, 'owed'>, composerPreference: StartAgentDeps['composerPreference']) {
     return (chatId: string): ChatCreatePayload | undefined => {
-        const entry = outbox.list().find((entry) => entry.kind === 'start-agent' && entry.target === chatId);
-        return entry?.kind === 'start-agent' && entry.payload.node === 'chat' ? agentChatPayload(entry, composerPreference(entry.payload.provider)) : undefined;
+        const entry = outbox.owed('start-agent', chatId);
+        return entry?.payload.node === 'chat' ? agentChatPayload(entry, composerPreference(entry.payload.provider)) : undefined;
     };
 }
 
 /*
  * Starts the chat or the terminal of an agent node a tool wrote, so a client that mounts it later
- * attaches to what already runs. Never retried: the create takes the node's first prompt before it
- * spawns, so a second attempt would start the agent without its task.
+ * attaches to what already runs. A failure is rethrown and the entry is given up on at once (`retries`
+ * of its kind), since the create takes the node's first prompt before it spawns and a second attempt
+ * would start the agent without its task.
  */
 export function startAgentHandler(deps: StartAgentDeps) {
     return async (entry: StartAgentEntry): Promise<void> => {
         const { node, provider, cwd, runtimeMode, ceiling, account } = entry.payload;
         const nodeId = entry.target;
-        const log = deps.log ?? ((line: string) => console.error(line));
         if (!deps.placed(nodeId)) {
             return;
         }
@@ -205,9 +201,7 @@ export function startAgentHandler(deps: StartAgentDeps) {
             if (typeof e === 'object' && e !== null && 'code' in e && e.code === 'session-exists') {
                 return;
             }
-            log(`Starting the agent of ${nodeId} failed: ${errorText(e)}`);
-            deps.onGaveUp?.(entry, e);
-            return;
+            throw e;
         }
         // Deleted while it was being started. Whoever deleted it found nothing to end yet.
         if (!deps.placed(nodeId)) {

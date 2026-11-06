@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
-import type { ChatEvent, SecretRequest } from '@ruimte/contracts';
+import type { SecretRequest } from '@ruimte/contracts';
 import { ManualTimers } from '../computer/computer-test-helpers.ts';
+import { NodeLifecycle } from '../node-lifecycle.ts';
 import type { SessionEvent } from '../wire.ts';
 import { SECRET_CARD_MS, SECRET_WAIT_MS, type SecretAsk } from './secret-requests.ts';
 import { SecretService } from './secret-service.ts';
@@ -46,6 +47,7 @@ let holds: Map<string, Set<string>>;
 let published: SecretRequest[][];
 let events: SessionEvent[];
 let service: SecretService;
+let lifecycle: NodeLifecycle;
 
 function heldKeys(nodeId: string): string[] {
     return [...(holds.get(nodeId) ?? [])];
@@ -55,10 +57,6 @@ async function flush(): Promise<void> {
     for (let i = 0; i < 10; i++) {
         await Promise.resolve();
     }
-}
-
-function chatEvent(chatId: string, event: ChatEvent): SessionEvent {
-    return { event: 'chat.event', payload: { chatId, event } } as SessionEvent;
 }
 
 beforeEach(() => {
@@ -86,6 +84,8 @@ beforeEach(() => {
         now: () => timers.now,
         timers
     });
+    lifecycle = new NodeLifecycle();
+    service.follow(lifecycle);
     service.subscribe('client', (event) => {
         events.push(event);
         if (event.event === 'secret.requests') {
@@ -162,19 +162,14 @@ describe('a secret card', () => {
     test('a turn that ends cancels the card, and so does a chat that stops or goes', async () => {
         const waiting = service.ask(ask, 30_000);
         await flush();
-        service.observe(
-            chatEvent('chat-1', {
-                type: 'item',
-                item: { id: 't', kind: 'turn', createdAt: 0, turnId: 't', state: 'done', endedAt: 1, costUsd: 0 }
-            } as ChatEvent)
-        );
+        await lifecycle.emit('turnEnded', 'chat-1', 'done');
         expect((await waiting).outcome).toBe('cancelled');
         expect(service.list()).toEqual([]);
         expect(heldKeys('chat-1')).toEqual([]);
 
         const again = service.ask(ask, 30_000);
         await flush();
-        service.nodeClosed('chat-1');
+        await lifecycle.emit('closed', 'chat-1');
         expect((await again).outcome).toBe('cancelled');
     });
 
