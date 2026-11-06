@@ -140,6 +140,8 @@ export function OutputPanel() {
     }
 
     const shown = list.artifacts.filter((artifact) => matchesFilters(artifact, filters, query, now));
+    // The list is the machine's: a project without output shows none of it with no filter a person set.
+    const nothingSaved = list.artifacts.length === 0 || (shown.length === 0 && query === '' && !filtersChanged(filters, projectId));
     const everywhere = filters.project === ALL;
     const shownBytes = shown.reduce((sum, artifact) => sum + artifact.totalBytes, 0);
 
@@ -168,7 +170,7 @@ export function OutputPanel() {
                 </div>
             )}
             <ScrollArea className="grow" viewportClassName="px-2 pb-2">
-                {list.artifacts.length === 0 ? (
+                {nothingSaved ? (
                     <PanelEmpty scene={<OutputScene />} title={t('panel.emptyTitle')} fill="full">
                         {t('panel.empty')}
                     </PanelEmpty>
