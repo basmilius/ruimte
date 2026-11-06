@@ -3,7 +3,7 @@ import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contr
 import { endpointKey } from '@/state/keys';
 import type { Transport, TransportStatus } from '@/transport-api/transport';
 import { BrowserClient } from './browser-client';
-import { initialStreamUrl, normalizeUrl, useBrowser } from './registry';
+import { initialStreamUrl, useBrowser } from './registry';
 
 function info(browserId: string, url = 'https://example.com') {
     return {
@@ -79,10 +79,6 @@ describe('BrowserClient', () => {
     test('restores the project URL when the previous remote page only reports about:blank', () => {
         expect(initialStreamUrl('https://tweakers.net', 'about:blank')).toBe('https://tweakers.net');
         expect(initialStreamUrl('https://tweakers.net', 'https://tweakers.net/nieuws')).toBe('https://tweakers.net/nieuws');
-    });
-
-    test('treats a localhost port as a host instead of a URL scheme', () => {
-        expect(normalizeUrl('localhost:3000/demo')).toBe('http://localhost:3000/demo');
     });
 
     test('opens once for two mounts and detaches after the last one', async () => {

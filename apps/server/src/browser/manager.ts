@@ -6,6 +6,8 @@ import {
     BROWSER_FAVICON_MAX_BYTES,
     BROWSER_FAVICON_MAX_DATA_URL_LENGTH,
     PAGE_TEXT_EXPRESSION,
+    agentAddressProblem,
+    normalizeUrl,
     type BrowserDriveAction,
     type BrowserInfo,
     type BrowserInput,
@@ -57,20 +59,13 @@ type BrowserErrorCode = 'bad-address' | 'browser-not-found' | 'browser-unavailab
 
 class BrowserError extends CodedError<BrowserErrorCode> {}
 
-function normalizeUrl(input: string): string {
-    const trimmed = input.trim();
-    if (trimmed === '') {
-        return 'about:blank';
-    }
-    const local = /^localhost(:\d+)?(\/|$)/.test(trimmed) || /^\d+\.\d+\.\d+\.\d+/.test(trimmed);
-    const value = local ? `http://${trimmed}` : /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
-    let parsed: URL;
-    try {
-        parsed = new URL(value);
-    } catch {
+function addressOf(input: string): string {
+    const value = normalizeUrl(input);
+    const problem = agentAddressProblem(value);
+    if (problem === 'invalid') {
         throw new BrowserError('bad-address', 'Enter a valid web address');
     }
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:' && value !== 'about:blank') {
+    if (problem === 'scheme') {
         throw new BrowserError('bad-address', 'Only HTTP and HTTPS pages can be opened');
     }
     return value;
@@ -211,7 +206,7 @@ class BrowserSession implements LiveFrameSource {
     }
 
     async navigate(input: string): Promise<void> {
-        const url = normalizeUrl(input);
+        const url = addressOf(input);
         this.update({ url, loading: true, error: null, favicon: null });
         try {
             await this.enqueuePage(() => this.page.navigate(url));
@@ -400,7 +395,7 @@ class BrowserSession implements LiveFrameSource {
             return fallback;
         }
         try {
-            return normalizeUrl(value);
+            return addressOf(value);
         } catch {
             return fallback;
         }
@@ -482,7 +477,7 @@ export class BrowserManager {
             await session.navigate(url);
         } else {
             session.clients.add(clientId);
-            if (session.info().url === 'about:blank' && normalizeUrl(url) !== 'about:blank') {
+            if (session.info().url === 'about:blank' && addressOf(url) !== 'about:blank') {
                 await session.navigate(url);
             }
         }

@@ -62,6 +62,7 @@ export * from './agent-server.ts';
 export * from './archive.ts';
 export * from './auth.ts';
 export * from './browser.ts';
+export * from './browser-url.ts';
 export * from './bytes.ts';
 export * from './chat.ts';
 export * from './chat-image.ts';

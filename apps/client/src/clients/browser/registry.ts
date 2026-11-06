@@ -1,4 +1,4 @@
-import { PAGE_TEXT_EXPRESSION } from '@ruimte/contracts';
+import { normalizeUrl, PAGE_TEXT_EXPRESSION } from '@ruimte/contracts';
 import { create } from 'zustand';
 import {
     feedWheel,
@@ -172,21 +172,6 @@ const ABORTED = -3;
 
 /* Longer than any picture of a drawn page takes, which is tens of milliseconds. */
 const CAPTURE_TIMEOUT_MS = 3_000;
-
-/* Adds a scheme when the person typed a bare host; anything with one is used as is. */
-export function normalizeUrl(input: string): string {
-    const trimmed = input.trim();
-    if (trimmed === '') {
-        return 'about:blank';
-    }
-    if (/^localhost(:\d+)?(\/|$)/.test(trimmed) || /^\d+\.\d+\.\d+\.\d+/.test(trimmed)) {
-        return `http://${trimmed}`;
-    }
-    if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) {
-        return trimmed;
-    }
-    return `https://${trimmed}`;
-}
 
 export function initialStreamUrl(savedUrl: string, observedUrl?: string): string {
     return observedUrl && observedUrl !== 'about:blank' ? observedUrl : savedUrl;

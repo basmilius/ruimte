@@ -1,8 +1,9 @@
 import { ActionRefusal, type ActionHandlers, type ActionOutput } from '@ruimte/actions';
+import { agentAddressProblem, normalizeUrl } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { refuseUnreachableBrowser } from '@/actions/action-reach';
 import { pageStateOf } from '@/browser/page-hold';
-import { browserRegistry, normalizeUrl, useBrowser, type BrowserState } from '@/clients/browser/registry';
+import { browserRegistry, useBrowser, type BrowserState } from '@/clients/browser/registry';
 import { isDesktop } from '@/desktop/bridge';
 import { currentEndpointId } from '@/state/current-endpoint';
 import type { DocumentState } from '@/state/document';
@@ -126,7 +127,7 @@ export function pageActions(document: StoreApi<DocumentState>, overrides: Partia
             const { title, url: saved, browserOwner } = browserOf(nodeId);
             const address = normalizeUrl(url);
             refuseUnreachableBrowser('browser', address, browserOwner);
-            if (actor.kind !== 'person' && !/^https?:\/\//i.test(address)) {
+            if (actor.kind !== 'person' && agentAddressProblem(address) !== null) {
                 throw new ActionRefusal('bad-url', `“${url}” is not an http or https address.`);
             }
             if (saved === '') {
