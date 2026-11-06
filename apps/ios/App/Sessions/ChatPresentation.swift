@@ -550,7 +550,7 @@ final class ChatPresentation {
         let itemTimes = all.map(\.item.createdAt)
         // Output survives a clear; only versions from the conversation still in this thread belong here.
         let from = itemTimes.min() ?? .infinity
-        let visibleSaved = saved.filter { $0.version.createdAt >= from }
+        let visibleSaved = saved.filter { $0.version.created >= from }
         let groups = ChatOutputCards.groups(visibleSaved, itemTimes: itemTimes)
         let cards = groups.map(ChatOutputCard.init(saved:))
         rows = ChatVisuals.placed(rows, visuals: visuals, cards: cards, heldFrom: heldFrom)

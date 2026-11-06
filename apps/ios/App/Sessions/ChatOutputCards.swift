@@ -19,7 +19,7 @@ struct ChatOutputCard: Equatable, Identifiable {
     let saved: [ChatSavedVersion]
     var id: String { "output:\(saved[0].version.id)" }
     /// At the last version, so a turn's card stands under the commands that made it.
-    var at: Double { saved[saved.count - 1].version.createdAt }
+    var at: Double { saved[saved.count - 1].version.created }
 }
 
 /// An Output item a card in the thread asked to open; nil `versionID` is its latest version.
@@ -37,19 +37,19 @@ enum ChatOutputCards {
     static func groups(_ saved: [ChatSavedVersion], itemTimes: [Double]) -> [[ChatSavedVersion]] {
         var groups: [[ChatSavedVersion]] = []
         let sorted = saved.enumerated().sorted {
-            $0.element.version.createdAt == $1.element.version.createdAt
-                ? $0.offset < $1.offset : $0.element.version.createdAt < $1.element.version.createdAt
+            $0.element.version.created == $1.element.version.created
+                ? $0.offset < $1.offset : $0.element.version.created < $1.element.version.created
         }
         for entry in sorted.map(\.element) {
             guard let previous = groups.last?.last else {
                 groups.append([entry])
                 continue
             }
-            let turnID = entry.version.provenance.turnID
-            let sameTurn = turnID != nil && previous.version.provenance.turnID == turnID
+            let turnID = entry.version.provenance.turnId
+            let sameTurn = turnID != nil && previous.version.provenance.turnId == turnID
             let apart =
                 !sameTurn
-                && itemTimes.contains { $0 > previous.version.createdAt && $0 <= entry.version.createdAt }
+                && itemTimes.contains { $0 > previous.version.created && $0 <= entry.version.created }
             if apart {
                 groups.append([entry])
             } else {
@@ -74,7 +74,7 @@ enum ChatOutputCards {
                     artifactID: item.id, title: item.title, kind: item.kind, version: item.latest, latest: true)
             ]
         }
-        .filter { $0.version.provenance.chatID == chatID }
+        .filter { $0.version.provenance.chatId == chatID }
     }
 }
 
@@ -111,15 +111,17 @@ enum ChatOutputCards {
             guard let self else { return }
             guard
                 let answer = try? await client.request(
-                    .artifactList, payload: .object(["chatId": .string(chatID)]))
+                    .artifactList, payload: .object(["chatId": .string(chatID)])
+                ).decoded(as: ArtifactListResult.self)
             else { return }
-            let items = answer.list("artifacts").map(OutputItem.init(json:))
+            let items = answer.artifacts
             for item in items where item.versionCount > 1 {
                 guard
                     let read = try? await client.request(
-                        .artifactGet, payload: .object(["artifactId": .string(item.id)]))
+                        .artifactGet, payload: .object(["artifactId": .string(item.id)])
+                    ).decoded(as: ArtifactGetResult.self)
                 else { continue }
-                versions[item.id] = read.list("versions").map(OutputVersion.init(json:))
+                versions[item.id] = read.versions
             }
             guard !Task.isCancelled else { return }
             deliver(ChatOutputCards.saved(chatID: chatID, items: items, versions: versions))

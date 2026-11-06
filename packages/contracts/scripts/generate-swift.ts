@@ -403,7 +403,16 @@ const typedRoots: [name: string, source: string, path: (string | number)[]][] = 
     ['RoutineRunKind', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'runs', 'items', 'properties', 'kind']],
     ['RoutineRunState', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'runs', 'items', 'properties', 'state']],
     ['RoutineSkip', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'runs', 'items', 'properties', 'skipped']],
-    ['RoutineRunNowResult', 'request.routine.runNow.result', []]
+    ['RoutineRunNowResult', 'request.routine.runNow.result', []],
+    ['ArtifactListResult', 'request.artifact.list.result', []],
+    ['ArtifactSummary', 'request.artifact.list.result', ['properties', 'artifacts', 'items']],
+    ['ArtifactVersion', 'request.artifact.list.result', ['properties', 'artifacts', 'items', 'properties', 'latest']],
+    ['ArtifactFile', 'request.artifact.list.result', ['properties', 'artifacts', 'items', 'properties', 'latest', 'properties', 'files', 'items']],
+    ['ArtifactProvenance', 'request.artifact.list.result', ['properties', 'artifacts', 'items', 'properties', 'latest', 'properties', 'provenance']],
+    ['ArtifactOrigin', 'request.artifact.list.result', ['properties', 'artifacts', 'items', 'properties', 'latest', 'properties', 'origin']],
+    ['ArtifactGetResult', 'request.artifact.get.result', []],
+    ['Artifact', 'request.artifact.get.result', ['properties', 'artifact']],
+    ['ArtifactChangedEvent', 'event.artifact.changed', []]
 ];
 const typed = typedRoots.map(([name, source, path]) => {
     const schema = path.reduce((node: any, key) => node?.[key], typedSchema(schemas[source]));

@@ -122,7 +122,7 @@ import Testing
     }
 
     @Test func aVersionIsLabeledByItsNumberAndMoment() {
-        let version = OutputVersion(json: Self.version("v3", number: 3, at: 0))
+        let version = Self.version("v3", number: 3, at: 0).outputVersion
         #expect(version.label.hasPrefix("v3, "))
     }
 
@@ -140,38 +140,19 @@ import Testing
     }
 
     private func item(_ id: String, at date: Date) -> OutputItem {
-        OutputItem(
-            json: Self.summary(id, title: id, at: date.timeIntervalSince1970 * 1000))
+        Self.summary(id, title: id, at: date.timeIntervalSince1970 * 1000).outputItem
     }
 
     static func provenance(maker: String, agent: String? = nil, model: String? = nil) -> OutputProvenance {
-        var fields: [String: JSONValue] = ["maker": .string(maker), "machineId": .string("m1")]
-        if let agent { fields["agent"] = .string(agent) }
-        if let model { fields["model"] = .string(model) }
-        return OutputProvenance(json: .object(fields))
+        OutputWire.provenance(maker: maker, agent: agent, model: model).outputProvenance
     }
 
     static func version(_ id: String, number: Int, at: Double) -> JSONValue {
-        .object([
-            "versionId": .string(id), "number": .number(Double(number)), "createdAt": .number(at),
-            "files": .array([
-                .object([
-                    "name": .string("summary.md"), "mime": .string("text/markdown"), "size": .number(12),
-                    "sha256": .string("abc"),
-                ])
-            ]),
-            "bytes": .number(12),
-            "provenance": .object(["maker": .string("agent"), "machineId": .string("m1"), "chatId": .string("c1")]),
-            "copiedTo": .array([]),
-        ])
+        OutputWire.version(id, number: number, at: at)
     }
 
     static func summary(_ id: String, title: String, at: Double = 1_792_000_000_000) -> JSONValue {
-        .object([
-            "artifactId": .string(id), "projectId": .string("p1"), "projectName": .string("ruimte"),
-            "title": .string(title), "kind": .string("report"), "createdAt": .number(at),
-            "latest": version("\(id)-3", number: 3, at: at), "versionCount": .number(3), "totalBytes": .number(36),
-        ])
+        OutputWire.summary(id, title: title, at: at)
     }
 }
 

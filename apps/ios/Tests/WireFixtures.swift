@@ -370,3 +370,52 @@ extension JSONValue {
     var routineEntry: RoutineEntry { try! decoded(as: RoutineEntry.self) }
     var routineSchedule: RoutineSchedule { try! decoded(as: RoutineSchedule.self) }
 }
+
+/// `artifact.*` replies as a machine writes them, with the fields the schema requires.
+enum OutputWire {
+    static func file(_ name: String = "summary.md", mime: String = "text/markdown", size: Double = 12) -> JSONValue {
+        .object(["name": .string(name), "mime": .string(mime), "size": .number(size), "sha256": .string("abc")])
+    }
+
+    static func provenance(
+        maker: String = "agent", agent: String? = nil, model: String? = nil, chat: String? = nil, turn: String? = nil
+    ) -> JSONValue {
+        var fields: [String: JSONValue] = ["maker": .string(maker), "machineId": .string("m1")]
+        if let agent { fields["agent"] = .string(agent) }
+        if let model { fields["model"] = .string(model) }
+        if let chat { fields["chatId"] = .string(chat) }
+        if let turn { fields["turnId"] = .string(turn) }
+        return .object(fields)
+    }
+
+    static func version(
+        _ id: String, number: Int = 1, at: Double = 0, files: [JSONValue]? = nil, provenance: JSONValue? = nil
+    ) -> JSONValue {
+        let files = files ?? [file()]
+        return .object([
+            "versionId": .string(id), "number": .number(Double(number)), "createdAt": .number(at),
+            "files": .array(files),
+            "bytes": .number(files.reduce(0) { $0 + ($1.objectValue?["size"]?.numberValue ?? 0) }),
+            "provenance": provenance ?? Self.provenance(chat: "c1"), "copiedTo": .array([]),
+        ])
+    }
+
+    static func summary(
+        _ id: String, title: String, kind: String = "report", at: Double = 1_792_000_000_000, versionCount: Int = 3,
+        latest: JSONValue? = nil
+    ) -> JSONValue {
+        .object([
+            "artifactId": .string(id), "projectId": .string("p1"), "projectName": .string("ruimte"),
+            "title": .string(title), "kind": .string(kind), "createdAt": .number(at),
+            "latest": latest ?? version("\(id)-3", number: 3, at: at), "versionCount": .number(Double(versionCount)),
+            "totalBytes": .number(36),
+        ])
+    }
+}
+
+extension JSONValue {
+    // A fixture that does not decode is a broken test, not a case to cover.
+    var outputVersion: OutputVersion { try! decoded(as: ArtifactVersion.self) }
+    var outputItem: OutputItem { try! decoded(as: ArtifactSummary.self) }
+    var outputProvenance: OutputProvenance { try! decoded(as: ArtifactProvenance.self) }
+}

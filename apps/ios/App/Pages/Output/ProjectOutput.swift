@@ -4,19 +4,12 @@ import RuimtePulsar
 import RuimteTransport
 
 /// A file of a version. Its name is a label, never a path, and a file is read by its place in the version.
-struct OutputFile: Equatable {
-    let name: String
-    let mime: String
-    let size: Double
+typealias OutputFile = ArtifactFile
 
-    init(json: JSONValue) {
-        name = json.text("name")
-        mime = json.text("mime")
-        size = json.number("size")
-    }
-
+extension ArtifactFile {
+    var bytes: Double { Double(size) }
     /// What Share and Quick Look need on the phone first, whole.
-    var readable: Bool { size <= WireConstants.bytesReadMaxBytes }
+    var readable: Bool { bytes <= WireConstants.bytesReadMaxBytes }
     var isImage: Bool { mime.hasPrefix("image/") }
     var isText: Bool { mime.hasPrefix("text/") && mime != "text/html" }
     /// The last part of the label, for a file on the phone and a title.
@@ -24,41 +17,16 @@ struct OutputFile: Equatable {
 }
 
 /// Who made a version, as the machine recorded it from the context of the call; nothing in it comes from an agent.
-struct OutputProvenance: Equatable {
-    let maker: String
-    let chatID: String?
-    let agent: String?
-    let model: String?
-    let turnID: String?
+typealias OutputProvenance = ArtifactProvenance
 
-    init(json: JSONValue) {
-        maker = json.text("maker")
-        chatID = json["chatId"]?.stringValue
-        turnID = json["turnId"]?.stringValue
-        agent = json["agent"]?.stringValue
-        model = json["model"]?.stringValue
-    }
-}
+typealias OutputVersion = ArtifactVersion
 
-struct OutputVersion: Equatable, Identifiable {
-    let id: String
-    let number: Int
-    /// Epoch milliseconds.
-    let createdAt: Double
-    let files: [OutputFile]
-    let bytes: Double
-    let provenance: OutputProvenance
+extension ArtifactVersion: Identifiable {
+    public var id: String { versionId }
 
-    init(json: JSONValue) {
-        id = json.text("versionId")
-        number = Int(json.number("number"))
-        createdAt = json.number("createdAt")
-        files = json.list("files").map(OutputFile.init(json:))
-        bytes = json.number("bytes")
-        provenance = OutputProvenance(json: json["provenance"] ?? .object([:]))
-    }
-
-    var date: Date { Date(timeIntervalSince1970: createdAt / 1000) }
+    /// Epoch milliseconds, as the times of a thread are.
+    var created: Double { Double(createdAt) }
+    var date: Date { Date(timeIntervalSince1970: created / 1000) }
 
     /// "v3, 25 Oct, 20:19", as the desktop labels a version.
     var label: String {
@@ -68,20 +36,10 @@ struct OutputVersion: Equatable, Identifiable {
 }
 
 /// A row of the list: an item with its latest version.
-struct OutputItem: Equatable, Identifiable {
-    let id: String
-    let title: String
-    let kind: String
-    let latest: OutputVersion
-    let versionCount: Int
+typealias OutputItem = ArtifactSummary
 
-    init(json: JSONValue) {
-        id = json.text("artifactId")
-        title = json.text("title")
-        kind = json.text("kind")
-        latest = OutputVersion(json: json["latest"] ?? .object([:]))
-        versionCount = max(1, Int(json.number("versionCount")))
-    }
+extension ArtifactSummary: Identifiable {
+    public var id: String { artifactId }
 }
 
 enum OutputKind {
@@ -101,11 +59,11 @@ enum OutputKind {
         }
     }
 
-    static func makerIcon(_ maker: String) -> String {
+    static func makerIcon(_ maker: ArtifactProvenanceMaker) -> String {
         switch maker {
-        case "person": "user"
-        case "routine": "calendar-clock"
-        default: "bot"
+        case .person: "user"
+        case .routine: "calendar-clock"
+        case .agent: "bot"
         }
     }
 }
@@ -178,14 +136,16 @@ enum OutputMachine {
 
     func start(
         _ client: any MachineRequesting, gated: Bool = false,
-        changed: @escaping @MainActor @Sendable (JSONValue) -> Void,
+        changed: @escaping @MainActor @Sendable (ArtifactChangedEvent) -> Void,
         connection: @escaping @MainActor @Sendable (Bool) -> Void = { _ in },
         reload: @escaping @MainActor @Sendable () async -> Void
     ) {
         guard stops.isEmpty else { return }
         stops.append(
             client.subscribe(.artifactChanged) { [weak self] payload in
-                if self?.lease != nil { changed(payload) }
+                if self?.lease != nil, let event = try? payload.decoded(as: ArtifactChangedEvent.self) {
+                    changed(event)
+                }
             })
         stops.append(
             client.observeConnection { [weak self] available in
@@ -229,8 +189,8 @@ enum OutputMachine {
     func start() {
         watch.start(
             client,
-            changed: { [weak self] payload in
-                guard let self, payload.text("projectId") == projectID else { return }
+            changed: { [weak self] event in
+                guard let self, event.projectId == projectID else { return }
                 Task { await self.load() }
             },
             connection: { [weak self] in self?.reachable = $0 },
@@ -242,7 +202,8 @@ enum OutputMachine {
     func load() async {
         do {
             let answer = try await client.request(.artifactList, payload: .object(["projectId": .string(projectID)]))
-            items = answer.list("artifacts").map(OutputItem.init(json:))
+                .decoded(as: ArtifactListResult.self)
+            items = answer.artifacts
             reachable = true
             problem = nil
         } catch is CancellationError {
@@ -292,9 +253,9 @@ enum OutputMachine {
     func start() {
         watch.start(
             client,
-            changed: { [weak self] payload in
-                guard let self, payload.text("artifactId") == artifactID else { return }
-                if payload["removed"]?.boolValue == true {
+            changed: { [weak self] event in
+                guard let self, event.artifactId == artifactID else { return }
+                if event.removed == true {
                     gone = true
                 } else {
                     Task { await self.load() }
@@ -309,11 +270,11 @@ enum OutputMachine {
     func load() async {
         do {
             let answer = try await client.request(.artifactGet, payload: .object(["artifactId": .string(artifactID)]))
-            let artifact = answer["artifact"] ?? .object([:])
-            title = artifact.text("title")
-            kind = artifact.text("kind")
-            versions = answer.list("versions").map(OutputVersion.init(json:))
-            chatPresent = answer["chatPresent"]?.boolValue ?? false
+                .decoded(as: ArtifactGetResult.self)
+            title = answer.artifact.title
+            kind = answer.artifact.kind
+            versions = answer.versions
+            chatPresent = answer.chatPresent
             gone = versions.isEmpty
             reachable = true
             problem = nil
@@ -349,9 +310,9 @@ enum OutputMachine {
     /// noted either says Agent.
     func maker(_ provenance: OutputProvenance) -> String {
         switch provenance.maker {
-        case "person": return String(localized: "You")
-        case "routine": return String(localized: "Routine")
-        default: break
+        case .person: return String(localized: "You")
+        case .routine: return String(localized: "Routine")
+        case .agent: break
         }
         let catalog = providers.first { $0.text("kind") == provenance.agent }
         if let model = provenance.model, !model.isEmpty {

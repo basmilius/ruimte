@@ -144,7 +144,7 @@ struct OutputMakerIcon: View {
     var size: CGFloat = 14
 
     var body: some View {
-        if provenance.maker == "agent", let agent = provenance.agent {
+        if provenance.maker == .agent, let agent = provenance.agent {
             ChatProviderMark(provider: agent, size: size).accessibilityHidden(true)
         } else {
             Image(lucide: OutputKind.makerIcon(provenance.maker), size: size).accessibilityHidden(true)
