@@ -7,6 +7,7 @@ import { useDiagram } from '@/state/diagram';
 import { useDocument } from '@/state/document';
 import { useDrawing } from '@/state/drawing';
 import { useProject } from '@/state/project';
+import { fireAndForget } from '@/transport-api/transport';
 
 // One banner slot: possible data loss outranks an agent's repeatable view request.
 export function ProjectBanner() {
@@ -43,10 +44,7 @@ export function ProjectBanner() {
     const resolve = (choice: 'theirs' | 'mine'): void => void client.resolveConflict(choice);
     const retry = (): void => {
         setRetrying(true);
-        void client
-            .flush()
-            .catch(() => undefined)
-            .finally(() => setRetrying(false));
+        void fireAndForget('client.flush', client.flush()).finally(() => setRetrying(false));
     };
     return conflict ? (
         <Banner icon={GitBranch} tone="attention" message={t(`projectBanner.conflict.${file}`)}>

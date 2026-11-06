@@ -38,6 +38,7 @@ import {
     type ProjectSummary,
     type ProjectView
 } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { isDirectory } from '../disk/is-directory.ts';
 import type { MachineHome } from '../disk/machine-home.ts';
@@ -1279,7 +1280,7 @@ export class ProjectStore {
         await rm(gitignorePathOf(path), { force: true });
         await rm(path, { force: true });
         // An icon or a file a person put in `.ruimte` keeps it, and `rmdir` says so by failing.
-        await rmdir(dirname(path)).catch(() => undefined);
+        await bestEffort('rmdir', rmdir(dirname(path)));
     }
 
     /*

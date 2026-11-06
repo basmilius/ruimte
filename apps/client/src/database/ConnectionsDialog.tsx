@@ -21,6 +21,7 @@ import { databaseSecretStore, type SecretPersistence } from '@/database/secrets'
 import { desktop } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { useProject } from '@/state/project';
+import { fireAndForget } from '@/transport-api/transport';
 import { useConnection } from '@/workspace/context';
 
 /*
@@ -110,14 +111,16 @@ function useSecretPersistence(): SecretPersistence | null {
     useEffect(() => {
         let live = true;
         // A shell that cannot say leaves the line out rather than guess.
-        databaseSecretStore()
-            .persistence()
-            .then((next) => {
-                if (live) {
-                    setPersistence(next);
-                }
-            })
-            .catch(() => undefined);
+        void fireAndForget(
+            'databaseSecretStore',
+            databaseSecretStore()
+                .persistence()
+                .then((next) => {
+                    if (live) {
+                        setPersistence(next);
+                    }
+                })
+        );
         return () => {
             live = false;
         };

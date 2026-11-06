@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { runAction } from '@/extensions/action-runs';
 import { useContributions, type PaletteSourceContribution as Source } from '@/state/extension-registry';
+import { fireAndForget } from '@/transport-api/transport';
 
 const SEARCH_WAIT_MS = 150;
 const NO_HITS: readonly PaletteHit[] = [];
@@ -54,7 +55,7 @@ export function usePaletteHits(query: string, enabled: boolean): readonly Palett
         };
         const timer = setTimeout(() => {
             for (const source of sources) {
-                void search(source).catch(() => undefined);
+                void fireAndForget('search', search(source));
             }
         }, SEARCH_WAIT_MS);
 

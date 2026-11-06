@@ -16,6 +16,7 @@ import { useEndpointId } from '@/state/current-endpoint';
 import { endpointById, LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { dropEndpoint, endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
 import { useSettings } from '@/state/settings';
+import { fireAndForget } from '@/transport-api/transport';
 import { localBrowserRouteAvailable } from './owner-route';
 import { webContentsIdOf } from './preview-guests';
 
@@ -321,7 +322,7 @@ class BrowserRegistry {
             pending.url = url;
             return;
         }
-        element.loadURL(url).catch(() => undefined);
+        void fireAndForget('element.loadURL', element.loadURL(url));
     }
 
     /* Whether the page has a guest to drive. Electron throws on history, stop and reload before the

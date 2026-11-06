@@ -3,7 +3,7 @@ import { isCanvasView } from '@ruimte/contracts';
 import { markUnlinked } from '@/clients/project/remote-refusals';
 import type { CanvasNode } from '@/state/canvas';
 import type { NodesOfView } from '@/state/view-nodes';
-import { TransportError, type Transport } from '@/transport-api/transport';
+import { TransportError, type Transport, fireAndForget, orNull } from '@/transport-api/transport';
 
 /* What one machine is to draw of this project: the nodes that run there and the lines between them. */
 export interface MachineMirror {
@@ -131,7 +131,10 @@ export class RemoteMirror {
         this.queued = true;
         queueMicrotask(() => {
             this.queued = false;
-            this.flushing = this.flushing.then(() => this.flush()).catch(() => undefined);
+            this.flushing = fireAndForget(
+                'flushing.then',
+                this.flushing.then(() => this.flush())
+            );
         });
     }
 
@@ -192,14 +195,16 @@ export class RemoteMirror {
 
     /* The project there ends this machine's nodes and is let go of. */
     private async letGo(transport: Requester, projectId: string): Promise<void> {
-        await transport.request('peer.placeNodes', { machineId: this.host.selfId(), projectId, nodes: [], edges: [] }).catch(() => undefined);
-        await transport.request('project.release', { projectId }).catch(() => undefined);
+        await fireAndForget('peer.placeNodes', transport.request('peer.placeNodes', { machineId: this.host.selfId(), projectId, nodes: [], edges: [] }));
+        await fireAndForget('project.release', transport.request('project.release', { projectId }));
     }
 
     /* The project is left or the window goes: the holds go, and the projects stay open there. */
     release(): void {
         // On their way is all a page that is leaving can ask for.
-        void Promise.all(this.eachHeld((transport, link) => transport.request('project.release', { projectId: link.remoteProjectId }).catch(() => undefined)));
+        void Promise.all(
+            this.eachHeld((transport, link) => fireAndForget('project.release', transport.request('project.release', { projectId: link.remoteProjectId })))
+        );
         this.sent.clear();
     }
 
@@ -218,7 +223,7 @@ export class RemoteMirror {
     private async linkOf(projectId: string, machine: string): Promise<RemoteLink | undefined> {
         if (this.links?.projectId !== projectId || !this.links.byMachine.has(machine)) {
             // Asked again whenever a machine is missing, since a link made a moment ago is what the first send waits for.
-            const links = await this.host.links(projectId).catch(() => null);
+            const links = await orNull('host.links', this.host.links(projectId));
             if (links === null) {
                 return undefined;
             }
@@ -276,7 +281,7 @@ export class RemoteMirror {
                 this.sent.set(machine, signature);
                 markUnlinked(machine, false);
                 if (mirror.nodes.length > 0) {
-                    void this.host.renewPeer?.(machine).catch(() => undefined);
+                    void fireAndForget('host.renewPeer', this.host.renewPeer?.(machine));
                 }
             } catch (e) {
                 // Not marked as sent, so the next change or the link coming back sends it again.

@@ -2,6 +2,7 @@ import { MachineUpdateStatusSchema, type MachineUpdateReport } from '@ruimte/con
 import type { UpdateState } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import type { Transport } from '@/transport-api/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { watchPool, type WatchablePool } from '@/transport/pool-watch';
 
 /*
@@ -62,7 +63,7 @@ export function startMachineUpdate(shell: MachineUpdateShell, source?: Watchable
         if (local?.status !== 'open' || payload === null) {
             return;
         }
-        void local.request('endpoint.reportUpdate', payload).catch(() => undefined);
+        void fireAndForget('endpoint.reportUpdate', local.request('endpoint.reportUpdate', payload));
     };
 
     const proceed = (state: UpdateState): void => {

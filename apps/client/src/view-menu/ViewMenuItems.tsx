@@ -46,6 +46,7 @@ import { isScratchProject, useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSessionRow } from '@/state/sessions';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { fireAndForget } from '@/transport-api/transport';
 import { useMachineAnswers } from '@/transport/features';
 import { sessionHandoffs, viewOffers } from '@/views/view-offers';
 import { useTransport } from '@/workspace/context';
@@ -179,7 +180,7 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
                 of it says: show it, reveal it, copy its path. */}
             {filePath !== null && <FileActionItems path={filePath} on="view" />}
             {workingFolder !== null && (
-                <Menu.Item onClick={() => void transport.request('fs.reveal', { path: workingFolder }).catch(() => undefined)}>
+                <Menu.Item onClick={() => void fireAndForget('fs.reveal', transport.request('fs.reveal', { path: workingFolder }))}>
                     <Icon icon={CornerUpRight} size={14} /> {t('viewMenu.openIn', { app: fileManagerName(platform) })}
                 </Menu.Item>
             )}

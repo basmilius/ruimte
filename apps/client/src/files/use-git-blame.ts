@@ -5,6 +5,7 @@ import type { EditorLanguage } from '@/language/ruimte-editor-language';
 import { useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
 import { useGitRoot } from '@/surface/panels/use-git-root';
+import { orNull } from '@/transport-api/transport';
 import { useTransport } from '@/workspace/context';
 
 /*
@@ -39,15 +40,15 @@ export function useGitBlame(language: EditorLanguage | null, path: string, disk:
         let alive = true;
         const relative = relativeTo(root, path);
         void (async () => {
-            const head = await transport
-                .request('git.log', { cwd: root, limit: 1 })
-                .then((log) => log.commits[0]?.hash ?? '')
-                .catch(() => null);
+            const head = await orNull(
+                'git.log',
+                transport.request('git.log', { cwd: root, limit: 1 }).then((log) => log.commits[0]?.hash ?? '')
+            );
             const before = shown.current;
             if (!alive || (before !== null && before.head === head && before.disk === disk)) {
                 return;
             }
-            const blame = await transport.request('git.blame', { cwd: root, path: relative }).catch(() => null);
+            const blame = await orNull('git.blame', transport.request('git.blame', { cwd: root, path: relative }));
             if (!alive) {
                 return;
             }

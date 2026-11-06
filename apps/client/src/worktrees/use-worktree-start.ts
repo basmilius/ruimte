@@ -5,6 +5,7 @@ import type { AgentKind, GitRefsResult, ModelSelection, Worktree } from '@ruimte
 import { useEffect, useState } from 'react';
 import { perform } from '@/action-port/perform';
 import { availableAgents } from '@/state/agent-availability';
+import { fireAndForget } from '@/transport-api/transport';
 import { useTransport } from '@/workspace/context';
 import { proposedBranch } from '@/worktrees/new-worktree-chat';
 
@@ -110,14 +111,14 @@ export function useWorktreeStart(folder: string | null, proposed: string | null 
             return;
         }
         let current = true;
-        transport
-            .request('git.worktree-list', { repo: folder })
-            .then((answer) => {
+        void fireAndForget(
+            'git.worktree-list',
+            transport.request('git.worktree-list', { repo: folder }).then((answer) => {
                 if (current) {
                     setWorktreeBranches(reusableBranches(answer.worktrees));
                 }
             })
-            .catch(() => undefined);
+        );
         return () => {
             current = false;
         };

@@ -10,6 +10,7 @@ import { asViewConnections, connectionName, ensureDatabaseConnections, useDataba
 import { ensureSqlBindings, refreshSqlSchemas, snapshotOf, sqlBindings, useSqlBindings } from '@/database/sql-bindings';
 import { endpointKey } from '@/state/keys';
 import { shownFolderOf, useProject } from '@/state/project';
+import { fireAndForget } from '@/transport-api/transport';
 import { useConnection } from '@/workspace/context';
 
 /* The value of the choices that are no connection, which no connection id can be. */
@@ -29,16 +30,17 @@ function useDatabases(connection: DatabaseConnection, open: boolean): string[] {
         }
         let live = true;
         const [view] = asViewConnections([connection]);
-        databaseClientFor(endpointKey(endpointId, projectId))
-            .session(view!, 'sql-choice')
-            .schemas()
-            .then((schemas) => {
-                if (live) {
-                    setDatabases(schemas.filter((schema) => !schema.system).map((schema) => schema.name));
-                }
-            })
-            // A connection that does not open here has no list to offer; the choice of the connection itself still stands.
-            .catch(() => undefined);
+        void fireAndForget(
+            'databaseClientFor',
+            databaseClientFor(endpointKey(endpointId, projectId))
+                .session(view!, 'sql-choice')
+                .schemas()
+                .then((schemas) => {
+                    if (live) {
+                        setDatabases(schemas.filter((schema) => !schema.system).map((schema) => schema.name));
+                    }
+                })
+        );
         return () => {
             live = false;
         };

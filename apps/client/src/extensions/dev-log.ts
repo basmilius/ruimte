@@ -1,5 +1,6 @@
 import { extensionRequest } from '@/extensions/machine-request';
 import { transport } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 
 function textOf(value: unknown): string {
     if (typeof value === 'string') {
@@ -21,7 +22,7 @@ function textOf(value: unknown): string {
 export function sendDevLog(id: string, level: string, args: readonly unknown[]): void {
     const text = `[client] ${level === 'log' ? '' : `${level}: `}${args.map(textOf).join(' ')}`;
 
-    void extensionRequest(transport, 'extension.log', { id, text: text.slice(0, 16_000) }).catch(() => undefined);
+    void fireAndForget('extensionRequest', extensionRequest(transport, 'extension.log', { id, text: text.slice(0, 16_000) }));
 }
 
 const LEVELS = ['log', 'info', 'warn', 'error', 'debug'] as const;

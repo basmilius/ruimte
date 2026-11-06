@@ -1,6 +1,7 @@
 import { CodedError } from '@adecore/agents';
 import type { TaskCoordinator, TaskStore } from '@adecore/agents/coordination';
 import { BYTES_CHUNK_MAX, type PeerResultResult, type PeerTaskStartPayload, type PeerTaskStartResult } from '@ruimte/contracts';
+import { bestEffort } from '../../best-effort.ts';
 import { MAX_RESULT_LENGTH } from '../../canvas/tasks.ts';
 import { errorText } from '../../error-text.ts';
 import { BundleStore, bundleIdFor, fetchBundle, makeBundle } from '../../git/bundles.ts';
@@ -140,10 +141,7 @@ export class RemoteTasks {
             await this.fail(taskId, `The task could not be started on the other machine: ${refused.message}`);
         } finally {
             if (bundleId !== null) {
-                await deps
-                    .git()
-                    .bundles.discard(bundleId)
-                    .catch(() => undefined);
+                await bestEffort('bundles.discard', deps.git().bundles.discard(bundleId));
             }
         }
         deps.refresh?.(machineId, entry.id);
@@ -430,7 +428,7 @@ export class RemoteTasks {
             (path, branch) => deps.untrustFolder(path, branch)
         );
         if (taken.path !== undefined) {
-            await worktrees.claim(folder, taken.path, entry.target).catch(() => undefined);
+            await bestEffort('worktrees.claim', worktrees.claim(folder, taken.path, entry.target));
         }
         return `The work came back as the branch ${taken.branch}${taken.path === undefined ? '' : ` in the worktree ${taken.path}`}; worktree_merge ${taken.branch} brings it into your branch.`;
     }

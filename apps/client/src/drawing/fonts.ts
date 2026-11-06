@@ -1,4 +1,5 @@
 import { DEFAULT_FONT_STACKS } from '@adecore/drawing';
+import { fireAndForget } from '@/transport-api/transport';
 
 let loaded: Promise<void> | null = null;
 
@@ -13,7 +14,7 @@ export function loadDrawingFont(): Promise<void> {
         if (typeof document === 'undefined' || !document.fonts) {
             return;
         }
-        await document.fonts.load(`400 20px ${DEFAULT_FONT_STACKS.hand}`).catch(() => undefined);
+        await fireAndForget('document.fonts.load', document.fonts.load(`400 20px ${DEFAULT_FONT_STACKS.hand}`));
     })();
     return loaded;
 }

@@ -1,5 +1,6 @@
 import { FS_WRITE_MAX_BYTES, type FsCreateResult } from '@ruimte/contracts';
 import type { Area } from '../area.ts';
+import { bestEffort } from '../best-effort.ts';
 import type { MachineHome } from '../disk/machine-home.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import { browseDirectories, browseTarget } from '../fs/browse.ts';
@@ -114,7 +115,7 @@ function registerRequests(dispatcher: Dispatcher, { watcher, boundaryOf, machine
             const written = await writeTextFile(payload.path, payload.text, payload.expectedMtime, boundary);
 
             // The reply never waits on the servers.
-            void language.saved(payload.path, payload.text).catch(() => undefined);
+            void bestEffort('language.saved', language.saved(payload.path, payload.text));
 
             return written;
         },
@@ -144,7 +145,7 @@ function registerRequests(dispatcher: Dispatcher, { watcher, boundaryOf, machine
 
             const written = await writeTextFile(path, text, expectedMtime, await boundaryOf(client.id), FS_WRITE_MAX_BYTES);
 
-            void language.saved(path, text).catch(() => undefined);
+            void bestEffort('language.saved', language.saved(path, text));
 
             return written;
         },

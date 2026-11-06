@@ -13,6 +13,7 @@ import { useEndpoints } from '@/state/endpoints';
 import { FILE_FOOTER } from '@/surface/panels/classes';
 import { machineResourceOf, revealablePath, sourceKey, useEndpointIdOf, wireResourceOf, type FileSource } from '@/surface/panels/file-source';
 import { readPiece } from '@/transport-api/piece';
+import { fireAndForget } from '@/transport-api/transport';
 import { readResource } from '@/transport/byte-transfer';
 import { bytesWorkerReady } from '@/transport/bytes-worker-host';
 import { machineTransport } from '@/transport/index';
@@ -318,7 +319,7 @@ function PdfPage({ doc, index, box, scale, root, onSize }: PdfPageProps) {
         layer.replaceChildren();
         layer.style.setProperty('--total-scale-factor', String(scale * page.userUnit));
         const textLayer = new TextLayer({ textContentSource: page.streamTextContent(), container: layer, viewport });
-        textLayer.render().catch(() => undefined);
+        void fireAndForget('textLayer.render', textLayer.render());
         return () => {
             drawing.cancel();
             textLayer.cancel();

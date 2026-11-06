@@ -10,6 +10,7 @@ import { RowTile, TaskNote, TaskPane } from '@/onboarding/TaskPane';
 import { joinNames, type CliRow } from '@/onboarding/tasks';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { transportFor } from '@/transport';
+import { orNull } from '@/transport-api/transport';
 
 interface ProvidersTaskProps {
     machine: string;
@@ -28,7 +29,7 @@ async function checkAgain(): Promise<void> {
     const [{ providers }, accounts] = await Promise.all([
         link.request('provider.list', {}),
         // The accounts are secondary: a refresh that fails keeps the providers.
-        link.request('accounts.refresh', {}).catch(() => null)
+        orNull('accounts.refresh', link.request('accounts.refresh', {}))
     ]);
     useProvidersStore.getState().setProviders(LOCAL_ENDPOINT_ID, providers);
     if (accounts !== null) {

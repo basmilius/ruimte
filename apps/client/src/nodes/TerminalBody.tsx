@@ -48,6 +48,7 @@ import { osc52Text } from '@/terminal/osc52';
 import { SessionPortMonitor } from '@/terminal/SessionPorts';
 import { useTerminalFind } from '@/terminal/use-terminal-find';
 import { bindTerminalKeys, drawSession, fittedGrid } from '@/terminal/xterm';
+import { fireAndForget } from '@/transport-api/transport';
 import { useTransportStatus } from '@/transport/status';
 import { sessionClientFor } from '@/workspace/connections';
 
@@ -296,14 +297,7 @@ function HeldCommandBar({ id, endpointId, command }: { id: string; endpointId: s
     return (
         <div className={clsx(BAR, 'text-text')}>
             <span className="grow truncate">{t('terminal.held', { command })}</span>
-            <Button
-                size="sm"
-                onClick={() =>
-                    void sessionClientFor(endpointId)
-                        ?.runHeld(id)
-                        .catch(() => undefined)
-                }
-            >
+            <Button size="sm" onClick={() => void fireAndForget('sessionClientFor', sessionClientFor(endpointId)?.runHeld(id))}>
                 <Icon icon={Play} size={12} /> {t('terminal.run')}
             </Button>
         </div>

@@ -24,6 +24,7 @@ import {
 import { endpointById } from '@/state/endpoints';
 import { useProject } from '@/state/project';
 import type { Transport } from '@/transport-api/transport';
+import { fireAndForget, orNull } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { pool, transportFor } from '@/transport/index';
 import { useWorkspace } from '@/workspace/connections';
@@ -189,9 +190,9 @@ function AddToMachineForm({ request, onDone }: { request: AddToMachineRequest; o
         try {
             const cloned = await there.request('git.clone', { actionId: id, url, path: target });
             // Opened once so the machine lists it among its projects, and let go at once like any folder only looked at.
-            const opened = await there.request('project.open', { folder: projectFolderIn(cloned.path) }).catch(() => null);
+            const opened = await orNull('project.open', there.request('project.open', { folder: projectFolderIn(cloned.path) }));
             if (opened !== null) {
-                void there.request('project.release', { projectId: opened.summary.projectId }).catch(() => undefined);
+                void fireAndForget('project.release', there.request('project.release', { projectId: opened.summary.projectId }));
             }
             setStep({ step: 'files', clone: cloned.path });
         } catch (e) {
@@ -203,7 +204,7 @@ function AddToMachineForm({ request, onDone }: { request: AddToMachineRequest; o
 
     const cancel = (): void => {
         if (step.step === 'cloning' && actionId !== null) {
-            void there?.request('git.cancel', { actionId }).catch(() => undefined);
+            void fireAndForget('git.cancel', there?.request('git.cancel', { actionId }));
             return;
         }
         onDone();
@@ -220,7 +221,7 @@ function AddToMachineForm({ request, onDone }: { request: AddToMachineRequest; o
         }
         setStep({ step: 'copying', clone, done: 0, total: chosen.length });
         // Writing there needs the clone open as a project of this client, which is the boundary of a write.
-        const opened = await there.request('project.open', { folder: projectFolderIn(clone) }).catch(() => null);
+        const opened = await orNull('project.open', there.request('project.open', { folder: projectFolderIn(clone) }));
         try {
             const outcomes = await copyIgnoredFiles(
                 chosen,
@@ -239,7 +240,7 @@ function AddToMachineForm({ request, onDone }: { request: AddToMachineRequest; o
             setStep({ step: 'done', clone, outcomes });
         } finally {
             if (opened !== null) {
-                void there.request('project.release', { projectId: opened.summary.projectId }).catch(() => undefined);
+                void fireAndForget('project.release', there.request('project.release', { projectId: opened.summary.projectId }));
             }
         }
     };

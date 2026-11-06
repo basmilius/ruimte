@@ -22,6 +22,7 @@ import {
 } from '@ruimte/contracts';
 import { randomToken } from '@ruimte/pulsar';
 import i18next from 'i18next';
+import { fireAndForget } from '@/transport-api/transport';
 import { mergeIceServers, relayedFromStats } from './ice';
 import type { Link, LinkOpener } from './link-transport';
 import { protocolRefusal } from './protocol';
@@ -180,9 +181,10 @@ export function webRtcLink(options: WebRtcLinkOptions): LinkOpener {
                 return;
             }
             if (incoming.kind === 'candidate' && peer && incoming.candidate !== '') {
-                void peer
-                    .addIceCandidate({ candidate: incoming.candidate, sdpMid: incoming.sdpMid, sdpMLineIndex: incoming.sdpMLineIndex })
-                    .catch(() => undefined);
+                void fireAndForget(
+                    'peer.addIceCandidate',
+                    peer.addIceCandidate({ candidate: incoming.candidate, sdpMid: incoming.sdpMid, sdpMLineIndex: incoming.sdpMLineIndex })
+                );
                 return;
             }
             if (incoming.kind === 'close') {

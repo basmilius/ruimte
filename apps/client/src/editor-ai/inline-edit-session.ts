@@ -7,6 +7,7 @@ import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
 import { basenameOf } from '@/paths/file-path';
 import type { DiskText } from '@/state/text-drafts';
+import { fireAndForget } from '@/transport-api/transport';
 import type { InlineEditRecord } from './inline-edit-record';
 import { inlineMessage } from './inline-message';
 
@@ -309,7 +310,7 @@ export class InlineEditSession {
             this.viewId = made.viewId;
             const replaced = this.deps.saveRecord(this.record());
             if (replaced !== null) {
-                void this.deps.removeChat(replaced.projectId, replaced.viewId).catch(() => undefined);
+                void fireAndForget('deps.removeChat', this.deps.removeChat(replaced.projectId, replaced.viewId));
             }
             await this.deps.openChat(made.chatId, provider);
             this.watch();

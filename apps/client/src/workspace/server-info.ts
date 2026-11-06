@@ -2,6 +2,7 @@ import { useProvidersStore } from '@adecore/agents-react/state';
 import { knownNodeSizes, type EndpointInfo, type EndpointNameSource } from '@ruimte/contracts';
 import { LOCAL_ENDPOINT_ID, localMachineLabel, useEndpoints } from '@/state/endpoints';
 import { serverInfoOf, useServers } from '@/state/server';
+import { fireAndForget } from '@/transport-api/transport';
 import { pool, transportFor } from '@/transport/index';
 import { noteDaemonIdentity } from '@/workspace/identity';
 import { watchOpenMachines } from '../transport/open-machines';
@@ -16,21 +17,21 @@ function load(endpointId: string): void {
     if (!link) {
         return;
     }
-    void link
-        .request('endpoint.info', {})
-        .then(async (info) => {
+    void fireAndForget(
+        'endpoint.info',
+        link.request('endpoint.info', {}).then(async (info) => {
             const settled = noteDaemonIdentity(endpointId, info);
             adoptEndpointInfo(settled, info);
-            void link
-                .request('provider.list', {})
-                .then(({ providers }) => useProvidersStore.getState().setProviders(settled, providers))
-                .catch(() => undefined);
+            void fireAndForget(
+                'provider.list',
+                link.request('provider.list', {}).then(({ providers }) => useProvidersStore.getState().setProviders(settled, providers))
+            );
             const hello = await link.request('server.hello', {});
             useServers.getState().setInfo(settled, { platform: hello.platform, home: hello.home, version: hello.version, model: hello.model ?? null });
             // The model arrives a request later than the name, so the row asks again now that it is known.
             adoptMachineName(settled, info.label, info.nameSource ?? 'default');
         })
-        .catch(() => undefined);
+    );
 }
 
 /* Everything a machine says about itself, on every connection and in its answer to a change made here. */

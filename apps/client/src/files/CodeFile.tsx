@@ -41,6 +41,7 @@ import { useSettings } from '@/state/settings';
 import type { EditBlock } from '@/surface/panels/edit-gate';
 import { registerFocusedEditor } from '@/surface/panels/focused-editor';
 import { highlightDocumentChunks } from '@/surface/panels/highlight';
+import { fireAndForget } from '@/transport-api/transport';
 import { useMachineAnswers } from '@/transport/features';
 
 const SqlConsole = lazyNamed(() => import('@/database/SqlConsole'), 'SqlConsole');
@@ -141,13 +142,14 @@ function CodeChunk({ code, lines, start, index, highlight, reveal, revealNonce }
             return;
         }
         let cancelled = false;
-        highlight(index)
-            .then((result) => {
+        void fireAndForget(
+            'highlight',
+            highlight(index).then((result) => {
                 if (!cancelled) {
                     setHighlighted({ source: highlight, index, html: result });
                 }
             })
-            .catch(() => undefined);
+        );
         return () => {
             cancelled = true;
         };

@@ -22,6 +22,7 @@ import { perform } from '@/action-port/perform';
 import { cancelGitRunAction } from '@/action-port/person-actions';
 import { useGit } from '@/state/git';
 import { useToasts } from '@/state/toasts';
+import { fireAndForget } from '@/transport-api/transport';
 import { amendTarget, commitTargets, nextActionId, splitMessage, type CommitCandidate } from '@/worktree-rules/git-actions';
 import { CommitSuggestion } from './commit-suggestion';
 
@@ -109,15 +110,16 @@ export function CommitBox({ messageKey, checkouts, named, capabilities, busy, on
         if (!on || amendable === null || message.trim() !== '') {
             return;
         }
-        perform('git.log', { repository: amendable.path, limit: 1, cursor: null })
-            .then((answer) => {
+        void fireAndForget(
+            'git.log',
+            perform('git.log', { repository: amendable.path, limit: 1, cursor: null }).then((answer) => {
                 const last = answer.commits[0]?.subject ?? '';
                 const state = useGit.getState();
                 if (last !== '' && state.amends[messageKey] === true && (state.messages[messageKey] ?? '') === '') {
                     state.setMessage(messageKey, last);
                 }
             })
-            .catch(() => undefined);
+        );
     };
 
     const write = (): void => {

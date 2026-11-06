@@ -1,6 +1,7 @@
 import type { ApiHostTools, ApiToolDefinition, BackendHost, BackendLaunch } from '@adecore/agents/chat';
 import { cliMcpHeaders } from '@adecore/agents/providers';
 import type { Tool } from '@modelcontextprotocol/client';
+import { bestEffort } from '../best-effort.ts';
 import { errorText } from '../error-text.ts';
 import { MCP_SERVER } from '../ruimte-mcp.ts';
 import { connectApiMcp, mcpResultText, RUIMTE_MCP_LIMITS, type ApiHttpMcpServer, type ApiMcpConnection, type ConnectApiMcp } from './api-mcp.ts';
@@ -68,7 +69,7 @@ export function ruimteApiTools(launch: BackendLaunch, host: BackendHost, connect
         },
         close: async () => {
             const ruimte = await connected?.catch(() => null);
-            await ruimte?.connection.close().catch(() => undefined);
+            await bestEffort('ruimte.connection.close', ruimte?.connection.close());
         }
     };
 }

@@ -3,6 +3,7 @@ import type { LanguageCustomCheckResult } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProjectList } from '@/state/project-list';
+import { fireAndForget } from '@/transport-api/transport';
 import { inputOf, problemOf, type CustomDraft, type DraftProblem } from './custom-draft';
 import type { CustomServersTracker } from './custom-servers';
 
@@ -181,10 +182,10 @@ function useCommandCheck(tracker: CustomServersTracker, command: string): Langua
         }
         let alive = true;
         const timer = window.setTimeout(() => {
-            void tracker
-                .check(typed)
-                .then((result) => alive && setAnswer({ command: typed, result }))
-                .catch(() => undefined);
+            void fireAndForget(
+                'tracker.check',
+                tracker.check(typed).then((result) => alive && setAnswer({ command: typed, result }))
+            );
         }, CHECK_DELAY_MS);
         return () => {
             alive = false;

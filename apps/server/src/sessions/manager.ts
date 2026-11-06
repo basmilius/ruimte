@@ -10,6 +10,7 @@ import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, RuntimeMode, Ses
 import type { AgentStore } from '../agents/agent-store.ts';
 import { codexIndexIn } from '../agents/codex-title.ts';
 import { borrowedHook, modeOfHook, normalizeHook, requestOfHook, settleWaiting } from '../agents/hooks.ts';
+import { bestEffort } from '../best-effort.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { contextHint, toolsNote } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
@@ -729,7 +730,7 @@ export class SessionManager {
 
     async kill(sessionId: string): Promise<void> {
         // A node deleted while its session is still being made ends that session rather than missing it.
-        await this.creating.get(sessionId)?.catch(() => undefined);
+        await bestEffort('creating.get', this.creating.get(sessionId));
         const session = this.require(sessionId);
         this.deleted.add(session);
         this.announce(session, 'closed');
@@ -770,7 +771,7 @@ export class SessionManager {
      * parent was stopped: removing it is a person's call, as deleting the node is.
      */
     async end(sessionId: string): Promise<void> {
-        await this.creating.get(sessionId)?.catch(() => undefined);
+        await bestEffort('creating.get', this.creating.get(sessionId));
         const session = this.sessions.get(sessionId);
         if (!session || session.exited) {
             return;
@@ -1020,8 +1021,9 @@ export class SessionManager {
             }
         }
         this.titleReadAt.set(session.id, now);
-        void read()
-            .then((title) => {
+        void bestEffort(
+            'read the session title',
+            read().then((title) => {
                 const current = session.agent;
                 if (this.sessions.get(session.id) !== session || current === null || current.agentSessionId !== agent.agentSessionId) {
                     return;
@@ -1038,7 +1040,7 @@ export class SessionManager {
                 }
                 return this.setAgent(session, { ...current, suggestedTitle: title });
             })
-            .catch(() => undefined);
+        );
     }
 
     private retryTitle(session: Session): void {

@@ -7,6 +7,7 @@ import { isRealMachine } from '@/state/local-machine';
 import { isScratchProject, useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useSettings } from '@/state/settings';
+import { fireAndForget } from '@/transport-api/transport';
 import { useWindow } from '@/workspace/window';
 
 /* The projects this window opened, as `endpointKey`s in the order of its tabs, and the one on screen. */
@@ -261,15 +262,15 @@ export function setStripIndexAt(locate: ((key: string, x: number) => number) | n
 
 /* Tells the shell which projects the window keeps, and lets go of the ones another window keeps already. */
 function hold(keys: string[]): void {
-    void shell
-        ?.holdTabs?.(keys)
-        .then((kept) => {
+    void fireAndForget(
+        'shell.holdTabs',
+        shell?.holdTabs?.(keys).then((kept) => {
             const { tabs } = useWindowTabs.getState();
             if (tabs.keys === keys) {
                 commit(keptTabs(tabs, kept), false);
             }
         })
-        .catch(() => undefined);
+    );
 }
 
 /* Sets the window's tabs and writes them where a reload, a restart and the shell find them. */
@@ -449,7 +450,7 @@ export function startWindowTabs(deps: WindowTabsDeps = REAL_DEPS): () => void {
         offs = null;
         leaving.clear();
         switching = () => false;
-        void shell?.holdTabs?.([]).catch(() => undefined);
+        void fireAndForget('shell.holdTabs', shell?.holdTabs?.([]));
         place = null;
         shell = null;
         useWindowTabs.setState({ tabs: NO_TABS });

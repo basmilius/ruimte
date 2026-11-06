@@ -9,6 +9,7 @@ import { CliTerminalDialog, CliTerminalFrame } from '@/chat/CliTerminalDialog';
 import type { LoginRequest } from '@/chat/dialogs';
 import { loginDialog } from '@/chat/dialogs';
 import { loginLanded } from '@/chat/login-landing';
+import { fireAndForget } from '@/transport-api/transport';
 
 /* Long enough to read that it worked, short enough not to wait on it. */
 const LANDED_MS = 1_200;
@@ -39,7 +40,7 @@ function LoginTerminal({ request, onRetry }: { request: LoginRequest; onRetry():
         sessionPrefix: 'login',
         start: (link, size) => link.request('session.login', { ...size, kind, account: accountId }),
         // Watching is a courtesy: the status still arrives on the machine's own clock.
-        onStarted: (link) => void link.request('accounts.watchLogin', { id: accountId }).catch(() => undefined)
+        onStarted: (link) => void fireAndForget('accounts.watchLogin', link.request('accounts.watchLogin', { id: accountId }))
     });
     const { phase, setPhase } = session;
     // The account as it read until this login started, which is what a landing has to differ from.

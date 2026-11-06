@@ -1,4 +1,5 @@
 import { clipText, type DevServer } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 
 /* As much of `fetch` as a probe uses, so a test can hand it an answer. */
 type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
@@ -42,7 +43,7 @@ async function readStart(response: Response): Promise<string> {
             html += decoder.decode(value, { stream: true });
         }
     } finally {
-        await reader.cancel().catch(() => undefined);
+        await bestEffort('reader.cancel', reader.cancel());
     }
     return html;
 }
@@ -53,7 +54,7 @@ async function probePort(port: number, request: Fetch): Promise<DevServer | null
         // bound to IPv4 down. A redirect is an answer as well, and following one could leave the machine.
         const response = await request(`http://127.0.0.1:${port}/`, { redirect: 'manual', signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
         if (!(response.headers.get('content-type') ?? '').includes('text/html')) {
-            await response.body?.cancel().catch(() => undefined);
+            await bestEffort('response.body.cancel', response.body?.cancel());
             return { port };
         }
         const title = titleOfHtml(await readStart(response));

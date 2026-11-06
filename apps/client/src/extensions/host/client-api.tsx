@@ -65,6 +65,7 @@ import { useUi } from '@/state/ui';
 import { IS_STATION } from '@/station';
 import { openFileLink } from '@/surface/panels/file-links';
 import { machineTransport, TransportError, type Transport } from '@/transport';
+import { fireAndForget, orNull } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { useFocusedMachine } from '@/workspace/connections';
 import type * as PublicClient from '../../../../../packages/extension/client';
@@ -1245,7 +1246,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
 
                     assertBoundedFiles(scope.link);
 
-                    const existing = await scope.link.request('fs.read', { path: full, within }).catch(() => null);
+                    const existing = await orNull('fs.read', scope.link.request('fs.read', { path: full, within }));
 
                     // The path and mtime are of the first machine's file; written on another, they could overwrite a file there.
                     assertScope(scope);
@@ -1491,7 +1492,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 });
 
                 let stopped = false;
-                const stopRun = (): void => void extensionRequest(link, 'extension.agentStop', { runId }).catch(() => undefined);
+                const stopRun = (): void => void fireAndForget('extensionRequest', extensionRequest(link, 'extension.agentStop', { runId }));
                 // A run stopped says no more, also of a piece the machine sent before it heard so.
                 const abort = (): void => {
                     stopped = true;

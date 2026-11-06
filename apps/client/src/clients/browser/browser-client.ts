@@ -5,7 +5,7 @@ import i18next from 'i18next';
 import { eventStreamFields, LatestFrames } from '@/clients/devices/latest-frames';
 import { endpointKey } from '@/state/keys';
 import { decodeBase64 } from '@/transport-api/piece';
-import { isConnectionError, type Transport, type TransportStatus } from '@/transport-api/transport';
+import { isConnectionError, type Transport, type TransportStatus, fireAndForget } from '@/transport-api/transport';
 import { useBrowser } from './registry';
 
 interface MountedBrowser extends MountedEntry {
@@ -95,13 +95,13 @@ export class BrowserClient {
         if (!mounted.attached) {
             return;
         }
-        await this.transport.request('browser.detach', { browserId }).catch(() => undefined);
+        await fireAndForget('browser.detach', this.transport.request('browser.detach', { browserId }));
     }
 
     async kill(browserId: string): Promise<void> {
         this.mounted.delete(browserId);
         useBrowser.getState().forget(endpointKey(this.endpointId, browserId));
-        await this.transport.request('browser.kill', { browserId }).catch(() => undefined);
+        await fireAndForget('browser.kill', this.transport.request('browser.kill', { browserId }));
     }
 
     navigate(browserId: string, url: string): void {
@@ -210,7 +210,7 @@ export class BrowserClient {
     /* The page opened after its node left, when the detach had nothing to detach yet. A node mounted again since keeps it. */
     private detachIfGone(browserId: string): void {
         if (!this.mounted.has(browserId)) {
-            void this.transport.request('browser.detach', { browserId }).catch(() => undefined);
+            void fireAndForget('browser.detach', this.transport.request('browser.detach', { browserId }));
         }
     }
 

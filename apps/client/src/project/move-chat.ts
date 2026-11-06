@@ -2,7 +2,7 @@ import type { ChatMovePayload, ChatMoveResult } from '@ruimte/contracts';
 import { listProjects } from '@/clients/project/list';
 import { showChatIn } from '@/project/new-chat';
 import { transportFor } from '@/transport';
-import { TransportError } from '@/transport-api/transport';
+import { TransportError, fireAndForget } from '@/transport-api/transport';
 import { ensureMachine } from '@/workspace/reach';
 
 /*
@@ -16,7 +16,7 @@ export async function moveChatOn(endpointId: string, payload: ChatMovePayload): 
         throw new TransportError('not-connected', 'This machine cannot be reached');
     }
     const result = await transport.request('chat.move', payload);
-    void listProjects(id).catch(() => undefined);
+    void fireAndForget('listProjects', listProjects(id));
     await showChatIn(id, result.summary.projectId, result.viewId);
     return result;
 }

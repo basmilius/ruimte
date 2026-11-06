@@ -26,7 +26,7 @@ import { webRtcLink, type WebRtcLinkOptions } from './webrtc-link';
 import { socketLink } from './websocket-transport';
 
 export type { ConnectionState, SignalRoute, Transport, TransportStatus } from '../transport-api/transport';
-export { fireAndForget, TransportError } from '../transport-api/transport';
+export { fireAndForget, orNull, TransportError } from '../transport-api/transport';
 
 /* What a direct connection to a row needs whatever carries its signals. */
 function directOptions(endpointId: () => string): Omit<WebRtcLinkOptions, 'signaling'> {

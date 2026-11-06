@@ -22,6 +22,7 @@ import {
     type RuntimeMode,
     type Task
 } from '@ruimte/contracts';
+import { bestEffort } from '../../best-effort.ts';
 import { MAX_AGENT_DEPTH } from '../../canvas/depth.ts';
 import type { PendingPromptStore } from '../../canvas/pending-prompts.ts';
 import { checkCwd } from '../../canvas/project-paths.ts';
@@ -109,10 +110,7 @@ export class PeerTasks {
                 // Used up or refused, the copy that came in is no use again: a machine that tries once more sends it anew.
                 if (payload.bundle !== undefined) {
                     this.forgetUpload(payload.bundle.bundleId);
-                    await this.deps
-                        .peerBundles(machineId)
-                        .dropIncoming(payload.bundle.bundleId)
-                        .catch(() => undefined);
+                    await bestEffort('peerBundles.dropIncoming', this.deps.peerBundles(machineId).dropIncoming(payload.bundle.bundleId));
                 }
             }
         });
@@ -237,10 +235,7 @@ export class PeerTasks {
                 })
         );
         if (payload.bundle !== undefined && known === null) {
-            await deps
-                .git()
-                .worktrees.claim(folder, cwd, nodeId)
-                .catch(() => undefined);
+            await bestEffort('worktrees.claim', deps.git().worktrees.claim(folder, cwd, nodeId));
         }
         const task = await deps.tasks.open(
             { projectId, parentId: peerCanvasId(machineId), childId: nodeId, title: payload.title, prompt: payload.prompt },

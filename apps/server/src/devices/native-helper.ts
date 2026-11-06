@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import type { DeviceInput } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { DEVICE_HELPER_MAGIC, DeviceHelperDecoder, encodeDeviceHelperMessage, type DeviceHelperCall, type DeviceHelperMessage } from './helper-protocol.ts';
 import { besideDaemon, serveSimFile } from './serve-sim.ts';
 
@@ -201,7 +202,7 @@ async function applyDeviceInput(hid: NativeHidHandle, input: DeviceInput, width:
     } else if (input.kind === 'multiPointer') {
         await hid.multiTouch(touchPhase(input.phase), input.first.x, input.first.y, input.second.x, input.second.y, width, height);
     } else if (input.kind === 'scroll') {
-        void hid.scroll(input.deltaX, input.deltaY, input.x, input.y, width, height).catch(() => undefined);
+        void bestEffort('hid.scroll', hid.scroll(input.deltaX, input.deltaY, input.x, input.y, width, height));
     } else if (input.kind === 'button') {
         const button = NATIVE_BUTTONS[input.button];
         const consumer = CONSUMER_BUTTONS[input.button];

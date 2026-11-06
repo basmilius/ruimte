@@ -15,6 +15,7 @@ import { create } from 'zustand';
 import { currentClientLabel } from '@/endpoint/client-label';
 import { useUi } from '@/state/ui';
 import type { AccountStatus } from '@/station';
+import { fireAndForget, orNull } from '@/transport-api/transport';
 import { offeredProviders } from './account-name';
 import { confirmAccount, dismissAccountConfirmation, linkedConfirmation, signedInConfirmation } from './confirmation';
 import { desktopPulsar, type PulsarPlatform } from './desktop';
@@ -114,7 +115,7 @@ async function finishWebSignIn(given: PulsarPlatform, web: NonNullable<PulsarPla
             openAccountSection();
         }
     } catch (e) {
-        const restored = await given.keeper.restore().catch(() => null);
+        const restored = await orNull('given.keeper.restore', given.keeper.restore());
         usePulsarAccount.setState({ status: restored ? 'signed-in' : 'signed-out', account: restored?.account ?? null, error: messageOf(e), notice: null });
         if (confirm) {
             openAccountSection();
@@ -124,7 +125,7 @@ async function finishWebSignIn(given: PulsarPlatform, web: NonNullable<PulsarPla
 
 /* The page came back from adding a provider: the session it left with trades the code, and stays signed in whatever the answer. */
 async function finishWebLink(given: PulsarPlatform, provider: ProviderId, payload: IdentityLinkCompletePayload): Promise<void> {
-    const restored = await given.keeper.restore().catch(() => null);
+    const restored = await orNull('given.keeper.restore', given.keeper.restore());
     if (!restored) {
         signedOut(null, sessionEnded());
         return;
@@ -275,14 +276,14 @@ export async function unlinkPulsarProvider(provider: ProviderId): Promise<void> 
 }
 
 export async function cancelPulsarSignIn(): Promise<void> {
-    await platform?.redirect?.cancel().catch(() => undefined);
+    await fireAndForget('platform.redirect.cancel', platform?.redirect?.cancel());
 }
 
 export async function signOutOfPulsar(): Promise<void> {
     if (!platform) {
         return;
     }
-    await platform.keeper.signOut().catch(() => undefined);
+    await fireAndForget('platform.keeper.signOut', platform.keeper.signOut());
     dismissAccountConfirmation();
     signedOut(null);
 }

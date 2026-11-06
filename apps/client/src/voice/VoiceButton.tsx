@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUi } from '@/state/ui';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { fireAndForget } from '@/transport-api/transport';
 import { refreshVoiceCredential, useVoice, useVoicePanelOpen } from '@/voice/state';
 
 export function VoiceButton() {
@@ -13,7 +14,7 @@ export function VoiceButton() {
     const active = useVoice((state) => state.phase === 'connecting' || state.phase === 'listening');
 
     useEffect(() => {
-        void refreshVoiceCredential().catch(() => undefined);
+        void fireAndForget('refreshVoiceCredential', refreshVoiceCredential());
     }, []);
 
     if (!configured) {

@@ -1,5 +1,6 @@
 import type { DatabaseConnection } from '@ruimte/contracts';
 import { passwordTarget } from '@/database/secrets';
+import { fireAndForget } from '@/transport-api/transport';
 
 /* A request of the database views and what the machine answered, as the workspace's client sends and receives them. */
 interface Exchange {
@@ -24,14 +25,12 @@ export function snapshotTrigger(connections: () => readonly DatabaseConnection[]
             return;
         }
         running.add(connectionId);
-        void refresh(connectionId)
-            .catch(() => undefined)
-            .finally(() => {
-                running.delete(connectionId);
-                if (pending.delete(connectionId)) {
-                    ask(connectionId);
-                }
-            });
+        void fireAndForget('refresh', refresh(connectionId)).finally(() => {
+            running.delete(connectionId);
+            if (pending.delete(connectionId)) {
+                ask(connectionId);
+            }
+        });
     };
 
     return ({ request, response }: Exchange): void => {

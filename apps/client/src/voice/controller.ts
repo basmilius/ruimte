@@ -34,6 +34,7 @@ import { useProject } from '@/state/project';
 import { sessionStatus, useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { pool, transportFor } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { followedState } from '@/voice/chat-follow-up';
 import { finishVoiceDiagnostics, noteVoiceError, startVoiceDiagnostics, voiceDeliveryObserver, voiceDiagnosticsObserver } from '@/voice/diagnostics-log';
 import { currentVoiceDomains } from '@/voice/domains';
@@ -328,7 +329,7 @@ export async function startVoice(): Promise<void> {
             }
             outputWaveform?.stop();
             outputWaveform = new WaveformMonitor((outputBands) => useVoice.setState({ outputBands }));
-            void outputWaveform.start(stream).catch(() => undefined);
+            void fireAndForget('outputWaveform.start', outputWaveform.start(stream));
         },
         () => {
             if (session === next) {

@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEV_SERVER_PROBE_PORTS, devServerTiles, type DevServerTile } from '@/browser/dev-servers';
 import { openPage } from '@/browser/open-page';
+import { fireAndForget } from '@/transport-api/transport';
 import { useOptionalConnection } from '@/workspace/context';
 
 /* How often the machine is asked again, so a server started after this node was opened shows up. */
@@ -27,14 +28,14 @@ export function BrowserSplash({ id, className }: { id: string; className?: strin
         }
         let alive = true;
         const ask = (): void => {
-            transport
-                .request('browser.devServers', { ports: DEV_SERVER_PROBE_PORTS })
-                .then((answer) => {
+            void fireAndForget(
+                'browser.devServers',
+                transport.request('browser.devServers', { ports: DEV_SERVER_PROBE_PORTS }).then((answer) => {
                     if (alive) {
                         setRunning(answer.servers);
                     }
                 })
-                .catch(() => undefined);
+            );
         };
         ask();
         const timer = setInterval(ask, REFRESH_MS);

@@ -1,4 +1,5 @@
 import type { DeviceFoldPose, DeviceSettings } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { DeviceError } from './device-error.ts';
 import { FoldPanelMonitor, PANEL_SIZES, panelOfAngle, POSE_DEGREES, type FoldPanel } from './fold-panel.ts';
 import type { DeviceHelperCall } from './helper-protocol.ts';
@@ -38,9 +39,9 @@ export class SimulatorFold {
         const known = this.hinge === null ? null : panelOfAngle(this.hinge);
         this.panel = null;
         if (known !== null) {
-            void this.show(known).catch(() => undefined);
+            void bestEffort('show', this.show(known));
         }
-        this.monitor = this.monitorOf(this.udid, (panel) => void this.show(panel).catch(() => undefined));
+        this.monitor = this.monitorOf(this.udid, (panel) => void bestEffort('show', this.show(panel)));
         this.monitor.start();
     }
 

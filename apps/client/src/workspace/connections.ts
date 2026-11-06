@@ -24,6 +24,7 @@ import { nodesOfView, subscribeViewNodes } from '@/state/view-nodes';
 import { defaultWorkspaceStores } from '@/state/workspace';
 import { workspaceOpening } from '@/telemetry/workspace-load';
 import type { Transport } from '@/transport-api/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { machineTransport, pool } from '@/transport/index';
 import { useOptionalConnection } from '@/workspace/context';
@@ -338,7 +339,7 @@ function releaseUnless(connection: Connection, projectId: string, kept: ProjectO
     if (kept?.endpointId === connection.endpointId && kept.projectId === projectId) {
         return;
     }
-    void connection.transport.request('project.release', { projectId }).catch(() => undefined);
+    void fireAndForget('project.release', connection.transport.request('project.release', { projectId }));
 }
 
 /* Thrown out of an open that a later one overtook, before the stores take its project. */

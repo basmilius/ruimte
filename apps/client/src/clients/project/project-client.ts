@@ -18,6 +18,7 @@ import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { stripOf } from '@/state/panel-state';
 import { browserStorage } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
+import { fireAndForget, orNull } from '@/transport-api/transport';
 import { forgetClosedProject, rememberClosedProject } from '../../state/closed-projects';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../../transport-api/transport';
 import { overlayLocal, readClientLocal, withoutClientBrowserState, writeClientLocal } from './client-local';
@@ -267,7 +268,7 @@ export class ProjectClient {
                     this.documents.getState().purgeTrash();
                 }
                 if (trashed || this.saveTimer !== null || this.sink.getState().dirty) {
-                    void this.flush().catch(() => undefined);
+                    void fireAndForget('flush', this.flush());
                 }
             };
             host.addEventListener('pagehide', onLeave);
@@ -307,7 +308,7 @@ export class ProjectClient {
         this.opened = false;
         this.remote.release();
         if (current && this.transport.status === 'open' && !this.locallyDrafted) {
-            await this.transport.request('project.release', { projectId: current.projectId }).catch(() => undefined);
+            await fireAndForget('project.release', this.transport.request('project.release', { projectId: current.projectId }));
         }
     }
 
@@ -330,7 +331,7 @@ export class ProjectClient {
         if (current) {
             this.forgetSessions(this.endpointId(), this.documents.getState().exportViews());
             if (this.transport.status === 'open' && !this.locallyDrafted) {
-                await this.transport.request('project.close', { projectId: current.projectId }).catch(() => undefined);
+                await fireAndForget('project.close', this.transport.request('project.close', { projectId: current.projectId }));
             }
             rememberClosedProject(this.endpointId(), current.projectId, this.storage);
             this.sink.patchProject({ ...current, closedAt: Date.now() });
@@ -514,7 +515,7 @@ export class ProjectClient {
             this.remember(result.summary.projectId);
             this.finishDeletions(result.summary.projectId, result.document);
             // The project is open whatever the list says; a list that did not come is asked again when the link opens.
-            void this.refreshList().catch(() => undefined);
+            void fireAndForget('refreshList', this.refreshList());
         } finally {
             this.sink.setSwitching(false);
         }
@@ -625,7 +626,10 @@ export class ProjectClient {
         // This client's own copy first, so the machine only has to be where a client that never saw the project starts.
         writeClientLocal(this.storage, this.endpointId(), current.projectId, local);
         if (this.transport.status === 'open') {
-            void this.transport.request('project.save-local', { projectId: current.projectId, local: withoutClientBrowserState(local) }).catch(() => undefined);
+            void fireAndForget(
+                'project.save-local',
+                this.transport.request('project.save-local', { projectId: current.projectId, local: withoutClientBrowserState(local) })
+            );
         }
     }
 
@@ -826,7 +830,7 @@ export class ProjectClient {
     }
 
     private async resolveFolderIcon(projectId: string): Promise<void> {
-        const projects = await this.refreshList().catch(() => null);
+        const projects = await orNull('refreshList', this.refreshList());
         const summary = projects?.find((project) => project.projectId === projectId);
         if (summary) {
             this.applySummary(summary);

@@ -2,6 +2,7 @@ import { useChats } from '@adecore/agents-react/state';
 import type { RuntimeMode } from '@ruimte/contracts';
 import { perform } from '@/action-port/perform';
 import { endpointKey } from '@/state/keys';
+import { fireAndForget } from '@/transport-api/transport';
 
 /* The mode a chat made a moment ago opens in, until its body opened it. */
 const pending = new Map<string, RuntimeMode>();
@@ -39,6 +40,6 @@ export function settleOpeningMode(endpointId: string, chatId: string): void {
 
 function configureMode(chatId: string, current: RuntimeMode, wanted: RuntimeMode): void {
     if (current !== wanted) {
-        void perform('chat.configure', { chatId, model: null, option: null, runtimeMode: wanted }).catch(() => undefined);
+        void fireAndForget('chat.configure', perform('chat.configure', { chatId, model: null, option: null, runtimeMode: wanted }));
     }
 }

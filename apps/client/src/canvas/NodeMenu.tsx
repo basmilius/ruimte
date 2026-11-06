@@ -68,6 +68,7 @@ import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useViewNodes } from '@/state/view-nodes';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { fireAndForget } from '@/transport-api/transport';
 import { useWorkspace } from '@/workspace/connections';
 import { useTransport } from '@/workspace/context';
 import { NodeMachineScope } from '@/workspace/node-machine';
@@ -435,7 +436,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
                 </ContextMenu.Item>
             )}
             {workingFolder && (
-                <ContextMenu.Item onClick={() => void transport.request('fs.reveal', { path: workingFolder }).catch(() => undefined)}>
+                <ContextMenu.Item onClick={() => void fireAndForget('fs.reveal', transport.request('fs.reveal', { path: workingFolder }))}>
                     <Icon icon={ExternalLink} size={14} /> {t('menu.openIn', { app: fileManagerName(platform) })}
                 </ContextMenu.Item>
             )}

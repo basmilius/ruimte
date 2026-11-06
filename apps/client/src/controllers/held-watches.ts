@@ -1,5 +1,6 @@
 import { endpointKey } from '@/state/keys';
 import type { Transport } from '@/transport-api/transport';
+import { fireAndForget } from '@/transport-api/transport';
 
 interface Held<A> {
     endpointId: string;
@@ -74,7 +75,7 @@ export abstract class HeldWatches<A = unknown> {
                 }
                 this.held.delete(key);
                 // On the machine the watch was taken out on, never on the one that happens to be active now.
-                void this.unask(link, path).catch(() => undefined);
+                void fireAndForget('unask', this.unask(link, path));
                 this.released(endpointId, path);
                 if (this.heldOn(endpointId).length === 0) {
                     this.following.get(endpointId)?.();

@@ -12,6 +12,7 @@ import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { VIEW_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { transportFor } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { withActiveView } from '@/views/active-view';
 import { GO_VIEW_PREFIX } from '@/views/menu-extras';
 
@@ -56,9 +57,7 @@ export const VIEW_BEHAVIORS = defineBehaviors({
     'view-reveal': {
         run: withActiveView(({ workingFolder }) => {
             if (workingFolder !== null) {
-                void transportFor(currentEndpointId())
-                    ?.request('fs.reveal', { path: workingFolder })
-                    .catch(() => undefined);
+                void fireAndForget('fs.reveal', transportFor(currentEndpointId())?.request('fs.reveal', { path: workingFolder }));
             }
         })
     },

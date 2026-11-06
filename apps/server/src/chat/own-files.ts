@@ -3,6 +3,7 @@ import { cp, mkdir, readdir, rm, rmdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { hasErrorCode, isNotFound } from '@adecore/utils/errors';
 import { entryExists } from '@adecore/utils/fs';
+import { bestEffort } from '../best-effort.ts';
 import { renameNoReplace } from '../disk/no-replace-rename.ts';
 import { isPathSegment } from '../disk/path-segment.ts';
 import { errorText } from '../error-text.ts';
@@ -40,7 +41,7 @@ export async function copyWithoutReplacing(from: string, to: string, copy: CopyT
         await copy(from, temporary);
         await rename(temporary, to);
     } catch (e) {
-        await removeTree(temporary).catch(() => undefined);
+        await bestEffort('removeTree', removeTree(temporary));
         throw e;
     }
 }
@@ -121,7 +122,7 @@ export async function moveOwnFiles(from: string, to: string, io: OwnFilesIO = SY
     };
 
     const failed = async (e: unknown, name: string, detail = ''): Promise<never> => {
-        await undo().catch(() => undefined);
+        await bestEffort('undo', undo());
         if (isTaken(e)) {
             throw new ChatError('files-conflict', `${name} is already in ${to}`);
         }
@@ -151,7 +152,7 @@ export async function moveOwnFiles(from: string, to: string, io: OwnFilesIO = SY
         } catch (e) {
             // The copy that failed left nothing at its name; the ones before it are ours to take back.
             for (const made of copied) {
-                await removeTree(join(to, made)).catch(() => undefined);
+                await bestEffort('removeTree', removeTree(join(to, made)));
             }
             return failed(e, name);
         }
@@ -163,7 +164,7 @@ export async function moveOwnFiles(from: string, to: string, io: OwnFilesIO = SY
             // The originals before this one are gone and come back from their copies; those after it are still whole, and so is the copy of this one.
             arrived.push(...copied.slice(0, i));
             for (const later of copied.slice(i + 1)) {
-                await removeTree(join(to, later)).catch(() => undefined);
+                await bestEffort('removeTree', removeTree(join(to, later)));
             }
             return failed(e, name, `. The whole copy is in ${join(to, name)}; the original in ${from} may be incomplete.`);
         }
@@ -172,7 +173,7 @@ export async function moveOwnFiles(from: string, to: string, io: OwnFilesIO = SY
 
     // Left in the folder it would keep `rmdir` from removing it; it was never the chat's.
     for (const name of listed.filter((entry) => IGNORED_OWN_NAMES.includes(entry))) {
-        await rm(join(from, name), { force: true }).catch(() => undefined);
+        await bestEffort('rm', rm(join(from, name), { force: true }));
     }
     removedFolder = await rmdir(from).then(
         () => true,

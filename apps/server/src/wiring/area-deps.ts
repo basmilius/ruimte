@@ -2,6 +2,7 @@ import type { SessionFs } from '@adecore/agents/chat';
 import { usageRootsOf } from '@adecore/agents/usage';
 import { readArchiveEntry } from '../archive/archive.ts';
 import { ArtifactImporter } from '../artifacts/artifact-import.ts';
+import { bestEffort } from '../best-effort.ts';
 import { continueOn } from '../chat/continue-on.ts';
 import { ExternalChatSessions, ownSessionSources } from '../chat/external.ts';
 import { chatForkDeps, forkChat, readForkInfo, readHandoff } from '../chat/fork.ts';
@@ -217,7 +218,7 @@ export function projectDeps({ machine, agents, projects, git }: AreaInput): Proj
             start: (payload) => chats.create(payload),
             // Loaded first: a chat nobody opened since a restart has no session to end, only a record to remove.
             end: async (chatId) => {
-                await chats.create({ chatId }).catch(() => undefined);
+                await bestEffort('chats.create', chats.create({ chatId }));
                 await projects.endSession('chat', chatId);
             },
             worktreePaths: (folder) => git.checkouts.paths(folder)

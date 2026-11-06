@@ -3,7 +3,7 @@ import i18next from 'i18next';
 import { create } from 'zustand';
 import { collapseBlankLines } from '@/state/blank-lines';
 import { endpointKey } from '@/state/keys';
-import { isConnectionError, TransportError } from '@/transport-api/transport';
+import { isConnectionError, TransportError, fireAndForget } from '@/transport-api/transport';
 
 /* How long typing has to pause before the draft goes to disk. */
 export const AUTOSAVE_DELAY_MS = 1000;
@@ -231,7 +231,7 @@ export class TextDrafts {
         }
         // Past a microtask, so `saving` is set before the write can settle and clear it; what was typed while it was out goes right after.
         const saving = Promise.resolve()
-            .then(() => (reason === 'edit' ? undefined : this.firstParticipant(key)?.(reason).catch(() => undefined)))
+            .then(() => (reason === 'edit' ? undefined : fireAndForget('firstParticipant', this.firstParticipant(key)?.(reason))))
             .then(() => this.writeDraft(endpointId, path))
             .then((written) => (written && this.isUnsaved(endpointId, path) ? this.save(endpointId, path, 'afterDelay') : written))
             .finally(() => {

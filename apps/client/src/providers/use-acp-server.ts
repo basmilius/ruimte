@@ -3,6 +3,7 @@ import type { AgentKind, AgentServerStatus } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { listProvidersAgain } from '@/providers/use-provider-installs';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import { orNull } from '@/transport-api/transport';
 import { useMachineAnswers } from '@/transport/features';
 import { transportFor } from '@/transport/index';
 
@@ -56,7 +57,7 @@ export function useAcpServer(endpointId: string, kind: AgentKind): AcpServer {
             await listProvidersAgain(endpointId);
         } catch (e) {
             setError(messageOf(e));
-            setServer((await link.request('provider.server', { provider: kind }).catch(() => null))?.server ?? server);
+            setServer((await orNull('provider.server', link.request('provider.server', { provider: kind })))?.server ?? server);
         }
     }
 

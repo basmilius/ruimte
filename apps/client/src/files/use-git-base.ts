@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useGitSignal } from '@/controllers/git-watch';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useGitRoot } from '@/surface/panels/use-git-root';
+import { orNull } from '@/transport-api/transport';
 import { useTransport } from '@/workspace/context';
 
 /*
@@ -30,7 +31,7 @@ export function useGitBase(path: string, disk: string): string | null {
         }
         let alive = true;
         const relative = relativeTo(root, path);
-        const read = (staged: boolean) => transport.request('git.diff', { cwd: root, path: relative, scope: 'worktree', staged }).catch(() => null);
+        const read = (staged: boolean) => orNull('git.diff', transport.request('git.diff', { cwd: root, path: relative, scope: 'worktree', staged }));
         // The commit's text is the old side of the staged diff when something is staged, else the index's is.
         void Promise.all([read(true), read(false)]).then(([staged, unstaged]) => {
             if (!alive) {

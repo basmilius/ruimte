@@ -1,6 +1,7 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { VISUAL_DARK_THEME, VISUAL_LIGHT_THEME, VISUAL_LIMITS, visualThemeFragment } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { errorText } from '../error-text.ts';
 import { browserEntry, ConsoleLog, consoleLevel, consoleText, exceptionText } from './page-console.ts';
 import { PAGE_ORIGIN, PAGE_URL, PageSource } from './page-source.ts';
@@ -480,7 +481,7 @@ export async function runRenderChild(): Promise<number> {
                 await rendering;
                 Bun.WebView.closeAll();
                 await stopBrowserChildren();
-                await rm(parsed.data.profile, { recursive: true, force: true, maxRetries: 3 }).catch(() => undefined);
+                await bestEffort('rm', rm(parsed.data.profile, { recursive: true, force: true, maxRetries: 3 }));
                 process.exit(0);
             })().catch(leaveAfter);
         })

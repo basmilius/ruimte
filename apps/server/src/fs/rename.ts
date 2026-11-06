@@ -4,6 +4,7 @@ import { lstat, mkdir, rmdir, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { isWithin } from '@adecore/utils/path';
+import { bestEffort } from '../best-effort.ts';
 import { retryingRename } from '../disk/busy-retry.ts';
 import { renameNoReplace } from '../disk/no-replace-rename.ts';
 import { realOrNull } from '../disk/real-path.ts';
@@ -188,7 +189,7 @@ async function replace(source: string, target: string, trash: Trash, move: Renam
     try {
         await move(target, aside);
     } catch (e) {
-        await rmdir(holder).catch(() => undefined);
+        await bestEffort('rmdir', rmdir(holder));
         throw e;
     }
     try {
@@ -198,7 +199,7 @@ async function replace(source: string, target: string, trash: Trash, move: Renam
         await move(aside, target).catch((restoreError: unknown) => {
             console.warn(`Could not put ${target} back from ${aside}`, restoreError);
         });
-        await rmdir(holder).catch(() => undefined);
+        await bestEffort('rmdir', rmdir(holder));
         throw e;
     }
     try {

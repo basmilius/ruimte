@@ -13,6 +13,7 @@ import {
     useIntegrationChoice
 } from '@/controllers/agent-integrations';
 import { useLocalTilde } from '@/format/home-path';
+import { fireAndForget } from '@/transport-api/transport';
 
 const OUTCOME_KEYS = {
     written: 'written',
@@ -113,7 +114,7 @@ export function AgentIntegrationsDialog() {
     // Leaving a migrated row without a choice keeps what it has, which counts as having seen it.
     const close = (): void => {
         for (const provider of providersToKeep(summary, Object.keys(reports), busy)) {
-            void setAgentIntegration(provider, true).catch(() => undefined);
+            void fireAndForget('setAgentIntegration', setAgentIntegration(provider, true));
         }
         agentIntegrationsDialog.set(false);
     };

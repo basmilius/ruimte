@@ -10,6 +10,7 @@ import { functionSourceAt, isFunctionSignature } from '@/editor-assist/explain-m
 import { promptFileName } from '@/editor-assist/prompt-file';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
+import { orNull } from '@/transport-api/transport';
 
 const TOAST_ID = 'language-explain';
 
@@ -146,7 +147,7 @@ export class ExplainFeature {
         if (!service.supports('textDocument/documentSymbol', this.language.uri)) {
             return null;
         }
-        const symbols = await service.documentSymbols(this.language.uri).catch(() => null);
+        const symbols = await orNull('service.documentSymbols', service.documentSymbols(this.language.uri));
         return innermostFunction(symbols, line);
     }
 

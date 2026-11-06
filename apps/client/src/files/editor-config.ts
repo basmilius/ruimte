@@ -3,6 +3,7 @@ import { absoluteOf } from '@ruimte/contracts';
 import type { FsReadResult } from '@ruimte/contracts';
 import { escapeRegExp } from '@/find/escape-regexp';
 import { dirnameOf, isUnderFolder } from '@/paths/file-path';
+import { orNull } from '@/transport-api/transport';
 
 export const DEFAULT_INDENTATION: EditorIndentation = { tabSize: 4, insertSpaces: true };
 
@@ -221,7 +222,7 @@ type ReadText = (path: string) => Promise<FsReadResult>;
 export async function loadEditorConfigs(path: string, roots: readonly string[], read: ReadText): Promise<EditorConfigFile[]> {
     const files: EditorConfigFile[] = [];
     for (const dir of editorConfigDirs(path, roots)) {
-        const result = await read(absoluteOf(dir, '.editorconfig')).catch(() => null);
+        const result = await orNull('read', read(absoluteOf(dir, '.editorconfig')));
         if (result?.kind === 'text') {
             const config = parseEditorConfig(result.text);
             files.push({ dir, config });

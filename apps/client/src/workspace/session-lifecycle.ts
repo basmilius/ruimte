@@ -4,6 +4,7 @@ import { sessionNodesOf } from '@/clients/project/project-sessions';
 import { watchNodes, type NodeExit } from '@/clients/terminal/lifecycle-watch';
 import { forgetScreen } from '@/clients/terminal/registry';
 import { endpointKey } from '@/state/keys';
+import { fireAndForget } from '@/transport-api/transport';
 import { browserClientFor, chatClientFor, sessionClientFor } from '@/workspace/connections';
 
 /* The node names the machine it ran on, so a node that leaves is ended there and not on the machine that is active now. */
@@ -24,7 +25,7 @@ function end(endpointId: string, id: string, kind: CanvasNodeKind, exit: NodeExi
               : kind === 'browser'
                 ? browserClientFor(endpointId)
                 : null;
-    void client?.kill(id).catch(() => undefined);
+    void fireAndForget('client.kill', client?.kill(id));
 }
 
 /* Ends the daemon session of every node this client takes out of the document. */

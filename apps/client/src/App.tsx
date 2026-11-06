@@ -20,6 +20,7 @@ import { useUi, type SettingsSectionId } from '@/state/ui';
 import { startUpdates } from '@/state/updates';
 import { FLOATING_FAILURE, failed } from '@/surface/surface-failure';
 import { watchDrags } from '@/surface/view-drag';
+import { fireAndForget } from '@/transport-api/transport';
 import { ChatScopeProvider } from '@/workspace/ChatScopeProvider';
 import { useWindow } from '@/workspace/window';
 
@@ -41,7 +42,7 @@ function WindowContent() {
     // A requested workspace loads beside its connection; an idle start screen only prefetches it.
     useEffect(() => {
         if (opening) {
-            void WorkspaceShell.preload().catch(() => undefined);
+            void fireAndForget('WorkspaceShell.preload', WorkspaceShell.preload());
         } else if (onStartScreen) {
             void prefetcher.prefetch(WorkspaceShell.preload);
         }

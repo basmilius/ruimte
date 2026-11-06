@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { ProjectMenuRow } from '@/clients/project/list';
 import { canOpenWindows, moveToNewWindow, openInNewWindow } from '@/project/windows';
 import { fileManagerName } from '@/state/server';
+import { fireAndForget } from '@/transport-api/transport';
 import { transportFor } from '@/transport/index';
 
 /*
@@ -20,9 +21,7 @@ export function ProjectPlaceActions({ row, platform, current }: { row: ProjectMe
         if (folder === null) {
             return;
         }
-        await transportFor(row.endpointId)
-            ?.request('fs.reveal', { path: folder })
-            .catch(() => undefined);
+        await fireAndForget('fs.reveal', transportFor(row.endpointId)?.request('fs.reveal', { path: folder }));
     };
 
     return (

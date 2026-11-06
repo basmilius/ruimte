@@ -5,6 +5,7 @@ import { useEndpoints } from '@/state/endpoints';
 import { isThisMachine } from '@/state/local-machine';
 import { IS_STATION } from '@/station';
 import type { Transport } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { watchPool } from '@/transport/pool-watch';
 
 /* What this computer has installed, and what the machine on it has linked for development. */
@@ -27,9 +28,10 @@ export function startExtensions(): () => void {
                 }
             } else if (isThisMachine(endpointId)) {
                 // A machine without extensions links none, and a link that fails is tried again on the next change.
-                void extensionRequest(link, 'extension.list', {})
-                    .then(({ extensions }) => followDevLinks(extensions))
-                    .catch(() => undefined);
+                void fireAndForget(
+                    'extensionRequest',
+                    extensionRequest(link, 'extension.list', {}).then(({ extensions }) => followDevLinks(extensions))
+                );
             }
         };
 

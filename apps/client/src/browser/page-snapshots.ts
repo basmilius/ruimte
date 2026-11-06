@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { browserRegistry } from '@/clients/browser/registry';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
+import { orNull } from '@/transport-api/transport';
 
 /*
  * The last picture of every page past the render distance, and whether it is past it. Only the parking
@@ -225,7 +226,7 @@ export class PageSnapshots {
         }
         // A page that went while its picture waited in line is far by now, and only drawn again can it be taken.
         const png = this.of(job.key).far ? await this.revealed(job.key) : await this.deps.capture(job.key);
-        const blob = png === null ? null : await this.deps.shrink(png, job.width).catch(() => null);
+        const blob = png === null ? null : await orNull('deps.shrink', this.deps.shrink(png, job.width));
         const current = usePageSnapshots.getState().byKey[job.key];
         if (blob !== null && current !== undefined && current.generation === job.generation) {
             if (current.imageUrl !== null) {

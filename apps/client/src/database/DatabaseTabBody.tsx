@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { asViewConnections, ensureDatabaseConnections, useDatabaseConnectionList, useDatabaseConnections, useWithheldPasswords } from '@/database/connections';
 import { DatabaseTabProvider, RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
 import { useFiles, type DatabaseTab } from '@/state/files';
+import { fireAndForget } from '@/transport-api/transport';
 
 /* What a database body draws: a table's rows, its structure or the designer, and the filter the rows open with. */
 type DatabaseSurface =
@@ -116,16 +117,18 @@ function TableKindCheck({ connection, schema, table, onKind }: { connection: Con
 
     useEffect(() => {
         const controller = new AbortController();
-        client
-            .session(connection)
-            .tables(schema, { signal: controller.signal })
-            .then((tables) => {
-                const kind = tables.find((entry) => entry.name === table)?.kind;
-                if (kind !== undefined) {
-                    report(kind);
-                }
-            })
-            .catch(() => undefined);
+        void fireAndForget(
+            'client.session',
+            client
+                .session(connection)
+                .tables(schema, { signal: controller.signal })
+                .then((tables) => {
+                    const kind = tables.find((entry) => entry.name === table)?.kind;
+                    if (kind !== undefined) {
+                        report(kind);
+                    }
+                })
+        );
         return () => controller.abort();
     }, [client, connection, schema, table]);
 

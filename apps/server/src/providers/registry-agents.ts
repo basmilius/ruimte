@@ -8,6 +8,7 @@ import { SingleFlight } from '@adecore/utils/async';
 import { writeAtomic } from '@adecore/utils/fs';
 import type { AgentKind, RegistryAgent, RegistryCatalog } from '@ruimte/contracts';
 import { z } from 'zod';
+import { bestEffort } from '../best-effort.ts';
 import { extractEntries, extractZipFile, readArchive } from '../disk/archive.ts';
 import { downloadFile, type FileDownload } from '../disk/download.ts';
 import { errorText } from '../error-text.ts';
@@ -236,7 +237,7 @@ export class RegistryAgents {
             await this.dropOtherVersions(folder, folderOf(entry.version));
             this.offer(agent);
         } catch (e) {
-            await rm(target, { recursive: true, force: true }).catch(() => undefined);
+            await bestEffort('rm', rm(target, { recursive: true, force: true }));
             this.failures.set(id, { error: errorText(e) });
         }
         return entry;
@@ -323,7 +324,7 @@ export class RegistryAgents {
     private async dropOtherVersions(folder: string, keep: string): Promise<void> {
         for (const name of await readdir(folder)) {
             if (name !== keep && name !== INSTALLED_FILE && !name.startsWith('.')) {
-                await rm(join(folder, name), { recursive: true, force: true }).catch(() => undefined);
+                await bestEffort('rm', rm(join(folder, name), { recursive: true, force: true }));
             }
         }
     }

@@ -1,5 +1,6 @@
 import { clipText } from '@ruimte/contracts';
 import type { IdentityLinkCompletePayload, ProviderId } from '@ruimte/pulsar';
+import { fireAndForget } from '@/transport-api/transport';
 import { codeFromCallback, createLoginState, createPkce, loginStartUrl, type LoginCallback } from './pkce';
 import type { SessionKeeper, SessionView } from './session';
 
@@ -47,7 +48,7 @@ async function loginInBrowser(options: {
             })
         );
     } catch (e) {
-        await options.redirect.cancel().catch(() => undefined);
+        await fireAndForget('options.redirect.cancel', options.redirect.cancel());
         throw e;
     }
     const code = codeFromCallback(await options.redirect.callback(), state);

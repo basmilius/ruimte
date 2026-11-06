@@ -3,6 +3,7 @@ import { connect as connectTcp, type Socket } from 'node:net';
 import { connect as connectTls } from 'node:tls';
 import type { ReachProbe } from '@ruimte/contracts';
 import type { IceServer } from '@ruimte/pulsar';
+import { bestEffort } from '../best-effort.ts';
 import { errorText } from '../error-text.ts';
 import {
     STUN_ATTRIBUTE,
@@ -227,7 +228,7 @@ async function bind(exchange: StunExchange): Promise<Outcome> {
 async function allocate(exchange: StunExchange, target: IceTarget): Promise<Outcome> {
     let answer = await ask(exchange, STUN_METHOD.allocate, [requestedTransportUdp()]);
     if (answer.kind === 'success') {
-        await ask(exchange, STUN_METHOD.refresh, [lifetime(0)]).catch(() => undefined);
+        await bestEffort('ask', ask(exchange, STUN_METHOD.refresh, [lifetime(0)]));
         return { outcome: 'ok' };
     }
     if (errorCodeOf(answer) !== 401) {
@@ -246,7 +247,7 @@ async function allocate(exchange: StunExchange, target: IceTarget): Promise<Outc
         ];
         answer = await ask(exchange, STUN_METHOD.allocate, [requestedTransportUdp(), ...credentials], key);
         if (answer.kind === 'success') {
-            await ask(exchange, STUN_METHOD.refresh, [lifetime(0), ...credentials], key).catch(() => undefined);
+            await bestEffort('ask', ask(exchange, STUN_METHOD.refresh, [lifetime(0), ...credentials], key));
             return { outcome: 'ok' };
         }
         // 438 is a stale nonce, which comes with a fresh one.

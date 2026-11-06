@@ -5,6 +5,7 @@ import { claimMicrophone } from '@/audio/ownership';
 import { desktop } from '@/desktop/bridge';
 import { useSettings } from '@/state/settings';
 import { machineUsage } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import type { DictationEngine, DictationSession } from './engine';
 import { dictationFailureText } from './failure';
 import { helperEngine } from './helper';
@@ -122,14 +123,14 @@ export function observeSpeech(): () => void {
             active = false;
             off();
         };
-        void bridge
-            .state()
-            .then((model) => {
+        void fireAndForget(
+            'bridge.state',
+            bridge.state().then((model) => {
                 if (!receivedEvent) {
                     receive(model);
                 }
             })
-            .catch(() => undefined);
+        );
     }
     return () => {
         if (--observers === 0) {

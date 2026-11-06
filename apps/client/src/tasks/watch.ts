@@ -1,5 +1,6 @@
 import { useProjectList } from '@/state/project-list';
 import { useTasks } from '@/tasks/tasks';
+import { fireAndForget } from '@/transport-api/transport';
 import { watchPool } from '@/transport/pool-watch';
 
 /*
@@ -22,9 +23,10 @@ export function startTaskWatch(): () => void {
                 const projectId = row.summary.projectId;
                 asked.add(projectId);
                 // A failed ask leaves the tasks as they were; the next open link asks again.
-                link.request('task.list', { projectId })
-                    .then((result) => useTasks.getState().setProjectTasks(endpointId, projectId, result.tasks))
-                    .catch(() => undefined);
+                void fireAndForget(
+                    'task.list',
+                    link.request('task.list', { projectId }).then((result) => useTasks.getState().setProjectTasks(endpointId, projectId, result.tasks))
+                );
             }
         };
 

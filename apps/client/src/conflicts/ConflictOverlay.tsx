@@ -26,6 +26,7 @@ import { useGitStatus } from '@/controllers/git-watch';
 import { DiffRowMenuItems } from '@/files/DiffRowMenuItems';
 import { basenameOf } from '@/paths/file-path';
 import { useToasts } from '@/state/toasts';
+import { fireAndForget } from '@/transport-api/transport';
 import { useTransport } from '@/workspace/context';
 import { nextActionId } from '@/worktree-rules/git-actions';
 import { conflictsDialog } from '@/worktrees/dialogs';
@@ -311,7 +312,7 @@ export function ConflictOverlay() {
         } catch (error: unknown) {
             showFailure(t('save.failed'), errorText(error));
             if (files.current.has(path)) {
-                await rereadConflict(cache(), path, readerOf(cwd)).catch(() => undefined);
+                await fireAndForget('rereadConflict', rereadConflict(cache(), path, readerOf(cwd)));
                 showReread();
             }
         } finally {

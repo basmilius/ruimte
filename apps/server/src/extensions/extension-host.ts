@@ -6,6 +6,7 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { isNotFound } from '@adecore/utils/errors';
 import { ANSWER_TIMEOUT_MS, EXTENSION_API_VERSION, type ExtensionActionName, type ExtensionInfo, type ExtensionStatus } from '@ruimte/contracts';
 import { z } from 'zod';
+import { bestEffort } from '../best-effort.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import { bunRuntime } from '../language/runtime.ts';
@@ -517,7 +518,7 @@ export class ExtensionHost {
 
     /* After the writes asked for before it, so a read follows what its own side just set. */
     async storageGet(id: string, key: string): Promise<unknown> {
-        await this.storageWrites.get(id)?.catch(() => undefined);
+        await bestEffort('storageWrites.get', this.storageWrites.get(id));
 
         return ownValue((await this.storageOf(id)).values, key);
     }
@@ -783,7 +784,7 @@ export class ExtensionHost {
         child.stdout.setEncoding('utf8');
         child.stdout.on('data', (chunk: string) => this.read(id, running, chunk, markReady));
         child.stderr.on('data', (chunk: Buffer) => {
-            void this.files.append(store.logFile(id), chunk).catch(() => undefined);
+            void bestEffort('files.append', this.files.append(store.logFile(id), chunk));
         });
         // A pipe that breaks with the process says so here; the exit below is what acts on it.
         child.stdin.on('error', () => undefined);
@@ -823,7 +824,7 @@ export class ExtensionHost {
 
         // Its own code can still write to stdout around the console, and a line that is no message is only noise.
         if (message === null) {
-            void this.files.append(this.options.store.logFile(id), `${line}\n`).catch(() => undefined);
+            void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${line}\n`));
 
             return;
         }
@@ -835,7 +836,7 @@ export class ExtensionHost {
                     const { code, message: reason } = extensionFailureOf(e);
 
                     // A refusal answers as a Result, so the terminal of `extension dev` is where a person still sees it.
-                    void this.files.append(this.options.store.logFile(id), `${message.method} answered ${code}: ${reason}\n`).catch(() => undefined);
+                    void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${message.method} answered ${code}: ${reason}\n`));
                     running.child.stdin.write(`${JSON.stringify({ type: 'answer', id: message.id, error: reason, code })}\n`);
                 }
             );
@@ -877,7 +878,7 @@ export class ExtensionHost {
             return;
         }
 
-        void this.files.append(this.options.store.logFile(id), `${reason}\n`).catch(() => undefined);
+        void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${reason}\n`));
     }
 
     /* Whoever asks, client or `server/`: a chat the person sees, behind the same permission. */

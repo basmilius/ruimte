@@ -18,6 +18,7 @@ import { dirnameOf } from '@/paths/file-path';
 import { useEndpoints } from '@/state/endpoints';
 import { CellViewContext } from '@/state/workspace-stores';
 import { focusCellOfView, watchGuestFocus } from '@/surface/guest-focus';
+import { fireAndForget } from '@/transport-api/transport';
 import { useTransport } from '@/workspace/context';
 
 const PREVIEW_PARTITION = 'preview';
@@ -116,7 +117,7 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
             const restore = element.dataset.loaded === undefined ? scrollPositions.get(path) : undefined;
             element.dataset.loaded = '';
             setLoading(false);
-            element.executeJavaScript(scrollScript(restore)).catch(() => {});
+            void fireAndForget('element.executeJavaScript', element.executeJavaScript(scrollScript(restore)));
             pageFindRef.current.refresh();
         });
         trackPageReady(element);

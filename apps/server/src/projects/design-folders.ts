@@ -3,6 +3,7 @@ import { dirname, extname, join } from 'node:path';
 import { writeAtomic } from '@adecore/utils/fs';
 import { isRecord } from '@adecore/utils/record';
 import { designFolderOf, designPlaces, isSharedDesign, type DesignPlace, type ProjectView } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 
 /*
  * The moves this daemon started and has not settled yet, under `private` so git never sees it. Only a
@@ -205,7 +206,7 @@ async function mergeFolder(from: string, to: string): Promise<void> {
         }
     }
 
-    await rmdir(from).catch(() => undefined);
+    await bestEffort('rmdir', rmdir(from));
 }
 
 /*

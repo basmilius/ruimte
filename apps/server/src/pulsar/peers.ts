@@ -1,6 +1,7 @@
 import { channelBinding, DIRECT_ATTEMPT_TIMEOUT_MS, DIRECT_CHANNEL_LABEL, ICE_GATHER_TIMEOUT_MS } from '@ruimte/contracts';
 import type { IceServer, SignalEnvelope } from '@ruimte/pulsar';
 import type { RTCPeerConnection } from 'werift';
+import { bestEffort } from '../best-effort.ts';
 import { errorText } from '../error-text.ts';
 import type { ClientAccess } from '../wire.ts';
 import { directChannel, fromWerift, type DirectChannel } from './data-channel.ts';
@@ -68,9 +69,14 @@ export class DirectPeers {
                 const attempt = this.attempts.get(connectionId);
                 // An empty candidate only says the other side is done trickling; everything this side needs is already in.
                 if (attempt && signal.candidate !== '') {
-                    void attempt.peer
-                        .addIceCandidate({ candidate: signal.candidate, sdpMid: signal.sdpMid ?? undefined, sdpMLineIndex: signal.sdpMLineIndex ?? undefined })
-                        .catch(() => undefined);
+                    void bestEffort(
+                        'attempt.peer.addIceCandidate',
+                        attempt.peer.addIceCandidate({
+                            candidate: signal.candidate,
+                            sdpMid: signal.sdpMid ?? undefined,
+                            sdpMLineIndex: signal.sdpMLineIndex ?? undefined
+                        })
+                    );
                 }
                 return;
             }
@@ -201,7 +207,7 @@ export class DirectPeers {
             clearTimeout(attempt.timer);
         }
         attempt.channel?.close(1000, 'Connection ended');
-        void attempt.peer.close().catch(() => undefined);
+        void bestEffort('attempt.peer.close', attempt.peer.close());
     }
 }
 

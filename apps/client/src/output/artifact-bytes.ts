@@ -7,6 +7,7 @@ import { saveBlob } from '@/download';
 import { useToasts } from '@/state/toasts';
 import { machineTransport } from '@/transport';
 import { readPiece } from '@/transport-api/piece';
+import { fireAndForget } from '@/transport-api/transport';
 import { readResource, streamResource } from '@/transport/byte-transfer';
 
 export interface ArtifactFileRef {
@@ -81,7 +82,7 @@ async function saveInPieces(stream: SaveFileStreamBridge, endpointId: string, re
         const path = await stream.end(id);
         toasts.update(toastId, { kind: 'success', title: i18next.t('output:view.downloaded', { name }), description: path, action: undefined });
     } catch (error: unknown) {
-        await stream.abort(id).catch(() => undefined);
+        await fireAndForget('stream.abort', stream.abort(id));
         toasts.dismiss(toastId);
         if (!(error instanceof Cancelled)) {
             throw error;

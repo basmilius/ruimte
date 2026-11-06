@@ -14,6 +14,7 @@ import type {
     DeviceTextSize,
     DeviceTool
 } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { locateAndroidSdk, type AndroidSdk } from './android-sdk.ts';
 import { androidTree, parseWmSize } from './android-tree.ts';
 import { runCommand, type CommandResult } from './command.ts';
@@ -518,11 +519,11 @@ export class AndroidBackend implements DeviceBackend {
         return this.recordings.stop(
             deviceId,
             async () => {
-                await this.shell(serial, 'pkill -INT screenrecord').catch(() => undefined);
+                await bestEffort('shell', this.shell(serial, 'pkill -INT screenrecord'));
             },
             async (file) => {
                 await this.adbOn(serial, ['pull', RECORDING_ON_DEVICE, file]);
-                await this.shell(serial, `rm -f ${RECORDING_ON_DEVICE}`).catch(() => undefined);
+                await bestEffort('shell', this.shell(serial, `rm -f ${RECORDING_ON_DEVICE}`));
             }
         );
     }

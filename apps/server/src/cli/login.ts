@@ -12,6 +12,7 @@ import {
     type DeviceLinkStartResult
 } from '@ruimte/pulsar';
 import type { z } from 'zod';
+import { bestEffort } from '../best-effort.ts';
 import { describeError } from '../error-text.ts';
 import { askLocalDaemon, commandIo, homeSecret, otherHome, startFirst, tooOld, type LocalDaemonOptions } from './local-daemon.ts';
 import { readMachineStatus, reachSentence } from './machine-status.ts';
@@ -100,7 +101,7 @@ export async function runLogin(options: LoginOptions): Promise<number> {
     let link: DeviceLinkStartResult | null = null;
     const withdraw = async (): Promise<number> => {
         if (link !== null) {
-            await book.cancelDeviceLink({ deviceCode: link.deviceCode }).catch(() => undefined);
+            await bestEffort('book.cancelDeviceLink', book.cancelDeviceLink({ deviceCode: link.deviceCode }));
         }
         err('Stopped. The code no longer works.');
         return 130;
@@ -154,7 +155,7 @@ export async function runLogin(options: LoginOptions): Promise<number> {
                     // A machine that refuses the account leaves the approval unused, so the code stops working on the page too.
                     const registration = await askDaemon(MACHINE_REGISTRATION_PATH, RegisterMachinePayloadSchema, { accountId: poll.account.id }).catch(
                         async (e: unknown) => {
-                            await book.cancelDeviceLink({ deviceCode: approved.deviceCode }).catch(() => undefined);
+                            await bestEffort('book.cancelDeviceLink', book.cancelDeviceLink({ deviceCode: approved.deviceCode }));
                             throw e;
                         }
                     );

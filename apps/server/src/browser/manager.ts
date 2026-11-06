@@ -14,6 +14,7 @@ import {
     type LiveFrameHeader,
     type LiveStreamFrame
 } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { LiveSinks, type LiveEvent, type LiveSink } from '../client-sinks.ts';
 import { FrameFanout, streamKeyOf } from '../streams/frame-fanout.ts';
 import { LiveStreamHub, type LiveFrameSource } from '../streams/live-stream.ts';
@@ -159,9 +160,12 @@ class BrowserSession implements LiveFrameSource {
                 this.captureHighDensityFrame(publish, frame.sessionId);
                 return;
             }
-            this.enqueueCdp('Page.screencastFrameAck', {
-                sessionId: frame.sessionId
-            }).catch(() => undefined);
+            void bestEffort(
+                'enqueueCdp',
+                this.enqueueCdp('Page.screencastFrameAck', {
+                    sessionId: frame.sessionId
+                })
+            );
             if (!publish) {
                 return;
             }
@@ -180,9 +184,12 @@ class BrowserSession implements LiveFrameSource {
             await this.enqueuePage(() => this.page.navigate('about:blank'));
             const current = await this.enqueuePage(() => this.page.evaluate<unknown>(USER_AGENT_EXPRESSION)).catch(() => null);
             if (typeof current === 'string' && current.includes('HeadlessChrome/')) {
-                await this.enqueueCdp('Network.setUserAgentOverride', {
-                    userAgent: current.replace('HeadlessChrome/', 'Chrome/')
-                }).catch(() => undefined);
+                await bestEffort(
+                    'enqueueCdp',
+                    this.enqueueCdp('Network.setUserAgentOverride', {
+                        userAgent: current.replace('HeadlessChrome/', 'Chrome/')
+                    })
+                );
             }
         } finally {
             this.bootstrapping = false;
@@ -323,7 +330,7 @@ class BrowserSession implements LiveFrameSource {
             return;
         }
         this.streaming = false;
-        await this.enqueueCdp('Page.stopScreencast').catch(() => undefined);
+        await bestEffort('enqueueCdp', this.enqueueCdp('Page.stopScreencast'));
     }
 
     close(): void {
@@ -338,31 +345,31 @@ class BrowserSession implements LiveFrameSource {
 
     private captureHighDensityFrame(publish: PublishFrame, screencastSessionId: number): void {
         if (this.capturingHighDensityFrame) {
-            this.enqueueCdp('Page.screencastFrameAck', { sessionId: screencastSessionId }).catch(() => undefined);
+            void bestEffort('enqueueCdp', this.enqueueCdp('Page.screencastFrameAck', { sessionId: screencastSessionId }));
             return;
         }
         this.capturingHighDensityFrame = true;
         const width = Math.round(this.width * this.deviceScaleFactor);
         const height = Math.round(this.height * this.deviceScaleFactor);
         // Chrome's screencast stays at 1x DPR; captureScreenshot preserves the emulated DPR.
-        void this.enqueuePage(async () => {
-            await this.page.cdp('Page.screencastFrameAck', { sessionId: screencastSessionId });
-            return this.page.cdp<CapturedFrame>('Page.captureScreenshot', {
-                format: 'jpeg',
-                quality: JPEG_QUALITY,
-                fromSurface: true,
-                captureBeyondViewport: false
-            });
-        })
-            .then((captured) => {
+        void bestEffort(
+            'capture a high density frame',
+            this.enqueuePage(async () => {
+                await this.page.cdp('Page.screencastFrameAck', { sessionId: screencastSessionId });
+                return this.page.cdp<CapturedFrame>('Page.captureScreenshot', {
+                    format: 'jpeg',
+                    quality: JPEG_QUALITY,
+                    fromSurface: true,
+                    captureBeyondViewport: false
+                });
+            }).then((captured) => {
                 if (this.publish === publish) {
                     this.emitFrame(publish, Buffer.from(captured.data, 'base64'), width, height);
                 }
             })
-            .catch(() => undefined)
-            .finally(() => {
-                this.capturingHighDensityFrame = false;
-            });
+        ).finally(() => {
+            this.capturingHighDensityFrame = false;
+        });
     }
 
     private enqueueCdp<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T> {

@@ -1,6 +1,7 @@
 import { draftOf, fingerprint, joinLines, shapeOf, splitBlocks, splitLines, type MergeBlock, type MergeSpan, type TextShape } from '@adecore/merge';
 import type { GitConflictKind, GitConflictResult, GitResolveBlock } from '@ruimte/contracts';
 import type { ConflictDraft, LiveSpan } from '@/conflicts/editor';
+import { fireAndForget } from '@/transport-api/transport';
 
 /* One unmerged file as the overlay works on it: the three versions split into stretches, the merged
    file to start from, and the shape the result is written back in. */
@@ -249,7 +250,7 @@ export async function writeConflict(cache: ConflictCache, path: string, writer: 
     try {
         await writer.resolve(path, contentOf(target, draft.text), target.hash);
     } catch (error: unknown) {
-        await rereadConflict(cache, path, writer.read).catch(() => undefined);
+        await fireAndForget('rereadConflict', rereadConflict(cache, path, writer.read));
         throw error;
     }
     cache.files.delete(path);

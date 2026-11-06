@@ -11,7 +11,7 @@ import { serverInfoOf, useServers, type ServerInfo } from '@/state/server';
 import { useSessions, type SessionsByKey } from '@/state/sessions';
 import { useSettings, type Settings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { TransportError } from '@/transport-api/transport';
+import { TransportError, fireAndForget } from '@/transport-api/transport';
 import { transportFor } from '@/transport/index';
 import { adoptEndpointInfo } from '@/workspace/server-info';
 
@@ -177,12 +177,12 @@ export function startKeepAwakeMove(): () => void {
         }
         moving = true;
         const send = isOff(move) ? Promise.resolve() : saveOnMachine(move);
-        void send
-            .then(() => useSettings.getState().update(OFF))
-            .catch(() => undefined)
-            .finally(() => {
-                moving = false;
-            });
+        void fireAndForget(
+            'send.then',
+            send.then(() => useSettings.getState().update(OFF))
+        ).finally(() => {
+            moving = false;
+        });
     };
     const off = useServers.subscribe(check);
     check();

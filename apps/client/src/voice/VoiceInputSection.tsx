@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { DEFAULT_MICROPHONE_ID, listMicrophones, type MicrophoneDevice } from '@/audio/microphone';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { useSettings } from '@/state/settings';
+import { fireAndForget } from '@/transport-api/transport';
 
 export function VoiceInputSection() {
     const { t } = useTranslation('settings');
@@ -37,16 +38,16 @@ export function VoiceInputSection() {
         };
         refresh();
         mediaDevices.addEventListener('devicechange', refresh);
-        void navigator.permissions
-            ?.query({ name: 'microphone' as PermissionName })
-            .then((status) => {
+        void fireAndForget(
+            'navigator.permissions.query',
+            navigator.permissions?.query({ name: 'microphone' as PermissionName }).then((status) => {
                 if (!current) {
                     return;
                 }
                 permission = status;
                 permission.addEventListener('change', refresh);
             })
-            .catch(() => undefined);
+        );
         return () => {
             current = false;
             mediaDevices.removeEventListener('devicechange', refresh);

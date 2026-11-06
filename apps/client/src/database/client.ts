@@ -6,6 +6,7 @@ import { snapshotTrigger } from '@/database/snapshot-triggers';
 import { ensureSqlBindings, sqlBindings } from '@/database/sql-bindings';
 import { endpointKey } from '@/state/keys';
 import { defaultProjectStore } from '@/state/project';
+import { fireAndForget } from '@/transport-api/transport';
 import { useWindow, windowWorkspace } from '@/workspace/window';
 
 let current: { key: string; client: DatabaseClient } | null = null;
@@ -50,7 +51,7 @@ export function databaseClientFor(key: string): DatabaseClient {
     });
     // A statement that changed a schema leaves the snapshot the language servers read behind; a machine that cannot take one again says nothing.
     client.onSchemaChange((change) => {
-        void sqlBindings.refresh(change.connectionId, change.schema).catch(() => undefined);
+        void fireAndForget('sqlBindings.refresh', sqlBindings.refresh(change.connectionId, change.schema));
     });
     current = { key, client };
     if (!following) {

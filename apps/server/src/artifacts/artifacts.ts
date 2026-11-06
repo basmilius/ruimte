@@ -27,6 +27,7 @@ import {
     type ArtifactVersionRef,
     type ChatAttachment
 } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { shotFolders } from '../disk/agent-folders.ts';
 import type { MachineHome } from '../disk/machine-home.ts';
 import { realOrNull } from '../disk/real-path.ts';
@@ -515,7 +516,7 @@ export class Artifacts {
 
     private async dropUpload(stagingId: string): Promise<void> {
         this.uploads.delete(stagingId);
-        await this.store.discardStaging(stagingId).catch(() => undefined);
+        await bestEffort('store.discardStaging', this.store.discardStaging(stagingId));
     }
 
     /* One staging folder per session and upload id, so two sessions never write into each other's. */

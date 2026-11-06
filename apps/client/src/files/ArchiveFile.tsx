@@ -31,6 +31,7 @@ import { useToasts } from '@/state/toasts';
 import { FILE_FOOTER } from '@/surface/panels/classes';
 import { readPiece } from '@/transport-api/piece';
 import type { Transport } from '@/transport-api/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { readResource } from '@/transport/byte-transfer';
 import { useTransport } from '@/workspace/context';
 
@@ -152,14 +153,14 @@ function ExtractDialog({ path, target, onClose }: { path: string; target: Extrac
             return;
         }
         let cancelled = false;
-        transport
-            .request('fs.list', { path: folder, hidden: true })
-            .then((listed) => {
+        void fireAndForget(
+            'fs.list',
+            transport.request('fs.list', { path: folder, hidden: true }).then((listed) => {
                 if (!cancelled) {
                     setFree({ folder, name: freeFolderName(named, new Set(listed.entries.map((entry) => entry.name))) });
                 }
             })
-            .catch(() => undefined);
+        );
         return () => {
             cancelled = true;
         };

@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createDatabaseHost, helperFileName, helperPath, spawnHelper, type DatabaseHost, type HelperProcess } from '@adecore/database/host';
 import type { ConnectionConfig, DatabaseResponse } from '@adecore/database/protocol';
+import { bestEffort } from '../best-effort.ts';
 import type { MachineHome } from '../disk/machine-home.ts';
 import { reportHelperExit, StderrTail } from '../telemetry/reporter.ts';
 
@@ -86,7 +87,7 @@ export class DatabaseService {
 
     release(owner: string): Promise<void> {
         this.localOwners.delete(owner);
-        return this.host.release(owner).catch(() => undefined);
+        return bestEffort('host.release', this.host.release(owner));
     }
 
     dispose(): Promise<void> {

@@ -4,6 +4,7 @@ import { dirname, isAbsolute, join, relative } from 'node:path';
 import { missingSides, patchFits } from '@adecore/merge';
 import { climbsOut, isWithin } from '@adecore/utils/path';
 import type { ChatCheckpointDiff, ChatCheckpointFile, GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { readCommit } from './log.ts';
 import { nativePath } from './native-path.ts';
 import { git, leavingOut, runGit, runGitBytes, toplevel, verifyRev, GitError, LEAVE_NOTHING_OUT, type LeftOut } from './run.ts';
@@ -458,7 +459,7 @@ export async function diffCheckout(cwd: string, from: string | null, leftOut: Le
         const own = (await git(['rev-parse', '--git-path', 'index'], top))?.trim();
         if (own) {
             // A checkout without an index yet starts from an empty one, and git then hashes every file.
-            await copyFile(isAbsolute(own) ? nativePath(own) : join(top, own), index).catch(() => undefined);
+            await bestEffort('copyFile', copyFile(isAbsolute(own) ? nativePath(own) : join(top, own), index));
         }
         const env = { GIT_INDEX_FILE: index };
         if ((await git(['add', '-A', ...leavingOut(paths)], top, env)) === null) {

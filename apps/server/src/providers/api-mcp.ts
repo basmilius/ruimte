@@ -5,6 +5,7 @@ import type { ChatMcpServer } from '@adecore/agents/chat';
 import { isNotFound } from '@adecore/utils/errors';
 import { Client, StreamableHTTPClientTransport, type CallToolResult, type Tool } from '@modelcontextprotocol/client';
 import { z } from 'zod';
+import { bestEffort } from '../best-effort.ts';
 import { MCP_MAX_IMAGE_BYTES, MCP_REQUEST_TIMEOUT_S, MCP_SERVER } from '../ruimte-mcp.ts';
 
 const common = { enabled: z.boolean().optional(), allowedTools: z.array(z.string().min(1).max(200)).max(100).optional() };
@@ -199,8 +200,8 @@ export async function connectApiMcp(
     });
 
     const abortStartup = (): void => {
-        void transport.close().catch(() => undefined);
-        void client.close().catch(() => undefined);
+        void bestEffort('transport.close', transport.close());
+        void bestEffort('client.close', client.close());
     };
     signal.addEventListener('abort', abortStartup, { once: true });
     try {
@@ -208,7 +209,7 @@ export async function connectApiMcp(
         await client.connect(transport, { signal, timeout: 15_000 });
         signal.throwIfAborted();
     } catch (error) {
-        await client.close().catch(() => undefined);
+        await bestEffort('client.close', client.close());
         throw error;
     } finally {
         signal.removeEventListener('abort', abortStartup);
@@ -221,7 +222,7 @@ export async function connectApiMcp(
         close: () =>
             (closing ??= (async () => {
                 // Terminating a remote session must not hold up stopping the local chat.
-                void transport.terminateSession().catch(() => undefined);
+                void bestEffort('transport.terminateSession', transport.terminateSession());
                 await client.close();
             })())
     };

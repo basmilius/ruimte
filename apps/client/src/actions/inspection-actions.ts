@@ -11,6 +11,7 @@ import { endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { nodesOfView } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
+import { orNull } from '@/transport-api/transport';
 import { chatClientFor } from '@/workspace/connections';
 
 interface ProjectAgent {
@@ -106,7 +107,7 @@ async function snapshotsOf(endpointIds: readonly string[], transport: typeof tra
             if (link?.status !== 'open') {
                 return [endpointId, null];
             }
-            const snapshot = await Promise.all([link.request('chat.list', {}), link.request('session.list', {})]).catch(() => null);
+            const snapshot = await orNull('chat.list', Promise.all([link.request('chat.list', {}), link.request('session.list', {})]));
             return [endpointId, snapshot];
         })
     );

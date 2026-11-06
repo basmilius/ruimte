@@ -7,6 +7,7 @@ import { basename, join, resolve } from 'node:path';
 import * as prompts from '@clack/prompts';
 import { EXTENSION_LINK_PATH, EXTENSION_UNLINK_PATH } from '@ruimte/contracts';
 import { Command } from 'commander';
+import { bestEffort } from '../best-effort.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
 import testRuntime from '../extensions/generated/test-runtime.js' with { type: 'text' };
 import { logTail } from '../extensions/log-tail.ts';
@@ -254,9 +255,7 @@ async function dev(options: LocalDaemonOptions): Promise<void> {
     for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
         process.on(signal, () => {
             // With this run's own token, so a later `extension dev` of the same extension keeps its link.
-            void askDaemon(options, EXTENSION_UNLINK_PATH, { id: manifest.id, owner })
-                .catch(() => undefined)
-                .finally(() => process.exit(0));
+            void bestEffort('askDaemon', askDaemon(options, EXTENSION_UNLINK_PATH, { id: manifest.id, owner })).finally(() => process.exit(0));
         });
     }
     // What `server/` wrote and what the client said, together.

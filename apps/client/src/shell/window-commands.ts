@@ -14,6 +14,7 @@ import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
 import { isInNodeBody } from '@/surface/canvas/node-body';
+import { fireAndForget } from '@/transport-api/transport';
 import { usageDialog } from '@/usage/dialog';
 
 function togglePalette(): void {
@@ -27,9 +28,9 @@ function togglePalette(): void {
 
 function toggleFullscreen(): void {
     if (document.fullscreenElement) {
-        void document.exitFullscreen().catch(() => undefined);
+        void fireAndForget('document.exitFullscreen', document.exitFullscreen());
     } else {
-        void document.documentElement.requestFullscreen().catch(() => undefined);
+        void fireAndForget('document.documentElement.requestFullscreen', document.documentElement.requestFullscreen());
     }
 }
 
@@ -115,10 +116,7 @@ export const WINDOW_BEHAVIORS = defineBehaviors({
     theme: { run: () => useTheme.getState().toggle() },
     'release-notes': { run: () => openReleaseNotes(null) },
     'restart-safe-mode': {
-        run: () =>
-            void desktop()
-                ?.restartInSafeMode?.()
-                .catch(() => undefined)
+        run: () => void fireAndForget('desktop', desktop()?.restartInSafeMode?.())
     },
     onboarding: { run: () => openOnboarding(), offered: () => hasLocalMachine() },
     usage: { run: () => usageDialog.set(true), offered: () => ({ hint: i18next.t('shell:palette.hints.usage') }) },

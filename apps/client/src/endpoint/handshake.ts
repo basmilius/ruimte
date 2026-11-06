@@ -2,6 +2,7 @@ import { AuthTicketResultSchema } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { desktop } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID, socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { orNull } from '@/transport-api/transport';
 import { rememberLocalSecret, rememberTicket } from '../transport-api/credentials';
 
 /*
@@ -9,14 +10,17 @@ import { rememberLocalSecret, rememberTicket } from '../transport-api/credential
  * URL. A refusal, an answer that is no ticket or a daemon that does not answer leaves the last ticket.
  */
 async function tradeLocalSecret(endpoint: Endpoint, secret: string): Promise<void> {
-    const response = await fetch(`${endpoint.httpBaseUrl}/auth/local-ticket`, {
-        method: 'POST',
-        headers: { authorization: `Bearer ${secret}` }
-    }).catch(() => null);
+    const response = await orNull(
+        'fetch',
+        fetch(`${endpoint.httpBaseUrl}/auth/local-ticket`, {
+            method: 'POST',
+            headers: { authorization: `Bearer ${secret}` }
+        })
+    );
     if (response === null || !response.ok) {
         return;
     }
-    const ticket = AuthTicketResultSchema.safeParse(await response.json().catch(() => null));
+    const ticket = AuthTicketResultSchema.safeParse(await orNull('response.json', response.json()));
     if (ticket.success) {
         rememberTicket(endpoint.id, ticket.data.ticket);
     }
@@ -33,9 +37,7 @@ export async function socketAddressFor(endpointId: string): Promise<string> {
     }
     if (endpointId === LOCAL_ENDPOINT_ID) {
         // Asked again on every attempt, so a daemon that started after the window, or on a fresh home, is still reached.
-        const secret = await desktop()
-            ?.localSecret?.()
-            .catch(() => null);
+        const secret = await orNull('desktop', desktop()?.localSecret?.());
         rememberLocalSecret(endpointId, secret ?? null);
         if (secret) {
             await tradeLocalSecret(endpoint, secret);

@@ -1,5 +1,6 @@
 import type { LanguageLogLine, LanguageServerKind, LanguageServerStatus, LanguageTraceValue } from '@ruimte/contracts';
 import type { Transport } from '@/transport-api/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { SnapshotTracker, upsert } from './snapshot-tracker';
 
@@ -17,7 +18,7 @@ export class LanguageStatusTracker extends SnapshotTracker<readonly LanguageServ
         this.subscriptions.push(
             // A server of a person's own was saved or removed, so which servers a project has changed with it.
             transport.on('language.custom.changed', () => {
-                void this.refresh().catch(() => undefined);
+                void fireAndForget('refresh', this.refresh());
             }),
             transport.on('language.status', (event) => {
                 if (event.projectId === this.projectId) {
@@ -81,7 +82,7 @@ export class LanguageStatusTracker extends SnapshotTracker<readonly LanguageServ
             this.set({ ...status, documents: this.snapshot.find((candidate) => candidate.server === status.server)?.documents ?? 0 });
             return;
         }
-        void this.refresh().catch(() => undefined);
+        void fireAndForget('refresh', this.refresh());
     }
 
     private set(status: LanguageServerStatus): void {

@@ -54,7 +54,7 @@ import {
 } from '@adecore/lsp';
 import { messageOf } from '@adecore/ui';
 import { LANGUAGE_ERROR_CODES, resolveStoredPath, storedPathOf, type LanguageMethod, type LanguageProviders } from '@ruimte/contracts';
-import { TransportError, type Transport } from '@/transport-api/transport';
+import { TransportError, type Transport, fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 
 export interface WireLanguageServiceOptions {
@@ -501,7 +501,7 @@ export class WireLanguageService implements LanguageService {
         const { transport, projectId } = this.options;
 
         if (document !== undefined && machineAnswers(transport.connection, 'language.willSave')) {
-            void transport.request('language.willSave', { projectId, path: document.path, reason }).catch(() => undefined);
+            void fireAndForget('language.willSave', transport.request('language.willSave', { projectId, path: document.path, reason }));
         }
 
         return Promise.resolve();
@@ -583,7 +583,10 @@ export class WireLanguageService implements LanguageService {
             return;
         }
         this.documents.delete(document.uri);
-        await this.options.transport.request('language.document.close', { projectId: this.options.projectId, path: document.path }).catch(() => undefined);
+        await fireAndForget(
+            'language.document.close',
+            this.options.transport.request('language.document.close', { projectId: this.options.projectId, path: document.path })
+        );
     }
 
     private textOf(document: OpenDocument): string | undefined {
@@ -641,14 +644,15 @@ export class WireLanguageService implements LanguageService {
         } catch (error) {
             answer = { applied: false, failureReason: messageOf(error) };
         }
-        await this.options.transport
-            .request('language.edit.answer', {
+        await fireAndForget(
+            'language.edit.answer',
+            this.options.transport.request('language.edit.answer', {
                 projectId: this.options.projectId,
                 editId,
                 applied: answer.applied,
                 ...(answer.failureReason ? { failureReason: answer.failureReason } : {})
             })
-            .catch(() => undefined);
+        );
     }
 
     /* `itemServers` names the process of each item of a merged list, which then resolves against that process and not the one that headed the answer. */

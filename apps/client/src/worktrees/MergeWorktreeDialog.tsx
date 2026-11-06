@@ -15,6 +15,7 @@ import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import type { Transport } from '@/transport-api/transport';
+import { orNull } from '@/transport-api/transport';
 import { useTransport } from '@/workspace/context';
 import { nextActionId, phaseLabel } from '@/worktree-rules/git-actions';
 import { nodesInWorktree, worktreeSessionsOf } from '@/worktree-rules/worktree-rows';
@@ -283,7 +284,7 @@ async function mergeWithToasts(transport: Transport, folder: string, runs: reado
 
 /* The branch the project folder is on; null when it sits on a detached HEAD or cannot be read. */
 async function branchOf(transport: Transport, folder: string): Promise<string | null> {
-    const status = await transport.request('git.status', { cwd: folder }).catch(() => null);
+    const status = await orNull('git.status', transport.request('git.status', { cwd: folder }));
     return status?.branch ?? null;
 }
 

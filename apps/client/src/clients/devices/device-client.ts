@@ -84,7 +84,7 @@ export class DeviceClient {
         this.watchers += 1;
         if (this.watchers === 1) {
             const loaded = useDevices.getState().byEndpoint[this.endpointId]?.loaded === true;
-            fireAndForget('device list', this.refresh(loaded));
+            fireAndForget('refresh', this.refresh(loaded));
         }
         this.syncWatch();
         let watching = true;
@@ -128,7 +128,7 @@ export class DeviceClient {
         if (current) {
             current.refs += 1;
         } else {
-            fireAndForget('device power', this.readPower(device));
+            fireAndForget('readPower', this.readPower(device));
             this.powerWatches.set(key, { refs: 1, device, timer: null });
         }
         this.syncWatch();
@@ -167,14 +167,14 @@ export class DeviceClient {
         }
         const clocked = open && !pushed;
         if (clocked && this.watchers > 0) {
-            this.refreshTimer ??= setInterval(() => fireAndForget('device list', this.refresh(true)), DEVICE_REFRESH_MS);
+            this.refreshTimer ??= setInterval(() => fireAndForget('refresh', this.refresh(true)), DEVICE_REFRESH_MS);
         } else if (this.refreshTimer !== null) {
             clearInterval(this.refreshTimer);
             this.refreshTimer = null;
         }
         for (const watch of this.powerWatches.values()) {
             if (clocked) {
-                watch.timer ??= setInterval(() => fireAndForget('device power', this.readPower(watch.device)), POWER_REFRESH_MS);
+                watch.timer ??= setInterval(() => fireAndForget('readPower', this.readPower(watch.device)), POWER_REFRESH_MS);
             } else {
                 this.stopClock(watch);
             }
@@ -191,10 +191,10 @@ export class DeviceClient {
     /* The machine said something changed: the list is read again, and so is every battery on screen. */
     private changed(): void {
         if (this.watchers > 0) {
-            fireAndForget('device list', this.refresh(true));
+            fireAndForget('refresh', this.refresh(true));
         }
         for (const watch of this.powerWatches.values()) {
-            fireAndForget('device power', this.readPower(watch.device));
+            fireAndForget('readPower', this.readPower(watch.device));
         }
     }
 
@@ -346,7 +346,7 @@ export class DeviceClient {
             return;
         }
         this.syncWatch();
-        fireAndForget('device list', this.refresh());
+        fireAndForget('refresh', this.refresh());
         void this.mounted.reattachAll(async (_key, mounted) => {
             await this.attach(mounted);
         });

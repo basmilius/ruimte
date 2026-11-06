@@ -6,6 +6,7 @@ import { shownFolderOf, useProject } from '@/state/project';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 
 export const FILE_BEHAVIORS = defineBehaviors({
     'file-new': {
@@ -22,9 +23,7 @@ export const FILE_BEHAVIORS = defineBehaviors({
         run: () => {
             const path = shownFolderOf(useProject.getState().current);
             if (path !== null) {
-                void transportFor(currentEndpointId())
-                    ?.request('fs.reveal', { path })
-                    .catch(() => undefined);
+                void fireAndForget('fs.reveal', transportFor(currentEndpointId())?.request('fs.reveal', { path }));
             }
         },
         offered: (moment) => moment.folder !== null && { values: { app: fileManagerName(serverInfoOf(moment.endpointId).platform) } }

@@ -1,7 +1,7 @@
 import type { GitPrWatch, GitPrWatchEndReason } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { dropEndpoint, endpointKey } from '@/state/keys';
-import { readOnEveryOpen, type Transport } from '@/transport-api/transport';
+import { readOnEveryOpen, type Transport, fireAndForget } from '@/transport-api/transport';
 import { useEndpointId } from '../state/current-endpoint';
 
 /*
@@ -51,15 +51,14 @@ export function watchPrWatches(endpointId: string, transport: Transport): () => 
     let generation = 0;
     const refresh = (ended?: { chatId: string; reason: GitPrWatchEndReason }): void => {
         const current = ++generation;
-        transport
-            .request('git.pr-watches', {})
-            .then(({ watches }) => {
+        void fireAndForget(
+            'git.pr-watches',
+            transport.request('git.pr-watches', {}).then(({ watches }) => {
                 if (current === generation) {
                     usePrWatches.getState().receive(endpointId, watches, ended);
                 }
             })
-            // A failed ask leaves the watches as they were; the next open link asks again.
-            .catch(() => undefined);
+        );
     };
     const offEvent = transport.on('git.pr-watches', ({ ended }) => refresh(ended));
     const offStatus = readOnEveryOpen(transport, refresh);

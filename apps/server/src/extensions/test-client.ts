@@ -7,6 +7,7 @@ import { parseExtensionActionInput, type ExtensionActionName } from '@ruimte/con
 import { lazyComponentProblem, shortcutProblem } from '@ruimte/contracts/extension-client';
 import { contextSelection } from '@ruimte/contracts/extension-context';
 import type * as PublicClient from '../../../../packages/extension/client';
+import { bestEffort } from '../best-effort.ts';
 import { callHandler, MissingHandler } from './server-api.ts';
 import { NEW_NODE, Refused, wire, type Entry, type TestHost } from './test-host.ts';
 import { formatModule, nodeContextOf, react } from './test-react.ts';
@@ -740,7 +741,7 @@ export function clientApi(host: TestHost) {
                 });
                 const answer = (host.answers as Record<string, unknown>)['agents.stream'];
                 const close = (iterator: AsyncIterator<string> | Iterator<string>): void => {
-                    void Promise.resolve(iterator.return?.()).catch(() => undefined);
+                    void bestEffort('Promise.resolve', Promise.resolve(iterator.return?.()));
                 };
                 let source: AsyncIterator<string> | Iterator<string> | null = null;
 

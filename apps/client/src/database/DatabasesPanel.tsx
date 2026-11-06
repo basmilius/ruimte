@@ -25,6 +25,7 @@ import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
 import { basenameOf } from '@/paths/file-path';
 import { useProject } from '@/state/project';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/surface/PanelHeaderSlot';
+import { fireAndForget } from '@/transport-api/transport';
 import { DatabasesScene } from '@/ui/EmptyScenes';
 
 /*
@@ -146,14 +147,14 @@ function NoConnections() {
     useEffect(() => {
         let live = true;
         // Without Docker, or with it stopped, there is simply nothing to offer.
-        client
-            .discover('docker')
-            .then((found) => {
+        void fireAndForget(
+            'client.discover',
+            client.discover('docker').then((found) => {
                 if (live) {
                     setContainers(found);
                 }
             })
-            .catch(() => undefined);
+        );
         return () => {
             live = false;
         };

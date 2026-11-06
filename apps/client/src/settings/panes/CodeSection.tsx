@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { codeThemesOf, useSettings } from '@/state/settings';
 import { highlightCode } from '@/surface/panels/highlight';
+import { fireAndForget } from '@/transport-api/transport';
 
 const PREVIEW_CODE = [
     '// Greets a visitor by name.',
@@ -29,13 +30,14 @@ export function CodeThemePreview({ theme, mode, label, code = PREVIEW_CODE }: Co
 
     useEffect(() => {
         let cancelled = false;
-        highlightCode(code, 'typescript', theme)
-            .then((result) => {
+        void fireAndForget(
+            'highlightCode',
+            highlightCode(code, 'typescript', theme).then((result) => {
                 if (!cancelled) {
                     setHtml(result);
                 }
             })
-            .catch(() => undefined);
+        );
         return () => {
             cancelled = true;
         };

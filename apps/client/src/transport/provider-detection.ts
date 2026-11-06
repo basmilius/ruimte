@@ -3,6 +3,7 @@ import type { ProviderInfo } from '@ruimte/contracts';
 import { useEffect } from 'react';
 import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
 import { pool, transportFor } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import type { Transport } from '../transport-api/transport';
 import { machineAnswers } from './features';
 
@@ -30,7 +31,10 @@ function detectProviders(endpointId: string): void {
     const reply: Promise<{ providers: ProviderInfo[] }> = machineAnswers(connection, 'provider.detect')
         ? link.request('provider.detect', {})
         : link.request('provider.list', {});
-    void reply.then(({ providers }) => useProvidersStore.getState().setProviders(endpointId, providers)).catch(() => undefined);
+    void fireAndForget(
+        'reply.then',
+        reply.then(({ providers }) => useProvidersStore.getState().setProviders(endpointId, providers))
+    );
 }
 
 /* For a menu or pane that offers the machine's agents: asks again each time it opens. */

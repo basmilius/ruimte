@@ -1,5 +1,6 @@
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import type { Area, EventSource } from '../area.ts';
+import { bestEffort } from '../best-effort.ts';
 
 // However many clients come back at once, the CLIs are probed again at most this often.
 export const PROVIDER_DETECT_INTERVAL_MS = 10_000;
@@ -35,7 +36,7 @@ export function providerDetectArea({ providers, accounts, feed, now }: ProviderD
                         providers.invalidate(kind);
                     }
                     // An account reads its CLI on a clock of its own, so a login made meanwhile would wait for it; its new state reaches clients as an event.
-                    void accounts.refresh().catch(() => undefined);
+                    void bestEffort('accounts.refresh', accounts.refresh());
                 }
                 return { providers: await providers.list() };
             });

@@ -1,5 +1,6 @@
 import { CodedError } from '@adecore/agents';
 import { CLOSED_LID_BATTERY_FLOOR } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { errorText } from '../error-text.ts';
 import { keepAwakeWanted, type KeepAwakeSetting } from './keep-awake.ts';
 
@@ -460,13 +461,13 @@ export class ClosedLid {
             watchdog = system.startWatchdog();
         } catch (e) {
             log(`Keeping this Mac awake with its lid closed failed, since its watchdog did not start: ${errorText(e)}`);
-            await system.marker.remove().catch(() => undefined);
+            await bestEffort('system.marker.remove', system.marker.remove());
             this.target = false;
             return;
         }
         if (!(await system.setSleepDisabled(true))) {
             watchdog.dismiss();
-            await system.marker.remove().catch(() => undefined);
+            await bestEffort('system.marker.remove', system.marker.remove());
             this.target = false;
             this.refused = true;
             log(`sudo did not let this user turn sleep off; the rule in ${closedLidRulePath(this.options.uid)} needs installing again`);

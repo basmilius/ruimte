@@ -4,6 +4,7 @@ import { confirmLeavingConflict } from '@/project/leave-conflict';
 import { detachWindowTab, dropWindowTab, restoreWindowTabs, tabAfterClosing, useWindowTabs } from '@/project/window-tabs';
 import { endpointKey, splitKey } from '@/state/keys';
 import { useProject } from '@/state/project';
+import { fireAndForget } from '@/transport-api/transport';
 import { leaveWorkspace, showStart } from '@/workspace/connections';
 import { windowWorkspace } from '@/workspace/window';
 
@@ -90,7 +91,7 @@ export async function moveToNewWindow({ at, ...overrides }: Partial<MoveDeps> & 
         return false;
     }
     // A conflict the person chose to leave behind cannot be written, and the new window reads the file as it is.
-    await deps.flush().catch(() => undefined);
+    await fireAndForget('deps.flush', deps.flush());
     const key = deps.shownKey();
     const next = key === null ? null : tabAfterClosing(key);
     if (!(await (at === undefined ? move() : move(at)))) {
@@ -100,10 +101,10 @@ export async function moveToNewWindow({ at, ...overrides }: Partial<MoveDeps> & 
         dropWindowTab(key);
     }
     if (next !== null) {
-        await deps.showTab(next).catch(() => undefined);
+        await fireAndForget('deps.showTab', deps.showTab(next));
         return true;
     }
-    await deps.leave().catch(() => undefined);
+    await fireAndForget('deps.leave', deps.leave());
     deps.toStart();
     return true;
 }
@@ -157,16 +158,16 @@ async function startTearOut(key: string, grab: WindowPoint, tabWidth: number, de
     const before = useWindowTabs.getState().tabs;
     detachWindowTab(key);
     if (shown) {
-        await deps.flush().catch(() => undefined);
+        await fireAndForget('deps.flush', deps.flush());
     }
     if (!(await drag('start', key, grab, false, tabWidth).catch(() => false))) {
         restoreWindowTabs(before);
         return false;
     }
     if (next !== null) {
-        await deps.showTab(next).catch(() => undefined);
+        await fireAndForget('deps.showTab', deps.showTab(next));
     } else if (shown) {
-        await deps.leave().catch(() => undefined);
+        await fireAndForget('deps.leave', deps.leave());
         deps.toStart();
     }
     return true;
@@ -183,9 +184,7 @@ export function startWindowDrag(key: string, grab: WindowPoint): Promise<boolean
 export async function endTabDrag(key: string, whole: boolean): Promise<void> {
     await dragStarting;
     if (whole) {
-        await flushWorkspace().catch(() => undefined);
+        await fireAndForget('flushWorkspace', flushWorkspace());
     }
-    await desktop()
-        ?.tabDrag?.('end', key, { x: 0, y: 0 }, whole)
-        .catch(() => undefined);
+    await fireAndForget('desktop', desktop()?.tabDrag?.('end', key, { x: 0, y: 0 }, whole));
 }

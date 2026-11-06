@@ -29,6 +29,7 @@ import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { useServer } from '@/state/server';
 import { PanelHeaderActions, PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeaderTitleHidden } from '@/surface/PanelHeaderSlot';
+import { fireAndForget } from '@/transport-api/transport';
 import { useEndpointConnection } from '@/transport/status';
 import { SignInMark } from '@/ui/SignInMark';
 import { deviceClientFor } from '@/workspace/connections';
@@ -386,11 +387,7 @@ export function DevicesPanel() {
                     busy={row.loading}
                     label={t('devices.refresh')}
                     disabled={row.loading}
-                    onClick={() =>
-                        void deviceClientFor(endpointId)
-                            ?.refresh()
-                            .catch(() => undefined)
-                    }
+                    onClick={() => void fireAndForget('deviceClientFor', deviceClientFor(endpointId)?.refresh())}
                 />
             </PanelHeaderActions>
         </PanelHeaderSlot>

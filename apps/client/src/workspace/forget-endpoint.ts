@@ -11,6 +11,7 @@ import { useServers } from '@/state/server';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { browserStorage } from '@/state/stored-json';
+import { fireAndForget } from '@/transport-api/transport';
 import { pool } from '@/transport/index';
 import { dropMachine, leaveWorkspace, showStart } from '@/workspace/connections';
 import { windowWorkspace } from '@/workspace/window';
@@ -19,7 +20,7 @@ import { forgetTicket } from '../transport-api/credentials';
 /* Forgetting the machine the open project is on takes the window back to the start screen first, so nothing is left on a daemon nothing talks to. */
 export async function forgetEndpoint(id: string): Promise<void> {
     if (windowWorkspace()?.connection.endpointId === id) {
-        await leaveWorkspace().catch(() => undefined);
+        await fireAndForget('leaveWorkspace', leaveWorkspace());
         showStart();
     }
     useEndpoints.getState().remove(id);

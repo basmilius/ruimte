@@ -1,4 +1,5 @@
 import { desktop, type SystemIdleState } from '@/desktop/bridge';
+import { fireAndForget } from '@/transport-api/transport';
 import type { Transport } from '../transport-api/transport';
 
 // Well within the machine's lease of a minute, so one lost report never reads as leaving.
@@ -49,7 +50,7 @@ export function reportPresence(
             return;
         }
         reported = present;
-        await transport.request('presence.report', { present }).catch(() => undefined);
+        await fireAndForget('presence.report', transport.request('presence.report', { present }));
     };
     const onChange = (): void => {
         void report();

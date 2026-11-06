@@ -9,6 +9,7 @@ import { saveToOutput, useOutputProject } from '@/output/save';
 import { useEndpointId } from '@/state/current-endpoint';
 import { fileManagerName, useServer } from '@/state/server';
 import { drawsImageMime, imageFormatName } from '@/surface/panels/file-kind';
+import { fireAndForget } from '@/transport-api/transport';
 import { useMachineUrl } from '@/transport/machine-url';
 import { useTransport } from '@/workspace/context';
 
@@ -80,7 +81,7 @@ function MachineImage({ path, alt, place, saves = false }: { path: string; alt: 
         return (
             <span className={`${PLACES[place].box} flex items-center gap-1.5 text-xs text-text-faint`}>
                 <Icon icon={ImageOff} size={12} /> {t('image.notShown', { format: imageFormatName(binary.mime) })}
-                <Button size="sm" onClick={() => void transport.request('fs.reveal', { path }).catch(() => undefined)}>
+                <Button size="sm" onClick={() => void fireAndForget('fs.reveal', transport.request('fs.reveal', { path }))}>
                     <Icon icon={CornerUpRight} size={14} /> {t('panels:file.revealIn', { app: fileManagerName(platform) })}
                 </Button>
             </span>

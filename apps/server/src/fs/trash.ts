@@ -4,6 +4,7 @@ import { homedir, tmpdir } from 'node:os';
 import { basename, extname, join } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { entryExists } from '@adecore/utils/fs';
+import { bestEffort } from '../best-effort.ts';
 import { RECYCLE_BIN_SOURCE, RecycleBinExit, recycleBinCommand } from './recycle-bin.ts';
 
 type TrashErrorCode = 'trash-unsupported' | 'trash-failed';
@@ -81,7 +82,7 @@ async function recycleBinHelper(env: NodeJS.ProcessEnv): Promise<{ source: strin
         await writeFile(draft, RECYCLE_BIN_SOURCE);
         // Another delete may have put it there first, and be compiling from it.
         await rename(draft, source).catch(async (e: unknown) => {
-            await unlink(draft).catch(() => undefined);
+            await bestEffort('unlink', unlink(draft));
             if (!(await entryExists(source))) {
                 throw e;
             }
@@ -144,13 +145,13 @@ async function trashLinux(path: string, original: string, home: string, env: Nod
         } catch {
             return true;
         } finally {
-            await unlink(draft).catch(() => undefined);
+            await bestEffort('unlink', unlink(draft));
         }
     });
     try {
         await move(path, join(files, name));
     } catch (e) {
-        await unlink(join(info, `${name}.trashinfo`)).catch(() => undefined);
+        await bestEffort('unlink', unlink(join(info, `${name}.trashinfo`)));
         throw e;
     }
 }

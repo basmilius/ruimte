@@ -68,16 +68,34 @@ export function isConnectionError(error: unknown): boolean {
 }
 
 /*
- * The one door for a request nobody awaits: a release, an unsubscribe, a note to the machine. A request
- * either gets awaited and its failure shown, or goes through here. A failure is logged at debug level and
- * dropped, except one of the link, since the reconnect asks again and there is nothing to say.
+ * The one door for a request whose failure nobody needs: a release, an unsubscribe, a note to the machine.
+ * A request is either awaited and its failure shown, or goes through here, which never rejects. A failure
+ * is logged at debug level and dropped, except one of the link, since the reconnect asks again and there
+ * is nothing to say.
  */
-export function fireAndForget(what: string, request: Promise<unknown>): void {
-    request.catch((error: unknown) => {
-        if (!isConnectionError(error)) {
-            console.debug(`[request] ${what} failed and was dropped`, error);
+export function fireAndForget(what: string, request: PromiseLike<unknown> | undefined): Promise<void> {
+    return Promise.resolve(request).then(
+        () => undefined,
+        (error: unknown) => {
+            if (!isConnectionError(error)) {
+                console.debug(`[request] ${what} failed and was dropped`, error);
+            }
         }
-    });
+    );
+}
+
+/* The same for a read whose failure is an answer of its own: nothing, under the same logging. */
+export function orNull<T>(what: string, request: PromiseLike<T> | undefined): Promise<T | null> {
+    return Promise.resolve(request).then(
+        (value) => value ?? null,
+        (error: unknown) => {
+            if (!isConnectionError(error)) {
+                console.debug(`[request] ${what} failed and was read as nothing`, error);
+            }
+
+            return null;
+        }
+    );
 }
 
 /*

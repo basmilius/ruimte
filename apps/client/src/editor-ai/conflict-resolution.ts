@@ -4,6 +4,7 @@ import { planConflict, replaceAllLines, replaceLines, type ConflictStretch } fro
 import type { AgentKind, ProvenanceReadResult, ProvenanceRun } from '@ruimte/contracts';
 import { createStore, type StoreApi } from 'zustand';
 import type { DiskText } from '@/state/text-drafts';
+import { orNull } from '@/transport-api/transport';
 import { useConflictInfo } from './conflict-info';
 
 const ROW_OWNER = 'conflict';
@@ -162,7 +163,7 @@ export class ConflictResolution {
     /* The runs of the file are in, or changed: each block names the newest run that wrote its lines. */
     async refreshAuthors(): Promise<void> {
         const handled = this.handled;
-        const result = await this.source.runs().catch(() => null);
+        const result = await orNull('source.runs', this.source.runs());
         if (result === null || this.disposed || handled !== this.handled || result.mtime !== handled) {
             return;
         }

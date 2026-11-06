@@ -16,7 +16,7 @@ import {
 import i18next from 'i18next';
 import { useSyncExternalStore } from 'react';
 import { useToasts } from '@/state/toasts';
-import { TransportError, type Transport } from '@/transport-api/transport';
+import { TransportError, type Transport, fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { SnapshotTracker, upsert } from './snapshot-tracker';
 
@@ -176,7 +176,7 @@ export class TemplatesTracker extends SnapshotTracker<TemplatesSnapshot | null> 
                 throw error;
             }
 
-            await this.refresh().catch(() => undefined);
+            await fireAndForget('refresh', this.refresh());
             useToasts.getState().show({
                 kind: 'error',
                 id: 'templates-conflict',

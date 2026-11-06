@@ -5,6 +5,7 @@ import { pageSnapshots } from '@/browser/page-snapshots';
 import { browserRegistry, useBrowser, type BrowserState } from '@/clients/browser/registry';
 import { endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
 import type { Transport } from '@/transport-api/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { watchPool } from '@/transport/pool-watch';
 
 /* What the daemon is told about a page this client holds; the icon and the stream are the client's own. */
@@ -120,12 +121,12 @@ export function startPageHolds(): () => void {
                     continue;
                 }
                 told.set(key, row);
-                void link.request('browser.hold', { state: pageStateOf(splitKey(key).id, row) }).catch(() => undefined);
+                void fireAndForget('browser.hold', link.request('browser.hold', { state: pageStateOf(splitKey(key).id, row) }));
             }
             for (const key of [...told.keys()]) {
                 if (rows[key] === undefined || !browserRegistry.has(key)) {
                     told.delete(key);
-                    void link.request('browser.release', { browserId: splitKey(key).id }).catch(() => undefined);
+                    void fireAndForget('browser.release', link.request('browser.release', { browserId: splitKey(key).id }));
                 }
             }
         };
@@ -139,7 +140,7 @@ export function startPageHolds(): () => void {
                 useBrowser.subscribe(report),
                 link.on('browser.drive', (payload) => {
                     reportPageAsk(endpointKey(endpointId, payload.browserId), Date.now());
-                    void answer(endpointId, payload).then((result) => link.request('browser.driveResult', result).catch(() => undefined));
+                    void answer(endpointId, payload).then((result) => fireAndForget('browser.driveResult', link.request('browser.driveResult', result)));
                 })
             ]
         };

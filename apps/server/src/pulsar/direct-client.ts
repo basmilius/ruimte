@@ -20,6 +20,7 @@ import type { IceServer, SignalEnvelope, SignalOfferAccess } from '@ruimte/pulsa
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { RTCPeerConnection, type RTCDataChannel } from 'werift';
 import { signMessage } from '../auth/keys.ts';
+import { bestEffort } from '../best-effort.ts';
 import { AUTHENTICATED_FRAME_CHARS, directChannel, fromWerift, UNAUTHENTICATED_FRAME_CHARS, type DirectChannel } from './data-channel.ts';
 
 // How long a close waits for the channel's stream reset to be answered before the peer goes anyway.
@@ -107,7 +108,10 @@ export class DirectClient {
             this.refused = (reason) => reject(new CodedError(reason, `The machine closed the attempt: ${reason}`));
         });
         await this.peer.setLocalDescription(await this.peer.createOffer());
-        await waitFor(() => this.peer.iceGatheringState === 'complete', ICE_GATHER_TIMEOUT_MS).catch(() => undefined);
+        await bestEffort(
+            'waitFor',
+            waitFor(() => this.peer.iceGatheringState === 'complete', ICE_GATHER_TIMEOUT_MS)
+        );
         this.offerSdp = this.peer.localDescription!.sdp;
         const offer = this.options.access
             ? { kind: 'offer' as const, sdp: this.offerSdp, access: this.options.access }
@@ -207,7 +211,7 @@ export class DirectClient {
            stream reset the channel close starts is the only word the daemon gets. Taking the peer down
            before the reset is answered races it, and a daemon that loses that race waits 30 s for ICE consent. */
         const released = raw === null || raw.readyState === 'closed' ? Promise.resolve() : waitFor(() => raw.readyState === 'closed', CLOSE_GRACE_MS);
-        void released.catch(() => undefined).then(() => this.peer.close().catch(() => undefined));
+        void released.catch(() => undefined).then(() => bestEffort('peer.close', this.peer.close()));
     }
 
     private handshake(channel: DirectChannel, binding: string): Promise<{ ticket: string | null }> {

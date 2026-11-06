@@ -20,6 +20,7 @@ import { useSettings } from '@/state/settings';
 import { browserStorage } from '@/state/stored-json';
 import { pageWindowTarget, type WindowTarget } from '@/state/window-target';
 import { transportFor } from '@/transport';
+import { fireAndForget, orNull } from '@/transport-api/transport';
 import { enterWorkspace, leaveWorkspace, machineFor, showStart, type OpenRequest } from '@/workspace/connections';
 import { ensureMachine } from '@/workspace/reach';
 import { useWindow, windowWorkspace } from '@/workspace/window';
@@ -258,7 +259,7 @@ export async function closeProjectOn(endpointId: string, summary: ProjectSummary
     }
     const transport = transportFor(endpointId);
     if (transport?.status === 'open') {
-        await transport.request('project.close', { projectId: summary.projectId }).catch(() => undefined);
+        await fireAndForget('project.close', transport.request('project.close', { projectId: summary.projectId }));
     }
     // Closing is this client's, whatever the machine does with it: the row moves here either way.
     closeListedProjectLocally(endpointId, summary);
@@ -273,7 +274,7 @@ export async function closingProject(endpointId: string, summary: ProjectSummary
     if (transport?.status !== 'open') {
         return null;
     }
-    const closing = await transport.request('project.closing', { projectId: summary.projectId }).catch(() => null);
+    const closing = await orNull('project.closing', transport.request('project.closing', { projectId: summary.projectId }));
     return closing === null ? null : closingCount(closing, local);
 }
 
@@ -290,7 +291,7 @@ export async function deleteProject(endpointId: string, projectId: string, remov
     await machine.transport.request('project.delete', { projectId, removeFiles });
     // After the close, which wrote this client's copy on its way out.
     dropClientLocal(browserStorage(), endpointId, projectId);
-    await listProjects(endpointId).catch(() => undefined);
+    await fireAndForget('listProjects', listProjects(endpointId));
 }
 
 function untilFocused(): Promise<void> {

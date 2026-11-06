@@ -1,5 +1,6 @@
 import { MountedRegistry, type MountedEntry } from '@adecore/agents-react';
 import type { AgentLaunch, SessionAttachPayload, SessionAttachResult, SessionInfo } from '@ruimte/contracts';
+import { fireAndForget } from '@/transport-api/transport';
 import type { SessionSink } from '../../state/sessions';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../../transport-api/transport';
 import { HandlerTable } from '../../transport/handler-table';
@@ -207,12 +208,12 @@ export class SessionClient {
     }
 
     write(nodeId: string, data: string): void {
-        void this.transport.request('session.write', { sessionId: nodeId, data }).catch(() => undefined);
+        void fireAndForget('session.write', this.transport.request('session.write', { sessionId: nodeId, data }));
     }
 
     /* The daemon owns the screen, so it clears it and pushes the fresh one to every attached client. */
     clear(nodeId: string): void {
-        void this.transport.request('session.clear', { sessionId: nodeId }).catch(() => undefined);
+        void fireAndForget('session.clear', this.transport.request('session.clear', { sessionId: nodeId }));
     }
 
     resize(nodeId: string, cols: number, rows: number): void {
@@ -220,7 +221,7 @@ export class SessionClient {
         if (entry) {
             entry.grid = { cols, rows };
         }
-        void this.transport.request('session.resize', { sessionId: nodeId, cols, rows }).catch(() => undefined);
+        void fireAndForget('session.resize', this.transport.request('session.resize', { sessionId: nodeId, cols, rows }));
     }
 
     async kill(nodeId: string): Promise<void> {

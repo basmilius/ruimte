@@ -15,6 +15,7 @@ import type { LanguageStatusTracker } from '@/language/status';
 import { actionsOf, groupedStatuses, isOwn, kindOf, nameOf, packageOf, toneOf } from '@/language/status-view';
 import { useWindowProject } from '@/language/window-project';
 import { SettingsSection } from '@/machines/SettingsSection';
+import { fireAndForget } from '@/transport-api/transport';
 import { useWindow, workspaceOf } from '@/workspace/window';
 
 /* The servers a person added on the machine of this window, for as long as the tab is up. */
@@ -29,7 +30,7 @@ function useWindowCustomServers(): { tracker: CustomServersTracker; endpointId: 
         const { transport, endpointId } = workspace.connection;
         const tracker = new CustomServersTracker(transport);
         holder.set({ tracker, endpointId });
-        void tracker.refresh().catch(() => undefined);
+        void fireAndForget('tracker.refresh', tracker.refresh());
         return () => {
             holder.set(null);
             tracker.dispose();

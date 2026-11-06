@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { cancellableTimeout } from '@adecore/utils/async';
 import { REPLY_COLUMN_WIDTH, VISUAL_MEASURE_WIDTHS, type VisualAppearance, type VisualHeight } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { errorText } from '../error-text.ts';
 import type { ConsoleEntry } from './page-console.ts';
 import { RENDER_COMMAND, RenderAnswerSchema, type RenderAnswer, type RenderRequest } from './render-protocol.ts';
@@ -124,7 +125,7 @@ export function childLauncher(command: readonly string[], env: Record<string, st
                     }
                 }
                 if (profile !== null) {
-                    await rm(profile, { recursive: true, force: true, maxRetries: 3 }).catch(() => undefined);
+                    await bestEffort('rm', rm(profile, { recursive: true, force: true, maxRetries: 3 }));
                 }
             });
         return {

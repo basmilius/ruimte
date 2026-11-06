@@ -5,6 +5,7 @@ import { pathAffected } from '@/state/changed-paths';
 import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
 import type { Transport } from '@/transport-api/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { machineTransport, transportFor } from '@/transport/index';
 
 /* The checkouts this client is watching, counted, so the files panel letting go of what the git panel still looks at leaves neither blind. */
@@ -41,13 +42,14 @@ export function useGitStatus(cwd: string | null): GitStatus | null {
         }
         let cancelled = false;
         const read = (): void => {
-            void (transportFor(endpointId)?.request('git.status', { cwd }) ?? Promise.reject(new Error('no socket')))
-                .then((status) => {
+            void fireAndForget(
+                'git.status',
+                (transportFor(endpointId)?.request('git.status', { cwd }) ?? Promise.reject(new Error('no socket'))).then((status) => {
                     if (!cancelled) {
                         setHeld({ key, status });
                     }
                 })
-                .catch(() => undefined);
+            );
         };
         const watch = watchGit(cwd, read);
         void watch.answer.then((answer) => {

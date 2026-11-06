@@ -4,7 +4,7 @@ import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
 import { viewIdsIn } from '@/layout/split';
 import type { EditorRegistry, SavedFileSetters } from '@/state/editors';
-import { isConnectionError, TransportError, type Transport, type TransportStatus } from '@/transport-api/transport';
+import { isConnectionError, TransportError, type Transport, type TransportStatus, fireAndForget } from '@/transport-api/transport';
 
 /* The slice of the document store this client reads; the real store has more. */
 export interface DocumentAccess {
@@ -444,7 +444,7 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
     private release(file: OpenFile<TState, TDocument>): void {
         file.store.getState().unload();
         this.editors.release(file.viewId);
-        void this.channel.close(this.transport, file.projectId, file.viewId).catch(() => undefined);
+        void fireAndForget('channel.close', this.channel.close(this.transport, file.projectId, file.viewId));
     }
 
     private async openOne(projectId: string, viewId: string, local: ProjectViewLocal | null): Promise<void> {

@@ -6,6 +6,7 @@ import { windowProjectFollower } from '@/database/window-project';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import type { Transport } from '@/transport-api/transport';
+import { orNull } from '@/transport-api/transport';
 
 interface SqlBindingsState {
     /* The machine and the project these are of (`endpointKey`); null while nothing asked for any. */
@@ -62,7 +63,7 @@ export function createSqlBindings(deps: SqlBindingsDeps): SqlBindingsModel {
             return;
         }
         // A failed ask leaves the files reading against nothing.
-        const state = await of.transport.request('language.sql', { projectId: of.projectId }).catch(() => null);
+        const state = await orNull('language.sql', of.transport.request('language.sql', { projectId: of.projectId }));
         if (state !== null) {
             take(of, state);
         }

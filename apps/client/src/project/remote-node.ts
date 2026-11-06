@@ -1,3 +1,4 @@
+import { fireAndForget } from '@/transport-api/transport';
 /*
  * What making a node on another machine takes, in the order that leaves nothing half made. The
  * machine is linked to the project first, the project then has the node, and only then does the
@@ -40,7 +41,7 @@ export async function createRemoteNode(steps: RemoteNodeSteps): Promise<string> 
     } catch (e) {
         if (nodeId !== null) {
             steps.removeNode(nodeId);
-            await steps.save().catch(() => undefined);
+            await fireAndForget('steps.save', steps.save());
         }
         throw e;
     } finally {

@@ -3,6 +3,7 @@ import { lstat, mkdir, open, unlink } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { ARCHIVE_SKIPPED_MAX, type ArchiveExtractResult, type ArchiveSkipped } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { deepestExisting } from '../fs/create.ts';
 import { assertOpenGround, realRoots, rootOf, stateRefusal, type WriteBoundary } from '../fs/write.ts';
 import { openArchive, walkArchive, type WalkedEntry } from './archive.ts';
@@ -170,7 +171,7 @@ export async function planExtract(request: ExtractRequest, boundary: WriteBounda
                 } catch (e) {
                     await handle.close();
                     // Half a file is worse than none: what was written whole before it stays.
-                    await unlink(destination).catch(() => undefined);
+                    await bestEffort('unlink', unlink(destination));
                     throw e;
                 }
                 await handle.close();

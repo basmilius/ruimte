@@ -60,6 +60,7 @@ import type {
     LanguageTraceValue,
     LanguageWillSavePayload
 } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { isDirectory } from '../disk/is-directory.ts';
 import { errorText } from '../error-text.ts';
@@ -841,7 +842,7 @@ export class LanguageHost {
                 diagnostics: () => this.diagnosticsFor(project, held)
             });
         } finally {
-            await this.release(project, held, request.owner).catch(() => undefined);
+            await bestEffort('release', this.release(project, held, request.owner));
         }
     }
 
@@ -1144,7 +1145,7 @@ export class LanguageHost {
         for (const project of this.projects.values()) {
             for (const document of [...project.documents.values()]) {
                 if (document.clients.has(clientId)) {
-                    void this.release(project, document, clientId).catch(() => undefined);
+                    void bestEffort('release', this.release(project, document, clientId));
                 }
             }
         }
@@ -1767,18 +1768,21 @@ export class LanguageHost {
 
     /* An install began or ended. Every client hears of it, since it is the machine's; a project with documents waiting then starts. */
     private installChanged(kind: CatalogKind): void {
-        void (async () => {
-            this.sinks.emit({ event: 'language.status', payload: { projectId: null, status: await this.statusOf(null, kind) } });
-            if ((await this.installer.state(kind)) !== 'installed') {
-                return;
-            }
-            for (const project of this.projects.values()) {
-                const server = project.servers.get(kind);
-                if (server) {
-                    void server.ensureStarted().catch(() => undefined);
+        void bestEffort(
+            'tell the clients the server state',
+            (async () => {
+                this.sinks.emit({ event: 'language.status', payload: { projectId: null, status: await this.statusOf(null, kind) } });
+                if ((await this.installer.state(kind)) !== 'installed') {
+                    return;
                 }
-            }
-        })().catch(() => undefined);
+                for (const project of this.projects.values()) {
+                    const server = project.servers.get(kind);
+                    if (server) {
+                        void server.ensureStarted().catch(() => undefined);
+                    }
+                }
+            })()
+        );
     }
 
     /* A kind runs another install now, so every server of it that ran starts again on it. */
@@ -1786,7 +1790,7 @@ export class LanguageHost {
         for (const project of this.projects.values()) {
             const server = project.servers.get(kind);
             if (server && server.state !== 'stopped') {
-                void server.restart().catch(() => undefined);
+                void bestEffort('server.restart', server.restart());
             }
         }
     }

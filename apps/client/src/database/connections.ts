@@ -28,7 +28,7 @@ import {
 import { windowProjectFollower } from '@/database/window-project';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
-import { isConnectionError, TransportError, type Transport } from '@/transport-api/transport';
+import { isConnectionError, TransportError, type Transport, fireAndForget } from '@/transport-api/transport';
 
 export type ConnectionsStatus = 'idle' | 'loading' | 'ready' | 'failed';
 
@@ -223,7 +223,7 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         }
         handed = text;
         // A failed hand-over leaves the agent without passwords; the next change of the list sends them again.
-        await of.transport.request('database.passwords', { projectId: of.projectId, passwords: listed }).catch(() => undefined);
+        await fireAndForget('database.passwords', of.transport.request('database.passwords', { projectId: of.projectId, passwords: listed }));
     };
 
     const readAgentAccess = async (of: ConnectionsTarget): Promise<void> => {

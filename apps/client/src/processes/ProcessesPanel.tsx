@@ -57,6 +57,7 @@ import { useProjectList } from '@/state/project-list';
 import { useToasts } from '@/state/toasts';
 import { useProjectNodes } from '@/state/view-nodes';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/surface/PanelHeaderSlot';
+import { fireAndForget } from '@/transport-api/transport';
 import { useEndpointConnection } from '@/transport/status';
 import { useTransport } from '@/workspace/context';
 
@@ -100,10 +101,10 @@ function useProcessesFeed(): void {
 
     useEffect(() => {
         const subscribe = (): void => {
-            transport
-                .request('processes.subscribe', { scope, sort })
-                .then((result) => useProcesses.getState().receive(endpointId, result))
-                .catch(() => undefined);
+            void fireAndForget(
+                'processes.subscribe',
+                transport.request('processes.subscribe', { scope, sort }).then((result) => useProcesses.getState().receive(endpointId, result))
+            );
         };
         if (transport.status === 'open') {
             subscribe();
@@ -125,7 +126,7 @@ function useProcessesFeed(): void {
 
     useEffect(
         () => () => {
-            void transport.request('processes.unsubscribe', {}).catch(() => undefined);
+            void fireAndForget('processes.unsubscribe', transport.request('processes.unsubscribe', {}));
         },
         [transport]
     );

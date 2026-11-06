@@ -7,6 +7,7 @@ import { groupsBetweenItems } from '@/output/saved-groups';
 import { SavedCard, type Saved } from '@/output/SavedCard';
 import { endpointKey } from '@/state/keys';
 import { machineTransport } from '@/transport';
+import { orNull } from '@/transport-api/transport';
 import { useMachineAnswers } from '@/transport/features';
 
 const NO_ARTIFACTS: readonly ArtifactSummary[] = [];
@@ -62,10 +63,12 @@ function useReadVersions(endpointId: string, artifacts: readonly ArtifactSummary
         const artifactIds = wanted.split(',').map((entry) => entry.slice(0, entry.lastIndexOf('@')));
         void Promise.all(
             artifactIds.map((artifactId) =>
-                transport
-                    .request('artifact.get', { artifactId })
-                    .then(({ artifact, versions }) => [artifactId, versions.map((version, index) => ({ artifact, version, latest: index === 0 }))] as const)
-                    .catch(() => null)
+                orNull(
+                    'artifact.get',
+                    transport
+                        .request('artifact.get', { artifactId })
+                        .then(({ artifact, versions }) => [artifactId, versions.map((version, index) => ({ artifact, version, latest: index === 0 }))] as const)
+                )
             )
         ).then((results) => {
             if (live) {

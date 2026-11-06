@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { lstat, mkdir, opendir, readdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
 import { isBelow, isWithin } from '@adecore/utils/path';
+import { bestEffort } from '../best-effort.ts';
 import type { Reclaimed } from '../maintenance/maintenance.ts';
 import { realTimers, type Timers } from '../timers.ts';
 import type { PhpCache } from './host.ts';
@@ -406,7 +407,7 @@ export async function sweepPhpCache(options: PhpCacheSweepOptions, now: number, 
             budget: options.budget ?? PHP_CACHE_BUDGET_BYTES
         });
 
-        await writeSightings(options.sightingsFile, plan.sightings).catch(() => undefined);
+        await bestEffort('writeSightings', writeSightings(options.sightingsFile, plan.sightings));
 
         const sizes = new Map(listing.entries.map((entry) => [entry.name, entry.size]));
         let removals = 0;

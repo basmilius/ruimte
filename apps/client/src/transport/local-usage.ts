@@ -1,6 +1,7 @@
 import type { UsageCountPayload, UsageTimingPayload } from '@ruimte/contracts';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import type { LinkMeter, ReconnectReason } from '@/telemetry/metrics';
+import { fireAndForget } from '@/transport-api/transport';
 import type { Transport } from '../transport-api/transport';
 import { machineAnswers } from './features';
 
@@ -15,7 +16,7 @@ export function localUsage(localLink: () => Transport | null) {
         if (link === null || link.status !== 'open' || !machineAnswers(link.connection, type)) {
             return;
         }
-        void (link.request as (type: T, payload: unknown) => Promise<unknown>)(type, payload).catch(() => undefined);
+        void fireAndForget('as', (link.request as (type: T, payload: unknown) => Promise<unknown>)(type, payload));
     };
     return {
         count: (counter: UsageCountPayload['counter']) => send('usage.count', { counter }),

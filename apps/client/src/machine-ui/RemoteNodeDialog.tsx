@@ -27,6 +27,7 @@ import { endpointById, endpointIdOfMachine, useEndpointIdOfMachine, useEndpoints
 import { useProject } from '@/state/project';
 import { nodesOfView } from '@/state/view-nodes';
 import { describeLastSeen } from '@/surface/connection-info';
+import { fireAndForget } from '@/transport-api/transport';
 import { machineAnswers, useMachineAnswers } from '@/transport/features';
 import { transportFor } from '@/transport/index';
 import { useLastSeenAt } from '@/transport/status';
@@ -161,7 +162,7 @@ function RemoteNodeForm({
             const there = transportFor(machineEndpointId)!;
             const opened = await there.request('project.open', { folder });
             // Looking at a folder does not keep its project open there.
-            void there.request('project.release', { projectId: opened.summary.projectId }).catch(() => undefined);
+            void fireAndForget('project.release', there.request('project.release', { projectId: opened.summary.projectId }));
             const { identities } = machineAnswers(there.connection, 'git.identity')
                 ? await there.request('git.identity', { paths: [opened.summary.folder] }).catch(() => ({ identities: [] }))
                 : { identities: [] };

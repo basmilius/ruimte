@@ -14,7 +14,7 @@ import { hasLocalMachine } from '@/state/local-machine';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
-import { TransportError } from '@/transport-api/transport';
+import { TransportError, fireAndForget } from '@/transport-api/transport';
 import { ensureMachine } from '@/workspace/reach';
 import { useWindow, windowWorkspace, workspaceOf } from '@/workspace/window';
 
@@ -88,7 +88,7 @@ export async function newChatOn(endpointId: string, payload: ProjectNewChatPaylo
             return false;
         }
         const { summary, viewId } = await transport.request('project.newChat', payload);
-        void listProjects(id).catch(() => undefined);
+        void fireAndForget('listProjects', listProjects(id));
         if (runtimeMode !== undefined) {
             openChatInMode(id, viewId, runtimeMode);
         }

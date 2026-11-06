@@ -7,6 +7,7 @@ import { useEndpoints } from '@/state/endpoints';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { machineTransport, pool } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { machineAnswers, useMachineAnswers } from '@/transport/features';
 import { useWindow, workspaceOf } from '@/workspace/window';
 
@@ -61,13 +62,14 @@ export function useMachineVoicePreferences(endpointId: string): MachineVoicePref
         let current = true;
         const link = machineTransport(endpointId);
         const off = link.on('voice.preferences', ({ preferences }) => setStored({ endpointId, preferences }));
-        link.request('voice.preferences', {})
-            .then(({ preferences }) => {
+        void fireAndForget(
+            'voice.preferences',
+            link.request('voice.preferences', {}).then(({ preferences }) => {
                 if (current) {
                     setStored({ endpointId, preferences });
                 }
             })
-            .catch(() => undefined);
+        );
         return () => {
             current = false;
             off();

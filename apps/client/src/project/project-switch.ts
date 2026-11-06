@@ -2,7 +2,7 @@ import { messageOf } from '@adecore/ui';
 import type { ProjectSummary } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
-import { TransportError } from '@/transport-api/transport';
+import { TransportError, fireAndForget } from '@/transport-api/transport';
 
 /* Long enough that a switch on a machine that is already connected never flashes a screen, short enough that a wait is never silent. */
 export const REVEAL_DELAY_MS = 300;
@@ -132,7 +132,7 @@ export class ProjectSwitch {
             return;
         }
         this.set({ kind: 'returning', target: state.target, visible: true });
-        await entry.run.back().catch(() => undefined);
+        await fireAndForget('entry.run.back', entry.run.back());
         this.finish(entry);
     }
 
@@ -158,7 +158,7 @@ export class ProjectSwitch {
                 return 'replaced';
             }
             // Only after the run stopped, since what it had on the wire would otherwise land on top of the way back.
-            await entry.run.back().catch(() => undefined);
+            await fireAndForget('entry.run.back', entry.run.back());
             this.finish(entry);
             return 'cancelled';
         }

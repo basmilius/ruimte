@@ -9,6 +9,7 @@ import { focusChat } from '@/plan/plan-actions';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
+import { fireAndForget } from '@/transport-api/transport';
 import { machineFor } from '@/workspace/connections';
 
 // The same pause the search in files takes: a typed word is one search.
@@ -114,9 +115,7 @@ export function useChatSearch(projectId: string | null, query: string): ChatSear
         return () => {
             window.clearTimeout(timer);
             if (started) {
-                void machineFor(endpointId)
-                    ?.transport.request('chat.searchCancel', { searchId })
-                    .catch(() => undefined);
+                void fireAndForget('chat.searchCancel', machineFor(endpointId)?.transport.request('chat.searchCancel', { searchId }));
             }
         };
     }, [projectId, query]);

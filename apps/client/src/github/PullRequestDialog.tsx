@@ -33,6 +33,7 @@ import { sendToChat } from '@/language/selection-to-chat';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey, isOfEndpoint } from '@/state/keys';
 import { useProject } from '@/state/project';
+import { fireAndForget } from '@/transport-api/transport';
 import { useMachineAnswers } from '@/transport/features';
 import { useTransport } from '@/workspace/context';
 
@@ -230,10 +231,10 @@ function useSplit(cwd: string, pr: PullRequest | null): ChangeSplit | null {
             return;
         }
         let current = true;
-        transport
-            .request('git.prSplit', { cwd, number, headSha })
-            .then((answer) => current && setHeld({ headSha, split: answer.split }))
-            .catch(() => undefined);
+        void fireAndForget(
+            'git.prSplit',
+            transport.request('git.prSplit', { cwd, number, headSha }).then((answer) => current && setHeld({ headSha, split: answer.split }))
+        );
         return () => {
             current = false;
         };

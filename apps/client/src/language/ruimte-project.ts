@@ -20,6 +20,7 @@ import { useUi } from '@/state/ui';
 import { RUIMTE_EDITOR_KEYMAP } from '@/surface/editor-keymap';
 import { openFileLink } from '@/surface/panels/file-links';
 import type { Transport } from '@/transport-api/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { readPanelHeight, writePanelHeight } from './panel-height';
 import type { DraftProjectFiles } from './project-files';
@@ -115,9 +116,9 @@ export class RuimteProject {
             }
         );
         this.status = new LanguageStatusTracker(transport, projectId);
-        void this.status.refresh().catch(() => undefined);
+        void fireAndForget('status.refresh', this.status.refresh());
         this.templateSync = new TemplatesTracker(transport, projectId, templates);
-        void this.templateSync.refresh().catch(() => undefined);
+        void fireAndForget('templateSync.refresh', this.templateSync.refresh());
         this.stopDrafts = files !== null && 'watchUnsaved' in files ? holdUnsavedTexts(this.language.service, folder, files) : () => undefined;
     }
 

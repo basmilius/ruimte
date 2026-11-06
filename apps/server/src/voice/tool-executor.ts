@@ -12,6 +12,7 @@ import {
     type VoiceReplyWords,
     type VoiceToolOutput
 } from '@ruimte/voice';
+import { bestEffort } from '../best-effort.ts';
 import type { VoicePolicy } from './action-policy.ts';
 
 /* The registry as the executor reaches it: the daemon's `serverActions`, or a fake in a test. */
@@ -192,7 +193,7 @@ export class VoiceToolExecutor<Context> {
 
     /* A token this session will never use is taken back from the registry too, as a cancel. */
     #decline(token: string): void {
-        this.#options.runner.confirm(token, false, this.#options.call()).catch(() => undefined);
+        void bestEffort('#options.runner.confirm', this.#options.runner.confirm(token, false, this.#options.call()));
     }
 
     async #state(): Promise<string | null> {

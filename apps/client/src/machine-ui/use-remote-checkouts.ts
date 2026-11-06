@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { rankCandidates, type RemoteCandidate } from '@/project/remote-candidates';
 import { endpointById } from '@/state/endpoints';
 import type { Transport } from '@/transport-api/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { pool, transportFor } from '@/transport/index';
 import { ensureMachine } from '@/workspace/reach';
@@ -138,13 +139,14 @@ export function useCheckoutState(here: Transport | null, folder: string | null, 
             return;
         }
         let current = true;
-        here.request('git.status', { cwd: folder })
-            .then((status) => {
+        void fireAndForget(
+            'git.status',
+            here.request('git.status', { cwd: folder }).then((status) => {
                 if (current) {
                     setState(status.repo ? { branch: status.branch, changed: status.files.length, upstream: status.upstream !== null } : null);
                 }
             })
-            .catch(() => undefined);
+        );
         return () => {
             current = false;
         };
