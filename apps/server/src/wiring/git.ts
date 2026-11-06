@@ -1,4 +1,4 @@
-import { MachineHome } from '../disk/machine-home.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import { SharedWatch } from '../disk/shared-watch.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { errorText } from '../error-text.ts';
@@ -31,12 +31,18 @@ export interface GitBundle {
     checkpoints: Checkpoints;
 }
 
-export function wireGit(home: string, identity: EndpointIdentity, agents: AgentsBundle, work: AgentWorkBundle, peers: PeerLinks): GitBundle {
+export function wireGit(
+    home: string,
+    identity: EndpointIdentity,
+    machineHome: MachineHome,
+    agents: AgentsBundle,
+    work: AgentWorkBundle,
+    peers: PeerLinks
+): GitBundle {
     const watches = new SharedWatch();
     watches.onBurst(forgetSearchCache);
     watches.onBurst(forgetRepos);
     const folders = new FolderWatcher(process.platform, watches);
-    const machineHome = new MachineHome(home);
     const statuses = new GitStatusWatcher(process.platform, watches, Date.now, (root) => readStatusAt(root, (top) => machineHome.stateWithin(top)));
     const agentsInWorktrees = worktreeAgents({
         chats: () => agents.chats.list(),
@@ -51,5 +57,5 @@ export function wireGit(home: string, identity: EndpointIdentity, agents: Agents
     const bundles = new BundleStore(home);
     // Nothing is in flight at start, so what an earlier run left is of no one.
     bundles.sweep().catch((e: unknown) => console.warn('Clearing the bundles failed:', errorText(e)));
-    return { watches, folders, statuses, worktrees, merges, checkouts: checkoutHost(worktrees), bundles, checkpoints: new Checkpoints(home) };
+    return { watches, folders, statuses, worktrees, merges, checkouts: checkoutHost(worktrees), bundles, checkpoints: agents.checkpoints };
 }

@@ -1,8 +1,8 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionCall } from '@ruimte/actions';
 import { type CanvasHost, type ProjectHost, type AgentCall } from '../canvas/host.ts';
-import { extensionOpener, voiceOpener } from '../canvas/opener.ts';
 import { callerKind } from '../canvas/tasks.ts';
+import { extensionOpener, voiceOpener } from '../opener.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 
 /* Where a chat stands in the eyes of Voice, by name, to say which one it means. */

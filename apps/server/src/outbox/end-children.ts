@@ -1,8 +1,8 @@
 import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { endChildren } from '@adecore/agents/coordination';
-import { isPlaceless, openerOf } from '../canvas/opener.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
+import { isPlaceless, openerOf } from '../opener.ts';
 import type { SessionManager } from '../sessions/manager.ts';
 import type { EndChildrenEntry, OutboxEntry, OutboxStore, OutboxWork } from './outbox.ts';
 

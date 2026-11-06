@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import type { AgentLineageStore } from '@adecore/agents/coordination';
 import { isWithin } from '@adecore/utils/path';
 import type { AgentKind } from '@ruimte/contracts';
-import { openerOf } from '../canvas/opener.ts';
+import { openerOf } from '../opener.ts';
 import { providerFor } from '../providers/registry.ts';
 
 interface UntrustedFoldersDeps {

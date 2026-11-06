@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { RecordDirectory } from '@adecore/agents';
 import { ProjectNodeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
-import { openerOf } from '../canvas/opener.ts';
+import { openerOf } from '../opener.ts';
 
 const HiddenAgentSchema = z.object({
     projectId: z.string().min(1),

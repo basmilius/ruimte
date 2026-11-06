@@ -40,14 +40,15 @@ import {
 } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { isDirectory } from '../disk/is-directory.ts';
-import { MachineHome } from '../disk/machine-home.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import { errorText } from '../error-text.ts';
 import type { SessionSink } from '../wire.ts';
 import { moveDesignFolders, settleDesignFolders, takenDesignFolders, type DesignAtWork, type DesignSides } from './design-folders.ts';
 import { folderToOpen } from './folder-to-open.ts';
-import { HiddenAgentStore } from './hidden-agents.ts';
+import type { HiddenAgentStore } from './hidden-agents.ts';
 import { splitLegacy, type LoadedFiles, type TrackedProbe } from './legacy-split.ts';
-import { PeerLinks, withHiddenCanvases } from './peer-links.ts';
+import type { ProjectOverlays } from './overlays.ts';
+import { withHiddenCanvases, type PeerLinks } from './peer-links.ts';
 import { ProjectError } from './project-error.ts';
 import {
     diagramsDirOf,
@@ -76,7 +77,7 @@ import { ProjectRegistry, type RegistryEntry } from './project-registry.ts';
 import { isIconFile, sameIcon, ProjectSummaries } from './project-summaries.ts';
 import { PROJECT_WRITE_IO, ProjectWriteRaced, ProjectWriteStuck, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
 import { referablesOfViews } from './references.ts';
-import { RemoteStore, idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines } from './remote-store.ts';
+import { idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines, type RemoteStore } from './remote-store.ts';
 import { scratchFolderOf } from './scratch-folder.ts';
 
 function asProjectError(e: unknown): unknown {
@@ -294,15 +295,15 @@ export class ProjectStore {
     private readonly seams: WatchSeams;
     private readonly writeIO: ProjectWriteIO;
 
-    constructor(home: string, links: ProjectLinks, seams: WatchSeams = SYSTEM_WATCH, writeIO: ProjectWriteIO = PROJECT_WRITE_IO) {
+    constructor(home: string, links: ProjectLinks, overlays: ProjectOverlays, seams: WatchSeams = SYSTEM_WATCH, writeIO: ProjectWriteIO = PROJECT_WRITE_IO) {
         this.home = home;
-        this.hiddenAgents = new HiddenAgentStore(home);
-        this.remote = new RemoteStore(home);
-        this.peers = new PeerLinks(home);
+        this.hiddenAgents = overlays.hiddenAgents;
+        this.remote = overlays.remote;
+        this.peers = overlays.peers;
         this.index = new ProjectIndex(this.hiddenAgents);
         this.scratchFolder = scratchFolderOf(home);
         this.registry = new ProjectRegistry(home);
-        this.machineHome = new MachineHome(home);
+        this.machineHome = overlays.machineHome;
         this.summaries = new ProjectSummaries(this.scratchFolder);
         this.links = links;
         this.seams = seams;
