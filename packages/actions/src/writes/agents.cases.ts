@@ -67,7 +67,7 @@ export const cases: WriteCases = {
         }
     },
     'agent.start': {
-        actors: ['agent', 'voice'],
+        actors: ['agent', 'voice', 'extension'],
         input: start,
         refused: {
             'a CLI that is no identifier': { ...start, provider: 'Cursor CLI' },

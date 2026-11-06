@@ -4,7 +4,7 @@ import {
     PERSON_AND_VOICE,
     AGENT,
     PERSON,
-    ACTION_ACTOR_KINDS,
+    PERSON_VOICE_AGENT_AND_AUTOMATION,
     ActionViewKindSchema,
     CREATABLE_VIEW_KINDS,
     ActionCreatableViewKindSchema,
@@ -30,7 +30,7 @@ export const VIEWS_ACTIONS = {
         agentDescription: 'Shows a view to whoever has this project on screen; the project file is not touched.',
         effect: 'local',
         domain: 'views',
-        actors: ACTION_ACTOR_KINDS,
+        actors: PERSON_VOICE_AGENT_AND_AUTOMATION,
         input: z.object({ viewId }),
         output: z.object({
             viewId,
@@ -46,7 +46,7 @@ export const VIEWS_ACTIONS = {
         agentDescription: 'Renames a view; nothing the view hosts renames over it again.',
         effect: 'shared',
         domain: 'views',
-        actors: ACTION_ACTOR_KINDS,
+        actors: PERSON_VOICE_AGENT_AND_AUTOMATION,
         input: z.object({ viewId, name: givenName }),
         output: z.object({
             viewId,
@@ -63,7 +63,7 @@ export const VIEWS_ACTIONS = {
         agentDescription: 'Adds a view to the sidebar, written down as yours.',
         effect: 'shared',
         domain: 'views',
-        actors: ACTION_ACTOR_KINDS,
+        actors: PERSON_VOICE_AGENT_AND_AUTOMATION,
         input: z.object({
             kind: z.union([ActionCreatableViewKindSchema, z.enum(PERSON_VIEW_KINDS).meta({ actors: [...PERSON] })]),
             name: givenName.nullable(),
@@ -95,7 +95,7 @@ export const VIEWS_ACTIONS = {
         agentDescription: 'Removes a view you made, with the sessions it holds.',
         effect: 'shared',
         domain: 'views',
-        actors: ACTION_ACTOR_KINDS,
+        actors: PERSON_VOICE_AGENT_AND_AUTOMATION,
         input: z.object({ viewId }),
         output: z.object({
             viewId,

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AGENT, PERSON_VOICE_AND_AGENT, operatedView, browserNode, browserOutcome } from './fields.ts';
+import { PERSON_VOICE_AND_AGENT, operatedView, browserNode, browserOutcome, PERSON_VOICE_AGENT_AND_EXTENSION, AGENT_AND_EXTENSION } from './fields.ts';
 
 export const PAGES_ACTIONS = {
     'browser.inspect': {
@@ -7,7 +7,7 @@ export const PAGES_ACTIONS = {
         description: 'Where the page of a browser node stands: its address, its title, whether it is loading and what its history holds.',
         effect: 'read',
         domain: 'pages',
-        actors: PERSON_VOICE_AND_AGENT,
+        actors: PERSON_VOICE_AGENT_AND_EXTENSION,
         input: z.object({ nodeId: browserNode, viewId: operatedView }),
         output: browserOutcome
     },
@@ -16,7 +16,7 @@ export const PAGES_ACTIONS = {
         description: 'Sends the page of a browser node to an address.',
         effect: 'external',
         domain: 'pages',
-        actors: PERSON_VOICE_AND_AGENT,
+        actors: PERSON_VOICE_AGENT_AND_EXTENSION,
         input: z.object({ nodeId: browserNode, viewId: operatedView, url: z.string().min(1).describe('A whole http or https address, scheme and all') }),
         output: browserOutcome.extend({
             // The address a node that had none was given: written in the project, with no page driven.
@@ -28,7 +28,7 @@ export const PAGES_ACTIONS = {
         description: 'Takes the page one step back through its own history.',
         effect: 'external',
         domain: 'pages',
-        actors: PERSON_VOICE_AND_AGENT,
+        actors: PERSON_VOICE_AGENT_AND_EXTENSION,
         input: z.object({ nodeId: browserNode, viewId: operatedView }),
         output: browserOutcome
     },
@@ -37,7 +37,7 @@ export const PAGES_ACTIONS = {
         description: 'Takes the page one step forward again, after a step back.',
         effect: 'external',
         domain: 'pages',
-        actors: PERSON_VOICE_AND_AGENT,
+        actors: PERSON_VOICE_AGENT_AND_EXTENSION,
         input: z.object({ nodeId: browserNode, viewId: operatedView }),
         output: browserOutcome
     },
@@ -46,7 +46,7 @@ export const PAGES_ACTIONS = {
         description: 'Loads the page of a browser node again.',
         effect: 'external',
         domain: 'pages',
-        actors: PERSON_VOICE_AND_AGENT,
+        actors: PERSON_VOICE_AGENT_AND_EXTENSION,
         input: z.object({
             nodeId: browserNode,
             viewId: operatedView,
@@ -68,7 +68,7 @@ export const PAGES_ACTIONS = {
         description: 'Writes a png of the page of a browser node and answers where it is.',
         effect: 'read',
         domain: 'pages',
-        actors: AGENT,
+        actors: AGENT_AND_EXTENSION,
         input: z.object({ nodeId: browserNode, viewId: operatedView }),
         output: browserOutcome.extend({
             // On this machine, outside the project folder; null when nobody has the page open.

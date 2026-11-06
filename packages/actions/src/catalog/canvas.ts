@@ -5,7 +5,7 @@ import {
     PERSON_AND_VOICE,
     AGENT,
     PERSON,
-    ACTION_ACTOR_KINDS,
+    PERSON_VOICE_AGENT_AND_AUTOMATION,
     ActionViewKindSchema,
     ActionCanvasNodeKindSchema,
     ActionCreatableCanvasNodeKindSchema,
@@ -53,7 +53,7 @@ export const CANVAS_ACTIONS = {
         agentDescription: 'Renames one node; nothing the node hosts renames over it again.',
         effect: 'shared',
         domain: 'canvas',
-        actors: ACTION_ACTOR_KINDS,
+        actors: PERSON_VOICE_AGENT_AND_AUTOMATION,
         input: z.object({ viewId, nodeId: z.string().min(1), name: givenName }),
         output: z.object({
             viewId,
@@ -115,7 +115,7 @@ export const CANVAS_ACTIONS = {
         agentDescription: 'Adds one node to a canvas, with a line from you into it.',
         effect: 'shared',
         domain: 'canvas',
-        actors: ACTION_ACTOR_KINDS,
+        actors: PERSON_VOICE_AGENT_AND_AUTOMATION,
         input: z.object({
             viewId,
             kind: z.union([
@@ -240,7 +240,7 @@ export const CANVAS_ACTIONS = {
         agentDescription: 'Removes a node you made, with the session it holds and the lines that ran into it.',
         effect: 'shared',
         domain: 'canvas',
-        actors: ACTION_ACTOR_KINDS,
+        actors: PERSON_VOICE_AGENT_AND_AUTOMATION,
         input: z.object({ viewId, nodeIds: z.array(z.string().min(1)).min(1) }),
         output: z.object({
             viewId,
@@ -268,7 +268,7 @@ export const CANVAS_ACTIONS = {
         agentDescription: 'Draws a frame around nodes that already stand together; your own lines into them become one line into the group.',
         effect: 'shared',
         domain: 'canvas',
-        actors: ACTION_ACTOR_KINDS,
+        actors: PERSON_VOICE_AGENT_AND_AUTOMATION,
         input: z.object({
             viewId,
             nodeIds: z.array(z.string().min(1)).min(1),

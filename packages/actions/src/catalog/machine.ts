@@ -47,7 +47,8 @@ import {
     computerElement,
     computerPixel,
     computerState,
-    computerOutcome
+    computerOutcome,
+    AGENT_AND_EXTENSION
 } from './fields.ts';
 
 export const MACHINE_ACTIONS = {
@@ -509,7 +510,7 @@ export const MACHINE_ACTIONS = {
         description: 'Which device this is, whether it runs, its screen and buttons, and what an agent can do on it.',
         effect: 'read',
         domain: 'machine',
-        actors: AGENT,
+        actors: AGENT_AND_EXTENSION,
         input: z.object({
             nodeId: deviceNode,
             find: z
@@ -563,7 +564,7 @@ export const MACHINE_ACTIONS = {
         description: 'Lists the simulators, emulators and phones this machine has now, whether each runs, and the id every other device action takes.',
         effect: 'read',
         domain: 'machine',
-        actors: AGENT,
+        actors: AGENT_AND_EXTENSION,
         input: z.object({}),
         output: z.object({
             devices: z.array(DeviceReferenceSchema.extend({ deviceId: z.string(), state: DeviceStateSchema }))
@@ -574,7 +575,7 @@ export const MACHINE_ACTIONS = {
         description: 'Writes a png of the screen of a device and answers where it is and how many pixels it has.',
         effect: 'read',
         domain: 'machine',
-        actors: AGENT,
+        actors: AGENT_AND_EXTENSION,
         input: z.object({ nodeId: deviceNode }),
         // On this machine, outside the project folder.
         output: z.object({ nodeId, path: z.string(), width: z.number().int(), height: z.number().int() })
@@ -584,7 +585,7 @@ export const MACHINE_ACTIONS = {
         description: 'Taps the screen of a device at a pixel of its last shot, or in the middle of an element of its last state.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: AGENT_AND_EXTENSION,
         input: z.object({ nodeId: deviceNode, x: devicePixel.nullish(), y: devicePixel.nullish(), element: deviceElement.nullish() }),
         output: deviceDone
     },
@@ -633,7 +634,7 @@ export const MACHINE_ACTIONS = {
         description: 'Opens an app on a device by its bundle id or package name.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: AGENT_AND_EXTENSION,
         input: z.object({
             nodeId: deviceNode,
             app: deviceApp

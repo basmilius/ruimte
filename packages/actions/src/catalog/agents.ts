@@ -10,11 +10,11 @@ import {
     agentField,
     CLIENT_ACTORS,
     drawnLine,
-    AGENT_AND_VOICE,
     OperationStatusSchema,
     OPERATION_ACTIONS,
     agentNodeKind,
-    agentReads
+    agentReads,
+    AGENT_VOICE_AND_EXTENSION
 } from './fields.ts';
 
 export const AGENTS_ACTIONS = {
@@ -97,7 +97,7 @@ export const AGENTS_ACTIONS = {
         effect: 'external',
         domain: 'agents',
         // Voice starts a chat with the person's CLI and nothing more: what only an agent gives stays an agent field.
-        actors: AGENT_AND_VOICE,
+        actors: AGENT_VOICE_AND_EXTENSION,
         input: z.object({
             provider: AgentKindSchema.describe('The CLI the agent runs'),
             terminal: z.boolean().describe('Makes a terminal node instead of a chat node'),

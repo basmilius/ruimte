@@ -24,7 +24,7 @@ import {
 import { z } from 'zod';
 import { MAX_TITLE_LENGTH } from '../limits.ts';
 
-export const ACTION_ACTOR_KINDS = ['person', 'voice', 'agent', 'automation'] as const;
+export const ACTION_ACTOR_KINDS = ['person', 'voice', 'agent', 'automation', 'extension'] as const;
 export const ActionActorKindSchema = z.enum(ACTION_ACTOR_KINDS);
 
 /* What an action is about. Voice gets one tool per domain, so this is also how its tools are cut. */
@@ -110,11 +110,16 @@ export const frame = z.object({ x: z.number(), y: z.number(), width: z.number(),
 export const LOCK_GESTURES = ['pan', 'zoom', 'move', 'resize'] as const;
 export const PERSON_AND_VOICE: readonly ActionActorKind[] = ['person', 'voice'];
 export const PERSON_VOICE_AND_AGENT: readonly ActionActorKind[] = ['person', 'voice', 'agent'];
+/* Every actor of a project's own: an extension runs only the actions that name it. */
+export const PERSON_VOICE_AGENT_AND_AUTOMATION: readonly ActionActorKind[] = ['person', 'voice', 'agent', 'automation'];
+/* What an extension with the permission may run, as an agent's verb, held to the fields an agent gives. */
+export const AGENT_AND_EXTENSION: readonly ActionActorKind[] = ['agent', 'extension'];
+export const PERSON_VOICE_AGENT_AND_EXTENSION: readonly ActionActorKind[] = ['person', 'voice', 'agent', 'extension'];
 /* What only a client runs: no agent reaches a client, so an agent is left out. */
 export const CLIENT_ACTORS: readonly ActionActorKind[] = ['person', 'voice', 'automation'];
 export const AGENT: readonly ActionActorKind[] = ['agent'];
-/* What an agent's verb starts and Voice on the daemon may start too, held to the fields Voice may give. */
-export const AGENT_AND_VOICE: readonly ActionActorKind[] = ['agent', 'voice'];
+/* What an agent's verb starts, and Voice and an extension may start too: an AI Chat of the person's own CLI, held to the fields they may give. */
+export const AGENT_VOICE_AND_EXTENSION: readonly ActionActorKind[] = ['agent', 'voice', 'extension'];
 export const PERSON: readonly ActionActorKind[] = ['person'];
 /* What a person's gesture and an agent's verb both do, and Voice has no words for yet. */
 export const PERSON_AND_AGENT: readonly ActionActorKind[] = ['person', 'agent'];
