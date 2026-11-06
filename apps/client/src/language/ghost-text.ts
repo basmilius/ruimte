@@ -83,8 +83,11 @@ export class GhostTextFeature {
         return this.controller !== null;
     }
 
+    // Ghost text sends code to the editor model as Explain does, so it waits for the same opt-in.
     private get enabled(): boolean {
-        return useSettings.getState().aiGhostText === 'request';
+        const { aiCodeHelp, aiGhostText } = useSettings.getState();
+
+        return aiCodeHelp && aiGhostText === 'request';
     }
 
     handleKey(event: KeyboardEvent): boolean {

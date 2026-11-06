@@ -248,6 +248,7 @@
                 "ghost": {
                     "label": "Suggesties tijdens het typen",
                     "description": "Vraag een codesuggestie met de sneltoets. De gekozen provider ontvangt de code rond de cursor.",
+                    "needsHelp": "Zet eerst Uitleg en naamsuggesties aan. De gekozen provider ontvangt dan de code rond de cursor.",
                     "options": {
                         "off": "Uit",
                         "request": "Op verzoek"

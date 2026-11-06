@@ -44,7 +44,7 @@ const key = (name: string, extra: Record<string, boolean> = {}) => ({ key: name,
 
 beforeEach(() => {
     useToasts.setState({ toasts: [] });
-    useSettings.setState({ aiGhostText: 'request' });
+    useSettings.setState({ aiCodeHelp: true, aiGhostText: 'request' });
 });
 
 describe('ghost text on request', () => {
@@ -184,6 +184,14 @@ describe('ghost text on request', () => {
         await language.ghost.request();
         expect(model.requests).toEqual([]);
         expect(useToasts.getState().toasts.at(-1)?.title).toContain('Suggestions are off');
+    });
+
+    test('sends no code before the person opted in to Explain, even with suggestions on request', async () => {
+        useSettings.setState({ aiCodeHelp: false });
+        const { model, language, suggest } = await setup();
+        expect(suggest()).toBe(false);
+        await language.ghost.request();
+        expect(model.requests).toEqual([]);
     });
 
     test('never asks while typing, and does nothing over a selection', async () => {
