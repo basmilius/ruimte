@@ -25,6 +25,7 @@
         "@adecore/plan": "0.54.10",
         "@adecore/terminal": "0.54.10",
         "@adecore/ui": "0.54.10",
+        "@adecore/utils": "0.54.10",
         "@base-ui/react": "^1.9.0",
         "@codemirror/commands": "^6.11.1",
         "@codemirror/language": "^6.13.1",
