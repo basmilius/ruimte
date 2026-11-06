@@ -69,28 +69,37 @@ function machineInFront(): Transport {
     return machineTransport(currentEndpointId());
 }
 
-async function installOn(link: Transport, bytes: Uint8Array, fromStore: boolean): Promise<{ onMachine: boolean }> {
+export interface PackInstall {
+    onMachine: boolean;
+    // Why the machine did not take its part, unless only its owner may install there.
+    machineFailure: string | null;
+}
+
+async function installOn(link: Transport, bytes: Uint8Array, fromStore: boolean): Promise<PackInstall> {
     await desktop()?.extensions?.install(bytes, { fromStore });
 
-    const onMachine = await extensionRequest(link, 'extension.install', { pack: base64Of(bytes) }).then(
-        () => true,
-        () => false
+    const result = await extensionRequest(link, 'extension.install', { pack: base64Of(bytes) }).then(
+        () => ({ onMachine: true, machineFailure: null }),
+        (e: unknown) => ({
+            onMachine: false,
+            machineFailure: e instanceof TransportError && e.code === 'forbidden' ? null : e instanceof Error ? e.message : String(e)
+        })
     );
 
     await syncExtensions();
 
-    return { onMachine };
+    return result;
 }
 
 /*
  * The client part goes to the shell of this computer and the rest to the machine in front. A machine only
  * takes it from its owner, so on someone else's the client part still works and this says what is missing.
  */
-export function installPack(bytes: Uint8Array): Promise<{ onMachine: boolean }> {
+export function installPack(bytes: Uint8Array): Promise<PackInstall> {
     return installOn(machineInFront(), bytes, false);
 }
 
-export async function installFromStore(entry: ExtensionStoreEntry, fetcher: typeof fetch = fetch): Promise<{ onMachine: boolean }> {
+export async function installFromStore(entry: ExtensionStoreEntry, fetcher: typeof fetch = fetch): Promise<PackInstall> {
     const link = machineInFront();
     const response = await fetcher(`${STORE_BASE}${entry.path}`);
     const bytes = new Uint8Array(await response.arrayBuffer());

@@ -1899,6 +1899,7 @@
         "install": "Install",
         "back": "Back",
         "notOnMachine": "{{name}} is on this computer, but its part for the machine takes that machine's owner.",
+        "machineFailed": "{{name}} is on this computer, but its part for the machine could not be installed",
         "machineKept": "{{name}} changed on this computer, but its part on the machine stayed as it was",
         "installFailed": "{{name}} could not be installed",
         "fromFileTrust": "This pack comes from a file, and the store has not reviewed it. It runs inside Ruimte and can do what you can, on all your machines.",

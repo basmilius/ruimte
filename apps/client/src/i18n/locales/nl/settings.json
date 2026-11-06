@@ -1899,6 +1899,7 @@
         "install": "Installeren",
         "back": "Terug",
         "notOnMachine": "{{name}} staat op deze computer, maar het deel voor de machine vraagt de eigenaar van die machine.",
+        "machineFailed": "{{name}} staat op deze computer, maar het deel voor de machine kon niet worden geïnstalleerd",
         "machineKept": "{{name}} is op deze computer aangepast, maar het deel op de machine bleef zoals het was",
         "installFailed": "{{name}} kon niet worden geïnstalleerd",
         "fromFileTrust": "Dit pakket komt uit een bestand en de store heeft het niet gecontroleerd. Het draait in Ruimte en kan wat jij kunt, op al je machines.",

@@ -2,6 +2,7 @@ import { Button, EmptyState, Icon, Pill, SectionLabel, Switch } from '@adecore/u
 import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
 import { isExtensionPermission } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
+import i18next from 'i18next';
 import { FileUp, HardDrive, Store, type LucideIcon } from 'lucide-react';
 import { createElement, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +23,7 @@ import {
     storeIsOpen,
     type ExtensionStoreEntry,
     type MachineChange,
+    type PackInstall,
     type PackPreview,
     type StoreAnswer
 } from '@/extensions/store';
@@ -34,6 +36,15 @@ const DISK = 'disk';
 const DETAIL = 'flex min-w-0 flex-col gap-5';
 const LIST_ROW_TILE = 20;
 const HEADER_TILE = 48;
+
+/* Only a refusal says the part for the machine takes its owner; any other failure says what went wrong. */
+function showMachineInstall({ onMachine, machineFailure }: PackInstall, name: string): void {
+    if (machineFailure !== null) {
+        useToasts.getState().show({ kind: 'error', title: i18next.t('settings:extensions.machineFailed', { name }), description: machineFailure });
+    } else if (!onMachine) {
+        useToasts.getState().show({ kind: 'success', title: i18next.t('settings:extensions.notOnMachine', { name }) });
+    }
+}
 
 /* Above the cards, since a card only holds rows and text in it would run into its edges. */
 function ExtensionHeader({
@@ -103,11 +114,8 @@ function FileDetail({ preview, onShown, onBack }: { preview: PackPreview; onShow
                     variant="primary"
                     onClick={() => {
                         void installPack(preview.bytes).then(
-                            ({ onMachine }) => {
-                                if (!onMachine) {
-                                    useToasts.getState().show({ kind: 'success', title: t('extensions.notOnMachine', { name: manifest.name }) });
-                                }
-
+                            (result) => {
+                                showMachineInstall(result, manifest.name);
                                 onShown(manifest.id);
                             },
                             (e: unknown) =>
@@ -226,11 +234,8 @@ function StoreDetail({ onShown }: { onShown: (id: string) => void }) {
                         variant="primary"
                         onClick={() => {
                             void installFromStore(open).then(
-                                ({ onMachine }) => {
-                                    if (!onMachine) {
-                                        useToasts.getState().show({ kind: 'success', title: t('extensions.notOnMachine', { name: open.name }) });
-                                    }
-
+                                (result) => {
+                                    showMachineInstall(result, open.name);
                                     onShown(open.id);
                                 },
                                 (e: unknown) =>
