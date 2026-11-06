@@ -169,19 +169,19 @@ private let imageRoot = imageTarget()
 
     @Test func folderReadsStayUnderTheRootAndExcludeFilesLinksAndState() async throws {
         let requests = ImageSaveRequests()
+        let entry = { (kind: String, name: String) -> JSONValue in
+            .object([
+                "kind": .string(kind), "name": .string(name), "path": .string("/ignored-by-client"), "size": .null,
+                "mtime": .number(0), "hidden": .bool(false), "ignored": .bool(false),
+            ])
+        }
         requests.handler = { _, _ in
             .object([
-                "truncated": .bool(true),
+                "path": .string("/project"), "truncated": .bool(true),
                 "entries": .array([
-                    .object([
-                        "kind": .string("directory"), "name": .string("assets"), "path": .string("/ignored-by-client"),
-                    ]),
-                    .object(["kind": .string("directory"), "name": .string("assets")]),
-                    .object(["kind": .string("symlink"), "name": .string("linked")]),
-                    .object(["kind": .string("file"), "name": .string("image.png")]),
-                    .object(["kind": .string("directory"), "name": .string(".git")]),
-                    .object(["kind": .string("directory"), "name": .string(".ruimte")]),
-                    .object(["kind": .string("directory"), "name": .string("../outside")]),
+                    entry("directory", "assets"), entry("directory", "assets"), entry("symlink", "linked"),
+                    entry("file", "image.png"), entry("directory", ".git"), entry("directory", ".ruimte"),
+                    entry("directory", "../outside"),
                 ]),
             ])
         }

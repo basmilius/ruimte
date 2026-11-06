@@ -268,11 +268,8 @@ private actor FakeAccountAPI: AccountAPI {
                 "work": .object(["kind": .string("claude"), "label": .string("Work")]),
             ]),
             "statuses": .array([
-                .object([
-                    "id": .string("claude"), "state": .string("ready"), "plan": .string("Max"),
-                    "email": .string("bas@example.com"),
-                ]),
-                .object(["id": .string("work"), "state": .string("signed-out")]),
+                AccountsWire.status("claude", email: "bas@example.com", plan: "Max"),
+                AccountsWire.status("work", state: "signed-out"),
             ]),
         ])
         let agents = MachineAgentsModel.agents(providers: providers, accounts: accounts.accountsSnapshot)

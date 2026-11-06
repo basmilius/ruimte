@@ -106,7 +106,7 @@ final class CommandPaletteTests: XCTestCase {
 
     func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         if fail { throw MachineClientError.server(code: "offline", message: "Offline") }
-        return .object(["files": .array([.string("src/pool.ts")])])
+        return .object(["files": .array([.string("src/pool.ts")]), "truncated": .bool(false)])
     }
 
     func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }

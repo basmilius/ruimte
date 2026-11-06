@@ -186,13 +186,11 @@ struct ChatPreparePreview: Identifiable, Equatable {
 
     private func attach(_ terminals: Set<String>) async {
         guard
-            let list = try? await context.client.request(.sessionList)
+            let list = try? await context.client.request(.sessionList).decoded(as: SessionListResult.self)
         else { return }
-        for info in list.list("sessions") {
-            let id = info.text("sessionId")
-            guard terminals.contains(id), info["exited"]?.boolValue != true, info["agent"]?.objectValue == nil,
-                info["heldCommand"]?.objectValue == nil
-            else { continue }
+        for info in list.sessions {
+            let id = info.sessionId
+            guard terminals.contains(id), !info.exited, info.agent.present == nil else { continue }
             let attachment = context.client.acquireAttachment(.session, id: id)
             if (try? await TerminalSnapshot.load(attachment: attachment, sessionID: id) { _ in }) != nil {
                 attachments.append(attachment)
