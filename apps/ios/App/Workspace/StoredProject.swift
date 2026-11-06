@@ -97,6 +97,12 @@ extension StoredView: Identifiable {
         return nil
     }
 
+    /// The device a device view shows.
+    var deviceReference: StoredDeviceViewDevice? {
+        if case .device(let view) = self { return view.device }
+        return nil
+    }
+
     /// The nodes of a canvas; every other view has none.
     var nodes: [StoredNode] { canvas?.nodes ?? [] }
 }

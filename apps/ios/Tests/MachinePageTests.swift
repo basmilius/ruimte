@@ -688,7 +688,7 @@ final class MachinePageTests: XCTestCase {
         await devices.boot(ipad)
         XCTAssertEqual(machine.sent.last?.0, .deviceBoot)
         XCTAssertEqual(machine.sent.last?.1, ipad.target)
-        XCTAssertEqual(devices.devices[0].state, "booted")
+        XCTAssertEqual(devices.devices[0].state, .booted)
         XCTAssertTrue(devices.changing.isEmpty)
 
         machine.refusals[.deviceShutdown] = "device-busy"
@@ -697,10 +697,10 @@ final class MachinePageTests: XCTestCase {
     }
 
     @MainActor func testTheNotesSayWhatTheMachineCannotLookFor() {
-        let unavailable: [JSONValue] = [
-            .object(["platform": .string("ios"), "code": .string("simctl-unavailable"), "message": .string("")]),
-            .object(["platform": .string("ios"), "code": .string("devicectl-unavailable"), "message": .string("")]),
-            .object(["platform": .string("android"), "code": .string("adb-unavailable"), "message": .string("")]),
+        let unavailable = [
+            DeviceUnavailable(platform: .ios, code: "simctl-unavailable", message: ""),
+            DeviceUnavailable(platform: .ios, code: "devicectl-unavailable", message: ""),
+            DeviceUnavailable(platform: .android, code: "adb-unavailable", message: ""),
         ]
         XCTAssertEqual(
             MachineDevices.notes(unavailable, platform: "darwin"),
@@ -716,8 +716,8 @@ final class MachinePageTests: XCTestCase {
             ])
     }
 
-    func testADeviceOpensTheViewThatAlreadyShowsItOrANewOne() throws {
-        let device = try XCTUnwrap(MachineDevice(self.device("iphone", state: "booted", name: "iPhone 17 Pro")))
+    func testADeviceOpensTheViewThatAlreadyShowsItOrANewOne() {
+        let device = MachineDevice(self.device("iphone", state: "booted", name: "iPhone 17 Pro").deviceInfo)
         let view = DeviceViews.view(for: device, id: "device-1")
         XCTAssertEqual(view["kind"], .string("device"))
         XCTAssertEqual(view["name"], .string("iPhone 17 Pro"))
@@ -728,7 +728,7 @@ final class MachinePageTests: XCTestCase {
             view,
         ]
         XCTAssertEqual(DeviceViews.existing(in: ProjectWire.stored(views), device: device), "device-1")
-        let other = try XCTUnwrap(MachineDevice(self.device("ipad")))
+        let other = MachineDevice(self.device("ipad").deviceInfo)
         XCTAssertNil(DeviceViews.existing(in: ProjectWire.stored(views), device: other))
     }
 

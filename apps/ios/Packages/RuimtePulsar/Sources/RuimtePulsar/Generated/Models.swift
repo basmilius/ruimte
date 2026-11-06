@@ -13104,6 +13104,585 @@ public struct GitDiscardResult: Codable, Sendable, Equatable {
     }
 }
 
+public struct DeviceListResult: Codable, Sendable, Equatable {
+    public let `devices`: [DeviceInfo]
+    public let `unavailable`: [DeviceUnavailable]?
+
+    public init(`devices`: [DeviceInfo], `unavailable`: [DeviceUnavailable]? = nil) {
+        self.`devices` = `devices`
+        self.`unavailable` = `unavailable`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `devices` = try container.decode([DeviceInfo].self, forKey: .`devices`)
+        `unavailable` = try container.decodeIfPresent([DeviceUnavailable].self, forKey: .`unavailable`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`devices`, forKey: .`devices`)
+        try container.encodeIfPresent(`unavailable`, forKey: .`unavailable`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `devices` = "devices"
+        case `unavailable` = "unavailable"
+    }
+}
+
+public struct DeviceInfo: Codable, Sendable, Equatable {
+    public let `deviceId`: String
+    public let `backendId`: String
+    public let `platform`: DevicePlatform
+    public let `kind`: DeviceKind
+    public let `name`: String
+    public let `runtime`: String
+    public let `state`: DeviceState
+    public let `reason`: String?
+    public let `capabilities`: DeviceCapabilities
+
+    public init(`deviceId`: String, `backendId`: String, `platform`: DevicePlatform, `kind`: DeviceKind, `name`: String, `runtime`: String, `state`: DeviceState, `reason`: String? = nil, `capabilities`: DeviceCapabilities) {
+        self.`deviceId` = `deviceId`
+        self.`backendId` = `backendId`
+        self.`platform` = `platform`
+        self.`kind` = `kind`
+        self.`name` = `name`
+        self.`runtime` = `runtime`
+        self.`state` = `state`
+        self.`reason` = `reason`
+        self.`capabilities` = `capabilities`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `deviceId` = try container.decode(String.self, forKey: .`deviceId`)
+        `backendId` = try container.decode(String.self, forKey: .`backendId`)
+        `platform` = try container.decode(DevicePlatform.self, forKey: .`platform`)
+        `kind` = try container.decode(DeviceKind.self, forKey: .`kind`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `runtime` = try container.decode(String.self, forKey: .`runtime`)
+        `state` = try container.decode(DeviceState.self, forKey: .`state`)
+        `reason` = try container.decodeIfPresent(String.self, forKey: .`reason`)
+        `capabilities` = try container.decode(DeviceCapabilities.self, forKey: .`capabilities`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`deviceId`, forKey: .`deviceId`)
+        try container.encode(`backendId`, forKey: .`backendId`)
+        try container.encode(`platform`, forKey: .`platform`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`runtime`, forKey: .`runtime`)
+        try container.encode(`state`, forKey: .`state`)
+        try container.encodeIfPresent(`reason`, forKey: .`reason`)
+        try container.encode(`capabilities`, forKey: .`capabilities`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `deviceId` = "deviceId"
+        case `backendId` = "backendId"
+        case `platform` = "platform"
+        case `kind` = "kind"
+        case `name` = "name"
+        case `runtime` = "runtime"
+        case `state` = "state"
+        case `reason` = "reason"
+        case `capabilities` = "capabilities"
+    }
+}
+
+public enum DevicePlatform: String, CaseIterable, Codable, Sendable, Equatable {
+    case `ios` = "ios"
+    case `android` = "android"
+}
+
+public enum DeviceKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `simulator` = "simulator"
+    case `physical` = "physical"
+}
+
+public enum DeviceState: String, CaseIterable, Codable, Sendable, Equatable {
+    case `booted` = "booted"
+    case `shutdown` = "shutdown"
+    case `transitioning` = "transitioning"
+}
+
+public struct DeviceCapabilities: Codable, Sendable, Equatable {
+    public let `boot`: Bool
+    public let `shutdown`: Bool
+    public let `stream`: Bool
+    public let `input`: Bool
+    public let `screenshot`: Bool
+    public let `buttons`: [String]?
+    public let `tools`: [String]?
+    public let `permissions`: [String]?
+
+    public init(`boot`: Bool, `shutdown`: Bool, `stream`: Bool, `input`: Bool, `screenshot`: Bool, `buttons`: [String]? = nil, `tools`: [String]? = nil, `permissions`: [String]? = nil) {
+        self.`boot` = `boot`
+        self.`shutdown` = `shutdown`
+        self.`stream` = `stream`
+        self.`input` = `input`
+        self.`screenshot` = `screenshot`
+        self.`buttons` = `buttons`
+        self.`tools` = `tools`
+        self.`permissions` = `permissions`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `boot` = try container.decode(Bool.self, forKey: .`boot`)
+        `shutdown` = try container.decode(Bool.self, forKey: .`shutdown`)
+        `stream` = try container.decode(Bool.self, forKey: .`stream`)
+        `input` = try container.decode(Bool.self, forKey: .`input`)
+        `screenshot` = try container.decode(Bool.self, forKey: .`screenshot`)
+        `buttons` = try container.decodeIfPresent([String].self, forKey: .`buttons`)
+        `tools` = try container.decodeIfPresent([String].self, forKey: .`tools`)
+        `permissions` = try container.decodeIfPresent([String].self, forKey: .`permissions`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`boot`, forKey: .`boot`)
+        try container.encode(`shutdown`, forKey: .`shutdown`)
+        try container.encode(`stream`, forKey: .`stream`)
+        try container.encode(`input`, forKey: .`input`)
+        try container.encode(`screenshot`, forKey: .`screenshot`)
+        try container.encodeIfPresent(`buttons`, forKey: .`buttons`)
+        try container.encodeIfPresent(`tools`, forKey: .`tools`)
+        try container.encodeIfPresent(`permissions`, forKey: .`permissions`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `boot` = "boot"
+        case `shutdown` = "shutdown"
+        case `stream` = "stream"
+        case `input` = "input"
+        case `screenshot` = "screenshot"
+        case `buttons` = "buttons"
+        case `tools` = "tools"
+        case `permissions` = "permissions"
+    }
+}
+
+public struct DeviceUnavailable: Codable, Sendable, Equatable {
+    public let `platform`: DevicePlatform
+    public let `code`: String
+    public let `message`: String
+
+    public init(`platform`: DevicePlatform, `code`: String, `message`: String) {
+        self.`platform` = `platform`
+        self.`code` = `code`
+        self.`message` = `message`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `platform` = try container.decode(DevicePlatform.self, forKey: .`platform`)
+        `code` = try container.decode(String.self, forKey: .`code`)
+        `message` = try container.decode(String.self, forKey: .`message`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`platform`, forKey: .`platform`)
+        try container.encode(`code`, forKey: .`code`)
+        try container.encode(`message`, forKey: .`message`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `platform` = "platform"
+        case `code` = "code"
+        case `message` = "message"
+    }
+}
+
+public struct DeviceOpenResult: Codable, Sendable, Equatable {
+    public let `deviceId`: String
+    public let `backendId`: String
+    public let `platform`: DevicePlatform
+    public let `kind`: DeviceKind
+    public let `name`: String
+    public let `runtime`: String
+    public let `state`: DeviceState
+    public let `reason`: String?
+    public let `capabilities`: DeviceCapabilities
+    public let `streamId`: String
+
+    public init(`deviceId`: String, `backendId`: String, `platform`: DevicePlatform, `kind`: DeviceKind, `name`: String, `runtime`: String, `state`: DeviceState, `reason`: String? = nil, `capabilities`: DeviceCapabilities, `streamId`: String) {
+        self.`deviceId` = `deviceId`
+        self.`backendId` = `backendId`
+        self.`platform` = `platform`
+        self.`kind` = `kind`
+        self.`name` = `name`
+        self.`runtime` = `runtime`
+        self.`state` = `state`
+        self.`reason` = `reason`
+        self.`capabilities` = `capabilities`
+        self.`streamId` = `streamId`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `deviceId` = try container.decode(String.self, forKey: .`deviceId`)
+        `backendId` = try container.decode(String.self, forKey: .`backendId`)
+        `platform` = try container.decode(DevicePlatform.self, forKey: .`platform`)
+        `kind` = try container.decode(DeviceKind.self, forKey: .`kind`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `runtime` = try container.decode(String.self, forKey: .`runtime`)
+        `state` = try container.decode(DeviceState.self, forKey: .`state`)
+        `reason` = try container.decodeIfPresent(String.self, forKey: .`reason`)
+        `capabilities` = try container.decode(DeviceCapabilities.self, forKey: .`capabilities`)
+        `streamId` = try container.decode(String.self, forKey: .`streamId`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`deviceId`, forKey: .`deviceId`)
+        try container.encode(`backendId`, forKey: .`backendId`)
+        try container.encode(`platform`, forKey: .`platform`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`runtime`, forKey: .`runtime`)
+        try container.encode(`state`, forKey: .`state`)
+        try container.encodeIfPresent(`reason`, forKey: .`reason`)
+        try container.encode(`capabilities`, forKey: .`capabilities`)
+        try container.encode(`streamId`, forKey: .`streamId`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `deviceId` = "deviceId"
+        case `backendId` = "backendId"
+        case `platform` = "platform"
+        case `kind` = "kind"
+        case `name` = "name"
+        case `runtime` = "runtime"
+        case `state` = "state"
+        case `reason` = "reason"
+        case `capabilities` = "capabilities"
+        case `streamId` = "streamId"
+    }
+}
+
+public struct DeviceDetail: Codable, Sendable, Equatable {
+    public let `deviceId`: String
+    public let `backendId`: String
+    public let `platform`: DevicePlatform
+    public let `settings`: DeviceSettings
+
+    public init(`deviceId`: String, `backendId`: String, `platform`: DevicePlatform, `settings`: DeviceSettings) {
+        self.`deviceId` = `deviceId`
+        self.`backendId` = `backendId`
+        self.`platform` = `platform`
+        self.`settings` = `settings`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `deviceId` = try container.decode(String.self, forKey: .`deviceId`)
+        `backendId` = try container.decode(String.self, forKey: .`backendId`)
+        `platform` = try container.decode(DevicePlatform.self, forKey: .`platform`)
+        `settings` = try container.decode(DeviceSettings.self, forKey: .`settings`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`deviceId`, forKey: .`deviceId`)
+        try container.encode(`backendId`, forKey: .`backendId`)
+        try container.encode(`platform`, forKey: .`platform`)
+        try container.encode(`settings`, forKey: .`settings`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `deviceId` = "deviceId"
+        case `backendId` = "backendId"
+        case `platform` = "platform"
+        case `settings` = "settings"
+    }
+}
+
+public struct DeviceSettings: Codable, Sendable, Equatable {
+    public let `appearance`: DeviceSettingsAppearance?
+    public let `textSize`: DeviceSettingsTextSize?
+    public let `reduceMotion`: Bool?
+    public let `increaseContrast`: Bool?
+    public let `reduceTransparency`: Bool?
+    public let `showBorders`: Bool?
+    public let `voiceOver`: Bool?
+    public let `liquidGlass`: DeviceSettingsLiquidGlass?
+    public let `colorFilter`: DeviceSettingsColorFilter?
+    public let `statusBar`: DeviceSettingsStatusBar?
+    public let `battery`: DeviceSettingsBattery?
+    public let `biometricEnrolled`: Bool?
+    public let `hinge`: Int64?
+    public let `panel`: DeviceSettingsPanel?
+    public let `recording`: Bool?
+    public let `recordingEnded`: Bool?
+
+    public init(`appearance`: DeviceSettingsAppearance? = nil, `textSize`: DeviceSettingsTextSize? = nil, `reduceMotion`: Bool? = nil, `increaseContrast`: Bool? = nil, `reduceTransparency`: Bool? = nil, `showBorders`: Bool? = nil, `voiceOver`: Bool? = nil, `liquidGlass`: DeviceSettingsLiquidGlass? = nil, `colorFilter`: DeviceSettingsColorFilter? = nil, `statusBar`: DeviceSettingsStatusBar? = nil, `battery`: DeviceSettingsBattery? = nil, `biometricEnrolled`: Bool? = nil, `hinge`: Int64? = nil, `panel`: DeviceSettingsPanel? = nil, `recording`: Bool? = nil, `recordingEnded`: Bool? = nil) {
+        self.`appearance` = `appearance`
+        self.`textSize` = `textSize`
+        self.`reduceMotion` = `reduceMotion`
+        self.`increaseContrast` = `increaseContrast`
+        self.`reduceTransparency` = `reduceTransparency`
+        self.`showBorders` = `showBorders`
+        self.`voiceOver` = `voiceOver`
+        self.`liquidGlass` = `liquidGlass`
+        self.`colorFilter` = `colorFilter`
+        self.`statusBar` = `statusBar`
+        self.`battery` = `battery`
+        self.`biometricEnrolled` = `biometricEnrolled`
+        self.`hinge` = `hinge`
+        self.`panel` = `panel`
+        self.`recording` = `recording`
+        self.`recordingEnded` = `recordingEnded`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `appearance` = try container.decodeIfPresent(DeviceSettingsAppearance.self, forKey: .`appearance`)
+        `textSize` = try container.decodeIfPresent(DeviceSettingsTextSize.self, forKey: .`textSize`)
+        `reduceMotion` = try container.decodeIfPresent(Bool.self, forKey: .`reduceMotion`)
+        `increaseContrast` = try container.decodeIfPresent(Bool.self, forKey: .`increaseContrast`)
+        `reduceTransparency` = try container.decodeIfPresent(Bool.self, forKey: .`reduceTransparency`)
+        `showBorders` = try container.decodeIfPresent(Bool.self, forKey: .`showBorders`)
+        `voiceOver` = try container.decodeIfPresent(Bool.self, forKey: .`voiceOver`)
+        `liquidGlass` = try container.decodeIfPresent(DeviceSettingsLiquidGlass.self, forKey: .`liquidGlass`)
+        `colorFilter` = try container.decodeIfPresent(DeviceSettingsColorFilter.self, forKey: .`colorFilter`)
+        `statusBar` = try container.decodeIfPresent(DeviceSettingsStatusBar.self, forKey: .`statusBar`)
+        `battery` = try container.decodeIfPresent(DeviceSettingsBattery.self, forKey: .`battery`)
+        `biometricEnrolled` = try container.decodeIfPresent(Bool.self, forKey: .`biometricEnrolled`)
+        `hinge` = try container.decodeIfPresent(Int64.self, forKey: .`hinge`)
+        `panel` = try container.decodeIfPresent(DeviceSettingsPanel.self, forKey: .`panel`)
+        `recording` = try container.decodeIfPresent(Bool.self, forKey: .`recording`)
+        `recordingEnded` = try container.decodeIfPresent(Bool.self, forKey: .`recordingEnded`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(`appearance`, forKey: .`appearance`)
+        try container.encodeIfPresent(`textSize`, forKey: .`textSize`)
+        try container.encodeIfPresent(`reduceMotion`, forKey: .`reduceMotion`)
+        try container.encodeIfPresent(`increaseContrast`, forKey: .`increaseContrast`)
+        try container.encodeIfPresent(`reduceTransparency`, forKey: .`reduceTransparency`)
+        try container.encodeIfPresent(`showBorders`, forKey: .`showBorders`)
+        try container.encodeIfPresent(`voiceOver`, forKey: .`voiceOver`)
+        try container.encodeIfPresent(`liquidGlass`, forKey: .`liquidGlass`)
+        try container.encodeIfPresent(`colorFilter`, forKey: .`colorFilter`)
+        try container.encodeIfPresent(`statusBar`, forKey: .`statusBar`)
+        try container.encodeIfPresent(`battery`, forKey: .`battery`)
+        try container.encodeIfPresent(`biometricEnrolled`, forKey: .`biometricEnrolled`)
+        try container.encodeIfPresent(`hinge`, forKey: .`hinge`)
+        try container.encodeIfPresent(`panel`, forKey: .`panel`)
+        try container.encodeIfPresent(`recording`, forKey: .`recording`)
+        try container.encodeIfPresent(`recordingEnded`, forKey: .`recordingEnded`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `appearance` = "appearance"
+        case `textSize` = "textSize"
+        case `reduceMotion` = "reduceMotion"
+        case `increaseContrast` = "increaseContrast"
+        case `reduceTransparency` = "reduceTransparency"
+        case `showBorders` = "showBorders"
+        case `voiceOver` = "voiceOver"
+        case `liquidGlass` = "liquidGlass"
+        case `colorFilter` = "colorFilter"
+        case `statusBar` = "statusBar"
+        case `battery` = "battery"
+        case `biometricEnrolled` = "biometricEnrolled"
+        case `hinge` = "hinge"
+        case `panel` = "panel"
+        case `recording` = "recording"
+        case `recordingEnded` = "recordingEnded"
+    }
+}
+
+public enum DeviceSettingsAppearance: String, CaseIterable, Codable, Sendable, Equatable {
+    case `light` = "light"
+    case `dark` = "dark"
+}
+
+public enum DeviceSettingsTextSize: String, CaseIterable, Codable, Sendable, Equatable {
+    case `small` = "small"
+    case `default` = "default"
+    case `large` = "large"
+    case `extraLarge` = "extra-large"
+}
+
+public enum DeviceSettingsLiquidGlass: String, CaseIterable, Codable, Sendable, Equatable {
+    case `clear` = "clear"
+    case `tinted` = "tinted"
+}
+
+public enum DeviceSettingsColorFilter: String, CaseIterable, Codable, Sendable, Equatable {
+    case `none` = "none"
+    case `grayscale` = "grayscale"
+    case `redGreen` = "red-green"
+    case `greenRed` = "green-red"
+    case `blueYellow` = "blue-yellow"
+}
+
+public enum DeviceSettingsStatusBar: String, CaseIterable, Codable, Sendable, Equatable {
+    case `clean` = "clean"
+    case `default` = "default"
+}
+
+public struct DeviceSettingsBattery: Codable, Sendable, Equatable {
+    public let `level`: Int64
+    public let `charging`: Bool
+
+    public init(`level`: Int64, `charging`: Bool) {
+        self.`level` = `level`
+        self.`charging` = `charging`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `level` = try container.decode(Int64.self, forKey: .`level`)
+        `charging` = try container.decode(Bool.self, forKey: .`charging`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`level`, forKey: .`level`)
+        try container.encode(`charging`, forKey: .`charging`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `level` = "level"
+        case `charging` = "charging"
+    }
+}
+
+public enum DeviceSettingsPanel: String, CaseIterable, Codable, Sendable, Equatable {
+    case `cover` = "cover"
+    case `inner` = "inner"
+}
+
+public struct DeviceCaptureResult: Codable, Sendable, Equatable {
+    public let `path`: String
+    public let `width`: Int64
+    public let `height`: Int64
+
+    public init(`path`: String, `width`: Int64, `height`: Int64) {
+        self.`path` = `path`
+        self.`width` = `width`
+        self.`height` = `height`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `path` = try container.decode(String.self, forKey: .`path`)
+        `width` = try container.decode(Int64.self, forKey: .`width`)
+        `height` = try container.decode(Int64.self, forKey: .`height`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`width`, forKey: .`width`)
+        try container.encode(`height`, forKey: .`height`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `path` = "path"
+        case `width` = "width"
+        case `height` = "height"
+    }
+}
+
+public struct DeviceClipboardResult: Codable, Sendable, Equatable {
+    public let `text`: String
+
+    public init(`text`: String) {
+        self.`text` = `text`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `text` = try container.decode(String.self, forKey: .`text`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`text`, forKey: .`text`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `text` = "text"
+    }
+}
+
+public struct DeviceFrameEvent: Codable, Sendable, Equatable {
+    public let `deviceId`: String
+    public let `backendId`: String
+    public let `platform`: DevicePlatform
+    public let `sequence`: Int64
+    public let `width`: Int64
+    public let `height`: Int64
+    public let `format`: DeviceFrameEventFormat?
+    public let `keyFrame`: Bool?
+    public let `data`: String
+
+    public init(`deviceId`: String, `backendId`: String, `platform`: DevicePlatform, `sequence`: Int64, `width`: Int64, `height`: Int64, `format`: DeviceFrameEventFormat? = nil, `keyFrame`: Bool? = nil, `data`: String) {
+        self.`deviceId` = `deviceId`
+        self.`backendId` = `backendId`
+        self.`platform` = `platform`
+        self.`sequence` = `sequence`
+        self.`width` = `width`
+        self.`height` = `height`
+        self.`format` = `format`
+        self.`keyFrame` = `keyFrame`
+        self.`data` = `data`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `deviceId` = try container.decode(String.self, forKey: .`deviceId`)
+        `backendId` = try container.decode(String.self, forKey: .`backendId`)
+        `platform` = try container.decode(DevicePlatform.self, forKey: .`platform`)
+        `sequence` = try container.decode(Int64.self, forKey: .`sequence`)
+        `width` = try container.decode(Int64.self, forKey: .`width`)
+        `height` = try container.decode(Int64.self, forKey: .`height`)
+        `format` = try container.decodeIfPresent(DeviceFrameEventFormat.self, forKey: .`format`)
+        `keyFrame` = try container.decodeIfPresent(Bool.self, forKey: .`keyFrame`)
+        `data` = try container.decode(String.self, forKey: .`data`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`deviceId`, forKey: .`deviceId`)
+        try container.encode(`backendId`, forKey: .`backendId`)
+        try container.encode(`platform`, forKey: .`platform`)
+        try container.encode(`sequence`, forKey: .`sequence`)
+        try container.encode(`width`, forKey: .`width`)
+        try container.encode(`height`, forKey: .`height`)
+        try container.encodeIfPresent(`format`, forKey: .`format`)
+        try container.encodeIfPresent(`keyFrame`, forKey: .`keyFrame`)
+        try container.encode(`data`, forKey: .`data`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `deviceId` = "deviceId"
+        case `backendId` = "backendId"
+        case `platform` = "platform"
+        case `sequence` = "sequence"
+        case `width` = "width"
+        case `height` = "height"
+        case `format` = "format"
+        case `keyFrame` = "keyFrame"
+        case `data` = "data"
+    }
+}
+
+public enum DeviceFrameEventFormat: String, CaseIterable, Codable, Sendable, Equatable {
+    case `jpeg` = "jpeg"
+    case `hevc` = "hevc"
+    case `h264` = "h264"
+}
+
 public struct ProjectOpenResult: Codable, Sendable, Equatable {
     public let `summary`: JSONValue
     public let `document`: JSONValue
@@ -13742,12 +14321,12 @@ public enum StoredNodeTitleSource: String, CaseIterable, Codable, Sendable, Equa
 }
 
 public struct StoredNodeDevice: Codable, Sendable, Equatable {
-    public let `platform`: StoredNodeDevicePlatform
-    public let `kind`: StoredNodeDeviceKind
+    public let `platform`: DevicePlatform
+    public let `kind`: DeviceKind
     public let `name`: String
     public let `runtime`: String
 
-    public init(`platform`: StoredNodeDevicePlatform, `kind`: StoredNodeDeviceKind, `name`: String, `runtime`: String) {
+    public init(`platform`: DevicePlatform, `kind`: DeviceKind, `name`: String, `runtime`: String) {
         self.`platform` = `platform`
         self.`kind` = `kind`
         self.`name` = `name`
@@ -13756,8 +14335,8 @@ public struct StoredNodeDevice: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        `platform` = try container.decode(StoredNodeDevicePlatform.self, forKey: .`platform`)
-        `kind` = try container.decode(StoredNodeDeviceKind.self, forKey: .`kind`)
+        `platform` = try container.decode(DevicePlatform.self, forKey: .`platform`)
+        `kind` = try container.decode(DeviceKind.self, forKey: .`kind`)
         `name` = try container.decode(String.self, forKey: .`name`)
         `runtime` = try container.decode(String.self, forKey: .`runtime`)
     }
@@ -13776,16 +14355,6 @@ public struct StoredNodeDevice: Codable, Sendable, Equatable {
         case `name` = "name"
         case `runtime` = "runtime"
     }
-}
-
-public enum StoredNodeDevicePlatform: String, CaseIterable, Codable, Sendable, Equatable {
-    case `ios` = "ios"
-    case `android` = "android"
-}
-
-public enum StoredNodeDeviceKind: String, CaseIterable, Codable, Sendable, Equatable {
-    case `simulator` = "simulator"
-    case `physical` = "physical"
 }
 
 public struct StoredNodeWorktree: Codable, Sendable, Equatable {
@@ -14753,12 +15322,12 @@ public enum StoredDeviceViewTitleSource: String, CaseIterable, Codable, Sendable
 }
 
 public struct StoredDeviceViewDevice: Codable, Sendable, Equatable {
-    public let `platform`: StoredDeviceViewDevicePlatform
-    public let `kind`: StoredDeviceViewDeviceKind
+    public let `platform`: DevicePlatform
+    public let `kind`: DeviceKind
     public let `name`: String
     public let `runtime`: String
 
-    public init(`platform`: StoredDeviceViewDevicePlatform, `kind`: StoredDeviceViewDeviceKind, `name`: String, `runtime`: String) {
+    public init(`platform`: DevicePlatform, `kind`: DeviceKind, `name`: String, `runtime`: String) {
         self.`platform` = `platform`
         self.`kind` = `kind`
         self.`name` = `name`
@@ -14767,8 +15336,8 @@ public struct StoredDeviceViewDevice: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        `platform` = try container.decode(StoredDeviceViewDevicePlatform.self, forKey: .`platform`)
-        `kind` = try container.decode(StoredDeviceViewDeviceKind.self, forKey: .`kind`)
+        `platform` = try container.decode(DevicePlatform.self, forKey: .`platform`)
+        `kind` = try container.decode(DeviceKind.self, forKey: .`kind`)
         `name` = try container.decode(String.self, forKey: .`name`)
         `runtime` = try container.decode(String.self, forKey: .`runtime`)
     }
@@ -14787,16 +15356,6 @@ public struct StoredDeviceViewDevice: Codable, Sendable, Equatable {
         case `name` = "name"
         case `runtime` = "runtime"
     }
-}
-
-public enum StoredDeviceViewDevicePlatform: String, CaseIterable, Codable, Sendable, Equatable {
-    case `ios` = "ios"
-    case `android` = "android"
-}
-
-public enum StoredDeviceViewDeviceKind: String, CaseIterable, Codable, Sendable, Equatable {
-    case `simulator` = "simulator"
-    case `physical` = "physical"
 }
 
 public struct StoredDrawingView: Codable, Sendable, Equatable {

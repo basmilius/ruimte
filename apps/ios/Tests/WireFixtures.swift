@@ -438,6 +438,13 @@ enum TaskWire {
     }
 }
 
+extension JSONValue {
+    /// A device as `device.list` writes it. A fixture that does not decode is a broken test, not a case to cover.
+    var deviceInfo: DeviceInfo { try! decoded(as: DeviceInfo.self) }
+    /// The device a device view names.
+    var deviceReference: StoredDeviceViewDevice { try! decoded(as: StoredDeviceViewDevice.self) }
+}
+
 /// Views and nodes of a project document as a machine writes them. A test names the fields it is about, and the rest
 /// takes the defaults of the kind, so the view decodes into the generated types as a real one does.
 enum ProjectWire {

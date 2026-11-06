@@ -27,20 +27,20 @@ import Testing
 
     @Test func aReferenceFindsTheDeviceByWhatAPersonCallsIt() {
         let other = Self.device().setting("runtime", .string("iOS 18.4"))
-        #expect(DeviceView.resolve(Self.reference, in: [other, Self.device()]) == Self.device())
-        #expect(DeviceView.resolve(Self.reference, in: [other]) == nil)
+        #expect(DeviceView.resolve(Self.reference.deviceReference, in: [other.deviceInfo, Self.device().deviceInfo]) == Self.device().deviceInfo)
+        #expect(DeviceView.resolve(Self.reference.deviceReference, in: [other.deviceInfo]) == nil)
     }
 
     @Test func aDeviceInTheListSaysWhatThePageShows() {
-        #expect(DeviceView.phase(for: Self.device()) == .starting)
-        #expect(DeviceView.phase(for: Self.device(state: "shutdown")) == .stopped)
-        #expect(DeviceView.phase(for: Self.device(state: "transitioning")) == .starting)
-        if case .noStream = DeviceView.phase(for: Self.device(stream: false)) {
+        #expect(DeviceView.phase(for: Self.device().deviceInfo) == .starting)
+        #expect(DeviceView.phase(for: Self.device(state: "shutdown").deviceInfo) == .stopped)
+        #expect(DeviceView.phase(for: Self.device(state: "transitioning").deviceInfo) == .starting)
+        if case .noStream = DeviceView.phase(for: Self.device(stream: false).deviceInfo) {
         } else {
             Issue.record("A device without a stream should say so")
         }
-        #expect(DeviceView.canBoot(Self.device(state: "shutdown")))
-        #expect(!DeviceView.canBoot(Self.device()))
+        #expect(DeviceView.canBoot(Self.device(state: "shutdown").deviceInfo))
+        #expect(!DeviceView.canBoot(Self.device().deviceInfo))
     }
 
     @Test func refusalsOfOpeningBecomeStatesAPersonCanReadOrRetry() {
@@ -58,8 +58,8 @@ import Testing
     }
 
     @Test func buttonsKeepWhatThisVersionKnowsAndDefaultToAnIPhonesOwn() {
-        #expect(DeviceView.buttons(Self.device()) == ["home", "swipeHome", "appSwitcher", "lock", "siri"])
-        #expect(DeviceView.buttons(Self.device(buttons: ["back", "home", "teleport"])) == ["back", "home"])
+        #expect(DeviceView.buttons(Self.device().deviceInfo) == ["home", "swipeHome", "appSwitcher", "lock", "siri"])
+        #expect(DeviceView.buttons(Self.device(buttons: ["back", "home", "teleport"]).deviceInfo) == ["back", "home"])
     }
 
     @Test func aTouchLandsAsAShareOfTheFittedScreen() {
@@ -74,7 +74,7 @@ import Testing
 
     @Test func aBootedSimulatorOpensAsJPEGEventsAndTakesTaps() async {
         let machine = DeviceMachine(devices: [Self.device()])
-        let model = DeviceViewModel(client: machine, reference: Self.reference)
+        let model = DeviceViewModel(client: machine, reference: Self.reference.deviceReference)
         await model.refresh()
         #expect(model.phase == .streaming)
         let open = machine.requests.first { $0.0 == .deviceOpen }?.1
@@ -94,7 +94,7 @@ import Testing
     @Test func aDeviceThatStreamsVideoOrIsMissingSaysSoInsteadOfAScreen() async {
         let machine = DeviceMachine(devices: [Self.device()])
         machine.openRefusal = "device-format-unsupported"
-        let model = DeviceViewModel(client: machine, reference: Self.reference)
+        let model = DeviceViewModel(client: machine, reference: Self.reference.deviceReference)
         await model.refresh()
         #expect(model.phase == .unsupportedFormat)
         await model.refresh()

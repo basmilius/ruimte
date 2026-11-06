@@ -8,7 +8,7 @@ enum DeviceViews {
     static func existing(in views: [StoredView], device: MachineDevice) -> String? {
         views.first { view in
             guard case .device(let shown) = view else { return false }
-            return shown.device.platform.rawValue == device.platform && shown.device.kind.rawValue == device.kind
+            return shown.device.platform == device.platform && shown.device.kind == device.kind
                 && shown.device.name == device.name && shown.device.runtime == device.runtime
         }?.id
     }
@@ -140,7 +140,7 @@ struct MachineDevicesPage: View {
     }
 
     private func row(_ device: MachineDevice) -> some View {
-        let changing = devices.changing[device.id] != nil || device.state == "transitioning"
+        let changing = devices.changing[device.id] != nil || device.state == .transitioning
         return HStack(spacing: MobileSpacing.medium) {
             HStack(alignment: .firstTextBaseline, spacing: MobileSpacing.medium) {
                 MobileStatusGlyph(tone: changing ? .working : .idle, symbol: "smartphone")
@@ -157,7 +157,7 @@ struct MachineDevicesPage: View {
                 }
             }
             Spacer(minLength: 8)
-            if !changing && device.state == "shutdown" && device.canBoot {
+            if !changing && device.state == .shutdown && device.canBoot {
                 Button {
                     Task { await devices.boot(device) }
                 } label: {
@@ -181,7 +181,7 @@ struct MachineDevicesPage: View {
             }
         }
         .disabled(projects.listed.isEmpty)
-        if device.state == "shutdown" && device.canBoot {
+        if device.state == .shutdown && device.canBoot {
             Button(String(localized: "Start"), lucideIcon: "power") { Task { await devices.boot(device) } }
         }
         if device.booted && device.canShutdown {
