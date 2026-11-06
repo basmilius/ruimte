@@ -4,8 +4,9 @@ import { owedTargetsIn } from '../peer/giver/connect-peer.ts';
 import { PeerMachines } from '../peer/giver/peer-machines.ts';
 import { RemoteConnections, brokerDialer } from '../peer/giver/remote-connections.ts';
 import { RemoteStatus } from '../peer/giver/remote-status.ts';
+import type { DaemonBundles } from './bundles.ts';
+import type { Later } from './later.ts';
 import type { MachineBundle } from './machine.ts';
-import type { NetworkBundle } from './network.ts';
 
 /* The links this machine holds to the machines it works in, with what it remembers about them. */
 export interface RemoteBundle {
@@ -21,7 +22,7 @@ interface RemoteInput {
     identity: EndpointIdentity;
     machine: MachineBundle;
     outbox: OutboxStore;
-    later: { network(): NetworkBundle };
+    later: Later<Pick<DaemonBundles, 'network'>>;
 }
 
 export async function wireRemote({ home, identity, machine, outbox, later }: RemoteInput): Promise<RemoteBundle> {

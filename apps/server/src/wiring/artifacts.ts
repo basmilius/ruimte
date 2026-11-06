@@ -6,8 +6,9 @@ import { ArtifactStore } from '../artifacts/artifact-store.ts';
 import { Artifacts } from '../artifacts/artifacts.ts';
 import type { MachineHome } from '../disk/machine-home.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
+import type { DaemonBundles } from './bundles.ts';
+import type { Later } from './later.ts';
 import type { ProjectsBundle } from './projects.ts';
-import type { RoutinesBundle } from './routines.ts';
 
 /* Output on this machine: the store under `$RUIMTE_HOME/artifacts` and what a person and an agent do with it. */
 export interface ArtifactsBundle {
@@ -22,7 +23,7 @@ interface ArtifactsInput {
     stores: AgentStores;
     agents: AgentsBundle;
     projects: ProjectsBundle;
-    later: { routines(): RoutinesBundle };
+    later: Later<Pick<DaemonBundles, 'routines'>>;
 }
 
 export async function wireArtifacts(input: ArtifactsInput): Promise<ArtifactsBundle> {

@@ -9,7 +9,8 @@ import { SqlAnalysis } from '../database/sql-analysis.ts';
 import type { MachineHome } from '../disk/machine-home.ts';
 import { errorText } from '../error-text.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import type { LanguageBundle } from './language.ts';
+import type { DaemonBundles } from './bundles.ts';
+import type { Later } from './later.ts';
 
 /* A project's databases, for a person through the views and for an agent through its tool. */
 export interface DatabasesBundle {
@@ -24,7 +25,7 @@ export async function wireDatabases(
     home: string,
     machineHome: MachineHome,
     projects: ProjectStore,
-    later: { language(): LanguageBundle }
+    later: Later<Pick<DaemonBundles, 'language'>>
 ): Promise<DatabasesBundle> {
     const service = new DatabaseService({ machineHome });
     const connections = new DatabaseConnectionStore({

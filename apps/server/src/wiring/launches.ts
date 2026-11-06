@@ -12,7 +12,8 @@ import { SecretService } from '../secrets/secret-service.ts';
 import { SecretStore } from '../secrets/secret-store.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
-import type { GitBundle } from './git.ts';
+import type { DaemonBundles } from './bundles.ts';
+import type { Later } from './later.ts';
 
 /* A project's launches and the secrets they start with. */
 export interface LaunchesBundle {
@@ -31,7 +32,7 @@ interface LaunchesInput {
     agents: AgentsBundle;
     work: AgentWorkBundle;
     projects: ProjectStore;
-    later: { git(): GitBundle };
+    later: Later<Pick<DaemonBundles, 'git'>>;
 }
 
 export function wireLaunches({ home, stores, agents, work, projects, later }: LaunchesInput): LaunchesBundle {
