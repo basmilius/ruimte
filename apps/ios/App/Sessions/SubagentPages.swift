@@ -248,6 +248,7 @@ struct SubagentStatusIcon: View {
         Group {
             switch word {
             case .running: Spinner(size: size)
+            case .paused: Image(lucide: "circle-pause", size: size)
             case .done: Image(lucide: "circle-check", size: size)
             case .failed: Image(lucide: "circle-x", size: size)
             case .cancelled: Image(lucide: "circle-slash", size: size)

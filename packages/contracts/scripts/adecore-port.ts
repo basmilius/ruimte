@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 
@@ -36,4 +37,21 @@ export function compactFixture(groups: Record<string, readonly unknown[]>): stri
     );
 
     return `{\n${body.join(',\n')}\n}\n`;
+}
+
+/** A package as another package of ADE CORE resolves it, so both read one module instance (i18next keeps its words there). */
+export function adecoreDependency<T>(name: string, of: string): Promise<T> {
+    // Resolved the way an `import` does, since the package would otherwise load a second copy in its CommonJS form.
+    return import(Bun.resolveSync(name, dirname(fromClient.resolve(of)))) as Promise<T>;
+}
+
+/** The folder a package of ADE CORE sits in, from its manifest. */
+export function adecorePackageRoot(name: string): string {
+    let folder = dirname(fromClient.resolve(name));
+
+    while (!existsSync(resolve(folder, 'package.json'))) {
+        folder = dirname(folder);
+    }
+
+    return folder;
 }

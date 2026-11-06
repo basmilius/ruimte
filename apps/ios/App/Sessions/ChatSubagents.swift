@@ -26,10 +26,10 @@ struct SubagentListRoute: Hashable, Identifiable {
     var id: String { chatID }
 }
 
-/// The state a sub-agent's entry shows in front of its title: the words of the wire, plus the cancelled that only a
-/// task's own record still tells apart from a failure.
+/// The state a sub-agent's entry shows in front of its title: the words of the wire, plus the cancelled and the paused
+/// that only a task's own record still tells apart from a failure and a run.
 enum SubagentStatusWord: String, CaseIterable {
-    case running, done, failed, cancelled
+    case running, paused, done, failed, cancelled
 
     /// Every word the wire has, so a status added to `ChatSubagentStatusSchema` stops compiling here.
     init(_ status: ChatSubagentStatus) {
@@ -43,6 +43,7 @@ enum SubagentStatusWord: String, CaseIterable {
     var title: String {
         switch self {
         case .running: String(localized: "Running")
+        case .paused: String(localized: "Paused")
         case .done: String(localized: "Done")
         case .failed: String(localized: "Failed")
         case .cancelled: String(localized: "Canceled")
@@ -54,14 +55,14 @@ enum SubagentStatusWord: String, CaseIterable {
         case .running: .running
         case .done: .done
         case .failed: .failed
-        case .cancelled: .stopped
+        case .paused, .cancelled: .stopped
         }
     }
 }
 
 /// What a task's row says its agent is doing: the task's own state, or that the agent waits on a person while the
 /// task runs.
-enum TaskRowState: Equatable {
+enum TaskRowState: String, Equatable {
     case running, waiting, paused, done, failed, cancelled
 
     var settled: Bool { self == .done || self == .failed || self == .cancelled }
@@ -105,8 +106,8 @@ enum ChatSubagents {
         items.compactMap(\.subagentItem).filter(canOpen)
     }
 
-    /// The sub-agents the composer's chip speaks for, as the desktop's `flyoutSubagents` picks them: every running
-    /// one, the ones since the person last wrote, and the rest of a turn that still has one running.
+    /// The sub-agents the composer's chip speaks for, as `activeSubagents` in `@adecore/agent-contracts` picks them:
+    /// every running one, the ones since the person last wrote, and the rest of a turn that still has one running.
     static func activity(_ items: [ChatItem]) -> [ChatSubagentItem] {
         let lastMessage = items.lastIndex { $0.userItem != nil } ?? -1
         let lastMessageAt = lastMessage < 0 ? nil : items[lastMessage].createdAt
@@ -119,31 +120,44 @@ enum ChatSubagents {
         }.map(\.1)
     }
 
-    /// The one state the chip shows for all of them: work in progress first, then whatever went wrong.
+    /// The one state the chip shows for all of them: work in progress first, then work held up, then whatever went wrong.
     static func summaryWord(_ words: [SubagentStatusWord]) -> SubagentStatusWord {
-        [.running, .failed, .cancelled].first { words.contains($0) } ?? .done
+        [.running, .paused, .failed, .cancelled].first { words.contains($0) } ?? .done
     }
 
-    /// The number on the chip: the ones still at work, and all of them once none is.
+    /// The number on the chip: the ones still at work, a paused one included, and all of them once none is.
     static func badgeCount(_ words: [SubagentStatusWord]) -> Int {
-        let active = words.count { $0 == .running }
+        let active = words.count { $0 == .running || $0 == .paused }
         return active > 0 ? active : words.count
     }
 
-    /// What the chip says: while more than one works and some still run, how far they got and how many need the person,
-    /// as `progressOf` in the desktop's `subagent-list.ts` counts them; otherwise how many there are.
-    static func chipLabel(_ states: [TaskRowState], words: [SubagentStatusWord]) -> String {
-        let done = states.count { $0 == .done }
-        let waiting = states.count { $0 == .waiting }
-        let active = states.count { $0 == .running || $0 == .paused || $0 == .waiting }
-        guard active > 0, states.count > 1 else { return ChatBackground.subagents(badgeCount(words)) }
-        let progress = String(localized: "\(done) of \(states.count) sub-agents done")
-        return waiting > 0 ? "\(progress), \(String(localized: "\(waiting) need you"))" : progress
+    /// How far delegated work is, as `progressOf` in `subagent-list.ts` of ADE CORE counts it: what settled as done,
+    /// what still runs or waits, and how many of those wait on a person.
+    static func progress(_ states: [TaskRowState]) -> (done: Int, total: Int, waiting: Int, active: Int) {
+        (
+            states.count { $0 == .done }, states.count, states.count { $0 == .waiting },
+            states.count { $0 == .running || $0 == .paused || $0 == .waiting }
+        )
     }
 
-    /// The task a row stands for, whose id the daemon wrote into the row's own.
+    /// What the chip says: while more than one works and some still run, how far they got and how many need the person;
+    /// otherwise how many there are.
+    static func chipLabel(_ states: [TaskRowState], words: [SubagentStatusWord]) -> String {
+        let counts = progress(states)
+        guard counts.active > 0, counts.total > 1 else { return ChatBackground.subagents(badgeCount(words)) }
+        let text = String(localized: "\(counts.done) of \(counts.total) sub-agents done")
+        return counts.waiting > 0 ? "\(text), \(String(localized: "\(counts.waiting) need you"))" : text
+    }
+
+    /// The task a row stands for, whose id the daemon wrote into the row's own, as `taskIdOfRow` reads it.
     static func taskID(_ agent: ChatSubagentItem) -> String? {
-        agent.origin == .ruimte && agent.id.hasPrefix("task-") ? String(agent.id.dropFirst(5)) : nil
+        taskID(id: agent.id, origin: agent.origin?.rawValue)
+    }
+
+    static func taskID(id: String, origin: String?) -> String? {
+        guard origin == "ruimte", id.hasPrefix("task-") else { return nil }
+        let task = String(id.dropFirst(5))
+        return task.isEmpty ? nil : task
     }
 
     /// Whether the chat a task's agent works in waits on a person, as the task's own row reads it.
@@ -152,19 +166,18 @@ enum ChatSubagents {
         return attention.needsYou(id) || attention.waits[id] != nil
     }
 
-    /// A cancelled task is a failed row on the wire, and only the task itself still says which it was.
+    /// A cancelled task is a failed row on the wire and a paused one a running row, and only the task itself still says
+    /// which it is.
     static func statusWord(_ agent: ChatSubagentItem, task: AgentTask?) -> SubagentStatusWord {
         if agent.status == .failed, task?.status == .cancelled { return .cancelled }
+        if agent.status == .running, task?.status == .open, task?.paused != nil { return .paused }
         return SubagentStatusWord(agent.status)
     }
 
-    /// A paused task is still a running row on the wire, and only the task itself says it waits on a limit.
     static func taskRowState(_ agent: ChatSubagentItem, task: AgentTask?, childWaiting: Bool) -> TaskRowState {
-        if agent.status == .running, task?.status == .open, task?.paused != nil {
-            return .paused
-        }
         switch statusWord(agent, task: task) {
         case .running: return childWaiting ? .waiting : .running
+        case .paused: return .paused
         case .done: return .done
         case .failed: return .failed
         case .cancelled: return .cancelled

@@ -27,8 +27,8 @@ struct ChatShellCommand: Equatable {
     }
 }
 
-/// The simple commands of a shell line, as `shellCommands` in the desktop's `chat/logic/embedded-code.ts` splits
-/// them: enough to tell which programs a line runs, not a parser.
+/// The simple commands of a shell line, as `shellCommands` in `chat/logic/embedded-code.ts` of `@adecore/agents-react`
+/// splits them: enough to tell which programs a line runs, not a parser.
 enum ChatShell {
     // Programs that run the next word as the command; their own options are skipped along with them.
     private static let wrappers: Set<String> = ["sudo", "env", "exec", "nohup", "time", "command", "nice"]

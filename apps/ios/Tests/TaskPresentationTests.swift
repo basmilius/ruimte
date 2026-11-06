@@ -7,7 +7,10 @@ import XCTest
 final class TaskPresentationTests: XCTestCase {
     @MainActor func testAWakeTurnSaysHowManyTasksWokeIt() {
         let turn: [String: JSONValue] = ["kind": .string("turn"), "label": .string("Tests")]
-        XCTAssertEqual(ChatPresentation.agentTurnLabel(Self.turn(turn)), "Sub-agent finished: Tests")
+        XCTAssertEqual(ChatPresentation.agentTurnLabel(Self.turn(turn)), "Background task finished: Tests")
+        XCTAssertEqual(
+            ChatPresentation.agentTurnLabel(Self.turn(turn.merging(["taskToolUseId": .string("spawn")]) { $1 })),
+            "Sub-agent finished: Tests")
         XCTAssertEqual(
             ChatPresentation.agentTurnLabel(Self.turn(turn.merging(["taskIds": .array([.string("a")])]) { $1 })),
             "Woken by a task: Tests")

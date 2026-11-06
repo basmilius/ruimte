@@ -7972,6 +7972,16 @@
         }
       }
     },
+    "Background task finished: %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Achtergrondtaak klaar: %@"
+          }
+        }
+      }
+    },
     "Base" : {
       "localizations" : {
         "nl" : {

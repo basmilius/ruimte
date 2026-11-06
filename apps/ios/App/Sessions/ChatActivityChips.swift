@@ -214,6 +214,7 @@ struct ChatActivityChips: View {
     private static func icon(_ word: SubagentStatusWord) -> String {
         switch word {
         case .running: "loader-circle"
+        case .paused: "circle-pause"
         case .done: "circle-check"
         case .failed: "circle-x"
         case .cancelled: "circle-slash"

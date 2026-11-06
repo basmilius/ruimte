@@ -162,7 +162,7 @@ final class ChatSubagentsTests: XCTestCase {
         XCTAssertEqual(today, "11:00 AM")
         let earlier = ChatSubagents.entryTime(
             agent("d", status: "done", finished: nowMs - 86_400_000), task: nil, now: now, locale: locale)
-        XCTAssertEqual(earlier, "Jan 2, 12:00 PM")
+        XCTAssertEqual(earlier, "Jan 2 at 12:00 PM")
         XCTAssertNil(ChatSubagents.entryTime(agent("d", status: "done"), task: nil, now: now, locale: locale))
     }
 

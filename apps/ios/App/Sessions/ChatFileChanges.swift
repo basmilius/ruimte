@@ -41,14 +41,17 @@ enum ChatFileChanges {
             omitted: file.omitted?.rawValue)
     }
 
+    /// The file an `Edit`, `Write` or `MultiEdit` call changes, from its input, as `toolFileEdit` in
+    /// `@adecore/agent-contracts` reads it: nothing for another tool and for a call that names no `file_path` or, for
+    /// `MultiEdit`, no `edits` list.
     private static func fromInput(name: String, input: JSONValue) -> [ChatFileChange] {
-        let path = input.text("file_path")
-        guard !path.isEmpty else { return [] }
+        guard input.objectValue != nil, let path = input["file_path"]?.stringValue else { return [] }
         switch name {
         case "Edit": return [replacement(path: path, before: input.text("old_string"), after: input.text("new_string"))]
         case "Write": return [replacement(path: path, before: "", after: input.text("content"))]
         case "MultiEdit":
-            return input.list("edits").map {
+            guard let edits = input["edits"]?.arrayValue else { return [] }
+            return edits.filter { $0.objectValue != nil }.map {
                 replacement(path: path, before: $0.text("old_string"), after: $0.text("new_string"))
             }
         default: return []

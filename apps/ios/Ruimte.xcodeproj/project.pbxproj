@@ -182,6 +182,7 @@
 		5F38A4CDF860941EC7714CDD /* RoutinePages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A7EAEBC6F38F9D314DFA77 /* RoutinePages.swift */; };
 		5FCF6A757B0B4A43BDF1B9F4 /* ChatSendTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BE20C3032455CE771452578 /* ChatSendTests.swift */; };
 		618B905E55D2BECE6783EABD /* tone.aac in Resources */ = {isa = PBXBuildFile; fileRef = 3D803A055A81FD7C2DFD3B8A /* tone.aac */; };
+		61C3DFDA97EEA6583CF2F9CD /* ports-chat.json in Resources */ = {isa = PBXBuildFile; fileRef = F7FC3796DFA48F9B0230FC21 /* ports-chat.json */; };
 		625548C2D5A0BC4D86E660A0 /* ScheduledBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18BC34E5919BC7662D31AEDE /* ScheduledBoard.swift */; };
 		62D36AE12D4AFBB7A1AECA5C /* MobileWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4494CB22D3C1F93514921B21 /* MobileWorkspace.swift */; };
 		62F374513A3A88F4B1584832 /* PadRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1836988D371F441523F1DAB /* PadRouterTests.swift */; };
@@ -933,6 +934,7 @@
 		F4E0A56C099A54C1CA5FCB08 /* Slug.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Slug.swift; sourceTree = "<group>"; };
 		F594843701EEC6FF5CD43209 /* ChatDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatDraft.swift; sourceTree = "<group>"; };
 		F5DA820F5A230279EC2E2564 /* ChatForking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatForking.swift; sourceTree = "<group>"; };
+		F7FC3796DFA48F9B0230FC21 /* ports-chat.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ports-chat.json"; sourceTree = "<group>"; };
 		F87147CB968B3A1A350EF934 /* WorkspaceNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceNavigation.swift; sourceTree = "<group>"; };
 		F88143232F57172C105B62F4 /* tone.m4a */ = {isa = PBXFileReference; path = tone.m4a; sourceTree = "<group>"; };
 		F99B601820CBFE2046FC337E /* ProjectOverviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectOverviewTests.swift; sourceTree = "<group>"; };
@@ -1318,6 +1320,7 @@
 			children = (
 				75DA6517FBC9FBF6C79776E2 /* document-scenes.json */,
 				A9867AAE3875BFA2A608B522 /* intelligent-ui-presentation.json */,
+				F7FC3796DFA48F9B0230FC21 /* ports-chat.json */,
 				DCEBB48874CD75525612331D /* ports-merge.json */,
 				C817F2600645B6E1FDD95CCF /* ports-plan.json */,
 				781F6AC7AD1FC0898F16BD73 /* ports.json */,
@@ -1952,6 +1955,7 @@
 				7E2B6B3B6C775D4B97412A5E /* image.tiff in Resources */,
 				232274F1989E0BA90BB73CA8 /* image.webp in Resources */,
 				93ABEC838D61F2A4F84A9AEF /* intelligent-ui-presentation.json in Resources */,
+				61C3DFDA97EEA6583CF2F9CD /* ports-chat.json in Resources */,
 				1DE7EEFABD8511F861F6E3F4 /* ports-merge.json in Resources */,
 				EF52FF2AA29B3410B1BD9D48 /* ports-plan.json in Resources */,
 				CF206234DF28A035F2731230 /* ports.json in Resources */,

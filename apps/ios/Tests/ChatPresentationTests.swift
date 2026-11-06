@@ -264,7 +264,8 @@ final class ChatPresentationTests: XCTestCase {
         XCTAssertEqual(depth, ChatSubagentBranch.maxNesting)
     }
 
-    @MainActor func testAgentTurnCanOpenTheSourceAgentInAnEarlierFold() {
+    /// A settled sub-agent stays outside the fold of its turn, so the row to open is already there.
+    @MainActor func testAgentTurnCanOpenTheSourceAgentOfAnEarlierTurn() {
         let presentation = ChatPresentation()
         let first = item("first", "turn").setting("turnId", .string("first")).setting("state", .string("done"))
         let agent = item("agent", "subagent").setting("turnId", .string("first")).setting("toolUseId", .string("spawn"))
@@ -272,12 +273,12 @@ final class ChatPresentationTests: XCTestCase {
         let second = item("second", "turn").setting("turnId", .string("second")).setting("state", .string("running"))
             .setting("origin", .string("agent"))
         presentation.replace([first, agent, second].map(\.chatItem), info: nil)
-        XCTAssertEqual(presentation.entries.map(\.id), ["fold-first", "start-second"])
+        XCTAssertEqual(presentation.entries.map(\.id), ["agent", "start-second"])
         presentation.openSubagent(toolUseID: "spawn")
         XCTAssertTrue(presentation.expandedSubagents.contains("agent"))
         XCTAssertEqual(presentation.requestedItemID, "agent")
         XCTAssertEqual(presentation.scrollRequest, 1)
-        XCTAssertEqual(presentation.entries.map(\.id), ["fold-first", "agent", "start-second"])
+        XCTAssertEqual(presentation.entries.map(\.id), ["agent", "start-second"])
     }
 
     func testProviderReplacementDiffsPreserveMultipleEditsToOneFile() {
@@ -360,7 +361,7 @@ final class ChatPresentationTests: XCTestCase {
         XCTAssertEqual(rows.map(\.id), ["u1", "fold-t1", "a1", "image"])
     }
 
-    func testABackgroundSubagentStaysOutOfTheFoldOfItsSettledTurnUntilItEnds() {
+    func testABackgroundSubagentStaysOutOfTheFoldOfItsSettledTurnAlsoOnceItEnds() {
         let agent = { (status: String) in
             self.item("sa1", "subagent").setting("background", .bool(true)).setting("status", .string(status))
         }
@@ -368,7 +369,7 @@ final class ChatPresentationTests: XCTestCase {
             self.entries([self.settled, self.item("u1", "user"), self.tool("r1"), agent(status), self.reply("a1")])
         }
         XCTAssertEqual(rows("running").map(\.id), ["u1", "fold-t1", "sa1", "a1"])
-        XCTAssertEqual(rows("done").map(\.id), ["u1", "fold-t1", "a1"])
+        XCTAssertEqual(rows("done").map(\.id), ["u1", "fold-t1", "sa1", "a1"])
     }
 
     func testAnUnfoldedTurnShowsItsWorkInPlaceThenTheChangedFilesThenTheAnswerAndWhatFollowsIt() {

@@ -74,7 +74,7 @@ struct ChatTimelineEntry: Identifiable, Equatable {
 }
 
 /// A sub-agent's row: the work the thread kept of it, and the agents it opened in turn, each a row of its own under
-/// it, as `SubagentBranch` in the desktop's `chat/logic/timeline.ts`.
+/// it, as `SubagentBranch` in `chat/logic/timeline.ts` of `@adecore/agents-react`.
 struct ChatSubagentBranch: Equatable {
     // Deeper than the CLI forwards any call; it also ends a chain of rows that would name each other.
     static let maxNesting = 8
@@ -520,7 +520,13 @@ final class ChatPresentation {
             let work = Array(conversation[split...])
             let workRows = rowsFor(work, children: children)
             // The closing answer stays in sight; the work after the last input folds behind the label.
-            let answer = Self.closingAnswer(workRows)
+            // A turn the machine ended mid-call has no closing answer, but what it last said is still the most a person
+            // can read of it.
+            let cutShort = turnItem.state == .aborted && Self.abortedByMachine(turnItem, items: items.map(\.item))
+            let answer =
+                Self.closingAnswer(workRows)
+                ?? (cutShort
+                    ? workRows.lastIndex { $0.kind == .message && $0.items.first?.item.assistantItem != nil } : nil)
             let before = Array(workRows[..<(answer ?? workRows.count)])
             let standing = before.filter(Self.stands)
             if before.count > standing.count {
@@ -535,10 +541,10 @@ final class ChatPresentation {
             rows += expandedTurns.contains(turnID) ? before : standing
             let edits = conversation.filter {
                 guard case .tool(let tool) = $0.item else { return false }
-                return tool.state == .done && ChatFileChanges.hasChanges(tool)
+                return tool.state == .done && ChatToolPresentation.changesFiles(tool.name)
+                    && ChatFileChanges.hasChanges(tool)
             }
-            let changed =
-                turnItem.checkpointDiff.map { !$0.files.isEmpty } ?? (!edits.isEmpty || turnItem.checkpoint != nil)
+            let changed = turnItem.checkpointDiff.map { !$0.files.isEmpty } ?? !edits.isEmpty
             if changed {
                 rows.append(ChatTimelineEntry(id: "files-\(turnID)", kind: .changedFiles, items: [turn] + edits))
             }
@@ -621,9 +627,11 @@ final class ChatPresentation {
         return nil
     }
 
-    /// Images and sub-agents stay a turn's visible result, and a workflow may still run after its turn ended.
+    /// Images and sub-agents stay a turn's visible result, and a workflow may still run after its turn ended. A
+    /// compaction is never folded away, so a turn that only compacted shows its divider and no fold.
     private static func stands(_ row: ChatTimelineEntry) -> Bool {
         switch row.items.first?.item {
+        case .compaction? where row.kind == .message: true
         case .tool(let tool)? where row.kind == .message:
             UiGeneratedImage.isGeneration(tool) || tool.workflow != nil && tool.state == .running
         case .subagent? where row.kind == .subagent: true
@@ -718,8 +726,11 @@ final class ChatPresentation {
                 ? String(localized: "Woken by \(messages) messages")
                 : String(localized: "Woken by \(messages) messages: \(label)")
         }
-        return label.isEmpty
-            ? String(localized: "Continued on its own") : String(localized: "Sub-agent finished: \(label)")
+        if label.isEmpty { return String(localized: "Continued on its own") }
+        // The machine names the sub-agent row a wake is about; the CLI also wakes the agent for a command, a monitor or a
+        // workflow it ran in the background, which has no such row.
+        return turn.taskToolUseId == nil
+            ? String(localized: "Background task finished: \(label)") : String(localized: "Sub-agent finished: \(label)")
     }
 }
 
@@ -728,30 +739,32 @@ enum ChatToolPresentation {
 
     /// What a call is about, also for one that is only asked for, as an approval names it.
     static func summary(name: String, input: JSONValue) -> String {
-        let keys: [String]
-        switch name {
-        case "Bash": keys = ["description", "command"]
-        case "Read", "Edit", "Write", "MultiEdit", "NotebookEdit": keys = ["file_path", "notebook_path"]
-        case "Grep", "Glob": keys = ["pattern"]
-        case "WebFetch", "WebSearch": keys = ["url", "query"]
-        case "Task", "Agent": keys = ["description"]
-        case "Skill": keys = ["skill"]
-        default:
+        guard let fields = input.objectValue else { return "" }
+        guard let keys = summaryKeys[name] else {
             // A tool nobody named shows whatever string it was called with, as chat/logic/tools.ts does. That reads
             // the input in the order the CLI wrote it; a decoded object has no order, so the keys decide instead.
-            keys = (input.objectValue ?? [:]).keys.sorted()
+            return fields.keys.sorted().compactMap { fields[$0]?.stringValue }.first ?? ""
         }
-        return keys.compactMap { input[$0]?.stringValue }.first ?? ""
+        return keys.compactMap { fields[$0]?.stringValue }.first ?? ""
     }
+
+    // The input keys that hold the line saying what a call is about, best first: `TOOL_CATALOG` in ADE CORE.
+    private static let summaryKeys: [String: [String]] = [
+        "Read": ["file_path"], "NotebookRead": ["file_path", "notebook_path"], "Edit": ["file_path"],
+        "Write": ["file_path"], "MultiEdit": ["file_path"], "NotebookEdit": ["file_path", "notebook_path"],
+        "ApplyPatch": ["summary"], "Bash": ["description", "command"], "Grep": ["pattern"], "Glob": ["pattern"],
+        "WebFetch": ["url", "query"], "WebSearch": ["url", "query"], "Task": ["description"],
+        "Agent": ["description"], "Skill": ["skill"], "TodoWrite": [], "Workflow": [],
+    ]
 
     /// Whether the summary of a call is the path of a file, which a row cuts in the middle so the name stays.
     static func summaryIsPath(_ tool: ChatToolItem) -> Bool { summaryIsPath(name: tool.name, input: tool.input) }
 
     static func summaryIsPath(name: String, input: JSONValue) -> Bool {
-        guard ["Read", "Edit", "Write", "MultiEdit", "NotebookEdit"].contains(name) else { return false }
-        let summary = summary(name: name, input: input)
-        return !summary.isEmpty
-            && [input["file_path"]?.stringValue, input["notebook_path"]?.stringValue].contains(summary)
+        guard let keys = summaryKeys[name], input.objectValue != nil,
+            let key = keys.first(where: { input[$0]?.stringValue != nil })
+        else { return false }
+        return key == "file_path" || key == "notebook_path"
     }
 
     /// The detail on a call's line. A live call that names nothing in its input says what its progress reports.
@@ -761,7 +774,7 @@ enum ChatToolPresentation {
         return tool.progress?.description ?? ""
     }
 
-    /// The mark of a call, as `toolIcon` in the desktop's chat draws it; a tool nobody named gets the wrench.
+    /// The mark of a call, as `toolIcon` in `@adecore/agents-react` draws it; a tool nobody named gets the wrench.
     static func icon(_ name: String) -> String {
         switch name {
         case "Read", "NotebookRead": "eye"
@@ -848,6 +861,9 @@ enum ChatToolPresentation {
     }
 
     private static let fileChanges: Set<String> = ["Edit", "Write", "MultiEdit", "ApplyPatch"]
+
+    /// Whether a call by this name writes to a file, which is what a mixed run of calls is named after.
+    static func changesFiles(_ name: String) -> Bool { fileChanges.contains(name) }
 
     /// A file change that failed or was refused changed nothing: it counts as a call, never as an edit.
     private static func failedFileChange(_ tool: ChatToolItem) -> Bool {
