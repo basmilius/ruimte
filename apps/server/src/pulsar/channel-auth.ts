@@ -62,12 +62,12 @@ export function authenticateChannel(options: ChannelAuthOptions): Promise<Client
             resolve(access);
         };
 
-        const refuse = (reason: string, protocol?: number): void => {
+        const refuse = (reason: string, extra?: { protocol?: number; code?: string }): void => {
             if (settled) {
                 return;
             }
             channel.receiveWith(() => undefined, UNAUTHENTICATED_FRAME_CHARS);
-            channel.send(JSON.stringify(refusedFrame(reason, protocol)));
+            channel.send(JSON.stringify(refusedFrame(reason, extra)));
             settle(null);
             setTimeout(() => channel.close(4003, reason), REFUSAL_LINGER_MS);
         };
@@ -89,13 +89,15 @@ export function authenticateChannel(options: ChannelAuthOptions): Promise<Client
                 return;
             }
             if (proof.protocol !== undefined && proof.protocol !== PROTOCOL_VERSION) {
-                refuse('This machine and this client run different versions of Ruimte', PROTOCOL_VERSION);
+                refuse('This machine and this client run different versions of Ruimte', { protocol: PROTOCOL_VERSION });
                 return;
             }
             if (proof.type === 'direct.key') {
                 const grant = await handshake.redeemChannel({ publicKey: proof.publicKey, challenge: proof.challenge, signature: proof.signature }, binding);
                 if (grant === null) {
-                    refuse('This machine does not know this device. Sign in to the account it is on to be let in again.');
+                    refuse('This machine does not know this device. Sign in to the account it is on to be let in again.', {
+                        code: 'not-paired'
+                    });
                     return;
                 }
                 accept(

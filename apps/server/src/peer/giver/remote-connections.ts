@@ -12,22 +12,32 @@ export class RemoteLinkError extends CodedError<'unknown-machine' | 'no-broker' 
 /*
  * What the other machine says when it will not have this one: it does not know the key (never let in, run
  * out or revoked) or refuses the statement. Trying again changes neither. Another protocol is no refusal:
- * an update of either machine ends it, so the reconnect keeps trying.
+ * an update of either machine ends it, so the reconnect keeps trying. Each is the code of the machine's
+ * refusal, with the words for the line of a task that fails on it.
  */
-function refusedByMachine(error: unknown): boolean {
-    const message = error instanceof Error ? error.message : '';
-    return /closed the attempt: (not-paired|statements-refused)|does not know this device/.test(message);
+const REFUSAL_WORDS = {
+    'not-paired': 'it does not know this machine, or no longer vouches for it',
+    'statements-refused': 'it takes no statement from this machine'
+} as const;
+
+export type MachineRefusal = keyof typeof REFUSAL_WORDS;
+
+/* A link the other machine will not give this one, whatever is tried again. */
+export class RemoteRefusal extends RemoteLinkError {
+    readonly refusal: MachineRefusal;
+
+    constructor(refusal: MachineRefusal, message: string) {
+        super('refused', message);
+        this.refusal = refusal;
+    }
 }
 
-/* Why the other machine would not have this one, in words for the line of a task that fails on it. */
-export function refusalWords(message: string): string {
-    if (message.includes('not-paired') || message.includes('does not know this device')) {
-        return 'it does not know this machine, or no longer vouches for it';
-    }
-    if (message.includes('statements-refused')) {
-        return 'it takes no statement from this machine';
-    }
-    return message.slice(0, 200);
+function refusalOf(error: unknown): MachineRefusal | null {
+    return error instanceof CodedError && Object.hasOwn(REFUSAL_WORDS, error.code) ? (error.code as MachineRefusal) : null;
+}
+
+export function refusalWords(refusal: MachineRefusal): string {
+    return REFUSAL_WORDS[refusal];
 }
 
 /* Opens a link to one machine; rejects with the reason it could not. */
@@ -214,9 +224,9 @@ export class RemoteConnections {
             if (this.generationOf(machineId) !== generation) {
                 throw new RemoteLinkError('closed', 'The link was closed while it was being made');
             }
-            const refused = refusedByMachine(e);
-            this.publish(machineId, this.options.owed(machineId) > 0 && !refused ? 'waiting' : null);
-            throw refused ? new RemoteLinkError('refused', e instanceof Error ? e.message : 'That machine refused this one') : e;
+            const refused = refusalOf(e);
+            this.publish(machineId, this.options.owed(machineId) > 0 && refused === null ? 'waiting' : null);
+            throw refused === null ? e : new RemoteRefusal(refused, e instanceof Error ? e.message : 'That machine refused this one');
         }
         // Closed meanwhile (unlinked, or this machine left its account): a handshake that finished late is not kept.
         if (this.generationOf(machineId) !== generation || !this.knows(machineId)) {

@@ -75,7 +75,7 @@ export async function runMerges(
     runs: readonly MergeRun[],
     actionId: () => string,
     onStart: (run: MergeRun, actionId: string) => void,
-    onOutcome: (outcome: MergeOutcome, actionId: string) => void
+    onOutcome: (outcome: MergeOutcome, actionId: string) => void | Promise<void>
 ): Promise<MergeOutcome[]> {
     const outcomes: MergeOutcome[] = [];
     for (const run of runs) {
@@ -96,25 +96,12 @@ export async function runMerges(
             };
         }
         outcomes.push(outcome);
-        onOutcome(outcome, id);
+        await onOutcome(outcome, id);
         if (outcome.kind !== 'merged') {
             break;
         }
     }
     return outcomes;
-}
-
-/* Git refusing a merge over a changed file of the person's, which a stash would move out of the way. */
-export function isOverwriteRefusal(outcome: MergeOutcome): boolean {
-    return (
-        outcome.kind === 'refused' && outcome.code === 'git-failed' && /would be overwritten by merge|commit your changes or stash them/i.test(outcome.message)
-    );
-}
-
-/* The branch a refusal says the project folder is on, when the target branch is checked out nowhere. */
-export function checkedOutBranch(message: string): string | null {
-    const match = / is on ([^\s]+)\.$/.exec(message.trim());
-    return match === null || match[1] === 'a' ? null : (match[1] ?? null);
 }
 
 /*

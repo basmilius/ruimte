@@ -162,8 +162,3 @@ export function popStashStep(stashes: readonly GitStash[]): { kind: 'pop'; ref: 
     }
     return stashes.length === 1 ? { kind: 'pop', ref: stashes[0]!.ref } : { kind: 'pick' };
 }
-
-/* Git refuses to delete a branch it has not merged anywhere; only that refusal earns a second ask. */
-export function isUnmergedRefusal(message: string): boolean {
-    return message.includes('not fully merged');
-}

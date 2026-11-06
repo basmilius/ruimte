@@ -19,7 +19,7 @@ interface GitOptions {
     timeoutMs?: number;
 }
 
-type GitErrorCode =
+export type GitErrorCode =
     | 'not-a-repo'
     | 'clone-refused'
     | 'outside-checkout'
@@ -43,6 +43,10 @@ type GitErrorCode =
     | 'pr-not-found'
     | 'branch-exists'
     | 'target-not-checked-out'
+    // git refused to merge over a changed file of the person's, which a stash moves out of the way.
+    | 'merge-would-overwrite'
+    // git refused to delete a branch it has not merged anywhere; a person can still force it.
+    | 'branch-not-merged'
     | 'target-busy'
     | 'target-dirty'
     | 'agent-working'

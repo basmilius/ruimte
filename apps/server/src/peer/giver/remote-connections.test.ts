@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
+import { CodedError } from '@adecore/agents';
 import type { PeerStatement } from '@ruimte/pulsar';
 import type { SessionEvent } from '../../wire.ts';
 import type { PeerLink } from './peer-connection.ts';
@@ -144,14 +145,11 @@ describe('the links to other machines', () => {
 
     test('tells a refusal by the machine from a machine that does not answer, and does not call it waiting', async () => {
         owed = 1;
-        for (const message of [
-            'The machine closed the attempt: not-paired',
-            'This machine does not know this device. Sign in to the account it is on to be let in again.'
-        ]) {
+        for (const code of ['not-paired', 'statements-refused']) {
             next = async () => {
-                throw new Error(message);
+                throw new CodedError(code, `The machine closed the attempt: ${code}`);
             };
-            await expect(connections.connect('machine-b')).rejects.toMatchObject({ code: 'refused' });
+            await expect(connections.connect('machine-b')).rejects.toMatchObject({ code: 'refused', refusal: code });
         }
         expect(heard).not.toContain('waiting:1');
         next = async () => {

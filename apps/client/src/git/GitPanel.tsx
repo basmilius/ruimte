@@ -34,7 +34,7 @@ import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { PanelHeaderActions, PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeaderTitleHidden } from '@/surface/PanelHeaderSlot';
 import { useTransport } from '@/workspace/context';
-import { isUnmergedRefusal, popStashStep, pushButton, pushable, pushEntries, type CommitCandidate } from '@/worktree-rules/git-actions';
+import { popStashStep, pushButton, pushable, pushEntries, type CommitCandidate } from '@/worktree-rules/git-actions';
 import { nodeNames, nodesInWorktree, worktreeBase, worktreeDiffTab } from '@/worktree-rules/worktree-rows';
 import { conflictsDialog, worktreeMergeDialog, worktreeRemovalDialog } from '@/worktrees/dialogs';
 import { useWorktreeInspection } from '@/worktrees/use-worktree-inspection';
@@ -221,7 +221,7 @@ export function GitPanel() {
         if (outcome.ok) {
             return true;
         }
-        if (kind === 'delete-branch' && typeof extra.ref === 'string' && extra.force !== true && isUnmergedRefusal(outcome.message)) {
+        if (kind === 'delete-branch' && typeof extra.ref === 'string' && extra.force !== true && outcome.code === 'branch-not-merged') {
             setDialog({ kind: 'confirm-delete', cwd: path, ref: extra.ref, force: true });
         }
         if (outcome.code === 'diverged') {

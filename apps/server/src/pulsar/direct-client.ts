@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { CodedError } from '@adecore/agents';
 import { wait, withTimeout } from '@adecore/utils/async';
 import {
     ChannelLiveness,
@@ -103,7 +104,7 @@ export class DirectClient {
         const answer = new Promise<string>((resolve, reject) => {
             this.answered = resolve;
             // A machine that refuses the offer says so at once, so a refused attempt does not wait out the timeout.
-            this.refused = (reason) => reject(new Error(`The machine closed the attempt: ${reason}`));
+            this.refused = (reason) => reject(new CodedError(reason, `The machine closed the attempt: ${reason}`));
         });
         await this.peer.setLocalDescription(await this.peer.createOffer());
         await waitFor(() => this.peer.iceGatheringState === 'complete', ICE_GATHER_TIMEOUT_MS).catch(() => undefined);
@@ -238,7 +239,8 @@ export class DirectClient {
                     return;
                 }
                 if (frame.type === 'direct.refused') {
-                    reject(new Error(frame.reason));
+                    // A machine older than the `code` field says only the words.
+                    reject(new CodedError(frame.code ?? (frame.reason.includes('does not know this device') ? 'not-paired' : 'refused'), frame.reason));
                     return;
                 }
                 resolve({ ticket: frame.ticket });
@@ -263,7 +265,7 @@ export class DirectClient {
         if (frame.ok) {
             entry.resolve(frame.result);
         } else {
-            entry.reject(new Error(`${frame.error?.code}: ${frame.error?.message}`));
+            entry.reject(new CodedError(frame.error?.code ?? 'internal', frame.error?.message ?? 'The machine gave no reason'));
         }
     }
 }

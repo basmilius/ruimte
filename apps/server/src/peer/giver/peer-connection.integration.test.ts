@@ -176,7 +176,7 @@ describe('the link of one machine to another, over a real broker', () => {
         expect(pending.peek(MACHINE_ID)).toBeNull();
         expect(opened.at(-1)?.access.peer).toEqual({ machineId: 'machine-a' });
         await expect(link.request('server.ping', {})).resolves.toMatchObject({ time: expect.any(Number) });
-        await expect(link.request('fs.read', { path: '/etc/passwd' })).rejects.toThrow(/forbidden/);
+        await expect(link.request('fs.read', { path: '/etc/passwd' })).rejects.toMatchObject({ code: 'forbidden' });
         // A machine that lies about what it answers is not believed.
         await expect(link.request('peer.result', { nodeId: 'chat-one' })).rejects.toThrow(/not an answer to it/);
     }, 60_000);

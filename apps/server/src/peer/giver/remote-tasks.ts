@@ -51,11 +51,10 @@ export interface RemoteTasksDeps {
  */
 function refusal(error: unknown): { code: string; message: string } | null {
     // The checkout could not be written as a bundle here (a repository that is not one, a bundle too large): that is an answer too.
-    if (error instanceof CodedError) {
+    if (error instanceof CodedError && error.code !== 'internal') {
         return { code: error.code, message: error.message.slice(0, MAX_REFUSAL_LENGTH) };
     }
-    const match = /^([a-z][a-z0-9-]*): (.*)$/s.exec(error instanceof Error ? error.message : '');
-    return match === null || match[1] === 'internal' ? null : { code: match[1]!, message: match[2]!.slice(0, MAX_REFUSAL_LENGTH) };
+    return null;
 }
 
 function base64(bytes: Uint8Array): string {

@@ -2,18 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { ActionRefusal } from '@ruimte/actions';
 import type { Worktree, WorktreeMergeResult } from '@ruimte/contracts';
 import { removeAllQuestion } from '../worktree-rules/worktree-rows.ts';
-import {
-    checkedOutBranch,
-    defaultSubject,
-    isOverwriteRefusal,
-    mergeContents,
-    mergedDescription,
-    mergeTitle,
-    runMerges,
-    targetCheckout,
-    type MergeOutcome,
-    type MergeRun
-} from './worktree-merge.ts';
+import { defaultSubject, mergeContents, mergedDescription, mergeTitle, runMerges, targetCheckout, type MergeRun } from './worktree-merge.ts';
 
 function worktree(branch: string, extra: Partial<Worktree> = {}): Worktree {
     return {
@@ -95,21 +84,10 @@ describe('what the merge dialog says', () => {
         expect(defaultSubject('', 'lexer')).toBe('lexer: work of the agent');
     });
 
-    test('reads the branch the project folder is on out of a refusal, and finds the checkout of a target', () => {
-        expect(checkedOutBranch('main is not checked out anywhere; /repo is on feature-x.')).toBe('feature-x');
-        expect(checkedOutBranch('main is not checked out anywhere; /repo is on a detached HEAD.')).toBeNull();
+    test('finds the checkout of a target', () => {
         expect(targetCheckout('/repo', 'main', [], 'main')).toBe('/repo');
         expect(targetCheckout('/repo', 'feature', [worktree('main')], 'main')).toBe('/wt/main');
         expect(targetCheckout('/repo', 'feature', [], 'main')).toBeNull();
-    });
-
-    test('offers a stash only for git refusing over a change it would overwrite', () => {
-        const refused = (code: string, message: string): MergeOutcome => ({ kind: 'refused', worktree: worktree('a'), code, message });
-        expect(isOverwriteRefusal(refused('git-failed', 'error: Your local changes to the following files would be overwritten by merge:\n\tshared.txt'))).toBe(
-            true
-        );
-        expect(isOverwriteRefusal(refused('agent-working', 'would be overwritten by merge'))).toBe(false);
-        expect(isOverwriteRefusal(refused('git-failed', 'fatal: refusing to merge unrelated histories'))).toBe(false);
     });
 
     test('says whether the worktree went, and why it stayed', () => {

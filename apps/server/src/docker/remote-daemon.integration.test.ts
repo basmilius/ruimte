@@ -639,7 +639,7 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         const owner = await connectOwner();
         try {
             for (const asker of [client, owner]) {
-                await expect(asker.request('auth.pairingToken', {})).rejects.toThrow(/^unknown-request:/);
+                await expect(asker.request('auth.pairingToken', {})).rejects.toMatchObject({ code: 'unknown-request' });
             }
         } finally {
             owner.close();
@@ -876,8 +876,8 @@ describe.skipIf(!ENABLED)('a client let in on a statement is not the owner', () 
     });
 
     test('it cannot put the machine on an account or take it off, and is not told which account it is on', async () => {
-        await expect(remote.client.request('endpoint.signRegistration', { accountId: 'bench-account' })).rejects.toThrow(/^forbidden:/);
-        await expect(remote.client.request('endpoint.leaveAccount', {})).rejects.toThrow(/^forbidden:/);
+        await expect(remote.client.request('endpoint.signRegistration', { accountId: 'bench-account' })).rejects.toMatchObject({ code: 'forbidden' });
+        await expect(remote.client.request('endpoint.leaveAccount', {})).rejects.toMatchObject({ code: 'forbidden' });
         expect((await remote.client.request<EndpointInfo>('endpoint.info', {})).accountId).toBeUndefined();
         // The owner is told, and letting a client in on a statement put the machine on no account.
         expect((await owner.request<EndpointInfo>('endpoint.info', {})).accountId).toBeNull();
@@ -885,7 +885,7 @@ describe.skipIf(!ENABLED)('a client let in on a statement is not the owner', () 
 
     test("it reads nothing of the machine's own state under the home, by request or by URL", async () => {
         for (const path of [`${HOME}/local.key`, `${HOME}/endpoint.json`, `${HOME}/auth.json`]) {
-            await expect(remote.client.request('fs.read', { path })).rejects.toThrow(/^machine-state:/);
+            await expect(remote.client.request('fs.read', { path })).rejects.toMatchObject({ code: 'machine-state' });
         }
         const byUrl = await fetch(`${BASE_URL}/fs/file?path=${encodeURIComponent(`${HOME}/local.key`)}&token=${encodeURIComponent(remote.ticket)}`);
         expect(byUrl.status).toBe(403);
@@ -1012,9 +1012,9 @@ describe.skipIf(!ENABLED)('a direct connection through the door', () => {
 
             const refused = (resource: unknown) => client.request('bytes.read', { resource, offset: 0, length: 1024 });
             // A program, since text is served and only a binary that is no picture, sound, video or PDF is not.
-            await expect(refused({ kind: 'file', path: '/usr/bin/git' })).rejects.toThrow(/^not-found:/);
-            await expect(refused({ kind: 'file', path: `${HOME}/endpoint.json` })).rejects.toThrow(/^machine-state:/);
-            await expect(refused({ kind: 'attachment', chatId: 'no-such-chat', attachmentId: 'nothing' })).rejects.toThrow(/^not-found:/);
+            await expect(refused({ kind: 'file', path: '/usr/bin/git' })).rejects.toMatchObject({ code: 'not-found' });
+            await expect(refused({ kind: 'file', path: `${HOME}/endpoint.json` })).rejects.toMatchObject({ code: 'machine-state' });
+            await expect(refused({ kind: 'attachment', chatId: 'no-such-chat', attachmentId: 'nothing' })).rejects.toMatchObject({ code: 'not-found' });
             const deep = await client.request<BytesReadResult>('bytes.read', {
                 resource: { kind: 'file', path: huge },
                 offset: 39 * 1024 * 1024,
@@ -1111,11 +1111,11 @@ describe.skipIf(!ENABLED)('another machine of the account as a peer', () => {
 
     test('it is refused file reads, terminal input, launches and project saves, and is listed as a machine', async () => {
         const { channel } = await asPeer();
-        await expect(channel.request('fs.read', { path: `${REPO}/README.md` })).rejects.toThrow(/^forbidden:/);
-        await expect(channel.request('session.write', { sessionId: 'any', data: 'id\n' })).rejects.toThrow(/^forbidden:/);
-        await expect(channel.request('launch.start', { projectId: 'any', launchId: 'any' })).rejects.toThrow(/^forbidden:/);
-        await expect(channel.request('project.save', { projectId: 'any' })).rejects.toThrow(/^forbidden:/);
-        await expect(channel.request('endpoint.signRegistration', { accountId: 'bench-account' })).rejects.toThrow(/^forbidden:/);
+        await expect(channel.request('fs.read', { path: `${REPO}/README.md` })).rejects.toMatchObject({ code: 'forbidden' });
+        await expect(channel.request('session.write', { sessionId: 'any', data: 'id\n' })).rejects.toMatchObject({ code: 'forbidden' });
+        await expect(channel.request('launch.start', { projectId: 'any', launchId: 'any' })).rejects.toMatchObject({ code: 'forbidden' });
+        await expect(channel.request('project.save', { projectId: 'any' })).rejects.toMatchObject({ code: 'forbidden' });
+        await expect(channel.request('endpoint.signRegistration', { accountId: 'bench-account' })).rejects.toMatchObject({ code: 'forbidden' });
         const listed = (await owner.request<AuthSessionsResult>('auth.sessions', {})).sessions.filter((session) => session.machineId === 'bench-peer-machine');
         expect(listed.length).toBeGreaterThan(0);
     }, 60_000);

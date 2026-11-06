@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { CodedError } from '@adecore/agents';
 import { ManualClock } from '@adecore/agents/testing';
 import { MAX_RESULT_LENGTH } from '../../canvas/tasks.ts';
 import { projectOverlays } from '../../projects/overlays.ts';
@@ -106,7 +107,7 @@ describe('agent --machine', () => {
         open = fakeLink();
         answer = (type) => {
             if (type === 'peer.taskStart') {
-                throw new Error('cli-not-installed: Claude Code is not installed on this machine');
+                throw new CodedError('cli-not-installed', 'Claude Code is not installed on this machine');
             }
             return STILL_OPEN;
         };
@@ -197,7 +198,7 @@ describe('agent --machine', () => {
     test('fails the task when the machine refuses it, and wakes the parent with why', async () => {
         open = fakeLink();
         answer = () => {
-            throw new Error('depth-limit: An agent from another machine may sit at depth 2 here, and this one would be at 3');
+            throw new CodedError('depth-limit', 'An agent from another machine may sit at depth 2 here, and this one would be at 3');
         };
         const [line] = await give();
         const taskId = line!.split('\t')[5]!;
@@ -216,7 +217,7 @@ describe('agent --machine', () => {
             const { nodeId } = payload as { nodeId: string };
             if (type === 'peer.taskStart') {
                 if (running.size >= 4) {
-                    throw new Error('peer-busy: This machine already runs 4 tasks for that machine. Try again when one is done');
+                    throw new CodedError('peer-busy', 'This machine already runs 4 tasks for that machine. Try again when one is done');
                 }
                 running.add(nodeId);
                 return STARTED;
@@ -289,7 +290,7 @@ describe('agent --machine', () => {
         let busy = true;
         answer = (type) => {
             if (type === 'peer.taskStart' && busy) {
-                throw new Error('peer-busy: This machine already runs 4 tasks for that machine');
+                throw new CodedError('peer-busy', 'This machine already runs 4 tasks for that machine');
             }
             return type === 'peer.result' ? STILL_OPEN : STARTED;
         };
@@ -333,7 +334,7 @@ describe('agent --machine', () => {
         answer = (type, payload) => {
             if (type === 'peer.taskStart') {
                 if (full) {
-                    throw new Error('peer-busy: This machine already runs 4 tasks for that machine');
+                    throw new CodedError('peer-busy', 'This machine already runs 4 tasks for that machine');
                 }
                 full = true;
                 return STARTED;
@@ -418,7 +419,7 @@ describe('agent --machine', () => {
         let busy = false;
         answer = (type) => {
             if (type === 'peer.taskStart' && busy) {
-                throw new Error('peer-busy: This machine already runs 4 tasks for that machine');
+                throw new CodedError('peer-busy', 'This machine already runs 4 tasks for that machine');
             }
             return type === 'peer.result' ? STILL_OPEN : STARTED;
         };
@@ -493,7 +494,7 @@ describe('agent --machine', () => {
         await give();
         await start.asked;
         await daemon.remoteTasks.leave();
-        start.end.reject(new Error('peer-busy: This machine already runs 4 tasks for that machine'));
+        start.end.reject(new CodedError('peer-busy', 'This machine already runs 4 tasks for that machine'));
         await daemon.worker.settled();
 
         expect(daemon.outbox.list()).toEqual([]);
@@ -550,7 +551,7 @@ describe('agent --machine', () => {
     test('a CLI the machine will not run for another machine fails the task for good, with the words of the machine', async () => {
         open = fakeLink();
         answer = () => {
-            throw new Error('peer-provider-unsupported: Codex cannot run a task from another machine here');
+            throw new CodedError('peer-provider-unsupported', 'Codex cannot run a task from another machine here');
         };
         const [line] = await give();
         const taskId = line!.split('\t')[5]!;
@@ -658,7 +659,7 @@ describe('agent --machine', () => {
         await daemon.worker.settled();
         answer = (type) => {
             if (type === 'peer.result') {
-                throw new Error('peer-not-linked: No project here is linked to this machine');
+                throw new CodedError('peer-not-linked', 'No project here is linked to this machine');
             }
             return {};
         };
@@ -680,7 +681,7 @@ describe('agent --machine', () => {
         expect(text).toEndWith('[The rest of the result was left out.]');
 
         answer = () => {
-            throw new Error(`depth-limit: ${'y'.repeat(100_000)}`);
+            throw new CodedError('depth-limit', 'y'.repeat(100_000));
         };
         const [second] = await give();
         await daemon.worker.settled();

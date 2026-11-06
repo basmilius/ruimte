@@ -420,8 +420,8 @@ describe('a machine of the account working here as a peer', () => {
         expect(access?.sessionId).not.toBeNull();
 
         expect(await client.request<{ serverTime: number }>('server.ping', {})).toMatchObject({ serverTime: expect.any(Number) });
-        await expect(client.request('endpoint.info', {})).rejects.toThrow(/forbidden/);
-        await expect(client.request('fs.read', { path: '/etc/passwd' })).rejects.toThrow(/forbidden/);
+        await expect(client.request('endpoint.info', {})).rejects.toMatchObject({ code: 'forbidden' });
+        await expect(client.request('fs.read', { path: '/etc/passwd' })).rejects.toMatchObject({ code: 'forbidden' });
     }, 20_000);
 
     test('proves its key from then on without a statement, until a person revokes it', async () => {
@@ -433,15 +433,15 @@ describe('a machine of the account working here as a peer', () => {
 
         const sessionId = (await store.sessionForPublicKey(key.publicKey))!;
         await store.revoke(sessionId);
-        await expect(viaGate(key, null).open()).rejects.toThrow(/does not know this device|not-paired/);
-        await expect(viaGate(key, statementFor(key.publicKey, 'third-peer-nonce'.padEnd(22, 'n'))).open()).rejects.toThrow(/not-paired/);
+        await expect(viaGate(key, null).open()).rejects.toMatchObject({ code: 'not-paired' });
+        await expect(viaGate(key, statementFor(key.publicKey, 'third-peer-nonce'.padEnd(22, 'n'))).open()).rejects.toMatchObject({ code: 'not-paired' });
     }, 40_000);
 
     test('a statement for another key lets nobody in', async () => {
         const key = generateKeyPair();
         const thief = generateKeyPair();
         const count = opened.length;
-        await expect(viaGate(thief, statementFor(key.publicKey, 'stolen-peer-nonce'.padEnd(22, 'n'))).open()).rejects.toThrow(/not-paired/);
+        await expect(viaGate(thief, statementFor(key.publicKey, 'stolen-peer-nonce'.padEnd(22, 'n'))).open()).rejects.toMatchObject({ code: 'not-paired' });
         expect(opened.length).toBe(count);
     }, 20_000);
 });

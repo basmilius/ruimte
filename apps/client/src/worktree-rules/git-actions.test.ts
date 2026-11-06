@@ -4,7 +4,6 @@ import {
     actionTitle,
     amendTarget,
     commitTargets,
-    isUnmergedRefusal,
     manySummary,
     phaseLabel,
     popStashStep,
@@ -160,11 +159,6 @@ describe('what a toast says', () => {
         expect(phaseLabel('push')).toBe('Pushing');
         expect(phaseLabel('failed')).toBe('That did not work');
         expect(actionTitle('commit-push')).toBe('Committing and pushing');
-    });
-
-    test('only an unmerged branch earns a second ask', () => {
-        expect(isUnmergedRefusal("error: the branch 'work' is not fully merged")).toBe(true);
-        expect(isUnmergedRefusal('error: branch not found')).toBe(false);
     });
 });
 

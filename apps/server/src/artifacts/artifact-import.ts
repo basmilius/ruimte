@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { CodedError } from '@adecore/agents';
 import { KeyedSerializer } from '@adecore/utils/async';
 import {
     PEER_ARTIFACT_PIECE_BYTES,
@@ -32,21 +33,14 @@ function requestIdOf(machineId: string, artifactId: string, versionId: string): 
     return `imp-${createHash('sha256').update(`${machineId}\0${artifactId}\0${versionId}`).digest('hex').slice(0, 40)}`;
 }
 
-/* What another machine refused, read off the message its reply carried (`code: message`). */
-function refusalOf(e: unknown): string | null {
-    const message = e instanceof Error ? e.message : '';
-    return /^([a-z][a-z-]*): /.exec(message)?.[1] ?? null;
-}
-
 /* A failure of a request to the other machine in the words of this one, never with anything of the artifact in it. */
 function importFailure(e: unknown): ArtifactError {
     if (e instanceof ArtifactError) {
         return e;
     }
-    if (typeof e === 'object' && e !== null && 'code' in e && e.code === 'bad-reply') {
-        return new ArtifactError('bad-reply', 'The other machine answered with something that is no part of this artifact');
-    }
-    switch (refusalOf(e)) {
+    switch (e instanceof CodedError ? e.code : null) {
+        case 'bad-reply':
+            return new ArtifactError('bad-reply', 'The other machine answered with something that is no part of this artifact');
         case 'not-found':
             return new ArtifactError('not-found', 'That version is no longer on the other machine');
         case 'peer-not-linked':

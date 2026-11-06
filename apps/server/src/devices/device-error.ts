@@ -23,6 +23,7 @@ export const DEVICE_ERROR_CODES = [
     'device-helper-protocol',
     'device-helper-running',
     'device-helper-unavailable',
+    'physical-device-stream-failed',
     'device-not-streaming',
     'device-tree-failed',
     'device-tree-unavailable',

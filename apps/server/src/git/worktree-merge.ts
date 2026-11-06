@@ -54,6 +54,9 @@ interface MergeLimits {
 // A step that runs this long says so, beside the cancel; nothing ends it without a person.
 const WAIT_NOTICE_MS = 20_000;
 
+/* How git words a merge it refuses over a changed file of the person's; the one place its text is read, so the client branches on a code. */
+const WOULD_OVERWRITE = /would be overwritten by merge|commit your changes or stash them/i;
+
 export const STILL_WAITING = 'Still waiting on git. A hook or a prompt may be holding it up; cancel to stop it.';
 
 function plural(count: number, one: string, many: string): string {
@@ -240,7 +243,10 @@ export class WorktreeMerge {
                 const moved = (await git(['rev-parse', 'HEAD'], target.path))?.trim() !== head;
                 if (conflicts.length === 0 && !waiting && !moved) {
                     // Refused before touching anything, such as over a changed file of the person's the merge would overwrite.
-                    throw new GitError('git-failed', merged.text || `Merging ${branch} into ${into} failed.`);
+                    throw new GitError(
+                        WOULD_OVERWRITE.test(merged.text) ? 'merge-would-overwrite' : 'git-failed',
+                        merged.text || `Merging ${branch} into ${into} failed.`
+                    );
                 }
                 if (limits.abortOnConflict === true) {
                     await this.abort(target.path).catch((e: unknown) => console.warn(`Taking back the merge in ${target.path} failed:`, errorText(e)));

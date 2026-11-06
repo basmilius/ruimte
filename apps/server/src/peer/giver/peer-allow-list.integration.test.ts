@@ -159,13 +159,13 @@ describe('a peer in the whole daemon', () => {
             'artifact.get',
             'artifact.importFrom'
         ]) {
-            await expect(link.request(type, {})).rejects.toThrow(/^forbidden:/);
+            await expect(link.request(type, {})).rejects.toMatchObject({ code: 'forbidden' });
         }
     }, 30_000);
 
     test('and every request on the list answers peer-not-linked until a person here links the machine', async () => {
         for (const type of Object.keys(PAYLOADS)) {
-            await expect(link.request(type, PAYLOADS[type])).rejects.toThrow(/^peer-not-linked:/);
+            await expect(link.request(type, PAYLOADS[type])).rejects.toMatchObject({ code: 'peer-not-linked' });
         }
     }, 30_000);
 });

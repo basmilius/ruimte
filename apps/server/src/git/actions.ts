@@ -1,6 +1,18 @@
 import type { GitActionPayload, GitActionPhase, GitActionResult } from '@ruimte/contracts';
 import { conflictedFiles } from './conflict.ts';
-import { LEAVE_NOTHING_OUT, READ_ONLY_GIT, git, leavingOut, runGit, streamCommand, toplevel, verifyRev, GitError, type LeftOut } from './run.ts';
+import {
+    LEAVE_NOTHING_OUT,
+    READ_ONLY_GIT,
+    git,
+    leavingOut,
+    runGit,
+    streamCommand,
+    toplevel,
+    verifyRev,
+    GitError,
+    type GitErrorCode,
+    type LeftOut
+} from './run.ts';
 import { stashStamp } from './stage.ts';
 
 // A push over a slow link is allowed to take this long before the daemon gives up on it.
@@ -130,9 +142,9 @@ export class GitActions {
             }
         };
 
-        const fail = (text: string, command: string, args: string[]): never => {
+        const fail = (text: string, command: string, args: string[], code: GitErrorCode = 'git-failed'): never => {
             sink('failed', text);
-            throw new GitError('git-failed', job.canceled ? 'The action was canceled.' : text || `${command} ${args[0]} failed`);
+            throw new GitError(code, job.canceled ? 'The action was canceled.' : text || `${command} ${args[0]} failed`);
         };
 
         const step: Step = async (phase, args, options = {}) => {
@@ -216,7 +228,11 @@ export class GitActions {
             }
             case 'delete-branch': {
                 const ref = operand(payload.ref, 'a branch to delete');
-                await step('branch', ['branch', '--delete', ...(payload.force === true ? ['--force'] : []), '--end-of-options', ref]);
+                const args = ['branch', '--delete', ...(payload.force === true ? ['--force'] : []), '--end-of-options', ref];
+                const deleted = await attempt('branch', args);
+                if (deleted.code !== 0) {
+                    fail(deleted.text, 'git', args, deleted.text.includes('not fully merged') ? 'branch-not-merged' : 'git-failed');
+                }
                 return done(`Deleted ${ref}.`);
             }
             case 'merge': {

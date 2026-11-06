@@ -5,7 +5,8 @@ import { desktop } from '@/desktop/bridge';
 import { syncExtensions } from '@/extensions/loader';
 import { extensionRequest } from '@/extensions/machine-request';
 import { currentEndpointId } from '@/state/current-endpoint';
-import { machineTransport, TransportError, type Transport } from '@/transport';
+import { machineTransport, type Transport } from '@/transport';
+import { machineAnswers } from '@/transport/features';
 
 const STORE_BASE = 'https://cdn.jsdelivr.net/gh/ruimte-app/extensions@main/';
 
@@ -133,6 +134,11 @@ export async function readPack(file: Blob): Promise<PackPreview> {
  * own list says whether it has one, since an extension with only a client part is no failure on the machine.
  */
 async function changeOnMachine(link: Transport, id: string, change: () => Promise<unknown>): Promise<string | null> {
+    // A machine from before the extension API has no part to change.
+    if (!machineAnswers(link.connection, 'extension.list')) {
+        return null;
+    }
+
     try {
         const { extensions } = await extensionRequest(link, 'extension.list', {});
 
@@ -142,11 +148,6 @@ async function changeOnMachine(link: Transport, id: string, change: () => Promis
 
         return null;
     } catch (e) {
-        // A machine from before the extension API has no part to change.
-        if (e instanceof TransportError && e.code === 'unavailable') {
-            return null;
-        }
-
         return e instanceof Error ? e.message : String(e);
     }
 }

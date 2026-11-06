@@ -22,10 +22,8 @@ import type { WorktreeMergeRequest } from '@/worktrees/dialogs';
 import { conflictsDialog, worktreeMergeDialog } from '@/worktrees/dialogs';
 import { inspectWorktrees, nodeNames } from '@/worktrees/worktree-inspection';
 import {
-    checkedOutBranch,
     defaultSubject,
     hasLooseWork,
-    isOverwriteRefusal,
     MERGE_STRATEGIES,
     mergeStrategyLabel,
     mergeStrategyLine,
@@ -268,12 +266,13 @@ async function mergeWithToasts(transport: Transport, folder: string, runs: reado
                     })
                 );
             },
-            (outcome, actionId) => {
+            async (outcome, actionId) => {
                 const id = toasts.get(actionId);
                 const run = runs.find((entry) => entry.worktree.path === outcome.worktree.path);
                 const skipped = runs.length - 1 - runs.findIndex((entry) => entry.worktree.path === outcome.worktree.path);
                 const rest = outcome.kind !== 'merged' && skipped > 0 ? ` ${i18next.t('shell:merge.othersStay', { count: skipped })}` : '';
-                useToasts.getState().show({ ...(id === undefined ? {} : { id }), ...toastOf(transport, folder, outcome, run, retry, rest) });
+                const folderBranch = outcome.kind === 'refused' && outcome.code === 'target-not-checked-out' ? await branchOf(transport, folder) : null;
+                useToasts.getState().show({ ...(id === undefined ? {} : { id }), ...toastOf(transport, folder, folderBranch, outcome, run, retry, rest) });
             }
         );
     } finally {
@@ -282,9 +281,16 @@ async function mergeWithToasts(transport: Transport, folder: string, runs: reado
     }
 }
 
+/* The branch the project folder is on; null when it sits on a detached HEAD or cannot be read. */
+async function branchOf(transport: Transport, folder: string): Promise<string | null> {
+    const status = await transport.request('git.status', { cwd: folder }).catch(() => null);
+    return status?.branch ?? null;
+}
+
 function toastOf(
     transport: Transport,
     folder: string,
+    folderBranch: string | null,
     outcome: MergeOutcome,
     run: MergeRun | undefined,
     retry: (run: MergeRun, patch: Partial<MergeRun['payload']>) => void,
@@ -318,10 +324,10 @@ function toastOf(
         return base;
     }
     if (outcome.code === 'target-not-checked-out') {
-        const branch = checkedOutBranch(outcome.message);
+        const branch = folderBranch;
         return branch === null ? base : { ...base, action: { label: i18next.t('shell:merge.mergeInto', { branch }), run: () => retry(run, { into: branch }) } };
     }
-    if (isOverwriteRefusal(outcome)) {
+    if (outcome.code === 'merge-would-overwrite') {
         return {
             ...base,
             action: {

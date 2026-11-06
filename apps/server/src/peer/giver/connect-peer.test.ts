@@ -7,7 +7,7 @@ import { ManualClock } from '@adecore/agents/testing';
 import { refusingHandlers } from '../../outbox/outbox-test-helpers.ts';
 import { machineOwed, OutboxStore, type ConnectPeerEntry, type OutboxWork } from '../../outbox/outbox.ts';
 import { ConnectPeer, PEERS_PROJECT, RECONNECT_LIFETIME_MS, RECONNECT_MAX_MS, RECONNECT_START_MS, peerLane, restartConnectPeers } from './connect-peer.ts';
-import { RemoteLinkError } from './remote-connections.ts';
+import { RemoteRefusal } from './remote-connections.ts';
 
 const MACHINE = 'machine-b';
 
@@ -23,7 +23,7 @@ class FakeConnections {
     async connect(): Promise<never> {
         this.attempts += 1;
         if (this.refuse) {
-            throw new RemoteLinkError('refused', 'The machine closed the attempt: not-paired');
+            throw new RemoteRefusal('not-paired', 'The machine closed the attempt: not-paired');
         }
         if (!this.up) {
             throw new Error('The machine did not answer');

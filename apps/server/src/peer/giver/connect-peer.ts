@@ -1,5 +1,5 @@
 import type { ConnectPeerEntry, OutboxStore, OutboxWork } from '../../outbox/outbox.ts';
-import { RemoteLinkError, refusalWords, type RemoteConnections } from './remote-connections.ts';
+import { RemoteLinkError, RemoteRefusal, refusalWords, type RemoteConnections } from './remote-connections.ts';
 
 // The wait after the first failed attempt, like the first poll of a PR-watch; each failure after it doubles the wait up to the cap.
 export const RECONNECT_START_MS = 60_000;
@@ -108,9 +108,9 @@ export class ConnectPeer {
             this.wakeOwed(machineId);
         } catch (e) {
             // A machine that will not have this one says so again however often it is asked, so what waits on it fails now.
-            if (e instanceof RemoteLinkError && e.code === 'refused') {
+            if (e instanceof RemoteRefusal) {
                 this.firstOwed.delete(machineId);
-                await this.deps.giveUp(machineId, refusalWords(e.message));
+                await this.deps.giveUp(machineId, refusalWords(e.refusal));
                 connections.idle(machineId);
             } else if (e instanceof RemoteLinkError && e.code === 'closed') {
                 connections.idle(machineId);
