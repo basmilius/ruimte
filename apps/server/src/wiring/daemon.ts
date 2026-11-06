@@ -1,0 +1,387 @@
+import { createServerActions } from '../actions/server-actions.ts';
+import { AGENT_FEATURES, AGENT_TOOLKITS } from '../agent-features/list.ts';
+import { stopSteps, type Area, type StopPhase } from '../area.ts';
+import { dropEmptyMark } from '../chat/scratch-project.ts';
+import { Dispatcher } from '../dispatcher.ts';
+import { errorText } from '../error-text.ts';
+import { buildCatalog } from '../mcp/catalog.ts';
+import { countUsages } from '../stats/usage-stats.ts';
+import { noteActivity } from '../telemetry/activity.ts';
+import { noteMoment, recordRequestDuration, type Launcher } from '../telemetry/reporter.ts';
+import { COMPILED as compiled } from '../version.ts';
+import { wireAgentWork } from './agent-work.ts';
+import { loadAgentStores, wireAgents } from './agents.ts';
+import { daemonAreas } from './areas.ts';
+import { wireArtifacts } from './artifacts.ts';
+import type { DaemonBundles } from './bundles.ts';
+import { wireCanvasHost } from './canvas-host.ts';
+import { chatMover } from './chat-move.ts';
+import { wireClients } from './clients.ts';
+import { wireDatabases } from './databases.ts';
+import { createComputer, wireDevices } from './devices.ts';
+import { wireExtensions } from './extensions.ts';
+import { wireGit } from './git.ts';
+import type { HttpInput } from './http.ts';
+import { wireLanguage } from './language.ts';
+import { lateness } from './later.ts';
+import { wireLaunches } from './launches.ts';
+import { wireMachine } from './machine.ts';
+import { wireMaintenance } from './maintenance.ts';
+import { wireNetwork } from './network.ts';
+import { wirePower } from './power.ts';
+import { wireProcesses } from './processes.ts';
+import { wireProjects } from './projects.ts';
+import { wireProviders } from './providers.ts';
+import { pruneHiddenChats } from './prune-hidden-chats.ts';
+import { wirePush } from './push.ts';
+import { wireRemote } from './remote.ts';
+import { wireRoutines } from './routines.ts';
+import type { DaemonRuntime } from './runtime.ts';
+import type { DaemonSeams } from './seams.ts';
+import { wireTemplates } from './templates.ts';
+import { wireUsageStats } from './usage-stats.ts';
+import { wireUsage } from './usage.ts';
+import { wireVoice } from './voice.ts';
+
+const STOP_PHASES: readonly StopPhase[] = ['halt', 'drain', 'end', 'last'];
+
+export interface WireInput {
+    runtime: DaemonRuntime;
+    launcher: Launcher;
+    seams: DaemonSeams;
+    /* Ends the daemon for a reason it logs; the self update asks it when a newer build is on disk. */
+    shutdown(reason: string): Promise<void>;
+}
+
+/* The daemon wired, not yet answering anyone: its bundles, its requests and the steps that bring it up and take it down. */
+export interface WiredDaemon {
+    readonly runtime: DaemonRuntime;
+    readonly bundles: DaemonBundles;
+    readonly areas: readonly Area[];
+    readonly dispatcher: Dispatcher;
+    /* The tasks a restart left open, picked up again; `start` does this too, a test that starts nothing else calls it alone. */
+    recoverWork(): Promise<void>;
+    /*
+     * Brings the daemon up: finishes what a restart interrupted, hands the routes to `serve` and starts
+     * everything that runs on its own. `requestStop` is how a request to the routes ends the daemon.
+     */
+    start(options: { port: number; requestStop: () => void; serve(input: HttpInput): void }): Promise<void>;
+    /* Stops each area in the order of its phases; a step that fails is logged and never keeps the next from running. */
+    stop(): Promise<void>;
+}
+
+/*
+ * Wires every module in boot order, each returning a typed bundle; one that needs a bundle wired after
+ * it reaches it through `later` (`wiring/later.ts`), which throws on a call before the daemon wired it
+ * instead of answering for a service that is not there. The daemon and the tests of the daemon wire
+ * through this one function, so they differ only in the seams they pass.
+ */
+export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInput): Promise<WiredDaemon> {
+    const { config } = runtime;
+    const { home } = config;
+    const { later, provide } = lateness<DaemonBundles>();
+    provide('actions', createServerActions(AGENT_FEATURES));
+    const extensions = provide('extensions', wireExtensions(home, later));
+
+    // Runs while the stores load; it never rejects, and the managers await it before any launch.
+    const codexProbe = seams.machine.codexProbe();
+    const machineModel = seams.machine.model();
+    const machine = provide('machine', await wireMachine(config));
+    const { identity } = machine;
+    const stores = provide('stores', await loadAgentStores(home, seams.clock));
+    const computer = provide('computer', createComputer(runtime, stores.computerStore, stores.lifecycle, later));
+    const stats = provide('stats', await wireUsageStats(home, identity, machine.auth, launcher));
+    const providers = provide('providers', await wireProviders(config, identity, () => computer.start(), stats.flush, seams));
+    const agents = provide(
+        'agents',
+        await wireAgents({ runtime, identity, stores, providers, computer, machineHome: machine.machineHome, codexProbe, seams, later })
+    );
+    const projects = provide('projects', await wireProjects({ home, machineId: identity.id, machineHome: machine.machineHome, stores, agents, seams, later }));
+    const templates = provide('templates', wireTemplates(home, projects));
+    const artifacts = provide(
+        'artifacts',
+        await wireArtifacts({ home, machineId: identity.id, machineHome: machine.machineHome, stores, agents, projects, later })
+    );
+    const databases = provide('databases', await wireDatabases(home, machine.machineHome, projects.store, later));
+    const remote = provide('remote', await wireRemote({ home, identity, machine, outbox: stores.outbox, later }));
+    const work = provide('work', wireAgentWork({ home, identity, stores, agents, projects: projects.store, remote, providers, seams, later }));
+    const launches = provide('launches', wireLaunches({ home, stores, agents, work, projects: projects.store, later }));
+    const routines = provide('routines', await wireRoutines({ home, machineId: identity.id, stores, agents, projects, launches, artifacts }));
+    // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.
+    await projects.store.warmIndex();
+    const git = provide('git', wireGit(home, identity, machine.machineHome, agents, work, projects.store.peers, seams));
+    const devices = provide('devices', wireDevices(runtime, computer, stores.lifecycle, machine.machineHome, seams));
+    const usage = provide('usage', wireUsage(config, providers, agents, projects.store, seams));
+    const processes = provide(
+        'processes',
+        await wireProcesses({
+            config,
+            machineId: identity.id,
+            agents,
+            launches,
+            projects: projects.store,
+            lifecycle: stores.lifecycle,
+            shutdown
+        })
+    );
+    const maintenance = provide('maintenance', wireMaintenance(home, processes, later));
+    const canvasHost = provide(
+        'canvasHost',
+        wireCanvasHost(AGENT_FEATURES, {
+            extensions: extensions.host,
+            identity,
+            stores,
+            providers,
+            agents,
+            projects,
+            work,
+            launches,
+            git,
+            devices,
+            databases,
+            remote,
+            usage,
+            artifacts,
+            routines,
+            templates,
+            later
+        })
+    );
+
+    const { sessions, chats } = agents;
+    const push = provide('push', wirePush(home, machine.auth, identity, agents, projects.store, work.snoozes));
+    sessions.observe((event) => push.consume(event));
+    sessions.observe((event) => work.tasks.terminals.sessionEvent(event));
+    chats.observe((event) => push.consume(event));
+    processes.processes.observeAlerts((alerts) => push.processAlerts(alerts));
+    const voice = provide(
+        'voice',
+        wireVoice({ config, projects: projects.store, machine: identity, canvasHost, actions: later.actions(), chats, live: seams.voiceLive })
+    );
+    const power = provide('power', wirePower(home, identity, agents));
+    sessions.observe((event) => computer.observe(event));
+    chats.observe((event) => computer.observe(event));
+    chats.observe((event) => launches.secrets.observe(event));
+    chats.observe((event) => extensions.host.forwardEvent(event.event, event.payload));
+    sessions.observe((event) => extensions.host.forwardEvent(event.event, event.payload));
+    chats.observe((event) => agents.proposals.observe(event));
+    chats.observe((event) => launches.afterSettle.chatEvent(event));
+    chats.observe((event) => {
+        if (event.event === 'chat.event' && event.payload.event.type === 'item' && event.payload.event.item.kind === 'user') {
+            dropEmptyMark(projects.store, event.payload.chatId).catch((e: unknown) => console.error('Listing a written chat failed:', errorText(e)));
+        }
+    });
+
+    const language = provide(
+        'language',
+        await wireLanguage({
+            home,
+            compiled,
+            machineHome: machine.machineHome,
+            watches: git.watches,
+            projects: projects.store,
+            sqlAnalysis: databases.sqlAnalysis,
+            agents,
+            providers,
+            seams
+        })
+    );
+    const network = provide('network', wireNetwork(config, compiled, machine, later));
+    const mover = provide(
+        'chatMover',
+        chatMover({
+            chats,
+            store: projects.store,
+            lineage: stores.lineage,
+            tasks: stores.tasks,
+            outbox: stores.outbox,
+            notices: stores.notices,
+            prWatches: work.prWatches,
+            machineHome: machine.machineHome,
+            journal: stores.chatMoves,
+            snoozes: work.snoozes,
+            proposals: agents.proposals
+        })
+    );
+
+    const areas = daemonAreas(
+        {
+            runtime,
+            machineModel: await machineModel,
+            sessionFs: await seams.machine.sessionFs(),
+            machine,
+            stores,
+            stats,
+            providers,
+            computer,
+            agents,
+            projects,
+            templates,
+            artifacts,
+            databases,
+            remote,
+            work,
+            launches,
+            routines,
+            git,
+            devices,
+            usage,
+            processes,
+            maintenance,
+            chatMover: mover,
+            language,
+            push,
+            voice,
+            power,
+            network,
+            actions: later.actions(),
+            canvasHost,
+            extensions
+        },
+        later
+    );
+    const dispatcher = new Dispatcher();
+    dispatcher.observe({
+        started: (type) => noteActivity(`request ${type}`),
+        answered: (type, ms, counts) => {
+            recordRequestDuration(type, ms);
+            countUsages(counts);
+        }
+    });
+    for (const area of areas) {
+        area.handlers?.(dispatcher);
+    }
+
+    const clients = provide(
+        'clients',
+        wireClients(machine.handshake, {
+            dispatcher,
+            areas,
+            screenOf: (clientId, sessionId, deliver) => {
+                const session = sessions.get(sessionId);
+                if (!session?.isAttached(clientId)) {
+                    return false;
+                }
+                session.snapshotFor(clientId, deliver);
+                return true;
+            },
+            requestKeyFrame: (backendId, deviceId) => devices.devices.requestKeyFrame(backendId, deviceId)
+        })
+    );
+
+    const bundles: DaemonBundles = {
+        machine,
+        stores,
+        stats,
+        providers,
+        computer,
+        agents,
+        projects,
+        templates,
+        artifacts,
+        databases,
+        remote,
+        work,
+        launches,
+        routines,
+        git,
+        devices,
+        usage,
+        processes,
+        maintenance,
+        chatMover: mover,
+        language,
+        push,
+        voice,
+        power,
+        network,
+        clients,
+        actions: later.actions(),
+        canvasHost,
+        extensions
+    };
+
+    return {
+        runtime,
+        bundles,
+        areas,
+        dispatcher,
+        recoverWork: async () => {
+            await work.tasks.recover();
+            await work.peerTasks.recover();
+            work.endChildren.start();
+        },
+        start: async ({ port, requestStop, serve }) => {
+            noteMoment('daemon.boot', 'wired');
+            void extensions.host.startAutostarted();
+            // Only from here on has the identity everything its announce describes; a CLI found sooner took the daemon down.
+            providers.integrations.onChanged(() => identity.announce());
+            void providers.integrations.refreshInstalled();
+            void providers.integrations.installDefaults();
+
+            // Before the socket answers, so no client attaches to or writes in a chat that is half moved; the outbox starts after.
+            await mover.repair().catch((e) => console.error('Finishing interrupted chat moves failed:', errorText(e)));
+            // Once per start, before the outbox runs and never on a clock.
+            await pruneHiddenChats({
+                hiddenAgents: projects.store.hiddenAgents,
+                index: projects.store.index,
+                tasks: stores.tasks,
+                lineage: stores.lineage,
+                chats,
+                now: () => seams.clock.now()
+            }).catch((e) => console.error('Removing old hidden agent chats failed:', errorText(e)));
+            serve({
+                requestStop,
+                extensions: extensions.host,
+                runtime,
+                machine,
+                stores,
+                agents,
+                projects,
+                devices,
+                processes,
+                power,
+                network,
+                clients,
+                canvasHost,
+                actions: later.actions(),
+                tools: buildCatalog(AGENT_TOOLKITS),
+                voice,
+                artifacts
+            });
+
+            // The first read runs now, so a page opened straight after a start already has the plan on it.
+            usage.limits.start();
+            providers.accounts.start();
+            processes.processes.start();
+
+            await work.tasks.recover();
+            await work.peerTasks.recover();
+            // Before the outbox works, so a routine whose time passed while the machine was off runs once now.
+            await routines.routines.start().catch((e: unknown) => console.error('Scheduling routines failed:', errorText(e)));
+            work.worker.start();
+            work.endChildren.start();
+            maintenance.start();
+            // Beside the daemon answering: a turn a restart interrupted is taken up again without waiting for a client.
+            void chats.recoverInterrupted().catch((e) => console.error('Resuming interrupted turns failed:', errorText(e)));
+
+            void network.brokerSwitch.publish({ host: config.host, port });
+            processes.selfUpdate.start();
+            // `always` holds from the start, before any agent has moved.
+            power.keepAwake.check();
+            // Puts back what a daemon before this one left, and only then decides for the lid.
+            void power.closedLid.start();
+        },
+        stop: async () => {
+            for (const phase of STOP_PHASES) {
+                for (const step of stopSteps(areas, phase)) {
+                    try {
+                        await step.run();
+                    } catch (e) {
+                        console.error(`${step.label} on shutdown failed:`, errorText(e));
+                    }
+                }
+            }
+        }
+    };
+}

@@ -1,17 +1,15 @@
-import { ProviderAccountsService } from '@adecore/agents/providers';
+import type { ProviderAccountsService } from '@adecore/agents/providers';
 import type { AgentKind } from '@ruimte/contracts';
 import { AgentIntegrations } from '../agents/integrations.ts';
 import type { ServerConfig } from '../config.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { AgentServers } from '../handlers/agent-servers.ts';
-import { RUIMTE_ACCOUNTS_HOST } from '../providers/accounts-host.ts';
 import { ANTIGRAVITY_ACP_RELEASE } from '../providers/acp-providers.ts';
 import { AcpRegistry } from '../providers/acp-registry.ts';
 import { AcpServerInstall } from '../providers/acp-server.ts';
 import { anthropicClaudeApiService } from '../providers/anthropic-claude-api-provider.ts';
 import type { AnthropicClaudeApiService } from '../providers/anthropic-claude-api-service.ts';
 import { CliVersions, type OwnInstall } from '../providers/cli-versions.ts';
-import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { terminalExecutable } from '../providers/launch.ts';
 import { ModelCatalogFeed } from '../providers/model-catalogs.ts';
 import { nanoGptService } from '../providers/nanogpt-provider.ts';
@@ -19,6 +17,7 @@ import type { NanoGptService } from '../providers/nanogpt-service.ts';
 import { ProviderFeed } from '../providers/provider-feed.ts';
 import { RegistryAgents } from '../providers/registry-agents.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
+import type { DaemonSeams } from './seams.ts';
 
 /* The agent CLIs of this machine, their accounts and what a person allowed in their settings. */
 export interface ProvidersBundle {
@@ -47,7 +46,8 @@ export async function wireProviders(
     config: ServerConfig,
     identity: EndpointIdentity,
     alongside: () => Promise<void>,
-    fetched: () => void = () => undefined
+    fetched: () => void,
+    seams: Pick<DaemonSeams, 'providers' | 'accounts'>
 ): Promise<ProvidersBundle> {
     const nanogpt = nanoGptService;
     const claudeApi = anthropicClaudeApiService;
@@ -56,12 +56,16 @@ export async function wireProviders(
     const providers = new ProviderRegistry({
         antigravityServer,
         home: config.home,
+        ...(seams.providers.detect === null ? {} : { detect: seams.providers.detect }),
         onList: () => {
             void integrations.refreshInstalled();
             void modelCatalogs.refresh();
             fetched();
         }
     });
+    for (const provider of seams.providers.added) {
+        providers.add(provider);
+    }
     const modelCatalogs = new ModelCatalogFeed({
         home: config.home,
         allowFetch: config.modelFetch,
@@ -77,20 +81,19 @@ export async function wireProviders(
             Object.entries(accounts.snapshot().accounts)
                 .filter(([id, account]) => account.kind === kind && id !== kind && account.home !== undefined)
                 .map(([, account]) => account.home!),
-        installed: async (kind) => (await providers.get(kind).detect(terminalExecutable(kind), process.env)).installed
+        installed: async (kind) => {
+            const command = terminalExecutable(kind);
+            const detect = seams.providers.detect;
+
+            return (detect === null ? await providers.get(kind).detect(command, process.env) : await detect(command)).installed;
+        }
     });
     await Promise.all([integrations.load(), modelCatalogs.load(), alongside()]);
     void modelCatalogs.refresh();
     fetched();
     identity.attachAgentIntegrations({ describe: () => ({ agentIntegrations: integrations.summary() }) });
     // Before the managers, which start every CLI under the account its node or chat names.
-    const accounts = new ProviderAccountsService({
-        home: config.home,
-        host: RUIMTE_ACCOUNTS_HOST,
-        client: RUIMTE_CODEX_CLIENT,
-        providers,
-        install: (kind, folder) => integrations.installFolder(kind, folder)
-    });
+    const accounts = seams.accounts({ home: config.home, providers, install: (kind, folder) => integrations.installFolder(kind, folder) });
     await accounts.load();
     const servers: AgentServers = {
         of: (kind) => (kind === 'antigravity' ? antigravityServer : undefined),

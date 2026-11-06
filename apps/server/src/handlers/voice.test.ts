@@ -8,6 +8,7 @@ import { connectionOpener } from '../connection.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { VoiceKeyStore } from '../voice/key-store.ts';
+import { openAiLive } from '../voice/openai-live.ts';
 import { VoicePreferencesStore } from '../voice/preferences-store.ts';
 import type { ClientAccess, ClientConnection, ClientChannel } from '../wire.ts';
 import { wireVoice } from '../wiring/voice.ts';
@@ -104,7 +105,8 @@ describe('the voice requests', () => {
             machine: { id: 'machine-1', label: 'Studio' },
             canvasHost: {} as CanvasHost,
             actions: serverActions,
-            chats: { observe: () => () => undefined, get: () => undefined }
+            chats: { observe: () => () => undefined, get: () => undefined },
+            live: openAiLive()
         });
         const dispatcher = new Dispatcher();
         voiceArea(wired).handlers?.(dispatcher);
@@ -162,7 +164,8 @@ describe('the voice requests', () => {
                 machine: { id: 'machine-1', label: 'Studio' },
                 canvasHost: {} as CanvasHost,
                 actions: serverActions,
-                chats: { observe: () => () => undefined, get: () => undefined }
+                chats: { observe: () => () => undefined, get: () => undefined },
+                live: openAiLive()
             });
             expect(log).not.toHaveBeenCalled();
             const dispatcher = new Dispatcher();

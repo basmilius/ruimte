@@ -238,14 +238,14 @@ describe('agent --machine', () => {
         const first = ids.find((id) => running.has(id))!;
         settled.add(first);
         running.delete(first);
-        daemon.remoteTasks!.peerSettled(MACHINE, first);
+        daemon.remoteTasks.peerSettled(MACHINE, first);
         await daemon.worker.settled();
         expect(daemon.outbox.list().filter((entry) => entry.kind === 'start-remote-agent')).toHaveLength(1);
 
         const second = ids.find((id) => running.has(id) && id !== first)!;
         settled.add(second);
         running.delete(second);
-        daemon.remoteTasks!.peerSettled(MACHINE, second);
+        daemon.remoteTasks.peerSettled(MACHINE, second);
         await daemon.worker.settled();
         expect(daemon.outbox.list().filter((entry) => entry.kind === 'start-remote-agent')).toEqual([]);
         expect(daemon.tasks.ofParent('chat-lead').filter((task) => task.status === 'failed')).toEqual([]);
@@ -279,7 +279,7 @@ describe('agent --machine', () => {
         open = fakeLink();
         requests = [];
         answer = () => ({});
-        daemon.remoteTasks!.peerSettled(MACHINE, nodeId);
+        daemon.remoteTasks.peerSettled(MACHINE, nodeId);
         await Promise.resolve();
         expect(requests).toEqual([{ type: 'peer.result', payload: { nodeId, ack: true } }]);
     });
@@ -319,10 +319,10 @@ describe('agent --machine', () => {
             woken.push(target);
             wake(target);
         };
-        daemon.remoteTasks!.peerSettled(MACHINE, 'chat-lead');
-        daemon.remoteTasks!.peerSettled('machine-c', nodeId);
+        daemon.remoteTasks.peerSettled(MACHINE, 'chat-lead');
+        daemon.remoteTasks.peerSettled('machine-c', nodeId);
         expect(woken).toEqual([]);
-        daemon.remoteTasks!.peerSettled(MACHINE, nodeId);
+        daemon.remoteTasks.peerSettled(MACHINE, nodeId);
         expect(woken).toContain(nodeId);
     });
 
@@ -378,7 +378,7 @@ describe('agent --machine', () => {
         ).toEqual(['start-remote-agent', 'take-remote-result']);
         owed = [];
 
-        await daemon.remoteTasks!.giveUp(MACHINE);
+        await daemon.remoteTasks.giveUp(MACHINE);
         // With no link open they are let go, and neither asks for a reconnect.
         await daemon.worker.settled();
         expect(daemon.tasks.get(waitingTask)).toMatchObject({ status: 'failed', result: { text: expect.stringContaining('never started there') } });
@@ -400,7 +400,7 @@ describe('agent --machine', () => {
         const waitingTask = waiting!.split('\t')[5]!;
         await daemon.worker.settled();
 
-        await daemon.remoteTasks!.giveUp(MACHINE, 'it takes no statement from this machine');
+        await daemon.remoteTasks.giveUp(MACHINE, 'it takes no statement from this machine');
         await daemon.worker.settled();
         expect(daemon.tasks.get(waitingTask)).toMatchObject({
             status: 'failed',
@@ -434,7 +434,7 @@ describe('agent --machine', () => {
             ['start-remote-agent', waitingNode]
         ]);
 
-        await daemon.remoteTasks!.giveUp(MACHINE);
+        await daemon.remoteTasks.giveUp(MACHINE);
         await daemon.worker.settled();
         const stops = requests.filter((request) => request.type === 'peer.taskStop').map((request) => (request.payload as { nodeId: string }).nodeId);
         expect(stops.sort()).toEqual([startedNode, waitingNode].sort());
@@ -460,7 +460,7 @@ describe('agent --machine', () => {
         const start = holdStart();
         const [line] = await give();
         await start.asked;
-        await daemon.remoteTasks!.leave();
+        await daemon.remoteTasks.leave();
         open = null;
         start.end.resolve(STARTED);
         await daemon.worker.settled();
@@ -478,7 +478,7 @@ describe('agent --machine', () => {
         const start = holdStart();
         await give();
         await start.asked;
-        await daemon.remoteTasks!.leave();
+        await daemon.remoteTasks.leave();
         open = null;
         start.end.reject(new Error('The channel closed'));
         await daemon.worker.settled();
@@ -492,7 +492,7 @@ describe('agent --machine', () => {
         const start = holdStart();
         await give();
         await start.asked;
-        await daemon.remoteTasks!.leave();
+        await daemon.remoteTasks.leave();
         start.end.reject(new Error('peer-busy: This machine already runs 4 tasks for that machine'));
         await daemon.worker.settled();
 
@@ -516,7 +516,7 @@ describe('agent --machine', () => {
         };
         daemon.worker.wake(nodeId);
         await asked.promise;
-        await daemon.remoteTasks!.leave();
+        await daemon.remoteTasks.leave();
         open = null;
         report.resolve({ status: 'done', result: { text: 'Fixed', source: 'done', at: 1 }, bundle: null });
         await daemon.worker.settled();
@@ -539,7 +539,7 @@ describe('agent --machine', () => {
             return STILL_OPEN;
         };
         owed = [];
-        await daemon.remoteTasks!.giveUp(MACHINE);
+        await daemon.remoteTasks.giveUp(MACHINE);
         await daemon.worker.settled();
         expect(requests.some((request) => request.type === 'peer.taskStop')).toBe(true);
         expect(owed).toEqual([]);

@@ -10,6 +10,7 @@ import { provenanceChat } from '../provenance/chat-facts.ts';
 import { ProvenanceService } from '../provenance/provenance-service.ts';
 import type { AgentsBundle } from './agents.ts';
 import type { ProvidersBundle } from './providers.ts';
+import type { DaemonSeams } from './seams.ts';
 
 /* What the editor asks of the machine: the language servers, the editor model and who wrote which lines. */
 export interface LanguageBundle {
@@ -27,11 +28,24 @@ interface LanguageInput {
     sqlAnalysis: SqlAnalysis;
     agents: AgentsBundle;
     providers: ProvidersBundle;
+    seams: Pick<DaemonSeams, 'language' | 'git'>;
 }
 
-export async function wireLanguage({ home, compiled, machineHome, watches, projects, sqlAnalysis, agents, providers }: LanguageInput): Promise<LanguageBundle> {
+export async function wireLanguage({
+    home,
+    compiled,
+    machineHome,
+    watches,
+    projects,
+    sqlAnalysis,
+    agents,
+    providers,
+    seams
+}: LanguageInput): Promise<LanguageBundle> {
     const host = new LanguageHost({
         root: join(home, 'language-servers'),
+        run: seams.language.run,
+        findProgram: seams.language.findProgram,
         watch: { seams: watches },
         folderOf: (projectId) => projects.index.folderOf(projectId),
         holders: (projectId) => projects.holdersOf(projectId),
@@ -45,6 +59,7 @@ export async function wireLanguage({ home, compiled, machineHome, watches, proje
     const editorAssist = new EditorAssistModel({ home, registry: providers.providers, accounts: providers.accounts });
     const provenance = new ProvenanceService({
         home,
+        repositoryOf: seams.git.repositoryOf,
         locate: (chatId) => projects.index.locate(chatId),
         folderOf: (projectId) => projects.index.folderOf(projectId),
         holders: (projectId) => projects.holdersOf(projectId),

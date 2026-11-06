@@ -177,7 +177,6 @@ afterEach(async () => {
 });
 
 async function bootA(): Promise<TestDaemon> {
-    const git = { bundles: a.bundles, checkpoints: a.checkpoints, worktrees: a.worktrees };
     const daemon = await bootTestDaemon({
         home: a.home,
         store: a.store,
@@ -187,10 +186,11 @@ async function bootA(): Promise<TestDaemon> {
         remote: {
             machines: () => [{ machineId: B, label: 'Studio', remoteProjectId: b.projectId, ready: true }],
             connections: { link: () => link },
-            reconnect: { owe: async (machineId) => void reconnects.push(machineId) },
-            git: () => git
+            reconnect: { owe: async (machineId) => void reconnects.push(machineId) }
         }
     });
+    // The label names the remote the work comes back under, which the wiring reads from the project's links.
+    await a.store.remote.link(a.projectId, { machineId: B, label: 'Studio', remoteProjectId: b.projectId, rootCommit: '' });
     running.push(daemon);
     daemon.worker.start();
     daemonA = daemon;
@@ -198,7 +198,6 @@ async function bootA(): Promise<TestDaemon> {
 }
 
 async function bootB(claudeCli?: FakeCli): Promise<TestDaemon> {
-    const git = { bundles: b.bundles, checkpoints: b.checkpoints, worktrees: b.worktrees };
     const daemon = await bootTestDaemon({
         home: b.home,
         store: b.store,
@@ -207,8 +206,6 @@ async function bootB(claudeCli?: FakeCli): Promise<TestDaemon> {
         checkpoints: b.checkpoints,
         ...(claudeCli ? { claudeCli } : {}),
         peer: {
-            links: b.store.peers,
-            git: () => git,
             // The event goes over the link that is open; with none open the machine asks when it comes back.
             notify: (_machineId, nodeId) => link?.emit(JSON.stringify({ type: 'event', event: 'peer.taskSettled', payload: { nodeId } }))
         }
@@ -430,7 +427,7 @@ describe('a task given to another machine', () => {
                 .sort()
         ).toEqual(['start-remote-agent', 'take-remote-result']);
 
-        await daemonA.remoteTasks!.leave();
+        await daemonA.remoteTasks.leave();
         await daemonA.until(() => wakeTurns(daemonA).filter((turn) => turn.state === 'done').length === 2);
         await daemonA.worker.settled();
 
@@ -462,7 +459,7 @@ describe('a task given to another machine', () => {
         const given = await give('slow', 'Runs there');
         await reading.promise;
 
-        await daemonA.remoteTasks!.leave();
+        await daemonA.remoteTasks.leave();
         link = null;
         read.resolve();
         await daemonA.worker.settled();

@@ -24,18 +24,7 @@ beforeEach(async () => {
     store = new ProjectStore(join(root, 'home'), projectLinks(), projectOverlays(join(root, 'home')));
     projectId = (await store.openProject({ folder })).summary.projectId;
     await store.peers.bind(MACHINE, 'Studio', projectId);
-    daemon = await bootTestDaemon({
-        home: join(root, 'home'),
-        store,
-        clock: new ManualClock(),
-        peer: {
-            links: store.peers,
-            git: () => {
-                throw new Error('no git in this test');
-            },
-            notify: () => undefined
-        }
-    });
+    daemon = await bootTestDaemon({ home: join(root, 'home'), store, clock: new ManualClock() });
 });
 
 afterEach(async () => {
@@ -54,7 +43,7 @@ async function createChat(chatId: string): Promise<ServerFrame> {
 }
 
 test('a window cannot start the chat of a task another machine gave before the daemon did, so it never runs in the project folder', async () => {
-    await daemon.peerTasks!.start(MACHINE, 'channel-1', {
+    await daemon.peerTasks.start(MACHINE, 'channel-1', {
         projectId,
         nodeId: 'chat-given',
         parentId: 'chat-parent',

@@ -21,10 +21,11 @@ import { createTreeLauncher, SimulatorTreeReader } from '../devices/simulator-tr
 import type { MachineHome } from '../disk/machine-home.ts';
 import type { NodeLifecycle } from '../node-lifecycle.ts';
 import { LiveStreamHub } from '../streams/live-stream.ts';
-import { childLauncher, renderCommand, VisualRenderer } from '../visuals/renderer.ts';
+import { VisualRenderer } from '../visuals/renderer.ts';
 import type { DaemonBundles } from './bundles.ts';
 import type { Later } from './later.ts';
 import type { DaemonRuntime } from './runtime.ts';
+import type { DaemonSeams } from './seams.ts';
 
 /* What lets agents operate this machine's apps; made before the providers, since its helper starts beside their files. */
 export function createComputer(
@@ -81,14 +82,20 @@ export interface DevicesBundle {
     deviceDriver: DeviceDriver;
 }
 
-export function wireDevices(runtime: DaemonRuntime, computer: ComputerUse, lifecycle: NodeLifecycle, machineHome: MachineHome): DevicesBundle {
+export function wireDevices(
+    runtime: DaemonRuntime,
+    computer: ComputerUse,
+    lifecycle: NodeLifecycle,
+    machineHome: MachineHome,
+    seams: Pick<DaemonSeams, 'visualLauncher'>
+): DevicesBundle {
     const { config, compiled, sourceDir } = runtime;
     const liveStreams = new LiveStreamHub();
     const browsers = BrowserManager.withBun(config.home, liveStreams);
     const browserPages = new BrowserPages();
     const browserDriver = new BrowserDriver(config.home, browsers, browserPages);
     const deviceHelperCommand = compiled ? [process.execPath, 'device-helper'] : [process.execPath, resolve(sourceDir, 'main.ts'), 'device-helper'];
-    const visualRenderer = new VisualRenderer(childLauncher(renderCommand(compiled, process.execPath, process.execArgv, sourceDir)));
+    const visualRenderer = new VisualRenderer(seams.visualLauncher);
     const deviceBridge = physicalStreamHelperPath(compiled, process.execPath, resolve(sourceDir, '../..'));
     const physicalStreamSource = createPhysicalStreamSourceFactory(deviceBridge);
     const treeLauncher = createTreeLauncher(deviceBridge);

@@ -12,10 +12,11 @@ import { readStatusAt } from '../git/status.ts';
 import { worktreeAgents } from '../git/worktree-agents.ts';
 import { checkoutHost, type CheckoutHost } from '../git/worktree-host.ts';
 import { WorktreeMerge } from '../git/worktree-merge.ts';
-import { Worktrees } from '../git/worktrees.ts';
+import type { Worktrees } from '../git/worktrees.ts';
 import type { PeerLinks } from '../projects/peer-links.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
 import type { AgentsBundle } from './agents.ts';
+import type { DaemonSeams } from './seams.ts';
 
 /* The folders of projects as files and as checkouts. */
 export interface GitBundle {
@@ -37,21 +38,33 @@ export function wireGit(
     machineHome: MachineHome,
     agents: AgentsBundle,
     work: AgentWorkBundle,
-    peers: PeerLinks
+    peers: PeerLinks,
+    seams: Pick<DaemonSeams, 'clock' | 'git'>
 ): GitBundle {
     const watches = new SharedWatch();
     watches.onBurst(forgetSearchCache);
     watches.onBurst(forgetRepos);
     const folders = new FolderWatcher(process.platform, watches);
-    const statuses = new GitStatusWatcher(process.platform, watches, Date.now, (root) => readStatusAt(root, (top) => machineHome.stateWithin(top)));
+    const statuses = new GitStatusWatcher(
+        process.platform,
+        watches,
+        () => seams.clock.now(),
+        (root) => readStatusAt(root, (top) => machineHome.stateWithin(top))
+    );
     const agentsInWorktrees = worktreeAgents({
         chats: () => agents.chats.list(),
         sessions: () => agents.sessions.list(),
         stopNode: (nodeId, reason) => work.endChildren.stopNode(nodeId, reason)
     });
-    const worktrees = new Worktrees(home, agentsInWorktrees, Date.now, () => identity.worktreeRoot, {
-        branches: () => peers.peerBranches(),
-        untrust: (path, branch) => peers.untrustFolder(path, branch)
+    const worktrees = seams.git.worktrees({
+        home,
+        agents: agentsInWorktrees,
+        now: () => seams.clock.now(),
+        checkoutRoot: () => identity.worktreeRoot,
+        foreign: {
+            branches: () => peers.peerBranches(),
+            untrust: (path, branch) => peers.untrustFolder(path, branch)
+        }
     });
     const merges = new WorktreeMerge(worktrees, agentsInWorktrees);
     const bundles = new BundleStore(home);

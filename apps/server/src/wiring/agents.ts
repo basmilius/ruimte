@@ -1,5 +1,5 @@
-import { AttachmentStore, BookmarkStore, ChatStore, ClaudeTitleReader, VisualStore, suggestChatTitle } from '@adecore/agents/chat';
-import { AgentLineageStore, NoticeNotes, NoticeStore, TaskStore, restartBackgroundLimits, unshownNotes } from '@adecore/agents/coordination';
+import { AttachmentStore, BookmarkStore, ChatStore, ClaudeTitleReader, VisualStore } from '@adecore/agents/chat';
+import { AgentLineageStore, NoticeNotes, NoticeStore, TaskStore, restartBackgroundLimits, unshownNotes, type Clock } from '@adecore/agents/coordination';
 import { AgentStore } from '../agents/agent-store.ts';
 import { CodexTitleReader } from '../agents/codex-title.ts';
 import type { Area } from '../area.ts';
@@ -17,7 +17,7 @@ import { openedChildSource } from '../context/opened-child.ts';
 import { hasDatabaseConnections } from '../database/connection-store.ts';
 import type { MachineHome } from '../disk/machine-home.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
-import { Checkpoints } from '../git/checkpoints.ts';
+import type { Checkpoints } from '../git/checkpoints.ts';
 import { readLog } from '../git/log.ts';
 import { NodeLifecycle } from '../node-lifecycle.ts';
 import { OutboxStore } from '../outbox/outbox.ts';
@@ -29,7 +29,6 @@ import { projectAccountChooser } from '../projects/project-accounts.ts';
 import { ProjectProposals } from '../projects/project-proposals.ts';
 import { referenced } from '../projects/references.ts';
 import { UntrustedFolders } from '../projects/untrusted.ts';
-import { BunPtyAdapter } from '../pty/bun-pty.ts';
 import { personShell } from '../pty/pty.ts';
 import { routineReport } from '../routines/routine-report.ts';
 import { CommandApprovals } from '../sessions/command-approvals.ts';
@@ -51,6 +50,7 @@ import type { ProjectsBundle } from './projects.ts';
 import type { ProvidersBundle } from './providers.ts';
 import type { RoutinesBundle } from './routines.ts';
 import type { DaemonRuntime } from './runtime.ts';
+import type { DaemonSeams } from './seams.ts';
 import type { UsageBundle } from './usage.ts';
 
 const CHAT_UNLOAD_AFTER_MS = 10 * 60_000;
@@ -73,13 +73,13 @@ export interface AgentStores {
     chatMoves: MoveJournal;
 }
 
-export async function loadAgentStores(home: string): Promise<AgentStores> {
+export async function loadAgentStores(home: string, clock: Clock): Promise<AgentStores> {
     // Loaded before anything can take from them, so a restart keeps a node's first prompt, the count of
     // agents an agent opened, a waiting message, an owed start, a task's wake, an approval and a chat move.
     const snapshots = new SnapshotStore(home);
     const prompts = new PendingPromptStore(home);
     const lineage = new AgentLineageStore(home);
-    const notices = new NoticeStore(home);
+    const notices = new NoticeStore(home, () => clock.now());
     const outbox = new OutboxStore(home);
     const tasks = new TaskStore(home);
     const commandApprovals = new CommandApprovals(home);
@@ -93,8 +93,8 @@ export async function loadAgentStores(home: string): Promise<AgentStores> {
         lineage.load(),
         notices.load(),
         outbox.load().then(async () => {
-            await restartBackgroundLimits(outbox, Date.now());
-            await restartConnectPeers(outbox, Date.now());
+            await restartBackgroundLimits(outbox, clock.now());
+            await restartConnectPeers(outbox, clock.now());
         }),
         tasks.load(),
         commandApprovals.load(),
@@ -140,6 +140,7 @@ interface AgentsInput {
     machineHome: MachineHome;
     /* Runs beside boot; only Codex terminal commands need its result. */
     codexProbe: Promise<void>;
+    seams: Pick<DaemonSeams, 'clock' | 'env' | 'pty' | 'chatSpawn' | 'git' | 'nameChat' | 'observers'>;
     later: AgentsLater;
 }
 
@@ -169,8 +170,19 @@ export interface AgentsBundle {
     messagesFor(targetId: string): string[];
 }
 
-export async function wireAgents({ runtime, identity, stores, providers, computer, machineHome, codexProbe, later }: AgentsInput): Promise<AgentsBundle> {
+export async function wireAgents({
+    runtime,
+    identity,
+    stores,
+    providers,
+    computer,
+    machineHome,
+    codexProbe,
+    seams,
+    later
+}: AgentsInput): Promise<AgentsBundle> {
     const { config } = runtime;
+    const { clock } = seams;
     const { snapshots, prompts, lineage, notices, outbox, tasks, commandApprovals, modeApprovals } = stores;
     const index = () => later.projects().store.index;
     const folderOf = (nodeId: string): string | null => index().locate(nodeId)?.folder ?? null;
@@ -179,7 +191,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         accountsOf: (projectId) => index().accountsOf(projectId),
         providerAccounts: providers.accounts,
         limits: () => later.usage().limits.snapshot(),
-        now: () => Date.now()
+        now: () => clock.now()
     });
     const bounds = agentBounds({
         commandApprovals,
@@ -202,7 +214,8 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
     // One reader for chats and terminals, so a transcript both look at is only read on from where either stopped.
     const claudeTitles = new ClaudeTitleReader();
     const sessions = new SessionManager({
-        adapter: new BunPtyAdapter(),
+        adapter: seams.pty,
+        env: seams.env,
         personShell: () => personShell(identity.terminalShell),
         shellEnvironment: stores.shellEnvironment,
         snapshots,
@@ -248,7 +261,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         // A chat no window read for a while is out of memory, so its record answers; reading it starts no CLI.
         chatItems: async (chatId) => chats.get(chatId)?.thread.list() ?? (await chats.readChat(chatId))?.items ?? null,
         chatInfo: async (chatId) => chats.get(chatId)?.info ?? (await chats.readChat(chatId))?.info ?? null,
-        now: Date.now,
+        now: () => clock.now(),
         browserPage: (browserId) => later.devices().browserDriver.read(browserId),
         devices: () => later.devices().devices.list(),
         chatPlans: (chatId) => plans.read(chatId),
@@ -268,10 +281,15 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             return project ? routineReport(later.routines().routines, project, routineId) : null;
         }
     });
-    const outboxLink = new OutboxLink({ outbox, projectOf: (id) => index().locate(id)?.projectId ?? null, clock: wakefulClock() });
+    const outboxLink = new OutboxLink({
+        outbox,
+        projectOf: (id) => index().locate(id)?.projectId ?? null,
+        clock: wakefulClock(clock),
+        observers: seams.observers
+    });
     const attachments = new AttachmentStore(config.home);
-    const checkpoints = new Checkpoints(config.home, machineHome);
-    const plans = new PlanStore(config.home);
+    const checkpoints = seams.git.checkpoints(config.home, machineHome);
+    const plans = new PlanStore(config.home, { now: () => clock.now() });
     const bookmarks = new BookmarkStore(config.home);
     const visuals = new VisualStore(config.home, attachments);
     // A microtask: a queue is taken in the middle of building a prompt, which a thread write must not cut into.
@@ -305,6 +323,8 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         attachments,
         checkpoints,
         contextUrl: runtime.contextUrl,
+        spawn: seams.chatSpawn,
+        env: seams.env,
         depthOf: (chatId) => lineage.depthOf(chatId),
         computer: () => computer.usable,
         reachOpenProjects: () => identity.reachOpenProjects,
@@ -341,10 +361,13 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         unshownMessages: (chatId) => unshownNotes(notices, chatId, MESSAGE_WORDS),
         firstPrompt: (chatId) => prompts.take(chatId),
         // A turn reports what is left of its plan in passing; that belongs to the machine's numbers.
-        onLimits: (update) => later.usage().limits.applyLive(update),
+        onLimits: (update) => {
+            seams.observers.limits(update);
+            later.usage().limits.applyLive(update);
+        },
         claudeTitles,
         // One one-shot call per Codex chat, on whichever CLI here answers a single prompt.
-        nameChat: async (provider, input) => suggestChatTitle(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) }),
+        nameChat: async (provider, input) => seams.nameChat(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) }),
         onInterruptedRun: outboxLink.onInterruptedRun,
         taskRows: (chatId) => tasks.ofParent(chatId),
         dropWakes: (chatId) => tasks.dropWake(chatId),
@@ -355,7 +378,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         visuals,
         limitResume: {
             allowed: () => identity.resumeAtReset,
-            now: () => Date.now(),
+            now: () => clock.now(),
             owe: (chatId, turnId, at) => outboxLink.oweLimitResume(chatId, turnId, at),
             lapse: (chatId) => outboxLink.lapseLimitResume(chatId),
             owed: (chatId) => outboxLink.owesLimitResume(chatId)

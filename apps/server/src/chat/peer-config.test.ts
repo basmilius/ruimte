@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import { projectOverlays } from '../projects/overlays.ts';
-import { PeerLinks } from '../projects/peer-links.ts';
+import type { PeerLinks } from '../projects/peer-links.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, invokeTool, turnsOf, type TestDaemon } from '../testing/test-daemon.ts';
@@ -28,21 +28,8 @@ beforeEach(async () => {
         color: '#123456',
         views: [{ kind: 'chat', id: 'chat-lead', name: 'Lead', node: { provider: 'claude' } }]
     });
-    links = new PeerLinks(join(root, 'home'));
-    await links.load();
-    daemon = await bootTestDaemon({
-        home: join(root, 'home'),
-        store,
-        clock: new ManualClock(),
-        installed: ['claude', 'codex'],
-        peer: {
-            links,
-            git: () => {
-                throw new Error('no git in this test');
-            },
-            notify: () => undefined
-        }
-    });
+    links = store.peers;
+    daemon = await bootTestDaemon({ home: join(root, 'home'), store, clock: new ManualClock(), installed: ['claude', 'codex'] });
     daemon.worker.start();
 });
 
@@ -67,12 +54,17 @@ describe('the configuration a chat CLI loads from its folder', () => {
 
     test('a chat that another machine gave its task never loads what the files it sent carry', async () => {
         await daemon.lineage.put({
-            projectId: 'p',
+            projectId,
             nodeId: 'chat-peer',
             openedBy: 'peer:machine-a:parent',
             depth: 1,
             agent: true,
             peer: { machineId: 'machine-a' }
+        });
+        await store.hiddenAgents.put({
+            projectId,
+            openedBy: 'peer:machine-a:parent',
+            node: { id: 'chat-peer', kind: 'chat', title: 'Peer', x: 0, y: 0, w: 480, h: 560 }
         });
         await daemon.chats.create({ chatId: 'chat-peer', provider: 'claude', cwd: folder });
         await say('chat-peer');

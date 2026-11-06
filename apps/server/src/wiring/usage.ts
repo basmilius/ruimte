@@ -9,6 +9,7 @@ import { followPlan } from '../usage/nanogpt-live.ts';
 import { sessionAccountsOf } from '../usage/session-accounts.ts';
 import type { AgentsBundle } from './agents.ts';
 import type { ProvidersBundle } from './providers.ts';
+import type { DaemonSeams } from './seams.ts';
 
 /* What the agents of this machine spent, and what their plans have left. */
 export interface UsageBundle {
@@ -16,7 +17,13 @@ export interface UsageBundle {
     limits: UsageMonitor;
 }
 
-export function wireUsage(config: ServerConfig, providers: ProvidersBundle, agents: AgentsBundle, projects: ProjectStore): UsageBundle {
+export function wireUsage(
+    config: ServerConfig,
+    providers: ProvidersBundle,
+    agents: AgentsBundle,
+    projects: ProjectStore,
+    seams: Pick<DaemonSeams, 'clock' | 'usage'>
+): UsageBundle {
     const { sessions, chats } = agents;
     const usage = new UsageService({
         home: config.home,
@@ -44,6 +51,8 @@ export function wireUsage(config: ServerConfig, providers: ProvidersBundle, agen
         providers: providers.providers,
         accounts: limitAccounts,
         client: RUIMTE_CODEX_CLIENT,
+        now: () => seams.clock.now(),
+        ...(seams.usage.probe === null ? {} : { probe: seams.usage.probe }),
         plans: {
             nanogpt: () => providers.nanogpt.readPlan(),
             grok: async (account) => {

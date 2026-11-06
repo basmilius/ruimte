@@ -14,7 +14,6 @@ import type { Task } from '@ruimte/contracts';
 import type { PendingPromptStore } from '../canvas/pending-prompts.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { MESSAGE_WORDS } from '../context/notices.ts';
-import { errorText } from '../error-text.ts';
 import type { NodeLifecycle } from '../node-lifecycle.ts';
 import { wireEndChildren, type EndChildrenWiring } from '../outbox/end-children.ts';
 import { OUTBOX_KIND_NAMES, outboxRetries } from '../outbox/kinds/index.ts';
@@ -25,14 +24,14 @@ import { placesOf } from '../projects/project-index.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { SessionManager } from '../sessions/manager.ts';
 import { wireTasks, type TaskWiring } from '../tasks/wiring.ts';
+import type { WiringObservers } from './seams.ts';
 
 interface OutboxLinkOptions {
     outbox: OutboxStore;
     /* The project a chat lives in, read when a run is owed a resume and not before. */
     projectOf(chatId: string): string | null;
-    clock?: Clock;
-    /* Run after every entry is on disk, for a test that waits on the outbox. */
-    onEnqueued?: (work: OutboxWork) => void;
+    clock: Clock;
+    observers: Pick<WiringObservers, 'enqueued'>;
 }
 
 /*
@@ -44,7 +43,7 @@ export class OutboxLink {
     readonly worker: OutboxWorker<OutboxWork>;
     /* What the chat manager reports an interrupted run to. */
     readonly onInterruptedRun: ReturnType<typeof oweResume>;
-    private readonly onEnqueued: ((work: OutboxWork) => void) | null;
+    private readonly observers: Pick<WiringObservers, 'enqueued'>;
     private readonly outbox: OutboxStore;
     private readonly projectOf: (chatId: string) => string | null;
 
@@ -53,9 +52,9 @@ export class OutboxLink {
             store: options.outbox,
             kinds: OUTBOX_KIND_NAMES,
             retries: outboxRetries(),
-            ...(options.clock ? { clock: options.clock } : {})
+            clock: options.clock
         });
-        this.onEnqueued = options.onEnqueued ?? null;
+        this.observers = options.observers;
         this.outbox = options.outbox;
         this.projectOf = options.projectOf;
         this.onInterruptedRun = oweResume({
@@ -67,7 +66,7 @@ export class OutboxLink {
 
     async enqueue(projectId: string, target: string, work: OutboxWork, notBefore?: number): Promise<void> {
         await this.worker.enqueue(projectId, target, work, notBefore);
-        this.onEnqueued?.(work);
+        this.observers.enqueued(work);
     }
 
     wake(chatId: string): void {
@@ -109,18 +108,14 @@ interface OutboxWiringDeps {
     chats: ChatManager;
     sessions: SessionManager;
     lifecycle: NodeLifecycle;
-    /* Raises attention on a node; the daemon pushes, a test only writes down that it happened. */
+    /* Raises attention on a node. */
     alert(target: 'chat' | 'terminal', nodeId: string, title: string, body: string): void;
-    now?: () => number;
-    log?: (line: string) => void;
+    now(): number;
+    observers: Pick<WiringObservers, 'dropped' | 'failed' | 'log'>;
     /* Refuses a directory an agent node may not start in, the same check the managers make. */
-    checkCwd?: (nodeId: string, cwd: string) => Promise<void>;
-    /* The machine's switch for taking a limited chat up again on a clock; off without it. */
-    resumeAtReset?: () => boolean;
-    /* Every unused fork a deleted node took along, for a caller that waits on them. */
-    onDropped?: (drop: Promise<void>) => void;
-    /* What a prune that failed does; the daemon logs it, a test stays quiet. */
-    onFailed?: (what: string, error: unknown) => void;
+    checkCwd(nodeId: string, cwd: string): Promise<void>;
+    /* The machine's switch for taking a limited chat up again on a clock. */
+    resumeAtReset(): boolean;
     /*
      * Whether another machine gave this task (`peer/worker/peer-tasks.ts`). Its parent is no chat here, so
      * nothing wakes it, and its result is owed to that machine.
@@ -140,7 +135,7 @@ interface OutboxWiring {
 }
 
 /*
- * What the outbox drives for the chats and tasks, wired once for the daemon and the test daemon both.
+ * What the outbox drives for the chats and tasks.
  * The kinds of work the other features owe are handled where those are wired.
  */
 export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
@@ -159,14 +154,8 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
             .ofProject(projectId)
             .map((task) => task.parentId)
             .filter((parentId) => placedElsewhere(parentId, projectId));
-    const now = deps.now ?? Date.now;
-    const failed = (what: string, error: unknown): void => {
-        if (deps.onFailed) {
-            deps.onFailed(what, error);
-            return;
-        }
-        console.error(`${what}:`, errorText(error));
-    };
+    const { now, observers } = deps;
+    const failed = (what: string, error: unknown): void => observers.failed(what, error);
 
     const taskWiring = wireTasks({
         tasks,
@@ -180,9 +169,8 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
         alert: (target, nodeId, title, body) => deps.alert(target, nodeId, title, body),
         wake: (chatId) => link.wake(chatId),
         // The same answer the chat itself gives as its turn ends, so a task pauses exactly while a retry is owed.
-        retryAt: (chatId, turn, items) =>
-            deps.resumeAtReset?.() === true && chats.get(chatId)?.info.resumeAtReset !== false ? limitResumeAt(items, turn, now()) : null,
-        ...(deps.now ? { now: deps.now } : {})
+        retryAt: (chatId, turn, items) => (deps.resumeAtReset() && chats.get(chatId)?.info.resumeAtReset !== false ? limitResumeAt(items, turn, now()) : null),
+        now
     });
 
     lifecycle.on('exited', (sessionId) => taskWiring.terminals.ended(sessionId));
@@ -203,8 +191,8 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
                 await projects.hiddenAgents.pruneOrphans(projectId, new Set(placesOf(projects.index.viewsOf(projectId) ?? []).keys()));
             }
         },
-        ...(deps.now ? { now: deps.now } : {}),
-        ...(deps.log ? { log: deps.log } : {})
+        now,
+        log: observers.log
     });
     lifecycle.on('closed', (nodeId) => endChildren.owe(nodeId).then(() => undefined));
     lifecycle.on('placed', (projectId, ids) => endChildren.places(projectId, ids));
@@ -233,7 +221,7 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
             hasSession: (sessionId) => sessions.get(sessionId) !== undefined,
             createSession: (options) => sessions.create(options),
             killSession: (sessionId) => sessions.kill(sessionId),
-            ...(deps.checkCwd ? { checkCwd: deps.checkCwd } : {})
+            checkCwd: deps.checkCwd
         })
     );
     worker.handle('resume-run', resumeRunHandler(chats));
@@ -255,12 +243,7 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
     lifecycle.on('placed', (projectId, ids) => {
         void prompts.pruneLeftNodes(projectId, ids).catch((e) => failed('Pruning pending prompts failed', e));
         for (const forkId of lineage.forksLeaving(projectId, ids)) {
-            const drop = chats.dropUnspokenFork(forkId);
-            if (deps.onDropped) {
-                deps.onDropped(drop);
-            } else {
-                void drop.catch((e) => failed('Removing an unused fork failed', e));
-            }
+            observers.dropped(chats.dropUnspokenFork(forkId));
         }
         void lineage.prune(projectId, ids).catch((e) => failed('Pruning agent lineage failed', e));
         void notices.prune(projectId, ids).catch((e) => failed('Pruning waiting messages failed', e));

@@ -1,82 +1,37 @@
 import { mkdir, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { AttachmentStore, ChatStore, VisualStore, chatOpener } from '@adecore/agents/chat';
-import { chatRequests, AgentLineageStore, NoticeNotes, NoticeStore, restartBackgroundLimits, TaskStore } from '@adecore/agents/coordination';
-import type { OutboxWorker } from '@adecore/agents/coordination';
-import type { AccountLaunches, ChatProvider, ProviderAccountsService } from '@adecore/agents/providers';
-import { fakeClaude, fakeCodex, inProcess, type FakeCli, type InProcessCli } from '@adecore/agents/testing';
-import type { ManualClock } from '@adecore/agents/testing';
-import type { LimitsUpdate } from '@adecore/agents/usage';
-import { NODE_SIZE, type AgentKind, type ChatItem, type ChatTurnItem, type ProjectContent, type ServerFrame } from '@ruimte/contracts';
-import { chatAccess } from '../agent-features/voice.ts';
+import type { VisualStore } from '@adecore/agents/chat';
+import type { AgentLineageStore, NoticeStore, OutboxWorker, TaskStore } from '@adecore/agents/coordination';
+import type { ChatProvider, ProviderAccountsService } from '@adecore/agents/providers';
+import type { FakeCli, InProcessCli, ManualClock } from '@adecore/agents/testing';
+import type { AgentKind, ChatItem, ChatTurnItem, ProjectContent, ServerFrame } from '@ruimte/contracts';
 import type { CanvasHost } from '../canvas/host.ts';
-import { PendingPromptStore } from '../canvas/pending-prompts.ts';
-import { StartClaims } from '../canvas/start-claims.ts';
-import { ChatManager } from '../chat/chat-manager.ts';
-import { continueOn } from '../chat/continue-on.ts';
-import { chatForkDeps, forkChat, forkForAgent, readForkInfo, readHandoff } from '../chat/fork.ts';
-import { MESSAGE_WORDS } from '../context/notices.ts';
-import { Dispatcher } from '../dispatcher.ts';
-import { BundleStore } from '../git/bundles.ts';
-import { Checkpoints, type CheckpointService } from '../git/checkpoints.ts';
+import type { PendingPromptStore } from '../canvas/pending-prompts.ts';
+import type { ChatManager } from '../chat/chat-manager.ts';
+import type { Dispatcher } from '../dispatcher.ts';
+import type { CheckpointService } from '../git/checkpoints.ts';
 import type { GhRunner } from '../git/github.ts';
-import { worktreeAgents } from '../git/worktree-agents.ts';
-import { checkoutHost, worktreeHost } from '../git/worktree-host.ts';
-import { WorktreeMerge } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
-import { PrWatchStore, prWatchHandler } from '../github/pr-watch.ts';
-import { chatArea } from '../handlers/chat.ts';
-import { planArea } from '../handlers/plan.ts';
-import { sessionArea } from '../handlers/session.ts';
-import { tasksArea } from '../handlers/tasks.ts';
-import { NodeLifecycle } from '../node-lifecycle.ts';
+import type { PrWatchStore } from '../github/pr-watch.ts';
 import type { EndChildrenWiring } from '../outbox/end-children.ts';
-import { OutboxStore, type OutboxWork } from '../outbox/outbox.ts';
-import { agentChatOpening, agentStartHost } from '../outbox/start-agent.ts';
-import { RemoteTasks, type RemoteTasksDeps } from '../peer/giver/remote-tasks.ts';
-import { peerTasksArea } from '../peer/worker/area-tasks.ts';
-import { PeerTasks, type PeerTasksDeps } from '../peer/worker/peer-tasks.ts';
-import { isPlanFileName, PlanStore } from '../plans/plan-store.ts';
+import type { OutboxStore, OutboxWork } from '../outbox/outbox.ts';
+import type { RemoteTasks, RemoteTasksDeps } from '../peer/giver/remote-tasks.ts';
+import type { PeerTasks } from '../peer/worker/peer-tasks.ts';
+import type { PlanStore } from '../plans/plan-store.ts';
 import { projectOverlays } from '../projects/overlays.ts';
-import type { PeerLinks } from '../projects/peer-links.ts';
-import { projectAccountChooser } from '../projects/project-accounts.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { UntrustedFolders } from '../projects/untrusted.ts';
-import { ProviderRegistry } from '../providers/registry.ts';
-import { FakePtyAdapter } from '../pty/fake-pty.ts';
+import type { FakePtyAdapter } from '../pty/fake-pty.ts';
 import type { PtyAdapter } from '../pty/pty.ts';
-import { SessionManager } from '../sessions/manager.ts';
-import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
-import { TEST_GIT_BASH } from '../sessions/test-helpers.ts';
+import type { SessionManager } from '../sessions/manager.ts';
 import type { TaskWiring } from '../tasks/wiring.ts';
 import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
-import { untilChecked } from '../until-test-helpers.ts';
-import { agentVisuals, type VisualHost } from '../visuals/agent-host.ts';
-import { agentMessages } from '../wiring/agent-messages.ts';
-import { agentStates, openedAgentCount } from '../wiring/agent-state.ts';
-import { OutboxLink, wireOutbox } from '../wiring/outbox.ts';
+import type { VisualHost } from '../visuals/agent-host.ts';
+import { wireDaemon } from '../wiring/daemon.ts';
+import { testRuntime, testSeams, type TestSeams } from './test-seams.ts';
 
-const detect = async () => ({ installed: true, version: '0.0.0' });
-const sharedProviders = new ProviderRegistry({ detect });
-
-/* The built-in providers with the ones a test brings in place of those of the same kind, in a registry of this daemon alone. */
-function registryWith(replacements: readonly ChatProvider[]): ProviderRegistry {
-    if (replacements.length === 0) {
-        return sharedProviders;
-    }
-
-    const registry = new ProviderRegistry({ detect });
-
-    for (const provider of replacements) {
-        registry.add(provider);
-    }
-
-    return registry;
-}
-
-/* One run of the daemon over a home, wired the way `daemon.ts` wires it, with fakes where a process would be. */
+/* One run of the daemon over a home, wired by `wireDaemon` with the seams of `test-seams.ts` where a process or the outside world would be. */
 export interface TestDaemon {
     tasks: TaskStore;
     notices: NoticeStore;
@@ -100,10 +55,10 @@ export interface TestDaemon {
     chatCommands: string[][];
     wiring: TaskWiring;
     endChildren: EndChildrenWiring;
-    /* The tasks other machines gave, when the daemon takes any. */
-    peerTasks: PeerTasks | null;
-    /* The tasks this machine gave other machines, when it gives any. */
-    remoteTasks: RemoteTasks | null;
+    /* The tasks other machines gave. */
+    peerTasks: PeerTasks;
+    /* The tasks this machine gave other machines. */
+    remoteTasks: RemoteTasks;
     host: CanvasHost;
     alerts: string[];
     /* Every piece of work owed since boot, kept after the worker took it off the outbox. */
@@ -114,6 +69,8 @@ export interface TestDaemon {
     pruned(): Promise<void>;
     /* Resolves once `check` holds, looked at again on every event and every task written. */
     until(check: () => boolean): Promise<void>;
+    /* Flips switches of the machine, as a person does in its settings. */
+    setSwitches(flags: { resumeAtReset?: boolean; visualReplies?: boolean }): Promise<void>;
     stop(): Promise<void>;
 }
 
@@ -134,12 +91,12 @@ interface TestDaemonOptions {
     codexCli?: FakeCli;
     /* The machine's switches a test flips; resuming after a limit is off and visual replies on, as on a fresh machine. */
     machine?: { resumeAtReset: boolean; visualReplies?: boolean };
-    /* The accounts of the CLIs; without them every CLI has only its default account. A project's choice of accounts needs their snapshot. */
-    accounts?: AccountLaunches & Partial<Pick<ProviderAccountsService, 'snapshot'>>;
+    /* The accounts of the CLIs; without them every CLI has only its default account. */
+    accounts?: ProviderAccountsService;
     /* The environment every CLI starts from. */
     env?: Record<string, string | undefined>;
     /* What a running turn says about the plan of its account. */
-    onLimits?: (update: LimitsUpdate) => void;
+    onLimits?: (update: Parameters<TestSeams['observers']['limits']>[0]) => void;
     /* How pages are previewed and measured; without it a preview is refused and a page shown without heights. */
     visualRender?: Pick<VisualHost, 'preview' | 'measure'>;
     /* What `gh` answers a pull request watch; without it every call fails. */
@@ -149,402 +106,113 @@ interface TestDaemonOptions {
         machines: NonNullable<CanvasHost['remote']>['machines'];
         connections: RemoteTasksDeps['connections'];
         reconnect: RemoteTasksDeps['reconnect'];
-        git?: RemoteTasksDeps['git'];
-        folderOf?: RemoteTasksDeps['folderOf'];
     };
-    /* This machine as the one other machines work in: the links they have here, its git, and how it tells one that a task settled. */
+    /* How this machine, working for another, tells it that a task settled. */
     peer?: {
-        links: PeerLinks;
-        git: PeerTasksDeps['git'];
-        notify: PeerTasksDeps['notify'];
+        notify: (machineId: string, nodeId: string) => void;
     };
     /* Providers in place of the built-ins of their kind, such as the Claude API on a service of the test's own. */
     providers?: readonly ChatProvider[];
 }
 
-export async function bootTestDaemon({
-    home,
-    store,
-    clock,
-    ptyAdapter,
-    checkpoints,
-    worktrees,
-    installed = ['claude'],
-    claudeCli = fakeClaude,
-    codexCli = fakeCodex,
-    machine = { resumeAtReset: false },
-    accounts,
-    env = { PATH: process.env.PATH, HOME: home },
-    onLimits,
-    visualRender = {},
-    gh = () => Promise.resolve({ code: 1, stdout: '', stderr: 'no gh in this test' }),
-    remote,
-    peer,
-    providers: replacements = []
-}: TestDaemonOptions): Promise<TestDaemon> {
-    const providers = registryWith(replacements);
-    await store.hiddenAgents.load();
-    const projectAccount = projectAccountChooser({
-        projectOf: (id) => store.index.locate(id)?.projectId ?? null,
-        accountsOf: (projectId) => store.index.accountsOf(projectId),
-        providerAccounts: { snapshot: () => accounts?.snapshot?.() ?? { accounts: {}, statuses: [] } },
-        limits: () => null,
-        now: () => clock.now()
-    });
-    const prompts = new PendingPromptStore(home);
-    await prompts.load();
-    const lineage = new AgentLineageStore(home);
-    await lineage.load();
-    const outbox = new OutboxStore(home);
-    await outbox.load();
-    await restartBackgroundLimits(outbox, clock.now());
-    const tasks = new TaskStore(home);
-    await tasks.load();
-    const notices = new NoticeStore(home, () => clock.now());
-    await notices.load();
-    const adapter = new FakePtyAdapter();
-    const claude = inProcess(claudeCli);
-    const codex = inProcess(codexCli);
-    const sessions = new SessionManager({
-        ...OPEN_BOUNDS,
-        personShell: () => 'bash',
-        adapter: ptyAdapter ?? adapter,
-        env,
-        firstPrompt: async (id) => (await prompts.take(id))?.prompt ?? null,
-        modeCeiling: (sessionId) => lineage.ceilingOf(sessionId),
-        ...(accounts ? { accounts } : {}),
-        openingAccount: (sessionId, kind, named) => projectAccount(sessionId, kind, named)?.account ?? named ?? accounts?.defaultFor?.(kind),
-        findGitBash: () => TEST_GIT_BASH
-    });
-    const attachments = new AttachmentStore(home);
-    const drops: Promise<void>[] = [];
-    const enqueued: OutboxWork[] = [];
-    const lifecycle = new NodeLifecycle();
-    const outboxLink = new OutboxLink({
-        outbox,
+export async function bootTestDaemon(options: TestDaemonOptions): Promise<TestDaemon> {
+    const {
+        home,
+        store,
         clock,
-        projectOf: (chatId) => store.index.locate(chatId)?.projectId ?? null,
-        /* Owed after the entry is written, so a wait on the outbox looks again once it is there. A
-           running worker may already have taken the entry off by then, so the work is kept too. */
-        onEnqueued: (work) => {
-            enqueued.push(work);
-            recheck();
-        }
+        worktrees,
+        checkpoints,
+        machine = { resumeAtReset: false },
+        accounts,
+        onLimits,
+        visualRender,
+        remote,
+        peer,
+        providers = []
+    } = options;
+    const base = testSeams({
+        home,
+        clock,
+        ...(options.installed ? { installed: options.installed } : {}),
+        ...(options.claudeCli ? { claudeCli: options.claudeCli } : {}),
+        ...(options.codexCli ? { codexCli: options.codexCli } : {}),
+        ...(options.ptyAdapter ? { ptyAdapter: options.ptyAdapter } : {}),
+        ...(options.env ? { env: options.env } : {}),
+        ...(options.gh ? { gh: options.gh } : {})
     });
-    const plans = new PlanStore(home, { now: () => clock.now() });
-    const visuals = new VisualStore(home, attachments);
-    const chatEnvs: Array<Record<string, string>> = [];
-    const chatCommands: string[][] = [];
-    const untrusted = new UntrustedFolders({
-        lineage,
-        folders: () => (peer?.links ?? store.peers).worktreeFolders(),
-        cwdOf: (nodeId) => chats.get(nodeId)?.info.cwd ?? sessions.get(nodeId)?.cwd ?? null
-    });
-    const chats = new ChatManager({
-        ...OPEN_BOUNDS,
-        providers,
-        projectAccount,
-        store: new ChatStore(home, { attachments, isSidecar: isPlanFileName }),
-        attachments,
-        ...(checkpoints ? { checkpoints } : {}),
-        // Never listened on: a chat's CLI is a fake, and the URL only rides on its line and in its environment.
-        contextUrl: 'http://127.0.0.1:4210/context',
-        spawn: (options) => {
-            chatEnvs.push(options.env);
-            chatCommands.push([...options.command]);
-            return options.command[0]?.endsWith('codex') ? codex.spawn(options) : claude.spawn(options);
+    const seams: TestSeams = {
+        ...base,
+        projectStore: () => store,
+        providers: { ...base.providers, added: providers },
+        git: {
+            ...base.git,
+            ...(worktrees ? { worktrees: () => worktrees } : {}),
+            ...(checkpoints ? { checkpoints: () => checkpoints as ReturnType<TestSeams['git']['checkpoints']> } : {})
         },
-        env,
-        ...(accounts ? { accounts } : {}),
-        ...(onLimits ? { onLimits } : {}),
-        firstPrompt: (id) => prompts.take(id),
-        openingAgent: agentChatOpening(outbox, (provider) => chats.composerPreferences.for(provider)),
-        onInterruptedRun: outboxLink.onInterruptedRun,
-        standalone: (id) => store.index.locate(id)?.canvasId === null,
-        messageNotes: (chatId) => new NoticeNotes(notices, chatId, MESSAGE_WORDS),
-        taskRows: (chatId) => tasks.ofParent(chatId),
-        dropWakes: (chatId) => tasks.dropWake(chatId),
-        endChildren: (chatId) => endChildren.stopNode(chatId, 'a person cleared this chat'),
-        endedAt: (chatId) => lineage.endedAt(chatId),
-        peerChat: (chatId) => untrusted.node(chatId),
-        plans,
-        visuals,
-        visualReplies: () => machine.visualReplies !== false,
-        limitResume: {
-            allowed: () => machine.resumeAtReset,
-            now: () => clock.now(),
-            owe: (chatId, turnId, at) => outboxLink.oweLimitResume(chatId, turnId, at),
-            lapse: (chatId) => outboxLink.lapseLimitResume(chatId),
-            owed: (chatId) => outboxLink.owesLimitResume(chatId)
-        }
-    });
-    const { until, recheck } = untilChecked();
-    const alerts: string[] = [];
-    const prWatches = new PrWatchStore({
-        path: `${home}/pr-watches.json`,
-        clock,
-        gh,
-        random: () => 0.5,
-        enqueue: (projectId, chatId, work) => outboxLink.enqueue(projectId, chatId, work),
-        entries: () => outbox.list(),
-        removeEntry: (id) => outbox.remove(id)
-    });
-    let remoteTasks: RemoteTasks | null = null;
-    let peerTasks: PeerTasks | null = null;
-    const outboxWiring = wireOutbox({
-        link: outboxLink,
-        outbox,
-        projects: store,
-        lineage,
-        prompts,
-        notices,
-        tasks,
-        chats,
-        sessions,
-        lifecycle,
-        alert: (_target, nodeId, title, body) => alerts.push(`${nodeId}\t${title}\t${body}`),
-        now: () => clock.now(),
-        log: () => undefined,
-        onDropped: (drop) => drops.push(drop),
-        onFailed: () => undefined,
-        resumeAtReset: () => machine.resumeAtReset,
-        isPeerTask: (task) => peerTasks?.isPeerTask(task) === true,
-        peerParents: (projectId) => peer?.links.canvasIdsOf(projectId) ?? new Set<string>(),
-        remoteStop: async (nodeId) => remoteTasks?.oweStop(nodeId)
-    });
-    // What this host owes that no test of it runs lapses, as an entry of a kind it has no feature for always did.
-    const lapse = async (): Promise<undefined> => undefined;
-    outboxLink.worker.handle(
-        'deliver-pr-watch',
-        prWatchHandler({ watches: prWatches, openChat: chatOpener({ chats, placed: (nodeId) => store.index.locate(nodeId) !== null }) })
-    );
-    outboxLink.worker.handle('run-after-settle', lapse);
-    outboxLink.worker.handle('routine-run', lapse);
-    outboxLink.worker.handle('connect-peer', lapse);
-    outboxLink.worker.handle('start-remote-agent', (entry) => remoteTasks?.start(entry) ?? lapse());
-    outboxLink.worker.handle('stop-remote-agent', (entry) => remoteTasks?.stop(entry) ?? lapse());
-    outboxLink.worker.handle('take-remote-result', (entry) => remoteTasks?.take(entry) ?? lapse());
-    outboxLink.worker.handle('deliver-remote-result', (entry) => peerTasks?.deliver(entry) ?? lapse());
-    lifecycle.on('placed', (projectId, ids) => prWatches.prune(projectId, ids));
-    lifecycle.on('placed', (projectId, ids) => remoteTasks?.places(projectId, ids));
+        observers: { ...base.observers, ...(onLimits ? { limits: onLimits } : {}) },
+        ...(accounts ? { accounts: () => accounts } : {}),
+        ...(remote ? { remote: { connections: () => remote.connections as never, reconnect: () => remote.reconnect as never } } : {}),
+        ...(peer ? { peerNotify: () => peer.notify } : {})
+    };
+    const wired = await wireDaemon({ runtime: testRuntime(home), launcher: 'standalone', seams, shutdown: async () => undefined });
+    const { stores, agents, work, canvasHost: host, machine: machineBundle } = wired.bundles;
+    const { sessions, chats } = agents;
+    const { fakes } = seams;
+
+    // Written down by `setSwitches`, so a second boot over the same home starts from what a fresh machine has, as the test says.
+    await machineBundle.identity.setSwitches({ resumeAtReset: machine.resumeAtReset, visualReplies: machine.visualReplies ?? true });
+
+    // Preview and measure come from the test or are absent, as on a host with no browser.
+    const { preview: _preview, measure: _measure, ...visualsWithoutRender } = host.visuals!;
+    host.visuals = { ...visualsWithoutRender, ...visualRender };
+
     if (remote) {
-        remoteTasks = new RemoteTasks({
-            connections: remote.connections,
-            reconnect: remote.reconnect,
-            tasks,
-            coordinator: outboxWiring.tasks.coordinator,
-            placed: (nodeId) => store.index.locate(nodeId) !== null,
-            git:
-                remote.git ??
-                (() => {
-                    throw new Error('no git in this test');
-                }),
-            folderOf: remote.folderOf ?? ((projectId) => store.index.folderOf(projectId)),
-            labelOf: (projectId, machineId) => remote.machines(projectId).find((machineLink) => machineLink.machineId === machineId)?.label ?? 'machine',
-            untrustFolder: (path, branch) => store.peers.untrustFolder(path, branch),
-            outbox,
-            enqueue: (projectId, target, work) => outboxLink.enqueue(projectId, target, work),
-            wake: (target) => outboxWiring.worker.wake(target),
-            now: () => clock.now()
-        });
+        host.remote = { ...host.remote!, machines: remote.machines };
     }
-    const { worker, tasks: wiring, endChildren, summaries } = outboxWiring;
-    await wiring.recover();
-    endChildren.start();
-    sessions.onProcessChange = (sessionId, phase) => {
-        if (phase === 'changed' && sessions.get(sessionId)?.exited !== false) {
-            void lifecycle.emit('exited', sessionId);
-        }
-    };
-    sessions.observe((event) => wiring.terminals.sessionEvent(event));
-    store.index.onPlaces = (projectId, ids) => void lifecycle.emit('placed', projectId, ids);
 
-    sessions.observe(recheck);
-    chats.observe(recheck);
+    await wired.recoverWork();
+    sessions.observe(fakes.recheck);
+    chats.observe(fakes.recheck);
     // A task is written after the event that settled it, so the wait looks again once it is on disk.
-    tasks.onChange(() => queueMicrotask(recheck));
-
-    const enqueue = (projectId: string, nodeId: string, work: OutboxWork): Promise<void> => outboxLink.enqueue(projectId, nodeId, work);
-    const startClaims = new StartClaims(home);
-    await startClaims.load();
-    const host: CanvasHost = {
-        projects: store,
-        hiddenAgents: store.hiddenAgents,
-        startClaims,
-        lineage,
-        untrusted,
-        starts: agentStartHost({
-            installed: async () => installed,
-            prompts,
-            enqueue,
-            chats,
-            sessions,
-            lineage,
-            openedCount: (callerId) => openedAgentCount({ lineage, hiddenAgents: store.hiddenAgents, tasks, outbox, chats, sessions }, callerId),
-            accountsOff: (projectId, kind) => store.index.accountsOf(projectId)?.[kind]?.off ?? []
-        }),
-        ...(remote
-            ? {
-                  remote: {
-                      machines: remote.machines,
-                      give: (projectId: string, nodeId: string, payload) => enqueue(projectId, nodeId, { kind: 'start-remote-agent', payload })
-                  }
-              }
-            : {}),
-        checkouts: worktrees
-            ? checkoutHost(worktrees)
-            : {
-                  paths: async () => [],
-                  branches: async () => null,
-                  add: () => Promise.reject(new Error('no worktrees here')),
-                  claim: async () => undefined,
-                  remove: async () => undefined
-              },
-        ...(worktrees
-            ? {
-                  worktrees: worktreeHost(
-                      worktrees,
-                      new WorktreeMerge(
-                          worktrees,
-                          worktreeAgents({
-                              chats: () => chats.list(),
-                              sessions: () => sessions.list(),
-                              stopNode: (nodeId, reason) => endChildren.stopNode(nodeId, reason)
-                          })
-                      )
-                  )
-              }
-            : {}),
-        machine: { agentsDeleteAnyView: false, nodeSize: (kind) => NODE_SIZE[kind] },
-        endSession: async (kind, nodeId) => {
-            await endChildren.owe(nodeId);
-            await (kind === 'terminal' ? sessions.kill(nodeId) : chats.kill(nodeId)).catch(() => undefined);
-        },
-        messages: {
-            ...agentMessages({ notices, sessions, chats, projects: store, enqueue, push: () => ({ notify: () => undefined }) }),
-            alert: () => undefined
-        },
-        diagrams: { write: () => Promise.reject(new Error('not used here')) },
-        tasks: wiring.host,
-        plans,
-        agents: agentStates({ outbox, lineage, chats, sessions }),
-        requests: chatRequests(chats),
-        ...chatAccess(chats, sessions),
-        agentImages: { attach: (chatId, upload) => chats.attachAgentImage(chatId, upload) },
-        visuals: { ...agentVisuals({ enabled: () => machine.visualReplies !== false, visuals, chats }), ...visualRender }
-    };
-
-    const dispatcher = new Dispatcher();
-    if (peer) {
-        const peerStores = new Map<string, BundleStore>();
-        peerTasks = new PeerTasks({
-            links: peer.links,
-            projects: store,
-            lineage,
-            tasks,
-            outbox,
-            enqueue: (projectId, target, work) => outboxLink.enqueue(projectId, target, work),
-            prompts,
-            stopNode: (nodeId, reason) => endChildren.stopNode(nodeId, reason),
-            installed: async () => installed,
-            exists: (nodeId) => chats.get(nodeId) !== undefined || sessions.get(nodeId) !== undefined,
-            git: peer.git,
-            peerBundles: (machineId) => {
-                const held = peerStores.get(machineId) ?? new BundleStore(home, machineId);
-                peerStores.set(machineId, held);
-                return held;
-            },
-            worktreePaths: async (folder) => (await worktrees?.registeredPaths(folder)) ?? [],
-            notify: peer.notify
-        });
-        tasks.onChange((task) => peerTasks!.changed(task));
-        peerTasksArea({ links: peer.links, tasks: peerTasks }).handlers?.(dispatcher);
-    }
-    sessionArea({
-        manager: sessions,
-        beforeKill: (nodeId) => lifecycle.emit('closed', nodeId),
-        logins: { commandOf: () => undefined, nameOf: (kind) => kind },
-        machineOf: () => null
-    }).handlers?.(dispatcher);
-    const forkDeps = chatForkDeps({
-        chats,
-        host,
-        titleFor: (id) => store.index.titleFor(id),
-        lineage,
-        hiddenAgents: store.hiddenAgents,
-        ...(worktrees ? { worktrees } : {}),
-        ...(checkpoints instanceof Checkpoints ? { checkpoints } : {})
-    });
-    host.forks = { fork: (input, opener) => forkForAgent(forkDeps, input, opener) };
-    const noMoves = (): Promise<never> => Promise.reject(new Error('This daemon does not move chats'));
-    chatArea({
-        manager: chats,
-        providers,
-        beforeKill: (nodeId) => lifecycle.emit('closed', nodeId),
-        stopNode: endChildren.stopNode,
-        forks: {
-            fork: (payload) => forkChat(forkDeps, payload),
-            info: (payload) => readForkInfo(forkDeps, payload),
-            handoff: (payload) => readHandoff(forkDeps, payload),
-            summarize: (chatId) => summaries.summarize(chatId),
-            continueOn: (payload) => continueOn({ chats, fork: (fork) => forkChat(forkDeps, fork) }, payload)
-        },
-        killed: async () => undefined,
-        moves: { info: noMoves, move: noMoves },
-        machineOf: () => null,
-        starting: (chatId) => lineage.peerOf(chatId) !== null && outbox.owes('start-agent', chatId)
-    }).handlers?.(dispatcher);
-    tasksArea({ tasks, children: endChildren.children }).handlers?.(dispatcher);
-    planArea({ plans }).handlers?.(dispatcher);
-    if (!dispatcher.has('server.ping')) {
-        dispatcher.register('server.ping', () => ({ time: Date.now() }));
-    }
+    stores.tasks.onChange(() => queueMicrotask(fakes.recheck));
 
     return {
-        tasks,
-        notices,
-        lineage,
-        prompts,
-        outbox,
-        worker,
+        tasks: stores.tasks,
+        notices: stores.notices,
+        lineage: stores.lineage,
+        prompts: stores.prompts,
+        outbox: stores.outbox,
+        worker: work.worker,
         sessions,
         chats,
-        plans,
-        visuals,
-        adapter,
-        dispatcher,
-        claude,
-        codex,
-        chatEnvs,
-        chatCommands,
-        wiring,
-        endChildren,
-        peerTasks,
-        remoteTasks,
-        prWatches,
+        plans: agents.plans,
+        visuals: agents.visuals,
+        adapter: fakes.adapter,
+        dispatcher: wired.dispatcher,
+        claude: fakes.claude,
+        codex: fakes.codex,
+        chatEnvs: fakes.chatEnvs,
+        chatCommands: fakes.chatCommands,
+        wiring: work.tasks,
+        endChildren: work.endChildren,
+        peerTasks: work.peerTasks,
+        remoteTasks: work.remoteTasks,
+        prWatches: work.prWatches,
         host,
-        alerts,
-        enqueued,
+        alerts: fakes.alerts,
+        enqueued: fakes.enqueued,
         request: async (type, payload) => {
             const frames: ServerFrame[] = [];
-            await dispatcher.handle({ id: 'client-1', send: (frame) => frames.push(frame) }, JSON.stringify({ id: 'request', type, payload }));
+            await wired.dispatcher.handle({ id: 'client-1', send: (frame) => frames.push(frame) }, JSON.stringify({ id: 'request', type, payload }));
             return frames[0]!;
         },
         pruned: async () => {
-            await Promise.all(drops);
+            await Promise.all(fakes.drops);
         },
-        until,
+        until: fakes.until,
+        setSwitches: (flags) => machineBundle.identity.setSwitches(flags),
         stop: async () => {
-            // The order the daemon's own shutdown takes: nothing that dies with it settles a task.
-            worker.stop();
-            prWatches.close();
-            wiring.coordinator.stop();
-            wiring.waiting.stop();
-            summaries.coordinator.stop();
-            await wiring.coordinator.settled();
-            await worker.settled();
-            chats.persistAllSync();
-            await chats.shutdown();
+            await wired.stop();
             sessions.killAll();
             for (const info of chats.list()) {
                 await chats.get(info.chatId)?.dispose();

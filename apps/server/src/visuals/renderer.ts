@@ -35,7 +35,7 @@ export interface RenderProcess {
     gone: Promise<void>;
 }
 
-type RenderLauncher = (job: RenderJob, budgetMs: number) => RenderProcess;
+export type RenderLauncher = (job: RenderJob, budgetMs: number) => RenderProcess;
 
 /* Calls `run` after `ms`, unless the function it answers is called first. */
 export type Schedule = (ms: number, run: () => void) => () => void;

@@ -43,7 +43,7 @@ interface CanvasHostInput {
 /* What the part builders of the agent features read: the bundles, and the two things most of them need from them. */
 export interface CanvasHostDeps extends CanvasHostInput {
     store: ProjectStore;
-    enqueue: AgentWorkBundle['worker']['enqueue'];
+    enqueue: AgentsBundle['outboxLink']['enqueue'];
 }
 
 /* The part of a feature this module reads: how it builds its fields of the host from `Deps`. */
@@ -75,5 +75,5 @@ export function composeHost<Deps>(sources: readonly HostSource<Deps>[], deps: De
 
 /* The services the agent tools reach the daemon through: the parts the agent features build. */
 export function wireCanvasHost(features: readonly HostSource<CanvasHostDeps>[], input: CanvasHostInput): CanvasHost {
-    return composeHost(features, { ...input, store: input.projects.store, enqueue: input.work.worker.enqueue.bind(input.work.worker) });
+    return composeHost(features, { ...input, store: input.projects.store, enqueue: input.agents.outboxLink.enqueue.bind(input.agents.outboxLink) });
 }

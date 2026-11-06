@@ -4,8 +4,6 @@ import type { OutboxWorker } from '@adecore/agents/coordination';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { errorText } from '../error-text.ts';
 import { BundleStore } from '../git/bundles.ts';
-import { runGh } from '../git/github.ts';
-import { prSplits } from '../git/pr-split.ts';
 import { PrWatchStore, prWatchHandler } from '../github/pr-watch.ts';
 import { AfterSettleStore } from '../launches/after-settle.ts';
 import type { EndChildrenWiring } from '../outbox/end-children.ts';
@@ -24,6 +22,7 @@ import type { GitBundle } from './git.ts';
 import { wireOutbox } from './outbox.ts';
 import type { ProvidersBundle } from './providers.ts';
 import type { RemoteBundle } from './remote.ts';
+import type { DaemonSeams } from './seams.ts';
 
 /* What the outbox drives on behalf of agents: starts, tasks, wakes and what a node takes along when it goes. */
 export interface AgentWorkBundle {
@@ -36,6 +35,8 @@ export interface AgentWorkBundle {
     afterSettleStore: AfterSettleStore;
     /* The reconnect of the links to other machines, owed through the outbox. */
     reconnect: ConnectPeer;
+    /* The tasks this machine gives agents on other machines. */
+    remoteTasks: RemoteTasks;
     /* The tasks other machines give agents here. */
     peerTasks: PeerTasks;
 }
@@ -48,6 +49,7 @@ interface AgentWorkInput {
     projects: ProjectStore;
     remote: RemoteBundle;
     providers: ProvidersBundle;
+    seams: Pick<DaemonSeams, 'clock' | 'random' | 'git' | 'remote' | 'peerNotify' | 'observers'>;
     later: {
         push(): PushService;
         git(): GitBundle;
@@ -65,14 +67,17 @@ function settledNodeOf(raw: string): string | null {
     }
 }
 
-export function wireAgentWork({ home, identity, stores, agents, projects, remote, providers, later }: AgentWorkInput): AgentWorkBundle {
+export function wireAgentWork({ home, identity, stores, agents, projects, remote, providers, seams, later }: AgentWorkInput): AgentWorkBundle {
     const { outbox, lifecycle } = stores;
     const { outboxLink } = agents;
     const { worker } = outboxLink;
+    const { clock } = seams;
     const prWatches = new PrWatchStore({
         path: join(home, 'pr-watches.json'),
-        gh: runGh,
-        splits: prSplits,
+        clock,
+        gh: seams.git.gh,
+        random: seams.random,
+        splits: seams.git.splits,
         enqueue: (projectId, chatId, work) => outboxLink.enqueue(projectId, chatId, work),
         entries: () => outbox.list(),
         removeEntry: (id) => outbox.remove(id),
@@ -92,8 +97,8 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         wake: (target) => outboxLink.wake(target),
         giveUp: (machineId, refusal) => remoteTasks.giveUp(machineId, refusal),
         connections: remote.connections,
-        now: () => Date.now(),
-        random: () => Math.random()
+        now: () => clock.now(),
+        random: seams.random
     });
     worker.handle('connect-peer', reconnect.handler);
     remote.onLeave(async () => {
@@ -115,7 +120,12 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         chats: agents.chats,
         sessions: agents.sessions,
         lifecycle,
-        alert: (target, nodeId, title, body) => later.push().alert(target, nodeId, title, body),
+        alert: (target, nodeId, title, body) => {
+            seams.observers.alerted(target, nodeId, title, body);
+            later.push().alert(target, nodeId, title, body);
+        },
+        now: () => clock.now(),
+        observers: seams.observers,
         checkCwd: agents.startCwd,
         resumeAtReset: () => identity.resumeAtReset,
         isPeerTask: (task) => peerTasks.isPeerTask(task),
@@ -123,8 +133,8 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         remoteStop: (nodeId) => remoteTasks.oweStop(nodeId)
     });
     const remoteTasks = new RemoteTasks({
-        connections: remote.connections,
-        reconnect,
+        connections: seams.remote.connections(remote.connections),
+        reconnect: seams.remote.reconnect(reconnect),
         refresh: (machineId, except) => remote.connections.refresh(machineId, except),
         tasks: stores.tasks,
         coordinator: wiring.tasks.coordinator,
@@ -136,7 +146,7 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         outbox,
         enqueue: (projectId, target, work) => outboxLink.enqueue(projectId, target, work),
         wake: (target) => outboxLink.wake(target),
-        now: () => Date.now(),
+        now: () => clock.now(),
         log: (line) => console.error(line)
     });
     worker.handle('start-remote-agent', remoteTasks.start);
@@ -164,7 +174,7 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         },
         git: () => later.git(),
         worktreePaths: (folder) => later.git().checkouts.paths(folder),
-        notify: (machineId, nodeId) => later.clients().notifyPeer(machineId, nodeId),
+        notify: seams.peerNotify((machineId, nodeId) => later.clients().notifyPeer(machineId, nodeId)),
         log: (line) => console.error(line)
     });
     worker.handle('deliver-remote-result', peerTasks.deliver);
@@ -192,6 +202,7 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         snoozes,
         afterSettleStore,
         reconnect,
+        remoteTasks,
         peerTasks
     };
 }

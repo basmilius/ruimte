@@ -13,8 +13,6 @@ import { DirectPeers } from '../pulsar/peers.ts';
 import { ReachChecker } from '../pulsar/reach-check.ts';
 import { SignalGate } from '../pulsar/signal-gate.ts';
 import { StatementGate, TEST_STATEMENT_KEY_VARIABLE, trustedStatementKeys } from '../pulsar/statement.ts';
-import { guardWeriftTurn } from '../pulsar/turn-guard.ts';
-import { reportFatal } from '../telemetry/reporter.ts';
 import type { DaemonBundles } from './bundles.ts';
 import type { Later } from './later.ts';
 import type { MachineBundle } from './machine.ts';
@@ -34,8 +32,6 @@ export interface NetworkBundle {
 
 export function wireNetwork(config: ServerConfig, compiled: boolean, machine: MachineBundle, later: Later<Pick<DaemonBundles, 'clients'>>): NetworkBundle {
     const { identity, auth, handshake, access } = machine;
-    // A TURN server that restarts under an allocation must not take the daemon with it; any other crash is reported on the way out.
-    guardWeriftTurn(process, console, (code, error) => void reportFatal(error).finally(() => process.exit(code)));
     // A direct channel gets its access from its own handshake, never from the socket its signals came over.
     const peers = new DirectPeers({
         // The broker's TURN credentials are asked for per attempt, since they expire and the broker can change.

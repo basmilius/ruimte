@@ -16,7 +16,7 @@ import {
     type ProjectCanvasView,
     type ProjectContent
 } from '@ruimte/contracts';
-import { toolsNote } from '../context/context-note.ts';
+import { CONTEXT_LEAD, toolsNote } from '../context/context-note.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
@@ -256,7 +256,10 @@ describe('forking a Claude chat', () => {
         // The note about the tools went in as developer instructions, so only the handoff stands before the text.
         expect(reply).toBe(`echo: ${record.preambles[0]}\n\ngo on (medium)`);
         await say(nodeId, 'note?');
-        expect(assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)).toBe(toolsNote({ depth: 0, visuals: true }));
+        // The fork is linked to its original, which the real wiring reads as context.
+        expect(assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)).toBe(
+            `${toolsNote({ depth: 0, visuals: true })} ${CONTEXT_LEAD}"Lexer" (chat). This is what the person means, so prefer it over anything your own tools or servers turn up.`
+        );
         expect(daemon.chats.get(nodeId)!.info.agentSessionId).not.toBeNull();
     });
 

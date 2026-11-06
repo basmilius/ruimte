@@ -44,7 +44,6 @@ let projectId: string;
 let daemon: TestDaemon;
 let accounts: ProviderAccountsService;
 let limitUpdates: LimitsUpdate[];
-let machine: { resumeAtReset: boolean };
 let clock: ManualClock;
 
 beforeEach(async () => {
@@ -53,7 +52,6 @@ beforeEach(async () => {
     const env = { PATH: process.env.PATH, HOME: home, USERPROFILE: home, ANTHROPIC_API_KEY: 'sk-inherited' };
     folders = new Set([personal, join(home, '.codex'), join(root, 'codex_work')]);
     limitUpdates = [];
-    machine = { resumeAtReset: false };
     accounts = await testAccounts({
         home,
         env,
@@ -72,7 +70,6 @@ beforeEach(async () => {
         installed: ['claude', 'codex'],
         accounts,
         env,
-        machine,
         onLimits: (update) => limitUpdates.push(update)
     });
     daemon.worker.start();
@@ -227,7 +224,7 @@ describe('going on under another account after a limit', () => {
     });
 
     test('a Claude chat goes on in a fork on the other account, and its own resume at the reset lapses', async () => {
-        machine.resumeAtReset = true;
+        await daemon.setSwitches({ resumeAtReset: true });
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
         await say('chat-lead', `limit:${RESET_AT / 1000}`);
         await daemon.until(() => owedResumes().length === 1);
@@ -254,16 +251,16 @@ describe('going on under another account after a limit', () => {
         );
         original.configure({ resumeAtReset: false });
         original.configure({ resumeAtReset: true });
-        machine.resumeAtReset = false;
+        await daemon.setSwitches({ resumeAtReset: false });
         daemon.chats.resumeSettingChanged();
-        machine.resumeAtReset = true;
+        await daemon.setSwitches({ resumeAtReset: true });
         daemon.chats.resumeSettingChanged();
         expect(owedResumes().filter((entry) => entry.target === 'chat-lead')).toEqual([]);
         expect(original.info.resumeAt).toBeUndefined();
     });
 
     test('a Codex chat whose CLI still runs a command in the background is refused, and keeps the resume it is owed', async () => {
-        machine.resumeAtReset = true;
+        await daemon.setSwitches({ resumeAtReset: true });
         await daemon.chats.create({ chatId: 'chat-codex', provider: 'codex', cwd: folder });
         await say('chat-codex', `serve\nlimit:${RESET_AT / 1000}`);
         await daemon.until(() => owedResumes().length === 1);
@@ -279,7 +276,7 @@ describe('going on under another account after a limit', () => {
     });
 
     test('a resume that comes due while a change of account waits on a background command opens its turn once that command ends', async () => {
-        machine.resumeAtReset = true;
+        await daemon.setSwitches({ resumeAtReset: true });
         await daemon.chats.create({ chatId: 'chat-codex', provider: 'codex', cwd: folder });
         await say('chat-codex', `serve\nlimit:${RESET_AT / 1000}`);
         await daemon.until(() => owedResumes().length === 1);
