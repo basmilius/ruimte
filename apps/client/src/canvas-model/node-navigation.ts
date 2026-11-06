@@ -1,4 +1,4 @@
-import { centerOf } from '@adecore/drawing';
+import { centerOf } from '@adecore/utils/geometry';
 import type { Camera, Point, Rect } from '@/canvas-model/math';
 
 export type NodeDirection = 'left' | 'right' | 'up' | 'down';

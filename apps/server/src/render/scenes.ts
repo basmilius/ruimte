@@ -12,7 +12,8 @@ import {
     shapePaths,
     textLinesOf
 } from '@adecore/diagram';
-import { LINE_HEIGHT, approximateMeasure, centerOf, fontOf, linesOf, pathsOfElement, rotatePoint, unionOf, writingFrameOf } from '@adecore/drawing';
+import { LINE_HEIGHT, approximateMeasure, fontOf, linesOf, pathsOfElement, writingFrameOf } from '@adecore/drawing';
+import { centerOf, rotatePoint, unionOf } from '@adecore/utils/geometry';
 import type {
     DiagramDocument,
     DrawingColor,

@@ -1,4 +1,4 @@
-import { centerOf } from '@adecore/drawing';
+import { centerOf } from '@adecore/utils/geometry';
 import type { NodeSide } from '@ruimte/contracts';
 import type { FixedSides } from '@/canvas-model/fixed-sides';
 import { containsPoint, type Point, type Rect } from '@/canvas-model/math';

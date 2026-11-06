@@ -1,4 +1,4 @@
-import { centerOf } from '@adecore/drawing';
+import { centerOf } from '@adecore/utils/geometry';
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
 import {
     clipText,

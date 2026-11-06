@@ -1,4 +1,4 @@
-import type { Point, Rect } from '@adecore/drawing';
+import type { Point, Rect } from '@adecore/utils/geometry';
 import { DRAWING_TEXT_SIZE_MAX, DRAWING_TEXT_SIZE_MIN, type DrawingElement } from '@ruimte/contracts';
 import { snapToGrid } from '@/canvas-model/math';
 import type { DrawingStyle, DrawingTool } from '@/state/drawing';

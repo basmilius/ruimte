@@ -1,12 +1,12 @@
-import { boundsOfElements, elementAt, rectFromPoints, resizeRect, scaleElement, type Point, type Rect, type ResizeHandle } from '@adecore/drawing';
-import { isInFloatingLayer, Kbd, isModHeld, ContextMenu } from '@adecore/ui';
+import { boundsOfElements, elementAt, resizeRect, scaleElement, type ResizeHandle } from '@adecore/drawing';
+import { isInFloatingLayer, Kbd, isModHeld, ContextMenu, isApplePlatform } from '@adecore/ui';
+import { rectFromPoints, type Point, type Rect } from '@adecore/utils/geometry';
 import type { DrawingElement } from '@ruimte/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { fitTextBox } from '@/canvas-model/drawing-measure';
 import { groundPlacement, toWorld } from '@/canvas-model/math';
-import { isApplePlatform } from '@/desktop/bridge';
 import { DrawingDock } from '@/drawing/DrawingDock';
 import { DrawingMenuPopup } from '@/drawing/DrawingMenu';
 import { DrawingOverlay } from '@/drawing/DrawingOverlay';
