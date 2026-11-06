@@ -310,7 +310,7 @@ struct ChatCommandDetail: View {
 
     private var names: [String: ChatCommandName] {
         guard let context, let workspace = context.workspace else { return [:] }
-        let names = RuimteCommandLook.projectNames(workspace.views)
+        let names = RuimteCommandLook.projectNames(workspace.storedViews)
         // A chat of another project keeps its ids, since the ids it names are not in this one.
         return names[context.chatID] == nil ? [:] : names
     }

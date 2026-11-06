@@ -105,9 +105,9 @@ final class ChatForkingTests: XCTestCase {
                 "nodes": .array([.object(["id": .string("node"), "kind": .string("chat"), "title": .string("Build")])]),
             ]),
         ]
-        XCTAssertEqual(ChatForking.origin(in: views, chatID: "chat-view")?.shape, .view)
-        XCTAssertEqual(ChatForking.origin(in: views, chatID: "node")?.title, "Build")
-        XCTAssertNil(ChatForking.origin(in: views, chatID: "gone"))
+        XCTAssertEqual(ChatForking.origin(in: ProjectWire.stored(views), chatID: "chat-view")?.shape, .view)
+        XCTAssertEqual(ChatForking.origin(in: ProjectWire.stored(views), chatID: "node")?.title, "Build")
+        XCTAssertNil(ChatForking.origin(in: ProjectWire.stored(views), chatID: "gone"))
         XCTAssertEqual(ChatForking.branchRefusal("  ", taken: []), "Name the branch")
         XCTAssertEqual(ChatForking.branchRefusal("main ", taken: ["main"]), "Name already taken")
         XCTAssertNil(ChatForking.branchRefusal("fork", taken: ["main"]))

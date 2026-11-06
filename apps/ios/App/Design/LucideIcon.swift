@@ -93,11 +93,20 @@ struct WorkspaceViewIcon: View {
     }
 
     nonisolated static func name(for item: JSONValue) -> String {
-        if item.text("kind") != "unknown", let icon = item["icon"], icon.text("kind") == "lucide" {
-            return icon.text("value")
-        }
+        let icon = item["icon"].flatMap { $0.text("kind") == "lucide" ? $0.text("value") : nil }
+        return name(kind: item.text("kind"), chosen: icon)
+    }
+
+    nonisolated static func name(for view: StoredView) -> String {
+        name(kind: view.kind, chosen: view.icon.flatMap { $0.kind == "lucide" ? $0.value : nil })
+    }
+
+    nonisolated static func name(for node: StoredNode) -> String { name(kind: node.kind.rawValue, chosen: nil) }
+
+    private nonisolated static func name(kind: String, chosen: String?) -> String {
+        if kind != "unknown", let chosen { return chosen }
         // Match the fallback marks in the desktop client's project/ViewGlyph.tsx.
-        switch item.text("kind") {
+        switch kind {
         case "canvas": return "frame"
         case "chat": return "message-square"
         case "terminal": return "terminal"

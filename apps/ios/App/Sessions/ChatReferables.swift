@@ -56,17 +56,17 @@ enum ChatReferables {
 
     /// The nodes and texts of the canvas `chatID` is a node of, then the views in sidebar order, never the chat
     /// itself. Two of one name and kind on the canvas are told apart by the canvas's name.
-    static func project(views: [JSONValue], chatID: String) -> [ChatReferable] {
+    static func project(views: [StoredView], chatID: String) -> [ChatReferable] {
         let canvas = views.first { view in
-            view.text("kind") == "canvas" && !unlisted(view) && view.list("nodes").contains { $0.stableID == chatID }
-        }
+            view.canvas != nil && !unlisted(view) && view.nodes.contains { $0.id == chatID }
+        }?.canvas
         var onCanvas: [ChatReferable] = []
         if let canvas {
-            onCanvas += canvas.list("nodes").compactMap { node in
-                node.stableID == chatID ? nil : nodeReferable(node, views: views)
+            onCanvas += canvas.nodes.compactMap { node in
+                node.id == chatID ? nil : nodeReferable(node, views: views)
             }
-            onCanvas += canvas.list("texts").map { text in
-                ChatReferable(id: text.stableID, name: textName(text.text("text")), kind: "text", group: .canvas)
+            onCanvas += canvas.texts.map { text in
+                ChatReferable(id: text.id, name: textName(text.text), kind: "text", group: .canvas)
             }
         }
         let taken = Set([chatID] + onCanvas.map(\.id))
@@ -78,20 +78,20 @@ enum ChatReferables {
             }
             guard item.group == .canvas, twin else { return item }
             var told = item
-            told.detail = canvas.text("name")
+            told.detail = canvas.name
             return told
         }
     }
 
     /// A chat view stands on no canvas, so it reaches a node through the canvas that node stands on. A node showing
     /// a drawing or a diagram has the id of that view, which is offered once, as a view.
-    private static func standing(views: [JSONValue], chatID: String, taken: Set<String>) -> [ChatReferable] {
-        let viewIDs = Set(views.map(\.stableID))
+    private static func standing(views: [StoredView], chatID: String, taken: Set<String>) -> [ChatReferable] {
+        let viewIDs = Set(views.map(\.id))
         return views.flatMap { view -> [ChatReferable] in
             let own = viewReferable(view).map { [$0] } ?? []
-            guard !chatID.isEmpty, view.text("kind") == "canvas", !unlisted(view) else { return own }
-            let step = ChatReferenceStep(id: view.stableID, name: view.text("name"), kind: "canvas")
-            let nodes = view.list("nodes").compactMap { node -> ChatReferable? in
+            guard !chatID.isEmpty, view.canvas != nil, !unlisted(view) else { return own }
+            let step = ChatReferenceStep(id: view.id, name: view.name, kind: "canvas")
+            let nodes = view.nodes.compactMap { node -> ChatReferable? in
                 guard var item = nodeReferable(node, views: views), !viewIDs.contains(item.id) else { return nil }
                 item.group = .views
                 item.trail = [step]
@@ -222,16 +222,16 @@ enum ChatReferables {
     }
 
     /// The view and node a chip opens: a view as itself, a node on its canvas, and a text as the canvas it is on.
-    static func destination(_ id: String, views: [JSONValue]) -> (viewID: String, nodeID: String)? {
-        if views.contains(where: { $0.stableID == id }) { return (id, id) }
-        for view in views where view.text("kind") == "canvas" {
-            if view.list("nodes").contains(where: { $0.stableID == id }) { return (view.stableID, id) }
-            if view.list("texts").contains(where: { $0.stableID == id }) { return (view.stableID, view.stableID) }
+    static func destination(_ id: String, views: [StoredView]) -> (viewID: String, nodeID: String)? {
+        if views.contains(where: { $0.id == id }) { return (id, id) }
+        for case .canvas(let view) in views {
+            if view.nodes.contains(where: { $0.id == id }) { return (view.id, id) }
+            if view.texts.contains(where: { $0.id == id }) { return (view.id, view.id) }
         }
         // A drawing or diagram node stands for its view, which a sidebar may not list but the project holds.
         for view in views {
-            if let node = view.list("nodes").first(where: { $0.text("viewId") == id }) {
-                return (view.stableID, node.stableID)
+            if let node = view.nodes.first(where: { $0.viewId == id }) {
+                return (view.id, node.id)
             }
         }
         return nil
@@ -287,46 +287,45 @@ enum ChatReferables {
 
     /// A node as a `#` reaches it, or nil for one no verb reaches: a group, a node with nothing to read, one on another
     /// machine. A node showing a drawing or a diagram stands for that view.
-    private static func nodeReferable(_ node: JSONValue, views: [JSONValue]) -> ChatReferable? {
-        if let machine = node["machine"], machine != .null { return nil }
-        let kind = node.text("kind")
-        let title = node.text("title")
+    private static func nodeReferable(_ node: StoredNode, views: [StoredView]) -> ChatReferable? {
+        if node.machine != nil { return nil }
+        let kind = node.kind.rawValue
+        let title = node.title
         let icon = WorkspaceViewIcon.name(for: node)
-        switch kind {
-        case "chat", "terminal", "note", "browser", "design":
-            return ChatReferable(id: node.stableID, name: title, kind: kind, group: .canvas, icon: icon)
-        case "drawing", "diagram":
-            let viewID = node.text("viewId")
-            guard !viewID.isEmpty else { return nil }
+        switch node.kind {
+        case .chat, .terminal, .note, .browser, .design:
+            return ChatReferable(id: node.id, name: title, kind: kind, group: .canvas, icon: icon)
+        case .drawing, .diagram:
+            guard let viewID = node.viewId, !viewID.isEmpty else { return nil }
             // The node stands for its view, so it wears the view's mark.
-            let view = views.first { $0.stableID == viewID }
+            let view = views.first { $0.id == viewID }
             return ChatReferable(
-                id: viewID, name: title, kind: kind, group: .canvas, icon: view.map(WorkspaceViewIcon.name) ?? icon)
-        case "file":
-            return node.text("path").isEmpty
-                ? nil : ChatReferable(id: node.stableID, name: title, kind: kind, group: .canvas, icon: icon)
-        case "device":
-            guard let device = node["device"], device != .null else { return nil }
-            return ChatReferable(id: node.stableID, name: title, kind: kind, group: .canvas, icon: icon)
+                id: viewID, name: title, kind: kind, group: .canvas,
+                icon: view.map { WorkspaceViewIcon.name(for: $0) } ?? icon)
+        case .file:
+            return (node.path ?? "").isEmpty
+                ? nil : ChatReferable(id: node.id, name: title, kind: kind, group: .canvas, icon: icon)
+        case .device:
+            guard node.device != nil else { return nil }
+            return ChatReferable(id: node.id, name: title, kind: kind, group: .canvas, icon: icon)
         default:
             return nil
         }
     }
 
-    private static func viewReferable(_ view: JSONValue) -> ChatReferable? {
-        let kind = view.text("kind")
-        guard viewKinds.contains(kind), !unlisted(view) else { return nil }
+    private static func viewReferable(_ view: StoredView) -> ChatReferable? {
+        guard viewKinds.contains(view.kind), !unlisted(view) else { return nil }
         return ChatReferable(
-            id: view.stableID, name: view.text("name"), kind: kind, group: .views,
-            icon: WorkspaceViewIcon.name(for: view))
+            id: view.id, name: view.name, kind: view.kind, group: .views, icon: WorkspaceViewIcon.name(for: view))
     }
 
     /// A chat nobody wrote in yet, or a view that is shown nowhere (an inline chat, another machine's canvas).
-    private static func unlisted(_ view: JSONValue) -> Bool {
-        let kind = view.text("kind")
-        let empty = kind == "chat" && view["empty"]?.boolValue == true
-        let hidden = (kind == "chat" || kind == "canvas") && view["hidden"]?.boolValue == true
-        return empty || hidden
+    private static func unlisted(_ view: StoredView) -> Bool {
+        switch view {
+        case .chat(let chat): chat.empty == true || chat.hidden == true
+        case .canvas(let canvas): canvas.hidden == true
+        default: false
+        }
     }
 
     /// A text's first line is its name, as the daemon names it to an agent.

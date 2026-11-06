@@ -67,7 +67,7 @@ struct PhoneProjectList: View {
             statuses: attention.statuses, unseen: attention.unseen,
             delegating: attention.delegating.union(workspace.session.tasks.parentsWithOpenTasks),
             drafts: state.drafts, warnings: state.warnings,
-            shared: Set(workspace.document.list("shared").compactMap(\.stringValue)),
+            shared: Set(workspace.header?.shared ?? []),
             snoozes: workspace.session.snoozes.standing)
     }
 

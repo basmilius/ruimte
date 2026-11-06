@@ -770,15 +770,12 @@ enum RuimteCommandLook {
     }
 
     /// Every view and node of a project by id, under the title it has now.
-    static func projectNames(_ views: [JSONValue]) -> [String: ChatCommandName] {
+    static func projectNames(_ views: [StoredView]) -> [String: ChatCommandName] {
         var names: [String: ChatCommandName] = [:]
         for view in views {
-            names[view.stableID] = ChatCommandName(
-                name: view.text("name"), icon: WorkspaceViewIcon.name(for: view), view: true)
-            for node in view.list("nodes") {
-                let kind = JSONValue.object(["kind": .string(node.text("kind"))])
-                names[node.stableID] = ChatCommandName(
-                    name: node.text("title"), icon: WorkspaceViewIcon.name(for: kind), view: false)
+            names[view.id] = ChatCommandName(name: view.name, icon: WorkspaceViewIcon.name(for: view), view: true)
+            for node in view.nodes {
+                names[node.id] = ChatCommandName(name: node.title, icon: WorkspaceViewIcon.name(for: node), view: false)
             }
         }
         return names

@@ -703,9 +703,9 @@ final class MachinePageTests: XCTestCase {
             .object(["id": .string("chat-1"), "kind": .string("chat")]),
             view,
         ]
-        XCTAssertEqual(DeviceViews.existing(in: views, device: device), "device-1")
+        XCTAssertEqual(DeviceViews.existing(in: ProjectWire.stored(views), device: device), "device-1")
         let other = try XCTUnwrap(MachineDevice(self.device("ipad")))
-        XCTAssertNil(DeviceViews.existing(in: views, device: other))
+        XCTAssertNil(DeviceViews.existing(in: ProjectWire.stored(views), device: other))
     }
 
     func testTheUsageReportStacksEveryDayAndSharesTheBreakdown() throws {

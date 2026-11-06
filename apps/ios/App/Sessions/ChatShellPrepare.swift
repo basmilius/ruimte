@@ -49,14 +49,14 @@ enum ChatShellPrepare {
 
     /// The terminals of this project on this machine, by session id: a terminal view, or a terminal node of a canvas
     /// that no other machine runs.
-    static func terminals(_ views: [JSONValue]) -> Set<String> {
+    static func terminals(_ views: [StoredView]) -> Set<String> {
         var ids = Set<String>()
         for view in views {
-            if view.text("kind") == "terminal" {
-                ids.insert(view.stableID)
+            if case .terminal = view {
+                ids.insert(view.id)
             }
-            for node in view.list("nodes") where node.text("kind") == "terminal" && node["machine"] == nil {
-                ids.insert(node.stableID)
+            for node in view.nodes where node.kind == .terminal && node.machine == nil {
+                ids.insert(node.id)
             }
         }
         return ids
@@ -116,7 +116,7 @@ struct ChatPreparePreview: Identifiable, Equatable {
         defer { busy = false }
         do {
             let machineID = try await machineID()
-            await attach(ChatShellPrepare.terminals(workspace.views))
+            await attach(ChatShellPrepare.terminals(workspace.storedViews))
             let answer = try await context.client.request(
                 .sessionPreparePreview,
                 payload: .object([

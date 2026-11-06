@@ -121,13 +121,13 @@ enum ChatForking {
 
     /// Whether a chat is a view of its own or a node on a canvas, and the name it goes by; nil when it is not in
     /// the project.
-    static func origin(in views: [JSONValue], chatID: String) -> (shape: ChatForkShape, title: String)? {
+    static func origin(in views: [StoredView], chatID: String) -> (shape: ChatForkShape, title: String)? {
         for view in views {
-            if view.text("kind") == "chat" && view.stableID == chatID {
-                return (.view, view.text("name", fallback: String(localized: "Chat")))
+            if case .chat(let chat) = view, chat.id == chatID {
+                return (.view, chat.name)
             }
-            if let node = view.list("nodes").first(where: { $0.stableID == chatID && $0.text("kind") == "chat" }) {
-                return (.node, node.text("title", fallback: String(localized: "Chat")))
+            if let node = view.nodes.first(where: { $0.id == chatID && $0.kind == .chat }) {
+                return (.node, node.title)
             }
         }
         return nil

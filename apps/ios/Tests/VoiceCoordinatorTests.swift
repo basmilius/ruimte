@@ -665,10 +665,11 @@ import Testing
             .object(["id": .string("second"), "kind": .string("canvas"), "nodes": .array([node("b")])]),
             .object(["id": .string("notes"), "kind": .string("chat")]),
         ]
-        #expect(VoiceTarget.canvas(shown: "second", views: views) == "second")
-        #expect(VoiceTarget.canvas(shown: "b", views: views) == "second", "Not the first canvas of the project")
-        #expect(VoiceTarget.canvas(shown: "notes", views: views) == nil, "A chat view stands on no canvas")
-        #expect(VoiceTarget.canvas(shown: nil, views: views) == nil)
+        let stored = ProjectWire.stored(views)
+        #expect(VoiceTarget.canvas(shown: "second", views: stored) == "second")
+        #expect(VoiceTarget.canvas(shown: "b", views: stored) == "second", "Not the first canvas of the project")
+        #expect(VoiceTarget.canvas(shown: "notes", views: stored) == nil, "A chat view stands on no canvas")
+        #expect(VoiceTarget.canvas(shown: nil, views: stored) == nil)
     }
 
     // MARK: Preferences

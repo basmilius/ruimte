@@ -103,7 +103,7 @@ struct ProjectSettingsPage: View {
     private var shown: JSONValue {
         summary.setting("name", .string(workspace.title)).setting("color", .string(color))
     }
-    private var color: String { workspace.document.text("color", fallback: summary.text("color")) }
+    private var color: String { workspace.header?.color ?? summary.text("color") }
 
     var body: some View {
         NavigationStack {

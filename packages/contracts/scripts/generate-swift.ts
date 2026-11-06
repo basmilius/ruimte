@@ -342,11 +342,31 @@ function typedSchema(value: unknown, scope?: RefScope): any {
         }
         return typedSchema(scope.defs[ref.split('/').pop()!], { defs: scope.defs, active: [...scope.active, ref] });
     }
+    const words = 'anyOf' in value ? wordsOf(value.anyOf) : undefined;
+    if (words) {
+        return { type: 'string', enum: words };
+    }
     return Object.fromEntries(
         Object.entries(value)
             .filter(([key]) => key !== '$defs' && key !== '$schema')
             .map(([key, child]) => [key, typedSchema(child, scope)])
     );
+}
+// Members that are only words, such as a node kind next to the literal `unknown`, are one enum in Swift.
+function wordsOf(members: unknown): string[] | undefined {
+    if (!Array.isArray(members) || members.length < 2) {
+        return undefined;
+    }
+    const words: string[] = [];
+    for (const member of members) {
+        const plain =
+            member && typeof member === 'object' && member.type === 'string' && Object.keys(member).every((key) => ['type', 'enum', 'const'].includes(key));
+        if (!plain) {
+            return undefined;
+        }
+        words.push(...(member.enum ?? [member.const]));
+    }
+    return words;
 }
 function typedSource(source: string): any {
     const schema = schemas[source];
@@ -357,7 +377,8 @@ const refNames = new Map<string, string>();
 function pascal(word: string): string {
     return camel(word).charAt(0).toUpperCase() + camel(word).slice(1);
 }
-const typedRoots: [name: string, source: string, path: (string | number)[]][] = [
+// The fourth member names properties the app keeps as JSON, because it merges and saves them whole.
+const typedRoots: [name: string, source: string, path: (string | number)[], keep?: string[]][] = [
     ['ChatItem', 'request.chat.attach.result', ['properties', 'items', 'items']],
     ['ChatInfo', 'request.chat.attach.result', ['properties', 'info']],
     ['ChatEvent', 'request.chat.attach.result', ['properties', 'events', 'items']],
@@ -450,12 +471,25 @@ const typedRoots: [name: string, source: string, path: (string | number)[]][] = 
     ['AgentTaskResult', 'request.task.list.result', ['properties', 'tasks', 'items', 'properties', 'result', 'anyOf', 0]],
     ['AgentTaskPaused', 'request.task.list.result', ['properties', 'tasks', 'items', 'properties', 'paused']],
     ['AgentTaskBackground', 'request.task.list.result', ['properties', 'tasks', 'items', 'properties', 'background']],
-    ['TaskChangedEvent', 'event.task.changed', []]
+    ['TaskChangedEvent', 'event.task.changed', []],
+    // The document stays JSON to merge and save, so a node or view this app has no word for survives a save. The
+    // summary is the row the project lists keep as JSON too.
+    ['ProjectOpenResult', 'request.project.open.result', [], ['summary', 'document', 'local']],
+    ['ProjectChangedEvent', 'event.project.changed', [], ['document']],
+    ['ProjectSaveResult', 'request.project.save.result', []],
+    ['ProjectShowViewEvent', 'event.project.showView', []],
+    // The views are read one by one, so a view this app cannot read does not blank the list.
+    ['StoredDocument', 'request.project.open.result', ['properties', 'document'], ['views']],
+    ['StoredView', 'request.project.open.result', ['properties', 'document', 'properties', 'views', 'items']],
+    ['StoredNode', 'request.project.open.result', ['properties', 'document', 'properties', 'views', 'items', 'oneOf', 0, 'properties', 'nodes', 'items']]
 ];
-const typed = typedRoots.map(([name, source, path]) => {
+const typed = typedRoots.map(([name, source, path, keep]) => {
     const schema = path.reduce((node: any, key) => node?.[key], typedSource(source));
     if (!schema) {
         throw new Error(`No schema at ${source} ${path.join('.')}`);
+    }
+    for (const key of keep ?? []) {
+        schema.properties[key] = {};
     }
     names.set(canonical(schema), name);
     return [name, schema] as const;
@@ -472,6 +506,10 @@ for (const [union, tag, suffix] of [
     for (const [value, member] of typedMembers(union, tag)) {
         names.set(canonical(member), `Chat${pascal(value)}${suffix}`);
     }
+}
+// `StoredCanvasView`, `StoredUnknownView`.
+for (const [value, member] of typedMembers('StoredView', 'kind')) {
+    names.set(canonical(member), `Stored${pascal(value)}View`);
 }
 // `AgentRoutine`, `RoutineWeeklySchedule`.
 for (const [value, member] of typedMembers('Routine', 'kind')) {

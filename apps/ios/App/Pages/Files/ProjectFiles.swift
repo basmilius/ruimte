@@ -16,7 +16,7 @@ import RuimteTransport
 
     var folder: String { workspace.folder }
     var client: any MachineRequesting { workspace.client }
-    var chats: [FilesChat] { FilesMention.chats(in: workspace.views, current: workspace.selectedID) }
+    var chats: [FilesChat] { FilesMention.chats(in: workspace.storedViews, current: workspace.selectedID) }
 
     /// Adds the file to the chat's draft. The line it returns says where it went.
     func mention(_ path: String, in chat: FilesChat) async -> String? {
@@ -64,20 +64,14 @@ enum FilesMention {
     }
 
     /// Every chat of the project, the current one first and the rest in the order the project lists them.
-    static func chats(in views: [JSONValue], current: String?) -> [FilesChat] {
+    static func chats(in views: [StoredView], current: String?) -> [FilesChat] {
         var chats: [FilesChat] = []
         for view in views {
-            if view.text("kind") == "chat" {
-                chats.append(
-                    FilesChat(
-                        id: view.stableID, title: view.text("name", fallback: String(localized: "Chat")),
-                        current: view.stableID == current))
+            if case .chat(let chat) = view {
+                chats.append(FilesChat(id: chat.id, title: chat.name, current: chat.id == current))
             }
-            for node in view.list("nodes") where node.text("kind") == "chat" {
-                chats.append(
-                    FilesChat(
-                        id: node.stableID, title: node.text("title", fallback: String(localized: "Chat")),
-                        current: false))
+            for node in view.nodes where node.kind == .chat {
+                chats.append(FilesChat(id: node.id, title: node.title, current: false))
             }
         }
         return chats.filter(\.current) + chats.filter { !$0.current }

@@ -60,16 +60,16 @@ extension VoiceTarget {
     @MainActor init(_ workspace: MobileWorkspace, shown: String?) {
         self.init(
             machineID: workspace.session.machine.id, projectID: workspace.projectID, projectName: workspace.title,
-            viewID: Self.canvas(shown: shown, views: workspace.views), machineName: workspace.session.machine.name)
+            viewID: Self.canvas(shown: shown, views: workspace.storedViews), machineName: workspace.session.machine.name)
     }
 
     /// The canvas a shown id stands for: a canvas itself, or the canvas of a node opened on its own, which is what both
     /// the iPhone and the iPad name as shown then.
-    static func canvas(shown: String?, views: [JSONValue]) -> String? {
+    static func canvas(shown: String?, views: [StoredView]) -> String? {
         guard let shown else { return nil }
-        let canvases = views.filter { $0.text("kind") == "canvas" }
-        if let canvas = canvases.first(where: { $0.stableID == shown }) { return canvas.stableID }
-        return canvases.first { $0.list("nodes").contains { $0.stableID == shown } }?.stableID
+        let canvases = views.compactMap(\.canvas)
+        if let canvas = canvases.first(where: { $0.id == shown }) { return canvas.id }
+        return canvases.first { $0.nodes.contains { $0.id == shown } }?.id
     }
 }
 

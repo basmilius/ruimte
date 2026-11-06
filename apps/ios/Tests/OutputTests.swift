@@ -131,12 +131,12 @@ import Testing
             .object(["id": .string("chat-1"), "kind": .string("chat"), "name": .string("Release")]),
             .object([
                 "id": .string("canvas"), "kind": .string("canvas"),
-                "nodes": .array([.object(["id": .string("chat-2"), "title": .string("Nightly")])]),
+                "nodes": .array([.object(["id": .string("chat-2"), "kind": .string("chat"), "title": .string("Nightly")])]),
             ]),
         ]
-        #expect(OutputContext.chatName(views, chatID: "chat-1") == "Release")
-        #expect(OutputContext.chatName(views, chatID: "chat-2") == "Nightly")
-        #expect(OutputContext.chatName(views, chatID: "chat-3") == nil)
+        #expect(OutputContext.chatName(ProjectWire.stored(views), chatID: "chat-1") == "Release")
+        #expect(OutputContext.chatName(ProjectWire.stored(views), chatID: "chat-2") == "Nightly")
+        #expect(OutputContext.chatName(ProjectWire.stored(views), chatID: "chat-3") == nil)
     }
 
     private func item(_ id: String, at date: Date) -> OutputItem {

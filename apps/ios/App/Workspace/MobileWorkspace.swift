@@ -10,14 +10,17 @@ final class MobileWorkspace {
     let session: SharedMachineSession
     let projectID: String
     private let schedule: Schedule
-    private(set) var document = JSONValue.object([:])
+    /// The document as it is merged and saved. The generated types read it for the screens and never write it back.
+    private(set) var document = JSONValue.object([:]) { didSet { readDocument() } }
+    private(set) var header: StoredDocument?
+    private(set) var storedViews: [StoredView] = []
     private(set) var summary = JSONValue.object([:])
     private(set) var local = JSONValue.object(["activeViewId": .null, "views": .object([:])])
     private(set) var ready = false
     private(set) var saving = false
     var problem: String?
     var conflict: JSONValue?
-    var notice: JSONValue?
+    var notice: ProjectShowViewEvent?
     var selectedID: String?
     /// Per node, the project-file command its terminal started without, until a person approves it.
     private(set) var heldCommands: [String: String] = [:]
@@ -31,11 +34,13 @@ final class MobileWorkspace {
     @ObservationIgnored private var cameraTask: Task<Void, Never>?
     @ObservationIgnored private var pendingCameras: [String: JSONValue] = [:]
     var views: [JSONValue] { document.list("views") }
+    /// A view by id, read through the generated types.
+    func storedView(_ id: String) -> StoredView? { storedViews.first { $0.id == id } }
     /// A view by id; an empty object when it is gone, so a page that outlives its view reads nothing.
     func view(_ id: String) -> JSONValue { views.first { $0.stableID == id } ?? .object([:]) }
     var folder: String { summary.text("folder", fallback: "~") }
     var title: String {
-        document.text("name", fallback: summary.text("name", fallback: String(localized: "Project")))
+        header?.name ?? summary.text("name", fallback: String(localized: "Project"))
     }
     /// The machine's Chats project, which holds the chats outside any project; its folder is the machine's own.
     var isScratch: Bool { summary["scratch"]?.boolValue == true }
@@ -43,9 +48,9 @@ final class MobileWorkspace {
     /// What a person calls each view and node, by id, for a list that names sessions by their node.
     var nodeTitles: [String: String] {
         var titles: [String: String] = [:]
-        for view in views {
-            titles[view.stableID] = view.text("name")
-            for node in view.list("nodes") { titles[node.stableID] = node.text("title") }
+        for view in storedViews {
+            titles[view.id] = view.name
+            for node in view.nodes { titles[node.id] = node.title }
         }
         return titles
     }
@@ -77,13 +82,17 @@ final class MobileWorkspace {
         session.retainProject(projectID)
         session.tasks.watch(projectID)
         subscriptions.append(
-            client.subscribe(.projectChanged) { [weak self] event in
-                guard let self, event.text("projectId") == projectID, let incoming = event["document"] else { return }
-                receive(incoming)
+            client.subscribe(.projectChanged) { [weak self] payload in
+                guard let self, let event = try? payload.decoded(as: ProjectChangedEvent.self),
+                    event.projectId == projectID
+                else { return }
+                receive(event.document)
             })
         subscriptions.append(
-            client.subscribe(.projectShowView) { [weak self] event in
-                guard let self, event.text("projectId") == projectID else { return }
+            client.subscribe(.projectShowView) { [weak self] payload in
+                guard let self, let event = try? payload.decoded(as: ProjectShowViewEvent.self),
+                    event.projectId == projectID
+                else { return }
                 notice = event
             })
         subscriptions.append(
@@ -118,18 +127,19 @@ final class MobileWorkspace {
 
     func open() async {
         do {
-            let result = try await session.openProject(projectID)
-            guard !stopped, !Task.isCancelled, let incoming = result["document"] else { return }
-            summary = result["summary"] ?? .object([:])
+            let result = try await session.openProject(projectID).decoded(as: ProjectOpenResult.self)
+            guard !stopped, !Task.isCancelled else { return }
+            let incoming = result.document
+            summary = result.summary
             if ready {
                 receive(incoming)
             } else {
                 document = incoming
                 base = incoming
-                revision = Int(incoming.number("rev"))
+                revision = Self.revision(of: incoming)
                 local =
-                    (UserDefaults.standard.data(forKey: storageKey).flatMap { try? JSONValue.decode($0) }) ?? result[
-                        "local"] ?? local
+                    (UserDefaults.standard.data(forKey: storageKey).flatMap { try? JSONValue.decode($0) })
+                    ?? result.local
                 selectedID =
                     local["activeViewId"]?.stringValue
                     ?? views.first(where: { !WorkspaceViewSections.isDivider($0) })?.stableID
@@ -141,12 +151,22 @@ final class MobileWorkspace {
         } catch { if !Task.isCancelled && session.connected { problem = error.localizedDescription } }
     }
 
+    /// The revision a document carries; zero for one that does not read, which no revision replaces.
+    private static func revision(of document: JSONValue) -> Int {
+        (try? document.decoded(as: StoredDocument.self)).map { Int($0.rev) } ?? 0
+    }
+
+    private func readDocument() {
+        header = try? document.decoded(as: StoredDocument.self)
+        storedViews = views.storedViews
+    }
+
     func receive(_ incoming: JSONValue) {
-        guard incoming.number("rev") > Double(revision) else { return }
+        guard Self.revision(of: incoming) > revision else { return }
         do {
             document = try MobileProjectMerge.merge(base: base, local: document, remote: incoming) ?? incoming
             base = incoming
-            revision = Int(incoming.number("rev"))
+            revision = Self.revision(of: incoming)
             reconcileSelection()
         } catch {
             conflict = incoming
@@ -158,7 +178,7 @@ final class MobileWorkspace {
         guard let conflict else { return }
         document = conflict
         base = conflict
-        revision = Int(conflict.number("rev"))
+        revision = Self.revision(of: conflict)
         self.conflict = nil
         problem = nil
         pendingSave = false
@@ -168,7 +188,7 @@ final class MobileWorkspace {
     func keepLocal() async {
         guard let conflict else { return }
         base = conflict
-        revision = Int(conflict.number("rev"))
+        revision = Self.revision(of: conflict)
         self.conflict = nil
         pendingSave = true
         await save()
@@ -196,7 +216,7 @@ final class MobileWorkspace {
                     payload: .object([
                         "projectId": .string(projectID), "baseRev": .number(Double(revision)), "content": content,
                     ]))
-                let writtenRevision = Int(result.number("rev"))
+                let writtenRevision = Int(try result.decoded(as: ProjectSaveResult.self).rev)
                 if writtenRevision >= revision {
                     revision = writtenRevision
                     base = sent.setting("rev", .number(Double(revision)))
@@ -209,8 +229,8 @@ final class MobileWorkspace {
                 let failedRevision = revision
                 // Reopen retrieves the conflicting revision without discarding this client's edits.
                 if session.rpc.isConnected {
-                    if let result = try? await session.openProject(projectID), let incoming = result["document"] {
-                        receive(incoming)
+                    if let result = try? await session.openProject(projectID).decoded(as: ProjectOpenResult.self) {
+                        receive(result.document)
                     }
                 }
                 // Merged onto a newer revision, the edit goes out again.

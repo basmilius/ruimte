@@ -108,6 +108,51 @@ final class SessionWorkspaceTests: XCTestCase {
         XCTAssertNil(workspace.problem)
     }
 
+    @MainActor func testWhatThisAppCannotReadSurvivesASaveAndStillReadsAsUnknown() async throws {
+        let runtime = AppRuntime(connections: MachineConnections(monitorPaths: false))
+        let machine = Machine(
+            id: "unknown-\(UUID().uuidString)", name: "Mac", icon: nil, publicKey: DeviceKey().publicKey,
+            brokerUrl: nil, lastSeenAt: nil)
+        let session = runtime.session(for: machine)
+        let wire = ConflictWire()
+        wire.remote = wire.remote.setting(
+            "views",
+            .array([
+                .object(["id": .string("holo"), "kind": .string("hologram"), "name": .string("Holo"), "depth": .number(3)]),
+                ProjectWire.view(
+                    .object([
+                        "id": .string("main"), "kind": .string("canvas"),
+                        "nodes": .array([
+                            .object(["id": .string("gizmo"), "kind": .string("gizmo"), "tilt": .number(12)]),
+                            .object(["id": .string("chat"), "kind": .string("chat"), "future": .bool(true)]),
+                        ]),
+                    ])),
+            ]))
+        session.rpc = wire.client
+        let workspace = MobileWorkspace(session: session, projectID: "project")
+        defer {
+            workspace.stop()
+            wire.client.shutdown()
+            runtime.connections.shutdown()
+            UserDefaults.standard.removeObject(forKey: workspace.storageKey)
+        }
+        workspace.start()
+        await workspace.open()
+        XCTAssertTrue(workspace.ready, workspace.problem ?? "The project did not open")
+
+        guard case .unknown(let holo) = workspace.storedViews[0] else { return XCTFail("An unknown view stays unknown") }
+        XCTAssertEqual(holo.raw["depth"], .number(3))
+        XCTAssertEqual(workspace.storedViews[1].nodes.map(\.kind), [.unknown, .chat])
+
+        await workspace.edit { $0.setting("name", .string("Renamed")) }
+
+        let saved = try XCTUnwrap(wire.saves.last?["content"])
+        XCTAssertEqual(saved["views"], workspace.document["views"])
+        XCTAssertEqual(saved["views"]?.arrayValue?[0]["raw"]?["depth"], .number(3))
+        XCTAssertEqual(saved["views"]?.arrayValue?[1]["nodes"]?.arrayValue?[0]["raw"]?["tilt"], .number(12))
+        XCTAssertEqual(saved["views"]?.arrayValue?[1]["nodes"]?.arrayValue?[1]["future"], .bool(true))
+    }
+
     @MainActor func testAProjectHasTheTitleAndKindOfItsRowBeforeItOpens() {
         let runtime = AppRuntime(connections: MachineConnections(monitorPaths: false))
         let machine = Machine(

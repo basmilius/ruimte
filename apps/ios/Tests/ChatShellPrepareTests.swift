@@ -52,13 +52,13 @@ final class ChatShellPrepareTests: XCTestCase {
                 "nodes": .array([
                     .object(["id": .string("here"), "kind": .string("terminal")]),
                     .object([
-                        "id": .string("there"), "kind": .string("terminal"), "machine": .object(["id": .string("b")]),
+                        "id": .string("there"), "kind": .string("terminal"), "machine": .string("b"),
                     ]),
                     .object(["id": .string("chat"), "kind": .string("chat")]),
                 ]),
             ]),
         ]
-        XCTAssertEqual(ChatShellPrepare.terminals(views), ["term", "here"])
+        XCTAssertEqual(ChatShellPrepare.terminals(ProjectWire.stored(views)), ["term", "here"])
     }
 
     func testAPreviewReadsTheMachineCommandAndTargets() {

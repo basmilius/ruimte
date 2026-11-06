@@ -52,7 +52,7 @@ import XCTest
 
     func testTheOfferIsTheDesktopsGroupsOrderExclusionsAndNames() throws {
         let fixture = try fixture()
-        let offered = ChatReferables.project(views: fixture.views, chatID: fixture.chatId)
+        let offered = ChatReferables.project(views: ProjectWire.stored(fixture.views), chatID: fixture.chatId)
         XCTAssertEqual(offered.map(\.id), fixture.referables.map(\.id))
         XCTAssertEqual(offered.map(\.name), fixture.referables.map(\.name))
         XCTAssertEqual(offered.map(\.kind), fixture.referables.map(\.kind))
@@ -72,7 +72,7 @@ import XCTest
             ]
             """
         let views = try JSONDecoder().decode([JSONValue].self, from: Data(json.utf8))
-        let offered = ChatReferables.project(views: views, chatID: "chat-lead")
+        let offered = ChatReferables.project(views: ProjectWire.stored(views), chatID: "chat-lead")
         XCTAssertEqual(offered.map(\.id), ["drawing-sketch", "canvas", "chat-plan"])
         XCTAssertEqual(offered.map(\.mark), ["brain", "frame", "message-square"])
         let lookup = ChatReferenceLookup(items: offered, known: true)
@@ -85,7 +85,7 @@ import XCTest
         let model = ChatModel(client: client, chatID: fixture.chatId, machineID: "machine", draftRoot: root)
         model.connected = true
         model.referenceSource = ChatReferenceSource(
-            items: { ChatReferables.project(views: fixture.views, chatID: fixture.chatId) }, viewReferences: { true })
+            items: { ChatReferables.project(views: ProjectWire.stored(fixture.views), chatID: fixture.chatId) }, viewReferences: { true })
         for pick in fixture.picks {
             model.draft += pick.typed
             model.composition.selection = NSRange(location: (model.draft as NSString).length, length: 0)
@@ -109,7 +109,7 @@ import XCTest
         let model = ChatModel(client: client, chatID: fixture.chatId, machineID: "machine", draftRoot: root)
         model.connected = true
         model.referenceSource = ChatReferenceSource(
-            items: { ChatReferables.project(views: fixture.views, chatID: fixture.chatId) }, viewReferences: { false })
+            items: { ChatReferables.project(views: ProjectWire.stored(fixture.views), chatID: fixture.chatId) }, viewReferences: { false })
         await model.search("#", query: "")
         XCTAssertEqual(Set(model.suggestions.compactMap(\.referable?.kind)), ["chat"])
         model.draft = "Ask #Release notes and #Research"
@@ -150,7 +150,7 @@ import XCTest
     }
 
     func testAChipOpensItsViewItsNodeOnItsCanvasOrTheCanvasOfAText() throws {
-        let views = try fixture().views
+        let views = ProjectWire.stored(try fixture().views)
         XCTAssertEqual(ChatReferables.destination("sketch", views: views)?.viewID, "sketch")
         XCTAssertEqual(ChatReferables.destination("research", views: views)?.viewID, "main")
         XCTAssertEqual(ChatReferables.destination("research", views: views)?.nodeID, "research")
@@ -182,7 +182,7 @@ final class ChatReferenceTrailTests: XCTestCase {
 
     func testAChatViewReachesANodeThroughItsCanvas() {
         let chat: JSONValue = .object(["kind": .string("chat"), "id": .string("lead"), "name": .string("Lead")])
-        let items = ChatReferables.project(views: [chat, canvas], chatID: "lead")
+        let items = ChatReferables.project(views: ProjectWire.stored([chat, canvas]), chatID: "lead")
         XCTAssertEqual(items.map(\.id), ["board", "runner"])
         XCTAssertEqual(items[1].trail.map(\.name), ["Board"])
     }

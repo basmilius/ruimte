@@ -437,3 +437,46 @@ enum TaskWire {
         return try! JSONValue.object(fields).decoded(as: AgentTask.self)
     }
 }
+
+/// Views and nodes of a project document as a machine writes them. A test names the fields it is about, and the rest
+/// takes the defaults of the kind, so the view decodes into the generated types as a real one does.
+enum ProjectWire {
+    static func view(_ fields: JSONValue) -> JSONValue {
+        let id = fields["id"]?.stringValue ?? "view"
+        var defaults: [String: JSONValue] = ["name": .string(id)]
+        switch fields["kind"]?.stringValue {
+        case "canvas": defaults.merge(["nodes": .array([]), "texts": .array([]), "edges": .array([])]) { $1 }
+        case "chat", "terminal", "artifact": defaults["node"] = .object([:])
+        case "design": defaults.merge(["node": .object([:]), "path": .string("design.md")]) { $1 }
+        case "browser": defaults["url"] = .string("https://ruimte.app")
+        case "file": defaults["path"] = .string("README.md")
+        case "device":
+            defaults["device"] = .object([
+                "platform": .string("ios"), "kind": .string("simulator"), "name": .string("iPhone"),
+                "runtime": .string("iOS 27"),
+            ])
+        case "database":
+            defaults.merge([
+                "connectionId": .string("main"), "schema": .string("public"), "table": .string("users"),
+                "mode": .string("data"),
+            ]) { $1 }
+        default: break
+        }
+        var view = defaults.merging(fields.objectValue ?? [:]) { _, given in given }
+        if let nodes = view["nodes"]?.arrayValue { view["nodes"] = .array(nodes.map(node)) }
+        return .object(view)
+    }
+
+    static func node(_ fields: JSONValue) -> JSONValue {
+        let id = fields["id"]?.stringValue ?? "node"
+        let defaults: [String: JSONValue] = [
+            "title": .string(id), "x": .number(0), "y": .number(0), "w": .number(320), "h": .number(200),
+        ]
+        return .object(defaults.merging(fields.objectValue ?? [:]) { _, given in given })
+    }
+
+    /// The views a screen reads. A fixture that does not decode is a broken test, not a case to cover.
+    static func stored(_ views: [JSONValue]) -> [StoredView] {
+        views.map { try! view($0).decoded(as: StoredView.self) }
+    }
+}

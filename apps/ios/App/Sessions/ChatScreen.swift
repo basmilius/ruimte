@@ -196,7 +196,7 @@ struct ChatScreen: View {
             item: Binding(
                 get: { model.presentation.forkRequest }, set: { model.presentation.forkRequest = $0 })
         ) { request in
-            let origin = workspace.flatMap { ChatForking.origin(in: $0.views, chatID: model.chatID) }
+            let origin = workspace.flatMap { ChatForking.origin(in: $0.storedViews, chatID: model.chatID) }
             ChatForkSheet(
                 model: model, turnID: request.turnID, originalTitle: origin?.title ?? title, origin: origin?.shape,
                 forked: openFork)
@@ -342,7 +342,7 @@ struct ChatScreen: View {
                 items: { [weak workspace, weak chat] in
                     guard let workspace else { return [] }
                     return ChatReferables.withReached(
-                        ChatReferables.project(views: workspace.views, chatID: chatID),
+                        ChatReferables.project(views: workspace.storedViews, chatID: chatID),
                         ownID: workspace.projectID, ownName: workspace.summary.text("name"),
                         reached: chat?.reachedProjects ?? [])
                 },
@@ -350,8 +350,8 @@ struct ChatScreen: View {
             // Up front as well as at a `#`, so a chip of a message already sent shows where it points.
             Task { await chat.refreshReachedProjects() }
             model.presentation.places = ChatPlaces(
-                title: { ChatForking.origin(in: workspace.views, chatID: $0)?.title },
-                shape: { ChatForking.origin(in: workspace.views, chatID: $0)?.shape },
+                title: { ChatForking.origin(in: workspace.storedViews, chatID: $0)?.title },
+                shape: { ChatForking.origin(in: workspace.storedViews, chatID: $0)?.shape },
                 arrival: { await workspace.arrival(of: $0) })
         }
     }
@@ -418,7 +418,7 @@ struct ChatScreen: View {
         }
         Section {
             forkItem
-            if workspace.map({ ChatForking.origin(in: $0.views, chatID: model.chatID) != nil }) == true {
+            if workspace.map({ ChatForking.origin(in: $0.storedViews, chatID: model.chatID) != nil }) == true {
                 Button(String(localized: "Rename"), lucideIcon: "pencil") {
                     renameText = title
                     renaming = true

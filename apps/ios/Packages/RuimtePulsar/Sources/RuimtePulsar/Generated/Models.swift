@@ -12040,6 +12040,2446 @@ public struct TaskChangedEvent: Codable, Sendable, Equatable {
     }
 }
 
+public struct ProjectOpenResult: Codable, Sendable, Equatable {
+    public let `summary`: JSONValue
+    public let `document`: JSONValue
+    public let `local`: JSONValue
+
+    public init(`summary`: JSONValue, `document`: JSONValue, `local`: JSONValue) {
+        self.`summary` = `summary`
+        self.`document` = `document`
+        self.`local` = `local`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `summary` = try container.decode(JSONValue.self, forKey: .`summary`)
+        `document` = try container.decode(JSONValue.self, forKey: .`document`)
+        `local` = try container.decode(JSONValue.self, forKey: .`local`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`summary`, forKey: .`summary`)
+        try container.encode(`document`, forKey: .`document`)
+        try container.encode(`local`, forKey: .`local`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `summary` = "summary"
+        case `document` = "document"
+        case `local` = "local"
+    }
+}
+
+public struct ProjectChangedEvent: Codable, Sendable, Equatable {
+    public let `projectId`: String
+    public let `document`: JSONValue
+
+    public init(`projectId`: String, `document`: JSONValue) {
+        self.`projectId` = `projectId`
+        self.`document` = `document`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `projectId` = try container.decode(String.self, forKey: .`projectId`)
+        `document` = try container.decode(JSONValue.self, forKey: .`document`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`projectId`, forKey: .`projectId`)
+        try container.encode(`document`, forKey: .`document`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `projectId` = "projectId"
+        case `document` = "document"
+    }
+}
+
+public struct ProjectSaveResult: Codable, Sendable, Equatable {
+    public let `rev`: Int64
+
+    public init(`rev`: Int64) {
+        self.`rev` = `rev`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `rev` = try container.decode(Int64.self, forKey: .`rev`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`rev`, forKey: .`rev`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `rev` = "rev"
+    }
+}
+
+public struct ProjectShowViewEvent: Codable, Sendable, Equatable {
+    public let `projectId`: String
+    public let `viewId`: String
+    public let `by`: String
+
+    public init(`projectId`: String, `viewId`: String, `by`: String) {
+        self.`projectId` = `projectId`
+        self.`viewId` = `viewId`
+        self.`by` = `by`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `projectId` = try container.decode(String.self, forKey: .`projectId`)
+        `viewId` = try container.decode(String.self, forKey: .`viewId`)
+        `by` = try container.decode(String.self, forKey: .`by`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`projectId`, forKey: .`projectId`)
+        try container.encode(`viewId`, forKey: .`viewId`)
+        try container.encode(`by`, forKey: .`by`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `projectId` = "projectId"
+        case `viewId` = "viewId"
+        case `by` = "by"
+    }
+}
+
+public struct StoredDocument: Codable, Sendable, Equatable {
+    public let `name`: String
+    public let `color`: String
+    public let `icon`: MachineIcon?
+    public let `views`: JSONValue
+    public let `flags`: [String: String]?
+    public let `sql`: StoredDocumentSql?
+    public let `accounts`: [String: StoredDocumentAccountsValue]?
+    public let `version`: Double
+    public let `rev`: Int64
+    public let `shared`: [String]?
+
+    public init(`name`: String, `color`: String, `icon`: MachineIcon? = nil, `views`: JSONValue, `flags`: [String: String]? = nil, `sql`: StoredDocumentSql? = nil, `accounts`: [String: StoredDocumentAccountsValue]? = nil, `version`: Double = 3, `rev`: Int64, `shared`: [String]? = nil) {
+        self.`name` = `name`
+        self.`color` = `color`
+        self.`icon` = `icon`
+        self.`views` = `views`
+        self.`flags` = `flags`
+        self.`sql` = `sql`
+        self.`accounts` = `accounts`
+        self.`version` = `version`
+        self.`rev` = `rev`
+        self.`shared` = `shared`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `color` = try container.decode(String.self, forKey: .`color`)
+        `icon` = try container.decodeIfPresent(MachineIcon.self, forKey: .`icon`)
+        `views` = try container.decode(JSONValue.self, forKey: .`views`)
+        `flags` = try container.decodeIfPresent([String: String].self, forKey: .`flags`)
+        `sql` = try container.decodeIfPresent(StoredDocumentSql.self, forKey: .`sql`)
+        `accounts` = try container.decodeIfPresent([String: StoredDocumentAccountsValue].self, forKey: .`accounts`)
+        `version` = try container.decode(Double.self, forKey: .`version`)
+        `rev` = try container.decode(Int64.self, forKey: .`rev`)
+        `shared` = try container.decodeIfPresent([String].self, forKey: .`shared`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`color`, forKey: .`color`)
+        try container.encodeIfPresent(`icon`, forKey: .`icon`)
+        try container.encode(`views`, forKey: .`views`)
+        try container.encodeIfPresent(`flags`, forKey: .`flags`)
+        try container.encodeIfPresent(`sql`, forKey: .`sql`)
+        try container.encodeIfPresent(`accounts`, forKey: .`accounts`)
+        try container.encode(`version`, forKey: .`version`)
+        try container.encode(`rev`, forKey: .`rev`)
+        try container.encodeIfPresent(`shared`, forKey: .`shared`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `name` = "name"
+        case `color` = "color"
+        case `icon` = "icon"
+        case `views` = "views"
+        case `flags` = "flags"
+        case `sql` = "sql"
+        case `accounts` = "accounts"
+        case `version` = "version"
+        case `rev` = "rev"
+        case `shared` = "shared"
+    }
+}
+
+public struct StoredDocumentSql: Codable, Sendable, Equatable {
+    public let `default`: StoredDocumentSqlDefault?
+    public let `files`: [String: StoredDocumentSqlFilesValue]?
+
+    public init(`default`: StoredDocumentSqlDefault? = nil, `files`: [String: StoredDocumentSqlFilesValue]? = nil) {
+        self.`default` = `default`
+        self.`files` = `files`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `default` = try container.decodeIfPresent(StoredDocumentSqlDefault.self, forKey: .`default`)
+        `files` = try container.decodeIfPresent([String: StoredDocumentSqlFilesValue].self, forKey: .`files`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(`default`, forKey: .`default`)
+        try container.encodeIfPresent(`files`, forKey: .`files`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `default` = "default"
+        case `files` = "files"
+    }
+}
+
+public struct StoredDocumentSqlDefault: Codable, Sendable, Equatable {
+    public let `connectionId`: String?
+    public let `database`: String?
+
+    public init(`connectionId`: String?, `database`: String? = nil) {
+        self.`connectionId` = `connectionId`
+        self.`database` = `database`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `connectionId` = try container.decode(String?.self, forKey: .`connectionId`)
+        `database` = try container.decodeIfPresent(String.self, forKey: .`database`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`connectionId`, forKey: .`connectionId`)
+        try container.encodeIfPresent(`database`, forKey: .`database`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `connectionId` = "connectionId"
+        case `database` = "database"
+    }
+}
+
+public struct StoredDocumentSqlFilesValue: Codable, Sendable, Equatable {
+    public let `connectionId`: String?
+    public let `database`: String?
+
+    public init(`connectionId`: String?, `database`: String? = nil) {
+        self.`connectionId` = `connectionId`
+        self.`database` = `database`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `connectionId` = try container.decode(String?.self, forKey: .`connectionId`)
+        `database` = try container.decodeIfPresent(String.self, forKey: .`database`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`connectionId`, forKey: .`connectionId`)
+        try container.encodeIfPresent(`database`, forKey: .`database`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `connectionId` = "connectionId"
+        case `database` = "database"
+    }
+}
+
+public struct StoredDocumentAccountsValue: Codable, Sendable, Equatable {
+    public let `default`: String?
+    public let `off`: [String]?
+
+    public init(`default`: String? = nil, `off`: [String]? = nil) {
+        self.`default` = `default`
+        self.`off` = `off`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `default` = try container.decodeIfPresent(String.self, forKey: .`default`)
+        `off` = try container.decodeIfPresent([String].self, forKey: .`off`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(`default`, forKey: .`default`)
+        try container.encodeIfPresent(`off`, forKey: .`off`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `default` = "default"
+        case `off` = "off"
+    }
+}
+
+public enum StoredView: Codable, Sendable, Equatable {
+    case `canvas`(StoredCanvasView)
+    case `chat`(StoredChatView)
+    case `terminal`(StoredTerminalView)
+    case `browser`(StoredBrowserView)
+    case `device`(StoredDeviceView)
+    case `drawing`(StoredDrawingView)
+    case `diagram`(StoredDiagramView)
+    case `file`(StoredFileView)
+    case `database`(StoredDatabaseView)
+    case `separator`(StoredSeparatorView)
+    case `subheader`(StoredSubheaderView)
+    case `artifact`(StoredArtifactView)
+    case `design`(StoredDesignView)
+    case `unknown`(StoredUnknownView)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Tag.self)
+        switch try container.decode(String.self, forKey: .value) {
+        case "canvas": self = .`canvas`(try StoredCanvasView(from: decoder))
+        case "chat": self = .`chat`(try StoredChatView(from: decoder))
+        case "terminal": self = .`terminal`(try StoredTerminalView(from: decoder))
+        case "browser": self = .`browser`(try StoredBrowserView(from: decoder))
+        case "device": self = .`device`(try StoredDeviceView(from: decoder))
+        case "drawing": self = .`drawing`(try StoredDrawingView(from: decoder))
+        case "diagram": self = .`diagram`(try StoredDiagramView(from: decoder))
+        case "file": self = .`file`(try StoredFileView(from: decoder))
+        case "database": self = .`database`(try StoredDatabaseView(from: decoder))
+        case "separator": self = .`separator`(try StoredSeparatorView(from: decoder))
+        case "subheader": self = .`subheader`(try StoredSubheaderView(from: decoder))
+        case "artifact": self = .`artifact`(try StoredArtifactView(from: decoder))
+        case "design": self = .`design`(try StoredDesignView(from: decoder))
+        case "unknown": self = .`unknown`(try StoredUnknownView(from: decoder))
+        default: throw WireValidationError.invalid("Unknown StoredView tag")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case .`canvas`(let value): try value.encode(to: encoder)
+        case .`chat`(let value): try value.encode(to: encoder)
+        case .`terminal`(let value): try value.encode(to: encoder)
+        case .`browser`(let value): try value.encode(to: encoder)
+        case .`device`(let value): try value.encode(to: encoder)
+        case .`drawing`(let value): try value.encode(to: encoder)
+        case .`diagram`(let value): try value.encode(to: encoder)
+        case .`file`(let value): try value.encode(to: encoder)
+        case .`database`(let value): try value.encode(to: encoder)
+        case .`separator`(let value): try value.encode(to: encoder)
+        case .`subheader`(let value): try value.encode(to: encoder)
+        case .`artifact`(let value): try value.encode(to: encoder)
+        case .`design`(let value): try value.encode(to: encoder)
+        case .`unknown`(let value): try value.encode(to: encoder)
+        }
+    }
+
+    private enum Tag: String, CodingKey { case value = "kind" }
+}
+
+public struct StoredCanvasView: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `titleSource`: StoredCanvasViewTitleSource?
+    public let `icon`: MachineIcon?
+    public let `createdBy`: String?
+    public let `kind`: String
+    public let `nodes`: [StoredNode]
+    public let `texts`: [StoredCanvasViewTextsItem]
+    public let `edges`: [StoredCanvasViewEdgesItem]
+    public let `layouts`: [StoredCanvasViewLayoutsItem]
+    public let `lines`: [StoredCanvasViewLinesItem]?
+    public let `hidden`: Bool?
+
+    public init(`id`: String, `name`: String, `titleSource`: StoredCanvasViewTitleSource? = nil, `icon`: MachineIcon? = nil, `createdBy`: String? = nil, `kind`: String = "canvas", `nodes`: [StoredNode], `texts`: [StoredCanvasViewTextsItem], `edges`: [StoredCanvasViewEdgesItem], `layouts`: [StoredCanvasViewLayoutsItem], `lines`: [StoredCanvasViewLinesItem]? = nil, `hidden`: Bool? = nil) {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`titleSource` = `titleSource`
+        self.`icon` = `icon`
+        self.`createdBy` = `createdBy`
+        self.`kind` = `kind`
+        self.`nodes` = `nodes`
+        self.`texts` = `texts`
+        self.`edges` = `edges`
+        self.`layouts` = `layouts`
+        self.`lines` = `lines`
+        self.`hidden` = `hidden`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `titleSource` = try container.decodeIfPresent(StoredCanvasViewTitleSource.self, forKey: .`titleSource`)
+        `icon` = try container.decodeIfPresent(MachineIcon.self, forKey: .`icon`)
+        `createdBy` = try container.decodeIfPresent(String.self, forKey: .`createdBy`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `nodes` = try container.decode([StoredNode].self, forKey: .`nodes`)
+        `texts` = try container.decode([StoredCanvasViewTextsItem].self, forKey: .`texts`)
+        `edges` = try container.decode([StoredCanvasViewEdgesItem].self, forKey: .`edges`)
+        `layouts` = try container.decodeIfPresent([StoredCanvasViewLayoutsItem].self, forKey: .`layouts`) ?? []
+        `lines` = try container.decodeIfPresent([StoredCanvasViewLinesItem].self, forKey: .`lines`)
+        `hidden` = try container.decodeIfPresent(Bool.self, forKey: .`hidden`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`titleSource`, forKey: .`titleSource`)
+        try container.encodeIfPresent(`icon`, forKey: .`icon`)
+        try container.encodeIfPresent(`createdBy`, forKey: .`createdBy`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`nodes`, forKey: .`nodes`)
+        try container.encode(`texts`, forKey: .`texts`)
+        try container.encode(`edges`, forKey: .`edges`)
+        try container.encode(`layouts`, forKey: .`layouts`)
+        try container.encodeIfPresent(`lines`, forKey: .`lines`)
+        try container.encodeIfPresent(`hidden`, forKey: .`hidden`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `titleSource` = "titleSource"
+        case `icon` = "icon"
+        case `createdBy` = "createdBy"
+        case `kind` = "kind"
+        case `nodes` = "nodes"
+        case `texts` = "texts"
+        case `edges` = "edges"
+        case `layouts` = "layouts"
+        case `lines` = "lines"
+        case `hidden` = "hidden"
+    }
+}
+
+public enum StoredCanvasViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `auto` = "auto"
+    case `user` = "user"
+}
+
+public struct StoredNode: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `kind`: StoredNodeKind
+    public let `title`: String
+    public let `titleSource`: StoredNodeTitleSource?
+    public let `x`: Double
+    public let `y`: Double
+    public let `w`: Double
+    public let `h`: Double
+    public let `accent`: String?
+    public let `cwd`: String?
+    public let `command`: String?
+    public let `resume`: String?
+    public let `provider`: String?
+    public let `account`: String?
+    public let `providerFixed`: Bool?
+    public let `runtimeMode`: String?
+    public let `url`: String?
+    public let `browserOwner`: String?
+    public let `device`: StoredNodeDevice?
+    public let `collapsed`: Bool?
+    public let `memberIds`: [String]?
+    public let `membersListed`: Bool?
+    public let `expandedHeight`: Double?
+    public let `worktree`: StoredNodeWorktree?
+    public let `issue`: StoredNodeIssue?
+    public let `body`: String?
+    public let `color`: String?
+    public let `viewId`: String?
+    public let `path`: String?
+    public let `raw`: [String: JSONValue]?
+    public let `machine`: String?
+    public let `artifact`: StoredNodeArtifact?
+    public let `routine`: String?
+    public let `chats`: [[String: JSONValue]]?
+
+    public init(`id`: String, `kind`: StoredNodeKind, `title`: String, `titleSource`: StoredNodeTitleSource? = nil, `x`: Double, `y`: Double, `w`: Double, `h`: Double, `accent`: String? = nil, `cwd`: String? = nil, `command`: String? = nil, `resume`: String? = nil, `provider`: String? = nil, `account`: String? = nil, `providerFixed`: Bool? = nil, `runtimeMode`: String? = nil, `url`: String? = nil, `browserOwner`: String? = nil, `device`: StoredNodeDevice? = nil, `collapsed`: Bool? = nil, `memberIds`: [String]? = nil, `membersListed`: Bool? = nil, `expandedHeight`: Double? = nil, `worktree`: StoredNodeWorktree? = nil, `issue`: StoredNodeIssue? = nil, `body`: String? = nil, `color`: String? = nil, `viewId`: String? = nil, `path`: String? = nil, `raw`: [String: JSONValue]? = nil, `machine`: String? = nil, `artifact`: StoredNodeArtifact? = nil, `routine`: String? = nil, `chats`: [[String: JSONValue]]? = nil) {
+        self.`id` = `id`
+        self.`kind` = `kind`
+        self.`title` = `title`
+        self.`titleSource` = `titleSource`
+        self.`x` = `x`
+        self.`y` = `y`
+        self.`w` = `w`
+        self.`h` = `h`
+        self.`accent` = `accent`
+        self.`cwd` = `cwd`
+        self.`command` = `command`
+        self.`resume` = `resume`
+        self.`provider` = `provider`
+        self.`account` = `account`
+        self.`providerFixed` = `providerFixed`
+        self.`runtimeMode` = `runtimeMode`
+        self.`url` = `url`
+        self.`browserOwner` = `browserOwner`
+        self.`device` = `device`
+        self.`collapsed` = `collapsed`
+        self.`memberIds` = `memberIds`
+        self.`membersListed` = `membersListed`
+        self.`expandedHeight` = `expandedHeight`
+        self.`worktree` = `worktree`
+        self.`issue` = `issue`
+        self.`body` = `body`
+        self.`color` = `color`
+        self.`viewId` = `viewId`
+        self.`path` = `path`
+        self.`raw` = `raw`
+        self.`machine` = `machine`
+        self.`artifact` = `artifact`
+        self.`routine` = `routine`
+        self.`chats` = `chats`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `kind` = try container.decode(StoredNodeKind.self, forKey: .`kind`)
+        `title` = try container.decode(String.self, forKey: .`title`)
+        `titleSource` = try container.decodeIfPresent(StoredNodeTitleSource.self, forKey: .`titleSource`)
+        `x` = try container.decode(Double.self, forKey: .`x`)
+        `y` = try container.decode(Double.self, forKey: .`y`)
+        `w` = try container.decode(Double.self, forKey: .`w`)
+        `h` = try container.decode(Double.self, forKey: .`h`)
+        `accent` = try container.decodeIfPresent(String.self, forKey: .`accent`)
+        `cwd` = try container.decodeIfPresent(String.self, forKey: .`cwd`)
+        `command` = try container.decodeIfPresent(String.self, forKey: .`command`)
+        `resume` = try container.decodeIfPresent(String.self, forKey: .`resume`)
+        `provider` = try container.decodeIfPresent(String.self, forKey: .`provider`)
+        `account` = try container.decodeIfPresent(String.self, forKey: .`account`)
+        `providerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`providerFixed`)
+        `runtimeMode` = try container.decodeIfPresent(String.self, forKey: .`runtimeMode`)
+        `url` = try container.decodeIfPresent(String.self, forKey: .`url`)
+        `browserOwner` = try container.decodeIfPresent(String.self, forKey: .`browserOwner`)
+        `device` = try container.decodeIfPresent(StoredNodeDevice.self, forKey: .`device`)
+        `collapsed` = try container.decodeIfPresent(Bool.self, forKey: .`collapsed`)
+        `memberIds` = try container.decodeIfPresent([String].self, forKey: .`memberIds`)
+        `membersListed` = try container.decodeIfPresent(Bool.self, forKey: .`membersListed`)
+        `expandedHeight` = try container.decodeIfPresent(Double.self, forKey: .`expandedHeight`)
+        `worktree` = try container.decodeIfPresent(StoredNodeWorktree.self, forKey: .`worktree`)
+        `issue` = try container.decodeIfPresent(StoredNodeIssue.self, forKey: .`issue`)
+        `body` = try container.decodeIfPresent(String.self, forKey: .`body`)
+        `color` = try container.decodeIfPresent(String.self, forKey: .`color`)
+        `viewId` = try container.decodeIfPresent(String.self, forKey: .`viewId`)
+        `path` = try container.decodeIfPresent(String.self, forKey: .`path`)
+        `raw` = try container.decodeIfPresent([String: JSONValue].self, forKey: .`raw`)
+        `machine` = try container.decodeIfPresent(String.self, forKey: .`machine`)
+        `artifact` = try container.decodeIfPresent(StoredNodeArtifact.self, forKey: .`artifact`)
+        `routine` = try container.decodeIfPresent(String.self, forKey: .`routine`)
+        `chats` = try container.decodeIfPresent([[String: JSONValue]].self, forKey: .`chats`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`title`, forKey: .`title`)
+        try container.encodeIfPresent(`titleSource`, forKey: .`titleSource`)
+        try container.encode(`x`, forKey: .`x`)
+        try container.encode(`y`, forKey: .`y`)
+        try container.encode(`w`, forKey: .`w`)
+        try container.encode(`h`, forKey: .`h`)
+        try container.encodeIfPresent(`accent`, forKey: .`accent`)
+        try container.encodeIfPresent(`cwd`, forKey: .`cwd`)
+        try container.encodeIfPresent(`command`, forKey: .`command`)
+        try container.encodeIfPresent(`resume`, forKey: .`resume`)
+        try container.encodeIfPresent(`provider`, forKey: .`provider`)
+        try container.encodeIfPresent(`account`, forKey: .`account`)
+        try container.encodeIfPresent(`providerFixed`, forKey: .`providerFixed`)
+        try container.encodeIfPresent(`runtimeMode`, forKey: .`runtimeMode`)
+        try container.encodeIfPresent(`url`, forKey: .`url`)
+        try container.encodeIfPresent(`browserOwner`, forKey: .`browserOwner`)
+        try container.encodeIfPresent(`device`, forKey: .`device`)
+        try container.encodeIfPresent(`collapsed`, forKey: .`collapsed`)
+        try container.encodeIfPresent(`memberIds`, forKey: .`memberIds`)
+        try container.encodeIfPresent(`membersListed`, forKey: .`membersListed`)
+        try container.encodeIfPresent(`expandedHeight`, forKey: .`expandedHeight`)
+        try container.encodeIfPresent(`worktree`, forKey: .`worktree`)
+        try container.encodeIfPresent(`issue`, forKey: .`issue`)
+        try container.encodeIfPresent(`body`, forKey: .`body`)
+        try container.encodeIfPresent(`color`, forKey: .`color`)
+        try container.encodeIfPresent(`viewId`, forKey: .`viewId`)
+        try container.encodeIfPresent(`path`, forKey: .`path`)
+        try container.encodeIfPresent(`raw`, forKey: .`raw`)
+        try container.encodeIfPresent(`machine`, forKey: .`machine`)
+        try container.encodeIfPresent(`artifact`, forKey: .`artifact`)
+        try container.encodeIfPresent(`routine`, forKey: .`routine`)
+        try container.encodeIfPresent(`chats`, forKey: .`chats`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `kind` = "kind"
+        case `title` = "title"
+        case `titleSource` = "titleSource"
+        case `x` = "x"
+        case `y` = "y"
+        case `w` = "w"
+        case `h` = "h"
+        case `accent` = "accent"
+        case `cwd` = "cwd"
+        case `command` = "command"
+        case `resume` = "resume"
+        case `provider` = "provider"
+        case `account` = "account"
+        case `providerFixed` = "providerFixed"
+        case `runtimeMode` = "runtimeMode"
+        case `url` = "url"
+        case `browserOwner` = "browserOwner"
+        case `device` = "device"
+        case `collapsed` = "collapsed"
+        case `memberIds` = "memberIds"
+        case `membersListed` = "membersListed"
+        case `expandedHeight` = "expandedHeight"
+        case `worktree` = "worktree"
+        case `issue` = "issue"
+        case `body` = "body"
+        case `color` = "color"
+        case `viewId` = "viewId"
+        case `path` = "path"
+        case `raw` = "raw"
+        case `machine` = "machine"
+        case `artifact` = "artifact"
+        case `routine` = "routine"
+        case `chats` = "chats"
+    }
+}
+
+public enum StoredNodeKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `terminal` = "terminal"
+    case `chat` = "chat"
+    case `browser` = "browser"
+    case `device` = "device"
+    case `group` = "group"
+    case `note` = "note"
+    case `drawing` = "drawing"
+    case `diagram` = "diagram"
+    case `file` = "file"
+    case `artifact` = "artifact"
+    case `routine` = "routine"
+    case `design` = "design"
+    case `unknown` = "unknown"
+}
+
+public enum StoredNodeTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `auto` = "auto"
+    case `user` = "user"
+}
+
+public struct StoredNodeDevice: Codable, Sendable, Equatable {
+    public let `platform`: StoredNodeDevicePlatform
+    public let `kind`: StoredNodeDeviceKind
+    public let `name`: String
+    public let `runtime`: String
+
+    public init(`platform`: StoredNodeDevicePlatform, `kind`: StoredNodeDeviceKind, `name`: String, `runtime`: String) {
+        self.`platform` = `platform`
+        self.`kind` = `kind`
+        self.`name` = `name`
+        self.`runtime` = `runtime`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `platform` = try container.decode(StoredNodeDevicePlatform.self, forKey: .`platform`)
+        `kind` = try container.decode(StoredNodeDeviceKind.self, forKey: .`kind`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `runtime` = try container.decode(String.self, forKey: .`runtime`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`platform`, forKey: .`platform`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`runtime`, forKey: .`runtime`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `platform` = "platform"
+        case `kind` = "kind"
+        case `name` = "name"
+        case `runtime` = "runtime"
+    }
+}
+
+public enum StoredNodeDevicePlatform: String, CaseIterable, Codable, Sendable, Equatable {
+    case `ios` = "ios"
+    case `android` = "android"
+}
+
+public enum StoredNodeDeviceKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `simulator` = "simulator"
+    case `physical` = "physical"
+}
+
+public struct StoredNodeWorktree: Codable, Sendable, Equatable {
+    public let `path`: String
+    public let `branch`: String
+
+    public init(`path`: String, `branch`: String) {
+        self.`path` = `path`
+        self.`branch` = `branch`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `path` = try container.decode(String.self, forKey: .`path`)
+        `branch` = try container.decode(String.self, forKey: .`branch`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`branch`, forKey: .`branch`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `path` = "path"
+        case `branch` = "branch"
+    }
+}
+
+public struct StoredNodeIssue: Codable, Sendable, Equatable {
+    public let `repo`: String
+    public let `number`: Int64
+    public let `url`: String
+
+    public init(`repo`: String, `number`: Int64, `url`: String) {
+        self.`repo` = `repo`
+        self.`number` = `number`
+        self.`url` = `url`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `repo` = try container.decode(String.self, forKey: .`repo`)
+        `number` = try container.decode(Int64.self, forKey: .`number`)
+        `url` = try container.decode(String.self, forKey: .`url`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`repo`, forKey: .`repo`)
+        try container.encode(`number`, forKey: .`number`)
+        try container.encode(`url`, forKey: .`url`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `repo` = "repo"
+        case `number` = "number"
+        case `url` = "url"
+    }
+}
+
+public struct StoredNodeArtifact: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `version`: String?
+
+    public init(`id`: String, `version`: String? = nil) {
+        self.`id` = `id`
+        self.`version` = `version`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `version` = try container.decodeIfPresent(String.self, forKey: .`version`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encodeIfPresent(`version`, forKey: .`version`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `version` = "version"
+    }
+}
+
+public struct StoredCanvasViewTextsItem: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `x`: Double
+    public let `y`: Double
+    public let `text`: String
+    public let `size`: Double
+    public let `font`: StoredCanvasViewTextsItemFont?
+    public let `bold`: Bool?
+    public let `italic`: Bool?
+    public let `underline`: Bool?
+    public let `strikethrough`: Bool?
+    public let `align`: StoredCanvasViewTextsItemAlign?
+    public let `maxWidth`: Double?
+    public let `color`: String?
+
+    public init(`id`: String, `x`: Double, `y`: Double, `text`: String, `size`: Double, `font`: StoredCanvasViewTextsItemFont? = nil, `bold`: Bool? = nil, `italic`: Bool? = nil, `underline`: Bool? = nil, `strikethrough`: Bool? = nil, `align`: StoredCanvasViewTextsItemAlign? = nil, `maxWidth`: Double? = nil, `color`: String? = nil) {
+        self.`id` = `id`
+        self.`x` = `x`
+        self.`y` = `y`
+        self.`text` = `text`
+        self.`size` = `size`
+        self.`font` = `font`
+        self.`bold` = `bold`
+        self.`italic` = `italic`
+        self.`underline` = `underline`
+        self.`strikethrough` = `strikethrough`
+        self.`align` = `align`
+        self.`maxWidth` = `maxWidth`
+        self.`color` = `color`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `x` = try container.decode(Double.self, forKey: .`x`)
+        `y` = try container.decode(Double.self, forKey: .`y`)
+        `text` = try container.decode(String.self, forKey: .`text`)
+        `size` = try container.decode(Double.self, forKey: .`size`)
+        `font` = try container.decodeIfPresent(StoredCanvasViewTextsItemFont.self, forKey: .`font`)
+        `bold` = try container.decodeIfPresent(Bool.self, forKey: .`bold`)
+        `italic` = try container.decodeIfPresent(Bool.self, forKey: .`italic`)
+        `underline` = try container.decodeIfPresent(Bool.self, forKey: .`underline`)
+        `strikethrough` = try container.decodeIfPresent(Bool.self, forKey: .`strikethrough`)
+        `align` = try container.decodeIfPresent(StoredCanvasViewTextsItemAlign.self, forKey: .`align`)
+        `maxWidth` = try container.decodeIfPresent(Double.self, forKey: .`maxWidth`)
+        `color` = try container.decodeIfPresent(String.self, forKey: .`color`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`x`, forKey: .`x`)
+        try container.encode(`y`, forKey: .`y`)
+        try container.encode(`text`, forKey: .`text`)
+        try container.encode(`size`, forKey: .`size`)
+        try container.encodeIfPresent(`font`, forKey: .`font`)
+        try container.encodeIfPresent(`bold`, forKey: .`bold`)
+        try container.encodeIfPresent(`italic`, forKey: .`italic`)
+        try container.encodeIfPresent(`underline`, forKey: .`underline`)
+        try container.encodeIfPresent(`strikethrough`, forKey: .`strikethrough`)
+        try container.encodeIfPresent(`align`, forKey: .`align`)
+        try container.encodeIfPresent(`maxWidth`, forKey: .`maxWidth`)
+        try container.encodeIfPresent(`color`, forKey: .`color`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `x` = "x"
+        case `y` = "y"
+        case `text` = "text"
+        case `size` = "size"
+        case `font` = "font"
+        case `bold` = "bold"
+        case `italic` = "italic"
+        case `underline` = "underline"
+        case `strikethrough` = "strikethrough"
+        case `align` = "align"
+        case `maxWidth` = "maxWidth"
+        case `color` = "color"
+    }
+}
+
+public enum StoredCanvasViewTextsItemFont: String, CaseIterable, Codable, Sendable, Equatable {
+    case `hand` = "hand"
+    case `sans` = "sans"
+    case `mono` = "mono"
+}
+
+public enum StoredCanvasViewTextsItemAlign: String, CaseIterable, Codable, Sendable, Equatable {
+    case `left` = "left"
+    case `center` = "center"
+    case `right` = "right"
+}
+
+public struct StoredCanvasViewEdgesItem: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `from`: String
+    public let `to`: String
+    public let `label`: String?
+    public let `fromSide`: StoredCanvasViewEdgesItemFromSide?
+    public let `toSide`: StoredCanvasViewEdgesItemToSide?
+    public let `role`: String?
+
+    public init(`id`: String, `from`: String, `to`: String, `label`: String? = nil, `fromSide`: StoredCanvasViewEdgesItemFromSide? = nil, `toSide`: StoredCanvasViewEdgesItemToSide? = nil, `role`: String? = nil) {
+        self.`id` = `id`
+        self.`from` = `from`
+        self.`to` = `to`
+        self.`label` = `label`
+        self.`fromSide` = `fromSide`
+        self.`toSide` = `toSide`
+        self.`role` = `role`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `from` = try container.decode(String.self, forKey: .`from`)
+        `to` = try container.decode(String.self, forKey: .`to`)
+        `label` = try container.decodeIfPresent(String.self, forKey: .`label`)
+        `fromSide` = try container.decodeIfPresent(StoredCanvasViewEdgesItemFromSide.self, forKey: .`fromSide`)
+        `toSide` = try container.decodeIfPresent(StoredCanvasViewEdgesItemToSide.self, forKey: .`toSide`)
+        `role` = try container.decodeIfPresent(String.self, forKey: .`role`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`from`, forKey: .`from`)
+        try container.encode(`to`, forKey: .`to`)
+        try container.encodeIfPresent(`label`, forKey: .`label`)
+        try container.encodeIfPresent(`fromSide`, forKey: .`fromSide`)
+        try container.encodeIfPresent(`toSide`, forKey: .`toSide`)
+        try container.encodeIfPresent(`role`, forKey: .`role`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `from` = "from"
+        case `to` = "to"
+        case `label` = "label"
+        case `fromSide` = "fromSide"
+        case `toSide` = "toSide"
+        case `role` = "role"
+    }
+}
+
+public enum StoredCanvasViewEdgesItemFromSide: String, CaseIterable, Codable, Sendable, Equatable {
+    case `top` = "top"
+    case `right` = "right"
+    case `bottom` = "bottom"
+    case `left` = "left"
+}
+
+public enum StoredCanvasViewEdgesItemToSide: String, CaseIterable, Codable, Sendable, Equatable {
+    case `top` = "top"
+    case `right` = "right"
+    case `bottom` = "bottom"
+    case `left` = "left"
+}
+
+public struct StoredCanvasViewLayoutsItem: Codable, Sendable, Equatable {
+    public let `name`: String
+    public let `nodes`: [String: StoredCanvasViewLayoutsItemNodesValue]
+    public let `texts`: [String: StoredCanvasViewLayoutsItemTextsValue]
+
+    public init(`name`: String, `nodes`: [String: StoredCanvasViewLayoutsItemNodesValue], `texts`: [String: StoredCanvasViewLayoutsItemTextsValue]) {
+        self.`name` = `name`
+        self.`nodes` = `nodes`
+        self.`texts` = `texts`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `nodes` = try container.decode([String: StoredCanvasViewLayoutsItemNodesValue].self, forKey: .`nodes`)
+        `texts` = try container.decode([String: StoredCanvasViewLayoutsItemTextsValue].self, forKey: .`texts`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`nodes`, forKey: .`nodes`)
+        try container.encode(`texts`, forKey: .`texts`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `name` = "name"
+        case `nodes` = "nodes"
+        case `texts` = "texts"
+    }
+}
+
+public struct StoredCanvasViewLayoutsItemNodesValue: Codable, Sendable, Equatable {
+    public let `x`: Double
+    public let `y`: Double
+    public let `w`: Double
+    public let `h`: Double
+
+    public init(`x`: Double, `y`: Double, `w`: Double, `h`: Double) {
+        self.`x` = `x`
+        self.`y` = `y`
+        self.`w` = `w`
+        self.`h` = `h`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `x` = try container.decode(Double.self, forKey: .`x`)
+        `y` = try container.decode(Double.self, forKey: .`y`)
+        `w` = try container.decode(Double.self, forKey: .`w`)
+        `h` = try container.decode(Double.self, forKey: .`h`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`x`, forKey: .`x`)
+        try container.encode(`y`, forKey: .`y`)
+        try container.encode(`w`, forKey: .`w`)
+        try container.encode(`h`, forKey: .`h`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `x` = "x"
+        case `y` = "y"
+        case `w` = "w"
+        case `h` = "h"
+    }
+}
+
+public struct StoredCanvasViewLayoutsItemTextsValue: Codable, Sendable, Equatable {
+    public let `x`: Double
+    public let `y`: Double
+
+    public init(`x`: Double, `y`: Double) {
+        self.`x` = `x`
+        self.`y` = `y`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `x` = try container.decode(Double.self, forKey: .`x`)
+        `y` = try container.decode(Double.self, forKey: .`y`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`x`, forKey: .`x`)
+        try container.encode(`y`, forKey: .`y`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `x` = "x"
+        case `y` = "y"
+    }
+}
+
+public struct StoredCanvasViewLinesItem: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `x`: Double
+    public let `y`: Double
+    public let `endX`: Double
+    public let `endY`: Double
+    public let `stroke`: StoredCanvasViewLinesItemStroke
+    public let `strokeWidth`: StoredCanvasViewLinesItemStrokeWidth
+    public let `strokeStyle`: StoredCanvasViewLinesItemStrokeStyle
+    public let `arrowStart`: Bool?
+    public let `arrowEnd`: Bool?
+    public let `raw`: [String: JSONValue]?
+
+    public init(`id`: String, `x`: Double, `y`: Double, `endX`: Double, `endY`: Double, `stroke`: StoredCanvasViewLinesItemStroke, `strokeWidth`: StoredCanvasViewLinesItemStrokeWidth, `strokeStyle`: StoredCanvasViewLinesItemStrokeStyle, `arrowStart`: Bool? = nil, `arrowEnd`: Bool? = nil, `raw`: [String: JSONValue]? = nil) {
+        self.`id` = `id`
+        self.`x` = `x`
+        self.`y` = `y`
+        self.`endX` = `endX`
+        self.`endY` = `endY`
+        self.`stroke` = `stroke`
+        self.`strokeWidth` = `strokeWidth`
+        self.`strokeStyle` = `strokeStyle`
+        self.`arrowStart` = `arrowStart`
+        self.`arrowEnd` = `arrowEnd`
+        self.`raw` = `raw`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `x` = try container.decode(Double.self, forKey: .`x`)
+        `y` = try container.decode(Double.self, forKey: .`y`)
+        `endX` = try container.decode(Double.self, forKey: .`endX`)
+        `endY` = try container.decode(Double.self, forKey: .`endY`)
+        `stroke` = try container.decode(StoredCanvasViewLinesItemStroke.self, forKey: .`stroke`)
+        `strokeWidth` = try container.decode(StoredCanvasViewLinesItemStrokeWidth.self, forKey: .`strokeWidth`)
+        `strokeStyle` = try container.decode(StoredCanvasViewLinesItemStrokeStyle.self, forKey: .`strokeStyle`)
+        `arrowStart` = try container.decodeIfPresent(Bool.self, forKey: .`arrowStart`)
+        `arrowEnd` = try container.decodeIfPresent(Bool.self, forKey: .`arrowEnd`)
+        `raw` = try container.decodeIfPresent([String: JSONValue].self, forKey: .`raw`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`x`, forKey: .`x`)
+        try container.encode(`y`, forKey: .`y`)
+        try container.encode(`endX`, forKey: .`endX`)
+        try container.encode(`endY`, forKey: .`endY`)
+        try container.encode(`stroke`, forKey: .`stroke`)
+        try container.encode(`strokeWidth`, forKey: .`strokeWidth`)
+        try container.encode(`strokeStyle`, forKey: .`strokeStyle`)
+        try container.encodeIfPresent(`arrowStart`, forKey: .`arrowStart`)
+        try container.encodeIfPresent(`arrowEnd`, forKey: .`arrowEnd`)
+        try container.encodeIfPresent(`raw`, forKey: .`raw`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `x` = "x"
+        case `y` = "y"
+        case `endX` = "endX"
+        case `endY` = "endY"
+        case `stroke` = "stroke"
+        case `strokeWidth` = "strokeWidth"
+        case `strokeStyle` = "strokeStyle"
+        case `arrowStart` = "arrowStart"
+        case `arrowEnd` = "arrowEnd"
+        case `raw` = "raw"
+    }
+}
+
+public enum StoredCanvasViewLinesItemStroke: String, CaseIterable, Codable, Sendable, Equatable {
+    case `ink` = "ink"
+    case `muted` = "muted"
+    case `accent` = "accent"
+    case `red` = "red"
+    case `orange` = "orange"
+    case `amber` = "amber"
+    case `yellow` = "yellow"
+    case `lime` = "lime"
+    case `green` = "green"
+    case `emerald` = "emerald"
+    case `teal` = "teal"
+    case `cyan` = "cyan"
+    case `sky` = "sky"
+    case `blue` = "blue"
+    case `indigo` = "indigo"
+    case `violet` = "violet"
+    case `purple` = "purple"
+    case `fuchsia` = "fuchsia"
+    case `pink` = "pink"
+    case `rose` = "rose"
+}
+
+public enum StoredCanvasViewLinesItemStrokeWidth: Codable, Sendable, Equatable {
+    case `variant0`(Double)
+    case `variant1`(Double)
+    case `variant2`(Double)
+
+    public init(from decoder: Decoder) throws {
+        if let value = try? Double(from: decoder) { self = .`variant0`(value); return }
+        if let value = try? Double(from: decoder) { self = .`variant1`(value); return }
+        if let value = try? Double(from: decoder) { self = .`variant2`(value); return }
+        throw WireValidationError.invalid("Invalid StoredCanvasViewLinesItemStrokeWidth")
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case .`variant0`(let value): try value.encode(to: encoder)
+        case .`variant1`(let value): try value.encode(to: encoder)
+        case .`variant2`(let value): try value.encode(to: encoder)
+        }
+    }
+}
+
+public enum StoredCanvasViewLinesItemStrokeStyle: String, CaseIterable, Codable, Sendable, Equatable {
+    case `solid` = "solid"
+    case `dashed` = "dashed"
+    case `dotted` = "dotted"
+}
+
+public struct StoredChatView: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `titleSource`: StoredChatViewTitleSource?
+    public let `icon`: MachineIcon?
+    public let `createdBy`: String?
+    public let `kind`: String
+    public let `node`: StoredChatViewNode
+    public let `empty`: Bool?
+    public let `hidden`: Bool?
+    public let `drawnBy`: String?
+
+    public init(`id`: String, `name`: String, `titleSource`: StoredChatViewTitleSource? = nil, `icon`: MachineIcon? = nil, `createdBy`: String? = nil, `kind`: String = "chat", `node`: StoredChatViewNode, `empty`: Bool? = nil, `hidden`: Bool? = nil, `drawnBy`: String? = nil) {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`titleSource` = `titleSource`
+        self.`icon` = `icon`
+        self.`createdBy` = `createdBy`
+        self.`kind` = `kind`
+        self.`node` = `node`
+        self.`empty` = `empty`
+        self.`hidden` = `hidden`
+        self.`drawnBy` = `drawnBy`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `titleSource` = try container.decodeIfPresent(StoredChatViewTitleSource.self, forKey: .`titleSource`)
+        `icon` = try container.decodeIfPresent(MachineIcon.self, forKey: .`icon`)
+        `createdBy` = try container.decodeIfPresent(String.self, forKey: .`createdBy`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `node` = try container.decode(StoredChatViewNode.self, forKey: .`node`)
+        `empty` = try container.decodeIfPresent(Bool.self, forKey: .`empty`)
+        `hidden` = try container.decodeIfPresent(Bool.self, forKey: .`hidden`)
+        `drawnBy` = try container.decodeIfPresent(String.self, forKey: .`drawnBy`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`titleSource`, forKey: .`titleSource`)
+        try container.encodeIfPresent(`icon`, forKey: .`icon`)
+        try container.encodeIfPresent(`createdBy`, forKey: .`createdBy`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`node`, forKey: .`node`)
+        try container.encodeIfPresent(`empty`, forKey: .`empty`)
+        try container.encodeIfPresent(`hidden`, forKey: .`hidden`)
+        try container.encodeIfPresent(`drawnBy`, forKey: .`drawnBy`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `titleSource` = "titleSource"
+        case `icon` = "icon"
+        case `createdBy` = "createdBy"
+        case `kind` = "kind"
+        case `node` = "node"
+        case `empty` = "empty"
+        case `hidden` = "hidden"
+        case `drawnBy` = "drawnBy"
+    }
+}
+
+public enum StoredChatViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `auto` = "auto"
+    case `user` = "user"
+}
+
+public struct StoredChatViewNode: Codable, Sendable, Equatable {
+    public let `cwd`: String?
+    public let `command`: String?
+    public let `resume`: String?
+    public let `provider`: String?
+    public let `account`: String?
+    public let `providerFixed`: Bool?
+    public let `runtimeMode`: String?
+    public let `accent`: String?
+    public let `issue`: StoredChatViewNodeIssue?
+    public let `artifact`: StoredChatViewNodeArtifact?
+
+    public init(`cwd`: String? = nil, `command`: String? = nil, `resume`: String? = nil, `provider`: String? = nil, `account`: String? = nil, `providerFixed`: Bool? = nil, `runtimeMode`: String? = nil, `accent`: String? = nil, `issue`: StoredChatViewNodeIssue? = nil, `artifact`: StoredChatViewNodeArtifact? = nil) {
+        self.`cwd` = `cwd`
+        self.`command` = `command`
+        self.`resume` = `resume`
+        self.`provider` = `provider`
+        self.`account` = `account`
+        self.`providerFixed` = `providerFixed`
+        self.`runtimeMode` = `runtimeMode`
+        self.`accent` = `accent`
+        self.`issue` = `issue`
+        self.`artifact` = `artifact`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `cwd` = try container.decodeIfPresent(String.self, forKey: .`cwd`)
+        `command` = try container.decodeIfPresent(String.self, forKey: .`command`)
+        `resume` = try container.decodeIfPresent(String.self, forKey: .`resume`)
+        `provider` = try container.decodeIfPresent(String.self, forKey: .`provider`)
+        `account` = try container.decodeIfPresent(String.self, forKey: .`account`)
+        `providerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`providerFixed`)
+        `runtimeMode` = try container.decodeIfPresent(String.self, forKey: .`runtimeMode`)
+        `accent` = try container.decodeIfPresent(String.self, forKey: .`accent`)
+        `issue` = try container.decodeIfPresent(StoredChatViewNodeIssue.self, forKey: .`issue`)
+        `artifact` = try container.decodeIfPresent(StoredChatViewNodeArtifact.self, forKey: .`artifact`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(`cwd`, forKey: .`cwd`)
+        try container.encodeIfPresent(`command`, forKey: .`command`)
+        try container.encodeIfPresent(`resume`, forKey: .`resume`)
+        try container.encodeIfPresent(`provider`, forKey: .`provider`)
+        try container.encodeIfPresent(`account`, forKey: .`account`)
+        try container.encodeIfPresent(`providerFixed`, forKey: .`providerFixed`)
+        try container.encodeIfPresent(`runtimeMode`, forKey: .`runtimeMode`)
+        try container.encodeIfPresent(`accent`, forKey: .`accent`)
+        try container.encodeIfPresent(`issue`, forKey: .`issue`)
+        try container.encodeIfPresent(`artifact`, forKey: .`artifact`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `cwd` = "cwd"
+        case `command` = "command"
+        case `resume` = "resume"
+        case `provider` = "provider"
+        case `account` = "account"
+        case `providerFixed` = "providerFixed"
+        case `runtimeMode` = "runtimeMode"
+        case `accent` = "accent"
+        case `issue` = "issue"
+        case `artifact` = "artifact"
+    }
+}
+
+public struct StoredChatViewNodeIssue: Codable, Sendable, Equatable {
+    public let `repo`: String
+    public let `number`: Int64
+    public let `url`: String
+
+    public init(`repo`: String, `number`: Int64, `url`: String) {
+        self.`repo` = `repo`
+        self.`number` = `number`
+        self.`url` = `url`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `repo` = try container.decode(String.self, forKey: .`repo`)
+        `number` = try container.decode(Int64.self, forKey: .`number`)
+        `url` = try container.decode(String.self, forKey: .`url`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`repo`, forKey: .`repo`)
+        try container.encode(`number`, forKey: .`number`)
+        try container.encode(`url`, forKey: .`url`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `repo` = "repo"
+        case `number` = "number"
+        case `url` = "url"
+    }
+}
+
+public struct StoredChatViewNodeArtifact: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `version`: String?
+
+    public init(`id`: String, `version`: String? = nil) {
+        self.`id` = `id`
+        self.`version` = `version`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `version` = try container.decodeIfPresent(String.self, forKey: .`version`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encodeIfPresent(`version`, forKey: .`version`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `version` = "version"
+    }
+}
+
+public struct StoredTerminalView: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `titleSource`: StoredTerminalViewTitleSource?
+    public let `icon`: MachineIcon?
+    public let `createdBy`: String?
+    public let `kind`: String
+    public let `node`: StoredTerminalViewNode
+
+    public init(`id`: String, `name`: String, `titleSource`: StoredTerminalViewTitleSource? = nil, `icon`: MachineIcon? = nil, `createdBy`: String? = nil, `kind`: String = "terminal", `node`: StoredTerminalViewNode) {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`titleSource` = `titleSource`
+        self.`icon` = `icon`
+        self.`createdBy` = `createdBy`
+        self.`kind` = `kind`
+        self.`node` = `node`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `titleSource` = try container.decodeIfPresent(StoredTerminalViewTitleSource.self, forKey: .`titleSource`)
+        `icon` = try container.decodeIfPresent(MachineIcon.self, forKey: .`icon`)
+        `createdBy` = try container.decodeIfPresent(String.self, forKey: .`createdBy`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `node` = try container.decode(StoredTerminalViewNode.self, forKey: .`node`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`titleSource`, forKey: .`titleSource`)
+        try container.encodeIfPresent(`icon`, forKey: .`icon`)
+        try container.encodeIfPresent(`createdBy`, forKey: .`createdBy`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`node`, forKey: .`node`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `titleSource` = "titleSource"
+        case `icon` = "icon"
+        case `createdBy` = "createdBy"
+        case `kind` = "kind"
+        case `node` = "node"
+    }
+}
+
+public enum StoredTerminalViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `auto` = "auto"
+    case `user` = "user"
+}
+
+public struct StoredTerminalViewNode: Codable, Sendable, Equatable {
+    public let `cwd`: String?
+    public let `command`: String?
+    public let `resume`: String?
+    public let `provider`: String?
+    public let `account`: String?
+    public let `providerFixed`: Bool?
+    public let `runtimeMode`: String?
+    public let `accent`: String?
+    public let `issue`: StoredTerminalViewNodeIssue?
+    public let `artifact`: StoredTerminalViewNodeArtifact?
+
+    public init(`cwd`: String? = nil, `command`: String? = nil, `resume`: String? = nil, `provider`: String? = nil, `account`: String? = nil, `providerFixed`: Bool? = nil, `runtimeMode`: String? = nil, `accent`: String? = nil, `issue`: StoredTerminalViewNodeIssue? = nil, `artifact`: StoredTerminalViewNodeArtifact? = nil) {
+        self.`cwd` = `cwd`
+        self.`command` = `command`
+        self.`resume` = `resume`
+        self.`provider` = `provider`
+        self.`account` = `account`
+        self.`providerFixed` = `providerFixed`
+        self.`runtimeMode` = `runtimeMode`
+        self.`accent` = `accent`
+        self.`issue` = `issue`
+        self.`artifact` = `artifact`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `cwd` = try container.decodeIfPresent(String.self, forKey: .`cwd`)
+        `command` = try container.decodeIfPresent(String.self, forKey: .`command`)
+        `resume` = try container.decodeIfPresent(String.self, forKey: .`resume`)
+        `provider` = try container.decodeIfPresent(String.self, forKey: .`provider`)
+        `account` = try container.decodeIfPresent(String.self, forKey: .`account`)
+        `providerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`providerFixed`)
+        `runtimeMode` = try container.decodeIfPresent(String.self, forKey: .`runtimeMode`)
+        `accent` = try container.decodeIfPresent(String.self, forKey: .`accent`)
+        `issue` = try container.decodeIfPresent(StoredTerminalViewNodeIssue.self, forKey: .`issue`)
+        `artifact` = try container.decodeIfPresent(StoredTerminalViewNodeArtifact.self, forKey: .`artifact`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(`cwd`, forKey: .`cwd`)
+        try container.encodeIfPresent(`command`, forKey: .`command`)
+        try container.encodeIfPresent(`resume`, forKey: .`resume`)
+        try container.encodeIfPresent(`provider`, forKey: .`provider`)
+        try container.encodeIfPresent(`account`, forKey: .`account`)
+        try container.encodeIfPresent(`providerFixed`, forKey: .`providerFixed`)
+        try container.encodeIfPresent(`runtimeMode`, forKey: .`runtimeMode`)
+        try container.encodeIfPresent(`accent`, forKey: .`accent`)
+        try container.encodeIfPresent(`issue`, forKey: .`issue`)
+        try container.encodeIfPresent(`artifact`, forKey: .`artifact`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `cwd` = "cwd"
+        case `command` = "command"
+        case `resume` = "resume"
+        case `provider` = "provider"
+        case `account` = "account"
+        case `providerFixed` = "providerFixed"
+        case `runtimeMode` = "runtimeMode"
+        case `accent` = "accent"
+        case `issue` = "issue"
+        case `artifact` = "artifact"
+    }
+}
+
+public struct StoredTerminalViewNodeIssue: Codable, Sendable, Equatable {
+    public let `repo`: String
+    public let `number`: Int64
+    public let `url`: String
+
+    public init(`repo`: String, `number`: Int64, `url`: String) {
+        self.`repo` = `repo`
+        self.`number` = `number`
+        self.`url` = `url`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `repo` = try container.decode(String.self, forKey: .`repo`)
+        `number` = try container.decode(Int64.self, forKey: .`number`)
+        `url` = try container.decode(String.self, forKey: .`url`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`repo`, forKey: .`repo`)
+        try container.encode(`number`, forKey: .`number`)
+        try container.encode(`url`, forKey: .`url`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `repo` = "repo"
+        case `number` = "number"
+        case `url` = "url"
+    }
+}
+
+public struct StoredTerminalViewNodeArtifact: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `version`: String?
+
+    public init(`id`: String, `version`: String? = nil) {
+        self.`id` = `id`
+        self.`version` = `version`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `version` = try container.decodeIfPresent(String.self, forKey: .`version`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encodeIfPresent(`version`, forKey: .`version`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `version` = "version"
+    }
+}
+
+public struct StoredBrowserView: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `titleSource`: StoredBrowserViewTitleSource?
+    public let `icon`: MachineIcon?
+    public let `createdBy`: String?
+    public let `kind`: String
+    public let `url`: String
+    public let `browserOwner`: String?
+
+    public init(`id`: String, `name`: String, `titleSource`: StoredBrowserViewTitleSource? = nil, `icon`: MachineIcon? = nil, `createdBy`: String? = nil, `kind`: String = "browser", `url`: String, `browserOwner`: String? = nil) {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`titleSource` = `titleSource`
+        self.`icon` = `icon`
+        self.`createdBy` = `createdBy`
+        self.`kind` = `kind`
+        self.`url` = `url`
+        self.`browserOwner` = `browserOwner`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `titleSource` = try container.decodeIfPresent(StoredBrowserViewTitleSource.self, forKey: .`titleSource`)
+        `icon` = try container.decodeIfPresent(MachineIcon.self, forKey: .`icon`)
+        `createdBy` = try container.decodeIfPresent(String.self, forKey: .`createdBy`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `url` = try container.decode(String.self, forKey: .`url`)
+        `browserOwner` = try container.decodeIfPresent(String.self, forKey: .`browserOwner`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`titleSource`, forKey: .`titleSource`)
+        try container.encodeIfPresent(`icon`, forKey: .`icon`)
+        try container.encodeIfPresent(`createdBy`, forKey: .`createdBy`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`url`, forKey: .`url`)
+        try container.encodeIfPresent(`browserOwner`, forKey: .`browserOwner`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `titleSource` = "titleSource"
+        case `icon` = "icon"
+        case `createdBy` = "createdBy"
+        case `kind` = "kind"
+        case `url` = "url"
+        case `browserOwner` = "browserOwner"
+    }
+}
+
+public enum StoredBrowserViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `auto` = "auto"
+    case `user` = "user"
+}
+
+public struct StoredDeviceView: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `titleSource`: StoredDeviceViewTitleSource?
+    public let `icon`: MachineIcon?
+    public let `createdBy`: String?
+    public let `kind`: String
+    public let `device`: StoredDeviceViewDevice
+
+    public init(`id`: String, `name`: String, `titleSource`: StoredDeviceViewTitleSource? = nil, `icon`: MachineIcon? = nil, `createdBy`: String? = nil, `kind`: String = "device", `device`: StoredDeviceViewDevice) {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`titleSource` = `titleSource`
+        self.`icon` = `icon`
+        self.`createdBy` = `createdBy`
+        self.`kind` = `kind`
+        self.`device` = `device`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `titleSource` = try container.decodeIfPresent(StoredDeviceViewTitleSource.self, forKey: .`titleSource`)
+        `icon` = try container.decodeIfPresent(MachineIcon.self, forKey: .`icon`)
+        `createdBy` = try container.decodeIfPresent(String.self, forKey: .`createdBy`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `device` = try container.decode(StoredDeviceViewDevice.self, forKey: .`device`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`titleSource`, forKey: .`titleSource`)
+        try container.encodeIfPresent(`icon`, forKey: .`icon`)
+        try container.encodeIfPresent(`createdBy`, forKey: .`createdBy`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`device`, forKey: .`device`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `titleSource` = "titleSource"
+        case `icon` = "icon"
+        case `createdBy` = "createdBy"
+        case `kind` = "kind"
+        case `device` = "device"
+    }
+}
+
+public enum StoredDeviceViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `auto` = "auto"
+    case `user` = "user"
+}
+
+public struct StoredDeviceViewDevice: Codable, Sendable, Equatable {
+    public let `platform`: StoredDeviceViewDevicePlatform
+    public let `kind`: StoredDeviceViewDeviceKind
+    public let `name`: String
+    public let `runtime`: String
+
+    public init(`platform`: StoredDeviceViewDevicePlatform, `kind`: StoredDeviceViewDeviceKind, `name`: String, `runtime`: String) {
+        self.`platform` = `platform`
+        self.`kind` = `kind`
+        self.`name` = `name`
+        self.`runtime` = `runtime`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `platform` = try container.decode(StoredDeviceViewDevicePlatform.self, forKey: .`platform`)
+        `kind` = try container.decode(StoredDeviceViewDeviceKind.self, forKey: .`kind`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `runtime` = try container.decode(String.self, forKey: .`runtime`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`platform`, forKey: .`platform`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`runtime`, forKey: .`runtime`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `platform` = "platform"
+        case `kind` = "kind"
+        case `name` = "name"
+        case `runtime` = "runtime"
+    }
+}
+
+public enum StoredDeviceViewDevicePlatform: String, CaseIterable, Codable, Sendable, Equatable {
+    case `ios` = "ios"
+    case `android` = "android"
+}
+
+public enum StoredDeviceViewDeviceKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `simulator` = "simulator"
+    case `physical` = "physical"
+}
+
+public struct StoredDrawingView: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `titleSource`: StoredDrawingViewTitleSource?
+    public let `icon`: MachineIcon?
+    public let `createdBy`: String?
+    public let `kind`: String
+
+    public init(`id`: String, `name`: String, `titleSource`: StoredDrawingViewTitleSource? = nil, `icon`: MachineIcon? = nil, `createdBy`: String? = nil, `kind`: String = "drawing") {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`titleSource` = `titleSource`
+        self.`icon` = `icon`
+        self.`createdBy` = `createdBy`
+        self.`kind` = `kind`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `titleSource` = try container.decodeIfPresent(StoredDrawingViewTitleSource.self, forKey: .`titleSource`)
+        `icon` = try container.decodeIfPresent(MachineIcon.self, forKey: .`icon`)
+        `createdBy` = try container.decodeIfPresent(String.self, forKey: .`createdBy`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`titleSource`, forKey: .`titleSource`)
+        try container.encodeIfPresent(`icon`, forKey: .`icon`)
+        try container.encodeIfPresent(`createdBy`, forKey: .`createdBy`)
+        try container.encode(`kind`, forKey: .`kind`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `titleSource` = "titleSource"
+        case `icon` = "icon"
+        case `createdBy` = "createdBy"
+        case `kind` = "kind"
+    }
+}
+
+public enum StoredDrawingViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `auto` = "auto"
+    case `user` = "user"
+}
+
+public struct StoredDiagramView: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `titleSource`: StoredDiagramViewTitleSource?
+    public let `icon`: MachineIcon?
+    public let `createdBy`: String?
+    public let `kind`: String
+
+    public init(`id`: String, `name`: String, `titleSource`: StoredDiagramViewTitleSource? = nil, `icon`: MachineIcon? = nil, `createdBy`: String? = nil, `kind`: String = "diagram") {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`titleSource` = `titleSource`
+        self.`icon` = `icon`
+        self.`createdBy` = `createdBy`
+        self.`kind` = `kind`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `titleSource` = try container.decodeIfPresent(StoredDiagramViewTitleSource.self, forKey: .`titleSource`)
+        `icon` = try container.decodeIfPresent(MachineIcon.self, forKey: .`icon`)
+        `createdBy` = try container.decodeIfPresent(String.self, forKey: .`createdBy`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`titleSource`, forKey: .`titleSource`)
+        try container.encodeIfPresent(`icon`, forKey: .`icon`)
+        try container.encodeIfPresent(`createdBy`, forKey: .`createdBy`)
+        try container.encode(`kind`, forKey: .`kind`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `titleSource` = "titleSource"
+        case `icon` = "icon"
+        case `createdBy` = "createdBy"
+        case `kind` = "kind"
+    }
+}
+
+public enum StoredDiagramViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `auto` = "auto"
+    case `user` = "user"
+}
+
+public struct StoredFileView: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `titleSource`: StoredFileViewTitleSource?
+    public let `icon`: MachineIcon?
+    public let `createdBy`: String?
+    public let `kind`: String
+    public let `path`: String
+
+    public init(`id`: String, `name`: String, `titleSource`: StoredFileViewTitleSource? = nil, `icon`: MachineIcon? = nil, `createdBy`: String? = nil, `kind`: String = "file", `path`: String) {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`titleSource` = `titleSource`
+        self.`icon` = `icon`
+        self.`createdBy` = `createdBy`
+        self.`kind` = `kind`
+        self.`path` = `path`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `titleSource` = try container.decodeIfPresent(StoredFileViewTitleSource.self, forKey: .`titleSource`)
+        `icon` = try container.decodeIfPresent(MachineIcon.self, forKey: .`icon`)
+        `createdBy` = try container.decodeIfPresent(String.self, forKey: .`createdBy`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `path` = try container.decode(String.self, forKey: .`path`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`titleSource`, forKey: .`titleSource`)
+        try container.encodeIfPresent(`icon`, forKey: .`icon`)
+        try container.encodeIfPresent(`createdBy`, forKey: .`createdBy`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`path`, forKey: .`path`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `titleSource` = "titleSource"
+        case `icon` = "icon"
+        case `createdBy` = "createdBy"
+        case `kind` = "kind"
+        case `path` = "path"
+    }
+}
+
+public enum StoredFileViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `auto` = "auto"
+    case `user` = "user"
+}
+
+public struct StoredDatabaseView: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `titleSource`: StoredDatabaseViewTitleSource?
+    public let `icon`: MachineIcon?
+    public let `createdBy`: String?
+    public let `kind`: String
+    public let `connectionId`: String
+    public let `schema`: String
+    public let `table`: String
+    public let `mode`: StoredDatabaseViewMode
+    public let `where`: String?
+    public let `tableKind`: StoredDatabaseViewTableKind?
+
+    public init(`id`: String, `name`: String, `titleSource`: StoredDatabaseViewTitleSource? = nil, `icon`: MachineIcon? = nil, `createdBy`: String? = nil, `kind`: String = "database", `connectionId`: String, `schema`: String, `table`: String, `mode`: StoredDatabaseViewMode, `where`: String? = nil, `tableKind`: StoredDatabaseViewTableKind? = nil) {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`titleSource` = `titleSource`
+        self.`icon` = `icon`
+        self.`createdBy` = `createdBy`
+        self.`kind` = `kind`
+        self.`connectionId` = `connectionId`
+        self.`schema` = `schema`
+        self.`table` = `table`
+        self.`mode` = `mode`
+        self.`where` = `where`
+        self.`tableKind` = `tableKind`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `titleSource` = try container.decodeIfPresent(StoredDatabaseViewTitleSource.self, forKey: .`titleSource`)
+        `icon` = try container.decodeIfPresent(MachineIcon.self, forKey: .`icon`)
+        `createdBy` = try container.decodeIfPresent(String.self, forKey: .`createdBy`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `connectionId` = try container.decode(String.self, forKey: .`connectionId`)
+        `schema` = try container.decode(String.self, forKey: .`schema`)
+        `table` = try container.decode(String.self, forKey: .`table`)
+        `mode` = try container.decode(StoredDatabaseViewMode.self, forKey: .`mode`)
+        `where` = try container.decodeIfPresent(String.self, forKey: .`where`)
+        `tableKind` = try container.decodeIfPresent(StoredDatabaseViewTableKind.self, forKey: .`tableKind`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`titleSource`, forKey: .`titleSource`)
+        try container.encodeIfPresent(`icon`, forKey: .`icon`)
+        try container.encodeIfPresent(`createdBy`, forKey: .`createdBy`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`connectionId`, forKey: .`connectionId`)
+        try container.encode(`schema`, forKey: .`schema`)
+        try container.encode(`table`, forKey: .`table`)
+        try container.encode(`mode`, forKey: .`mode`)
+        try container.encodeIfPresent(`where`, forKey: .`where`)
+        try container.encodeIfPresent(`tableKind`, forKey: .`tableKind`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `titleSource` = "titleSource"
+        case `icon` = "icon"
+        case `createdBy` = "createdBy"
+        case `kind` = "kind"
+        case `connectionId` = "connectionId"
+        case `schema` = "schema"
+        case `table` = "table"
+        case `mode` = "mode"
+        case `where` = "where"
+        case `tableKind` = "tableKind"
+    }
+}
+
+public enum StoredDatabaseViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `auto` = "auto"
+    case `user` = "user"
+}
+
+public enum StoredDatabaseViewMode: String, CaseIterable, Codable, Sendable, Equatable {
+    case `data` = "data"
+    case `structure` = "structure"
+}
+
+public enum StoredDatabaseViewTableKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `table` = "table"
+    case `view` = "view"
+}
+
+public struct StoredSeparatorView: Codable, Sendable, Equatable {
+    public let `kind`: String
+    public let `id`: String
+    public let `name`: String?
+    public let `createdBy`: String?
+
+    public init(`kind`: String = "separator", `id`: String, `name`: String? = nil, `createdBy`: String? = nil) {
+        self.`kind` = `kind`
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`createdBy` = `createdBy`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decodeIfPresent(String.self, forKey: .`name`)
+        `createdBy` = try container.decodeIfPresent(String.self, forKey: .`createdBy`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encodeIfPresent(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`createdBy`, forKey: .`createdBy`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `id` = "id"
+        case `name` = "name"
+        case `createdBy` = "createdBy"
+    }
+}
+
+public struct StoredSubheaderView: Codable, Sendable, Equatable {
+    public let `kind`: String
+    public let `id`: String
+    public let `name`: String
+    public let `createdBy`: String?
+
+    public init(`kind`: String = "subheader", `id`: String, `name`: String, `createdBy`: String? = nil) {
+        self.`kind` = `kind`
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`createdBy` = `createdBy`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `createdBy` = try container.decodeIfPresent(String.self, forKey: .`createdBy`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`createdBy`, forKey: .`createdBy`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `id` = "id"
+        case `name` = "name"
+        case `createdBy` = "createdBy"
+    }
+}
+
+public struct StoredArtifactView: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `titleSource`: StoredArtifactViewTitleSource?
+    public let `icon`: MachineIcon?
+    public let `createdBy`: String?
+    public let `kind`: String
+    public let `node`: StoredArtifactViewNode
+
+    public init(`id`: String, `name`: String, `titleSource`: StoredArtifactViewTitleSource? = nil, `icon`: MachineIcon? = nil, `createdBy`: String? = nil, `kind`: String = "artifact", `node`: StoredArtifactViewNode) {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`titleSource` = `titleSource`
+        self.`icon` = `icon`
+        self.`createdBy` = `createdBy`
+        self.`kind` = `kind`
+        self.`node` = `node`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `titleSource` = try container.decodeIfPresent(StoredArtifactViewTitleSource.self, forKey: .`titleSource`)
+        `icon` = try container.decodeIfPresent(MachineIcon.self, forKey: .`icon`)
+        `createdBy` = try container.decodeIfPresent(String.self, forKey: .`createdBy`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `node` = try container.decode(StoredArtifactViewNode.self, forKey: .`node`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`titleSource`, forKey: .`titleSource`)
+        try container.encodeIfPresent(`icon`, forKey: .`icon`)
+        try container.encodeIfPresent(`createdBy`, forKey: .`createdBy`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`node`, forKey: .`node`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `titleSource` = "titleSource"
+        case `icon` = "icon"
+        case `createdBy` = "createdBy"
+        case `kind` = "kind"
+        case `node` = "node"
+    }
+}
+
+public enum StoredArtifactViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `auto` = "auto"
+    case `user` = "user"
+}
+
+public struct StoredArtifactViewNode: Codable, Sendable, Equatable {
+    public let `cwd`: String?
+    public let `command`: String?
+    public let `resume`: String?
+    public let `provider`: String?
+    public let `account`: String?
+    public let `providerFixed`: Bool?
+    public let `runtimeMode`: String?
+    public let `accent`: String?
+    public let `issue`: StoredArtifactViewNodeIssue?
+    public let `artifact`: StoredArtifactViewNodeArtifact?
+
+    public init(`cwd`: String? = nil, `command`: String? = nil, `resume`: String? = nil, `provider`: String? = nil, `account`: String? = nil, `providerFixed`: Bool? = nil, `runtimeMode`: String? = nil, `accent`: String? = nil, `issue`: StoredArtifactViewNodeIssue? = nil, `artifact`: StoredArtifactViewNodeArtifact? = nil) {
+        self.`cwd` = `cwd`
+        self.`command` = `command`
+        self.`resume` = `resume`
+        self.`provider` = `provider`
+        self.`account` = `account`
+        self.`providerFixed` = `providerFixed`
+        self.`runtimeMode` = `runtimeMode`
+        self.`accent` = `accent`
+        self.`issue` = `issue`
+        self.`artifact` = `artifact`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `cwd` = try container.decodeIfPresent(String.self, forKey: .`cwd`)
+        `command` = try container.decodeIfPresent(String.self, forKey: .`command`)
+        `resume` = try container.decodeIfPresent(String.self, forKey: .`resume`)
+        `provider` = try container.decodeIfPresent(String.self, forKey: .`provider`)
+        `account` = try container.decodeIfPresent(String.self, forKey: .`account`)
+        `providerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`providerFixed`)
+        `runtimeMode` = try container.decodeIfPresent(String.self, forKey: .`runtimeMode`)
+        `accent` = try container.decodeIfPresent(String.self, forKey: .`accent`)
+        `issue` = try container.decodeIfPresent(StoredArtifactViewNodeIssue.self, forKey: .`issue`)
+        `artifact` = try container.decodeIfPresent(StoredArtifactViewNodeArtifact.self, forKey: .`artifact`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(`cwd`, forKey: .`cwd`)
+        try container.encodeIfPresent(`command`, forKey: .`command`)
+        try container.encodeIfPresent(`resume`, forKey: .`resume`)
+        try container.encodeIfPresent(`provider`, forKey: .`provider`)
+        try container.encodeIfPresent(`account`, forKey: .`account`)
+        try container.encodeIfPresent(`providerFixed`, forKey: .`providerFixed`)
+        try container.encodeIfPresent(`runtimeMode`, forKey: .`runtimeMode`)
+        try container.encodeIfPresent(`accent`, forKey: .`accent`)
+        try container.encodeIfPresent(`issue`, forKey: .`issue`)
+        try container.encodeIfPresent(`artifact`, forKey: .`artifact`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `cwd` = "cwd"
+        case `command` = "command"
+        case `resume` = "resume"
+        case `provider` = "provider"
+        case `account` = "account"
+        case `providerFixed` = "providerFixed"
+        case `runtimeMode` = "runtimeMode"
+        case `accent` = "accent"
+        case `issue` = "issue"
+        case `artifact` = "artifact"
+    }
+}
+
+public struct StoredArtifactViewNodeIssue: Codable, Sendable, Equatable {
+    public let `repo`: String
+    public let `number`: Int64
+    public let `url`: String
+
+    public init(`repo`: String, `number`: Int64, `url`: String) {
+        self.`repo` = `repo`
+        self.`number` = `number`
+        self.`url` = `url`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `repo` = try container.decode(String.self, forKey: .`repo`)
+        `number` = try container.decode(Int64.self, forKey: .`number`)
+        `url` = try container.decode(String.self, forKey: .`url`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`repo`, forKey: .`repo`)
+        try container.encode(`number`, forKey: .`number`)
+        try container.encode(`url`, forKey: .`url`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `repo` = "repo"
+        case `number` = "number"
+        case `url` = "url"
+    }
+}
+
+public struct StoredArtifactViewNodeArtifact: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `version`: String?
+
+    public init(`id`: String, `version`: String? = nil) {
+        self.`id` = `id`
+        self.`version` = `version`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `version` = try container.decodeIfPresent(String.self, forKey: .`version`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encodeIfPresent(`version`, forKey: .`version`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `version` = "version"
+    }
+}
+
+public struct StoredDesignView: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `titleSource`: StoredDesignViewTitleSource?
+    public let `icon`: MachineIcon?
+    public let `createdBy`: String?
+    public let `kind`: String
+    public let `node`: StoredDesignViewNode
+    public let `path`: String
+    public let `chats`: [[String: JSONValue]]?
+
+    public init(`id`: String, `name`: String, `titleSource`: StoredDesignViewTitleSource? = nil, `icon`: MachineIcon? = nil, `createdBy`: String? = nil, `kind`: String = "design", `node`: StoredDesignViewNode, `path`: String, `chats`: [[String: JSONValue]]? = nil) {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`titleSource` = `titleSource`
+        self.`icon` = `icon`
+        self.`createdBy` = `createdBy`
+        self.`kind` = `kind`
+        self.`node` = `node`
+        self.`path` = `path`
+        self.`chats` = `chats`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `titleSource` = try container.decodeIfPresent(StoredDesignViewTitleSource.self, forKey: .`titleSource`)
+        `icon` = try container.decodeIfPresent(MachineIcon.self, forKey: .`icon`)
+        `createdBy` = try container.decodeIfPresent(String.self, forKey: .`createdBy`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `node` = try container.decode(StoredDesignViewNode.self, forKey: .`node`)
+        `path` = try container.decode(String.self, forKey: .`path`)
+        `chats` = try container.decodeIfPresent([[String: JSONValue]].self, forKey: .`chats`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`titleSource`, forKey: .`titleSource`)
+        try container.encodeIfPresent(`icon`, forKey: .`icon`)
+        try container.encodeIfPresent(`createdBy`, forKey: .`createdBy`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`node`, forKey: .`node`)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encodeIfPresent(`chats`, forKey: .`chats`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `titleSource` = "titleSource"
+        case `icon` = "icon"
+        case `createdBy` = "createdBy"
+        case `kind` = "kind"
+        case `node` = "node"
+        case `path` = "path"
+        case `chats` = "chats"
+    }
+}
+
+public enum StoredDesignViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `auto` = "auto"
+    case `user` = "user"
+}
+
+public struct StoredDesignViewNode: Codable, Sendable, Equatable {
+    public let `cwd`: String?
+    public let `command`: String?
+    public let `resume`: String?
+    public let `provider`: String?
+    public let `account`: String?
+    public let `providerFixed`: Bool?
+    public let `runtimeMode`: String?
+    public let `accent`: String?
+    public let `issue`: StoredDesignViewNodeIssue?
+    public let `artifact`: StoredDesignViewNodeArtifact?
+
+    public init(`cwd`: String? = nil, `command`: String? = nil, `resume`: String? = nil, `provider`: String? = nil, `account`: String? = nil, `providerFixed`: Bool? = nil, `runtimeMode`: String? = nil, `accent`: String? = nil, `issue`: StoredDesignViewNodeIssue? = nil, `artifact`: StoredDesignViewNodeArtifact? = nil) {
+        self.`cwd` = `cwd`
+        self.`command` = `command`
+        self.`resume` = `resume`
+        self.`provider` = `provider`
+        self.`account` = `account`
+        self.`providerFixed` = `providerFixed`
+        self.`runtimeMode` = `runtimeMode`
+        self.`accent` = `accent`
+        self.`issue` = `issue`
+        self.`artifact` = `artifact`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `cwd` = try container.decodeIfPresent(String.self, forKey: .`cwd`)
+        `command` = try container.decodeIfPresent(String.self, forKey: .`command`)
+        `resume` = try container.decodeIfPresent(String.self, forKey: .`resume`)
+        `provider` = try container.decodeIfPresent(String.self, forKey: .`provider`)
+        `account` = try container.decodeIfPresent(String.self, forKey: .`account`)
+        `providerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`providerFixed`)
+        `runtimeMode` = try container.decodeIfPresent(String.self, forKey: .`runtimeMode`)
+        `accent` = try container.decodeIfPresent(String.self, forKey: .`accent`)
+        `issue` = try container.decodeIfPresent(StoredDesignViewNodeIssue.self, forKey: .`issue`)
+        `artifact` = try container.decodeIfPresent(StoredDesignViewNodeArtifact.self, forKey: .`artifact`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(`cwd`, forKey: .`cwd`)
+        try container.encodeIfPresent(`command`, forKey: .`command`)
+        try container.encodeIfPresent(`resume`, forKey: .`resume`)
+        try container.encodeIfPresent(`provider`, forKey: .`provider`)
+        try container.encodeIfPresent(`account`, forKey: .`account`)
+        try container.encodeIfPresent(`providerFixed`, forKey: .`providerFixed`)
+        try container.encodeIfPresent(`runtimeMode`, forKey: .`runtimeMode`)
+        try container.encodeIfPresent(`accent`, forKey: .`accent`)
+        try container.encodeIfPresent(`issue`, forKey: .`issue`)
+        try container.encodeIfPresent(`artifact`, forKey: .`artifact`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `cwd` = "cwd"
+        case `command` = "command"
+        case `resume` = "resume"
+        case `provider` = "provider"
+        case `account` = "account"
+        case `providerFixed` = "providerFixed"
+        case `runtimeMode` = "runtimeMode"
+        case `accent` = "accent"
+        case `issue` = "issue"
+        case `artifact` = "artifact"
+    }
+}
+
+public struct StoredDesignViewNodeIssue: Codable, Sendable, Equatable {
+    public let `repo`: String
+    public let `number`: Int64
+    public let `url`: String
+
+    public init(`repo`: String, `number`: Int64, `url`: String) {
+        self.`repo` = `repo`
+        self.`number` = `number`
+        self.`url` = `url`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `repo` = try container.decode(String.self, forKey: .`repo`)
+        `number` = try container.decode(Int64.self, forKey: .`number`)
+        `url` = try container.decode(String.self, forKey: .`url`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`repo`, forKey: .`repo`)
+        try container.encode(`number`, forKey: .`number`)
+        try container.encode(`url`, forKey: .`url`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `repo` = "repo"
+        case `number` = "number"
+        case `url` = "url"
+    }
+}
+
+public struct StoredDesignViewNodeArtifact: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `version`: String?
+
+    public init(`id`: String, `version`: String? = nil) {
+        self.`id` = `id`
+        self.`version` = `version`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `version` = try container.decodeIfPresent(String.self, forKey: .`version`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encodeIfPresent(`version`, forKey: .`version`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `version` = "version"
+    }
+}
+
+public struct StoredUnknownView: Codable, Sendable, Equatable {
+    public let `kind`: String
+    public let `id`: String
+    public let `name`: String
+    public let `createdBy`: String?
+    public let `raw`: [String: JSONValue]
+
+    public init(`kind`: String = "unknown", `id`: String, `name`: String, `createdBy`: String? = nil, `raw`: [String: JSONValue]) {
+        self.`kind` = `kind`
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`createdBy` = `createdBy`
+        self.`raw` = `raw`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `createdBy` = try container.decodeIfPresent(String.self, forKey: .`createdBy`)
+        `raw` = try container.decode([String: JSONValue].self, forKey: .`raw`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`createdBy`, forKey: .`createdBy`)
+        try container.encode(`raw`, forKey: .`raw`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `id` = "id"
+        case `name` = "name"
+        case `createdBy` = "createdBy"
+        case `raw` = "raw"
+    }
+}
+
 public extension PlanStepState {
     /// The marker of this state, as `PLAN_STATE_MARKERS` in `@adecore/plan` writes it.
     var marker: String {

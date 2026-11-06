@@ -5,8 +5,12 @@ import SwiftUI
 /// The device view of a project that shows a device, or the one to add for it.
 enum DeviceViews {
     /// The view of `views` that already shows the device, by the reference a project file keeps.
-    static func existing(in views: [JSONValue], device: MachineDevice) -> String? {
-        views.first { $0.text("kind") == "device" && $0["device"] == device.reference }?.stableID
+    static func existing(in views: [StoredView], device: MachineDevice) -> String? {
+        views.first { view in
+            guard case .device(let shown) = view else { return false }
+            return shown.device.platform.rawValue == device.platform && shown.device.kind.rawValue == device.kind
+                && shown.device.name == device.name && shown.device.runtime == device.runtime
+        }?.id
     }
 
     static func view(for device: MachineDevice, id: String = "device-\(UUID().uuidString)") -> JSONValue {
@@ -198,7 +202,7 @@ struct MachineDevicesPage: View {
             workspace.stop()
             return
         }
-        var id = DeviceViews.existing(in: workspace.views, device: device)
+        var id = DeviceViews.existing(in: workspace.storedViews, device: device)
         if id == nil {
             let view = DeviceViews.view(for: device)
             await workspace.edit { $0.setting("views", .array($0.list("views") + [view])) }

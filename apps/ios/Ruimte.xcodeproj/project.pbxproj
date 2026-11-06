@@ -142,6 +142,7 @@
 		4E8F299AA65A370E9D134A1B /* VoiceTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 535DE70078B6FCEB1DAD035E /* VoiceTimeline.swift */; };
 		4F55FC08F38F77B99650C774 /* SessionWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1813EA5208B26BEDB337A946 /* SessionWorkspaceTests.swift */; };
 		4FD3D48F2E89E3A322C749FA /* FilePDFPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4BD54102FE5027BBC5278C7 /* FilePDFPreview.swift */; };
+		5024CDE5DD25A966A6FAC0DA /* StoredProject.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE77DDE733680CBFCAB7DCC /* StoredProject.swift */; };
 		52044F16FB5C9FC9FF67A877 /* GitWorktrees.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C9E309302105E05848A6E80 /* GitWorktrees.swift */; };
 		52339434144B4B1307B49826 /* ChatLimitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D704DFA44B45B7A82FFFA2 /* ChatLimitTests.swift */; };
 		525328BF92CFEE7D18F48DD5 /* AppRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE323EA02FEEF12048A2D3A8 /* AppRuntime.swift */; };
@@ -847,6 +848,7 @@
 		CD1D0EE3D6E5269C753AE6B9 /* ChatVisualTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatVisualTheme.swift; sourceTree = "<group>"; };
 		CDEBDA8A3C104C2C7998E957 /* ChatQueueSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatQueueSheet.swift; sourceTree = "<group>"; };
 		CE48345F04BA4B8E778C12FD /* PhoneHome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneHome.swift; sourceTree = "<group>"; };
+		CEE77DDE733680CBFCAB7DCC /* StoredProject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredProject.swift; sourceTree = "<group>"; };
 		CF0183BD88185DD4301FC7B9 /* RuntimeStartupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeStartupTests.swift; sourceTree = "<group>"; };
 		CFDC26F03A26E31BA4D2AE6C /* GitActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitActions.swift; sourceTree = "<group>"; };
 		D0DC19EF6BA44E7A277CAF1F /* ProjectSettingsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectSettingsPage.swift; sourceTree = "<group>"; };
@@ -1026,6 +1028,7 @@
 				089B611A941366002AA1307E /* RenderDocumentPage.swift */,
 				9E090439358C62866638E3DD /* SessionEnding.swift */,
 				653536E5B98BEFB676B13733 /* SharedMachineSession.swift */,
+				CEE77DDE733680CBFCAB7DCC /* StoredProject.swift */,
 				2F0CACBC269A20D7663C70E5 /* TaskStore.swift */,
 				5A672F255CAFCD537E1F2A74 /* UnifiedProjects.swift */,
 				A70BD9BD780EA9BE034FA161 /* UsageWidgetRecorder.swift */,
@@ -2306,6 +2309,7 @@
 				AEFABCFC364116F1A99CC8A8 /* SharedMachineSession.swift in Sources */,
 				422E1EFAEE2305134610E429 /* Snoozes.swift in Sources */,
 				5AAD42D63D48CA237DFF1ACF /* Spinner.swift in Sources */,
+				5024CDE5DD25A966A6FAC0DA /* StoredProject.swift in Sources */,
 				F9423B6A7EA1879C4A9987D4 /* SubagentPages.swift in Sources */,
 				1AF6F6A85AF5D021863DCA66 /* TaskStore.swift in Sources */,
 				3475B2B46C734E84F6DA50FA /* TerminalKeyBar.swift in Sources */,

@@ -125,7 +125,7 @@ final class ProjectFilesTests: XCTestCase {
             ]),
             .object(["id": .string("two"), "kind": .string("chat"), "name": .string("Shopping list")]),
         ]
-        let chats = FilesMention.chats(in: views, current: "two")
+        let chats = FilesMention.chats(in: ProjectWire.stored(views), current: "two")
         XCTAssertEqual(chats.map(\.title), ["Shopping list", "Refactor", "Review"])
         XCTAssertEqual(chats.map(\.current), [true, false, false])
     }

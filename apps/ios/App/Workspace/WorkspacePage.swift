@@ -116,7 +116,7 @@ struct WorkspacePage: View {
                         Text("An agent opened a view").font(.subheadline)
                         Spacer()
                         Button("Go there") {
-                            openView(notice.text("viewId"))
+                            openView(notice.viewId)
                             workspace.notice = nil
                         }
                         Button(String(localized: "Dismiss"), lucideIcon: "x") { workspace.notice = nil }
