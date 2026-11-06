@@ -1,0 +1,24 @@
+import { AccountPill, GoalPill, LimitPill } from '@adecore/agents-react/chat/ui';
+import { ForkPill } from '@/chat/ForkPill';
+import { ComputerIndicator } from '@/computer/ComputerIndicator';
+import { PrWatchPill } from '@/github/PrWatchPill';
+import { PlanPill } from '@/plan/PlanPill';
+import type { NodeHeaderProps } from '@/registry/node-kinds';
+
+/* What the header of a chat on the canvas says about the chat, and the computer it works on. */
+export function NodeChatPills({ id, chatId, renaming }: NodeHeaderProps) {
+    if (renaming) {
+        return null;
+    }
+    return (
+        <>
+            <AccountPill chatId={chatId} />
+            <ForkPill chatId={chatId} />
+            <PlanPill chatId={chatId} />
+            <LimitPill chatId={chatId} />
+            <GoalPill chatId={chatId} />
+            <PrWatchPill chatId={chatId} />
+            <ComputerIndicator nodeId={id} />
+        </>
+    );
+}

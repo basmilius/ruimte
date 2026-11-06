@@ -3,13 +3,9 @@ import { isCanvasView } from '@ruimte/contracts';
 import { useEffect, useState, type DragEvent as ReactDragEvent, type ReactElement } from 'react';
 import { placeFilesAction, placeViewAction } from '@/action-port/person-actions';
 import { PromptStack } from '@/canvas/PromptStack';
-import { carriesDatabase, droppedDatabase } from '@/database/drag';
-import { dropDatabaseTab } from '@/database/open';
-import { carriesDiff, droppedDiff } from '@/git/diff-drag';
 import { cellsMoved, registerCell } from '@/layout/cell-rects';
 import { canDropAsTab, canMoveCell, canSplit, cellAt, cellViewIds, locateView, MIN_SHARE, type CellAt, type SplitZone } from '@/layout/split';
 import { clampTabLeft, DEFAULT_TAB_WIDTH, gapLeft, positionAfterLifting } from '@/layout/tab-drop';
-import { carriesArtifact, dropArtifactTab, droppedArtifact } from '@/output/artifact-drag';
 import { CellToolbar } from '@/shell/CellToolbar';
 import { cellForPane, columnForSplit, coreLayout } from '@/shell/core-layout';
 import { Dock } from '@/shell/Dock';
@@ -17,14 +13,13 @@ import { useCellView } from '@/shell/use-cell-view';
 import { ViewSurface } from '@/shell/ViewHost';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { canStandInCell, useDocument } from '@/state/document';
-import { tabKey, useFiles } from '@/state/files';
-import { useSettings } from '@/state/settings';
 import { CellViewContext } from '@/state/workspace-stores';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/surface/canvas/drop';
 import { finderPaths } from '@/surface/canvas/finder-drop';
 import { isLooseView } from '@/surface/cell-view';
 import { CellOverlay } from '@/surface/CellOverlay';
 import { hideDropPreview, showDropPreview } from '@/surface/drop-preview';
+import { carriesTabDrag, takeTabDrop } from '@/surface/tab-drags';
 import {
     carriesView,
     draggedViewId,
@@ -168,7 +163,7 @@ function Cell({
             return null;
         }
         const moving = dragging();
-        if (!carriesDiff(event.dataTransfer) && !carriesDatabase(event.dataTransfer) && !carriesArtifact(event.dataTransfer) && !usesPaths(event)) {
+        if (!carriesTabDrag(event.dataTransfer) && !usesPaths(event)) {
             if (moving === null || draggingWholeCell() || !canStandInCell(useDocument.getState(), moving) || !canDropAsTab(layout, at, moving)) {
                 return null;
             }
@@ -220,7 +215,7 @@ function Cell({
             return null;
         }
         // A change dropped in the middle of a cell opens as a tab of it, whatever the cell holds.
-        if (here === 'center' && (carriesDiff(event.dataTransfer) || carriesDatabase(event.dataTransfer) || carriesArtifact(event.dataTransfer))) {
+        if (here === 'center' && carriesTabDrag(event.dataTransfer)) {
             return here;
         }
         // The bar of a host carries every tab, so the question is whether the whole cell fits there.
@@ -262,24 +257,11 @@ function Cell({
         }
         event.preventDefault();
         event.stopPropagation();
-        const database = droppedDatabase(event.dataTransfer);
-        if (database !== null) {
-            dropDatabaseTab(database, at, 'center', tabIndexFor(tab.gap, dragging() ?? ''));
-            return;
-        }
-        const artifact = droppedArtifact(event.dataTransfer);
-        if (artifact !== null) {
-            dropArtifactTab(artifact, at, 'center', tabIndexFor(tab.gap, dragging() ?? ''));
+        if (takeTabDrop(event.dataTransfer, at, 'center', (moving) => tabIndexFor(tab.gap, moving))) {
             return;
         }
         if (usesPaths(event)) {
             placeFilesAction(pathsOf(event), viewId, 'center', tabs === undefined ? null : tab.gap);
-            return;
-        }
-        const diff = droppedDiff(event.dataTransfer);
-        if (diff !== null) {
-            const key = tabKey(diff.path, diff.view);
-            useFiles.getState().dropDiff(diff.path, diff.view, useSettings.getState().filesTabLimit, at, 'center', tabIndexFor(tab.gap, key));
             return;
         }
         const dragged = draggedViewId(event.dataTransfer);
@@ -298,24 +280,12 @@ function Cell({
         }
         event.preventDefault();
         event.stopPropagation();
-        const database = droppedDatabase(event.dataTransfer);
-        if (database !== null) {
-            dropDatabaseTab(database, at, here);
-            return;
-        }
-        const artifact = droppedArtifact(event.dataTransfer);
-        if (artifact !== null) {
-            dropArtifactTab(artifact, at, here);
+        if (takeTabDrop(event.dataTransfer, at, here)) {
             return;
         }
         if (paths.length > 0) {
             // A dropped file stays out of the sidebar.
             placeFilesAction(paths, viewId, here);
-            return;
-        }
-        const diff = droppedDiff(event.dataTransfer);
-        if (diff !== null) {
-            useFiles.getState().dropDiff(diff.path, diff.view, useSettings.getState().filesTabLimit, at, here);
             return;
         }
         const dragged = draggedViewId(event.dataTransfer);
