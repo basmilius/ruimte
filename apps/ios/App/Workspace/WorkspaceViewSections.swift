@@ -14,9 +14,7 @@ struct WorkspaceViewSection: Identifiable {
 enum WorkspaceViewSections {
     /// The rows that divide the list rather than stand in it: a line, and a heading over what follows. A phone has no
     /// room for a rule between rows, so both open a section here and the one that carries a name titles it.
-    static func isDivider(_ view: JSONValue) -> Bool {
-        view.text("kind") == "separator" || view.text("kind") == "subheader"
-    }
+    static func isDivider(_ view: JSONValue) -> Bool { ProjectKinds.isDivider(view.text("kind")) }
 
     static func split(_ views: [JSONValue], search: String = "") -> [WorkspaceViewSection] {
         var sections = [WorkspaceViewSection(id: .leading, title: nil, items: [])]

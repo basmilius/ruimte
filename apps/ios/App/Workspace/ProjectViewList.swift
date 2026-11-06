@@ -44,7 +44,7 @@ enum ProjectListLogic {
     /// The nodes a canvas lists under it. Groups, notes and drawings are frames and paper; the list is about what runs.
     static func nodes(of view: JSONValue) -> [JSONValue] {
         guard view.text("kind") == "canvas" else { return [] }
-        return view.list("nodes").filter { ["terminal", "chat", "browser", "device"].contains($0.text("kind")) }
+        return view.list("nodes").filter { ProjectKinds.runs($0.text("kind")) }
     }
 
     static func heaviest(_ statuses: [AgentStatus?]) -> AgentStatus? {

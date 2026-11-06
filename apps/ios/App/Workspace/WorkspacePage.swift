@@ -724,7 +724,7 @@ struct ProjectItemPage: View {
                 // The page stands with its content, and so its bar, from the first frame of the push. Swapping a
                 // spinner for it once the session is there made the bar drop its items as the push settled.
                 content.overlay {
-                    if !ready && ProjectItemPage.waitsForSession(current.text("kind")) {
+                    if !ready && ProjectKinds.waitsForSession(current.text("kind")) {
                         MobileLoadingRow(String(localized: "Opening"))
                     }
                 }
@@ -746,8 +746,6 @@ struct ProjectItemPage: View {
         .onDisappear { workspace.session.attention.blur(item.stableID) }
         .task(id: "\(workspace.session.generation):\(workspace.ready)") { await prepare() }
     }
-    /// The kinds whose page has nothing to show until the project opened, and for a terminal its session exists.
-    static func waitsForSession(_ kind: String) -> Bool { ["terminal", "canvas", "group"].contains(kind) }
 
     @ViewBuilder private var content: some View {
         switch current.text("kind") {
@@ -843,7 +841,7 @@ struct ProjectItemPage: View {
 
     private var subtitle: String { workspace.ready ? workspace.title : projectName ?? workspace.title }
     private var title: String {
-        current.text("name", fallback: current.text("title", fallback: NewViewFactory.kindTitle(current.text("kind"))))
+        current.text("name", fallback: current.text("title", fallback: ProjectKinds.label(current.text("kind"))))
     }
     private func absolutePath(_ path: String) -> String {
         path.hasPrefix("/") || path.hasPrefix("~") ? path : workspace.folder + "/" + path
@@ -888,14 +886,9 @@ struct AddProjectItem: View {
         NavigationStack {
             MobileForm {
                 Picker("Kind", selection: $kind) {
-                    ForEach(
-                        canvasID == nil
-                            ? [
-                                "chat", "terminal", "canvas", "browser", "file", "drawing", "diagram", "separator",
-                                "subheader",
-                            ]
-                            : ["chat", "terminal", "browser", "file", "note", "group"], id: \.self
-                    ) { Text(NewViewFactory.kindTitle($0)).tag($0) }
+                    ForEach(canvasID == nil ? ProjectKinds.addView : ProjectKinds.addNode, id: \.self) {
+                        Text(ProjectKinds.label($0)).tag($0)
+                    }
                 }
                 TextField("Name", text: $name)
                 if kind == "browser" || kind == "file" {

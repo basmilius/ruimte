@@ -50,10 +50,6 @@ struct ChatReferenceSource {
 enum ChatReferables {
     static let results = 20
 
-    private static let viewKinds: Set<String> = [
-        "canvas", "design", "chat", "terminal", "browser", "device", "drawing", "diagram", "file", "database",
-    ]
-
     /// The nodes and texts of the canvas `chatID` is a node of, then the views in sidebar order, never the chat
     /// itself. Two of one name and kind on the canvas are told apart by the canvas's name.
     static func project(views: [StoredView], chatID: String) -> [ChatReferable] {
@@ -123,7 +119,7 @@ enum ChatReferables {
             let name = project.text("name")
             let step = ChatReferenceStep(id: id, name: name, kind: "project")
             return entry.list("items").compactMap { item -> ChatReferable? in
-                guard knownKinds.contains(item.text("kind")) else { return nil }
+                guard isOffered(item.text("kind")) else { return nil }
                 let inside = item["canvas"].map {
                     [ChatReferenceStep(id: $0.text("id"), name: $0.text("name"), kind: "canvas")]
                 }
@@ -134,7 +130,8 @@ enum ChatReferables {
         }
     }
 
-    private static let knownKinds = viewKinds.union(["note", "text"])
+    /// A text on a canvas is no view or node kind of the project, so the table does not hold it.
+    private static func isOffered(_ kind: String) -> Bool { kind == "text" || ProjectKinds.isReferable(kind) }
 
     /// What a `#query` offers, the canvas first: never an id in `exclude`, and only chats where the machine takes
     /// no more. The limit holds per project, or a large first project would keep every other one out.
@@ -177,34 +174,8 @@ enum ChatReferables {
     static func icon(_ kind: String) -> String {
         switch kind {
         case "project": "folder"
-        case "design": "swatch-book"
-        case "canvas": "frame"
-        case "chat": "message-square"
-        case "terminal": "terminal"
-        case "note": "sticky-note"
         case "text": "type"
-        case "drawing": "pen-tool"
-        case "diagram": "workflow"
-        case "browser": "globe"
-        case "device": "smartphone"
-        case "database": "database"
-        default: "file-text"
-        }
-    }
-
-    static func kindName(_ kind: String) -> String {
-        switch kind {
-        case "canvas": String(localized: "Canvas")
-        case "chat": String(localized: "Chat")
-        case "terminal": String(localized: "Terminal")
-        case "note": String(localized: "Note")
-        case "text": String(localized: "Text")
-        case "drawing": String(localized: "Drawing")
-        case "diagram": String(localized: "Diagram")
-        case "browser": String(localized: "Browser")
-        case "device": String(localized: "Device")
-        case "database": String(localized: "Database")
-        default: String(localized: "File")
+        default: ProjectKinds.row(kind).map { $0.referenceIcon ?? $0.icon } ?? "file-text"
         }
     }
 
@@ -314,7 +285,7 @@ enum ChatReferables {
     }
 
     private static func viewReferable(_ view: StoredView) -> ChatReferable? {
-        guard viewKinds.contains(view.kind), !unlisted(view) else { return nil }
+        guard ProjectKinds.isReferable(view.kind), !unlisted(view) else { return nil }
         return ChatReferable(
             id: view.id, name: view.name, kind: view.kind, group: .views, icon: WorkspaceViewIcon.name(for: view))
     }

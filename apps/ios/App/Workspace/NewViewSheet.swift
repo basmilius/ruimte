@@ -15,33 +15,11 @@ enum NewViewResult: Equatable {
 /// The views New view makes, as the desktop makes them: named after what they are until a session or a person names
 /// them.
 enum NewViewFactory {
-    static let kinds = ["terminal", "canvas", "browser", "file", "drawing", "diagram"]
-
     static func base(_ kind: String) -> String {
         switch kind {
         case "canvas": "Canvas"
         case "chat": "AI Chat"
         case "subheader": "Section"
-        default: kind.capitalized
-        }
-    }
-
-    /// What a person reads for a kind of view or node where it has no name of its own.
-    static func kindTitle(_ kind: String) -> String {
-        switch kind {
-        case "terminal": String(localized: "Terminal")
-        case "chat": String(localized: "Chat")
-        case "canvas": String(localized: "Canvas")
-        case "browser": String(localized: "Browser")
-        case "file": String(localized: "File")
-        case "drawing": String(localized: "Drawing")
-        case "diagram": String(localized: "Diagram")
-        case "device": String(localized: "Device")
-        case "group": String(localized: "Group")
-        case "note": String(localized: "Note")
-        case "separator": String(localized: "Separator")
-        case "subheader": String(localized: "Subheader")
-        case "artifact": String(localized: "Output")
         default: kind.capitalized
         }
     }
@@ -108,13 +86,13 @@ struct NewViewSheet: View {
                     heading(String(localized: "View", comment: "Heading over the kinds of view to make"))
                         .padding(.top, 10)
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                        ForEach(NewViewFactory.kinds, id: \.self) { kind in
+                        ForEach(ProjectKinds.newView, id: \.self) { kind in
                             Button {
                                 kind == "file" ? pickFile() : create(kind)
                             } label: {
                                 VStack(spacing: 6) {
                                     LucideIcon(name: WorkspaceViewIcon.name(for: .object(["kind": .string(kind)])), size: 18)
-                                    Text(NewViewFactory.kindTitle(kind)).font(.footnote)
+                                    Text(ProjectKinds.label(kind)).font(.footnote)
                                 }
                                 .frame(maxWidth: .infinity, minHeight: 68)
                                 .background(MobileStyle.hover, in: .rect(cornerRadius: 18))

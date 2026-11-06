@@ -185,7 +185,7 @@ struct NowBoard: Equatable {
             guard let summary = project["summary"], let views = project["views"]?.arrayValue else { continue }
             let projectID = summary.text("projectId")
             let projectName = Self.projectName(summary)
-            for view in views where !isDivider(view) {
+            for view in views where !WorkspaceViewSections.isDivider(view) {
                 let viewID = view.text("id")
                 let rows = [view] + view.list("nodes")
                 for row in rows {
@@ -198,7 +198,7 @@ struct NowBoard: Equatable {
                             target: ProjectViewTarget(
                                 machineID: machine.machineID, projectID: projectID, viewID: viewID, itemID: itemID),
                             machineName: machine.machineName, projectName: projectName,
-                            title: title.isEmpty ? defaultTitle(kind) : title, kind: kind,
+                            title: title.isEmpty ? ProjectKinds.label(kind) : title, kind: kind,
                             iconName: WorkspaceViewIcon.name(for: row),
                             status: machine.attention.statuses[itemID],
                             unseen: machine.attention.unseen.contains(itemID),
@@ -253,19 +253,5 @@ struct NowBoard: Equatable {
         NewChat.isChats(summary)
             ? String(localized: "Chats", comment: "Name of the project that holds the chats outside any project")
             : summary.text("name", fallback: String(localized: "Untitled project"))
-    }
-
-    private static func isDivider(_ view: JSONValue) -> Bool {
-        ["separator", "subheader"].contains(view.text("kind"))
-    }
-
-    private static func defaultTitle(_ kind: String) -> String {
-        switch kind {
-        case "chat": String(localized: "Chat")
-        case "terminal": String(localized: "Terminal")
-        case "browser": String(localized: "Browser")
-        case "device": String(localized: "Device")
-        default: kind.capitalized
-        }
     }
 }

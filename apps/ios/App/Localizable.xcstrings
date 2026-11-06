@@ -626,6 +626,16 @@
         }
       }
     },
+    "Design" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Design"
+          }
+        }
+      }
+    },
     "Device tools" : {
       "localizations" : {
         "nl" : {

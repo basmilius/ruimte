@@ -105,24 +105,6 @@ struct WorkspaceViewIcon: View {
 
     private nonisolated static func name(kind: String, chosen: String?) -> String {
         if kind != "unknown", let chosen { return chosen }
-        // Match the fallback marks in the desktop client's project/ViewGlyph.tsx.
-        switch kind {
-        case "canvas": return "frame"
-        case "chat": return "message-square"
-        case "terminal": return "terminal"
-        case "browser": return "globe"
-        case "device": return "smartphone"
-        case "separator": return "minus"
-        case "subheader": return "heading"
-        case "drawing": return "pen-tool"
-        case "diagram": return "workflow"
-        case "file": return "file-text"
-        case "database": return "table"
-        case "note": return "sticky-note"
-        case "group": return "layout-grid"
-        case "artifact": return "package"
-        case "design": return "swatch-book"
-        default: return "circle-question-mark"
-        }
+        return ProjectKinds.row(kind)?.icon ?? "circle-question-mark"
     }
 }

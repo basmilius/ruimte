@@ -176,7 +176,7 @@ private struct ProjectListCell: View {
 
     private func title(_ row: JSONValue) -> String {
         let name = row.text("name", fallback: row.text("title"))
-        return name.isEmpty ? NewViewFactory.kindTitle(row.text("kind")) : name
+        return name.isEmpty ? ProjectKinds.label(row.text("kind")) : name
     }
 }
 
@@ -275,7 +275,7 @@ private struct ProjectRowPreview: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 WorkspaceViewIcon(item: item, size: 14)
-                let kind = NewViewFactory.kindTitle(item.text("kind"))
+                let kind = ProjectKinds.label(item.text("kind"))
                 Text(item.text("name", fallback: item.text("title", fallback: kind)))
                     .font(.footnote.weight(.semibold)).lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -290,7 +290,7 @@ private struct ProjectRowPreview: View {
                     ForEach(nodes.prefix(6), id: \.stableID) { node in
                         HStack(spacing: 8) {
                             WorkspaceViewIcon(item: node, size: 12).foregroundStyle(MobileStyle.muted)
-                            Text(node.text("title", fallback: NewViewFactory.kindTitle(node.text("kind")))).lineLimit(1)
+                            Text(node.text("title", fallback: ProjectKinds.label(node.text("kind")))).lineLimit(1)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             ProjectRowMarksView(marks: ProjectListLogic.marks(node: node, sources: sources))
                         }

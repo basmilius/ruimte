@@ -851,7 +851,7 @@ private final class CanvasSurface: UIView {
             let detail =
                 node.kind == .note
                 ? node.body ?? ""
-                : NewViewFactory.kindTitle(node.kind.rawValue)
+                : ProjectKinds.label(node.kind.rawValue)
                     + ((node.url ?? "").isEmpty ? "" : "\n" + (node.url ?? ""))
             drawText(
                 detail,
@@ -936,7 +936,7 @@ private final class CanvasSurface: UIView {
             guard rect.intersects(viewport) else { return nil }
             let element = CanvasAccessibleNode(accessibilityContainer: self)
             let title = node.title
-            let kind = NewViewFactory.kindTitle(node.kind.rawValue)
+            let kind = ProjectKinds.label(node.kind.rawValue)
             if let task = tasks[node.id] {
                 let word = TaskMark.word(task.status)
                 element.accessibilityLabel = String(

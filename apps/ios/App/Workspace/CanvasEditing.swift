@@ -53,7 +53,7 @@ enum CanvasNodeAction: Equatable {
     static func actions(for node: JSONValue) -> [CanvasNodeAction] {
         let kind = node.text("kind")
         // A kind this version does not know is kept as it is, so the menu only offers to take it away.
-        guard CanvasEditing.knownKinds.contains(kind) else { return [.delete] }
+        guard ProjectKinds.editsOnCanvas(kind) else { return [.delete] }
         var actions: [CanvasNodeAction] = []
         if CanvasEditing.opensAsView(kind) { actions.append(.openAsView) }
         actions.append(.linkAsContext)
@@ -73,12 +73,9 @@ enum CanvasEditing {
     static let grid = 8.0
     static let groupPadding = 32.0
     static let groupHeader = 40.0
-    static let knownKinds: Set<String> = [
-        "terminal", "chat", "browser", "device", "group", "note", "drawing", "diagram", "file",
-    ]
 
     static func isAgent(_ kind: String) -> Bool { kind == "chat" || kind == "terminal" }
-    static func opensAsView(_ kind: String) -> Bool { ["chat", "terminal", "browser", "device"].contains(kind) }
+    static func opensAsView(_ kind: String) -> Bool { ProjectKinds.runs(kind) }
 
     /// `Math.round` of the desktop, which rounds a half up where Swift rounds it away from zero.
     static func snap(_ value: Double) -> Double { (value / grid + 0.5).rounded(.down) * grid }
@@ -196,7 +193,7 @@ enum CanvasEditing {
             "nodes",
             .array(
                 canvas.list("nodes").map { node in
-                    guard node.stableID == id, knownKinds.contains(node.text("kind")) else { return node }
+                    guard node.stableID == id, ProjectKinds.editsOnCanvas(node.text("kind")) else { return node }
                     let colored = node.setting("accent", value)
                     return node.text("kind") == "note" ? colored.setting("color", nil) : colored
                 }))
