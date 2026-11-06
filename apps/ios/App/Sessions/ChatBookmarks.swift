@@ -117,7 +117,7 @@ extension ChatModel {
         while !found() {
             guard !Task.isCancelled else { return false }
             if loadingHistory {
-                do { try await Task.sleep(for: .milliseconds(100)) } catch { return false }
+                guard await waitUntil({ !self.loadingHistory }) else { return false }
             } else if await !loadOlderNow() {
                 return false
             }

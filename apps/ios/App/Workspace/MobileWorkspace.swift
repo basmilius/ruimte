@@ -294,13 +294,10 @@ final class MobileWorkspace {
         views.first { $0.stableID == id } ?? views.lazy.flatMap { $0.list("nodes") }.first { $0.stableID == id }
     }
 
-    /// Waits for an item the machine wrote to reach this copy of the project, for at most a few seconds.
+    /// Waits for an item the machine wrote to reach this copy of the project. An item that never comes is the case
+    /// the five seconds are for.
     func arrival(of id: String) async -> Bool {
-        for _ in 0..<50 {
-            if item(id) != nil { return true }
-            do { try await Task.sleep(for: .milliseconds(100)) } catch { return false }
-        }
-        return item(id) != nil
+        await waitUntil(timeout: .seconds(5)) { [self] in item(id) != nil }
     }
 
     func ensureSession(_ item: JSONValue) async throws {

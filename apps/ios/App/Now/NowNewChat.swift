@@ -81,9 +81,9 @@ final class NowNewChatModel {
         let workspace = MobileWorkspace(session: session, projectID: projectID)
         workspace.start()
         defer { workspace.stop() }
-        for _ in 0..<150 where !workspace.ready {
-            do { try await Task.sleep(for: .milliseconds(100)) } catch { return nil }
-        }
+        // A project that does not open within fifteen seconds is the failure the person is told about.
+        _ = await waitUntil(timeout: .seconds(15)) { workspace.ready }
+        if Task.isCancelled { return nil }
         guard workspace.ready else {
             problem = workspace.problem ?? String(localized: "The project did not open in time.")
             return nil

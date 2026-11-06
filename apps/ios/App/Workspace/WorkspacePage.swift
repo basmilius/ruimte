@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteTransport
 import SwiftUI
 
 struct WorkspacePage: View {
@@ -439,11 +440,8 @@ struct WorkspacePage: View {
         let session = workspace.session
         let model = session.retainChat(ChatModel(client: workspace.client, chatID: id, machineID: session.machine.id))
         defer { session.releaseChat(model) }
-        var waited = 0
-        while (model.loading || model.info == nil) && model.error == nil && waited < 50 {
-            try? await Task.sleep(for: .milliseconds(100))
-            waited += 1
-        }
+        // A chat that never loads is what the five seconds are for; the sheet then has no turn to open on.
+        _ = await waitUntil(timeout: .seconds(5)) { (!model.loading && model.info != nil) || model.error != nil }
         guard let turnID = model.presentation.lastSettledTurnID else {
             forkProblem =
                 model.error ?? String(localized: "This chat has no turn that ended yet, so there is nothing to fork.")
