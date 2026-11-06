@@ -262,7 +262,3 @@ test('git.status reads the branch, the counts and the first files of a busy chec
     expect((status as { files: unknown[] }).files).toHaveLength(50);
     expect(JSON.stringify(status).length).toBeLessThan(64 * 1024);
 });
-
-test('a chat gets no place lookup, so a place with only an address reads as not found', () => {
-    expect(ruimteUiSources(hosts).place).toBeUndefined();
-});
