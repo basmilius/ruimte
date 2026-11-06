@@ -340,6 +340,10 @@ export class PrWatchStore {
         }
         if ((await this.options.paused?.(record.projectId)) === true) {
             this.held.add(id);
+            // A resume that fell between the answer and the hold found nothing to release, so ask once more.
+            if ((await this.options.paused?.(record.projectId)) === false && this.held.delete(id)) {
+                this.arm(id, 0);
+            }
             return;
         }
         let poll: PrPoll | null;

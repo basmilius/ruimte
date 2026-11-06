@@ -94,9 +94,10 @@ const fakeGh: GhRunner = (args) => {
     return Promise.resolve({ code: 0, stdout: JSON.stringify(page), stderr: '' });
 };
 
-function open(closedProjects?: ReadonlySet<string>): PrWatchStore {
+function open(closedProjects?: ReadonlySet<string>, paused?: (projectId: string) => Promise<boolean>): PrWatchStore {
     const store = new PrWatchStore({
         ...(closedProjects ? { paused: (projectId: string) => Promise.resolve(closedProjects.has(projectId)) } : {}),
+        ...(paused ? { paused } : {}),
         path: join(home, 'pr-watches.json'),
         clock,
         gh: fakeGh,
@@ -366,6 +367,28 @@ describe('a pull request watch', () => {
 
         closed.delete('p');
         store.resume('p');
+        await tick(store, 0);
+
+        expect(polls).toBe(before + 1);
+    });
+
+    test('keeps polling when the project opens again between the answer that it is closed and the hold', async () => {
+        let closed = false;
+        let store: PrWatchStore | null = null;
+        store = open(undefined, (projectId) => {
+            const answer = closed;
+            if (closed) {
+                closed = false;
+                // Runs before the poll takes the answer, which is the window a resume can fall in.
+                queueMicrotask(() => store?.resume(projectId));
+            }
+            return Promise.resolve(answer);
+        });
+        await store.start('p', 'chat-1', '/repo');
+        closed = true;
+        const before = polls;
+
+        await tick(store, MAX_INTERVAL_MS);
         await tick(store, 0);
 
         expect(polls).toBe(before + 1);
