@@ -1,5 +1,14 @@
 import { NodeChatPills } from '@/nodes/NodeChatPills';
-import { BrowserNodeBody, BrowserViewBody, ChatViewBody, TerminalViewBody, ChatNodeBody, TerminalAfterTitle, TerminalContextPill, TerminalNodeBody } from '@/nodes/NodeKindBodies';
+import {
+    BrowserNodeBody,
+    BrowserViewBody,
+    ChatViewBody,
+    TerminalViewBody,
+    ChatNodeBody,
+    TerminalAfterTitle,
+    TerminalContextPill,
+    TerminalNodeBody
+} from '@/nodes/NodeKindBodies';
 import type { NodeKindDefinition } from '@/registry/node-kinds';
 import { viewKind, viewOfKind, type ViewKindDefinition } from '@/registry/view-kinds';
 

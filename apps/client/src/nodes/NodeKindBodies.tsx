@@ -1,5 +1,5 @@
-import type { ProjectView } from '@ruimte/contracts';
 import { Icon, Pill, Tooltip } from '@adecore/ui';
+import type { ProjectView } from '@ruimte/contracts';
 import { Link2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ComputerIndicator } from '@/computer/ComputerIndicator';
@@ -7,8 +7,8 @@ import { useHasContextLinks } from '@/context/sources';
 import { BrowserBody, BrowserFallback } from '@/nodes/BrowserBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
-import type { NodeBodyProps, NodeHeaderProps } from '@/registry/node-kinds';
 import { usePage } from '@/nodes/use-page';
+import type { NodeBodyProps, NodeHeaderProps } from '@/registry/node-kinds';
 import { SessionPorts } from '@/terminal/SessionPorts';
 
 export function TerminalNodeBody({ id, live, focused }: NodeBodyProps) {

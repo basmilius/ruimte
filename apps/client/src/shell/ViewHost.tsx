@@ -76,13 +76,7 @@ export function ViewSurface({ view }: { view: CellView }) {
     const diagram = useDiagram((s) => s.content);
     return (
         <ErrorBoundary key={view.id} label={t('viewHost.failed')} resetKeys={[view.id, rev, drawing, diagram]}>
-            {isLooseView(view) ? (
-                <FilesSurface tabKey={view.id} ids={[view.id]} />
-            ) : isCanvasView(view) ? (
-                <Canvas />
-            ) : (
-                <StandaloneView view={view} />
-            )}
+            {isLooseView(view) ? <FilesSurface tabKey={view.id} ids={[view.id]} /> : isCanvasView(view) ? <Canvas /> : <StandaloneView view={view} />}
         </ErrorBoundary>
     );
 }

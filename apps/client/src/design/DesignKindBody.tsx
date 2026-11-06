@@ -1,5 +1,5 @@
-import type { ProjectDesignView } from '@ruimte/contracts';
 import { lazyNamed, LazyBoundary } from '@adecore/ui';
+import type { ProjectDesignView } from '@ruimte/contracts';
 import type { NodeBodyProps } from '@/registry/node-kinds';
 
 const DesignNodeBody = lazyNamed(() => import('@/design/DesignNode'), 'DesignNodeBody');

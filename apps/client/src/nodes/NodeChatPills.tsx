@@ -1,7 +1,7 @@
 import { AccountPill, GoalPill, LimitPill } from '@adecore/agents-react/chat/ui';
-import { ForkPill } from '@/nodes/ForkPill';
 import { ComputerIndicator } from '@/computer/ComputerIndicator';
 import { PrWatchPill } from '@/github/PrWatchPill';
+import { ForkPill } from '@/nodes/ForkPill';
 import { PlanPill } from '@/plan/PlanPill';
 import type { NodeHeaderProps } from '@/registry/node-kinds';
 

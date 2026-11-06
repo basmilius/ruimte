@@ -1,6 +1,6 @@
 import { isDesignView } from '@ruimte/contracts';
-import { NodeChatPills } from '@/nodes/NodeChatPills';
 import { DesignBody, DesignViewKindBody } from '@/design/DesignKindBody';
+import { NodeChatPills } from '@/nodes/NodeChatPills';
 import type { NodeKindDefinition } from '@/registry/node-kinds';
 import { viewKind } from '@/registry/view-kinds';
 

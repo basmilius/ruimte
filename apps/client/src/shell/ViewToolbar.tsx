@@ -1,6 +1,5 @@
 import { runtimeModeHint, runtimeModeLabel } from '@adecore/agents-react/chat';
 import { Pill, Tooltip } from '@adecore/ui';
-import { ForkPill } from '@/nodes/ForkPill';
 import { ComputerIndicator } from '@/computer/ComputerIndicator';
 import { useNodeComputerSession } from '@/computer/indicator';
 import { DesignActions } from '@/design/DesignActions';
@@ -8,6 +7,7 @@ import { DeviceToolbar } from '@/devices/DeviceBody';
 import { useDictation } from '@/dictation/controller';
 import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
 import { BrowserToolbar } from '@/nodes/BrowserBody';
+import { ForkPill } from '@/nodes/ForkPill';
 import { PlanPill } from '@/plan/PlanPill';
 import { chatIdOf, hostIdOf, KINDS_WITH_TOOLBAR, modeOf, useIsFork } from '@/shell/view-toolbar';
 import { useEndpointId } from '@/state/current-endpoint';

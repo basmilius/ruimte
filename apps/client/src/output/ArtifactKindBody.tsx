@@ -1,5 +1,5 @@
-import type { ProjectArtifactView } from '@ruimte/contracts';
 import { lazyNamed, LazyBoundary } from '@adecore/ui';
+import type { ProjectArtifactView } from '@ruimte/contracts';
 import type { NodeBodyProps } from '@/registry/node-kinds';
 
 // Draws what the artifact view draws, which a canvas without one never loads.

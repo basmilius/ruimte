@@ -1,13 +1,13 @@
+import { CANVAS_NODE_KINDS } from '@/canvas/node-kinds';
+import { DATABASE_TAB_BODY } from '@/database/tab-body';
+import { DATABASE_TAB_DRAG } from '@/database/tab-drag';
 import { DATABASE_VIEW_KIND } from '@/database/view-kind';
+import { DESIGN_NODE_KIND, DESIGN_VIEW_KIND } from '@/design/node-kind';
+import { DEVICE_NODE_KIND, DEVICE_VIEW_KIND } from '@/devices/node-kind';
 import { DIAGRAM_VIEW_KIND } from '@/diagram/view-kind';
 import { DRAWING_VIEW_KIND } from '@/drawing/view-kind';
 import { EXTENSION_VIEW_KIND } from '@/extensions/view-kind';
 import { FILE_VIEW_KIND } from '@/files/view-kind';
-import { CANVAS_NODE_KINDS } from '@/canvas/node-kinds';
-import { DATABASE_TAB_BODY } from '@/database/tab-body';
-import { DATABASE_TAB_DRAG } from '@/database/tab-drag';
-import { DESIGN_NODE_KIND, DESIGN_VIEW_KIND } from '@/design/node-kind';
-import { DEVICE_NODE_KIND, DEVICE_VIEW_KIND } from '@/devices/node-kind';
 import { DIFF_TAB_DRAG } from '@/git/tab-drag';
 import { NODE_BODY_KINDS, NODE_VIEW_KINDS } from '@/nodes/node-kinds';
 import { ARTIFACT_NODE_KIND, ARTIFACT_VIEW_KIND } from '@/output/node-kind';
