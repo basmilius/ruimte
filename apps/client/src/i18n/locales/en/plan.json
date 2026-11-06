@@ -58,7 +58,8 @@
         }
     },
     "empty": {
-        "all": "No steps yet.",
+        "all": "No steps yet",
+        "allHint": "A plan holds the steps of the work, for you and your agents. Ask a chat to plan it.",
         "open": "Nothing open.",
         "issues": "No issues."
     },

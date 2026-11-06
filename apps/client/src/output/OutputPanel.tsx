@@ -25,7 +25,6 @@ import {
     LayoutGrid,
     ListFilter,
     MonitorDown,
-    Package,
     PanelLeft,
     Search,
     Pin,
@@ -66,6 +65,7 @@ import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { useMachineAnswers } from '@/transport/features';
+import { OutputScene } from '@/ui/EmptyScenes';
 
 const CopyToProjectDialog = lazyNamed(() => import('@/output/CopyToProjectDialog'), 'CopyToProjectDialog');
 
@@ -169,11 +169,8 @@ export function OutputPanel() {
             )}
             <ScrollArea className="grow" viewportClassName="px-2 pb-2">
                 {list.artifacts.length === 0 ? (
-                    <PanelEmpty icon={Package} fill="full">
-                        <span className="flex flex-col gap-1">
-                            <span className="text-text">{t('panel.emptyTitle')}</span>
-                            <span>{t('panel.empty')}</span>
-                        </span>
+                    <PanelEmpty scene={<OutputScene />} title={t('panel.emptyTitle')} fill="full">
+                        {t('panel.empty')}
                     </PanelEmpty>
                 ) : shown.length === 0 ? (
                     <PanelEmpty fill="full">{t('panel.noMatch')}</PanelEmpty>

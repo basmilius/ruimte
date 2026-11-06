@@ -91,6 +91,7 @@ import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useProjectNodes, useWorktrees, worktreeLists } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
+import { FilesScene } from '@/ui/EmptyScenes';
 
 const { directoryHandle, menuTargetsOf, resetExpandedPaths, rowPathOf } = FileTree;
 
@@ -809,7 +810,19 @@ export function FilesPanel() {
         if (!showHidden && (cache.get(root)?.length ?? 0) > 0) {
             return <EmptyState icon={Folder}>{t('files.onlyHidden')}</EmptyState>;
         }
-        return <EmptyState icon={Folder}>{t('files.empty')}</EmptyState>;
+        return (
+            <EmptyState
+                scene={<FilesScene />}
+                title={t('files.emptyTitle')}
+                action={
+                    <Button size="sm" variant="secondary" onClick={() => startCreate('file', creationParentOf(selectionRef.current[0] ?? null))}>
+                        <Icon icon={FilePlus} size={14} /> {t('files.create.file')}
+                    </Button>
+                }
+            >
+                {t('files.empty')}
+            </EmptyState>
+        );
     };
 
     const empty = placeholder();

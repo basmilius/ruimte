@@ -2,10 +2,10 @@ import type { EditorPosition } from '@adecore/editor';
 import { countsOf, createHolder, type ProblemFile } from '@adecore/editor-react';
 import { codeLabelOf, severityOf } from '@adecore/editor-react/models';
 import { pathToFileUri } from '@adecore/lsp';
-import { ButtonGroup, Icon, IconButton, PanelEmpty, ScrollArea } from '@adecore/ui';
+import { Button, ButtonGroup, Icon, IconButton, PanelEmpty, ScrollArea } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
 import { resolveStoredPath, type LanguageServerStatus } from '@ruimte/contracts';
-import { CircleCheck, CircleX, Info, ScanSearch, Search, TriangleAlert } from 'lucide-react';
+import { CircleX, Info, ScanSearch, Search, TriangleAlert } from 'lucide-react';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
@@ -14,6 +14,7 @@ import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useTransport } from '@/transport/context';
 import { useMachineAnswers } from '@/transport/features';
+import { ProblemsScene } from '@/ui/EmptyScenes';
 import { draftFiles } from './project-files';
 import { acquireProjectLanguage, type ProjectLanguage } from './ruimte-project-language';
 import { report } from './server-status';
@@ -154,7 +155,19 @@ export function ProblemsPanel() {
                 </PanelHeaderActions>
             </PanelHeaderSlot>
             {files.length === 0 ? (
-                <PanelEmpty icon={CircleCheck}>{checked ? t('problems.emptyProject') : t('problems.empty')}</PanelEmpty>
+                <PanelEmpty
+                    scene={<ProblemsScene />}
+                    title={t('problems.emptyTitle')}
+                    action={
+                        canCheckProject && !checked ? (
+                            <Button size="sm" variant="secondary" disabled={checking} onClick={() => void checkProject()}>
+                                <Icon icon={ScanSearch} size={14} /> {t('problems.workspace')}
+                            </Button>
+                        ) : undefined
+                    }
+                >
+                    {checked ? t('problems.emptyProject') : t('problems.empty')}
+                </PanelEmpty>
             ) : (
                 <div className="flex min-h-0 grow flex-col">
                     <div className="relative shrink-0 border-b border-border p-2">

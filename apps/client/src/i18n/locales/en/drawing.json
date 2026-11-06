@@ -95,19 +95,9 @@
         "tone": "Tone",
         "resetPosition": "Reset position",
         "empty": {
-            "description": "Empty diagram. An agent can fill it for you.",
-            "agent": {
-                "title": "Ask an agent",
-                "description": "Opens a chat beside it"
-            },
-            "json": {
-                "title": "Open JSON",
-                "description": "Write nodes and edges by hand"
-            },
-            "example": {
-                "title": "Insert example",
-                "description": "A small flow to start from"
-            }
+            "title": "Empty diagram",
+            "description": "Boxes and lines for architecture and flows. An agent draws them from the code.",
+            "agent": "Ask an agent"
         }
     },
     "error": {
@@ -130,6 +120,7 @@
         "zoom": "Zoom"
     },
     "empty": {
-        "description": "Nothing drawn yet. Pick a tool with <tools/> or paste with <paste/>."
+        "title": "Nothing drawn yet",
+        "description": "Sketch a screen or a flow by hand. Pick a tool with <tools/> or paste with <paste/>."
     }
 }
