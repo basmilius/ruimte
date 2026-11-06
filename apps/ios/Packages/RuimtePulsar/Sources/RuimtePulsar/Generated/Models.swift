@@ -13683,6 +13683,372 @@ public enum DeviceFrameEventFormat: String, CaseIterable, Codable, Sendable, Equ
     case `h264` = "h264"
 }
 
+public struct ChatListResult: Codable, Sendable, Equatable {
+    public let `chats`: [ChatInfo]
+
+    public init(`chats`: [ChatInfo]) {
+        self.`chats` = `chats`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `chats` = try container.decode([ChatInfo].self, forKey: .`chats`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`chats`, forKey: .`chats`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `chats` = "chats"
+    }
+}
+
+public struct ChatStatusEvent: Codable, Sendable, Equatable {
+    public let `chatId`: String
+    public let `info`: ChatInfo
+
+    public init(`chatId`: String, `info`: ChatInfo) {
+        self.`chatId` = `chatId`
+        self.`info` = `info`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `chatId` = try container.decode(String.self, forKey: .`chatId`)
+        `info` = try container.decode(ChatInfo.self, forKey: .`info`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`chatId`, forKey: .`chatId`)
+        try container.encode(`info`, forKey: .`info`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `chatId` = "chatId"
+        case `info` = "info"
+    }
+}
+
+public struct SessionListResult: Codable, Sendable, Equatable {
+    public let `sessions`: [SessionInfo]
+
+    public init(`sessions`: [SessionInfo]) {
+        self.`sessions` = `sessions`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `sessions` = try container.decode([SessionInfo].self, forKey: .`sessions`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`sessions`, forKey: .`sessions`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `sessions` = "sessions"
+    }
+}
+
+public struct SessionInfo: Codable, Sendable, Equatable {
+    public let `sessionId`: String
+    public let `cwd`: String
+    public let `pid`: Int64
+    public let `cols`: Int64
+    public let `rows`: Int64
+    public let `createdAt`: Double
+    public let `attached`: Int64
+    public let `exited`: Bool
+    public let `exitCode`: Int64?
+    public let `agent`: Presence<SessionAgent>
+    public let `heldCommand`: String?
+    public let `account`: String?
+    public let `shell`: String?
+
+    public init(`sessionId`: String, `cwd`: String, `pid`: Int64, `cols`: Int64, `rows`: Int64, `createdAt`: Double, `attached`: Int64, `exited`: Bool, `exitCode`: Int64? = nil, `agent`: Presence<SessionAgent> = .missing, `heldCommand`: String? = nil, `account`: String? = nil, `shell`: String? = nil) {
+        self.`sessionId` = `sessionId`
+        self.`cwd` = `cwd`
+        self.`pid` = `pid`
+        self.`cols` = `cols`
+        self.`rows` = `rows`
+        self.`createdAt` = `createdAt`
+        self.`attached` = `attached`
+        self.`exited` = `exited`
+        self.`exitCode` = `exitCode`
+        self.`agent` = `agent`
+        self.`heldCommand` = `heldCommand`
+        self.`account` = `account`
+        self.`shell` = `shell`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `sessionId` = try container.decode(String.self, forKey: .`sessionId`)
+        `cwd` = try container.decode(String.self, forKey: .`cwd`)
+        `pid` = try container.decode(Int64.self, forKey: .`pid`)
+        `cols` = try container.decode(Int64.self, forKey: .`cols`)
+        `rows` = try container.decode(Int64.self, forKey: .`rows`)
+        `createdAt` = try container.decode(Double.self, forKey: .`createdAt`)
+        `attached` = try container.decode(Int64.self, forKey: .`attached`)
+        `exited` = try container.decode(Bool.self, forKey: .`exited`)
+        `exitCode` = try container.decodeIfPresent(Int64.self, forKey: .`exitCode`)
+        `agent` = try container.contains(.`agent`) ? (container.decodeNil(forKey: .`agent`) ? .null : .value(container.decode(SessionAgent.self, forKey: .`agent`))) : .missing
+        `heldCommand` = try container.decodeIfPresent(String.self, forKey: .`heldCommand`)
+        `account` = try container.decodeIfPresent(String.self, forKey: .`account`)
+        `shell` = try container.decodeIfPresent(String.self, forKey: .`shell`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`sessionId`, forKey: .`sessionId`)
+        try container.encode(`cwd`, forKey: .`cwd`)
+        try container.encode(`pid`, forKey: .`pid`)
+        try container.encode(`cols`, forKey: .`cols`)
+        try container.encode(`rows`, forKey: .`rows`)
+        try container.encode(`createdAt`, forKey: .`createdAt`)
+        try container.encode(`attached`, forKey: .`attached`)
+        try container.encode(`exited`, forKey: .`exited`)
+        try container.encodeIfPresent(`exitCode`, forKey: .`exitCode`)
+        switch `agent` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`agent`)
+        case .value(let value): try container.encode(value, forKey: .`agent`)
+        }
+        try container.encodeIfPresent(`heldCommand`, forKey: .`heldCommand`)
+        try container.encodeIfPresent(`account`, forKey: .`account`)
+        try container.encodeIfPresent(`shell`, forKey: .`shell`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `sessionId` = "sessionId"
+        case `cwd` = "cwd"
+        case `pid` = "pid"
+        case `cols` = "cols"
+        case `rows` = "rows"
+        case `createdAt` = "createdAt"
+        case `attached` = "attached"
+        case `exited` = "exited"
+        case `exitCode` = "exitCode"
+        case `agent` = "agent"
+        case `heldCommand` = "heldCommand"
+        case `account` = "account"
+        case `shell` = "shell"
+    }
+}
+
+public struct SessionAttachResult: Codable, Sendable, Equatable {
+    public let `screen`: String
+    public let `cols`: Int64
+    public let `rows`: Int64
+    public let `exited`: Bool
+
+    public init(`screen`: String, `cols`: Int64, `rows`: Int64, `exited`: Bool) {
+        self.`screen` = `screen`
+        self.`cols` = `cols`
+        self.`rows` = `rows`
+        self.`exited` = `exited`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `screen` = try container.decode(String.self, forKey: .`screen`)
+        `cols` = try container.decode(Int64.self, forKey: .`cols`)
+        `rows` = try container.decode(Int64.self, forKey: .`rows`)
+        `exited` = try container.decode(Bool.self, forKey: .`exited`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`screen`, forKey: .`screen`)
+        try container.encode(`cols`, forKey: .`cols`)
+        try container.encode(`rows`, forKey: .`rows`)
+        try container.encode(`exited`, forKey: .`exited`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `screen` = "screen"
+        case `cols` = "cols"
+        case `rows` = "rows"
+        case `exited` = "exited"
+    }
+}
+
+public struct SessionOutputEvent: Codable, Sendable, Equatable {
+    public let `sessionId`: String
+    public let `data`: String
+
+    public init(`sessionId`: String, `data`: String) {
+        self.`sessionId` = `sessionId`
+        self.`data` = `data`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `sessionId` = try container.decode(String.self, forKey: .`sessionId`)
+        `data` = try container.decode(String.self, forKey: .`data`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`sessionId`, forKey: .`sessionId`)
+        try container.encode(`data`, forKey: .`data`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `sessionId` = "sessionId"
+        case `data` = "data"
+    }
+}
+
+public struct SessionResyncEvent: Codable, Sendable, Equatable {
+    public let `sessionId`: String
+    public let `screen`: String
+
+    public init(`sessionId`: String, `screen`: String) {
+        self.`sessionId` = `sessionId`
+        self.`screen` = `screen`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `sessionId` = try container.decode(String.self, forKey: .`sessionId`)
+        `screen` = try container.decode(String.self, forKey: .`screen`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`sessionId`, forKey: .`sessionId`)
+        try container.encode(`screen`, forKey: .`screen`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `sessionId` = "sessionId"
+        case `screen` = "screen"
+    }
+}
+
+public struct SessionSizeEvent: Codable, Sendable, Equatable {
+    public let `sessionId`: String
+    public let `cols`: Int64
+    public let `rows`: Int64
+
+    public init(`sessionId`: String, `cols`: Int64, `rows`: Int64) {
+        self.`sessionId` = `sessionId`
+        self.`cols` = `cols`
+        self.`rows` = `rows`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `sessionId` = try container.decode(String.self, forKey: .`sessionId`)
+        `cols` = try container.decode(Int64.self, forKey: .`cols`)
+        `rows` = try container.decode(Int64.self, forKey: .`rows`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`sessionId`, forKey: .`sessionId`)
+        try container.encode(`cols`, forKey: .`cols`)
+        try container.encode(`rows`, forKey: .`rows`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `sessionId` = "sessionId"
+        case `cols` = "cols"
+        case `rows` = "rows"
+    }
+}
+
+public struct SessionExitEvent: Codable, Sendable, Equatable {
+    public let `sessionId`: String
+    public let `exitCode`: Int64
+
+    public init(`sessionId`: String, `exitCode`: Int64) {
+        self.`sessionId` = `sessionId`
+        self.`exitCode` = `exitCode`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `sessionId` = try container.decode(String.self, forKey: .`sessionId`)
+        `exitCode` = try container.decode(Int64.self, forKey: .`exitCode`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`sessionId`, forKey: .`sessionId`)
+        try container.encode(`exitCode`, forKey: .`exitCode`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `sessionId` = "sessionId"
+        case `exitCode` = "exitCode"
+    }
+}
+
+public struct PushAttentionResult: Codable, Sendable, Equatable {
+    public let `entries`: [PushAttentionEntry]
+    public let `marksFrom`: Int64?
+
+    public init(`entries`: [PushAttentionEntry], `marksFrom`: Int64? = nil) {
+        self.`entries` = `entries`
+        self.`marksFrom` = `marksFrom`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `entries` = try container.decode([PushAttentionEntry].self, forKey: .`entries`)
+        `marksFrom` = try container.decodeIfPresent(Int64.self, forKey: .`marksFrom`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`entries`, forKey: .`entries`)
+        try container.encodeIfPresent(`marksFrom`, forKey: .`marksFrom`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `entries` = "entries"
+        case `marksFrom` = "marksFrom"
+    }
+}
+
+public struct PushAttentionEntry: Codable, Sendable, Equatable {
+    public let `nodeId`: String
+    public let `issuedAt`: Int64
+    public let `readThrough`: Int64
+
+    public init(`nodeId`: String, `issuedAt`: Int64, `readThrough`: Int64) {
+        self.`nodeId` = `nodeId`
+        self.`issuedAt` = `issuedAt`
+        self.`readThrough` = `readThrough`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `nodeId` = try container.decode(String.self, forKey: .`nodeId`)
+        `issuedAt` = try container.decode(Int64.self, forKey: .`issuedAt`)
+        `readThrough` = try container.decode(Int64.self, forKey: .`readThrough`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`nodeId`, forKey: .`nodeId`)
+        try container.encode(`issuedAt`, forKey: .`issuedAt`)
+        try container.encode(`readThrough`, forKey: .`readThrough`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `nodeId` = "nodeId"
+        case `issuedAt` = "issuedAt"
+        case `readThrough` = "readThrough"
+    }
+}
+
 public struct UsageSummary: Codable, Sendable, Equatable {
     public let `from`: String
     public let `to`: String

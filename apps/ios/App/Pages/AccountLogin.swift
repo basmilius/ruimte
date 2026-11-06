@@ -71,10 +71,10 @@ import SwiftUI
                     let now = status(in: snapshot)
                     if Self.landed(before: before, now: now) { phase = .landed(email: now?.email) }
                 },
-                .apply(.sessionExit, raw: { [weak self] payload in
-                    guard let self, payload.text("sessionId") == sessionID, phase == .running else { return }
+                .apply(.sessionExit, as: SessionExitEvent.self) { [weak self] event in
+                    guard let self, event.sessionId == sessionID, phase == .running else { return }
                     phase = .ended(dropped: false)
-                }),
+                },
             ],
             connection: { [weak self] available in
                 guard let self, !available, phase == .running else { return }

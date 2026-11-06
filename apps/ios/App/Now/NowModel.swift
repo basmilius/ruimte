@@ -53,10 +53,8 @@ final class NowModel {
     var liveRequests: Set<String> {
         Set(
             feeds.values.flatMap { feed in
-                feed.session.attention.waits.values.flatMap(\.requests).compactMap { request in
-                    request["requestId"]?.stringValue.map {
-                        NowAnswers.key(machineID: feed.session.machine.id, requestID: $0)
-                    }
+                feed.session.attention.waits.values.flatMap(\.requests).map {
+                    NowAnswers.key(machineID: feed.session.machine.id, requestID: $0.requestId)
                 }
             })
     }
@@ -94,7 +92,7 @@ final class NowModel {
     }
 
     /// A request answered from this device leaves its card before the machine says it settled.
-    private func unanswered(_ requests: [JSONValue], machineID: String) -> [NowRequest] {
+    private func unanswered(_ requests: [ChatInfoRequestsItem], machineID: String) -> [NowRequest] {
         requests.compactMap(NowRequest.init).filter {
             !answers.answered.contains(NowAnswers.key(machineID: machineID, requestID: $0.requestID))
         }

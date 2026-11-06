@@ -34,7 +34,7 @@ struct SessionReading: Equatable {
 extension AgentStatus {
     /// The status of an agent record, or idle: a record without one, and a word a newer machine knows and this app
     /// does not, both mean nothing is waiting here.
-    static func of(_ record: JSONValue?) -> AgentStatus { AgentStatus(rawValue: record?.text("status") ?? "") ?? .idle }
+    static func of(_ status: String) -> AgentStatus { AgentStatus(rawValue: status) ?? .idle }
 }
 
 /// The CLI a chat runs and the model it runs on, as its info last said.
@@ -46,7 +46,7 @@ struct ChatAgentIdentity: Equatable {
 /// The requests a chat waits on, with the CLI it runs, which decides whether a denial can carry a message.
 struct ChatWait: Equatable {
     let provider: String
-    let requests: [JSONValue]
+    let requests: [ChatInfoRequestsItem]
 }
 
 /// What a chat has going beside its turn, as its info last said: the messages queued for its next turn and the
@@ -65,12 +65,10 @@ struct ChatActivity: Hashable {
 }
 
 extension ChatActivity {
-    init(info: JSONValue) {
+    init(info: ChatInfo) {
         self.init(
-            queued: info.list("queue").count,
-            background: info.list("background").map {
-                Background(description: $0.text("description"), startedAt: $0.number("startedAt"))
-            })
+            queued: info.queue?.count ?? 0,
+            background: (info.background ?? []).map { Background(description: $0.description, startedAt: $0.startedAt) })
     }
 }
 
@@ -89,7 +87,7 @@ final class AttentionStore {
     /// When a session last stopped running, in epoch milliseconds: the moment this client saw it stop, or when the
     /// machine says its turn ended while nobody looked.
     private(set) var finishedAt: [String: Double] = [:]
-    private var pushEntries: [String: JSONValue] = [:]
+    private var pushEntries: [String: PushAttentionEntry] = [:]
     private var readings: [String: SessionReading] = [:]
     /// When the machine began keeping entries a client may mark nodes from; nil for a machine that never says, whose
     /// entries only ever concerned notifications and would otherwise all turn into marks after an update.
@@ -103,21 +101,20 @@ final class AttentionStore {
     @ObservationIgnored private lazy var live = LiveResource(
         client: client,
         events: [
-            .apply(.pushAttention, raw: { [weak self] in self?.receivePush($0) }),
+            .apply(.pushAttention, as: PushAttentionEntry.self) { [weak self] in self?.receivePush($0) },
             .apply(.sessionStatus, as: SessionStatusEvent.self) { [weak self] event in
                 self?.read(event.sessionId) { $0.agent = event.agent }
             },
-            .apply(.sessionExit, raw: { [weak self] event in
-                self?.read(event.text("sessionId")) { $0.shellExited = true }
-            }),
-            .apply(.chatStatus, raw: { [weak self] payload in
-                guard let info = payload["info"] else { return }
-                self?.receive(chat: payload.text("chatId"), info: info)
-            }),
-            .apply(.chatEvent, raw: { [weak self] payload in
-                guard let event = payload["event"], let info = event["info"] else { return }
-                self?.receive(chat: payload.text("chatId"), info: info)
-            }),
+            .apply(.sessionExit, as: SessionExitEvent.self) { [weak self] event in
+                self?.read(event.sessionId) { $0.shellExited = true }
+            },
+            .apply(.chatStatus, as: ChatStatusEvent.self) { [weak self] event in
+                self?.receive(chat: event.chatId, info: event.info)
+            },
+            .apply(.chatEvent, as: ChatEventEnvelope.self) { [weak self] envelope in
+                guard case .info(let event) = envelope.event else { return }
+                self?.receive(chat: envelope.chatId, info: event.info)
+            },
         ],
         connection: { [weak self] connected in
             guard connected else { return }
@@ -161,33 +158,32 @@ final class AttentionStore {
     }
 
     /// A chat's info, from `chat.list`, `chat.status` or the chat's own events, which all carry what it waits on.
-    func receive(chat id: String, info: JSONValue) {
+    func receive(chat id: String, info: ChatInfo) {
         guard !id.isEmpty else { return }
-        update(id, status: AgentStatus.of(info))
-        let requests = info.list("requests")
-        let wait = requests.isEmpty ? nil : ChatWait(provider: info.text("provider"), requests: requests)
+        update(id, status: AgentStatus.of(info.status))
+        let requests = info.requests ?? []
+        let wait = requests.isEmpty ? nil : ChatWait(provider: info.provider, requests: requests)
         if waits[id] != wait { waits[id] = wait }
-        let delegates = info.text("status") == AgentStatus.idle.rawValue && info["delegating"]?.boolValue == true
+        let delegates = info.status == AgentStatus.idle.rawValue && info.delegating == true
         if delegates != delegating.contains(id) {
             if delegates { delegating.insert(id) } else { delegating.remove(id) }
         }
         let going = ChatActivity(info: info)
         let kept = going.isEmpty ? nil : going
         if activity[id] != kept { activity[id] = kept }
-        let provider = info.text("provider")
+        let provider = info.provider
         if !provider.isEmpty {
-            let model = info.text("model")
-            let identity = ChatAgentIdentity(
-                provider: provider, model: model.isEmpty ? info["selection"]?.text("model") ?? "" : model)
+            let model = info.model ?? ""
+            let identity = ChatAgentIdentity(provider: provider, model: model.isEmpty ? info.selection.model : model)
             if agents[id] != identity { agents[id] = identity }
         }
     }
 
     func markSeen(_ id: String) {
         guard UIApplication.shared.applicationState == .active,
-            let entry = pushEntries[id], let issuedAt = entry["issuedAt"]?.numberValue,
-            issuedAt > (entry["readThrough"]?.numberValue ?? 0)
+            let entry = pushEntries[id], entry.issuedAt > entry.readThrough
         else { return }
+        let issuedAt = Double(entry.issuedAt)
         let key = "\(id):\(issuedAt)"
         guard pendingReads.insert(key).inserted else { return }
         Task { [weak self] in
@@ -197,28 +193,28 @@ final class AttentionStore {
                 _ = try await client.request(
                     .pushRead, payload: .object(["nodeId": .string(id), "issuedAt": .number(issuedAt)]))
                 receivePush(
-                    .object(["nodeId": .string(id), "issuedAt": .number(issuedAt), "readThrough": .number(issuedAt)]))
+                    PushAttentionEntry(nodeId: id, issuedAt: Int64(issuedAt), readThrough: Int64(issuedAt)))
             } catch {}
         }
     }
 
-    private func receivePush(_ entry: JSONValue) {
-        let id = entry.text("nodeId")
+    private func receivePush(_ entry: PushAttentionEntry) {
+        let id = entry.nodeId
         guard !id.isEmpty else { return }
         let previous = pushEntries[id]
-        let issued = max(entry["issuedAt"]?.numberValue ?? 0, previous?["issuedAt"]?.numberValue ?? 0)
-        let read = max(entry["readThrough"]?.numberValue ?? 0, previous?["readThrough"]?.numberValue ?? 0)
-        pushEntries[id] = .object(["nodeId": .string(id), "issuedAt": .number(issued), "readThrough": .number(read)])
+        let issued = max(entry.issuedAt, previous?.issuedAt ?? 0)
+        let read = max(entry.readThrough, previous?.readThrough ?? 0)
+        pushEntries[id] = PushAttentionEntry(nodeId: id, issuedAt: issued, readThrough: read)
         if read > 0 {
             if read >= issued { unseen.remove(id) }
-            if read > (previous?["readThrough"]?.numberValue ?? 0) {
-                Task { await onRead?(id, read) }
+            if read > (previous?.readThrough ?? 0) {
+                Task { await onRead?(id, Double(read)) }
             }
         }
         // A turn that ended, a task that failed or a wake the machine gave up on while nobody was connected.
-        if let marksFrom, issued >= marksFrom, read < issued, focused[id, default: 0] == 0 {
+        if let marksFrom, Double(issued) >= marksFrom, read < issued, focused[id, default: 0] == 0 {
             unseen.insert(id)
-            finishedAt[id] = max(finishedAt[id] ?? 0, issued)
+            finishedAt[id] = max(finishedAt[id] ?? 0, Double(issued))
         }
         if focused[id, default: 0] > 0 { markSeen(id) }
     }
@@ -226,37 +222,35 @@ final class AttentionStore {
     private var unreadPushIDs: Set<String> {
         guard let marksFrom else { return [] }
         return Set(
-            pushEntries.values.filter {
-                let issued = $0.number("issuedAt")
-                return issued >= marksFrom && $0.number("readThrough") < issued
-            }.map { $0.text("nodeId") })
+            pushEntries.values.filter { Double($0.issuedAt) >= marksFrom && $0.readThrough < $0.issuedAt }
+                .map(\.nodeId))
     }
 
     private func refresh() async {
-        if let snapshot = try? await client.request(.pushAttention, payload: .object([:])) {
+        if let snapshot = try? await client.request(.pushAttention, payload: .object([:]))
+            .decoded(as: PushAttentionResult.self)
+        {
             guard !Task.isCancelled else { return }
-            marksFrom = snapshot["marksFrom"]?.numberValue
-            for entry in snapshot.list("entries") { receivePush(entry) }
-            let unread = pushEntries.values.filter { $0.number("readThrough") < $0.number("issuedAt") }
-                .map { $0.text("nodeId") }
+            marksFrom = snapshot.marksFrom.map(Double.init)
+            for entry in snapshot.entries { receivePush(entry) }
+            let unread = pushEntries.values.filter { $0.readThrough < $0.issuedAt }.map(\.nodeId)
             await onUnread?(Set(unread))
         }
         do {
             let sessions = try await client.request(.sessionList, payload: .object([:]))
+                .decoded(as: SessionListResult.self)
             guard !Task.isCancelled else { return }
-            for session in sessions.list("sessions") {
-                let id = session.text("sessionId")
-                read(id) {
-                    $0.agent = try? session["agent"]?.decoded(as: SessionAgent.self)
-                    $0.shellExited = session["exited"] == .bool(true)
+            for session in sessions.sessions {
+                read(session.sessionId) {
+                    $0.agent = session.agent.present
+                    $0.shellExited = session.exited
                 }
             }
-            let chats = try await client.request(.chatList, payload: .object([:]))
+            let chats = try await client.request(.chatList, payload: .object([:])).decoded(as: ChatListResult.self)
             guard !Task.isCancelled else { return }
-            let ids = Set(
-                sessions.list("sessions").map { $0.text("sessionId") } + chats.list("chats").map { $0.text("chatId") })
-            for chat in chats.list("chats") {
-                receive(chat: chat.text("chatId"), info: chat)
+            let ids = Set(sessions.sessions.map(\.sessionId) + chats.chats.map(\.chatId))
+            for chat in chats.chats {
+                receive(chat: chat.chatId, info: chat)
             }
             statuses = statuses.filter { ids.contains($0.key) }
             waits = waits.filter { ids.contains($0.key) }

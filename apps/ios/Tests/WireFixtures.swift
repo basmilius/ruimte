@@ -515,3 +515,12 @@ enum ProjectWire {
         views.map { try! view($0).decoded(as: StoredView.self) }
     }
 }
+
+extension NowRequest {
+    /// A request written as a machine writes it in `ChatInfo.requests`. One that does not decode reads as no request,
+    /// as the card does for a kind it does not know.
+    init?(_ value: JSONValue) {
+        guard let item = try? value.decoded(as: ChatInfoRequestsItem.self) else { return nil }
+        self.init(item)
+    }
+}

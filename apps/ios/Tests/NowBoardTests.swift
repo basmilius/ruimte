@@ -218,7 +218,7 @@ final class NowBoardTests: XCTestCase {
                     "requestId": .string("r"), "itemId": .string("i"), "kind": .string("approval"),
                     "createdAt": .number(1),
                     "approval": .object([
-                        "toolName": .string("Edit"), "subject": .string("src/transport/pool.ts"),
+                        "toolName": .string("Edit"), "subject": .string("src/transport/pool.ts"), "description": .null,
                         "path": .string("src/transport/pool.ts"), "canAllowAlways": .bool(false),
                     ]),
                 ])))
@@ -286,10 +286,14 @@ final class NowBoardTests: XCTestCase {
             try XCTUnwrap(
                 NowRequest(
                     .object([
-                        "requestId": .string(id), "kind": .string("question"), "createdAt": .number(createdAt),
+                        "requestId": .string(id), "itemId": .string("i"), "kind": .string("question"),
+                        "createdAt": .number(createdAt),
                         "question": .object([
                             "questions": .array([
-                                .object(["id": .string("q"), "question": .string("Which?"), "choices": .array([])])
+                                .object([
+                                    "id": .string("q"), "header": .string(""), "question": .string("Which?"),
+                                    "choices": .array([]), "multiSelect": .bool(false),
+                                ])
                             ])
                         ]),
                     ])))

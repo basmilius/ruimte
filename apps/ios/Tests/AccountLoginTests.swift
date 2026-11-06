@@ -43,9 +43,9 @@ import XCTest
         let model = AccountLoginModel(client: machine, kind: "codex", accountID: "work", name: "Work")
         await model.begin()
         let first = model.sessionID
-        machine.emit(.sessionExit, .object(["sessionId": .string("someone-else")]))
+        machine.emit(.sessionExit, .object(["sessionId": .string("someone-else"), "exitCode": .number(0)]))
         XCTAssertEqual(model.phase, .running)
-        machine.emit(.sessionExit, .object(["sessionId": .string(first)]))
+        machine.emit(.sessionExit, .object(["sessionId": .string(first), "exitCode": .number(0)]))
         XCTAssertEqual(model.phase, .ended(dropped: false))
         await model.retry()
         XCTAssertNotEqual(model.sessionID, first)

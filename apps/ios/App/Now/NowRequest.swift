@@ -50,34 +50,32 @@ struct NowRequest: Hashable, Identifiable {
     var id: String { requestID }
 
     /// Nil for a kind this app does not know, or a summary without the part its kind needs.
-    init?(_ value: JSONValue) {
-        guard let requestID = value["requestId"]?.stringValue, !requestID.isEmpty else { return nil }
-        self.requestID = requestID
-        itemID = value.text("itemId")
-        createdAt = value.number("createdAt")
-        switch value.text("kind") {
+    init?(_ value: ChatInfoRequestsItem) {
+        guard !value.requestId.isEmpty else { return nil }
+        requestID = value.requestId
+        itemID = value.itemId
+        createdAt = value.createdAt
+        switch value.kind {
         case "approval":
-            guard let approval = value["approval"], approval.objectValue != nil else { return nil }
-            let rule = approval["allowAlways"]
+            guard let approval = value.approval else { return nil }
+            let rule = approval.allowAlways
             kind = .approval(
                 Approval(
-                    toolName: approval.text("toolName"), subject: approval.text("subject"),
-                    description: approval["description"]?.stringValue.flatMap { $0.isEmpty ? nil : $0 },
-                    path: approval["path"]?.stringValue, files: Int(approval["files"]?.numberValue ?? 1),
-                    diff: approval["diff"]?.stringValue.flatMap { $0.isEmpty ? nil : $0 },
-                    command: approval["command"]?.stringValue,
-                    truncated: approval["truncated"]?.boolValue == true,
-                    allowAlways: approval["canAllowAlways"]?.boolValue == true
+                    toolName: approval.toolName, subject: approval.subject,
+                    description: approval.description.flatMap { $0.isEmpty ? nil : $0 },
+                    path: approval.path, files: Int(approval.files ?? 1),
+                    diff: approval.diff.flatMap { $0.isEmpty ? nil : $0 }, command: approval.command,
+                    truncated: approval.truncated == true,
+                    allowAlways: approval.canAllowAlways
                         ? AllowAlways(
-                            label: rule?["label"]?.stringValue ?? String(localized: "Always allow"),
-                            description: rule?.text("description") ?? "") : nil))
+                            label: rule?.label ?? String(localized: "Always allow"), description: rule?.description ?? "")
+                        : nil))
         case "question":
-            let questions = (value["question"]?.list("questions") ?? []).map { question in
+            let questions = (value.question?.questions ?? []).map { question in
                 Question(
-                    id: question.text("id"), header: question.text("header"), text: question.text("question"),
-                    choices: question.list("choices").map {
-                        Choice(label: $0.text("label"), description: $0.text("description"))
-                    }, multiSelect: question["multiSelect"]?.boolValue == true)
+                    id: question.id, header: question.header, text: question.question,
+                    choices: question.choices.map { Choice(label: $0.label, description: $0.description) },
+                    multiSelect: question.multiSelect)
             }
             guard !questions.isEmpty else { return nil }
             kind = .questions(questions)

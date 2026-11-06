@@ -23,20 +23,25 @@ final class TerminalModel {
     // no re-read of a resource does.
     @ObservationIgnored private lazy var live = LiveResource(
         client: client,
-        events: [WireEvent.sessionOutput, .sessionResync, .sessionSize, .sessionExit].map { eventName -> LiveEvent in
-            LiveEvent.apply(eventName, raw: { [weak self] payload in
-                guard let self, payload["sessionId"]?.stringValue == sessionID else { return }
-                switch eventName {
-                case .sessionOutput: deliver(payload["data"]?.stringValue ?? "", reset: false)
-                case .sessionResync: deliver(payload["screen"]?.stringValue ?? "", reset: true)
-                case .sessionSize: follow(payload)
-                default: exited = true
-                }
-            })
-        }
-            + [
-                .apply(.sessionListChanged, raw: { [weak self] _ in Task { await self?.refreshInfo() } })
-            ],
+        events: [
+            .apply(.sessionOutput, as: SessionOutputEvent.self) { [weak self] event in
+                guard let self, event.sessionId == sessionID else { return }
+                deliver(event.data, reset: false)
+            },
+            .apply(.sessionResync, as: SessionResyncEvent.self) { [weak self] event in
+                guard let self, event.sessionId == sessionID else { return }
+                deliver(event.screen, reset: true)
+            },
+            .apply(.sessionSize, as: SessionSizeEvent.self) { [weak self] event in
+                guard let self, event.sessionId == sessionID else { return }
+                follow(event)
+            },
+            .apply(.sessionExit, as: SessionExitEvent.self) { [weak self] event in
+                guard let self, event.sessionId == sessionID else { return }
+                exited = true
+            },
+            .apply(.sessionListChanged, raw: { [weak self] _ in Task { await self?.refreshInfo() } }),
+        ],
         connection: { [weak self] available in
             guard let self else { return }
             connected = available
@@ -105,13 +110,15 @@ final class TerminalModel {
             do {
                 guard let attachment else { throw CancellationError() }
                 _ = try await TerminalSnapshot.load(attachment: attachment, sessionID: sessionID) {
-                    [weak self] snapshot in
-                    guard let self, self.generation == current else { return }
-                    self.cols = Int(snapshot["cols"]?.numberValue ?? 80)
-                    self.rows = Int(snapshot["rows"]?.numberValue ?? 24)
-                    self.exited = snapshot["exited"]?.boolValue ?? false
+                    [weak self] payload in
+                    guard let self, self.generation == current,
+                        let snapshot = try? payload.decoded(as: SessionAttachResult.self)
+                    else { return }
+                    self.cols = Int(snapshot.cols)
+                    self.rows = Int(snapshot.rows)
+                    self.exited = snapshot.exited
                     self.resizeDisplay?(self.cols, self.rows)
-                    self.pendingOutput = [(snapshot["screen"]?.stringValue ?? "", true)]
+                    self.pendingOutput = [(snapshot.screen, true)]
                     self.loading = false
                     self.flushOutput()
                     self.error = nil
@@ -129,17 +136,17 @@ final class TerminalModel {
     func refreshInfo() async {
         do {
             let result = try await client.request(.sessionList, payload: .object([:]))
+                .decoded(as: SessionListResult.self)
             guard !Task.isCancelled, connected else { return }
-            if let info = result["sessions"]?.arrayValue?.first(where: { $0["sessionId"]?.stringValue == sessionID }) {
-                exited = info["exited"]?.boolValue ?? exited
+            if let info = result.sessions.first(where: { $0.sessionId == sessionID }) {
+                exited = info.exited
             }
         } catch { self.error = error.localizedDescription }
     }
 
-    func follow(_ size: JSONValue) {
-        guard let cols = size["cols"]?.numberValue, let rows = size["rows"]?.numberValue else { return }
-        self.cols = Int(cols)
-        self.rows = Int(rows)
+    func follow(_ size: SessionSizeEvent) {
+        cols = Int(size.cols)
+        rows = Int(size.rows)
         resizeDisplay?(self.cols, self.rows)
     }
 

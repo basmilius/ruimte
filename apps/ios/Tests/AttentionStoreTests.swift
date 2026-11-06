@@ -40,10 +40,12 @@ final class AttentionStoreTests: XCTestCase {
         defer { store.stop() }
         await refresh.finish()
         machine.emit(
-            .chatStatus, .object(["chatId": .string("chat-1"), "info": .object(["status": .string("running")])]))
+            .chatStatus,
+            .object(["chatId": .string("chat-1"), "info": ChatWire.info(["chatId": .string("chat-1"), "status": .string("running")])]))
         XCTAssertEqual(store.statuses["chat-1"], .running)
         machine.emit(
-            .chatStatus, .object(["chatId": .string("chat-1"), "info": .object(["status": .string("idle")])]))
+            .chatStatus,
+            .object(["chatId": .string("chat-1"), "info": ChatWire.info(["chatId": .string("chat-1"), "status": .string("idle")])]))
         XCTAssertEqual(store.statuses["chat-1"], .idle)
         XCTAssertTrue(store.unseen.contains("chat-1"))
         XCTAssertEqual(machine.chatLists, 1)
