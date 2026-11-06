@@ -150,8 +150,31 @@ describe('hardenGuestPreferences', () => {
                 sandbox: false
             };
             expect(hardenGuestPreferences(preferences)).toBe(true);
-            expect(preferences).toEqual({ partition, nodeIntegration: false, nodeIntegrationInSubFrames: false, contextIsolation: true, sandbox: true });
+            expect(preferences).toEqual({
+                partition,
+                nodeIntegration: false,
+                nodeIntegrationInSubFrames: false,
+                contextIsolation: true,
+                sandbox: true,
+                disableHtmlFullscreenWindowResize: true
+            });
         }
+    });
+
+    test('a page never takes the window out of fullscreen itself', () => {
+        for (const partition of ['persist:ruimte', 'preview']) {
+            const asked: GuestWebPreferences = { partition, disableHtmlFullscreenWindowResize: false };
+            expect(hardenGuestPreferences(asked)).toBe(true);
+            expect(asked.disableHtmlFullscreenWindowResize).toBe(true);
+
+            const missing: GuestWebPreferences = { partition };
+            expect(hardenGuestPreferences(missing)).toBe(true);
+            expect(missing.disableHtmlFullscreenWindowResize).toBe(true);
+        }
+
+        const refused: GuestWebPreferences = { partition: 'persist:other', disableHtmlFullscreenWindowResize: false };
+        expect(hardenGuestPreferences(refused)).toBe(false);
+        expect(refused).toEqual({ partition: 'persist:other', disableHtmlFullscreenWindowResize: false });
     });
 
     test("refuses any other session, the app window's own among them", () => {
