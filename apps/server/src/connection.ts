@@ -94,6 +94,7 @@ export interface ConnectionServices {
     /* The suggestions of agents in Chats to become a project, which every client hears. */
     proposals?: Subscribable;
     snoozes?: Subscribable;
+    activity?: Subscribable;
     prWatches?: Subscribable;
     /* The links of other machines to projects here, which every client hears change. */
     peers?: Subscribable;
@@ -154,6 +155,7 @@ function subscribeClient(services: ConnectionServices, client: ClientConnection,
         services.secrets,
         services.proposals,
         services.snoozes,
+        services.activity,
         services.prWatches,
         services.peers,
         services.remote,

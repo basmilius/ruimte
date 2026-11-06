@@ -1,5 +1,6 @@
 import { AGENT_EVENT_SCHEMAS, AGENT_REQUEST_SCHEMAS, EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
+import { NodeActivityListSchema, NodeActivityTouchPayloadSchema } from './activity.ts';
 import { AgentIntegrationSetPayloadSchema, AgentIntegrationSetResultSchema, AgentIntegrationsResultSchema } from './agent-integrations.ts';
 import {
     CliUpdatePayloadSchema,
@@ -556,6 +557,7 @@ export * from './push.ts';
 export * from './peer.ts';
 export * from './remote.ts';
 export * from './snooze.ts';
+export * from './activity.ts';
 export * from './language-patterns.ts';
 export * from './stored-path.ts';
 export * from './sql-binding.ts';
@@ -623,6 +625,9 @@ export const REQUEST_SCHEMAS = {
     // Setting a moment already past ends the snooze, as clearing it does.
     'snooze.set': { payload: SnoozeSetPayloadSchema, result: EmptySchema },
     'snooze.clear': { payload: SnoozeClearPayloadSchema, result: EmptySchema },
+    'activity.list': { payload: EmptySchema, result: NodeActivityListSchema },
+    // A person opened the node, on the canvas or in the sidebar.
+    'activity.touch': { payload: NodeActivityTouchPayloadSchema, result: EmptySchema },
     'session.attach': { payload: SessionAttachPayloadSchema, result: SessionAttachResultSchema },
     'session.detach': { payload: SessionTargetPayloadSchema, result: EmptySchema },
     'session.preparePreview': { payload: TerminalPreparePreviewPayloadSchema, result: TerminalPreparePreviewResultSchema },
@@ -986,6 +991,8 @@ export const EVENT_SCHEMAS = {
     'push.attention': PushAttentionEntrySchema,
     // Every snooze the machine holds, to every client, whenever one is set, cleared or ends.
     'snooze.changed': SnoozeListSchema,
+    // The nodes whose last activity moved, to every client.
+    'activity.changed': NodeActivityListSchema,
     // The links of other machines to projects here changed, so the list in settings reloads.
     'peer.changed': EmptySchema,
     // Sent to the machine that gave the task, over its own link only.
