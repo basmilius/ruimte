@@ -5,6 +5,7 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import * as prompts from '@clack/prompts';
+import { EXTENSION_LINK_PATH, EXTENSION_UNLINK_PATH } from '@ruimte/contracts';
 import { Command } from 'commander';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
 import testRuntime from '../extensions/generated/test-runtime.js' with { type: 'text' };
@@ -14,27 +15,23 @@ import { scaffoldFiles, scaffoldFolder, scaffoldProblem, type ScaffoldAnswers } 
 import { isLeftOut, sourceSignature } from '../extensions/source-signature.ts';
 import { DOM_PRELOAD, hasDomTests, missingDom, reactWarning } from '../extensions/test-setup.ts';
 import { bunRuntime } from '../language/runtime.ts';
-import { commandIo, homeSecret, startFirst, type LocalDaemonOptions } from './local-daemon.ts';
+import { askLocalDaemon, homeSecret, startFirst, type LocalDaemonOptions } from './local-daemon.ts';
 
 const STORE_REPOSITORY = 'ruimte-app/extensions';
 const WATCH_DEBOUNCE_MS = 150;
 const LOG_POLL_MS = 250;
 
 async function askDaemon(options: LocalDaemonOptions, path: string, body: object): Promise<Record<string, unknown>> {
-    const { fetcher } = commandIo(options);
     const secret = await homeSecret(options);
 
     if (secret === null) {
         throw new Error(`No Ruimte has started with ${options.home} as its home. ${startFirst(options.port)}`);
     }
 
-    const response = await fetcher(`http://127.0.0.1:${options.port}${path}`, {
-        method: 'POST',
-        headers: { authorization: `Bearer ${secret}`, 'content-type': 'application/json' },
-        body: JSON.stringify(body)
-    }).catch(() => {
+    const response = await askLocalDaemon(options, secret, path, { method: 'POST', body });
+    if (response === null) {
         throw new Error(`No Ruimte answers on port ${options.port}. Open the desktop app, or start it with \`ruimte\`.`);
-    });
+    }
     const answer = (await response.json().catch(() => ({}))) as Record<string, unknown>;
 
     if (!response.ok) {
@@ -234,7 +231,7 @@ async function dev(options: LocalDaemonOptions): Promise<void> {
         try {
             const { outdir } = await buildExtension(folder);
 
-            await askDaemon(options, '/extensions/link', { folder: outdir, owner });
+            await askDaemon(options, EXTENSION_LINK_PATH, { folder: outdir, owner });
             console.log(`${new Date().toLocaleTimeString()} ${manifest.name} is loaded`);
         } catch (e) {
             console.error(e instanceof Error ? e.message : e);
@@ -257,7 +254,7 @@ async function dev(options: LocalDaemonOptions): Promise<void> {
     for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
         process.on(signal, () => {
             // With this run's own token, so a later `extension dev` of the same extension keeps its link.
-            void askDaemon(options, '/extensions/unlink', { id: manifest.id, owner })
+            void askDaemon(options, EXTENSION_UNLINK_PATH, { id: manifest.id, owner })
                 .catch(() => undefined)
                 .finally(() => process.exit(0));
         });

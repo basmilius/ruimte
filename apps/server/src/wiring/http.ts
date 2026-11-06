@@ -1,9 +1,14 @@
 import type { Server, WebSocketHandler } from 'bun';
 import { join } from 'node:path';
 import {
+    EXTENSION_LINK_PATH,
+    EXTENSION_UNLINK_PATH,
     MACHINE_HEALTH_PATH,
+    MACHINE_LEAVE_ACCOUNT_PATH,
+    MACHINE_LINK_PATH,
     MACHINE_NOTIFY_PATH,
     MACHINE_PROOF_PATH,
+    MACHINE_REGISTRATION_PATH,
     MACHINE_STATUS_CHECK_QUERY,
     MACHINE_SHUTDOWN_PATH,
     MACHINE_STATUS_PATH,
@@ -57,13 +62,6 @@ import type { ProjectsBundle } from './projects.ts';
 import type { DaemonRuntime } from './runtime.ts';
 import type { VoiceBundle } from './voice.ts';
 
-// What `ruimte login` has the machine sign; local secret only, like the work.
-const MACHINE_LINK_PATH = '/machine/link-request';
-const EXTENSION_LINK_PATH = '/extensions/link';
-const EXTENSION_UNLINK_PATH = '/extensions/unlink';
-const MACHINE_REGISTRATION_PATH = '/machine/registration';
-// What `ruimte logout` asks: the machine leaves its account, as `endpoint.leaveAccount` does for the app.
-const MACHINE_LEAVE_ACCOUNT_PATH = '/machine/leave-account';
 // Where a client of before account-only paired and signed for a ticket over HTTP; each answers that pairing links are gone.
 const LEGACY_PAIRING_PATHS = ['/auth/pair', '/auth/pairing-token', '/auth/challenge', '/auth/ticket'];
 const RegistrationRequestSchema = z.object({ accountId: AccountSchema.shape.id });

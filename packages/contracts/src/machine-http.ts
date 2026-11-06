@@ -120,10 +120,23 @@ export type MachineStatus = z.infer<typeof MachineStatusSchema>;
  */
 export const MACHINE_NOTIFY_PATH = '/machine/notify';
 
-export const MachineNotifyRequestSchema = z.object({ nodeId: z.string().min(1), text: z.string().trim().min(1).max(500) });
+export const MACHINE_NOTIFY_MAX_TEXT = 500;
+
+export const MachineNotifyRequestSchema = z.object({ nodeId: z.string().min(1), text: z.string().trim().min(1).max(MACHINE_NOTIFY_MAX_TEXT) });
 
 /* What a refused notification answers beside its status: `node-not-found` for a node no project holds. */
 export const MachineNotifyRefusalSchema = z.object({ code: z.string(), message: z.string() });
+
+/* What `ruimte login` has the machine sign, on the local secret: a request to link the machine, then its registration on the account the person approved. */
+export const MACHINE_LINK_PATH = '/machine/link-request';
+export const MACHINE_REGISTRATION_PATH = '/machine/registration';
+
+/* What `ruimte logout` asks: the machine leaves its account, as `endpoint.leaveAccount` does for the app. */
+export const MACHINE_LEAVE_ACCOUNT_PATH = '/machine/leave-account';
+
+/* What `ruimte extension dev` asks, on the local secret: run a folder as an extension here, and stop. */
+export const EXTENSION_LINK_PATH = '/extensions/link';
+export const EXTENSION_UNLINK_PATH = '/extensions/unlink';
 
 /*
  * Where a daemon proves it holds the local secret of its home without showing it. The desktop shell
