@@ -65781,6 +65781,9 @@
                     "native",
                     "command"
                   ]
+                },
+                "fork": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -66270,6 +66273,9 @@
                     "native",
                     "command"
                   ]
+                },
+                "fork": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -89950,6 +89956,9 @@
                     "native",
                     "command"
                   ]
+                },
+                "fork": {
+                  "type": "boolean"
                 }
               },
               "required": [

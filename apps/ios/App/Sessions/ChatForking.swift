@@ -49,7 +49,7 @@ enum ChatForking {
     static let titleMax = 120
 
     /// Whether a machine can fork this CLI's conversation and go on with it in a fork. Every kind this app knows by name
-    /// is answered here, so a CLI added to `KNOWN_AGENT_KINDS` is decided on before it is offered a fork.
+    /// is answered here, so a CLI the vocabulary gains is decided on before it is offered a fork.
     static func forkable(_ kind: AgentKind) -> Bool {
         switch kind {
         case .claude, .codex: true

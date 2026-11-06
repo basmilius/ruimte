@@ -4,7 +4,7 @@ import {
     useAccountChoice,
     type AccountChoice,
     branchRefusal,
-    FORKABLE_PROVIDERS,
+    canForkWith,
     forkPayload,
     forkPointLabel,
     forkPointOf,
@@ -107,7 +107,8 @@ function ForkForm({ chatId, turnId, source, onDone }: { chatId: string; turnId: 
     const elsewhere = workspace !== null && endpointId !== workspace.connection.endpointId;
 
     const point = items && order ? forkPointOf(items, order, turnId, whole) : null;
-    const refusal = forkRefusal(info, items?.[turnId]);
+    const loaded = useProviders((s) => s.loaded);
+    const refusal = forkRefusal(info, items?.[turnId], { providers, loaded });
     const worktree = folder?.repository === true && inWorktree;
     const branchName = branch ?? folder?.branch ?? '';
     const branchProblem = worktree ? branchRefusal(branchName, folder.branches) : null;
@@ -115,7 +116,7 @@ function ForkForm({ chatId, turnId, source, onDone }: { chatId: string; turnId: 
         info === null ? null : { provider: info.provider, selection: info.selection, account: info.account ?? info.provider };
     const chosenCli = cli ?? originalCli;
     const accountChoice = useAccountChoice(chosenCli?.provider ?? null, chosenCli?.account, chatId);
-    const pickable = providers.filter((entry) => FORKABLE_PROVIDERS.has(entry.kind) && entry.installed && entry.capabilities.chat);
+    const pickable = providers.filter((entry) => canForkWith(entry) && entry.installed && entry.capabilities.chat);
     const switching = chosenCli !== null && originalCli !== null && chosenCli.provider !== originalCli.provider;
     // Another account of the same CLI that does not read the original's conversation gets it handed over, as another CLI does.
     const handoff =

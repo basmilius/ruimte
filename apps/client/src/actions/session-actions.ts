@@ -504,7 +504,7 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
                 throw new ActionRefusal('no-turn', `“${chat}” has no finished turn to fork after that this window knows of. Open it and try again.`);
             }
             if (call.actor.kind !== 'person') {
-                const refusal = forkRefusal(row?.info ?? null, row?.structure[turn]);
+                const refusal = forkRefusal(row?.info ?? null, row?.structure[turn], providersOf(currentEndpointId()));
                 if (refusal !== null) {
                     throw new ActionRefusal('cannot-fork', refusal);
                 }

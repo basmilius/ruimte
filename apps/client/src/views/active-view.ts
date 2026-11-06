@@ -49,7 +49,7 @@ export function activeViewFacts(): ActiveViewFacts | null {
     const scratch = isScratchProject(current);
     const workingFolder = !scratch && (isChatHostView(view) || view.kind === 'terminal') ? (view.node.cwd ?? chatRow?.info.cwd ?? folder) : null;
     const settled = chatRow ? lastSettledTurn(chatRow.structure, chatRow.order) : null;
-    const forkTurn = settled !== null && forkRefusal(chatRow?.info ?? null, chatRow?.structure[settled]) === null ? settled : null;
+    const forkTurn = settled !== null && forkRefusal(chatRow?.info ?? null, chatRow?.structure[settled], providersOf(endpointId)) === null ? settled : null;
     const offers = viewOffers({
         kind: view.kind,
         shared,
