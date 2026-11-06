@@ -1,14 +1,13 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
+import { keyOf, settle } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { FakeLanguageTransport, readOnlyFiles } from './fake-daemon';
-import { eventOf } from './key-events';
 import { createEditorLanguage } from './ruimte-editor-language';
 import { RuimteProject } from './ruimte-project';
-import { settleLanguage as settle } from './settle.test';
 
 const uri = 'file:///work/app/src/a.ts';
 const otherUri = 'file:///work/app/src/b.ts';
@@ -43,7 +42,7 @@ async function setup(options: { available?: boolean; fail?: boolean } = {}) {
     const language = createEditorLanguage(project, editor, uri, 'typescript');
     await language.document.ready;
     editor.moveCaret(at(0, 7));
-    editor.press(eventOf(CANVAS_SHORTCUTS.rename));
+    editor.press(keyOf(CANVAS_SHORTCUTS.rename));
     await settle();
     return { transport, model, editor, language };
 }

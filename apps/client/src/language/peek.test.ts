@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
+import { keyOf, settle } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { useToasts } from '@/state/toasts';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { FakeLanguageTransport, readOnlyFiles } from './fake-daemon';
-import { eventOf } from './key-events';
 import { createEditorLanguage } from './ruimte-editor-language';
 import { RuimteProject } from './ruimte-project';
-import { settleLanguage } from './settle.test';
 
 const uri = 'file:///work/app/src/a.ts';
 const otherUri = 'file:///work/app/src/b.ts';
@@ -149,8 +148,8 @@ describe('peek definition', () => {
         const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'use();', theme: 'light' });
         const language = createEditorLanguage(project, editor, uri, 'typescript');
         await language.document.ready;
-        editor.press(eventOf(CANVAS_SHORTCUTS.peekDefinition));
-        await settleLanguage();
+        editor.press(keyOf(CANVAS_SHORTCUTS.peekDefinition));
+        await settle();
         const view = language.popups.slot('peek').get()!;
         expect(view.kind).toBe('definitions');
         expect(view.preview).toMatchObject({ uri: otherUri, startLine: 0, text: 'function use() {\n  return 1;\n    }', active: 2 });

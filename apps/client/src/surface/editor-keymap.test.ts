@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { keyOf } from '@adecore/editor-react/testing';
 import { KEYMAP_IDS, type KeymapId } from '@adecore/editor/keymap';
 import { matchesShortcut, shortcut, type Shortcut } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
@@ -48,7 +49,7 @@ describe('the editor key table', () => {
                 }
                 const platformKey = shortcut(taken.platform);
                 const bare = !platformKey.mod && !platformKey.ctrl && !platformKey.meta && !platformKey.alt;
-                const held = ownShortcuts(apple).some((candidate) => matchesShortcut(candidate, eventOf(platformKey, apple), apple)) || bare;
+                const held = ownShortcuts(apple).some((candidate) => matchesShortcut(candidate, keyOf(platformKey, apple), apple)) || bare;
                 expect(held, `${id}: ${taken.platform} is not held by anything`).toBe(true);
             }
         });
@@ -177,16 +178,3 @@ describe('the keys of the statement, clipboard, word, change and navigation comm
         });
     }
 });
-
-function eventOf(target: Shortcut, apple: boolean): Pick<KeyboardEvent, 'key' | 'code' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'> {
-    const letter = /^[A-Z]$/.test(target.key);
-    const code: Record<string, string> = { '[': 'BracketLeft', ']': 'BracketRight', '\\': 'Backslash' };
-    return {
-        key: letter ? target.key.toLowerCase() : target.key,
-        code: letter ? `Key${target.key}` : /^[0-9]$/.test(target.key) ? `Digit${target.key}` : (code[target.key] ?? target.key),
-        ctrlKey: target.ctrl || (target.mod && !apple),
-        metaKey: target.meta || (target.mod && apple),
-        altKey: target.alt,
-        shiftKey: target.shift
-    };
-}

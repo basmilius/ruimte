@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { HoverInfo } from '@adecore/editor-react';
+import { settle } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
 import { useSettings } from '@/state/settings';
@@ -9,7 +10,6 @@ import { innermostFunction } from './explain';
 import { FakeLanguageTransport } from './fake-daemon';
 import { createEditorLanguage, type EditorLanguage } from './ruimte-editor-language';
 import { RuimteProject } from './ruimte-project';
-import { settleLanguage as settle } from './settle.test';
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });

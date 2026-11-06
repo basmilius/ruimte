@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { useProviderAccountsStore, useProvidersStore } from '@adecore/agents-react/state';
 import type { Editor } from '@adecore/editor';
 import { highlightLayers } from '@adecore/editor-react';
+import { keyOf } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { LANGUAGE_COMMANDS } from '@/language/command-table';
 import { FakeLanguageTransport } from '@/language/fake-daemon';
-import { eventOf } from '@/language/key-events';
 import { createEditorLanguage, type EditorLanguage } from '@/language/ruimte-editor-language';
 import { RuimteProject } from '@/language/ruimte-project';
 import { currentEndpointId } from '@/state/current-endpoint';
@@ -84,12 +84,12 @@ describe('Mod+I in the editor', () => {
         });
         editor.setSelection(RANGE);
 
-        expect(editor.press(eventOf(CANVAS_SHORTCUTS.inlineEdit))).toBe(true);
+        expect(editor.press(keyOf(CANVAS_SHORTCUTS.inlineEdit))).toBe(true);
 
         const { prompt } = (language.app.inlineEdit as InlineEditFeature).store.getState();
         expect(prompt).toMatchObject({ range: RANGE, selectedText: SELECTED, span: { startLine: 2, endLine: 3 }, instruction: '' });
         expect(prompt?.problems).toEqual([{ line: 3, severity: 'error', message: 'on the lines', code: 'ts(2345)' }]);
-        expect(editor.press(eventOf(shortcutOf('Escape')))).toBe(true);
+        expect(editor.press(keyOf(shortcutOf('Escape')))).toBe(true);
         expect((language.app.inlineEdit as InlineEditFeature).store.getState().prompt).toBeNull();
     });
 
@@ -222,7 +222,7 @@ describe('the question over the selected lines', () => {
         expect(editor.getSelection()).toEqual({ start: at(0, 0), end: at(0, 0) });
         expect(editor.focused).toBe(false);
 
-        expect(editor.press(eventOf(shortcutOf('Escape')))).toBe(true);
+        expect(editor.press(keyOf(shortcutOf('Escape')))).toBe(true);
 
         expect(editor.getSelection()).toEqual(RANGE);
         expect(editor.focused).toBe(true);

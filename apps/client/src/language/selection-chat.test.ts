@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { EMPTY_DRAFT, readDraft, writeDraft } from '@adecore/agents-react/chat';
+import { keyOf } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import type { ProjectDocument } from '@ruimte/contracts';
 import { useChatChooser } from '@/language/chat-chooser';
@@ -8,7 +9,6 @@ import { useProject } from '@/state/project';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { LANGUAGE_COMMANDS } from './command-table';
 import { FakeLanguageTransport } from './fake-daemon';
-import { eventOf } from './key-events';
 import { createEditorLanguage } from './ruimte-editor-language';
 import { RuimteProject } from './ruimte-project';
 
@@ -69,7 +69,7 @@ describe('adding the selection to a chat from the editor', () => {
         const { editor, language } = await setup();
         language.app.selectionChat.bindNode('score');
         editor.setSelection({ start: at(0, 0), end: at(1, 13) });
-        expect(editor.press(eventOf(CANVAS_SHORTCUTS.selectionToChat))).toBe(true);
+        expect(editor.press(keyOf(CANVAS_SHORTCUTS.selectionToChat))).toBe(true);
         expect(readDraft('talk').text).toBe('src/score.ts:1-2\n```typescript\nlet one = 1;\nlet two = 2;\n```\n\n');
         expect(useChatChooser.getState().request).toBeNull();
     });

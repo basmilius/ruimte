@@ -1,6 +1,5 @@
 import {
     ClipboardHistory,
-    lspLanguageIdOf,
     ProjectLanguage as SharedProjectLanguage,
     shikiLanguageOf,
     shikiLanguageOfPath,
@@ -8,7 +7,7 @@ import {
     type ProjectFiles,
     type RenameSuggestionsRequest
 } from '@adecore/editor-react';
-import { fileUriToPath, pathToFileUri, type Diagnostic } from '@adecore/lsp';
+import { fileUriToPath, lspLanguageIdOf, pathToFileUri, type Diagnostic } from '@adecore/lsp';
 import { isApplePlatform } from '@adecore/ui';
 import { isPathBelow, namesPrompt, parseNames } from '@ruimte/contracts';
 import i18next from 'i18next';

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { keyOf } from '@adecore/editor-react/testing';
 import { typeInto } from '@adecore/editor/testing';
 import { isApplePlatform, type Shortcut } from '@adecore/ui';
 import { act } from 'react';
@@ -7,7 +8,6 @@ import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { eventOf } from './key-events';
 import { languageCommandRows } from './language-commands';
 
 const MOD = isApplePlatform() ? { metaKey: true } : { ctrlKey: true };
@@ -28,7 +28,7 @@ function rows(): HTMLElement[] {
 
 async function press(chord: Shortcut): Promise<void> {
     await act(async () => {
-        input()!.dispatchEvent(new KeyboardEvent('keydown', { ...eventOf(chord), bubbles: true, cancelable: true }));
+        input()!.dispatchEvent(new KeyboardEvent('keydown', { ...keyOf(chord), bubbles: true, cancelable: true }));
     });
 }
 

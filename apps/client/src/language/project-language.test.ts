@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
+import { settle } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeLanguageTransport } from './fake-daemon';
 import { acquireProject, RuimteProject } from './ruimte-project';
-import { settleLanguage as settle } from './settle.test';
 
 const folder = '/work/app';
 const uri = 'file:///work/app/src/a.ts';
