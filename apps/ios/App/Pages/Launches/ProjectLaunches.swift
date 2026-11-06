@@ -35,7 +35,21 @@ enum LaunchesText {
     private(set) var connected = false
     var problem: String?
     var ask: LaunchAsk?
-    private var subscriptions: [() -> Void] = []
+    // What changed while the link was down was pushed to nobody, so every link reads again.
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.launchStatus, as: LaunchStatus.self) { [weak self] status in
+                guard let self, status.projectId == projectID else { return }
+                statuses[status.launchId] = status
+            },
+            .apply(.launchesChanged, as: LaunchesChanged.self) { [weak self] change in
+                guard let self, change.projectId == projectID else { return }
+                document = change.document
+            },
+        ],
+        connection: { [weak self] available in self?.connected = available },
+        read: { [weak self] in await self?.load() })
 
     init(client: any MachineRequesting, projectID: String, folder: String) {
         self.client = client
@@ -56,34 +70,9 @@ enum LaunchesText {
 
     func name(_ launchID: String) -> String { document?.launch(launchID)?.name ?? launchID }
 
-    func start() {
-        guard subscriptions.isEmpty else { return }
-        subscriptions.append(
-            client.subscribe(.launchStatus) { [weak self] payload in
-                guard let self, let status = try? payload.decoded(as: LaunchStatus.self), status.projectId == projectID
-                else { return }
-                statuses[status.launchId] = status
-            })
-        subscriptions.append(
-            client.subscribe(.launchesChanged) { [weak self] payload in
-                guard let self, let change = try? payload.decoded(as: LaunchesChanged.self),
-                    change.projectId == projectID
-                else { return }
-                document = change.document
-            })
-        subscriptions.append(
-            client.observeConnection { [weak self] available in
-                guard let self else { return }
-                connected = available
-                // What changed while the link was down was pushed to nobody.
-                if available { Task { await self.load() } }
-            })
-    }
+    func start() { live.start() }
 
-    func stop() {
-        subscriptions.forEach { $0() }
-        subscriptions.removeAll()
-    }
+    func stop() { live.stop() }
 
     func load() async {
         do {

@@ -99,52 +99,38 @@ final class AttentionStore {
     /// Told the nodes the machine holds unread each time a fresh link asked for them.
     var onUnread: ((Set<String>) async -> Void)?
     private var focused: [String: Int] = [:]
-    private var subscriptions: [() -> Void] = []
-    private var refreshTask: Task<Void, Never>?
     private let client: any MachineRequesting
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.pushAttention, raw: { [weak self] in self?.receivePush($0) }),
+            .apply(.sessionStatus, as: SessionStatusEvent.self) { [weak self] event in
+                self?.read(event.sessionId) { $0.agent = event.agent }
+            },
+            .apply(.sessionExit, raw: { [weak self] event in
+                self?.read(event.text("sessionId")) { $0.shellExited = true }
+            }),
+            .apply(.chatStatus, raw: { [weak self] payload in
+                guard let info = payload["info"] else { return }
+                self?.receive(chat: payload.text("chatId"), info: info)
+            }),
+            .apply(.chatEvent, raw: { [weak self] payload in
+                guard let event = payload["event"], let info = event["info"] else { return }
+                self?.receive(chat: payload.text("chatId"), info: info)
+            }),
+        ],
+        connection: { [weak self] connected in
+            guard connected else { return }
+            self?.pushEntries.removeAll()
+            self?.marksFrom = nil
+        }, read: { [weak self] in await self?.refresh() })
 
     init(client: any MachineRequesting) { self.client = client }
     isolated deinit { stop() }
 
-    func start() {
-        guard subscriptions.isEmpty else { return }
-        subscriptions.append(client.subscribe(.pushAttention) { [weak self] entry in self?.receivePush(entry) })
-        subscriptions.append(
-            client.subscribe(.sessionStatus) { [weak self] payload in
-                guard let event = try? payload.decoded(as: SessionStatusEvent.self) else { return }
-                self?.read(event.sessionId) { $0.agent = event.agent }
-            })
-        subscriptions.append(
-            client.subscribe(.sessionExit) { [weak self] event in
-                self?.read(event.text("sessionId")) { $0.shellExited = true }
-            })
-        subscriptions.append(
-            client.subscribe(.chatStatus) { [weak self] payload in
-                guard let info = payload["info"] else { return }
-                self?.receive(chat: payload.text("chatId"), info: info)
-            })
-        subscriptions.append(
-            client.subscribe(.chatEvent) { [weak self] payload in
-                guard let event = payload["event"], let info = event["info"] else { return }
-                self?.receive(chat: payload.text("chatId"), info: info)
-            })
-        subscriptions.append(
-            client.observeConnection { [weak self] connected in
-                guard let self else { return }
-                refreshTask?.cancel()
-                guard connected else { return }
-                pushEntries.removeAll()
-                marksFrom = nil
-                refreshTask = Task { [weak self] in await self?.refresh() }
-            })
-    }
+    func start() { live.start() }
 
-    func stop() {
-        subscriptions.forEach { $0() }
-        subscriptions.removeAll()
-        refreshTask?.cancel()
-        refreshTask = nil
-    }
+    func stop() { live.stop() }
 
     func focus(_ id: String) {
         focused[id, default: 0] += 1

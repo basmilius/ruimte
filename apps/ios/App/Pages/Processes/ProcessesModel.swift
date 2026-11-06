@@ -268,7 +268,15 @@ enum ProcessesText {
     var problem: String?
     var opened: Set<String> = []
     var highlight: ProcessTarget?
-    private var subscriptions: [() -> Void] = []
+    // The read is also the ask for samples, so the machine's answer to it is applied, not a watch held beside it.
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.processesSample, as: ProcessSample.self) { [weak self] in self?.apply($0) },
+            .apply(.processesAlerts, as: ProcessesAlerts.self) { [weak self] in self?.alerts = $0.alerts },
+        ],
+        connection: { [weak self] available in self?.connected = available },
+        read: { [weak self] in await self?.subscribe() })
 
     init(client: any MachineRequesting, defaults: UserDefaults = .standard) {
         self.client = client
@@ -278,29 +286,10 @@ enum ProcessesText {
         sort = ["memory", "disk"].contains(stored) ? stored : "cpu"
     }
 
-    func start() {
-        guard subscriptions.isEmpty else { return }
-        subscriptions.append(
-            client.subscribe(.processesSample) { [weak self] payload in
-                guard let sample = try? payload.decoded(as: ProcessSample.self) else { return }
-                self?.apply(sample)
-            })
-        subscriptions.append(
-            client.subscribe(.processesAlerts) { [weak self] payload in
-                guard let list = try? payload.decoded(as: ProcessesAlerts.self) else { return }
-                self?.alerts = list.alerts
-            })
-        subscriptions.append(
-            client.observeConnection { [weak self] available in
-                guard let self else { return }
-                connected = available
-                if available { Task { await self.subscribe() } }
-            })
-    }
+    func start() { live.start() }
 
     func stop() {
-        subscriptions.forEach { $0() }
-        subscriptions.removeAll()
+        live.stop()
         let client = client
         Task { _ = try? await client.request(.processesUnsubscribe) }
     }

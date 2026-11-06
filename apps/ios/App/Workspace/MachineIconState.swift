@@ -13,56 +13,44 @@ final class MachineIconState {
     /// `endpoint.info`; without it a `#` reaches chats only.
     private(set) var viewReferences = false
     @ObservationIgnored private let client: any MachineRequesting
-    @ObservationIgnored private var unsubscribe: (() -> Void)?
-    @ObservationIgnored private var unobserve: (() -> Void)?
-    @ObservationIgnored private var task: Task<Void, Never>?
+    // Counts the events and links that make a read in flight stale.
     @ObservationIgnored private var revision = 0
     @ObservationIgnored private var connected = false
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.endpointChanged, as: EndpointChangedEvent.self) { [weak self] event in
+                guard let self, connected else { return }
+                revision += 1
+                apply(event)
+            }
+        ],
+        connection: { [weak self] connected in
+            self?.connected = connected
+            self?.revision += 1
+        }, read: { [weak self] in await self?.read() })
 
     init(client: any MachineRequesting, fallback: MachineIcon?) {
         self.client = client
         icon = fallback
     }
 
-    func start() {
-        guard unobserve == nil else { return }
-        unsubscribe = client.subscribe(.endpointChanged) { [weak self] value in
-            guard let self, connected, let event = try? value.decoded(as: EndpointChangedEvent.self) else { return }
-            cancelRefresh()
-            apply(event)
-        }
-        unobserve = client.observeConnection { [weak self] connected in
-            guard let self else { return }
-            self.connected = connected
-            cancelRefresh()
-            guard connected else { return }
-            let operation = revision
-            task = Task { [weak self] in
-                guard let self else { return }
-                do {
-                    let answer = try await client.request(.endpointInfo)
-                    guard !Task.isCancelled, self.connected, revision == operation else { return }
-                    apply(try answer.decoded(as: EndpointInfo.self))
-                } catch {
-                    // An unavailable icon must not hide projects or change the connection's error state.
-                }
-            }
-        }
-    }
+    func start() { live.start() }
 
     func stop() {
         connected = false
-        cancelRefresh()
-        unsubscribe?()
-        unobserve?()
-        unsubscribe = nil
-        unobserve = nil
+        revision += 1
+        live.stop()
     }
 
-    private func cancelRefresh() {
-        revision += 1
-        task?.cancel()
-        task = nil
+    private func read() async {
+        let operation = revision
+        // An unavailable icon must not hide projects or change the connection's error state.
+        guard let answer = try? await client.request(.endpointInfo),
+            let info = try? answer.decoded(as: EndpointInfo.self), !Task.isCancelled, connected,
+            revision == operation
+        else { return }
+        apply(info)
     }
 
     /// An answer to `endpoint.info`, where an absent switch is off.
@@ -80,11 +68,5 @@ final class MachineIconState {
     private func apply(_ event: EndpointChangedEvent) {
         if let resume = event.resumeAtReset { resumeAtReset = resume }
         icon = event.icon
-    }
-
-    isolated deinit {
-        task?.cancel()
-        unsubscribe?()
-        unobserve?()
     }
 }

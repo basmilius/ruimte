@@ -25,9 +25,30 @@ final class UsageWidgetRecorder {
     private(set) var accounts: UsageAccounts = .unknown
     @ObservationIgnored private let machineID: String
     @ObservationIgnored private let client: any MachineRequesting
-    @ObservationIgnored private var unsubscribe: (() -> Void)?
-    @ObservationIgnored private var unsubscribeAccounts: (() -> Void)?
-    @ObservationIgnored private var unobserve: (() -> Void)?
+    // Holds the events and the link only; the reading below keeps its own tasks, since an event can hand it limits.
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.usageLimitsChanged, raw: { [weak self] value in
+                guard let self, let limits = try? WireEvent.usageLimitsChanged.validatePayload(value) else { return }
+                take(limits)
+                if running == nil { begin(limits: limits) } else { pending = limits }
+            }),
+            .apply(.accountsChanged, raw: { [weak self] value in
+                guard let self else { return }
+                accountsRevision += 1
+                accounts = .loaded(ProviderAccountList(value))
+            }),
+        ],
+        connection: { [weak self] connected in
+            guard let self else { return }
+            if connected {
+                begin()
+                listAccounts()
+            } else {
+                cancel()
+            }
+        })
     @ObservationIgnored private var running: Task<Void, Never>?
     @ObservationIgnored private var revision = 0
     /// Limits that came while a load ran, which the snapshot takes once that load is done.
@@ -44,37 +65,11 @@ final class UsageWidgetRecorder {
         providers = UsageWidgetStore.snapshot(machineID: machineID)?.providers ?? []
     }
 
-    func start() {
-        guard unobserve == nil else { return }
-        unsubscribe = client.subscribe(.usageLimitsChanged) { [weak self] value in
-            guard let self, let limits = try? WireEvent.usageLimitsChanged.validatePayload(value) else { return }
-            take(limits)
-            if running == nil { begin(limits: limits) } else { pending = limits }
-        }
-        unsubscribeAccounts = client.subscribe(.accountsChanged) { [weak self] value in
-            guard let self else { return }
-            accountsRevision += 1
-            accounts = .loaded(ProviderAccountList(value))
-        }
-        unobserve = client.observeConnection { [weak self] connected in
-            guard let self else { return }
-            if connected {
-                begin()
-                listAccounts()
-            } else {
-                cancel()
-            }
-        }
-    }
+    func start() { live.start() }
 
     func stop() {
         cancel()
-        unsubscribe?()
-        unsubscribeAccounts?()
-        unobserve?()
-        unsubscribe = nil
-        unsubscribeAccounts = nil
-        unobserve = nil
+        live.stop()
         limits = nil
         accounts = .unknown
     }

@@ -25,11 +25,26 @@ final class MobileWorkspace {
     /// Per node, the project-file command its terminal started without, until a person approves it.
     private(set) var heldCommands: [String: String] = [:]
     private var base = JSONValue.object([:])
-    private var subscriptions: [() -> Void] = []
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.projectChanged, as: ProjectChangedEvent.self) { [weak self] event in
+                guard let self, event.projectId == projectID else { return }
+                receive(event.document)
+            },
+            .apply(.projectShowView, as: ProjectShowViewEvent.self) { [weak self] event in
+                guard let self, event.projectId == projectID else { return }
+                notice = event
+            },
+            .apply(.sessionListChanged, raw: { [weak self] _ in
+                guard let self, !heldCommands.isEmpty else { return }
+                Task { await self.refreshHeldCommands() }
+            }),
+        ],
+        read: { [weak self] in await self?.open() })
     private var revision = 0
     private var stopped = true
     private var pendingSave = false
-    private var openTask: Task<Void, Never>?
     private var localTask: Task<Void, Never>?
     @ObservationIgnored private var cameraTask: Task<Void, Never>?
     @ObservationIgnored private var pendingCameras: [String: JSONValue] = [:]
@@ -81,43 +96,15 @@ final class MobileWorkspace {
         session.retain()
         session.retainProject(projectID)
         session.tasks.watch(projectID)
-        subscriptions.append(
-            client.subscribe(.projectChanged) { [weak self] payload in
-                guard let self, let event = try? payload.decoded(as: ProjectChangedEvent.self),
-                    event.projectId == projectID
-                else { return }
-                receive(event.document)
-            })
-        subscriptions.append(
-            client.subscribe(.projectShowView) { [weak self] payload in
-                guard let self, let event = try? payload.decoded(as: ProjectShowViewEvent.self),
-                    event.projectId == projectID
-                else { return }
-                notice = event
-            })
-        subscriptions.append(
-            client.subscribe(.sessionListChanged) { [weak self] _ in
-                guard let self, !heldCommands.isEmpty else { return }
-                Task { await self.refreshHeldCommands() }
-            })
-        subscriptions.append(
-            client.observeConnection { [weak self] connected in
-                guard let self else { return }
-                if connected {
-                    openTask?.cancel()
-                    openTask = Task { await self.open() }
-                }
-            })
+        live.start()
     }
 
     func stop() {
         flushCameras()
         guard !stopped else { return }
         stopped = true
-        openTask?.cancel()
+        live.stop()
         localTask?.cancel()
-        for unsubscribe in subscriptions { unsubscribe() }
-        subscriptions.removeAll()
         session.tasks.unwatch(projectID)
         Task { [projectID, session] in
             await session.releaseProject(projectID)

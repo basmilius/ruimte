@@ -9,36 +9,26 @@ final class PlanStore {
     private(set) var plans: [String: [PlanDocument]] = [:]
     /// Chats whose agent made a plan that no one here has opened yet. The phone never opens it on its own.
     private(set) var unseen: Set<String> = []
-    @ObservationIgnored private var subscriptions: [() -> Void] = []
     @ObservationIgnored private let client: any MachineRequesting
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.planChanged, as: PlanChangedEvent.self) { [weak self] in
+                self?.put(chatID: $0.chatId, PlanDocument($0.plan))
+            },
+            .apply(.planRemoved, as: PlanRemovedEvent.self) { [weak self] in
+                self?.remove(chatID: $0.chatId, planID: $0.planId)
+            },
+            .apply(.planCreated, as: PlanCreatedEvent.self) { [weak self] in self?.unseen.insert($0.chatId) },
+        ],
+        read: { [weak self] in await self?.list() })
 
     init(client: any MachineRequesting) { self.client = client }
 
-    func start() {
-        guard subscriptions.isEmpty else { return }
-        subscriptions = [
-            client.subscribe(.planChanged) { [weak self] payload in
-                guard let event = try? payload.decoded(as: PlanChangedEvent.self) else { return }
-                self?.put(chatID: event.chatId, PlanDocument(event.plan))
-            },
-            client.subscribe(.planRemoved) { [weak self] payload in
-                guard let event = try? payload.decoded(as: PlanRemovedEvent.self) else { return }
-                self?.remove(chatID: event.chatId, planID: event.planId)
-            },
-            client.subscribe(.planCreated) { [weak self] payload in
-                guard let event = try? payload.decoded(as: PlanCreatedEvent.self) else { return }
-                self?.unseen.insert(event.chatId)
-            },
-            client.observeConnection { [weak self] connected in
-                guard connected else { return }
-                self?.list()
-            },
-        ]
-    }
+    func start() { live.start() }
 
     func stop() {
-        for unsubscribe in subscriptions { unsubscribe() }
-        subscriptions.removeAll()
+        live.stop()
         plans.removeAll()
         unseen.removeAll()
     }
@@ -88,13 +78,11 @@ final class PlanStore {
         put(chatID: chatID, PlanDocument(result.plan))
     }
 
-    private func list() {
-        Task { [weak self, client] in
-            guard
-                let result = try? await client.request(.planList, payload: .object([:])).decoded(as: PlanListResult.self)
-            else { return }
-            guard let self, !subscriptions.isEmpty else { return }
-            setListed(result.plans)
-        }
+    private func list() async {
+        guard
+            let result = try? await client.request(.planList, payload: .object([:])).decoded(as: PlanListResult.self),
+            live.isStarted
+        else { return }
+        setListed(result.plans)
     }
 }

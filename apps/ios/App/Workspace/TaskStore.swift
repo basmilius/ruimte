@@ -8,35 +8,25 @@ import SwiftUI
 final class TaskStore {
     private(set) var tasks: [String: AgentTask] = [:]
     @ObservationIgnored private var projects: [String: Int] = [:]
-    @ObservationIgnored private var subscriptions: [() -> Void] = []
     @ObservationIgnored private let client: any MachineRequesting
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [.apply(.taskChanged, as: TaskChangedEvent.self) { [weak self] in self?.put($0.task) }],
+        read: { [weak self] in await self?.askAll() })
 
     init(client: any MachineRequesting) { self.client = client }
 
-    func start() {
-        guard subscriptions.isEmpty else { return }
-        subscriptions = [
-            client.subscribe(.taskChanged) { [weak self] payload in
-                guard let event = try? payload.decoded(as: TaskChangedEvent.self) else { return }
-                self?.put(event.task)
-            },
-            client.observeConnection { [weak self] connected in
-                guard let self, connected else { return }
-                for projectID in projects.keys { ask(projectID) }
-            },
-        ]
-    }
+    func start() { live.start() }
 
     func stop() {
-        subscriptions.forEach { $0() }
-        subscriptions.removeAll()
+        live.stop()
         projects.removeAll()
         tasks.removeAll()
     }
 
     func watch(_ projectID: String) {
         projects[projectID, default: 0] += 1
-        if projects[projectID] == 1 && !subscriptions.isEmpty { ask(projectID) }
+        if projects[projectID] == 1 && live.isStarted { Task { await ask(projectID) } }
     }
 
     func unwatch(_ projectID: String) {
@@ -72,15 +62,18 @@ final class TaskStore {
         Set(tasks.values.filter { $0.status == .open }.map(\.parentId))
     }
 
-    private func ask(_ projectID: String) {
-        Task { [weak self, client] in
-            guard
-                let result = try? await client.request(.taskList, payload: .object(["projectId": .string(projectID)]))
-                    .decoded(as: TaskListResult.self)
-            else { return }
-            guard let self, projects[projectID] != nil else { return }
-            setProjectTasks(projectID, result.tasks)
-        }
+    private func askAll() async {
+        let asks = projects.keys.map { projectID in Task { await ask(projectID) } }
+        for ask in asks { await ask.value }
+    }
+
+    private func ask(_ projectID: String) async {
+        guard
+            let result = try? await client.request(.taskList, payload: .object(["projectId": .string(projectID)]))
+                .decoded(as: TaskListResult.self),
+            projects[projectID] != nil
+        else { return }
+        setProjectTasks(projectID, result.tasks)
     }
 }
 

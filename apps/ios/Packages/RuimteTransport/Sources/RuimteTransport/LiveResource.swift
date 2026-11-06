@@ -148,6 +148,8 @@ public struct LiveEvent {
         self.read = read
     }
 
+    isolated deinit { stop() }
+
     public func start() {
         guard !isStarted else { return }
         isStarted = true

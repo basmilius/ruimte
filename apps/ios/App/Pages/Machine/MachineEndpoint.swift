@@ -140,8 +140,16 @@ final class MachineEndpoint {
     @ObservationIgnored private let clock: @MainActor () -> Date
     @ObservationIgnored private let learnedLan: @MainActor (LanDoorAddress?) -> Void
     @ObservationIgnored private let heardUsage: @MainActor (Bool) -> Void
-    @ObservationIgnored private var subscriptions: [() -> Void] = []
-    @ObservationIgnored private var reading: Task<Void, Never>?
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.endpointChanged, raw: { [weak self] value in self?.merge(value) }),
+            .apply(.endpointUpdateChanged, as: EndpointUpdateChangedEvent.self) { [weak self] event in
+                self?.update = event.update
+            },
+        ],
+        connection: { [weak self] connected in self?.connectionChanged(connected) },
+        read: { [weak self] in await self?.refresh() })
     @ObservationIgnored private var connected = false
     @ObservationIgnored private var generation = 0
 
@@ -176,27 +184,10 @@ final class MachineEndpoint {
     /// A flag the machine started with decides the door, so the switch changes nothing.
     var lanDoorFixed: Bool { info?.lanDoorFixed == true }
 
-    func start() {
-        guard subscriptions.isEmpty else { return }
-        subscriptions = [
-            client.subscribe(.endpointChanged) { [weak self] value in
-                self?.merge(value)
-            },
-            client.subscribe(.endpointUpdateChanged) { [weak self] value in
-                guard let self, let event = try? value.decoded(as: EndpointUpdateChangedEvent.self) else { return }
-                update = event.update
-            },
-            client.observeConnection { [weak self] connected in
-                self?.connectionChanged(connected)
-            },
-        ]
-    }
+    func start() { live.start() }
 
     func stop() {
-        subscriptions.forEach { $0() }
-        subscriptions.removeAll()
-        reading?.cancel()
-        reading = nil
+        live.stop()
         generation += 1
         connected = false
     }
@@ -214,11 +205,8 @@ final class MachineEndpoint {
     private func connectionChanged(_ connected: Bool) {
         self.connected = connected
         remember()
-        reading?.cancel()
         latency = nil
-        guard connected else { return }
-        if install == .started { install = .idle }
-        reading = Task { [weak self] in await self?.refresh() }
+        if connected, install == .started { install = .idle }
     }
 
     private func remember() {
