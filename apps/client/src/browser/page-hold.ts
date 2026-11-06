@@ -1,6 +1,5 @@
 import type { BrowserDriveEvent, BrowserDriveResult, BrowserPageState } from '@ruimte/contracts';
 import { base64Of } from '@/base64';
-import { reportPageAsk } from '@/browser/page-asks';
 import { pageSnapshots } from '@/browser/page-snapshots';
 import { browserRegistry, useBrowser, type BrowserState } from '@/browser/registry';
 import { endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
@@ -145,7 +144,6 @@ export function startPageHolds(): () => void {
             subscriptions: [
                 useBrowser.subscribe(report),
                 link.on('browser.drive', (payload) => {
-                    reportPageAsk(endpointKey(endpointId, payload.browserId), Date.now());
                     void answer(endpointId, payload).then((result) => link.request('browser.driveResult', result).catch(() => undefined));
                 })
             ]

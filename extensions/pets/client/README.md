@@ -5,7 +5,7 @@ own, which a person turns on in Settings, Pets. Off to start with.
 
 What a pet is and how it is drawn lives here, in `src/pets`: the figures, the paint, the shared beat,
 the sets, the kids, the strips a person added, and the pets of views (`ViewPet.tsx`). Where a pet
-stands on a canvas, along the bottom of the screen, the visitor and the trips to a page live in
+stands on a canvas, along the bottom of the screen, and the visitor live in
 `src/canvas/pets`. Everything here is the client's: what a pet shows comes from the state the client
 already holds (`chat.status`, a terminal's `session.status` from the CLI's hooks), and nothing reads
 the file system, the daemon's folders or a project file.
@@ -152,18 +152,3 @@ same set for the same id, and for a chat the same kids. A view has no color, so 
   size, its feet on the line under the bar, the bubble beside its head (`TerminalViewPet`).
 - A press hands the keyboard over: to the open question or the field to type in, or to the terminal.
 
-## A trip to a page
-
-While Pets is on its nodes, an agent's pet walks over the line to a page or a device the agent works
-in (`canvas/pets/page-trip.ts`, `use-page-trip.ts`): a browser or device node at the other end of a
-target line from its node. The machine asks a page through the client that holds it
-(`browser/page-hold.ts`), and the ask names the page and not the agent, so the line says whose it is.
-A device counts as asked for as long as `device.operated` names the agent's node.
-
-- It sets off at the first ask, stays on the page's top edge while the asks come, and walks home after
-  five quiet seconds. It moves on to another page or home only after four seconds on one, so an agent
-  switching pages does not send it back and forth.
-- It walks the line's own route (`lineRoutes`), in under a second and a half however long the line.
-- A pet that waits on you is home at once, where the question is answered. A page out of view keeps
-  it home, and with reduced motion it only takes its place.
-- On a page a press still goes to its own node.
