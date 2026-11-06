@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { ManualTimers } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeLanguageTransport } from './fake-daemon';
-import { EditorLanguage } from './ruimte-editor-language';
-import { ProjectLanguage } from './ruimte-project-language';
+import { createEditorLanguage } from './ruimte-editor-language';
+import { RuimteProject } from './ruimte-project';
 import { settleLanguage as settle } from './settle.test';
 
 const uri = 'file:///work/app/src/a.ts';
@@ -24,7 +24,7 @@ describe('inlay hints of a long file', () => {
         const editor = new FakeEditorEngine().mount({} as HTMLElement, { text, theme: 'light' });
         editor.visibleRange = { start: at(100, 0), end: at(120, 12) };
         const timers = new ManualTimers();
-        const language = new EditorLanguage(new ProjectLanguage(transport, 'p1', '/work/app'), editor, uri, 'typescript', timers);
+        const language = createEditorLanguage(new RuimteProject(transport, 'p1', '/work/app'), editor, uri, 'typescript', timers);
         await language.document.ready;
         await settle();
         return { editor, timers, ranges };

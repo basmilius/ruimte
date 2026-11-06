@@ -81,9 +81,3 @@ function dropTrailingDuplicates(text: string, after: string): string {
     }
     return text;
 }
-
-/* The first word of a suggestion with the whitespace before it, which is what Option+] takes. */
-export function firstWord(text: string): string {
-    const match = /^\s*(?:[\p{L}\p{N}_$]+|[^\p{L}\p{N}_$\s]+)/u.exec(text);
-    return match === null ? text : match[0];
-}

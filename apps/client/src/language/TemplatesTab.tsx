@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { copyOf, draftOfLive, draftOfPostfix, emptyDraft, type TemplateDraft } from '@/language/template-draft';
 import { TemplateDialog } from '@/language/TemplateDialog';
 import { useTemplates, type TemplatesTracker } from '@/language/templates';
-import { useWindowProjectLanguage } from '@/language/window-project-language';
+import { useWindowProject } from '@/language/window-project';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { useToasts } from '@/state/toasts';
 import { machineAnswers } from '@/transport/features';
@@ -92,9 +92,9 @@ function matches(entry: Entry, query: string): boolean {
 /* The templates of this window's machine, and the project's, for the project the window shows. */
 export function TemplatesTab() {
     const { t } = useTranslation('settings');
-    const language = useWindowProjectLanguage();
+    const project = useWindowProject();
 
-    if (language === null) {
+    if (project === null) {
         return (
             <SettingsSection title={t('editor.templates.title')}>
                 <SettingsRow muted searchId="editor.templates.live" label={t('editor.templates.needsProject')} />
@@ -102,7 +102,7 @@ export function TemplatesTab() {
         );
     }
 
-    return <Templates tracker={language.templateSync} />;
+    return <Templates tracker={project.templateSync} />;
 }
 
 function Templates({ tracker }: { tracker: TemplatesTracker }) {

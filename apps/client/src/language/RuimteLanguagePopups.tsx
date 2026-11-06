@@ -15,7 +15,7 @@ function HoverActions({ language, view }: { language: EditorLanguage; view: Hove
     const { t } = useTranslation('panels');
     const { t: chat } = useTranslation('chat');
     const agents = useAskAgents();
-    const explain = useStore(language.explain.store);
+    const explain = useStore(language.app.explain.store);
     return (
         <>
             {explain.phase !== 'idle' && (
@@ -36,7 +36,7 @@ function HoverActions({ language, view }: { language: EditorLanguage; view: Hove
             {(explain.offered || view.problems.length > 0) && (
                 <div className="flex flex-wrap gap-1 px-3 py-2">
                     {explain.offered && (
-                        <Button size="xs" variant="secondary" onClick={() => void language.explain.explainCard()}>
+                        <Button size="xs" variant="secondary" onClick={() => void language.app.explain.explainCard()}>
                             {t('language.editorAssist.explain')}
                         </Button>
                     )}
@@ -48,7 +48,7 @@ function HoverActions({ language, view }: { language: EditorLanguage; view: Hove
                                 variant="secondary"
                                 onClick={() => {
                                     language.hover.hide();
-                                    language.selectionChat.askAboutProblem(problem, agent.kind);
+                                    language.app.selectionChat.askAboutProblem(problem, agent.kind);
                                 }}
                             >
                                 <AgentIcon kind={agent.kind} size={12} /> {chat('selection.ask', { provider: agent.name })}
@@ -67,15 +67,15 @@ function MenuActions({ language }: { language: EditorLanguage }) {
     const agents = useAskAgents();
     return (
         <>
-            <ContextMenu.Item onClick={() => language.inlineEdit.start()}>
+            <ContextMenu.Item onClick={() => language.app.inlineEdit.start()}>
                 <Icon icon={Sparkles} size={14} /> {t('editorMenu.inlineEdit')} <Kbd shortcut={CANVAS_SHORTCUTS.inlineEdit} />
             </ContextMenu.Item>
-            <ContextMenu.Item onClick={() => language.selectionChat.choose()}>
+            <ContextMenu.Item onClick={() => language.app.selectionChat.choose()}>
                 <Icon icon={MessageSquarePlus} size={14} /> {t('editorMenu.selectionToChat')} <Kbd shortcut={CANVAS_SHORTCUTS.selectionToChat} />
             </ContextMenu.Item>
             {agents.length === 1 &&
                 agents.map((agent) => (
-                    <ContextMenu.Item key={agent.kind} onClick={() => language.selectionChat.askAbout(agent.kind)}>
+                    <ContextMenu.Item key={agent.kind} onClick={() => language.app.selectionChat.askAbout(agent.kind)}>
                         <AgentIcon kind={agent.kind} /> {chat('selection.ask', { provider: agent.name })}
                     </ContextMenu.Item>
                 ))}
@@ -86,7 +86,7 @@ function MenuActions({ language }: { language: EditorLanguage }) {
                     </ContextMenu.SubmenuTrigger>
                     <ContextMenu.Popup>
                         {agents.map((agent) => (
-                            <ContextMenu.Item key={agent.kind} onClick={() => language.selectionChat.askAbout(agent.kind)}>
+                            <ContextMenu.Item key={agent.kind} onClick={() => language.app.selectionChat.askAbout(agent.kind)}>
                                 <AgentIcon kind={agent.kind} /> {agent.name}
                             </ContextMenu.Item>
                         ))}

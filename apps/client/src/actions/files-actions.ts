@@ -59,9 +59,7 @@ const LIVE_MACHINE: FilesMachine = {
         forgetDeleted(endpointId, path);
         if (current !== null && transport !== undefined) {
             // Loaded here and not at the top: the start screen reaches these actions and carries no editor code.
-            void import('@/language/ruimte-project-language').then(({ forgetDeletedEdits }) =>
-                forgetDeletedEdits(transport, current.projectId, current.folder, path)
-            );
+            void import('@/language/ruimte-project').then(({ forgetDeletedEdits }) => forgetDeletedEdits(transport, current.projectId, current.folder, path));
         }
     },
     move: async (from, to) => {

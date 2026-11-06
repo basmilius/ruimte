@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { cleanGhost, firstWord } from './ghost-model';
+import { cleanGhost } from './ghost-model';
 
 describe('cleanGhost', () => {
     test('drops the line before the cursor that the model wrote again, and the closing line the file has', () => {
@@ -40,14 +40,5 @@ describe('cleanGhost', () => {
     test('says nothing when nothing is left', () => {
         expect(cleanGhost('   \n', '', '')).toBe('');
         expect(cleanGhost('}', 'function a() {\n    return 1;\n', '}\n')).toBe('');
-    });
-});
-
-describe('firstWord', () => {
-    test('takes the whitespace before a word with it, and a run of punctuation as one word', () => {
-        expect(firstWord('  const x = 1;')).toBe('  const');
-        expect(firstWord(' = 1;')).toBe(' =');
-        expect(firstWord('\n    return a;')).toBe('\n    return');
-        expect(firstWord('')).toBe('');
     });
 });

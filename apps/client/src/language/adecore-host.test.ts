@@ -3,8 +3,8 @@ import { ManualTimers } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { RUIMTE_EDITOR_KEYMAP } from '@/surface/editor-keymap';
 import { FakeLanguageTransport } from './fake-daemon';
-import { EditorLanguage } from './ruimte-editor-language';
-import { ProjectLanguage } from './ruimte-project-language';
+import { createEditorLanguage } from './ruimte-editor-language';
+import { RuimteProject } from './ruimte-project';
 import { settleLanguage as settle } from './settle.test';
 
 describe('Adecore over the Ruimte language wire', () => {
@@ -25,11 +25,11 @@ describe('Adecore over the Ruimte language wire', () => {
             server: 'typescript',
             version: 1
         }));
-        const project = new ProjectLanguage(transport, 'p1', '/work/app');
+        const project = new RuimteProject(transport, 'p1', '/work/app');
         const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'consumerCom', theme: 'light' });
         editor.moveCaret({ line: 0, character: 11 });
         const timers = new ManualTimers();
-        const language = new EditorLanguage(project, editor, 'file:///work/app/a.ts', 'typescript', timers);
+        const language = createEditorLanguage(project, editor, 'file:///work/app/a.ts', 'typescript', timers);
         try {
             expect(language.keymap).toBe(RUIMTE_EDITOR_KEYMAP);
             await language.document.ready;
@@ -48,7 +48,7 @@ describe('Adecore over the Ruimte language wire', () => {
 
     test('keeps machine diagnostics from documents another client owns', () => {
         const transport = new FakeLanguageTransport();
-        const project = new ProjectLanguage(transport, 'p1', '/work/app');
+        const project = new RuimteProject(transport, 'p1', '/work/app');
         transport.emit('language.diagnostics', {
             projectId: 'p1',
             path: 'other.ts',
@@ -63,7 +63,7 @@ describe('Adecore over the Ruimte language wire', () => {
             version: 1,
             diagnostics: [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } }, message: 'Another project', severity: 1 }]
         });
-        expect(project.problems.getSnapshot().map((file) => file.path)).toEqual(['other.ts']);
+        expect(project.language.problems.getSnapshot().map((file) => file.path)).toEqual(['other.ts']);
         project.dispose();
     });
 });

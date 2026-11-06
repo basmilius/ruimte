@@ -10,7 +10,7 @@ import type { InlineEditFeature, InlinePrompt } from './inline-edit';
 import { problemChips, problemDetail, problemLabel } from './inline-edit-layout';
 import { InlineAgentPicker } from './InlineAgentPicker';
 
-type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'inlineEdit'>;
+type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'app'>;
 
 const SEVERITY_ICONS = { error: CircleX, warning: TriangleAlert, info: Info, hint: Info } as const;
 const SEVERITY_TONES = { error: 'text-status-error', warning: 'text-status-needs-you', info: 'text-text-muted', hint: 'text-text-muted' } as const;
@@ -59,7 +59,7 @@ function Problems({ problems }: { problems: readonly InlineProblem[] }) {
 export function InlinePromptCard({ feature, language, prompt }: { feature: InlineEditFeature; language: EditorLanguage; prompt: InlinePrompt }) {
     const { t } = useTranslation('inline-edit');
     const input = useRef<HTMLInputElement>(null);
-    const path = basenameOf(language.inlineEdit.path);
+    const path = basenameOf(language.app.inlineEdit.path);
 
     // The editor's own focus handling is done by the time this runs, so the keys go to the question and stay there.
     useEffect(() => {
@@ -100,7 +100,7 @@ export function InlinePromptCard({ feature, language, prompt }: { feature: Inlin
                 <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5">
                     <InlineAgentPicker agent={prompt} onChange={(agent) => feature.setAgent(agent.provider, agent.model, agent.account)} finalFocus={input} />
                     <span className={CHIP_CLASS} aria-label={t('prompt.lines')}>
-                        <FileIcon path={language.inlineEdit.path} size={12} />
+                        <FileIcon path={language.app.inlineEdit.path} size={12} />
                         <span className="truncate">{lineRangeLabel(path, prompt.span.startLine, prompt.span.endLine)}</span>
                     </span>
                     <span className="ml-auto shrink-0 text-xs whitespace-nowrap text-text-faint">

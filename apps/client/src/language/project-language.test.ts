@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeLanguageTransport } from './fake-daemon';
-import { acquireProjectLanguage, ProjectLanguage } from './ruimte-project-language';
+import { acquireProject, RuimteProject } from './ruimte-project';
 import { settleLanguage as settle } from './settle.test';
 
 const folder = '/work/app';
@@ -9,7 +9,7 @@ const uri = 'file:///work/app/src/a.ts';
 
 function setup(text = 'let a = 1;\nlet b = 2;') {
     const transport = new FakeLanguageTransport();
-    const language = new ProjectLanguage(transport, 'p1', folder);
+    const language = new RuimteProject(transport, 'p1', folder).language;
     const engine = new FakeEditorEngine();
     const editor = engine.mount({} as HTMLElement, { text, theme: 'light' });
     return { transport, language, engine, editor };
@@ -102,29 +102,29 @@ describe('an unserved document', () => {
     });
 });
 
-describe('acquireProjectLanguage', () => {
+describe('acquireProject', () => {
     test('is one per project on a machine and ends with its last release', async () => {
         const transport = new FakeLanguageTransport();
-        const first = acquireProjectLanguage(transport, 'p1', folder);
-        const second = acquireProjectLanguage(transport, 'p1', folder);
-        expect(second.language).toBe(first.language);
+        const first = acquireProject(transport, 'p1', folder);
+        const second = acquireProject(transport, 'p1', folder);
+        expect(second.project).toBe(first.project);
         const partitions = [
-            acquireProjectLanguage(new FakeLanguageTransport(), 'p1', folder),
-            acquireProjectLanguage(transport, 'p2', folder),
-            acquireProjectLanguage(transport, 'p1', '/work/other')
+            acquireProject(new FakeLanguageTransport(), 'p1', folder),
+            acquireProject(transport, 'p2', folder),
+            acquireProject(transport, 'p1', '/work/other')
         ];
-        expect(new Set([first.language, ...partitions.map((entry) => entry.language)]).size).toBe(4);
+        expect(new Set([first.project, ...partitions.map((entry) => entry.project)]).size).toBe(4);
         first.release();
         const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'still held', theme: 'light' });
-        const document = second.language.acquire(uri, 'typescript', editor);
+        const document = second.project.language.acquire(uri, 'typescript', editor);
         await document.ready;
         editor.type('still usable');
         await settle();
         expect(transport.documents.get('src/a.ts')?.text).toBe('still usable');
         document.release();
         second.release();
-        const replacement = acquireProjectLanguage(transport, 'p1', folder);
-        expect(replacement.language).not.toBe(first.language);
+        const replacement = acquireProject(transport, 'p1', folder);
+        expect(replacement.project).not.toBe(first.project);
         replacement.release();
         for (const entry of partitions) {
             entry.release();

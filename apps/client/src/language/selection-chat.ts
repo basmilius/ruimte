@@ -1,5 +1,5 @@
 import type { EditorRange } from '@adecore/editor';
-import { shikiLanguageOf } from '@adecore/editor-react';
+import { shikiLanguageOf, type EditorLanguage } from '@adecore/editor-react';
 import type { Problem } from '@adecore/editor-react/models';
 import { fileUriToPath } from '@adecore/lsp';
 import { storedPathOf, type AgentKind } from '@ruimte/contracts';
@@ -8,7 +8,6 @@ import { lineRangeLabel, offerSelection, selectionBlock, startLinkedChatOrTell, 
 import { basenameOf } from '@/paths/file-path';
 import { useProject } from '@/state/project';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
-import type { HostLanguage as EditorLanguage } from './host-language';
 import { isShortcut } from './shortcut-keys';
 
 const PLAIN_IDS = new Set(['plaintext', 'text']);
@@ -24,14 +23,15 @@ export class SelectionChatFeature {
 
     constructor(language: EditorLanguage) {
         this.language = language;
-        const off = language.editor.onKeyDown((event) => {
-            if (!language.served || !isShortcut(CANVAS_SHORTCUTS.selectionToChat, event)) {
-                return false;
-            }
-            this.choose();
-            return true;
-        });
-        language.onDispose(off);
+        language.onDispose(
+            language.onServedKey((event) => {
+                if (!isShortcut(CANVAS_SHORTCUTS.selectionToChat, event)) {
+                    return false;
+                }
+                this.choose();
+                return true;
+            })
+        );
     }
 
     /* The node this editor is drawn in; null for a tab or a view of its own. */

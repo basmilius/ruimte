@@ -5,8 +5,8 @@ import { TextDrafts, useTextDrafts, type DraftLink } from '@/state/text-drafts';
 import { useToasts } from '@/state/toasts';
 import { FakeLanguageTransport } from './fake-daemon';
 import { draftFiles } from './project-files';
-import { EditorLanguage } from './ruimte-editor-language';
-import { ProjectLanguage } from './ruimte-project-language';
+import { createEditorLanguage } from './ruimte-editor-language';
+import { RuimteProject } from './ruimte-project';
 import { settleLanguage } from './settle.test';
 
 const GREETING = '/work/app/src/greeting.ts';
@@ -45,7 +45,7 @@ function setup() {
     const drafts = new TextDrafts(() => link);
     const transport = new FakeLanguageTransport();
     transport.answers.set('fs.read', ((payload: { path: string }) => ({ kind: 'text', path: payload.path, ...disk.get(payload.path)! })) as never);
-    const project = new ProjectLanguage(transport, 'p1', '/work/app', draftFiles('local', transport, 'p1', drafts));
+    const project = new RuimteProject(transport, 'p1', '/work/app', draftFiles('local', transport, 'p1', drafts));
     return { disk, drafts, transport, project };
 }
 
@@ -62,16 +62,16 @@ describe('a rename that changes a file no editor holds', () => {
     test('lets the servers read the unsaved text of that file, and a rename back leaves both files as they were', async () => {
         const { disk, drafts, transport, project } = setup();
         const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: greetingText('greetAll'), theme: 'light' });
-        const language = new EditorLanguage(project, editor, greetingUri, 'typescript');
+        const language = createEditorLanguage(project, editor, greetingUri, 'typescript');
         await language.document.ready;
 
-        expect(await project.applyWorkspaceEdit(renameEdit('greetAll', 'greetEveryone'))).toEqual({ applied: true });
+        expect(await project.language.applyWorkspaceEdit(renameEdit('greetAll', 'greetEveryone'))).toEqual({ applied: true });
         await settleLanguage();
         expect(drafts.draft('local', MAIN)?.text).toBe(mainText('greetEveryone'));
         expect(transport.documents.get('src/main.ts')?.text).toBe(mainText('greetEveryone'));
         expect(useToasts.getState().toasts).toHaveLength(1);
 
-        expect(await project.applyWorkspaceEdit(renameEdit('greetEveryone', 'greetAll'))).toEqual({ applied: true });
+        expect(await project.language.applyWorkspaceEdit(renameEdit('greetEveryone', 'greetAll'))).toEqual({ applied: true });
         await settleLanguage();
         expect(editor.getText()).toBe(greetingText('greetAll'));
         expect(drafts.isUnsaved('local', MAIN)).toBe(false);
@@ -86,10 +86,10 @@ describe('a rename that changes a file no editor holds', () => {
     test('goes away from the toast once Save all wrote it, and the servers read it from disk again', async () => {
         const { disk, transport, project } = setup();
         const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: greetingText('greetAll'), theme: 'light' });
-        const language = new EditorLanguage(project, editor, greetingUri, 'typescript');
+        const language = createEditorLanguage(project, editor, greetingUri, 'typescript');
         await language.document.ready;
 
-        await project.applyWorkspaceEdit(renameEdit('greetAll', 'greetEveryone'));
+        await project.language.applyWorkspaceEdit(renameEdit('greetAll', 'greetEveryone'));
         await settleLanguage();
         useToasts.getState().toasts[0]!.action!.run();
         await settleLanguage();
@@ -104,7 +104,7 @@ describe('a rename that changes a file no editor holds', () => {
 
     test('goes away from the toast when the file is saved some other way', async () => {
         const { drafts, project } = setup();
-        await project.applyWorkspaceEdit(renameEdit('greetAll', 'greetEveryone'));
+        await project.language.applyWorkspaceEdit(renameEdit('greetAll', 'greetEveryone'));
         await settleLanguage();
         expect(useToasts.getState().toasts).toHaveLength(1);
 

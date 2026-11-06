@@ -6,8 +6,8 @@ import { FakeEditorEngine } from '@adecore/editor/fake';
 import { LANGUAGE_COMMANDS } from '@/language/command-table';
 import { FakeLanguageTransport } from '@/language/fake-daemon';
 import { eventOf } from '@/language/key-events';
-import { EditorLanguage } from '@/language/ruimte-editor-language';
-import { ProjectLanguage } from '@/language/ruimte-project-language';
+import { createEditorLanguage, type EditorLanguage } from '@/language/ruimte-editor-language';
+import { RuimteProject } from '@/language/ruimte-project';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
@@ -29,9 +29,9 @@ let storage: Map<string, string>;
 type FakeEditor = ReturnType<FakeEditorEngine['mount']>;
 
 async function open(text = TEXT): Promise<{ editor: FakeEditor; language: EditorLanguage; feature: InlineEditFeature }> {
-    const project = new ProjectLanguage(transport, 'p1', '/work/app');
+    const project = new RuimteProject(transport, 'p1', '/work/app');
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text, theme: 'light' });
-    const language = new EditorLanguage(project, editor, uri, 'typescript');
+    const language = createEditorLanguage(project, editor, uri, 'typescript');
     await language.document.ready;
     // The one the language made takes the key and the commands; this one answers to the test's own deps.
     const feature = new InlineEditFeature(language, () => harness.deps);
@@ -41,7 +41,7 @@ async function open(text = TEXT): Promise<{ editor: FakeEditor; language: Editor
 /* The feature the language made for itself, which takes the key and the gutter, answering to the test's deps. */
 async function openOwn(text = TEXT): Promise<{ editor: FakeEditor; language: EditorLanguage; feature: InlineEditFeature }> {
     const { editor, language } = await open(text);
-    const feature = language.inlineEdit as InlineEditFeature;
+    const feature = language.app.inlineEdit as InlineEditFeature;
     (feature as unknown as { depsFor: unknown }).depsFor = () => harness.deps;
     return { editor, language, feature };
 }
@@ -86,20 +86,20 @@ describe('Mod+I in the editor', () => {
 
         expect(editor.press(eventOf(CANVAS_SHORTCUTS.inlineEdit))).toBe(true);
 
-        const { prompt } = (language.inlineEdit as InlineEditFeature).store.getState();
+        const { prompt } = (language.app.inlineEdit as InlineEditFeature).store.getState();
         expect(prompt).toMatchObject({ range: RANGE, selectedText: SELECTED, span: { startLine: 2, endLine: 3 }, instruction: '' });
         expect(prompt?.problems).toEqual([{ line: 3, severity: 'error', message: 'on the lines', code: 'ts(2345)' }]);
         expect(editor.press(eventOf(shortcutOf('Escape')))).toBe(true);
-        expect((language.inlineEdit as InlineEditFeature).store.getState().prompt).toBeNull();
+        expect((language.app.inlineEdit as InlineEditFeature).store.getState().prompt).toBeNull();
     });
 
     test('takes the line under the caret when nothing is selected', async () => {
         const { editor, language } = await open();
         editor.moveCaret(at(1, 5));
 
-        language.inlineEdit.start();
+        language.app.inlineEdit.start();
 
-        expect((language.inlineEdit as InlineEditFeature).store.getState().prompt).toMatchObject({
+        expect((language.app.inlineEdit as InlineEditFeature).store.getState().prompt).toMatchObject({
             range: { start: at(1, 0), end: at(1, 34) },
             selectedText: '  if (need.length === 0) return 1;',
             span: { startLine: 2, endLine: 2 }

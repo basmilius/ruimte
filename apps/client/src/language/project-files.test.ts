@@ -5,7 +5,7 @@ import type { Transport } from '@/transport-api/transport';
 import { TransportError } from '@/transport-api/transport';
 import { FakeLanguageTransport } from './fake-daemon';
 import { draftFiles } from './project-files';
-import { ProjectLanguage } from './ruimte-project-language';
+import { RuimteProject } from './ruimte-project';
 
 type Call = { type: RequestType; payload: unknown };
 
@@ -60,10 +60,10 @@ describe('overwriting', () => {
             return { size: payload.text.length, mtime: 2 };
         }) as never);
         const drafts = new TextDrafts(() => null);
-        const project = new ProjectLanguage(transport, 'p1', '/work', draftFiles('local', transport, 'p1', drafts));
+        const project = new RuimteProject(transport, 'p1', '/work', draftFiles('local', transport, 'p1', drafts));
         try {
             expect(
-                await project.applyWorkspaceEdit({
+                await project.language.applyWorkspaceEdit({
                     documentChanges: [
                         { kind: 'create', uri: 'file:///work/src/a.php', options: { overwrite: true } },
                         {

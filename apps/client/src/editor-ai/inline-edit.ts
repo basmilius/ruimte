@@ -1,6 +1,6 @@
 import { knownAccounts, providerAccountsOf, providersOf } from '@adecore/agents-react/state';
 import type { EditorRange, EditorTrackedRange } from '@adecore/editor';
-import { highlightLayers, shikiLanguageOf } from '@adecore/editor-react';
+import { highlightLayers, shikiLanguageOf, type EditorLanguage } from '@adecore/editor-react';
 import {
     codeLabelOf,
     inlineRangeOf,
@@ -16,7 +16,6 @@ import { fileUriToPath } from '@adecore/lsp';
 import { storedPathOf, type AgentKind } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
-import type { HostLanguage as EditorLanguage } from '@/language/host-language';
 import type { InlineEdit } from '@/language/ruimte-editor-language';
 import { isShortcut } from '@/language/shortcut-keys';
 import { inlineEditAccountOn, inlineEditAgentOn } from '@/state/ai-settings';
@@ -92,11 +91,14 @@ export class InlineEditFeature implements InlineEdit {
         this.depsFor = depsFor;
         const { editor } = language;
         const offs = [
-            editor.onKeyDown((event) => {
-                if (language.served && isShortcut(CANVAS_SHORTCUTS.inlineEdit, event)) {
+            language.onServedKey((event) => {
+                if (isShortcut(CANVAS_SHORTCUTS.inlineEdit, event)) {
                     this.start();
                     return true;
                 }
+                return false;
+            }),
+            editor.onKeyDown((event) => {
                 if (event.key === 'Escape' && this.store.getState().prompt !== null) {
                     this.cancel();
                     return true;

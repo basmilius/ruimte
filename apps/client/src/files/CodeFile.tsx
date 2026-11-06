@@ -314,7 +314,7 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
         return editorLanguage === null || element === null ? undefined : registerFocusedLanguage(editorLanguage, element);
     }, [editorLanguage]);
     useEffect(() => {
-        editorLanguage?.selectionChat.bindNode(nodeId);
+        editorLanguage?.app.selectionChat.bindNode(nodeId);
     }, [editorLanguage, nodeId]);
     useChangeMarks(editor, useGitBase(path, read.text));
     const agentChanges = useAgentChanges(editor, path, plain ? undefined : read.language);

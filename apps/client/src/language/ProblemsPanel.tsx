@@ -15,7 +15,7 @@ import { PanelHeaderActions, PanelHeaderSlot } from '@/surface/PanelHeaderSlot';
 import { useMachineAnswers } from '@/transport/features';
 import { useTransport } from '@/workspace/context';
 import { draftFiles } from './project-files';
-import { acquireProjectLanguage, type ProjectLanguage } from './ruimte-project-language';
+import { acquireProject, type RuimteProject } from './ruimte-project';
 import { report } from './server-status';
 import { offersWorkspaceProblems } from './status-view';
 
@@ -26,19 +26,19 @@ const ICONS = { error: CircleX, warning: TriangleAlert, info: Info } as const;
 const COLORS = { error: 'text-status-error', warning: 'text-status-needs-you', info: 'text-status-running' } as const;
 
 /* The language side of the project for as long as the panel is up, so what the servers report is heard while it is. */
-function useProjectLanguage(): ProjectLanguage | null {
+function useProjectLanguage(): RuimteProject | null {
     const transport = useTransport();
     const endpointId = useEndpointId();
     const projectId = useProject((state) => state.current?.projectId ?? null);
     const folder = useProject((state) => state.current?.folder ?? null);
-    const [holder] = useState(createHolder<ProjectLanguage>);
+    const [holder] = useState(createHolder<RuimteProject>);
 
     useEffect(() => {
         if (projectId === null || folder === null) {
             return;
         }
-        const held = acquireProjectLanguage(transport, projectId, folder, draftFiles(endpointId, transport, projectId));
-        holder.set(held.language);
+        const held = acquireProject(transport, projectId, folder, draftFiles(endpointId, transport, projectId));
+        holder.set(held.project);
         return () => {
             holder.set(null);
             held.release();
@@ -61,9 +61,10 @@ export function ProblemsPanel() {
     const { t } = useTranslation('panels');
     const endpointId = useEndpointId();
     const folder = useProject((state) => state.current?.folder ?? null);
-    const language = useProjectLanguage();
+    const project = useProjectLanguage();
+    const language = project?.language ?? null;
     const files = useSyncExternalStore(language?.problems.subscribe ?? (() => () => undefined), language?.problems.getSnapshot ?? (() => NONE));
-    const tracker = language?.status ?? null;
+    const tracker = project?.status ?? null;
     const statuses = useSyncExternalStore(
         (listener) => tracker?.subscribe(listener) ?? (() => undefined),
         () => tracker?.getSnapshot() ?? NO_STATUSES

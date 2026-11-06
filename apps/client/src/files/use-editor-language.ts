@@ -5,8 +5,8 @@ import { storedPathOf } from '@ruimte/contracts';
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { customLanguageIdOf } from '@/language/language-ids-host';
 import { draftFiles } from '@/language/project-files';
-import { EditorLanguage } from '@/language/ruimte-editor-language';
-import { acquireProjectLanguage } from '@/language/ruimte-project-language';
+import { createEditorLanguage, type EditorLanguage } from '@/language/ruimte-editor-language';
+import { acquireProject } from '@/language/ruimte-project';
 import { participateInSave } from '@/language/save-participation';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
@@ -29,11 +29,11 @@ function useOwnLanguageId(enabled: boolean, path: string, language: string | und
         if (!enabled || projectId === null || folder === null) {
             return;
         }
-        const held = acquireProjectLanguage(transport, projectId, folder, draftFiles(endpointId, transport, projectId));
+        const held = acquireProject(transport, projectId, folder, draftFiles(endpointId, transport, projectId));
         const stored = storedPathOf(folder, path);
-        const read = (): void => holder.set(customLanguageIdOf(held.language.status.getSnapshot(), language, stored));
+        const read = (): void => holder.set(customLanguageIdOf(held.project.status.getSnapshot(), language, stored));
         read();
-        const stop = held.language.status.subscribe(read);
+        const stop = held.project.status.subscribe(read);
         return () => {
             stop();
             holder.set(null);
@@ -67,8 +67,8 @@ export function useEditorLanguage(editor: Editor | null, path: string, language:
         if (editor === null || projectId === null || folder === null) {
             return;
         }
-        const held = acquireProjectLanguage(transport, projectId, folder, draftFiles(endpointId, transport, projectId));
-        const editorLanguage = new EditorLanguage(held.language, editor, pathToFileUri(path), languageId, realTimers, { serve });
+        const held = acquireProject(transport, projectId, folder, draftFiles(endpointId, transport, projectId));
+        const editorLanguage = createEditorLanguage(held.project, editor, pathToFileUri(path), languageId, realTimers, { serve });
         // The same path FileEditor hands the draft, so the keys match; a document no server serves has nothing to take part with.
         const offSave = serve ? textDrafts.participate(endpointId, path, (reason) => participateInSave(editorLanguage, reason)) : undefined;
         holder.set(editorLanguage);

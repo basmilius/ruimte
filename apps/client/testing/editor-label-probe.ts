@@ -12,7 +12,7 @@ import { FileEditor } from '@/files/FileEditor';
 import { initI18n } from '@/i18n';
 import dutchPanels from '@/i18n/locales/nl/panels.json' with { type: 'json' };
 import { FakeLanguageTransport } from '@/language/fake-daemon';
-import { ProjectLanguage } from '@/language/ruimte-project-language';
+import { RuimteProject } from '@/language/ruimte-project';
 
 export async function probeEditorLabels() {
     // The probe page boots no app, so nothing set the words up yet.
@@ -56,7 +56,7 @@ export async function probeEditorLabels() {
             mounted = editor;
         }
     };
-    const project = new ProjectLanguage(new FakeLanguageTransport(), 'editor-label-probe', '/work/app');
+    const project = new RuimteProject(new FakeLanguageTransport(), 'editor-label-probe', '/work/app');
     try {
         await i18next.changeLanguage('en');
         flushSync(() => root.render(createElement(FileEditor, props)));
@@ -72,8 +72,8 @@ export async function probeEditorLabels() {
             english,
             dutch,
             sameEditor: first !== null && first === mounted,
-            sameWords: project.i18n === i18next,
-            featureWords: project.i18n.t('editor:language.codeVision.usagesNone')
+            sameWords: project.language.i18n === i18next,
+            featureWords: project.language.i18n.t('editor:language.codeVision.usagesNone')
         };
     } finally {
         flushSync(() => root.unmount());

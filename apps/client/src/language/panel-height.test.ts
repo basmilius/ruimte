@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { memoryStorage } from '../../testing/memory-storage';
 import { FakeLanguageTransport } from './fake-daemon';
 import { readPanelHeight, writePanelHeight } from './panel-height';
-import { ProjectLanguage } from './ruimte-project-language';
+import { RuimteProject } from './ruimte-project';
 
 describe('the height of the peek and call hierarchy panel', () => {
     test('is nothing until a person has dragged it', () => {
@@ -41,10 +41,10 @@ describe('the height of the peek and call hierarchy panel', () => {
         const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
         Object.defineProperty(globalThis, 'localStorage', { value: storage, configurable: true });
         try {
-            const first = new ProjectLanguage(new FakeLanguageTransport(), 'p1', '/work/app');
-            first.resizePanelBody(260);
-            const second = new ProjectLanguage(new FakeLanguageTransport(), 'p1', '/work/app');
-            expect(second.panelBodyHeight).toBe(260);
+            const first = new RuimteProject(new FakeLanguageTransport(), 'p1', '/work/app');
+            first.language.resizePanelBody(260);
+            const second = new RuimteProject(new FakeLanguageTransport(), 'p1', '/work/app');
+            expect(second.language.panelBodyHeight).toBe(260);
         } finally {
             if (original === undefined) {
                 Reflect.deleteProperty(globalThis, 'localStorage');

@@ -5,7 +5,7 @@ import { InlineEditFeature } from './inline-edit';
 import { InlinePromptCard } from './InlinePromptCard';
 import { InlineProposalCard } from './InlineProposalCard';
 
-type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'inlineEdit'>;
+type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'app'>;
 
 /*
  * What an inline edit draws over an editor: the question in a row above the selected lines, and once
@@ -13,7 +13,7 @@ type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'inlineEdit'>;
  * they scroll with the text; this only fills them.
  */
 export function InlineEditLayer({ language }: { language: EditorLanguage }) {
-    const feature = language.inlineEdit;
+    const feature = language.app.inlineEdit;
     return feature instanceof InlineEditFeature ? <InlineEditCards feature={feature} language={language} /> : null;
 }
 

@@ -13,7 +13,7 @@ import type { EditorLanguage as RuimteEditorLanguage } from '@/language/ruimte-e
 import { isShortcut } from '@/language/shortcut-keys';
 import type { ApplyOutcome, InlineEditSession, InlineEditState } from './inline-edit-session';
 
-type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'inlineEdit'>;
+type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'app'>;
 
 const APPLY = shortcut('Mod+Enter');
 
@@ -147,12 +147,12 @@ export function InlineProposalCard({ language, session }: { language: EditorLang
     }
 
     function close(): void {
-        language.inlineEdit.returnToEditor();
+        language.app.inlineEdit.returnToEditor();
         session.hide();
     }
 
     async function discard(): Promise<void> {
-        language.inlineEdit.returnToEditor();
+        language.app.inlineEdit.returnToEditor();
         await session.discard();
     }
 

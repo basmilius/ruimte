@@ -8,12 +8,12 @@ import { useTranslation } from 'react-i18next';
 import { draftOf, emptyDraft, type CustomDraft } from '@/language/custom-draft';
 import { CustomServersTracker, useCustomServers } from '@/language/custom-servers';
 import { CustomServerDialog } from '@/language/CustomServerDialog';
-import type { ProjectLanguage } from '@/language/ruimte-project-language';
+import type { RuimteProject } from '@/language/ruimte-project';
 import { report, serverDetail, sidecarDetails, useStatuses } from '@/language/server-status';
 import { Dot, LogDialog, ServerActionButtons } from '@/language/ServerParts';
 import type { LanguageStatusTracker } from '@/language/status';
 import { actionsOf, groupedStatuses, isOwn, kindOf, nameOf, packageOf, toneOf } from '@/language/status-view';
-import { useWindowProjectLanguage } from '@/language/window-project-language';
+import { useWindowProject } from '@/language/window-project';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { useWindow, workspaceOf } from '@/workspace/window';
 
@@ -225,9 +225,9 @@ function OwnServers({
     );
 }
 
-function ServerList({ language }: { language: ProjectLanguage }) {
+function ServerList({ project }: { project: RuimteProject }) {
     const { t } = useTranslation('settings');
-    const tracker = language.status;
+    const tracker = project.status;
     const statuses = useStatuses(tracker);
     const own = useWindowCustomServers();
     const [logOf, setLogOf] = useState<string | null>(null);
@@ -262,14 +262,14 @@ function ServerList({ language }: { language: ProjectLanguage }) {
 /* The servers of the open project with the same actions as the status bar, so a person can install or restart one without opening a file, and the servers they added themselves. */
 export function LanguageServersTab() {
     const { t } = useTranslation('settings');
-    const language = useWindowProjectLanguage();
+    const project = useWindowProject();
 
-    if (language === null) {
+    if (project === null) {
         return (
             <SettingsSection title={t('editor.servers.title')}>
                 <SettingsRow muted searchId="editor.servers" label={t('editor.servers.needsProject')} />
             </SettingsSection>
         );
     }
-    return <ServerList language={language} />;
+    return <ServerList project={project} />;
 }

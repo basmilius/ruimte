@@ -7,8 +7,8 @@ import { useToasts } from '@/state/toasts';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { FakeLanguageTransport } from './fake-daemon';
 import { eventOf } from './key-events';
-import { EditorLanguage } from './ruimte-editor-language';
-import { ProjectLanguage } from './ruimte-project-language';
+import { createEditorLanguage } from './ruimte-editor-language';
+import { RuimteProject } from './ruimte-project';
 import { settleLanguage as settle } from './settle.test';
 
 const uri = 'file:///work/app/src/a.ts';
@@ -22,10 +22,10 @@ async function setup(options: { available?: boolean; text?: string; caret?: { li
         transport,
         options.available === false ? { available: false, reason: 'The selected editor model is unavailable.' } : {}
     );
-    const project = new ProjectLanguage(transport, 'p1', '/work/app');
+    const project = new RuimteProject(transport, 'p1', '/work/app');
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: options.text ?? TEXT, theme: 'light' });
     const timers = new ManualTimers();
-    const language = new EditorLanguage(project, editor, uri, 'typescript', timers);
+    const language = createEditorLanguage(project, editor, uri, 'typescript', timers);
     await language.document.ready;
     editor.moveCaret(options.caret ?? at(1, 4));
     const suggest = (): boolean => editor.press(eventOf(CANVAS_SHORTCUTS.suggestInline));
@@ -34,7 +34,7 @@ async function setup(options: { available?: boolean; text?: string; caret?: { li
 
 // Requests a continuation and lets the fake model answer it.
 async function suggested({ model, language }: Pick<Awaited<ReturnType<typeof setup>>, 'model' | 'language'>, answer: string) {
-    void language.ghost.request();
+    void language.app.ghost.request();
     await settle();
     model.answer(answer);
     await settle();
@@ -55,7 +55,7 @@ describe('ghost text on request', () => {
         expect(model.last.purpose).toBe('ghost');
         expect(model.last.prompt).toContain('<before>\nexport function bestMatch(pool: Candidate[]): Candidate | null {\n    </before>');
         expect(model.last.prompt).toContain('<after>\n}\n</after>');
-        expect(language.ghost.busy).toBe(true);
+        expect(language.app.ghost.busy).toBe(true);
         expect(editor.lineActionsByOwner.get('ghost-progress')).toHaveLength(1);
         expect(editor.ghost).toBeNull();
     });
@@ -68,8 +68,8 @@ describe('ghost text on request', () => {
         );
         expect(editor.ghost).toMatchObject({ position: at(1, 4), text: 'const [first] = rank(pool);\n    return first ?? null;' });
         expect(editor.lineActionsByOwner.has('ghost-progress')).toBe(false);
-        expect(language.ghost.busy).toBe(false);
-        expect(language.ghost.active).toBe(true);
+        expect(language.app.ghost.busy).toBe(false);
+        expect(language.app.ghost.active).toBe(true);
     });
 
     test('Tab takes all of it as one edit and leaves the caret behind it', async () => {
@@ -79,7 +79,7 @@ describe('ghost text on request', () => {
         expect(editor.getText()).toBe('export function bestMatch(pool: Candidate[]): Candidate | null {\n    return null;\n}\n');
         expect(editor.getCaret()).toEqual(at(1, 16));
         expect(editor.ghost).toBeNull();
-        expect(language.ghost.active).toBe(false);
+        expect(language.app.ghost.active).toBe(false);
     });
 
     test('a suggestion over several lines puts the caret at the end of its last line', async () => {
@@ -111,7 +111,7 @@ describe('ghost text on request', () => {
             expect(rig.editor.ghost).not.toBeNull();
             away(rig);
             expect(rig.editor.ghost).toBeNull();
-            expect(rig.language.ghost.active).toBe(false);
+            expect(rig.language.app.ghost.active).toBe(false);
         }
     });
 
@@ -127,12 +127,12 @@ describe('ghost text on request', () => {
             model.cancels.push(id);
             return {};
         });
-        void language.ghost.request();
+        void language.app.ghost.request();
         await settle();
         expect(editor.press(key('Escape'))).toBe(true);
         await settle();
         expect(model.cancels).toEqual([model.last.id]);
-        expect(language.ghost.busy).toBe(false);
+        expect(language.app.ghost.busy).toBe(false);
         expect(editor.lineActionsByOwner.has('ghost-progress')).toBe(false);
         model.answer('return null;');
         await settle();
@@ -141,7 +141,7 @@ describe('ghost text on request', () => {
 
     test('drops an answer for text that changed or a caret that moved in the meantime', async () => {
         const first = await setup();
-        void first.language.ghost.request();
+        void first.language.app.ghost.request();
         await settle();
         first.editor.type(`${first.editor.getText()}// edit`);
         first.model.answer('return null;');
@@ -149,7 +149,7 @@ describe('ghost text on request', () => {
         expect(first.editor.ghost).toBeNull();
 
         const second = await setup();
-        void second.language.ghost.request();
+        void second.language.app.ghost.request();
         await settle();
         second.editor.moveCaret(at(2, 0));
         second.model.answer('return null;');
@@ -172,7 +172,7 @@ describe('ghost text on request', () => {
 
     test('says why the model is not there and asks for nothing', async () => {
         const { model, language } = await setup({ available: false });
-        await language.ghost.request();
+        await language.app.ghost.request();
         expect(model.requests).toEqual([]);
         expect(useToasts.getState().toasts.at(-1)?.title).toBe('The selected editor model is unavailable.');
     });
@@ -181,7 +181,7 @@ describe('ghost text on request', () => {
         useSettings.setState({ aiGhostText: 'off' });
         const { model, language, suggest } = await setup();
         expect(suggest()).toBe(false);
-        await language.ghost.request();
+        await language.app.ghost.request();
         expect(model.requests).toEqual([]);
         expect(useToasts.getState().toasts.at(-1)?.title).toContain('Suggestions are off');
     });
@@ -192,7 +192,7 @@ describe('ghost text on request', () => {
         await settle();
         expect(model.requests).toEqual([]);
         editor.setSelection({ start: at(0, 0), end: at(0, 6) });
-        await language.ghost.request();
+        await language.app.ghost.request();
         expect(model.requests).toEqual([]);
     });
 });
@@ -211,8 +211,8 @@ describe('ghost text with shared completions', () => {
             language.completion.invoke();
             timers.advance(20);
             await settle();
-            expect(language.popups.getState().completion).not.toBeNull();
-            expect(language.ghost.active).toBe(true);
+            expect(language.popups.slot('completion').get()).not.toBeNull();
+            expect(language.app.ghost.active).toBe(true);
             expect(editor.press(key('Tab'))).toBe(true);
             expect(editor.getText()).toContain('return null;');
         } finally {
