@@ -9,6 +9,8 @@ export * from './preferences.ts';
 export * from './prompts.ts';
 export * from './replies.ts';
 export * from './session-watch.ts';
+export * from './time-context.ts';
 export * from './tool-arguments.ts';
 export * from './tool-events.ts';
 export * from './tool-loop.ts';
+export * from './tool-output.ts';

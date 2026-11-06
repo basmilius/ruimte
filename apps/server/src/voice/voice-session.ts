@@ -15,7 +15,7 @@ import type {
     VoiceStartResult,
     VoiceStatusEvent
 } from '@ruimte/contracts';
-import { contextChunks, daemonVoiceTools, VoiceCompletionDelivery, VoiceToolLoop, type LiveEvent } from '@ruimte/voice';
+import { contextChunks, daemonVoiceTools, timeContext, VoiceCompletionDelivery, VoiceToolLoop, type LiveEvent } from '@ruimte/voice';
 import { voiceActionCall, type ServerActionContext, type VoiceCaller, type VoiceOpenProject } from '../actions/context.ts';
 import { openProjects } from '../actions/voice-project-reading.ts';
 import { type CanvasHost } from '../canvas/host.ts';
@@ -24,7 +24,7 @@ import { voicePolicy } from './action-policy.ts';
 import type { VoiceClock } from './clock.ts';
 import { LiveError, type OpenAiLive } from './openai-live.ts';
 import { voicePreferencesFor } from './preferences-store.ts';
-import { sessionContext, timeContext } from './session-context.ts';
+import { sessionContext } from './session-context.ts';
 import type { LiveSideband } from './sideband.ts';
 import { VoiceToolExecutor, type VoiceActionRunner, type VoiceToolQuestion } from './tool-executor.ts';
 import { VoiceFollower, type VoiceFollowActivity, type VoiceFollowChats } from './voice-follower.ts';

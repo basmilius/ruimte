@@ -6,6 +6,7 @@ import {
     settledPrompt,
     SETTLED_COMMENTARY,
     terminalWaits,
+    timeContext,
     VoiceCompletionDelivery,
     VoiceSessionWatch,
     waitingPrompt,
@@ -66,15 +67,8 @@ function failureText(error: unknown): string {
     return messageOf(error, i18next.t('voice:error.start'));
 }
 
-/*
- * This context is for the speech model, not something a person reads, so it skips `format/`. A fixed
- * `en-GB` keeps the date unambiguous whatever the interface language is set to.
- */
 function temporalContext(): string {
-    const now = new Date();
-    const timeZone = localTimeZone() ?? 'unknown';
-    const local = new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long' }).format(now);
-    return `User local date and time: ${local}. IANA time zone: ${timeZone}. UTC time: ${now.toISOString()}.`;
+    return timeContext(Date.now(), localTimeZone() ?? null);
 }
 
 function workspaceContext(): string {

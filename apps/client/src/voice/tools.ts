@@ -2,6 +2,8 @@ import { VOICE_CONTROL_TOOL, VOICE_TOOL_ACTIONS, type ActionName, type ActionOut
 import {
     actionInput,
     confirmationOf,
+    confirmationRequestOutput,
+    failedActionOutput,
     objectArguments,
     voiceReplyOf,
     type VoiceChatFollowUp,
@@ -56,15 +58,14 @@ function failed(message: string, data: Record<string, unknown> = {}): VoiceToolE
 }
 
 function failureOf(result: ActionResult): VoiceToolExecution {
-    return result.status === 'needs_confirmation'
-        ? failed('Ask the user to confirm or cancel this action before continuing.', {
-              needs_confirmation: true,
-              confirmation_token: result.confirmationToken,
-              confirmation: result.confirmation
-          })
-        : failed(result.status === 'failed' ? result.error.message : 'The action could not be completed.', {
-              code: result.status === 'failed' ? result.error.code : result.status
-          });
+    switch (result.status) {
+        case 'needs_confirmation':
+            return { output: confirmationRequestOutput(result) };
+        case 'failed':
+            return { output: failedActionOutput(result) };
+        default:
+            return failed('The action could not be completed.', { code: result.status });
+    }
 }
 
 function completed(name: ActionName, output: Record<string, unknown>, undoToken: string | undefined, endpointId: string): VoiceToolExecution {

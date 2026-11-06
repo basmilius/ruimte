@@ -190,6 +190,9 @@ function mayGive(schema: z.ZodType, value: unknown, actor: ActionActorKind): boo
     return true;
 }
 
+/* What the registry calls a failure no handler coded: its message is that of whatever was thrown, so a reader who must not hear it checks for this. */
+export const UNCODED_FAILURE_CODE = 'action-failed';
+
 function failure(action: ActionName | null, code: string, message: string, details?: unknown): ActionFailed {
     return {
         status: 'failed',
@@ -379,6 +382,6 @@ export class ActionRegistry<Context> {
         if (refusal) {
             return failure(action, refusal.code, refusal.message, refusal.details);
         }
-        return failure(action, 'action-failed', error instanceof Error ? error.message : `The action “${action}” failed.`);
+        return failure(action, UNCODED_FAILURE_CODE, error instanceof Error ? error.message : `The action “${action}” failed.`);
     }
 }
