@@ -79,6 +79,19 @@ describe('removing the Voice key', () => {
         expect(await restarted.status()).toEqual({ configured: false, persistent: false });
     });
 
+    test('a key removed while the app runs without its machine is taken from the machine at the next local start', async () => {
+        const machine = fakeMachine();
+        const keys = memoryStore();
+        const pendingPath = join(folder, 'openai-api-key-removal');
+        await voiceKey(() => keys, pendingRemovalFile(pendingPath), machine).save('sk-test');
+
+        expect(await voiceKey(() => keys, pendingRemovalFile(pendingPath), null).remove()).toEqual({ configured: false, persistent: false });
+
+        await voiceKey(() => keys, pendingRemovalFile(pendingPath), machine).handOver();
+
+        expect(machine.copy).toBeNull();
+    });
+
     test('a key saved while a removal is owed is what the machine holds next', async () => {
         const machine = fakeMachine();
         const keys = memoryStore();

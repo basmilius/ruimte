@@ -101,11 +101,9 @@ export function voiceKey(keys: () => SecretStore, pending: PendingRemoval, machi
             return status();
         },
         async remove() {
-            // Owed before the shell's copy goes, so a crash in between still takes the machine's copy.
-            if (machine !== null) {
-                await pending.set(true);
-            }
-
+            /* Owed before the shell's copy goes, so a crash in between still takes the machine's copy. Also
+               owed outside machine mode `local`: the next start that runs the machine takes its copy then. */
+            await pending.set(true);
             await keys().write(null);
 
             if (!(await settleRemoval())) {
