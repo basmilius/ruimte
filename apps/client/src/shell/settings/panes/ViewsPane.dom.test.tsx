@@ -13,12 +13,12 @@ function choice(label: string): HTMLElement | null {
 }
 
 beforeEach(async () => {
-    await act(async () => useSettings.getState().update({ canvasRenderDistance: 'standard' }));
+    await act(async () => useSettings.getState().update({ canvasRenderDistance: 'standard', sidebarNodeSort: 'canvas', sidebarNodeSortThen: 'newest' }));
 });
 
 afterEach(async () => {
     await page.unmount();
-    await act(async () => useSettings.getState().update({ canvasRenderDistance: 'standard' }));
+    await act(async () => useSettings.getState().update({ canvasRenderDistance: 'standard', sidebarNodeSort: 'canvas', sidebarNodeSortThen: 'newest' }));
 });
 
 describe('Settings > Views > Canvas > Render distance', () => {
@@ -37,5 +37,26 @@ describe('Settings > Views > Canvas > Render distance', () => {
     test('is found by a search for its words', () => {
         expect(searchSettings('render distance')[0]).toMatchObject({ section: 'views', id: 'views.canvas.renderDistance' });
         expect(searchSettings('still picture').map((result) => result.id)).toContain('views.canvas.renderDistance');
+    });
+});
+
+describe('Settings > Views > Canvas > Order in the sidebar', () => {
+    const row = (label: string) =>
+        [...document.querySelectorAll<HTMLElement>('*')].some((element) => element.childElementCount === 0 && element.textContent === label);
+
+    test('sits under Canvas and asks for the order within a kind or status only when there is one', async () => {
+        page = mount();
+        await page.render(<ViewsPane />);
+        await until(() => row('Order in the sidebar'));
+        expect(row('Within a kind or status')).toBe(false);
+
+        await act(async () => useSettings.getState().update({ sidebarNodeSort: 'status' }));
+        await until(() => row('Within a kind or status'));
+        await act(async () => useSettings.getState().update({ sidebarNodeSort: 'name' }));
+        await until(() => !row('Within a kind or status'));
+    });
+
+    test('is found by a search for its words', () => {
+        expect(searchSettings('order in the sidebar')[0]).toMatchObject({ section: 'views', id: 'views.canvas.sidebarSort' });
     });
 });

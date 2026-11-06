@@ -35,14 +35,7 @@
         "moveDown": "Omlaag",
         "newView": "Nieuwe weergave",
         "separator": "Scheiding",
-        "separatorLabel": "Label (optioneel)",
-        "sort": {
-            "label": "Volgorde van de nodes",
-            "canvas": "Zoals op het canvas",
-            "name": "Op naam",
-            "kind": "Op soort",
-            "status": "Op status"
-        }
+        "separatorLabel": "Label (optioneel)"
     },
     "snooze": {
         "action": "Snoozen",

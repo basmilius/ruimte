@@ -35,14 +35,7 @@
         "moveDown": "Move down",
         "newView": "New view",
         "separator": "Separator",
-        "separatorLabel": "Label (optional)",
-        "sort": {
-            "label": "Order of the nodes",
-            "canvas": "As on the canvas",
-            "name": "By name",
-            "kind": "By kind",
-            "status": "By status"
-        }
+        "separatorLabel": "Label (optional)"
     },
     "snooze": {
         "action": "Snooze",
