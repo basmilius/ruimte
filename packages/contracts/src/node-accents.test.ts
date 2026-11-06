@@ -1,5 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import { NODE_ACCENT_NAMES, nodeColorOf, nodeColorPatch, notePaperOf } from './node-accents.ts';
+import { NODE_ACCENT_COLORS, NODE_ACCENT_NAMES, nodeColorOf, nodeColorPatch, notePaperOf } from './node-accents.ts';
+
+describe('the paint of the accents', () => {
+    test('is one distinct sRGB hex for each name', () => {
+        const colors = NODE_ACCENT_NAMES.map((name) => NODE_ACCENT_COLORS[name]);
+
+        expect(colors.every((color) => /^#[0-9a-f]{6}$/.test(color))).toBe(true);
+        expect(new Set(colors).size).toBe(NODE_ACCENT_NAMES.length);
+    });
+});
 
 describe('notePaperOf', () => {
     test('reads the four old papers as the accent of their name, and gray as the neutral paper', () => {

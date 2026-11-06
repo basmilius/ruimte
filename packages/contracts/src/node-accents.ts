@@ -1,4 +1,4 @@
-/* The shared picker order; clients supply the colors and the daemon validates these names. */
+/* The shared picker order; the daemon validates these names, and every client paints them from `NODE_ACCENT_COLORS`. */
 export const NODE_ACCENT_NAMES = [
     'red',
     'orange',
@@ -20,6 +20,31 @@ export const NODE_ACCENT_NAMES = [
 ] as const;
 
 export type NodeAccent = (typeof NODE_ACCENT_NAMES)[number];
+
+/*
+ * Tailwind's 600 ramp without the grays, in sRGB hex rather than the oklch Tailwind writes them in:
+ * an accent reaches xterm as a literal color and its parser knows no oklch. The iOS app reads the
+ * same table through `generate-swift.ts`.
+ */
+export const NODE_ACCENT_COLORS: Readonly<Record<NodeAccent, string>> = {
+    red: '#e7000b',
+    orange: '#f54900',
+    amber: '#e17100',
+    yellow: '#d08700',
+    lime: '#5ea500',
+    green: '#00a63e',
+    emerald: '#009966',
+    teal: '#009689',
+    cyan: '#0092b8',
+    sky: '#0084d1',
+    blue: '#155dfc',
+    indigo: '#4f39f6',
+    violet: '#7f22fe',
+    purple: '#9810fa',
+    fuchsia: '#c800de',
+    pink: '#e60076',
+    rose: '#ec003f'
+};
 
 export function isNodeAccent(name: unknown): name is NodeAccent {
     return (NODE_ACCENT_NAMES as readonly unknown[]).includes(name);

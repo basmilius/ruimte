@@ -1,6 +1,15 @@
 // Only a type from the project schema, so the test host of `@ruimte/extension/testing` takes these without zod.
 import type { NodeKind } from './project.ts';
-export { NODE_ACCENT_NAMES, type NodeAccent, type NotePaper, isNodeAccent, notePaperOf, nodeColorOf, nodeColorPatch } from './node-accents.ts';
+export {
+    NODE_ACCENT_COLORS,
+    NODE_ACCENT_NAMES,
+    type NodeAccent,
+    type NotePaper,
+    isNodeAccent,
+    notePaperOf,
+    nodeColorOf,
+    nodeColorPatch
+} from './node-accents.ts';
 
 export interface NodeSize {
     w: number;
