@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { PushSubscribePayloadSchema, clientChannelMessage } from '@ruimte/contracts';
+import { PushSubscribePayloadSchema } from '@ruimte/contracts';
 import {
     ACCESS_STATEMENT_LIFETIME_MS,
     PULSAR_STATEMENT_PUBLIC_KEYS,
     accessStatementMessage,
     accessStatementV2Message,
+    clientChannelMessage,
     peerStatementMessage,
     type AccessStatement,
     type PeerStatement,

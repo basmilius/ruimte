@@ -7,15 +7,13 @@ import {
     DIRECT_PING_TICK_MS,
     ICE_GATHER_TIMEOUT_MS,
     directPingFrame,
-    clientChannelMessage,
-    daemonChannelMessage,
     DIRECT_CHANNEL_LABEL,
     DirectChallengeFrameSchema,
     PROTOCOL_VERSION,
     DirectVerdictFrameSchema,
     type DirectProofFrame
 } from '@ruimte/contracts';
-import type { IceServer, SignalEnvelope, SignalOfferAccess } from '@ruimte/pulsar';
+import { clientChannelMessage, daemonChannelMessage, type IceServer, type SignalEnvelope, type SignalOfferAccess } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { RTCPeerConnection, type RTCDataChannel } from 'werift';
 import { signMessage } from '../auth/keys.ts';

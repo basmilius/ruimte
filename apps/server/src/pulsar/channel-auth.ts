@@ -2,12 +2,12 @@ import { createHmac } from 'node:crypto';
 import {
     DIRECT_COMPRESSION,
     DirectProofFrameSchema,
-    localSecretChannelMessage,
     PROTOCOL_VERSION,
     type AuthChallengeResult,
     type AuthTicketPayload,
     type AuthTicketResult
 } from '@ruimte/contracts';
+import { localSecretChannelMessage } from '@ruimte/pulsar';
 import type { ChannelGrant } from '../auth/handshake.ts';
 import { sameSecret } from '../auth/local-secret.ts';
 import { errorText } from '../error-text.ts';

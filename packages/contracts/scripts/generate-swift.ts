@@ -236,7 +236,7 @@ const constants = {
     bytesChunkMax: BYTES_CHUNK_MAX,
     pushMaxAgeMs: push.PUSH_MAX_AGE_MS,
     pushMaxClockSkewMs: push.PUSH_MAX_CLOCK_SKEW_MS,
-    pushHKDFSalt: push.PUSH_HKDF_SALT,
+    pushHKDFSalt: signing.PUSH_HKDF_SALT,
     bytesReadMaxBytes: BYTES_READ_MAX_BYTES,
     chatModelMaxBytes: CHAT_MODEL_MAX_BYTES,
     bytesReplyKind: BYTES_REPLY_KIND,
@@ -444,6 +444,7 @@ const offer = {
     connectionId: 'attempt_1',
     signal: { kind: 'offer' as const, sdp: 'v=0\r\na=fingerprint:sha-256 aa:BB\r\n', access: { statement, label: 'Bás 📱 漢字 / "ruimte"\n' } }
 };
+const channelBindingFixture = direct.channelBinding(offer.signal.sdp, 'a=fingerprint:SHA-256 cc:dd\r\na=fingerprint:sha-256 CC:DD\r\n');
 const signatureFixtures = [
     {
         kind: 'sessionKey',
@@ -462,7 +463,50 @@ const signatureFixtures = [
             connectionId: 'attempt_2',
             signal: { kind: 'candidate', candidate: '', sdpMid: null, sdpMLineIndex: null }
         })
-    }
+    },
+    {
+        kind: 'machineRegistration',
+        args: ['account-1', 'machine-1', key, 'Mac', 1000],
+        expected: signing.machineRegistrationMessage('account-1', 'machine-1', key, 'Mac', 1000)
+    },
+    { kind: 'accessStatement', args: ['machine-1', key, nonce, 1000, 121000], expected: signing.accessStatementMessage('machine-1', key, nonce, 1000, 121000) },
+    {
+        kind: 'accessStatementV2',
+        args: ['machine-1', key, 'account-1', key, nonce, 1000, 121000],
+        expected: signing.accessStatementV2Message('machine-1', key, 'account-1', key, nonce, 1000, 121000)
+    },
+    { kind: 'deviceLinkStart', args: ['machine-1', key, 'Mac', 1000], expected: signing.deviceLinkStartMessage('machine-1', key, 'Mac', 1000) },
+    { kind: 'lanDoor', args: [nonce, 'machine-1', key], expected: signing.lanDoorMessage(nonce, 'machine-1', key) },
+    { kind: 'mapsTicketMac', args: [key, 1789488000123], expected: signing.mapsTicketBytes(key, 1789488000123) },
+    {
+        kind: 'peerAccessRequest',
+        args: ['machine-1', key, 'machine-2', nonce],
+        expected: signing.peerAccessRequestMessage('machine-1', key, 'machine-2', nonce)
+    },
+    {
+        kind: 'peerStatement',
+        args: ['machine-1', key, 'account-1', key, 'machine-2', key, nonce, 1000, 121000],
+        expected: signing.peerStatementMessage('machine-1', key, 'account-1', key, 'machine-2', key, nonce, 1000, 121000)
+    },
+    { kind: 'extensionStore', args: ['{"extensions":[]}'], expected: signing.extensionStoreMessage('{"extensions":[]}') },
+    { kind: 'daemonChallenge', args: ['machine-1', 'challenge'], expected: signing.daemonChallengeMessage('machine-1', 'challenge') },
+    { kind: 'clientAuth', args: ['machine-1', 'challenge', key], expected: signing.clientAuthMessage('machine-1', 'challenge', key) },
+    {
+        kind: 'daemonChannel',
+        args: ['machine-1', 'challenge', channelBindingFixture],
+        expected: signing.daemonChannelMessage('machine-1', 'challenge', channelBindingFixture)
+    },
+    {
+        kind: 'clientChannel',
+        args: ['machine-1', 'challenge', key, channelBindingFixture],
+        expected: signing.clientChannelMessage('machine-1', 'challenge', key, channelBindingFixture)
+    },
+    {
+        kind: 'localChannel',
+        args: ['machine-1', 'challenge', channelBindingFixture],
+        expected: signing.localSecretChannelMessage('machine-1', 'challenge', channelBindingFixture)
+    },
+    { kind: 'machineProof', args: [4210, nonce], expected: signing.machineProofMessage(4210, nonce) }
 ];
 const framingFixtures = ['hello', 'A'.repeat(15999) + '📱' + '終', 'e\u0301'.repeat(9000), ''].map((input) => ({ input, pieces: direct.splitFrame(input) }));
 const validationInputs: { schema: string; input: unknown }[] = [
@@ -827,11 +871,11 @@ const pushContent = {
 };
 const pushShared = diffieHellman({ privateKey: ephemeralKey, publicKey: createPublicKey(recipientKey) });
 const pushSymmetric = Buffer.from(
-    hkdfSync('sha256', pushShared, Buffer.from(push.PUSH_HKDF_SALT), Buffer.from(push.pushEncryptionInfo(pushRouting.machineId, pushRouting.handle)), 32)
+    hkdfSync('sha256', pushShared, Buffer.from(signing.PUSH_HKDF_SALT), Buffer.from(push.pushEncryptionInfo(pushRouting.machineId, pushRouting.handle)), 32)
 );
 const pushNonce = Buffer.alloc(12, 3);
 const pushCipher = createCipheriv('aes-256-gcm', pushSymmetric, pushNonce, { authTagLength: 16 });
-pushCipher.setAAD(Buffer.from(push.pushRoutingMessage(pushRouting)));
+pushCipher.setAAD(Buffer.from(signing.pushRoutingMessage(pushRouting)));
 const pushCiphertext = Buffer.concat([pushCipher.update(Buffer.from(JSON.stringify(pushContent))), pushCipher.final(), pushCipher.getAuthTag()]);
 const unsignedPush = {
     ...pushRouting,
@@ -846,7 +890,7 @@ const pushEncryption = { privateKey: pushPrivateBytes.toString('base64url'), mac
 const readContent = { nodeId: 'node-1', through: 999, expiresAt: 121000 };
 const readNonce = Buffer.alloc(12, 4);
 const readCipher = createCipheriv('aes-256-gcm', pushSymmetric, readNonce, { authTagLength: 16 });
-readCipher.setAAD(Buffer.from(push.pushRoutingMessage(pushRouting)));
+readCipher.setAAD(Buffer.from(signing.pushRoutingMessage(pushRouting)));
 const readCiphertext = Buffer.concat([readCipher.update(Buffer.from(JSON.stringify(readContent))), readCipher.final(), readCipher.getAuthTag()]);
 const unsignedRead = {
     ...unsignedPush,
@@ -887,6 +931,7 @@ outputs.set(
             eventTypes: eventNames,
             crypto,
             signatures: signatureFixtures,
+            purposes: signing.SIGNING_PURPOSES,
             framing: framingFixtures,
             validations,
             binding: {

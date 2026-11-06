@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { createHmac } from 'node:crypto';
-import { clientChannelMessage, daemonChannelMessage, localSecretChannelMessage, PROTOCOL_VERSION, type DirectChallengeFrame } from '@ruimte/contracts';
+import { PROTOCOL_VERSION, type DirectChallengeFrame } from '@ruimte/contracts';
+import { clientChannelMessage, daemonChannelMessage, localSecretChannelMessage } from '@ruimte/pulsar';
 import type { ClientKey } from '@/endpoint/client-key';
 import { proveChallenge } from './direct-auth';
 

@@ -1,10 +1,12 @@
 import type { BrokerRole } from './broker.ts';
-import type { PushEnvelope } from './push.ts';
+import type { PushEnvelope, PushRouting } from './push.ts';
 import type { SignalEnvelope } from './signaling.ts';
 
 /*
- * Purpose prefixes prevent cross-protocol signatures. Ordered JSON preserves newlines and nulls
- * without ambiguous separators, and the `pulsar-` namespace stays separate from daemon handshakes.
+ * Every prefix Ruimte signs, MACs or derives a key under, so one test can hold that no two are alike
+ * and none starts another. Ordered JSON preserves newlines and nulls without ambiguous separators.
+ * The `ruimte-` rows keep the names they had before they moved here, so a signature made then still
+ * verifies; the rest are in the `pulsar-` namespace.
  */
 export const SIGNING_PURPOSES = {
     brokerHello: 'pulsar-broker-hello-v1',
@@ -17,25 +19,81 @@ export const SIGNING_PURPOSES = {
     sessionRefresh: 'pulsar-session-refresh-v1',
     deviceLinkStart: 'pulsar-device-link-start-v1',
     push: 'pulsar-push-v1',
+    // The AAD of a push's encryption, so a ciphertext only opens under the routing it was sent with.
+    pushRouting: 'pulsar-push-routing-v1',
+    // The HKDF salt of a push's key, not a message.
+    pushEncryption: 'pulsar-push-encryption-v1',
     lanDoor: 'pulsar-lan-door-v1',
     mapsTicketMac: 'pulsar-maps-ticket-mac-v1',
+    // What the maps secret derives its subject key and its path key under, and the first line of a path's mark: keys, not signed messages.
+    mapsTicketSubject: 'pulsar-maps-ticket-subject-v1',
+    mapsPathKey: 'pulsar-maps-path-key-v1',
+    mapsPath: 'pulsar-maps-path-v1',
     peerAccessRequest: 'pulsar-peer-access-request-v1',
-    peerStatement: 'pulsar-peer-statement-v1'
+    peerStatement: 'pulsar-peer-statement-v1',
+    // The extension store's own key signs `index.json` whole.
+    extensionStore: 'ruimte-extension-store-v1',
+    daemonChallenge: 'ruimte-daemon-v1',
+    clientAuth: 'ruimte-client-v1',
+    daemonChannel: 'ruimte-daemon-channel-v1',
+    clientChannel: 'ruimte-client-channel-v1',
+    localChannel: 'ruimte-local-channel-v1',
+    machineProof: 'ruimte machine proof v1'
 } as const;
 export type SigningPurpose = (typeof SIGNING_PURPOSES)[keyof typeof SIGNING_PURPOSES];
 
-/*
- * The extension store's own key signs `index.json` whole, outside the `pulsar-` namespace and under the
- * prefix it had before it moved here, so an index signed then still verifies.
- */
-export const EXTENSION_STORE_PURPOSE = 'ruimte-extension-store-v1';
+// The salt a push's key is derived with, from the shared secret and `pushEncryptionInfo`.
+export const PUSH_HKDF_SALT = SIGNING_PURPOSES.pushEncryption;
 
 export function extensionStoreMessage(index: string): string {
-    return `${EXTENSION_STORE_PURPOSE}\n${index}`;
+    return `${SIGNING_PURPOSES.extensionStore}\n${index}`;
 }
 
 function signedBytes(purpose: SigningPurpose, fields: ReadonlyArray<string | number | null>): string {
     return `${purpose}\n${JSON.stringify(fields)}`;
+}
+
+function signedLines(purpose: SigningPurpose, fields: readonly (string | number)[]): string {
+    return [purpose, ...fields].join('\n');
+}
+
+/*
+ * The daemon id in each message keeps a signature from proving anything to another machine, and the
+ * client's key in its own keeps an answer for one key from being handed in under another.
+ */
+export function daemonChallengeMessage(daemonId: string, challenge: string): string {
+    return signedLines(SIGNING_PURPOSES.daemonChallenge, [daemonId, challenge]);
+}
+
+export function clientAuthMessage(daemonId: string, challenge: string, publicKey: string): string {
+    return signedLines(SIGNING_PURPOSES.clientAuth, [daemonId, challenge, publicKey]);
+}
+
+/*
+ * The bytes signed on a channel. Prefixes of their own, so a signature over the HTTP handshake's
+ * challenge never verifies as one over a channel's, and the binding last, since it is JSON and the
+ * fields before it never hold a newline.
+ */
+export function daemonChannelMessage(daemonId: string, challenge: string, binding: string): string {
+    return signedLines(SIGNING_PURPOSES.daemonChannel, [daemonId, challenge, binding]);
+}
+
+export function clientChannelMessage(daemonId: string, challenge: string, publicKey: string, binding: string): string {
+    return signedLines(SIGNING_PURPOSES.clientChannel, [daemonId, challenge, publicKey, binding]);
+}
+
+// Keyed with the local secret as an HMAC-SHA256, so the channel learns that the client holds it and never the secret itself.
+export function localSecretChannelMessage(daemonId: string, challenge: string, binding: string): string {
+    return signedLines(SIGNING_PURPOSES.localChannel, [daemonId, challenge, binding]);
+}
+
+/*
+ * What a daemon's proof of the local secret covers. The port is in it too, so a daemon of the same home on
+ * another port cannot answer for whatever holds this one, and the prefix keeps the HMAC from ever meaning
+ * anything else signed with the secret.
+ */
+export function machineProofMessage(port: number, nonce: string): string {
+    return signedLines(SIGNING_PURPOSES.machineProof, [port, nonce]);
 }
 
 /*
@@ -179,6 +237,11 @@ export function pushMessage(push: PushEnvelope): string {
         }
     }
     return signedBytes(SIGNING_PURPOSES.push, [push.machineId, push.handle, push.id, push.issuedAt, push.expiresAt, push.collapseId, push.pushType, ...body]);
+}
+
+// What a push's encryption authenticates besides its ciphertext: where it goes and how long it lives.
+export function pushRoutingMessage(push: PushRouting): string {
+    return signedBytes(SIGNING_PURPOSES.pushRouting, [push.machineId, push.handle, push.id, push.issuedAt, push.expiresAt, push.collapseId]);
 }
 
 /*

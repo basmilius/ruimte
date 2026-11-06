@@ -1,4 +1,4 @@
-import { toBase64Url } from '@ruimte/pulsar';
+import { machineProofMessage, toBase64Url } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { KeepAwakeModeSchema } from './keep-awake.ts';
 import { LanDoorSchema } from './lan-door.ts';
@@ -149,19 +149,11 @@ export const MachineProofRequestSchema = z.object({ nonce: z.string().min(16).ma
 
 export const MachineProofResultSchema = z.object({ proof: z.string().min(1) });
 
-/*
- * The port is covered too, so a daemon of the same home on another port cannot answer for whatever
- * holds this one. The first line keeps the HMAC from ever meaning anything else signed with the secret.
- */
-function proofMessage(port: number, nonce: string): string {
-    return `ruimte machine proof v1\n${port}\n${nonce}`;
-}
-
 /* HMAC-SHA256 under the local secret, in base64url, with WebCrypto so the daemon and the shell compute the same bytes. */
 export async function localProofOf(secret: string, port: number, nonce: string): Promise<string> {
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    return toBase64Url(await crypto.subtle.sign('HMAC', key, encoder.encode(proofMessage(port, nonce))));
+    return toBase64Url(await crypto.subtle.sign('HMAC', key, encoder.encode(machineProofMessage(port, nonce))));
 }
 
 /* Whether a reply to the proof request was made with this secret, for this port and this nonce. */

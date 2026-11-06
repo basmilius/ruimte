@@ -1,12 +1,5 @@
-import {
-    clientChannelMessage,
-    daemonChannelMessage,
-    localSecretChannelMessage,
-    PROTOCOL_VERSION,
-    type DirectChallengeFrame,
-    type DirectProofFrame
-} from '@ruimte/contracts';
-import { toBase64Url } from '@ruimte/pulsar';
+import { PROTOCOL_VERSION, type DirectChallengeFrame, type DirectProofFrame } from '@ruimte/contracts';
+import { clientChannelMessage, daemonChannelMessage, localSecretChannelMessage, toBase64Url } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-web';
 import i18next from 'i18next';
 import { clientKey, type ClientKey } from '@/endpoint/client-key';

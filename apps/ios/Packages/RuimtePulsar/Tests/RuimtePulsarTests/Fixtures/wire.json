@@ -574,6 +574,96 @@
       "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
       "message": "pulsar-signal-v1\n[\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"attempt_2\",\"candidate\",\"\",null,null]",
       "signature": "qQrSG_-2gqcymKdlzulJimOMmOd4siI-vaj4NFCNOH98XkWG5bmSQLRZc8BO_CalhXn8Ie7IXhB2V_gtlrg3Dg"
+    },
+    {
+      "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+      "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "message": "pulsar-machine-registration-v1\n[\"account-1\",\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"Mac\",1000]",
+      "signature": "ILBLKu6sP8H-ml5xKQ-M_cJ85DiLGYuAVbaEJPEqc1jzQN1WhJrogE77CnWiXWtd9mcSzfFNbQUhYvgSOwwPCg"
+    },
+    {
+      "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+      "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "message": "pulsar-access-statement-v1\n[\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"nnnnnnnnnnnnnnnnnnnnnnnn\",1000,121000]",
+      "signature": "7PQEIwlFEWTAJ3IGaTVlP8SJjD49CXwxFrk3o52KPdrlEwFzY65-XT5BUsD7GkjgrD3zB1FOk8NP2gRGbL0mCQ"
+    },
+    {
+      "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+      "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "message": "pulsar-access-statement-v2\n[\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"nnnnnnnnnnnnnnnnnnnnnnnn\",1000,121000]",
+      "signature": "lOwMtBVpueQhpXBnJs4gGvukGZ6OC1B85UidUfBx0RNffJ9av-iKvY2NNuxYlAIue54CzSF8Id1yedl7AYWiCA"
+    },
+    {
+      "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+      "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "message": "pulsar-device-link-start-v1\n[\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"Mac\",1000]",
+      "signature": "sfSWlollvCYam9Xjgxy18y8Q4ipbQZLPgehoAu1--W1HCPcUHpmvLOvu3GPcDM1BeSOxV2G79OnAxS6bUKSlBg"
+    },
+    {
+      "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+      "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "message": "pulsar-lan-door-v1\n[\"nnnnnnnnnnnnnnnnnnnnnnnn\",\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"]",
+      "signature": "YClxrgGDustd61cKwCNW4oeX4saTgBKydW4y2xhhjL1bbG5urTTnuXzh-RJkkKfYBdNptNjW4AWRf9ICglNFBg"
+    },
+    {
+      "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+      "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "message": "pulsar-maps-ticket-mac-v1\n[\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",1789488000123]",
+      "signature": "r5Cz9ZE51hxY3N667D7mrloG5eDy6q_-gu373Mbf_xbCHp17ko37hGNTYFKPfCh-HJe9_39GXugUN8ZKaXxaAw"
+    },
+    {
+      "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+      "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "message": "pulsar-peer-access-request-v1\n[\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"machine-2\",\"nnnnnnnnnnnnnnnnnnnnnnnn\"]",
+      "signature": "Bu5HKG3kJzNTZcxJBhzwCrc9mnjEtaieH9g3_7_41CYHKEEbISrHOPt-H5p9u4bOJ95YuUmYA81VScOrkd2qDA"
+    },
+    {
+      "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+      "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "message": "pulsar-peer-statement-v1\n[\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"machine-2\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"nnnnnnnnnnnnnnnnnnnnnnnn\",1000,121000]",
+      "signature": "ChEs0SrcoQ4esBGYHGywxwm_fnRocuaAqeh-hKDsvW7FvY0qIGCVXoOW1WalSUJsP_euYHNnni7TPYr0JIPBCA"
+    },
+    {
+      "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+      "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "message": "ruimte-extension-store-v1\n{\"extensions\":[]}",
+      "signature": "5DAKazvwSA2odxtrAbUA0NMQ6oEc6HhwHhhEDKGdVt5Uaex5yoYZATkpjpxj8hseOGXbagrqlcwQ8ZFpGB1FDg"
+    },
+    {
+      "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+      "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "message": "ruimte-daemon-v1\nmachine-1\nchallenge",
+      "signature": "Dr8aMqY-6ewezedqUjx-iAtQFHIB9Kefjvkb3pB4nNAmMfEBCqM_v97TqG4ZpIJ7-iAqOmYxVj1jaEYHiLCoBg"
+    },
+    {
+      "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+      "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "message": "ruimte-client-v1\nmachine-1\nchallenge\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "signature": "XWVMOzfqP_qg6XPwf_7IFQ8DcMSOrkItGEosoMXG7UNfU_AGdiI6G9zjEg2YvZfUlqmzqZD3zCjugb9LXT72AQ"
+    },
+    {
+      "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+      "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "message": "ruimte-daemon-channel-v1\nmachine-1\nchallenge\n[[\"sha-256 AA:BB\"],[\"sha-256 CC:DD\"]]",
+      "signature": "ehDtsHOlqUQr21N8iQRa4yLLW7HWAL_Pgz6yQM-7GspRxjnWyxAWsrjewlwfr7LYcjRdcdOjPaHH41GM945EDw"
+    },
+    {
+      "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+      "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "message": "ruimte-client-channel-v1\nmachine-1\nchallenge\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n[[\"sha-256 AA:BB\"],[\"sha-256 CC:DD\"]]",
+      "signature": "QKAHqAs7WLqbbRr576m8jxfKIAhu-xNIH0mLCFgqOEE9r2G-rxrJCfMLW9oea16m2Srwdzrt4MU6GfxOGhuwCA"
+    },
+    {
+      "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+      "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "message": "ruimte-local-channel-v1\nmachine-1\nchallenge\n[[\"sha-256 AA:BB\"],[\"sha-256 CC:DD\"]]",
+      "signature": "k_pKNReh0nmrn1PH1CpCiOkDsHScCS9pyd2Eiip0vLkTPyZu0IaEaB9iejtCAyt_GQ4tZAwKejXOGk4FTnFaAA"
+    },
+    {
+      "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+      "publicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "message": "ruimte machine proof v1\n4210\nnnnnnnnnnnnnnnnnnnnnnnnn",
+      "signature": "rHMHO-yrYzt0jRWKDOTW4-bvGrr5e_RjJ8jNzFGfuY77_c8FyKMtiByylFef4YCMhJz7EPqDKQ3ZsTHIPp7pAQ"
     }
   ],
   "signatures": [
@@ -662,8 +752,183 @@
         }
       ],
       "expected": "pulsar-signal-v1\n[\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"attempt_2\",\"candidate\",\"\",null,null]"
+    },
+    {
+      "kind": "machineRegistration",
+      "args": [
+        "account-1",
+        "machine-1",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "Mac",
+        1000
+      ],
+      "expected": "pulsar-machine-registration-v1\n[\"account-1\",\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"Mac\",1000]"
+    },
+    {
+      "kind": "accessStatement",
+      "args": [
+        "machine-1",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "nnnnnnnnnnnnnnnnnnnnnnnn",
+        1000,
+        121000
+      ],
+      "expected": "pulsar-access-statement-v1\n[\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"nnnnnnnnnnnnnnnnnnnnnnnn\",1000,121000]"
+    },
+    {
+      "kind": "accessStatementV2",
+      "args": [
+        "machine-1",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "account-1",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "nnnnnnnnnnnnnnnnnnnnnnnn",
+        1000,
+        121000
+      ],
+      "expected": "pulsar-access-statement-v2\n[\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"nnnnnnnnnnnnnnnnnnnnnnnn\",1000,121000]"
+    },
+    {
+      "kind": "deviceLinkStart",
+      "args": [
+        "machine-1",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "Mac",
+        1000
+      ],
+      "expected": "pulsar-device-link-start-v1\n[\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"Mac\",1000]"
+    },
+    {
+      "kind": "lanDoor",
+      "args": [
+        "nnnnnnnnnnnnnnnnnnnnnnnn",
+        "machine-1",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      ],
+      "expected": "pulsar-lan-door-v1\n[\"nnnnnnnnnnnnnnnnnnnnnnnn\",\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"]"
+    },
+    {
+      "kind": "mapsTicketMac",
+      "args": [
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        1789488000123
+      ],
+      "expected": "pulsar-maps-ticket-mac-v1\n[\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",1789488000123]"
+    },
+    {
+      "kind": "peerAccessRequest",
+      "args": [
+        "machine-1",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "machine-2",
+        "nnnnnnnnnnnnnnnnnnnnnnnn"
+      ],
+      "expected": "pulsar-peer-access-request-v1\n[\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"machine-2\",\"nnnnnnnnnnnnnnnnnnnnnnnn\"]"
+    },
+    {
+      "kind": "peerStatement",
+      "args": [
+        "machine-1",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "account-1",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "machine-2",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "nnnnnnnnnnnnnnnnnnnnnnnn",
+        1000,
+        121000
+      ],
+      "expected": "pulsar-peer-statement-v1\n[\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"machine-2\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"nnnnnnnnnnnnnnnnnnnnnnnn\",1000,121000]"
+    },
+    {
+      "kind": "extensionStore",
+      "args": [
+        "{\"extensions\":[]}"
+      ],
+      "expected": "ruimte-extension-store-v1\n{\"extensions\":[]}"
+    },
+    {
+      "kind": "daemonChallenge",
+      "args": [
+        "machine-1",
+        "challenge"
+      ],
+      "expected": "ruimte-daemon-v1\nmachine-1\nchallenge"
+    },
+    {
+      "kind": "clientAuth",
+      "args": [
+        "machine-1",
+        "challenge",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      ],
+      "expected": "ruimte-client-v1\nmachine-1\nchallenge\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    {
+      "kind": "daemonChannel",
+      "args": [
+        "machine-1",
+        "challenge",
+        "[[\"sha-256 AA:BB\"],[\"sha-256 CC:DD\"]]"
+      ],
+      "expected": "ruimte-daemon-channel-v1\nmachine-1\nchallenge\n[[\"sha-256 AA:BB\"],[\"sha-256 CC:DD\"]]"
+    },
+    {
+      "kind": "clientChannel",
+      "args": [
+        "machine-1",
+        "challenge",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "[[\"sha-256 AA:BB\"],[\"sha-256 CC:DD\"]]"
+      ],
+      "expected": "ruimte-client-channel-v1\nmachine-1\nchallenge\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n[[\"sha-256 AA:BB\"],[\"sha-256 CC:DD\"]]"
+    },
+    {
+      "kind": "localChannel",
+      "args": [
+        "machine-1",
+        "challenge",
+        "[[\"sha-256 AA:BB\"],[\"sha-256 CC:DD\"]]"
+      ],
+      "expected": "ruimte-local-channel-v1\nmachine-1\nchallenge\n[[\"sha-256 AA:BB\"],[\"sha-256 CC:DD\"]]"
+    },
+    {
+      "kind": "machineProof",
+      "args": [
+        4210,
+        "nnnnnnnnnnnnnnnnnnnnnnnn"
+      ],
+      "expected": "ruimte machine proof v1\n4210\nnnnnnnnnnnnnnnnnnnnnnnnn"
     }
   ],
+  "purposes": {
+    "brokerHello": "pulsar-broker-hello-v1",
+    "signal": "pulsar-signal-v1",
+    "machineRegistration": "pulsar-machine-registration-v1",
+    "accessRequest": "pulsar-access-request-v1",
+    "accessStatement": "pulsar-access-statement-v1",
+    "accessStatementV2": "pulsar-access-statement-v2",
+    "sessionKey": "pulsar-session-key-v1",
+    "sessionRefresh": "pulsar-session-refresh-v1",
+    "deviceLinkStart": "pulsar-device-link-start-v1",
+    "push": "pulsar-push-v1",
+    "pushRouting": "pulsar-push-routing-v1",
+    "pushEncryption": "pulsar-push-encryption-v1",
+    "lanDoor": "pulsar-lan-door-v1",
+    "mapsTicketMac": "pulsar-maps-ticket-mac-v1",
+    "mapsTicketSubject": "pulsar-maps-ticket-subject-v1",
+    "mapsPathKey": "pulsar-maps-path-key-v1",
+    "mapsPath": "pulsar-maps-path-v1",
+    "peerAccessRequest": "pulsar-peer-access-request-v1",
+    "peerStatement": "pulsar-peer-statement-v1",
+    "extensionStore": "ruimte-extension-store-v1",
+    "daemonChallenge": "ruimte-daemon-v1",
+    "clientAuth": "ruimte-client-v1",
+    "daemonChannel": "ruimte-daemon-channel-v1",
+    "clientChannel": "ruimte-client-channel-v1",
+    "localChannel": "ruimte-local-channel-v1",
+    "machineProof": "ruimte machine proof v1"
+  },
   "framing": [
     {
       "input": "hello",

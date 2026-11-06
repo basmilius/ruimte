@@ -287,18 +287,6 @@ export const AuthTicketResultSchema = z.object({
 export type AuthTicketResult = z.infer<typeof AuthTicketResultSchema>;
 
 /*
- * The daemon id in each message keeps a signature from proving anything to another machine, and the
- * client's key in its own keeps an answer for one key from being handed in under another.
- */
-export function daemonChallengeMessage(daemonId: string, challenge: string): string {
-    return `ruimte-daemon-v1\n${daemonId}\n${challenge}`;
-}
-
-export function clientAuthMessage(daemonId: string, challenge: string, publicKey: string): string {
-    return `ruimte-client-v1\n${daemonId}\n${challenge}\n${publicKey}`;
-}
-
-/*
  * `endpoint.signRegistration`: the client posts the signed agreement with its own session; the daemon
  * holds no account token. Local secret only. Another account is refused with `machine-has-account`
  * until `endpoint.leaveAccount`.

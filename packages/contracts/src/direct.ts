@@ -94,24 +94,6 @@ export function channelBinding(offerSdp: string, answerSdp: string): string {
 }
 
 /*
- * The bytes signed on a channel. Prefixes of their own, so a signature over the HTTP handshake's
- * challenge never verifies as one over a channel's, and the binding last, since it is JSON and the
- * fields before it never hold a newline.
- */
-export function daemonChannelMessage(daemonId: string, challenge: string, binding: string): string {
-    return `ruimte-daemon-channel-v1\n${daemonId}\n${challenge}\n${binding}`;
-}
-
-export function clientChannelMessage(daemonId: string, challenge: string, publicKey: string, binding: string): string {
-    return `ruimte-client-channel-v1\n${daemonId}\n${challenge}\n${publicKey}\n${binding}`;
-}
-
-// Keyed with the local secret as an HMAC-SHA256, so the channel learns that the client holds it and never the secret itself.
-export function localSecretChannelMessage(daemonId: string, challenge: string, binding: string): string {
-    return `ruimte-local-channel-v1\n${daemonId}\n${challenge}\n${binding}`;
-}
-
-/*
  * A frame past the peer's SCTP max-message-size is refused outright (werift announces 64 KiB, Chromium
  * 256 KiB), so every frame goes in pieces: a mark saying whether more follow, then at most this many
  * UTF-16 code units, at most 48 KiB of UTF-8.
