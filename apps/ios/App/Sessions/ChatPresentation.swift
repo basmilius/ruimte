@@ -380,7 +380,9 @@ final class ChatPresentation {
     }
 
     func forkRefusal(turnID: String) -> String? {
-        ChatForking.refusal(info: info, turn: records[turnID]?.item)
+        ChatForking.refusal(
+            info: info, turn: records[turnID]?.item,
+            cliCanFork: info.map { AgentDirectory.shared.canFork($0.provider) } ?? true)
     }
 
     /// Scrolls the timeline to an entry, as the message index asks; a jump that searched for it lights it up.

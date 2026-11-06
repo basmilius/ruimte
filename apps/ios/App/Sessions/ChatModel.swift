@@ -321,7 +321,9 @@ final class ChatModel {
     }
 
     private func loadProviders() async throws -> JSONValue {
-        try await client.request(.providerList, payload: .object([:]))
+        let result = try await client.request(.providerList, payload: .object([:]))
+        AgentDirectory.shared.learn(result.list("providers"))
+        return result
     }
 
     /// Nil from a machine before accounts, which does not know the request.

@@ -121,19 +121,8 @@ enum ProcessesText {
         read == nil && write == nil ? nil : (read ?? 0) + (write ?? 0)
     }
 
-    static func agentName(_ kind: String) -> String {
-        switch kind {
-        case "claude": "Claude Code"
-        case "codex": "Codex"
-        case "antigravity": "Antigravity"
-        case "copilot": "Copilot"
-        case "grok": "Grok"
-        default: kind.prefix(1).uppercased() + kind.dropFirst()
-        }
-    }
-
     /// The warning in one sentence a person reads without knowing what a hook is.
-    static func alert(_ alert: ProcessAlert, now: Double) -> String {
+    @MainActor static func alert(_ alert: ProcessAlert, now: Double) -> String {
         let name = alert.name ?? String(localized: "A process")
         let duration = Format.elapsedShort(milliseconds: now - alert.since)
         switch alert.kind {
@@ -146,7 +135,7 @@ enum ProcessesText {
                 localized: "\(name) uses \(bytes(alert.value))",
                 comment: "%@ is a process name, then an amount of memory")
         case .agentGone:
-            let agent = agentName(alert.name ?? String(localized: "The agent"))
+            let agent = AgentDirectory.shared.name(alert.name ?? String(localized: "The agent"))
             return String(localized: "\(agent) exited but shows as running")
         case .orphan: return String(localized: "\(name) is still running after its terminal closed")
         case .probeHung:

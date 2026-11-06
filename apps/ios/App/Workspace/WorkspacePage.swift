@@ -877,7 +877,7 @@ struct AddProjectItem: View {
     }
 
     private var chatAgents: [(kind: String, name: String)] {
-        guard let providers else { return [("codex", "Codex"), ("claude", "Claude Code")] }
+        guard let providers else { return [] }
         return AgentCatalog.installed(providers, target: "chat").map {
             ($0.text("kind"), $0.text("name", fallback: $0.text("kind")))
         }

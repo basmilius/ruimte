@@ -59,6 +59,18 @@ final class ChatPreferencesTests: XCTestCase {
         XCTAssertNil(restored.accounts["mini"])
     }
 
+    @MainActor func testAPickForAProviderThisReleaseNeverHeardOfSurvivesARestart() {
+        let store = defaults()
+        let preferences = ChatPreferences(defaults: store)
+        let selection = JSONValue.object(["model": .string("big"), "options": .object([:])])
+        preferences.rememberSelection(selection, provider: "newcli", now: Date(timeIntervalSince1970: 10))
+        preferences.rememberAccount("work", provider: "newcli", machineID: "mac")
+        preferences.rememberSelection(selection, provider: "Not A Kind")
+        let restored = ChatPreferences(defaults: store)
+        XCTAssertEqual(restored.selections, ["newcli": selection])
+        XCTAssertEqual(restored.accounts, ["mac": ["newcli": "work"]])
+    }
+
     @MainActor func testAMachineIsToldOnlyItsOwnPicksAndNoneItTurnedOff() {
         let preferences = ChatPreferences(defaults: defaults())
         preferences.rememberAccount("work", provider: "claude", machineID: "mac", now: Date(timeIntervalSince1970: 10))

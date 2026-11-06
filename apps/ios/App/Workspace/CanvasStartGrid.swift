@@ -6,7 +6,9 @@ import SwiftUI
 @MainActor
 enum AgentCatalog {
     static func load(_ client: any MachineRequesting) async throws -> [JSONValue] {
-        try await client.request(.providerList, payload: .object([:]))["providers"]?.arrayValue ?? []
+        let providers = try await client.request(.providerList, payload: .object([:]))["providers"]?.arrayValue ?? []
+        AgentDirectory.shared.learn(providers)
+        return providers
     }
 
     /// Installed CLIs that open as `target`, a chat or a terminal.

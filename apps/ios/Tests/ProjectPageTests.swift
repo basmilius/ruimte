@@ -56,17 +56,22 @@ final class ProjectListLogicTests: XCTestCase {
             "id": .string("c"), "kind": .string("chat"), "node": .object(["provider": .string("claude")]),
         ])
         XCTAssertEqual(
-            ProjectListLogic.actions(for: claude, isView: true, status: .running),
+            ProjectListLogic.actions(for: claude, isView: true, status: .running, canFork: true),
             [.rename, .icon, .settings, .fork, .snooze, .stopTurn, .delete])
         XCTAssertEqual(
-            ProjectListLogic.actions(for: claude, isView: true, status: .idle),
+            ProjectListLogic.actions(for: claude, isView: true, status: .idle, canFork: true),
             [.rename, .icon, .settings, .fork, .snooze, .delete])
         let gemini = JSONValue.object(["id": .string("g"), "kind": .string("chat"), "provider": .string("gemini")])
-        XCTAssertEqual(ProjectListLogic.actions(for: gemini, isView: false, status: .running), [.snooze, .stopTurn])
         XCTAssertEqual(
-            ProjectListLogic.actions(for: canvas, isView: true, status: nil), [.rename, .icon, .settings, .delete])
+            ProjectListLogic.actions(for: gemini, isView: false, status: .running, canFork: false),
+            [.snooze, .stopTurn])
         XCTAssertEqual(
-            ProjectListLogic.actions(for: .object(["id": .string("u"), "kind": .string("unknown")]), isView: true, status: nil),
+            ProjectListLogic.actions(for: canvas, isView: true, status: nil, canFork: false),
+            [.rename, .icon, .settings, .delete])
+        XCTAssertEqual(
+            ProjectListLogic.actions(
+                for: .object(["id": .string("u"), "kind": .string("unknown")]), isView: true, status: nil,
+                canFork: false),
             [.delete])
     }
 

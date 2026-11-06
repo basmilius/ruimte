@@ -27,11 +27,7 @@ import SwiftUI
     /// A message is written from one repository's staged diff; over two there is no one diff to read.
     var writeFrom: String? { plan.targets.count == 1 ? plan.targets[0].path : nil }
     var providerName: String {
-        switch provider {
-        case "claude": "Claude"
-        case "codex": "Codex"
-        default: provider ?? String(localized: "an agent")
-        }
+        provider.map { AgentDirectory.shared.name($0) } ?? String(localized: "an agent")
     }
 
     /// A file that goes in, with the repository it goes into. Two repositories can each hold the same relative path,
@@ -54,6 +50,8 @@ import SwiftUI
         guard let probe = repositories.checkouts.first?.path else { return }
         let answer = try? await client.request(.gitCapabilities, payload: .object(["cwd": .string(probe)]))
         provider = answer?["messageProvider"]?.stringValue
+        // The machine's own name for the CLI, in case nothing else has asked for the list yet.
+        if provider != nil { _ = try? await AgentCatalog.load(client) }
     }
 
     /// Asks the machine's CLI for a message over the staged diff; asked again while it writes, it stops.

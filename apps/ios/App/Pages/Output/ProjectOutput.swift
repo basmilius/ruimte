@@ -43,7 +43,7 @@ extension ArtifactSummary: Identifiable {
 }
 
 enum OutputKind {
-    static let known = ["report", "image", "build", "export", "recording", "page"]
+    static let known = WireVocabulary.artifactKinds
 
     /// A kind this version does not know is drawn as an export, a file to keep, as the desktop does.
     static func drawn(_ kind: String) -> String { known.contains(kind) ? kind : "export" }
@@ -275,6 +275,7 @@ enum OutputMachine {
         }
         if providers.isEmpty, let answer = try? await client.request(.providerList) {
             providers = answer.list("providers")
+            AgentDirectory.shared.learn(providers)
         }
     }
 

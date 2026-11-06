@@ -139,8 +139,10 @@ final class GitSheetTests: XCTestCase {
 
         let staged = await GitSheetRepositories.with([checkout("app", ["staged"])])
         let ready = GitCommitModel(repositories: staged)
+        addTeardownBlock { await AgentDirectory.shared.reset() }
+        XCTAssertEqual(ready.providerName, "an agent")
         await ready.loadProvider(client: machine)
-        XCTAssertEqual(ready.providerName, "Claude")
+        XCTAssertEqual(ready.providerName, "Claude Code")
         await ready.write(client: machine)
         XCTAssertEqual(ready.subject, "Share one backoff")
         XCTAssertEqual(ready.body, "Caps retries at 5.")
@@ -360,6 +362,8 @@ final class GitSheetTests: XCTestCase {
         switch type {
         case .gitCapabilities:
             return .object(["gh": .bool(true), "messageProvider": .string("claude")])
+        case .providerList:
+            return .object(["providers": .array([.object(["kind": .string("claude"), "name": .string("Claude Code")])])])
         case .gitSuggestMessage:
             return .object(["subject": .string("Share one backoff"), "body": .string("Caps retries at 5.")])
         case .gitLog:

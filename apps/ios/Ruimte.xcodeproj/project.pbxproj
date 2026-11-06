@@ -388,6 +388,7 @@
 		D94B9A219172036093CE9911 /* FileFallbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 087DA6353C210DE8AA1937BC /* FileFallbackView.swift */; };
 		D95BE760408BA83CE68BF797 /* AccountSettingsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CCBBAD2C00600A5196B2916 /* AccountSettingsPage.swift */; };
 		DA3D0A0C5F342584A6BFC396 /* DeviceViewPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 182666BB542DAB125B18E1DB /* DeviceViewPage.swift */; };
+		DA4ADEF8E1447696E00C43E7 /* AgentDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38E8FD76F34A66ED806FAE38 /* AgentDirectory.swift */; };
 		DA706DD344EC8C255DA6B3B5 /* AccountAvatarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED096EE1BA6D72095667FE44 /* AccountAvatarTests.swift */; };
 		DB3200C453AA32F1EF544084 /* ScheduledBoardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE1AD46E8F80194A6762FA3E /* ScheduledBoardTests.swift */; };
 		DBAB23D19384984149C8E454 /* UsageWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A2764A51BCE359F3B4CCA36 /* UsageWidget.swift */; };
@@ -602,6 +603,7 @@
 		37EC21940BBBF9F8B0E17C7F /* TerminalKeyBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalKeyBar.swift; sourceTree = "<group>"; };
 		3831E0DF8E82C62D0BB8F805 /* RichChatComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichChatComposer.swift; sourceTree = "<group>"; };
 		38A7F14B293EF63B0B66EAFC /* ActivityWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ActivityWidget.entitlements; sourceTree = "<group>"; };
+		38E8FD76F34A66ED806FAE38 /* AgentDirectory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentDirectory.swift; sourceTree = "<group>"; };
 		39056D51C8E87E6BB0A1342B /* CanvasEditing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasEditing.swift; sourceTree = "<group>"; };
 		3A2764A51BCE359F3B4CCA36 /* UsageWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageWidget.swift; sourceTree = "<group>"; };
 		3ADF9EDED24291297CDF6751 /* CanvasDock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasDock.swift; sourceTree = "<group>"; };
@@ -994,6 +996,7 @@
 		06FC0334C1991C94C881E007 /* Workspace */ = {
 			isa = PBXGroup;
 			children = (
+				38E8FD76F34A66ED806FAE38 /* AgentDirectory.swift */,
 				22EEF67D1BFFD71DFA7FA021 /* AppHome.swift */,
 				91AE65432A65D98C4A7FE2CA /* AttentionStore.swift */,
 				D779BA807ED5F459698AC2C0 /* BrowserPage.swift */,
@@ -2107,6 +2110,7 @@
 				A51340876D161A20D1C26476 /* AccountLogin.swift in Sources */,
 				D95BE760408BA83CE68BF797 /* AccountSettingsPage.swift in Sources */,
 				AA96D472AACC14EFE35DB063 /* AddMachineSheet.swift in Sources */,
+				DA4ADEF8E1447696E00C43E7 /* AgentDirectory.swift in Sources */,
 				8C9FF1DDE620F87C9C84679C /* AppHome.swift in Sources */,
 				D10D76C25FB0D3D9CA32934F /* AppIconImage.swift in Sources */,
 				6E6B876EEA0AD03D9FAF5A07 /* AppMetrics.swift in Sources */,

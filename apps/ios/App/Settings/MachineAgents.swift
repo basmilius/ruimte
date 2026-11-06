@@ -130,15 +130,16 @@ enum EndpointSwitch: String {
         return providers.filter { $0["installed"] == .bool(true) }.map { provider in
             let kind = provider.text("kind")
             let entries = list?.accounts(of: kind) ?? []
+            let agentName = provider.text("name", fallback: kind)
             return Agent(
-                kind: kind, name: provider.text("name", fallback: ProcessesText.agentName(kind)),
+                kind: kind, name: agentName,
                 version: provider["version"]?.stringValue, chat: provider["capabilities"]?["chat"] == .bool(true),
                 models: provider.list("models").filter { $0["legacy"] != .bool(true) },
                 defaultModel: provider["defaultModel"]?.stringValue,
                 accounts: entries.map { entry in
                     let state = entry.enabled ? entry.state : "disabled"
                     return Account(
-                        id: entry.id, name: entry.name(provider: ProcessesText.agentName(kind)), state: state,
+                        id: entry.id, name: entry.name(provider: agentName), state: state,
                         detail: detail(state: state, status: statuses[entry.id]))
                 })
         }
@@ -314,9 +315,7 @@ struct MachineAgentsPage: View {
                 }
             }
             .pickerStyle(.menu)
-            ForEach(
-                model.agents.filter { $0.chat && !$0.models.isEmpty && ChatPreferences.providers.contains($0.kind) }
-            ) { agent in
+            ForEach(model.agents.filter { $0.chat && !$0.models.isEmpty }) { agent in
                 modelPicker(agent)
             }
             if model.endpoint?.resumeAtReset != nil {

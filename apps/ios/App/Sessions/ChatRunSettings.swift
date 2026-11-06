@@ -3,7 +3,7 @@ import SwiftUI
 
 /// The permission modes as the desktop names them, from the one that asks most to the one that never asks.
 enum ChatRuntimeMode {
-    static let all = ["supervised", "auto-accept-edits", "auto", "full-access"]
+    static let all = WireVocabulary.runtimeModes
 
     static func label(_ mode: String) -> String {
         switch mode {

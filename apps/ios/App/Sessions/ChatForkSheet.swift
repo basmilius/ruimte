@@ -44,7 +44,7 @@ struct ChatForkSheet: View {
     private var chosenProvider: String { provider ?? originalProvider }
     private var pickable: [JSONValue] {
         model.providers.filter {
-            ChatForking.forkable(provider: $0.text("kind")) && $0["installed"]?.boolValue == true
+            ChatForking.canFork($0) && $0["installed"]?.boolValue == true
                 && $0["capabilities"]?["chat"]?.boolValue == true
         }
     }

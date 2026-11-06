@@ -18,7 +18,7 @@ final class ProcessesTests: XCTestCase {
         XCTAssertEqual(ProcessesText.disk(read: 2, write: nil), 2)
     }
 
-    func testAWarningReadsAsOneSentenceWithTheButtonThatFits() {
+    @MainActor func testAWarningReadsAsOneSentenceWithTheButtonThatFits() {
         XCTAssertEqual(ProcessesText.alert(alert("silent"), now: 120_000), "Working, but silent for 2m")
         XCTAssertEqual(ProcessesText.alert(alert("memory", value: 2048), now: 0), "bun uses 2 KB")
         XCTAssertEqual(ProcessesText.actions(alert("busy-after-turn")), [.show, .terminate])

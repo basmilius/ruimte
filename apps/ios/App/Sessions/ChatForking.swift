@@ -48,24 +48,17 @@ struct ChatMessageMark: Identifiable, Equatable {
 enum ChatForking {
     static let titleMax = 120
 
-    /// Whether a machine can fork this CLI's conversation and go on with it in a fork. Every kind this app knows by name
-    /// is answered here, so a CLI the vocabulary gains is decided on before it is offered a fork.
-    static func forkable(_ kind: AgentKind) -> Bool {
-        switch kind {
-        case .claude, .codex: true
-        case .gemini, .copilot, .apple: false
-        }
-    }
+    /// Whether a machine's CLI keeps a conversation that a fork goes on with: the `fork` capability its `provider.list`
+    /// entry reports. Only a machine can say what its CLIs do, so a new CLI needs no update of this app.
+    static func canFork(_ provider: JSONValue) -> Bool { provider["capabilities"]?["fork"]?.boolValue == true }
 
-    /// A CLI this app does not know is not forkable; only a machine that knows it can say what it can do.
-    static func forkable(provider: String) -> Bool { AgentKind(rawValue: provider).map(forkable) ?? false }
-
-    /// Why a chat cannot be forked after this turn right now, or nil when it can.
-    static func refusal(info: ChatInfo?, turn: ChatItem?) -> String? {
+    /// Why a chat cannot be forked after this turn right now, or nil when it can. `cliCanFork` is what the machines'
+    /// lists say of the chat's CLI.
+    static func refusal(info: ChatInfo?, turn: ChatItem?, cliCanFork: Bool) -> String? {
         guard let info, let turn = turn?.turnItem else {
             return String(localized: "This turn is not in the conversation")
         }
-        guard forkable(provider: info.provider) else {
+        guard cliCanFork else {
             return String(localized: "This agent cannot fork its conversation")
         }
         guard info.agentSessionId != nil else {

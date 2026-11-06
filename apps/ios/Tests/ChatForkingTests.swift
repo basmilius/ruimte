@@ -12,21 +12,41 @@ final class ChatForkingTests: XCTestCase {
 
     func testRefusesATurnThatCannotBeForkedYet() {
         let turn = self.turn("t1", state: "done").chatItem
-        XCTAssertNil(ChatForking.refusal(info: chat(info), turn: turn))
-        XCTAssertEqual(ChatForking.refusal(info: nil, turn: turn), "This turn is not in the conversation")
-        XCTAssertEqual(ChatForking.refusal(info: chat(info), turn: nil), "This turn is not in the conversation")
+        XCTAssertNil(ChatForking.refusal(info: chat(info), turn: turn, cliCanFork: true))
         XCTAssertEqual(
-            ChatForking.refusal(info: chat(info.setting("provider", .string("gemini"))), turn: turn),
+            ChatForking.refusal(info: nil, turn: turn, cliCanFork: true), "This turn is not in the conversation")
+        XCTAssertEqual(
+            ChatForking.refusal(info: chat(info), turn: nil, cliCanFork: true), "This turn is not in the conversation")
+        XCTAssertEqual(
+            ChatForking.refusal(info: chat(info), turn: turn, cliCanFork: false),
             "This agent cannot fork its conversation")
         XCTAssertEqual(
-            ChatForking.refusal(info: chat(info.setting("agentSessionId", .null)), turn: turn),
+            ChatForking.refusal(info: chat(info.setting("agentSessionId", .null)), turn: turn, cliCanFork: true),
             "Nothing to fork yet. Send a message first.")
         XCTAssertEqual(
-            ChatForking.refusal(info: chat(info), turn: self.turn("t2", state: "running").chatItem),
+            ChatForking.refusal(
+                info: chat(info), turn: self.turn("t2", state: "running").chatItem, cliCanFork: true),
             "Wait for the turn to end")
         XCTAssertEqual(
-            ChatForking.refusal(info: chat(info.setting("activeTurnId", .string("t2"))), turn: turn),
+            ChatForking.refusal(
+                info: chat(info.setting("activeTurnId", .string("t2"))), turn: turn, cliCanFork: true),
             "Wait for the turn to end")
+    }
+
+    @MainActor func testOnlyACLIThatReportsTheForkCapabilityForks() {
+        let directory = AgentDirectory()
+        XCTAssertTrue(directory.canFork("anything"), "Nothing refuses for the CLI before a machine answered")
+        directory.learn([
+            .object(["kind": .string("newcli"), "name": .string("New CLI"), "capabilities": .object(["fork": .bool(true)])]),
+            .object(["kind": .string("plain"), "name": .string("Plain"), "capabilities": .object(["chat": .bool(true)])]),
+        ])
+        XCTAssertTrue(directory.canFork("newcli"))
+        XCTAssertFalse(directory.canFork("plain"))
+        XCTAssertFalse(directory.canFork("gone"))
+        XCTAssertEqual(directory.name("newcli"), "New CLI")
+        XCTAssertEqual(directory.name("gone"), "gone")
+        XCTAssertTrue(ChatForking.canFork(.object(["capabilities": .object(["fork": .bool(true)])])))
+        XCTAssertFalse(ChatForking.canFork(.object(["capabilities": .object([:])])))
     }
 
     func testANoteAChildLeftWhileItWaitsLeadsToAnswering() {

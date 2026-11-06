@@ -130,12 +130,14 @@ import SwiftUI
 
 struct AccountLoginSheet: View {
     @State private var model: AccountLoginModel
-    let cli: String
+    private let kind: String
     @Environment(\.dismiss) private var dismiss
+
+    private var cli: String { AgentDirectory.shared.name(kind) }
 
     init(client: any MachineRequesting, kind: String, accountID: String, name: String) {
         _model = State(initialValue: AccountLoginModel(client: client, kind: kind, accountID: accountID, name: name))
-        cli = ProcessesText.agentName(kind)
+        self.kind = kind
     }
 
     var body: some View {

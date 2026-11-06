@@ -80,11 +80,11 @@ enum ProjectListLogic {
     }
 
     /// The actions a view offers; a node of a canvas only offers what acts on its session.
-    static func actions(for item: JSONValue, isView: Bool, status: AgentStatus?) -> [ProjectRowAction] {
+    static func actions(for item: JSONValue, isView: Bool, status: AgentStatus?, canFork: Bool) -> [ProjectRowAction] {
         let kind = item.text("kind")
         var actions: [ProjectRowAction] = []
         if isView && kind != "unknown" { actions += [.rename, .icon, .settings] }
-        if kind == "chat" && ChatForking.forkable(provider: provider(of: item)) { actions.append(.fork) }
+        if kind == "chat" && canFork { actions.append(.fork) }
         if kind == "chat" || kind == "terminal" { actions.append(.snooze) }
         if kind == "chat" && status == .running { actions.append(.stopTurn) }
         if isView { actions.append(.delete) }
