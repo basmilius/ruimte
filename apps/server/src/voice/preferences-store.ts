@@ -1,13 +1,11 @@
 import { join } from 'node:path';
-import { VoicePreferencesSchema, type LiveVoice, type VoiceLanguage, type VoicePreferences } from '@ruimte/contracts';
+import { DEFAULT_VOICE_PREFERENCES, VoicePreferencesSchema, type LiveVoice, type VoiceLanguage, type VoicePreferences } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { JsonFileStore } from '../json-file-store.ts';
 import type { SessionSink } from '../wire.ts';
 import { VOICE_DIR } from './key-store.ts';
 
 const PREFERENCES_FILE = 'preferences.json';
-
-const DEFAULT_VOICE_PREFERENCES: VoicePreferences = { language: 'en', voice: 'marin' };
 
 /*
  * How Voice on this machine talks, in `$RUIMTE_HOME/voice/preferences.json` beside the key. No secret: any

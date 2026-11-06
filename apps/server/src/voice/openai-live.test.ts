@@ -1,13 +1,15 @@
 import { describe, expect, spyOn, test } from 'bun:test';
-import type { LiveEvent } from '@ruimte/voice';
-import { openAiLive, type LiveFetch } from './openai-live.ts';
+import type { LiveEvent, LiveFetch, LiveFetchInit, LiveSessionRequest } from '@ruimte/voice';
+import { openAiLive } from './openai-live.ts';
 import { isAudioEvent, LiveSideband, SIDEBAND_CLOSE_WAIT_MS } from './sideband.ts';
 import { FakeClock, FakeSocket, settle } from './voice-fakes.ts';
 
 const KEY = 'sk-test-voice-0123456789abcdef';
 const ANSWER = { session: { id: 'sess_abc' }, transport: { type: 'webrtc', sdp: 'v=0 answer' } };
 
-function fetchAnswering(status: number, body: unknown, calls: { url: string; init: RequestInit }[] = []): LiveFetch {
+const REQUEST: LiveSessionRequest = { language: 'en', voice: 'marin', tools: [], sdp: 'v=0 offer' };
+
+function fetchAnswering(status: number, body: unknown, calls: { url: string; init: LiveFetchInit }[] = []): LiveFetch {
     return async (url, init) => {
         calls.push({ url, init });
         return new Response(JSON.stringify(body), { status });
@@ -16,38 +18,32 @@ function fetchAnswering(status: number, body: unknown, calls: { url: string; ini
 
 describe('mint', () => {
     test('posts the body with the key in a header and answers the session', async () => {
-        const calls: { url: string; init: RequestInit }[] = [];
+        const calls: { url: string; init: LiveFetchInit }[] = [];
         const live = openAiLive({ fetch: fetchAnswering(200, ANSWER, calls) });
-        const answer = await live.mint(KEY, { session: { model: 'gpt-live-1' } }, new AbortController().signal);
+        const answer = await live.mint(KEY, REQUEST, new AbortController().signal);
         expect(answer).toEqual(ANSWER as never);
         expect(calls).toHaveLength(1);
         expect(calls[0]!.url).toBe('https://api.openai.com/v1/live/sessions');
         expect(calls[0]!.url).not.toContain(KEY);
-        expect((calls[0]!.init.headers as Record<string, string>).Authorization).toBe(`Bearer ${KEY}`);
-        expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ session: { model: 'gpt-live-1' } });
+        expect(calls[0]!.init.headers.Authorization).toBe(`Bearer ${KEY}`);
+        expect(JSON.parse(calls[0]!.init.body)).toMatchObject({
+            session: { instructions: expect.stringContaining('speaking with a person on their phone') },
+            transport: { sdp: 'v=0 offer' }
+        });
     });
 
-    test('a refused key, a limit and any other status are coded, without the body or the key', async () => {
+    test('the mint failures of the shared request come out coded for the phone', async () => {
         const body = { error: { message: `bad key ${KEY}` } };
-        await expect(openAiLive({ fetch: fetchAnswering(401, body) }).mint(KEY, {}, new AbortController().signal)).rejects.toMatchObject({
-            code: 'voice-key-rejected'
-        });
-        await expect(openAiLive({ fetch: fetchAnswering(429, body) }).mint(KEY, {}, new AbortController().signal)).rejects.toMatchObject({
-            code: 'voice-rate-limited'
-        });
-        const failure = openAiLive({ fetch: fetchAnswering(500, body) }).mint(KEY, {}, new AbortController().signal);
-        await expect(failure).rejects.toMatchObject({ code: 'voice-mint-failed', message: 'OpenAI could not start GPT-Live (500)' });
-        await failure.catch((e: Error) => expect(e.message).not.toContain(KEY));
-    });
-
-    test('an answer that is no session, or a session id that is no id, is refused', async () => {
-        await expect(openAiLive({ fetch: fetchAnswering(200, { session: {} }) }).mint(KEY, {}, new AbortController().signal)).rejects.toMatchObject({
-            code: 'voice-mint-failed'
-        });
-        const traversal = { ...ANSWER, session: { id: '../../admin' } };
-        await expect(openAiLive({ fetch: fetchAnswering(200, traversal) }).mint(KEY, {}, new AbortController().signal)).rejects.toMatchObject({
-            code: 'voice-mint-failed'
-        });
+        const mint = (status: number) => openAiLive({ fetch: fetchAnswering(status, body) }).mint(KEY, REQUEST, new AbortController().signal);
+        await expect(mint(401)).rejects.toMatchObject({ code: 'voice-key-rejected', message: 'OpenAI rejected the Voice key on this machine' });
+        await expect(mint(429)).rejects.toMatchObject({ code: 'voice-rate-limited' });
+        await expect(mint(500)).rejects.toMatchObject({ code: 'voice-mint-failed', message: 'OpenAI could not start GPT-Live (500)' });
+        const unreachable = openAiLive({
+            fetch: async () => {
+                throw new Error(`connect failed for ${KEY}`);
+            }
+        }).mint(KEY, REQUEST, new AbortController().signal);
+        await expect(unreachable).rejects.toMatchObject({ code: 'voice-mint-failed', message: 'The machine could not reach OpenAI' });
     });
 
     test('a stopped start aborts the request and says so', async () => {
@@ -58,7 +54,7 @@ describe('mint', () => {
                     init.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
                 })
         });
-        const minting = live.mint(KEY, {}, stop.signal);
+        const minting = live.mint(KEY, REQUEST, stop.signal);
         stop.abort();
         await expect(minting).rejects.toMatchObject({ code: 'voice-cancelled' });
     });

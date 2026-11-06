@@ -5,6 +5,8 @@ export * from './live-event.ts';
 export * from './matrix.ts';
 export * from './mint.ts';
 export * from './names.ts';
+export * from './preferences.ts';
+export * from './prompts.ts';
 export * from './replies.ts';
 export * from './session-watch.ts';
 export * from './tool-arguments.ts';

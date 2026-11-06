@@ -15,7 +15,7 @@ import type {
     VoiceStartResult,
     VoiceStatusEvent
 } from '@ruimte/contracts';
-import { contextChunks, daemonVoiceTools, liveSessionBody, VoiceCompletionDelivery, VoiceToolLoop, type LiveEvent } from '@ruimte/voice';
+import { contextChunks, daemonVoiceTools, VoiceCompletionDelivery, VoiceToolLoop, type LiveEvent } from '@ruimte/voice';
 import { voiceActionCall, type ServerActionContext, type VoiceCaller, type VoiceOpenProject } from '../actions/context.ts';
 import { openProjects } from '../actions/voice-project-reading.ts';
 import { type CanvasHost } from '../canvas/host.ts';
@@ -24,7 +24,6 @@ import { voicePolicy } from './action-policy.ts';
 import type { VoiceClock } from './clock.ts';
 import { LiveError, type OpenAiLive } from './openai-live.ts';
 import { voicePreferencesFor } from './preferences-store.ts';
-import { phonePrompts } from './prompts.ts';
 import { sessionContext, timeContext } from './session-context.ts';
 import type { LiveSideband } from './sideband.ts';
 import { VoiceToolExecutor, type VoiceActionRunner, type VoiceToolQuestion } from './tool-executor.ts';
@@ -190,8 +189,7 @@ export class VoiceSession {
             }
             const tools = daemonVoiceTools();
             const { language, voice } = voicePreferencesFor(this.#deps.preferences(), payload);
-            const body = liveSessionBody({ language, voice, ...phonePrompts(), tools, sdp: payload.sdp });
-            const minting = live.mint(key, body, signal);
+            const minting = live.mint(key, { language, voice, tools, sdp: payload.sdp }, signal);
             // A mint that answers once the start ended would stay open at OpenAI, so it is closed again.
             minting.then(
                 (answer) => {

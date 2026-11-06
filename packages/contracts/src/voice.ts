@@ -12,7 +12,7 @@ import { LIVE_VOICES, VOICE_LANGUAGES, type VoiceLanguage } from './voice-langua
 /* An OpenAI API key is a few hundred bytes; more is a paste of something else. */
 export const VOICE_KEY_MAX_BYTES = 1024;
 /* What a desktop offer with every candidate gathered stays under. */
-const VOICE_SDP_MAX_CHARS = 128_000;
+export const VOICE_SDP_MAX_CHARS = 128_000;
 
 const id = z.string().regex(/^[A-Za-z0-9._:-]{1,128}$/);
 
@@ -47,6 +47,9 @@ export const VoicePreferencesSchema = z.object({
     voice: LiveVoiceSchema
 });
 export type VoicePreferences = z.infer<typeof VoicePreferencesSchema>;
+
+/* What a machine speaks while no client set anything. */
+export const DEFAULT_VOICE_PREFERENCES: VoicePreferences = { language: 'en', voice: 'marin' };
 
 /* The answer to `voice.preferences` and `voice.setPreferences`, and the `voice.preferences` event every client hears on a change. */
 export const VoicePreferencesStateSchema = z.object({

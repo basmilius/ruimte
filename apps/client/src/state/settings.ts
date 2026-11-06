@@ -1,6 +1,7 @@
 import type { EditorFoldOutline, EditorSmartKeys } from '@adecore/editor';
 import { FORMAT_LANGUAGE, formatRegionFrom } from '@adecore/ui/format';
 import {
+    DEFAULT_VOICE_PREFERENCES,
     EditorAssistAgentSchema,
     type EditorAssistAgent,
     isLiveVoice,
@@ -361,7 +362,7 @@ const DEFAULT_SETTINGS: Settings = {
     chatSteerByDefault: false,
     chatHideToolCalls: false,
     voiceLanguage: 'nl',
-    liveVoice: 'marin',
+    liveVoice: DEFAULT_VOICE_PREFERENCES.voice,
     voiceInputDeviceId: 'default',
     voiceConfirmDestructiveActions: true,
     updatesAutoDownload: true,
@@ -477,7 +478,7 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
             ? stored.liveVoice
             : (stored as Partial<Settings> & { voiceGender?: unknown }).voiceGender === 'male'
               ? 'cedar'
-              : 'marin',
+              : DEFAULT_SETTINGS.liveVoice,
         voiceInputDeviceId:
             typeof stored.voiceInputDeviceId === 'string' && stored.voiceInputDeviceId.trim() !== ''
                 ? stored.voiceInputDeviceId
