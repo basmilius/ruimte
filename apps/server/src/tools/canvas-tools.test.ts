@@ -25,7 +25,7 @@ import {
     CANVAS_LINES
 } from './canvas-test-fixture.ts';
 import { NEW_NODE, type CanvasHost } from './host.ts';
-import { projectReach } from './reach.ts';
+import { projectReach, SETTING_LINE } from './reach.ts';
 
 canvasFixture();
 
@@ -520,7 +520,7 @@ describe('reaching another open project', () => {
 
         reachOn = false;
 
-        expect((await invoke('project_list', {}, 'chat', through)).lines).toEqual([]);
+        expect((await invoke('project_list', {}, 'chat', through)).lines).toEqual([SETTING_LINE]);
         expect((await invoke('view_list', { project: otherId }, 'chat', through)).lines[0]).toStartWith('refused\tprojects-not-reachable\t');
     });
 

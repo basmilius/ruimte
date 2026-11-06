@@ -43,7 +43,7 @@ export function projectReach(projects: Pick<ProjectStore, 'list' | 'openProject'
     };
 }
 
-const SETTING_LINE =
+export const SETTING_LINE =
     "setting\treachOpenProjects in this machine's endpoint.json lets agents reach the other open projects; a person turns it on under Agents in the settings";
 
 export function reachableLines(projects: readonly ReachableProject[]): string[] {

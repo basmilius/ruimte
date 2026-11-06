@@ -2,7 +2,7 @@ import { PROJECT_PROPOSAL_LIMITS } from '@ruimte/contracts';
 import { z } from 'zod';
 import { defineActionTool, runAction } from './action-tool.ts';
 import { field, orNote } from './host.ts';
-import { reachableLines, reachableProjects, reachedProject, recentLines } from './reach.ts';
+import { reachableLines, reachableProjects, reachedProject, recentLines, SETTING_LINE } from './reach.ts';
 import { defineTool, defineToolkit, textInput } from './tool.ts';
 
 function projectIdInput(tool: string) {
@@ -17,10 +17,14 @@ const projectList = defineTool('project', {
     annotations: { readOnly: true },
     input: z.object({}),
     async run(_input, call) {
+        // With the switch off an agent hears of no project, only of the setting, so it asks the person instead of working around it.
+        if (call.host.reach?.enabled() !== true) {
+            return [SETTING_LINE];
+        }
+
         const own = call.host.projects.locate(call.caller)?.projectId ?? null;
         const open = await reachableProjects(call.host, own);
-        // Behind the same switch: with it off an agent reaches no other project, so it hears of none.
-        const recent = call.host.reach?.enabled() === true ? await call.host.reach.recent() : [];
+        const recent = await call.host.reach.recent();
 
         return [...reachableLines(open), ...recentLines(recent)];
     }
