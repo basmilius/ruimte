@@ -53,6 +53,7 @@
 		1D2828131C689B78A675A365 /* TerminalCompatibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA81AFC7F3E726AB38C0EE96 /* TerminalCompatibilityTests.swift */; };
 		1D68DB039EB573C984D12915 /* UiHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF5E04A13B99B9A02435B7C /* UiHost.swift */; };
 		1D6CEEA1B77289B22B60489B /* ViewSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B046BB9BDAA4FBBD682034 /* ViewSettingsSheet.swift */; };
+		1DE7EEFABD8511F861F6E3F4 /* ports-merge.json in Resources */ = {isa = PBXBuildFile; fileRef = DCEBB48874CD75525612331D /* ports-merge.json */; };
 		2039449EB696024C64A7D640 /* RuimteIntelligentUI in Frameworks */ = {isa = PBXBuildFile; productRef = EA9DFDE6BD85D7623C050492 /* RuimteIntelligentUI */; };
 		2078E1D5C84F273F381AA240 /* LaunchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6D2983C599BF780FEA70F8A /* LaunchModel.swift */; };
 		226093BDE4A09AE44CB9B90A /* GitPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D69D1BF9802A60BF9D50BA2B /* GitPage.swift */; };
@@ -431,6 +432,7 @@
 		F1A931557F44FF6FC65B7AFD /* NotificationStepPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AD446245C58A36AE2F1CBBB /* NotificationStepPage.swift */; };
 		F224DF80655AF5E08A5C578A /* ConnectionScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49B30EC9B23C65C35FC2E1B0 /* ConnectionScreen.swift */; };
 		F38A8826258A06EF947C6676 /* PhoneRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DAC3BBE10240D8F0B9E349A /* PhoneRouterTests.swift */; };
+		F3BE1BAA358CCBF1FE99AAAC /* AdecorePortTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D3D1432370C3B5FE5C56D58 /* AdecorePortTests.swift */; };
 		F4C315E3ABE645471F0C04C1 /* ProjectArtwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62D07C5E01735816B53D3E59 /* ProjectArtwork.swift */; };
 		F4EE24BB55285D9659B748CD /* image.heif in Resources */ = {isa = PBXBuildFile; fileRef = 14DAA27C094FD2E2C1196975 /* image.heif */; };
 		F57AA854DB471B03DE066B63 /* ProjectLaunches.swift in Sources */ = {isa = PBXBuildFile; fileRef = B54E0CEF22E8C588624D00B0 /* ProjectLaunches.swift */; };
@@ -748,6 +750,7 @@
 		8B642891456066D415114B58 /* FileAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileAudioPlayer.swift; sourceTree = "<group>"; };
 		8BC7EEB4644997BC2EAB10D4 /* ChatLimits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatLimits.swift; sourceTree = "<group>"; };
 		8CD1F877F86D4A5649A9F58B /* RuimteVoice */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RuimteVoice; path = Packages/RuimteVoice; sourceTree = SOURCE_ROOT; };
+		8D3D1432370C3B5FE5C56D58 /* AdecorePortTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdecorePortTests.swift; sourceTree = "<group>"; };
 		8DE7FE0547CCCD8397A54AF2 /* clip.mp4 */ = {isa = PBXFileReference; path = clip.mp4; sourceTree = "<group>"; };
 		8E3C280A49506D171C893DB2 /* SearchPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPage.swift; sourceTree = "<group>"; };
 		8FF5E04A13B99B9A02435B7C /* UiHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UiHost.swift; sourceTree = "<group>"; };
@@ -884,6 +887,7 @@
 		D9AC34FA6BB3E2D39E24D463 /* ChatDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatDraftTests.swift; sourceTree = "<group>"; };
 		D9F974976FEA8791980073A9 /* GeneratedImageSaveDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratedImageSaveDialog.swift; sourceTree = "<group>"; };
 		DC1024E7E46E63BA81DAFAD5 /* AboutPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutPage.swift; sourceTree = "<group>"; };
+		DCEBB48874CD75525612331D /* ports-merge.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ports-merge.json"; sourceTree = "<group>"; };
 		DD1AADEED69848ED7D305964 /* TerminalSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSnapshot.swift; sourceTree = "<group>"; };
 		DE7EFBD1B37342A286D3F988 /* VoiceLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceLiveActivity.swift; sourceTree = "<group>"; };
 		DEBA4D8875D163CC1E085C98 /* ChatComposerMorph.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatComposerMorph.swift; sourceTree = "<group>"; };
@@ -1312,6 +1316,7 @@
 			children = (
 				75DA6517FBC9FBF6C79776E2 /* document-scenes.json */,
 				A9867AAE3875BFA2A608B522 /* intelligent-ui-presentation.json */,
+				DCEBB48874CD75525612331D /* ports-merge.json */,
 				781F6AC7AD1FC0898F16BD73 /* ports.json */,
 				B22BE2076F9548674B7672E9 /* view-references.json */,
 				E3B2D444DD5354869B42656D /* visuals.json */,
@@ -1333,6 +1338,7 @@
 			children = (
 				ED096EE1BA6D72095667FE44 /* AccountAvatarTests.swift */,
 				9274EA8FBA587B9F140CB886 /* AccountLoginTests.swift */,
+				8D3D1432370C3B5FE5C56D58 /* AdecorePortTests.swift */,
 				FBC322B49F5CB3934C36E246 /* AppMetricsTests.swift */,
 				97203F1CB27A45176505F61D /* AttentionStoreTests.swift */,
 				D10DAC60D7E4E0809235DD2C /* CanvasDockTests.swift */,
@@ -1943,6 +1949,7 @@
 				7E2B6B3B6C775D4B97412A5E /* image.tiff in Resources */,
 				232274F1989E0BA90BB73CA8 /* image.webp in Resources */,
 				93ABEC838D61F2A4F84A9AEF /* intelligent-ui-presentation.json in Resources */,
+				1DE7EEFABD8511F861F6E3F4 /* ports-merge.json in Resources */,
 				CF206234DF28A035F2731230 /* ports.json in Resources */,
 				B7C91BEC26677BD8FBAFC69D /* rotated.jpg in Resources */,
 				618B905E55D2BECE6783EABD /* tone.aac in Resources */,
@@ -1993,6 +2000,7 @@
 			files = (
 				DA706DD344EC8C255DA6B3B5 /* AccountAvatarTests.swift in Sources */,
 				852C09C2FFC8A7549F30E87D /* AccountLoginTests.swift in Sources */,
+				F3BE1BAA358CCBF1FE99AAAC /* AdecorePortTests.swift in Sources */,
 				56D78BD9DE3001C07CAD384C /* AppMetricsTests.swift in Sources */,
 				3FF11289E9C9D97393BA9DEC /* AttentionStoreTests.swift in Sources */,
 				AD8738B6245554F4CFF1B01B /* CanvasDockTests.swift in Sources */,
