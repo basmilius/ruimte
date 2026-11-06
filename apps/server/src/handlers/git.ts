@@ -28,7 +28,7 @@ import { mergeBaseWith } from '../git/status.ts';
 import type { WorktreeMerge } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import type { PrWatchStore } from '../github/pr-watch.ts';
-import type { OneShotPlace } from '../peering/one-shot-place.ts';
+import type { OneShotPlace } from '../peer/worker/one-shot-place.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import { sendEvent, type ClientConnection } from '../wire.ts';
 

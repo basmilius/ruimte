@@ -5,9 +5,10 @@ import { join } from 'node:path';
 import { AuthStore } from '../auth/auth-store.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { OutboxStore } from '../outbox/outbox.ts';
-import { PeerKey } from '../remote/peer-key.ts';
-import { PendingAdmissions } from '../remote/pending-admissions.ts';
+import { PeerKey } from '../peer/giver/peer-key.ts';
+import { PendingAdmissions } from '../peer/giver/pending-admissions.ts';
 import type { MachineBundle } from './machine.ts';
+import type { NetworkBundle } from './network.ts';
 import { wireRemote } from './remote.ts';
 
 let home: string;
@@ -31,7 +32,13 @@ describe('what this machine holds of the machines it works in', () => {
     test('goes when the machine leaves its account: the peer key, the machines it knew, the statements it held and what is built on them', async () => {
         const outbox = new OutboxStore(home);
         await outbox.load();
-        const remote = await wireRemote({ home, identity: { label: 'Studio' } as EndpointIdentity, machine, outbox, later: { brokerUrl: () => null } });
+        const remote = await wireRemote({
+            home,
+            identity: { label: 'Studio' } as EndpointIdentity,
+            machine,
+            outbox,
+            later: { network: () => ({ brokerSwitch: { describe: () => ({ brokerUrl: null }) } }) as unknown as NetworkBundle }
+        });
         await auth.bindAccount('owner');
         const before = await machine.peerKey.publicKey();
         await remote.machines.put({ machineId: 'machine-b', publicKey: 'B'.repeat(43) }, 1);

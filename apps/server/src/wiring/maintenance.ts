@@ -1,25 +1,25 @@
 import { join } from 'node:path';
 import { sweepStaleChatWrites } from '../chat/stale-writes.ts';
 import { sweepComputerScreenshots } from '../computer/screenshots.ts';
-import type { LanguageHost } from '../language/host.ts';
 import { sweepPhpCache, type PhpCacheSweepOptions } from '../language/php-cache.ts';
 import { Maintenance, type Sweeper } from '../maintenance/maintenance.ts';
-import type { ProjectIndex } from '../projects/project-index.ts';
 import { sweepDeviceCaptures, sweepScreenshots } from '../shots.ts';
+import type { LanguageBundle } from './language.ts';
 import type { ProcessesBundle } from './processes.ts';
+import type { ProjectsBundle } from './projects.ts';
 
 /* Bundles wired after maintenance, reached when a pass runs. */
 interface MaintenanceLater {
-    language: () => LanguageHost;
-    projects: () => ProjectIndex;
+    language(): LanguageBundle;
+    projects(): ProjectsBundle;
 }
 
 /* The disposable files of this machine, each on the rule of the code that writes it. */
 function sweepersOf(home: string, later: MaintenanceLater): Sweeper[] {
     const php: PhpCacheSweepOptions = {
-        cache: () => later.language().phpCache(),
+        cache: () => later.language().host.phpCache(),
         sightingsFile: join(home, 'language-servers', 'php-native', 'cache-sightings.json'),
-        knownFolders: () => later.projects().folders()
+        knownFolders: () => later.projects().store.index.folders()
     };
 
     return [

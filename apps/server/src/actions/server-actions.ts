@@ -34,48 +34,53 @@ import { visualActions } from './visual-actions.ts';
 import { voiceActions } from './voice-actions.ts';
 import { worktreeActions } from './worktree-actions.ts';
 
+export type ServerActions = ActionRegistry<ServerActionContext>;
+
 /*
  * What the daemon itself carries out, on the project file rather than on a client's stores. A client
- * has its own handlers for the same actions; an agent's tool call lands here.
+ * has its own handlers for the same actions; an agent's tool call lands here. The wiring makes one
+ * and the `CanvasHost` carries it, so no module reaches the registry by importing it.
  */
-export const serverActions = new ActionRegistry<ServerActionContext>(
-    {
-        ...viewActions,
-        ...flagActions,
-        ...nodeActions,
-        ...linkActions,
-        ...agentActions,
-        ...toolActions,
-        ...forkActions,
-        ...startActions,
-        ...operationActions,
-        ...taskActions,
-        ...planActions,
-        ...visualActions,
-        ...chatAttachActions,
-        ...artifactActions,
-        ...diagramActions,
-        ...drawingActions,
-        ...browserActions,
-        ...computerActions,
-        ...deviceActions,
-        ...worktreeActions,
-        ...launchActions,
-        ...routineActions,
-        ...secretActions,
-        ...projectProposalActions,
-        ...projectIgnoredActions,
-        ...databaseActions,
-        ...languageActions,
-        ...templateActions,
-        ...providerActions,
-        ...contextActions,
-        ...voiceActions
-    },
-    {
-        previews: ['node.create', 'node.createMany', 'node.setColor', 'plan.create', 'agent.start', 'team.start', 'drawing.edit', 'template.add'],
-        checkRevision: checkProjectRevision,
-        // Every refusal the daemon raises is coded, with what to pick instead as its lines.
-        refusalOf: (error) => (error instanceof CodedError ? { code: error.code, message: error.message, details: error.lines } : null)
-    }
-);
+export function createServerActions(): ServerActions {
+    return new ActionRegistry<ServerActionContext>(
+        {
+            ...viewActions,
+            ...flagActions,
+            ...nodeActions,
+            ...linkActions,
+            ...agentActions,
+            ...toolActions,
+            ...forkActions,
+            ...startActions,
+            ...operationActions,
+            ...taskActions,
+            ...planActions,
+            ...visualActions,
+            ...chatAttachActions,
+            ...artifactActions,
+            ...diagramActions,
+            ...drawingActions,
+            ...browserActions,
+            ...computerActions,
+            ...deviceActions,
+            ...worktreeActions,
+            ...launchActions,
+            ...routineActions,
+            ...secretActions,
+            ...projectProposalActions,
+            ...projectIgnoredActions,
+            ...databaseActions,
+            ...languageActions,
+            ...templateActions,
+            ...providerActions,
+            ...contextActions,
+            ...voiceActions
+        },
+        {
+            previews: ['node.create', 'node.createMany', 'node.setColor', 'plan.create', 'agent.start', 'team.start', 'drawing.edit', 'template.add'],
+            checkRevision: checkProjectRevision,
+            // Every refusal the daemon raises is coded, with what to pick instead as its lines.
+            refusalOf: (error) => (error instanceof CodedError ? { code: error.code, message: error.message, details: error.lines } : null)
+        }
+    );
+}

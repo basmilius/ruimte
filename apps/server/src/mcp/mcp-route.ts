@@ -1,5 +1,6 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { Server, WebStandardStreamableHTTPServerTransport, type CallToolResult } from '@modelcontextprotocol/server';
+import type { ServerActions } from '../actions/server-actions.ts';
 import { AgentFiles } from '../agent-files/files.ts';
 import type { ArtifactUploads } from '../agent-files/uploads.ts';
 import { bearerCaller } from '../agents/bearer.ts';
@@ -18,6 +19,7 @@ export interface McpDeps {
     /* The session or chat a bearer token speaks for. */
     targetForToken(token: string): string | null;
     host: CanvasHost;
+    actions: ServerActions;
     uploads?: ArtifactUploads;
     /* The caller's own folders under `$RUIMTE_HOME` (its attachments and visuals), from which its files may come too. */
     callerFolders?(caller: string): string[];
@@ -103,6 +105,7 @@ function toolContext(caller: string, deps: McpDeps): ToolContext {
     return {
         caller,
         host: deps.host,
+        actions: deps.actions,
         uploads: deps.uploads,
         files: () => {
             files ??= folders();

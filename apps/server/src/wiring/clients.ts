@@ -1,6 +1,6 @@
 import type { ServerWebSocket } from 'bun';
 import type { Handshake } from '../auth/handshake.ts';
-import { connectionOpener, type ConnectionServices, type OpenConnection, type SocketChannel } from '../connection.ts';
+import { connectionOpener, type ConnectionHost, type OpenConnection, type SocketChannel } from '../connection.ts';
 import { sendEvent, type ClientAccess, type ClientChannel } from '../wire.ts';
 
 interface SocketConnection {
@@ -26,7 +26,7 @@ export interface ClientsBundle {
     notifyPeer(machineId: string, nodeId: string): void;
 }
 
-export function wireClients(handshake: Handshake, services: ConnectionServices): ClientsBundle {
+export function wireClients(handshake: Handshake, host: ConnectionHost): ClientsBundle {
     const sockets = new Map<ServerWebSocket<ClientAccess>, SocketConnection>();
     const direct = new Set<DirectConnection>();
     const disconnectSession = (sessionId: string): void => {
@@ -44,7 +44,7 @@ export function wireClients(handshake: Handshake, services: ConnectionServices):
             }
         }
     };
-    const open = connectionOpener(services);
+    const open = connectionOpener(host);
 
     const addDirect = (channel: ClientChannel, access: ClientAccess): DirectConnection | null => {
         // Checked as it is registered, with no await between, so a later revoke finds it in `direct` instead.

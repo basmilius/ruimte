@@ -172,7 +172,7 @@ $RUIMTE_HOME/
   bundles/<id>.bundle              0700, a git bundle for another machine to read with `bytes.read`; cleared at start, each file gone once read to the end (a client holds at most 4, the machine 16 unread)
     incoming/<id>.bundle           0700, a bundle another machine is sending with `git.bundlePut`; removed after `git.fetchBundle`
     peers/<hash>/                  0700, the same two folders per peer machine, so no machine reaches another's bundles; cleared at start
-  peer-worktrees/                  folders made from another machine's work, recorded as untrusted (src/peering/CLAUDE.md)
+  peer-worktrees/                  folders made from another machine's work, recorded as untrusted (src/peer/CLAUDE.md)
   oneshot/                         the empty folder a one-shot CLI run in an untrusted folder works in
   hidden-agents/<id>.json          agents a chat view started outside the canvas, with their placement
   sessions/                        0700
@@ -542,14 +542,14 @@ Which chat wrote which lines of a file, for the editor's gutter (`src/provenance
 - Commands run without a shell, arguments as lists. `GIT_TERMINAL_PROMPT=0` keeps a credential prompt from stalling, and a remote step gives up after two minutes.
 - `git.watch` with `status: true` answers the first status at once. It stops watching a repository with more than 5,000 tracked files or a status slower than a second (`live: false`); the client then refreshes on focus.
 - `git.identity { paths }` answers per top-level folder its root commits, `origin` without credentials, branch and local branch tips, so two machines can tell they hold the same repository. A slow folder (over five seconds) answers `timed-out`.
-- `git.bundle` writes a checkout (working tree, `head` or a branch) as a bundle under `bundles/`, read with `bytes.read` up to 256 MiB (`bundle-too-large` beyond). `git.bundlePut` takes an incoming bundle in pieces of up to 256 KiB, at most 16 open uploads, and `git.fetchBundle` verifies it and makes a worktree on `ruimte/<branch>` (`src/peering/CLAUDE.md` has the bundle rules).
+- `git.bundle` writes a checkout (working tree, `head` or a branch) as a bundle under `bundles/`, read with `bytes.read` up to 256 MiB (`bundle-too-large` beyond). `git.bundlePut` takes an incoming bundle in pieces of up to 256 KiB, at most 16 open uploads, and `git.fetchBundle` verifies it and makes a worktree on `ruimte/<branch>` (`src/peer/CLAUDE.md` has the bundle rules).
 - `git.clone` takes HTTPS, SSH or git URLs (never a local path, `file://` or `ext::`) into a missing or empty folder, and leaves no folder when it fails. SSH runs in batch mode unless `GIT_SSH_COMMAND` or `GIT_SSH` is set. `git.ignoredFiles` lists up to 2,000 ignored files. `git.identity` and `git.clone` refuse paths in machine state.
 - `git.discard` stashes the paths as `ruimte-discard-<timestamp>` first, so `git stash pop` brings them back.
 - `create-pr` needs `gh` on the PATH. Suggested commit messages and chat titles run a CLI's one-shot mode: the chat's own CLI first, then `claude -p`, `codex exec` (read-only sandbox), `copilot -p -s`, `grok -p`, `agy -p`.
 
 ## Linked machines
 
-Another machine of the account works in a project here only after a person links it. `src/peering/CLAUDE.md` has admission, what a peer may ask, limits, bundles and untrusted folders. The requests:
+Another machine of the account works in a project here only after a person links it. `src/peer/CLAUDE.md` has admission, what a peer may ask, limits, bundles and untrusted folders. The requests:
 
 - `peer.bind { machineId, label, projectId, ceiling? }` (ceiling `supervised` by default), `peer.list`, `peer.setCeiling` and `peer.unbind`, which ends that machine's nodes here and removes its hidden canvas `peer-<machineId>` and the link. `peer.changed` goes to every client.
 - `peer.placeNodes { machineId, projectId, nodes, edges }` replaces that hidden canvas (`cwd-outside`, `edge-off-machine` refuse bad entries).

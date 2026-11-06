@@ -17,11 +17,11 @@ import { signForAccount } from '../auth/registration.ts';
 import { type Dispatcher } from '../dispatcher.ts';
 import type { EndpointIdentity, IdentityFlags } from '../endpoint-id.ts';
 import { checkWorktreeRoot } from '../git/worktree-root.ts';
+import type { PeerKey } from '../peer/giver/peer-key.ts';
 import { DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
 import type { InstallVerdict } from '../power/machine-update.ts';
 import { gitBash } from '../pty/pty.ts';
 import type { BrokerDescription } from '../pulsar/broker-switch.ts';
-import type { PeerKey } from '../remote/peer-key.ts';
 import { countClient, countUsage, recordStartup, recordTiming } from '../stats/usage-stats.ts';
 import type { ClientAccess } from '../wire.ts';
 

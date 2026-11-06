@@ -18,8 +18,8 @@ import type {
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { ChatError } from '../chat/errors.ts';
 import type { Dispatcher } from '../dispatcher.ts';
+import { refuseBoundNode, type MachineOfNode } from '../peer/giver/bound-nodes.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
-import { refuseBoundNode, type MachineOfNode } from '../remote/bound-nodes.ts';
 import { registerAgentHandlers } from './agent.ts';
 import type { BeforeKill } from './session.ts';
 

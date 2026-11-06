@@ -33,10 +33,23 @@ describe('Dispatcher', () => {
         const dispatcher = makeDispatcher();
         dispatcher.observe({
             started: (type) => heard.push(`started ${type}`),
-            answered: (type, payload) => heard.push(`answered ${type} ${JSON.stringify(payload)}`)
+            answered: (type, _ms, counts) => heard.push(`answered ${type} ${JSON.stringify(counts)}`)
         });
         await dispatcher.handle(new FakeSocket(), JSON.stringify({ id: 'r1', type: 'server.hello', payload: {} }));
-        expect(heard).toEqual(['started server.hello', 'answered server.hello {}']);
+        expect(heard).toEqual(['started server.hello', 'answered server.hello []']);
+    });
+
+    test('hands the observers what a request registered to count, from its payload when that decides', async () => {
+        const heard: string[] = [];
+        const dispatcher = new Dispatcher();
+        dispatcher.register('server.hello', () => ({ version: '1', platform: 'test', home: '/tmp/home' }), { count: ['actions.device'] });
+        dispatcher.register('fs.read', () => ({ text: 'x' }) as never, {
+            count: (payload) => [{ counter: 'files.opened', once: payload.path }]
+        });
+        dispatcher.observe({ answered: (type, _ms, counts) => heard.push(`${type} ${JSON.stringify(counts)}`) });
+        await dispatcher.handle(new FakeSocket(), JSON.stringify({ id: 'r1', type: 'server.hello', payload: {} }));
+        await dispatcher.handle(new FakeSocket(), JSON.stringify({ id: 'r2', type: 'fs.read', payload: { path: '/work/a.ts' } }));
+        expect(heard).toEqual(['server.hello ["actions.device"]', 'fs.read [{"counter":"files.opened","once":"/work/a.ts"}]']);
     });
 
     test('answers a known request with ok and the result', async () => {

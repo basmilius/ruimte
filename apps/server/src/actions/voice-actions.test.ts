@@ -4,7 +4,7 @@ import type { AgentInfo, ChatInfo, ChatItem, ProjectContent } from '@ruimte/cont
 import type { CanvasHost } from '../canvas/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { serverActionCall, voiceActionCall, type VoiceCaller, type VoiceFollowHost } from './context.ts';
-import { serverActions } from './server-actions.ts';
+import { serverActions } from './server-actions-test-helpers.ts';
 
 const PLACE: IndexedPlace = { projectId: 'project-1', folder: '/work/app', canvasId: 'main' };
 const VOICE: VoiceCaller = {

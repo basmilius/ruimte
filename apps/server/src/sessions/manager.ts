@@ -204,8 +204,8 @@ export class SessionManager {
     private readonly titleRetries = new Map<string, { timer: ReturnType<typeof setTimeout> | null; count: number }>();
     // When each session last looked for its name, so the tool hooks of a busy turn do not all read.
     private readonly titleReadAt = new Map<string, number>();
-    hookUrl: string | null;
-    contextUrl: string | null;
+    readonly hookUrl: string | null;
+    readonly contextUrl: string | null;
     private readonly contextFor: (sessionId: string) => ContextSource[];
     private readonly firstPrompt: (sessionId: string) => Promise<string | null>;
     private readonly firstNotices: (sessionId: string) => string[];

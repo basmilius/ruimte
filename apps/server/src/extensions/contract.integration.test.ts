@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import { ExtensionMessageEventSchema, type ProjectContent } from '@ruimte/contracts';
 import { serverContract, ID } from '../../../../extensions/poc/contract/contract/server.ts';
-import { serverActions } from '../actions/server-actions.ts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import { markDrawnChat } from '../projects/drawn-chat.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';

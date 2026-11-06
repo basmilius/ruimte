@@ -5,7 +5,7 @@ import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
 import type { ActionOutput, ActionResult } from '@ruimte/actions';
 import { type ProjectCanvasView } from '@ruimte/contracts';
 import { serverActionCall, voiceActionCall, type VoiceCaller } from '../actions/context.ts';
-import { serverActions } from '../actions/server-actions.ts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import { AGENT_KINDS } from '../canvas/agents.ts';
 import { MAX_AGENT_DEPTH, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH } from '../canvas/depth.ts';
 import { MAX_TITLE_LENGTH, NEW_NODE, type CanvasHost } from '../canvas/host.ts';

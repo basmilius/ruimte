@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { ManualClock } from '@adecore/agents/testing';
 import { EXTENSION_API_VERSION, type ProjectContent } from '@ruimte/contracts';
-import { serverActions } from '../actions/server-actions.ts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import type { CanvasHost } from '../canvas/host.ts';
 import { markDrawnChat } from '../projects/drawn-chat.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';

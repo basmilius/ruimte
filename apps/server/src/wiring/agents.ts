@@ -19,7 +19,8 @@ import { Checkpoints } from '../git/checkpoints.ts';
 import { readLog } from '../git/log.ts';
 import { OutboxStore } from '../outbox/outbox.ts';
 import { agentChatOpening } from '../outbox/start-agent.ts';
-import { OneShotPlace } from '../peering/one-shot-place.ts';
+import { restartConnectPeers } from '../peer/giver/connect-peer.ts';
+import { OneShotPlace } from '../peer/worker/one-shot-place.ts';
 import { isPlanFileName, PlanStore } from '../plans/plan-store.ts';
 import { projectAccountChooser } from '../projects/project-accounts.ts';
 import { ProjectProposals } from '../projects/project-proposals.ts';
@@ -27,7 +28,6 @@ import { referenced } from '../projects/references.ts';
 import { UntrustedFolders } from '../projects/untrusted.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
 import { personShell } from '../pty/pty.ts';
-import { restartConnectPeers } from '../remote/connect-peer.ts';
 import { routineReport } from '../routines/routine-report.ts';
 import { CommandApprovals } from '../sessions/command-approvals.ts';
 import { SessionManager } from '../sessions/manager.ts';
@@ -186,6 +186,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         shellEnvironment: stores.shellEnvironment,
         snapshots,
         agents: new AgentStore(config.home),
+        hookUrl: runtime.hookUrl,
         contextUrl: runtime.contextUrl,
         contextFor: (sessionId) => context.list(sessionId),
         // Only a chat starts with a brief, which a routine run gives; a terminal hears the prompt alone.

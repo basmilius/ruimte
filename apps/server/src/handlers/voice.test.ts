@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import type { CanvasHost } from '../canvas/host.ts';
-import { connectionOpener, type ConnectionServices } from '../connection.ts';
+import { connectionHostOf } from '../connection-test-helpers.ts';
+import { connectionOpener } from '../connection.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { VoiceKeyStore } from '../voice/key-store.ts';
@@ -99,6 +101,7 @@ describe('the voice requests', () => {
             projects: { hold: () => undefined, letGo: () => undefined, index: { folderOf: () => null, viewsOf: () => null } } as never,
             machine: { id: 'machine-1', label: 'Studio' },
             canvasHost: {} as CanvasHost,
+            actions: serverActions,
             chats: { observe: () => () => undefined, get: () => undefined }
         });
         const dispatcher = new Dispatcher();
@@ -156,6 +159,7 @@ describe('the voice requests', () => {
                 projects: { hold: () => undefined, letGo: () => undefined, index: { folderOf: () => null, viewsOf: () => null } } as never,
                 machine: { id: 'machine-1', label: 'Studio' },
                 canvasHost: {} as CanvasHost,
+                actions: serverActions,
                 chats: { observe: () => () => undefined, get: () => undefined }
             });
             expect(log).not.toHaveBeenCalled();
@@ -210,22 +214,7 @@ describe('the preferences of Voice', () => {
 
     test('a change goes to every client of the machine, and to no other machine', async () => {
         const dispatcher = voiceDispatcher();
-        const source = () => ({ subscribe: () => () => undefined, detachAll: () => undefined });
-        const open = connectionOpener({
-            dispatcher,
-            sessions: { ...source(), get: () => undefined },
-            chats: source(),
-            identity: source(),
-            projects: source(),
-            drawings: source(),
-            diagrams: source(),
-            folders: source(),
-            statuses: source(),
-            usage: source(),
-            limits: source(),
-            processes: source(),
-            voicePreferences: preferences
-        } as unknown as ConnectionServices);
+        const open = connectionOpener(connectionHostOf(dispatcher, [{ name: 'voice', sources: [preferences] }]));
         const phone = channel();
         const desktop = channel();
         const peer = channel();

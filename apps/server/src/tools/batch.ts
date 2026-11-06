@@ -50,7 +50,7 @@ export function jsonBatch<Item extends z.ZodType>(json: string, item: Item, exam
  * revision the call named, each action applied to what the one before it left. A refusal of any of
  * them writes nothing. A write after `run` returned, such as an undo, goes to the store as its own.
  */
-export async function oneWrite<T>(call: AgentCall, run: (write: AgentCall) => Promise<T>): Promise<T> {
+export async function oneWrite<Call extends AgentCall, T>(call: Call, run: (write: Call) => Promise<T>): Promise<T> {
     const { projects } = call.host;
     const { projectId } = placeOf(call);
     let open = true;

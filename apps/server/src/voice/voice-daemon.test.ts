@@ -7,7 +7,7 @@ import { ACTION_DEFINITIONS } from '@ruimte/actions';
 import type { ChatTurnItem, ProjectContent, ServerFrame, VoiceStartPayload } from '@ruimte/contracts';
 import type { LiveEvent } from '@ruimte/voice';
 import { voiceActionCall } from '../actions/context.ts';
-import { serverActions } from '../actions/server-actions.ts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';

@@ -1,4 +1,4 @@
-import type { Server } from 'bun';
+import type { Server, WebSocketHandler } from 'bun';
 import { join } from 'node:path';
 import {
     MACHINE_HEALTH_PATH,
@@ -18,12 +18,14 @@ import {
 } from '@ruimte/contracts';
 import { AccountSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
+import type { ServerActions } from '../actions/server-actions.ts';
 import { crossOriginHeaders, decideAccess, handleLocalTicketRequest, isOwner, preflightHeaders, withHeaders } from '../auth/access.ts';
 import { handleLocalProofRequest } from '../auth/local-proof.ts';
 import { MachineAccountError, signForAccount, signLinkRequest } from '../auth/registration.ts';
 import { SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
 import type { CanvasHost } from '../canvas/host.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from '../chat/attachment-route.ts';
+import type { ServerConfig } from '../config.ts';
 import { socketChannel } from '../connection.ts';
 import { hookContext } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
@@ -74,7 +76,7 @@ const MAX_MCP_BODY_BYTES = 72 * 1024 * 1024;
 
 export type SocketData = ClientAccess & { protocolRefused: boolean; ticket: string | null };
 
-interface HttpInput {
+export interface HttpInput {
     requestStop: () => void;
     runtime: DaemonRuntime;
     machine: MachineBundle;
@@ -87,6 +89,7 @@ interface HttpInput {
     network: NetworkBundle;
     clients: ClientsBundle;
     canvasHost: CanvasHost;
+    actions: ServerActions;
     voice: VoiceBundle;
     artifacts: ArtifactsBundle;
     extensions: ExtensionHost;
@@ -299,6 +302,7 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                 return handleMcpRequest(request, {
                     targetForToken: agents.targetForToken,
                     host: canvasHost,
+                    actions: input.actions,
                     uploads: input.artifacts.artifacts,
                     callerFolders: (caller) => [join(config.home, 'attachments', caller), agents.visuals.workspacePath(caller)],
                     shotFolders: shotFolders(config.home)
@@ -308,16 +312,57 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
     ];
 }
 
-/* Starts answering on the daemon's port: every HTTP route, and every client socket from its upgrade to its close. */
-export function serveDaemon(input: HttpInput): Server<SocketData> {
-    const { config } = input.runtime;
-    const { handshake } = input.machine;
-    const { sockets, open } = input.clients;
-    const routes = daemonRoutes(input);
-    return Bun.serve<SocketData>({
+type DoorwayServer = Server<SocketData>;
+
+interface DoorwayHandlers {
+    fetch(request: Request, server: DoorwayServer): Response | undefined | Promise<Response | undefined>;
+    websocket: Required<Pick<WebSocketHandler<SocketData>, 'open' | 'drain' | 'message' | 'close'>>;
+}
+
+/*
+ * The daemon's port, held from the first moment of boot, so that every URL an agent or a hook is
+ * told is known before anything is wired. It answers `503` until `answer` hands it the routes, and
+ * a socket cannot upgrade before then.
+ */
+export interface Doorway {
+    readonly server: DoorwayServer;
+    readonly port: number;
+    readonly hostname: string;
+    answer(input: HttpInput): void;
+}
+
+export function listenFirst(config: ServerConfig): Doorway {
+    let handlers: DoorwayHandlers | null = null;
+    const server = Bun.serve<SocketData>({
         hostname: config.host,
         port: config.port,
         maxRequestBodySize: MAX_MCP_BODY_BYTES,
+        fetch: (request, server) => handlers?.fetch(request, server) ?? new Response('The machine is starting', { status: 503 }),
+        websocket: {
+            backpressureLimit: SOCKET_BACKPRESSURE_LIMIT,
+            closeOnBackpressureLimit: true,
+            open: (ws) => handlers?.websocket.open(ws),
+            drain: (ws) => handlers?.websocket.drain(ws),
+            message: (ws, message) => handlers?.websocket.message(ws, message),
+            close: (ws, code, reason) => handlers?.websocket.close(ws, code, reason)
+        }
+    });
+    return {
+        server,
+        port: server.port ?? config.port,
+        hostname: server.hostname ?? config.host,
+        answer(input) {
+            handlers = daemonHandlers(input);
+        }
+    };
+}
+
+/* Every HTTP route, and every client socket from its upgrade to its close. */
+function daemonHandlers(input: HttpInput): DoorwayHandlers {
+    const { handshake } = input.machine;
+    const { sockets, open } = input.clients;
+    const routes = daemonRoutes(input);
+    return {
         async fetch(request, server) {
             const cors = crossOriginHeaders(request);
             if (cors !== null && request.method === 'OPTIONS') {
@@ -327,8 +372,6 @@ export function serveDaemon(input: HttpInput): Server<SocketData> {
             return cors === null || response === undefined ? response : withHeaders(response, cors);
         },
         websocket: {
-            backpressureLimit: SOCKET_BACKPRESSURE_LIMIT,
-            closeOnBackpressureLimit: true,
             open(ws) {
                 if (ws.data.protocolRefused) {
                     ws.close(PROTOCOL_REFUSED_CLOSE_CODE, protocolRefusalReason());
@@ -356,5 +399,5 @@ export function serveDaemon(input: HttpInput): Server<SocketData> {
                 state.channel.closed();
             }
         }
-    });
+    };
 }

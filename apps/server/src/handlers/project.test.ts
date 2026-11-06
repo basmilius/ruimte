@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { ProjectCanvasView, ProjectContent, ProjectDocument, ProjectSummaryEvent, ServerFrame } from '@ruimte/contracts';
-import { connectionOpener, type ConnectionServices, type OpenConnection } from '../connection.ts';
+import { connectionHostOf } from '../connection-test-helpers.ts';
+import { connectionOpener, type OpenConnection } from '../connection.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import type { InlineChatHost } from '../projects/inline-chat.ts';
 import { OUTSIDE_CHECKOUT, projectLinks } from '../projects/project-file-test-helpers.ts';
@@ -41,8 +42,6 @@ class FakeChannel implements ClientChannel {
     onDrain(): void {}
 }
 
-const quiet = { subscribe: () => () => undefined, detachAll: () => undefined };
-
 let root: string;
 let folder: string;
 let store: ProjectStore;
@@ -63,21 +62,7 @@ afterEach(async () => {
 function twoClients(inline?: InlineChatHost) {
     const dispatcher = new Dispatcher();
     registerProjectHandlers(dispatcher, store, OUTSIDE_CHECKOUT, inline);
-    const services: ConnectionServices = {
-        dispatcher,
-        sessions: { ...quiet, get: () => undefined },
-        chats: quiet,
-        identity: quiet,
-        projects: store,
-        drawings: quiet,
-        diagrams: quiet,
-        folders: quiet,
-        statuses: quiet,
-        usage: quiet,
-        limits: quiet,
-        processes: quiet
-    };
-    const open = connectionOpener(services);
+    const open = connectionOpener(connectionHostOf(dispatcher, [{ name: 'projects', sources: [store] }]));
     const socket = new FakeChannel();
     const direct = new FakeChannel();
     return {

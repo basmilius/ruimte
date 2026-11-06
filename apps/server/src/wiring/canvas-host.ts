@@ -6,7 +6,6 @@ import { chatForkDeps, forkForAgent } from '../chat/fork.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { worktreeHost } from '../git/worktree-host.ts';
 import { AgentLanguage } from '../language/agent-language.ts';
-import type { LanguageHost } from '../language/host.ts';
 import { agentStartHost } from '../outbox/start-agent.ts';
 import type { PushService } from '../push/service.ts';
 import { agentRoutines } from '../routines/agent-host.ts';
@@ -21,6 +20,7 @@ import { chatIsInChats } from './chat-move.ts';
 import type { DatabasesBundle } from './databases.ts';
 import type { DevicesBundle } from './devices.ts';
 import type { GitBundle } from './git.ts';
+import type { LanguageBundle } from './language.ts';
 import type { LaunchesBundle } from './launches.ts';
 import type { ProjectsBundle } from './projects.ts';
 import type { ProvidersBundle } from './providers.ts';
@@ -47,7 +47,7 @@ interface CanvasHostInput {
     routines: RoutinesBundle;
     templates: TemplatesBundle;
     later: {
-        language(): LanguageHost;
+        language(): LanguageBundle;
         push(): PushService;
     };
 }
@@ -130,9 +130,9 @@ export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
         extensions: input.extensions,
         language: new AgentLanguage({
             host: {
-                forAgent: (projectId, request, languageWork) => later.language().forAgent(projectId, request, languageWork),
-                programOf: (kind) => later.language().programOf(kind),
-                cachedWorkspaceProblems: (projectId) => later.language().cachedWorkspaceProblems(projectId)
+                forAgent: (projectId, request, languageWork) => later.language().host.forAgent(projectId, request, languageWork),
+                programOf: (kind) => later.language().host.programOf(kind),
+                cachedWorkspaceProblems: (projectId) => later.language().host.cachedWorkspaceProblems(projectId)
             },
             sql: databases.sqlAnalysis
         }),

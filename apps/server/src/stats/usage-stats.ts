@@ -1,4 +1,3 @@
-import { isRecord } from '@adecore/utils/record';
 import { USAGE_CLIENT_KINDS, type UsageClientKind } from '@ruimte/contracts';
 import {
     USAGE_VERB_COUNTERS,
@@ -10,6 +9,7 @@ import {
     type UsageReportTiming
 } from '@ruimte/pulsar';
 import { isOwner } from '../auth/access.ts';
+import type { UsageCount } from '../dispatcher.ts';
 import type { ClientAccess } from '../wire.ts';
 import type { UsageCounter } from './usage-counter.ts';
 
@@ -49,41 +49,6 @@ export function recordTiming(timing: UsageReportTiming, ms: number): void {
     }
 }
 
-// What a person asks over the wire that counts, beside what agents do through their tools; only once it was answered.
-const REQUEST_COUNTERS: Readonly<Record<string, readonly UsageReportCounter[]>> = {
-    'browser.navigate': ['actions.browser'],
-    'browser.command': ['actions.browser'],
-    'device.boot': ['actions.device', 'devices.started'],
-    'device.shutdown': ['actions.device'],
-    'device.action': ['actions.device'],
-    'device.capture': ['actions.device'],
-    'device.record': ['actions.device'],
-    'device.clipboard': ['actions.device'],
-    'database.request': ['actions.database'],
-    'computer.control': ['actions.computer'],
-    'fs.write': ['files.saved'],
-    'fs.writeCommit': ['files.saved'],
-    'git.resolve': ['git.conflictsResolved'],
-    'git.pr-watch': ['prWatches.started'],
-    'voice.start': ['voice.sessions'],
-    'peer.taskStart': ['peers.tasks']
-};
-
-// A git action as what it did; one that only fetches, checks out or branches counts nothing here.
-const GIT_ACTION_COUNTERS: Readonly<Record<string, readonly UsageReportCounter[]>> = {
-    commit: ['git.commits'],
-    'commit-push': ['git.commits', 'git.pushes'],
-    push: ['git.pushes'],
-    'force-push': ['git.pushes'],
-    publish: ['git.pushes'],
-    pull: ['git.pulls'],
-    sync: ['git.pulls', 'git.pushes']
-};
-
-function fieldOf(payload: unknown, name: string): unknown {
-    return isRecord(payload) ? payload[name] : undefined;
-}
-
 // The tool counters that also count on the day itself: what an agent delegates, and what it does in a feature a person can use too.
 const TOOL_DAY_COUNTERS: Readonly<Record<string, UsageReportCounter>> = {
     agent: 'agents.delegated',
@@ -97,25 +62,13 @@ const TOOL_DAY_COUNTERS: Readonly<Record<string, UsageReportCounter>> = {
 const TOOL_COUNTERS: ReadonlySet<string> = new Set(Object.keys(USAGE_VERB_COUNTERS));
 const VIEW_KINDS: ReadonlySet<string> = new Set(Object.keys(USAGE_VIEW_COUNTERS));
 
-/*
- * A request that was answered, with the payload it carried. A file read counts once per file a day, by a key that
- * stays in memory like every other `countOnce` key; a statement a person ran in a database view counts as a query.
- */
-export function countRequest(type: string, payload?: unknown): void {
-    for (const counter of REQUEST_COUNTERS[type] ?? []) {
-        countUsage(counter);
-    }
-    if (type === 'git.action') {
-        const kind = fieldOf(payload, 'kind');
-        for (const counter of (typeof kind === 'string' ? GIT_ACTION_COUNTERS[kind] : undefined) ?? []) {
-            countUsage(counter);
-        }
-    } else if (type === 'database.request' && fieldOf(payload, 'method') === 'execute') {
-        countUsage('database.queries');
-    } else if (type === 'fs.read') {
-        const path = fieldOf(payload, 'path');
-        if (typeof path === 'string') {
-            countUsageOnce('files.opened', path);
+/* What the dispatcher says an answered request counts, as the area that registered it declared. */
+export function countUsages(counts: readonly UsageCount[]): void {
+    for (const count of counts) {
+        if (typeof count === 'string') {
+            countUsage(count);
+        } else {
+            countUsageOnce(count.counter, count.once);
         }
     }
 }

@@ -7,6 +7,7 @@ import {
     type ToolSpec as CoreToolSpec
 } from '@adecore/agents/context';
 import { z } from 'zod';
+import type { ServerActions } from '../actions/server-actions.ts';
 import type { AgentFiles } from '../agent-files/files.ts';
 import type { ArtifactUploads } from '../agent-files/uploads.ts';
 import type { AgentCall } from '../canvas/host.ts';
@@ -19,6 +20,8 @@ export type Audience = 'everyone' | 'chat' | 'computer' | 'database';
 
 /* Who calls a tool: the caller and the daemon, and the files and uploads a tool that takes a path reads. */
 export interface ToolCaller extends AgentCall {
+    /* The daemon's registry, which a tool runs the actions of its feature on. */
+    actions: ServerActions;
     /* The folders a file this caller names may come from, worked out on first use. */
     files(): Promise<AgentFiles>;
     uploads?: ArtifactUploads;

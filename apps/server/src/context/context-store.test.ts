@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { renderTranscript } from '@adecore/agents/context';
 import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import { ArtifactError } from '../artifacts/artifact-names.ts';
 import { artifactReport } from '../artifacts/artifact-report.ts';
 import type { CanvasHost } from '../canvas/host.ts';
@@ -22,7 +23,12 @@ function toolsOf(context: ContextStore): (name: string, input?: Record<string, u
     } as unknown as CanvasHost;
 
     return async (name, input = {}) => {
-        const result = await callTool(catalog(), name, input, { caller: 'agent', host, files: () => Promise.reject(new Error('no files in these tests')) });
+        const result = await callTool(catalog(), name, input, {
+            caller: 'agent',
+            host,
+            actions: serverActions,
+            files: () => Promise.reject(new Error('no files in these tests'))
+        });
         const first = result.content[0];
 
         return { refused: result.isError === true, text: first?.type === 'text' ? first.text : '' };

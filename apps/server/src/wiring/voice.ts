@@ -1,4 +1,4 @@
-import { serverActions } from '../actions/server-actions.ts';
+import type { ServerActions } from '../actions/server-actions.ts';
 import type { CanvasHost } from '../canvas/host.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { ServerConfig } from '../config.ts';
@@ -21,6 +21,7 @@ interface VoiceInput {
     /* This machine, the only one whose projects Voice works in. */
     machine: { id: string; label: string };
     canvasHost: CanvasHost;
+    actions: ServerActions;
     chats: Pick<ChatManager, 'observe' | 'get'>;
     /* Only a test hands in another, a fake GPT-Live on loopback. */
     live?: OpenAiLive;
@@ -60,7 +61,7 @@ export function wireVoice(input: VoiceInput): VoiceBundle {
                 listening.delete(holder);
             }
         },
-        runner: serverActions,
+        runner: input.actions,
         host: canvasHost,
         chats: {
             observe: (sink) => chats.observe(sink),

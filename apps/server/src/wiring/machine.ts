@@ -4,8 +4,8 @@ import { readOrCreateLocalSecret } from '../auth/local-secret.ts';
 import type { ServerConfig } from '../config.ts';
 import { MachineHome } from '../disk/machine-home.ts';
 import { readOrCreateEndpointIdentity, type EndpointIdentity } from '../endpoint-id.ts';
-import { PeerKey } from '../remote/peer-key.ts';
-import { PendingAdmissions } from '../remote/pending-admissions.ts';
+import { PeerKey } from '../peer/giver/peer-key.ts';
+import { PendingAdmissions } from '../peer/giver/pending-admissions.ts';
 
 /* Who the machine is and who may reach it. */
 export interface MachineBundle {

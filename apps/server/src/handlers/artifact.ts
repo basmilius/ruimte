@@ -2,7 +2,7 @@ import type { ArtifactImporter } from '../artifacts/artifact-import.ts';
 import type { Artifacts } from '../artifacts/artifacts.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 
-/* A client connection is always a person. None of these is on a peer's list; what another machine reads is `handlers/peer-artifacts.ts`. */
+/* A client connection is always a person. None of these is on a peer's list; what another machine reads is `peer/worker/area-artifacts.ts`. */
 export function registerArtifactHandlers(dispatcher: Dispatcher, artifacts: Artifacts, importer: ArtifactImporter): void {
     dispatcher.register('artifact.importFrom', (payload) => importer.importFrom(payload));
 

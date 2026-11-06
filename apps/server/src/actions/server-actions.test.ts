@@ -8,7 +8,7 @@ import { PlanStore } from '../plans/plan-store.ts';
 import { ProjectError } from '../projects/project-error.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { serverActionCall } from './context.ts';
-import { serverActions } from './server-actions.ts';
+import { serverActions } from './server-actions-test-helpers.ts';
 
 const PLACE = { projectId: 'project-1', folder: '/nowhere', canvasId: 'main' };
 

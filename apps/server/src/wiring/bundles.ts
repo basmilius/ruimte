@@ -1,0 +1,57 @@
+import type { ServerActions } from '../actions/server-actions.ts';
+import type { CanvasHost } from '../canvas/host.ts';
+import type { ComputerUse } from '../computer/computer-use.ts';
+import type { PushService } from '../push/service.ts';
+import type { AgentWorkBundle } from './agent-work.ts';
+import type { AgentStores, AgentsBundle } from './agents.ts';
+import type { ArtifactsBundle } from './artifacts.ts';
+import type { ClientsBundle } from './clients.ts';
+import type { DatabasesBundle } from './databases.ts';
+import type { DevicesBundle } from './devices.ts';
+import type { ExtensionsBundle } from './extensions.ts';
+import type { GitBundle } from './git.ts';
+import type { LanguageBundle } from './language.ts';
+import type { LaunchesBundle } from './launches.ts';
+import type { MachineBundle } from './machine.ts';
+import type { NetworkBundle } from './network.ts';
+import type { PowerBundle } from './power.ts';
+import type { ProcessesBundle } from './processes.ts';
+import type { ProjectsBundle } from './projects.ts';
+import type { ProvidersBundle } from './providers.ts';
+import type { RemoteBundle } from './remote.ts';
+import type { RoutinesBundle } from './routines.ts';
+import type { TemplatesBundle } from './templates.ts';
+import type { UsageStatsBundle } from './usage-stats.ts';
+import type { UsageBundle } from './usage.ts';
+import type { VoiceBundle } from './voice.ts';
+
+/* Every bundle the daemon wires, by the name a module that is built before it reaches it by (`wiring/later.ts`). */
+export interface DaemonBundles {
+    machine: MachineBundle;
+    stores: AgentStores;
+    stats: UsageStatsBundle;
+    providers: ProvidersBundle;
+    computer: ComputerUse;
+    agents: AgentsBundle;
+    projects: ProjectsBundle;
+    templates: TemplatesBundle;
+    artifacts: ArtifactsBundle;
+    databases: DatabasesBundle;
+    remote: RemoteBundle;
+    work: AgentWorkBundle;
+    launches: LaunchesBundle;
+    routines: RoutinesBundle;
+    git: GitBundle;
+    devices: DevicesBundle;
+    usage: UsageBundle;
+    processes: ProcessesBundle;
+    language: LanguageBundle;
+    push: PushService;
+    voice: VoiceBundle;
+    power: PowerBundle;
+    network: NetworkBundle;
+    clients: ClientsBundle;
+    actions: ServerActions;
+    canvasHost: CanvasHost;
+    extensions: ExtensionsBundle;
+}

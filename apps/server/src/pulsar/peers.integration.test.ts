@@ -27,7 +27,7 @@ import { LanDoor } from './lan-door.ts';
 import { DirectPeers } from './peers.ts';
 import { SignalGate } from './signal-gate.ts';
 import { StatementGate } from './statement.ts';
-import { servicesWith, signedSignal } from './test-helpers.ts';
+import { hostWith, signedSignal } from './test-helpers.ts';
 
 /*
  * Both ends of a direct connection in one process, over real ICE, DTLS and SCTP on loopback: the
@@ -61,7 +61,7 @@ beforeAll(async () => {
         'endpoint.info',
         (_payload, client) => ({ reachability: client.access?.reachability, authenticated: client.access?.sessionId !== null }) as never
     );
-    const openConnection = connectionOpener(servicesWith(dispatcher));
+    const openConnection = connectionOpener(hostWith(dispatcher));
     peers = new DirectPeers({
         iceServers: () => [],
         portRange: null,

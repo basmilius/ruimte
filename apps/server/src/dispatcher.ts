@@ -1,5 +1,6 @@
 import { CodedError } from '@adecore/agents';
 import { REQUEST_SCHEMAS, isRequestType, parseRequest, type ReplyError, type RequestMap, type RequestType } from '@ruimte/contracts';
+import type { UsageReportCounter } from '@ruimte/pulsar';
 import { isOwner } from './auth/access.ts';
 import { errorText } from './error-text.ts';
 import type { ClientConnection } from './wire.ts';
@@ -18,13 +19,16 @@ type Handler<T extends RequestType> = (
     client: ClientConnection
 ) => RequestMap[T]['result'] | BinaryReply | Promise<RequestMap[T]['result'] | BinaryReply>;
 
+/* What an answered request adds to the usage counts; `once` counts a key once per day, like a file a person opened. */
+export type UsageCount = UsageReportCounter | { counter: UsageReportCounter; once: string };
+
 /* Told of every request the dispatcher answers, so what counts or times them stays out of its imports. */
 export interface RequestObserver {
     started?(type: RequestType): void;
-    answered?(type: RequestType, payload: unknown, ms: number): void;
+    answered?(type: RequestType, ms: number, counts: readonly UsageCount[]): void;
 }
 
-interface HandlerOptions {
+interface HandlerOptions<T extends RequestType> {
     /* Only a client that presented the local secret may ask; any other is refused as `forbidden` before the handler runs. */
     owner?: boolean;
     /*
@@ -33,6 +37,8 @@ interface HandlerOptions {
      * An owner-only request can never carry it.
      */
     peer?: boolean;
+    /* What a person's request counts once it was answered, by what its payload says when that matters. */
+    count?: readonly UsageCount[] | ((payload: RequestMap[T]['payload']) => readonly UsageCount[]);
 }
 
 function errorReply(id: string | null, code: string, message: string): ReplyError {
@@ -47,9 +53,10 @@ export class Dispatcher {
     private readonly handlers = new Map<RequestType, Handler<RequestType>>();
     private readonly ownerOnly = new Set<RequestType>();
     private readonly peerAllowed = new Set<RequestType>();
+    private readonly counts = new Map<RequestType, (payload: never) => readonly UsageCount[]>();
     private readonly observers: RequestObserver[] = [];
 
-    register<T extends RequestType>(type: T, handler: Handler<T>, options: HandlerOptions = {}): void {
+    register<T extends RequestType>(type: T, handler: Handler<T>, options: HandlerOptions<T> = {}): void {
         if (this.handlers.has(type)) {
             throw new Error(`Handler for ${type} is already registered`);
         }
@@ -62,6 +69,10 @@ export class Dispatcher {
         }
         if (options.peer === true) {
             this.peerAllowed.add(type);
+        }
+        const { count } = options;
+        if (count !== undefined) {
+            this.counts.set(type, typeof count === 'function' ? count : () => count);
         }
     }
 
@@ -129,8 +140,9 @@ export class Dispatcher {
         try {
             const result = await handler(payloadParse.data, client);
             const elapsed = performance.now() - started;
+            const counted = this.counts.get(type)?.(payloadParse.data as never) ?? [];
             for (const observer of this.observers) {
-                observer.answered?.(type, payloadParse.data, elapsed);
+                observer.answered?.(type, elapsed, counted);
             }
             if (result instanceof BinaryReply && client.sendBinary) {
                 client.sendBinary(result.encode(id));

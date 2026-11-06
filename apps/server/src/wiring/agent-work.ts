@@ -10,13 +10,12 @@ import { AfterSettleStore } from '../launches/after-settle.ts';
 import type { EndChildrenWiring } from '../outbox/end-children.ts';
 import type { OutboxWork } from '../outbox/outbox.ts';
 import type { SummaryWiring } from '../outbox/summary.ts';
-import { PeerTasks } from '../peering/peer-tasks.ts';
+import { ConnectPeer, owedTargetsIn } from '../peer/giver/connect-peer.ts';
+import { RemoteTasks } from '../peer/giver/remote-tasks.ts';
+import { PeerTasks } from '../peer/worker/peer-tasks.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { PushService } from '../push/service.ts';
 import { SnoozeStore } from '../push/snoozes.ts';
-import { ConnectPeer, owedTargetsIn } from '../remote/connect-peer.ts';
-import { RemoteTasks } from '../remote/remote-tasks.ts';
-import type { Routines } from '../routines/routines.ts';
 import type { TaskWiring } from '../tasks/wiring.ts';
 import { wakefulClock } from '../timers.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
@@ -26,6 +25,7 @@ import type { LaunchesBundle } from './launches.ts';
 import { wireOutbox } from './outbox.ts';
 import type { ProvidersBundle } from './providers.ts';
 import type { RemoteBundle } from './remote.ts';
+import type { RoutinesBundle } from './routines.ts';
 
 /* What the outbox drives on behalf of agents: starts, tasks, wakes and what a node takes along when it goes. */
 export interface AgentWorkBundle {
@@ -55,7 +55,7 @@ interface AgentWorkInput {
         launches(): LaunchesBundle;
         git(): GitBundle;
         clients(): ClientsBundle;
-        routines(): Routines;
+        routines(): RoutinesBundle;
     };
 }
 
@@ -133,7 +133,7 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         resumeAtReset: () => identity.resumeAtReset,
         runAfterSettle: (entry) => later.launches().afterSettle.handle(entry),
         connectPeer: reconnect.handler,
-        runRoutine: (entry) => later.routines().handle(entry),
+        runRoutine: (entry) => later.routines().routines.handle(entry),
         peerTasks: {
             deliver: (entry) => peerTasksNow().deliver(entry),
             isPeerTask: (task) => peerTasks?.isPeerTask(task) === true,

@@ -1,6 +1,6 @@
 import type { AgentKind, SessionInfo } from '@ruimte/contracts';
 import type { Dispatcher } from '../dispatcher.ts';
-import { refuseBoundNode, type MachineOfNode } from '../remote/bound-nodes.ts';
+import { refuseBoundNode, type MachineOfNode } from '../peer/giver/bound-nodes.ts';
 import { SessionError, type SessionManager } from '../sessions/manager.ts';
 import { recordTiming } from '../stats/usage-stats.ts';
 import type { ClientConnection } from '../wire.ts';

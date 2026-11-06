@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { NODE_SIZE, type ProjectContent } from '@ruimte/contracts';
 import { z } from 'zod';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import { AgentFiles, readOpened } from '../agent-files/files.ts';
 import type { CanvasHost } from '../canvas/host.ts';
 import { ContextRefusal } from '../context/context-store.ts';
@@ -98,7 +99,7 @@ function host(): CanvasHost {
 }
 
 function context(caller: string, files = new AgentFiles('/nowhere/repo', [])): ToolContext {
-    return { caller, host: host(), files: async () => files };
+    return { caller, host: host(), actions: serverActions, files: async () => files };
 }
 
 async function call(caller: string, name: string, input: Record<string, unknown>) {
@@ -349,7 +350,7 @@ describe('images', () => {
 });
 
 describe('http', () => {
-    const deps = { targetForToken: (token: string) => (token === 'tok-chat' ? 'chat-1' : null), host: host() };
+    const deps = { targetForToken: (token: string) => (token === 'tok-chat' ? 'chat-1' : null), host: host(), actions: serverActions };
 
     function post(body: unknown, token: string | null): Request {
         return new Request('http://127.0.0.1:4210/mcp', {

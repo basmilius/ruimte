@@ -1,4 +1,5 @@
 import { refusalBody, ToolRefusal } from '@adecore/agents/context';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import type { CanvasHost, LaunchReading } from '../canvas/host.ts';
 import { ProjectError } from '../projects/project-error.ts';
 import { runTool, type ToolCaller } from './tool.ts';
@@ -13,7 +14,7 @@ export interface ToolAnswer {
 
 /* A call for a tool that reads no file the agent names; one that does gets `files` of its own. */
 export function toolCall(caller: string, host: CanvasHost): ToolCaller {
-    return { caller, host, files: () => Promise.reject(new Error('This test hands the tool no files')) };
+    return { caller, host, actions: serverActions, files: () => Promise.reject(new Error('This test hands the tool no files')) };
 }
 
 /*

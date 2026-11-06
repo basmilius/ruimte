@@ -1,10 +1,11 @@
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { OutboxStore } from '../outbox/outbox.ts';
-import { owedTargetsIn } from '../remote/connect-peer.ts';
-import { PeerMachines } from '../remote/peer-machines.ts';
-import { RemoteConnections, brokerDialer } from '../remote/remote-connections.ts';
-import { RemoteStatus } from '../remote/remote-status.ts';
+import { owedTargetsIn } from '../peer/giver/connect-peer.ts';
+import { PeerMachines } from '../peer/giver/peer-machines.ts';
+import { RemoteConnections, brokerDialer } from '../peer/giver/remote-connections.ts';
+import { RemoteStatus } from '../peer/giver/remote-status.ts';
 import type { MachineBundle } from './machine.ts';
+import type { NetworkBundle } from './network.ts';
 
 /* The links this machine holds to the machines it works in, with what it remembers about them. */
 export interface RemoteBundle {
@@ -20,10 +21,7 @@ interface RemoteInput {
     identity: EndpointIdentity;
     machine: MachineBundle;
     outbox: OutboxStore;
-    later: {
-        /* The broker this machine announces itself to, null when it uses none. */
-        brokerUrl(): string | null;
-    };
+    later: { network(): NetworkBundle };
 }
 
 export async function wireRemote({ home, identity, machine, outbox, later }: RemoteInput): Promise<RemoteBundle> {
@@ -42,7 +40,7 @@ export async function wireRemote({ home, identity, machine, outbox, later }: Rem
                 .flatMap((entry) =>
                     entry.kind === 'start-remote-agent' && entry.payload.machineId === machineId && entry.id !== except ? [entry.target] : []
                 ),
-        dialer: brokerDialer({ signer: machine.peerKey, defaultBroker: () => later.brokerUrl(), label: () => identity.label })
+        dialer: brokerDialer({ signer: machine.peerKey, defaultBroker: () => later.network().brokerSwitch.describe().brokerUrl, label: () => identity.label })
     });
     const leaving: Array<() => Promise<void> | void> = [];
     // Another account's machines never vouched for this one: its key, the machines it knew and the statements it held go with the account.
