@@ -8,6 +8,7 @@ export const AGENT_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
     row('agents.deleteAnyView'),
     row('agents.reachOpenProjects'),
     row('agents.working.sound'),
+    row('agents.showViews'),
     {
         id: 'agents.keepAwake.mode',
         section: 'agents',

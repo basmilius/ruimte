@@ -4,7 +4,7 @@ import { writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { gzipSync } from 'node:zlib';
-import { EXTENSION_API_VERSION } from '@ruimte/contracts';
+import { EXTENSION_API_VERSION, EXTENSION_PACK_MAX_UNPACKED_BYTES } from '@ruimte/contracts';
 import { ExtensionHost } from './extension-host.ts';
 import { ExtensionStore, isDamaged } from './store.ts';
 
@@ -63,6 +63,22 @@ describe('ExtensionStore', () => {
         };
 
         await expect(store.install(gzipSync(JSON.stringify({ files })).toString('base64'))).rejects.toMatchObject({ code: 'pack-path' });
+        expect(await idsIn(store)).toEqual([]);
+    });
+
+    test('refuses a valid pack that unpacks past the limit, and keeps nothing of it', async () => {
+        const store = new ExtensionStore(join(root, 'too-large'));
+        const manifest = Buffer.from(manifestOf('acme.large')).toString('base64');
+        const json = Buffer.concat([
+            Buffer.from(`{"files":{"manifest.json":"${manifest}","assets/filler.txt":"`),
+            Buffer.alloc(EXTENSION_PACK_MAX_UNPACKED_BYTES, 'A'),
+            Buffer.from('"}}')
+        ]);
+
+        await expect(store.install(gzipSync(json).toString('base64'))).rejects.toMatchObject({
+            code: 'pack-unreadable',
+            message: 'This pack unpacks to more than an extension may hold'
+        });
         expect(await idsIn(store)).toEqual([]);
     });
 

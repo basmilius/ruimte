@@ -4,11 +4,13 @@ import {
     activeExtensionTheme,
     applyStoredExtensionTheme,
     chooseExtensionTheme,
+    EXTENSION_THEME_STORAGE_KEY,
     listExtensionThemes,
     refreshExtensionTheme,
     type ThemeChoice
 } from '@/extensions/themes';
 import { AppearancePane } from '@/settings/panes/AppearancePane';
+import { startSharedStorage } from '@/shared-storage';
 import { contribute, type BuiltInThemeContribution } from '@/state/extension-registry';
 import { useSettings } from '@/state/settings';
 import { mount } from '../../testing/dom';
@@ -40,6 +42,34 @@ describe('an extension theme', () => {
         applyStoredExtensionTheme();
 
         expect(themeText()).toContain('--surface: #000');
+    });
+
+    test('follows a theme another window chose or took off, without writing it back', () => {
+        const listeners = new Set<(event: StorageEvent) => void>();
+        const otherWindows = {
+            addEventListener: (_type: string, listener: (event: StorageEvent) => void) => void listeners.add(listener),
+            removeEventListener: (_type: string, listener: (event: StorageEvent) => void) => void listeners.delete(listener)
+        };
+        const announce = () => listeners.forEach((listener) => listener({ key: EXTENSION_THEME_STORAGE_KEY } as StorageEvent));
+        const stop = startSharedStorage(otherWindows as unknown as Window);
+
+        try {
+            const stored = JSON.stringify({ key: CHOICE.key, tokens: `[data-theme='dark'][data-theme] { --surface: #000; }`, cssUrl: null });
+            localStorage.setItem(EXTENSION_THEME_STORAGE_KEY, stored);
+            announce();
+
+            expect(themeText()).toContain('--surface: #000');
+            expect(activeExtensionTheme()).toBe(CHOICE.key);
+            expect(localStorage.getItem(EXTENSION_THEME_STORAGE_KEY)).toBe(stored);
+
+            localStorage.removeItem(EXTENSION_THEME_STORAGE_KEY);
+            announce();
+
+            expect(themeText()).toBeNull();
+            expect(localStorage.getItem(EXTENSION_THEME_STORAGE_KEY)).toBeNull();
+        } finally {
+            stop();
+        }
     });
 
     test('stays ahead of the palette, so a person keeps their accent', () => {

@@ -6,6 +6,8 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `accountsReorder` = "accounts.reorder"
     case `accountsSave` = "accounts.save"
     case `accountsWatchLogin` = "accounts.watchLogin"
+    case `activityList` = "activity.list"
+    case `activityTouch` = "activity.touch"
     case `agentChildren` = "agent.children"
     case `agentResume` = "agent.resume"
     case `anthropicConfigure` = "anthropic.configure"
@@ -371,6 +373,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
 
 public enum WireEvent: String, CaseIterable, Sendable {
     case `accountsChanged` = "accounts.changed"
+    case `activityChanged` = "activity.changed"
     case `artifactChanged` = "artifact.changed"
     case `browserDrive` = "browser.drive"
     case `browserFrame` = "browser.frame"
@@ -424,6 +427,9 @@ public enum WireEvent: String, CaseIterable, Sendable {
     case `planRemoved` = "plan.removed"
     case `processesAlerts` = "processes.alerts"
     case `processesSample` = "processes.sample"
+    case `projectActivate` = "project.activate"
+    case `projectAskClose` = "project.askClose"
+    case `projectAskOpen` = "project.askOpen"
     case `projectChanged` = "project.changed"
     case `projectListChanged` = "project.listChanged"
     case `projectShowView` = "project.showView"

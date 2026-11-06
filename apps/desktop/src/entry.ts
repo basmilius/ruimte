@@ -38,7 +38,7 @@ import { installSocketTypeOfServiceGuard } from './socket-tos-guard';
 import { startApp } from './startup';
 import { allowAppPermission, appSubframeNavigation, isExternalLink } from './web-guards';
 
-const { app, BrowserWindow, dialog, ipcMain, nativeTheme, protocol, screen, session, shell, webContents } = electron;
+const { app, BrowserWindow, dialog, ipcMain, nativeTheme, powerMonitor, protocol, screen, session, shell, webContents } = electron;
 
 // A checkout keeps its own port, name and profile, so it runs beside an installed Ruimte instead of
 // quitting on that app's single instance lock or talking to its daemon.
@@ -202,7 +202,7 @@ async function askBeforeQuit(stopsMachine = machine.stopsOnQuit()): Promise<bool
 const pageKeys = createPageKeys();
 
 /*
- * The page already asked, so the quit that follows asks nothing; it still takes down the service this
+ * The caller already asked, so the quit that follows asks nothing; it still takes down the service this
  * installation owns when the choice said so. Under `bun dev` the relaunched app is no longer tied to
  * the launcher's pipe, so Ctrl+C in that terminal does not close it.
  */
@@ -213,7 +213,7 @@ function relaunchApp(args?: string[]): void {
 }
 
 installMachineMode(ipc, { mode: machineMode, machine, store: machineModeStore, relaunch: () => relaunchApp() });
-installSafeMode(ipc, { argv: process.argv, relaunch: relaunchApp });
+installSafeMode(ipc, { argv: process.argv, relaunch: relaunchApp, askBeforeQuit: () => askBeforeQuit().catch(() => true) });
 
 const menu = installMenu(ipc, {
     pageKeys,
@@ -385,6 +385,27 @@ const updates = installUpdates(ipc, {
     }
 });
 
+/*
+ * An external display that sleeps on a lock takes the Space of a window in full screen with it, which
+ * leaves that window on no display. macOS moves windows a moment after the event, so this waits for it.
+ */
+function followDisplays(): void {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const settle = (): void => {
+        if (timer !== null) {
+            clearTimeout(timer);
+        }
+        timer = setTimeout(() => {
+            timer = null;
+            windows.bringBack();
+        }, 1000);
+    };
+    screen.on('display-removed', settle);
+    screen.on('display-added', settle);
+    powerMonitor.on('unlock-screen', settle);
+    powerMonitor.on('resume', settle);
+}
+
 /* One window on what the page remembers, whatever the last session left open. */
 async function runSmokeWindow(): Promise<void> {
     const window = windows.open(null);
@@ -449,6 +470,7 @@ if (!app.requestSingleInstanceLock()) {
         sealPreviewSession();
         browserRoutes = installBrowserRoutes(fromAppWindow, join(here, 'guest.cjs'));
         power.followPowerSource();
+        followDisplays();
         await startApp({
             localMachine,
             startMachine: () => machine.start(),

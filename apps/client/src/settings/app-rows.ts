@@ -1,3 +1,4 @@
+import { sortHasGroups } from '@/canvas-model/node-sort';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
 import { RENDERED_DOC_COMMENTS } from '@/features';
 import { settingsRow as row, type SettingsSearchRow } from '@/registry/settings-sections';
@@ -5,6 +6,7 @@ import { FOLDING_GROUPS } from '@/settings/folding-rows';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { serverInfoOf, useServers } from '@/state/server';
+import { useSettings } from '@/state/settings';
 
 export const APP_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
     row('general.language'),
@@ -71,6 +73,8 @@ export const APP_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
         available: () => Object.keys(useServers.getState().byEndpoint).length > 0
     },
     row('views.canvas.minimap'),
+    row('views.canvas.sidebarSort'),
+    row('views.canvas.sidebarSortThen', () => sortHasGroups(useSettings.getState().sidebarNodeSort)),
     row('views.canvas.renderDistance'),
     row('views.drawing.snap'),
     row('views.browser.swipe', canSwipeBetweenPages),

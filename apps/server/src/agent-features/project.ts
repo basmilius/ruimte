@@ -26,6 +26,10 @@ export const projectFeature = defineAgentFeature({
     actions: { ...projectProposalActions, ...projectIgnoredActions },
     host: ({ identity, agents, store }) => ({
         proposals: { inChats: (chatId) => chatIsInChats(store, chatId), propose: (ask) => Promise.resolve(agents.proposals.ask(ask)) },
-        reach: projectReach(store, () => identity.reachOpenProjects)
+        reach: projectReach(
+            store,
+            () => identity.reachOpenProjects,
+            () => identity.worktreeRoot
+        )
     })
 });

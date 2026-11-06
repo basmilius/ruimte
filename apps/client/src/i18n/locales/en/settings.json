@@ -248,6 +248,7 @@
                 "ghost": {
                     "label": "Suggestions while typing",
                     "description": "Request a code suggestion with the shortcut. The selected provider receives the code around the cursor.",
+                    "needsHelp": "Turn on Explain and name suggestions first. The selected provider then receives the code around the cursor.",
                     "options": {
                         "off": "Off",
                         "request": "On request"
@@ -699,6 +700,26 @@
                 "label": "Canvas map",
                 "description": "A map of every node in the bottom right. Click to jump, drag the frame to pan. Hidden on a narrow canvas."
             },
+            "sidebarSort": {
+                "label": "Order in the sidebar",
+                "description": "How the sidebar lists the nodes under an open canvas. A node is updated when its agent starts, waits, stops or finishes, and when you open it. The canvas itself stays as it is.",
+                "options": {
+                    "canvas": "Canvas order",
+                    "recent": "Recently updated",
+                    "name": "Name",
+                    "kind": "Kind",
+                    "status": "Status"
+                }
+            },
+            "sidebarSortThen": {
+                "label": "Within a kind or status",
+                "description": "Which node comes first when several have the same kind or status.",
+                "options": {
+                    "recent": "Recently updated",
+                    "least-recent": "Least recently updated",
+                    "name": "Name"
+                }
+            },
             "renderDistance": {
                 "label": "Render distance",
                 "description": "How far out pages, files, diagrams and devices stay live. Further out they show a still picture or their name. Far and Unlimited ask more of this computer.",
@@ -984,7 +1005,7 @@
         "reachOpenProjects": {
             "label": "Agents may reach all open projects",
             "rowLabel": "Agents on {{machine}} may reach all open projects",
-            "description": "Agents in one project can read your other open projects and start agents there.",
+            "description": "Agents in one project can read your other open projects and start agents there. They can also open a project from Recent, bring one to the front, and ask you to close one. They make a new project only once you confirm.",
             "notConnected": "{{machine}} is not connected. Change this from its details under Account, or open one of its projects."
         },
         "resumeAtReset": {
@@ -1011,6 +1032,13 @@
         },
         "notifications": {
             "title": "Notifications"
+        },
+        "views": {
+            "title": "Views"
+        },
+        "showViews": {
+            "label": "Let agents switch views",
+            "description": "A view or project an agent opens replaces yours, and a message lets you go back. When off, the message offers to go there."
         },
         "working": {
             "title": "Keep awake",
@@ -1107,8 +1135,8 @@
         "sending": {
             "title": "Sending"
         },
-        "views": {
-            "title": "Views and maps"
+        "maps": {
+            "title": "Maps"
         },
         "agents": {
             "title": "What agents may show"
@@ -1131,10 +1159,6 @@
         "readingWidth": {
             "label": "Reading width",
             "description": "The width of the messages in a chat view. A chat on a canvas fills its node."
-        },
-        "showViews": {
-            "label": "Let agents switch views",
-            "description": "A view an agent opens replaces yours, with a banner to go back. When off, the banner offers to go there."
         },
         "mapTiles": {
             "label": "Map tiles",
@@ -1896,10 +1920,18 @@
         "install": "Install",
         "back": "Back",
         "notOnMachine": "{{name}} is on this computer, but its part for the machine takes that machine's owner.",
+        "machineFailed": "{{name}} is on this computer, but its part for the machine could not be installed",
         "machineKept": "{{name}} changed on this computer, but its part on the machine stayed as it was",
         "installFailed": "{{name}} could not be installed",
         "fromFileTrust": "This pack comes from a file, and the store has not reviewed it. It runs inside Ruimte and can do what you can, on all your machines.",
         "fromFileUnreadable": "This file is not an extension pack",
+        "fromFileUpdates": "Updates {{name}} to version {{version}}. It takes over the data and secrets {{name}} stored.",
+        "unknownPublisher": "an unnamed publisher",
+        "otherPublisher": {
+            "title": "Replace {{name}} with a pack from another publisher?",
+            "description": "{{name}} on this computer comes from {{installed}}, this pack from {{publisher}}. The pack takes over the data and secrets {{name}} stored.",
+            "action": "Replace"
+        },
         "enabled": "On",
         "remove": "Remove",
         "desktopOnly": "Extensions work in the desktop app.",

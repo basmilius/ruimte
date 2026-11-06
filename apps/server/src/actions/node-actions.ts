@@ -8,6 +8,7 @@ import {
     flagOf,
     emptyCanvasGroupIds,
     groupFrame,
+    groupMemberIds,
     nodeColorOf,
     nodeColorPatch,
     isCanvasView,
@@ -693,8 +694,14 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                 ...(accent === undefined ? {} : { accent })
             };
             const inside = groupMembers(group, [...canvas.nodes, group]);
+            // Texts and lines in the frame go along too, as with a frame a person draws (`membersOf` in the client).
+            const loose = groupMemberIds(group, [
+                ...canvas.texts,
+                ...(canvas.lines ?? []).map((line) => ({ id: line.id, x: (line.x + line.endX) / 2, y: (line.y + line.endY) / 2 }))
+            ]);
             const named = new Set(ids);
             const held = new Set(inside.map((node) => node.id));
+            const taken = new Set([...held, ...loose]);
             /* A caller the frame ends up around keeps every line it has, since a line from inside a
                frame into that same frame tells nobody anything; so does one that is not on this canvas. */
             const framesCaller = held.has(caller.caller) || !canvas.nodes.some((node) => node.id === caller.caller);
@@ -707,19 +714,13 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                they are in the inner group only. One that reads positions holds the group already. */
             const nodes = canvas.nodes.map((node) =>
                 container !== undefined && node.id === container.id && spellsOutMembers(node)
-                    ? { ...node, memberIds: [...(node.memberIds ?? []).filter((member) => !held.has(member)), id] }
+                    ? { ...node, memberIds: [...(node.memberIds ?? []).filter((member) => !taken.has(member)), id] }
                     : node
             );
             return {
                 content: withCanvas(content, {
                     ...canvas,
-                    nodes: [
-                        ...nodes,
-                        withMemberIds(
-                            group,
-                            inside.map((node) => node.id)
-                        )
-                    ],
+                    nodes: [...nodes, withMemberIds(group, [...inside.map((node) => node.id), ...loose])],
                     edges
                 }),
                 result: {

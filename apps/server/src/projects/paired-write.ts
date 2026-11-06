@@ -85,11 +85,12 @@ export async function writePaired(intentPath: string, files: readonly PairedFile
 
 /* Finishes an interrupted `writePaired`, unless a file was edited since; then it says which intent to delete. */
 export async function recoverPaired(intentPath: string, targets: PairedWriteTargets, io: ProjectWriteIO = PROJECT_WRITE_IO): Promise<'none' | 'recovered'> {
-    await checkTargets(intentPath, targets);
     const text = await textAt(intentPath);
     if (text === null) {
         return 'none';
     }
+    // Only a recovery writes, so a folder a person linked elsewhere stands in the way of nothing else.
+    await checkTargets(intentPath, targets);
     const { files } = IntentSchema.parse(JSON.parse(text));
     const paths = new Set(files.map((file) => file.path));
 

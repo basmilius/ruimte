@@ -121,11 +121,11 @@ export function EditorAiTab() {
                 <SettingsRow
                     searchId="editor.ai.assist.ghost"
                     label={t('editor.ai.assist.ghost.label')}
-                    description={whyNot ?? t('editor.ai.assist.ghost.description')}
+                    description={whyNot ?? (editorAssistHelp ? t('editor.ai.assist.ghost.description') : t('editor.ai.assist.ghost.needsHelp'))}
                     control={
                         <Segmented<GhostTextMode>
-                            value={unavailable ? 'off' : ghostText}
-                            disabled={unavailable}
+                            value={unavailable || !editorAssistHelp ? 'off' : ghostText}
+                            disabled={unavailable || !editorAssistHelp}
                             options={GHOST_TEXT_MODES.map((id) => ({
                                 id,
                                 label:

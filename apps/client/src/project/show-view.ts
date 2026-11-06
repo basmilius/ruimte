@@ -22,14 +22,14 @@ export function callerName(views: readonly ProjectView[], nodesOf: NodesOfView<P
 }
 
 export interface ShowViewNotice {
-    /* One line, because the banner is one row. The buttons already say the rest. */
+    /* One line, the title of the toast. Its button already says the rest. */
     message: string;
     /* The way out it offers: over to the view, back out of the one that was shown, or nothing at all. */
     action: 'go' | 'back' | null;
 }
 
 /*
- * What an agent's `view open` says, always in the banner over the views, whether the view moved or
+ * What an agent's `view open` says, always in a toast, whether the view moved or
  * not. `alreadyThere` is asked before anything moves, since a way back to where the person stands
  * reads as a bug.
  */

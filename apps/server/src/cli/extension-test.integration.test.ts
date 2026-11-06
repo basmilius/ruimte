@@ -1,15 +1,16 @@
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { CLIENT_REACT_MAJOR, scaffoldFiles } from '../extensions/scaffold.ts';
 
 const MAIN = join(import.meta.dir, '..', 'main.ts');
+const EXTENSIONS = join(import.meta.dir, '../../../../extensions');
 const root = mkdtempSync(join(process.env.RUIMTE_INTEGRATION_FIXTURE_ROOT ?? tmpdir(), 'ruimte-extension-test-'));
 
 /* `ruimte extension test` in a folder, as an author runs it. */
-async function extensionTest(folder: string): Promise<{ code: number; output: string }> {
-    const child = Bun.spawn([process.execPath, MAIN, 'extension', 'test'], { cwd: folder, stdout: 'pipe', stderr: 'pipe' });
+async function extensionTest(folder: string, files: readonly string[] = []): Promise<{ code: number; output: string }> {
+    const child = Bun.spawn([process.execPath, MAIN, 'extension', 'test', ...files], { cwd: folder, stdout: 'pipe', stderr: 'pipe' });
     const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
 
     return { code, output: `${stdout}${stderr}` };
@@ -30,16 +31,29 @@ function scaffolded(name: string): string {
 
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
-describe('ruimte extension test', () => {
-    test.each(['limits', 'poc/server', 'poc/agents', 'poc/workspace', 'poc/contract'])(
-        'runs the tests of extensions/%s against the test host',
-        async (name) => {
-            const { code, output } = await extensionTest(join(import.meta.dir, '../../../../extensions', name));
+/* The contract runs in two processes: its suspend test waits out every turn of the host, and together they ran
+   into the five seconds of a busy macOS runner. */
+const CONTRACT_RUNS: readonly (readonly string[])[] = [['test/client.dom.test.ts', 'test/server.test.ts'], ['test/suspend.dom.test.ts']];
 
-            expect(output).toContain(' 0 fail');
-            expect(code).toBe(0);
-        }
-    );
+describe('ruimte extension test', () => {
+    test('runs every test file of extensions/poc/contract in one of its runs', () => {
+        const files = readdirSync(join(EXTENSIONS, 'poc/contract/test')).map((name) => `test/${name}`);
+
+        expect(CONTRACT_RUNS.flat().toSorted()).toEqual(files.toSorted());
+    });
+
+    test.each<[string, readonly string[]]>([
+        ['limits', []],
+        ['poc/server', []],
+        ['poc/agents', []],
+        ['poc/workspace', []],
+        ...CONTRACT_RUNS.map((files): [string, readonly string[]] => ['poc/contract', files])
+    ])('runs the tests of extensions/%s %p against the test host', async (name, files) => {
+        const { code, output } = await extensionTest(join(EXTENSIONS, name), files);
+
+        expect(output).toContain(' 0 fail');
+        expect(code).toBe(0);
+    });
 
     test('passes the example test a new project starts with, before anything is installed', async () => {
         const folder = scaffolded('builds');

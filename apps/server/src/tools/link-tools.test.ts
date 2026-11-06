@@ -191,7 +191,8 @@ describe('link delete', () => {
         expect(await edgeIds()).toEqual([back!]);
     });
 
-    test('a line that touches a node a person or another agent made stays, unless the machine frees every one', async () => {
+    // Split by the end a line touches, so no single test makes enough calls to run into a slow runner's limit.
+    test('a line into a node a person made stays, and the refusal names the setting that frees it', async () => {
         const into = await madeId(fx.invoke('link_new', { to: 'note-1' }));
         const refused = await fx.invoke('link_delete', { edge_id: [into] });
         expect(refused.status).toBe(422);
@@ -201,23 +202,32 @@ describe('link delete', () => {
             'you\tterm-1',
             "setting\tagentsDeleteAnyView in this machine's endpoint.json frees every node, view and line; a person turns it on from the Machines pane"
         ]);
+        expect(await edgeIds()).toEqual([into]);
+    });
 
-        // The context a person gave the caller is theirs, even though the caller is one of its ends.
+    test('the context a person gave the caller stays, even though the caller is one of its ends', async () => {
         const given = await madeId(fx.invoke('link_new', { from: 'note-1', to: 'term-1' }));
         expect((await fx.invoke('link_delete', { edge_id: [given] })).lines[0]).toStartWith(
             `refused\tnot-yours\t${given} runs from note-1, which a person made,`
         );
+        expect(await edgeIds()).toEqual([given]);
+    });
 
+    test('a line into a node another agent made stays', async () => {
         const theirs = await newNode('note', 'chat', { view: 'main' });
         const toTheirs = await madeId(fx.invoke('link_new', { to: theirs }));
         expect((await fx.invoke('link_delete', { edge_id: [toTheirs] })).lines[0]).toStartWith(
             `refused\tnot-yours\t${toTheirs} runs into ${theirs}, which chat-1 made,`
         );
-        expect(await edgeIds()).toEqual([into, given, toTheirs]);
+        expect(await edgeIds()).toContain(toTheirs);
+    });
 
+    test('a machine that frees every line lets a line into a node a person made go, and only that one', async () => {
+        const into = await madeId(fx.invoke('link_new', { to: 'note-1' }));
+        const given = await madeId(fx.invoke('link_new', { from: 'note-1', to: 'term-1' }));
         fx.knobs.deleteAnyView = true;
         expect((await fx.invoke('link_delete', { edge_id: [into] })).lines).toEqual([`deleted\t${into}\tterm-1\tnote-1\t`]);
-        expect(await edgeIds()).toEqual([given, toTheirs]);
+        expect(await edgeIds()).toEqual([given]);
     });
 
     test('an id that is no line is refused with only the lines this call would remove', async () => {

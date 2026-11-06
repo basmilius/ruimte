@@ -2,6 +2,7 @@ import { lineBounds } from '@/canvas-model/line-geometry';
 import { intersects } from '@/canvas-model/math';
 import type { CanvasState } from '@/state/canvas';
 import { maximizedNodeOf, type CanvasGet, type CanvasSet } from '@/state/canvas-model';
+import { announceActivation } from '@/state/node-activation';
 import { mergeSelection } from '@/state/selection';
 
 /* What is selected, which node has the keyboard and which one fills the canvas. */
@@ -42,6 +43,7 @@ export function createCanvasSelectionSlice(
         activateNode(id) {
             get().bringToFront(id);
             set({ selection: [id], navigationId: id, bodyFocusId: id, editingTextId: null });
+            announceActivation(id);
         },
         setBodyFocus(id) {
             set({ bodyFocusId: id, ...(id === null ? {} : { navigationId: id }) });

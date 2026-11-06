@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import type { ExtensionInfo } from '@ruimte/contracts';
-import { removeExtension, setExtensionEnabled } from '@/extensions/store';
+import { EXTENSION_PACK_MAX_UNPACKED_BYTES, type ExtensionInfo } from '@ruimte/contracts';
+import { installPack, readPack, removeExtension, setExtensionEnabled } from '@/extensions/store';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { TransportError } from '@/transport';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
@@ -84,5 +84,34 @@ describe('a change to an installed extension', () => {
         expect(await setExtensionEnabled('acme.counter', false)).toEqual({ machineFailure: 'The disk is full' });
         expect(await setExtensionEnabled('acme.elsewhere', false)).toEqual({ machineFailure: null });
         expect(machine.requests('extension.setEnabled')).toEqual([{ id: 'acme.counter', enabled: false }]);
+    });
+
+    test('an install the machine refused names its owner, and any other failure keeps its own words', async () => {
+        const machine = machineWith([]);
+        let refusal = new TransportError('forbidden', 'Only the owner installs here');
+
+        windowWithBridge.ruimteDesktop = { extensions: { list: async () => [], install: async () => undefined } };
+        machine.answer('extension.install', () => {
+            throw refusal;
+        });
+
+        expect(await installPack(new Uint8Array([1]))).toEqual({ onMachine: false, machineFailure: null });
+
+        refusal = new TransportError('internal', 'The disk is full');
+
+        expect(await installPack(new Uint8Array([1]))).toEqual({ onMachine: false, machineFailure: 'The disk is full' });
+    });
+});
+
+describe('reading a pack from a file', () => {
+    test('refuses a valid pack that unpacks past the limit before it shows anything', async () => {
+        const manifest = Buffer.from(JSON.stringify({ id: 'acme.large', name: 'Large', version: '1.0.0', api: 1 })).toString('base64');
+        const json = Buffer.concat([
+            Buffer.from(`{"files":{"manifest.json":"${manifest}","client/filler.txt":"`),
+            Buffer.alloc(EXTENSION_PACK_MAX_UNPACKED_BYTES, 'A'),
+            Buffer.from('"}}')
+        ]);
+
+        await expect(readPack(new Blob([Bun.gzipSync(json)]))).rejects.toThrow('This pack unpacks to more than an extension may hold');
     });
 });

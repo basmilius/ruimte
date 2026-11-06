@@ -1,4 +1,5 @@
 import { lazyDialog } from '@adecore/ui';
+import { useAgentCloseAsk, useAgentFolderAsk } from '@/project/agent-asks';
 import { createDialogState, createFlagState } from '@/registry/dialog-state';
 import type { DialogContribution } from '@/registry/dialogs';
 
@@ -26,7 +27,25 @@ const MoveChatDialog = lazyDialog(
     (state) => state.request !== null
 );
 
-export const PROJECT_DIALOGS: readonly DialogContribution[] = [{ id: 'move-chat', surface: 'dialog', component: MoveChatDialog }];
+const AgentCloseDialog = lazyDialog(
+    () => import('@/project/AgentCloseDialog'),
+    'AgentCloseDialog',
+    useAgentCloseAsk,
+    (state) => state.ask !== null
+);
+
+const AgentOpenFolderDialog = lazyDialog(
+    () => import('@/project/AgentOpenFolderDialog'),
+    'AgentOpenFolderDialog',
+    useAgentFolderAsk,
+    (state) => state.ask !== null
+);
+
+export const PROJECT_DIALOGS: readonly DialogContribution[] = [
+    { id: 'agent-close', surface: 'dialog', component: AgentCloseDialog },
+    { id: 'agent-open-folder', surface: 'dialog', component: AgentOpenFolderDialog },
+    { id: 'move-chat', surface: 'dialog', component: MoveChatDialog }
+];
 
 /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
 export type ViewDialog =

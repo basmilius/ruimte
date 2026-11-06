@@ -7980,6 +7980,68 @@
     "type": "object",
     "properties": {}
   },
+  "request.activity.list.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.activity.list.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "activity": {
+        "maxItems": 5000,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "nodeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "at": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "projectId",
+            "nodeId",
+            "at"
+          ]
+        }
+      }
+    },
+    "required": [
+      "activity"
+    ]
+  },
+  "request.activity.touch.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "nodeId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "required": [
+      "nodeId"
+    ]
+  },
+  "request.activity.touch.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.agent.children.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -74326,6 +74388,44 @@
       "statuses"
     ]
   },
+  "event.activity.changed": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "activity": {
+        "maxItems": 5000,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "nodeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "at": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "projectId",
+            "nodeId",
+            "at"
+          ]
+        }
+      }
+    },
+    "required": [
+      "activity"
+    ]
+  },
   "event.artifact.changed": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -85046,6 +85146,75 @@
       "fine",
       "coarse",
       "reset"
+    ]
+  },
+  "event.project.activate": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "fromProjectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "by": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "fromProjectId",
+      "by"
+    ]
+  },
+  "event.project.askClose": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "fromProjectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "by": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "fromProjectId",
+      "by"
+    ]
+  },
+  "event.project.askOpen": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "folder": {
+        "type": "string",
+        "minLength": 1
+      },
+      "fromProjectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "by": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "folder",
+      "fromProjectId",
+      "by"
     ]
   },
   "event.project.changed": {

@@ -57,8 +57,11 @@ export class GhostTextFeature implements InlineSuggestionSource {
         return this.language.served && this.setting;
     }
 
+    // Ghost text sends code to the editor model as Explain does, so it waits for the same opt-in.
     private get setting(): boolean {
-        return useSettings.getState().aiGhostText === 'request';
+        const { aiCodeHelp, aiGhostText } = useSettings.getState();
+
+        return aiCodeHelp && aiGhostText === 'request';
     }
 
     /* Asks for a continuation at the caret and shows it when it comes, if the caret and the text are where they were. */

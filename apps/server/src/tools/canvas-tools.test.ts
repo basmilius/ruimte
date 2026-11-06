@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, realpath, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { withViewAsNode, type ProjectCanvasView } from '@ruimte/contracts';
 import { NEW_NODE, type CanvasHost } from '../canvas/host.ts';
-import { projectReach } from '../canvas/reach.ts';
+import { projectReach, SETTING_LINE } from '../canvas/reach.ts';
+import { projectOverlays } from '../projects/overlays.ts';
+import { projectLinks } from '../projects/project-file-test-helpers.ts';
+import { ProjectStore } from '../projects/project-store.ts';
+import type { SessionEvent } from '../wire.ts';
 import { CANVAS_LINES, canvasFixture, type CanvasFixture, content, madeId, revisionOf } from './canvas-fixture-test-helpers.ts';
 
 let fx: CanvasFixture;
@@ -498,7 +502,7 @@ describe('reaching another open project', () => {
 
         await fx.store.closeProject(otherId, 'client-1');
 
-        expect((await fx.invoke('project_list', {}, 'chat', through)).lines).toEqual([]);
+        expect((await fx.invoke('project_list', {}, 'chat', through)).lines).toEqual([`recent\t${otherId}\tother`]);
         expect((await fx.invoke('view_list', { project: otherId }, 'chat', through)).lines[0]).toStartWith('refused\tproject-not-open\t');
 
         await fx.store.openProject({ projectId: otherId });
@@ -507,7 +511,7 @@ describe('reaching another open project', () => {
 
         reachOn = false;
 
-        expect((await fx.invoke('project_list', {}, 'chat', through)).lines).toEqual([]);
+        expect((await fx.invoke('project_list', {}, 'chat', through)).lines).toEqual([SETTING_LINE]);
         expect((await fx.invoke('view_list', { project: otherId }, 'chat', through)).lines[0]).toStartWith('refused\tprojects-not-reachable\t');
     });
 
@@ -529,6 +533,155 @@ describe('reaching another open project', () => {
         ]);
         await fx.store.closeProject(otherId, 'client-1');
         expect((await fx.invoke('view_list', { project: otherId }, 'term', reaching())).lines[0]).toStartWith('refused\tproject-not-open\t');
+    });
+
+    test('project open takes a project back out of Recent without anyone holding it, and only behind the switch', async () => {
+        await fx.store.closeProject(otherId, 'client-1');
+        reachOn = false;
+
+        expect((await fx.invoke('project_open', { project_id: otherId }, 'chat', reaching())).lines[0]).toStartWith('refused\tprojects-not-reachable\t');
+        expect(await fx.store.isClosed(otherId)).toBe(true);
+
+        reachOn = true;
+
+        expect((await fx.invoke('project_open', { project_id: fx.projectId }, 'chat', reaching())).lines).toEqual([
+            `refused\town-project\t${fx.projectId} is your own project; project_id names another one`,
+            `recent\t${otherId}\tother`
+        ]);
+        expect((await fx.invoke('project_open', { project_id: otherId }, 'chat', reaching())).lines).toEqual([`project\t${otherId}\tother\topened`]);
+        expect(await fx.store.isClosed(otherId)).toBe(false);
+        expect(fx.store.holdersOf(otherId)).toEqual([]);
+        expect((await fx.invoke('project_list', {}, 'chat', reaching())).lines).toEqual([`project\t${otherId}\tother`]);
+        expect((await fx.invoke('project_open', { project_id: otherId }, 'chat', reaching())).lines).toEqual([`project\t${otherId}\tother\talready open`]);
+    });
+
+    test('project activate and project close only ask the clients with the caller project on screen', async () => {
+        const asked: SessionEvent[] = [];
+        fx.store.subscribe('client-2', (event) => asked.push(event));
+
+        expect((await fx.invoke('project_activate', { project_id: otherId }, 'chat', reaching())).lines).toEqual([
+            `showing\t${otherId}\tother`,
+            'sent\tno\tNobody has your project on screen right now, so nothing was shown'
+        ]);
+
+        fx.store.hold('client-2', fx.projectId, { startsLaunches: false });
+
+        expect((await fx.invoke('project_activate', { project_id: otherId }, 'chat', reaching())).lines[1]).toStartWith('sent\tyes\t');
+        expect((await fx.invoke('project_close', { project_id: otherId }, 'chat', reaching())).lines).toEqual([
+            `asked\t${otherId}\tother`,
+            'sent\tyes\tIt closes only once a person confirms; project_list shows whether it did'
+        ]);
+        expect(asked).toEqual([
+            { event: 'project.activate', payload: { projectId: otherId, fromProjectId: fx.projectId, by: 'chat-1' } },
+            { event: 'project.askClose', payload: { projectId: otherId, fromProjectId: fx.projectId, by: 'chat-1' } }
+        ]);
+        expect(await fx.store.isClosed(otherId)).toBe(false);
+    });
+
+    test('project activate and project close refuse a project under Recent and the caller own project', async () => {
+        await fx.store.closeProject(otherId, 'client-1');
+
+        for (const tool of ['project_activate', 'project_close']) {
+            expect((await fx.invoke(tool, { project_id: otherId }, 'chat', reaching())).lines).toEqual([
+                `refused\tproject-not-open\t${otherId} is no project open on this machine; project_open takes one back out of Recent`
+            ]);
+            expect((await fx.invoke(tool, { project_id: fx.projectId }, 'chat', reaching())).lines[0]).toStartWith('refused\town-project\t');
+        }
+    });
+
+    test('project open takes a folder with a project file of its own at once, without anyone holding it', async () => {
+        const cloned = join(fx.root, 'cloned');
+        await mkdir(cloned);
+        const elsewhere = new ProjectStore(join(fx.root, 'elsewhere'), projectLinks(), projectOverlays(join(fx.root, 'elsewhere')));
+        await elsewhere.openProject({ folder: cloned, name: 'Cloned' });
+        elsewhere.closeAll();
+        const asked: SessionEvent[] = [];
+        fx.store.hold('client-2', fx.projectId, { startsLaunches: false });
+        fx.store.subscribe('client-2', (event) => asked.push(event));
+
+        const lines = (await fx.invoke('project_open', { folder: cloned }, 'chat', reaching())).lines;
+        const real = await realpath(cloned);
+        const opened = (await fx.store.list()).find((project) => project.folder === real);
+
+        expect(opened?.closedAt ?? null).toBeNull();
+        expect(lines).toEqual([`project\t${opened?.projectId}\tCloned\topened`]);
+        expect(fx.store.holdersOf(opened?.projectId ?? '')).toEqual([]);
+        expect(asked.filter((event) => event.event === 'project.askOpen')).toEqual([]);
+        expect((await fx.invoke('project_list', {}, 'chat', reaching())).lines).toContain(`project\t${opened?.projectId}\tCloned`);
+        expect((await fx.invoke('project_open', { folder: cloned }, 'chat', reaching())).lines).toEqual([
+            `refused\tfolder-is-project\tfolder ${cloned} is the folder of ${opened?.projectId}; open it with project_id instead`,
+            `project\t${opened?.projectId}\tCloned`
+        ]);
+    });
+
+    test('project open asks the clients with the caller project on screen before a folder without a project becomes one', async () => {
+        const fresh = join(fx.root, 'fresh');
+        await mkdir(fresh);
+        const real = await realpath(fresh);
+        const asked: SessionEvent[] = [];
+        fx.store.subscribe('client-2', (event) => asked.push(event));
+
+        expect((await fx.invoke('project_open', { folder: fresh }, 'chat', reaching())).lines).toEqual([
+            `asked\t${real}`,
+            'sent\tno\tNobody has your project on screen right now, so nobody was asked and nothing was made'
+        ]);
+
+        fx.store.hold('client-2', fx.projectId, { startsLaunches: false });
+
+        expect((await fx.invoke('project_open', { folder: fresh }, 'chat', reaching())).lines).toEqual([
+            `asked\t${real}`,
+            'sent\tyes\tIt becomes a project only once a person confirms; project_list shows whether it did'
+        ]);
+        expect(asked).toEqual([{ event: 'project.askOpen', payload: { folder: real, fromProjectId: fx.projectId, by: 'chat-1' } }]);
+        expect((await fx.store.list()).some((project) => project.folder === real)).toBe(false);
+        expect(await Bun.file(join(fresh, '.ruimte', 'project.json')).exists()).toBe(false);
+    });
+
+    test('project open refuses a folder outside what it may open, and both or neither of its fields', async () => {
+        const file = join(fx.root, 'notes.txt');
+        await writeFile(file, 'x');
+        const chosenRoot = join(fx.root, 'checkouts');
+        await mkdir(join(chosenRoot, 'one'), { recursive: true });
+        await mkdir(join(fx.root, 'home', 'worktrees', 'two'), { recursive: true });
+        await mkdir(fx.store.scratchFolder, { recursive: true });
+        await symlink(join(fx.root, 'home'), join(fx.root, 'home-link'));
+        await symlink(join(fx.root, 'repo'), join(fx.root, 'repo-link'));
+        const through: CanvasHost = {
+            ...fx.host(),
+            reach: projectReach(
+                fx.store,
+                () => reachOn,
+                () => chosenRoot
+            )
+        };
+
+        const codeOf = async (input: Record<string, unknown>): Promise<string | undefined> =>
+            (await fx.invoke('project_open', input, 'chat', through)).lines[0]?.split('\t').slice(0, 2).join('\t');
+
+        expect(await codeOf({})).toBe('refused\tbad-arguments');
+        expect(await codeOf({ project_id: otherId, folder: other })).toBe('refused\tbad-arguments');
+        expect(await codeOf({ folder: 'relative/path' })).toBe('refused\tfolder-not-absolute');
+        expect(await codeOf({ folder: join(fx.root, 'missing') })).toBe('refused\tfolder-not-found');
+        expect(await codeOf({ folder: file })).toBe('refused\tfolder-not-found');
+        expect(await codeOf({ folder: join(fx.root, 'home') })).toBe('refused\tmachine-folder');
+        expect(await codeOf({ folder: fx.store.scratchFolder })).toBe('refused\tmachine-folder');
+        expect(await codeOf({ folder: join(fx.root, 'home', 'worktrees', 'two') })).toBe('refused\tmachine-folder');
+        expect(await codeOf({ folder: join(fx.root, 'home-link') })).toBe('refused\tmachine-folder');
+        expect(await codeOf({ folder: join(chosenRoot, 'one') })).toBe('refused\tmachine-folder');
+        expect(await codeOf({ folder: join(fx.root, 'repo') })).toBe('refused\town-project');
+        expect(await codeOf({ folder: join(fx.root, 'repo-link') })).toBe('refused\town-project');
+        expect((await fx.invoke('project_open', { folder: other }, 'chat', through)).lines).toEqual([
+            `refused\tfolder-is-project\tfolder ${other} is the folder of ${otherId}; open it with project_id instead`,
+            `project\t${otherId}\tother`
+        ]);
+
+        await fx.store.closeProject(otherId, 'client-1');
+
+        expect((await fx.invoke('project_open', { folder: other }, 'chat', through)).lines[1]).toBe(`recent\t${otherId}\tother`);
+
+        reachOn = false;
+
+        expect(await codeOf({ folder: join(fx.root, 'repo') })).toBe('refused\tprojects-not-reachable');
     });
 
     test('a tool that does not cross refuses project as a field it does not take, before it does anything', async () => {

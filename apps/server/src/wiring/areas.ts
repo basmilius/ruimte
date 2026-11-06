@@ -1,5 +1,6 @@
 import type { Area } from '../area.ts';
 import { accountsArea } from '../handlers/accounts.ts';
+import { activityArea } from '../handlers/activity.ts';
 import { agentRegistryArea } from '../handlers/agent-registry.ts';
 import { agentServersArea } from '../handlers/agent-servers.ts';
 import { archiveArea } from '../handlers/archive.ts';
@@ -101,6 +102,7 @@ export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
         agentServersArea({ servers: providers.servers }),
         agentRegistryArea({ agents: providers.registryAgents, versions: providers.versions }),
         snoozeArea({ snoozes: work.snoozes, locate: (nodeId) => store.index.locate(nodeId) }),
+        activityArea({ activity: work.activity }),
         gitArea(gitDeps(input)),
         agentWorkLifecycle(work),
         agentsLifecycle(agents),

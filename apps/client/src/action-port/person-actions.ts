@@ -30,6 +30,7 @@ import { defaultCanvases, focusedCanvas, type CanvasState, type Locks } from '@/
 import { closeCellsRightOfGuarded, closeOtherCellsGuarded } from '@/state/cell-close';
 import { activeViewOf, useDocument, viewOfNode } from '@/state/document';
 import { lastFlagColor, rememberFlagColor } from '@/state/flag-color';
+import { backOffer, showMoveToast } from '@/state/show-toast';
 import { closeTabGuarded, closeTabsAround, type TabsClosing } from '@/state/tab-close';
 import { useToasts } from '@/state/toasts';
 import { nodesOfView } from '@/state/view-nodes';
@@ -66,17 +67,14 @@ export function focusViewAction(viewId: string): void {
 
 /*
  * A view of the project opened beside the one in the focused cell, as a tab. Not an action of the catalog: only a
- * person at a grid asks for this. The banner over the views says so and offers the way back, as for any show.
+ * person at a grid asks for this. A toast says so and offers the way back, as for any show.
  */
 export function openInNewTabAction(viewId: string): void {
     const state = useDocument.getState();
     const view = state.views.find((candidate) => candidate.id === viewId);
     const shown = view === undefined || !isOpenableView(view) ? null : state.showView(viewId, { newTab: true });
     if (view !== undefined && shown?.tab !== undefined) {
-        useDocument.getState().showNotice({
-            message: i18next.t('project:showView.newTab', { view: view.name ?? viewId }),
-            action: { kind: 'back', shown }
-        });
+        showMoveToast(i18next.t('project:showView.newTab', { view: view.name ?? viewId }), backOffer(shown));
     }
 }
 

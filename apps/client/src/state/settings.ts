@@ -17,6 +17,7 @@ import { bundledThemesInfo } from 'shiki/themes';
 import { z } from 'zod';
 import { create } from 'zustand';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas-model/accents';
+import { nodeSortFrom, nodeSortThenFrom, type NodeSort, type NodeSortThen } from '@/canvas-model/node-sort';
 import { renderDistanceFrom, type RenderDistance } from '@/canvas-model/render-distance';
 import { CODE_THEMES } from '@/code-themes';
 import {
@@ -296,6 +297,9 @@ export interface Settings {
     /* How far out a canvas still draws its costly bodies live (a page, a file, a diagram, a device).
        About what this computer can carry, so it sits with the client and not with a project. */
     canvasRenderDistance: RenderDistance;
+    /* How the sidebar lists the nodes under an open canvas, and the order within a kind or a status. One choice for every canvas. */
+    sidebarNodeSort: NodeSort;
+    sidebarNodeSortThen: NodeSortThen;
 }
 
 /* What `RTCPeerConnection` takes for the servers in the setting; none for an empty field. */
@@ -383,7 +387,9 @@ const DEFAULT_SETTINGS: Settings = {
     onboardingSkipWelcome: false,
     codeEnsureFinalNewline: true,
     terminalFont: 'editor',
-    canvasRenderDistance: 'standard'
+    canvasRenderDistance: 'standard',
+    sidebarNodeSort: 'canvas',
+    sidebarNodeSortThen: 'recent'
 };
 
 // Rounded as well as clamped: storage can still hold a half pixel, and text renders sharpest on a whole one.
@@ -498,7 +504,9 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         codeEnsureFinalNewline: stored.codeEnsureFinalNewline !== false,
         terminalFont:
             stored.terminalFont === 'editor' ? 'editor' : (MONO_FONTS.find((entry) => entry.id === stored.terminalFont)?.id ?? DEFAULT_SETTINGS.terminalFont),
-        canvasRenderDistance: renderDistanceFrom(stored.canvasRenderDistance)
+        canvasRenderDistance: renderDistanceFrom(stored.canvasRenderDistance),
+        sidebarNodeSort: nodeSortFrom(stored.sidebarNodeSort),
+        sidebarNodeSortThen: nodeSortThenFrom(stored.sidebarNodeSortThen)
     };
 }
 

@@ -1,6 +1,13 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import type { BackgroundServiceState } from '@/desktop/bridge';
-import { machineUpdateAnswer, machineUpdatePrompt, pendingRestartLine } from './machine-update';
+import {
+    askMachineUpdateAgain,
+    machineUpdateAnswer,
+    machineUpdatePrompt,
+    pendingRestartLine,
+    showsPendingRestart,
+    useMachineUpdateAgain
+} from './machine-update';
 
 const BRIDGE = { restartNow: async () => STATE, restartWhenIdle: async () => STATE };
 
@@ -42,4 +49,47 @@ describe('machineUpdateAnswer', () => {
 test('the settings line stands while the older build runs', () => {
     expect(pendingRestartLine(pending(2, true))).not.toBeNull();
     expect(pendingRestartLine(STATE)).toBeNull();
+});
+
+describe('the question asked again', () => {
+    afterEach(() => {
+        useMachineUpdateAgain.setState({ again: null });
+    });
+
+    test('asks once answered, with the count of now rather than the one from the start', () => {
+        expect(machineUpdatePrompt(pending(2, true), BRIDGE, { work: 5 })?.description).toBe(
+            'Restart this machine now? This ends 5 running terminals and agents.'
+        );
+        expect(machineUpdatePrompt(pending(2, true), BRIDGE, { work: null })?.description).toBe(
+            'Restart this machine now? This ends the terminals and agents running on it.'
+        );
+    });
+
+    test('asks nothing once the restart is no longer pending', () => {
+        expect(machineUpdatePrompt(STATE, BRIDGE, { work: 1 })).toBeNull();
+    });
+
+    test('counts what runs on the machine when it is asked', async () => {
+        await askMachineUpdateAgain(async () => ({ work: { terminals: 2, agents: 1 }, home: '~/.ruimte', commandLine: false }));
+        expect(useMachineUpdateAgain.getState().again).toEqual({ work: 3 });
+    });
+
+    test('says nothing about the count when the machine cannot say or the shell cannot ask', async () => {
+        await askMachineUpdateAgain(async () => {
+            throw new Error('gone');
+        });
+        expect(useMachineUpdateAgain.getState().again).toEqual({ work: null });
+        await askMachineUpdateAgain(undefined);
+        expect(useMachineUpdateAgain.getState().again).toEqual({ work: null });
+    });
+});
+
+describe('showsPendingRestart', () => {
+    test('marks the rail only after "When idle", on a shell that can restart', () => {
+        expect(showsPendingRestart(pending(2, true), BRIDGE)).toBe(true);
+        expect(showsPendingRestart(pending(2), BRIDGE)).toBe(false);
+        expect(showsPendingRestart(STATE, BRIDGE)).toBe(false);
+        expect(showsPendingRestart(null, BRIDGE)).toBe(false);
+        expect(showsPendingRestart(pending(2, true), {})).toBe(false);
+    });
 });

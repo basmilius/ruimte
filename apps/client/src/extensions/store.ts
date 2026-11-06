@@ -1,11 +1,11 @@
-import { EXTENSION_ICON_PATH, readExtensionPack, type ExtensionManifest } from '@ruimte/contracts';
+import { EXTENSION_ICON_PATH, EXTENSION_PACK_MAX_UNPACKED_BYTES, PackTooLargeError, readExtensionPack, type ExtensionManifest } from '@ruimte/contracts';
 import { EXTENSION_STORE_PUBLIC_KEY, extensionStoreMessage, ExtensionStoreIndexSchema, type ExtensionStoreEntry } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-web';
 import { desktop } from '@/desktop/bridge';
 import { syncExtensions } from '@/extensions/loader';
 import { extensionRequest } from '@/extensions/machine-request';
 import { currentEndpointId } from '@/state/current-endpoint';
-import { machineTransport, type Transport } from '@/transport';
+import { machineTransport, TransportError, type Transport } from '@/transport';
 import { machineAnswers } from '@/transport/features';
 
 const STORE_BASE = 'https://cdn.jsdelivr.net/gh/ruimte-app/extensions@main/';
@@ -70,28 +70,37 @@ function machineInFront(): Transport {
     return machineTransport(currentEndpointId());
 }
 
-async function installOn(link: Transport, bytes: Uint8Array, fromStore: boolean): Promise<{ onMachine: boolean }> {
+export interface PackInstall {
+    onMachine: boolean;
+    // Why the machine did not take its part, unless only its owner may install there.
+    machineFailure: string | null;
+}
+
+async function installOn(link: Transport, bytes: Uint8Array, fromStore: boolean): Promise<PackInstall> {
     await desktop()?.extensions?.install(bytes, { fromStore });
 
-    const onMachine = await extensionRequest(link, 'extension.install', { pack: base64Of(bytes) }).then(
-        () => true,
-        () => false
+    const result = await extensionRequest(link, 'extension.install', { pack: base64Of(bytes) }).then(
+        () => ({ onMachine: true, machineFailure: null }),
+        (e: unknown) => ({
+            onMachine: false,
+            machineFailure: e instanceof TransportError && e.code === 'forbidden' ? null : e instanceof Error ? e.message : String(e)
+        })
     );
 
     await syncExtensions();
 
-    return { onMachine };
+    return result;
 }
 
 /*
  * The client part goes to the shell of this computer and the rest to the machine in front. A machine only
  * takes it from its owner, so on someone else's the client part still works and this says what is missing.
  */
-export function installPack(bytes: Uint8Array): Promise<{ onMachine: boolean }> {
+export function installPack(bytes: Uint8Array): Promise<PackInstall> {
     return installOn(machineInFront(), bytes, false);
 }
 
-export async function installFromStore(entry: ExtensionStoreEntry, fetcher: typeof fetch = fetch): Promise<{ onMachine: boolean }> {
+export async function installFromStore(entry: ExtensionStoreEntry, fetcher: typeof fetch = fetch): Promise<PackInstall> {
     const link = machineInFront();
     const response = await fetcher(`${STORE_BASE}${entry.path}`);
     const bytes = new Uint8Array(await response.arrayBuffer());
@@ -109,10 +118,25 @@ export interface PackPreview {
     icon: string | null;
 }
 
+/* The stream whole, refused once it grows past what a pack may unpack to. */
 async function gunzip(bytes: Uint8Array): Promise<Uint8Array> {
-    const unzipped = new Blob([bytes as BufferSource]).stream().pipeThrough(new DecompressionStream('gzip'));
+    const reader = new Blob([bytes as BufferSource]).stream().pipeThrough(new DecompressionStream('gzip')).getReader();
+    const chunks: Uint8Array[] = [];
+    let size = 0;
 
-    return new Uint8Array(await new Response(unzipped).arrayBuffer());
+    for (let read = await reader.read(); !read.done; read = await reader.read()) {
+        size += read.value.byteLength;
+
+        if (size > EXTENSION_PACK_MAX_UNPACKED_BYTES) {
+            await reader.cancel();
+
+            throw new PackTooLargeError();
+        }
+
+        chunks.push(read.value);
+    }
+
+    return new Uint8Array(await new Blob(chunks as BlobPart[]).arrayBuffer());
 }
 
 /* What a `.rex` from a file says it is, so a person sees its name and permissions before it runs anywhere. */

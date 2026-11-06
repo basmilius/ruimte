@@ -7,6 +7,7 @@ import { Serializer } from '@adecore/utils/async';
 import { writeAtomic } from '@adecore/utils/fs';
 import {
     EXTENSION_ICON_PATH,
+    EXTENSION_PACK_MAX_UNPACKED_BYTES,
     ExtensionIdSchema,
     ExtensionManifestSchema,
     extensionFrameHost,
@@ -157,7 +158,7 @@ export class ClientExtensions {
 
     async install(pack: Uint8Array, fromStore = false): Promise<InstalledClientExtension> {
         const bytes = Buffer.from(pack);
-        const parsed = readExtensionPack(bytes, gunzipSync);
+        const parsed = readExtensionPack(bytes, (packed) => gunzipSync(packed, { maxOutputLength: EXTENSION_PACK_MAX_UNPACKED_BYTES }));
 
         if (!parsed.ok) {
             throw new Error(parsed.message);

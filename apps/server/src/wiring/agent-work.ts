@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { chatOpener } from '@adecore/agents/chat';
 import type { OutboxWorker } from '@adecore/agents/coordination';
+import { NodeActivityStore } from '../activity/node-activity.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { errorText } from '../error-text.ts';
 import { BundleStore } from '../git/bundles.ts';
@@ -32,6 +33,7 @@ export interface AgentWorkBundle {
     summaries: SummaryWiring;
     prWatches: PrWatchStore;
     snoozes: SnoozeStore;
+    activity: NodeActivityStore;
     afterSettleStore: AfterSettleStore;
     /* The reconnect of the links to other machines, owed through the outbox. */
     reconnect: ConnectPeer;
@@ -193,8 +195,10 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         }
     });
     const snoozes = new SnoozeStore({ path: join(home, 'snoozes.json') });
+    const activity = new NodeActivityStore({ path: join(home, 'node-activity.json'), locate: (nodeId) => projects.index.locate(nodeId) });
     const afterSettleStore = new AfterSettleStore({ path: join(home, 'launch-after-settle.json') });
     lifecycle.on('placed', (projectId, ids) => snoozes.places(projectId, ids));
+    lifecycle.on('placed', (projectId, ids) => activity.places(projectId, ids));
     lifecycle.on('placed', (projectId, ids) => afterSettleStore.places(projectId, ids));
     projects.index.onPlaces = (projectId, ids) => {
         void lifecycle.emit('placed', projectId, ids).catch((e: unknown) => console.error('A node leaving its project was not taken in:', errorText(e)));
@@ -206,6 +210,7 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         summaries: wiring.summaries,
         prWatches,
         snoozes,
+        activity,
         afterSettleStore,
         reconnect,
         remoteTasks,

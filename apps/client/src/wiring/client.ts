@@ -15,6 +15,7 @@ import { onboardingDialog } from '@/onboarding/dialog';
 import { startOnboarding } from '@/onboarding/open';
 import { startPlanPanelWatch } from '@/plan/plan-panel-watch';
 import { startProcessWarnings } from '@/processes/watch';
+import { startAgentProjectWatch } from '@/project/agent-project-watch';
 import { bootWindow } from '@/project/open';
 import { startShowViewWatch } from '@/project/show-view-watch';
 import { startWindowTabs } from '@/project/window-tabs';
@@ -26,6 +27,7 @@ import { startSharedStorage } from '@/shared-storage';
 import { watchDesktopUsage } from '@/shell/command-usage';
 import { reloadOnStaleChunk } from '@/stale-chunks';
 import { startAttentionWatch } from '@/state/attention';
+import { startNodeActivityTouches } from '@/state/node-activity';
 import { usePalette } from '@/state/palette';
 import { startSnoozeClock } from '@/state/snooze';
 import { useTheme } from '@/state/theme';
@@ -116,6 +118,7 @@ const STEPS: readonly Step[] = [
     { name: 'sharedStorage', start: startSharedStorage },
     { name: 'sessionLifecycle', start: startSessionLifecycle },
     { name: 'snoozeClock', start: startSnoozeClock },
+    { name: 'nodeActivityTouches', start: startNodeActivityTouches },
     { name: 'waitingSince', start: startWaitingSinceWatch },
     { name: 'agentNotifications', start: () => startAgentNotifications() },
     { name: 'attention', start: startAttentionWatch },
@@ -138,6 +141,7 @@ const STEPS: readonly Step[] = [
     // After the cached lists are in, so the switch screen can name the project it is opening.
     { name: 'bootWindow', start: bootWindow },
     { name: 'showView', start: startShowViewWatch },
+    { name: 'agentProjects', start: startAgentProjectWatch },
     { name: 'pageHolds', start: startPageHolds },
     { name: 'animations', start: () => syncAnimations(['status-pulse']) },
     { name: 'keepAwake', start: () => startKeepAwake() },

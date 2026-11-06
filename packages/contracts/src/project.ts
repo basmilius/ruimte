@@ -1558,6 +1558,33 @@ export const ProjectShowViewEventSchema = z.object({
 });
 export type ProjectShowViewEvent = z.infer<typeof ProjectShowViewEventSchema>;
 
+/*
+ * An agent asked to bring another project to the front (`project.activate`) or to close one
+ * (`project.askClose`). It goes to the clients that have the agent's own project on screen; each
+ * decides for itself, and a close happens only once a person there confirms it.
+ */
+export const ProjectAgentAskEventSchema = z.object({
+    projectId: ProjectIdSchema,
+    // The project the agent stands in, which the client checks is the one on screen.
+    fromProjectId: ProjectIdSchema,
+    // The node or view the verb ran from.
+    by: z.string().min(1)
+});
+export type ProjectAgentAskEvent = z.infer<typeof ProjectAgentAskEventSchema>;
+
+/*
+ * An agent asked to make a folder that holds no project yet into one (`project.askOpen`). It goes to the
+ * clients that have the agent's own project on screen, and the folder becomes a project only once a
+ * person there confirms it, as their own open of a folder.
+ */
+export const ProjectAgentFolderEventSchema = z.object({
+    // An absolute path on the machine, as the machine resolved it.
+    folder: z.string().min(1),
+    fromProjectId: ProjectIdSchema,
+    by: z.string().min(1)
+});
+export type ProjectAgentFolderEvent = z.infer<typeof ProjectAgentFolderEventSchema>;
+
 // Writes or removes `.ruimte/icon.<ext>`; a null image deletes what is there. The bytes are
 // base64 because a JSON frame carries no binary, and the daemon checks them against its own cap.
 export const ProjectSetIconPayloadSchema = z.object({
@@ -1636,5 +1663,8 @@ export const PROJECT_EVENT_SCHEMAS = {
     'project.changed': ProjectChangedEventSchema,
     // Only to the clients that asked with `project.watch`.
     'project.listChanged': ProjectListChangedEventSchema,
-    'project.showView': ProjectShowViewEventSchema
+    'project.showView': ProjectShowViewEventSchema,
+    'project.activate': ProjectAgentAskEventSchema,
+    'project.askClose': ProjectAgentAskEventSchema,
+    'project.askOpen': ProjectAgentFolderEventSchema
 } as const;

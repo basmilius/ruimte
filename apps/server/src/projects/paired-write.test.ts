@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileExists } from '@adecore/utils/fs';
 import { tempHomes } from '../temp-home-test-helpers.ts';
@@ -96,5 +96,21 @@ describe('paired write', () => {
 
         expect(await readFile(first, 'utf8')).toBe('shared-0');
         expect(await readFile(second, 'utf8')).toBe('own-1');
+    });
+
+    test('a folder linked elsewhere has nothing to recover without an intent, and refuses one with an intent', async () => {
+        const elsewhere = await newHome();
+        const linked = join(root, 'linked');
+        const linkedIntent = join(linked, 'pending.json');
+        const linkedFile = join(linked, 'own.json');
+        await writeFile(join(elsewhere, 'own.json'), 'own-0');
+        await symlink(elsewhere, linked);
+
+        expect(await recoverPaired(linkedIntent, { root, paths: [first, linkedFile] })).toBe('none');
+
+        await writeFile(linkedIntent, JSON.stringify({ version: 1, files: [{ path: linkedFile, before: 'own-0', after: 'own-1' }] }));
+
+        await expect(recoverPaired(linkedIntent, { root, paths: [first, linkedFile] })).rejects.toBeInstanceOf(PairedWriteStuck);
+        expect(await readFile(linkedFile, 'utf8')).toBe('own-0');
     });
 });

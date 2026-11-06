@@ -22,6 +22,17 @@
         "go": "{{agent}} asked you to look at {{view}}",
         "newTab": "Opened {{view}} as a tab"
     },
+    "showProject": {
+        "follow": "{{agent}} brought {{project}} to the front",
+        "go": "{{agent}} asked you to look at {{project}}"
+    },
+    "askClose": {
+        "asked": "{{agent}} asks you to close this project."
+    },
+    "askOpen": {
+        "title": "Open folder as project?",
+        "asked": "{{agent}} asks to open {{folder}} as a project. It opens in this window."
+    },
     "diagram": {
         "draft": "Fill the empty diagram \"{{name}}\" with `view_diagram {{viewId}}`. It should show "
     },

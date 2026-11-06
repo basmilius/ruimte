@@ -1,7 +1,6 @@
 import { useChats } from '@adecore/agents-react/state';
 import { Tooltip } from '@adecore/ui';
 import { PET_HIT_HEIGHT, PET_HIT_TOP, petBlocked, petCrowded, petNodeKey, petPlace, sameStanding } from '@extensions/pets/client/canvas/placement';
-import { usePageTrip } from '@extensions/pets/client/canvas/use-page-trip';
 import { createVisitor, VISIT_MS, visitSpot, type VisitSpot } from '@extensions/pets/client/canvas/visitor';
 import { petLabel, usePrefersStill } from '@extensions/pets/client/figure-support';
 import { KID_HEIGHT, KID_SPACING, kidMoodsOf, petKidsOf } from '@extensions/pets/client/kids';
@@ -57,12 +56,8 @@ function Pet({ id, ownPets, gone }: { id: string; ownPets: ReadonlySet<string>; 
     const { shown, beam } = useTeleport(live === null || node === undefined ? null : { node, pet: live }, sameStanding, still);
     const pet = shown?.pet ?? null;
     const look = usePetLook(pet?.agent, id);
-    const { standsOn, carry, walking } = usePageTrip(id, pet?.mood === 'waiting' || pet?.mood === 'snoozed', still);
-    const standsOnId = standsOn?.id ?? id;
-    // On a page its agent works in, the pet steps aside for a node there as it does on its own.
-    const blockedOnPage = useCanvas((s) => standsOnId !== id && s.nodes[standsOnId] !== undefined && petBlocked(s, standsOnId));
-    // A pet off screen keeps no beat; it stands where it was once the node it stands on comes back in view.
-    const inView = useNodeInViewport(standsOnId);
+    // A pet off screen keeps no beat; it stands where it was once its node comes back in view.
+    const inView = useNodeInViewport(id);
     const home = shown?.node;
     const accent = home === undefined ? undefined : accentColor(nodeColorOf(home));
 
@@ -71,17 +66,13 @@ function Pet({ id, ownPets, gone }: { id: string; ownPets: ReadonlySet<string>; 
     }
 
     const { mood } = pet;
-    const place = petPlace(standsOn ?? home);
+    const place = petPlace(home);
     const label = petLabel(t, home, mood);
-    const away = standsOnId !== id;
     const leaving = beam === 'out';
-    const pressBlocked = away ? blockedOnPage : blocked;
 
     return (
         <div
-            ref={carry}
             data-pet-box={id}
-            data-pet-on={away ? standsOnId : undefined}
             data-pet-leaving={leaving || undefined}
             className="absolute"
             style={{ left: place.x, top: place.y, width: PET_PAINT_WIDTH, height: PET_HEIGHT }}
@@ -101,7 +92,7 @@ function Pet({ id, ownPets, gone }: { id: string; ownPets: ReadonlySet<string>; 
             {inView && (
                 // Positioned as its kids are, so it stands in front of them.
                 <div className="relative">
-                    <PetFigure look={look} mood={mood} crowded={!away && crowded} accent={accent} walking={walking} beam={beam} />
+                    <PetFigure look={look} mood={mood} crowded={crowded} accent={accent} beam={beam} />
                 </div>
             )}
             {/* A pet on its way out is only a picture: it leads nowhere any more. */}
@@ -111,11 +102,11 @@ function Pet({ id, ownPets, gone }: { id: string; ownPets: ReadonlySet<string>; 
                         type="button"
                         data-pet={id}
                         data-pet-mood={mood}
-                        data-pet-blocked={pressBlocked || undefined}
+                        data-pet-blocked={blocked || undefined}
                         aria-label={label}
                         className={clsx(
                             'absolute left-0 cursor-pointer rounded-md outline-none focus-visible:ring-2 focus-visible:ring-accent',
-                            pressBlocked || aiming ? 'pointer-events-none' : 'pointer-events-auto'
+                            blocked || aiming ? 'pointer-events-none' : 'pointer-events-auto'
                         )}
                         style={{ top: PET_HIT_TOP, width: PET_WIDTH, height: PET_HIT_HEIGHT }}
                         // A press on a pet is not the start of a box or a pan on the canvas under it.

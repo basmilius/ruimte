@@ -131,7 +131,7 @@ export const PUBLISHED_INLINE_NOTE =
 
 // The tool rather than the projects themselves, since which projects are open changes during a session.
 const REACH_NOTE =
-    'This machine lets you reach its other open projects: `project_list` lists them, and the tools that take `project` work there. Use that only for what the person asks of another project.';
+    'This machine lets you reach its other open projects: `project_list` lists them, and the tools that take `project` work there. `project_open`, `project_activate` and `project_close` open one under Recent, show one, or ask the person to close one. Use that only for what the person asks of another project.';
 
 export function toolsNote({
     depth,

@@ -1,11 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { usePetSettings } from '@extensions/pets/client/pet-settings';
-import type { AgentInfo, AgentStatus, ProjectCanvasView, ProjectNode, ProjectView } from '@ruimte/contracts';
+import type { AgentInfo, AgentStatus, ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
-import { startPageHolds } from '@/browser/page-hold';
-import { canvasOfNode } from '@/state/canvas';
 import { useSessions } from '@/state/sessions';
-import { openCanvasPage, type CanvasPage } from '../../../apps/client/testing/canvas-page';
 import { chatInfoOf } from '../../../apps/client/testing/chat-info';
 import { clickOn, mount, until, type Mounted } from '../../../apps/client/testing/dom';
 import { FakeMachine } from '../../../apps/client/testing/fake-machine';
@@ -81,51 +78,6 @@ describe('a terminal in a view of its own', () => {
         await act(async () => machine.emit('session.status', { sessionId: SHELL.id, agent: null }));
         await until(() => viewPet(SHELL.id) === null);
         expect(document.querySelector('[data-cell-bar] [data-pet-leaving]')).not.toBeNull();
-    });
-});
-
-describe('a pet on a canvas', () => {
-    const WRITER: ProjectNode = { id: 'writer', kind: 'chat', title: 'Writer', x: 100, y: 200, w: 480, h: 400 };
-    const SHOP: ProjectNode = { id: 'shop', kind: 'browser', title: 'Shop', x: 800, y: 200, w: 480, h: 400 };
-    const MAIN: ProjectCanvasView = {
-        kind: 'canvas',
-        id: 'main',
-        name: 'Main',
-        nodes: [WRITER, SHOP],
-        texts: [],
-        edges: [{ id: 'e1', from: WRITER.id, to: SHOP.id, role: 'target' }],
-        layouts: []
-    };
-    let canvas: CanvasPage | undefined;
-
-    afterEach(async () => {
-        await canvas?.close();
-    });
-
-    function standsOn(): string | null {
-        return document.querySelector(`[data-pet-box="${WRITER.id}"]`)?.getAttribute('data-pet-on') ?? null;
-    }
-
-    test('walks over the line to a page its agent works in, and home when it waits on you', async () => {
-        canvas = await openCanvasPage(machine, [MAIN], WRITER.id);
-
-        await act(async () => {
-            canvasOfNode(WRITER.id)?.getState().setViewport({ w: 1600, h: 900 });
-            canvasOfNode(WRITER.id)?.getState().setCamera({ x: 0, y: 0, zoom: 1 });
-            machine.emit('chat.status', { chatId: WRITER.id, info: chatInfoOf(WRITER.id, { status: 'running' }) });
-        });
-
-        await until(() => document.querySelector(`[data-pet="${WRITER.id}"]`) !== null);
-        expect(standsOn()).toBeNull();
-
-        // The machine asks the page through this client, which `main.tsx` listens for in the app.
-        const stopHolds = startPageHolds();
-        await act(async () => machine.emit('browser.drive', { askId: 'ask-1', browserId: SHOP.id, action: { kind: 'text' } }));
-        await until(() => standsOn() === SHOP.id);
-        stopHolds();
-
-        await act(async () => machine.emit('chat.status', { chatId: WRITER.id, info: chatInfoOf(WRITER.id, { status: 'needs-you' }) }));
-        await until(() => standsOn() === null);
     });
 });
 

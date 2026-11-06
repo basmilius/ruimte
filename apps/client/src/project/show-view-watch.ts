@@ -5,6 +5,7 @@ import { showViewOnceThere } from '@/project/show-view-once';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
+import { backOffer, goOffer, showMoveToast } from '@/state/show-toast';
 import { nodesOfView } from '@/state/view-nodes';
 import { watchPool } from '@/transport/pool-watch';
 import { windowWorkspace } from '@/workspace/window';
@@ -26,12 +27,9 @@ function showInWorkspace(payload: ProjectShowViewEvent): void {
     /* The grid moves first, so the way back is recorded against the grid as it stands after the move
        and a second `view open` undoes the second one rather than the first. */
     const shown = notice.action === 'back' ? useDocument.getState().showView(payload.viewId) : null;
-    /* One banner, so three views in a row leave the last on screen. An empty grid has nothing to go
+    /* One toast, so three views in a row leave the last on screen. An empty grid has nothing to go
        back to, so that one only reports. */
-    useDocument.getState().showNotice({
-        message: notice.message,
-        action: notice.action === 'go' ? { kind: 'go', viewId: payload.viewId } : shown === null ? null : { kind: 'back', shown }
-    });
+    showMoveToast(notice.message, notice.action === 'go' ? goOffer(payload.viewId) : shown === null ? null : backOffer(shown));
 }
 
 function onShowView(endpointId: string, payload: ProjectShowViewEvent): void {

@@ -248,6 +248,7 @@
                 "ghost": {
                     "label": "Suggesties tijdens het typen",
                     "description": "Vraag een codesuggestie met de sneltoets. De gekozen provider ontvangt de code rond de cursor.",
+                    "needsHelp": "Zet eerst Uitleg en naamsuggesties aan. De gekozen provider ontvangt dan de code rond de cursor.",
                     "options": {
                         "off": "Uit",
                         "request": "Op verzoek"
@@ -699,6 +700,26 @@
                 "label": "Canvaskaart",
                 "description": "Een kaart van elke node rechtsonder. Klik om erheen te gaan, sleep het kader om te schuiven. Verborgen op een smal canvas."
             },
+            "sidebarSort": {
+                "label": "Volgorde in de zijbalk",
+                "description": "Hoe de zijbalk de nodes onder een open canvas toont. Een node is bijgewerkt als zijn agent begint, wacht, stopt of klaar is, en als je hem opent. Het canvas zelf blijft zoals het is.",
+                "options": {
+                    "canvas": "Canvasvolgorde",
+                    "recent": "Recent bijgewerkt",
+                    "name": "Naam",
+                    "kind": "Soort",
+                    "status": "Status"
+                }
+            },
+            "sidebarSortThen": {
+                "label": "Binnen dezelfde soort of status",
+                "description": "Welke node eerst komt als er meer dezelfde soort of status hebben.",
+                "options": {
+                    "recent": "Recent bijgewerkt",
+                    "least-recent": "Langst niet bijgewerkt",
+                    "name": "Naam"
+                }
+            },
             "renderDistance": {
                 "label": "Tekenafstand",
                 "description": "Hoe ver pagina's, bestanden, diagrammen en apparaten live blijven. Verder weg tonen ze een stilstaand beeld of hun naam. Ver en Onbeperkt vragen meer van deze computer.",
@@ -984,7 +1005,7 @@
         "reachOpenProjects": {
             "label": "Agents mogen alle open projecten bereiken",
             "rowLabel": "Agents op {{machine}} mogen alle open projecten bereiken",
-            "description": "Agents in het ene project kunnen je andere open projecten lezen en daar agents starten.",
+            "description": "Agents in het ene project kunnen je andere open projecten lezen en daar agents starten. Ze kunnen ook een project uit Recent openen, er een naar voren halen en je vragen er een te sluiten. Een nieuw project maken ze pas als jij dat bevestigt.",
             "notConnected": "{{machine}} is niet verbonden. Pas dit aan in de details onder Account, of open een van zijn projecten."
         },
         "resumeAtReset": {
@@ -1011,6 +1032,13 @@
         },
         "notifications": {
             "title": "Meldingen"
+        },
+        "views": {
+            "title": "Weergaven"
+        },
+        "showViews": {
+            "label": "Agents van weergave laten wisselen",
+            "description": "Een weergave of project dat een agent opent, vervangt het jouwe, en een melding laat je teruggaan. Als dit uit staat, biedt de melding aan erheen te gaan."
         },
         "working": {
             "title": "Wakker houden",
@@ -1107,8 +1135,8 @@
         "sending": {
             "title": "Versturen"
         },
-        "views": {
-            "title": "Weergaven en kaarten"
+        "maps": {
+            "title": "Kaarten"
         },
         "agents": {
             "title": "Wat agents mogen tonen"
@@ -1131,10 +1159,6 @@
         "readingWidth": {
             "label": "Leesbreedte",
             "description": "De breedte van de berichten in een chatweergave. Een chat op een canvas vult zijn node."
-        },
-        "showViews": {
-            "label": "Agents van weergave laten wisselen",
-            "description": "Een weergave die een agent opent, vervangt de jouwe, met een banner om terug te gaan. Als dit uit staat, biedt de banner aan erheen te gaan."
         },
         "mapTiles": {
             "label": "Kaarttegels",
@@ -1896,10 +1920,18 @@
         "install": "Installeren",
         "back": "Terug",
         "notOnMachine": "{{name}} staat op deze computer, maar het deel voor de machine vraagt de eigenaar van die machine.",
+        "machineFailed": "{{name}} staat op deze computer, maar het deel voor de machine kon niet worden geïnstalleerd",
         "machineKept": "{{name}} is op deze computer aangepast, maar het deel op de machine bleef zoals het was",
         "installFailed": "{{name}} kon niet worden geïnstalleerd",
         "fromFileTrust": "Dit pakket komt uit een bestand en de store heeft het niet gecontroleerd. Het draait in Ruimte en kan wat jij kunt, op al je machines.",
         "fromFileUnreadable": "Dit bestand is geen extensiepakket",
+        "fromFileUpdates": "Werkt {{name}} bij naar versie {{version}}. Het pakket neemt de data en secrets over die {{name}} bewaarde.",
+        "unknownPublisher": "een naamloze publisher",
+        "otherPublisher": {
+            "title": "{{name}} vervangen door een pakket van een andere publisher?",
+            "description": "{{name}} op deze computer komt van {{installed}}, dit pakket van {{publisher}}. Het pakket neemt de data en secrets over die {{name}} bewaarde.",
+            "action": "Vervangen"
+        },
         "enabled": "Aan",
         "remove": "Verwijderen",
         "desktopOnly": "Extensies werken in de desktopapp.",

@@ -6,7 +6,13 @@ import { gunzipSync } from 'node:zlib';
 import { Serializer } from '@adecore/utils/async';
 import { isNotFound } from '@adecore/utils/errors';
 import { writeAtomic } from '@adecore/utils/fs';
-import { ExtensionManifestSchema, extensionManifestProblem, readExtensionPack, type ExtensionManifest } from '@ruimte/contracts';
+import {
+    EXTENSION_PACK_MAX_UNPACKED_BYTES,
+    ExtensionManifestSchema,
+    extensionManifestProblem,
+    readExtensionPack,
+    type ExtensionManifest
+} from '@ruimte/contracts';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';
 
@@ -368,7 +374,7 @@ export class ExtensionStore {
 }
 
 function readPack(bytes: Buffer): { manifest: ExtensionManifest; files: Readonly<Record<string, string>> } {
-    const reading = readExtensionPack(bytes, gunzipSync);
+    const reading = readExtensionPack(bytes, (packed) => gunzipSync(packed, { maxOutputLength: EXTENSION_PACK_MAX_UNPACKED_BYTES }));
 
     if (!reading.ok) {
         throw new ExtensionPackError(reading.code, reading.message);

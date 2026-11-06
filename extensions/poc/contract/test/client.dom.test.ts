@@ -2,7 +2,7 @@ import { afterEach, describe, expect, jest, test } from 'bun:test';
 import * as client from '@ruimte/extension/client';
 import { createTestHost, createTestServer, type TestNode } from '@ruimte/extension/testing';
 import * as ui from '@ruimte/extension/ui';
-import { createElement, use, useState } from 'react';
+import { createElement, useState } from 'react';
 import { clientContract, NAME, SEED, type WorldSeed } from '../contract/client';
 import type { ContractServer } from '../server';
 
@@ -115,20 +115,6 @@ describe('a test host', () => {
 
         jest.advanceTimersByTime(1000);
         await screen.until(() => screen.text() === 'Done');
-    });
-
-    test('rejects a click that leaves the surface waiting on what it suspends on', async () => {
-        const host = await createTestHost();
-        const never = new Promise<string>(() => undefined);
-        const Waits = () => createElement('p', null, use(never));
-        const Start = () => {
-            const [started, setStarted] = useState(false);
-
-            return started ? createElement(Waits) : createElement('button', { type: 'button', onClick: () => setStarted(true) }, 'Start');
-        };
-        const screen = await host.render(Start);
-
-        await expect(screen.click('Start')).rejects.toThrow('It is still waiting for what it suspends on');
     });
 
     test('fails at once on an option or answer it would never read, and names where an answer goes', async () => {

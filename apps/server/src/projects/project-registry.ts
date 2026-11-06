@@ -1,12 +1,11 @@
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Serializer } from '@adecore/utils/async';
-import { isNotFound } from '@adecore/utils/errors';
 import { writeAtomic } from '@adecore/utils/fs';
 import { ProjectIconChoiceSchema } from '@ruimte/contracts';
 import { z } from 'zod';
-import { errorText } from '../error-text.ts';
 import { ProjectError } from './project-error.ts';
+import { readJsonDocument, type JsonDocumentParse } from './project-files.ts';
 
 const RegistryEntrySchema = z.object({
     projectId: z.string().min(1),
@@ -23,13 +22,38 @@ const RegistryEntrySchema = z.object({
 export type RegistryEntry = z.infer<typeof RegistryEntrySchema>;
 
 const RegistrySchema = z.object({
-    projects: z.array(z.unknown()).transform((entries) =>
-        entries.flatMap((entry) => {
-            const parsed = RegistryEntrySchema.safeParse(entry);
-            return parsed.success ? [parsed.data] : [];
-        })
-    )
+    projects: z.array(z.unknown())
 });
+
+interface RegistryRead {
+    entries: RegistryEntry[];
+    // Entries this Ruimte cannot read, written back untouched so a newer or hand-edited one is never lost.
+    kept: unknown[];
+}
+
+function parseRegistry(text: string): JsonDocumentParse<RegistryRead> {
+    let json: unknown;
+    try {
+        json = JSON.parse(text);
+    } catch {
+        return { kind: 'unreadable' };
+    }
+    const parsed = RegistrySchema.safeParse(json);
+    if (!parsed.success) {
+        return { kind: 'unreadable' };
+    }
+    const entries: RegistryEntry[] = [];
+    const kept: unknown[] = [];
+    for (const raw of parsed.data.projects) {
+        const entry = RegistryEntrySchema.safeParse(raw);
+        if (entry.success) {
+            entries.push(entry.data);
+        } else {
+            kept.push(raw);
+        }
+    }
+    return { kind: 'ok', document: { entries, kept } };
+}
 
 function entryIn(entries: readonly RegistryEntry[], projectId: string): RegistryEntry {
     const entry = entries.find((candidate) => candidate.projectId === projectId);
@@ -45,6 +69,7 @@ export class ProjectRegistry {
     private readonly home: string;
     private entries: RegistryEntry[] | null = null;
     private loading: Promise<RegistryEntry[]> | null = null;
+    private kept: unknown[] = [];
     // Registry changes run one after the other; two clients opening at once must not lose an entry.
     private readonly writes = new Serializer();
     private readonly updated = new Set<() => void>();
@@ -61,10 +86,17 @@ export class ProjectRegistry {
             return this.entries;
         }
         // One read for everyone who asks first, so a read that ends late never undoes a change made meanwhile.
-        this.loading ??= this.read().then((entries) => {
-            this.entries ??= entries;
-            return this.entries;
-        });
+        this.loading ??= this.read().then(
+            (entries) => {
+                this.entries ??= entries;
+                return this.entries;
+            },
+            (e: unknown) => {
+                // The next caller reads again rather than inheriting a failure that may have passed.
+                this.loading = null;
+                throw e;
+            }
+        );
         return this.loading;
     }
 
@@ -85,20 +117,21 @@ export class ProjectRegistry {
             this.entries = entries;
             await mkdir(this.home, { recursive: true, mode: 0o700 });
             // Durable like the project files: after a power loss the machine's list is the old one or the new one, never empty.
-            await this.write(this.path, `${JSON.stringify({ projects: entries }, null, 2)}\n`, undefined, { durable: true });
+            await this.write(this.path, `${JSON.stringify({ projects: [...entries, ...this.kept] }, null, 2)}\n`, undefined, { durable: true });
             this.updated.forEach((listener) => listener());
         });
     }
 
+    /* A file that will not parse is moved aside before the next write; one that fails to read at all is an error, never an empty list. */
     private async read(): Promise<RegistryEntry[]> {
-        try {
-            const parsed = RegistrySchema.safeParse(JSON.parse(await readFile(this.path, 'utf8')));
-            return parsed.success ? parsed.data.projects : [];
-        } catch (e) {
-            if (!isNotFound(e)) {
-                console.warn('The project registry would not parse; starting with an empty one:', errorText(e));
-            }
-            return [];
+        const read = await readJsonDocument(this.path, parseRegistry);
+        if (read.kind === 'ok') {
+            this.kept = read.document.kept;
+            return read.document.entries;
         }
+        if (read.kind === 'corrupt') {
+            console.warn(`The project registry would not parse; it was moved to ${read.setAside} and a new one starts empty.`);
+        }
+        return [];
     }
 }

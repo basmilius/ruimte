@@ -275,6 +275,46 @@ describe('start', () => {
         expect(fake.calls).toEqual([]);
     });
 
+    test('"When idle" restarts onto the new build at the first refresh that finds nothing running', async () => {
+        const { controller, fake, machine } = setup({
+            fake: fakeManager({ installed: true, running: { version: '0.0.9', build: 'old' } }),
+            work: { terminals: 1, agents: 1 }
+        });
+        await controller.start();
+        controller.restartWhenIdle();
+        await controller.refresh();
+        expect(fake.calls).toEqual([]);
+
+        machine.work = { terminals: 0, agents: 0 };
+        const next = await controller.refresh();
+        expect(fake.calls).toEqual(['restart']);
+        expect(next).toMatchObject({ owner: 'service', failure: null, pendingRestart: null });
+        expect(fake.service.running).toEqual(EXPECTED);
+        expect(controller.unsettled()).toBe(false);
+    });
+
+    test('"When idle" keeps waiting while the machine cannot say what runs', async () => {
+        const { controller, fake } = setup({
+            fake: fakeManager({ installed: true, running: { version: '0.0.9', build: 'old' } }),
+            work: null
+        });
+        await controller.start();
+        controller.restartWhenIdle();
+        expect((await controller.refresh()).pendingRestart).toEqual({ work: null, answered: true });
+        expect(fake.calls).toEqual([]);
+    });
+
+    test('an unanswered question never restarts the machine, even once it is idle', async () => {
+        const { controller, fake, machine } = setup({
+            fake: fakeManager({ installed: true, running: { version: '0.0.9', build: 'old' } }),
+            work: { terminals: 1, agents: 0 }
+        });
+        await controller.start();
+        machine.work = { terminals: 0, agents: 0 };
+        expect((await controller.refresh()).pendingRestart).toEqual({ work: 1, answered: false });
+        expect(fake.calls).toEqual([]);
+    });
+
     test('nothing answering starts the service', async () => {
         const { controller, fake, events } = setup({});
         await controller.start();

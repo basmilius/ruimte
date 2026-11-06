@@ -26,6 +26,8 @@ export interface SafeModeOptions {
     argv: readonly string[];
     /* Quits and starts the app again with these arguments. */
     relaunch(args: string[]): void;
+    /* The question a quit asks while work runs; a native dialog, so it works on a page an extension broke. */
+    askBeforeQuit(): Promise<boolean>;
     /* Runs after the current call, so the reply reaches the page before the windows go. */
     later?(run: () => void): void;
 }
@@ -37,7 +39,11 @@ export interface SafeModeOptions {
 export function installSafeMode(ipc: DesktopIpc, options: SafeModeOptions): void {
     const later = options.later ?? ((run: () => void) => void setTimeout(run, 0));
 
-    ipc.handle('app:restart-safe-mode', () => {
+    ipc.handle('app:restart-safe-mode', async () => {
+        if (!(await options.askBeforeQuit())) {
+            return;
+        }
+
         const args = [...options.argv.slice(1).filter((arg) => arg !== SAFE_MODE_ARGUMENT), SAFE_MODE_ARGUMENT];
         later(() => options.relaunch(args));
     });

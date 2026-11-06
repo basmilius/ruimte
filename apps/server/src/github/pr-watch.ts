@@ -169,7 +169,7 @@ export class PrWatchStore {
     private readonly records = new Map<string, WatchRecord>();
     private readonly timers = new Map<string, unknown>();
     private readonly due = new Map<string, number>();
-    // Watches whose project was closed at their last poll; they wait for `resume`, not for a clock.
+    // Watches whose project was closed at their last poll; they poll again on `resume`, and their clock only ends them.
     private readonly held = new Set<string>();
     private readonly queue: string[] = [];
     private readonly flying = new Set<Promise<void>>();
@@ -361,6 +361,13 @@ export class PrWatchStore {
         }
         if ((await this.options.paused?.(record.projectId)) === true) {
             this.held.add(id);
+            // A resume that fell between the answer and the hold found nothing to release, so ask once more.
+            if ((await this.options.paused?.(record.projectId)) === false && this.held.delete(id)) {
+                this.arm(id, 0);
+                return;
+            }
+            // Asks GitHub nothing until `resume`, but still ends on its day rather than when the project opens again.
+            this.arm(id, record.startedAt + WATCH_LIFETIME_MS - this.clock.now());
             return;
         }
         let poll: PrPoll | null;

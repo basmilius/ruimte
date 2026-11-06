@@ -1,6 +1,8 @@
 import { extensionPermissionProblems } from './extension-permissions.ts';
 import { clashingPackPath, EXTENSION_API_VERSION, ExtensionManifestSchema, ExtensionPackSchema, isSafePackPath, type ExtensionManifest } from './extension.ts';
 
+const TOO_LARGE_MESSAGE = 'This pack unpacks to more than an extension may hold';
+
 export type ExtensionPackProblemCode = 'pack-unreadable' | 'pack-manifest' | 'pack-api' | 'pack-path';
 
 export interface ExtensionPackProblem {
@@ -8,7 +10,14 @@ export interface ExtensionPackProblem {
     message: string;
 }
 
-/* The gunzip of the runtime that reads the pack: Node's `gunzipSync`, a browser's `DecompressionStream`. */
+/* What a gunzip throws once a pack inflates past `EXTENSION_PACK_MAX_UNPACKED_BYTES`; Node's `maxOutputLength` throws its own code for it. */
+export class PackTooLargeError extends Error {
+    constructor() {
+        super(TOO_LARGE_MESSAGE);
+    }
+}
+
+/* The gunzip of the runtime that reads the pack, capped at `EXTENSION_PACK_MAX_UNPACKED_BYTES`: Node's `gunzipSync`, a browser's `DecompressionStream`. */
 export type PackGunzip = (bytes: Uint8Array) => Uint8Array | Promise<Uint8Array>;
 
 export type ExtensionPackReading =
@@ -39,6 +48,11 @@ function utf8Of(base64: string): string {
 }
 
 const UNREADABLE: ExtensionPackReading = { ok: false, code: 'pack-unreadable', message: 'This is not an extension pack' };
+const TOO_LARGE: ExtensionPackReading = { ok: false, code: 'pack-unreadable', message: TOO_LARGE_MESSAGE };
+
+function unreadable(e: unknown): ExtensionPackReading {
+    return e instanceof PackTooLargeError || (e as { code?: unknown } | null)?.code === 'ERR_BUFFER_TOO_LARGE' ? TOO_LARGE : UNREADABLE;
+}
 
 function readUnzipped(unzipped: Uint8Array): ExtensionPackReading {
     let parsed: unknown;
@@ -98,8 +112,8 @@ export function readExtensionPack(bytes: Uint8Array, gunzip: PackGunzip): Extens
     try {
         const unzipped = gunzip(bytes);
 
-        return unzipped instanceof Uint8Array ? readUnzipped(unzipped) : unzipped.then(readUnzipped, () => UNREADABLE);
-    } catch {
-        return UNREADABLE;
+        return unzipped instanceof Uint8Array ? readUnzipped(unzipped) : unzipped.then(readUnzipped, unreadable);
+    } catch (e) {
+        return unreadable(e);
     }
 }

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import type { CanvasHost } from '../canvas/host.ts';
+import { projectReach } from '../canvas/reach.ts';
 import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
@@ -81,7 +82,7 @@ function reaching(booted: TestDaemon): { host: CanvasHost } {
         host: {
             ...booted.host,
             reach: {
-                enabled: () => true,
+                ...projectReach(store, () => true),
                 open: async () =>
                     [
                         { projectId: ownId, name: 'repo', folder: join(root, 'repo') },

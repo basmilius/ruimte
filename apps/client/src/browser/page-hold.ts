@@ -1,6 +1,5 @@
 import { BROWSER_LOAD_TIMEOUT_MS, BROWSER_START_TIMEOUT_MS, type BrowserDriveEvent, type BrowserDriveResult, type BrowserPageState } from '@ruimte/contracts';
 import { base64Of } from '@/base64';
-import { reportPageAsk } from '@/browser/page-asks';
 import { pageSnapshots } from '@/browser/page-snapshots';
 import { browserRegistry, useBrowser, type BrowserState } from '@/clients/browser/registry';
 import { endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
@@ -139,7 +138,6 @@ export function startPageHolds(): () => void {
             subscriptions: [
                 useBrowser.subscribe(report),
                 link.on('browser.drive', (payload) => {
-                    reportPageAsk(endpointKey(endpointId, payload.browserId), Date.now());
                     void answer(endpointId, payload).then((result) => fireAndForget('browser.driveResult', link.request('browser.driveResult', result)));
                 })
             ]

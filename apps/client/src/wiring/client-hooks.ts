@@ -5,6 +5,7 @@ import { watchPrWatches } from '@/github/pr-watches';
 import { provideExtensionChat } from '@/nodes/extension-chat';
 import { PlanSync } from '@/plan/plans';
 import { useDocument } from '@/state/document';
+import { watchNodeActivity } from '@/state/node-activity';
 import { watchPushAttention } from '@/state/push-attention';
 import { watchSnoozes } from '@/state/snooze';
 import { textDrafts } from '@/state/text-drafts';
@@ -44,6 +45,7 @@ export function installClientHooks(): ClientHooks {
     watchEveryMachine((endpointId, transport) => watchPushAttention(endpointId, transport));
     watchEveryMachine((endpointId, transport) => reportPresence(transport, () => machineAnswers(pool.statusOf(endpointId), 'presence.report')));
     watchEveryMachine((endpointId, transport) => watchSnoozes(endpointId, transport));
+    watchEveryMachine((endpointId, transport) => watchNodeActivity(endpointId, transport, () => machineAnswers(pool.statusOf(endpointId), 'activity.list')));
     watchEveryMachine((endpointId, transport) => watchPrWatches(endpointId, transport));
     watchEveryMachine((endpointId, transport) => {
         const plans = new PlanSync(endpointId, transport);

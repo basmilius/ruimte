@@ -25,6 +25,7 @@ import { databaseTargetOf, databaseViewName } from '@/state/database-view-name';
 import { useDesignChat } from '@/state/design-chat';
 import { useDocument, viewOfNode } from '@/state/document';
 import { fileTabOf, isDatabaseTab, useFiles } from '@/state/files';
+import { announceActivation } from '@/state/node-activation';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { defaultNodeSize } from '@/state/node-size';
 import { useProject } from '@/state/project';
@@ -88,6 +89,7 @@ export function revealNode(id: string): void {
     if (viewId !== null) {
         focusNodeAction(viewId, nodeId);
     }
+    announceActivation(nodeId);
 }
 
 /*

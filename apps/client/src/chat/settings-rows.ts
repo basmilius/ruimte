@@ -11,7 +11,6 @@ export const CHAT_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
     row('chats.showToolCalls'),
     row('chats.sendKey'),
     row('chats.steerByDefault'),
-    row('chats.showViews'),
     row('chats.mapTiles'),
     { id: 'agents.visualReplies', section: 'chats', label: 'settings:agents.visualReplies.label', description: 'settings:agents.visualReplies.description' }
 ];

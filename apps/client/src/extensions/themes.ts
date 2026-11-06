@@ -8,7 +8,7 @@ import { storedJson } from '@/state/stored-json';
 import { useTheme } from '@/state/theme';
 import { IS_STATION } from '@/station';
 
-const STORAGE_KEY = 'ruimte.extensionTheme';
+export const EXTENSION_THEME_STORAGE_KEY = 'ruimte.extensionTheme';
 const TOKENS_ID = 'ruimte-extension-theme';
 const CSS_ID = 'ruimte-extension-theme-css';
 const PALETTE_ID = 'ruimte-palette';
@@ -27,7 +27,7 @@ export interface ThemeChoice {
 const StoredThemeSchema = z.object({ key: z.string(), tokens: z.string(), cssUrl: z.string().nullable() });
 type StoredTheme = z.infer<typeof StoredThemeSchema>;
 
-const storedTheme = storedJson<StoredTheme>(STORAGE_KEY, StoredThemeSchema);
+const storedTheme = storedJson<StoredTheme>(EXTENSION_THEME_STORAGE_KEY, StoredThemeSchema);
 
 function tokensCss(theme: ExtensionTheme): string {
     const lines = Object.entries(theme.tokens).map(([token, value]) => `${token}: ${value};`);

@@ -586,7 +586,7 @@ An agent Ruimte starts gets the daemon's MCP server: `/mcp` on the daemon's port
 `@adecore/agents/usage` answers what the CLIs cost and what is left of their plans, with no vendor API or credential.
 
 - The scanner reads every account's transcripts (`~/.claude/projects`, `~/.codex/sessions`, honoring `CLAUDE_CONFIG_DIR` and `CODEX_HOME`).
-- `usage/scan-state.json` is a cache; deleting it costs one cold scan. `usage/history.jsonl` keeps the usage of every transcript ever read, also after its CLI removed it, so deleting it loses that usage for good.
+- `usage/scan-state.json` is a cache; deleting it costs one cold scan. `usage/history.jsonl` keeps the usage of every transcript ever read, also after its CLI removed it, so deleting it loses that usage for good. `usage/limits.json` keeps the last plan numbers of every account, shown after a restart until the first read, which covers every signed-in account once.
 - Copilot chat turns are logged to `usage/copilot`, a file per session; a Copilot terminal is not counted.
 - Prices come from LiteLLM's `model_prices_and_context_window.json`, refreshed every 24 hours into `usage/prices.json`, with a bundled fallback. An unpriced model shows as unknown, never free. The ECB euro rate comes from frankfurter.app on the same schedule into `usage/exchange-rate.json`. `--no-price-fetch` turns off both.
 - Plan limits come from the CLIs (`get_usage` over Claude Code's stream-json, `account/rateLimits/read` over Codex's app-server) every five minutes, backing off to an hour after a failure. Agents read them with `provider_info`.

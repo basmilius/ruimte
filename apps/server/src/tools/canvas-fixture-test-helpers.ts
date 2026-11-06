@@ -32,7 +32,7 @@ import { freeBranch } from '../git/worktrees.ts';
 import { DiagramStore } from '../projects/diagram-store.ts';
 import { DrawingStore } from '../projects/drawing-store.ts';
 import { projectOverlays } from '../projects/overlays.ts';
-import { documentOnDisk, projectLinks } from '../projects/project-file-test-helpers.ts';
+import { documentOnDisk, projectLinks, UNSYNCED_WRITE_IO } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { resolveReference, resolveReferences, type Reference } from '../projects/references.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
@@ -226,7 +226,13 @@ export class CanvasFixture {
         this.lineage = new AgentLineageStore(home);
         this.tasks = new TaskStore(home);
         await this.lineage.load();
-        this.store = new ProjectStore(home, projectLinks({ viewFiles: () => [this.diagrams, this.drawings] }), projectOverlays(home));
+        this.store = new ProjectStore(
+            home,
+            projectLinks({ viewFiles: () => [this.diagrams, this.drawings] }),
+            projectOverlays(home),
+            undefined,
+            UNSYNCED_WRITE_IO
+        );
         this.diagrams = new DiagramStore(this.store);
         this.diagrams.subscribe('client-1', (event) => this.diagramEvents.push(event));
         this.drawings = new DrawingStore(this.store);

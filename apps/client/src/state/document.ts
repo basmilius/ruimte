@@ -27,16 +27,15 @@ import { defaultCanvases } from '@/state/canvas';
 import { defaultDiagrams } from '@/state/diagram';
 import { createDocumentContentSlice } from '@/state/document-content-slice';
 import { createDocumentGridSlice } from '@/state/document-grid-slice';
-import { cellViewOf, createDocumentKit, type DocumentPeers, type StandaloneRequest, type TrashedView, type ViewNotice } from '@/state/document-model';
+import { cellViewOf, createDocumentKit, type DocumentPeers, type StandaloneRequest, type TrashedView } from '@/state/document-model';
 import { createDocumentNodesSlice } from '@/state/document-nodes-slice';
-import { createDocumentNoticeSlice } from '@/state/document-notice-slice';
 import { createDocumentTabsSlice } from '@/state/document-tabs-slice';
 import { createDocumentViewsSlice } from '@/state/document-views-slice';
 import { defaultDrawings } from '@/state/drawing';
 import { CellViewContext, storeHook } from '@/state/workspace-stores';
 import type { CanvasPatch } from './canvas-model';
 
-export { canStandInCell, cellViewOf, type DocumentPeers, type StandaloneRequest, type TrashedView, type ViewNotice } from '@/state/document-model';
+export { canStandInCell, cellViewOf, type DocumentPeers, type StandaloneRequest, type TrashedView } from '@/state/document-model';
 
 export interface DocumentState {
     /* In sidebar order. The active canvas view is stale here, since the canvas store is the editor of that one. */
@@ -58,9 +57,6 @@ export interface DocumentState {
     viewLocal: Record<string, ProjectViewLocal>;
     /* Whether the keyboard is inside the body of a standalone view; Escape leaves it to the sidebar. */
     bodyFocused: boolean;
-    /* What an agent's `view open` left on the banner over the views, in either setting. Null when there is
-       nothing to say; one at a time, since the last thing an agent asked for is the one worth acting on. */
-    viewNotice: ViewNotice | null;
     /* Counts changes to the document itself. Switching views writes the canvas back, which is not one. */
     edits: number;
     /* True for the one update that swaps in another project, so nobody reads it as edits. */
@@ -108,13 +104,6 @@ export interface DocumentState {
     showView(id: string, options?: { newTab?: boolean }): ShownView | null;
     /* The way back out of that toast, run against the grid as it stands when the button is pressed. */
     undoShowView(shown: Omit<ShownView, 'layout'>): void;
-    /* What an agent's `view open` has to say, put in the banner over whatever was standing in it. */
-    showNotice(notice: ViewNotice): void;
-    /* The button on that banner, whichever of the two it is. It takes the banner off the screen as
-       well, which is what a card with a button has to do: leaving it up after the press reads as a
-       press that did nothing. */
-    runNotice(): void;
-    dismissNotice(): void;
     /* A view into a cell's zone: the four edges split, the middle takes the place of what is there. */
     dropViewAt(viewId: string, at: CellAt, zone: SplitZone): void;
     /*
@@ -229,7 +218,6 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
             lastHostViewId: null,
             viewLocal: {},
             bodyFocused: false,
-            viewNotice: null,
             edits: 0,
             loading: false,
             merging: false,
@@ -242,7 +230,6 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
             ...createDocumentContentSlice(kit),
             ...createDocumentGridSlice(kit),
             ...createDocumentTabsSlice(kit),
-            ...createDocumentNoticeSlice(kit),
             ...createDocumentViewsSlice(kit),
             ...createDocumentNodesSlice(kit)
         };

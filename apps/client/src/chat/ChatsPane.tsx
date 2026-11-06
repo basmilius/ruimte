@@ -108,8 +108,7 @@ export function ChatsPane() {
                 />
                 <SettingSwitchRow id="chats.steerByDefault" setting="chatSteerByDefault" onChanged={tellMachinesOfSteering} />
             </SettingsSection>
-            <SettingsSection title={t('chats.views.title')}>
-                <SettingSwitchRow id="chats.showViews" setting="agentsShowViews" />
+            <SettingsSection title={t('chats.maps.title')}>
                 <SettingSwitchRow id="chats.mapTiles" setting="chatMapTiles" />
             </SettingsSection>
             <MachineSwitchSection title={t('chats.agents.title')} settings={['visualReplies']} />

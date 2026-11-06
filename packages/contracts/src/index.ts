@@ -1,5 +1,6 @@
 import { AGENT_EVENT_SCHEMAS, AGENT_REQUEST_SCHEMAS } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
+import { ACTIVITY_REQUEST_SCHEMAS, ACTIVITY_EVENT_SCHEMAS } from './activity.ts';
 import { AGENT_INTEGRATIONS_REQUEST_SCHEMAS } from './agent-integrations.ts';
 import { AGENT_REGISTRY_REQUEST_SCHEMAS } from './agent-registry.ts';
 import { AGENT_SERVER_REQUEST_SCHEMAS, AGENT_SERVER_EVENT_SCHEMAS } from './agent-server.ts';
@@ -129,6 +130,8 @@ export * from './peer.ts';
 export * from './remote.ts';
 export * from './slug.ts';
 export * from './snooze.ts';
+export * from './activity.ts';
+export * from './activity.ts';
 export * from './language-patterns.ts';
 export * from './stored-path.ts';
 export * from './sql-binding.ts';
@@ -170,6 +173,7 @@ export const REQUEST_SCHEMAS = {
     ...PEER_REQUEST_SCHEMAS,
     ...REMOTE_REQUEST_SCHEMAS,
     ...SNOOZE_REQUEST_SCHEMAS,
+    ...ACTIVITY_REQUEST_SCHEMAS,
     ...TERMINAL_PREPARE_REQUEST_SCHEMAS,
     ...SESSION_PORTS_REQUEST_SCHEMAS,
     ...BROWSER_REQUEST_SCHEMAS,
@@ -231,6 +235,7 @@ export const EVENT_SCHEMAS = {
     ...PEER_EVENT_SCHEMAS,
     ...REMOTE_EVENT_SCHEMAS,
     ...SNOOZE_EVENT_SCHEMAS,
+    ...ACTIVITY_EVENT_SCHEMAS,
     ...BROWSER_EVENT_SCHEMAS,
     ...DEVICE_EVENT_SCHEMAS,
     ...RUIMTE_AGENT_EVENT_SCHEMAS,

@@ -66,8 +66,8 @@ describe('the completion list of the editor', () => {
         machine.answer('fs.read', () => ({ kind: 'text', text: before, encoding: 'utf-8', size: before.length, mtime: 1, language: 'typescript' }) as never);
         machine.answer('editor.status', () => ({ available: true }));
         machine.answer('editor.generate', () => ({ state: 'done' as const, text: suggestion }));
-        const previous = useSettings.getState().aiGhostText;
-        useSettings.setState({ aiGhostText: 'request' });
+        const { aiCodeHelp, aiGhostText } = useSettings.getState();
+        useSettings.setState({ aiCodeHelp: true, aiGhostText: 'request' });
         try {
             await page.renderApp();
             await until(() => input() !== null);
@@ -86,7 +86,7 @@ describe('the completion list of the editor', () => {
             await pressKey(input()!, 's', MOD);
             expect(machine.requests('fs.write').at(-1)?.text).toBe(before);
         } finally {
-            useSettings.setState({ aiGhostText: previous });
+            useSettings.setState({ aiCodeHelp, aiGhostText });
         }
     });
 

@@ -1,7 +1,8 @@
-import { Segmented, Switch, Keys, shortcut } from '@adecore/ui';
+import { Segmented, Select, Switch, Keys, shortcut } from '@adecore/ui';
 import { SettingsRow, useSettingsTarget } from '@adecore/ui/settings';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { NODE_SORT_THENS, NODE_SORTS, sortHasGroups } from '@/canvas-model/node-sort';
 import { RENDER_DISTANCES, type RenderDistance } from '@/canvas-model/render-distance';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
 import { SettingsSection } from '@/machines/SettingsSection';
@@ -33,12 +34,44 @@ function tabOfTarget(target: string | null): ViewTab | null {
 function CanvasTab() {
     const { t } = useTranslation('settings');
     const renderDistance = useSettings((s) => s.canvasRenderDistance);
+    const nodeSort = useSettings((s) => s.sidebarNodeSort);
+    const nodeSortThen = useSettings((s) => s.sidebarNodeSortThen);
     const update = useSettings((s) => s.update);
 
     return (
         <>
             <SettingsSection>
                 <SettingSwitchRow id="views.canvas.minimap" setting="canvasMinimap" />
+                <SettingsRow
+                    searchId="views.canvas.sidebarSort"
+                    label={t('views.canvas.sidebarSort.label')}
+                    description={t('views.canvas.sidebarSort.description')}
+                    control={
+                        <Select
+                            value={nodeSort}
+                            label={t('views.canvas.sidebarSort.label')}
+                            align="end"
+                            items={NODE_SORTS.map((value) => ({ value, label: t(`views.canvas.sidebarSort.options.${value}`) }))}
+                            onValueChange={(value) => update({ sidebarNodeSort: value })}
+                        />
+                    }
+                />
+                {sortHasGroups(nodeSort) && (
+                    <SettingsRow
+                        searchId="views.canvas.sidebarSortThen"
+                        label={t('views.canvas.sidebarSortThen.label')}
+                        description={t('views.canvas.sidebarSortThen.description')}
+                        control={
+                            <Select
+                                value={nodeSortThen}
+                                label={t('views.canvas.sidebarSortThen.label')}
+                                align="end"
+                                items={NODE_SORT_THENS.map((value) => ({ value, label: t(`views.canvas.sidebarSortThen.options.${value}`) }))}
+                                onValueChange={(value) => update({ sidebarNodeSortThen: value })}
+                            />
+                        }
+                    />
+                )}
             </SettingsSection>
             {/* Read by every window on this computer, so it carries the computer's tag apart from the map above. */}
             <SettingsSection scope="computer">

@@ -38,6 +38,9 @@ export function AgentsPane() {
             <SettingsSection title={t('agents.notifications.title')}>
                 <SettingSwitchRow id="agents.working.sound" setting="agentsTurnSound" />
             </SettingsSection>
+            <SettingsSection title={t('agents.views.title')}>
+                <SettingSwitchRow id="agents.showViews" setting="agentsShowViews" />
+            </SettingsSection>
             <ComputerSections />
             <WorkingSection />
         </>
