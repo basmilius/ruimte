@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/actions/client-actions';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
+import { ChatOnCanvasContext } from '@/chat/composer-status';
 import { peekOpeningMode, settleOpeningMode } from '@/chat/opening-mode';
 import { deriveNodeTitle } from '@/chat/title';
 import { ViewAccessories } from '@/extensions/ContributedSlots';
@@ -185,7 +186,7 @@ export function ChatBody({
                                         context={{ chat: { id }, node: nodeInfoOf(id) }}
                                         wrap={(row) => <div className="flex flex-wrap items-center gap-1 px-2 pb-1">{row}</div>}
                                     />
-                                    {composer}
+                                    <ChatOnCanvasContext value={onCanvas}>{composer}</ChatOnCanvasContext>
                                 </div>
                             )
                         }

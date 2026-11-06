@@ -1,4 +1,9 @@
 {
+    "where": {
+        "worktree": "Worktree {{name}}",
+        "mainCheckout": "Hoofdcheckout",
+        "otherMachine": "Andere machine"
+    },
     "fork": {
         "pill": {
             "label": "Fork",

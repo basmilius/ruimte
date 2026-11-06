@@ -113,9 +113,16 @@ export function Composer({
                 <span className="grid size-8 place-items-center rounded-full border border-border text-text-muted">
                     <Plus size={16} strokeWidth={1.75} />
                 </span>
-                <span className="flex h-8 items-center gap-2 rounded-full border border-border pr-3 pl-2.5 text-[13px] leading-[19px] text-text-muted">
+                <span className="flex h-8 items-center gap-2 rounded-full pr-3 pl-2.5 text-[13px] leading-[19px] text-text-muted">
                     <ClaudeMark />
-                    <span className="font-medium text-text">Opus 5.5</span>
+                    <span className="flex items-center gap-1.5">
+                        <span className="font-medium text-text">Opus 5.5</span> High
+                    </span>
+                    <span className="text-text-faint">·</span>
+                    <span className="flex items-center gap-2">
+                        <ContextRing fraction={0.41} /> 1M
+                    </span>
+                    <span className="text-text-faint">·</span>
                     <span className="flex items-center gap-1">
                         <Pencil size={12} strokeWidth={1.75} /> Edits
                     </span>
@@ -129,6 +136,28 @@ export function Composer({
                 </span>
             </div>
         </div>
+    );
+}
+
+/** `ContextRing` in `RunSettings.tsx`: how full the context window is. */
+function ContextRing({ fraction }: { readonly fraction: number }) {
+    const circumference = 2 * Math.PI * 5;
+
+    return (
+        <svg width="14" height="14" viewBox="0 0 14 14" className="shrink-0 text-text" aria-hidden="true">
+            <circle cx="7" cy="7" r="5" fill="none" strokeWidth="2" className="stroke-border" />
+            <circle
+                cx="7"
+                cy="7"
+                r="5"
+                fill="none"
+                strokeWidth="2"
+                stroke="currentColor"
+                strokeDasharray={circumference}
+                strokeDashoffset={circumference * (1 - fraction)}
+                transform="rotate(-90 7 7)"
+            />
+        </svg>
     );
 }
 

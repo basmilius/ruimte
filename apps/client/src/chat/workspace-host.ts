@@ -3,6 +3,7 @@ import i18next from 'i18next';
 import { createElement, useMemo } from 'react';
 import { answerComputerAsPerson } from '@/actions/client-actions';
 import { ChatModelView } from '@/chat/ChatModelView';
+import { useComposerStatus } from '@/chat/composer-status';
 import { ComposerDictation } from '@/chat/ComposerDictation';
 import { CHAT_HOST } from '@/chat/host';
 import { openNewChatAfterSend } from '@/chat/new-chat-after-send';
@@ -51,6 +52,7 @@ export const WORKSPACE_CHAT_HOST: Partial<ChatHost> = {
     MarkdownImage,
     ModelView: ChatModelView,
     ComposerHeaderSlot: DesignComposerHeader,
+    useComposerStatus,
     useHidesToolCalls: useDesignHidesToolCalls,
     renderShellCodeBlock: prepareCodeBlockAction,
     fileLinks: {
