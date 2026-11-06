@@ -1,9 +1,17 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { groupMemberIds } from '@ruimte/contracts/node-defaults';
-import { box, canvasFixture, canvasOnDisk, invoke, madeId, nodeOnDisk, seed } from './canvas-test-fixture.ts';
+import { box, canvasFixture, type CanvasFixture, madeId } from './canvas-test-fixture.ts';
 
-canvasFixture();
+let fx: CanvasFixture;
+
+beforeEach(async () => {
+    fx = await canvasFixture();
+});
+
+afterEach(async () => {
+    await fx.dispose();
+});
 
 /*
  * Groups as 0.29 wrote them: `room` is open around the caller `term-1` and names no members, `shelf` is
@@ -41,32 +49,32 @@ function heldBy(canvas: ProjectCanvasView, id: string): string[] {
 }
 
 async function seedFromOlderRuimte(...extra: ProjectNode[]): Promise<ProjectCanvasView> {
-    await seed(room, loose, shelf, kept, ...extra);
+    await fx.seed(room, loose, shelf, kept, ...extra);
 
-    return canvasOnDisk();
+    return fx.canvasOnDisk();
 }
 
 describe('a project an older Ruimte wrote', () => {
     test('node group inside an open group that names no members leaves that group reading them off its frame', async () => {
         const before = await seedFromOlderRuimte(box('other', 1600, 400));
 
-        const id = await madeId(invoke('node_group', { nodes: 'loose,other' }));
-        const after = await canvasOnDisk();
+        const id = await madeId(fx.invoke('node_group', { nodes: 'loose,other' }));
+        const after = await fx.canvasOnDisk();
 
-        expect((await nodeOnDisk('room'))!.memberIds).toBeUndefined();
-        expect((await nodeOnDisk(id))!.memberIds).toEqual(['loose', 'other']);
+        expect((await fx.nodeOnDisk('room'))!.memberIds).toBeUndefined();
+        expect((await fx.nodeOnDisk(id))!.memberIds).toEqual(['loose', 'other']);
         expect(heldBy(after, 'room')).toEqual([...heldBy(before, 'room'), id].sort());
         expect(heldBy(after, 'shelf')).toEqual(['kept']);
     });
 
     test('node group inside an open group a 0.29 iPhone wrote an empty list on leaves that group holding its frame', async () => {
-        await seed({ ...room, memberIds: [] }, loose, shelf, kept, box('other', 1600, 400));
-        const before = await canvasOnDisk();
+        await fx.seed({ ...room, memberIds: [] }, loose, shelf, kept, box('other', 1600, 400));
+        const before = await fx.canvasOnDisk();
 
-        const id = await madeId(invoke('node_group', { nodes: 'loose,other' }));
-        const after = await canvasOnDisk();
+        const id = await madeId(fx.invoke('node_group', { nodes: 'loose,other' }));
+        const after = await fx.canvasOnDisk();
 
-        expect((await nodeOnDisk('room'))!.memberIds).toEqual([]);
+        expect((await fx.nodeOnDisk('room'))!.memberIds).toEqual([]);
         expect(heldBy(after, 'room')).toEqual([...heldBy(before, 'room'), id].sort());
         expect(heldBy(before, 'room')).toContain('loose');
     });
@@ -74,10 +82,10 @@ describe('a project an older Ruimte wrote', () => {
     test('agent start beside its opener stands in the open group the opener stands in, without writing it out', async () => {
         const before = await seedFromOlderRuimte();
 
-        const id = await madeId(invoke('agent_start', { cli: 'claude', beside: 'term-1' }));
-        const after = await canvasOnDisk();
+        const id = await madeId(fx.invoke('agent_start', { cli: 'claude', beside: 'term-1' }));
+        const after = await fx.canvasOnDisk();
 
-        expect((await nodeOnDisk('room'))!.memberIds).toBeUndefined();
+        expect((await fx.nodeOnDisk('room'))!.memberIds).toBeUndefined();
         expect(heldBy(after, 'room')).toEqual([...heldBy(before, 'room'), id].sort());
         expect(heldBy(after, 'shelf')).toEqual(['kept']);
     });
@@ -89,14 +97,14 @@ describe('a project an older Ruimte wrote', () => {
             { provider: 'claude', title: 'Two', prompt: 'b' }
         ];
 
-        const { lines } = await invoke('agent_team', { label: 'Crew', roles: JSON.stringify(roles) });
-        const after = await canvasOnDisk();
+        const { lines } = await fx.invoke('agent_team', { label: 'Crew', roles: JSON.stringify(roles) });
+        const after = await fx.canvasOnDisk();
         const team = after.nodes.find((node) => node.kind === 'group' && node.title === 'Crew')!;
         const agents = after.nodes.filter((node) => !before.nodes.some((known) => known.id === node.id) && node.id !== team.id).map((node) => node.id);
 
         expect(lines[0]).not.toStartWith('refused');
         expect(team.memberIds).toEqual(agents);
-        expect((await nodeOnDisk('room'))!.memberIds).toBeUndefined();
+        expect((await fx.nodeOnDisk('room'))!.memberIds).toBeUndefined();
         expect(heldBy(after, 'room')).toEqual(heldBy(before, 'room'));
         expect(heldBy(after, 'shelf')).toEqual(['kept']);
         expect(heldBy(after, team.id)).toEqual([...agents].sort());
