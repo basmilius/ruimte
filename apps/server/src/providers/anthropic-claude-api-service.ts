@@ -6,6 +6,7 @@ import {
     type ClaudeApiStatus,
     type ModelInfo
 } from '@ruimte/contracts';
+import { HOME_FOLDERS } from '@ruimte/service/home';
 import { z } from 'zod';
 import { KeyedApiService, type ApiFetch, type CatalogContent } from './keyed-api-service.ts';
 
@@ -145,7 +146,7 @@ export class AnthropicClaudeApiService extends KeyedApiService<ClaudeApiSettings
     /* `claude` is Claude Code's catalog, whose options these chats take, since they run in Claude Code too. */
     constructor(request: ApiFetch = fetch, claude: ClaudeModels | null = null) {
         super(request, {
-            folder: 'anthropic-claude-api',
+            folder: HOME_FOLDERS.anthropicClaudeApi,
             settingsSchema: ClaudeApiSettingsSchema,
             defaults: DEFAULT_CLAUDE_API_SETTINGS,
             words: {

@@ -5,6 +5,7 @@ import { KeyedSerializer } from '@adecore/utils/async';
 import { isNotFound } from '@adecore/utils/errors';
 import { writeAtomic } from '@adecore/utils/fs';
 import { PLAN_LIMITS, PlanSchema, type Plan, type PlanActor, type PlanMeta, type PlanOfChat, type PlanOp } from '@ruimte/contracts';
+import { homeFolder } from '@ruimte/service/home';
 import { z } from 'zod';
 import { ClientSinks } from '../client-sinks.ts';
 import { countUsage } from '../stats/usage-stats.ts';
@@ -50,7 +51,7 @@ export class PlanStore {
     private readonly sinks = new ClientSinks();
 
     constructor(home: string, options: PlanStoreOptions = {}) {
-        this.dir = join(home, 'chats');
+        this.dir = homeFolder(home, 'chats');
         this.now = options.now ?? Date.now;
         this.mintId = options.mintId ?? randomItemId;
     }

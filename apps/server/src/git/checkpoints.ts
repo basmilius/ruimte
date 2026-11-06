@@ -3,6 +3,7 @@ import { mkdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { KeyedSerializer } from '@adecore/utils/async';
 import type { ChatCheckpointDiff } from '@ruimte/contracts';
+import { homeFolder } from '@ruimte/service/home';
 import type { MachineHome } from '../disk/machine-home.ts';
 import { diffTrees } from './diff.ts';
 import { git, gitOrThrow, leavingOut, repositoryRoot, runGit, toplevel, verifyRev } from './run.ts';
@@ -39,7 +40,7 @@ export class Checkpoints implements CheckpointService {
     private readonly machineHome: MachineHome;
 
     constructor(home: string, machineHome: MachineHome) {
-        this.root = join(home, 'checkpoints');
+        this.root = homeFolder(home, 'checkpoints');
         this.machineHome = machineHome;
     }
 

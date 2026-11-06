@@ -3,6 +3,7 @@ import { basename, join, resolve } from 'node:path';
 import { KeyedSerializer } from '@adecore/utils/async';
 import { fileExists } from '@adecore/utils/fs';
 import type { Worktree, WorktreeWork } from '@ruimte/contracts';
+import { homeFolder } from '@ruimte/service/home';
 import { ClientSinks } from '../client-sinks.ts';
 import type { SessionSink } from '../wire.ts';
 import { checkpointIndexFile, folderKey } from './checkpoints.ts';
@@ -130,8 +131,8 @@ export class Worktrees {
         this.agents = agents;
         this.foreign = foreign;
         this.checkoutRoot = checkoutRoot;
-        this.root = join(home, 'worktrees');
-        this.checkpointsRoot = join(home, 'checkpoints');
+        this.root = homeFolder(home, 'worktrees');
+        this.checkpointsRoot = homeFolder(home, 'checkpoints');
         this.now = now;
     }
 

@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AuthTicketResultSchema, MACHINE_HEALTH_PATH } from '@ruimte/contracts';
+import { localKeyPath } from '@ruimte/service/home';
 import { proveDaemon } from '../../../desktop/src/daemon-proof';
 import { LinkTransport } from '../../src/transport/link-transport';
 import { socketLink } from '../../src/transport/websocket-transport';
@@ -42,7 +43,7 @@ try {
                 throw new Error(`Daemon did not listen; exit code ${child.exitCode}`);
             }
             const listeningMs = performance.now() - started;
-            const secret = (await readFile(join(home, 'local.key'), 'utf8')).trim();
+            const secret = (await readFile(localKeyPath(home), 'utf8')).trim();
             if (!(await proveDaemon({ port, readSecret: async () => secret, nonce: () => randomBytes(16).toString('hex'), fetch }))) {
                 throw new Error('Local daemon did not prove its identity');
             }

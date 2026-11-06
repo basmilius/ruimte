@@ -2,7 +2,7 @@ import { readdir } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { isBelow, isWithin } from '@adecore/utils/path';
-import { DEVICE_CAPTURES_FOLDER } from '../shots.ts';
+import { CHAT_VISUALS_SUFFIX, COMPUTER_USE_SCREENSHOTS, HOME_FOLDERS, homeFolder } from '@ruimte/service/home';
 import { realOfNearest, realOrSelf } from './real-path.ts';
 
 export class MachineHomeError extends CodedError<'machine-state'> {}
@@ -14,15 +14,22 @@ export class MachineHomeError extends CodedError<'machine-state'> {}
  * approvals, the secrets of launches, the accounts of the CLIs, the browser profile and the threads
  * of the chats beside their visuals.
  */
-const OPEN_FOLDERS = ['scratch', 'worktrees', 'screenshots', join('computer-use', 'screenshots'), 'attachments', DEVICE_CAPTURES_FOLDER];
+const OPEN_FOLDERS = [
+    HOME_FOLDERS.scratch,
+    HOME_FOLDERS.worktrees,
+    HOME_FOLDERS.screenshots,
+    join(HOME_FOLDERS.computerUse, COMPUTER_USE_SCREENSHOTS),
+    HOME_FOLDERS.attachments,
+    HOME_FOLDERS.deviceCaptures
+];
 
 function isChatVisuals(home: string, path: string): boolean {
-    const chats = join(home, 'chats');
+    const chats = homeFolder(home, 'chats');
     if (!isWithin(chats, path)) {
         return false;
     }
     const folder = relative(chats, path).split(sep)[0]!;
-    return folder.endsWith('.visuals');
+    return folder.endsWith(CHAT_VISUALS_SUFFIX);
 }
 
 function isMachineState(home: string, path: string): boolean {
@@ -33,7 +40,7 @@ const STATE_LIST_BYTES = 16 * 1024;
 
 /* Whether a folder of the machine's state holds an open folder deeper down, so its entries are judged one by one. */
 function holdsOpenFolder(home: string, folder: string): boolean {
-    return folder === join(home, 'chats') || OPEN_FOLDERS.some((open) => isBelow(folder, join(home, open)));
+    return folder === homeFolder(home, 'chats') || OPEN_FOLDERS.some((open) => isBelow(folder, join(home, open)));
 }
 
 /* Every entry under `folder` that is the machine's state, as high up as the open folders allow. */

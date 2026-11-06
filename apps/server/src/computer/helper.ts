@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { connect } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
+import { homeFolder } from '@ruimte/service/home';
 import type { z } from 'zod';
 import { readLocalSecret } from '../auth/local-secret.ts';
 import { HelperReplySchema, type HelperRequest } from './helper-protocol.ts';
@@ -44,7 +45,7 @@ const START_WAIT_MS = 10_000;
 const START_POLL_MS = 100;
 
 export function helperDirectory(home: string): string {
-    return join(home, 'computer-use');
+    return homeFolder(home, 'computerUse');
 }
 
 function helperSocketPath(home: string): string {

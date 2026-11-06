@@ -1,6 +1,6 @@
-import { join } from 'node:path';
 import { RecordDirectory } from '@adecore/agents';
 import { RemoteLinkSchema, isCanvasView, type ProjectContent, type ProjectNode, type ProjectView, type RemoteLink } from '@ruimte/contracts';
+import { homeFolder } from '@ruimte/service/home';
 import { z } from 'zod';
 
 /*
@@ -25,7 +25,7 @@ export class RemoteStore {
     private readonly files: RecordDirectory<RemoteFile>;
 
     constructor(home: string) {
-        this.files = new RecordDirectory({ dir: join(home, 'remote'), schema: RemoteFileSchema, idOf: (file) => file.projectId });
+        this.files = new RecordDirectory({ dir: homeFolder(home, 'remote'), schema: RemoteFileSchema, idOf: (file) => file.projectId });
     }
 
     /* Reads what an earlier run of the daemon wrote down. Call before any session is made. */

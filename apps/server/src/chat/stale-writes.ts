@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { homeFolder } from '@ruimte/service/home';
 import type { Reclaimed } from '../maintenance/maintenance.ts';
 import { sweepFolder } from '../maintenance/sweep-folder.ts';
 
@@ -11,7 +11,7 @@ const TEMPORARY_WRITE = /\.\d+-[0-9a-f-]+\.tmp$/;
 export function sweepStaleChatWrites(home: string, now: number, signal?: AbortSignal): Promise<Reclaimed> {
     const oldest = now - STALE_WRITE_AGE_MS;
 
-    return sweepFolder(join(home, 'chats'), {
+    return sweepFolder(homeFolder(home, 'chats'), {
         expired: (name, modifiedMs) => TEMPORARY_WRITE.test(name) && modifiedMs < oldest,
         signal
     });
