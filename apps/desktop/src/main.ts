@@ -37,7 +37,7 @@ import { installSocketTypeOfServiceGuard } from './socket-tos-guard';
 import { startApp } from './startup';
 import { allowAppPermission, appSubframeNavigation, isExternalLink } from './web-guards';
 
-const { app, BrowserWindow, dialog, ipcMain, nativeTheme, protocol, screen, session, shell, webContents } = electron;
+const { app, BrowserWindow, dialog, ipcMain, nativeTheme, powerMonitor, protocol, screen, session, shell, webContents } = electron;
 
 // A checkout keeps its own port, name and profile, so it runs beside an installed Ruimte instead of
 // quitting on that app's single instance lock or talking to its daemon.
@@ -384,6 +384,27 @@ const updates = installUpdates(ipc, {
     }
 });
 
+/*
+ * An external display that sleeps on a lock takes the Space of a window in full screen with it, which
+ * leaves that window on no display. macOS moves windows a moment after the event, so this waits for it.
+ */
+function followDisplays(): void {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const settle = (): void => {
+        if (timer !== null) {
+            clearTimeout(timer);
+        }
+        timer = setTimeout(() => {
+            timer = null;
+            windows.bringBack();
+        }, 1000);
+    };
+    screen.on('display-removed', settle);
+    screen.on('display-added', settle);
+    powerMonitor.on('unlock-screen', settle);
+    powerMonitor.on('resume', settle);
+}
+
 /* One window on what the page remembers, whatever the last session left open. */
 async function runSmokeWindow(): Promise<void> {
     const window = windows.open(null);
@@ -448,6 +469,7 @@ if (!app.requestSingleInstanceLock()) {
         sealPreviewSession();
         browserRoutes = installBrowserRoutes(fromAppWindow, join(here, 'guest.cjs'));
         power.followPowerSource();
+        followDisplays();
         await startApp({
             localMachine,
             startMachine: () => machine.start(),
