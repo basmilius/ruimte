@@ -40,7 +40,7 @@ struct GitConflictsPage: View {
         .task(id: session.cwd) {
             await RemotePageLifecycle.run(
                 client: client, events: [.gitStatus], matches: { $0.text("cwd") == session.cwd },
-                subscription: { GitPanel.watch(client, cwd: session.cwd) }, load: { await session.load(client: client) }
+                watch: { GitPanel.watch(cwd: session.cwd) }, load: { await session.load(client: client) }
             )
         }
         .refreshable { await session.load(client: client) }

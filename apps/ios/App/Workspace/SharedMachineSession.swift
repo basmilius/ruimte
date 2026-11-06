@@ -14,7 +14,13 @@ final class SharedMachineSession {
     /// When the link this phone had last went down; nil while it never had one this launch.
     private(set) var lastConnectedAt: Date?
     private var lease: MachineLease?
-    @ObservationIgnored private var preferenceSubscriptions: [() -> Void] = []
+    /// The pick of account each new link tells the machine, and again whenever the pick changes.
+    @ObservationIgnored private lazy var preferences = LiveResource(
+        client: rpc, read: { [weak self] in
+            guard let self else { return }
+            ChatPreferences.shared.send(to: rpc, machineID: machine.id)
+        })
+    @ObservationIgnored private var stopPreferenceChanges: (() -> Void)?
     private var references = 0
     private var invalidated = false
     /// Moves whenever the link goes away. `hold` reports a connected link before it returns the lease, so `opened`
@@ -119,23 +125,18 @@ final class SharedMachineSession {
     }
 
     private func startPreferences() {
-        guard preferenceSubscriptions.isEmpty else { return }
-        let preferences = ChatPreferences.shared
-        preferenceSubscriptions = [
-            rpc.observeConnection { [weak self] connected in
-                guard let self, connected else { return }
-                preferences.send(to: rpc, machineID: machine.id)
-            },
-            preferences.observe { [weak self] in
-                guard let self, rpc.isConnected else { return }
-                preferences.send(to: rpc, machineID: machine.id)
-            },
-        ]
+        guard !preferences.isStarted else { return }
+        preferences.start()
+        stopPreferenceChanges = ChatPreferences.shared.observe { [weak self] in
+            guard let self, rpc.isConnected else { return }
+            ChatPreferences.shared.send(to: rpc, machineID: machine.id)
+        }
     }
 
     private func stopPreferences() {
-        preferenceSubscriptions.forEach { $0() }
-        preferenceSubscriptions.removeAll()
+        preferences.stop()
+        stopPreferenceChanges?()
+        stopPreferenceChanges = nil
     }
 
     func release() {

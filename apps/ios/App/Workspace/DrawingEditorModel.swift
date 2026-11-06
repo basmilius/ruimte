@@ -33,12 +33,21 @@ final class DrawingEditorModel {
     private var base: JSONValue?
     private var saveTask: Task<Void, Never>?
     private var renderTask: Task<Void, Never>?
-    private var subscription: (() -> Void)?
-    private var connection: (() -> Void)?
     private var generation = 0
     private var lifecycle = 0
     private var inFlightElements: [JSONValue]?
+    // The open request is the read, so the lease is refreshed by `reload` and the resource holds no watch of its own.
     private var lease: MachineSubscription?
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.drawingChanged, raw: { [weak self] event in
+                guard let self, event["projectId"] == target["projectId"], event["viewId"] == target["viewId"],
+                    let document = event["document"]
+                else { return }
+                receive(document)
+            })
+        ], read: { [weak self] in await self?.reload() })
 
     init(client: any MachineRequesting, machineID: String, projectID: String, viewID: String) {
         self.client = client
@@ -63,28 +72,13 @@ final class DrawingEditorModel {
             lease = client.acquireSubscription(
                 start: .drawingOpen, stop: .drawingClose, payload: target, stopPayload: target)
         }
-        if subscription == nil {
-            subscription = client.subscribe(.drawingChanged) { [weak self] event in
-                guard let self, event["projectId"] == self.target["projectId"],
-                    event["viewId"] == self.target["viewId"],
-                    let document = event["document"]
-                else { return }
-                self.receive(document)
-            }
-            connection = client.observeConnection { [weak self] connected in
-                guard connected else { return }
-                Task { await self?.reload() }
-            }
-        }
+        live.start()
         await reload()
     }
 
     func stop() {
         lifecycle += 1
-        subscription?()
-        subscription = nil
-        connection?()
-        connection = nil
+        live.stop()
         save()
         let releasing = lease
         lease = nil

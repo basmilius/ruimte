@@ -111,13 +111,6 @@ enum OutputMachine {
         (client as? MachineFeatures)?.answers(.artifactList) == true
     }
 
-    /// The hold on `artifact.watch` that `artifact.changed` comes under.
-    @MainActor static func watch(_ client: any MachineRequesting) -> MachineSubscription {
-        client.acquireSubscription(
-            start: .artifactWatch, stop: .artifactUnwatch,
-            payload: .object([:]), stopPayload: .object([:]))
-    }
-
     /// A failure that says the link is gone rather than that the machine refused.
     static func unreachable(_ error: any Error) -> Bool {
         switch error as? MachineClientError {
@@ -131,8 +124,7 @@ enum OutputMachine {
 /// down was pushed to nobody. The hold starts at the first connection; `gated` waits for a machine that names
 /// `artifact.list`, which is known only once it is connected.
 @MainActor final class OutputWatch {
-    private var stops: [() -> Void] = []
-    private var lease: MachineSubscription?
+    private var live: LiveResource?
 
     func start(
         _ client: any MachineRequesting, gated: Bool = false,
@@ -140,32 +132,22 @@ enum OutputMachine {
         connection: @escaping @MainActor @Sendable (Bool) -> Void = { _ in },
         reload: @escaping @MainActor @Sendable () async -> Void
     ) {
-        guard stops.isEmpty else { return }
-        stops.append(
-            client.subscribe(.artifactChanged) { [weak self] payload in
-                if self?.lease != nil, let event = try? payload.decoded(as: ArtifactChangedEvent.self) {
-                    changed(event)
-                }
+        guard live == nil else { return }
+        let live = LiveResource(
+            client: client, events: [.apply(.artifactChanged, as: ArtifactChangedEvent.self, changed)],
+            watch: LiveWatch(
+                start: .artifactWatch, stop: .artifactUnwatch, needs: gated ? .artifactList : nil),
+            connection: connection,
+            read: {
+                if !gated || OutputMachine.answers(client) { await reload() }
             })
-        stops.append(
-            client.observeConnection { [weak self] available in
-                connection(available)
-                guard let self, available, !gated || OutputMachine.answers(client) else { return }
-                let lease = lease ?? OutputMachine.watch(client)
-                self.lease = lease
-                Task {
-                    _ = try? await lease.refresh()
-                    await reload()
-                }
-            })
+        self.live = live
+        live.start()
     }
 
     func stop() {
-        stops.forEach { $0() }
-        stops.removeAll()
-        let lease = lease
-        self.lease = nil
-        Task { await lease?.release() }
+        live?.stop()
+        live = nil
     }
 }
 

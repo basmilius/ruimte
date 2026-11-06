@@ -52,10 +52,9 @@ struct GitCheckout: Identifiable, Equatable {
 let gitFileGroups = ["conflicted", "staged", "unstaged", "untracked"]
 
 enum GitPanel {
-    /// The hold on `git.watch` that a checkout's `git.status` events come under.
-    @MainActor static func watch(_ client: any MachineRequesting, cwd: String) -> MachineSubscription {
-        let payload: JSONValue = .object(["cwd": .string(cwd)])
-        return client.acquireSubscription(start: .gitWatch, stop: .gitUnwatch, payload: payload, stopPayload: payload)
+    /// The `git.watch` that a checkout's `git.status` events come under.
+    static func watch(cwd: String) -> LiveWatch {
+        .area(.gitWatch, payload: .object(["cwd": .string(cwd)]))
     }
 
     /// One checkout's status without the repositories standing inside it. A repository git does not

@@ -38,6 +38,14 @@ public struct LiveWatch: Sendable {
     }
 }
 
+@MainActor extension MachineRequesting {
+    /// The holder's share of a watch, for a page that keeps more of them than one resource holds.
+    public func acquireSubscription(_ watch: LiveWatch) -> MachineSubscription {
+        acquireSubscription(
+            start: watch.start, stop: watch.stop, payload: watch.payload, stopPayload: watch.stopPayload)
+    }
+}
+
 /// An event a live resource listens to, and what it does with it.
 public struct LiveEvent {
     fileprivate let install: @MainActor (LiveResource) -> [() -> Void]
@@ -307,7 +315,7 @@ public struct LiveEvent {
 
     public init(
         graceMilliseconds: Double, scheduler: any TransportScheduling = TaskTransportScheduler(),
-        began: @escaping @MainActor () -> Void, ended: @escaping @MainActor () -> Void
+        began: @escaping @MainActor () -> Void = {}, ended: @escaping @MainActor () -> Void
     ) {
         self.graceMilliseconds = graceMilliseconds
         self.scheduler = scheduler

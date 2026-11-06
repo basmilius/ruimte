@@ -169,48 +169,8 @@ extension AppRuntime {
     }
 }
 
-/// One read of a feed at a time: a refresh while one runs waits on it, and a burst of events folds into one read, as
-/// the desktop's sidebar watch does.
-@MainActor
-final class FeedReads {
-    private let load: @MainActor () async -> Void
-    private var pending: Task<Void, Never>?
-    private var loading: Task<Void, Never>?
-
-    init(load: @escaping @MainActor () async -> Void) { self.load = load }
-
-    func refresh() async {
-        if let loading {
-            await loading.value
-            return
-        }
-        let task = Task { await load() }
-        loading = task
-        await task.value
-        loading = nil
-    }
-
-    func schedule() {
-        guard pending == nil else { return }
-        pending = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(150))
-            guard let self, !Task.isCancelled else { return }
-            pending = nil
-            await refresh()
-        }
-    }
-
-    /// A link that dropped has nothing to read until it is back.
-    func cancelScheduled() {
-        pending?.cancel()
-        pending = nil
-    }
-
-    func cancel() {
-        cancelScheduled()
-        loading?.cancel()
-    }
-}
+/// How long a burst of events is gathered into one read of a feed, as the desktop's sidebar watch does.
+let feedSettleMilliseconds: Double = 150
 
 @MainActor @Observable
 final class NowFeed: MachineFeed {
@@ -221,49 +181,36 @@ final class NowFeed: MachineFeed {
     /// The CLIs on this machine whose denial carries a message, from `provider.list`.
     private(set) var denyReason: Set<String> = []
     @ObservationIgnored private var providersGeneration: Int?
-    @ObservationIgnored private var stops: [() -> Void] = []
-    @ObservationIgnored private lazy var reads = FeedReads { [weak self] in await self?.load() }
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: session.rpc,
+        events: [.reread(.projectChanged), .reread(.projectSummary), .reread(.sessionListChanged)],
+        settleMilliseconds: feedSettleMilliseconds, read: { [weak self] in await self?.load() })
     @ObservationIgnored private var watched = Set<String>()
 
     init(session: SharedMachineSession) { self.session = session }
 
     func start() {
-        guard stops.isEmpty else { return }
+        guard !live.isStarted else { return }
         session.retain()
-        let client = session.rpc
-        stops = [.projectChanged, .projectSummary, .sessionListChanged].map { event in
-            client.subscribe(event) { [weak self] _ in self?.reads.schedule() }
-        }
-        stops.append(
-            client.observeConnection { [weak self] connected in
-                guard let self else { return }
-                if connected {
-                    reads.schedule()
-                } else {
-                    reads.cancelScheduled()
-                }
-            })
-        if session.connected { reads.schedule() }
+        live.start()
     }
 
     func stop() {
-        guard !stops.isEmpty else { return }
-        stops.forEach { $0() }
-        stops.removeAll()
-        reads.cancel()
+        guard live.isStarted else { return }
+        live.stop()
         for id in watched { session.tasks.unwatch(id) }
         watched.removeAll()
         session.release()
     }
 
-    func refresh() async { await reads.refresh() }
+    func refresh() async { await live.refresh() }
 
     private func load() async {
         guard session.connected else { return }
         let generation = session.generation
         do {
             let result = try await session.rpc.request(.projectSidebar, payload: .object([:]))
-            guard !Task.isCancelled, generation == session.generation, !stops.isEmpty else { return }
+            guard !Task.isCancelled, generation == session.generation, live.isStarted else { return }
             projects = result.list("projects")
             loaded = true
             problem = nil

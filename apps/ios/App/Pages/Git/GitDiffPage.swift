@@ -70,7 +70,7 @@ struct GitDiffPage: View {
             }
             await RemotePageLifecycle.run(
                 client: client, events: [.gitStatus], matches: { $0.text("cwd") == target.cwd },
-                subscription: { GitPanel.watch(client, cwd: target.cwd) }, load: load)
+                watch: { GitPanel.watch(cwd: target.cwd) }, load: load)
         }
     }
 

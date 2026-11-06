@@ -109,8 +109,7 @@ final class ProjectListState {
     private(set) var expanded: Set<String> = []
     private(set) var drafts: Set<String> = []
     private(set) var warnings: Set<String> = []
-    @ObservationIgnored private var stops: [() -> Void] = []
-    @ObservationIgnored private var client: (any MachineRequesting)?
+    @ObservationIgnored private var live: LiveResource?
 
     func isExpanded(_ id: String) -> Bool { expanded.contains(id) }
 
@@ -129,29 +128,24 @@ final class ProjectListState {
 
     /// Follows the machine's process warnings, which it pushes to every client whether or not it watches processes.
     func watchWarnings(_ client: any MachineRequesting) {
-        guard stops.isEmpty else { return }
-        self.client = client
-        stops.append(client.subscribe(.processesAlerts) { [weak self] payload in self?.receive(payload) })
-        stops.append(
-            client.observeConnection { [weak self] connected in
-                guard connected else { return }
-                Task { await self?.readWarnings() }
+        guard live == nil else { return }
+        let live = LiveResource(
+            client: client, events: [.apply(.processesAlerts, as: ProcessesAlerts.self) { [weak self] in self?.receive($0) }],
+            read: { [weak self] in
+                guard let list = try? await client.request(.processesListAlerts).decoded(as: ProcessesAlerts.self)
+                else { return }
+                self?.receive(list)
             })
+        self.live = live
+        live.start()
     }
 
     func stopWatching() {
-        stops.forEach { $0() }
-        stops.removeAll()
-        client = nil
+        live?.stop()
+        live = nil
     }
 
-    private func readWarnings() async {
-        guard let client, let result = try? await client.request(.processesListAlerts) else { return }
-        receive(result)
-    }
-
-    private func receive(_ payload: JSONValue) {
-        guard let list = try? payload.decoded(as: ProcessesAlerts.self) else { return }
+    private func receive(_ list: ProcessesAlerts) {
         warnings = Set(list.alerts.compactMap(\.nodeId))
     }
 }

@@ -26,7 +26,7 @@ import SwiftUI
     /// The account as it read until this login started, which is what a landing has to differ from.
     private var before: JSONValue?
     private var started = false
-    private var subscriptions: [() -> Void] = []
+    @ObservationIgnored private var live: LiveResource?
 
     /// A grid a login prints its address and its prompts into; the phone follows it like any other terminal.
     static let cols = 80
@@ -57,22 +57,26 @@ import SwiftUI
 
     func begin() async {
         stopWatching()
-        subscriptions.append(
-            client.subscribe(.accountsChanged) { [weak self] payload in
-                guard let self, phase == .running else { return }
-                let now = status(in: payload)
-                if Self.landed(before: before, now: now) { phase = .landed(email: now?["email"]?.stringValue) }
-            })
-        subscriptions.append(
-            client.subscribe(.sessionExit) { [weak self] payload in
-                guard let self, payload.text("sessionId") == sessionID, phase == .running else { return }
-                phase = .ended(dropped: false)
-            })
-        subscriptions.append(
-            client.observeConnection { [weak self] available in
+        // A login lives on one link: reading anything again after a new one would show a terminal that is gone.
+        let live = LiveResource(
+            client: client,
+            events: [
+                .apply(.accountsChanged, raw: { [weak self] payload in
+                    guard let self, phase == .running else { return }
+                    let now = status(in: payload)
+                    if Self.landed(before: before, now: now) { phase = .landed(email: now?["email"]?.stringValue) }
+                }),
+                .apply(.sessionExit, raw: { [weak self] payload in
+                    guard let self, payload.text("sessionId") == sessionID, phase == .running else { return }
+                    phase = .ended(dropped: false)
+                }),
+            ],
+            connection: { [weak self] available in
                 guard let self, !available, phase == .running else { return }
                 phase = .ended(dropped: true)
             })
+        self.live = live
+        live.start()
         before = (try? await client.request(.accountsList)).flatMap { status(in: $0) }
         do {
             started = true
@@ -107,8 +111,8 @@ import SwiftUI
     }
 
     private func stopWatching() {
-        subscriptions.forEach { $0() }
-        subscriptions.removeAll()
+        live?.stop()
+        live = nil
     }
 
     var notice: String? {

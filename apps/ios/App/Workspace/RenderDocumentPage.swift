@@ -14,8 +14,7 @@ struct RenderDocumentPage: View {
     var openChat: (String) -> Void = { _ in }
     @State private var work = RemotePageState()
     @State private var generation = 0
-    @State private var connection: (() -> Void)?
-    @State private var subscription: (() -> Void)?
+    @State private var live: LiveResource?
     @State private var zoom: SceneZoomRequest?
     @State private var agentModel: DiagramAgentModel?
     @State private var asking = false
@@ -80,11 +79,21 @@ struct RenderDocumentPage: View {
         .sensoryFeedback(.success, trigger: copied)
         .task {
             if agentModel == nil, let agent { agentModel = DiagramAgentModel(target: agent) }
-            if subscription == nil {
-                subscription = client.subscribe(kind == "drawing" ? .drawingChanged : .diagramChanged) { event in
-                    if event.text("projectId") == projectID && event.text("viewId") == viewID { generation += 1 }
-                }
-                connection = client.observeConnection { if $0 { generation += 1 } }
+            if live == nil {
+                // The page reads when its generation moves, so a change and a new link both move it.
+                let resource = LiveResource(
+                    client: client,
+                    events: [
+                        .apply(
+                            kind == "drawing" ? .drawingChanged : .diagramChanged,
+                            raw: { event in
+                                if event.text("projectId") == projectID && event.text("viewId") == viewID {
+                                    generation += 1
+                                }
+                            })
+                    ], read: { generation += 1 })
+                live = resource
+                resource.start()
             }
         }
         .task(id: generation) {
@@ -94,10 +103,8 @@ struct RenderDocumentPage: View {
             }
         }
         .onDisappear {
-            subscription?()
-            subscription = nil
-            connection?()
-            connection = nil
+            live?.stop()
+            live = nil
         }
     }
 

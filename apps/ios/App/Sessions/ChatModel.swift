@@ -93,7 +93,61 @@ final class ChatModel {
     @ObservationIgnored private var historyRevision = 0
     var sending = false
     var revision = 0
-    @ObservationIgnored private var unsubscribe: [() -> Void] = []
+    // Only the events and the link: the attach below resumes from `since` and rebuilds the thread, which no re-read
+    // of a resource does.
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.chatEvent, raw: { [weak self] payload in
+                guard let self, !self.loading, let envelope = try? payload.decoded(as: ChatEventEnvelope.self),
+                    envelope.chatId == self.chatID
+                else { return }
+                self.apply(envelope.event)
+                if let seq = envelope.seq { self.lastSeq = Int(seq) }
+            }),
+            .apply(.accountsChanged, raw: { [weak self] payload in
+                self?.accounts = ProviderAccountList(payload)
+            }),
+            .apply(.chatBookmarks, raw: { [weak self] payload in
+                guard let self, payload["chatId"]?.stringValue == self.chatID else { return }
+                self.presentation.setBookmarks(ChatBookmarks.parse(payload["bookmarks"]?.arrayValue ?? []))
+            }),
+            .apply(.chatVisuals, raw: { [weak self] payload in
+                guard let self, payload["chatId"]?.stringValue == self.chatID else { return }
+                self.presentation.setVisuals(ChatVisuals.parse(payload.list("visuals")))
+            }),
+            .apply(.snoozeChanged, raw: { [weak self] payload in
+                guard let self else { return }
+                self.snoozedUntil = ChatSnooze.until(of: self.chatID, in: payload)
+            }),
+            .apply(.usageLimitsChanged, raw: { [weak self] payload in
+                guard let self, self.limits != nil else { return }
+                self.limits = payload
+            }),
+            .rejected(.chatEvent) { [weak self] payload in
+                guard let self, payload["chatId"]?.stringValue == self.chatID, !self.loading,
+                    !self.reattachedOverRejectedEvent
+                else { return }
+                self.reattachedOverRejectedEvent = true
+                // With `since` the machine would answer with the very event this app could not read.
+                self.lastSeq = nil
+                self.attach()
+            },
+        ],
+        connection: { [weak self] available in
+            guard let self else { return }
+            self.connected = available
+            self.presentation.setConnected(available)
+            if available {
+                self.attach()
+            } else {
+                self.reattachedOverRejectedEvent = false
+                self.generation += 1
+                self.attachTask?.cancel()
+                self.loading = false
+                error = nil
+            }
+        })
     @ObservationIgnored private var attachTask: Task<Void, Never>?
     @ObservationIgnored private var attachment: MachineAttachment?
     @ObservationIgnored private lazy var output = ChatOutputWatch(client: client, chatID: chatID) {
@@ -211,66 +265,10 @@ final class ChatModel {
     var models: [JSONValue] { providerEntry?["models"]?.arrayValue ?? [] }
 
     func start() {
-        guard unsubscribe.isEmpty else { return }
+        guard !live.isStarted else { return }
         attachment = client.acquireAttachment(.chat, id: chatID)
         output.start()
-        unsubscribe.append(
-            client.subscribe(.chatEvent) { [weak self] payload in
-                guard let self, !self.loading, let envelope = try? payload.decoded(as: ChatEventEnvelope.self),
-                    envelope.chatId == self.chatID
-                else { return }
-                self.apply(envelope.event)
-                if let seq = envelope.seq { self.lastSeq = Int(seq) }
-            })
-        unsubscribe.append(
-            client.subscribe(.accountsChanged) { [weak self] payload in
-                self?.accounts = ProviderAccountList(payload)
-            })
-        unsubscribe.append(
-            client.subscribe(.chatBookmarks) { [weak self] payload in
-                guard let self, payload["chatId"]?.stringValue == self.chatID else { return }
-                self.presentation.setBookmarks(ChatBookmarks.parse(payload["bookmarks"]?.arrayValue ?? []))
-            })
-        unsubscribe.append(
-            client.subscribe(.chatVisuals) { [weak self] payload in
-                guard let self, payload["chatId"]?.stringValue == self.chatID else { return }
-                self.presentation.setVisuals(ChatVisuals.parse(payload.list("visuals")))
-            })
-        unsubscribe.append(
-            client.subscribe(.snoozeChanged) { [weak self] payload in
-                guard let self else { return }
-                self.snoozedUntil = ChatSnooze.until(of: self.chatID, in: payload)
-            })
-        unsubscribe.append(
-            client.subscribe(.usageLimitsChanged) { [weak self] payload in
-                guard let self, self.limits != nil else { return }
-                self.limits = payload
-            })
-        unsubscribe.append(
-            client.subscribeRejected(.chatEvent) { [weak self] payload in
-                guard let self, payload["chatId"]?.stringValue == self.chatID, !self.loading,
-                    !self.reattachedOverRejectedEvent
-                else { return }
-                self.reattachedOverRejectedEvent = true
-                // With `since` the machine would answer with the very event this app could not read.
-                self.lastSeq = nil
-                self.attach()
-            })
-        unsubscribe.append(
-            client.observeConnection { [weak self] available in
-                guard let self else { return }
-                self.connected = available
-                self.presentation.setConnected(available)
-                if available {
-                    self.attach()
-                } else {
-                    self.reattachedOverRejectedEvent = false
-                    self.generation += 1
-                    self.attachTask?.cancel()
-                    self.loading = false
-                    error = nil
-                }
-            })
+        live.start()
     }
 
     func stop() {
@@ -279,8 +277,7 @@ final class ChatModel {
         attachTask?.cancel()
         uiModels.imageSave.stop()
         output.stop()
-        for cancel in unsubscribe { cancel() }
-        unsubscribe.removeAll()
+        live.stop()
         loading = false
         let held = attachment
         attachment = nil

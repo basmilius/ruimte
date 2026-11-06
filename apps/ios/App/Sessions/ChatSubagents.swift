@@ -493,7 +493,20 @@ final class SubagentConversation {
     @ObservationIgnored private let chatID: String
     @ObservationIgnored private let toolUseID: String
     @ObservationIgnored private let limit: Int
-    @ObservationIgnored private var subscriptions: [() -> Void] = []
+    // Only the event and the link: the watch is a flag of the read itself, counted by `SubagentWatches`, and the
+    // reads wait in their own queue.
+    @ObservationIgnored private lazy var feed = LiveResource(
+        client: client,
+        events: [
+            .apply(.chatSubagentChanged, raw: { [weak self] event in
+                guard let self, event.text("chatId") == chatID, event.text("toolUseId") == toolUseID else { return }
+                refresh()
+            })
+        ],
+        connection: { [weak self] connected in
+            guard let self, connected else { return }
+            enqueue { await self.readNewest(watch: true) }
+        })
     @ObservationIgnored private var queue: Task<Void, Never>?
     @ObservationIgnored private var refreshWaiting = false
     @ObservationIgnored private var earlierWaiting = false
@@ -511,24 +524,14 @@ final class SubagentConversation {
     private var watchKey: String { SubagentWatches.key(client, chatID: chatID, toolUseID: toolUseID) }
 
     func start() {
-        guard subscriptions.isEmpty else { return }
+        guard !feed.isStarted else { return }
         holding = true
         SubagentWatches.acquire(watchKey)
-        subscriptions = [
-            client.subscribe(.chatSubagentChanged) { [weak self] event in
-                guard let self, event.text("chatId") == chatID, event.text("toolUseId") == toolUseID else { return }
-                refresh()
-            },
-            client.observeConnection { [weak self] connected in
-                guard let self, connected else { return }
-                enqueue { await self.readNewest(watch: true) }
-            },
-        ]
+        feed.start()
     }
 
     func stop() {
-        subscriptions.forEach { $0() }
-        subscriptions.removeAll()
+        feed.stop()
         queue?.cancel()
         earlierWaiting = false
         guard holding else { return }

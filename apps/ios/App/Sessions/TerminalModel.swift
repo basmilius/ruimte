@@ -19,7 +19,35 @@ final class TerminalModel {
     @ObservationIgnored var resizeDisplay: ((Int, Int) -> Void)?
     @ObservationIgnored var applicationCursor: (() -> Bool)?
     @ObservationIgnored var toggleKeyboard: (() -> Void)?
-    @ObservationIgnored private var unsubscribe: [() -> Void] = []
+    // Only the events and the link: the attach below hands over the screen, then output follows without a gap, which
+    // no re-read of a resource does.
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [WireEvent.sessionOutput, .sessionResync, .sessionSize, .sessionExit].map { eventName -> LiveEvent in
+            LiveEvent.apply(eventName, raw: { [weak self] payload in
+                guard let self, payload["sessionId"]?.stringValue == sessionID else { return }
+                switch eventName {
+                case .sessionOutput: deliver(payload["data"]?.stringValue ?? "", reset: false)
+                case .sessionResync: deliver(payload["screen"]?.stringValue ?? "", reset: true)
+                case .sessionSize: follow(payload)
+                default: exited = true
+                }
+            })
+        }
+            + [
+                .apply(.sessionListChanged, raw: { [weak self] _ in Task { await self?.refreshInfo() } })
+            ],
+        connection: { [weak self] available in
+            guard let self else { return }
+            connected = available
+            if available {
+                attach()
+            } else {
+                cancelWork()
+                loading = false
+                error = nil
+            }
+        })
     @ObservationIgnored private var attachTask: Task<Void, Never>?
     @ObservationIgnored private var writeTask: Task<Void, Never>?
     @ObservationIgnored private var queuedInput: [String] = []
@@ -38,40 +66,14 @@ final class TerminalModel {
     var usable: Bool { connected && !loading && !exited }
 
     func start() {
-        guard unsubscribe.isEmpty else { return }
+        guard !live.isStarted else { return }
         attachment = client.acquireAttachment(.session, id: sessionID)
-        for eventName in [WireEvent]([.sessionOutput, .sessionResync, .sessionSize, .sessionExit]) {
-            unsubscribe.append(
-                client.subscribe(eventName) { [weak self] payload in
-                    guard let self, payload["sessionId"]?.stringValue == sessionID else { return }
-                    switch eventName {
-                    case .sessionOutput: deliver(payload["data"]?.stringValue ?? "", reset: false)
-                    case .sessionResync: deliver(payload["screen"]?.stringValue ?? "", reset: true)
-                    case .sessionSize: follow(payload)
-                    default: exited = true
-                    }
-                })
-        }
-        unsubscribe.append(
-            client.subscribe(.sessionListChanged) { [weak self] _ in Task { await self?.refreshInfo() } })
-        unsubscribe.append(
-            client.observeConnection { [weak self] available in
-                guard let self else { return }
-                connected = available
-                if available {
-                    attach()
-                } else {
-                    cancelWork()
-                    loading = false
-                    error = nil
-                }
-            })
+        live.start()
     }
 
     func stop() {
         cancelWork()
-        unsubscribe.forEach { $0() }
-        unsubscribe.removeAll()
+        live.stop()
         render = nil
         resizeDisplay = nil
         applicationCursor = nil

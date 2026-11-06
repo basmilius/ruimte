@@ -117,7 +117,7 @@ struct MachineFilesPage: View {
                     let root = event.text("root")
                     return resolved == root || resolved.hasPrefix(root + "/")
                 },
-                subscription: { fsWatch(client, path: state.value?.text("path") ?? path) },
+                watch: { fsWatch(path: state.value?.text("path") ?? path) },
                 start: { if path == "~" { await load() } }, load: load)
         }
         .refreshable { await load() }
@@ -267,7 +267,7 @@ struct FileContentPage: View {
                 await RemotePageLifecycle.run(
                     client: client, events: [.fsChanged],
                     matches: { parent == $0.text("root") || parent.hasPrefix($0.text("root") + "/") },
-                    subscription: { fsWatch(client, path: parent) }, load: load)
+                    watch: { fsWatch(path: parent) }, load: load)
             }
             // Only a pause, and not on the way into full screen: the page comes back without reading the file again.
             .onDisappear { if !fullScreen { player?.pause() } }
@@ -536,10 +536,9 @@ struct FileContentPage: View {
 
 private let largeTextMaxBytes: Double = 8 * 1024 * 1024
 
-/// The hold on `fs.watch` that a folder's `fs.changed` events come under.
-@MainActor private func fsWatch(_ client: any MachineRequesting, path: String) -> MachineSubscription {
-    let payload: JSONValue = .object(["path": .string(path)])
-    return client.acquireSubscription(start: .fsWatch, stop: .fsUnwatch, payload: payload, stopPayload: payload)
+/// The `fs.watch` that a folder's `fs.changed` events come under.
+private func fsWatch(path: String) -> LiveWatch {
+    .area(.fsWatch, payload: .object(["path": .string(path)]))
 }
 
 /// What a file page shows beside the read itself. Observable like `RemotePageState`, so a read and the picture it

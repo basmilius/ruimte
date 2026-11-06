@@ -33,35 +33,17 @@ import SwiftUI
 
     func checkout(_ path: String) -> GitCheckout? { checkouts.first { $0.path == path } }
 
-    private enum Signal {
-        case connected
-        case status(JSONValue)
-    }
-
     /// The whole life of the page: the repositories of the folder, a watch on each of them, and the
     /// statuses the daemon pushes back. A reconnect reads the list again, because a folder can have
     /// gained or lost a repository while the phone was away.
     func run(client: any MachineRequesting, folder: String) async {
-        let (stream, continuation) = AsyncStream<Signal>.makeStream(bufferingPolicy: .unbounded)
-        let cancelConnection = client.observeConnection { if $0 { continuation.yield(.connected) } }
-        let cancelStatus = client.subscribe(.gitStatus) { continuation.yield(.status($0)) }
-        defer {
-            cancelConnection()
-            cancelStatus()
-            continuation.finish()
-            let held = leases
-            leases = [:]
-            Task { await withTaskCancellationShield { for lease in held.values { await lease.release() } } }
-        }
-        for await signal in stream {
-            if Task.isCancelled { break }
-            switch signal {
-            case .connected:
-                await reload(client: client, folder: folder)
-            case .status(let payload):
-                apply(payload)
-            }
-        }
+        let live = LiveResource(
+            client: client, events: [.apply(.gitStatus, raw: { [weak self] in self?.apply($0) })],
+            read: { [weak self] in await self?.reload(client: client, folder: folder) })
+        await live.run()
+        let held = leases
+        leases = [:]
+        Task { await withTaskCancellationShield { for lease in held.values { await lease.release() } } }
     }
 
     /// Reads which repositories the folder holds, then takes a watch and a first status on each.
@@ -92,7 +74,7 @@ import SwiftUI
             await lease.release()
         }
         for checkout in checkouts where leases[checkout.path] == nil {
-            leases[checkout.path] = GitPanel.watch(client, cwd: checkout.path)
+            leases[checkout.path] = client.acquireSubscription(GitPanel.watch(cwd: checkout.path))
         }
         for lease in leases.values { _ = try? await lease.refresh() }
     }

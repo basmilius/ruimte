@@ -84,11 +84,7 @@ struct MachineUsagePage: View {
             let client = client
             await RemotePageLifecycle.run(
                 client: client, events: [.usageChanged, .usageLimitsChanged, .accountsChanged],
-                subscription: {
-                    client.acquireSubscription(
-                        start: .usageSubscribe, stop: .usageUnsubscribe, payload: .object([:]),
-                        stopPayload: .object([:]))
-                }, load: load)
+                watch: { LiveWatch(start: .usageSubscribe, stop: .usageUnsubscribe) }, load: load)
         }
     }
 
