@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { GitRepo, LaunchConfigEntry, LaunchesDocument, LaunchStatus } from '@ruimte/contracts';
-import { chosenLaunch, headlineOf, launchFolder, launchSections, launchViews, othersOf, outputOf, shortAddress } from './model.ts';
+import { chosenLaunch, headlineOf, launchSections, launchViews, othersOf, outputOf, shortAddress } from './model.ts';
 
 function launch(id: string, overrides: Partial<LaunchConfigEntry> = {}): LaunchConfigEntry {
     return {
@@ -158,16 +158,16 @@ describe('the menu', () => {
         expect(launchSections(launches, '/p', repos)).toEqual([{ label: null, launches }]);
     });
 
-    test('a private folder of its own counts over the shared one', () => {
-        expect(launchFolder(launch('a', { cwd: 'backend' }), '/p')).toBe('/p/backend');
-        expect(launchFolder(launch('a', { cwd: './' }), '/p/')).toBe('/p');
-        expect(launchFolder(launch('a', { cwd: 'backend', overlay: { cwd: '/elsewhere/' } }), '/p')).toBe('/elsewhere');
+    test('a private folder of its own sorts a launch into the checkout it names', () => {
+        const moved = launch('a', { cwd: 'backend', overlay: { cwd: 'frontend' } });
+        const sections = launchSections([moved, launch('b', { cwd: 'backend' })], '/p', repos);
+        expect(sections.map((section) => [section.label, section.launches.map((entry) => entry.id)])).toEqual([
+            ['backend', ['b']],
+            ['frontend', ['a']]
+        ]);
     });
 
     test('a folder on a Windows machine', () => {
-        expect(launchFolder(launch('a', { cwd: 'apps/web' }), 'C:\\p')).toBe('C:\\p\\apps\\web');
-        expect(launchFolder(launch('a', { cwd: 'D:\\elsewhere\\' }), 'C:\\p')).toBe('D:\\elsewhere');
-        expect(launchFolder(launch('a', { cwd: 'C:\\' }), 'C:\\p')).toBe('C:\\');
         const winRepos = [
             { path: 'C:\\p', label: 'p', kind: 'root' as const },
             { path: 'C:\\p\\frontend', label: 'frontend', kind: 'nested' as const }

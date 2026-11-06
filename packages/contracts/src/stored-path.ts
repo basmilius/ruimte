@@ -1,6 +1,6 @@
 // The daemon may speak Windows paths; a stored path speaks POSIX. A path that starts with a drive
 // letter or a backslash is the only case where the separator is not a slash.
-function separatorOf(root: string): string {
+export function pathSeparatorOf(root: string): string {
     return /^[a-zA-Z]:\\|^\\\\/.test(root) ? '\\' : '/';
 }
 
@@ -37,7 +37,7 @@ export function relativeTo(root: string, path: string): string {
 
 /* The way back, so a row can be revealed, copied or opened on the daemon's machine. */
 export function absoluteOf(root: string, treePath: string): string {
-    const separator = separatorOf(root);
+    const separator = pathSeparatorOf(root);
     const relative = withoutTrailingSeparator(treePath).split('/').join(separator);
     return relative === '' ? withoutTrailingSeparator(root) : `${withoutTrailingSeparator(root)}${separator}${relative}`;
 }

@@ -89,6 +89,7 @@ export * from './language.ts';
 export * from './editor-assist.ts';
 export { cheapestEditorModel, type EditorModelPrice } from './editor-assist-model.ts';
 export * from './launches.ts';
+export * from './launch-rules.ts';
 export * from './secrets.ts';
 export * from './live-stream.ts';
 export * from './live-frame.ts';

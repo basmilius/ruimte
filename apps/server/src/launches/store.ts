@@ -1,4 +1,4 @@
-import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { isAbsolute, join, relative, sep } from 'node:path';
 import { CodedError, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import { Serializer } from '@adecore/utils/async';
 import { climbsOut, isWithin } from '@adecore/utils/path';
@@ -10,6 +10,8 @@ import {
     LAUNCHES_VERSION,
     LaunchesPrivateFileSchema,
     LaunchesSharedFileSchema,
+    launchCwdOf,
+    launchGap,
     launchPortOf,
     readLaunchEntries,
     type LaunchConfig,
@@ -463,7 +465,7 @@ export class LaunchStore {
         return ordered(state).map((launch) => {
             const shared = sharedIds.has(launch.id);
             const overlay = shared ? state.overlays[launch.id] : undefined;
-            const cwd = resolve(state.folder, overlay?.cwd ?? launch.cwd ?? '.');
+            const cwd = launchCwdOf(state.folder, { cwd: launch.cwd, overlay });
             const env = { ...launch.env, ...overlay?.env };
             const command = launch.command ?? '';
             const resolved = {
@@ -646,9 +648,10 @@ export function problemIn(folder: string, worktrees: readonly string[], launches
     }
     const kinds = new Map(launches.map((launch) => [launch.id, launch.kind]));
     for (const launch of launches) {
+        const gap = launchGap(launch);
         if (launch.kind === 'group') {
             const members = launch.launches ?? [];
-            if (members.length === 0) {
+            if (gap === 'members') {
                 return `The group "${launch.name}" starts no launch`;
             }
             const missing = members.find((id) => !kinds.has(id));
@@ -660,14 +663,14 @@ export function problemIn(folder: string, worktrees: readonly string[], launches
             }
             continue;
         }
-        if (!launch.command?.trim()) {
+        if (gap === 'command') {
             return `The launch "${launch.name}" has no command`;
         }
         for (const cwd of [launch.cwd, launch.overlay?.cwd]) {
             if (cwd === undefined) {
                 continue;
             }
-            const path = isAbsolute(cwd) ? cwd : resolve(folder, cwd);
+            const path = launchCwdOf(folder, { cwd });
             if (!isWithin(folder, path) && !worktrees.some((root) => isWithin(root, path))) {
                 return `The folder of "${launch.name}" is outside the project: ${path}`;
             }

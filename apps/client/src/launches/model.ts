@@ -1,4 +1,4 @@
-import { absoluteOf, isAbsolutePath, isPathBelow, type GitRepo, type LaunchConfigEntry, type LaunchesDocument, type LaunchStatus } from '@ruimte/contracts';
+import { isPathBelow, launchCwdOf, type GitRepo, type LaunchConfigEntry, type LaunchesDocument, type LaunchStatus } from '@ruimte/contracts';
 
 /*
  * What a launch looks like from here. A launch a person stopped, or a service that ended cleanly on
@@ -148,16 +148,6 @@ function trimSlashes(path: string): string {
     return trimmed === '' || /^[a-zA-Z]:$/.test(trimmed) ? path : trimmed;
 }
 
-/* Where a launch runs, absolute. A private overlay may name a folder of its own. */
-export function launchFolder(launch: LaunchConfigEntry, folder: string): string {
-    const cwd = (launch.overlay?.cwd ?? launch.cwd ?? '').trim();
-    if (isAbsolutePath(cwd)) {
-        return trimSlashes(cwd);
-    }
-    const relative = cwd.replace(/^\.[\\/]?/, '');
-    return absoluteOf(trimSlashes(folder), trimSlashes(relative));
-}
-
 /*
  * The menu's launches, grouped by the checkout they run in, the way the git panel groups a folder of
  * repositories. A group and a launch in the project folder itself come first under no heading; a
@@ -169,7 +159,7 @@ export function launchSections(launches: readonly LaunchConfigEntry[], folder: s
     const loose: LaunchConfigEntry[] = [];
     const byRepo = new Map<string, LaunchConfigEntry[]>();
     for (const launch of launches) {
-        const at = launch.kind === 'group' ? root : launchFolder(launch, root);
+        const at = launch.kind === 'group' ? root : launchCwdOf(root, launch);
         const repo = inner.find((candidate) => at === trimSlashes(candidate.path) || isPathBelow(candidate.path, at));
         if (repo === undefined) {
             loose.push(launch);

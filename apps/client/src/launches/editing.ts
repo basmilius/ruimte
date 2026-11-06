@@ -1,6 +1,7 @@
 import {
     freeSlug,
     isAbsolutePath,
+    launchGap,
     type GitRepo,
     type LaunchConfigEntry,
     type LaunchConfigKind,
@@ -98,8 +99,9 @@ export function draftProblem(drafts: readonly LaunchDraft[]): { id: string; prob
         if (entry.name.trim() === '') {
             return { id: entry.id, problem: 'name' };
         }
-        if (entry.kind === 'group' ? (entry.launches ?? []).length === 0 : (entry.command ?? '').trim() === '') {
-            return { id: entry.id, problem: entry.kind === 'group' ? 'members' : 'command' };
+        const gap = launchGap(entry);
+        if (gap !== null) {
+            return { id: entry.id, problem: gap };
         }
     }
     return null;
