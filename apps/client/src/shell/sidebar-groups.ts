@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { sidebarWaitingCount, useWaitingCount } from '@/state/attention';
 import { useEndpoints } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
+import { activityOf, useNodeActivity } from '@/state/node-activity';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useSessions } from '@/state/sessions';
@@ -30,6 +31,7 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
     const order = useSidebarProjects((state) => state.order);
     const separators = useSidebarProjects((state) => state.separators);
     const snoozes = useSnoozes((state) => state.byKey);
+    const activities = useNodeActivity((state) => state.byKey);
     const activeWaiting = useWaitingCount();
     const sessions = useSessions((state) => state.byKey);
     const chats = useChats((state) => state.statusByKey);
@@ -74,6 +76,7 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
                         ...(later ?? []).map((id) => ({ status: statusOf(value.kind, id, null) }))
                     ]),
                     snoozedUntil: snoozeOf(snoozes, endpoint.id, value.id),
+                    activity: activityOf(activities, endpoint.id, value.id),
                     wait: waitDetailsOf(value, sessions, chats, waitingSince, endpoint.id)
                 });
                 if (state === 'error' && snapshot?.state === 'ready') {
@@ -150,6 +153,7 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
         order,
         separators,
         snoozes,
+        activities,
         sessions,
         chats,
         waitingSince

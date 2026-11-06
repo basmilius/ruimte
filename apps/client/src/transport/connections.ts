@@ -19,6 +19,7 @@ import { chatSinkFor } from '@/state/chats';
 import { activeEndpoint, endpointById, endpointIdOfMachine, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { isOfEndpoint } from '@/state/keys';
 import { isRealMachine } from '@/state/local-machine';
+import { watchNodeActivity } from '@/state/node-activity';
 import { PlanSync } from '@/state/plans';
 import { watchPrWatches } from '@/state/pr-watches';
 import { useProjectList } from '@/state/project-list';
@@ -119,6 +120,7 @@ function buildMachine(endpoint: Endpoint): Machine {
         watchPushAttention(endpoint.id, transport),
         reportPresence(transport, () => machineAnswers(pool.statusOf(endpoint.id), 'presence.report')),
         watchSnoozes(endpoint.id, transport),
+        watchNodeActivity(endpoint.id, transport, () => machineAnswers(pool.statusOf(endpoint.id), 'activity.list')),
         watchPrWatches(endpoint.id, transport),
         watchProviderAccounts(endpoint.id, transport),
         transport.on('provider.changed', ({ providers }) => providerSinkFor(endpoint.id).setProviders(providers)),

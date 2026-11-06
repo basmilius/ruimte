@@ -26,6 +26,8 @@ export interface SidebarNode {
     task?: Task | null;
     /* When a person's snooze runs out, while it holds: the node waits outside "Needs you" until then. */
     snoozedUntil?: number | null;
+    /* When it last changed for a person, on its machine's clock; null where the machine keeps none. */
+    activity?: number | null;
     /* The design this row is one chat of, which has no name or menu of a node to offer. */
     chatOf?: string;
     /* The chats of a design with several, which this one row speaks for; each waits under "Needs you" by itself. */
@@ -131,6 +133,22 @@ export interface SidebarProject {
 export interface SidebarNodeOrder {
     sort: NodeSort;
     then: NodeSortThen;
+
+    /* The position of each node row while the pointer is in the sidebar, which holds them there. */
+    held?: ReadonlyMap<string, number>;
+}
+
+/* Where each node row of the views stands, for `SidebarNodeOrder.held`. */
+export function nodePositions(sections: readonly SidebarSection[]): ReadonlyMap<string, number> {
+    const positions = new Map<string, number>();
+
+    for (const row of sections.filter((section) => section.kind === 'views').flatMap((section) => section.rows)) {
+        if (row.type === 'node') {
+            positions.set(row.node.id, positions.size);
+        }
+    }
+
+    return positions;
 }
 
 interface SidebarInput {
@@ -140,8 +158,11 @@ interface SidebarInput {
 }
 
 /* Groups, notes and drawings are frames, paper and files; the list is about what runs. */
-export function isSessionKind(kind: CanvasNodeKind): boolean {
-    return kind === 'terminal' || kind === 'chat' || kind === 'browser' || kind === 'device' || kind === 'design';
+export const SESSION_KINDS = ['terminal', 'chat', 'browser', 'device', 'design'] as const;
+export type SessionKind = (typeof SESSION_KINDS)[number];
+
+export function isSessionKind(kind: CanvasNodeKind): kind is SessionKind {
+    return (SESSION_KINDS as readonly string[]).includes(kind);
 }
 
 const WEIGHT: Record<AgentStatus, number> = { 'needs-you': 3, error: 2, exited: 2, running: 1, idle: 0 };
@@ -242,7 +263,7 @@ export function buildSidebar({ project, expandedIds, order }: SidebarInput): Sid
         if (!expanded) {
             continue;
         }
-        for (const node of order ? sortNodes(view.nodes, order.sort, order.then) : view.nodes) {
+        for (const node of order ? sortNodes(view.nodes, order.sort, order.then, order.held) : view.nodes) {
             rows.push({ type: 'node', rowId: `node:${view.id}:${node.id}`, node, viewId: view.id, viewName: null });
         }
     }

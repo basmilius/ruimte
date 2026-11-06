@@ -31,6 +31,7 @@ import {
     buildSidebarEverywhere,
     gapIndex,
     isSessionKind,
+    nodePositions,
     rowAfterArrow,
     rowOrder,
     withChats,
@@ -62,6 +63,7 @@ import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { isDatabaseTab, isPromotableTab, useFiles } from '@/state/files';
 import { useEndpointId, endpointOfNodeIn } from '@/state/keys';
+import { activityOf, useNodeActivity } from '@/state/node-activity';
 import { useProcessWarnings } from '@/state/processes';
 import { isScratchProject, useProject } from '@/state/project';
 import { nodeProvider, nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
@@ -138,6 +140,7 @@ export function Sidebar() {
     const unseen = useAttention((s) => s.unseen);
     const tasks = useTasks((s) => s.byEndpoint);
     const snoozes = useSnoozes((s) => s.byKey);
+    const activities = useNodeActivity((s) => s.byKey);
     const waitingSince = useWaitingSince((state) => state.byKey);
     const open = useUi((s) => s.sidebarOpen);
     const expanded = useUi(useShallow((s) => s.sidebarExpanded));
@@ -154,6 +157,8 @@ export function Sidebar() {
     /* The project heading being dragged, and the project it would land before or after. */
     const [projectDrag, setProjectDrag] = useState<string | null>(null);
     const [projectInsert, setProjectInsert] = useState<{ key: string; after: boolean } | null>(null);
+    /* Where the node rows stood when the pointer came in; a picked order moves nothing under it until it leaves. */
+    const [heldPositions, setHeldPositions] = useState<ReadonlyMap<string, number> | null>(null);
 
     const project: SidebarProject = {
         activeViewId: source.activeViewId,
@@ -180,6 +185,7 @@ export function Sidebar() {
                     finished: isUnseen(unseen, machine, node.id),
                     task: childTask(tasks[machine], node.id),
                     snoozedUntil: snoozeOf(snoozes, machine, node.id),
+                    activity: activityOf(activities, machine, node.id),
                     ...(chatOf === undefined ? {} : { chatOf })
                 };
             };
@@ -248,7 +254,7 @@ export function Sidebar() {
         separators
     );
     const hidden = foldedProjects(movable, [...Object.values(separators.before).flat(), ...separators.trailing]);
-    const order = { sort: nodeSort, then: nodeSortThen };
+    const order = { sort: nodeSort, then: nodeSortThen, ...(heldPositions === null ? {} : { held: heldPositions }) };
     const sections = combined
         ? buildCombinedSidebar(groups, order)
         : everywhere
@@ -443,6 +449,9 @@ export function Sidebar() {
             data-instant={instant ? '' : undefined}
             className="sliding-column h-full shrink-0 overflow-hidden"
             style={{ width: open ? SIDEBAR_WIDTH_PX + gap : 0 }}
+            // React counts a row's menu, drawn in a portal, as inside, so an open menu holds the order too.
+            onPointerEnter={() => setHeldPositions(nodeSort === 'canvas' ? null : nodePositions(sections))}
+            onPointerLeave={() => setHeldPositions(null)}
         >
             <div
                 className={clsx('relative isolate flex h-full flex-col bg-surface', gap === 0 && 'border-r border-border')}

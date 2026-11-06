@@ -132,7 +132,7 @@ describe('buildSidebar', () => {
         const [needs, list] = buildSidebar({
             project: project([backend, frontend], 'backend'),
             expandedIds: new Set(['backend']),
-            order: { sort: 'name', then: 'newest' }
+            order: { sort: 'name', then: 'recent' }
         });
         expect(list!.rows.map((row) => row.rowId)).toEqual(['view:backend', 'node:backend:claude', 'node:backend:docs', 'node:backend:shell', 'view:frontend']);
         expect(needs!.rows.map((row) => row.rowId)).toEqual(['needs:claude']);

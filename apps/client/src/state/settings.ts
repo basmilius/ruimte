@@ -388,7 +388,7 @@ const DEFAULT_SETTINGS: Settings = {
     terminalFont: 'editor',
     canvasRenderDistance: 'standard',
     sidebarNodeSort: 'canvas',
-    sidebarNodeSortThen: 'newest'
+    sidebarNodeSortThen: 'recent'
 };
 
 // Rounded as well as clamped: storage can still hold a half pixel, and text renders sharpest on a whole one.

@@ -13,12 +13,12 @@ function choice(label: string): HTMLElement | null {
 }
 
 beforeEach(async () => {
-    await act(async () => useSettings.getState().update({ canvasRenderDistance: 'standard', sidebarNodeSort: 'canvas', sidebarNodeSortThen: 'newest' }));
+    await act(async () => useSettings.getState().update({ canvasRenderDistance: 'standard', sidebarNodeSort: 'canvas', sidebarNodeSortThen: 'recent' }));
 });
 
 afterEach(async () => {
     await page.unmount();
-    await act(async () => useSettings.getState().update({ canvasRenderDistance: 'standard', sidebarNodeSort: 'canvas', sidebarNodeSortThen: 'newest' }));
+    await act(async () => useSettings.getState().update({ canvasRenderDistance: 'standard', sidebarNodeSort: 'canvas', sidebarNodeSortThen: 'recent' }));
 });
 
 describe('Settings > Views > Canvas > Render distance', () => {

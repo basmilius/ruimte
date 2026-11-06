@@ -45,7 +45,7 @@ describe('the terminal font', () => {
 describe('the order of the nodes in the sidebar', () => {
     test('starts on the canvas order with the newest first, and keeps what a person picked', () => {
         expect(settingsFrom({}).sidebarNodeSort).toBe('canvas');
-        expect(settingsFrom({}).sidebarNodeSortThen).toBe('newest');
+        expect(settingsFrom({}).sidebarNodeSortThen).toBe('recent');
         const picked = settingsFrom({ sidebarNodeSort: 'status', sidebarNodeSortThen: 'name' });
         expect(picked.sidebarNodeSort).toBe('status');
         expect(picked.sidebarNodeSortThen).toBe('name');

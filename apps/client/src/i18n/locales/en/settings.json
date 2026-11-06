@@ -702,9 +702,10 @@
             },
             "sidebarSort": {
                 "label": "Order in the sidebar",
-                "description": "How the sidebar lists the nodes under an open canvas. The canvas itself stays as it is.",
+                "description": "How the sidebar lists the nodes under an open canvas. A node is updated when its agent starts, waits, stops or finishes, and when you open it. The canvas itself stays as it is.",
                 "options": {
                     "canvas": "Canvas order",
+                    "recent": "Recently updated",
                     "name": "Name",
                     "kind": "Kind",
                     "status": "Status"
@@ -714,8 +715,8 @@
                 "label": "Within a kind or status",
                 "description": "Which node comes first when several have the same kind or status.",
                 "options": {
-                    "newest": "Newest first",
-                    "oldest": "Oldest first",
+                    "recent": "Recently updated",
+                    "least-recent": "Least recently updated",
                     "name": "Name"
                 }
             },
