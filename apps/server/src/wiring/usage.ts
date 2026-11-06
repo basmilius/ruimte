@@ -1,5 +1,5 @@
 import { copilotUsageDirectory } from '@adecore/agents/providers';
-import { limitAccountsOf, usageAccountsOf, usageRootsOf, UsageMonitor, UsageService, type LimitAccounts } from '@adecore/agents/usage';
+import { limitAccountsOf, limitsFileIn, usageAccountsOf, usageRootsOf, UsageMonitor, UsageService, type LimitAccounts } from '@adecore/agents/usage';
 import type { ServerConfig } from '../config.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { claudeApiUsageRoots } from '../providers/anthropic-claude-api-provider.ts';
@@ -44,6 +44,7 @@ export function wireUsage(config: ServerConfig, providers: ProvidersBundle, agen
         providers: providers.providers,
         accounts: limitAccounts,
         client: RUIMTE_CODEX_CLIENT,
+        file: limitsFileIn(config.home),
         plans: {
             nanogpt: () => providers.nanogpt.readPlan(),
             grok: async (account) => {

@@ -473,7 +473,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         work.summaries.coordinator.stop();
         agents.snapshotSchedule.stop();
         usage.usage.stop();
-        usage.limits.stop();
+        const limitsKept = usage.limits.stop();
         providers.accounts.stop();
         processes.processes.stop();
         processes.sessionPorts.stop();
@@ -514,6 +514,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         await step('Stopping language servers', () => language.host.close());
         await step('Stopping editor model requests', () => language.editorAssist.dispose());
         await step('Writing the usage counts', () => stats.stop());
+        await step('Writing the plan limits', () => limitsKept);
         await step('Sending error reports', () => stopTelemetry());
         network.peers.closeAll();
         network.lanDoor.stop();
