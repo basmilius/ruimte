@@ -136,6 +136,7 @@ export * from './visual.ts';
 export * from './extension.ts';
 export * from './extension-actions.ts';
 export * from './extension-client.ts';
+export * from './extension-pack.ts';
 export * from './extension-permissions.ts';
 export * from './extension-results.ts';
 export * from './voice.ts';

@@ -34,8 +34,6 @@ function entry<Name extends ExtensionActionName, Action extends ActionName>(
     return { action, ...translate };
 }
 
-const RUN_STATES = { 'needs-you': 'needsYou' } as const;
-
 function routineOf(entry: RoutineEntry): ExtensionActionOutput<'routine.list'>['routines'][number] {
     const last = entry.runs[0];
 
@@ -46,7 +44,7 @@ function routineOf(entry: RoutineEntry): ExtensionActionOutput<'routine.list'>['
         approved: entry.approved,
         paused: entry.local.pausedAt !== undefined,
         next: entry.next,
-        lastRun: last === undefined ? null : { state: last.state === 'needs-you' ? RUN_STATES['needs-you'] : last.state, at: last.at }
+        lastRun: last === undefined ? null : { state: last.state === 'needs-you' ? 'needsYou' : last.state, at: last.at }
     };
 }
 

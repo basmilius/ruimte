@@ -4,14 +4,7 @@ import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { isNotFound } from '@adecore/utils/errors';
-import {
-    EXTENSION_API_VERSION,
-    ExtensionManifestSchema,
-    ExtensionPackSchema,
-    extensionPermissionProblems,
-    isSafePackPath,
-    type ExtensionManifest
-} from '@ruimte/contracts';
+import { ExtensionManifestSchema, extensionManifestProblem, readExtensionPack, type ExtensionManifest } from '@ruimte/contracts';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';
 
@@ -249,8 +242,7 @@ export class ExtensionStore {
      */
     async install(pack: string): Promise<StoredExtension> {
         const bytes = Buffer.from(pack, 'base64');
-        const files = unpack(bytes);
-        const manifest = manifestOf(files);
+        const { manifest, files } = readPack(bytes);
         const hash = createHash('sha256').update(bytes).digest('hex');
         const folder = this.versionFolder(manifest.id, hash);
 
@@ -264,7 +256,7 @@ export class ExtensionStore {
                         const target = join(unpacking, path);
 
                         await mkdir(dirname(target), { recursive: true });
-                        await writeFile(target, content);
+                        await writeFile(target, Buffer.from(content, 'base64'));
                     }
 
                     await rm(folder, { recursive: true, force: true });
@@ -329,11 +321,11 @@ export class ExtensionStore {
             throw new ExtensionPackError('pack-manifest', `No valid manifest.json in ${folder}`);
         }
 
-        if (manifest.api !== EXTENSION_API_VERSION) {
-            throw new ExtensionPackError('pack-api', `${manifest.id} needs API ${manifest.api}; this machine has ${EXTENSION_API_VERSION}`);
-        }
+        const problem = extensionManifestProblem(manifest);
 
-        refuseUnknownPermissions(manifest);
+        if (problem !== null) {
+            throw new ExtensionPackError(problem.code, problem.message);
+        }
 
         return this.change(async () => {
             const { id } = manifest;
@@ -386,59 +378,17 @@ export class ExtensionStore {
     }
 }
 
-function unpack(bytes: Buffer): Record<string, Buffer> {
-    let parsed: unknown;
+function readPack(bytes: Buffer): { manifest: ExtensionManifest; files: Readonly<Record<string, string>> } {
+    const reading = readExtensionPack(bytes, gunzipSync);
 
-    try {
-        parsed = JSON.parse(gunzipSync(bytes).toString('utf8'));
-    } catch {
-        throw new ExtensionPackError('pack-unreadable', 'This is not an extension pack');
+    if (!reading.ok) {
+        throw new ExtensionPackError(reading.code, reading.message);
     }
 
-    const pack = ExtensionPackSchema.safeParse(parsed);
-
-    if (!pack.success) {
-        throw new ExtensionPackError('pack-unreadable', 'This is not an extension pack');
-    }
-
-    return Object.fromEntries(
-        Object.entries(pack.data.files).map(([path, content]) => {
-            if (!isSafePackPath(path)) {
-                throw new ExtensionPackError('pack-path', `The pack names a path outside itself: ${path}`);
-            }
-
-            return [path, Buffer.from(content, 'base64')];
-        })
-    );
+    return reading;
 }
 
 /* What a pack installs as, checked whole, so a caller can order the install among the other changes of that id. */
 export function manifestOfPack(pack: string): ExtensionManifest {
-    return manifestOf(unpack(Buffer.from(pack, 'base64')));
-}
-
-// Refused when it comes in, never when it loads, so one already installed keeps working on a Ruimte that knows less.
-function refuseUnknownPermissions(manifest: ExtensionManifest): void {
-    const problems = extensionPermissionProblems(manifest.permissions);
-
-    if (problems.length > 0) {
-        throw new ExtensionPackError('pack-manifest', `${manifest.id}: ${problems.join('; ')}`);
-    }
-}
-
-function manifestOf(files: Record<string, Buffer>): ExtensionManifest {
-    const raw = files['manifest.json'];
-    const manifest = raw === undefined ? null : ExtensionManifestSchema.safeParse(JSON.parse(raw.toString('utf8')));
-
-    if (manifest === null || !manifest.success) {
-        throw new ExtensionPackError('pack-manifest', 'The pack has no valid manifest.json');
-    }
-
-    if (manifest.data.api !== EXTENSION_API_VERSION) {
-        throw new ExtensionPackError('pack-api', `${manifest.data.id} needs API ${manifest.data.api}; this machine has ${EXTENSION_API_VERSION}`);
-    }
-
-    refuseUnknownPermissions(manifest.data);
-
-    return manifest.data;
+    return readPack(Buffer.from(pack, 'base64')).manifest;
 }

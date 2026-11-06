@@ -7,14 +7,13 @@ import type { AppIpc } from '@adecore/shell';
 import { Serializer } from '@adecore/utils/async';
 import { writeAtomic } from '@adecore/utils/fs';
 import {
-    EXTENSION_API_VERSION,
     EXTENSION_ICON_PATH,
     ExtensionIdSchema,
     ExtensionManifestSchema,
     extensionFrameHost,
-    ExtensionPackSchema,
-    extensionPermissionProblems,
+    extensionManifestProblem,
     isSafePackPath,
+    readExtensionPack,
     type ExtensionManifest
 } from '@ruimte/contracts';
 import { EXTENSION_FILE_TYPES, EXTENSION_FILES_PATH, extensionFrameCsp } from '@ruimte/csp';
@@ -35,11 +34,11 @@ export function hostsOf(manifest: Pick<ExtensionManifest, 'permissions'>): strin
     });
 }
 
-function refuseUnknownPermissions(manifest: ExtensionManifest): void {
-    const problems = extensionPermissionProblems(manifest.permissions);
+function refuseManifest(manifest: ExtensionManifest): void {
+    const problem = extensionManifestProblem(manifest);
 
-    if (problems.length > 0) {
-        throw new Error(`${manifest.name}: ${problems.join('; ')}`);
+    if (problem !== null) {
+        throw new Error(problem.message);
     }
 }
 
@@ -158,21 +157,14 @@ export class ClientExtensions {
 
     async install(pack: Uint8Array, fromStore = false): Promise<InstalledClientExtension> {
         const bytes = Buffer.from(pack);
-        const parsed = ExtensionPackSchema.parse(JSON.parse(gunzipSync(bytes).toString('utf8')));
-        const paths = Object.keys(parsed.files);
+        const parsed = readExtensionPack(bytes, gunzipSync);
 
-        if (!paths.every(isSafePackPath)) {
-            throw new Error('The pack names a path outside itself');
+        if (!parsed.ok) {
+            throw new Error(parsed.message);
         }
 
-        const manifest = ExtensionManifestSchema.parse(JSON.parse(Buffer.from(parsed.files['manifest.json'] ?? '', 'base64').toString('utf8')));
-
-        if (manifest.api !== EXTENSION_API_VERSION) {
-            throw new Error(`${manifest.name} needs a different version of Ruimte`);
-        }
-
-        refuseUnknownPermissions(manifest);
-
+        const { manifest, files } = parsed;
+        const paths = Object.keys(files);
         const hash = createHash('sha256').update(bytes).digest('hex');
         const folder = join(this.root, manifest.id, hash);
 
@@ -186,7 +178,7 @@ export class ClientExtensions {
                 try {
                     for (const path of paths) {
                         await mkdir(dirname(join(unpacking, path)), { recursive: true });
-                        await writeFile(join(unpacking, path), Buffer.from(parsed.files[path] as string, 'base64'));
+                        await writeFile(join(unpacking, path), Buffer.from(files[path] as string, 'base64'));
                     }
 
                     await rm(folder, { recursive: true, force: true });
@@ -258,7 +250,7 @@ export class ClientExtensions {
                 throw new Error(`No valid manifest.json in ${folder}`);
             }
 
-            refuseUnknownPermissions(manifest);
+            refuseManifest(manifest);
             this.links.set(manifest.id, { folder, revision, manifest, enabled: enabled ?? this.links.get(manifest.id)?.enabled ?? true });
             touched();
         });

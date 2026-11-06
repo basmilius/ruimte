@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { ExtensionsPane } from '@/extensions/ExtensionsPane';
 import { useInstalledExtensions } from '@/extensions/loader';
+import { useToasts } from '@/state/toasts';
 import { mount, until, type Mounted } from '../../testing/dom';
 
 function installed(id: string, name: string, dev: boolean): InstalledClientExtension {
@@ -38,16 +39,26 @@ describe('the list of extensions', () => {
     });
 });
 
+function manifestOf(permissions: Record<string, string>) {
+    return { id: 'acme.local', name: 'Local pack', version: '0.2.0', api: 1, permissions };
+}
+
+async function chooseFile(manifest: object): Promise<void> {
+    const pack = { files: { 'manifest.json': Buffer.from(JSON.stringify(manifest)).toString('base64') } };
+
+    await mounted.render(<ExtensionsPane />);
+    [...mounted.host.querySelectorAll('button')].find((button) => button.textContent === 'Install from disk')?.click();
+    await until(() => mounted.host.querySelector('input[type="file"]') !== null);
+
+    const input = mounted.host.querySelector<HTMLInputElement>('input[type="file"]');
+    const file = new File([Bun.gzipSync(JSON.stringify(pack))], 'local.rex');
+
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    input?.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
 describe('installing from a file', () => {
     test('shows what the pack is and asks for before it installs it', async () => {
-        const manifest = {
-            id: 'acme.local',
-            name: 'Local pack',
-            version: '0.2.0',
-            api: 1,
-            permissions: { 'files.read': 'Reads your notes', 'ui.canvasOverlay': 'Walks over the canvas' }
-        };
-        const pack = { files: { 'manifest.json': Buffer.from(JSON.stringify(manifest)).toString('base64') } };
         const installs: Uint8Array[] = [];
 
         windowWithBridge.ruimteDesktop = {
@@ -56,27 +67,25 @@ describe('installing from a file', () => {
                 install: async (bytes: Uint8Array) => void installs.push(bytes)
             }
         };
-        await mounted.render(<ExtensionsPane />);
-
-        expect(mounted.host.querySelector('input[type="file"]')).toBeNull();
-        [...mounted.host.querySelectorAll('button')].find((button) => button.textContent === 'Install from disk')?.click();
-        await until(() => mounted.host.querySelector('input[type="file"]') !== null);
-
-        const input = mounted.host.querySelector<HTMLInputElement>('input[type="file"]');
-        const file = new File([Bun.gzipSync(JSON.stringify(pack))], 'local.rex');
-
-        Object.defineProperty(input, 'files', { value: [file], configurable: true });
-        input?.dispatchEvent(new Event('change', { bubbles: true }));
+        await chooseFile(manifestOf({ 'files.read': 'Reads your notes' }));
         await until(() => mounted.host.textContent?.includes('Local pack') ?? false);
 
         expect(mounted.host.textContent).toContain('Reads your notes');
-        // A name that opens nothing is no permission to show a person.
-        expect(mounted.host.textContent).not.toContain('Walks over the canvas');
         expect(installs).toHaveLength(0);
 
         const install = [...mounted.host.querySelectorAll('button')].find((button) => button.textContent === 'Install');
 
         install?.click();
         await until(() => installs.length === 1);
+    });
+
+    test('refuses a pack that asks for a permission Ruimte does not know, as the machine would', async () => {
+        const toasts = useToasts.getState().toasts.length;
+
+        await chooseFile(manifestOf({ 'files.read': 'Reads your notes', 'ui.canvasOverlay': 'Walks over the canvas' }));
+        await until(() => useToasts.getState().toasts.length > toasts);
+
+        expect(useToasts.getState().toasts.at(-1)?.description).toContain('ui.canvasOverlay is not a permission');
+        expect(mounted.host.textContent).not.toContain('Local pack');
     });
 });
