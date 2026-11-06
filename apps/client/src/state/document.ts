@@ -1,3 +1,4 @@
+import type { SplitCommand } from '@adecore/ui';
 import {
     isCanvasView,
     isDesignView,
@@ -157,12 +158,8 @@ export interface DocumentState {
     toggleMaximized(): void;
     /* The focus one cell along, which is how a grid is navigated: by direction, never by number. */
     focusTowards(direction: SplitDirection): void;
-    /* A splitter dragged between columns or cells: every share on that axis, in order. */
-    resizeColumns(sizes: readonly number[]): void;
-    resizeCells(column: number, sizes: readonly number[]): void;
-    /* A double click on a splitter: its two neighbors even out, or with `all` every column, or every cell of the column. */
-    evenColumns(at: number, all: boolean): void;
-    evenCells(column: number, at: number, all: boolean): void;
+    /* What the split view itself asks: a pane takes the focus, a splitter is dragged or evened out. */
+    runSplitCommand(command: SplitCommand): void;
     setBodyFocused(focused: boolean): void;
     addCanvasView(name: string): string;
     /* A line in the sidebar with nothing behind it, to group the views around it. */

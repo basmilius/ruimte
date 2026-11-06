@@ -1,3 +1,4 @@
+import { updateSplitLayout, type SplitCommand, type SplitLayout as SplitTree, type SplitNode, type SplitPane, type SplitSide } from '@adecore/ui';
 import { isOpenableView, type ProjectLocal, type ProjectView, type SplitCell, type SplitColumn, type SplitLayout } from '@ruimte/contracts';
 
 /* Columns of cells instead of a free tree, so "at most three by three" is these two numbers and every layout the model can express is allowed. */
@@ -94,68 +95,152 @@ export function focusedViewId(layout: SplitLayout): string | null {
     return cellAt(layout, layout.focus)?.viewId ?? null;
 }
 
-/* What a cell holds without its share of the column, which is what travels when a cell moves. */
-type CellContent = Pick<SplitCell, 'viewId' | 'tabs'>;
-
-function contentOf(cell: SplitCell): CellContent {
-    return cell.tabs === undefined ? { viewId: cell.viewId } : { viewId: cell.viewId, tabs: cell.tabs };
-}
-
 function replaceCell(columns: readonly SplitColumn[], at: CellAt, next: SplitCell): SplitColumn[] {
     return columns.map((column, columnIndex) =>
         columnIndex === at.column ? { ...column, cells: column.cells.map((cell, cellIndex) => (cellIndex === at.cell ? next : cell)) } : column
     );
 }
 
-/* Where a cell leaves a tab, the active tab only moves when it was the one that left: right neighbor first, else left. */
-function withoutTab(cell: SplitCell, viewId: string): SplitCell {
-    const tabs = cellViewIds(cell);
-    const index = tabs.indexOf(viewId);
-    if (index === -1 || tabs.length === 1) {
-        return cell;
-    }
-    const active = cell.viewId === viewId ? (tabs[index + 1] ?? tabs[index - 1]) : cell.viewId;
-    return { ...cell, viewId: active, tabs: tabs.filter((id) => id !== viewId) };
+function fillsCellAlone(layout: SplitLayout, source: CellAt): boolean {
+    return cellViewIds(cellAt(layout, source)!).length === 1;
 }
 
-function renamedIn(cell: SplitCell, from: string, to: string): SplitCell {
-    const next = { ...cell, viewId: cell.viewId === from ? to : cell.viewId };
-    if (cell.tabs !== undefined) {
-        next.tabs = cell.tabs.map((id) => (id === from ? to : id));
+const COLUMNS_ID = 'split:columns';
+const NEW_PANE_ID = 'split:new-pane';
+const NEW_SPLIT_ID = 'split:new-split';
+
+/* Stands in for a view that is in no layout, to ask what a drop of any view would do. */
+const ANY_VIEW = 'split:any-view';
+
+const SIDES: Record<SplitDirection, SplitSide> = { left: 'left', right: 'right', up: 'top', down: 'bottom' };
+
+/* A view stands in one cell, so a view names its cell; the stored format has no ids of its own and older clients read it. */
+function paneIdOf(cell: SplitCell): string {
+    return cellViewIds(cell)[0]!;
+}
+
+function columnIdOf(column: SplitColumn): string {
+    const first = paneIdOf(column.cells[0]!);
+    return column.cells.length === 1 ? first : `split:rows:${first}`;
+}
+
+function focusedPaneId(layout: SplitLayout): string {
+    return paneIdOf(cellAt(layout, clampFocus(layout.columns, layout.focus))!);
+}
+
+/* The saved columns of cells as ADE CORE's split tree. `maximized` is a view, which only drawing the grid needs. */
+export function splitTree(layout: SplitLayout, maximized: string | null = null): SplitTree {
+    const stacks = layout.columns.map((column): SplitNode => {
+        const panes = column.cells.map((cell): SplitPane => ({ type: 'pane', id: paneIdOf(cell), views: cellViewIds(cell), active: cell.viewId }));
+        if (panes.length === 1) {
+            return panes[0]!;
+        }
+        return { type: 'split', id: columnIdOf(column), axis: 'vertical', children: panes, sizes: column.cells.map((cell) => cell.size) };
+    });
+    const sizes = layout.columns.map((column) => column.size);
+    const root: SplitNode = stacks.length === 1 ? stacks[0]! : { type: 'split', id: COLUMNS_ID, axis: 'horizontal', children: stacks, sizes };
+    const filling = maximizedCell(layout, maximized);
+    return { root, focused: focusedPaneId(layout), maximized: filling === null ? null : paneIdOf(cellAt(layout, filling)!) };
+}
+
+/* The panes of one column, or null for a node that holds anything but a stack of panes. */
+function panesOf(node: SplitNode): SplitPane[] | null {
+    if (node.type === 'pane') {
+        return [node];
     }
-    return next;
+    return node.axis === 'vertical' && node.children.every((child) => child.type === 'pane') ? (node.children as SplitPane[]) : null;
 }
 
 /*
- * The shared test behind a drop on a zone. `source` is the cell the dragged view stands in and
- * `leavesCell` says whether the drop empties it: a tab among several leaves only its tab, so it
- * frees no cell and no column, and a drop on the edge of its own host is a split, not nothing.
+ * The tree back in the saved form, or null for one that form cannot hold: a split nested deeper than
+ * columns of cells, or past the limits. A pane that was a host stays one with a single tab left, which
+ * the tree does not tell from a plain cell.
  */
-function canPlace(layout: SplitLayout, at: CellAt, zone: SplitZone, source: CellAt | null, leavesCell: boolean): boolean {
-    if (cellAt(layout, at) === null) {
-        return false;
+function storedForm(tree: SplitTree, before: SplitLayout): SplitLayout | null {
+    const { root } = tree;
+    const sideBySide = root.type === 'split' && root.axis === 'horizontal';
+    const stacks = sideBySide ? root.children : [root];
+    if (stacks.length > MAX_COLUMNS) {
+        return null;
     }
-    if (source !== null && isSameCell(source, at) && (zone === 'center' || leavesCell)) {
-        return false;
+    const hosts = new Set(before.columns.flatMap((column) => column.cells.filter(isTabHost).map(paneIdOf)));
+    const columns: SplitColumn[] = [];
+    let focus: CellAt = { column: 0, cell: 0 };
+    for (const [column, stack] of stacks.entries()) {
+        const panes = panesOf(stack);
+        if (panes === null || panes.length > MAX_CELLS || panes.some((pane) => pane.active === null)) {
+            return null;
+        }
+        const cells = panes.map((pane, cell): SplitCell => {
+            const size = stack.type === 'split' ? stack.sizes[cell]! : 1;
+            if (pane.id === tree.focused) {
+                focus = { column, cell };
+            }
+            return pane.views.length > 1 || hosts.has(pane.id) ? { viewId: pane.active!, tabs: pane.views, size } : { viewId: pane.active!, size };
+        });
+        columns.push({ size: sideBySide ? root.sizes[column]! : 1, cells });
+    }
+    return { columns, focus };
+}
+
+/* Refused, the layout stands as it was: the same object, so a caller can tell. */
+export function runSplitCommands(layout: SplitLayout, commands: readonly SplitCommand[]): SplitLayout {
+    const tree = splitTree(layout);
+    const next = commands.reduce(updateSplitLayout, tree);
+    return next === tree ? layout : (storedForm(next, layout) ?? layout);
+}
+
+/* An edge on the side of a column makes a column, so that command names the whole column and never nests a split in it. */
+function edgeTargetOf(layout: SplitLayout, at: CellAt, zone: SplitDirection): string {
+    return isColumnZone(zone) ? columnIdOf(layout.columns[at.column]!) : paneIdOf(cellAt(layout, at)!);
+}
+
+function moveCellCommand(layout: SplitLayout, from: CellAt, at: CellAt, zone: SplitZone): SplitCommand | null {
+    const moving = cellAt(layout, from);
+    const target = cellAt(layout, at);
+    if (moving === null || target === null || isSameCell(from, at)) {
+        return null;
     }
     if (zone === 'center') {
-        return true;
+        return { type: 'swap', sourceId: paneIdOf(moving), targetId: paneIdOf(target) };
     }
-    if (isColumnZone(zone)) {
-        const freed = source !== null && leavesCell && layout.columns[source.column].cells.length === 1 ? 1 : 0;
-        return layout.columns.length - freed < MAX_COLUMNS;
+    return { type: 'move', sourceId: paneIdOf(moving), targetId: edgeTargetOf(layout, at, zone), side: SIDES[zone], splitId: NEW_SPLIT_ID };
+}
+
+/* The middle of a cell: a tab trades places with the target's active view, a view that stood nowhere takes that view's place. */
+function tradeCommands(layout: SplitLayout, viewId: string, at: CellAt): SplitCommand[] {
+    const source = locateView(layout, viewId);
+    const target = cellAt(layout, at)!;
+    const targetId = paneIdOf(target);
+    if (source === null) {
+        return [
+            { type: 'replace', viewId: target.viewId, replacement: viewId },
+            { type: 'focus', paneId: targetId }
+        ];
     }
-    const leaving = source !== null && leavesCell && source.column === at.column ? 1 : 0;
-    return layout.columns[at.column].cells.length - leaving < MAX_CELLS;
+    return [{ type: 'swap', sourceId: paneIdOf(cellAt(layout, source)!), targetId, viewId }];
+}
+
+function edgeCommand(layout: SplitLayout, viewId: string, source: CellAt | null, at: CellAt, zone: SplitDirection): SplitCommand {
+    const targetId = edgeTargetOf(layout, at, zone);
+    if (source === null) {
+        const newPane: SplitPane = { type: 'pane', id: NEW_PANE_ID, views: [viewId], active: viewId };
+        return { type: 'split', targetId, side: SIDES[zone], newPane, splitId: NEW_SPLIT_ID };
+    }
+    return {
+        type: 'move',
+        sourceId: paneIdOf(cellAt(layout, source)!),
+        targetId,
+        viewId,
+        side: SIDES[zone],
+        newPaneId: NEW_PANE_ID,
+        splitId: NEW_SPLIT_ID
+    };
 }
 
 /* Whether the whole cell at `from` may land in the zone of the cell at `at`, which is what dragging a host by its bar asks. */
 export function canMoveCell(layout: SplitLayout, from: CellAt, at: CellAt, zone: SplitZone): boolean {
-    return cellAt(layout, from) !== null && canPlace(layout, at, zone, from, true);
-}
-
-function fillsCellAlone(layout: SplitLayout, source: CellAt): boolean {
-    return cellViewIds(cellAt(layout, source)!).length === 1;
+    return moveCell(layout, from, at, zone) !== layout;
 }
 
 /*
@@ -163,76 +248,37 @@ function fillsCellAlone(layout: SplitLayout, source: CellAt): boolean {
  * along, so a layout that looks full may have room; a drop on the cell it already sits in is nothing.
  */
 export function canSplit(layout: SplitLayout, at: CellAt, zone: SplitZone, moving: string | null = null): boolean {
-    const source = moving === null ? null : locateView(layout, moving);
-    return canPlace(layout, at, zone, source, source !== null && fillsCellAlone(layout, source));
-}
-
-/* A column that loses its last cell is gone, so the target moves up when it sat behind that column. */
-function withoutCell(columns: readonly SplitColumn[], source: CellAt, target: CellAt): { columns: SplitColumn[]; target: CellAt } {
-    const next = columns.map((column, index) =>
-        index === source.column ? { ...column, cells: column.cells.filter((_, cell) => cell !== source.cell) } : column
-    );
-    const emptied = next[source.column].cells.length === 0;
-    return {
-        columns: emptied ? next.filter((_, index) => index !== source.column) : next,
-        target: {
-            column: emptied && source.column < target.column ? target.column - 1 : target.column,
-            cell: source.column === target.column && source.cell < target.cell ? target.cell - 1 : target.cell
-        }
-    };
-}
-
-/* A new cell beside `target` on one of its four edges, half of the share the target had. */
-function splitAt(columns: readonly SplitColumn[], target: CellAt, zone: SplitDirection, content: CellContent): SplitLayout {
-    if (isColumnZone(zone)) {
-        const half = columns[target.column].size / 2;
-        const index = zone === 'left' ? target.column : target.column + 1;
-        const next = columns.map((column, columnIndex) => (columnIndex === target.column ? { ...column, size: half } : column));
-        next.splice(index, 0, { size: half, cells: [{ ...content, size: 1 }] });
-        return settled(next, { column: index, cell: 0 });
-    }
-    const column = columns[target.column];
-    const half = column.cells[target.cell].size / 2;
-    const index = zone === 'up' ? target.cell : target.cell + 1;
-    const cells = column.cells.map((cell, cellIndex) => (cellIndex === target.cell ? { ...cell, size: half } : cell));
-    cells.splice(index, 0, { ...content, size: half });
-    const next = columns.map((candidate, columnIndex) => (columnIndex === target.column ? { ...candidate, cells } : candidate));
-    return settled(next, { column: target.column, cell: index });
+    return dropView(layout, moving ?? ANY_VIEW, at, zone) !== layout;
 }
 
 /*
  * The one mutation behind both a drag and a split shortcut: a view lands in a cell's zone. A view that
  * was already on screen moves rather than appearing twice, and a drop on the middle swaps with the
  * view that stood there instead of closing it, so nothing falls off the grid by accident. A view that
- * fills its cell alone takes the whole cell along (`moveCell`); one of several tabs leaves only its tab.
+ * fills its cell alone takes the whole cell along (`moveCell`); one of several tabs leaves only its tab,
+ * and a drop on the edge of its own host is a split, not nothing.
  */
 export function dropView(layout: SplitLayout, viewId: string, at: CellAt, zone: SplitZone): SplitLayout {
-    if (!canSplit(layout, at, zone, viewId)) {
+    const target = cellAt(layout, at);
+    if (target === null) {
         return layout;
     }
     const source = locateView(layout, viewId);
-    if (source !== null && fillsCellAlone(layout, source)) {
+    const alone = source !== null && fillsCellAlone(layout, source);
+    if (source !== null && isSameCell(source, at) && (zone === 'center' || alone)) {
+        return layout;
+    }
+    if (alone) {
         return moveCell(layout, source, at, zone);
     }
-    if (zone === 'center') {
-        // A view that stands nowhere yet joins a host rather than replacing its active tab, so no loose tab vanishes by accident.
-        if (source === null && isTabHost(cellAt(layout, at)!)) {
-            return dropAsTab(layout, viewId, at, null);
-        }
-        return tradeInto(layout, viewId, at);
+    if (zone !== 'center') {
+        return runSplitCommands(layout, [edgeCommand(layout, viewId, source, at, zone)]);
     }
-    const sourceCell = source === null ? null : cellAt(layout, source)!;
-    const columns = sourceCell === null ? layout.columns : replaceCell(layout.columns, source!, withoutTab(sourceCell, viewId));
-    return splitAt(columns, at, zone, { viewId });
-}
-
-/* The middle of a cell: a tab trades places with the target's active view, a view that stood nowhere takes that view's place. */
-function tradeInto(layout: SplitLayout, viewId: string, at: CellAt): SplitLayout {
-    const source = locateView(layout, viewId);
-    const sourceCell = source === null ? null : cellAt(layout, source)!;
-    const replaced = cellAt(layout, at)!;
-    const swapped = sourceCell === null ? layout.columns : replaceCell(layout.columns, source!, renamedIn(sourceCell, viewId, replaced.viewId));
-    return settled(replaceCell(swapped, at, renamedIn(replaced, replaced.viewId, viewId)), at);
+    // A view that stands nowhere yet joins a host rather than replacing its active tab, so no loose tab vanishes by accident.
+    if (source === null && isTabHost(target)) {
+        return dropAsTab(layout, viewId, at, null);
+    }
+    return runSplitCommands(layout, tradeCommands(layout, viewId, at));
 }
 
 /*
@@ -240,20 +286,8 @@ function tradeInto(layout: SplitLayout, viewId: string, at: CellAt): SplitLayout
  * splits. This is the drag of a host by the empty part of its strip, and of a plain cell by its bar.
  */
 export function moveCell(layout: SplitLayout, from: CellAt, at: CellAt, zone: SplitZone): SplitLayout {
-    const moving = cellAt(layout, from);
-    if (moving === null || !canPlace(layout, at, zone, from, true)) {
-        return layout;
-    }
-    if (zone === 'center') {
-        const replaced = cellAt(layout, at)!;
-        const columns = replaceCell(replaceCell(layout.columns, at, { ...contentOf(moving), size: replaced.size }), from, {
-            ...contentOf(replaced),
-            size: moving.size
-        });
-        return settled(columns, at);
-    }
-    const { columns, target } = withoutCell(layout.columns, from, at);
-    return splitAt(columns, target, zone, contentOf(moving));
+    const command = moveCellCommand(layout, from, at, zone);
+    return command === null ? layout : runSplitCommands(layout, [command]);
 }
 
 /* Whether `viewId` may join the cell at `at` as a tab; not on the cell it already fills alone, where it would be nothing. */
@@ -287,25 +321,14 @@ export function dropAsTab(layout: SplitLayout, viewId: string, at: CellAt, index
     } else if (others.includes(target.viewId)) {
         position = others.indexOf(target.viewId) + 1;
     }
-    const joined = { ...target, viewId, tabs: [...others.slice(0, position), viewId, ...others.slice(position)] };
-    const columns = replaceCell(layout.columns, at, joined);
-    if (source === null || sameCell) {
-        return settled(columns, at);
-    }
-    if (fillsCellAlone(layout, source)) {
-        const removed = withoutCell(columns, source, at);
-        return settled(removed.columns, removed.target);
-    }
-    return settled(replaceCell(columns, source, withoutTab(cellAt(layout, source)!, viewId)), at);
+    // The tree counts a gap in the tabs as they stand, with the view still among them.
+    const gap = sameCell && position >= cellViewIds(target).indexOf(viewId) ? position + 1 : position;
+    return runSplitCommands(layout, [{ type: 'insert', paneId: paneIdOf(target), viewId, index: gap }]);
 }
 
 export function activateTab(layout: SplitLayout, viewId: string): SplitLayout {
     const at = locateView(layout, viewId);
-    if (at === null) {
-        return layout;
-    }
-    const cell = cellAt(layout, at)!;
-    return { columns: cell.viewId === viewId ? layout.columns : replaceCell(layout.columns, at, { ...cell, viewId }), focus: at };
+    return at === null ? layout : runSplitCommands(layout, [{ type: 'activate', paneId: paneIdOf(cellAt(layout, at)!), viewId }]);
 }
 
 /*
@@ -318,14 +341,10 @@ export function closeTab(layout: SplitLayout, viewId: string): SplitLayout | nul
     if (at === null) {
         return layout;
     }
-    const cell = cellAt(layout, at)!;
-    if (fillsCellAlone(layout, at)) {
-        return closeCell(layout, at);
-    }
-    return { ...layout, columns: replaceCell(layout.columns, at, withoutTab(cell, viewId)) };
+    return fillsCellAlone(layout, at) ? closeCell(layout, at) : runSplitCommands(layout, [{ type: 'close', viewId }]);
 }
 
-/* One step along the strip of the host, stopping at the ends. */
+/* One step along the strip of the host, stopping at the ends. The tab in front and the focus stay where they are. */
 export function moveTabBy(layout: SplitLayout, viewId: string, delta: number): SplitLayout {
     const at = locateView(layout, viewId);
     const cell = at === null ? null : cellAt(layout, at);
@@ -337,9 +356,12 @@ export function moveTabBy(layout: SplitLayout, viewId: string, delta: number): S
     if (next === index) {
         return layout;
     }
-    const tabs = cell.tabs.filter((id) => id !== viewId);
-    tabs.splice(next, 0, viewId);
-    return { ...layout, columns: replaceCell(layout.columns, at, { ...cell, tabs }) };
+    const paneId = paneIdOf(cell);
+    return runSplitCommands(layout, [
+        { type: 'insert', paneId, viewId, index: next > index ? next + 1 : next },
+        { type: 'activate', paneId, viewId: cell.viewId },
+        { type: 'focus', paneId: focusedPaneId(layout) }
+    ]);
 }
 
 export function ungroup(layout: SplitLayout, at: CellAt): SplitLayout {
@@ -373,10 +395,12 @@ export function collapseTabHosts(layout: SplitLayout | null, views: readonly Pro
     return changed ? { ...layout, columns } : layout;
 }
 
-/* A view that got another id (a file that moved) keeps its place wherever it stands. */
+/* A view that got another id (a file that moved) keeps its place wherever it stands, unless that id stands somewhere already: a view stands in one cell. */
 export function replaceViewId(layout: SplitLayout, from: string, to: string): SplitLayout {
-    const at = locateView(layout, from);
-    return at === null ? layout : { ...layout, columns: replaceCell(layout.columns, at, renamedIn(cellAt(layout, at)!, from, to)) };
+    if (from !== to && locateView(layout, to) !== null) {
+        return closeTab(layout, from) ?? layout;
+    }
+    return runSplitCommands(layout, [{ type: 'replace', viewId: from, replacement: to }]);
 }
 
 /* What showing a view did, which is everything the way back needs. */
@@ -462,8 +486,9 @@ export function showViewIn(layout: SplitLayout, viewId: string, options: ShowOpt
             return shownAsTab(layout, viewId, host);
         }
         if (focused !== null) {
-            const replacement = { viewId, tabs: [viewId], size: focused.size };
-            return { layout: settled(replaceCell(layout.columns, at, replacement), at), at, replaced: focused.viewId, from: at };
+            const replaced = runSplitCommands(layout, tradeCommands(layout, viewId, at));
+            const host = { viewId, tabs: [viewId], size: focused.size };
+            return { layout: { ...replaced, columns: replaceCell(replaced.columns, at, host) }, at, replaced: focused.viewId, from: at };
         }
     }
     return { layout: dropView(layout, viewId, at, 'center'), at, replaced: focused?.viewId ?? null, from: at };
@@ -475,11 +500,11 @@ function withoutShownTab(layout: SplitLayout, shown: Omit<ShownView, 'layout'>, 
     if (cell === null || cell.tabs === undefined || cell.tabs.length === 1 || !cell.tabs.includes(tab.viewId)) {
         return layout;
     }
-    let next = withoutTab(cell, tab.viewId);
-    if (cell.viewId === tab.viewId && next.tabs?.includes(tab.activeBefore)) {
-        next = { ...next, viewId: tab.activeBefore };
+    const commands: SplitCommand[] = [{ type: 'close', viewId: tab.viewId }];
+    if (cell.viewId === tab.viewId) {
+        commands.push({ type: 'activate', paneId: paneIdOf(cell), viewId: tab.activeBefore }, { type: 'focus', paneId: focusedPaneId(layout) });
     }
-    const back = { ...layout, columns: replaceCell(layout.columns, shown.at, next) };
+    const back = runSplitCommands(layout, commands);
     return tab.wasPlain ? ungroup(back, shown.at) : back;
 }
 
@@ -489,7 +514,7 @@ function withReplacedBack(layout: SplitLayout, shown: Omit<ShownView, 'layout'>)
     if (shown.replaced === null || cell === null || cellViewIds(cell).length > 1) {
         return layout;
     }
-    return ungroup(tradeInto(layout, shown.replaced, shown.at), shown.at);
+    return ungroup(runSplitCommands(layout, tradeCommands(layout, shown.replaced, shown.at)), shown.at);
 }
 
 /*
@@ -503,14 +528,15 @@ export function undoShowView(layout: SplitLayout, shown: Omit<ShownView, 'layout
 
 /* Null when that was the last cell; the caller decides what an empty grid means. */
 export function closeCell(layout: SplitLayout, at: CellAt): SplitLayout | null {
-    if (cellAt(layout, at) === null) {
+    const cell = cellAt(layout, at);
+    if (cell === null) {
         return layout;
     }
-    if (cellCount(layout) === 1) {
-        return null;
-    }
-    const { columns, target } = withoutCell(layout.columns, at, layout.focus);
-    return settled(columns, target);
+    return cellCount(layout) === 1 ? null : runSplitCommands(layout, [{ type: 'closePane', paneId: paneIdOf(cell) }]);
+}
+
+function closingCells(cells: readonly SplitCell[]): SplitCommand[] {
+    return cells.map((cell) => ({ type: 'closePane', paneId: paneIdOf(cell) }));
 }
 
 export function closeOtherCells(layout: SplitLayout, at: CellAt): SplitLayout {
@@ -518,7 +544,8 @@ export function closeOtherCells(layout: SplitLayout, at: CellAt): SplitLayout {
     if (kept === null || cellCount(layout) === 1) {
         return layout;
     }
-    return { columns: [{ size: 1, cells: [{ ...kept, size: 1 }] }], focus: { column: 0, cell: 0 } };
+    const others = layout.columns.flatMap((column) => column.cells).filter((cell) => cell !== kept);
+    return runSplitCommands(layout, [...closingCells(others), { type: 'focus', paneId: paneIdOf(kept) }]);
 }
 
 export function cellsRightOf(layout: SplitLayout, at: CellAt): number {
@@ -527,14 +554,17 @@ export function cellsRightOf(layout: SplitLayout, at: CellAt): number {
 
 /* The columns left keep their proportions. A focus that was in a closed column comes to this cell. */
 export function closeCellsRightOf(layout: SplitLayout, at: CellAt): SplitLayout {
-    if (cellAt(layout, at) === null || cellsRightOf(layout, at) === 0) {
+    const kept = cellAt(layout, at);
+    if (kept === null || cellsRightOf(layout, at) === 0) {
         return layout;
     }
-    return settled(layout.columns.slice(0, at.column + 1), layout.focus.column > at.column ? at : layout.focus);
+    const closing = closingCells(layout.columns.slice(at.column + 1).flatMap((column) => column.cells));
+    return runSplitCommands(layout, layout.focus.column > at.column ? [...closing, { type: 'focus', paneId: paneIdOf(kept) }] : closing);
 }
 
 export function focusCell(layout: SplitLayout, at: CellAt): SplitLayout {
-    return cellAt(layout, at) === null ? layout : { ...layout, focus: at };
+    const cell = cellAt(layout, at);
+    return cell === null ? layout : runSplitCommands(layout, [{ type: 'focus', paneId: paneIdOf(cell) }]);
 }
 
 /* The span a cell covers on its column's axis, in shares, which is what makes two columns comparable. */
@@ -663,36 +693,6 @@ export function layoutOf(
 
 /* The smallest share a drag leaves a column or cell, of the span the drag moves. */
 export const MIN_SHARE = 0.15;
-
-/*
- * Even shares for the two neighbors of the splitter in front of `at`, which split the span they
- * already hold between them so the rest of the axis stays put; with `all`, for every item on it.
- */
-function evenOut<T extends { size: number }>(items: readonly T[], at: number, all: boolean): T[] {
-    if (at <= 0 || at >= items.length) {
-        return [...items];
-    }
-    if (all) {
-        return items.map((item) => ({ ...item, size: 1 / items.length }));
-    }
-    const half = (items[at - 1].size + items[at].size) / 2;
-    return items.map((item, index) => (index === at - 1 || index === at ? { ...item, size: half } : item));
-}
-
-export function evenColumns(layout: SplitLayout, at: number, all: boolean): SplitLayout {
-    return { ...layout, columns: evenOut(layout.columns, at, all) };
-}
-
-/* `all` stays inside the column. */
-export function evenCells(layout: SplitLayout, column: number, at: number, all: boolean): SplitLayout {
-    if (layout.columns[column] === undefined) {
-        return layout;
-    }
-    return {
-        ...layout,
-        columns: layout.columns.map((candidate, index) => (index === column ? { ...candidate, cells: evenOut(candidate.cells, at, all) } : candidate))
-    };
-}
 
 /*
  * The cell a maximized view stands in, or null when there is nothing to fill: no view maximized,

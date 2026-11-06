@@ -1,13 +1,12 @@
-import { rectDropPreview, SplitView, tabDropPreview, tabGapAt, type SplitCommand, type SplitRect, type TabDrop } from '@adecore/ui';
+import { rectDropPreview, SplitView, tabDropPreview, tabGapAt, type SplitRect, type TabDrop } from '@adecore/ui';
 import { isCanvasView } from '@ruimte/contracts';
 import { useEffect, useState, type DragEvent as ReactDragEvent, type ReactElement } from 'react';
 import { placeFilesAction, placeViewAction } from '@/action-port/person-actions';
 import { PromptStack } from '@/canvas/PromptStack';
 import { cellsMoved, registerCell } from '@/layout/cell-rects';
-import { canDropAsTab, canMoveCell, canSplit, cellAt, cellViewIds, locateView, MIN_SHARE, type CellAt, type SplitZone } from '@/layout/split';
+import { canDropAsTab, canMoveCell, canSplit, cellAt, cellViewIds, locateView, MIN_SHARE, splitTree, type CellAt, type SplitZone } from '@/layout/split';
 import { clampTabLeft, DEFAULT_TAB_WIDTH, gapLeft, positionAfterLifting } from '@/layout/tab-drop';
 import { CellToolbar } from '@/shell/CellToolbar';
-import { cellForPane, columnForSplit, coreLayout } from '@/shell/core-layout';
 import { Dock } from '@/shell/Dock';
 import { useCellView } from '@/shell/use-cell-view';
 import { ViewSurface } from '@/shell/ViewHost';
@@ -380,39 +379,6 @@ function Cell({
     );
 }
 
-function applyCommand(command: SplitCommand): void {
-    const document = useDocument.getState();
-    if (command.type === 'focus') {
-        const at = cellForPane(command.paneId);
-        if (at !== null) {
-            document.focusCellAt(at);
-        }
-    } else if (command.type === 'equalizeAxis') {
-        if (command.axis === 'horizontal') {
-            document.evenColumns(1, true);
-        } else {
-            document.layout?.columns.forEach((_, column) => document.evenCells(column, 1, true));
-        }
-    } else if (command.type === 'resize' || command.type === 'equalize') {
-        const column = columnForSplit(command.splitId);
-        if (command.type === 'resize') {
-            if (column === null) {
-                document.resizeColumns(command.sizes);
-            } else {
-                document.resizeCells(column, command.sizes);
-            }
-        } else {
-            const at = (command.index ?? 0) + 1;
-            const all = command.index === undefined;
-            if (column === null) {
-                document.evenColumns(at, all);
-            } else {
-                document.evenCells(column, at, all);
-            }
-        }
-    }
-}
-
 /*
  * The views of one project beside each other: columns of cells, at most three by three. The model
  * and its limits are pure (`layout/split.ts`); this only draws what the layout says and hands a drag
@@ -439,18 +405,21 @@ export function SplitGrid(): ReactElement | null {
     if (layout === null) {
         return null;
     }
-    const value = coreLayout(layout, maximizedId);
+    const value = splitTree(layout, maximizedId);
     return (
         <SplitView
             data-split-grid
             value={value}
-            onValueChange={(_, command) => applyCommand(command)}
+            onValueChange={(_, command) => useDocument.getState().runSplitCommand(command)}
             showTabs={false}
             minimumSize={{ width: 0, height: 0 }}
             minimumResizeShare={MIN_SHARE}
             onViewBoundsChange={() => cellsMoved()}
             renderView={(viewId, info) => {
-                const at = cellForPane(info.paneId)!;
+                const at = locateView(layout, viewId);
+                if (at === null) {
+                    return null;
+                }
                 return (
                     <Cell
                         at={at}

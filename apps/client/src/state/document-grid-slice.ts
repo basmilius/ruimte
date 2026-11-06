@@ -7,13 +7,12 @@ import {
     closeCellsRightOf,
     closeOtherCells,
     dropView,
-    evenCells,
-    evenColumns,
     focusCell,
     focusDirection,
     focusedViewId,
     isSameCell,
     moveCell,
+    runSplitCommands,
     showViewIn,
     singleLayout,
     undoShowView
@@ -41,10 +40,7 @@ export function createDocumentGridSlice({
     | 'focusCellAt'
     | 'toggleMaximized'
     | 'focusTowards'
-    | 'resizeColumns'
-    | 'resizeCells'
-    | 'evenColumns'
-    | 'evenCells'
+    | 'runSplitCommand'
     | 'setBodyFocused'
 > {
     return {
@@ -140,35 +136,18 @@ export function createDocumentGridSlice({
             }
         },
 
-        /* A drag is not a move of the grid, since no editor opens or closes, so it sets the sizes alone. */
-        resizeColumns(sizes) {
-            set((state) => {
-                if (state.layout === null || sizes.length !== state.layout.columns.length) {
-                    return {};
-                }
-                const columns = state.layout.columns.map((column, index) => ({ ...column, size: sizes[index]! }));
-                return { layout: { ...state.layout, columns } };
-            });
-        },
-
-        resizeCells(column, sizes) {
-            set((state) => {
-                const held = state.layout?.columns[column];
-                if (!state.layout || !held || sizes.length !== held.cells.length) {
-                    return {};
-                }
-                const cells = held.cells.map((cell, index) => ({ ...cell, size: sizes[index]! }));
-                const columns = state.layout.columns.map((candidate, index) => (index === column ? { ...candidate, cells } : candidate));
-                return { layout: { ...state.layout, columns } };
-            });
-        },
-
-        evenColumns(at, all) {
-            set((state) => (state.layout === null ? {} : { layout: evenColumns(state.layout, at, all) }));
-        },
-
-        evenCells(column, at, all) {
-            set((state) => (state.layout === null ? {} : { layout: evenCells(state.layout, column, at, all) }));
+        /* A splitter is not a move of the grid, since no editor opens or closes, so it sets the sizes alone. */
+        runSplitCommand(command) {
+            const { layout } = get();
+            const next = layout === null ? null : runSplitCommands(layout, [command]);
+            if (layout === null || next === null || next === layout) {
+                return;
+            }
+            if (isSameCell(next.focus, layout.focus)) {
+                set({ layout: next });
+            } else {
+                commit(next);
+            }
         },
 
         setBodyFocused(focused) {

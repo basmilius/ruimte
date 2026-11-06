@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectDocument, ProjectView, SplitLayout } from '@ruimte/contracts';
+import { splitTree } from '@/layout/split';
 import { focusedCanvas, liveCanvases } from './canvas';
 import { activeViewOf, useDocument } from './document';
 
@@ -25,6 +26,12 @@ function document(views: ProjectView[]): ProjectDocument {
 
 function shape(): string[][] {
     return (useDocument.getState().layout?.columns ?? []).map((column) => column.cells.map((cell) => cell.viewId));
+}
+
+/* A splitter dragged in a grid of one axis, whose only branch is the root of the tree. */
+function dragSplitter(sizes: number[]): void {
+    const state = useDocument.getState();
+    state.runSplitCommand({ type: 'resize', splitId: splitTree(state.layout!).root.id, sizes });
 }
 
 function tabsOf(): string[][] {
@@ -488,15 +495,36 @@ describe('deleting a view that is in a cell', () => {
 describe('resizing', () => {
     test('a drag between two columns moves the share and nothing else', () => {
         useDocument.getState().splitFocused('right', 'b');
-        useDocument.getState().resizeColumns([0.7, 0.3]);
-        expect(useDocument.getState().layout?.columns.map((column) => column.size)).toEqual([0.7, 0.3]);
+        dragSplitter([0.7, 0.3]);
+        const [left, right] = useDocument.getState().layout!.columns;
+        expect(left!.size).toBeCloseTo(0.7, 10);
+        expect(right!.size).toBeCloseTo(0.3, 10);
         expect(shape()).toEqual([['a'], ['b']]);
     });
 
     test('a drag between two cells of one column moves those two', () => {
         useDocument.getState().splitFocused('down', 'b');
-        useDocument.getState().resizeCells(0, [0.25, 0.75]);
-        expect(useDocument.getState().layout?.columns[0]?.cells.map((cell) => cell.size)).toEqual([0.25, 0.75]);
+        dragSplitter([0.25, 0.75]);
+        const [top, bottom] = useDocument.getState().layout!.columns[0]!.cells;
+        expect(top!.size).toBeCloseTo(0.25, 10);
+        expect(bottom!.size).toBeCloseTo(0.75, 10);
+    });
+
+    test('a press in a cell takes the focus through the same door, as a move of the grid', () => {
+        useDocument.getState().splitFocused('right', 'b');
+        useDocument.getState().toggleMaximized();
+        const paneOfA = splitTree(useDocument.getState().layout!).root;
+        const id = paneOfA.type === 'split' ? paneOfA.children[0]!.id : paneOfA.id;
+        useDocument.getState().runSplitCommand({ type: 'focus', paneId: id });
+        expect(useDocument.getState().activeViewId).toBe('a');
+        expect(useDocument.getState().maximized).toBeNull();
+    });
+
+    test('a command on a stale pane changes nothing', () => {
+        useDocument.getState().splitFocused('right', 'b');
+        const before = useDocument.getState().layout;
+        useDocument.getState().runSplitCommand({ type: 'focus', paneId: 'gone' });
+        expect(useDocument.getState().layout).toBe(before);
     });
 });
 
@@ -505,7 +533,7 @@ describe('maximizing a cell', () => {
 
     test('fills the grid with the focused cell and gives the very same grid back', () => {
         useDocument.getState().splitFocused('right', 'b');
-        useDocument.getState().resizeColumns([0.7, 0.3]);
+        dragSplitter([0.7, 0.3]);
         const before = useDocument.getState().layout;
         useDocument.getState().toggleMaximized();
         expect(maximized()).toBe('b');
@@ -523,7 +551,7 @@ describe('maximizing a cell', () => {
     test('any move of the grid ends it, and a splitter drag does not', () => {
         useDocument.getState().splitFocused('right', 'b');
         useDocument.getState().toggleMaximized();
-        useDocument.getState().resizeColumns([0.6, 0.4]);
+        dragSplitter([0.6, 0.4]);
         expect(maximized()).toBe('b');
         useDocument.getState().splitFocused('down', 'c');
         expect(maximized()).toBeNull();

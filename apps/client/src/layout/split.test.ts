@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { splitPanes, updateSplitLayout, type SplitBranch } from '@adecore/ui';
 import type { ProjectView, SplitCell, SplitLayout } from '@ruimte/contracts';
 import {
     activateTab,
@@ -16,8 +17,6 @@ import {
     closeTab,
     dropAsTab,
     dropView,
-    evenCells,
-    evenColumns,
     focusCell,
     focusDirection,
     focusedViewId,
@@ -31,9 +30,11 @@ import {
     moveTabBy,
     openableViewIds,
     replaceViewId,
+    runSplitCommands,
     showViewIn,
     shownViewIdsIn,
     singleLayout,
+    splitTree,
     ungroup,
     undoShowView,
     viewIdsIn,
@@ -407,15 +408,19 @@ describe('layoutOf', () => {
     });
 });
 
-describe('evenColumns', () => {
+describe('evening out columns', () => {
     const sized = (sizes: number[]): SplitLayout => ({
         columns: sizes.map((size, index) => ({ size, cells: [{ viewId: `v${index}`, size: 1 }] })),
         focus: { column: 0, cell: 0 }
     });
     const sizes = (layout: SplitLayout): number[] => layout.columns.map((column) => column.size);
 
+    /* Evening one splitter out names the index before it; without one every column evens out. */
+    const evened = (layout: SplitLayout, index?: number): SplitLayout =>
+        runSplitCommands(layout, [{ type: 'equalize', splitId: splitTree(layout).root.id, index }]);
+
     test('the two neighbors of the splitter share what they held, and the third keeps its size', () => {
-        const next = evenColumns(sized([0.2, 0.5, 0.3]), 1, false);
+        const next = evened(sized([0.2, 0.5, 0.3]), 0);
         expect(sizes(next)[0]).toBeCloseTo(0.35, 10);
         expect(sizes(next)[1]).toBeCloseTo(0.35, 10);
         expect(sizes(next)[2]).toBe(0.3);
@@ -423,7 +428,7 @@ describe('evenColumns', () => {
     });
 
     test('with every column asked for, three become thirds', () => {
-        const next = evenColumns(sized([0.2, 0.5, 0.3]), 2, true);
+        const next = evened(sized([0.2, 0.5, 0.3]));
         for (const size of sizes(next)) {
             expect(size).toBeCloseTo(1 / 3, 10);
         }
@@ -431,17 +436,25 @@ describe('evenColumns', () => {
     });
 
     test('two columns become halves either way', () => {
-        expect(sizes(evenColumns(sized([0.7, 0.3]), 1, false))).toEqual([0.5, 0.5]);
-        expect(sizes(evenColumns(sized([0.7, 0.3]), 1, true))).toEqual([0.5, 0.5]);
+        expect(sizes(evened(sized([0.7, 0.3]), 0))).toEqual([0.5, 0.5]);
+        expect(sizes(evened(sized([0.7, 0.3])))).toEqual([0.5, 0.5]);
     });
 
     test('a splitter that is not there changes nothing', () => {
-        expect(sizes(evenColumns(sized([0.7, 0.3]), 0, true))).toEqual([0.7, 0.3]);
-        expect(sizes(evenColumns(sized([0.7, 0.3]), 2, false))).toEqual([0.7, 0.3]);
+        expect(sizes(evened(sized([0.7, 0.3]), -1))).toEqual([0.7, 0.3]);
+        expect(sizes(evened(sized([0.7, 0.3]), 1))).toEqual([0.7, 0.3]);
+    });
+
+    test('every column at once, as a double click with Option asks', () => {
+        const layout = sized([0.2, 0.5, 0.3]);
+        const next = runSplitCommands(layout, [{ type: 'equalizeAxis', axis: 'horizontal', length: 900, gap: 1 }]);
+        for (const size of sizes(next)) {
+            expect(size).toBeCloseTo(1 / 3, 10);
+        }
     });
 });
 
-describe('evenCells', () => {
+describe('evening out cells', () => {
     const layout: SplitLayout = {
         columns: [
             {
@@ -463,9 +476,10 @@ describe('evenCells', () => {
         focus: { column: 0, cell: 0 }
     };
     const sizesIn = (next: SplitLayout, column: number): number[] => next.columns[column]!.cells.map((cell) => cell.size);
+    const firstColumn = (splitTree(layout).root as SplitBranch).children[0]!.id;
 
     test('the two cells around the splitter share what they held', () => {
-        const next = evenCells(layout, 0, 2, false);
+        const next = runSplitCommands(layout, [{ type: 'equalize', splitId: firstColumn, index: 1 }]);
         expect(sizesIn(next, 0)[0]).toBe(0.6);
         expect(sizesIn(next, 0)[1]).toBeCloseTo(0.2, 10);
         expect(sizesIn(next, 0)[2]).toBeCloseTo(0.2, 10);
@@ -473,7 +487,7 @@ describe('evenCells', () => {
     });
 
     test('every cell of the column, and only of that column', () => {
-        const next = evenCells(layout, 0, 1, true);
+        const next = runSplitCommands(layout, [{ type: 'equalize', splitId: firstColumn }]);
         for (const size of sizesIn(next, 0)) {
             expect(size).toBeCloseTo(1 / 3, 10);
         }
@@ -482,7 +496,14 @@ describe('evenCells', () => {
     });
 
     test('a column that is not there changes nothing', () => {
-        expect(evenCells(layout, 4, 1, true)).toBe(layout);
+        expect(runSplitCommands(layout, [{ type: 'equalize', splitId: 'gone' }])).toBe(layout);
+    });
+
+    test('every column on its own, as a double click with Option asks across a grid', () => {
+        const next = runSplitCommands(layout, [{ type: 'equalizeAxis', axis: 'vertical', length: 900, gap: 1 }]);
+        expect(sizesIn(next, 0)[0]).toBeCloseTo(1 / 3, 10);
+        expect(sizesIn(next, 1)[0]).toBeCloseTo(0.5, 10);
+        expect(next.columns.map((column) => column.size)).toEqual([0.5, 0.5]);
     });
 });
 
@@ -957,6 +978,216 @@ describe('canMoveCell', () => {
         expect(canMoveCell(gridOf([['[a *b]', 'c']]), first, first, 'right')).toBe(false);
         expect(canMoveCell(gridOf([['a', 'b', 'c'], ['[d *e]']]), { column: 1, cell: 0 }, first, 'down')).toBe(false);
         expect(canMoveCell(full, { column: 5, cell: 0 }, first, 'center')).toBe(false);
+    });
+});
+
+describe('the split tree of a saved layout', () => {
+    const layout: SplitLayout = {
+        columns: [
+            {
+                size: 0.4,
+                cells: [
+                    { size: 0.25, viewId: 'b', tabs: ['a', 'b'] },
+                    { size: 0.75, viewId: 'c' }
+                ]
+            },
+            { size: 0.6, cells: [{ size: 1, viewId: 'd', tabs: ['d'] }] }
+        ],
+        focus: { column: 0, cell: 1 }
+    };
+
+    test('preserves saved column and row shares, tabs, active views, focus and maximization', () => {
+        const before = JSON.stringify(layout);
+        const result = splitTree(layout, 'b');
+        const root = result.root as SplitBranch;
+        const panes = splitPanes(root);
+        expect(result.focused).toBe(panes[1]!.id);
+        expect(result.maximized).toBe(panes[0]!.id);
+        expect(root.axis).toBe('horizontal');
+        expect(root.sizes).toEqual([0.4, 0.6]);
+        expect(root.children[0]).toMatchObject({ axis: 'vertical', sizes: [0.25, 0.75] });
+        expect(panes.map((pane) => [pane.views, pane.active])).toEqual([
+            [['a', 'b'], 'b'],
+            [['c'], 'c'],
+            [['d'], 'd']
+        ]);
+        expect(JSON.stringify(layout)).toBe(before);
+    });
+
+    test('every grid size maps each pane to its cell and comes back the same', () => {
+        for (let columns = 1; columns <= 3; columns++) {
+            for (let rows = 1; rows <= 3; rows++) {
+                const saved: SplitLayout = {
+                    columns: Array.from({ length: columns }, (_, column) => ({
+                        size: 1 / columns,
+                        cells: Array.from({ length: rows }, (_, cell) => ({ size: 1 / rows, viewId: `${column}:${cell}` }))
+                    })),
+                    focus: { column: columns - 1, cell: rows - 1 }
+                };
+                const result = splitTree(saved);
+                expect(splitPanes(result.root).flatMap((pane) => pane.views)).toEqual(viewIdsIn(saved));
+                expect(new Set(splitPanes(result.root).map((pane) => pane.id)).size).toBe(columns * rows);
+                expect(splitPanes(result.root).find((pane) => pane.id === result.focused)?.views).toEqual([`${columns - 1}:${rows - 1}`]);
+                expect(runSplitCommands(saved, [{ type: 'activate', paneId: result.focused, viewId: `${columns - 1}:${rows - 1}` }])).toEqual(saved);
+                expect(splitTree(saved, 'absent').maximized).toBeNull();
+            }
+        }
+    });
+
+    test('a pane keeps its id wherever the cell moves, so no id says a position', () => {
+        const before = splitTree(gridOf([['[a *b]'], ['c']]));
+        const after = splitTree(moveCell(gridOf([['[a *b]'], ['c']]), first, second, 'right'));
+        expect(
+            splitPanes(after.root)
+                .map((pane) => pane.id)
+                .sort()
+        ).toEqual(
+            splitPanes(before.root)
+                .map((pane) => pane.id)
+                .sort()
+        );
+    });
+
+    test('an equalize command affects the selected axis and leaves the saved model untouched', () => {
+        const projected = splitTree(layout);
+        const rows = (projected.root as SplitBranch).children[0]!;
+        const next = updateSplitLayout(projected, { type: 'equalize', splitId: rows.id });
+        expect(((next.root as SplitBranch).children[0] as SplitBranch).sizes).toEqual([0.5, 0.5]);
+        expect((next.root as SplitBranch).sizes).toEqual([0.4, 0.6]);
+        expect(layout.columns[0]!.cells.map((cell) => cell.size)).toEqual([0.25, 0.75]);
+    });
+});
+
+describe('a command the saved form cannot hold', () => {
+    const paneOf = (layout: SplitLayout, viewId: string): string => splitPanes(splitTree(layout).root).find((pane) => pane.views.includes(viewId))!.id;
+
+    test('a pane split sideways inside a stacked column would nest deeper than columns of cells', () => {
+        const layout = gridOf([['a', 'b'], ['c']]);
+        const newPane = { type: 'pane' as const, id: 'new', views: ['x'], active: 'x' };
+        expect(runSplitCommands(layout, [{ type: 'split', targetId: paneOf(layout, 'a'), side: 'right', newPane, splitId: 'made' }])).toBe(layout);
+    });
+
+    test('a single-column split sideways on one of its panes is refused, the column split beside is not', () => {
+        const layout = gridOf([['a', 'b']]);
+        const newPane = { type: 'pane' as const, id: 'new', views: ['x'], active: 'x' };
+        expect(runSplitCommands(layout, [{ type: 'split', targetId: paneOf(layout, 'b'), side: 'left', newPane, splitId: 'made' }])).toBe(layout);
+        expect(shapeOf(dropView(layout, 'x', { column: 0, cell: 1 }, 'left'))).toEqual([['x'], ['a', 'b']]);
+    });
+
+    test('a fourth column or a fourth cell is refused by the same check', () => {
+        const wide = gridOf([['a'], ['b'], ['c']]);
+        const tall = gridOf([['a', 'b', 'c']]);
+        const newPane = { type: 'pane' as const, id: 'new', views: ['x'], active: 'x' };
+        expect(runSplitCommands(wide, [{ type: 'split', targetId: paneOf(wide, 'c'), side: 'right', newPane, splitId: 'made' }])).toBe(wide);
+        expect(runSplitCommands(tall, [{ type: 'split', targetId: paneOf(tall, 'c'), side: 'bottom', newPane, splitId: 'made' }])).toBe(tall);
+    });
+
+    test('a refused step anywhere refuses the whole run', () => {
+        const wide = gridOf([['a'], ['b'], ['c']]);
+        const newPane = { type: 'pane' as const, id: 'new', views: ['x'], active: 'x' };
+        const focus = { type: 'focus' as const, paneId: paneOf(wide, 'b') };
+        const split = { type: 'split' as const, targetId: paneOf(wide, 'c'), side: 'right' as const, newPane, splitId: 'made' };
+        expect(runSplitCommands(wide, [focus, split])).toBe(wide);
+    });
+});
+
+/* Where ADE CORE's reducer alone would do something else, and the window keeps what it did. */
+describe('what the window keeps from its own rules', () => {
+    const below: CellAt = { column: 0, cell: 1 };
+
+    test('a side drop on a stacked cell makes a column beside the whole column, half its share', () => {
+        const layout = dropView(gridOf([['a', 'b'], ['c']]), 'x', below, 'left');
+        expect(shapeOf(layout)).toEqual([['x'], ['a', 'b'], ['c']]);
+        expect(layout.columns.map((column) => column.size)).toEqual([0.25, 0.25, 0.5]);
+        expect(layout.focus).toEqual({ column: 0, cell: 0 });
+        sums(layout);
+    });
+
+    test('a tab dragged to the side of its own stacked host makes a column', () => {
+        const layout = dropView(gridOf([['[a *b]', 'c']]), 'b', first, 'right');
+        expect(tabShapeOf(layout)).toEqual([['[*a]', 'c'], ['b']]);
+        expect(layout.focus).toEqual(second);
+    });
+
+    test('a stacked cell moved beside its own column leaves it and makes a column', () => {
+        expect(tabShapeOf(moveCell(gridOf([['a', 'b', 'c']]), below, first, 'right'))).toEqual([['a', 'c'], ['b']]);
+        expect(tabShapeOf(moveCell(gridOf([['a', 'b']]), below, first, 'left'))).toEqual([['b'], ['a']]);
+    });
+
+    test('a move out of a full column keeps the column limit honest in the grid around it', () => {
+        const full = gridOf([['a', 'b'], ['c'], ['d']]);
+        expect(moveCell(full, below, second, 'right')).toBe(full);
+        expect(canMoveCell(gridOf([['a'], ['b'], ['c']]), first, second, 'right')).toBe(true);
+    });
+
+    test('closing the focused cell hands the focus down its column, then up, then to the next column, then back', () => {
+        expect(focusedViewId(closeCell(gridOf([['a', 'b', 'c']], below), below)!)).toBe('c');
+        expect(focusedViewId(closeCell(gridOf([['a', 'b', 'c']], { column: 0, cell: 2 }), { column: 0, cell: 2 })!)).toBe('b');
+        expect(focusedViewId(closeCell(gridOf([['a'], ['b', 'c'], ['d']], second), second)!)).toBe('c');
+        const last: CellAt = { column: 2, cell: 0 };
+        expect(focusedViewId(closeCell(gridOf([['a'], ['b', 'c'], ['d']], last), last)!)).toBe('b');
+        expect(focusedViewId(closeCell(gridOf([['a'], ['b'], ['c']], second), second)!)).toBe('c');
+    });
+
+    test('closing the last view of the focused cell by its tab goes the same way', () => {
+        expect(focusedViewId(closeTab(gridOf([['a'], ['b'], ['c']], second), 'b')!)).toBe('c');
+    });
+
+    test('a host keeps its shape through a round trip, a plain cell stays plain', () => {
+        const layout = gridOf([['a', '[*b]'], ['[c *d]']], first);
+        expect(tabShapeOf(focusCell(layout, below))).toEqual([['a', '[*b]'], ['[c *d]']]);
+        expect(cellAt(focusCell(layout, below), first)).toEqual({ viewId: 'a', size: 0.5 });
+    });
+
+    test('a one-tab host swapped with a plain cell keeps being a host, and the plain one stays plain', () => {
+        expect(tabShapeOf(moveCell(gridOf([['[*a]'], ['b']]), first, second, 'center'))).toEqual([['b'], ['[*a]']]);
+    });
+
+    test('moving a tab along the strip leaves the tab in front and the focus where they were', () => {
+        const layout = gridOf([['[*a b c]'], ['d']], second);
+        const next = moveTabBy(layout, 'c', -1);
+        expect(tabShapeOf(next)).toEqual([['[*a c b]'], ['d']]);
+        expect(next.focus).toEqual(second);
+    });
+
+    test('a tab index counts among the resulting tabs, where the tree counts gaps before the lift', () => {
+        expect(tabShapeOf(dropAsTab(gridOf([['[*a b c d]']]), 'a', first, 2))).toEqual([['[b c *a d]']]);
+        expect(tabShapeOf(dropAsTab(gridOf([['[a b c *d]']]), 'd', first, 1))).toEqual([['[a *d b c]']]);
+        expect(tabShapeOf(dropAsTab(gridOf([['[a b]'], ['x']]), 'x', first, 1))).toEqual([['[a *x b]']]);
+        expect(tabShapeOf(dropAsTab(gridOf([['[a b]'], ['x']]), 'x', first, 99))).toEqual([['[a b *x]']]);
+    });
+
+    test('a view nobody shows dropped in the middle of a plain cell takes its place, and the old view leaves', () => {
+        const layout = gridOf([['a'], ['b']]);
+        expect(viewIdsIn(dropView(layout, 'x', second, 'center'))).toEqual(['a', 'x']);
+    });
+
+    test('a move into the column it left shares like a move anywhere else', () => {
+        const layout: SplitLayout = {
+            columns: [
+                {
+                    size: 1,
+                    cells: [
+                        { viewId: 'a', size: 0.5 },
+                        { viewId: 'b', size: 0.25 },
+                        { viewId: 'c', size: 0.25 }
+                    ]
+                }
+            ],
+            focus: first
+        };
+        const next = moveCell(layout, { column: 0, cell: 2 }, first, 'up');
+        expect(shapeOf(next)).toEqual([['c', 'a', 'b']]);
+        for (const cell of next.columns[0]!.cells) {
+            expect(cell.size).toBeCloseTo(1 / 3, 10);
+        }
+    });
+
+    test('a new id that stands somewhere already closes the old cell rather than showing one view twice', () => {
+        const layout = replaceViewId(gridOf([['a'], ['b']], second), 'a', 'b');
+        expect(tabShapeOf(layout)).toEqual([['b']]);
+        const same = gridOf([['a']]);
+        expect(replaceViewId(same, 'a', 'a')).toBe(same);
     });
 });
 
