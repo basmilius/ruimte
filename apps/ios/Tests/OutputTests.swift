@@ -192,14 +192,10 @@ import Testing
                 "chatPresent": .bool(true),
             ])
         case .providerList:
-            return .object([
-                "providers": .array([
-                    .object([
-                        "kind": .string("claude"), "name": .string("Claude Code"),
-                        "models": .array([.object(["slug": .string("opus"), "name": .string("Claude Opus 5.5")])]),
-                    ]),
-                    .object(["kind": .string("codex"), "name": .string("Codex"), "models": .array([])]),
-                ])
+            return ProviderWire.list([
+                ProviderWire.provider(
+                    "claude", name: "Claude Code", models: [ProviderWire.model("opus", name: "Claude Opus 5.5")]),
+                ProviderWire.provider("codex", name: "Codex"),
             ])
         default:
             return .object([:])

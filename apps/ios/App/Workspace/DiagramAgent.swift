@@ -63,7 +63,7 @@ final class DiagramAgentModel {
     }
 
     var diagramID: String { target.item.text("viewId", fallback: target.item.stableID) }
-    var agents: [JSONValue] { catalog.agents ?? [] }
+    var agents: [ProviderInfo] { catalog.agents ?? [] }
     var loaded: Bool { catalog.agents != nil }
     var chats: [JSONValue] { DiagramAgentPrompt.chats(in: target.workspace.views) }
     var canSend: Bool {
@@ -74,8 +74,7 @@ final class DiagramAgentModel {
     func name(of choice: DiagramAgentChoice) -> String {
         switch choice {
         case .new(let provider):
-            let agent = agents.first { $0.agentKind == provider }
-            let name = agent?["name"]?.stringValue ?? provider
+            let name = agents.first { $0.kind == provider }?.name ?? provider
             return String(localized: "New \(name) chat", comment: "%@ is the name of an agent, such as Claude Code")
         case .chat(let id):
             let fallback = String(localized: "Chat")
@@ -87,7 +86,7 @@ final class DiagramAgentModel {
     func load() async {
         await catalog.load()
         problem = catalog.problem
-        if choice == nil, let first = agents.first { choice = .new(provider: first.agentKind) }
+        if choice == nil, let first = agents.first { choice = .new(provider: first.kind) }
     }
 
     /// Sends the question and answers with the chat it went to, to open; nil when it did not go out.
@@ -136,8 +135,8 @@ struct DiagramAgentPicker: View {
     var body: some View {
         Menu {
             Section("New chat") {
-                ForEach(model.agents, id: \.agentKind) { agent in
-                    choiceButton(.new(provider: agent.agentKind), icon: "message-square-plus")
+                ForEach(model.agents, id: \.kind) { agent in
+                    choiceButton(.new(provider: agent.kind), icon: "message-square-plus")
                 }
             }
             if !model.chats.isEmpty {

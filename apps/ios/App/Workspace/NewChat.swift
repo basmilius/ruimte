@@ -23,7 +23,7 @@ final class NewChatModel {
     let client: any MachineRequesting
     let machineID: String
     /// The installed CLIs that open as a chat; nil until the machine answered.
-    private(set) var agents: [JSONValue]?
+    private(set) var agents: [ProviderInfo]?
     private(set) var accounts: ProviderAccountList?
     /// The CLI a chat is being made for.
     private(set) var starting: String?
@@ -39,7 +39,7 @@ final class NewChatModel {
     func load() async {
         do {
             let providers = try await AgentCatalog.load(client)
-            agents = AgentCatalog.installed(providers, target: "chat")
+            agents = AgentCatalog.installedChats(providers)
             problem = nil
         } catch {
             problem = error.localizedDescription
@@ -119,7 +119,7 @@ struct NewChatSheet: View {
                             Text("Install a CLI or add an account in Ruimte on the machine itself, under Agents.")
                                 .foregroundStyle(MobileStyle.muted)
                         }
-                        ForEach(agents, id: \.agentKind) { agent in row(agent) }
+                        ForEach(agents, id: \.kind) { agent in row(agent) }
                     } else if model.problem == nil {
                         MobileLoadingRow(
                             session.connected
@@ -147,9 +147,9 @@ struct NewChatSheet: View {
         .task(id: session.generation) { if session.connected { await model.load() } }
     }
 
-    private func row(_ agent: JSONValue) -> some View {
-        let kind = agent.agentKind
-        let name = agent["name"]?.stringValue ?? kind
+    private func row(_ agent: ProviderInfo) -> some View {
+        let kind = agent.kind
+        let name = agent.name
         let account = model.account(for: kind).flatMap { id in
             model.accounts?.entries.first { $0.id == id }?.name(provider: name) ?? id
         }
@@ -174,10 +174,6 @@ struct NewChatSheet: View {
         .disabled(!session.connected)
         .accessibilityIdentifier("newChat.agent.\(kind)")
     }
-}
-
-extension JSONValue {
-    var agentKind: String { self["kind"]?.stringValue ?? "" }
 }
 
 /// "New chat" in a list of projects: one button for one machine, a menu of the machines for several.

@@ -241,7 +241,7 @@ final class NowFeed: MachineFeed {
         else { return }
         providersGeneration = generation
         denyReason = Set(
-            providers.filter { $0["capabilities"]?["denyReason"]?.boolValue == true }.map { $0.text("kind") })
+            providers.filter { $0.capabilities.denyReason }.map(\.kind))
     }
 
     /// Asks for the tasks of every open project, so a row of a node another agent opened wears its task mark.

@@ -27,7 +27,7 @@ enum EndpointSwitch: String {
         let name: String
         let version: String?
         let chat: Bool
-        let models: [JSONValue]
+        let models: [ProviderModel]
         let defaultModel: String?
         var accounts: [Account]
         var id: String { kind }
@@ -51,7 +51,7 @@ enum EndpointSwitch: String {
     private(set) var agents: [Agent] = []
     /// Whether the machine keeps an order of accounts that a person can change from here.
     private(set) var reorders = false
-    private var providers: [JSONValue] = []
+    private var providers: [ProviderInfo] = []
     /// Per CLI, what the machine types to log in under an account; a CLI without one has no login to offer here.
     private(set) var loginCommands: [String: String] = [:]
     private(set) var endpoint: EndpointInfo?
@@ -125,19 +125,19 @@ enum EndpointSwitch: String {
     }
 
     /// The installed CLIs, each with its accounts in the machine's order and what they read as now.
-    static func agents(providers: [JSONValue], accounts: AccountsSnapshot?) -> [Agent] {
+    static func agents(providers: [ProviderInfo], accounts: AccountsSnapshot?) -> [Agent] {
         let list = accounts.map(ProviderAccountList.init)
         let statuses = Dictionary(
             (accounts?.statuses ?? []).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        return providers.filter { $0["installed"] == .bool(true) }.map { provider in
-            let kind = provider.text("kind")
+        return providers.filter(\.installed).map { provider in
+            let kind = provider.kind
             let entries = list?.accounts(of: kind) ?? []
-            let agentName = provider.text("name", fallback: kind)
+            let agentName = provider.name
             return Agent(
                 kind: kind, name: agentName,
-                version: provider["version"]?.stringValue, chat: provider["capabilities"]?["chat"] == .bool(true),
-                models: provider.list("models").filter { $0["legacy"] != .bool(true) },
-                defaultModel: provider["defaultModel"]?.stringValue,
+                version: provider.version, chat: provider.capabilities.chat,
+                models: provider.models.filter { !$0.legacy },
+                defaultModel: provider.defaultModel,
                 accounts: entries.map { entry in
                     let state = entry.enabled ? entry.state : "disabled"
                     return Account(
@@ -358,14 +358,14 @@ struct MachineAgentsPage: View {
             selection: Binding(
                 get: {
                     preferences.selections[agent.kind]?["model"]?.stringValue ?? agent.defaultModel
-                        ?? agent.models.first?.text("slug") ?? ""
+                        ?? agent.models.first?.slug ?? ""
                 },
                 set: { slug in
                     preferences.rememberSelection(
                         .object(["model": .string(slug), "options": .object([:])]), provider: agent.kind)
                 })
         ) {
-            ForEach(agent.models.map { $0.text("slug") }, id: \.self) { slug in
+            ForEach(agent.models.map(\.slug), id: \.self) { slug in
                 Text(ModelName.of(slug, in: agent.models)).tag(slug)
             }
         }

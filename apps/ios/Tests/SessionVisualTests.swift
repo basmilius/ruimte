@@ -417,7 +417,7 @@ extension UIView {
         defer { waits.removeValue(forKey: type)?.resume() }
         switch type {
         case .chatAttach: return try chatSnapshot ?? JSONValue.decode(Data(Self.chat.utf8))
-        case .providerList: return .object(["providers": .array([])])
+        case .providerList: return ProviderWire.list([])
         case .sessionAttach:
             return .object([
                 "screen": .string(

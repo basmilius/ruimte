@@ -37,16 +37,16 @@ final class ChatForkingTests: XCTestCase {
         let directory = AgentDirectory()
         XCTAssertTrue(directory.canFork("anything"), "Nothing refuses for the CLI before a machine answered")
         directory.learn([
-            .object(["kind": .string("newcli"), "name": .string("New CLI"), "capabilities": .object(["fork": .bool(true)])]),
-            .object(["kind": .string("plain"), "name": .string("Plain"), "capabilities": .object(["chat": .bool(true)])]),
+            ProviderWire.provider("newcli", name: "New CLI", capabilities: ["fork": .bool(true)]).providerInfo,
+            ProviderWire.provider("plain", name: "Plain").providerInfo,
         ])
         XCTAssertTrue(directory.canFork("newcli"))
         XCTAssertFalse(directory.canFork("plain"))
         XCTAssertFalse(directory.canFork("gone"))
         XCTAssertEqual(directory.name("newcli"), "New CLI")
         XCTAssertEqual(directory.name("gone"), "gone")
-        XCTAssertTrue(ChatForking.canFork(.object(["capabilities": .object(["fork": .bool(true)])])))
-        XCTAssertFalse(ChatForking.canFork(.object(["capabilities": .object([:])])))
+        XCTAssertTrue(ChatForking.canFork(ProviderWire.provider("a", capabilities: ["fork": .bool(true)]).providerInfo))
+        XCTAssertFalse(ChatForking.canFork(ProviderWire.provider("a").providerInfo))
     }
 
     func testANoteAChildLeftWhileItWaitsLeadsToAnswering() {

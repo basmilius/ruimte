@@ -18,12 +18,12 @@ final class AgentDirectory {
         forks.isEmpty || forks[kind] == true
     }
 
-    func learn(_ providers: [JSONValue]) {
+    func learn(_ providers: [ProviderInfo]) {
         for provider in providers {
-            let kind = provider.text("kind")
+            let kind = provider.kind
             guard !kind.isEmpty else { continue }
             forks[kind] = ChatForking.canFork(provider)
-            let name = provider.text("name")
+            let name = provider.name
             if !name.isEmpty, names[kind] != name { names[kind] = name }
         }
     }

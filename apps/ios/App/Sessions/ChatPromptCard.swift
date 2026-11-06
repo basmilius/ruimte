@@ -396,6 +396,6 @@ extension ChatPromptCard {
 extension ChatModel {
     /// Whether this CLI passes a reason along with a denial, as the machine's `provider.list` says.
     func takesDenyReason(provider: String?) -> Bool {
-        providers.first { $0["kind"]?.stringValue == provider }?["capabilities"]?["denyReason"]?.boolValue == true
+        providers.first { $0.kind == provider }?.capabilities.denyReason == true
     }
 }

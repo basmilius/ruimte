@@ -550,6 +550,27 @@ const typedRoots: [name: string, source: string, path: (string | number)[], keep
     ['AccountConfig', 'request.accounts.list.result', ['properties', 'accounts', 'additionalProperties']],
     ['AccountStatus', 'request.accounts.list.result', ['properties', 'statuses', 'items']],
     ['AccountState', 'request.accounts.list.result', ['properties', 'statuses', 'items', 'properties', 'state']],
+    // `provider.detect` and `provider.changed` carry the same list, so they decode into these types too.
+    ['ProviderListResult', 'request.provider.list.result', []],
+    ['ProviderInfo', 'request.provider.list.result', ['properties', 'providers', 'items']],
+    ['ProviderModel', 'request.provider.list.result', ['properties', 'providers', 'items', 'properties', 'models', 'items']],
+    [
+        'ProviderModelOption',
+        'request.provider.list.result',
+        ['properties', 'providers', 'items', 'properties', 'models', 'items', 'properties', 'options', 'items']
+    ],
+    [
+        'ProviderOptionChoice',
+        'request.provider.list.result',
+        ['properties', 'providers', 'items', 'properties', 'models', 'items', 'properties', 'options', 'items', 'oneOf', 0, 'properties', 'choices', 'items']
+    ],
+    ['ProviderCapabilities', 'request.provider.list.result', ['properties', 'providers', 'items', 'properties', 'capabilities']],
+    ['ProviderDiffs', 'request.provider.list.result', ['properties', 'providers', 'items', 'properties', 'capabilities', 'properties', 'diffs']],
+    ['ProviderCompaction', 'request.provider.list.result', ['properties', 'providers', 'items', 'properties', 'capabilities', 'properties', 'compaction']],
+    ['ProviderGoals', 'request.provider.list.result', ['properties', 'providers', 'items', 'properties', 'capabilities', 'properties', 'goals']],
+    ['ProviderInstall', 'request.provider.list.result', ['properties', 'providers', 'items', 'properties', 'install']],
+    ['SkillsListResult', 'request.skills.list.result', []],
+    ['SkillInfo', 'request.skills.list.result', ['properties', 'skills', 'items']],
     // The document stays JSON to merge and save, so a node or view this app has no word for survives a save. The
     // summary is the row the project lists keep as JSON too.
     ['ProjectOpenResult', 'request.project.open.result', [], ['summary', 'document', 'local']],
@@ -616,6 +637,10 @@ names.set(canonical(endpointInfo.agentIntegrations), 'EndpointAgentIntegrations'
 names.set(canonical(typed.find(([name]) => name === 'ProcessSample')![1].properties.scope), 'ProcessScope');
 // A launch and a suggestion for one both say where an import read it from.
 names.set(canonical(typed.find(([name]) => name === 'LaunchConfig')![1].properties.origin), 'LaunchOrigin');
+// `ProviderSelectOption`, `ProviderBooleanOption`.
+for (const [value, member] of typedMembers('ProviderModelOption', 'type')) {
+    names.set(canonical(member), `Provider${pascal(value)}Option`);
+}
 // A step holds its own sub-steps, and the section's items are the same union without a section.
 const storedStep = typed.find(([name]) => name === 'StoredPlanStep')![1];
 refNames.set(storedStep.properties.steps.items['x-ref'], 'StoredPlanStep');

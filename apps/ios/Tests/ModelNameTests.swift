@@ -4,9 +4,9 @@ import XCTest
 @testable import Ruimte
 
 final class ModelNameTests: XCTestCase {
-    private let models: [JSONValue] = [
-        .object(["slug": .string("gpt-5.6-sol"), "name": .string("GPT-5.6 Sol")]),
-        .object(["slug": .string("claude-opus-5"), "name": .string("Claude Opus 5")]),
+    private let models = [
+        ProviderWire.model("gpt-5.6-sol", name: "GPT-5.6 Sol").providerModel,
+        ProviderWire.model("claude-opus-5", name: "Claude Opus 5").providerModel,
     ]
 
     func testASlugDropsItsVendorAndDateAndPutsTheVersionBackTogether() {
@@ -27,14 +27,10 @@ final class ModelNameTests: XCTestCase {
     }
 
     func testAShortNameDropsOnlyTheWholeWordsEveryModelShares() {
-        let claude: [JSONValue] = [
-            .object(["name": .string("Claude Opus 5.5")]), .object(["name": .string("Claude Sonnet 5")]),
-        ]
+        func named(_ name: String) -> ProviderModel { ProviderWire.model("m", name: name).providerModel }
+        let claude = [named("Claude Opus 5.5"), named("Claude Sonnet 5")]
         XCTAssertEqual(ModelName.short("Claude Opus 5.5", in: claude), "Opus 5.5")
-        XCTAssertEqual(
-            ModelName.short(
-                "GPT-6", in: [.object(["name": .string("GPT-6")]), .object(["name": .string("GPT-6 Mini")])]), "GPT-6")
-        XCTAssertEqual(
-            ModelName.short("Claude Opus 5.5", in: [.object(["name": .string("Claude Opus 5.5")])]), "Claude Opus 5.5")
+        XCTAssertEqual(ModelName.short("GPT-6", in: [named("GPT-6"), named("GPT-6 Mini")]), "GPT-6")
+        XCTAssertEqual(ModelName.short("Claude Opus 5.5", in: [named("Claude Opus 5.5")]), "Claude Opus 5.5")
     }
 }

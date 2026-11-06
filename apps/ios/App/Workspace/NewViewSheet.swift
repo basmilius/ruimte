@@ -126,9 +126,7 @@ struct NewViewSheet: View {
                 if agents == nil && !workspace.session.connected { agents = [] }
                 return
             }
-            agents = AgentCatalog.installed(providers, target: "chat").map {
-                ($0.text("kind"), $0.text("name", fallback: $0.text("kind")))
-            }
+            agents = AgentCatalog.installedChats(providers).map { ($0.kind, $0.name) }
         }
     }
 

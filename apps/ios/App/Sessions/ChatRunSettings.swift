@@ -112,16 +112,13 @@ struct ChatRunSettings: View {
     @Bindable var model: ChatModel
     @Environment(\.dismiss) private var dismiss
 
-    private var selection: JSONValue { model.selection }
-    private var selected: JSONValue { model.selectedModel }
+    private var selected: ProviderModel? { model.selectedModel }
     private var mode: String { model.runtimeMode }
     private var label: String {
-        let slug = selection.text("model")
+        let slug = model.selectedSlug
         return slug.isEmpty ? String(localized: "Choose model") : ModelName.of(slug, in: model.models)
     }
-    private var windowOption: JSONValue? {
-        selected.list("options").first { $0.text("id") == ChatContextUsage.windowOption && $0.text("type") == "select" }
-    }
+    private var windowOption: ProviderSelectOption? { selected?.selectOption(ChatContextUsage.windowOption) }
 
     var body: some View {
         NavigationStack {
@@ -139,18 +136,17 @@ struct ChatRunSettings: View {
                     Picker(
                         "Model",
                         selection: Binding(
-                            get: { selection.text("model") },
+                            get: { model.selectedSlug },
                             set: { model.chooseModel($0) })
                     ) {
-                        if model.models.isEmpty { Text(label).tag(selection.text("model")) }
+                        if model.models.isEmpty { Text(label).tag(model.selectedSlug) }
                         ForEach(Array(model.models.enumerated()), id: \.offset) { _, option in
-                            Text(option.text("name", fallback: ModelName.fromSlug(option.text("slug")))).tag(
-                                option.text("slug"))
+                            Text(option.name).tag(option.slug)
                         }
                     }
                     ForEach(
                         Array(
-                            selected.list("options").filter { $0.text("id") != ChatContextUsage.windowOption }
+                            (selected?.options ?? []).filter { $0.id != ChatContextUsage.windowOption }
                                 .enumerated()), id: \.offset
                     ) { _, option in optionRow(option) }
                     Picker(
@@ -233,16 +229,13 @@ struct ChatRunSettings: View {
                 Spacer()
                 if let windowOption {
                     Picker(
-                        windowOption.text("label", fallback: String(localized: "Context window")),
+                        windowOption.label,
                         selection: Binding(
-                            get: {
-                                selection["options"]?[ChatContextUsage.windowOption]?.stringValue
-                                    ?? windowOption.text("defaultChoice")
-                            },
+                            get: { model.selectedOption(ChatContextUsage.windowOption) ?? windowOption.defaultChoice },
                             set: { model.chooseOption(ChatContextUsage.windowOption, value: .string($0)) })
                     ) {
-                        ForEach(Array(windowOption.list("choices").enumerated()), id: \.offset) { _, choice in
-                            Text(choice.text("label")).tag(choice.text("id"))
+                        ForEach(Array(windowOption.choices.enumerated()), id: \.offset) { _, choice in
+                            Text(choice.label).tag(choice.id)
                         }
                     }
                     .pickerStyle(.segmented).fixedSize()
@@ -257,7 +250,7 @@ struct ChatRunSettings: View {
             if let segments = usage.segments {
                 ChatContextLegend(segments: segments)
             }
-            if model.capabilities.text("compaction") != "none" {
+            if model.capabilities?.compaction != ProviderCompaction.none {
                 Button {
                     Task {
                         do {
@@ -273,31 +266,30 @@ struct ChatRunSettings: View {
         }
     }
 
-    @ViewBuilder private func optionRow(_ option: JSONValue) -> some View {
-        let id = option.text("id")
-        let title = option.text("label", fallback: id)
-        if option.text("type") == "boolean" {
+    @ViewBuilder private func optionRow(_ option: ProviderModelOption) -> some View {
+        switch option {
+        case .boolean(let option):
             Toggle(
                 isOn: Binding(
-                    get: { selection["options"]?[id]?.boolValue ?? option["defaultValue"]?.boolValue ?? false },
-                    set: { model.chooseOption(id, value: .bool($0)) })
+                    get: { model.selectedOptions[option.id]?.boolValue ?? option.defaultValue },
+                    set: { model.chooseOption(option.id, value: .bool($0)) })
             ) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                    if !option.text("description").isEmpty {
-                        Text(option.text("description")).font(.caption).foregroundStyle(MobileStyle.muted)
+                    Text(option.label)
+                    if let description = option.description, !description.isEmpty {
+                        Text(description).font(.caption).foregroundStyle(MobileStyle.muted)
                     }
                 }
             }
-        } else {
+        case .select(let option):
             Picker(
-                title,
+                option.label,
                 selection: Binding(
-                    get: { selection["options"]?[id]?.stringValue ?? option.text("defaultChoice") },
-                    set: { model.chooseOption(id, value: .string($0)) })
+                    get: { model.selectedOption(option.id) ?? option.defaultChoice },
+                    set: { model.chooseOption(option.id, value: .string($0)) })
             ) {
-                ForEach(Array(option.list("choices").enumerated()), id: \.offset) { _, choice in
-                    Text(choice.text("label")).tag(choice.text("id"))
+                ForEach(Array(option.choices.enumerated()), id: \.offset) { _, choice in
+                    Text(choice.label).tag(choice.id)
                 }
             }
         }
@@ -370,7 +362,11 @@ extension ChatModel {
     var canConfigure: Bool { connected && !loading && !configuring && !sending }
 
     /// The model the chat runs on, with its own options.
-    var selectedModel: JSONValue { models.first { $0["slug"] == selection["model"] } ?? .null }
+    var selectedModel: ProviderModel? { models.first { $0.slug == selectedSlug } }
+    var selectedSlug: String { info?.selection.model ?? "" }
+    var selectedOptions: [String: JSONValue] { info?.selection.options ?? [:] }
+
+    func selectedOption(_ id: String) -> String? { selectedOptions[id]?.stringValue }
 
     func chooseModel(_ slug: String) {
         chooseSelection(.object(["model": .string(slug), "options": .object([:])]))

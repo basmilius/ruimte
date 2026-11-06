@@ -21,7 +21,7 @@ import XCTest
         let machine = NewChatMachine()
         let model = NewChatModel(client: machine, machineID: "mac", preferences: preferences)
         await model.load()
-        XCTAssertEqual(model.agents?.map { $0.text("kind") }, ["claude"])
+        XCTAssertEqual(model.agents?.map(\.kind), ["claude"])
     }
 
     func testAChatStartsOnTheAgentAndTheAccountRememberedForThisMachine() async {
@@ -82,16 +82,9 @@ import XCTest
         if let refusal { throw MachineClientError.server(code: refusal, message: refusal) }
         switch type {
         case .providerList:
-            let chat = JSONValue.object(["chat": .bool(true)])
-            return .object([
-                "providers": .array([
-                    .object(["kind": .string("claude"), "installed": .bool(true), "capabilities": chat]),
-                    .object(["kind": .string("gemini"), "installed": .bool(false), "capabilities": chat]),
-                    .object([
-                        "kind": .string("codex"), "installed": .bool(true),
-                        "capabilities": .object(["chat": .bool(false), "terminal": .bool(true)]),
-                    ]),
-                ])
+            return ProviderWire.list([
+                ProviderWire.provider("claude"), ProviderWire.provider("gemini", installed: false),
+                ProviderWire.provider("codex", capabilities: ["chat": .bool(false)]),
             ])
         case .accountsList:
             return AccountsWire.snapshot(accounts: [

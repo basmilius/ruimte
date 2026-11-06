@@ -50,7 +50,7 @@ final class ChatItemState: Identifiable {
 struct ChatAgentSources {
     var tasks: TaskStore?
     var attention: AttentionStore?
-    var models: (String) -> [JSONValue] = { _ in [] }
+    var models: (String) -> [ProviderModel] = { _ in [] }
 }
 
 struct ChatTimelineEntry: Identifiable, Equatable {
@@ -234,7 +234,7 @@ final class ChatPresentation {
     private(set) var referenced: [String] = []
     @ObservationIgnored var agentSources: ChatAgentSources?
     /// The catalog of the chat's own CLI, which names the models and efforts a selection switch moved between.
-    @ObservationIgnored var chatModels: () -> [JSONValue] = { [] }
+    @ObservationIgnored var chatModels: () -> [ProviderModel] = { [] }
     /// The messages a person marked, by item id, as the machine last said.
     private(set) var bookmarks: [String: ChatBookmark] = [:]
     /// A row asked to place, name or take away a bookmark; the screen carries it out.

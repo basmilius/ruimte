@@ -333,7 +333,7 @@ struct ChatScreen: View {
         model.presentation.agentSources = ChatAgentSources(
             tasks: machineSession?.tasks, attention: machineSession?.attention
         ) { [weak chat] provider in
-            chat?.providers.first { $0.text("kind") == provider }?["models"]?.arrayValue ?? []
+            chat?.providers.first { $0.kind == provider }?.models ?? []
         }
         model.presentation.chatModels = { [weak chat] in chat?.models ?? [] }
         if let workspace {

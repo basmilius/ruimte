@@ -250,18 +250,12 @@ private actor FakeAccountAPI: AccountAPI {
     }
 
     func testInstalledAgentsCarryTheirAccountsInOneLine() {
-        let providers: [JSONValue] = [
-            .object([
-                "kind": .string("claude"), "name": .string("Claude Code"), "installed": .bool(true),
-                "version": .string("2.0.14"), "capabilities": .object(["chat": .bool(true)]),
-                "models": .array([
-                    .object(["slug": .string("opus"), "legacy": .bool(false)]),
-                    .object(["slug": .string("old"), "legacy": .bool(true)]),
-                ]),
-                "defaultModel": .string("opus"),
-            ]),
-            .object(["kind": .string("gemini"), "name": .string("Gemini"), "installed": .bool(false)]),
-        ]
+        let providers = [
+            ProviderWire.provider(
+                "claude", name: "Claude Code", version: "2.0.14",
+                models: [ProviderWire.model("opus"), ProviderWire.model("old", legacy: true)], defaultModel: "opus"),
+            ProviderWire.provider("gemini", name: "Gemini", installed: false),
+        ].map(\.providerInfo)
         let accounts = JSONValue.object([
             "accounts": .object([
                 "claude": .object(["kind": .string("claude")]),
@@ -274,7 +268,7 @@ private actor FakeAccountAPI: AccountAPI {
         ])
         let agents = MachineAgentsModel.agents(providers: providers, accounts: accounts.accountsSnapshot)
         XCTAssertEqual(agents.map(\.kind), ["claude"])
-        XCTAssertEqual(agents[0].models.map { $0.text("slug") }, ["opus"])
+        XCTAssertEqual(agents[0].models.map(\.slug), ["opus"])
         XCTAssertEqual(agents[0].accounts.map(\.detail), ["Max · bas@example.com", "Not logged in"])
         XCTAssertEqual(agents[0].accounts.map(\.name), ["Claude Code", "Work"])
         XCTAssertTrue(agents[0].accounts[1].signedOut)
@@ -282,7 +276,7 @@ private actor FakeAccountAPI: AccountAPI {
     }
 
     @MainActor func testTheAgentsSettingsFollowTheOrderAndTagTheTopAccountThatIsOn() {
-        let providers: [JSONValue] = [.object(["kind": .string("claude"), "installed": .bool(true)])]
+        let providers = [ProviderWire.provider("claude").providerInfo]
         let accounts = JSONValue.object([
             "accounts": .object([
                 "claude": .object(["kind": .string("claude")]),

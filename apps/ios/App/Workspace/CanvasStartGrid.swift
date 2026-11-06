@@ -5,15 +5,16 @@ import SwiftUI
 /// The agent CLIs a machine reports through `provider.list`, the one source for which agents it offers.
 @MainActor
 enum AgentCatalog {
-    static func load(_ client: any MachineRequesting) async throws -> [JSONValue] {
-        let providers = try await client.request(.providerList, payload: .object([:]))["providers"]?.arrayValue ?? []
+    static func load(_ client: any MachineRequesting) async throws -> [ProviderInfo] {
+        let providers = try await client.request(.providerList, payload: .object([:]))
+            .decoded(as: ProviderListResult.self).providers
         AgentDirectory.shared.learn(providers)
         return providers
     }
 
-    /// Installed CLIs that open as `target`, a chat or a terminal.
-    static func installed(_ providers: [JSONValue], target: String) -> [JSONValue] {
-        providers.filter { $0["installed"] == .bool(true) && $0["capabilities"]?[target] == .bool(true) }
+    /// Installed CLIs that open as a chat.
+    static func installedChats(_ providers: [ProviderInfo]) -> [ProviderInfo] {
+        providers.filter { $0.installed && $0.capabilities.chat }
     }
 }
 
@@ -25,14 +26,11 @@ struct CanvasStartGrid: View {
     /// Opens the add sheet for a kind that needs more than a tap, like a URL or a path.
     let compose: (String) -> Void
     let added: () -> Void
-    @State private var providers: [JSONValue]?
+    @State private var providers: [ProviderInfo]?
     @State private var saving = false
 
-    private var agents: [JSONValue] {
-        (providers ?? []).filter {
-            $0["installed"] == .bool(true)
-                && ($0["capabilities"]?["chat"] == .bool(true) || $0["capabilities"]?["terminal"] == .bool(true))
-        }
+    private var agents: [ProviderInfo] {
+        (providers ?? []).filter { $0.installed && ($0.capabilities.chat || $0.capabilities.terminal) }
     }
 
     var body: some View {
@@ -111,17 +109,17 @@ struct CanvasStartGrid: View {
             .accessibilityElement(children: .combine)
         } else {
             section(String(localized: "Agents")) {
-                ForEach(agents, id: \.agentKind) { provider in
-                    let chat = provider["capabilities"]?["chat"] == .bool(true)
+                ForEach(agents, id: \.kind) { provider in
+                    let chat = provider.capabilities.chat
                     tile(
-                        provider.text("name", fallback: provider.text("kind")),
+                        provider.name,
                         detail: chat ? String(localized: "Chat") : String(localized: "Terminal"), icon: "bot"
                     ) {
                         insert(
-                            kind: chat ? "chat" : "terminal", title: provider.text("name", fallback: "Agent"),
+                            kind: chat ? "chat" : "terminal", title: provider.name,
                             extra: chat
-                                ? ["provider": .string(provider.text("kind")), "providerFixed": .bool(true)]
-                                : ["provider": .string(provider.text("kind"))])
+                                ? ["provider": .string(provider.kind), "providerFixed": .bool(true)]
+                                : ["provider": .string(provider.kind)])
                     }
                 }
             }

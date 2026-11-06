@@ -42,7 +42,7 @@ final class ChatModel {
         get { composition.skills }
         set { composition.skills = newValue }
     }
-    var providers: [JSONValue] = []
+    var providers: [ProviderInfo] = []
     /// Nil from a machine before accounts.
     var accounts: ProviderAccountList?
     /// The machine's plan windows per account, `usage.limits`; nil until something on screen asked for them.
@@ -199,7 +199,7 @@ final class ChatModel {
         if continuable != continuableTurn { continuableTurn = continuable }
         let turn = info.flatMap {
             ChatResume.offerableTurn(
-                info: $0, compaction: capabilities["compaction"]?.stringValue, items: items, dismissed: keptHistoryFor)
+                info: $0, compaction: capabilities?.compaction.rawValue, items: items, dismissed: keptHistoryFor)
         }
         if turn?.id != compactionTurn?.id || turn?.endedAt != compactionTurn?.endedAt { compactionTurn = turn }
     }
@@ -257,12 +257,12 @@ final class ChatModel {
     }
 
     /// The machine's entry for the chat's CLI in `provider.list`.
-    private var providerEntry: JSONValue? {
+    private var providerEntry: ProviderInfo? {
         guard let info else { return nil }
-        return providers.first { $0["kind"]?.stringValue == info.provider }
+        return providers.first { $0.kind == info.provider }
     }
 
-    var models: [JSONValue] { providerEntry?["models"]?.arrayValue ?? [] }
+    var models: [ProviderModel] { providerEntry?.models ?? [] }
 
     func start() {
         guard !live.isStarted else { return }
@@ -307,7 +307,7 @@ final class ChatModel {
                 guard !Task.isCancelled, generation == current else { return }
                 let result = try await providerResult
                 guard !Task.isCancelled, generation == current else { return }
-                providers = result["providers"]?.arrayValue ?? []
+                providers = result.providers
                 refreshResume()
                 accounts = await accountResult.map(ProviderAccountList.init)
                 await refreshForks()
@@ -320,9 +320,9 @@ final class ChatModel {
         }
     }
 
-    private func loadProviders() async throws -> JSONValue {
-        let result = try await client.request(.providerList, payload: .object([:]))
-        AgentDirectory.shared.learn(result.list("providers"))
+    private func loadProviders() async throws -> ProviderListResult {
+        let result = try await client.request(.providerList, payload: .object([:])).decoded(as: ProviderListResult.self)
+        AgentDirectory.shared.learn(result.providers)
         return result
     }
 
@@ -510,9 +510,9 @@ final class ChatModel {
         }
     }
 
-    var capabilities: JSONValue { providerEntry?["capabilities"] ?? .null }
-    var canAttach: Bool { capabilities["attachments"]?.boolValue != false }
-    var canMention: Bool { capabilities["mentions"]?.boolValue != false }
+    var capabilities: ProviderCapabilities? { providerEntry?.capabilities }
+    var canAttach: Bool { capabilities?.attachments != false }
+    var canMention: Bool { capabilities?.mentions != false }
 
     /// The `@`, `$`, `/` or `#` word the caret is in, unless it is already a chip or `#` has nothing to offer.
     var draftQuery: ChatDraftQuery? {
@@ -736,16 +736,14 @@ final class ChatModel {
                 }
             case "$":
                 let result = try await client.request(.skillsList, payload: target())
-                found = result.list("skills").filter {
-                    query.isEmpty || $0.text("name").localizedCaseInsensitiveContains(query)
+                    .decoded(as: SkillsListResult.self)
+                found = result.skills.filter {
+                    query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)
                 }
-                .map {
-                    ChatSuggestion(
-                        kind: "$", value: $0.text("name"), title: $0.text("name"), detail: $0.text("description"))
-                }
+                .map { ChatSuggestion(kind: "$", value: $0.name, title: $0.name, detail: $0.description) }
             default:
                 var local = ["clear", "stop", "model"]
-                if capabilities.text("compaction") != "none" { local.append("compact") }
+                if capabilities?.compaction != ProviderCompaction.none { local.append("compact") }
                 found = Array(Set(local + (info?.slashCommands ?? [])))
                     .filter {
                         !ChatSuggestion.terminalOnly.contains($0)

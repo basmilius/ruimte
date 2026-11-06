@@ -23,9 +23,7 @@ struct ChatComposerPills: View {
     let sheets: ChatComposerSheets
     @Binding var focused: Bool
 
-    private var effort: JSONValue? {
-        model.selectedModel.list("options").first { $0.text("id") == "effort" && $0.text("type") == "select" }
-    }
+    private var effort: ProviderSelectOption? { model.selectedModel?.selectOption("effort") }
 
     var body: some View {
         ScrollView(.horizontal) {
@@ -94,10 +92,10 @@ struct ChatComposerPills: View {
     }
 
     private var modelMenu: some View {
-        let slug = model.selection.text("model")
+        let slug = model.selectedSlug
         let name = slug.isEmpty ? String(localized: "Choose model") : ModelName.of(slug, in: model.models)
-        let live = model.models.filter { $0["legacy"]?.boolValue != true }
-        let legacy = model.models.filter { $0["legacy"]?.boolValue == true }
+        let live = model.models.filter { !$0.legacy }
+        let legacy = model.models.filter(\.legacy)
         let choice = Binding(get: { slug }, set: { if $0 != slug { model.chooseModel($0) } })
         return Menu {
             Picker("Model", selection: choice) { modelRows(live) }.pickerStyle(.inline)
@@ -106,8 +104,8 @@ struct ChatComposerPills: View {
                     Picker("Legacy models", selection: choice) { modelRows(legacy) }.pickerStyle(.inline)
                 } label: {
                     Text("Legacy models")
-                    if let current = legacy.first(where: { $0.text("slug") == slug }) {
-                        Text(current.text("name", fallback: ModelName.fromSlug(slug)))
+                    if let current = legacy.first(where: { $0.slug == slug }) {
+                        Text(current.name)
                     }
                 }
             }
@@ -141,31 +139,31 @@ struct ChatComposerPills: View {
         .accessibilityAction(named: "Run settings") { open { sheets.settings = true } }
     }
 
-    private func modelRows(_ models: [JSONValue]) -> some View {
+    private func modelRows(_ models: [ProviderModel]) -> some View {
         ForEach(Array(models.enumerated()), id: \.offset) { _, option in
-            Text(option.text("name", fallback: ModelName.fromSlug(option.text("slug")))).tag(option.text("slug"))
+            Text(option.name).tag(option.slug)
         }
     }
 
-    private func effortMenu(_ option: JSONValue) -> some View {
-        let current = model.selection["options"]?["effort"]?.stringValue ?? option.text("defaultChoice")
-        let choices = option.list("choices")
-        let label = choices.first { $0.text("id") == current }?.text("label") ?? current
+    private func effortMenu(_ option: ProviderSelectOption) -> some View {
+        let current = model.selectedOption("effort") ?? option.defaultChoice
+        let choices = option.choices
+        let label = choices.first { $0.id == current }?.label ?? current
         return Menu {
             Picker(
-                option.text("label", fallback: String(localized: "Effort")),
+                option.label,
                 selection: Binding(
                     get: { current },
                     set: { if $0 != current { model.chooseOption("effort", value: .string($0)) } })
             ) {
                 ForEach(Array(choices.enumerated()), id: \.offset) { _, choice in
                     Label {
-                        Text(choice.text("label", fallback: choice.text("id")))
-                        if !choice.text("description").isEmpty { Text(choice.text("description")) }
+                        Text(choice.label)
+                        if let description = choice.description, !description.isEmpty { Text(description) }
                     } icon: {
                         EmptyView()
                     }
-                    .tag(choice.text("id"))
+                    .tag(choice.id)
                 }
             }
             .pickerStyle(.inline)
@@ -177,7 +175,7 @@ struct ChatComposerPills: View {
             .modifier(ChatComposerPill())
         }
         .buttonStyle(MobileGlassButtonStyle(shape: .capsule))
-        .accessibilityLabel(option.text("label", fallback: String(localized: "Effort")))
+        .accessibilityLabel(option.label)
         .accessibilityValue(label)
     }
 

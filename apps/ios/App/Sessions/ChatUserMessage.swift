@@ -479,7 +479,7 @@ struct ChatCompactionRule: View {
 struct ChatSelectionSwitchRule: View {
     let from: ChatTurnItemSelection
     let to: ChatTurnItemSelection
-    let models: [JSONValue]
+    let models: [ProviderModel]
 
     var body: some View {
         if let text = ChatSelectionSwitch.text(from: from, to: to, models: models) {

@@ -84,7 +84,7 @@ struct ChatGoalDock: View {
     private var view: ChatGoalView? {
         ChatGoalView(
             goal: model.info?.goal, activeTurnID: model.info?.activeTurnId,
-            goals: model.capabilities["goals"]?.stringValue,
+            goals: model.capabilities?.goals?.rawValue,
             canAct: (model.client as? MachineFeatures)?.answers(.chatGoal) == true)
     }
 

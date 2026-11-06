@@ -214,7 +214,7 @@ enum OutputMachine {
     private(set) var reachable = true
     private(set) var problem: String?
     /// The CLIs the machine knows, for the name of the model that made a version.
-    private(set) var providers: [JSONValue] = []
+    private(set) var providers: [ProviderInfo] = []
     var selectedID: String?
     @ObservationIgnored private let watch = OutputWatch()
 
@@ -274,8 +274,10 @@ enum OutputMachine {
             }
             return
         }
-        if providers.isEmpty, let answer = try? await client.request(.providerList) {
-            providers = answer.list("providers")
+        if providers.isEmpty,
+            let answer = try? await client.request(.providerList).decoded(as: ProviderListResult.self)
+        {
+            providers = answer.providers
             AgentDirectory.shared.learn(providers)
         }
     }
@@ -298,10 +300,10 @@ enum OutputMachine {
         case .routine: return String(localized: "Routine")
         case .agent: break
         }
-        let catalog = providers.first { $0.text("kind") == provenance.agent }
+        let catalog = providers.first { $0.kind == provenance.agent }
         if let model = provenance.model, !model.isEmpty {
-            return ModelName.of(model, in: catalog?.list("models") ?? [])
+            return ModelName.of(model, in: catalog?.models ?? [])
         }
-        return catalog?["name"]?.stringValue ?? String(localized: "Agent")
+        return catalog?.name ?? String(localized: "Agent")
     }
 }

@@ -363,7 +363,7 @@ final class GitSheetTests: XCTestCase {
         case .gitCapabilities:
             return .object(["gh": .bool(true), "messageProvider": .string("claude")])
         case .providerList:
-            return .object(["providers": .array([.object(["kind": .string("claude"), "name": .string("Claude Code")])])])
+            return ProviderWire.list([ProviderWire.provider("claude", name: "Claude Code")])
         case .gitSuggestMessage:
             return .object(["subject": .string("Share one backoff"), "body": .string("Caps retries at 5.")])
         case .gitLog:

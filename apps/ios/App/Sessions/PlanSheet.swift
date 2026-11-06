@@ -34,7 +34,7 @@ struct PlanSheet: View {
         plan?.activeSteps.map { PlanActivityHold.Step(id: $0.id, title: $0.title) } ?? []
     }
     private var agentName: String {
-        model.providers.first { $0["kind"]?.stringValue == model.info?.provider }?.text("name")
+        model.providers.first { $0.kind == model.info?.provider }?.name
             ?? String(localized: "The agent")
     }
 

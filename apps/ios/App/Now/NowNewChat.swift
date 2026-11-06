@@ -60,7 +60,7 @@ final class NowNewChatModel {
         let catalog = catalog ?? NewChatModel(client: session.rpc, machineID: session.machine.id)
         self.catalog = catalog
         await catalog.load()
-        let agents = (catalog.agents ?? []).map { $0.text("kind") }
+        let agents = (catalog.agents ?? []).map(\.kind)
         if provider.map({ !agents.contains($0) }) ?? true { provider = agents.first }
     }
 
@@ -140,9 +140,9 @@ struct NowNewChatSheet: View {
                             Text("Install a CLI or add an account in Ruimte on the machine itself, under Agents.")
                                 .foregroundStyle(MobileStyle.muted)
                         }
-                        ForEach(agents, id: \.agentKind) { agent in
-                            let kind = agent.text("kind")
-                            choice(agent.text("name", fallback: kind), icon: "bot", picked: model.provider == kind) {
+                        ForEach(agents, id: \.kind) { agent in
+                            let kind = agent.kind
+                            choice(agent.name, icon: "bot", picked: model.provider == kind) {
                                 model.provider = kind
                             }
                         }

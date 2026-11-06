@@ -830,7 +830,7 @@ struct AddProjectItem: View {
     @State private var name = ""
     @State private var detail = ""
     @State private var provider = "codex"
-    @State private var providers: [JSONValue]?
+    @State private var providers: [ProviderInfo]?
     @State private var saving = false
 
     init(workspace: MobileWorkspace, canvasID: String?, kind: String = "chat") {
@@ -841,9 +841,7 @@ struct AddProjectItem: View {
 
     private var chatAgents: [(kind: String, name: String)] {
         guard let providers else { return [] }
-        return AgentCatalog.installed(providers, target: "chat").map {
-            ($0.text("kind"), $0.text("name", fallback: $0.text("kind")))
-        }
+        return AgentCatalog.installedChats(providers).map { ($0.kind, $0.name) }
     }
     var body: some View {
         NavigationStack {

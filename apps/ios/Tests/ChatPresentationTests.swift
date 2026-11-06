@@ -70,15 +70,12 @@ final class ChatPresentationTests: XCTestCase {
     }
 
     func testASelectionSwitchNamesOnlyWhatChanged() {
-        func choice(_ id: String, _ label: String) -> JSONValue {
-            .object(["id": .string(id), "label": .string(label)])
+        func model(_ slug: String, _ name: String, _ options: [JSONValue]) -> ProviderModel {
+            ProviderWire.model(slug, name: name, options: options).providerModel
         }
-        func model(_ slug: String, _ name: String, _ options: [JSONValue]) -> JSONValue {
-            .object(["slug": .string(slug), "name": .string(name), "options": .array(options)])
-        }
-        let effort: JSONValue = .object([
-            "id": .string("effort"), "type": .string("select"), "defaultChoice": .string("medium"),
-            "choices": .array([choice("low", "Low"), choice("medium", "Medium"), choice("xhigh", "Extra High")]),
+        let effort = ProviderWire.effort(choices: [
+            ProviderWire.choice("low", "Low"), ProviderWire.choice("medium", "Medium"),
+            ProviderWire.choice("xhigh", "Extra High"),
         ])
         let models = [
             model("opus", "Claude Opus 5.5", [effort]), model("sonnet", "Claude Sonnet 5.5", [effort]),

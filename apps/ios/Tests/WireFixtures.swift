@@ -524,3 +524,58 @@ extension NowRequest {
         self.init(item)
     }
 }
+
+/// `provider.list` answers as a machine writes them. A test names the fields it is about, and the rest takes defaults,
+/// so the list decodes into the generated types as a real one does.
+enum ProviderWire {
+    static func model(
+        _ slug: String, name: String? = nil, legacy: Bool = false, options: [JSONValue] = []
+    ) -> JSONValue {
+        .object([
+            "slug": .string(slug), "name": .string(name ?? slug), "legacy": .bool(legacy), "isDefault": .bool(false),
+            "options": .array(options),
+        ])
+    }
+
+    static func choice(_ id: String, _ label: String) -> JSONValue {
+        .object(["id": .string(id), "label": .string(label)])
+    }
+
+    static func effort(default defaultChoice: String = "medium", choices: [JSONValue]) -> JSONValue {
+        .object([
+            "id": .string("effort"), "label": .string("Effort"), "type": .string("select"),
+            "choices": .array(choices), "defaultChoice": .string(defaultChoice),
+        ])
+    }
+
+    static func capabilities(_ fields: [String: JSONValue] = [:]) -> JSONValue {
+        let defaults: [String: JSONValue] = [
+            "chat": .bool(true), "terminal": .bool(true), "hooks": .bool(true), "streamsToolOutput": .bool(true),
+            "diffs": .string("unified"), "attachments": .bool(true), "mentions": .bool(true),
+            "denyReason": .bool(false), "allowAlways": .bool(true), "asyncQuestions": .bool(false),
+            "compaction": .string("native"), "reportsCost": .bool(true), "reportsContextWindow": .bool(true),
+            "reportsThinking": .bool(true), "slashCommands": .bool(true),
+        ]
+        return .object(defaults.merging(fields) { _, given in given })
+    }
+
+    static func provider(
+        _ kind: String, name: String? = nil, installed: Bool = true, version: String? = nil,
+        models: [JSONValue] = [], defaultModel: String? = nil, capabilities fields: [String: JSONValue] = [:]
+    ) -> JSONValue {
+        .object([
+            "kind": .string(kind), "name": .string(name ?? kind), "installed": .bool(installed),
+            "version": version.map(JSONValue.string) ?? .null, "models": .array(models),
+            "defaultModel": defaultModel.map(JSONValue.string) ?? .null, "capabilities": capabilities(fields),
+            "resumeCommand": .string(kind),
+        ])
+    }
+
+    static func list(_ providers: [JSONValue]) -> JSONValue { .object(["providers": .array(providers)]) }
+}
+
+extension JSONValue {
+    /// A fixture that does not decode is a broken test, not a case to cover.
+    var providerInfo: ProviderInfo { try! decoded(as: ProviderInfo.self) }
+    var providerModel: ProviderModel { try! decoded(as: ProviderModel.self) }
+}

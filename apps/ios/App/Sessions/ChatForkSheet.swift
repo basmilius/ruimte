@@ -42,14 +42,11 @@ struct ChatForkSheet: View {
     private var canRestoreFiles: Bool { folder?["filesAfterTurn"]?.boolValue == true }
     private var originalProvider: String { info?.provider ?? "" }
     private var chosenProvider: String { provider ?? originalProvider }
-    private var pickable: [JSONValue] {
-        model.providers.filter {
-            ChatForking.canFork($0) && $0["installed"]?.boolValue == true
-                && $0["capabilities"]?["chat"]?.boolValue == true
-        }
+    private var pickable: [ProviderInfo] {
+        model.providers.filter { ChatForking.canFork($0) && $0.installed && $0.capabilities.chat }
     }
-    private func models(of kind: String) -> [JSONValue] {
-        pickable.first { $0.text("kind") == kind }?.list("models") ?? []
+    private func models(of kind: String) -> [ProviderModel] {
+        pickable.first { $0.kind == kind }?.models ?? []
     }
     private var chosenModel: String { modelSlug ?? info?.selection.model ?? "" }
     private var ready: Bool {
@@ -130,15 +127,15 @@ struct ChatForkSheet: View {
                         modelSlug = defaultModel(for: kind)
                     })
             ) {
-                ForEach(pickable, id: \.stableKind) { entry in
-                    Text(entry.text("name", fallback: entry.text("kind"))).tag(entry.text("kind"))
+                ForEach(pickable, id: \.kind) { entry in
+                    Text(entry.name).tag(entry.kind)
                 }
             }
             let options = models(of: chosenProvider)
             if !options.isEmpty {
                 Picker("Model", selection: Binding(get: { chosenModel }, set: { modelSlug = $0 })) {
-                    ForEach(options, id: \.stableSlug) { option in
-                        Text(option.text("name", fallback: option.text("slug"))).tag(option.text("slug"))
+                    ForEach(options, id: \.slug) { option in
+                        Text(option.name).tag(option.slug)
                     }
                 }
             }
@@ -204,14 +201,14 @@ struct ChatForkSheet: View {
 
     /// The newest pick for a CLI when that model is still offered, else what the machine calls its default.
     private func defaultModel(for kind: String) -> String? {
-        let offered = models(of: kind).map { $0.text("slug") }
+        let offered = models(of: kind).map(\.slug)
         if kind == originalProvider, let current = info?.selection.model { return current }
         if let remembered = ChatPreferences.shared.selections[kind]?["model"]?.stringValue,
             offered.contains(remembered)
         {
             return remembered
         }
-        return pickable.first { $0.text("kind") == kind }?["defaultModel"]?.stringValue ?? offered.first
+        return pickable.first { $0.kind == kind }?.defaultModel ?? offered.first
     }
 
     private func selection(provider kind: String, model slug: String) -> JSONValue {
@@ -258,7 +255,3 @@ struct ChatForkSheet: View {
     }
 }
 
-extension JSONValue {
-    fileprivate var stableKind: String { text("kind") }
-    fileprivate var stableSlug: String { text("slug") }
-}
