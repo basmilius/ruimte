@@ -61,7 +61,7 @@ const visualPreview = defineActionTool('visual', {
             .min(PREVIEW_WIDTH.min, `width is from ${PREVIEW_WIDTH.min} to ${PREVIEW_WIDTH.max} CSS pixels`)
             .max(PREVIEW_WIDTH.max, `width is from ${PREVIEW_WIDTH.min} to ${PREVIEW_WIDTH.max} CSS pixels`)
             .optional()
-            .describe('CSS pixels; the reply column is 768'),
+            .describe(`CSS pixels; the reply column is ${PREVIEW_WIDTH.default}`),
         appearance: z.enum(['dark', 'light'], { error: 'appearance is dark or light' }).optional(),
         html: z.string().optional()
     }),

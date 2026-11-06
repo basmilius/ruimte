@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { cancellableTimeout } from '@adecore/utils/async';
-import { VISUAL_MEASURE_WIDTHS, type VisualAppearance, type VisualHeight } from '@ruimte/contracts';
+import { REPLY_COLUMN_WIDTH, VISUAL_MEASURE_WIDTHS, type VisualAppearance, type VisualHeight } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 import type { ConsoleEntry } from './page-console.ts';
 import { RENDER_COMMAND, RenderAnswerSchema, type RenderAnswer, type RenderRequest } from './render-protocol.ts';
@@ -15,8 +15,8 @@ import { RENDER_COMMAND, RenderAnswerSchema, type RenderAnswer, type RenderReque
  * it is killed with its whole process group, its browser included.
  */
 
-/* The width a preview is drawn at: the reply column of a chat that is a view of its own (`.chat-column-content` in `@adecore/agents-react`). */
-export const PREVIEW_WIDTH = { min: 240, max: 1600, default: 768 } as const;
+/* The width a preview is drawn at, by default the reply column of a chat that is a view of its own. */
+export const PREVIEW_WIDTH = { min: 240, max: 1600, default: REPLY_COLUMN_WIDTH } as const;
 
 export const PREVIEW_LIMIT_MS = 20_000;
 /* Measuring is part of publishing, which must not keep the agent waiting long. */
