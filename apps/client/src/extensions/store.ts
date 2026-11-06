@@ -1,4 +1,4 @@
-import { ExtensionManifestSchema, ExtensionPackSchema, type ExtensionManifest } from '@ruimte/contracts';
+import { EXTENSION_PACK_MAX_UNPACKED_BYTES, ExtensionManifestSchema, ExtensionPackSchema, type ExtensionManifest } from '@ruimte/contracts';
 import { EXTENSION_STORE_PUBLIC_KEY, extensionStoreMessage, ExtensionStoreIndexSchema, type ExtensionStoreEntry } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-web';
 import { desktop } from '@/desktop/bridge';
@@ -121,11 +121,32 @@ function textOf(base64: string): string {
     return new TextDecoder().decode(Uint8Array.from(atob(base64), (char) => char.charCodeAt(0)));
 }
 
+/* The stream as text, refused once it grows past what a pack may unpack to. */
+async function unpackedText(stream: ReadableStream<Uint8Array>): Promise<string> {
+    const reader = stream.getReader();
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+
+    for (let read = await reader.read(); !read.done; read = await reader.read()) {
+        size += read.value.byteLength;
+
+        if (size > EXTENSION_PACK_MAX_UNPACKED_BYTES) {
+            await reader.cancel();
+
+            throw new Error('This pack unpacks to more than an extension may hold');
+        }
+
+        chunks.push(read.value);
+    }
+
+    return new Blob(chunks).text();
+}
+
 /* What a `.rex` from a file says it is, so a person sees its name and permissions before it runs anywhere. */
 export async function readPack(file: Blob): Promise<PackPreview> {
     const bytes = new Uint8Array(await file.arrayBuffer());
     const unzipped = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-    const pack = ExtensionPackSchema.parse(JSON.parse(await new Response(unzipped).text()));
+    const pack = ExtensionPackSchema.parse(JSON.parse(await unpackedText(unzipped)));
     const manifest = pack.files['manifest.json'];
 
     if (manifest === undefined) {

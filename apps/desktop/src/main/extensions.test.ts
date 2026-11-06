@@ -3,6 +3,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, sy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
+import { EXTENSION_PACK_MAX_UNPACKED_BYTES } from '@ruimte/contracts';
 import { ClientExtensions, hostsOf } from './extensions';
 
 const ORIGIN = 'ruimte://app';
@@ -81,6 +82,19 @@ describe('the client extensions of the shell', () => {
 
         await expect(store.install(pack({ 'MANIFEST.json': swapped }))).rejects.toThrow('MANIFEST.json twice');
         await expect(store.install(pack({ 'client/a.js': 'x', 'Client/A.js': 'y' }))).rejects.toThrow('twice');
+        expect(await store.list()).toEqual([]);
+    });
+
+    test('refuse a valid pack that unpacks past the limit', async () => {
+        const store = extensions();
+        const manifest = base64(JSON.stringify({ id: 'acme.builds', name: 'Builds', version: '1.0.0', api: 1 }));
+        const json = Buffer.concat([
+            Buffer.from(`{"files":{"manifest.json":"${manifest}","client/filler.txt":"`),
+            Buffer.alloc(EXTENSION_PACK_MAX_UNPACKED_BYTES, 'A'),
+            Buffer.from('"}}')
+        ]);
+
+        await expect(store.install(gzipSync(json))).rejects.toMatchObject({ code: 'ERR_BUFFER_TOO_LARGE' });
         expect(await store.list()).toEqual([]);
     });
 

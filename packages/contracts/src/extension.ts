@@ -111,6 +111,9 @@ export const ExtensionPackSchema = z.object({
 });
 export type ExtensionPack = z.infer<typeof ExtensionPackSchema>;
 
+// A pack is unpacked in memory whole, so one that inflates past this is refused before it can exhaust the process.
+export const EXTENSION_PACK_MAX_UNPACKED_BYTES = 128 * 1024 * 1024;
+
 /* A file in a pack stays inside its own folder, wherever it is unpacked. */
 export function isSafePackPath(path: string): boolean {
     return !path.startsWith('/') && !path.includes('\\') && !path.split('/').some((part) => part === '' || part === '.' || part === '..');

@@ -7,6 +7,7 @@ import { isNotFound } from '@adecore/utils/errors';
 import {
     clashingPackPath,
     EXTENSION_API_VERSION,
+    EXTENSION_PACK_MAX_UNPACKED_BYTES,
     ExtensionManifestSchema,
     ExtensionPackSchema,
     extensionPermissionProblems,
@@ -398,8 +399,12 @@ function unpack(bytes: Buffer): Record<string, Buffer> {
     let parsed: unknown;
 
     try {
-        parsed = JSON.parse(gunzipSync(bytes).toString('utf8'));
-    } catch {
+        parsed = JSON.parse(gunzipSync(bytes, { maxOutputLength: EXTENSION_PACK_MAX_UNPACKED_BYTES }).toString('utf8'));
+    } catch (e) {
+        if ((e as NodeJS.ErrnoException).code === 'ERR_BUFFER_TOO_LARGE') {
+            throw new ExtensionPackError('pack-unreadable', 'This pack unpacks to more than an extension may hold');
+        }
+
         throw new ExtensionPackError('pack-unreadable', 'This is not an extension pack');
     }
 

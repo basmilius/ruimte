@@ -10,6 +10,7 @@ import {
     clashingPackPath,
     EXTENSION_API_VERSION,
     EXTENSION_ICON_PATH,
+    EXTENSION_PACK_MAX_UNPACKED_BYTES,
     ExtensionIdSchema,
     ExtensionManifestSchema,
     extensionFrameHost,
@@ -159,7 +160,7 @@ export class ClientExtensions {
 
     async install(pack: Uint8Array, fromStore = false): Promise<InstalledClientExtension> {
         const bytes = Buffer.from(pack);
-        const parsed = ExtensionPackSchema.parse(JSON.parse(gunzipSync(bytes).toString('utf8')));
+        const parsed = ExtensionPackSchema.parse(JSON.parse(gunzipSync(bytes, { maxOutputLength: EXTENSION_PACK_MAX_UNPACKED_BYTES }).toString('utf8')));
         const paths = Object.keys(parsed.files);
 
         if (!paths.every(isSafePackPath)) {
