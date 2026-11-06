@@ -105,7 +105,7 @@ export function Composer({
                     <Typed shown text={draft} speed={typing ? 45 : 0} caret={typing} />
                 ) : (
                     <span className="text-text-faint">
-                        Ask anything, or <Kbd>/</Kbd> commands, <Kbd>@</Kbd> files, <Kbd>$</Kbd> skills
+                        Ask anything, or <Kbd>/</Kbd> commands <Kbd>@</Kbd> files <Kbd>#</Kbd> views <Kbd>$</Kbd> skills
                     </span>
                 )}
             </div>
