@@ -141,6 +141,14 @@ export function noteOnLine(kind: AgentKind, launch: AgentLaunch | null | undefin
 }
 
 /*
+ * Whether a CLI's start hook tells it the tools: only one Ruimte launched, since only that line carries the MCP
+ * server, and only where its line did not carry the note already. A CLI typed by hand in a shell has no tools.
+ */
+export function hookTellsTools(kind: AgentKind, launch: AgentLaunch | null | undefined): boolean {
+    return launch?.kind === kind && !noteOnLine(kind, launch);
+}
+
+/*
  * What a launch puts on a CLI's line beside the command itself: the permission mode and, where the
  * CLI takes one, the model. A launch that names no mode gets no mode flag; only a fresh launch fills
  * that gap with `DEFAULT_RUNTIME_MODE`, because a resume of a CLI nobody chose a mode for would

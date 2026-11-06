@@ -34,7 +34,7 @@ import { PAIRING_REMOVED } from '../handlers/auth.ts';
 import { answerRoute, type Route } from '../http-routes.ts';
 import { handleMcpRequest, MCP_PATH, MCP_REQUEST_TIMEOUT_S } from '../mcp/mcp-route.ts';
 import { handleProjectRequest, PROJECTS_PATH } from '../projects/icon-route.ts';
-import { noteOnLine } from '../providers/launch.ts';
+import { hookTellsTools } from '../providers/launch.ts';
 import { handleMachineNotify } from '../push/notify-route.ts';
 import { shotFolders } from '../shots.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from '../streams/http-stream.ts';
@@ -278,8 +278,7 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     // Asked on every event that can carry an answer, so the memory of what this
                     // agent was told keeps up with its turns even where nothing is printed.
                     const changed = context.changeSince(sessionId);
-                    // A CLI the node launched fresh got the tools note on its line; a resume or one typed by hand in the shell did not.
-                    const tools = !noteOnLine(kind, sessions.get(sessionId)?.launch);
+                    const tools = hookTellsTools(kind, sessions.get(sessionId)?.launch);
                     return hookContext(event, context.list(sessionId), {
                         changed,
                         messages: agents.messagesFor(sessionId),

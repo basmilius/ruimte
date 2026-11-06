@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { CliMcpServer } from '@adecore/agents/providers';
-import { freshCommand, probeCodexNoDaemon, resumeCommand, noteOnLine, resumeOrFreshCommand, terminalCommand } from './launch.ts';
+import { freshCommand, hookTellsTools, probeCodexNoDaemon, resumeCommand, noteOnLine, resumeOrFreshCommand, terminalCommand } from './launch.ts';
 
 // How the launch line quotes the flag that lets Ruimte's MCP tools through.
 const ALLOW = `'--allowedTools=mcp__ruimte'`;
@@ -135,6 +135,17 @@ describe('terminalCommand', () => {
         expect(noteOnLine('codex', { kind: 'codex' })).toBe(true);
         expect(noteOnLine('claude', { kind: 'claude' })).toBe(false);
         expect(noteOnLine('codex', null)).toBe(false);
+    });
+
+    test('a start hook tells the tools only to a CLI Ruimte launched without the note on its line', () => {
+        expect(hookTellsTools('claude', { kind: 'claude' })).toBe(true);
+        expect(hookTellsTools('claude', { kind: 'claude', resume: 'abc-123' })).toBe(true);
+        expect(hookTellsTools('codex', { kind: 'codex', resume: 'thread-1' })).toBe(true);
+        expect(hookTellsTools('codex', { kind: 'codex' })).toBe(false);
+        // Typed by hand in a shell: no launch, or a launch of another CLI, and no MCP server on its line.
+        expect(hookTellsTools('claude', undefined)).toBe(false);
+        expect(hookTellsTools('claude', null)).toBe(false);
+        expect(hookTellsTools('claude', { kind: 'codex' })).toBe(false);
     });
 
     test('a resumed Codex carries no note on its line, so its start hook tells it the tools', () => {
