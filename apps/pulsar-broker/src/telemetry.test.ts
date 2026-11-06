@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { brokerTelemetryOptions, BROKER_DSN } from './telemetry.ts';
+import { TELEMETRY_DSN } from '@ruimte/telemetry';
+import { brokerTelemetryOptions } from './telemetry.ts';
 
 describe('the telemetry of the broker', () => {
     test('reports under its own app and the release of its checkout, without tracing', () => {
         const options = brokerTelemetryOptions('broker@0123456789ab');
-        expect(options).toMatchObject({ dsn: BROKER_DSN, release: 'broker@0123456789ab', environment: 'production' });
+        expect(options).toMatchObject({ dsn: TELEMETRY_DSN.broker, release: 'broker@0123456789ab', environment: 'production' });
         expect(options.tracesSampleRate).toBeUndefined();
         expect(options.integrations).toContainEqual(expect.objectContaining({ name: 'ConsoleLogs' }));
         expect(brokerTelemetryOptions(null).release).toBeUndefined();

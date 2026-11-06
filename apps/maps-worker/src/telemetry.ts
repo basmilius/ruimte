@@ -1,4 +1,4 @@
-import { createScrubber, TELEMETRY_DATA_COLLECTION } from '@ruimte/telemetry';
+import { createScrubber, privateSentryOptions } from '@ruimte/telemetry';
 import { consoleLoggingIntegration, dedupeIntegration, functionToStringIntegration, linkedErrorsIntegration, type CloudflareOptions } from '@sentry/cloudflare';
 import type { Env } from './env.ts';
 
@@ -13,17 +13,7 @@ export function telemetryOptions(env: Env): CloudflareOptions | undefined {
     }
     const scrubber = createScrubber({ tags: [] });
     return {
-        dsn: env.OBSERVATORY_DSN,
-        release: env.OBSERVATORY_RELEASE,
-        environment: 'production',
-        dataCollection: TELEMETRY_DATA_COLLECTION,
-        defaultIntegrations: false,
-        integrations: [functionToStringIntegration(), linkedErrorsIntegration(), dedupeIntegration(), consoleLoggingIntegration({ levels: ['warn', 'error'] })],
-        attachStacktrace: false,
-        maxBreadcrumbs: 0,
-        sendClientReports: false,
-        beforeSend: (event) => scrubber.scrubEvent(event),
-        beforeSendLog: (log) => scrubber.scrubLog(log),
-        beforeBreadcrumb: () => null
+        ...privateSentryOptions({ dsn: env.OBSERVATORY_DSN, release: env.OBSERVATORY_RELEASE, beforeSend: scrubber.scrubEvent, scrubLog: scrubber.scrubLog }),
+        integrations: [functionToStringIntegration(), linkedErrorsIntegration(), dedupeIntegration(), consoleLoggingIntegration({ levels: ['warn', 'error'] })]
     };
 }

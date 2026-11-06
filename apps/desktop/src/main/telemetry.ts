@@ -1,6 +1,6 @@
 import { homedir, hostname, userInfo } from 'node:os';
 import { join } from 'node:path';
-import { TELEMETRY_DATA_COLLECTION, TELEMETRY_DSN, telemetryRelease } from '@ruimte/telemetry';
+import { privateSentryOptions, TELEMETRY_DSN, telemetryRelease } from '@ruimte/telemetry';
 import { fileDedupeStore } from '@ruimte/telemetry/file-store';
 import type { IPCMode } from '@sentry/electron/main';
 import { RendererMemory, type RendererSample } from '../renderer-memory';
@@ -46,12 +46,8 @@ export function startTelemetry(): void {
                 fileDedupeStore(join(app.getPath('userData'), 'telemetry', 'sent.json'))
             );
             loaded.init({
-                dsn: TELEMETRY_DSN.desktop,
-                release: telemetryRelease(app.getVersion()),
-                environment: 'production',
-                dataCollection: TELEMETRY_DATA_COLLECTION,
+                ...privateSentryOptions({ dsn: TELEMETRY_DSN.desktop, release: telemetryRelease(app.getVersion()), beforeSend }),
                 ipcMode: NO_RENDERER_IPC,
-                defaultIntegrations: false,
                 integrations: [
                     loaded.sentryMinidumpIntegration(),
                     loaded.onUncaughtExceptionIntegration(),
@@ -63,14 +59,9 @@ export function startTelemetry(): void {
                     // The one session of the app per run, which a native crash of any of its processes marks; the windows hold none of their own.
                     loaded.mainProcessSessionIntegration()
                 ],
-                attachStacktrace: false,
-                maxBreadcrumbs: 0,
-                sendClientReports: false,
                 initialScope: {
                     tags: shellTags({ platform: process.platform, arch: process.arch, electron: process.versions.electron, appImage: process.env.APPIMAGE })
-                },
-                beforeSend: (event) => beforeSend(event),
-                beforeBreadcrumb: () => null
+                }
             });
             sdk = loaded;
             for (const problem of waiting.splice(0)) {

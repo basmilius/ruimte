@@ -1,9 +1,6 @@
-import { createScrubber, startQuarterMeter, TELEMETRY_DATA_COLLECTION, type QuarterMeter } from '@ruimte/telemetry';
+import { createScrubber, privateSentryOptions, startQuarterMeter, TELEMETRY_DSN, type QuarterMeter } from '@ruimte/telemetry';
 import * as Sentry from '@sentry/bun';
 import type { BrokerMeter } from './broker.ts';
-
-// The broker's app in Observatory. A DSN only lets a client send, so it is no secret.
-export const BROKER_DSN = 'https://47b1dcc0fd8242359e18520245dab28e@ingest.bmnw.nl/8';
 
 const CLOSE_MS = 2000;
 
@@ -14,10 +11,13 @@ const CLOSE_MS = 2000;
 export function brokerTelemetryOptions(release: string | null): Sentry.BunOptions {
     const scrubber = createScrubber({ tags: [] });
     return {
-        dsn: BROKER_DSN,
-        ...(release === null ? {} : { release }),
-        environment: 'production',
-        dataCollection: TELEMETRY_DATA_COLLECTION,
+        ...privateSentryOptions({
+            dsn: TELEMETRY_DSN.broker,
+            release,
+            beforeSend: scrubber.scrubEvent,
+            scrubLog: scrubber.scrubLog,
+            initWithoutDefaultIntegrations: true
+        }),
         integrations: [
             Sentry.functionToStringIntegration(),
             Sentry.linkedErrorsIntegration(),
@@ -25,13 +25,7 @@ export function brokerTelemetryOptions(release: string | null): Sentry.BunOption
             Sentry.onUncaughtExceptionIntegration(),
             Sentry.onUnhandledRejectionIntegration(),
             Sentry.consoleLoggingIntegration({ levels: ['log', 'info', 'warn', 'error'] })
-        ],
-        attachStacktrace: false,
-        maxBreadcrumbs: 0,
-        sendClientReports: false,
-        beforeSend: (event) => scrubber.scrubEvent(event),
-        beforeSendLog: (log) => scrubber.scrubLog(log),
-        beforeBreadcrumb: () => null
+        ]
     };
 }
 

@@ -1,9 +1,15 @@
-/* Where each part of Ruimte sends its crash reports. A DSN only lets a client send, so it is no secret. */
+/*
+ * Where each part of Ruimte sends its crash reports. A DSN only lets a client send, so it is no secret.
+ * The two workers read theirs from `wrangler.jsonc`; a test holds those rows to this table.
+ */
 export const TELEMETRY_DSN = {
     daemon: 'https://ace29cdab42746249e5753874d74c401@ingest.bmnw.nl/3',
     desktop: 'https://1b7ea4823fd6466f9de7f4c6bee0fc8d@ingest.bmnw.nl/4',
     station: 'https://313c4ee0419c4e3eac2e8c92be270bb2@ingest.bmnw.nl/5',
-    bench: 'https://a28d4e1c79fb49cd9704267b9ac05638@ingest.bmnw.nl/10'
+    bench: 'https://a28d4e1c79fb49cd9704267b9ac05638@ingest.bmnw.nl/10',
+    pulsar: 'https://9ff9af7a3b804d228a025d52b6040176@ingest.bmnw.nl/7',
+    broker: 'https://47b1dcc0fd8242359e18520245dab28e@ingest.bmnw.nl/8',
+    maps: 'https://6519c142a98b418cbaa7fb0a02f18c07@ingest.bmnw.nl/9'
 };
 
 export type TelemetrySurface = keyof typeof TELEMETRY_DSN;
