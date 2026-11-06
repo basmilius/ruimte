@@ -18,7 +18,7 @@ import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
 import { releasedProject } from '../testing/test-daemon.ts';
 import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { untilChecked } from '../until-test-helpers.ts';
-import { outboxRetries } from './kinds.ts';
+import { outboxRetries } from './kinds/index.ts';
 import { refusingHandlers } from './outbox-test-helpers.ts';
 import { OutboxStore, type OutboxWork, type StartAgentEntry } from './outbox.ts';
 import { HEADLESS_TERMINAL, nodeMode, startAgentHandler, startAgentWork, type StartAgentDeps } from './start-agent.ts';

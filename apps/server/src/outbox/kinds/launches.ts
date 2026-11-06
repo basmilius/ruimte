@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { defineOutboxKind } from '../outbox/kind.ts';
+import { defineOutboxKind } from '../kind.ts';
 
 const RunAfterSettleSchema = z.object({
     kind: z.literal('run-after-settle'),

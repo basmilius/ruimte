@@ -1,5 +1,5 @@
 import type { OutboxHandlers } from '@adecore/agents/coordination';
-import { OUTBOX_KIND_NAMES } from './kinds.ts';
+import { OUTBOX_KIND_NAMES } from './kinds/index.ts';
 import type { OutboxWork } from './outbox.ts';
 
 function refuse(entry: { kind: string }): Promise<never> {

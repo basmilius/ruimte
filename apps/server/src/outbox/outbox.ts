@@ -1,7 +1,7 @@
 import { OutboxStore as BaseOutboxStore, type OutboxEntryOf } from '@adecore/agents/coordination';
-import { OutboxWorkSchema, traitsOf, type OutboxWork } from './kinds.ts';
+import { OutboxWorkSchema, traitsOf, type OutboxWork } from './kinds/index.ts';
 
-export type { OutboxWork } from './kinds.ts';
+export type { OutboxWork } from './kinds/index.ts';
 export type OutboxEntry = OutboxEntryOf<OutboxWork>;
 export type OutboxEntryOfKind<K extends OutboxWork['kind']> = Extract<OutboxEntry, { kind: K }>;
 export type StartAgentEntry = OutboxEntryOfKind<'start-agent'>;

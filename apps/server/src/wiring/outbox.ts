@@ -17,7 +17,7 @@ import { MESSAGE_WORDS } from '../context/notices.ts';
 import { errorText } from '../error-text.ts';
 import type { NodeLifecycle } from '../node-lifecycle.ts';
 import { wireEndChildren, type EndChildrenWiring } from '../outbox/end-children.ts';
-import { OUTBOX_KIND_NAMES, outboxRetries } from '../outbox/kinds.ts';
+import { OUTBOX_KIND_NAMES, outboxRetries } from '../outbox/kinds/index.ts';
 import type { OutboxStore, OutboxWork } from '../outbox/outbox.ts';
 import { startAgentHandler } from '../outbox/start-agent.ts';
 import { wireSummaries, type SummaryWiring } from '../outbox/summary.ts';

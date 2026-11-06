@@ -1,5 +1,5 @@
 import { errorText } from '../error-text.ts';
-import { traitsOf } from '../outbox/kinds.ts';
+import { traitsOf } from '../outbox/kinds/index.ts';
 import type { OutboxEntry } from '../outbox/outbox.ts';
 
 interface ParkedNoteDeps {

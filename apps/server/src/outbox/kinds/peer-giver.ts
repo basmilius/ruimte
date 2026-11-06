@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { StartRemoteAgentPayloadSchema } from '../../canvas/remote-agent-payload.ts';
-import { defineOutboxKind } from '../../outbox/kind.ts';
+import { defineOutboxKind } from '../kind.ts';
 
 const ConnectPeerSchema = z.object({
     kind: z.literal('connect-peer'),

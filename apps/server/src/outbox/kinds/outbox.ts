@@ -1,7 +1,7 @@
 import { DeliverMessageWorkSchema, EndChildrenWorkSchema, ResumeRunWorkSchema } from '@adecore/agents/coordination';
 import { AgentKindSchema, ModelSelectionSchema, ProviderAccountIdSchema, RuntimeModeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
-import { defineOutboxKind } from './kind.ts';
+import { defineOutboxKind } from '../kind.ts';
 
 const StartAgentSchema = z.object({
     kind: z.literal('start-agent'),

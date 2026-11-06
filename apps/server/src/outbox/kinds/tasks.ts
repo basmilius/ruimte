@@ -1,5 +1,5 @@
 import { BackgroundLimitWorkSchema, DeliverWaitingWorkSchema, GiveTaskWorkSchema, WakeParentWorkSchema } from '@adecore/agents/coordination';
-import { defineOutboxKind } from '../outbox/kind.ts';
+import { defineOutboxKind } from '../kind.ts';
 
 export const wakeParentKind = defineOutboxKind(WakeParentWorkSchema, {
     parked: {

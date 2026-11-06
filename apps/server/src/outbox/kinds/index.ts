@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { deliverPrWatchKind } from '../github/outbox-kind.ts';
-import { runAfterSettleKind } from '../launches/outbox-kind.ts';
-import { connectPeerKind, startRemoteAgentKind, stopRemoteAgentKind, takeRemoteResultKind } from '../peer/giver/outbox-kind.ts';
-import { deliverRemoteResultKind } from '../peer/worker/outbox-kind.ts';
-import { routineRunKind } from '../routines/outbox-kind.ts';
-import { backgroundLimitKind, deliverWaitingKind, giveTaskKind, wakeParentKind } from '../tasks/outbox-kind.ts';
-import type { OutboxKind, OutboxParkedNote } from './kind.ts';
-import { deliverMessageKind, deliverSummaryKind, endChildrenKind, resumeLimitKind, resumeRunKind, startAgentKind } from './work-kinds.ts';
+import type { OutboxKind, OutboxParkedNote } from '../kind.ts';
+import { deliverPrWatchKind } from './github.ts';
+import { runAfterSettleKind } from './launches.ts';
+import { deliverMessageKind, deliverSummaryKind, endChildrenKind, resumeLimitKind, resumeRunKind, startAgentKind } from './outbox.ts';
+import { connectPeerKind, startRemoteAgentKind, stopRemoteAgentKind, takeRemoteResultKind } from './peer-giver.ts';
+import { deliverRemoteResultKind } from './peer-worker.ts';
+import { routineRunKind } from './routines.ts';
+import { backgroundLimitKind, deliverWaitingKind, giveTaskKind, wakeParentKind } from './tasks.ts';
 
 /*
  * Every kind of work the outbox owes. A new kind is its descriptor in the folder of the feature that
