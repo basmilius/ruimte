@@ -15,13 +15,6 @@ struct VoiceTarget: Equatable {
     var machineName: String?
 }
 
-/// The requests a machine names in `endpoint.info`. `MachineClient` reads them; a test machine says what it answers.
-@MainActor protocol MachineFeatures: AnyObject {
-    func answers(_ type: WireRequest) -> Bool
-}
-
-extension MachineClient: MachineFeatures {}
-
 /// A line of what Voice did on the machine, as `voice.activity` reports it.
 struct VoiceActivityLine: Identifiable, Equatable {
     let id: String
