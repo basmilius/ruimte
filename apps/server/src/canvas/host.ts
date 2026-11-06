@@ -16,8 +16,10 @@ import type { CheckoutHost } from '../git/worktree-host.ts';
 import type { HiddenAgentStore } from '../projects/hidden-agents.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProjectMutation, ProjectStore } from '../projects/project-store.ts';
-import { referencesDirectly } from '../projects/references.ts';
+import { referencesDirectly, type Reference } from '../projects/references.ts';
 import type { UntrustedFolders } from '../projects/untrusted.ts';
+import type { ReachHost } from './reach.ts';
+import type { StartRemoteAgentPayload } from './remote-agent-payload.ts';
 import type { StartClaims } from './start-claims.ts';
 
 // The tools and actions reach the one sanitizer through the module they already import.
@@ -45,6 +47,8 @@ export interface CanvasHost {
     /* What a retried `agent_start` with the same `request_id` answers with; absent, a request id is ignored. */
     startClaims?: StartClaims;
     lineage: LineageHost;
+    /* What starting an agent node takes. */
+    starts: AgentStartHost;
     checkouts: CheckoutHost;
     machine: MachineHost;
     /* Ends the shell or the CLI behind a node; a canvas that is removed takes its sessions with it. */
@@ -54,6 +58,10 @@ export interface CanvasHost {
     untrusted?: Pick<UntrustedFolders, 'node' | 'inFolder' | 'fromPeer'>;
     /* When a person's snooze on a node ends, in epoch milliseconds; absent on a host without snoozes. */
     snoozes?: { until(nodeId: string): number | null };
+    /* The machines this machine can give tasks to; absent on a host that links to none. */
+    remote?: RemoteAgentHost;
+    /* The other open projects an agent may reach with `project`; absent on a host that reaches none. */
+    reach?: ReachHost;
 }
 
 /*
@@ -101,8 +109,17 @@ export interface MessageHost {
     notify(notice: Omit<Notice, 'createdAt'>): Promise<NoticeDelivery>;
 }
 
-export function referencedBy(host: Pick<CanvasHost, 'context'>, caller: string, id: string): boolean {
+/* Whether a person pointed the caller at this very id, which lets it write and operate there as a line does. */
+export function referencedBy(host: { context?: { referenced?(targetId: string): Reference[] } }, caller: string, id: string): boolean {
     return referencesDirectly(host.context?.referenced?.(caller) ?? [], id);
+}
+
+/* The other machines an agent may give work to, and the owing of that work. */
+export interface RemoteAgentHost {
+    /* The machines a project is linked to; `ready` is whether this machine holds the link that lets it work in them. */
+    machines(projectId: string): Array<{ machineId: string; label: string; remoteProjectId: string; ready: boolean }>;
+    /* Owes the start of a task on another machine for the node that stands for it here. */
+    give(projectId: string, nodeId: string, work: StartRemoteAgentPayload): Promise<void>;
 }
 
 export interface NodeAccount {

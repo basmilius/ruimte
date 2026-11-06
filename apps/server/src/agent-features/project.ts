@@ -1,6 +1,6 @@
 import { projectIgnoredActions } from '../actions/project-ignored-actions.ts';
 import { projectProposalActions } from '../actions/project-proposal-actions.ts';
-import { projectReach, type ReachHost } from '../canvas/reach.ts';
+import { projectReach } from '../canvas/reach.ts';
 import type { ProposalAnswer, ProposalAsk } from '../projects/project-proposals.ts';
 import { projectToolkit } from '../tools/project-tools.ts';
 import { chatIsInChats } from '../wiring/chat-move.ts';
@@ -17,8 +17,6 @@ declare module '../canvas/host.ts' {
     interface CanvasHost {
         /* The cards in which an agent in Chats suggests a project; absent on a host that keeps none. */
         proposals?: ProposalHost;
-        /* The other open projects an agent may reach with `project`; absent on a host that reaches none. */
-        reach?: ReachHost;
     }
 }
 
