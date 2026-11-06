@@ -9,6 +9,7 @@ import type { ComputerUseStore } from '../computer/store.ts';
 import { DeviceDriver } from '../devices/agent-driver.ts';
 import { AndroidBackend } from '../devices/android.ts';
 import { DeviceControl } from '../devices/control.ts';
+import { DeviceWatch } from '../devices/device-watch.ts';
 import { createDeviceHelperLauncher } from '../devices/helper-source.ts';
 import { createPhysicalBatteryReader, IosPhysicalBackend } from '../devices/ios-physical.ts';
 import { IosSimulatorBackend } from '../devices/ios-simulator.ts';
@@ -79,6 +80,7 @@ export interface DevicesBundle {
     visualRenderer: VisualRenderer;
     devices: DeviceManager;
     deviceControl: DeviceControl;
+    deviceWatch: DeviceWatch;
     deviceDriver: DeviceDriver;
 }
 
@@ -126,9 +128,10 @@ export function wireDevices(
         (path) => machineHome.refuse(path)
     );
     const deviceControl = new DeviceControl();
+    const deviceWatch = new DeviceWatch(devices);
     const deviceDriver = new DeviceDriver({ home: config.home, manager: devices, gate: deviceControl });
     deviceDriver.follow(lifecycle);
-    return { computer, liveStreams, browsers, browserPages, browserDriver, visualRenderer, devices, deviceControl, deviceDriver };
+    return { computer, liveStreams, browsers, browserPages, browserDriver, visualRenderer, devices, deviceControl, deviceWatch, deviceDriver };
 }
 
 /* What an agent claims of a device and the renderer of visuals belong to no request; they go between the browsers and the devices. */

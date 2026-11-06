@@ -29,6 +29,19 @@ function registerRequests(dispatcher: Dispatcher, { store, scratch, inline, reac
     dispatcher.register('project.sidebar', () => store.sidebar());
     dispatcher.register('project.list', async () => ({ projects: await store.list() }));
 
+    dispatcher.register('project.watch', (_payload, client) => {
+        // A channel that went while this was on its way would leave a watch nobody hears.
+        if (client.closed !== true) {
+            store.watchList(client.id);
+        }
+        return {};
+    });
+
+    dispatcher.register('project.unwatch', (_payload, client) => {
+        store.unwatchList(client.id);
+        return {};
+    });
+
     dispatcher.register('project.referables', async () => {
         return reachOpenProjects() ? store.referables() : { projects: [] };
     });

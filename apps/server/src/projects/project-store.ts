@@ -70,6 +70,7 @@ import {
     PROJECT_FILE,
     WATCH_SETTLE_MS
 } from './project-files.ts';
+import { ProjectFolderWatch } from './project-folder-watch.ts';
 import { ProjectHolds } from './project-holds.ts';
 import { readIdeaName } from './project-identity.ts';
 import { placesOf, ProjectIndex, type IndexedPlace } from './project-index.ts';
@@ -284,6 +285,9 @@ export class ProjectStore {
        every other client hears a change of the document as the rows of its sidebar (`announceChange`). */
     private readonly holds = new ProjectHolds();
     private readonly wakes = new ProjectWakes();
+    /* The clients that asked with `project.watch`, who hear a project change that no client holds. */
+    private readonly listWatchers = new Set<string>();
+    private readonly folderWatch: ProjectFolderWatch;
     private readonly registry: ProjectRegistry;
     private readonly summaries: ProjectSummaries;
     // One project's reads and writes run one after the other, and never wait on another project's.
@@ -306,6 +310,8 @@ export class ProjectStore {
         this.index = new ProjectIndex(this.hiddenAgents);
         this.scratchFolder = scratchFolderOf(home);
         this.registry = new ProjectRegistry(home);
+        this.registry.onUpdate(() => void this.watchFolders());
+        this.folderWatch = new ProjectFolderWatch(seams, (projectId) => this.heardOutside(projectId));
         this.machineHome = overlays.machineHome;
         this.summaries = new ProjectSummaries(this.scratchFolder);
         this.links = links;
@@ -415,7 +421,41 @@ export class ProjectStore {
         }
     }
 
+    /* The client hears `project.listChanged` for every project of the machine until it unwatches or its socket goes. */
+    watchList(clientId: string): void {
+        this.listWatchers.add(clientId);
+        void this.watchFolders();
+    }
+
+    unwatchList(clientId: string): void {
+        this.listWatchers.delete(clientId);
+        if (this.listWatchers.size === 0) {
+            this.folderWatch.close();
+        }
+    }
+
+    private async watchFolders(): Promise<void> {
+        if (this.listWatchers.size === 0) {
+            return;
+        }
+        const entries = await this.registry.load();
+        if (this.listWatchers.size > 0) {
+            this.folderWatch.sync(new Map(entries.map((entry) => [entry.projectId, entry.folder])));
+        }
+    }
+
+    /* A project a client holds has its own watcher, which tells the clients itself. */
+    private heardOutside(projectId: string): void {
+        if (this.open.has(projectId)) {
+            return;
+        }
+        for (const clientId of this.listWatchers) {
+            this.sinks.to(clientId, { event: 'project.listChanged', payload: { projectId } });
+        }
+    }
+
     private dropClient(clientId: string): void {
+        this.unwatchList(clientId);
         for (const projectId of this.holds.dropClient(clientId)) {
             this.release(projectId);
         }
@@ -1270,6 +1310,8 @@ export class ProjectStore {
 
     /* The daemon is going down: it lets go of every project without closing any of them. */
     closeAll(): void {
+        this.listWatchers.clear();
+        this.folderWatch.close();
         for (const projectId of [...this.open.keys()]) {
             this.release(projectId);
         }

@@ -47,6 +47,7 @@ export class ProjectRegistry {
     private loading: Promise<RegistryEntry[]> | null = null;
     // Registry changes run one after the other; two clients opening at once must not lose an entry.
     private readonly writes = new Serializer();
+    private readonly updated = new Set<() => void>();
     private readonly write: typeof writeAtomic;
 
     constructor(home: string, write: typeof writeAtomic = writeAtomic) {
@@ -72,6 +73,11 @@ export class ProjectRegistry {
         return entryIn(await this.load(), projectId);
     }
 
+    /* Calls back after every change that was written, for what keeps a view of the whole list. */
+    onUpdate(listener: () => void): void {
+        this.updated.add(listener);
+    }
+
     /* Applies a change to the registry as it stands once the changes before it are written, never to a copy read earlier. */
     update(change: (entries: RegistryEntry[]) => RegistryEntry[]): Promise<void> {
         return this.writes.run(async () => {
@@ -80,6 +86,7 @@ export class ProjectRegistry {
             await mkdir(this.home, { recursive: true, mode: 0o700 });
             // Durable like the project files: after a power loss the machine's list is the old one or the new one, never empty.
             await this.write(this.path, `${JSON.stringify({ projects: entries }, null, 2)}\n`, undefined, { durable: true });
+            this.updated.forEach((listener) => listener());
         });
     }
 

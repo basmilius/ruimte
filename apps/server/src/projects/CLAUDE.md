@@ -16,6 +16,7 @@ The root `CLAUDE.md` names the invariants; this file holds how the two files kee
 
 ## Holding and closing
 
+- A client with `project.watch` on also hears `project.listChanged` when the shared file of a project no client holds changes from outside (`project-folder-watch.ts`, watching the registry's folders only while a client watches); a machine from before that is read every 15 s by the sidebar.
 - Clients with a project open hold it (`ProjectHolds`) while their socket lives. Only they hear `project.changed`; every other client hears `project.summary` with its sidebar rows (`announceChange`). `closedAt` in the registry is the machine's own fact, and the sidebar an agent reads filters on it.
 - Closing (`ProjectStore.closeProject`) ends the sessions the document holds, read off the index, so a project nobody has on screen closes the same way.
 

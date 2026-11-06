@@ -123,7 +123,7 @@ export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
         routineArea({ routines: routines.routines, watchers: routines.watchers, skills: (payload) => routines.skills(payload) }),
         browserArea({ browsers: devices.browsers, pages: devices.browserPages, streamingAllowed }),
         devicesLifecycle(devices),
-        deviceArea({ devices: devices.devices, control: devices.deviceControl, streamingAllowed, home: runtime.config.home }),
+        deviceArea({ devices: devices.devices, control: devices.deviceControl, watch: devices.deviceWatch, streamingAllowed, home: runtime.config.home }),
         projectArea(projectDeps(input)),
         drawingArea({ store: projects.drawings }),
         diagramArea({ store: projects.diagrams }),

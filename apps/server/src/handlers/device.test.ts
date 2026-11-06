@@ -6,6 +6,7 @@ import type { ServerFrame } from '@ruimte/contracts';
 import { DeviceControl } from '../devices/control.ts';
 import { DeviceError } from '../devices/device-error.ts';
 import { SIMULATOR } from '../devices/device-test-helpers.ts';
+import { DeviceWatch } from '../devices/device-watch.ts';
 import { type DeviceManager } from '../devices/manager.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import type { ClientConnection } from '../wire.ts';
@@ -23,7 +24,7 @@ afterAll(() => {
 
 function setup(devices: DeviceManager, allowed: () => boolean) {
     const dispatcher = new Dispatcher();
-    deviceArea({ devices, control: new DeviceControl(), streamingAllowed: allowed, home }).handlers?.(dispatcher);
+    deviceArea({ devices, control: new DeviceControl(), watch: new DeviceWatch(devices), streamingAllowed: allowed, home }).handlers?.(dispatcher);
     const frames: ServerFrame[] = [];
     const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
     return { dispatcher, frames, client };
@@ -232,7 +233,9 @@ describe('device handlers', () => {
     test('lets a person pause an agent and read who operates what, whatever the streaming policy', async () => {
         const dispatcher = new Dispatcher();
         const control = new DeviceControl();
-        deviceArea({ devices: {} as DeviceManager, control, streamingAllowed: () => false, home }).handlers?.(dispatcher);
+        deviceArea({ devices: {} as DeviceManager, control, watch: new DeviceWatch({} as DeviceManager), streamingAllowed: () => false, home }).handlers?.(
+            dispatcher
+        );
         const frames: ServerFrame[] = [];
         const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
         control.admit(SIMULATOR, 'chat-1', { kind: 'swipe' });

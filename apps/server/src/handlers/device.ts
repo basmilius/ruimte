@@ -1,6 +1,7 @@
 import type { Area } from '../area.ts';
 import type { DeviceControl } from '../devices/control.ts';
 import { DeviceError } from '../devices/device-error.ts';
+import type { DeviceWatch } from '../devices/device-watch.ts';
 import { type DeviceManager } from '../devices/manager.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import { captureFile, keepCapture, pngSize, writeCapture } from '../shots.ts';
@@ -9,23 +10,26 @@ import { streamingGate } from '../streams/streaming-gate.ts';
 export interface DeviceDeps {
     devices: DeviceManager;
     control: DeviceControl;
+    watch: DeviceWatch;
     streamingAllowed(): boolean;
     home: string;
 }
 
 export function deviceArea(deps: DeviceDeps): Area {
-    const { devices, control } = deps;
+    const { devices, control, watch } = deps;
 
     return {
         name: 'device',
-        sources: [devices, control],
+        sources: [devices, control, watch],
         holders: [devices],
         handlers: (dispatcher) => {
             registerRequests(dispatcher, deps);
             registerControlRequests(dispatcher, control);
+            registerWatchRequests(dispatcher, watch);
         },
         stop: [
             { phase: 'end', label: 'Stopping device control', run: () => control.stop() },
+            { phase: 'end', label: 'Stopping the device watch', run: () => watch.stop() },
             { phase: 'end', label: 'Closing devices', run: () => devices.closeAll() }
         ]
     };
@@ -131,6 +135,21 @@ function registerRequests(dispatcher: Dispatcher, { devices, streamingAllowed, h
         },
         { count: ['actions.device'] }
     );
+}
+
+/* Not held to the streaming policy either: the event carries nothing of a device, only that the list changed. */
+function registerWatchRequests(dispatcher: Dispatcher, watch: DeviceWatch): void {
+    dispatcher.register('device.watch', (_payload, client) => {
+        // A channel that went while this was on its way would leave a watch nobody hears.
+        if (client.closed !== true) {
+            watch.watch(client.id);
+        }
+        return {};
+    });
+    dispatcher.register('device.unwatch', (_payload, client) => {
+        watch.unwatch(client.id);
+        return {};
+    });
 }
 
 /* Not held to the streaming policy: they carry no picture, and a person pauses an agent from wherever they are. */

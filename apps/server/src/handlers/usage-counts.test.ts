@@ -19,7 +19,7 @@ function declaredCounts(): (type: string, payload?: unknown) => readonly UsageCo
     const unused = {} as never;
     for (const area of [
         browserArea({ browsers: unused, pages: unused, streamingAllowed: () => true }),
-        deviceArea({ devices: unused, control: unused, streamingAllowed: () => true, home: '/home' }),
+        deviceArea({ devices: unused, control: unused, watch: unused, streamingAllowed: () => true, home: '/home' }),
         databaseArea({ service: unused, connections: unused, agents: unused, sql: unused }),
         computerArea({ computer: unused }),
         fsArea({ watcher: unused, boundaryOf: unused, machineHome: unused, language: unused }),
