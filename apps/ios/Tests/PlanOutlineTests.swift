@@ -43,62 +43,6 @@ final class PlanOutlineTests: XCTestCase {
         return try planStep(step("p", steps: steps))
     }
 
-    /// Every pair of `derived state` in `@adecore/plan/plan.test.ts`, in the order that file has them. The
-    /// derivation lives twice, so these vectors are what keeps the phone and the desktop from drifting apart.
-    private static let derivedPairs: [(PlanStepState, PlanStepState, PlanStepState)] = [
-        (.open, .open, .open),
-        (.open, .active, .active),
-        (.open, .done, .active),
-        (.open, .failed, .failed),
-        (.open, .skipped, .open),
-        (.open, .blocked, .blocked),
-        (.active, .active, .active),
-        (.active, .done, .active),
-        (.active, .failed, .failed),
-        (.active, .skipped, .active),
-        (.active, .blocked, .blocked),
-        (.done, .done, .done),
-        (.done, .failed, .failed),
-        (.done, .skipped, .done),
-        (.done, .blocked, .blocked),
-        (.failed, .failed, .failed),
-        (.failed, .skipped, .failed),
-        (.failed, .blocked, .failed),
-        (.skipped, .skipped, .done),
-        (.skipped, .blocked, .blocked),
-        (.blocked, .blocked, .blocked),
-        (.open, .warning, .active),
-        (.open, .info, .active),
-        (.active, .warning, .active),
-        (.active, .info, .active),
-        (.done, .warning, .warning),
-        (.done, .info, .done),
-        (.failed, .warning, .failed),
-        (.failed, .info, .failed),
-        (.skipped, .warning, .warning),
-        (.skipped, .info, .done),
-        (.blocked, .warning, .blocked),
-        (.blocked, .info, .blocked),
-        (.warning, .warning, .warning),
-        (.warning, .info, .warning),
-        (.info, .info, .done),
-    ]
-
-    func testParentDerivesItsStateLikeThePlanPackage() throws {
-        for (first, second, expected) in Self.derivedPairs {
-            XCTAssertEqual(try parent([first, second]).state, expected, "\(first.rawValue) and \(second.rawValue)")
-            XCTAssertEqual(try parent([second, first]).state, expected, "\(second.rawValue) and \(first.rawValue)")
-        }
-    }
-
-    func testOneChildPassesItsStateUp() throws {
-        for state in [PlanStepState.open, .active, .done, .failed, .blocked, .warning] {
-            XCTAssertEqual(try parent([state]).state, state, state.rawValue)
-        }
-        XCTAssertEqual(try parent([.skipped]).state, .done)
-        XCTAssertEqual(try parent([.info]).state, .done)
-    }
-
     func testFailedGoesBeforeBlockedInAnyMix() throws {
         XCTAssertEqual(try parent([.done, .skipped, .blocked, .failed, .active, .open]).state, .failed)
         XCTAssertEqual(try parent([.done, .skipped, .open]).state, .active)
@@ -121,18 +65,6 @@ final class PlanOutlineTests: XCTestCase {
         let unfinished = step(
             "a", steps: [step("b", steps: [step("c", state: "warning"), step("d")]), step("e", state: "info")])
         XCTAssertEqual(try planStep(unfinished).state, .active)
-    }
-
-    /// A state added to `PlanStepStateSchema` reaches the generated enum on its own; these hold the hand-written
-    /// tables beside it, so nobody ships a state a person cannot pick or that shows no marker.
-    func testEveryStateIsPlacedInTheTablesAPersonSees() {
-        XCTAssertEqual(Set(PlanStepState.personStates + [.active]), Set(PlanStepState.allCases))
-        XCTAssertEqual(Set(PlanStepState.testOutcomes + [.open, .active]), Set(PlanStepState.allCases))
-        XCTAssertEqual(Set(PlanStepState.allCases.map(\.marker)).count, PlanStepState.allCases.count)
-        XCTAssertEqual(
-            PlanStepState.allCases.filter(\.asksForNote), [.failed, .warning, .info])
-        XCTAssertEqual(
-            PlanStepState.allCases.filter(\.isFinished), [.done, .skipped, .warning, .info])
     }
 
     func testProgressCountsLeavesOnlyAndNamesTheActiveStep() throws {

@@ -89,3 +89,83 @@ final class AdecorePortTests: XCTestCase {
         }
     }
 }
+
+// MARK: @adecore/plan
+
+extension AdecorePortTests {
+    private func planStates(_ value: JSONValue?) -> [PlanStepState] {
+        lines(value).compactMap { PlanStepState(rawValue: $0) }
+    }
+
+    private func planStep(state: String?, children: [String] = []) throws -> PlanStep {
+        var object: [String: JSONValue] = ["type": .string("step"), "id": .string("p"), "title": .string("Parent")]
+        if let state { object["state"] = .string(state) }
+        if !children.isEmpty {
+            object["steps"] = .array(
+                children.enumerated().map {
+                    .object([
+                        "type": .string("step"), "id": .string("c\($0.offset)"), "title": .string("Child"),
+                        "state": .string($0.element),
+                    ])
+                })
+        }
+        return PlanStep(try JSONValue.object(object).decoded(as: StoredPlanStep.self))
+    }
+
+    func testAParentAddsUpItsChildrenAsThePlanPackageDoes() throws {
+        let all = try cases("ports-plan", "derived")
+        XCTAssertGreaterThan(all.count, 500)
+        for entry in all {
+            let children = lines(entry["states"])
+            XCTAssertEqual(try planStep(state: nil, children: children).state.rawValue, entry["state"]?.stringValue, "\(children)")
+        }
+        for entry in try cases("ports-plan", "leafStates") {
+            XCTAssertEqual(try planStep(state: entry["state"]?.stringValue).state.rawValue, entry["read"]?.stringValue)
+        }
+        for entry in try cases("ports-plan", "finished") {
+            let state = try XCTUnwrap(PlanStepState(rawValue: try XCTUnwrap(entry["state"]?.stringValue)))
+            XCTAssertEqual(state.isFinished, entry["finished"]?.boolValue, state.rawValue)
+        }
+    }
+
+    func testTheStatesAPersonSeesAreThePlanPackagesOwn() throws {
+        let tables = try XCTUnwrap(try cases("ports-plan", "tables").first)
+        XCTAssertEqual(PlanStepState.personStates, planStates(tables["person"]))
+        XCTAssertEqual(PlanStepState.testOutcomes, planStates(tables["test"]))
+        XCTAssertEqual(PlanStepState.allCases.filter(\.asksForNote), planStates(tables["asksForNote"]))
+        for state in PlanStepState.allCases {
+            XCTAssertEqual(state.marker, tables["markers"]?[state.rawValue]?.stringValue, state.rawValue)
+        }
+    }
+
+    func testAPlanCountsAndCopiesAsThePlanPackageDoes() throws {
+        let all = try cases("ports-plan", "plans")
+        XCTAssertGreaterThan(all.count, 30)
+        for entry in all {
+            let value = try XCTUnwrap(entry["plan"])
+            let document = PlanDocument(try value.decoded(as: StoredPlan.self))
+            let label = document.id
+            XCTAssertEqual(document.markdown, entry["markdown"]?.stringValue, label)
+            let progress = try XCTUnwrap(entry["progress"])
+            XCTAssertEqual(Double(document.progress.total), progress.number("total"), label)
+            XCTAssertEqual(Double(document.progress.finished), progress.number("finished"), label)
+            for state in PlanStepState.allCases {
+                XCTAssertEqual(Double(document.progress.count(state)), progress.number(state.rawValue), "\(label) \(state)")
+            }
+            var steps: [PlanStep] = []
+            func collect(_ step: PlanStep) {
+                steps.append(step)
+                step.steps.forEach(collect)
+            }
+            document.steps.forEach(collect)
+            let states = try XCTUnwrap(entry["stepStates"])
+            let copies = try XCTUnwrap(entry["stepMarkdown"])
+            for step in steps {
+                XCTAssertEqual(step.state.rawValue, states[step.id]?.stringValue, "\(label) \(step.id)")
+                XCTAssertEqual(
+                    PlanCopyText.stepLine(step) { "said \($0.rawValue)" }, copies[step.id]?.stringValue, "\(label) \(step.id)")
+            }
+            XCTAssertEqual(Set(steps.map(\.id)), Set(states.objectValue?.keys.map { $0 } ?? []), label)
+        }
+    }
+}

@@ -424,6 +424,7 @@
 		EE58B0C84A6226EE848C7320 /* image.bmp in Resources */ = {isa = PBXBuildFile; fileRef = 6165EEB92F8B4DB68B70B3F7 /* image.bmp */; };
 		EE74DF5514DD201C33ACEA3E /* NotificationSessionPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8658D05270F5D27871DF224 /* NotificationSessionPage.swift */; };
 		EF468123D0DBEDC10D883F36 /* PhoneRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E342A07018739FE303A2EAF /* PhoneRouter.swift */; };
+		EF52FF2AA29B3410B1BD9D48 /* ports-plan.json in Resources */ = {isa = PBXBuildFile; fileRef = C817F2600645B6E1FDD95CCF /* ports-plan.json */; };
 		EF576663DB38E8ED830F3C9C /* ChatGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 588CB5F421613BFCAE091D07 /* ChatGoal.swift */; };
 		EF671DDC2475C1E41165F98F /* MachineIconTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B02D669F665402B085C9E9C /* MachineIconTests.swift */; };
 		EFD8EEA12C952C4276B210C2 /* ModelComparisonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C3D5EF84CEC4A665BE6F8A /* ModelComparisonTests.swift */; };
@@ -854,6 +855,7 @@
 		C6D89A46407EFAE5ECD7CE9B /* NowScheduledSnapshots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowScheduledSnapshots.swift; sourceTree = "<group>"; };
 		C74A1CFB609179C74C4E0F1D /* UiReplyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UiReplyView.swift; sourceTree = "<group>"; };
 		C79EE3745DD51F5657919C72 /* MachineIdentitySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineIdentitySheet.swift; sourceTree = "<group>"; };
+		C817F2600645B6E1FDD95CCF /* ports-plan.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ports-plan.json"; sourceTree = "<group>"; };
 		C8E7595D929A5B4FA8DFD12C /* PhoneHomeScrollTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneHomeScrollTests.swift; sourceTree = "<group>"; };
 		C93464A87752188B15F2F555 /* UsageTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTheme.swift; sourceTree = "<group>"; };
 		CA401CA82CE41046F457D507 /* MachineProjectsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineProjectsPage.swift; sourceTree = "<group>"; };
@@ -1317,6 +1319,7 @@
 				75DA6517FBC9FBF6C79776E2 /* document-scenes.json */,
 				A9867AAE3875BFA2A608B522 /* intelligent-ui-presentation.json */,
 				DCEBB48874CD75525612331D /* ports-merge.json */,
+				C817F2600645B6E1FDD95CCF /* ports-plan.json */,
 				781F6AC7AD1FC0898F16BD73 /* ports.json */,
 				B22BE2076F9548674B7672E9 /* view-references.json */,
 				E3B2D444DD5354869B42656D /* visuals.json */,
@@ -1950,6 +1953,7 @@
 				232274F1989E0BA90BB73CA8 /* image.webp in Resources */,
 				93ABEC838D61F2A4F84A9AEF /* intelligent-ui-presentation.json in Resources */,
 				1DE7EEFABD8511F861F6E3F4 /* ports-merge.json in Resources */,
+				EF52FF2AA29B3410B1BD9D48 /* ports-plan.json in Resources */,
 				CF206234DF28A035F2731230 /* ports.json in Resources */,
 				B7C91BEC26677BD8FBAFC69D /* rotated.jpg in Resources */,
 				618B905E55D2BECE6783EABD /* tone.aac in Resources */,
