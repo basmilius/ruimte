@@ -359,6 +359,22 @@ describe('node group', () => {
         });
     });
 
+    test('holds the texts and lines inside its frame, so they move with it', async () => {
+        const next = content();
+        const board = next.views[0] as ProjectCanvasView;
+        board.nodes.push(box('a', 400, 400), box('b', 800, 600));
+        board.texts.push({ id: 'text-in', x: 700, y: 500, text: 'inside', size: 16 });
+        board.lines = [
+            { id: 'line-in', x: 450, y: 450, endX: 850, endY: 650, stroke: 'red', strokeWidth: 2, strokeStyle: 'solid' },
+            { id: 'line-out', x: 3000, y: 3000, endX: 3200, endY: 3000, stroke: 'red', strokeWidth: 2, strokeStyle: 'solid' }
+        ];
+        await replaceContent(next);
+
+        const { lines } = await invoke('node_group', { nodes: 'a,b' });
+
+        expect((await nodeOnDisk(lines[0]!.split('\t')[0]!))?.memberIds).toEqual(['a', 'b', 'text-in', 'line-in']);
+    });
+
     test('label and color are the ones the client offers', async () => {
         await seed(box('a', 400, 400), box('b', 800, 600));
         const { lines } = await invoke('node_group', { nodes: 'a,b', label: 'Parser work', color: 'violet' });
