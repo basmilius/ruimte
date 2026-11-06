@@ -3,6 +3,7 @@ import { messageOf } from '@adecore/ui';
 import { localTimeZone } from '@adecore/ui/format';
 import { isCanvasView, isOpenableView, type AgentStatus } from '@ruimte/contracts';
 import {
+    chatRunsTurn,
     settledPrompt,
     SETTLED_COMMENTARY,
     terminalWaits,
@@ -190,7 +191,7 @@ function pollChatFollowUps(): void {
                 if (info && chatFollowUps.get(id) === followUp && !useChats.getState().statusByKey[followUp.key]) {
                     observeSession({ key: followUp.key, kind: 'chat', name: followUp.chat, project: followUp.project }, info.status);
                 }
-                if (!info || info.activeTurnId === followUp.turnId || chatFollowUps.get(id) !== followUp) {
+                if (!info || chatRunsTurn(info, followUp.turnId) || chatFollowUps.get(id) !== followUp) {
                     return;
                 }
                 const snapshot = await client.inspect(chatId);

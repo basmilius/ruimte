@@ -1,6 +1,6 @@
 import type { ChatState } from '@adecore/agents-react/state';
 import type { ChatItem } from '@ruimte/contracts';
-import { chatWaits as threadWaits, turnCompletion, type VoiceChatCompletion } from '@ruimte/voice';
+import { chatTurnProgress, chatWaits as threadWaits, type VoiceChatCompletion } from '@ruimte/voice';
 
 /* The thread in the order this window holds it. A long turn's own item may sit in `items` before the page `order` reaches back to. */
 function threadItems(chat: Pick<ChatState, 'items' | 'order'>, turnId?: string): ChatItem[] {
@@ -16,7 +16,8 @@ export function chatCompletion(chat: ChatState | undefined, turnId: string): Voi
     if (!chat) {
         return null;
     }
-    return turnCompletion({ items: threadItems(chat, turnId), activeTurnId: chat.info.activeTurnId }, turnId);
+    const progress = chatTurnProgress({ items: threadItems(chat, turnId), info: chat.info }, turnId);
+    return progress.kind === 'settled' ? progress.completion : null;
 }
 
 /* Only what this window holds of the thread; a chat nobody here opened says what it waits on through chat.inspect. */
