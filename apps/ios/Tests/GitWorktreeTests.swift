@@ -10,22 +10,21 @@ final class GitWorktreeTests: XCTestCase {
         locked: Bool = false
     ) -> GitWorktree {
         GitWorktree(
-            path: "/wt/lexer", branch: "lexer", fromBranch: "main", fromCommit: "abc", missing: missing, locked: locked,
-            work: GitWorktree.Work(changed: changed, untracked: untracked, ahead: ahead, operation: operation))
+            path: "/wt/lexer", branch: "lexer", from: WorktreeFrom(branch: "main", commit: "abc"), missing: missing,
+            locked: locked,
+            work: WorktreeWork(
+                changed: Int64(changed), untracked: Int64(untracked), ahead: Int64(ahead), operation: operation))
     }
 
     func testAWorktreeIsReadFromTheList() {
-        let json: JSONValue = .object([
-            "path": .string("/wt/x"), "branch": .string("x"),
-            "from": .object(["branch": .string("main"), "commit": .string("c1")]), "locked": .bool(true),
-            "work": .object(["changed": .number(2), "untracked": .number(0), "ahead": .number(1), "behind": .number(3)]
-            ),
-        ])
-        let entry = GitWorktree(json: json)
+        let entry = WorktreeWire.entry(
+            "/wt/x", branch: "x", from: ("main", "c1"), locked: true,
+            work: WorktreeWire.work(changed: 2, ahead: 1, behind: 3)
+        ).worktree
         XCTAssertEqual(entry.fromBranch, "main")
         XCTAssertEqual(entry.base, "main")
-        XCTAssertTrue(entry.locked)
-        XCTAssertFalse(entry.missing)
+        XCTAssertTrue(entry.isLocked)
+        XCTAssertFalse(entry.isMissing)
         XCTAssertEqual(entry.work?.behind, 3)
         XCTAssertTrue(entry.hasWork)
         XCTAssertTrue(entry.hasLooseWork)
@@ -83,12 +82,13 @@ final class GitWorktreeTests: XCTestCase {
 
     func testWhatARemovalLeftBehindIsSaid() {
         XCTAssertEqual(
-            GitWorktreeText.removed(branch: "lexer", result: .object(["branchDeleted": .bool(false)])),
+            GitWorktreeText.removed(
+                branch: "lexer", result: WorktreeWire.removed(branchDeleted: false).worktreeRemoved),
             "Removed worktree lexer. The branch lexer stays.")
         XCTAssertEqual(
             GitWorktreeText.removed(
                 branch: "lexer",
-                result: .object(["branchDeleted": .bool(true), "branchCommit": .string("0123456789abcdef")])),
+                result: WorktreeWire.removed(branchDeleted: true, branchCommit: "0123456789abcdef").worktreeRemoved),
             "Removed worktree lexer and its branch. \"git branch lexer 0123456789ab\" brings it back.")
     }
 
@@ -182,18 +182,14 @@ final class GitWorktreeTests: XCTestCase {
             return GitWire.json(GitWire.status(["branch": .string(branch)]))
         case .gitWorktreeMerge:
             if let refusal { throw MachineClientError.server(code: refusal.code, message: refusal.message) }
+            let actionId = payload["actionId"] ?? .null
             if !conflicts {
-                return .object([
-                    "actionId": payload["actionId"] ?? .null, "summary": .string("Merged lexer into main."),
-                    "output": .string(""), "cwd": .string("/repo"),
-                ])
+                return WorktreeWire.merged(actionId: actionId, summary: "Merged lexer into main.", cwd: "/repo")
             }
-            return .object([
-                "actionId": payload["actionId"] ?? .null, "summary": .string("1 file conflicts in /repo."),
-                "output": .string(""), "cwd": .string("/repo"), "conflicts": .array([.string("a.ts")]),
-            ])
+            return WorktreeWire.merged(
+                actionId: actionId, summary: "1 file conflicts in /repo.", cwd: "/repo", conflicts: ["a.ts"])
         case .gitWorktreeList:
-            return .object(["worktrees": .array([])])
+            return WorktreeWire.list()
         default:
             return .object([:])
         }

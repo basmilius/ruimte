@@ -102,16 +102,16 @@ struct GitWorktreeRow: View {
 
     var body: some View {
         Button {
-            guard !worktree.missing else { return }
+            guard !worktree.isMissing else { return }
             onDiff(diffTarget)
         } label: {
             HStack(spacing: 10) {
-                Image(lucide: worktree.missing ? "folder-x" : "folder-git-2", size: 15)
+                Image(lucide: worktree.isMissing ? "folder-x" : "folder-git-2", size: 15)
                     .foregroundStyle(MobileStyle.muted)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text((worktree.path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle)
-                        if worktree.locked {
+                        if worktree.isLocked {
                             Image(lucide: "lock", size: 12).foregroundStyle(MobileStyle.muted)
                                 .accessibilityLabel("Locked")
                         }
@@ -129,20 +129,20 @@ struct GitWorktreeRow: View {
                 }
                 Spacer(minLength: 8)
             }
-            .modifier(MobileSidebarLabel(disclosure: !worktree.missing))
+            .modifier(MobileSidebarLabel(disclosure: !worktree.isMissing))
         }
         .modifier(MobileSidebarRow())
         .disabled(state.busy)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button("Remove", role: .destructive) { Task { await state.ask(client: client, remove: worktree) } }
                 .tint(MobileStyle.swipeDestructive)
-            if !worktree.missing {
+            if !worktree.isMissing {
                 Button("Merge") { Task { await state.ask(client: client, merge: worktree) } }
                     .tint(MobileStyle.swipeAction)
             }
         }
         .contextMenu {
-            if !worktree.missing {
+            if !worktree.isMissing {
                 Button(String(localized: "View changes"), lucideIcon: "eye") { onDiff(diffTarget) }
                 Button(
                     worktree.fromBranch.map { String(localized: "Merge into \($0)…") } ?? String(localized: "Merge…"),
@@ -253,7 +253,7 @@ struct GitWorktreeDialogs: ViewModifier {
                 Button(pending.confirmLabel, role: .destructive) {
                     Task { state.removal = await state.remove(client: client, removal: pending) }
                 }
-                if pending.force && !pending.worktree.missing {
+                if pending.force && !pending.worktree.isMissing {
                     Button("Merge first") { state.merging = pending.worktree }
                 }
                 Button("Cancel", role: .cancel) {}

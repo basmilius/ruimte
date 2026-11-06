@@ -149,13 +149,9 @@ enum GitWorktreeBinding {
                 payload: .object([
                     "repo": .string(workspace.folder), "branch": .string(name),
                     "projectId": .string(workspace.projectID),
-                ]))
-            let worktree = result["worktree"]
-            guard let path = worktree?["path"]?.stringValue else {
-                problem = String(localized: "The machine did not say where the worktree is.")
-                return false
-            }
-            let bound = (path: path, branch: worktree?.text("branch", fallback: name) ?? name)
+                ])
+            ).decoded(as: WorktreeAddResult.self)
+            let bound = (path: result.worktree.path, branch: result.worktree.branch)
             await workspace.edit {
                 GitWorktreeBinding.bind($0, viewID: group.viewID, groupID: group.id, worktree: bound)
             }

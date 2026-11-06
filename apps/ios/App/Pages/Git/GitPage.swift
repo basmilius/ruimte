@@ -129,7 +129,7 @@ struct GitPage: View {
     /// Where the project stands, and the way to its worktrees and its repositories.
     private var pill: some View {
         Menu {
-            let worktrees = projectWorktrees.worktrees.filter { !$0.missing }
+            let worktrees = projectWorktrees.worktrees.filter { !$0.isMissing }
             if !worktrees.isEmpty {
                 Section("Checkout") {
                     Button {

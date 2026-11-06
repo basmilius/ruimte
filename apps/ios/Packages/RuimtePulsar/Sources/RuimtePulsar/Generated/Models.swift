@@ -9854,6 +9854,365 @@ public enum GitRepoKind: String, CaseIterable, Codable, Sendable, Equatable {
     case `nested` = "nested"
 }
 
+public struct WorktreeListResult: Codable, Sendable, Equatable {
+    public let `worktrees`: [Worktree]
+
+    public init(`worktrees`: [Worktree]) {
+        self.`worktrees` = `worktrees`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `worktrees` = try container.decode([Worktree].self, forKey: .`worktrees`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`worktrees`, forKey: .`worktrees`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `worktrees` = "worktrees"
+    }
+}
+
+public struct Worktree: Codable, Sendable, Equatable {
+    public let `path`: String
+    public let `branch`: String
+    public let `from`: WorktreeFrom?
+    public let `projectId`: String?
+    public let `nodeId`: String?
+    public let `madeAt`: Double?
+    public let `missing`: Bool?
+    public let `locked`: Bool?
+    public let `work`: WorktreeWork?
+
+    public init(`path`: String, `branch`: String, `from`: WorktreeFrom? = nil, `projectId`: String? = nil, `nodeId`: String? = nil, `madeAt`: Double? = nil, `missing`: Bool? = nil, `locked`: Bool? = nil, `work`: WorktreeWork? = nil) {
+        self.`path` = `path`
+        self.`branch` = `branch`
+        self.`from` = `from`
+        self.`projectId` = `projectId`
+        self.`nodeId` = `nodeId`
+        self.`madeAt` = `madeAt`
+        self.`missing` = `missing`
+        self.`locked` = `locked`
+        self.`work` = `work`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `path` = try container.decode(String.self, forKey: .`path`)
+        `branch` = try container.decode(String.self, forKey: .`branch`)
+        `from` = try container.decodeIfPresent(WorktreeFrom.self, forKey: .`from`)
+        `projectId` = try container.decodeIfPresent(String.self, forKey: .`projectId`)
+        `nodeId` = try container.decodeIfPresent(String.self, forKey: .`nodeId`)
+        `madeAt` = try container.decodeIfPresent(Double.self, forKey: .`madeAt`)
+        `missing` = try container.decodeIfPresent(Bool.self, forKey: .`missing`)
+        `locked` = try container.decodeIfPresent(Bool.self, forKey: .`locked`)
+        `work` = try container.decodeIfPresent(WorktreeWork.self, forKey: .`work`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`branch`, forKey: .`branch`)
+        try container.encodeIfPresent(`from`, forKey: .`from`)
+        try container.encodeIfPresent(`projectId`, forKey: .`projectId`)
+        try container.encodeIfPresent(`nodeId`, forKey: .`nodeId`)
+        try container.encodeIfPresent(`madeAt`, forKey: .`madeAt`)
+        try container.encodeIfPresent(`missing`, forKey: .`missing`)
+        try container.encodeIfPresent(`locked`, forKey: .`locked`)
+        try container.encodeIfPresent(`work`, forKey: .`work`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `path` = "path"
+        case `branch` = "branch"
+        case `from` = "from"
+        case `projectId` = "projectId"
+        case `nodeId` = "nodeId"
+        case `madeAt` = "madeAt"
+        case `missing` = "missing"
+        case `locked` = "locked"
+        case `work` = "work"
+    }
+}
+
+public struct WorktreeFrom: Codable, Sendable, Equatable {
+    public let `branch`: String?
+    public let `commit`: String
+
+    public init(`branch`: String? = nil, `commit`: String) {
+        self.`branch` = `branch`
+        self.`commit` = `commit`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `branch` = try container.decodeIfPresent(String.self, forKey: .`branch`)
+        `commit` = try container.decode(String.self, forKey: .`commit`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(`branch`, forKey: .`branch`)
+        try container.encode(`commit`, forKey: .`commit`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `branch` = "branch"
+        case `commit` = "commit"
+    }
+}
+
+public struct WorktreeWork: Codable, Sendable, Equatable {
+    public let `changed`: Int64
+    public let `untracked`: Int64
+    public let `ahead`: Int64
+    public let `operation`: String?
+    public let `behind`: Int64?
+
+    public init(`changed`: Int64, `untracked`: Int64, `ahead`: Int64, `operation`: String? = nil, `behind`: Int64? = nil) {
+        self.`changed` = `changed`
+        self.`untracked` = `untracked`
+        self.`ahead` = `ahead`
+        self.`operation` = `operation`
+        self.`behind` = `behind`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `changed` = try container.decode(Int64.self, forKey: .`changed`)
+        `untracked` = try container.decode(Int64.self, forKey: .`untracked`)
+        `ahead` = try container.decode(Int64.self, forKey: .`ahead`)
+        `operation` = try container.decodeIfPresent(String.self, forKey: .`operation`)
+        `behind` = try container.decodeIfPresent(Int64.self, forKey: .`behind`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`changed`, forKey: .`changed`)
+        try container.encode(`untracked`, forKey: .`untracked`)
+        try container.encode(`ahead`, forKey: .`ahead`)
+        try container.encodeIfPresent(`operation`, forKey: .`operation`)
+        try container.encodeIfPresent(`behind`, forKey: .`behind`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `changed` = "changed"
+        case `untracked` = "untracked"
+        case `ahead` = "ahead"
+        case `operation` = "operation"
+        case `behind` = "behind"
+    }
+}
+
+public struct WorktreeAddResult: Codable, Sendable, Equatable {
+    public let `worktree`: Worktree
+    public let `created`: Bool
+
+    public init(`worktree`: Worktree, `created`: Bool) {
+        self.`worktree` = `worktree`
+        self.`created` = `created`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `worktree` = try container.decode(Worktree.self, forKey: .`worktree`)
+        `created` = try container.decode(Bool.self, forKey: .`created`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`worktree`, forKey: .`worktree`)
+        try container.encode(`created`, forKey: .`created`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `worktree` = "worktree"
+        case `created` = "created"
+    }
+}
+
+public struct WorktreeRemoveResult: Codable, Sendable, Equatable {
+    public let `branchDeleted`: Bool?
+    public let `branchCommit`: String?
+
+    public init(`branchDeleted`: Bool? = nil, `branchCommit`: String? = nil) {
+        self.`branchDeleted` = `branchDeleted`
+        self.`branchCommit` = `branchCommit`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `branchDeleted` = try container.decodeIfPresent(Bool.self, forKey: .`branchDeleted`)
+        `branchCommit` = try container.decodeIfPresent(String.self, forKey: .`branchCommit`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(`branchDeleted`, forKey: .`branchDeleted`)
+        try container.encodeIfPresent(`branchCommit`, forKey: .`branchCommit`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `branchDeleted` = "branchDeleted"
+        case `branchCommit` = "branchCommit"
+    }
+}
+
+public struct WorktreeMergeResult: Codable, Sendable, Equatable {
+    public let `actionId`: String
+    public let `summary`: String
+    public let `output`: String
+    public let `commit`: WorktreeMergeResultCommit?
+    public let `url`: String?
+    public let `conflicts`: [String]?
+    public let `cwd`: String?
+    public let `into`: String?
+    public let `removed`: Bool?
+    public let `branchDeleted`: Bool?
+    public let `kept`: String?
+
+    public init(`actionId`: String, `summary`: String, `output`: String, `commit`: WorktreeMergeResultCommit? = nil, `url`: String? = nil, `conflicts`: [String]? = nil, `cwd`: String? = nil, `into`: String? = nil, `removed`: Bool? = nil, `branchDeleted`: Bool? = nil, `kept`: String? = nil) {
+        self.`actionId` = `actionId`
+        self.`summary` = `summary`
+        self.`output` = `output`
+        self.`commit` = `commit`
+        self.`url` = `url`
+        self.`conflicts` = `conflicts`
+        self.`cwd` = `cwd`
+        self.`into` = `into`
+        self.`removed` = `removed`
+        self.`branchDeleted` = `branchDeleted`
+        self.`kept` = `kept`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `actionId` = try container.decode(String.self, forKey: .`actionId`)
+        `summary` = try container.decode(String.self, forKey: .`summary`)
+        `output` = try container.decode(String.self, forKey: .`output`)
+        `commit` = try container.decodeIfPresent(WorktreeMergeResultCommit.self, forKey: .`commit`)
+        `url` = try container.decodeIfPresent(String.self, forKey: .`url`)
+        `conflicts` = try container.decodeIfPresent([String].self, forKey: .`conflicts`)
+        `cwd` = try container.decodeIfPresent(String.self, forKey: .`cwd`)
+        `into` = try container.decodeIfPresent(String.self, forKey: .`into`)
+        `removed` = try container.decodeIfPresent(Bool.self, forKey: .`removed`)
+        `branchDeleted` = try container.decodeIfPresent(Bool.self, forKey: .`branchDeleted`)
+        `kept` = try container.decodeIfPresent(String.self, forKey: .`kept`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`actionId`, forKey: .`actionId`)
+        try container.encode(`summary`, forKey: .`summary`)
+        try container.encode(`output`, forKey: .`output`)
+        try container.encodeIfPresent(`commit`, forKey: .`commit`)
+        try container.encodeIfPresent(`url`, forKey: .`url`)
+        try container.encodeIfPresent(`conflicts`, forKey: .`conflicts`)
+        try container.encodeIfPresent(`cwd`, forKey: .`cwd`)
+        try container.encodeIfPresent(`into`, forKey: .`into`)
+        try container.encodeIfPresent(`removed`, forKey: .`removed`)
+        try container.encodeIfPresent(`branchDeleted`, forKey: .`branchDeleted`)
+        try container.encodeIfPresent(`kept`, forKey: .`kept`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `actionId` = "actionId"
+        case `summary` = "summary"
+        case `output` = "output"
+        case `commit` = "commit"
+        case `url` = "url"
+        case `conflicts` = "conflicts"
+        case `cwd` = "cwd"
+        case `into` = "into"
+        case `removed` = "removed"
+        case `branchDeleted` = "branchDeleted"
+        case `kept` = "kept"
+    }
+}
+
+public struct WorktreeMergeResultCommit: Codable, Sendable, Equatable {
+    public let `hash`: String
+    public let `subject`: String
+
+    public init(`hash`: String, `subject`: String) {
+        self.`hash` = `hash`
+        self.`subject` = `subject`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `hash` = try container.decode(String.self, forKey: .`hash`)
+        `subject` = try container.decode(String.self, forKey: .`subject`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`hash`, forKey: .`hash`)
+        try container.encode(`subject`, forKey: .`subject`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `hash` = "hash"
+        case `subject` = "subject"
+    }
+}
+
+public struct GitProgressEvent: Codable, Sendable, Equatable {
+    public let `cwd`: String
+    public let `actionId`: String
+    public let `phase`: GitProgressEventPhase
+    public let `line`: String
+
+    public init(`cwd`: String, `actionId`: String, `phase`: GitProgressEventPhase, `line`: String) {
+        self.`cwd` = `cwd`
+        self.`actionId` = `actionId`
+        self.`phase` = `phase`
+        self.`line` = `line`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `cwd` = try container.decode(String.self, forKey: .`cwd`)
+        `actionId` = try container.decode(String.self, forKey: .`actionId`)
+        `phase` = try container.decode(GitProgressEventPhase.self, forKey: .`phase`)
+        `line` = try container.decode(String.self, forKey: .`line`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`cwd`, forKey: .`cwd`)
+        try container.encode(`actionId`, forKey: .`actionId`)
+        try container.encode(`phase`, forKey: .`phase`)
+        try container.encode(`line`, forKey: .`line`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `cwd` = "cwd"
+        case `actionId` = "actionId"
+        case `phase` = "phase"
+        case `line` = "line"
+    }
+}
+
+public enum GitProgressEventPhase: String, CaseIterable, Codable, Sendable, Equatable {
+    case `start` = "start"
+    case `fetch` = "fetch"
+    case `stage` = "stage"
+    case `commit` = "commit"
+    case `push` = "push"
+    case `pull` = "pull"
+    case `branch` = "branch"
+    case `stash` = "stash"
+    case `merge` = "merge"
+    case `rebase` = "rebase"
+    case `pr` = "pr"
+    case `done` = "done"
+    case `failed` = "failed"
+}
+
 public extension PlanStepState {
     /// The marker of this state, as `PLAN_STATE_MARKERS` in `@adecore/plan` writes it.
     var marker: String {

@@ -226,7 +226,8 @@ enum LaunchWire {
         .object([
             "projectId": .string(project), "launchId": .string(id), "sessionId": .string("launch:\(id)"),
             "kind": .string(kind), "state": .string(state), "exitCode": exit.map { .number(Double($0)) } ?? .null,
-            "startedAt": .number(1000), "endedAt": endedAt.map(JSONValue.number) ?? (state == "exited" ? .number(6000) : .null),
+            "startedAt": .number(1000),
+            "endedAt": endedAt.map(JSONValue.number) ?? (state == "exited" ? .number(6000) : .null),
             "port": port.map { .number(Double($0)) } ?? .null, "url": .null, "stopped": .bool(stopped),
         ])
     }
@@ -257,4 +258,53 @@ extension JSONValue {
     var launchStatus: LaunchStatus { try! decoded(as: LaunchStatus.self) }
     var launchBook: LaunchBook { try! decoded(as: LaunchBook.self) }
     var launchSuggestion: LaunchSuggestion { try! decoded(as: LaunchSuggestion.self) }
+}
+
+/// `git.worktree-*` replies as a machine writes them, with the fields the schema requires.
+enum WorktreeWire {
+    static func entry(
+        _ path: String, branch: String, from: (branch: String, commit: String)? = nil, locked: Bool? = nil,
+        work: JSONValue? = nil
+    ) -> JSONValue {
+        var fields: [String: JSONValue] = ["path": .string(path), "branch": .string(branch)]
+        if let from { fields["from"] = .object(["branch": .string(from.branch), "commit": .string(from.commit)]) }
+        if let locked { fields["locked"] = .bool(locked) }
+        if let work { fields["work"] = work }
+        return .object(fields)
+    }
+
+    static func work(changed: Int = 0, untracked: Int = 0, ahead: Int = 0, behind: Int? = nil) -> JSONValue {
+        var fields: [String: JSONValue] = [
+            "changed": .number(Double(changed)), "untracked": .number(Double(untracked)),
+            "ahead": .number(Double(ahead)),
+        ]
+        if let behind { fields["behind"] = .number(Double(behind)) }
+        return .object(fields)
+    }
+
+    static func list(_ worktrees: [JSONValue] = []) -> JSONValue {
+        .object(["worktrees": .array(worktrees)])
+    }
+
+    /// What `git.worktree-merge` answers; a list of files makes it a merge that stopped on a conflict.
+    static func merged(actionId: JSONValue, summary: String, cwd: String, conflicts: [String]? = nil) -> JSONValue {
+        var fields: [String: JSONValue] = [
+            "actionId": actionId, "summary": .string(summary), "output": .string(""), "cwd": .string(cwd),
+        ]
+        if let conflicts { fields["conflicts"] = .array(conflicts.map(JSONValue.string)) }
+        return .object(fields)
+    }
+
+    static func removed(branchDeleted: Bool? = nil, branchCommit: String? = nil) -> JSONValue {
+        var fields: [String: JSONValue] = [:]
+        if let branchDeleted { fields["branchDeleted"] = .bool(branchDeleted) }
+        if let branchCommit { fields["branchCommit"] = .string(branchCommit) }
+        return .object(fields)
+    }
+}
+
+extension JSONValue {
+    // A fixture that does not decode is a broken test, not a case to cover.
+    var worktree: GitWorktree { try! decoded(as: Worktree.self) }
+    var worktreeRemoved: WorktreeRemoveResult { try! decoded(as: WorktreeRemoveResult.self) }
 }

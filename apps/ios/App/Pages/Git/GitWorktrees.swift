@@ -4,55 +4,17 @@ import RuimteTransport
 import SwiftUI
 
 /// One worktree of a repository as `git.worktree-list` answers it, with the work it holds when the list
-/// was asked to count it.
-struct GitWorktree: Identifiable, Equatable {
-    struct Work: Equatable {
-        var changed = 0
-        var untracked = 0
-        /// Commits the branch it was made from lacks.
-        var ahead = 0
-        /// A rebase, merge, cherry-pick or revert that stopped halfway in it.
-        var operation: String?
-        var behind = 0
-    }
+/// was asked to count it. Its `work.ahead` counts commits the branch it was made from lacks, and its `work.operation`
+/// is a rebase, merge, cherry-pick or revert that stopped halfway in it.
+typealias GitWorktree = Worktree
 
-    let path: String
-    let branch: String
-    let fromBranch: String?
-    let fromCommit: String?
-    let missing: Bool
-    let locked: Bool
-    let work: Work?
+extension Worktree: Identifiable {
+    public var id: String { path }
 
-    var id: String { path }
-
-    init(json: JSONValue) {
-        path = json.text("path")
-        branch = json.text("branch")
-        fromBranch = json["from"]?["branch"]?.stringValue
-        fromCommit = json["from"]?["commit"]?.stringValue
-        missing = json["missing"] == .bool(true)
-        locked = json["locked"] == .bool(true)
-        work = json["work"].map { work in
-            Work(
-                changed: Int(work.number("changed")), untracked: Int(work.number("untracked")),
-                ahead: Int(work.number("ahead")), operation: work["operation"]?.stringValue,
-                behind: Int(work.number("behind")))
-        }
-    }
-
-    init(
-        path: String, branch: String, fromBranch: String? = nil, fromCommit: String? = nil, missing: Bool = false,
-        locked: Bool = false, work: Work? = nil
-    ) {
-        self.path = path
-        self.branch = branch
-        self.fromBranch = fromBranch
-        self.fromCommit = fromCommit
-        self.missing = missing
-        self.locked = locked
-        self.work = work
-    }
+    var fromBranch: String? { from?.branch }
+    var fromCommit: String? { from?.commit }
+    var isMissing: Bool { missing ?? false }
+    var isLocked: Bool { locked ?? false }
 
     /// The branch its commits are counted against, in words; one the register does not know was measured against the base.
     var target: String { fromBranch ?? String(localized: "the base branch") }
@@ -166,7 +128,7 @@ enum GitWorktreeText {
 
     /// The line under a row: where it came from and what it holds, behind included, since that is not lost.
     static func rowDetail(_ worktree: GitWorktree) -> String {
-        if worktree.missing { return String(localized: "Folder missing") }
+        if worktree.isMissing { return String(localized: "Folder missing") }
         var parts: [String] = []
         if let from = worktree.fromBranch {
             parts.append(String(localized: "from \(from)", comment: "%@ is a git branch"))
@@ -194,22 +156,22 @@ enum GitWorktreeText {
 
     static func removal(_ worktree: GitWorktree) -> GitWorktreeRemoval {
         let title = String(localized: "Remove worktree \(worktree.branch)?")
-        let lock = worktree.locked ? String(localized: "It is locked with git worktree lock.") : nil
+        let lock = worktree.isLocked ? String(localized: "It is locked with git worktree lock.") : nil
         guard worktree.hasWork else {
             let clean = String(
                 localized:
                     "Nothing is lost. No uncommitted files, new files or commits that \(worktree.target) lacks."
             )
-            let gone = worktree.missing ? String(localized: "Its folder is already gone.") : nil
+            let gone = worktree.isMissing ? String(localized: "Its folder is already gone.") : nil
             return GitWorktreeRemoval(
                 worktree: worktree, title: title,
                 detail: [gone, clean, lock].compactMap { $0 }.joined(separator: " "),
-                confirmLabel: worktree.locked ? String(localized: "Remove anyway") : String(localized: "Remove"),
-                force: worktree.locked)
+                confirmLabel: worktree.isLocked ? String(localized: "Remove anyway") : String(localized: "Remove"),
+                force: worktree.isLocked)
         }
         let held = workSentence(worktree)
         let detail =
-            worktree.missing
+            worktree.isMissing
             ? String(
                 localized:
                     "Its folder is already gone, and the branch holds \(held). Those commits are lost with the branch.")
@@ -222,11 +184,11 @@ enum GitWorktreeText {
             confirmLabel: String(localized: "Remove anyway"), force: true)
     }
 
-    static func removed(branch: String, result: JSONValue) -> String {
-        if result["branchDeleted"] == .bool(false) {
+    static func removed(branch: String, result: WorktreeRemoveResult) -> String {
+        if result.branchDeleted == false {
             return String(localized: "Removed worktree \(branch). The branch \(branch) stays.")
         }
-        if let commit = result["branchCommit"]?.stringValue {
+        if let commit = result.branchCommit {
             let revive = "git branch \(branch) \(commit.prefix(12))"
             return String(
                 localized: "Removed worktree \(branch) and its branch. \"\(revive)\" brings it back.",
@@ -235,15 +197,15 @@ enum GitWorktreeText {
         return String(localized: "Removed worktree \(branch).")
     }
 
-    static func merged(_ result: JSONValue) -> String {
-        let summary = result.text("summary", fallback: String(localized: "Merged."))
-        if let kept = result["kept"]?.stringValue {
+    static func merged(_ result: WorktreeMergeResult) -> String {
+        let summary = result.summary
+        if let kept = result.kept {
             return String(
                 localized: "\(summary) The worktree stays: \(kept)",
                 comment: "%1$@ is what the merge did, %2$@ why the worktree stays")
         }
-        if result["removed"] == .bool(true) {
-            return result["branchDeleted"] == .bool(false)
+        if result.removed == true {
+            return result.branchDeleted == false
                 ? String(
                     localized: "\(summary) Removed the worktree. Its branch stays.", comment: "%@ is what the merge did"
                 )
@@ -279,7 +241,7 @@ enum GitWorktreeText {
     {
         guard let into else { return nil }
         if folderBranch == into { return folder }
-        return worktrees.first { $0.branch == into && !$0.missing }?.path
+        return worktrees.first { $0.branch == into && !$0.isMissing }?.path
     }
 
     /// The one thing a person can do about a refusal, in words, for the codes that have one.
@@ -319,7 +281,7 @@ enum GitWorktreeText {
 
     /// The merge sheet, asked with the work counted now and not with the numbers on the row.
     func ask(client: any MachineRequesting, merge worktree: GitWorktree) async {
-        guard let fresh = await fresh(client: client, path: worktree.path), !fresh.missing else {
+        guard let fresh = await fresh(client: client, path: worktree.path), !fresh.isMissing else {
             note = String(localized: "No worktree left to merge.")
             return
         }
@@ -337,8 +299,9 @@ enum GitWorktreeText {
     func load(client: any MachineRequesting) async {
         do {
             let answer = try await client.request(
-                .gitWorktreeList, payload: .object(["repo": .string(repo), "inspect": .bool(true)]))
-            worktrees = answer.list("worktrees").map(GitWorktree.init(json:))
+                .gitWorktreeList, payload: .object(["repo": .string(repo), "inspect": .bool(true)])
+            ).decoded(as: WorktreeListResult.self)
+            worktrees = answer.worktrees
         } catch is CancellationError {
             return
         } catch {
@@ -360,10 +323,11 @@ enum GitWorktreeText {
         let name = branch.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
             let result = try await client.request(
-                .gitWorktreeAdd, payload: .object(["repo": .string(repo), "branch": .string(name)]))
+                .gitWorktreeAdd, payload: .object(["repo": .string(repo), "branch": .string(name)])
+            ).decoded(as: WorktreeAddResult.self)
             problem = nil
             note =
-                result["created"] == .bool(false)
+                !result.created
                 ? String(localized: "\(name) already had a worktree.")
                 : String(localized: "Made a worktree for \(name).")
         } catch {
@@ -379,9 +343,10 @@ enum GitWorktreeText {
         let actionId = UUID().uuidString
         mergeAction = actionId
         let cancel = client.subscribe(.gitProgress) { [weak self] payload in
-            guard payload.text("actionId") == actionId else { return }
-            let line = payload.text("line")
-            self?.progress = line.isEmpty ? nil : line
+            guard let event = try? payload.decoded(as: GitProgressEvent.self), event.actionId == actionId else {
+                return
+            }
+            self?.progress = event.line.isEmpty ? nil : event.line
         }
         defer {
             cancel()
@@ -391,12 +356,11 @@ enum GitWorktreeText {
         }
         do {
             let result = try await client.request(
-                .gitWorktreeMerge, payload: request.payload(repo: repo, actionId: actionId))
+                .gitWorktreeMerge, payload: request.payload(repo: repo, actionId: actionId)
+            ).decoded(as: WorktreeMergeResult.self)
             problem = nil
-            if let conflicts = result["conflicts"]?.arrayValue {
-                outcome = .conflict(
-                    cwd: result.text("cwd", fallback: repo), files: conflicts.compactMap(\.stringValue),
-                    summary: result.text("summary"))
+            if let conflicts = result.conflicts {
+                outcome = .conflict(cwd: result.cwd ?? repo, files: conflicts, summary: result.summary)
                 note = nil
             } else {
                 note = GitWorktreeText.merged(result)
@@ -421,9 +385,9 @@ enum GitWorktreeText {
             let status = try await client.request(.gitStatus, payload: .object(["cwd": .string(repo)]))
                 .decoded(as: GitStatus.self)
             let list = try await client.request(.gitWorktreeList, payload: .object(["repo": .string(repo)]))
+                .decoded(as: WorktreeListResult.self)
             target = GitWorktreeText.targetCheckout(
-                folder: repo, folderBranch: status.branch,
-                worktrees: list.list("worktrees").map(GitWorktree.init(json:)), into: into)
+                folder: repo, folderBranch: status.branch, worktrees: list.worktrees, into: into)
             if let target {
                 _ = try await client.request(
                     .gitAction,
@@ -485,6 +449,7 @@ enum GitWorktreeText {
         if removal.force { payload["force"] = .bool(true) }
         do {
             let result = try await client.request(.gitWorktreeRemove, payload: .object(payload))
+                .decoded(as: WorktreeRemoveResult.self)
             problem = nil
             note = GitWorktreeText.removed(branch: worktree.branch, result: result)
         } catch {

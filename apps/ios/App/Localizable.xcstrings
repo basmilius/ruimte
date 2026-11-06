@@ -14227,16 +14227,6 @@
         }
       }
     },
-    "Merged." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gemerged."
-          }
-        }
-      }
-    },
     "Could not merge %@" : {
       "localizations" : {
         "nl" : {
@@ -20802,16 +20792,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "De machine zei niet waar de chat is."
-          }
-        }
-      }
-    },
-    "The machine did not say where the worktree is." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De machine zei niet waar de worktree is."
           }
         }
       }

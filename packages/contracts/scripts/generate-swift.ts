@@ -384,7 +384,14 @@ const typedRoots: [name: string, source: string, path: (string | number)[]][] = 
     ['LaunchConfig', 'request.launches.detect.result', ['properties', 'suggestions', 'items', 'properties', 'launch']],
     ['LaunchSuggestionSource', 'request.launches.detect.result', ['properties', 'suggestions', 'items', 'properties', 'source']],
     ['GitReposResult', 'request.git.repos.result', []],
-    ['GitRepo', 'request.git.repos.result', ['properties', 'repos', 'items']]
+    ['GitRepo', 'request.git.repos.result', ['properties', 'repos', 'items']],
+    ['WorktreeListResult', 'request.git.worktree-list.result', []],
+    ['Worktree', 'request.git.worktree-list.result', ['properties', 'worktrees', 'items']],
+    ['WorktreeWork', 'request.git.worktree-list.result', ['properties', 'worktrees', 'items', 'properties', 'work']],
+    ['WorktreeAddResult', 'request.git.worktree-add.result', []],
+    ['WorktreeRemoveResult', 'request.git.worktree-remove.result', []],
+    ['WorktreeMergeResult', 'request.git.worktree-merge.result', []],
+    ['GitProgressEvent', 'event.git.progress', []]
 ];
 const typed = typedRoots.map(([name, source, path]) => {
     const schema = path.reduce((node: any, key) => node?.[key], typedSchema(schemas[source]));
