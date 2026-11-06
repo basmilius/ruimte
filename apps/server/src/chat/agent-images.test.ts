@@ -221,7 +221,8 @@ describe('finding an agent image', () => {
     test('a fork gets the same images under the same ids, and the original keeps its own', async () => {
         const daemon = await bootWithChat();
         const [, id] = (await attach(daemon, 'chat-lead', PNG))[0]!.split('\t');
-        await daemon.chatManager.copyAgentImages('chat-lead', 'chat-fork');
+        const fork = (from: string, to: string) => daemon.chats.copySidecars(from, to, { item: () => false, visual: () => false });
+        await fork('chat-lead', 'chat-fork');
         const copy = await daemon.chatManager.findAttachment('chat-fork', id!);
         expect(copy).toMatchObject({ id, name: 'shot.png', size: PNG.byteLength });
         expect(copy!.path).toStartWith(join(home, 'attachments', 'chat-fork', `${id}~`));
@@ -232,10 +233,10 @@ describe('finding an agent image', () => {
         const linked = 'agent-00000000-0000-4000-8000-000000000000';
         await symlink(outside, join(home, 'attachments', 'chat-lead', `${linked}.png`));
         expect(await daemon.chatManager.findAttachment('chat-lead', linked)).toBeNull();
-        await daemon.chatManager.copyAgentImages('chat-lead', 'chat-fork-2');
+        await fork('chat-lead', 'chat-fork-2');
         expect(await readdir(join(home, 'attachments', 'chat-fork-2'))).toEqual([basename((await daemon.chatManager.findAttachment('chat-lead', id!))!.path)]);
         // Nothing to copy leaves no folder behind.
-        await daemon.chatManager.copyAgentImages('chat-without-images', 'chat-empty');
+        await fork('chat-without-images', 'chat-empty');
         expect(await stat(join(home, 'attachments', 'chat-empty')).catch(() => null)).toBeNull();
     });
 });

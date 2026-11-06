@@ -28,12 +28,12 @@ const TERMINAL_TASK_BRIEF =
     'This is a task from the agent that opened you. When it is finished, call task_done with the result; if you exit without it, the task fails.';
 
 /*
- * The first prompt a child of a task is held with. A chat hears the brief beside the prompt and folds it
- * in its thread; a terminal has no notes, and a CLI hears nothing in front of a slash command, so for
- * those it rides in the prompt.
+ * The first prompt a child of a task is held with. A chat hears the brief beside the prompt, and the
+ * session places it after a slash command itself; a terminal has no notes, so for it the brief rides in
+ * the prompt.
  */
 export function taskFirstPrompt(prompt: string, chat: boolean): FirstPrompt {
-    if (!chat || prompt.startsWith('/')) {
+    if (!chat) {
         return { prompt: `${prompt}${taskBrief(chat)}` };
     }
     return { prompt, brief: CHAT_TASK_BRIEF };

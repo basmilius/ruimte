@@ -130,7 +130,7 @@ describe('the stream of a chat', () => {
 
         await first.manager.core.clear('chat');
         tasks[0] = { ...tasks[0]!, status: 'done', settledAt: 2 };
-        first.manager.syncTaskRow(tasks[0]!);
+        first.manager.core.syncTaskRow(tasks[0]!);
         expect(first.manager.core.attach('chat', 'watcher').items).toEqual([]);
         expect((await new ChatStore(home).read('chat'))?.extras.clearedTaskIds).toEqual(['old']);
         first.manager.core.persistAllSync();
@@ -140,7 +140,7 @@ describe('the stream of a chat', () => {
         await second.manager.core.create({ chatId: 'chat' });
         expect(second.manager.core.attach('chat', 'watcher').items).toEqual([]);
         tasks.push({ ...tasks[0]!, id: 'new', childId: 'new-child', status: 'open', settledAt: null });
-        second.manager.syncTaskRow(tasks[1]!);
+        second.manager.core.syncTaskRow(tasks[1]!);
         expect(second.manager.core.attach('chat', 'watcher').items.map((item) => item.id)).toEqual(['task-new']);
 
         await second.manager.core.clear('chat');
@@ -148,7 +148,7 @@ describe('the stream of a chat', () => {
         const third = boot({ taskRows: () => tasks });
         await third.manager.core.create({ chatId: 'chat' });
         for (const task of tasks) {
-            third.manager.syncTaskRow(task);
+            third.manager.core.syncTaskRow(task);
         }
         expect(third.manager.core.attach('chat', 'watcher').items).toEqual([]);
     });

@@ -10,7 +10,7 @@ describe('the brief of a run that continues its chat', () => {
         expect(continuedBrief('publish it', { references: ['sketch', 'gone'] }, lookup)).toBe(`publish it\n\n${referenceNote([SKETCH])}`);
     });
 
-    test('stays as it was without picks, and after a slash command, which hears no brief', () => {
+    test('stays as it was without picks, and stays absent without a brief', () => {
         expect(continuedBrief('publish it', undefined, lookup)).toBe('publish it');
         expect(continuedBrief(undefined, { references: ['sketch'] }, lookup)).toBeUndefined();
     });

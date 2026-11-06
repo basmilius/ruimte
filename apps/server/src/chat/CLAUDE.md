@@ -2,7 +2,9 @@
 
 ## The core and the manager
 
-- `ChatManager` (`chat-manager.ts`) holds a `ChatCore` from `@adecore/agents/chat` as `core` and gives it its hooks; it never extends it. The wiring hands out the core as `agents.chats` and the manager as `agents.chatManager`. Code that reads or drives a chat takes the core; only what Ruimte adds (task rows, plans, forks, briefs, agent images, `findAttachment` with those images) goes through the manager.
+- `ChatManager` (`chat-manager.ts`) holds a `ChatCore` from `@adecore/agents/chat` as `core` and gives it its hooks; it never extends it. The wiring hands out the core as `agents.chats` and the manager as `agents.chatManager`. Code that reads or drives a chat takes the core; only what Ruimte adds (forks, `findAttachment` with the agent images, the notes of a prompt) goes through the manager. The core writes the task rows (`taskRows` hook, `core.syncTaskRow`) and keeps the cleared ones, and a brief for one prompt travels with the wake or the send (`brief`), never through the manager.
+- Plans and agent images are sidecars of the core (`ChatManager` registers them): the core lists, removes and forks them with the bookmarks and visuals, and a fork copies them through `core.copySidecars`.
+- The UI fence name is `RUIMTE_UI_FENCE`, handed to the core once in `ChatManager`; notes read it back as `core.uiFence`, and tool text reads the constant.
 - What the daemon answers to the chat (depth, mode ceiling, linked context, the project a chat is in) is one required `ChatFacts` object built in `wiring/agents.ts`. A test builds a manager with `testChatManager` (`chat-manager-test-helpers.ts`), whose `quietFacts` answer nothing.
 - A change to a chat's start, its UI access or the deletion of its record is a hook of the core (`opening`, `admitUi`, `deleted`), never a method the manager overrides.
 

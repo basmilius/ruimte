@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { AttachmentStore, ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
+import { AttachmentStore, ChatStore, claudeProjectSlug, type ForkKept } from '@adecore/agents/chat';
 import { AgentLineageStore } from '@adecore/agents/coordination';
 import { ManualClock, inProcess, fakeCodex, fakeCodexForks } from '@adecore/agents/testing';
 import {
@@ -17,6 +17,7 @@ import {
     type ProjectContent
 } from '@ruimte/contracts';
 import { CONTEXT_LEAD, toolsNote } from '../context/context-note.ts';
+import { RUIMTE_UI_FENCE } from '../context/ui-fence.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
@@ -261,7 +262,7 @@ describe('forking a Claude chat', () => {
         await say(nodeId, 'note?');
         // The fork is linked to its original, which the real wiring reads as context.
         expect(assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)).toBe(
-            `${toolsNote({ depth: 0, visuals: true })} ${CONTEXT_LEAD}"Lexer" (chat). This is what the person means, so prefer it over anything your own tools or servers turn up.`
+            `${toolsNote({ depth: 0, visuals: true, uiFence: RUIMTE_UI_FENCE })} ${CONTEXT_LEAD}"Lexer" (chat). This is what the person means, so prefer it over anything your own tools or servers turn up.`
         );
         expect(daemon.chats.get(nodeId)!.info.agentSessionId).not.toBeNull();
     });
@@ -332,16 +333,12 @@ describe('forkChat', () => {
             claude: unknown[];
             codex: unknown[];
             written: Array<{ info: ChatInfo; items: ChatItem[]; preambles: string[] }>;
-            bookmarkedItems: string[][];
-            keptVisuals: Array<(visual: ChatVisual) => boolean>;
-            agentImages: Array<[string, string]>;
+            sidecars: Array<{ from: string; to: string; kept: ForkKept }>;
         } = {
             claude: [],
             codex: [],
             written: [],
-            bookmarkedItems: [],
-            keptVisuals: [],
-            agentImages: []
+            sidecars: []
         };
         const deps: ChatForkDeps = {
             source: async () => source,
@@ -376,15 +373,8 @@ describe('forkChat', () => {
                 asked.written.push({ info: written, items, preambles });
             },
             deleteRecord: async () => undefined,
-            copyPlans: async () => undefined,
-            copyBookmarks: async (_fromChatId, _toChatId, itemIds) => {
-                asked.bookmarkedItems.push([...itemIds]);
-            },
-            copyVisuals: async (_fromChatId, _toChatId, keep) => {
-                asked.keptVisuals.push(keep);
-            },
-            copyAgentImages: async (fromChatId, toChatId) => {
-                asked.agentImages.push([fromChatId, toChatId]);
+            copySidecars: async (from, to, kept) => {
+                asked.sidecars.push({ from, to, kept });
             },
             newSessionId: () => 'session-2',
             now: () => 5
@@ -410,7 +400,8 @@ describe('forkChat', () => {
         const items = [turn('turn-1', { lastUuid: 'u-1' }), user('user-1', 'turn-1'), turn('turn-2', { lastUuid: 'u-2' }), user('user-2', 'turn-2')];
         const { deps, asked } = stub({ info: info('claude'), items });
         await forkChat(deps, { chatId: 'chat-lead', turnId: 'turn-1' });
-        expect(asked.bookmarkedItems).toEqual([['turn-1', 'user-1']]);
+        const { kept } = asked.sidecars[0]!;
+        expect(items.filter((item) => kept.item(item.id)).map((item) => item.id)).toEqual(['turn-1', 'user-1']);
     });
 
     test('a quote keeps its source in a fork, with the reply it names', async () => {
@@ -443,17 +434,19 @@ describe('forkChat', () => {
             size: 10,
             ...(turnId ? { turnId } : {})
         });
-        const keep = asked.keptVisuals[0]!;
+        const { kept } = asked.sidecars[0]!;
         // The turn the fork was cut at ended at 1.
         expect(
-            [visual('in-turn', 5, 'turn-1'), visual('before', 1), visual('later-turn', 0, 'turn-2'), visual('after', 2)].filter(keep).map((kept) => kept.id)
+            [visual('in-turn', 5, 'turn-1'), visual('before', 1), visual('later-turn', 0, 'turn-2'), visual('after', 2)]
+                .filter((candidate) => kept.visual(candidate))
+                .map((candidate) => candidate.id)
         ).toEqual(['in-turn', 'before']);
     });
 
-    test('the images the original agent attached go to the fork under the same chat pair', async () => {
+    test('the sidecars of the original are copied once, from the original to the fork', async () => {
         const { deps, asked } = stub({ info: info('claude'), items: [turn('turn-1', { lastUuid: 'u-1' })] });
         const result = await forkChat(deps, { chatId: 'chat-lead', turnId: 'turn-1' });
-        expect(asked.agentImages).toEqual([['chat-lead', result.info.chatId]]);
+        expect(asked.sidecars.map(({ from, to }) => [from, to])).toEqual([['chat-lead', result.info.chatId]]);
     });
 
     test('a fork into another CLI reads as much of the conversation as the window of its model allows', async () => {

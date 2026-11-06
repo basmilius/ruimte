@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { copyFile, lstat, mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CodedError } from '@adecore/agents';
-import type { AttachmentStore } from '@adecore/agents/chat';
+import type { AttachmentStore, ChatSidecar } from '@adecore/agents/chat';
 import { KeyedSerializer } from '@adecore/utils/async';
 import type { ChatAttachment } from '@ruimte/contracts';
 import { withoutControlCharacters } from '../bytes/byte-route.ts';
@@ -47,9 +47,10 @@ function parsed(file: string): { id: string; name: string | null; extension: str
 /*
  * The images and models an agent attached to its own chat, as `agent-<uuid>~<name>.<ext>` in the chat's attachment
  * folder, the name URI-encoded after the id. The id is what a lookup reads, so an unrelated attachment is
- * never touched and there is no index to keep.
+ * never touched and there is no index to keep. The files go with the chat's attachment folder, so as a
+ * sidecar they only need copying into a fork.
  */
-export class AgentImages {
+export class AgentImages implements ChatSidecar {
     private readonly attachments: Pick<AttachmentStore, 'folderOf'>;
     // One save of a chat at a time, so parallel attaches count the folder one after the other and cannot pass the limit together.
     private readonly saves = new KeyedSerializer();
@@ -105,7 +106,7 @@ export class AgentImages {
     }
 
     /* Gives a fork the same files under the same ids, so the blocks it copied still show them. */
-    async copy(fromChatId: string, toChatId: string): Promise<void> {
+    async copyChat(fromChatId: string, toChatId: string): Promise<void> {
         const source = this.attachments.folderOf(fromChatId);
         const found = await this.names(source);
         const regular = await Promise.all(found.map(async (name) => ((await lstat(join(source, name)).catch(() => null))?.isFile() ? name : null)));

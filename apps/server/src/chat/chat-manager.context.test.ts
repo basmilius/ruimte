@@ -6,6 +6,7 @@ import type { ContextSource } from '@ruimte/contracts';
 import type { FirstPrompt } from '../canvas/pending-prompts.ts';
 import { chatPrompt, toolsNote } from '../context/context-note.ts';
 import { deliverNotice, MESSAGE_WORDS } from '../context/notices.ts';
+import { RUIMTE_UI_FENCE } from '../context/ui-fence.ts';
 import { referenceNote, type Reference } from '../projects/references.ts';
 import { makeChatFixture, retire, LINKED } from './chat-manager.fixture.test.ts';
 import { BRIEF_TITLE } from './chat-manager.ts';
@@ -43,7 +44,7 @@ test('the system prompt names visuals while the machine has them on, and never t
     await open(manager, 'chat-shows');
     await manager.core.send('chat-shows', 'system?');
     await recorder.untilIdle();
-    expect(recorder.ofKind('assistant')[0]?.text).toBe(toolsNote({ depth: 0, visuals: true }));
+    expect(recorder.ofKind('assistant')[0]?.text).toBe(toolsNote({ depth: 0, visuals: true, uiFence: RUIMTE_UI_FENCE }));
     expect(claude.started[0]!.argv.filter((arg) => arg.startsWith('--add-dir='))).toEqual([`--add-dir=${visuals.workspacePath('chat-shows')}`]);
 
     const inline = new ChatRecorder();
@@ -242,10 +243,10 @@ describe('the first prompt of an agent node', () => {
         await recorder.until(settledIn('chat-w'));
         const session = manager.core.get('chat-w')!;
 
-        const woke = manager.withBrief('chat-w', 'the brief', () => session.wake({ text: 'run again', label: 'Morning', taskIds: [] }));
+        const woke = session.wake({ text: 'run again', label: 'Morning', taskIds: [], brief: 'the brief' });
         expect(woke).not.toBeNull();
         // In a turn, so this wake is refused, and its brief must not reach the next prompt.
-        expect(manager.withBrief('chat-w', 'a refused brief', () => session.wake({ text: 'too soon', label: 'Morning', taskIds: [] }))).toBeNull();
+        expect(session.wake({ text: 'too soon', label: 'Morning', taskIds: [], brief: 'a refused brief' })).toBeNull();
         await recorder.until(() => session.info.usage.turns === 2 && settledIn('chat-w')());
         await manager.core.send('chat-w', 'by hand');
         await recorder.until(() => session.info.usage.turns === 3 && settledIn('chat-w')());

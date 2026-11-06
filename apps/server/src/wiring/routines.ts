@@ -54,7 +54,7 @@ interface RoutinesInput {
 /* Routines on this machine: their files in each project, what ran and the clock the outbox keeps for them. */
 export async function wireRoutines({ home, machineId, stores, agents, projects, launches, artifacts }: RoutinesInput): Promise<RoutinesBundle> {
     const project = projects.store;
-    const { chats, chatManager, outboxLink } = agents;
+    const { chats, outboxLink } = agents;
     const runs = new RoutineRunStore(home);
     const authors = new RoutineAuthorStore(home);
     await Promise.all([runs.load(), authors.load()]);
@@ -108,11 +108,14 @@ export async function wireRoutines({ home, machineId, stores, agents, projects, 
                     return false;
                 }
                 const { mentions, skills } = routine.picked ?? {};
-                return chatManager.withBrief(
-                    chatId,
-                    continuedBrief(brief, routine.picked, (id) => project.index.referenceBeside(chatId, id)),
-                    () => chat.wake({ text: prompt, label: routine.title, taskIds: [], ...(mentions ? { mentions } : {}), ...(skills ? { skills } : {}) })
-                );
+                return chat.wake({
+                    text: prompt,
+                    label: routine.title,
+                    taskIds: [],
+                    brief: continuedBrief(brief, routine.picked, (id) => project.index.referenceBeside(chatId, id)),
+                    ...(mentions ? { mentions } : {}),
+                    ...(skills ? { skills } : {})
+                });
             },
             // Opens a stored chat as well, so what it ran before is known before the run's turn opens.
             exists: async (chatId) => placed(chatId) && (await openChat(chatId)) !== null

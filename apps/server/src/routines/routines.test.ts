@@ -8,7 +8,7 @@ import { CommandApprovals } from '../sessions/command-approvals.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { RoutineAuthorStore, RoutineRunStore } from './routine-runs.ts';
 import { RoutineStore } from './routine-store.ts';
-import { digestOf, Routines, runMessage, type AgentRunStart, type CommandResult, type RunMessage } from './routines.ts';
+import { digestOf, Routines, type AgentRunStart, type CommandResult, type RunMessage } from './routines.ts';
 
 const ZONE = 'Europe/Amsterdam';
 const PROJECT = 'p1';
@@ -344,11 +344,13 @@ describe('approval', () => {
 });
 
 describe('what a run says', () => {
-    test('the prompt is the message and the brief rides beside it', () => {
-        expect(runMessage('Summarize main.', 'Publish it.')).toEqual({ prompt: 'Summarize main.', brief: 'Publish it.' });
-    });
+    test('the prompt is the message and the brief rides beside it, also for a slash command, which the chat places itself', async () => {
+        const { routines } = await build();
+        await routines.save(PROJECT, 0, { ...morning, prompt: '/review' }, false);
+        now = zonedTime(2026, 10, 19, 9, 0, ZONE);
+        await fire(routines, owed()[0]!);
 
-    test('a slash command carries the brief as its arguments, since a CLI hears nothing in front of one', () => {
-        expect(runMessage('/review', 'Publish it.')).toEqual({ prompt: '/review\n\n---\nPublish it.' });
+        expect(started[0]).toMatchObject({ prompt: '/review' });
+        expect(started[0]?.brief).toContain('artifact_publish key morning-summary');
     });
 });

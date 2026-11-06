@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { AgentFiles } from '../agent-files/files.ts';
 import { field } from '../canvas/host.ts';
 import { AGENT_IMAGE_BYTES, AGENT_MODEL_BYTES, AGENT_MODEL_TYPES, agentAttachmentBytes, agentAttachmentType } from '../chat/attachment-type.ts';
+import { RUIMTE_UI_FENCE } from '../context/ui-fence.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
 import { defineToolkit } from './tool.ts';
 
@@ -62,8 +63,8 @@ const chatAttach = defineActionTool('chat', {
         return [
             `attachment\t${attachment.id}\t${field(attachment.name)}\t${attachment.mime}\t${attachment.size}`,
             AGENT_MODEL_TYPES[attachment.mime] === undefined
-                ? `next\tShow it with <Image attachment="${attachment.id}" alt="..."/> in a ruimte-ui block`
-                : `next\tShow it with <Model attachment="${attachment.id}">caption</Model> in a ruimte-ui block once the person asks to see it`
+                ? `next\tShow it with <Image attachment="${attachment.id}" alt="..."/> in a ${RUIMTE_UI_FENCE} block`
+                : `next\tShow it with <Model attachment="${attachment.id}">caption</Model> in a ${RUIMTE_UI_FENCE} block once the person asks to see it`
         ];
     }
 });

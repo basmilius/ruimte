@@ -56,7 +56,7 @@ export function wireTasks(deps: TaskWiringDeps): TaskWiring {
         titleFor: deps.titleFor,
         alert: (nodeId, title, body) => deps.alert(deps.chats.core.get(nodeId) ? 'chat' : 'terminal', nodeId, title, body),
         // Deferred, so a row is never written into a parent from inside the broadcast of the child that settled it.
-        changed: (task: Task) => queueMicrotask(() => deps.chats.syncTaskRow(task)),
+        changed: (task: Task) => queueMicrotask(() => deps.chats.core.syncTaskRow(task)),
         ...(deps.retryAt ? { retryAt: deps.retryAt } : {}),
         words: TASK_WORDS,
         ...(deps.now ? { now: deps.now } : {})

@@ -209,14 +209,6 @@ function runBrief(
 }
 
 /*
- * The brief goes beside the prompt, except after a slash command: a CLI hears nothing in front of one,
- * so it rides in the message as the command's arguments.
- */
-export function runMessage(prompt: string, brief: string): RunMessage {
-    return prompt.startsWith('/') ? { prompt: `${prompt}\n\n---\n${brief}` } : { prompt, brief };
-}
-
-/*
  * Routines on this machine: when each is due, the `routine-run` entry that owes it, what a run starts
  * and what it delivered. A routine runs only as a person on this machine approved it as it stands now,
  * whether or not a client has its project open.
@@ -603,7 +595,7 @@ export class Routines {
 
     private async beginAgent(projectId: string, folder: string, stored: StoredRoutine, routine: AgentRoutine, base: RoutineRun): Promise<RoutineRun> {
         const previous = this.deps.output.latest(projectId, routine.outputKey);
-        const message = runMessage(routine.prompt, runBrief(routine, formatDue(base.due, this.deps.timeZone()), previous, base.kind));
+        const message: RunMessage = { prompt: routine.prompt, brief: runBrief(routine, formatDue(base.due, this.deps.timeZone()), previous, base.kind) };
         if (routine.perRun === 'continue') {
             const last = this.deps.runs.of(projectId, routine.id).find((run) => run.chatId !== undefined);
             if (last?.chatId !== undefined && (await this.deps.agents.exists(last.chatId))) {

@@ -1,5 +1,6 @@
 import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { ChatSidecar } from '@adecore/agents/chat';
 import { applyPlanOps, canDeletePlan, createPlan, planProgress, randomItemId, refuse, type PlanApplied, type PlanDraft, type PlanRefusal } from '@adecore/plan';
 import { KeyedSerializer } from '@adecore/utils/async';
 import { isNotFound } from '@adecore/utils/errors';
@@ -19,8 +20,7 @@ export function planFileName(chatId: string): string {
     return `${encodeURIComponent(chatId)}${SUFFIX}`;
 }
 
-/* Whether a name in the chats folder is a plans file, which the chat records beside it must not count as a chat. */
-export function isPlanFileName(name: string): boolean {
+function isPlanFileName(name: string): boolean {
     return name.endsWith(SUFFIX);
 }
 
@@ -40,9 +40,10 @@ interface PlanCreateInput {
 /*
  * The plans of every chat, one file per chat beside its record under `$RUIMTE_HOME/chats`, not in
  * the record itself, which is rewritten on every turn and strips what it does not know. The daemon
- * is the only writer, so there is no watcher.
+ * is the only writer, so there is no watcher. It is a sidecar of the chat core, which takes its files
+ * out of the chat list, removes them with a chat and copies them into a fork.
  */
-export class PlanStore {
+export class PlanStore implements ChatSidecar {
     readonly dir: string;
     private readonly now: () => number;
     private readonly mintId: () => string;
@@ -54,6 +55,10 @@ export class PlanStore {
         this.dir = homeFolder(home, 'chats');
         this.now = options.now ?? Date.now;
         this.mintId = options.mintId ?? randomItemId;
+    }
+
+    owns(name: string): boolean {
+        return isPlanFileName(name);
     }
 
     /* Every connection hears every plan, since a chat's pill shows whether or not anyone attached the chat. */

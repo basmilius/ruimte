@@ -2,8 +2,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ChatCore, type ChatCoreOptions, claudeProjectSlug, limitedTurn, type VisualStore } from '@adecore/agents/chat';
-import type { ChatReferences, ChatSession, PromptNotes, ResumeWords, ChatRecord, ChatRecordExtras } from '@adecore/agents/chat';
+import { ChatCore, type ChatCoreOptions, type ChatSidecar, claudeProjectSlug, limitedTurn, type VisualStore } from '@adecore/agents/chat';
+import type { ChatReferences, ChatSession, PromptNotes, ResumeWords, ChatRecord } from '@adecore/agents/chat';
 import { storedAccount, narrowerMode, type AccountUnusable } from '@adecore/agents/providers';
 import type {
     AgentKind,
@@ -13,13 +13,11 @@ import type {
     ChatInfo,
     ChatItem,
     ChatNoteMessage,
-    ChatSubagentItem,
     ChatTurnLimit,
     ContextSource,
     RuntimeMode,
     Task
 } from '@ruimte/contracts';
-import { HOST_TASK_ORIGIN } from '@ruimte/contracts';
 import type { FirstPrompt } from '../canvas/pending-prompts.ts';
 import {
     chatNote,
@@ -50,10 +48,8 @@ export const RESUME_PROMPT = 'The machine restarted while you were working on th
 // Said in front of a resume when the chat keeps a plan with steps left.
 export const PLAN_RESUME_PREAMBLE = 'You keep a plan in this chat: plan_read shows where you were.';
 
-/* The plans kept beside a chat's record, which live and die with the chat. */
-export interface ChatPlans {
-    removeChat(chatId: string): Promise<void>;
-    copyChat(fromChatId: string, toChatId: string): Promise<void>;
+/* The plans kept beside a chat's record, which live and die with the chat, and whether a resumed agent has steps left in them. */
+export interface ChatPlans extends ChatSidecar {
     hasOpenSteps(chatId: string): Promise<boolean>;
 }
 
@@ -107,7 +103,7 @@ export interface ChatFacts {
     projectAccount: ProjectAccountChooser;
 }
 
-interface ChatManagerOptions extends Omit<ChatCoreOptions, 'hooks'> {
+interface ChatManagerOptions extends Omit<ChatCoreOptions, 'hooks' | 'uiFenceLanguage' | 'taskRemovedReason'> {
     // Where an agent reads its linked context, with Ruimte's MCP server beside it.
     contextUrl?: string;
     facts: ChatFacts;
@@ -136,33 +132,30 @@ export const BRIEF_TITLE = 'Instructions from Ruimte';
 class ContextNotes implements PromptNotes {
     private readonly sources: () => ContextSource[];
     private readonly messages: PromptNotes | null;
-    private readonly takeBrief: () => string | null;
     private readonly designFolder: () => string | null;
     // The links at the previous prompt; null before the first, whose CLI hears about them at launch.
     private last: ContextSource[] | null = null;
     // The design folder at the previous prompt, the same way: a design that moved in between is told where it went.
     private lastFolder: string | null = null;
 
-    constructor(sources: () => ContextSource[], messages: PromptNotes | null, takeBrief: () => string | null, designFolder: () => string | null) {
+    constructor(sources: () => ContextSource[], messages: PromptNotes | null, designFolder: () => string | null) {
         this.sources = sources;
         this.messages = messages;
-        this.takeBrief = takeBrief;
         this.designFolder = designFolder;
     }
 
-    next(): { shown: string[]; heard: string[] } {
+    next(brief?: string): { shown: string[]; heard: string[] } {
         const current = this.sources();
         const previous = this.last;
         this.last = current;
         const folder = this.designFolder();
         const moved = previous === null ? null : designMovedNote(this.lastFolder, folder);
         this.lastFolder = folder;
-        const brief = this.takeBrief();
         const change = previous === null ? null : contextChangeNote(previous, current);
         const messages = this.messages?.next() ?? { shown: [], heard: [] };
         return {
             shown: [
-                ...(brief === null ? [] : [`${BRIEF_TITLE}\n${brief}`]),
+                ...(brief === undefined ? [] : [`${BRIEF_TITLE}\n${brief}`]),
                 ...(moved === null ? [] : [moved]),
                 ...(change === null ? [] : [change]),
                 ...messages.shown
@@ -178,70 +171,15 @@ class ContextNotes implements PromptNotes {
     }
 }
 
-/* The rows of tasks a clear hid, as the record keeps them beside the thread. */
-function clearedExtras(ids: ReadonlySet<string> | undefined): ChatRecordExtras {
-    return ids === undefined || ids.size === 0 ? {} : { clearedTaskIds: [...ids] };
-}
-
-function clearedTaskIdsOf(extras: ChatRecordExtras): string[] {
-    return Array.isArray(extras.clearedTaskIds) ? extras.clearedTaskIds.filter((id): id is string => typeof id === 'string') : [];
-}
-
 function noteDigest(note: string): string {
     return createHash('sha256').update(note).digest('hex').slice(0, 16);
 }
 
 /*
- * The chat row of a task in the thread of the chat that gave it, written from the task alone so writing
- * it twice changes nothing. A new row joins the turn that is running, which is the turn that ran the
- * tool; a cancelled task gets a note saying why its row failed.
- */
-function taskRowItems(session: ChatSession, task: Task): ChatItem[] {
-    const id = `task-${task.id}`;
-    const existing = session.thread.get(id);
-    const row: ChatSubagentItem = {
-        id,
-        kind: 'subagent',
-        createdAt: task.createdAt,
-        turnId: existing?.turnId ?? session.info.activeTurnId,
-        toolUseId: id,
-        description: task.title,
-        subagentType: null,
-        prompt: task.prompt,
-        background: true,
-        status: task.status === 'open' ? 'running' : task.status === 'done' ? 'done' : 'failed',
-        startedAt: task.createdAt,
-        finishedAt: task.settledAt,
-        summary: null,
-        result: task.result?.text ?? null,
-        usage: null,
-        lastTool: null,
-        itemsTruncated: false,
-        origin: HOST_TASK_ORIGIN,
-        childId: task.childId
-    };
-    const noteId = `${id}-cancelled`;
-    if (task.status !== 'cancelled' || session.thread.get(noteId) !== undefined) {
-        return [row];
-    }
-    return [
-        row,
-        {
-            id: noteId,
-            kind: 'note',
-            createdAt: task.settledAt ?? task.createdAt,
-            turnId: null,
-            level: 'warning',
-            text: `The task "${task.title}" was cancelled: ${task.result?.text ?? 'its node was removed'}`
-        }
-    ];
-}
-
-/*
  * Ruimte's chats: the generic core with what the daemon adds to it. A chat runs in a project, hears
- * about the tools and its links, draws a row per task it gave, keeps its plans beside its record and
- * forks into the canvas, and a turn cut off by a restart or a limit is taken up through the outbox.
- * The generic part is `core`, which this holds and gives its hooks.
+ * about the tools and its links, keeps its plans beside its record and forks into the canvas, and a
+ * turn cut off by a restart or a limit is taken up through the outbox. The generic part is `core`,
+ * which this holds and gives its hooks.
  */
 export class ChatManager {
     readonly core: ChatCore;
@@ -250,11 +188,7 @@ export class ChatManager {
     private readonly plans: ChatPlans | null;
     private readonly agentImages: AgentImages;
     private readonly visuals: VisualStore | null;
-    // Ruimte's instructions for a chat's next prompt, handed out once (`ContextNotes`).
-    private readonly briefs = new Map<string, string>();
     private readonly tokens = new Map<string, string>();
-    // The tasks whose rows a clear hid, per chat.
-    private readonly clearedTasks = new Map<string, Set<string>>();
     /* The digest of the note each chat's thread last took in, kept in its record as `instructions`. */
     private readonly instructed = new Map<string, string>();
     /* The project default a new chat passed over and why, from its start until it opens. */
@@ -269,8 +203,10 @@ export class ChatManager {
         this.agentImages = new AgentImages(options.attachments);
         this.visuals = options.visuals ?? null;
         this.core = new ChatCore({
-            uiFenceLanguage: RUIMTE_UI_FENCE,
             ...coreOptions,
+            uiFenceLanguage: RUIMTE_UI_FENCE,
+            taskRemovedReason: 'its node was removed',
+            sidecars: [...(plans ? [plans] : []), this.agentImages, ...(coreOptions.sidecars ?? [])],
             env: chatEnvOf(options.env ?? process.env),
             hooks: {
                 instructionsFor: (chatId) => this.instructionsFor(chatId),
@@ -290,15 +226,15 @@ export class ChatManager {
                 opened: (session, stored) => this.opened(session, stored),
                 recordExtras: (chatId) => {
                     const digest = this.instructed.get(chatId);
-                    return { ...clearedExtras(this.clearedTasks.get(chatId)), ...(digest === undefined ? {} : { instructions: digest }) };
+                    return digest === undefined ? {} : { instructions: digest };
                 },
+                taskRows: (chatId) => facts.taskRows(chatId),
                 clearing: async (chatId) => {
                     await facts.endChildren(chatId);
                 },
-                cleared: (chatId) => this.cleared(chatId),
+                cleared: (chatId) => facts.dropWakes(chatId),
                 forgotten: (chatId) => this.forgotten(chatId),
-                deleted: (chatId) => this.plans?.removeChat(chatId) ?? Promise.resolve(),
-                removed: (chatId, chat) => this.removed(chatId, chat),
+                removed: (_chatId, chat) => this.dropForkCopy(chat),
                 broadcasted: (chatId, event) => this.broadcasted(chatId, event),
                 endedAt: (chatId) => facts.endedAt(chatId),
                 unownedReason: () => 'no project holds this chat any more',
@@ -311,11 +247,6 @@ export class ChatManager {
         return this.tokens.get(token) ?? null;
     }
 
-    /* Gives a fork the plans of the chat it was forked from. */
-    async copyPlans(fromChatId: string, toChatId: string): Promise<void> {
-        await this.plans?.copyChat(fromChatId, toChatId);
-    }
-
     /* The file behind an attachment id, also of a chat nobody loaded since the daemon started, and of an image an agent attached. */
     async findAttachment(chatId: string, id: string): Promise<ChatAttachment | null> {
         return (await this.core.findAttachment(chatId, id)) ?? this.agentImages.find(chatId, id);
@@ -324,19 +255,6 @@ export class ChatManager {
     /* Makes an image an agent has of its own an attachment of its chat; the bytes are checked by the caller. */
     attachAgentImage(chatId: string, upload: { name: string; mime: string; bytes: Uint8Array }): Promise<ChatAttachment> {
         return this.agentImages.save(chatId, upload);
-    }
-
-    /* Gives a fork the images the original's agent attached. */
-    copyAgentImages(fromChatId: string, toChatId: string): Promise<void> {
-        return this.agentImages.copy(fromChatId, toChatId);
-    }
-
-    /* Writes the row of a task into the chat that gave it, when that chat is loaded; loading it lays every row down anyway. */
-    syncTaskRow(task: Task): void {
-        const session = this.core.get(task.parentId);
-        if (session) {
-            this.upsertTaskRow(session, task);
-        }
     }
 
     /* Opens the turn a fork writes its summary in, loading the fork when nobody has; null while a turn is in the way. */
@@ -425,22 +343,6 @@ export class ChatManager {
     }
 
     /*
-     * Runs a synchronous wake of the chat with Ruimte's brief beside its text: heard on that turn, and folded
-     * in its thread as a note. A wake hears its notes before it returns, so a brief still here was refused.
-     */
-    withBrief<T>(chatId: string, brief: string | undefined, wake: () => T): T {
-        if (brief === undefined) {
-            return wake();
-        }
-        this.briefs.set(chatId, brief);
-        try {
-            return wake();
-        } finally {
-            this.briefs.delete(chatId);
-        }
-    }
-
-    /*
      * Moves the chat to an account that reads its conversation and takes its limited turn up there at
      * once, carrying the tasks and messages that turn answered, the way a resume at the reset does.
      */
@@ -486,6 +388,7 @@ export class ChatManager {
             visuals: this.facts.visualReplies() && !this.facts.inlineChat(chatId),
             databases: !this.facts.inlineChat(chatId) && this.facts.databases(chatId),
             reach: !this.facts.inlineChat(chatId) && this.facts.reachOpenProjects(),
+            uiFence: this.core.uiFence,
             design: this.facts.design(chatId)
         };
     }
@@ -524,15 +427,9 @@ export class ChatManager {
     }
 
     private promptNotesFor(chatId: string): PromptNotes {
-        const takeBrief = (): string | null => {
-            const brief = this.briefs.get(chatId) ?? null;
-            this.briefs.delete(chatId);
-            return brief;
-        };
         const notes = new ContextNotes(
             () => this.facts.contextSources(chatId),
             this.facts.messageNotes(chatId),
-            takeBrief,
             () => this.facts.design(chatId)?.folder ?? null
         );
         return this.facts.inlineChat(chatId) ? new InlineEditNotes(notes) : notes;
@@ -584,13 +481,9 @@ export class ChatManager {
                 );
             }
         }
-        this.clearedTasks.set(chatId, new Set(clearedTaskIdsOf(stored?.extras ?? {})));
         const digest = stored?.extras.instructions;
         if (typeof digest === 'string') {
             this.instructed.set(chatId, digest);
-        }
-        for (const task of this.facts.taskRows(chatId)) {
-            this.upsertTaskRow(session, task);
         }
         // A message that landed while nobody held this chat shows here; the model hears it from the queue.
         try {
@@ -604,44 +497,23 @@ export class ChatManager {
         // Send before returning info so attach includes the initial prompt as the thread's first message.
         const first = await this.facts.firstPrompt(chatId);
         if (first !== null) {
-            // Left in place after the send: a send that queues hears its notes only when the queue lets it go.
-            if (first.brief !== undefined) {
-                this.briefs.set(chatId, first.brief);
-            }
             try {
-                session.send(first.prompt, first.picked ?? {});
+                session.send(first.prompt, { ...first.picked, ...(first.brief === undefined ? {} : { brief: first.brief }) });
             } catch (e) {
-                this.briefs.delete(chatId);
                 // A CLI that will not start must not take chat.create down with it: the node is there either way.
                 console.error(`The first prompt of chat ${chatId} failed:`, errorText(e));
             }
         }
     }
 
-    /* A cleared chat hides the rows of the tasks it gave, and loses its plans and what those tasks still owed it. */
-    private async cleared(chatId: string): Promise<void> {
-        const cleared = this.clearedTasks.get(chatId) ?? new Set<string>();
-        for (const task of this.facts.taskRows(chatId)) {
-            cleared.add(task.id);
-        }
-        this.clearedTasks.set(chatId, cleared);
-        await Promise.all([this.plans?.removeChat(chatId), this.facts.dropWakes(chatId)]);
-    }
-
     private forgotten(chatId: string): void {
-        this.briefs.delete(chatId);
         for (const [token, id] of this.tokens) {
             if (id === chatId) {
                 this.tokens.delete(token);
             }
         }
-        this.clearedTasks.delete(chatId);
         this.instructed.delete(chatId);
         this.turnUsage.forget(chatId);
-    }
-
-    private async removed(chatId: string, chat: { info: ChatInfo; items: ChatItem[] }): Promise<void> {
-        await Promise.all([this.plans?.removeChat(chatId), this.dropForkCopy(chat)]);
     }
 
     /* A client following a task's node hears whenever an item of that node's thread lands; a delta alone does not. */
@@ -668,13 +540,6 @@ export class ChatManager {
             return false;
         });
         return { prompt: RESUME_PROMPT, note: 'Resumed after the machine restarted', preamble: open ? PLAN_RESUME_PREAMBLE : null };
-    }
-
-    private upsertTaskRow(session: ChatSession, task: Task): void {
-        if (this.clearedTasks.get(session.id)?.has(task.id)) {
-            return;
-        }
-        session.upsertItems(taskRowItems(session, task));
     }
 
     /* The transcript copy of a Claude fork nobody resumed; Codex keeps its forked thread where Ruimte cannot remove it. */

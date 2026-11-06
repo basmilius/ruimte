@@ -18,7 +18,7 @@ import { RUIMTE_UI_FENCE } from './ui-fence.ts';
 
 const TOOLS_NOTE = toolsNote({ depth: 0 });
 const TERMINAL_NOTE = toolsNote({ depth: 0, terminal: true });
-const VISUAL_NOTE = toolsNote({ depth: 0, standalone: true, visuals: true, databases: true });
+const VISUAL_NOTE = toolsNote({ depth: 0, standalone: true, visuals: true, databases: true, uiFence: RUIMTE_UI_FENCE });
 
 // Only the argument schemas are read; a source that ran would be a bug in the test.
 const unused = (): never => {
@@ -89,7 +89,7 @@ describe('toolsNote', () => {
         expect(VISUAL_NOTE).toContain('@Query("database.query"');
         expect(VISUAL_NOTE).not.toContain('query show');
         expect(VISUAL_NOTE).not.toContain('  ');
-        expect(toolsNote({ depth: 0, standalone: true, visuals: true })).not.toContain('database.query');
+        expect(toolsNote({ depth: 0, standalone: true, visuals: true, uiFence: RUIMTE_UI_FENCE })).not.toContain('database.query');
         const child = toolsNote({ depth: 1, standalone: true, visuals: true, databases: true });
         expect(child).not.toContain(RUIMTE_UI_FENCE);
         expect(child).not.toContain('@Query');
@@ -98,7 +98,7 @@ describe('toolsNote', () => {
     });
 
     test('the UI and visual notes together stay within their size budget, listing names and required props instead of every prop', () => {
-        const added = toolsNote({ depth: 0, visuals: true }).length - toolsNote({ depth: 0 }).length;
+        const added = toolsNote({ depth: 0, visuals: true, uiFence: RUIMTE_UI_FENCE }).length - toolsNote({ depth: 0 }).length;
         expect(added).toBeLessThanOrEqual(4100);
         expect(VISUAL_NOTE).not.toContain('Props:');
     });
@@ -140,7 +140,14 @@ describe('toolsNote', () => {
     });
 
     test('tells a chat that works on a design where its files go, and every other chat nothing about designs', () => {
-        const prompt = chatPrompt({ sources: [], depth: 0, standalone: true, visuals: true, design: { folder: '/repo/designs/onboarding', onCanvas: false } });
+        const prompt = chatPrompt({
+            sources: [],
+            depth: 0,
+            standalone: true,
+            visuals: true,
+            uiFence: RUIMTE_UI_FENCE,
+            design: { folder: '/repo/designs/onboarding', onCanvas: false }
+        });
         expect(prompt).toContain('in the folder `/repo/designs/onboarding`, also when you run in another checkout');
         // Every convention a tool of the view reads, by the exact name it reads.
         expect(prompt).toContain('`<meta name="ruimte-design" content="canvas">`');
@@ -159,11 +166,17 @@ describe('toolsNote', () => {
         expect(prompt).toContain('Use text the person gives you word for word');
         expect(prompt).toContain('Never show a design with `visual_show`');
         expect(prompt).toContain('`visual_preview` at its width');
-        expect(chatPrompt({ sources: [], depth: 0, standalone: true, visuals: true })).not.toContain('design');
+        expect(chatPrompt({ sources: [], depth: 0, standalone: true, visuals: true, uiFence: RUIMTE_UI_FENCE })).not.toContain('design');
     });
 
     test('tells a chat of a design on a canvas to make every option a page of its own, and never a board', () => {
-        const prompt = chatPrompt({ sources: [], depth: 0, visuals: true, design: { folder: '/repo/.ruimte/designs/onboarding', onCanvas: true } });
+        const prompt = chatPrompt({
+            sources: [],
+            depth: 0,
+            visuals: true,
+            uiFence: RUIMTE_UI_FENCE,
+            design: { folder: '/repo/.ruimte/designs/onboarding', onCanvas: true }
+        });
         expect(prompt).toContain('`/repo/.ruimte/designs/onboarding`');
         expect(prompt).toContain('never use the `ruimte-design` canvas meta');
         expect(prompt).toContain('(`2a Onboarding.html`)');
@@ -174,7 +187,7 @@ describe('toolsNote', () => {
 
     test('tells an AI chat about visuals only while they are on, on a canvas and in a view alike, and never a terminal', () => {
         for (const standalone of [false, true]) {
-            expect(chatPrompt({ sources: [], depth: 0, standalone, visuals: true })).toContain('`visual_show`');
+            expect(chatPrompt({ sources: [], depth: 0, standalone, visuals: true, uiFence: RUIMTE_UI_FENCE })).toContain('`visual_show`');
             expect(chatPrompt({ sources: [], depth: 0, standalone })).not.toContain('visual');
             expect(chatPrompt({ sources: [], depth: 0, standalone, visuals: false })).not.toContain('visual');
         }

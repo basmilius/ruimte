@@ -2,7 +2,7 @@ import { EMPTY_DRAFT, writeDraft } from '@adecore/agents-react/chat';
 import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui';
 import { useChatRow, useProviders } from '@adecore/agents-react/state';
 import { DisabledReason, Icon, Kbd, ContextMenu, ScrollArea } from '@adecore/ui';
-import { nodeColorOf, type NodeAccent, type ProviderInfo, type Task, resolveStoredPath } from '@ruimte/contracts';
+import { nodeColorOf, type NodeAccent, type ProviderInfo, type Task, resolveStoredPath, taskRowId } from '@ruimte/contracts';
 import {
     ChevronsDownUp,
     ChevronsUpDown,
@@ -184,7 +184,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
     // The task was given by a chat of the workspace's machine, which owes the start and is the one that ends it.
     const stopWaiting = (task: Task): void => {
         void askBeforeStoppingTask(workspaceTransport, id, task.title, () => {
-            void perform('chat.stopSubagent', { chatId: task.parentId, toolUseId: `task-${task.id}` }).catch(ignoreRefusal);
+            void perform('chat.stopSubagent', { chatId: task.parentId, toolUseId: taskRowId(task.id) }).catch(ignoreRefusal);
         });
     };
     const clearChat = (): void => {

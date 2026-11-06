@@ -24,7 +24,7 @@ import { OutboxStore } from '../outbox/outbox.ts';
 import { agentChatOpening } from '../outbox/start-agent.ts';
 import { restartConnectPeers } from '../peer/giver/connect-peer.ts';
 import { OneShotPlace } from '../peer/worker/one-shot-place.ts';
-import { isPlanFileName, PlanStore } from '../plans/plan-store.ts';
+import { PlanStore } from '../plans/plan-store.ts';
 import { projectAccountChooser } from '../projects/project-accounts.ts';
 import { ProjectProposals } from '../projects/project-proposals.ts';
 import { referenced } from '../projects/references.ts';
@@ -308,7 +308,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             tasks: (chatId) => tasks.ofParent(chatId),
             databases: () => later.databases().agents
         }),
-        store: new ChatStore(config.home, { attachments, isSidecar: isPlanFileName }),
+        store: new ChatStore(config.home, { attachments }),
         // A chat no window shows and whose CLI is gone holds its whole thread for nobody; its record has it.
         unloadAfterMs: CHAT_UNLOAD_AFTER_MS,
         attachments,

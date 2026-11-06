@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import { ChatError as AgentChatError } from '@adecore/agents/chat';
+import { ChatError as AgentChatError, type ForkKept } from '@adecore/agents/chat';
 import type { AgentLineageStore } from '@adecore/agents/coordination';
 import { narrowerMode, AccountError, storedAccount, codexServiceTier, codexThreadOptions, type ChatProvider } from '@adecore/agents/providers';
 import {
@@ -22,7 +22,6 @@ import {
     type ChatInfo,
     type ChatItem,
     type ChatTurnItem,
-    type ChatVisual,
     type ModelSelection,
     type RuntimeMode,
     type ProjectCanvasView,
@@ -119,14 +118,8 @@ export interface ChatForkDeps {
     restoreTree(cwd: string, tree: string): Promise<void>;
     writeRecord(chatId: string, info: ChatInfo, items: ChatItem[], preambles: string[]): Promise<void>;
     deleteRecord(chatId: string): Promise<void>;
-    /* Copies the plans of the original under the fork's id; `deleteRecord` takes them back. */
-    copyPlans(fromChatId: string, toChatId: string): Promise<void>;
-    /* Copies the bookmarks of the original that sit on these items; `deleteRecord` takes them back too. */
-    copyBookmarks(fromChatId: string, toChatId: string, itemIds: ReadonlySet<string>): Promise<void>;
-    /* Copies the visuals of the original `keep` picks, each with a page of its own; `deleteRecord` takes them back too. */
-    copyVisuals(fromChatId: string, toChatId: string, keep: (visual: ChatVisual) => boolean): Promise<void>;
-    /* Copies the images the original's agent attached under the same ids, so the blocks the fork copied still show them. */
-    copyAgentImages(fromChatId: string, toChatId: string): Promise<void>;
+    /* Gives the fork what the original keeps beside its record (plans, bookmarks, visuals, the images its agent attached); `deleteRecord` takes it back. */
+    copySidecars(fromChatId: string, toChatId: string, kept: ForkKept): Promise<void>;
     newSessionId(): string;
     now(): number;
     /* The accounts a fork may go on under; without them only a CLI's default account. */
@@ -161,7 +154,7 @@ export function itemsThrough(items: readonly ChatItem[], turnId: string): ChatIt
  * Whether a visual belongs to what a fork copied: one a copied turn published, or one published
  * between turns no later than the end of the turn the fork was cut at.
  */
-function visualKept(copied: readonly ChatItem[], turn: ChatTurnItem): (visual: ChatVisual) => boolean {
+function visualKept(copied: readonly ChatItem[], turn: ChatTurnItem): ForkKept['visual'] {
     const turnIds = new Set(copied.flatMap((item) => (item.kind === 'turn' ? [item.id] : [])));
     const end = turn.endedAt ?? copied.reduce((latest, item) => Math.max(latest, item.createdAt), turn.createdAt);
     return (visual) => (visual.turnId === undefined ? visual.at <= end : turnIds.has(visual.turnId));
@@ -480,10 +473,8 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
     undo.push(() => deps.deleteRecord(forkId));
     await undo.guard(async () => {
         await deps.writeRecord(forkId, forkInfo, items, [notes.preamble]);
-        await deps.copyPlans(payload.chatId, forkId);
-        await deps.copyBookmarks(payload.chatId, forkId, new Set(copied.map((item) => item.id)));
-        await deps.copyVisuals(payload.chatId, forkId, visualKept(copied, turn));
-        await deps.copyAgentImages(payload.chatId, forkId);
+        const copiedIds = new Set(copied.map((item) => item.id));
+        await deps.copySidecars(payload.chatId, forkId, { item: (itemId) => copiedIds.has(itemId), visual: visualKept(copied, turn) });
     });
     return undo.guard(() =>
         deps.mutate(place.projectId, (content) =>
@@ -896,10 +887,7 @@ export function chatForkDeps(wiring: {
         deleteRecord: async (chatId) => {
             await wiring.chats.core.deleteRecord(chatId);
         },
-        copyPlans: (fromChatId, toChatId) => wiring.chats.copyPlans(fromChatId, toChatId),
-        copyBookmarks: (fromChatId, toChatId, itemIds) => wiring.chats.core.copyBookmarks(fromChatId, toChatId, (itemId) => itemIds.has(itemId)),
-        copyVisuals: (fromChatId, toChatId, keep) => wiring.chats.core.copyVisuals(fromChatId, toChatId, keep),
-        copyAgentImages: (fromChatId, toChatId) => wiring.chats.copyAgentImages(fromChatId, toChatId),
+        copySidecars: (fromChatId, toChatId, kept) => wiring.chats.core.copySidecars(fromChatId, toChatId, kept),
         newSessionId: () => randomUUID(),
         now: () => Date.now(),
         accounts: {

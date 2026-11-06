@@ -42,10 +42,12 @@ describe('task list', () => {
         expect(taskBrief(true)).toContain(fx.held[0]!.brief!);
     });
 
-    test('a task whose prompt is a slash command keeps the brief in it, since a CLI hears nothing in front of one', async () => {
+    test('a task whose prompt is a slash command holds the brief beside it too, which the chat places after the command', async () => {
         const { lines } = await give({ task: 'Review', prompt: '/review the lexer' });
         const [id] = lines[0]!.split('\t');
-        expect(fx.held).toEqual([{ projectId: fx.projectId, nodeId: id!, prompt: `/review the lexer${taskBrief(true)}` }]);
+        expect(fx.held).toEqual([
+            { projectId: fx.projectId, nodeId: id!, prompt: '/review the lexer', brief: taskFirstPrompt('/review the lexer', true).brief! }
+        ]);
     });
 
     test('a terminal agent cannot give a task, since nothing can wake it with the result', async () => {

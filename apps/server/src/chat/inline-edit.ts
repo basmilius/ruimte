@@ -24,8 +24,8 @@ export class InlineEditNotes implements PromptNotes {
         this.inner = inner;
     }
 
-    next(): { shown: string[]; heard: string[] } {
-        const notes = this.inner.next();
+    next(brief?: string): { shown: string[]; heard: string[] } {
+        const notes = this.inner.next(brief);
         if (this.said) {
             return notes;
         }
