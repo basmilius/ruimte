@@ -4,6 +4,7 @@ import { localTimeZone } from '@adecore/ui/format';
 import { isCanvasView, isOpenableView, type AgentStatus } from '@ruimte/contracts';
 import {
     chatRunsTurn,
+    FollowedTurn,
     settledPrompt,
     SETTLED_COMMENTARY,
     terminalWaits,
@@ -13,7 +14,9 @@ import {
     waitingPrompt,
     WAITING_COMMENTARY,
     type LiveEvent,
+    type VoiceChatCompletion,
     type VoiceChatFollowUp,
+    type VoiceChatState,
     type VoiceSessionChange,
     type VoiceWatchedSession
 } from '@ruimte/voice';
@@ -31,7 +34,7 @@ import { useProject } from '@/state/project';
 import { sessionStatus, useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { pool, transportFor } from '@/transport';
-import { chatCompletion, chatWaits } from '@/voice/chat-follow-up';
+import { followedState } from '@/voice/chat-follow-up';
 import { finishVoiceDiagnostics, noteVoiceError, startVoiceDiagnostics, voiceDeliveryObserver, voiceDiagnosticsObserver } from '@/voice/diagnostics-log';
 import { currentVoiceDomains } from '@/voice/domains';
 import { LiveSession } from '@/voice/live-session';
@@ -52,7 +55,6 @@ let toolQueue: VoiceToolQueue | null = null;
 let toolLoop: ResponseToolLoop | null = null;
 let unsubscribeDocument: (() => void) | null = null;
 let unsubscribeProject: (() => void) | null = null;
-let followUpTimer: number | null = null;
 const followUpReleases = new Map<string, () => void>();
 const readingFollowUps = new Set<string>();
 let unsubscribeChats: (() => void) | null = null;
@@ -63,6 +65,7 @@ let contextTimer: number | null = null;
 let clockTimer: number | null = null;
 const undo = new Map<string, () => void>();
 const chatFollowUps = new Map<string, VoiceChatFollowUp>();
+const followedTurns = new Map<string, FollowedTurn>();
 
 function failureText(error: unknown): string {
     return messageOf(error, i18next.t('voice:error.start'));
@@ -102,41 +105,34 @@ function appendTime(): void {
 
 function dropFollowUp(id: string): void {
     chatFollowUps.delete(id);
+    followedTurns.delete(id);
     followUpReleases.get(id)?.();
     followUpReleases.delete(id);
 }
 
-function reportCompletion(id: string, followUp: VoiceChatFollowUp, completion: NonNullable<ReturnType<typeof chatCompletion>>): void {
+function reportCompletion(id: string, followUp: VoiceChatFollowUp, completion: VoiceChatCompletion): void {
     if (chatFollowUps.get(id) !== followUp || !completionDelivery) {
         return;
     }
     completionDelivery.enqueue(followUp, completion);
     dropFollowUp(id);
-    if (![...chatFollowUps.values()].some((other) => other.key === followUp.key)) {
-        sessionWatch?.forget(followUp.key);
-    }
 }
 
 function statusOf(session: VoiceWatchedSession): AgentStatus | undefined {
-    return session.kind === 'chat' ? useChats.getState().statusByKey[session.key]?.info.status : sessionStatus(useSessions.getState().byKey[session.key]);
+    return sessionStatus(useSessions.getState().byKey[session.key]);
 }
 
-/* A chat's answer comes with its turn's own completion, so here a chat only reports that it waits. */
+/* A terminal's status says when it waits or ended; a chat's turn is followed on its own (`followStep`). */
 function reportChange(session: VoiceWatchedSession, change: VoiceSessionChange): void {
     if (!completionDelivery) {
         return;
     }
     if (change === 'needs-you') {
-        const asked =
-            session.kind === 'chat'
-                ? chatWaits(useChats.getState().byKey[session.key])
-                : terminalWaits(useSessions.getState().byKey[session.key]?.agent?.requests);
+        const asked = terminalWaits(useSessions.getState().byKey[session.key]?.agent?.requests);
         completionDelivery.report(`${session.key}:waits:${++waits}`, session.key, waitingPrompt(session, asked), WAITING_COMMENTARY);
         return;
     }
-    if (session.kind === 'terminal') {
-        completionDelivery.report(`${session.key}:${change}:${++waits}`, session.key, settledPrompt(session, change), SETTLED_COMMENTARY);
-    }
+    completionDelivery.report(`${session.key}:${change}:${++waits}`, session.key, settledPrompt(session, change), SETTLED_COMMENTARY);
 }
 
 function observeSession(session: VoiceWatchedSession, status: AgentStatus | undefined): void {
@@ -159,58 +155,80 @@ function watchSession(session: VoiceWatchedSession): void {
     }
 }
 
-function flushChatFollowUps(): void {
-    const chats = useChats.getState().byKey;
+/* What this window knows of a followed chat: its thread when it holds it, else the status the machine told every client. */
+function followedChat(followUp: VoiceChatFollowUp): VoiceChatState | null {
+    const held = useChats.getState().byKey[followUp.key];
+    if (held) {
+        return followedState(held, followUp.turnId);
+    }
+    const info = useChats.getState().statusByKey[followUp.key]?.info;
+    return info ? { items: [], info } : null;
+}
+
+/* One look at a followed turn: told once when it settles, and once for each time it starts to wait on the person. */
+function followStep(id: string, followUp: VoiceChatFollowUp, chat: VoiceChatState): void {
+    const step = followedTurns.get(id)?.observe(chat);
+    if (step?.kind === 'settled') {
+        reportCompletion(id, followUp, step.completion);
+    } else if (step?.kind === 'waits') {
+        completionDelivery?.report(
+            `${id}:waits:${step.count}`,
+            followUp.key,
+            waitingPrompt(
+                { key: followUp.key, kind: 'chat', name: followUp.chat, ...(followUp.project === undefined ? {} : { project: followUp.project }) },
+                step.waits
+            ),
+            WAITING_COMMENTARY
+        );
+    }
+}
+
+/* Called whenever a chat's status or thread moved, which is all that can change what Voice tells; a chat this window holds no thread of is read once it stops running. */
+function followChats(): void {
     for (const [id, followUp] of chatFollowUps) {
-        const completion = chatCompletion(chats[followUp.key], followUp.turnId);
-        if (completion) {
-            reportCompletion(id, followUp, completion);
+        const chat = followedChat(followUp);
+        if (chat === null) {
+            readFollowUp(id, followUp);
+            continue;
+        }
+        followStep(id, followUp, chat);
+        if (chatFollowUps.get(id) === followUp && !useChats.getState().byKey[followUp.key] && !chatRunsTurn(chat.info, followUp.turnId)) {
+            readFollowUp(id, followUp);
         }
     }
 }
 
-function pollChatFollowUps(): void {
-    completionDelivery?.flush();
-    for (const [id, followUp] of chatFollowUps) {
-        if (readingFollowUps.has(id)) {
-            continue;
-        }
-        const { endpointId, id: chatId } = splitKey(followUp.key);
-        const transport = transportFor(endpointId);
-        const client = chatClientFor(endpointId);
-        if (!client || transport?.status !== 'open') {
-            continue;
-        }
-        readingFollowUps.add(id);
-        void transport
-            .request('chat.list', {})
-            .then(async ({ chats }) => {
-                const info = chats.find((chat) => chat.chatId === chatId);
-                // After a project switch this window has no status of the chat but this answer. While it has one,
-                // that is newer than a list that was asked for before it, and a stale list would tell a wait twice.
-                if (info && chatFollowUps.get(id) === followUp && !useChats.getState().statusByKey[followUp.key]) {
-                    observeSession({ key: followUp.key, kind: 'chat', name: followUp.chat, project: followUp.project }, info.status);
-                }
-                if (!info || chatRunsTurn(info, followUp.turnId) || chatFollowUps.get(id) !== followUp) {
-                    return;
-                }
-                const snapshot = await client.inspect(chatId);
-                const items = Object.fromEntries(snapshot.items.map((item) => [item.id, item]));
-                const completion = chatCompletion(
-                    { info: snapshot.info, items, structure: items, order: snapshot.items.map((item) => item.id) },
-                    followUp.turnId
-                );
-                if (completion) {
-                    reportCompletion(id, followUp, completion);
-                }
-            })
-            .catch(() => undefined)
-            .finally(() => readingFollowUps.delete(id));
+/* The chat as the machine holds it, for a chat no status or thread of this window says anything about, as after a project switch. */
+function readFollowUp(id: string, followUp: VoiceChatFollowUp): void {
+    if (readingFollowUps.has(id)) {
+        return;
     }
+    const { endpointId, id: chatId } = splitKey(followUp.key);
+    const transport = transportFor(endpointId);
+    const client = chatClientFor(endpointId);
+    if (!client || transport?.status !== 'open') {
+        return;
+    }
+    readingFollowUps.add(id);
+    void (async () => {
+        const known = useChats.getState().statusByKey[followUp.key]?.info;
+        const info = known ?? (await transport.request('chat.list', {})).chats.find((chat) => chat.chatId === chatId);
+        if (!info || chatFollowUps.get(id) !== followUp) {
+            return;
+        }
+        if (chatRunsTurn(info, followUp.turnId)) {
+            followStep(id, followUp, { items: [], info });
+            return;
+        }
+        const snapshot = await client.inspect(chatId);
+        const items = Object.fromEntries(snapshot.items.map((item) => [item.id, item]));
+        followStep(id, followUp, followedState({ info: snapshot.info, items, order: snapshot.items.map((item) => item.id) }, followUp.turnId));
+    })()
+        .catch((error: unknown) => console.debug('[voice] reading a followed chat failed', error))
+        .finally(() => readingFollowUps.delete(id));
 }
 
 function cancelChatFollowUps(key: string): void {
-    sessionWatch?.forget(key);
     for (const [id, followUp] of chatFollowUps) {
         if (followUp.key === key) {
             dropFollowUp(id);
@@ -227,8 +245,8 @@ function trackChatFollowUp(followUp: VoiceChatFollowUp): void {
         followUpReleases.set(id, pool.hold(endpoint));
     }
     chatFollowUps.set(id, followUp);
-    watchSession({ key: followUp.key, kind: 'chat', name: followUp.chat, project: followUp.project });
-    flushChatFollowUps();
+    followedTurns.set(id, new FollowedTurn(followUp.turnId));
+    followChats();
 }
 
 function addAction(kind: VoiceActionKind, label: string, detail: string, undoAction?: () => void): void {
@@ -253,6 +271,8 @@ function number(value: unknown): number {
 
 function handleEvent(event: LiveEvent): void {
     completionDelivery?.handle(event);
+    // A report that found the session not ready goes out with the next thing the session says.
+    completionDelivery?.flush();
     if (event.type === 'session.started') {
         useVoice.setState({ phase: 'listening', error: null, sessionStartedAt: Date.now() });
         appendContext();
@@ -377,14 +397,13 @@ export async function startVoice(): Promise<void> {
             }
             contextTimer = window.setTimeout(appendContext, 250);
         });
-        unsubscribeChats = useChats.subscribe(flushChatFollowUps);
+        unsubscribeChats = useChats.subscribe(followChats);
         const offChatStatuses = subscribeChatStatuses(checkSessions);
         const offSessions = useSessions.subscribe(checkSessions);
         unsubscribeStatuses = () => {
             offChatStatuses();
             offSessions();
         };
-        followUpTimer = window.setInterval(pollChatFollowUps, 3000);
         unsubscribeProject = useProject.subscribe((state, previous) => {
             if (state.current?.projectId !== previous.current?.projectId || state.currentEndpointId !== previous.currentEndpointId) {
                 undo.clear();
@@ -421,16 +440,13 @@ export function stopVoice(): void {
     unsubscribeStatuses = null;
     unsubscribeProject?.();
     unsubscribeProject = null;
-    if (followUpTimer !== null) {
-        window.clearInterval(followUpTimer);
-        followUpTimer = null;
-    }
     for (const release of followUpReleases.values()) {
         release();
     }
     followUpReleases.clear();
     readingFollowUps.clear();
     chatFollowUps.clear();
+    followedTurns.clear();
     useVoice.setState({ phase: session ? 'closing' : 'idle' });
     session?.close();
     session = null;

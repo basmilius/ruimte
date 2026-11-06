@@ -120,7 +120,54 @@ describe('DeviceClient', () => {
         client.dispose();
     });
 
-    test('polls external lifecycle changes while watched and stops after the last watcher', async () => {
+    test('reads again when the machine says the devices changed, and asks it to say so only while watched', async () => {
+        jest.useFakeTimers();
+        const transport = new FakeTransport();
+        Object.assign(transport, { connection: { features: ['device.watch'] } });
+        const client = new DeviceClient('machine-1', transport);
+        const asked = (type: RequestType): number => transport.calls.filter((call) => call.type === type).length;
+        const stopFirst = client.watch();
+        const stopSecond = client.watch();
+        await settle();
+        expect(listReads(transport)).toBe(1);
+        expect(asked('device.watch')).toBe(1);
+
+        jest.advanceTimersByTime(60_000);
+        await settle();
+        expect(listReads(transport)).toBe(1);
+
+        transport.emit('device.changed', {});
+        await settle();
+        expect(listReads(transport)).toBe(2);
+
+        stopFirst();
+        expect(asked('device.unwatch')).toBe(0);
+
+        stopSecond();
+        await settle();
+        expect(asked('device.unwatch')).toBe(1);
+        transport.emit('device.changed', {});
+        await settle();
+        expect(listReads(transport)).toBe(2);
+        client.dispose();
+    });
+
+    test('asks again after the link came back', async () => {
+        const transport = new FakeTransport();
+        Object.assign(transport, { connection: { features: ['device.watch'] } });
+        const client = new DeviceClient('machine-1', transport);
+        const stop = client.watch();
+        await settle();
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await settle();
+
+        expect(transport.calls.filter((call) => call.type === 'device.watch')).toHaveLength(2);
+        stop();
+        client.dispose();
+    });
+
+    test('reads a machine from before device.watch on a clock while watched and stops after the last watcher', async () => {
         jest.useFakeTimers();
         const transport = new FakeTransport();
         const client = new DeviceClient('machine-1', transport);
@@ -184,6 +231,27 @@ describe('DeviceClient', () => {
         await settle();
         expect(older.calls.some((call) => call.type === 'device.power')).toBe(false);
         stop();
+    });
+
+    test("reads a phone's power when the machine says something changed, and on no clock", async () => {
+        jest.useFakeTimers();
+        const transport = new FakeTransport();
+        Object.assign(transport, { connection: { features: ['device.power', 'device.watch'] } });
+        const client = new DeviceClient('machine-1', transport);
+        const reads = (): number => transport.calls.filter((call) => call.type === 'device.power').length;
+        const stop = client.watchPower(phone);
+        await settle();
+        expect(reads()).toBe(1);
+
+        jest.advanceTimersByTime(120_000);
+        await settle();
+        expect(reads()).toBe(1);
+
+        transport.emit('device.changed', {});
+        await settle();
+        expect(reads()).toBe(2);
+        stop();
+        client.dispose();
     });
 
     test('shares one remote attachment between two mounted surfaces', async () => {

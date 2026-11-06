@@ -16,7 +16,7 @@ import { powerKey, useDevicePowers } from '@/clients/devices/device-power';
 import { eventStreamFields, LatestFrames } from '@/clients/devices/latest-frames';
 import { useDevices } from '@/clients/devices/state';
 import { decodeBase64 } from '@/transport-api/piece';
-import { isConnectionError, type Transport, type TransportStatus } from '@/transport-api/transport';
+import { fireAndForget, isConnectionError, type Transport, type TransportStatus } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { HandlerTable } from '@/transport/handler-table';
 
@@ -27,6 +27,7 @@ interface MountedDevice extends MountedEntry {
     streamId: string | null;
 }
 
+// What a machine from before `device.watch` is read on; a newer one says when something changed.
 const DEVICE_REFRESH_MS = 1_000;
 const POWER_REFRESH_MS = 60_000;
 const DRAWABLE_FORMATS: DeviceVideoFormat[] = ['jpeg', 'hevc', 'h264'];
@@ -42,12 +43,14 @@ function targetOf(device: DeviceTarget) {
 export class DeviceClient {
     private readonly frames = new LatestFrames();
     private readonly mounted = new MountedRegistry<MountedDevice>();
-    private readonly powerWatches = new Map<string, { refs: number; timer: ReturnType<typeof setInterval> }>();
+    private readonly powerWatches = new Map<string, { refs: number; device: DeviceTarget; timer: ReturnType<typeof setInterval> | null }>();
     private refreshInFlight: Promise<DeviceInfo[]> | null = null;
     private refreshTimer: ReturnType<typeof setInterval> | null = null;
     private readonly streamHandlers = new HandlerTable<string>();
     private readonly unsubscribe: Array<() => void>;
     private watchers = 0;
+    // Whether the machine was asked to say when the devices change, on the link that is open now.
+    private told = false;
     readonly endpointId: string;
     private readonly transport: Transport;
 
@@ -56,6 +59,7 @@ export class DeviceClient {
         this.transport = transport;
         this.unsubscribe = [
             transport.on('device.frame', ({ data, ...header }) => this.receiveFrame(header, decodeBase64(data))),
+            transport.on('device.changed', () => this.changed()),
             transport.onLiveFrame?.('device.frame', (header, bytes) => this.receiveFrame(header, bytes)) ?? (() => undefined),
             transport.subscribeStatus((status) => this.onStatus(status))
         ];
@@ -80,9 +84,9 @@ export class DeviceClient {
         this.watchers += 1;
         if (this.watchers === 1) {
             const loaded = useDevices.getState().byEndpoint[this.endpointId]?.loaded === true;
-            void this.refresh(loaded).catch(() => undefined);
-            this.refreshTimer = setInterval(() => void this.refresh(true).catch(() => undefined), DEVICE_REFRESH_MS);
+            fireAndForget('device list', this.refresh(loaded));
         }
+        this.syncWatch();
         let watching = true;
         return () => {
             if (!watching) {
@@ -90,10 +94,7 @@ export class DeviceClient {
             }
             watching = false;
             this.watchers = Math.max(0, this.watchers - 1);
-            if (this.watchers === 0 && this.refreshTimer !== null) {
-                clearInterval(this.refreshTimer);
-                this.refreshTimer = null;
-            }
+            this.syncWatch();
         };
     }
 
@@ -127,9 +128,10 @@ export class DeviceClient {
         if (current) {
             current.refs += 1;
         } else {
-            void this.readPower(device);
-            this.powerWatches.set(key, { refs: 1, timer: setInterval(() => void this.readPower(device), POWER_REFRESH_MS) });
+            fireAndForget('device power', this.readPower(device));
+            this.powerWatches.set(key, { refs: 1, device, timer: null });
         }
+        this.syncWatch();
         let watching = true;
         return () => {
             const watch = this.powerWatches.get(key);
@@ -139,10 +141,61 @@ export class DeviceClient {
             watching = false;
             watch.refs -= 1;
             if (watch.refs === 0) {
-                clearInterval(watch.timer);
+                this.stopClock(watch);
                 this.powerWatches.delete(key);
             }
+            this.syncWatch();
         };
+    }
+
+    /*
+     * Asks the machine to say when the devices or a battery change while something on screen shows them, and
+     * reads on a clock only on a machine that cannot say, and only while its link is open.
+     */
+    private syncWatch(): void {
+        const wanted = this.watchers > 0 || this.powerWatches.size > 0;
+        const open = this.transport.status === 'open';
+        const pushed = open && machineAnswers(this.transport.connection, 'device.watch');
+        if (pushed && wanted && !this.told) {
+            this.told = true;
+            fireAndForget('device.watch', this.transport.request('device.watch', {}));
+        } else if (this.told && !(pushed && wanted)) {
+            this.told = false;
+            if (open) {
+                fireAndForget('device.unwatch', this.transport.request('device.unwatch', {}));
+            }
+        }
+        const clocked = open && !pushed;
+        if (clocked && this.watchers > 0) {
+            this.refreshTimer ??= setInterval(() => fireAndForget('device list', this.refresh(true)), DEVICE_REFRESH_MS);
+        } else if (this.refreshTimer !== null) {
+            clearInterval(this.refreshTimer);
+            this.refreshTimer = null;
+        }
+        for (const watch of this.powerWatches.values()) {
+            if (clocked) {
+                watch.timer ??= setInterval(() => fireAndForget('device power', this.readPower(watch.device)), POWER_REFRESH_MS);
+            } else {
+                this.stopClock(watch);
+            }
+        }
+    }
+
+    private stopClock(watch: { timer: ReturnType<typeof setInterval> | null }): void {
+        if (watch.timer !== null) {
+            clearInterval(watch.timer);
+            watch.timer = null;
+        }
+    }
+
+    /* The machine said something changed: the list is read again, and so is every battery on screen. */
+    private changed(): void {
+        if (this.watchers > 0) {
+            fireAndForget('device list', this.refresh(true));
+        }
+        for (const watch of this.powerWatches.values()) {
+            fireAndForget('device power', this.readPower(watch.device));
+        }
     }
 
     private async readPower(device: DeviceTarget): Promise<void> {
@@ -213,12 +266,12 @@ export class DeviceClient {
         this.mounted.delete(key);
         this.frames.forget(key);
         if (mounted.attached) {
-            await this.transport.request('device.detach', targetOf(mounted.device)).catch(() => undefined);
+            fireAndForget('device.detach', this.transport.request('device.detach', targetOf(mounted.device)));
         }
     }
 
     input(device: DeviceTarget, input: DeviceInput): void {
-        void this.transport.request('device.input', { ...targetOf(device), input }).catch(() => undefined);
+        fireAndForget('device.input', this.transport.request('device.input', { ...targetOf(device), input }));
     }
 
     onFrame(device: DeviceTarget, handler: (frame: LiveStreamFrame) => void): () => void {
@@ -239,15 +292,10 @@ export class DeviceClient {
         for (const unsubscribe of this.unsubscribe) {
             unsubscribe();
         }
-        if (this.refreshTimer !== null) {
-            clearInterval(this.refreshTimer);
-            this.refreshTimer = null;
-        }
-        for (const watch of this.powerWatches.values()) {
-            clearInterval(watch.timer);
-        }
-        this.powerWatches.clear();
         this.watchers = 0;
+        this.powerWatches.forEach((watch) => this.stopClock(watch));
+        this.powerWatches.clear();
+        this.syncWatch();
         this.mounted.clear();
         this.frames.clear();
         this.streamHandlers.clear();
@@ -292,10 +340,13 @@ export class DeviceClient {
 
     private onStatus(status: TransportStatus): void {
         if (status !== 'open') {
+            this.told = false;
+            this.syncWatch();
             this.mounted.detachAll();
             return;
         }
-        void this.refresh().catch(() => undefined);
+        this.syncWatch();
+        fireAndForget('device list', this.refresh());
         void this.mounted.reattachAll(async (_key, mounted) => {
             await this.attach(mounted);
         });

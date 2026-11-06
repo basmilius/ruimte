@@ -1,6 +1,7 @@
 import { projectSidebarViews, type AgentStatus, type ProjectChangedEvent, type ProjectSidebarResult, type ProjectSummaryEvent } from '@ruimte/contracts';
 import { waitDate } from '@/state/waiting-date';
-import type { Transport } from '@/transport-api/transport';
+import { fireAndForget, type Transport } from '@/transport-api/transport';
+import { machineAnswers } from '@/transport/features';
 
 export interface SidebarMachineSnapshot {
     projects: ProjectSidebarResult['projects'];
@@ -15,6 +16,7 @@ type Part = 'projects' | 'sessions' | 'chats';
 const ALL_PARTS: readonly Part[] = ['projects', 'sessions', 'chats'];
 
 export interface SidebarWatchOptions {
+    /* For a machine from before `project.watch`, which cannot say when a project it does not hold changed. */
     pollMs?: number;
     /* Whether this page polls now. Every window draws a sidebar, and only the one with the focus has to. */
     polls?: () => boolean;
@@ -55,7 +57,11 @@ export class SidebarWatch {
     private snapshot: SidebarMachineSnapshot = { projects: [], statuses: {}, waitingSince: {}, state: 'loading' };
     private readonly listeners = new Set<() => void>();
     private readonly off: (() => void)[];
-    private readonly interval: ReturnType<typeof setInterval>;
+    private interval: ReturnType<typeof setInterval> | null = null;
+    // Whether the machine was asked to say when a project changed, on the link that is open now.
+    private told = false;
+    private readonly pollMs: number;
+    private readonly polls: () => boolean;
     private readonly queued = new Set<Part>();
     private disposed = false;
     private loading = false;
@@ -67,10 +73,14 @@ export class SidebarWatch {
 
     constructor(transport: Transport, { pollMs = 15_000, polls = focusedPage }: SidebarWatchOptions = {}) {
         this.transport = transport;
+        this.pollMs = pollMs;
+        this.polls = polls;
         this.off = [
             transport.subscribeStatus((status) => {
                 this.generation++;
                 this.queued.clear();
+                this.told = false;
+                this.syncWatch();
                 if (status === 'open') {
                     this.set({ ...this.snapshot, state: 'loading' });
                     this.refresh();
@@ -80,6 +90,7 @@ export class SidebarWatch {
             }),
             transport.on('project.changed', (event) => this.changed(event)),
             transport.on('project.summary', (event) => this.summary(event)),
+            transport.on('project.listChanged', () => this.queue(['projects'])),
             transport.on('session.list-changed', () => this.queue(['sessions'])),
             transport.on('session.status', ({ sessionId, agent }) =>
                 this.status(`terminal:${sessionId}`, agent?.status ?? 'running', agent?.requests, agent?.updatedAt)
@@ -87,12 +98,7 @@ export class SidebarWatch {
             transport.on('session.exit', ({ sessionId }) => this.status(`terminal:${sessionId}`, 'exited')),
             transport.on('chat.status', ({ chatId, info }) => this.status(`chat:${chatId}`, info.status, info.requests))
         ];
-        // A project no client has open has no watcher on the machine, so an edit from outside reaches no event.
-        this.interval = setInterval(() => {
-            if (polls()) {
-                this.queue(['projects']);
-            }
-        }, pollMs);
+        this.syncWatch();
         this.refresh();
     }
 
@@ -105,8 +111,36 @@ export class SidebarWatch {
     dispose(): void {
         this.disposed = true;
         this.off.forEach((off) => off());
-        clearInterval(this.interval);
+        if (this.interval !== null) {
+            clearInterval(this.interval);
+        }
+        if (this.told && this.transport.status === 'open') {
+            fireAndForget('project.unwatch', this.transport.request('project.unwatch', {}));
+        }
         this.listeners.clear();
+    }
+
+    /*
+     * A project no client has open has no watcher of its own, so an edit from outside reaches no event unless
+     * the machine is asked to watch every project. A machine from before that is read on a clock instead.
+     */
+    private syncWatch(): void {
+        const open = this.transport.status === 'open';
+        const pushed = open && machineAnswers(this.transport.connection, 'project.watch');
+        if (pushed && !this.told) {
+            this.told = true;
+            fireAndForget('project.watch', this.transport.request('project.watch', {}));
+        }
+        if (open && !pushed) {
+            this.interval ??= setInterval(() => {
+                if (this.polls()) {
+                    this.queue(['projects']);
+                }
+            }, this.pollMs);
+        } else if (this.interval !== null) {
+            clearInterval(this.interval);
+            this.interval = null;
+        }
     }
 
     /* Everything again, as on a fresh link. */

@@ -68,6 +68,19 @@ export function isConnectionError(error: unknown): boolean {
 }
 
 /*
+ * The one door for a request nobody awaits: a release, an unsubscribe, a note to the machine. A request
+ * either gets awaited and its failure shown, or goes through here. A failure is logged at debug level and
+ * dropped, except one of the link, since the reconnect asks again and there is nothing to say.
+ */
+export function fireAndForget(what: string, request: Promise<unknown>): void {
+    request.catch((error: unknown) => {
+        if (!isConnectionError(error)) {
+            console.debug(`[request] ${what} failed and was dropped`, error);
+        }
+    });
+}
+
+/*
  * Runs `read` now if the link is open and again on every open after, since what changed while it was
  * closed was told to nobody. `onStatus` runs first on every change of status.
  */

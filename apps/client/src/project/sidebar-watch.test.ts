@@ -321,6 +321,33 @@ describe('background sidebar updates', () => {
         expect(transport.calls).toEqual(['project.sidebar']);
     });
 
+    test('asks a machine that can say so to tell when a project changed, and reads no clock then', async () => {
+        jest.useFakeTimers();
+        const transport = new FakeTransport();
+        Object.assign(transport, { connection: { features: ['project.watch'] } });
+        const watcher = watch(transport);
+        await settle();
+        expect(transport.calls).toContain('project.watch');
+
+        transport.calls = [];
+        jest.advanceTimersByTime(60_000);
+        await settle();
+        expect(transport.calls).toEqual([]);
+
+        transport.emit('project.listChanged', { projectId: 'p1' });
+        await settle();
+        expect(transport.calls).toEqual(['project.sidebar']);
+
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await settle();
+        expect(transport.calls.filter((call) => call === 'project.watch')).toHaveLength(1);
+
+        transport.calls = [];
+        watcher.dispose();
+        expect(transport.calls).toEqual(['project.unwatch']);
+    });
+
     test('disposal removes listeners and timers', async () => {
         jest.useFakeTimers();
         const transport = new FakeTransport();
