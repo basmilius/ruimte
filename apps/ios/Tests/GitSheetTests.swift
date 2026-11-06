@@ -187,7 +187,7 @@ final class GitSheetTests: XCTestCase {
     }
 
     func testAWorktreeSaysWhoWorksInIt() {
-        let views: [JSONValue] = [
+        let views = ProjectWire.stored([
             .object([
                 "id": .string("main"), "kind": .string("canvas"),
                 "nodes": .array([
@@ -203,7 +203,7 @@ final class GitSheetTests: XCTestCase {
             .object([
                 "id": .string("t"), "kind": .string("terminal"), "node": .object(["cwd": .string("/wt/redesign")]),
             ]),
-        ]
+        ])
         XCTAssertEqual(GitWorktreeOccupants.line(in: views, path: "/wt/redesign"), "2 chats and 1 terminal work here")
         XCTAssertEqual(GitWorktreeOccupants.line(in: views, path: "/wt/login"), "bound to Login")
         XCTAssertNil(GitWorktreeOccupants.line(in: views, path: "/wt/redesign-2"))
@@ -234,7 +234,7 @@ final class GitSheetTests: XCTestCase {
                 ])
             ])
         ])
-        let groups = GitWorktreeBinding.groups(in: document.list("views"))
+        let groups = GitWorktreeBinding.groups(in: ProjectWire.stored(document.list("views")))
         XCTAssertEqual(groups.map(\.title), ["Shopping list"])
         XCTAssertNil(groups[0].worktree)
         let bound = GitWorktreeBinding.bind(
@@ -242,7 +242,7 @@ final class GitSheetTests: XCTestCase {
         let nodes = bound.list("views")[0].list("nodes")
         XCTAssertEqual(nodes[0]["worktree"]?["path"], .string("/wt/shopping-list"))
         XCTAssertNil(nodes[1]["worktree"])
-        XCTAssertEqual(GitWorktreeBinding.groups(in: bound.list("views"))[0].worktree?.branch, "shopping-list")
+        XCTAssertEqual(GitWorktreeBinding.groups(in: ProjectWire.stored(bound.list("views")))[0].worktree?.branch, "shopping-list")
         let unbound = GitWorktreeBinding.bind(bound, viewID: "main", groupID: "g", worktree: nil)
         XCTAssertNil(unbound.list("views")[0].list("nodes")[0]["worktree"])
     }
@@ -368,19 +368,30 @@ final class GitSheetTests: XCTestCase {
             return .object(["subject": .string("Share one backoff"), "body": .string("Caps retries at 5.")])
         case .gitLog:
             return .object([
-                "commits": .array([.object(["subject": .string("Share one backoff across transport endpoints")])])
+                "commits": .array([
+                    .object([
+                        "hash": .string("abc1234def"), "shortHash": .string("abc1234"),
+                        "subject": .string("Share one backoff across transport endpoints"), "author": .string("Ada"),
+                        "at": .number(1000), "refs": .array([]),
+                    ])
+                ]),
+                "cursor": .null,
             ])
         case .gitDiff:
-            return .object([
-                "files": .array([
-                    .object(["path": .string("a.ts"), "added": .number(24), "deleted": .number(9)]),
-                    .object(["path": .string("b.ts"), "added": .number(3), "deleted": .number(1)]),
+            let file = { (path: String, added: Double, deleted: Double) -> JSONValue in
+                .object([
+                    "path": .string(path), "diff": .string(""), "added": .number(added), "deleted": .number(deleted),
+                    "binary": .bool(false),
                 ])
+            }
+            return .object([
+                "path": .string(""), "diff": .string(""), "added": .number(27), "deleted": .number(10),
+                "binary": .bool(false), "files": .array([file("a.ts", 24, 9), file("b.ts", 3, 1)]),
             ])
         case .gitAction where payload["kind"] == .string("create-pr"):
             return .object([
-                "summary": .string("Pull request ready: https://example.test/pull/7"),
-                "url": .string("https://example.test/pull/7"),
+                "actionId": .string("a1"), "summary": .string("Pull request ready: https://example.test/pull/7"),
+                "output": .string(""), "url": .string("https://example.test/pull/7"),
             ])
         case .gitWorktreeAdd:
             return .object([
@@ -390,7 +401,7 @@ final class GitSheetTests: XCTestCase {
         case .gitStatus:
             return GitWire.json(GitWire.status([:]))
         default:
-            return .object(["summary": .string("Done.")])
+            return .object(["actionId": .string("a1"), "summary": .string("Done."), "output": .string("")])
         }
     }
 

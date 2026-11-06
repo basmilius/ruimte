@@ -248,7 +248,10 @@ final class ProjectFilesTests: XCTestCase {
                     ]),
                 ]))
         case .gitDiff:
-            return .object(["path": .string("src/pool.ts"), "diff": .string("@@ -1,2 +1,2 @@\n a\n-b\n+B\n")])
+            return .object([
+                "path": .string("src/pool.ts"), "diff": .string("@@ -1,2 +1,2 @@\n a\n-b\n+B\n"), "added": .number(1),
+                "deleted": .number(1), "binary": .bool(false),
+            ])
         case .fsGrep:
             return .object([
                 "matches": .array([

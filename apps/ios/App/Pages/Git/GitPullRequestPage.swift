@@ -32,20 +32,21 @@ import SwiftUI
     func load(client: any MachineRequesting) async {
         if title.isEmpty,
             let log = try? await client.request(
-                .gitLog, payload: .object(["cwd": .string(path), "limit": .number(1)]))
+                .gitLog, payload: .object(["cwd": .string(path), "limit": .number(1)])
+            ).decoded(as: GitLogResult.self)
         {
-            title = log.list("commits").first?.text("subject") ?? ""
+            title = log.commits.first?.subject ?? ""
         }
         var payload: [String: JSONValue] = [
             "cwd": .string(path), "scope": .string("base"), "staged": .bool(false),
         ]
         if let base = checkout?.status?.base { payload["base"] = .string(base) }
-        guard let diff = try? await client.request(.gitDiff, payload: .object(payload)) else { return }
-        let files = diff.list("files")
-        stats = (
-            files.count, files.reduce(0) { $0 + Int($1.number("added")) },
-            files.reduce(0) { $0 + Int($1.number("deleted")) }
-        )
+        guard
+            let diff = try? await client.request(.gitDiff, payload: .object(payload))
+                .decoded(as: GitDiffResult.self)
+        else { return }
+        let files = diff.files ?? []
+        stats = (files.count, files.reduce(0) { $0 + Int($1.added) }, files.reduce(0) { $0 + Int($1.deleted) })
     }
 
     /// Opens the pull request; the line it returns is what the sheet says afterwards.
@@ -54,8 +55,8 @@ import SwiftUI
             client: client, cwd: path, kind: "create-pr",
             extra: ["subject": .string(title.trimmingCharacters(in: .whitespacesAndNewlines)), "body": .string(body)])
         guard let result else { return nil }
-        url = result["url"]?.stringValue.flatMap(URL.init(string:))
-        return result.text("summary", fallback: String(localized: "The pull request is open."))
+        url = result.url.flatMap(URL.init(string:))
+        return result.summary
     }
 }
 

@@ -98,12 +98,12 @@ import SwiftUI
 struct GitBranchRow: View {
     let client: any MachineRequesting
     let actions: GitBranchActions
-    let ref: JSONValue
+    let ref: GitRef
 
     var body: some View {
-        let name = ref.text("name")
-        let isCurrent = ref["current"] == .bool(true)
-        let elsewhere = ref["worktree"]?.stringValue
+        let name = ref.name
+        let isCurrent = ref.current
+        let elsewhere = ref.worktree
         Button {
             Task { await actions.switchTo(client: client, branch: name) }
         } label: {
@@ -141,7 +141,7 @@ struct GitBranchRow: View {
                     actions.prompt = .renameBranch(cwd: actions.path, branch: name)
                 }
             }
-            if !isCurrent && ref.text("kind") == "local" {
+            if !isCurrent && ref.kind == .local {
                 Button(String(localized: "Delete branch"), lucideIcon: "trash", role: .destructive) {
                     actions.confirmation = .deleteBranch(cwd: actions.path, ref: name, force: false)
                 }
@@ -161,7 +161,7 @@ struct GitBranchRow: View {
             }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         }
-        return ref["isDefault"] == .bool(true) ? String(localized: "Default branch") : nil
+        return ref.isDefault ? String(localized: "Default branch") : nil
     }
 }
 
@@ -207,10 +207,10 @@ struct GitBranchesPage: View {
     @State private var query = ""
     @State private var remotes = false
 
-    private var shown: [JSONValue] {
+    private var shown: [GitRef] {
         let source = remotes ? actions.refs.refs : actions.refs.branches
         let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
-        return needle.isEmpty ? source : source.filter { $0.text("name").lowercased().contains(needle) }
+        return needle.isEmpty ? source : source.filter { $0.name.lowercased().contains(needle) }
     }
 
     var body: some View {
@@ -230,7 +230,7 @@ struct GitBranchesPage: View {
             } else if shown.isEmpty {
                 ContentUnavailableView(String(localized: "No branches"), lucideIcon: "git-branch")
             }
-            ForEach(shown, id: \.stableID) { ref in
+            ForEach(shown, id: \.name) { ref in
                 GitBranchRow(client: client, actions: actions, ref: ref)
             }
         }

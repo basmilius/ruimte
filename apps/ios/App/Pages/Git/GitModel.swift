@@ -99,7 +99,7 @@ enum GitPanel {
 struct GitLoadedLog {
     let cwd: String
     let repo: String
-    var commits: [JSONValue]
+    var commits: [GitCommit]
     /// Nil when this checkout has no further page.
     var cursor: String?
 }
@@ -108,10 +108,10 @@ struct GitLoadedLog {
 struct GitLogRow: Identifiable {
     let cwd: String
     let repo: String
-    let commit: JSONValue
+    let commit: GitCommit
 
-    var id: String { cwd + "\u{0}" + commit.text("hash") }
-    var at: Double { commit.number("at") }
+    var id: String { cwd + "\u{0}" + commit.hash }
+    var at: Double { Double(commit.at) }
 }
 
 extension GitPanel {
@@ -121,7 +121,7 @@ extension GitPanel {
     /// those rows in now would mean moving them later. They come with the next page instead.
     static func mergeLogs(_ logs: [GitLoadedLog]) -> (rows: [GitLogRow], more: Bool) {
         let floor =
-            logs.filter { $0.cursor != nil }.compactMap { $0.commits.last?.number("at") }.max() ?? -.infinity
+            logs.filter { $0.cursor != nil }.compactMap { $0.commits.last.map { Double($0.at) } }.max() ?? -.infinity
         let rows =
             logs
             .flatMap { log in log.commits.map { GitLogRow(cwd: log.cwd, repo: log.repo, commit: $0) } }

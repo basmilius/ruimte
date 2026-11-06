@@ -82,10 +82,8 @@ final class GitPanelTests: XCTestCase {
         GitLoadedLog(
             cwd: "/work/\(repo)", repo: repo,
             commits: ats.map {
-                .object([
-                    "hash": .string("\(repo)-\($0)"), "shortHash": .string("\(repo)"), "subject": .string("s"),
-                    "author": .string("Ada"), "at": .number($0), "refs": .array([]),
-                ])
+                GitCommit(
+                    hash: "\(repo)-\($0)", shortHash: repo, subject: "s", author: "Ada", at: Int64($0), refs: [])
             }, cursor: cursor)
     }
 

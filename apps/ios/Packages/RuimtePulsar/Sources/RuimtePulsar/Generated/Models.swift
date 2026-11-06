@@ -5070,10 +5070,10 @@ public struct ChatToolItemProgress: Codable, Sendable, Equatable {
 
 public struct ChatToolItemChangesItem: Codable, Sendable, Equatable {
     public let `path`: String
-    public let `kind`: ChatToolItemChangesItemKind
+    public let `kind`: GitDiffKind
     public let `diff`: String
 
-    public init(`path`: String, `kind`: ChatToolItemChangesItemKind, `diff`: String) {
+    public init(`path`: String, `kind`: GitDiffKind, `diff`: String) {
         self.`path` = `path`
         self.`kind` = `kind`
         self.`diff` = `diff`
@@ -5082,7 +5082,7 @@ public struct ChatToolItemChangesItem: Codable, Sendable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         `path` = try container.decode(String.self, forKey: .`path`)
-        `kind` = try container.decode(ChatToolItemChangesItemKind.self, forKey: .`kind`)
+        `kind` = try container.decode(GitDiffKind.self, forKey: .`kind`)
         `diff` = try container.decode(String.self, forKey: .`diff`)
     }
 
@@ -5100,7 +5100,7 @@ public struct ChatToolItemChangesItem: Codable, Sendable, Equatable {
     }
 }
 
-public enum ChatToolItemChangesItemKind: String, CaseIterable, Codable, Sendable, Equatable {
+public enum GitDiffKind: String, CaseIterable, Codable, Sendable, Equatable {
     case `add` = "add"
     case `update` = "update"
     case `delete` = "delete"
@@ -5942,13 +5942,13 @@ public struct ChatTurnItemCheckpointDiff: Codable, Sendable, Equatable {
 
 public struct ChatTurnItemCheckpointDiffFilesItem: Codable, Sendable, Equatable {
     public let `path`: String
-    public let `kind`: ChatTurnItemCheckpointDiffFilesItemKind
+    public let `kind`: GitDiffKind
     public let `added`: Int64
     public let `deleted`: Int64
     public let `diff`: String
-    public let `omitted`: ChatTurnItemCheckpointDiffFilesItemOmitted?
+    public let `omitted`: GitDiffOmitted?
 
-    public init(`path`: String, `kind`: ChatTurnItemCheckpointDiffFilesItemKind, `added`: Int64, `deleted`: Int64, `diff`: String, `omitted`: ChatTurnItemCheckpointDiffFilesItemOmitted? = nil) {
+    public init(`path`: String, `kind`: GitDiffKind, `added`: Int64, `deleted`: Int64, `diff`: String, `omitted`: GitDiffOmitted? = nil) {
         self.`path` = `path`
         self.`kind` = `kind`
         self.`added` = `added`
@@ -5960,11 +5960,11 @@ public struct ChatTurnItemCheckpointDiffFilesItem: Codable, Sendable, Equatable 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         `path` = try container.decode(String.self, forKey: .`path`)
-        `kind` = try container.decode(ChatTurnItemCheckpointDiffFilesItemKind.self, forKey: .`kind`)
+        `kind` = try container.decode(GitDiffKind.self, forKey: .`kind`)
         `added` = try container.decode(Int64.self, forKey: .`added`)
         `deleted` = try container.decode(Int64.self, forKey: .`deleted`)
         `diff` = try container.decode(String.self, forKey: .`diff`)
-        `omitted` = try container.decodeIfPresent(ChatTurnItemCheckpointDiffFilesItemOmitted.self, forKey: .`omitted`)
+        `omitted` = try container.decodeIfPresent(GitDiffOmitted.self, forKey: .`omitted`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -5987,13 +5987,7 @@ public struct ChatTurnItemCheckpointDiffFilesItem: Codable, Sendable, Equatable 
     }
 }
 
-public enum ChatTurnItemCheckpointDiffFilesItemKind: String, CaseIterable, Codable, Sendable, Equatable {
-    case `add` = "add"
-    case `update` = "update"
-    case `delete` = "delete"
-}
-
-public enum ChatTurnItemCheckpointDiffFilesItemOmitted: String, CaseIterable, Codable, Sendable, Equatable {
+public enum GitDiffOmitted: String, CaseIterable, Codable, Sendable, Equatable {
     case `binary` = "binary"
     case `tooLarge` = "too-large"
 }
@@ -7743,7 +7737,7 @@ public enum GitStatusFileState: String, CaseIterable, Codable, Sendable, Equatab
 
 public struct GitStatus: Codable, Sendable, Equatable {
     public let `repo`: Bool
-    public let `operation`: GitStatusOperation?
+    public let `operation`: GitOperationKind?
     public let `root`: String?
     public let `branch`: String?
     public let `detached`: Bool
@@ -7756,7 +7750,7 @@ public struct GitStatus: Codable, Sendable, Equatable {
     public let `truncated`: Bool
     public let `live`: Bool
 
-    public init(`repo`: Bool, `operation`: GitStatusOperation? = nil, `root`: String?, `branch`: String?, `detached`: Bool, `upstream`: String?, `ahead`: Int64, `behind`: Int64, `base`: String?, `mergeBase`: String?, `files`: [GitStatusFile], `truncated`: Bool, `live`: Bool) {
+    public init(`repo`: Bool, `operation`: GitOperationKind? = nil, `root`: String?, `branch`: String?, `detached`: Bool, `upstream`: String?, `ahead`: Int64, `behind`: Int64, `base`: String?, `mergeBase`: String?, `files`: [GitStatusFile], `truncated`: Bool, `live`: Bool) {
         self.`repo` = `repo`
         self.`operation` = `operation`
         self.`root` = `root`
@@ -7775,7 +7769,7 @@ public struct GitStatus: Codable, Sendable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         `repo` = try container.decode(Bool.self, forKey: .`repo`)
-        `operation` = try container.decodeIfPresent(GitStatusOperation.self, forKey: .`operation`)
+        `operation` = try container.decodeIfPresent(GitOperationKind.self, forKey: .`operation`)
         `root` = try container.decode(String?.self, forKey: .`root`)
         `branch` = try container.decode(String?.self, forKey: .`branch`)
         `detached` = try container.decode(Bool.self, forKey: .`detached`)
@@ -7823,7 +7817,7 @@ public struct GitStatus: Codable, Sendable, Equatable {
     }
 }
 
-public enum GitStatusOperation: String, CaseIterable, Codable, Sendable, Equatable {
+public enum GitOperationKind: String, CaseIterable, Codable, Sendable, Equatable {
     case `merge` = "merge"
     case `rebase` = "rebase"
     case `cherryPick` = "cherry-pick"
@@ -10065,7 +10059,7 @@ public struct WorktreeMergeResult: Codable, Sendable, Equatable {
     public let `actionId`: String
     public let `summary`: String
     public let `output`: String
-    public let `commit`: WorktreeMergeResultCommit?
+    public let `commit`: GitActionCommit?
     public let `url`: String?
     public let `conflicts`: [String]?
     public let `cwd`: String?
@@ -10074,7 +10068,7 @@ public struct WorktreeMergeResult: Codable, Sendable, Equatable {
     public let `branchDeleted`: Bool?
     public let `kept`: String?
 
-    public init(`actionId`: String, `summary`: String, `output`: String, `commit`: WorktreeMergeResultCommit? = nil, `url`: String? = nil, `conflicts`: [String]? = nil, `cwd`: String? = nil, `into`: String? = nil, `removed`: Bool? = nil, `branchDeleted`: Bool? = nil, `kept`: String? = nil) {
+    public init(`actionId`: String, `summary`: String, `output`: String, `commit`: GitActionCommit? = nil, `url`: String? = nil, `conflicts`: [String]? = nil, `cwd`: String? = nil, `into`: String? = nil, `removed`: Bool? = nil, `branchDeleted`: Bool? = nil, `kept`: String? = nil) {
         self.`actionId` = `actionId`
         self.`summary` = `summary`
         self.`output` = `output`
@@ -10093,7 +10087,7 @@ public struct WorktreeMergeResult: Codable, Sendable, Equatable {
         `actionId` = try container.decode(String.self, forKey: .`actionId`)
         `summary` = try container.decode(String.self, forKey: .`summary`)
         `output` = try container.decode(String.self, forKey: .`output`)
-        `commit` = try container.decodeIfPresent(WorktreeMergeResultCommit.self, forKey: .`commit`)
+        `commit` = try container.decodeIfPresent(GitActionCommit.self, forKey: .`commit`)
         `url` = try container.decodeIfPresent(String.self, forKey: .`url`)
         `conflicts` = try container.decodeIfPresent([String].self, forKey: .`conflicts`)
         `cwd` = try container.decodeIfPresent(String.self, forKey: .`cwd`)
@@ -10133,7 +10127,7 @@ public struct WorktreeMergeResult: Codable, Sendable, Equatable {
     }
 }
 
-public struct WorktreeMergeResultCommit: Codable, Sendable, Equatable {
+public struct GitActionCommit: Codable, Sendable, Equatable {
     public let `hash`: String
     public let `subject`: String
 
@@ -12440,6 +12434,673 @@ public struct FsGrepMatch: Codable, Sendable, Equatable {
         case `text` = "text"
         case `before` = "before"
         case `after` = "after"
+    }
+}
+
+public struct GitConflictsResult: Codable, Sendable, Equatable {
+    public let `operation`: GitOperationKind?
+    public let `ours`: String
+    public let `theirs`: String
+    public let `files`: [GitConflictEntry]
+
+    public init(`operation`: GitOperationKind?, `ours`: String, `theirs`: String, `files`: [GitConflictEntry]) {
+        self.`operation` = `operation`
+        self.`ours` = `ours`
+        self.`theirs` = `theirs`
+        self.`files` = `files`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `operation` = try container.decode(GitOperationKind?.self, forKey: .`operation`)
+        `ours` = try container.decode(String.self, forKey: .`ours`)
+        `theirs` = try container.decode(String.self, forKey: .`theirs`)
+        `files` = try container.decode([GitConflictEntry].self, forKey: .`files`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`operation`, forKey: .`operation`)
+        try container.encode(`ours`, forKey: .`ours`)
+        try container.encode(`theirs`, forKey: .`theirs`)
+        try container.encode(`files`, forKey: .`files`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `operation` = "operation"
+        case `ours` = "ours"
+        case `theirs` = "theirs"
+        case `files` = "files"
+    }
+}
+
+public struct GitConflictEntry: Codable, Sendable, Equatable {
+    public let `path`: String
+    public let `kind`: GitConflictKind
+
+    public init(`path`: String, `kind`: GitConflictKind) {
+        self.`path` = `path`
+        self.`kind` = `kind`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `path` = try container.decode(String.self, forKey: .`path`)
+        `kind` = try container.decode(GitConflictKind.self, forKey: .`kind`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`kind`, forKey: .`kind`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `path` = "path"
+        case `kind` = "kind"
+    }
+}
+
+public enum GitConflictKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `text` = "text"
+    case `binary` = "binary"
+    case `deletedByUs` = "deleted-by-us"
+    case `deletedByThem` = "deleted-by-them"
+    case `submodule` = "submodule"
+}
+
+public struct GitConflictDetail: Codable, Sendable, Equatable {
+    public let `path`: String
+    public let `kind`: GitConflictKind
+    public let `base`: String?
+    public let `ours`: String?
+    public let `theirs`: String?
+    public let `hash`: String
+    public let `omitted`: GitDiffOmitted?
+
+    public init(`path`: String, `kind`: GitConflictKind, `base`: String?, `ours`: String?, `theirs`: String?, `hash`: String, `omitted`: GitDiffOmitted? = nil) {
+        self.`path` = `path`
+        self.`kind` = `kind`
+        self.`base` = `base`
+        self.`ours` = `ours`
+        self.`theirs` = `theirs`
+        self.`hash` = `hash`
+        self.`omitted` = `omitted`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `path` = try container.decode(String.self, forKey: .`path`)
+        `kind` = try container.decode(GitConflictKind.self, forKey: .`kind`)
+        `base` = try container.decode(String?.self, forKey: .`base`)
+        `ours` = try container.decode(String?.self, forKey: .`ours`)
+        `theirs` = try container.decode(String?.self, forKey: .`theirs`)
+        `hash` = try container.decode(String.self, forKey: .`hash`)
+        `omitted` = try container.decodeIfPresent(GitDiffOmitted.self, forKey: .`omitted`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`base`, forKey: .`base`)
+        try container.encode(`ours`, forKey: .`ours`)
+        try container.encode(`theirs`, forKey: .`theirs`)
+        try container.encode(`hash`, forKey: .`hash`)
+        try container.encodeIfPresent(`omitted`, forKey: .`omitted`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `path` = "path"
+        case `kind` = "kind"
+        case `base` = "base"
+        case `ours` = "ours"
+        case `theirs` = "theirs"
+        case `hash` = "hash"
+        case `omitted` = "omitted"
+    }
+}
+
+public struct GitResolveResult: Codable, Sendable, Equatable {
+    public let `remaining`: Int64
+
+    public init(`remaining`: Int64) {
+        self.`remaining` = `remaining`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `remaining` = try container.decode(Int64.self, forKey: .`remaining`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`remaining`, forKey: .`remaining`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `remaining` = "remaining"
+    }
+}
+
+public struct GitResolveAiResult: Codable, Sendable, Equatable {
+    public let `blocks`: [GitResolveAiBlock]
+    public let `note`: String?
+
+    public init(`blocks`: [GitResolveAiBlock], `note`: String? = nil) {
+        self.`blocks` = `blocks`
+        self.`note` = `note`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `blocks` = try container.decode([GitResolveAiBlock].self, forKey: .`blocks`)
+        `note` = try container.decodeIfPresent(String.self, forKey: .`note`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`blocks`, forKey: .`blocks`)
+        try container.encodeIfPresent(`note`, forKey: .`note`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `blocks` = "blocks"
+        case `note` = "note"
+    }
+}
+
+public struct GitResolveAiBlock: Codable, Sendable, Equatable {
+    public let `index`: Int64
+    public let `fingerprint`: String
+    public let `lines`: [String]
+
+    public init(`index`: Int64, `fingerprint`: String, `lines`: [String]) {
+        self.`index` = `index`
+        self.`fingerprint` = `fingerprint`
+        self.`lines` = `lines`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `index` = try container.decode(Int64.self, forKey: .`index`)
+        `fingerprint` = try container.decode(String.self, forKey: .`fingerprint`)
+        `lines` = try container.decode([String].self, forKey: .`lines`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`index`, forKey: .`index`)
+        try container.encode(`fingerprint`, forKey: .`fingerprint`)
+        try container.encode(`lines`, forKey: .`lines`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `index` = "index"
+        case `fingerprint` = "fingerprint"
+        case `lines` = "lines"
+    }
+}
+
+public struct GitDiffResult: Codable, Sendable, Equatable {
+    public let `path`: String
+    public let `diff`: String
+    public let `added`: Int64
+    public let `deleted`: Int64
+    public let `binary`: Bool
+    public let `omitted`: GitDiffOmitted?
+    public let `kind`: GitDiffKind?
+    public let `files`: [GitDiffFile]?
+    public let `truncated`: Bool?
+    public let `commit`: GitCommit?
+    public let `oldText`: String?
+    public let `newText`: String?
+
+    public init(`path`: String, `diff`: String, `added`: Int64, `deleted`: Int64, `binary`: Bool, `omitted`: GitDiffOmitted? = nil, `kind`: GitDiffKind? = nil, `files`: [GitDiffFile]? = nil, `truncated`: Bool? = nil, `commit`: GitCommit? = nil, `oldText`: String? = nil, `newText`: String? = nil) {
+        self.`path` = `path`
+        self.`diff` = `diff`
+        self.`added` = `added`
+        self.`deleted` = `deleted`
+        self.`binary` = `binary`
+        self.`omitted` = `omitted`
+        self.`kind` = `kind`
+        self.`files` = `files`
+        self.`truncated` = `truncated`
+        self.`commit` = `commit`
+        self.`oldText` = `oldText`
+        self.`newText` = `newText`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `path` = try container.decode(String.self, forKey: .`path`)
+        `diff` = try container.decode(String.self, forKey: .`diff`)
+        `added` = try container.decode(Int64.self, forKey: .`added`)
+        `deleted` = try container.decode(Int64.self, forKey: .`deleted`)
+        `binary` = try container.decode(Bool.self, forKey: .`binary`)
+        `omitted` = try container.decodeIfPresent(GitDiffOmitted.self, forKey: .`omitted`)
+        `kind` = try container.decodeIfPresent(GitDiffKind.self, forKey: .`kind`)
+        `files` = try container.decodeIfPresent([GitDiffFile].self, forKey: .`files`)
+        `truncated` = try container.decodeIfPresent(Bool.self, forKey: .`truncated`)
+        `commit` = try container.decodeIfPresent(GitCommit.self, forKey: .`commit`)
+        `oldText` = try container.decodeIfPresent(String.self, forKey: .`oldText`)
+        `newText` = try container.decodeIfPresent(String.self, forKey: .`newText`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`diff`, forKey: .`diff`)
+        try container.encode(`added`, forKey: .`added`)
+        try container.encode(`deleted`, forKey: .`deleted`)
+        try container.encode(`binary`, forKey: .`binary`)
+        try container.encodeIfPresent(`omitted`, forKey: .`omitted`)
+        try container.encodeIfPresent(`kind`, forKey: .`kind`)
+        try container.encodeIfPresent(`files`, forKey: .`files`)
+        try container.encodeIfPresent(`truncated`, forKey: .`truncated`)
+        try container.encodeIfPresent(`commit`, forKey: .`commit`)
+        try container.encodeIfPresent(`oldText`, forKey: .`oldText`)
+        try container.encodeIfPresent(`newText`, forKey: .`newText`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `path` = "path"
+        case `diff` = "diff"
+        case `added` = "added"
+        case `deleted` = "deleted"
+        case `binary` = "binary"
+        case `omitted` = "omitted"
+        case `kind` = "kind"
+        case `files` = "files"
+        case `truncated` = "truncated"
+        case `commit` = "commit"
+        case `oldText` = "oldText"
+        case `newText` = "newText"
+    }
+}
+
+public struct GitDiffFile: Codable, Sendable, Equatable {
+    public let `path`: String
+    public let `diff`: String
+    public let `added`: Int64
+    public let `deleted`: Int64
+    public let `binary`: Bool
+    public let `omitted`: GitDiffOmitted?
+    public let `kind`: GitDiffKind?
+
+    public init(`path`: String, `diff`: String, `added`: Int64, `deleted`: Int64, `binary`: Bool, `omitted`: GitDiffOmitted? = nil, `kind`: GitDiffKind? = nil) {
+        self.`path` = `path`
+        self.`diff` = `diff`
+        self.`added` = `added`
+        self.`deleted` = `deleted`
+        self.`binary` = `binary`
+        self.`omitted` = `omitted`
+        self.`kind` = `kind`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `path` = try container.decode(String.self, forKey: .`path`)
+        `diff` = try container.decode(String.self, forKey: .`diff`)
+        `added` = try container.decode(Int64.self, forKey: .`added`)
+        `deleted` = try container.decode(Int64.self, forKey: .`deleted`)
+        `binary` = try container.decode(Bool.self, forKey: .`binary`)
+        `omitted` = try container.decodeIfPresent(GitDiffOmitted.self, forKey: .`omitted`)
+        `kind` = try container.decodeIfPresent(GitDiffKind.self, forKey: .`kind`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`diff`, forKey: .`diff`)
+        try container.encode(`added`, forKey: .`added`)
+        try container.encode(`deleted`, forKey: .`deleted`)
+        try container.encode(`binary`, forKey: .`binary`)
+        try container.encodeIfPresent(`omitted`, forKey: .`omitted`)
+        try container.encodeIfPresent(`kind`, forKey: .`kind`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `path` = "path"
+        case `diff` = "diff"
+        case `added` = "added"
+        case `deleted` = "deleted"
+        case `binary` = "binary"
+        case `omitted` = "omitted"
+        case `kind` = "kind"
+    }
+}
+
+public struct GitCommit: Codable, Sendable, Equatable {
+    public let `hash`: String
+    public let `shortHash`: String
+    public let `subject`: String
+    public let `author`: String
+    public let `at`: Int64
+    public let `committedAt`: Int64?
+    public let `refs`: [String]
+    public let `authorEmail`: String?
+    public let `remoteRefs`: [String]?
+
+    public init(`hash`: String, `shortHash`: String, `subject`: String, `author`: String, `at`: Int64, `committedAt`: Int64? = nil, `refs`: [String], `authorEmail`: String? = nil, `remoteRefs`: [String]? = nil) {
+        self.`hash` = `hash`
+        self.`shortHash` = `shortHash`
+        self.`subject` = `subject`
+        self.`author` = `author`
+        self.`at` = `at`
+        self.`committedAt` = `committedAt`
+        self.`refs` = `refs`
+        self.`authorEmail` = `authorEmail`
+        self.`remoteRefs` = `remoteRefs`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `hash` = try container.decode(String.self, forKey: .`hash`)
+        `shortHash` = try container.decode(String.self, forKey: .`shortHash`)
+        `subject` = try container.decode(String.self, forKey: .`subject`)
+        `author` = try container.decode(String.self, forKey: .`author`)
+        `at` = try container.decode(Int64.self, forKey: .`at`)
+        `committedAt` = try container.decodeIfPresent(Int64.self, forKey: .`committedAt`)
+        `refs` = try container.decode([String].self, forKey: .`refs`)
+        `authorEmail` = try container.decodeIfPresent(String.self, forKey: .`authorEmail`)
+        `remoteRefs` = try container.decodeIfPresent([String].self, forKey: .`remoteRefs`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`hash`, forKey: .`hash`)
+        try container.encode(`shortHash`, forKey: .`shortHash`)
+        try container.encode(`subject`, forKey: .`subject`)
+        try container.encode(`author`, forKey: .`author`)
+        try container.encode(`at`, forKey: .`at`)
+        try container.encodeIfPresent(`committedAt`, forKey: .`committedAt`)
+        try container.encode(`refs`, forKey: .`refs`)
+        try container.encodeIfPresent(`authorEmail`, forKey: .`authorEmail`)
+        try container.encodeIfPresent(`remoteRefs`, forKey: .`remoteRefs`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `hash` = "hash"
+        case `shortHash` = "shortHash"
+        case `subject` = "subject"
+        case `author` = "author"
+        case `at` = "at"
+        case `committedAt` = "committedAt"
+        case `refs` = "refs"
+        case `authorEmail` = "authorEmail"
+        case `remoteRefs` = "remoteRefs"
+    }
+}
+
+public struct GitLogResult: Codable, Sendable, Equatable {
+    public let `commits`: [GitCommit]
+    public let `cursor`: String?
+
+    public init(`commits`: [GitCommit], `cursor`: String?) {
+        self.`commits` = `commits`
+        self.`cursor` = `cursor`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `commits` = try container.decode([GitCommit].self, forKey: .`commits`)
+        `cursor` = try container.decode(String?.self, forKey: .`cursor`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`commits`, forKey: .`commits`)
+        try container.encode(`cursor`, forKey: .`cursor`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `commits` = "commits"
+        case `cursor` = "cursor"
+    }
+}
+
+public struct GitRefsResult: Codable, Sendable, Equatable {
+    public let `refs`: [GitRef]
+    public let `current`: String?
+    public let `stashes`: [GitStash]
+
+    public init(`refs`: [GitRef], `current`: String?, `stashes`: [GitStash]) {
+        self.`refs` = `refs`
+        self.`current` = `current`
+        self.`stashes` = `stashes`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `refs` = try container.decode([GitRef].self, forKey: .`refs`)
+        `current` = try container.decode(String?.self, forKey: .`current`)
+        `stashes` = try container.decode([GitStash].self, forKey: .`stashes`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`refs`, forKey: .`refs`)
+        try container.encode(`current`, forKey: .`current`)
+        try container.encode(`stashes`, forKey: .`stashes`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `refs` = "refs"
+        case `current` = "current"
+        case `stashes` = "stashes"
+    }
+}
+
+public struct GitRef: Codable, Sendable, Equatable {
+    public let `name`: String
+    public let `kind`: GitRefKind
+    public let `current`: Bool
+    public let `isDefault`: Bool
+    public let `worktree`: String?
+    public let `commit`: String?
+    public let `at`: Int64
+
+    public init(`name`: String, `kind`: GitRefKind, `current`: Bool, `isDefault`: Bool, `worktree`: String? = nil, `commit`: String? = nil, `at`: Int64) {
+        self.`name` = `name`
+        self.`kind` = `kind`
+        self.`current` = `current`
+        self.`isDefault` = `isDefault`
+        self.`worktree` = `worktree`
+        self.`commit` = `commit`
+        self.`at` = `at`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `kind` = try container.decode(GitRefKind.self, forKey: .`kind`)
+        `current` = try container.decode(Bool.self, forKey: .`current`)
+        `isDefault` = try container.decode(Bool.self, forKey: .`isDefault`)
+        `worktree` = try container.decodeIfPresent(String.self, forKey: .`worktree`)
+        `commit` = try container.decodeIfPresent(String.self, forKey: .`commit`)
+        `at` = try container.decode(Int64.self, forKey: .`at`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`current`, forKey: .`current`)
+        try container.encode(`isDefault`, forKey: .`isDefault`)
+        try container.encodeIfPresent(`worktree`, forKey: .`worktree`)
+        try container.encodeIfPresent(`commit`, forKey: .`commit`)
+        try container.encode(`at`, forKey: .`at`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `name` = "name"
+        case `kind` = "kind"
+        case `current` = "current"
+        case `isDefault` = "isDefault"
+        case `worktree` = "worktree"
+        case `commit` = "commit"
+        case `at` = "at"
+    }
+}
+
+public enum GitRefKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `local` = "local"
+    case `remote` = "remote"
+}
+
+public struct GitStash: Codable, Sendable, Equatable {
+    public let `ref`: String
+    public let `message`: String
+
+    public init(`ref`: String, `message`: String) {
+        self.`ref` = `ref`
+        self.`message` = `message`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `ref` = try container.decode(String.self, forKey: .`ref`)
+        `message` = try container.decode(String.self, forKey: .`message`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`ref`, forKey: .`ref`)
+        try container.encode(`message`, forKey: .`message`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `ref` = "ref"
+        case `message` = "message"
+    }
+}
+
+public struct GitCapabilitiesResult: Codable, Sendable, Equatable {
+    public let `gh`: Bool
+    public let `messageProvider`: String?
+    public let `amend`: Bool?
+
+    public init(`gh`: Bool, `messageProvider`: String?, `amend`: Bool? = nil) {
+        self.`gh` = `gh`
+        self.`messageProvider` = `messageProvider`
+        self.`amend` = `amend`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `gh` = try container.decode(Bool.self, forKey: .`gh`)
+        `messageProvider` = try container.decode(String?.self, forKey: .`messageProvider`)
+        `amend` = try container.decodeIfPresent(Bool.self, forKey: .`amend`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`gh`, forKey: .`gh`)
+        try container.encode(`messageProvider`, forKey: .`messageProvider`)
+        try container.encodeIfPresent(`amend`, forKey: .`amend`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `gh` = "gh"
+        case `messageProvider` = "messageProvider"
+        case `amend` = "amend"
+    }
+}
+
+public struct GitActionResult: Codable, Sendable, Equatable {
+    public let `actionId`: String
+    public let `summary`: String
+    public let `output`: String
+    public let `commit`: GitActionCommit?
+    public let `url`: String?
+    public let `conflicts`: [String]?
+
+    public init(`actionId`: String, `summary`: String, `output`: String, `commit`: GitActionCommit? = nil, `url`: String? = nil, `conflicts`: [String]? = nil) {
+        self.`actionId` = `actionId`
+        self.`summary` = `summary`
+        self.`output` = `output`
+        self.`commit` = `commit`
+        self.`url` = `url`
+        self.`conflicts` = `conflicts`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `actionId` = try container.decode(String.self, forKey: .`actionId`)
+        `summary` = try container.decode(String.self, forKey: .`summary`)
+        `output` = try container.decode(String.self, forKey: .`output`)
+        `commit` = try container.decodeIfPresent(GitActionCommit.self, forKey: .`commit`)
+        `url` = try container.decodeIfPresent(String.self, forKey: .`url`)
+        `conflicts` = try container.decodeIfPresent([String].self, forKey: .`conflicts`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`actionId`, forKey: .`actionId`)
+        try container.encode(`summary`, forKey: .`summary`)
+        try container.encode(`output`, forKey: .`output`)
+        try container.encodeIfPresent(`commit`, forKey: .`commit`)
+        try container.encodeIfPresent(`url`, forKey: .`url`)
+        try container.encodeIfPresent(`conflicts`, forKey: .`conflicts`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `actionId` = "actionId"
+        case `summary` = "summary"
+        case `output` = "output"
+        case `commit` = "commit"
+        case `url` = "url"
+        case `conflicts` = "conflicts"
+    }
+}
+
+public struct GitSuggestMessageResult: Codable, Sendable, Equatable {
+    public let `subject`: String
+    public let `body`: String
+
+    public init(`subject`: String, `body`: String) {
+        self.`subject` = `subject`
+        self.`body` = `body`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `subject` = try container.decode(String.self, forKey: .`subject`)
+        `body` = try container.decode(String.self, forKey: .`body`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`subject`, forKey: .`subject`)
+        try container.encode(`body`, forKey: .`body`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `subject` = "subject"
+        case `body` = "body"
+    }
+}
+
+public struct GitDiscardResult: Codable, Sendable, Equatable {
+    public let `stash`: String?
+
+    public init(`stash`: String?) {
+        self.`stash` = `stash`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `stash` = try container.decode(String?.self, forKey: .`stash`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`stash`, forKey: .`stash`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `stash` = "stash"
     }
 }
 

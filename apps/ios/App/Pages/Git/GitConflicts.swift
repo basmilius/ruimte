@@ -8,21 +8,20 @@ import SwiftUI
 /// read. A resolution is written over exactly that digest.
 struct GitConflictFile: Equatable, Sendable {
     let path: String
-    /// `text`, `binary`, `deleted-by-us`, `deleted-by-them` or `submodule`, as `git.conflict` reports it.
-    let kind: String
+    let kind: GitConflictKind
     let blocks: [MergeBlock]
     let shape: MergeTextShape
     private(set) var hash: String
     /// Set when there is nothing to merge line by line: the file is a choice between whole sides.
     let whole: Bool
 
-    init(answer: JSONValue) {
-        path = answer.text("path")
-        kind = answer.text("kind", fallback: "text")
-        let base = answer["base"]?.stringValue
-        let ours = answer["ours"]?.stringValue
-        let theirs = answer["theirs"]?.stringValue
-        whole = kind != "text" || ours == nil || theirs == nil
+    init(answer: GitConflictDetail) {
+        path = answer.path
+        kind = answer.kind
+        let base = answer.base
+        let ours = answer.ours
+        let theirs = answer.theirs
+        whole = kind != .text || ours == nil || theirs == nil
         blocks =
             whole
             ? []
@@ -31,7 +30,7 @@ struct GitConflictFile: Equatable, Sendable {
                 theirs: ThreeWayMerge.splitLines(theirs ?? ""))
         // Our side decides the shape: the result goes on the branch the checkout is on.
         shape = ThreeWayMerge.shapeOf(ours ?? theirs ?? base ?? "")
-        hash = answer.text("hash")
+        hash = answer.hash
     }
 
     var conflictIndexes: [Int] { blocks.indices.filter { blocks[$0].kind == .conflict } }
@@ -167,13 +166,13 @@ enum GitConflictModel {
     /// The proposals that still fit the file in front of us. An answer whose fingerprint does not match
     /// was written for another version of the stretch and is dropped rather than put somewhere it was
     /// never meant.
-    static func usable(_ file: GitConflictFile, answers: [JSONValue]) -> [(index: Int, lines: [String])] {
+    static func usable(_ file: GitConflictFile, answers: [GitResolveAiBlock]) -> [(index: Int, lines: [String])] {
         answers.compactMap { answer in
-            let index = Int(answer.number("index", fallback: -1))
+            let index = Int(answer.index)
             guard file.blocks.indices.contains(index), file.blocks[index].kind == .conflict,
-                ThreeWayMerge.fingerprint(file.blocks[index]) == answer.text("fingerprint")
+                ThreeWayMerge.fingerprint(file.blocks[index]) == answer.fingerprint
             else { return nil }
-            return (index, answer.list("lines").compactMap(\.stringValue))
+            return (index, answer.lines)
         }
     }
 
@@ -210,15 +209,15 @@ enum GitConflictModel {
         }
     }
 
-    static func wholeDetail(kind: String, ours: String, theirs: String) -> String {
+    static func wholeDetail(kind: GitConflictKind, ours: String, theirs: String) -> String {
         switch kind {
-        case "binary": String(localized: "This file is not text. Keep one side whole or drop it.")
-        case "deleted-by-them":
+        case .binary: String(localized: "This file is not text. Keep one side whole or drop it.")
+        case .deletedByThem:
             String(localized: "\(theirs) deleted this file while it changed on \(ours).", comment: "Both are git refs")
-        case "deleted-by-us":
+        case .deletedByUs:
             String(localized: "\(ours) deleted this file while it changed on \(theirs).", comment: "Both are git refs")
-        case "submodule": String(localized: "Submodule. Pick the commit of one side.")
-        default: String(localized: "Pick a side for this file.")
+        case .submodule: String(localized: "Submodule. Pick the commit of one side.")
+        case .text: String(localized: "Pick a side for this file.")
         }
     }
 
@@ -238,7 +237,7 @@ enum GitConflictModel {
 @MainActor @Observable final class GitConflictSession {
     struct Entry: Equatable, Identifiable {
         let path: String
-        let kind: String
+        let kind: GitConflictKind
         var id: String { path }
     }
 
@@ -282,10 +281,11 @@ enum GitConflictModel {
     func load(client: any MachineRequesting) async {
         do {
             let answer = try await client.request(.gitConflicts, payload: .object(["cwd": .string(cwd)]))
-            operation = answer["operation"]?.stringValue
-            ours = answer.text("ours", fallback: "ours")
-            theirs = answer.text("theirs", fallback: "theirs")
-            entries = answer.list("files").map { Entry(path: $0.text("path"), kind: $0.text("kind", fallback: "text")) }
+                .decoded(as: GitConflictsResult.self)
+            operation = answer.operation?.rawValue
+            ours = answer.ours
+            theirs = answer.theirs
+            entries = answer.files.map { Entry(path: $0.path, kind: $0.kind) }
             let listed = Set(entries.map(\.path))
             files = files.filter { listed.contains($0.key) }
             drafts = drafts.filter { listed.contains($0.key) }
@@ -406,11 +406,12 @@ enum GitConflictModel {
                 guard let file = files[path], !file.whole else { continue }
                 let result = try await client.request(
                     .gitResolveAi,
-                    payload: .object(["cwd": .string(cwd), "path": .string(path), "actionId": .string(actionId)]))
-                let usable = GitConflictModel.usable(file, answers: result.list("blocks"))
+                    payload: .object(["cwd": .string(cwd), "path": .string(path), "actionId": .string(actionId)])
+                ).decoded(as: GitResolveAiResult.self)
+                let usable = GitConflictModel.usable(file, answers: result.blocks)
                 drafts[path, default: GitConflictDraft()].propose(usable)
                 answered += usable.count
-                if let line = result["note"]?.stringValue, !line.isEmpty { notes.append(line) }
+                if let line = result.note, !line.isEmpty { notes.append(line) }
             }
             problem = nil
             let summary =
@@ -440,17 +441,19 @@ enum GitConflictModel {
         if !loaded { await load(client: client) }
         let actionId = UUID().uuidString
         let cancel = client.subscribe(.gitProgress) { [weak self] payload in
-            guard payload.text("actionId") == actionId else { return }
-            let line = payload.text("line")
-            self?.progress = line.isEmpty ? nil : line
+            guard let event = try? payload.decoded(as: GitProgressEvent.self), event.actionId == actionId else {
+                return
+            }
+            self?.progress = event.line.isEmpty ? nil : event.line
         }
         defer { cancel() }
         let waiting = operation ?? "merge"
         do {
             let result = try await client.request(
                 .gitOperation,
-                payload: .object(["cwd": .string(cwd), "actionId": .string(actionId), "action": .string(action)]))
-            let left = result.list("conflicts").count
+                payload: .object(["cwd": .string(cwd), "actionId": .string(actionId), "action": .string(action)])
+            ).decoded(as: GitActionResult.self)
+            let left = result.conflicts?.count ?? 0
             files = [:]
             drafts = [:]
             problem = nil
@@ -492,7 +495,8 @@ enum GitConflictModel {
     /// The split runs off the main actor: a long file with many changes takes a moment to walk.
     private func read(client: any MachineRequesting, path: String) async throws -> GitConflictFile {
         let answer = try await client.request(
-            .gitConflict, payload: .object(["cwd": .string(cwd), "path": .string(path)]))
+            .gitConflict, payload: .object(["cwd": .string(cwd), "path": .string(path)])
+        ).decoded(as: GitConflictDetail.self)
         return await Task.detached { GitConflictFile(answer: answer) }.value
     }
 

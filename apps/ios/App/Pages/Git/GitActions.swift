@@ -68,7 +68,7 @@ extension GitRepositories {
     /// push says where it is instead of freezing a button.
     @discardableResult func act(
         client: any MachineRequesting, cwd: String, kind: String, extra: [String: JSONValue] = [:]
-    ) async -> JSONValue? {
+    ) async -> GitActionResult? {
         guard !busy else { return nil }
         busy = true
         defer {
@@ -161,8 +161,9 @@ extension GitRepositories {
         var stash: String?
         do {
             let answer = try await client.request(
-                .gitDiscard, payload: .object(["cwd": .string(cwd), "paths": .array([.string(path)])]))
-            stash = answer["stash"]?.stringValue
+                .gitDiscard, payload: .object(["cwd": .string(cwd), "paths": .array([.string(path)])])
+            ).decoded(as: GitDiscardResult.self)
+            stash = answer.stash
             problem = nil
         } catch {
             problem = error.localizedDescription
@@ -173,12 +174,13 @@ extension GitRepositories {
 
     private func perform(
         client: any MachineRequesting, cwd: String, kind: String, extra: [String: JSONValue]
-    ) async -> Result<JSONValue, any Error> {
+    ) async -> Result<GitActionResult, any Error> {
         let actionId = UUID().uuidString
         let cancel = client.subscribe(.gitProgress) { [weak self] payload in
-            guard payload.text("actionId") == actionId else { return }
-            let line = payload.text("line")
-            self?.progress = line.isEmpty ? payload.text("phase") : line
+            guard let event = try? payload.decoded(as: GitProgressEvent.self), event.actionId == actionId else {
+                return
+            }
+            self?.progress = event.line.isEmpty ? event.phase.rawValue : event.line
         }
         defer {
             cancel()
@@ -187,7 +189,7 @@ extension GitRepositories {
         let fields: [String: JSONValue] = ["cwd": .string(cwd), "actionId": .string(actionId), "kind": .string(kind)]
             .merging(extra) { $1 }
         do {
-            return .success(try await client.request(.gitAction, payload: .object(fields)))
+            return .success(try await client.request(.gitAction, payload: .object(fields)).decoded(as: GitActionResult.self))
         } catch {
             return .failure(error)
         }

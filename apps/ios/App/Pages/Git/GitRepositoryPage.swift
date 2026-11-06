@@ -187,14 +187,14 @@ struct GitDivergedRow: View {
 
 /// The branches and stashes of one repository, and whether this machine can open a pull request at all.
 @MainActor @Observable final class GitRefsState {
-    private(set) var refs: [JSONValue] = []
-    private(set) var stashes: [JSONValue] = []
+    private(set) var refs: [GitRef] = []
+    private(set) var stashes: [GitStash] = []
     private(set) var capabilities = false
     /// The subject of the last commit, which is what a pull request opens with.
     private(set) var lastSubject = ""
     private(set) var loading = false
 
-    var branches: [JSONValue] { refs.filter { $0.text("kind") == "local" } }
+    var branches: [GitRef] { refs.filter { $0.kind == .local } }
 
     /// Forgets what was read, for a page that now points at another repository.
     func clear() {
@@ -207,38 +207,42 @@ struct GitDivergedRow: View {
     func load(client: any MachineRequesting, cwd: String) async {
         loading = refs.isEmpty
         defer { loading = false }
-        if let answer = try? await client.request(.gitRefs, payload: .object(["cwd": .string(cwd)])) {
-            refs = answer.list("refs")
-            stashes = answer.list("stashes")
+        if let answer = try? await client.request(.gitRefs, payload: .object(["cwd": .string(cwd)]))
+            .decoded(as: GitRefsResult.self)
+        {
+            refs = answer.refs
+            stashes = answer.stashes
         }
-        if let answer = try? await client.request(.gitCapabilities, payload: .object(["cwd": .string(cwd)])) {
-            capabilities = answer["gh"] == .bool(true)
+        if let answer = try? await client.request(.gitCapabilities, payload: .object(["cwd": .string(cwd)]))
+            .decoded(as: GitCapabilitiesResult.self)
+        {
+            capabilities = answer.gh
         }
         if let answer = try? await client.request(
-            .gitLog, payload: .object(["cwd": .string(cwd), "limit": .number(1)]))
-        {
-            lastSubject = answer.list("commits").first?.text("subject") ?? ""
+            .gitLog, payload: .object(["cwd": .string(cwd), "limit": .number(1)])
+        ).decoded(as: GitLogResult.self) {
+            lastSubject = answer.commits.first?.subject ?? ""
         }
     }
 }
 
 /// One stash to pop, for a repository that holds more than one.
 struct GitStashSheet: View {
-    let stashes: [JSONValue]
+    let stashes: [GitStash]
     @Binding var isPresented: Bool
     let onPick: (String) -> Void
 
     var body: some View {
         NavigationStack {
             MobileList {
-                ForEach(stashes, id: \.stableID) { stash in
+                ForEach(stashes, id: \.ref) { stash in
                     Button {
-                        onPick(stash.text("ref"))
+                        onPick(stash.ref)
                         isPresented = false
                     } label: {
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(stash.text("ref")).font(.callout.monospaced())
-                            Text(stash.text("message")).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(2)
+                            Text(stash.ref).font(.callout.monospaced())
+                            Text(stash.message).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(2)
                         }.modifier(MobileSidebarLabel())
                     }.modifier(MobileSidebarRow())
                 }

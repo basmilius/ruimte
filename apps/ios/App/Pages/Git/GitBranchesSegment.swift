@@ -25,7 +25,7 @@ struct GitBranchesSegment: View {
     }
 
     private var worktrees: GitWorktreesState { repositories.worktrees[path: actions.path] }
-    private var branches: [JSONValue] { actions.refs.branches }
+    private var branches: [GitRef] { actions.refs.branches }
 
     var body: some View {
         MobileList {
@@ -51,7 +51,7 @@ struct GitBranchesSegment: View {
                 if actions.refs.loading && branches.isEmpty {
                     MobileLoadingRow(String(localized: "Loading")).frame(maxWidth: .infinity).padding()
                 }
-                ForEach(branches, id: \.stableID) { ref in
+                ForEach(branches, id: \.name) { ref in
                     GitBranchRow(client: client, actions: actions, ref: ref)
                 }
                 NavigationLink {
@@ -75,11 +75,11 @@ struct GitBranchesSegment: View {
                 ForEach(worktrees.worktrees) { worktree in
                     GitWorktreeRow(
                         client: client, state: worktrees, worktree: worktree,
-                        occupants: workspace.flatMap { GitWorktreeOccupants.line(in: $0.views, path: worktree.path) },
+                        occupants: workspace.flatMap { GitWorktreeOccupants.line(in: $0.storedViews, path: worktree.path) },
                         onDiff: onDiff)
                 }
                 if let workspace, actions.path == workspace.folder,
-                    !GitWorktreeBinding.groups(in: workspace.views).isEmpty
+                    !GitWorktreeBinding.groups(in: workspace.storedViews).isEmpty
                 {
                     Button(String(localized: "Bind a group to a worktree"), lucideIcon: "group") { binding = true }
                         .disabled(worktrees.busy)
@@ -88,7 +88,7 @@ struct GitBranchesSegment: View {
                 header(String(localized: "Worktrees"))
             }
             Section {
-                ForEach(actions.refs.stashes, id: \.stableID) { stash in
+                ForEach(actions.refs.stashes, id: \.ref) { stash in
                     stashRow(stash)
                 }
                 Button(String(localized: "Stash changes"), lucideIcon: "archive") {
@@ -135,12 +135,12 @@ struct GitBranchesSegment: View {
         Text(title).font(.footnote).foregroundStyle(MobileStyle.muted).textCase(nil)
     }
 
-    private func stashRow(_ stash: JSONValue) -> some View {
-        let ref = stash.text("ref")
+    private func stashRow(_ stash: GitStash) -> some View {
+        let ref = stash.ref
         return HStack(spacing: 10) {
             Image(lucide: "archive", size: 15).foregroundStyle(MobileStyle.faint)
             VStack(alignment: .leading, spacing: 3) {
-                Text(stash.text("message", fallback: ref)).lineLimit(2)
+                Text(stash.message).lineLimit(2)
                 Text(ref).font(.caption.monospaced()).foregroundStyle(MobileStyle.muted)
             }
             Spacer(minLength: 8)

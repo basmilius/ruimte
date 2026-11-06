@@ -39,7 +39,7 @@ struct GitWorktreesPage: View {
                         GitWorktreeRow(
                             client: client, state: state, worktree: worktree,
                             occupants: workspace.flatMap {
-                                GitWorktreeOccupants.line(in: $0.views, path: worktree.path)
+                                GitWorktreeOccupants.line(in: $0.storedViews, path: worktree.path)
                             }
                         ) { diff = $0 }
                     }

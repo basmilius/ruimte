@@ -121,7 +121,8 @@ struct GitPage: View {
         .task(id: checkouts.first?.path) {
             guard let probe = checkouts.first?.path else { return }
             let answer = try? await client.request(.gitCapabilities, payload: .object(["cwd": .string(probe)]))
-            canPullRequest = answer?["gh"] == .bool(true)
+                .decoded(as: GitCapabilitiesResult.self)
+            canPullRequest = answer?.gh == true
         }
         .presentationDetents([.medium, .large], selection: $detent)
     }

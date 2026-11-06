@@ -7,13 +7,9 @@ import XCTest
 final class GitConflictTests: XCTestCase {
     private func answer(
         path: String = "a.ts", base: String? = "a\nb\nc\n", ours: String? = "a\nours\nc\n",
-        theirs: String? = "a\ntheirs\nc\n", kind: String = "text", hash: String = "h1"
-    ) -> JSONValue {
-        .object([
-            "path": .string(path), "kind": .string(kind), "base": base.map { .string($0) } ?? .null,
-            "ours": ours.map { .string($0) } ?? .null, "theirs": theirs.map { .string($0) } ?? .null,
-            "hash": .string(hash),
-        ])
+        theirs: String? = "a\ntheirs\nc\n", kind: GitConflictKind = .text, hash: String = "h1"
+    ) -> GitConflictDetail {
+        GitConflictDetail(path: path, kind: kind, base: base, ours: ours, theirs: theirs, hash: hash)
     }
 
     func testAFileStartsWithEveryConflictOpenAndOurSideInPlace() {
@@ -44,8 +40,8 @@ final class GitConflictTests: XCTestCase {
     }
 
     func testAFileWithoutTwoTextSidesIsAChoiceBetweenWholeSides() {
-        XCTAssertTrue(GitConflictFile(answer: answer(ours: nil, kind: "deleted-by-us")).whole)
-        XCTAssertTrue(GitConflictFile(answer: answer(kind: "binary")).whole)
+        XCTAssertTrue(GitConflictFile(answer: answer(ours: nil, kind: .deletedByUs)).whole)
+        XCTAssertTrue(GitConflictFile(answer: answer(kind: .binary)).whole)
         XCTAssertTrue(GitConflictFile(answer: answer(theirs: nil)).whole)
     }
 
@@ -55,13 +51,10 @@ final class GitConflictTests: XCTestCase {
         let usable = GitConflictModel.usable(
             file,
             answers: [
-                .object(["index": .number(1), "fingerprint": .string(print), "lines": .array([.string("merged")])]),
-                .object(["index": .number(1), "fingerprint": .string("00000000"), "lines": .array([.string("stale")])]),
-                .object([
-                    "index": .number(0), "fingerprint": .string(ThreeWayMerge.fingerprint(file.blocks[0])),
-                    "lines": .array([]),
-                ]),
-                .object(["index": .number(9), "fingerprint": .string(print), "lines": .array([])]),
+                GitResolveAiBlock(index: 1, fingerprint: print, lines: ["merged"]),
+                GitResolveAiBlock(index: 1, fingerprint: "00000000", lines: ["stale"]),
+                GitResolveAiBlock(index: 0, fingerprint: ThreeWayMerge.fingerprint(file.blocks[0]), lines: []),
+                GitResolveAiBlock(index: 9, fingerprint: print, lines: []),
             ])
         XCTAssertEqual(usable.map(\.index), [1])
         XCTAssertEqual(usable.first?.lines, ["merged"])

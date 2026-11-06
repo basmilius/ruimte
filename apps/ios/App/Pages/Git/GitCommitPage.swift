@@ -49,7 +49,8 @@ import SwiftUI
     func loadProvider(client: any MachineRequesting) async {
         guard let probe = repositories.checkouts.first?.path else { return }
         let answer = try? await client.request(.gitCapabilities, payload: .object(["cwd": .string(probe)]))
-        provider = answer?["messageProvider"]?.stringValue
+            .decoded(as: GitCapabilitiesResult.self)
+        provider = answer?.messageProvider
         // The machine's own name for the CLI, in case nothing else has asked for the list yet.
         if provider != nil { _ = try? await AgentCatalog.load(client) }
     }
@@ -74,8 +75,9 @@ import SwiftUI
         if let provider { payload["provider"] = .string(provider) }
         do {
             let suggestion = try await client.request(.gitSuggestMessage, payload: .object(payload))
-            subject = suggestion.text("subject")
-            body = suggestion.text("body")
+                .decoded(as: GitSuggestMessageResult.self)
+            subject = suggestion.subject
+            body = suggestion.body
             repositories.problem = nil
         } catch is CancellationError {
         } catch {

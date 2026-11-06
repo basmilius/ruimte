@@ -31,7 +31,7 @@ struct GitConflictsPage: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem {
-                let text = session.entries.filter { $0.kind == "text" }.map(\.path)
+                let text = session.entries.filter { $0.kind == .text }.map(\.path)
                 Button(String(localized: "Ask an agent about every file"), lucideIcon: "sparkles") {
                     Task { await session.ask(client: client, paths: text) }
                 }.disabled(session.busy || text.isEmpty)
@@ -300,9 +300,9 @@ struct GitConflictFilePage: View {
         Section {
             Text(GitConflictModel.wholeDetail(kind: file.kind, ours: session.ours, theirs: session.theirs))
             Button(String(localized: "Keep \(session.ours)"), lucideIcon: "check") { Task { await take("ours") } }
-                .disabled(session.busy || file.kind == "deleted-by-us")
+                .disabled(session.busy || file.kind == .deletedByUs)
             Button(String(localized: "Take \(session.theirs)"), lucideIcon: "check") { Task { await take("theirs") } }
-                .disabled(session.busy || file.kind == "deleted-by-them")
+                .disabled(session.busy || file.kind == .deletedByThem)
             Button(String(localized: "Drop file"), lucideIcon: "trash", role: .destructive) { confirmDrop = true }
                 .disabled(session.busy)
         } header: {

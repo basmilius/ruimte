@@ -6,7 +6,7 @@ import SwiftUI
 /// Who works in a worktree, as the project's nodes say: a chat or terminal whose folder is in it, or a group
 /// bound to it.
 enum GitWorktreeOccupants {
-    static func line(in views: [JSONValue], path: String) -> String? {
+    static func line(in views: [StoredView], path: String) -> String? {
         var chats = 0
         var terminals = 0
         var groups: [String] = []
@@ -16,12 +16,14 @@ enum GitWorktreeOccupants {
             if kind == "terminal" { terminals += 1 }
         }
         for view in views {
-            count(view.text("kind"), view["node"]?["cwd"]?.stringValue ?? view["cwd"]?.stringValue)
-            for node in view.list("nodes") {
-                count(node.text("kind"), node["cwd"]?.stringValue)
-                if node.text("kind") == "group", node["worktree"]?["path"]?.stringValue == path {
-                    groups.append(node.text("title", fallback: String(localized: "A group")))
-                }
+            switch view {
+            case .chat(let chat): count("chat", chat.node.cwd)
+            case .terminal(let terminal): count("terminal", terminal.node.cwd)
+            default: break
+            }
+            for node in view.nodes {
+                count(node.kind.rawValue, node.cwd)
+                if node.kind == .group, node.worktree?.path == path { groups.append(node.title) }
             }
         }
         switch (chats, terminals) {
@@ -52,17 +54,12 @@ struct GitBindableGroup: Identifiable, Equatable {
 /// group starts in that checkout. The worktree of a node is one person's, so the machine keeps it in the private
 /// project file.
 enum GitWorktreeBinding {
-    static func groups(in views: [JSONValue]) -> [GitBindableGroup] {
+    static func groups(in views: [StoredView]) -> [GitBindableGroup] {
         views.flatMap { view in
-            view.list("nodes").filter { $0.text("kind") == "group" }.map { node in
-                let bound = node["worktree"].flatMap { worktree -> (String, String)? in
-                    guard let path = worktree["path"]?.stringValue else { return nil }
-                    return (path, worktree.text("branch"))
-                }
-                return GitBindableGroup(
-                    viewID: view.stableID, id: node.stableID,
-                    title: node.text("title", fallback: String(localized: "Group")),
-                    worktree: bound)
+            view.nodes.filter { $0.kind == .group }.map { node in
+                GitBindableGroup(
+                    viewID: view.id, id: node.id, title: node.title,
+                    worktree: node.worktree.map { ($0.path, $0.branch) })
             }
         }
     }
@@ -126,7 +123,7 @@ enum GitWorktreeBinding {
         branch = groups.first.map { GitWorktreeBinding.branchName(fromTitle: $0.title) } ?? ""
     }
 
-    var groups: [GitBindableGroup] { GitWorktreeBinding.groups(in: workspace.views) }
+    var groups: [GitBindableGroup] { GitWorktreeBinding.groups(in: workspace.storedViews) }
     var group: GitBindableGroup? { groups.first { Self.key($0) == groupKey } }
     var ready: Bool { group != nil && !branch.trimmingCharacters(in: .whitespaces).isEmpty && !busy }
 

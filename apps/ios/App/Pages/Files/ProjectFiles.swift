@@ -237,8 +237,9 @@ enum FileLineChanges {
             "cwd": .string(root), "scope": .string("base"), "staged": .bool(false), "path": .string(relative),
             "base": .string("HEAD"),
         ])
-        guard let answer = try? await client.request(.gitDiff, payload: payload) else { return }
-        marks = FileLineChanges.parse(answer.text("diff"))
+        guard let answer = try? await client.request(.gitDiff, payload: payload).decoded(as: GitDiffResult.self)
+        else { return }
+        marks = FileLineChanges.parse(answer.diff)
     }
 
     private func clear() {
