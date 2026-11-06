@@ -3,19 +3,21 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { desktop, type BackgroundServiceState, type DaemonCrash } from '@/desktop/bridge';
 import { machineCrashToast } from '@/shell/machine-crash';
-import { machineUpdateAnswer, machineUpdatePrompt, type MachineUpdateAnswer } from '@/shell/machine-update';
+import { machineUpdateAnswer, machineUpdatePrompt, useMachineUpdateAgain, type MachineUpdateAnswer } from '@/shell/machine-update';
 import { useToasts } from '@/state/toasts';
 
 /*
  * Asked after an update when the background service still runs the older build, because a restart
- * would have ended the terminals and agents running on it. Mounted once beside the toasts, and only
- * inside the desktop app, where the shell carries the restart out.
+ * would have ended the terminals and agents running on it, and again from the rail's mark until the
+ * machine restarted. Mounted once beside the toasts, and only inside the desktop app, where the
+ * shell carries the restart out.
  */
 export function MachineUpdateDialog() {
     const { t } = useTranslation('shell');
     const bridge = desktop()?.backgroundService ?? null;
     const [state, setState] = useState<BackgroundServiceState | null>(null);
     const [busy, setBusy] = useState(false);
+    const again = useMachineUpdateAgain((s) => s.again);
 
     useEffect(() => {
         if (!bridge) {
@@ -29,6 +31,9 @@ export function MachineUpdateDialog() {
             crash = next.crash ?? null;
             if (toast) {
                 useToasts.getState().show(toast);
+            }
+            if (!next.pendingRestart) {
+                useMachineUpdateAgain.setState({ again: null });
             }
             setState(next);
         };
@@ -45,7 +50,7 @@ export function MachineUpdateDialog() {
         };
     }, [bridge]);
 
-    const prompt = bridge ? machineUpdatePrompt(state, bridge) : null;
+    const prompt = bridge ? machineUpdatePrompt(state, bridge, again) : null;
     if (!bridge || prompt === null) {
         return null;
     }
@@ -58,6 +63,7 @@ export function MachineUpdateDialog() {
                 setState(next);
             }
         } finally {
+            useMachineUpdateAgain.setState({ again: null });
             setBusy(false);
         }
     };

@@ -1,11 +1,12 @@
 import { Button } from '@adecore/ui';
 import { ConfirmDialog } from '@adecore/ui/settings';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { desktop, type BackgroundServiceState } from '@/desktop/bridge';
+import { desktop } from '@/desktop/bridge';
 import { offersMachineRestart } from '@/shell/machine-lost';
 import { MachineCard } from '@/shell/MachineCard';
 import { nameOf } from '@/shell/settings/machine-list';
+import { useBackgroundServiceState } from '@/shell/use-background-service';
 import { useMachineEntry } from '@/shell/use-machine-entry';
 import { useMachineLost } from '@/shell/use-machine-lost';
 import { useEndpointId } from '@/state/keys';
@@ -27,24 +28,7 @@ export function MachineLostScreen() {
     const entry = useMachineEntry(endpointId);
     const [confirming, setConfirming] = useState(false);
     const service = desktop()?.backgroundService ?? null;
-    const [serviceState, setServiceState] = useState<BackgroundServiceState | null>(null);
-
-    useEffect(() => {
-        if (!service) {
-            return;
-        }
-        let live = true;
-        void service.state().then((next) => {
-            if (live) {
-                setServiceState(next);
-            }
-        });
-        const off = service.onState(setServiceState);
-        return () => {
-            live = false;
-            off();
-        };
-    }, [service]);
+    const serviceState = useBackgroundServiceState();
 
     if (!lost) {
         return null;

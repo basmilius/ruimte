@@ -1,14 +1,16 @@
 import { UsageLimitsCard } from '@adecore/agents-react/usage';
 import { IconButton, WorkspaceRail, WorkspaceRailSeparator, WorkspaceRailSpacer } from '@adecore/ui';
-import { ArrowDownToLine, ChartNoAxesColumn, Search, Settings } from 'lucide-react';
+import { ArrowDownToLine, ChartNoAxesColumn, RotateCw, Search, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { hasOverlayControls } from '@/desktop/bridge';
+import { desktop, hasOverlayControls } from '@/desktop/bridge';
 import { LaunchChip } from '@/launches/LaunchChip';
 import { useConnectionDotShown } from '@/shell/connection-dot';
 import { ConnectionDot } from '@/shell/ConnectionDot';
+import { askMachineUpdateAgain, showsPendingRestart } from '@/shell/machine-update';
 import { PanelControls } from '@/shell/PanelControls';
 import { useToolbarPanels } from '@/shell/panels';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { useBackgroundServiceState } from '@/shell/use-background-service';
 import { isScratchProject, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { hasUpdate, useUpdates } from '@/state/updates';
@@ -32,6 +34,9 @@ export function ShellRail() {
     // These draw nothing while they have nothing to say, and their separator goes with them.
     const voice = useVoice((s) => s.credential?.configured === true);
     const update = hasUpdate(useUpdates());
+    const service = desktop()?.backgroundService ?? null;
+    const serviceState = useBackgroundServiceState();
+    const restartPending = service !== null && showsPendingRestart(serviceState, service);
     const connectionDot = useConnectionDotShown();
 
     return (
@@ -58,9 +63,10 @@ export function ShellRail() {
             )}
             <WorkspaceRailSpacer />
             <UpdateButton />
+            {restartPending && <PendingRestartButton />}
             <ConnectionDot />
             <VoiceButton />
-            {(voice || update || connectionDot) && <WorkspaceRailSeparator />}
+            {(voice || update || restartPending || connectionDot) && <WorkspaceRailSeparator />}
             <UsageLimitsCard side="left" open={usagePeek}>
                 <IconButton icon={ChartNoAxesColumn} label={t('sidebar.usage')} tooltip={false} onClick={() => useUi.getState().setUsageOpen(true)} />
             </UsageLimitsCard>
@@ -94,6 +100,22 @@ function UpdateButton() {
             tooltipSide="left"
             className="text-positive hover:text-positive"
             onClick={() => useUi.getState().setSettings({ open: true, section: 'about' })}
+        />
+    );
+}
+
+/* While "When idle" waits, the machine still runs the old version. Orange, a warning rather than a fault, and it asks the question again with what runs now. */
+function PendingRestartButton() {
+    const { t } = useTranslation('shell');
+    const machine = desktop()?.machine;
+
+    return (
+        <IconButton
+            icon={RotateCw}
+            label={t('machineUpdate.pendingLine')}
+            tooltipSide="left"
+            className="text-status-needs-you hover:text-status-needs-you"
+            onClick={() => void askMachineUpdateAgain(machine ? () => machine.stopPreview() : undefined)}
         />
     );
 }
