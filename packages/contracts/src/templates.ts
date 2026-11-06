@@ -186,3 +186,16 @@ export const ProjectTemplatesFileSchema = z.looseObject({
     live: z.array(z.unknown()).optional(),
     postfix: z.array(z.unknown()).optional()
 });
+
+export const TEMPLATES_REQUEST_SCHEMAS = {
+    // Any client of the owner edits; no request of these is on a peer's list, and an agent reaches templates only through its verb.
+    'template.list': { payload: TemplateListPayloadSchema, result: TemplateListResultSchema },
+    'template.save': { payload: TemplateSavePayloadSchema, result: TemplateSaveResultSchema },
+    'template.remove': { payload: TemplateRemovePayloadSchema, result: TemplateRemoveResultSchema },
+    'template.configure': { payload: TemplateConfigurePayloadSchema, result: TemplateConfigureResultSchema }
+} as const;
+
+export const TEMPLATES_EVENT_SCHEMAS = {
+    // A person's templates to every client, a project's to the clients that hold it.
+    'template.changed': TemplateChangedEventSchema
+} as const;

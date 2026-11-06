@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 
 export const EditorAssistProviderSchema = z.enum(['claude', 'codex', 'grok', 'antigravity']);
@@ -43,3 +44,14 @@ export type EditorAssistGenerateResult = z.infer<typeof EditorAssistGenerateResu
 
 export const EditorAssistCancelPayloadSchema = z.object({ id: z.string().min(1).max(80) });
 export const EditorAssistTextEventSchema = z.object({ id: z.string(), text: z.string() });
+
+export const EDITOR_ASSIST_REQUEST_SCHEMAS = {
+    'editor.status': { payload: EditorAssistStatusPayloadSchema, result: EditorAssistStatusResultSchema },
+    // The text streams to the asking client as `editor.text` while it runs; the result is the whole of it.
+    'editor.generate': { payload: EditorAssistGeneratePayloadSchema, result: EditorAssistGenerateResultSchema },
+    'editor.cancel': { payload: EditorAssistCancelPayloadSchema, result: EmptySchema }
+} as const;
+
+export const EDITOR_ASSIST_EVENT_SCHEMAS = {
+    'editor.text': EditorAssistTextEventSchema
+} as const;

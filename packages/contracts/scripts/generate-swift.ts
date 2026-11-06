@@ -278,12 +278,16 @@ const openVocabularies: ReadonlyMap<unknown, readonly string[]> = new Map<unknow
 ]);
 // Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.
 const apiRoots: Record<string, z.ZodType> = {};
-for (const [name, pair] of Object.entries(REQUEST_SCHEMAS)) {
+// Sorted, so the generated files do not move when an area file adds a request.
+const requestNames = Object.keys(REQUEST_SCHEMAS).sort() as (keyof typeof REQUEST_SCHEMAS)[];
+const eventNames = Object.keys(EVENT_SCHEMAS).sort() as (keyof typeof EVENT_SCHEMAS)[];
+for (const name of requestNames) {
+    const pair = REQUEST_SCHEMAS[name];
     apiRoots[`request.${name}.payload`] = pair.payload;
     apiRoots[`request.${name}.result`] = pair.result;
 }
-for (const [name, schema] of Object.entries(EVENT_SCHEMAS)) {
-    apiRoots[`event.${name}`] = schema;
+for (const name of eventNames) {
+    apiRoots[`event.${name}`] = EVENT_SCHEMAS[name];
 }
 for (const [name, schema] of Object.entries(apiRoots)) {
     roots[name] = schema;
@@ -398,12 +402,12 @@ function tableSource(name: string, entries: string[], methods: string): string {
 const apiSource = [
     tableSource(
         'WireRequest',
-        Object.keys(REQUEST_SCHEMAS),
+        requestNames,
         `    public func validatePayload(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("request.\\(rawValue).payload", value) }\n    public func validateResult(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("request.\\(rawValue).result", value) }`
     ),
     tableSource(
         'WireEvent',
-        Object.keys(EVENT_SCHEMAS),
+        eventNames,
         `    public func validatePayload(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("event.\\(rawValue)", value) }`
     )
 ].join('\n\n');
@@ -877,8 +881,8 @@ outputs.set(
             pushEncryption,
             pushReadEncryption,
             pushActivitySigning,
-            requestTypes: Object.keys(REQUEST_SCHEMAS),
-            eventTypes: Object.keys(EVENT_SCHEMAS),
+            requestTypes: requestNames,
+            eventTypes: eventNames,
             crypto,
             signatures: signatureFixtures,
             framing: framingFixtures,

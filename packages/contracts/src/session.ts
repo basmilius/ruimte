@@ -1,8 +1,10 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { AgentInfoSchema, AgentKindSchema } from './agent.ts';
 import { SessionIdSchema } from './ids.ts';
 import { RuntimeModeSchema } from './model.ts';
 import { ProviderAccountIdSchema } from './provider-accounts.ts';
+import { SessionPortsResultSchema } from './session-ports.ts';
 
 // An agent CLI to start in a fresh shell. The daemon owns the command line, so every client
 // launches a CLI the same way and a new flag never has to travel over the wire.
@@ -136,3 +138,27 @@ export const SessionSizeEventSchema = z.object({
     cols,
     rows
 });
+
+export const SESSION_REQUEST_SCHEMAS = {
+    'session.create': { payload: SessionCreatePayloadSchema, result: SessionInfoSchema },
+    'session.attach': { payload: SessionAttachPayloadSchema, result: SessionAttachResultSchema },
+    'session.detach': { payload: SessionTargetPayloadSchema, result: EmptySchema },
+    'session.write': { payload: SessionWritePayloadSchema, result: EmptySchema },
+    'session.resize': { payload: SessionResizePayloadSchema, result: EmptySchema },
+    'session.kill': { payload: SessionTargetPayloadSchema, result: EmptySchema },
+    'session.clear': { payload: SessionTargetPayloadSchema, result: EmptySchema },
+    'session.list': { payload: EmptySchema, result: SessionListResultSchema },
+    'session.ports': { payload: SessionTargetPayloadSchema, result: SessionPortsResultSchema },
+    // A person approving the command the session holds: it is written down and typed. Nothing held is no error.
+    'session.runHeld': { payload: SessionTargetPayloadSchema, result: EmptySchema },
+    // Ends once the client that asked leaves; `login-unavailable` for a CLI without a login of its own.
+    'session.login': { payload: SessionLoginPayloadSchema, result: SessionInfoSchema }
+} as const;
+
+export const SESSION_EVENT_SCHEMAS = {
+    'session.output': SessionOutputEventSchema,
+    'session.resync': SessionResyncEventSchema,
+    'session.size': SessionSizeEventSchema,
+    'session.exit': SessionExitEventSchema,
+    'session.list-changed': EmptySchema
+} as const;

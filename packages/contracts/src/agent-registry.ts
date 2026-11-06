@@ -85,3 +85,13 @@ export function registryAgentMatches(agent: Pick<RegistryAgent, 'id' | 'name' | 
         .filter((word) => word !== '')
         .every((word) => text.includes(word));
 }
+
+export const AGENT_REGISTRY_REQUEST_SCHEMAS = {
+    // The agents of the public ACP registry with a build for this machine, and a person's Install or removal of one; the daemon never installs one itself.
+    'provider.registry': { payload: RegistryCatalogPayloadSchema, result: RegistryCatalogResultSchema },
+    'provider.installAgent': { payload: RegistryAgentPayloadSchema, result: RegistryAgentResultSchema },
+    'provider.removeAgent': { payload: RegistryAgentPayloadSchema, result: RegistryAgentResultSchema },
+    // How each CLI was installed, its version and the newest its route offers, and a person's update through that route.
+    'provider.versions': { payload: CliVersionsPayloadSchema, result: CliVersionsResultSchema },
+    'provider.update': { payload: CliUpdatePayloadSchema, result: CliUpdateResultSchema }
+} as const;

@@ -74,3 +74,12 @@ export const ProvenanceChangedEventSchema = z.object({
     live: z.boolean()
 });
 export type ProvenanceChangedEvent = z.infer<typeof ProvenanceChangedEventSchema>;
+
+export const PROVENANCE_REQUEST_SCHEMAS = {
+    'provenance.read': { payload: ProvenanceReadPayloadSchema, result: ProvenanceReadResultSchema },
+    'provenance.review': { payload: ProvenanceReviewPayloadSchema, result: ProvenanceReviewResultSchema }
+} as const;
+
+export const PROVENANCE_EVENT_SCHEMAS = {
+    'provenance.changed': ProvenanceChangedEventSchema
+} as const;

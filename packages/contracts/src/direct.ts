@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { SignalEnvelopeSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { ProtocolVersionSchema } from './protocol.ts';
@@ -275,3 +276,11 @@ export class DeflatedFrameAssembler extends MarkedFrameAssembler {
         super(DEFLATED_MORE, DEFLATED_LAST);
     }
 }
+
+export const DIRECT_REQUEST_SCHEMAS = {
+    'direct.signal': { payload: DirectSignalPayloadSchema, result: EmptySchema }
+} as const;
+
+export const DIRECT_EVENT_SCHEMAS = {
+    'direct.signaled': DirectSignalPayloadSchema
+} as const;

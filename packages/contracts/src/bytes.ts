@@ -130,3 +130,7 @@ export function decodeBytesReply(frame: Uint8Array): BytesReply | null {
     const head = BytesReplyHeadSchema.safeParse(decoded.head);
     return head.success ? { id: head.data.id, result: head.data.result, bytes: decoded.bytes } : null;
 }
+
+export const BYTES_REQUEST_SCHEMAS = {
+    'bytes.read': { payload: BytesReadPayloadSchema, result: BytesReadResultSchema }
+} as const;

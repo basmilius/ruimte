@@ -1,6 +1,6 @@
 import { DrawingFontSchema } from '@adecore/drawing/protocol';
 import { z } from 'zod';
-import { DrawingAlignSchema, DrawingColorSchema } from './drawing-host.ts';
+import { DrawingAlignSchema, DrawingColorSchema, DrawingTargetPayloadSchema } from './drawing-host.ts';
 
 export const RenderBoundsSchema = z.object({ x: z.number(), y: z.number(), w: z.number().nonnegative(), h: z.number().nonnegative() });
 
@@ -50,3 +50,7 @@ export const RenderSceneResultSchema = z.object({
     elements: z.array(RenderElementSchema)
 });
 export type RenderSceneResult = z.infer<typeof RenderSceneResultSchema>;
+
+export const RENDER_REQUEST_SCHEMAS = {
+    'drawing.paths': { payload: DrawingTargetPayloadSchema, result: RenderSceneResultSchema }
+} as const;

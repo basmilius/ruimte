@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 
 /*
@@ -267,3 +268,23 @@ export const ArtifactCleanupResultSchema = z.object({
     removed: z.number().int().nonnegative().optional(),
     freedBytes: z.number().int().nonnegative().optional()
 });
+
+export const ARTIFACT_REQUEST_SCHEMAS = {
+    // A person's own: no request of these is on a peer's list, and bytes go only through `bytes.read`.
+    'artifact.list': { payload: ArtifactListPayloadSchema, result: ArtifactListResultSchema },
+    'artifact.get': { payload: ArtifactGetPayloadSchema, result: ArtifactGetResultSchema },
+    'artifact.watch': { payload: EmptySchema, result: EmptySchema },
+    'artifact.unwatch': { payload: EmptySchema, result: EmptySchema },
+    'artifact.save': { payload: ArtifactSavePayloadSchema, result: ArtifactSaveResultSchema },
+    'artifact.saveFolder': { payload: ArtifactSaveFolderPayloadSchema, result: ArtifactSaveResultSchema },
+    'artifact.copyToProject': { payload: ArtifactCopyToProjectPayloadSchema, result: ArtifactCopyToProjectResultSchema },
+    'artifact.storage': { payload: EmptySchema, result: ArtifactStorageResultSchema },
+    'artifact.cleanup': { payload: ArtifactCleanupPayloadSchema, result: ArtifactCleanupResultSchema },
+    'artifact.importFrom': { payload: ArtifactImportFromPayloadSchema, result: ArtifactImportFromResultSchema },
+    'artifact.remove': { payload: ArtifactRemovePayloadSchema, result: ArtifactRemoveResultSchema }
+} as const;
+
+export const ARTIFACT_EVENT_SCHEMAS = {
+    // Only to the clients that asked with `artifact.watch`.
+    'artifact.changed': ArtifactChangedEventSchema
+} as const;

@@ -1,4 +1,5 @@
 import { AgentKindSchema, ChatSkillSchema, ModelSelectionSchema, ProviderAccountIdSchema, RuntimeModeSchema } from '@adecore/agent-contracts';
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { ArtifactKeySchema } from './artifact.ts';
 import { ProjectIdSchema } from './project.ts';
@@ -277,3 +278,24 @@ export type RoutineSkillsResult = z.infer<typeof RoutineSkillsResultSchema>;
 
 // Only to the clients that asked with `routine.watch`; they read the project's routines again.
 export const RoutineChangedEventSchema = z.object({ projectId: ProjectIdSchema });
+
+export const ROUTINE_REQUEST_SCHEMAS = {
+    // A person's own: no request of these is on a peer's list, and an agent reaches routines only through its verbs.
+    'routine.list': { payload: RoutineListPayloadSchema, result: RoutineListResultSchema },
+    'routine.get': { payload: RoutineTargetPayloadSchema, result: RoutineGetResultSchema },
+    'routine.save': { payload: RoutineSavePayloadSchema, result: RoutineSaveResultSchema },
+    'routine.approve': { payload: RoutineApprovePayloadSchema, result: EmptySchema },
+    'routine.decline': { payload: RoutineApprovePayloadSchema, result: EmptySchema },
+    'routine.pause': { payload: RoutineTargetPayloadSchema, result: EmptySchema },
+    'routine.resume': { payload: RoutineTargetPayloadSchema, result: EmptySchema },
+    'routine.runNow': { payload: RoutineTargetPayloadSchema, result: RoutineRunNowResultSchema },
+    'routine.remove': { payload: RoutineRemovePayloadSchema, result: EmptySchema },
+    'routine.watch': { payload: EmptySchema, result: EmptySchema },
+    'routine.unwatch': { payload: EmptySchema, result: EmptySchema },
+    'routine.skills': { payload: RoutineSkillsPayloadSchema, result: RoutineSkillsResultSchema }
+} as const;
+
+export const ROUTINE_EVENT_SCHEMAS = {
+    // Only to the clients that asked with `routine.watch`.
+    'routine.changed': RoutineChangedEventSchema
+} as const;

@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 
 /*
@@ -29,3 +30,8 @@ export const NanoGptConfigurePayloadSchema = z.object({
     // Only the settings, when this is all there is: nothing is fetched and the key stays as it is.
     settings: NanoGptSettingsSchema.partial().optional()
 });
+
+export const NANOGPT_REQUEST_SCHEMAS = {
+    'nanogpt.status': { payload: EmptySchema, result: NanoGptStatusSchema },
+    'nanogpt.configure': { payload: NanoGptConfigurePayloadSchema, result: NanoGptStatusSchema }
+} as const;

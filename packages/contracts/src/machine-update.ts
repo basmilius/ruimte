@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { MachineWorkSchema } from './machine-http.ts';
 
@@ -44,3 +45,14 @@ export const EndpointInstallUpdateResultSchema = z.object({
     // What the restart cuts short right now; zero when the daemon runs as the service and outlives the app.
     ending: MachineWorkSchema
 });
+
+export const MACHINE_UPDATE_REQUEST_SCHEMAS = {
+    // The desktop app on this machine saying where its updater stands. Local secret only: it speaks for the machine.
+    'endpoint.reportUpdate': { payload: MachineUpdateReportSchema, result: EmptySchema },
+    // Any client may ask, `update-no-app` without the desktop app and `update-none` with nothing to install.
+    'endpoint.installUpdate': { payload: EndpointInstallUpdatePayloadSchema, result: EndpointInstallUpdateResultSchema }
+} as const;
+
+export const MACHINE_UPDATE_EVENT_SCHEMAS = {
+    'endpoint.updateChanged': EndpointUpdateChangedEventSchema
+} as const;

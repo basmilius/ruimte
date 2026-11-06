@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 
 const DeviceIdSchema = z.string().min(1).max(256);
@@ -439,3 +440,26 @@ export type DeviceSettings = z.infer<typeof DeviceSettingsSchema>;
 export type DeviceState = z.infer<typeof DeviceStateSchema>;
 export type DeviceTextSize = z.infer<typeof DeviceTextSizeSchema>;
 export type DeviceToggleSetting = z.infer<typeof DeviceToggleSettingSchema>;
+
+export const DEVICE_REQUEST_SCHEMAS = {
+    'device.list': { payload: EmptySchema, result: DeviceListResultSchema },
+    'device.boot': { payload: DeviceTargetPayloadSchema, result: DeviceInfoSchema },
+    'device.shutdown': { payload: DeviceTargetPayloadSchema, result: DeviceInfoSchema },
+    'device.open': { payload: DeviceOpenPayloadSchema, result: DeviceOpenResultSchema },
+    'device.detach': { payload: DeviceTargetPayloadSchema, result: EmptySchema },
+    'device.input': { payload: DeviceInputPayloadSchema, result: EmptySchema },
+    'device.detail': { payload: DeviceDetailPayloadSchema, result: DeviceDetailSchema },
+    'device.action': { payload: DeviceActionPayloadSchema, result: DeviceDetailSchema },
+    'device.operations': { payload: EmptySchema, result: DeviceOperationsResultSchema },
+    'device.control': { payload: DeviceControlPayloadSchema, result: DeviceOperatedSchema },
+    'device.capture': { payload: DeviceTargetPayloadSchema, result: DeviceCaptureResultSchema },
+    'device.importCapture': { payload: DeviceImportCapturePayloadSchema, result: DeviceCaptureResultSchema },
+    'device.record': { payload: DeviceRecordPayloadSchema, result: DeviceRecordResultSchema },
+    'device.clipboard': { payload: DeviceClipboardPayloadSchema, result: DeviceClipboardResultSchema },
+    'device.power': { payload: DeviceTargetPayloadSchema, result: DevicePowerResultSchema }
+} as const;
+
+export const DEVICE_EVENT_SCHEMAS = {
+    'device.frame': DeviceFrameSchema,
+    'device.operated': DeviceOperatedSchema
+} as const;

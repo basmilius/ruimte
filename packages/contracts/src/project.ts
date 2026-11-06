@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { DrawingFontSchema, DrawingStrokeStyleSchema, DrawingStrokeWidthSchema } from '@adecore/drawing/protocol';
 import { isRecord } from '@adecore/utils/record';
 import { z } from 'zod';
@@ -1612,3 +1613,28 @@ export type ProjectSetAccountsPayload = z.infer<typeof ProjectSetAccountsPayload
 export const ProjectSetAccountsResultSchema = z.object({
     accounts: ProjectAccountsSchema
 });
+
+export const PROJECT_REQUEST_SCHEMAS = {
+    'project.list': { payload: EmptySchema, result: ProjectListResultSchema },
+    'project.referables': { payload: EmptySchema, result: ProjectReferablesResultSchema },
+    'project.open': { payload: ProjectOpenPayloadSchema, result: ProjectOpenResultSchema },
+    'project.save': { payload: ProjectSavePayloadSchema, result: ProjectSaveResultSchema },
+    'project.save-local': { payload: ProjectSaveLocalPayloadSchema, result: EmptySchema },
+    'project.close': { payload: ProjectTargetPayloadSchema, result: ProjectCloseResultSchema },
+    'project.closing': { payload: ProjectTargetPayloadSchema, result: ProjectClosingResultSchema },
+    'project.release': { payload: ProjectTargetPayloadSchema, result: EmptySchema },
+    'project.setIcon': { payload: ProjectSetIconPayloadSchema, result: ProjectSummaryResultSchema },
+    'project.setIdentity': { payload: ProjectSetIdentityPayloadSchema, result: ProjectSummaryResultSchema },
+    // One person's accounts for a project's new starts, in its private file. Only a person on this machine sets them, never a verb.
+    'project.setAccounts': { payload: ProjectSetAccountsPayloadSchema, result: ProjectSetAccountsResultSchema },
+    'project.delete': { payload: ProjectDeletePayloadSchema, result: EmptySchema },
+    'project.newChat': { payload: ProjectNewChatPayloadSchema, result: ProjectNewChatResultSchema },
+    'project.newInlineChat': { payload: ProjectNewInlineChatPayloadSchema, result: ProjectNewInlineChatResultSchema },
+    'project.showInlineChat': { payload: ProjectInlineChatTargetPayloadSchema, result: EmptySchema },
+    'project.removeInlineChat': { payload: ProjectInlineChatTargetPayloadSchema, result: EmptySchema }
+} as const;
+
+export const PROJECT_EVENT_SCHEMAS = {
+    'project.changed': ProjectChangedEventSchema,
+    'project.showView': ProjectShowViewEventSchema
+} as const;

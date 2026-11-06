@@ -74,3 +74,9 @@ export const ArchiveExtractResultSchema = z.object({
     skippedTotal: z.number().int().nonnegative()
 });
 export type ArchiveExtractResult = z.infer<typeof ArchiveExtractResultSchema>;
+
+export const ARCHIVE_REQUEST_SCHEMAS = {
+    'archive.list': { payload: ArchiveListPayloadSchema, result: ArchiveListResultSchema },
+    // Unpacks into a project; never overwrites and never makes a link.
+    'archive.extract': { payload: ArchiveExtractPayloadSchema, result: ArchiveExtractResultSchema }
+} as const;

@@ -1,73 +1,95 @@
-import { AgentKindSchema, ChatSubagentSourceSchema, ContextSourceSchema, RuntimeModeSchema } from '@ruimte/contracts';
+import { AgentKindSchema, AgentStatusSchema, RuntimeModeSchema, TaskSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_OPENED_PER_CALLER, MAX_PROMPT_LENGTH } from '../limits.ts';
 import {
+    PERSON_AND_VOICE,
+    AGENT,
     viewId,
     nodeId,
     givenName,
     agentField,
-    PERSON_VOICE_AND_AGENT,
-    AGENT,
+    CLIENT_ACTORS,
+    drawnLine,
     AGENT_AND_VOICE,
-    operatedView,
     OperationStatusSchema,
     OPERATION_ACTIONS,
     agentNodeKind,
-    agentReads,
-    drawnLine,
-    chatReadUsage
+    agentReads
 } from './fields.ts';
 
-export const AGENT_ACTIONS = {
-    'context.list': {
-        title: 'List linked context',
-        description: 'Lists the context a person linked to this session: the id, kind and title of each source.',
+export const AGENTS_ACTIONS = {
+    'agents.inspect': {
+        title: 'Inspect agents',
+        description: 'Reads current agent statuses in this project from the daemon.',
         effect: 'read',
-        domain: 'communicate',
-        actors: AGENT,
+        domain: 'agents',
+        actors: CLIENT_ACTORS,
         input: z.object({}),
         output: z.object({
-            sources: z.array(
-                ContextSourceSchema.pick({ id: true, kind: true, title: true, flag: true }).extend({
-                    snoozedUntil: z.iso.datetime().optional().describe('When the snooze a person put on the node ends; absent for none')
+            project: z.string(),
+            connected: z.boolean(),
+            observedAt: z.number(),
+            agents: z.array(
+                z.object({
+                    id: z.string(),
+                    name: z.string(),
+                    view: z.string(),
+                    kind: z.enum(['chat', 'terminal']),
+                    status: z.union([AgentStatusSchema, z.literal('unknown')]),
+                    working: z.boolean().nullable(),
+                    selected: z.boolean(),
+                    toolHistory: z.boolean(),
+                    updatedAt: z.number().nullable()
                 })
             )
         })
     },
-    'context.read': {
-        title: 'Read linked context',
-        description: 'Prints one linked source, whole or its last lines.',
+    'agent.activity': {
+        title: 'Read agent activity',
+        description: 'Reads bounded structured tool activity, never internal reasoning.',
         effect: 'read',
-        domain: 'communicate',
-        actors: AGENT,
-        input: z.object({
-            sourceId: z
-                .string()
-                .min(1)
-                .describe(
-                    'The id of a source, as context.list gives it, or of an agent the caller opened itself; a drawing or diagram also takes the id of the linked node that shows it'
-                ),
-            tail: z.number().int().min(1).nullable().describe('Only the last this many lines; without it the whole source'),
-            viewId: operatedView,
-            subagent: z
-                .string()
-                .min(1)
-                .nullable()
-                .describe(
-                    `The whole conversation of one subagent of a chat the caller may read instead of the chat, read from ${ChatSubagentSourceSchema.options.join(' or ')}`
-                ),
-            form: z
-                .enum(['elements', 'image'])
-                .nullish()
-                .describe(
-                    'Instead of the text: the elements of a drawing as JSON, or a PNG of a drawing, a diagram or a canvas written to the chat and named by its path'
-                )
-        }),
+        domain: 'agents',
+        actors: CLIENT_ACTORS,
+        input: z.object({ agentId: z.string().min(1), limit: z.number().int().min(1).max(20), toolId: z.string().nullable() }),
         output: z.object({
-            text: z.string(),
-            usage: chatReadUsage.optional().describe('Only on a chat read whole or by its tail, not on a subagent of it'),
-            image: z.string().optional().describe('The path of the PNG a read in form image wrote')
+            agent: z.string(),
+            supported: z.boolean(),
+            truncated: z.boolean(),
+            tools: z.array(
+                z.object({
+                    id: z.string(),
+                    name: z.string(),
+                    state: z.enum(['running', 'done', 'error']),
+                    createdAt: z.number(),
+                    input: z.string(),
+                    output: z.string().nullable(),
+                    parentToolUseId: z.string().nullable(),
+                    paths: z.array(z.string()),
+                    truncated: z.boolean()
+                })
+            )
         })
+    },
+    'extension.voiceList': {
+        title: 'List extension actions',
+        description: 'Lists what the extensions of this window offer by voice, each with what it does and the input it takes.',
+        effect: 'read',
+        domain: 'agents',
+        actors: PERSON_AND_VOICE,
+        input: z.object({}),
+        output: z.object({ actions: z.array(z.object({ id: z.string(), description: z.string(), parameters: z.string() })) })
+    },
+    'extension.voiceRun': {
+        title: 'Run an extension action',
+        description: 'Runs what an extension offers by voice, with its input as JSON, and says what it answers.',
+        effect: 'local',
+        domain: 'agents',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            id: z.string().min(1).max(256).describe('As extension.voiceList names it'),
+            input: z.string().max(10_000).describe('Its input, as JSON')
+        }),
+        output: z.object({ text: z.string() })
     },
     'agent.start': {
         title: 'Start an agent',
@@ -197,24 +219,89 @@ export const AGENT_ACTIONS = {
             agents: z.array(z.object({ nodeId, status: OperationStatusSchema, taskId: z.string().nullable(), detail: z.string() }))
         })
     },
-    'operation.cancel': {
-        title: 'Cancel an operation',
-        description:
-            'Stops an operation of your own that still runs: a git run, or the turns an agent or team start set going. Nothing is rolled back; each line says what is left.',
-        agentDescription:
-            'Stops the turns an agent or team you started is working on. The chats and their tasks stay, a terminal agent is left running, and nothing is rolled back; each line says what is left.',
-        effect: 'shared',
-        domain: 'developer',
-        actors: PERSON_VOICE_AND_AGENT,
+    'tool.list': {
+        title: 'List extension tools',
+        description: 'Lists the tools the extensions on this machine offer agents, each with what it does and the input it takes.',
+        effect: 'read',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({}),
+        output: z.object({ tools: z.array(z.object({ id: z.string(), description: z.string(), parameters: z.string() })) })
+    },
+    'tool.run': {
+        title: 'Run an extension tool',
+        description: 'Runs a tool an extension on this machine offers, with its input as JSON, and prints what it answers.',
+        effect: 'external',
+        domain: 'agents',
+        actors: AGENT,
         input: z.object({
-            operationId: z
+            id: z.string().min(1).max(256).describe('The tool, as tool list prints it'),
+            input: z.string().max(100_000).describe('Its input, as JSON')
+        }),
+        output: z.object({ text: z.string() })
+    },
+    'agent.answer': {
+        title: 'Answer an agent',
+        description: 'Answers a question an agent you opened asked and waits on, the way a person answers it in that node; an approval stays with the person.',
+        effect: 'external',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            nodeId: nodeId.describe('The agent that asked, by id; only one you opened yourself'),
+            requestId: z.string().min(1).describe('The request the question came with, as the > Question line of a read or the note about it names it'),
+            answer: z
                 .string()
-                .min(1)
                 .nullable()
-                .describe('git:<run> for a git run, agent.start:<id> or team.start:<id>,<id> for a start; null for every git run of yours still going')
+                .describe('The answer to a request with one question: a choice label as written, several separated by a comma, or your own words'),
+            answers: z.record(z.string(), z.string()).nullable().describe('The answers to a request with several questions, keyed by question id')
+        }),
+        output: z.object({ nodeId, requestId: z.string() })
+    },
+    'task.list': {
+        title: 'List tasks',
+        description:
+            'Lists the tasks you gave and the task you were given that are still open or have yet to wake you: id, direction, status, the other node, title, wake, result, batch.',
+        effect: 'read',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            all: z.boolean().describe('Also lists the history: tasks that settled and already woke their chat, and a task you were given that settled')
         }),
         output: z.object({
-            operations: z.array(z.object({ operationId: z.string(), status: z.enum(['cancelled', 'over', 'left']), detail: z.string() }))
+            tasks: z.array(TaskSchema),
+            // What the list left out without all: settled tasks that already reported.
+            hidden: z.number().int()
         })
+    },
+    'task.create': {
+        title: 'Give a task',
+        description: 'Gives a task to an agent you opened that is already running, whose result wakes you the way the task of a new one does.',
+        effect: 'external',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            nodeId: nodeId.describe('The agent to give the task to, by id; only a chat you opened yourself'),
+            prompt: z.string().nullable().describe('What the task asks'),
+            promptFile: agentField(z.string().min(1)).describe('The same assignment out of a file, for one with exact bytes'),
+            title: givenName.nullable().describe('The title of the task; without one the first line of the prompt')
+        }),
+        output: z.object({
+            taskId: z.string(),
+            nodeId,
+            // Now for an agent that starts on it as you call, waiting for one still in a turn.
+            at: z.enum(['now', 'waiting'])
+        })
+    },
+    'task.complete': {
+        title: 'Report a task',
+        description: 'Reports the result of the task you were opened with, which wakes the chat that gave it.',
+        effect: 'external',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            result: z.string().nullable().describe('The result'),
+            resultFile: agentField(z.string().min(1)).describe('The same result out of a file inside the project folder')
+        }),
+        output: z.object({ taskId: z.string(), parentId: nodeId })
     }
 } as const;

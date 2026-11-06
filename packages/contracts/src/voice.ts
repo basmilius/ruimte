@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { LIVE_VOICES, VOICE_LANGUAGES, type VoiceLanguage } from './voice-languages.ts';
 
@@ -162,3 +163,24 @@ export type VoiceConfirmPayload = z.infer<typeof VoiceConfirmPayloadSchema>;
 export const VoiceConfirmResultSchema = z.object({
     accepted: z.boolean()
 });
+
+export const VOICE_REQUEST_SCHEMAS = {
+    // Voice run by the daemon for a phone. Setting and clearing the key is the local secret's.
+    'voice.keyStatus': { payload: EmptySchema, result: VoiceKeyStatusSchema },
+    'voice.setKey': { payload: VoiceSetKeyPayloadSchema, result: VoiceKeyStatusSchema },
+    'voice.clearKey': { payload: EmptySchema, result: VoiceKeyStatusSchema },
+    'voice.start': { payload: VoiceStartPayloadSchema, result: VoiceStartResultSchema },
+    'voice.stop': { payload: VoiceStopPayloadSchema, result: VoiceStopResultSchema },
+    'voice.confirm': { payload: VoiceConfirmPayloadSchema, result: VoiceConfirmResultSchema },
+    // How Voice on this machine talks, which any client but another machine reads and sets.
+    'voice.preferences': { payload: EmptySchema, result: VoicePreferencesStateSchema },
+    'voice.setPreferences': { payload: VoicePreferencesSchema, result: VoicePreferencesStateSchema }
+} as const;
+
+export const VOICE_EVENT_SCHEMAS = {
+    // To the connection that started the session only; the app routes them to the scene by `sceneId`.
+    'voice.status': VoiceStatusEventSchema,
+    'voice.activity': VoiceActivityEventSchema,
+    // To every client of the machine, whenever a client sets them.
+    'voice.preferences': VoicePreferencesStateSchema
+} as const;

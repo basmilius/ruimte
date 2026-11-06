@@ -44,3 +44,8 @@ export const TerminalPreparePreviewResultSchema = z.object({
 export type TerminalPreparePreview = z.infer<typeof TerminalPreparePreviewResultSchema>;
 export const TerminalPreparePayloadSchema = z.object({ machineId: z.string().min(1), token: z.string().min(1) });
 export const TerminalPrepareResultSchema = z.object({ sessionId: z.string().min(1) });
+
+export const TERMINAL_PREPARE_REQUEST_SCHEMAS = {
+    'session.preparePreview': { payload: TerminalPreparePreviewPayloadSchema, result: TerminalPreparePreviewResultSchema },
+    'session.prepare': { payload: TerminalPreparePayloadSchema, result: TerminalPrepareResultSchema }
+} as const;

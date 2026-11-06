@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { ProjectIdSchema } from './project.ts';
 
@@ -359,3 +360,27 @@ const ARCHIVE_MIMES: ReadonlySet<string> = new Set(['application/zip', 'applicat
 export function isArchiveMime(mime: string): boolean {
     return ARCHIVE_MIMES.has(mime);
 }
+
+export const FS_REQUEST_SCHEMAS = {
+    'fs.browse': { payload: FsBrowsePayloadSchema, result: FsBrowseResultSchema },
+    'fs.reveal': { payload: FsRevealPayloadSchema, result: EmptySchema },
+    'fs.search': { payload: FsSearchPayloadSchema, result: FsSearchResultSchema },
+    'fs.grep': { payload: FsGrepPayloadSchema, result: FsGrepResultSchema },
+    'fs.locate': { payload: FsLocatePayloadSchema, result: FsLocateResultSchema },
+    'fs.list': { payload: FsListPayloadSchema, result: FsListResultSchema },
+    'fs.read': { payload: FsReadPayloadSchema, result: FsReadResultSchema },
+    'fs.create': { payload: FsCreatePayloadSchema, result: FsCreateResultSchema },
+    'fs.delete': { payload: FsDeletePayloadSchema, result: FsDeleteResultSchema },
+    'fs.rename': { payload: FsRenamePayloadSchema, result: FsRenameResultSchema },
+    'fs.write': { payload: FsWritePayloadSchema, result: FsWriteResultSchema },
+    'fs.writeStart': { payload: FsWriteStartPayloadSchema, result: FsWriteStartResultSchema },
+    'fs.writePiece': { payload: FsWritePiecePayloadSchema, result: EmptySchema },
+    'fs.writeCommit': { payload: FsWriteUploadPayloadSchema, result: FsWriteResultSchema },
+    'fs.writeAbort': { payload: FsWriteUploadPayloadSchema, result: EmptySchema },
+    'fs.watch': { payload: FsWatchPayloadSchema, result: EmptySchema },
+    'fs.unwatch': { payload: FsWatchPayloadSchema, result: EmptySchema }
+} as const;
+
+export const FS_EVENT_SCHEMAS = {
+    'fs.changed': FsChangedEventSchema
+} as const;

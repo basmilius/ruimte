@@ -1,4 +1,5 @@
 import type { ChatInfo } from '@adecore/agent-contracts';
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { ProjectSummarySchema } from './project.ts';
 import { isAbsolutePath } from './stored-path.ts';
@@ -129,3 +130,16 @@ export function chatIsWorking(
         (info.queue?.length ?? 0) > 0
     );
 }
+
+export const CHAT_MOVE_REQUEST_SCHEMAS = {
+    'chat.move': { payload: ChatMovePayloadSchema, result: ChatMoveResultSchema },
+    'chat.moveInfo': { payload: ChatMoveInfoPayloadSchema, result: ChatMoveInfoResultSchema },
+    // The suggestions of agents in Chats that a person has not answered yet, and a person's no to one.
+    'chat.proposals': { payload: EmptySchema, result: ProjectProposalsSchema },
+    'chat.proposalDecline': { payload: ProjectProposalDeclinePayloadSchema, result: ProjectProposalDeclineResultSchema }
+} as const;
+
+export const CHAT_MOVE_EVENT_SCHEMAS = {
+    // Every open suggestion of an agent in Chats, to every client, whenever the list changes.
+    'chat.proposals': ProjectProposalsSchema
+} as const;

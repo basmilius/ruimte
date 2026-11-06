@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 
 const BrowserIdSchema = z.string().min(1).max(256);
@@ -196,3 +197,23 @@ export function isLoopbackBrowserUrl(value: string): boolean {
         /^\[::ffff:7f[0-9a-f]{2}:/.test(hostname)
     );
 }
+
+export const BROWSER_REQUEST_SCHEMAS = {
+    'browser.open': { payload: BrowserOpenPayloadSchema, result: BrowserInfoSchema },
+    'browser.detach': { payload: BrowserTargetPayloadSchema, result: EmptySchema },
+    'browser.kill': { payload: BrowserTargetPayloadSchema, result: EmptySchema },
+    'browser.navigate': { payload: BrowserNavigatePayloadSchema, result: BrowserInfoSchema },
+    'browser.command': { payload: BrowserCommandPayloadSchema, result: BrowserInfoSchema },
+    'browser.resize': { payload: BrowserResizePayloadSchema, result: EmptySchema },
+    'browser.input': { payload: BrowserInputPayloadSchema, result: EmptySchema },
+    'browser.devServers': { payload: BrowserDevServersPayloadSchema, result: BrowserDevServersResultSchema },
+    'browser.hold': { payload: BrowserHoldPayloadSchema, result: EmptySchema },
+    'browser.release': { payload: BrowserTargetPayloadSchema, result: EmptySchema },
+    'browser.driveResult': { payload: BrowserDriveResultPayloadSchema, result: EmptySchema }
+} as const;
+
+export const BROWSER_EVENT_SCHEMAS = {
+    'browser.frame': BrowserFrameSchema,
+    'browser.status': BrowserInfoSchema,
+    'browser.drive': BrowserDriveEventSchema
+} as const;

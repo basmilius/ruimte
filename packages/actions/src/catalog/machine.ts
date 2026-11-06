@@ -1,9 +1,21 @@
 import {
+    CliVersionSchema,
+    RegistryCatalogSchema,
+    AgentKindSchema,
+    UsageProviderSchema,
+    DeviceReferenceSchema,
+    ComputerControlActionSchema,
+    DeviceControlModeSchema,
+    DeviceControlPayloadSchema,
+    EndpointSetIdentityPayloadSchema,
+    EndpointSetNodeSizePayloadSchema,
+    ProcessAlertKindSchema,
+    ProcessGroupKindSchema,
+    ProcessSignalSchema,
     ComputerApprovalChoiceSchema,
     DeviceAppearanceSchema,
     DevicePermissionSchema,
     DevicePowerSchema,
-    DeviceReferenceSchema,
     DeviceStateSchema,
     DeviceStatusBarSchema,
     DeviceTextSizeSchema
@@ -11,14 +23,14 @@ import {
 import { z } from 'zod';
 import { MAX_KEY_COMBOS, MAX_TYPED_LENGTH } from '../limits.ts';
 import {
-    nodeId,
-    frame,
-    PERSON_VOICE_AND_AGENT,
+    PERSON_AND_VOICE,
     AGENT,
     PERSON,
-    operatedView,
-    browserNode,
-    browserOutcome,
+    usageDay,
+    PaceSchema,
+    nodeId,
+    givenMachine,
+    frame,
     deviceNode,
     devicePixel,
     deviceDone,
@@ -38,79 +50,235 @@ import {
     computerOutcome
 } from './fields.ts';
 
-export const CONTROL_ACTIONS = {
-    'browser.inspect': {
-        title: 'Read a page',
-        description: 'Where the page of a browser node stands: its address, its title, whether it is loading and what its history holds.',
+export const MACHINE_ACTIONS = {
+    'provider.catalog': {
+        title: 'Read the ACP registry',
+        description:
+            "Reads the agents of the public ACP registry this machine can run, with the version the registry names and whether each is installed here. Installing one stays a person's, in Settings, Providers.",
         effect: 'read',
-        domain: 'pages',
-        actors: PERSON_VOICE_AND_AGENT,
-        input: z.object({ nodeId: browserNode, viewId: operatedView }),
-        output: browserOutcome
-    },
-    'browser.navigate': {
-        title: 'Go to an address',
-        description: 'Sends the page of a browser node to an address.',
-        effect: 'external',
-        domain: 'pages',
-        actors: PERSON_VOICE_AND_AGENT,
-        input: z.object({ nodeId: browserNode, viewId: operatedView, url: z.string().min(1).describe('A whole http or https address, scheme and all') }),
-        output: browserOutcome.extend({
-            // The address a node that had none was given: written in the project, with no page driven.
-            assigned: z.object({ url: z.string(), title: z.string() }).nullable()
-        })
-    },
-    'browser.back': {
-        title: 'Go back',
-        description: 'Takes the page one step back through its own history.',
-        effect: 'external',
-        domain: 'pages',
-        actors: PERSON_VOICE_AND_AGENT,
-        input: z.object({ nodeId: browserNode, viewId: operatedView }),
-        output: browserOutcome
-    },
-    'browser.forward': {
-        title: 'Go forward',
-        description: 'Takes the page one step forward again, after a step back.',
-        effect: 'external',
-        domain: 'pages',
-        actors: PERSON_VOICE_AND_AGENT,
-        input: z.object({ nodeId: browserNode, viewId: operatedView }),
-        output: browserOutcome
-    },
-    'browser.reload': {
-        title: 'Reload a page',
-        description: 'Loads the page of a browser node again.',
-        effect: 'external',
-        domain: 'pages',
-        actors: PERSON_VOICE_AND_AGENT,
-        input: z.object({
-            nodeId: browserNode,
-            viewId: operatedView,
-            hard: z.boolean().describe('Loads it past the cache, the way a person holding shift would')
-        }),
-        output: browserOutcome
-    },
-    'browser.stop': {
-        title: 'Stop loading',
-        description: 'Ends a load that is still running, leaving the page as far as it got.',
-        effect: 'external',
-        domain: 'pages',
-        actors: PERSON_VOICE_AND_AGENT,
-        input: z.object({ nodeId: browserNode, viewId: operatedView }),
-        output: browserOutcome
-    },
-    'browser.screenshot': {
-        title: 'Photograph a page',
-        description: 'Writes a png of the page of a browser node and answers where it is.',
-        effect: 'read',
-        domain: 'pages',
+        domain: 'machine',
         actors: AGENT,
-        input: z.object({ nodeId: browserNode, viewId: operatedView }),
-        output: browserOutcome.extend({
-            // On this machine, outside the project folder; null when nobody has the page open.
-            path: z.string().nullable()
+        input: z.object({
+            search: z.string().nullable().describe('Words the name, id or description of an agent holds; every agent without it'),
+            refresh: z.boolean().nullable().describe('Reads the registry again instead of the copy of the last hour')
+        }),
+        output: RegistryCatalogSchema
+    },
+    'provider.versions': {
+        title: 'Read the versions of the agent CLIs',
+        description:
+            "Reads the version of each agent CLI on this machine, how it was installed and whether that route offers a newer one. Updating one stays a person's, in Settings, Providers.",
+        effect: 'read',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({ refresh: z.boolean().nullable().describe('Asks each route for its newest version again instead of the answer of the last hour') }),
+        output: z.object({ versions: z.array(CliVersionSchema) })
+    },
+    'provider.limits': {
+        title: 'Read the plan of my own account',
+        description:
+            'Reads the plan windows of the account the calling agent runs on, as its CLI last reported them: how much of each is used, when it resets and how that stands against an even pace. Nothing reads a credential or asks the provider.',
+        effect: 'read',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({}),
+        output: z.object({
+            provider: AgentKindSchema,
+            account: z.string().nullable().describe('The account by name; null on a machine without accounts'),
+            plan: z.string().nullable(),
+            checkedAt: z.iso.datetime().nullable().describe('When these numbers came in; null before the first read'),
+            unavailable: z.string().nullable().describe('Why there are no windows, when there are none for a reason'),
+            windows: z.array(
+                z.object({
+                    label: z.string(),
+                    kind: z.string(),
+                    usedPercent: z.number().int(),
+                    resetsAt: z.iso.datetime().nullable(),
+                    evenPacePercent: z
+                        .number()
+                        .int()
+                        .nullable()
+                        .describe('Where usedPercent would stand had the window been spent evenly from its start; null when the CLI named no reset or length'),
+                    pace: PaceSchema.nullable().describe('ahead uses more than that even pace, behind less; null without one')
+                })
+            )
         })
+    },
+    'usage.summary': {
+        title: 'Read AI usage',
+        description:
+            'Reads what the AI CLIs on the machine of this project used over a stretch of days, from their own transcripts: tokens, cost where a price is known, and the models and projects that used most.',
+        effect: 'read',
+        domain: 'machine',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            from: usageDay.nullable().describe('The first day, YYYY-MM-DD; seven days back without it'),
+            to: usageDay.nullable().describe('The last day, YYYY-MM-DD; today without it')
+        }),
+        output: z.object({
+            from: z.string(),
+            to: z.string(),
+            tokens: z.number().int(),
+            // Null when no model used in the stretch has a known price, which is not the same as free.
+            costUsd: z.number().nullable(),
+            sessions: z.number().int(),
+            providers: z.array(z.object({ provider: UsageProviderSchema, tokens: z.number().int(), costUsd: z.number().nullable() })),
+            models: z.array(z.object({ provider: UsageProviderSchema, model: z.string(), tokens: z.number().int(), costUsd: z.number().nullable() })),
+            projects: z.array(z.object({ name: z.string(), tokens: z.number().int(), costUsd: z.number() }))
+        })
+    },
+    'usage.limits': {
+        title: 'Read plan limits',
+        description: 'Reads how far the plan windows of the AI CLIs on the machine of this project are used, as the CLIs report them.',
+        effect: 'read',
+        domain: 'machine',
+        actors: PERSON_AND_VOICE,
+        input: z.object({}),
+        output: z.object({
+            providers: z.array(
+                z.object({
+                    provider: UsageProviderSchema,
+                    // A CLI with several accounts has an entry for each.
+                    account: z.string().nullable().describe('The account these numbers are of, by name; null on a machine without accounts'),
+                    plan: z.string().nullable(),
+                    checkedAt: z.number(),
+                    unavailable: z.string().nullable(),
+                    windows: z.array(
+                        z.object({
+                            label: z.string(),
+                            kind: z.string(),
+                            usedPercent: z.number(),
+                            resetsAt: z.number().nullable(),
+                            evenPacePercent: z
+                                .number()
+                                .nullable()
+                                .describe(
+                                    'Where usedPercent would stand had the window been spent evenly from its start; above it is ahead of that pace. Null when the CLI named no reset or length'
+                                )
+                        })
+                    )
+                })
+            )
+        })
+    },
+    'process.list': {
+        title: 'Read processes',
+        description:
+            'Reads what runs on the machine of this project while its processes panel measures it: the machine as a whole and a group per node, with its busiest processes.',
+        effect: 'read',
+        domain: 'machine',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ limit: z.number().int().min(1).max(20).nullable().describe('Processes per group; 5 without it') }),
+        output: z.object({
+            at: z.number(),
+            cpu: z.number().nullable().describe('Percent of all cores'),
+            memoryUsed: z.number().nullable().describe('Bytes'),
+            memoryTotal: z.number(),
+            groups: z.array(
+                z.object({
+                    kind: ProcessGroupKindSchema,
+                    nodeId: z.string().nullable(),
+                    name: z.string(),
+                    cpu: z.number().nullable().describe('Percent of one core'),
+                    memory: z.number().nullable(),
+                    processes: z.array(z.object({ pid: z.number().int(), name: z.string(), cpu: z.number().nullable(), memory: z.number().nullable() })),
+                    more: z.number().int()
+                })
+            )
+        })
+    },
+    'process.alerts': {
+        title: 'Read process warnings',
+        description:
+            'Reads the warnings the machine of this project raised about what runs in it: an agent gone silent, still busy after its turn, a process eating memory, an agent whose process is gone, an orphan left behind, or a hung usage probe.',
+        effect: 'read',
+        domain: 'machine',
+        actors: PERSON_AND_VOICE,
+        input: z.object({}),
+        output: z.object({
+            alerts: z.array(
+                z.object({
+                    alertId: z.string(),
+                    kind: ProcessAlertKindSchema,
+                    nodeId: z.string().nullable(),
+                    node: z.string().nullable(),
+                    process: z.string().nullable(),
+                    since: z.number(),
+                    value: z.number().nullable().describe('Percent of one core for busy, bytes for memory')
+                })
+            )
+        })
+    },
+    'machine.setIdentity': {
+        title: 'Set what a machine is',
+        description: 'Names a machine, gives it an icon and sets the switches it keeps itself; what is left out stays as it is.',
+        effect: 'external',
+        domain: 'machine',
+        // These switches decide what agents may do on the machine and who reaches it, which stays a person's choice.
+        actors: PERSON,
+        input: EndpointSetIdentityPayloadSchema.partial().extend({
+            endpointId: givenMachine
+        }),
+        output: z.object({ endpointId: z.string(), machine: z.string() })
+    },
+    'machine.setNodeSize': {
+        title: 'Set the default size of a node kind',
+        description:
+            'Sets the size new nodes of a kind take on a machine, the ones agents add included; null puts the kind back to its built-in size. Nodes already on a canvas keep theirs.',
+        effect: 'external',
+        domain: 'machine',
+        // What an agent's nodes look like on a machine is a person's call, so no verb changes it.
+        actors: PERSON,
+        input: EndpointSetNodeSizePayloadSchema.extend({ endpointId: givenMachine }),
+        output: EndpointSetNodeSizePayloadSchema.extend({ endpointId: z.string() })
+    },
+    'machine.revokeAccess': {
+        title: 'Revoke access to a machine',
+        description: "Takes away one client's access to a machine, this client's own included.",
+        effect: 'external',
+        domain: 'machine',
+        // Who reaches a machine is only a person's to decide.
+        actors: PERSON,
+        input: z.object({ endpointId: givenMachine, sessionId: z.string().min(1).describe('The access, by the id the machine lists it under') }),
+        output: z.object({ endpointId: z.string(), sessionId: z.string() })
+    },
+    'computer.control': {
+        title: "Pause, resume or stop an agent's computer use",
+        description: 'What the session bar on the Mac offers: pause the agent that operates an app, let it go on, or stop it.',
+        effect: 'external',
+        domain: 'machine',
+        // The person's own hand on the session bar; an agent never lets itself go on.
+        actors: PERSON,
+        input: z.object({ endpointId: givenMachine, action: ComputerControlActionSchema }),
+        output: z.object({ endpointId: z.string(), action: ComputerControlActionSchema })
+    },
+    'device.control': {
+        title: 'Pause, resume or take over a device an agent operates',
+        description: 'Pauses the agent that operates a device, lets it go on, or takes the device over from it.',
+        effect: 'external',
+        domain: 'machine',
+        // The person's own hand on the device; an agent never lets itself go on.
+        actors: PERSON,
+        input: DeviceControlPayloadSchema.extend({ endpointId: givenMachine }),
+        output: z.object({ endpointId: z.string(), deviceId: z.string(), mode: DeviceControlModeSchema })
+    },
+    'process.dismissAlert': {
+        title: 'Dismiss process warning',
+        description: 'Puts a warning away on the machine; the process it is about keeps running.',
+        effect: 'shared',
+        domain: 'machine',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ alertId: z.string().min(1).describe('The warning, by the alertId process.alerts gives') }),
+        output: z.object({ alertId: z.string(), kind: ProcessAlertKindSchema })
+    },
+    'process.signal': {
+        title: 'Signal process',
+        description: 'Sends a process on the machine SIGINT, SIGTERM or, after confirmation, SIGKILL. A pid that now names another process is refused.',
+        effect: 'external',
+        domain: 'machine',
+        actors: PERSON,
+        input: z.object({ pid: z.number().int().positive(), startTime: z.number(), name: z.string(), signal: ProcessSignalSchema }),
+        output: z.object({ pid: z.number().int(), name: z.string(), signal: ProcessSignalSchema })
     },
     'computer.answerApproval': {
         title: 'Answer a computer use card',

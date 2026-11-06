@@ -26,3 +26,7 @@ export const SessionPortVerifyResultSchema = z.object({
     validForMs: z.number().int().positive().max(SESSION_PORT_VERIFY_MAX_AGE_MS).optional()
 });
 export type SessionPortVerification = z.infer<typeof SessionPortVerifyResultSchema>;
+
+export const SESSION_PORTS_REQUEST_SCHEMAS = {
+    'session.verifyPort': { payload: SessionPortVerifyPayloadSchema, result: SessionPortVerifyResultSchema }
+} as const;

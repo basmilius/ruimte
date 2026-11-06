@@ -1,6 +1,7 @@
 import { AgentKindSchema, TaskResultSchema, TaskStatusSchema } from '@adecore/agent-contracts';
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
-import { ARTIFACT_LIMITS, ArtifactIdSchema, ArtifactVersionIdSchema } from './artifact.ts';
+import { ARTIFACT_LIMITS, ArtifactIdSchema, ArtifactVersionIdSchema, ArtifactListResultSchema, ArtifactGetResultSchema } from './artifact.ts';
 import { GitBundlePutPayloadSchema, GitBundlePutResultSchema, GitBundleResultSchema } from './git.ts';
 import { RuntimeModeSchema } from './model.ts';
 import { ProjectEdgeSchema, ProjectNodeSchema } from './project.ts';
@@ -188,3 +189,30 @@ export const PeerArtifactReadResultSchema = z.object({
     data: z.string().max(Math.ceil(PEER_ARTIFACT_PIECE_BYTES / 3) * 4)
 });
 export type PeerArtifactReadResult = z.infer<typeof PeerArtifactReadResultSchema>;
+
+export const PEER_REQUEST_SCHEMAS = {
+    // Any client may link, change and unlink: only a person reaches these, an agent has no socket.
+    'peer.list': { payload: EmptySchema, result: PeerListResultSchema },
+    'peer.bind': { payload: PeerBindPayloadSchema, result: PeerLinkSchema },
+    'peer.setCeiling': { payload: PeerSetCeilingPayloadSchema, result: EmptySchema },
+    'peer.unbind': { payload: PeerUnbindPayloadSchema, result: EmptySchema },
+    // The asking client holds the project from then on, as one that opened it.
+    'peer.placeNodes': { payload: PeerPlaceNodesPayloadSchema, result: EmptySchema },
+    // What a machine that works here asks (the peer list): each starts with the link a person made, and none is a person's.
+    'peer.taskStart': { payload: PeerTaskStartPayloadSchema, result: PeerTaskStartResultSchema },
+    'peer.taskStop': { payload: PeerTaskStopPayloadSchema, result: EmptySchema },
+    'peer.result': { payload: PeerResultPayloadSchema, result: PeerResultResultSchema },
+    'peer.bundlePut': { payload: PeerBundlePutPayloadSchema, result: PeerBundlePutResultSchema },
+    'peer.bundleRead': { payload: PeerBundleReadPayloadSchema, result: PeerBundleReadResultSchema },
+    'peer.close': { payload: PeerClosePayloadSchema, result: EmptySchema },
+    'peer.artifactList': { payload: PeerArtifactListPayloadSchema, result: ArtifactListResultSchema },
+    'peer.artifactGet': { payload: PeerArtifactGetPayloadSchema, result: ArtifactGetResultSchema },
+    'peer.artifactRead': { payload: PeerArtifactReadPayloadSchema, result: PeerArtifactReadResultSchema }
+} as const;
+
+export const PEER_EVENT_SCHEMAS = {
+    // The links of other machines to projects here changed, so the list in settings reloads.
+    'peer.changed': EmptySchema,
+    // Sent to the machine that gave the task, over its own link only.
+    'peer.taskSettled': PeerTaskSettledEventSchema
+} as const;

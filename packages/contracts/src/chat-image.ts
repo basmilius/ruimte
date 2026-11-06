@@ -74,3 +74,8 @@ export function sniffImageMime(bytes: Uint8Array): 'image/png' | 'image/jpeg' | 
 
     return brands.some((brand) => brand === 'mif1' || brand === 'msf1') ? 'image/heif' : null;
 }
+
+export const CHAT_IMAGE_REQUEST_SCHEMAS = {
+    'chat.imageTarget': { payload: ChatImageTargetPayloadSchema, result: ChatImageTargetResultSchema },
+    'chat.saveImage': { payload: ChatImageSavePayloadSchema, result: ChatImageSaveResultSchema }
+} as const;

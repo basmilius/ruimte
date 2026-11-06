@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { BrokerUrlSchema, PeerStatementSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
 
@@ -54,3 +55,15 @@ export const RemoteStatusEventSchema = z.object({
     unstartedNodeIds: z.array(z.string().min(1).max(256)).max(200).optional()
 });
 export type RemoteStatusEvent = z.infer<typeof RemoteStatusEventSchema>;
+
+export const REMOTE_REQUEST_SCHEMAS = {
+    'remote.list': { payload: RemoteListPayloadSchema, result: RemoteListResultSchema },
+    'remote.link': { payload: RemoteLinkPayloadSchema, result: RemoteLinkSchema },
+    'remote.connect': { payload: RemoteConnectPayloadSchema, result: EmptySchema },
+    'remote.unlink': { payload: RemoteUnlinkPayloadSchema, result: EmptySchema }
+} as const;
+
+export const REMOTE_EVENT_SCHEMAS = {
+    // The link to another machine opened, was lost or is waiting to be tried again.
+    'remote.status': RemoteStatusEventSchema
+} as const;

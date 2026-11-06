@@ -1,41 +1,24 @@
 import {
+    AgentKindSchema,
+    AgentStatusSchema,
+    ProviderAccountIdSchema,
+    RuntimeModeSchema,
     TerminalPrepareSourceSchema,
     TerminalPreparePreviewResultSchema,
     TerminalPrepareResultSchema,
-    AgentKindSchema,
-    AgentStatusSchema,
-    ChatAttachmentUploadsSchema,
     ChatBackgroundTaskSchema,
     ChatCheckpointDiffSchema,
-    ChatDeliverySchema,
     ChatExternalResultSchema,
-    ChatQuoteSourceSchema,
     ChatSearchResultSchema,
-    ChatSendResultSchema,
-    ChatSubagentStatusSchema,
-    ChatUiChoicePayloadSchema,
-    ProviderAccountIdSchema,
-    RuntimeModeSchema,
-    TaskSchema
+    ChatSubagentStatusSchema
 } from '@ruimte/contracts';
 import { z } from 'zod';
-import { MAX_PER_CALL, MAX_TERMINAL_READ_LINES } from '../limits.ts';
 import {
-    ActionViewKindSchema,
-    ActionCanvasNodeKindSchema,
-    viewId,
-    nodeId,
-    revision,
+    PERSON_AND_VOICE,
+    PERSON,
     givenName,
     forActors,
-    agentField,
-    ARRANGE_LAYOUTS,
-    PERSON_AND_VOICE,
     PERSON_VOICE_AND_AGENT,
-    CLIENT_ACTORS,
-    AGENT,
-    PERSON,
-    PERSON_AND_AGENT,
     chatTarget,
     terminalTarget,
     chatNamed,
@@ -45,12 +28,10 @@ import {
     modelOptions,
     modelSelection,
     questionAnswers,
-    recentMessages,
-    flagColor,
-    canvasLine
+    recentMessages
 } from './fields.ts';
 
-export const SESSION_ACTIONS = {
+export const SESSIONS_ACTIONS = {
     'terminal.preparePreview': {
         title: 'Preview terminal input',
         description: 'Shows one completed chat code block and suitable empty shells on the chat machine. Writes no input.',
@@ -68,41 +49,6 @@ export const SESSION_ACTIONS = {
         effect: 'local',
         input: z.object({ endpointId: z.string().min(1), machineId: z.string().min(1), token: z.string().min(1) }),
         output: TerminalPrepareResultSchema
-    },
-    'terminal.clear': {
-        title: 'Clear terminal',
-        description: 'Clears the screen and scrollback of a terminal view or node, after confirmation. The process in it keeps running.',
-        effect: 'external',
-        domain: 'communicate',
-        // An agent never types into or clears the session of another node.
-        actors: PERSON_AND_VOICE,
-        input: z.object({ terminalId: z.string().min(1) }),
-        output: z.object({ terminalId: z.string().min(1), terminal: z.string() })
-    },
-    'chat.send': {
-        title: 'Send AI Chat prompt',
-        description: 'Submits a direct prompt to an existing AI Chat view or node.',
-        effect: 'external',
-        domain: 'communicate',
-        actors: CLIENT_ACTORS,
-        input: z.object({
-            chatId: z.string().min(1),
-            // Not trimmed here: the composer sends what was typed, and a message of attachments alone has no text.
-            prompt: z.string(),
-            delivery: forActors(PERSON_AND_VOICE, ChatDeliverySchema).describe('Steer the running agent, or queue until its current turn finishes'),
-            mentions: forActors(PERSON, z.array(z.string().min(1)).max(64)).describe('Paths picked with @'),
-            skills: forActors(PERSON, z.array(z.string().min(1)).max(16)).describe('Skills picked with $'),
-            chats: forActors(PERSON, z.array(z.string().min(1)).max(16)).describe('Chats of this project picked with #'),
-            quoteSource: forActors(PERSON, ChatQuoteSourceSchema).describe('The reply a quote at the head of the prompt was taken from'),
-            attachments: forActors(PERSON, ChatAttachmentUploadsSchema).describe('Files dropped or pasted into the composer'),
-            references: forActors(PERSON, z.array(z.string().min(1)).max(16)).describe('Views and nodes of this project picked with #')
-        }),
-        output: z.object({
-            chatId: z.string().min(1),
-            chat: z.string(),
-            queued: z.boolean(),
-            turnId: z.string().min(1).optional()
-        })
     },
     'chat.search': {
         title: 'Search the chats of the project',
@@ -124,58 +70,6 @@ export const SESSION_ACTIONS = {
         actors: PERSON,
         input: z.object({}),
         output: ChatExternalResultSchema
-    },
-    'chat.uiChoice': {
-        title: 'Send AI Chat choice',
-        description: 'Sends a choice from a completed reply using its stored label and visible context.',
-        effect: 'external',
-        domain: 'communicate',
-        actors: PERSON,
-        input: ChatUiChoicePayloadSchema,
-        output: ChatSendResultSchema
-    },
-    'chat.clear': {
-        title: 'Clear AI Chat',
-        description: 'Clears conversation history, attachments and plans, and stops the current turn after confirmation. Keeps the chat node or view.',
-        effect: 'external',
-        domain: 'communicate',
-        actors: PERSON_AND_VOICE,
-        input: z.object({
-            chatId: z.string().min(1),
-            // The composer clears without it first, so a turn in the way comes back as chat-busy and the person is asked.
-            force: forActors(PERSON, z.boolean()).describe('Stops a running turn instead of refusing')
-        }),
-        output: z.object({ chatId: z.string().min(1), chat: z.string() })
-    },
-    'chat.read': {
-        title: 'Read recent AI Chat messages',
-        description:
-            'Reads a limited recent excerpt of an AI Chat of this project, also one nobody opened in this window, without including reasoning or tool output. A null limit reads the last 20 messages.',
-        effect: 'read',
-        domain: 'communicate',
-        actors: CLIENT_ACTORS,
-        input: z.object({ chatId: z.string().min(1), limit: z.number().int().min(1).max(20).nullable() }),
-        output: z.object({
-            chatId: z.string().min(1),
-            chat: z.string(),
-            messages: z.array(
-                z.object({
-                    role: z.enum(['user', 'assistant']),
-                    text: z.string(),
-                    createdAt: z.number()
-                })
-            ),
-            truncated: z.boolean()
-        })
-    },
-    'terminal.read': {
-        title: 'Read terminal output',
-        description: 'Reads the last lines on the screen and in the scrollback of a terminal that is open in this window. A null lines reads the last 40.',
-        effect: 'read',
-        domain: 'communicate',
-        actors: PERSON_AND_VOICE,
-        input: z.object({ terminalId: terminalTarget, lines: z.number().int().min(1).max(MAX_TERMINAL_READ_LINES).nullable() }),
-        output: terminalNamed.extend({ lines: z.array(z.string()), truncated: z.boolean(), exited: z.boolean() })
     },
     'chat.inspect': {
         title: 'Inspect AI Chat',
@@ -475,321 +369,5 @@ export const SESSION_ACTIONS = {
         actors: PERSON_AND_VOICE,
         input: z.object({ terminalId: terminalTarget }),
         output: terminalNamed
-    },
-    'view.list': {
-        title: 'List views',
-        description: 'Lists the views of the project in sidebar order, with whether you may delete each and why.',
-        effect: 'read',
-        domain: 'views',
-        actors: AGENT,
-        input: z.object({}),
-        output: z.object({
-            views: z.array(
-                z.object({
-                    viewId,
-                    kind: ActionViewKindSchema,
-                    name: z.string(),
-                    deletable: z.boolean(),
-                    why: z.string(),
-                    // The Lucide name of the mark view icon gave it; null for a view that wears the mark of its kind.
-                    icon: z.string().nullable(),
-                    flag: flagColor.nullable()
-                })
-            ),
-            // The view the caller is in: the canvas it is a node on, or its own id when it is a view.
-            self: z.string(),
-            // Of the project file.
-            revision
-        })
-    },
-    'view.setIcon': {
-        title: 'Mark view',
-        description: 'Gives a view a mark of its own from the Lucide names the picker has, or takes its mark away with null.',
-        effect: 'shared',
-        domain: 'views',
-        actors: PERSON_VOICE_AND_AGENT,
-        input: z.object({ viewId, icon: z.string().min(1).nullable().describe('A Lucide name from the set the picker has') }),
-        output: z.object({ viewId, kind: ActionViewKindSchema, icon: z.object({ kind: z.literal('lucide'), value: z.string() }).nullable() })
-    },
-    'view.move': {
-        title: 'Move view',
-        description: 'Moves a view to another place in the sidebar.',
-        effect: 'shared',
-        domain: 'views',
-        actors: PERSON_AND_AGENT,
-        input: z.object({ viewId, afterViewId: viewId.nullable().describe('The view it goes right under; without one it goes to the top') }),
-        output: z.object({ viewId, kind: ActionViewKindSchema, index: z.number().int() })
-    },
-    'node.list': {
-        title: 'List canvas nodes',
-        description: 'Lists the nodes of a canvas, where each stands and the group it is in.',
-        effect: 'read',
-        domain: 'canvas',
-        actors: AGENT,
-        input: z.object({ viewId }),
-        output: z.object({
-            viewId,
-            nodes: z.array(
-                z.object({
-                    nodeId,
-                    kind: ActionCanvasNodeKindSchema,
-                    title: z.string(),
-                    x: z.number(),
-                    y: z.number(),
-                    w: z.number(),
-                    h: z.number(),
-                    groupId: z.string().nullable(),
-                    flag: flagColor.nullable(),
-                    snoozedUntil: z.iso.datetime().nullable().describe('When the snooze a person put on the node ends; null for none')
-                })
-            ),
-            // The caller when it is one of these nodes.
-            self: z.string().nullable(),
-            // Of the project file.
-            revision
-        })
-    },
-    'node.update': {
-        title: 'Write in a note',
-        description: 'Writes the body of a note on a canvas on screen; append puts the text under what is there instead of over it.',
-        agentDescription:
-            'Writes the body of a note you made or a line joins you to, or any note of the canvas a chat view names; append puts the text under what is there instead of over it.',
-        effect: 'shared',
-        domain: 'content',
-        actors: PERSON_VOICE_AND_AGENT,
-        input: z.object({
-            viewId,
-            nodeId,
-            text: z.string().describe('What to write'),
-            append: z.boolean().describe('Adds the text as a line under what is there instead of replacing the body')
-        }),
-        output: z.object({ viewId, nodeId, lines: z.number().int(), characters: z.number().int(), changed: z.boolean() })
-    },
-    'node.updateMany': {
-        title: 'Write in notes',
-        description:
-            'Writes the bodies of several notes of one canvas in one write, each the way node.update writes one. Every note is checked before any is written, so a refusal writes none.',
-        agentDescription: 'Writes in several notes in one write, each a note you made or a line joins you to, or any note of the canvas a chat view names.',
-        effect: 'shared',
-        domain: 'content',
-        actors: AGENT,
-        input: z.object({
-            viewId,
-            nodes: z
-                .array(
-                    z.object({
-                        nodeId,
-                        text: z.string().describe('What to write'),
-                        append: z.boolean().describe('Adds the text as a line under what is there instead of replacing the body')
-                    })
-                )
-                .min(1)
-                .max(MAX_PER_CALL)
-        }),
-        output: z.object({
-            viewId,
-            nodes: z.array(z.object({ nodeId, lines: z.number().int(), characters: z.number().int(), changed: z.boolean() }))
-        })
-    },
-    'flag.set': {
-        title: 'Flag',
-        description: 'Puts a colored flag on views and nodes, or takes it off with null. A flag is personal: it never goes into the shared project file.',
-        effect: 'shared',
-        domain: 'views',
-        actors: PERSON_AND_AGENT,
-        input: z.object({
-            ids: z.array(z.string().min(1)).min(1).describe('The views and nodes to flag, by id'),
-            color: flagColor.nullable().describe('The color of the flag; null takes it off')
-        }),
-        output: z.object({
-            flags: z.array(z.object({ id: z.string(), target: z.enum(['view', 'node']), previous: flagColor.nullable() })),
-            color: flagColor.nullable(),
-            changed: z.boolean()
-        })
-    },
-    'node.arrange': {
-        title: 'Arrange canvas nodes',
-        description: 'Lays nodes out in a grid, a row or a column without overlap.',
-        effect: 'shared',
-        domain: 'canvas',
-        actors: AGENT,
-        input: z.object({
-            viewId,
-            nodeIds: z.array(nodeId).min(1).describe('The nodes to tidy; they are laid out in the order they are named'),
-            layout: z.enum(ARRANGE_LAYOUTS),
-            columns: z
-                .number()
-                .int()
-                .min(1)
-                .nullable()
-                .describe('How many columns the grid gets; without it as square as the count allows, so 5 nodes are 3 and 2')
-        }),
-        output: z.object({ viewId, nodes: z.array(z.object({ nodeId, x: z.number(), y: z.number() })), changed: z.boolean() })
-    },
-    'link.list': {
-        title: 'List canvas lines',
-        description: 'Lists the lines of a canvas.',
-        effect: 'read',
-        domain: 'canvas',
-        actors: AGENT,
-        input: z.object({ viewId }),
-        // The revision is that of the project file.
-        output: z.object({ viewId, edges: z.array(canvasLine), revision })
-    },
-    'link.create': {
-        title: 'Draw canvas lines',
-        description: 'Draws a context line between nodes of one canvas; between two agents it draws both ways.',
-        effect: 'shared',
-        domain: 'canvas',
-        actors: PERSON_AND_AGENT,
-        input: z.object({
-            viewId,
-            from: nodeId.nullable().describe('Where the line starts; without it, you'),
-            to: z.array(nodeId).min(1).describe('The nodes the line runs into'),
-            label: agentField(givenName).describe('What the line is called on the canvas'),
-            role: agentField(z.string().min(1)).describe('What the line is for')
-        }),
-        output: z.object({
-            viewId,
-            edges: z.array(
-                z.object({
-                    edgeId: z.string(),
-                    from: nodeId,
-                    to: nodeId,
-                    state: z.enum(['new', 'updated', 'existing']),
-                    // Out for the line asked for, back for the one drawn the other way between two agents.
-                    way: z.enum(['out', 'back'])
-                })
-            )
-        })
-    },
-    'link.delete': {
-        title: 'Remove canvas line',
-        description: 'Removes one line whose ends are both yours.',
-        effect: 'shared',
-        domain: 'canvas',
-        actors: AGENT,
-        input: z.object({ viewId, edgeId: z.string().min(1) }),
-        output: z.object({ viewId, ...canvasLine.shape })
-    },
-    'link.deleteMany': {
-        title: 'Remove canvas lines',
-        description:
-            'Removes several lines of one canvas in one write, each the way link.delete removes one. Every line is checked before any goes, so a refusal removes none.',
-        effect: 'shared',
-        domain: 'canvas',
-        actors: AGENT,
-        input: z.object({ viewId, edgeIds: z.array(z.string().min(1)).min(1).max(MAX_PER_CALL) }),
-        output: z.object({ viewId, edges: z.array(canvasLine) })
-    },
-    'tool.list': {
-        title: 'List extension tools',
-        description: 'Lists the tools the extensions on this machine offer agents, each with what it does and the input it takes.',
-        effect: 'read',
-        domain: 'agents',
-        actors: AGENT,
-        input: z.object({}),
-        output: z.object({ tools: z.array(z.object({ id: z.string(), description: z.string(), parameters: z.string() })) })
-    },
-    'tool.run': {
-        title: 'Run an extension tool',
-        description: 'Runs a tool an extension on this machine offers, with its input as JSON, and prints what it answers.',
-        effect: 'external',
-        domain: 'agents',
-        actors: AGENT,
-        input: z.object({
-            id: z.string().min(1).max(256).describe('The tool, as tool list prints it'),
-            input: z.string().max(100_000).describe('Its input, as JSON')
-        }),
-        output: z.object({ text: z.string() })
-    },
-    'agent.alert': {
-        title: 'Notify the person',
-        description: 'Sends the person a notification from your own session. Use only when they asked for one, such as when your work is done.',
-        effect: 'external',
-        domain: 'communicate',
-        actors: AGENT,
-        input: z.object({ text: z.string().trim().min(1).max(500).describe('The notification message') }),
-        output: z.object({ nodeId })
-    },
-    'agent.notify': {
-        title: 'Notify an agent',
-        description: 'Sends a message to the agent in another node, along a line that runs from you into it, which gives a chat between turns a turn on it.',
-        effect: 'external',
-        domain: 'communicate',
-        actors: AGENT,
-        input: z.object({ nodeId: nodeId.describe('The node to notify, by id'), text: z.string().min(1).describe('The message') }),
-        output: z.object({
-            nodeId,
-            // Now when it was acted on as it arrived, waiting when it is held for the next turn of that node.
-            at: z.enum(['now', 'waiting']),
-            detail: z.string(),
-            // What the node is called now, which a thread keeps showing once it is gone.
-            title: z.string().optional()
-        })
-    },
-    'agent.answer': {
-        title: 'Answer an agent',
-        description: 'Answers a question an agent you opened asked and waits on, the way a person answers it in that node; an approval stays with the person.',
-        effect: 'external',
-        domain: 'agents',
-        actors: AGENT,
-        input: z.object({
-            nodeId: nodeId.describe('The agent that asked, by id; only one you opened yourself'),
-            requestId: z.string().min(1).describe('The request the question came with, as the > Question line of a read or the note about it names it'),
-            answer: z
-                .string()
-                .nullable()
-                .describe('The answer to a request with one question: a choice label as written, several separated by a comma, or your own words'),
-            answers: z.record(z.string(), z.string()).nullable().describe('The answers to a request with several questions, keyed by question id')
-        }),
-        output: z.object({ nodeId, requestId: z.string() })
-    },
-    'task.list': {
-        title: 'List tasks',
-        description:
-            'Lists the tasks you gave and the task you were given that are still open or have yet to wake you: id, direction, status, the other node, title, wake, result, batch.',
-        effect: 'read',
-        domain: 'agents',
-        actors: AGENT,
-        input: z.object({
-            all: z.boolean().describe('Also lists the history: tasks that settled and already woke their chat, and a task you were given that settled')
-        }),
-        output: z.object({
-            tasks: z.array(TaskSchema),
-            // What the list left out without all: settled tasks that already reported.
-            hidden: z.number().int()
-        })
-    },
-    'task.create': {
-        title: 'Give a task',
-        description: 'Gives a task to an agent you opened that is already running, whose result wakes you the way the task of a new one does.',
-        effect: 'external',
-        domain: 'agents',
-        actors: AGENT,
-        input: z.object({
-            nodeId: nodeId.describe('The agent to give the task to, by id; only a chat you opened yourself'),
-            prompt: z.string().nullable().describe('What the task asks'),
-            promptFile: agentField(z.string().min(1)).describe('The same assignment out of a file, for one with exact bytes'),
-            title: givenName.nullable().describe('The title of the task; without one the first line of the prompt')
-        }),
-        output: z.object({
-            taskId: z.string(),
-            nodeId,
-            // Now for an agent that starts on it as you call, waiting for one still in a turn.
-            at: z.enum(['now', 'waiting'])
-        })
-    },
-    'task.complete': {
-        title: 'Report a task',
-        description: 'Reports the result of the task you were opened with, which wakes the chat that gave it.',
-        effect: 'external',
-        domain: 'agents',
-        actors: AGENT,
-        input: z.object({
-            result: z.string().nullable().describe('The result'),
-            resultFile: agentField(z.string().min(1)).describe('The same result out of a file inside the project folder')
-        }),
-        output: z.object({ taskId: z.string(), parentId: nodeId })
     }
 } as const;

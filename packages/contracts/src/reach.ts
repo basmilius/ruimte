@@ -70,3 +70,7 @@ export const EndpointReachPayloadSchema = z.object({ check: z.boolean().optional
 
 // Null while no check has run, such as on a machine with nothing to check yet.
 export const EndpointReachResultSchema = z.object({ reach: ReachCheckSchema.nullable() });
+
+export const REACH_REQUEST_SCHEMAS = {
+    'endpoint.reach': { payload: EndpointReachPayloadSchema, result: EndpointReachResultSchema }
+} as const;

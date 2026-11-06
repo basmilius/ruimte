@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { AgentKindSchema, AgentStatusSchema } from './agent.ts';
 import { flagOf } from './project-flags.ts';
@@ -119,3 +120,11 @@ export function projectSidebarViews(views: readonly ProjectView[], shared: reado
             };
         });
 }
+
+export const PROJECT_SIDEBAR_REQUEST_SCHEMAS = {
+    'project.sidebar': { payload: EmptySchema, result: ProjectSidebarResultSchema }
+} as const;
+
+export const PROJECT_SIDEBAR_EVENT_SCHEMAS = {
+    'project.summary': ProjectSummaryEventSchema
+} as const;

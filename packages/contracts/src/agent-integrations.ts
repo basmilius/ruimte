@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
 
@@ -57,3 +58,8 @@ export const AgentIntegrationSetResultSchema = z.object({
     summary: AgentIntegrationsSummarySchema,
     report: z.array(AgentIntegrationReportSchema)
 });
+
+export const AGENT_INTEGRATIONS_REQUEST_SCHEMAS = {
+    'endpoint.agentIntegrations': { payload: EmptySchema, result: AgentIntegrationsResultSchema },
+    'endpoint.setAgentIntegration': { payload: AgentIntegrationSetPayloadSchema, result: AgentIntegrationSetResultSchema }
+} as const;

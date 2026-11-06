@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import {
     BrokerSettingSchema,
     MachineIdSchema,
@@ -335,3 +336,25 @@ export const EndpointSignPeerAccessResultSchema = z.object({
 export const EndpointLeaveAccountResultSchema = z.object({
     revoked: z.number().int().min(0)
 });
+
+export const AUTH_REQUEST_SCHEMAS = {
+    'usage.startup': { payload: UsageStartupPayloadSchema, result: EmptySchema },
+    'usage.count': { payload: UsageCountPayloadSchema, result: EmptySchema },
+    'usage.timing': { payload: UsageTimingPayloadSchema, result: EmptySchema },
+    'endpoint.info': { payload: EndpointInfoPayloadSchema, result: EndpointInfoSchema },
+    'endpoint.setIdentity': { payload: EndpointSetIdentityPayloadSchema, result: EndpointInfoSchema },
+    'endpoint.settings': { payload: EndpointSettingsSchema, result: EndpointInfoSchema },
+    'endpoint.setNodeSize': { payload: EndpointSetNodeSizePayloadSchema, result: EndpointInfoSchema },
+    'endpoint.closedLidRule': { payload: EndpointClosedLidRulePayloadSchema, result: EndpointInfoSchema },
+    'endpoint.signPeerAccess': { payload: EndpointSignPeerAccessPayloadSchema, result: EndpointSignPeerAccessResultSchema },
+    'endpoint.signRegistration': { payload: EndpointSignRegistrationPayloadSchema, result: EndpointSignRegistrationResultSchema },
+    'endpoint.leaveAccount': { payload: EmptySchema, result: EndpointLeaveAccountResultSchema },
+    'auth.sessions': { payload: EmptySchema, result: AuthSessionsResultSchema },
+    'auth.revoke': { payload: AuthRevokePayloadSchema, result: EmptySchema }
+} as const;
+
+export const AUTH_EVENT_SCHEMAS = {
+    'endpoint.changed': EndpointChangedEventSchema,
+    // To the desktop app on this machine only: a person asked another client to install the update.
+    'endpoint.updateInstall': EmptySchema
+} as const;
