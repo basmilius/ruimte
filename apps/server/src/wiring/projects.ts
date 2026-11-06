@@ -1,10 +1,12 @@
 import { chatIsWorking } from '@ruimte/contracts';
 import { StartClaims } from '../canvas/start-claims.ts';
 import type { ComputerUse } from '../computer/computer-use.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import { errorText } from '../error-text.ts';
 import { isTrackedPath } from '../git/ignore.ts';
 import { DiagramStore } from '../projects/diagram-store.ts';
 import { DrawingStore } from '../projects/drawing-store.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { commandsSet } from '../sessions/command-approvals.ts';
 import { modesSet } from '../sessions/mode-approvals.ts';
@@ -38,6 +40,7 @@ export interface ProjectsBundle {
 interface ProjectsInput {
     home: string;
     machineId: string;
+    machineHome: MachineHome;
     stores: AgentStores;
     agents: AgentsBundle;
     computer: ComputerUse;
@@ -51,7 +54,7 @@ interface ProjectsInput {
     };
 }
 
-export async function wireProjects({ home, machineId, stores, agents, computer, later }: ProjectsInput): Promise<ProjectsBundle> {
+export async function wireProjects({ home, machineId, machineHome, stores, agents, computer, later }: ProjectsInput): Promise<ProjectsBundle> {
     const { sessions, chats } = agents;
     const endChat = (nodeId: string, closing: boolean): Promise<void> => (closing ? chats.stop(nodeId, PROJECT_CLOSED_REASON) : chats.kill(nodeId));
 
@@ -63,61 +66,67 @@ export async function wireProjects({ home, machineId, stores, agents, computer, 
         await later.work().endChildren.owe(nodeId);
         await (kind === 'terminal' ? sessions.kill(nodeId) : endChat(nodeId, closing)).catch(() => undefined);
     };
-    const store = new ProjectStore(home, {
-        tracked: isTrackedPath,
-        endSession,
-        personSaved: async (folder, before, after) => {
-            for (const { nodeId, command, cwd: nodeCwd } of commandsSet(before, after)) {
-                // A terminal without a cwd of its own starts in the project folder, as the client creates it.
-                const cwd = nodeCwd ?? folder;
-                try {
-                    await stores.commandApprovals.approve(folder, nodeId, command, cwd);
-                } catch (e) {
-                    // Not approved is only asked again; the save itself already landed.
-                    console.error(`Approving the command of ${nodeId} failed:`, errorText(e));
-                    continue;
+    const overlays = projectOverlays(home, machineHome);
+    const store = new ProjectStore(
+        home,
+        {
+            tracked: isTrackedPath,
+            endSession,
+            personSaved: async (folder, before, after) => {
+                for (const { nodeId, command, cwd: nodeCwd } of commandsSet(before, after)) {
+                    // A terminal without a cwd of its own starts in the project folder, as the client creates it.
+                    const cwd = nodeCwd ?? folder;
+                    try {
+                        await stores.commandApprovals.approve(folder, nodeId, command, cwd);
+                    } catch (e) {
+                        // Not approved is only asked again; the save itself already landed.
+                        console.error(`Approving the command of ${nodeId} failed:`, errorText(e));
+                        continue;
+                    }
+                    sessions.runApproved(nodeId, command, cwd);
                 }
-                sessions.runApproved(nodeId, command, cwd);
-            }
-            for (const { nodeId, mode } of modesSet(before, after)) {
-                // Not written down narrows the node to the mode its person picks for new terminals, which is safe to retry.
-                await stores.modeApprovals
-                    .approve(folder, nodeId, mode)
-                    .catch((e: unknown) => console.error(`Approving the mode of ${nodeId} failed:`, errorText(e)));
-            }
-        },
-        launches: {
-            opened: (projectId) => void later.launches().runner.opened(projectId),
-            running: (projectId) => later.launches().runner.running(projectId),
-            end: (projectId) => later.launches().runner.end(projectId)
-        },
-        language: { end: (projectId) => later.language().host.end(projectId) },
-        provenance: { forget: (projectId) => later.language().provenance.forget(projectId) },
-        databases: {
-            closeProject: (projectId) => {
-                later.databases().connections.closeProject(projectId);
-                later.databases().agents.letGo(projectId);
+                for (const { nodeId, mode } of modesSet(before, after)) {
+                    // Not written down narrows the node to the mode its person picks for new terminals, which is safe to retry.
+                    await stores.modeApprovals
+                        .approve(folder, nodeId, mode)
+                        .catch((e: unknown) => console.error(`Approving the mode of ${nodeId} failed:`, errorText(e)));
+                }
             },
-            forgetProject: (projectId) => later.databases().snapshots.forgetProject(projectId)
-        },
-        templates: { closeProject: (projectId) => later.templates().store.closeProject(projectId) },
-        bindings: {
-            machineId,
-            started: async (nodeId) => sessions.get(nodeId) !== undefined || stores.lineage.madeBy(nodeId) !== null || (await chats.readChat(nodeId)) !== null
-        },
-        viewFiles: () => [drawings, diagrams],
-        closing: (name, nodeIds) =>
-            failTasksOfClosedProject(
-                { tasks: stores.tasks, locate: (id) => store.index.locate(id), coordinator: later.work().tasks.coordinator },
-                name,
-                nodeIds
-            ),
-        chatWorking: (chatId) => {
-            const session = chats.get(chatId);
+            launches: {
+                opened: (projectId) => void later.launches().runner.opened(projectId),
+                running: (projectId) => later.launches().runner.running(projectId),
+                end: (projectId) => later.launches().runner.end(projectId)
+            },
+            language: { end: (projectId) => later.language().host.end(projectId) },
+            provenance: { forget: (projectId) => later.language().provenance.forget(projectId) },
+            databases: {
+                closeProject: (projectId) => {
+                    later.databases().connections.closeProject(projectId);
+                    later.databases().agents.letGo(projectId);
+                },
+                forgetProject: (projectId) => later.databases().snapshots.forgetProject(projectId)
+            },
+            templates: { closeProject: (projectId) => later.templates().store.closeProject(projectId) },
+            bindings: {
+                machineId,
+                started: async (nodeId) =>
+                    sessions.get(nodeId) !== undefined || stores.lineage.madeBy(nodeId) !== null || (await chats.readChat(nodeId)) !== null
+            },
+            viewFiles: () => [drawings, diagrams],
+            closing: (name, nodeIds) =>
+                failTasksOfClosedProject(
+                    { tasks: stores.tasks, locate: (id) => store.index.locate(id), coordinator: later.work().tasks.coordinator },
+                    name,
+                    nodeIds
+                ),
+            chatWorking: (chatId) => {
+                const session = chats.get(chatId);
 
-            return session !== undefined && (session.busy || chatIsWorking(session.info));
-        }
-    });
+                return session !== undefined && (session.busy || chatIsWorking(session.info));
+            }
+        },
+        overlays
+    );
     await store.hiddenAgents.load();
     await store.remote.load();
     await store.peers.load();

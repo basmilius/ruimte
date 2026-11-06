@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ServerFrame } from '@ruimte/contracts';
+import { projectOverlays } from '../../projects/overlays.ts';
 import { projectLinks } from '../../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../../testing/test-daemon.ts';
@@ -20,7 +21,7 @@ beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-peer-chat-start-'));
     folder = join(root, 'repo');
     await mkdir(folder, { recursive: true });
-    store = new ProjectStore(join(root, 'home'), projectLinks());
+    store = new ProjectStore(join(root, 'home'), projectLinks(), projectOverlays(join(root, 'home')));
     projectId = (await store.openProject({ folder })).summary.projectId;
     await store.peers.bind(MACHINE, 'Studio', projectId);
     daemon = await bootTestDaemon({

@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { projectOverlays } from '../../apps/server/src/projects/overlays.ts';
 import { projectLinks } from '../../apps/server/src/projects/project-file-test-helpers';
 import { ProjectStore } from '../../apps/server/src/projects/project-store';
 
@@ -9,7 +10,7 @@ const viewsPerProject = Number(process.env.BENCH_VIEWS ?? 100);
 const runs = Number(process.env.BENCH_RUNS ?? 9);
 const root = await mkdtemp(join(tmpdir(), 'ruimte-sidebar-store-'));
 const home = join(root, 'home');
-const seed = new ProjectStore(home, projectLinks());
+const seed = new ProjectStore(home, projectLinks(), projectOverlays(home));
 let store: ProjectStore | undefined;
 try {
     for (let project = 0; project < count; project++) {
@@ -27,7 +28,7 @@ try {
         seed.release(opened.summary.projectId);
     }
     seed.closeAll();
-    store = new ProjectStore(home, projectLinks());
+    store = new ProjectStore(home, projectLinks(), projectOverlays(home));
     const warming = performance.now();
     await store.warmIndex();
     const warmIndexMs = performance.now() - warming;

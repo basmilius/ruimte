@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { ProjectChatView } from '@ruimte/contracts';
 import { initRepo } from '../git/test-repo.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { chatViewsOf, projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { scratchFolderOf } from '../projects/scratch-folder.ts';
@@ -23,7 +24,7 @@ function chatViews(projectId: string): Promise<ProjectChatView[]> {
 
 beforeEach(async () => {
     root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-scratch-')));
-    store = new ProjectStore(join(root, 'home'), projectLinks(), new FakeWatch());
+    store = new ProjectStore(join(root, 'home'), projectLinks(), projectOverlays(join(root, 'home')), new FakeWatch());
 });
 
 afterEach(async () => {
@@ -64,7 +65,7 @@ describe('a new chat outside any project', () => {
     test('a home inside a git checkout is refused and makes nothing', async () => {
         const checkout = join(root, 'checkout');
         await initRepo(checkout, { 'README.md': 'hello\n' });
-        const inside = new ProjectStore(join(checkout, 'home'), projectLinks(), new FakeWatch());
+        const inside = new ProjectStore(join(checkout, 'home'), projectLinks(), projectOverlays(join(checkout, 'home')), new FakeWatch());
 
         const refusal = await newScratchChat(inside, {}).catch((e: unknown) => e);
 

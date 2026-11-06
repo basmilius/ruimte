@@ -7,6 +7,7 @@ import { fileExists } from '@adecore/utils/fs';
 import type { DrawingContent, DrawingElement, ProjectContent } from '@ruimte/contracts';
 import type { SessionEvent } from '../wire.ts';
 import { DrawingStore } from './drawing-store.ts';
+import { projectOverlays } from './overlays.ts';
 import { projectLinks } from './project-file-test-helpers.ts';
 import { documentPathInFolder, serializeDrawing } from './project-files.ts';
 import { ProjectStore } from './project-store.ts';
@@ -59,7 +60,7 @@ beforeEach(async () => {
     folder = join(root, 'repo');
     await mkdir(folder);
     fake = new FakeWatch();
-    projects = new ProjectStore(home, projectLinks({ viewFiles: () => [drawings] }), fake);
+    projects = new ProjectStore(home, projectLinks({ viewFiles: () => [drawings] }), projectOverlays(home), fake);
     drawings = new DrawingStore(projects, fake);
     events = [];
     drawings.subscribe('c1', (event) => events.push(event));
@@ -118,7 +119,7 @@ describe('DrawingStore', () => {
             expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({ version: 1, rev: 1, elements });
             drawings.closeAll();
             projects.closeAll();
-            projects = new ProjectStore(home, projectLinks({ viewFiles: () => [drawings] }), fake);
+            projects = new ProjectStore(home, projectLinks({ viewFiles: () => [drawings] }), projectOverlays(home), fake);
             drawings = new DrawingStore(projects, fake);
             const reopened = await projects.openProject({ folder });
             expect(reopened.summary.projectId).toBe(projectId);

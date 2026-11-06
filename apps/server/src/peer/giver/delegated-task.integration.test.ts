@@ -3,10 +3,12 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ManualClock, claudeStoppingOnResume, type FakeCli } from '@adecore/agents/testing';
 import type { ChatTurnItem } from '@ruimte/contracts';
+import { MachineHome } from '../../disk/machine-home.ts';
 import { BundleStore } from '../../git/bundles.ts';
 import { Checkpoints } from '../../git/checkpoints.ts';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate, NO_WORKTREE_AGENTS } from '../../git/test-repo.ts';
 import { Worktrees } from '../../git/worktrees.ts';
+import { projectOverlays } from '../../projects/overlays.ts';
 import { projectLinks } from '../../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../../projects/project-store.ts';
 import { bootTestDaemon, invokeTool, type TestDaemon } from '../../testing/test-daemon.ts';
@@ -127,11 +129,11 @@ async function side(name: string): Promise<Side> {
     return {
         home,
         repo,
-        store: new ProjectStore(home, projectLinks()),
+        store: new ProjectStore(home, projectLinks(), projectOverlays(home)),
         projectId: '',
         clock: new ManualClock(),
         worktrees: new Worktrees(home, NO_WORKTREE_AGENTS),
-        checkpoints: new Checkpoints(home),
+        checkpoints: new Checkpoints(home, new MachineHome(home)),
         bundles: new BundleStore(home)
     };
 }

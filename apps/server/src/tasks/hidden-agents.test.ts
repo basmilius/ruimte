@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import { MAX_OPENED_PER_CALLER } from '../canvas/depth.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, invokeTool, type TestDaemon } from '../testing/test-daemon.ts';
@@ -20,7 +21,7 @@ beforeEach(async () => {
     home = join(root, 'home');
     folder = join(root, 'repo');
     await mkdir(folder);
-    store = new ProjectStore(home, projectLinks());
+    store = new ProjectStore(home, projectLinks(), projectOverlays(home));
     const opened = await store.openProject({ folder });
     projectId = opened.summary.projectId;
     await store.save(projectId, opened.document.rev, {
@@ -200,7 +201,7 @@ test('queued hidden agents and their lineage survive a restart of the machine', 
     await first.stop();
     daemons = [];
     store.closeAll();
-    store = new ProjectStore(home, projectLinks());
+    store = new ProjectStore(home, projectLinks(), projectOverlays(home));
     await store.warmIndex();
     const second = await boot();
     expect(store.index.locate(childId)).toEqual({ projectId, folder, canvasId: null });

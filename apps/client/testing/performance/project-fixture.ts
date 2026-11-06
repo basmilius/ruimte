@@ -2,6 +2,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MACHINE_HEALTH_PATH } from '@ruimte/contracts';
+import { projectOverlays } from '../../../server/src/projects/overlays.ts';
 import { projectLinks } from '../../../server/src/projects/project-file-test-helpers';
 import { ProjectStore } from '../../../server/src/projects/project-store';
 import { reservedPort, spawnBenchDaemon, stopBenchDaemon } from './bench';
@@ -20,7 +21,7 @@ export async function withProjectFixture<Result>(
 ): Promise<Result> {
     const root = await mkdtemp(join(tmpdir(), 'ruimte-project-fixture-'));
     const home = join(root, 'home');
-    const seed = new ProjectStore(home, projectLinks());
+    const seed = new ProjectStore(home, projectLinks(), projectOverlays(home));
     let first = '';
     let child: ReturnType<typeof spawnBenchDaemon> | undefined;
     let stdout: Promise<string> | undefined;

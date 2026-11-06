@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AgentEvent } from '@adecore/agents/host';
 import type { ChatTurnItem } from '@ruimte/contracts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { gitIn, repoTemplate, type RepoTemplate } from '../git/test-repo.ts';
 import { ProvenanceService, type ProvenanceChat } from './provenance-service.ts';
@@ -45,7 +46,7 @@ async function setup(withHeads = true) {
     const repo = await template.copy();
     const home = await mkdtemp(join(tmpdir(), 'provenance-head-home-'));
     cleanups.push(repo, home);
-    const checkpoints = new Checkpoints(home);
+    const checkpoints = new Checkpoints(home, new MachineHome(home));
     const heads: { before?: string; after?: string } = {};
     let tree: string | undefined;
     const chat: ProvenanceChat = {

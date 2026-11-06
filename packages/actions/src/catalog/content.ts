@@ -22,6 +22,48 @@ import {
 } from './fields.ts';
 
 export const CONTENT_ACTIONS = {
+    'node.update': {
+        title: 'Write in a note',
+        description: 'Writes the body of a note on a canvas on screen; append puts the text under what is there instead of over it.',
+        agentDescription:
+            'Writes the body of a note you made or a line joins you to, or any note of the canvas a chat view names; append puts the text under what is there instead of over it.',
+        effect: 'shared',
+        domain: 'content',
+        actors: PERSON_VOICE_AND_AGENT,
+        input: z.object({
+            viewId,
+            nodeId,
+            text: z.string().describe('What to write'),
+            append: z.boolean().describe('Adds the text as a line under what is there instead of replacing the body')
+        }),
+        output: z.object({ viewId, nodeId, lines: z.number().int(), characters: z.number().int(), changed: z.boolean() })
+    },
+    'node.updateMany': {
+        title: 'Write in notes',
+        description:
+            'Writes the bodies of several notes of one canvas in one write, each the way node.update writes one. Every note is checked before any is written, so a refusal writes none.',
+        agentDescription: 'Writes in several notes in one write, each a note you made or a line joins you to, or any note of the canvas a chat view names.',
+        effect: 'shared',
+        domain: 'content',
+        actors: AGENT,
+        input: z.object({
+            viewId,
+            nodes: z
+                .array(
+                    z.object({
+                        nodeId,
+                        text: z.string().describe('What to write'),
+                        append: z.boolean().describe('Adds the text as a line under what is there instead of replacing the body')
+                    })
+                )
+                .min(1)
+                .max(MAX_PER_CALL)
+        }),
+        output: z.object({
+            viewId,
+            nodes: z.array(z.object({ nodeId, lines: z.number().int(), characters: z.number().int(), changed: z.boolean() }))
+        })
+    },
     'diagram.replaceContent': {
         title: 'Replace a diagram',
         description: 'Replaces everything a diagram on screen holds with a JSON document; undo brings the old one back while it stays open.',
@@ -255,47 +297,5 @@ export const CONTENT_ACTIONS = {
         actors: PERSON,
         input: z.object({ viewId: diagramView, format: imageFormat }),
         output: z.object({ viewId, view: z.string(), format: z.string() })
-    },
-    'node.update': {
-        title: 'Write in a note',
-        description: 'Writes the body of a note on a canvas on screen; append puts the text under what is there instead of over it.',
-        agentDescription:
-            'Writes the body of a note you made or a line joins you to, or any note of the canvas a chat view names; append puts the text under what is there instead of over it.',
-        effect: 'shared',
-        domain: 'content',
-        actors: PERSON_VOICE_AND_AGENT,
-        input: z.object({
-            viewId,
-            nodeId,
-            text: z.string().describe('What to write'),
-            append: z.boolean().describe('Adds the text as a line under what is there instead of replacing the body')
-        }),
-        output: z.object({ viewId, nodeId, lines: z.number().int(), characters: z.number().int(), changed: z.boolean() })
-    },
-    'node.updateMany': {
-        title: 'Write in notes',
-        description:
-            'Writes the bodies of several notes of one canvas in one write, each the way node.update writes one. Every note is checked before any is written, so a refusal writes none.',
-        agentDescription: 'Writes in several notes in one write, each a note you made or a line joins you to, or any note of the canvas a chat view names.',
-        effect: 'shared',
-        domain: 'content',
-        actors: AGENT,
-        input: z.object({
-            viewId,
-            nodes: z
-                .array(
-                    z.object({
-                        nodeId,
-                        text: z.string().describe('What to write'),
-                        append: z.boolean().describe('Adds the text as a line under what is there instead of replacing the body')
-                    })
-                )
-                .min(1)
-                .max(MAX_PER_CALL)
-        }),
-        output: z.object({
-            viewId,
-            nodes: z.array(z.object({ nodeId, lines: z.number().int(), characters: z.number().int(), changed: z.boolean() }))
-        })
     }
 } as const;

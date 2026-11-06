@@ -4,9 +4,11 @@ import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import { fileExists } from '@adecore/utils/fs';
 import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate, NO_WORKTREE_AGENTS } from '../git/test-repo.ts';
 import { Worktrees } from '../git/worktrees.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, invokeTool, type TestDaemon } from '../testing/test-daemon.ts';
@@ -56,7 +58,7 @@ beforeEach(async () => {
     root = await template.copy();
     folder = join(root, 'repo');
     const home = join(root, 'home');
-    store = new ProjectStore(home, projectLinks());
+    store = new ProjectStore(home, projectLinks(), projectOverlays(home));
     const opened = await store.openProject({ folder });
     await store.save(opened.summary.projectId, opened.document.rev, content());
     store.release(opened.summary.projectId);
@@ -64,7 +66,7 @@ beforeEach(async () => {
         home,
         store,
         clock: new ManualClock(),
-        checkpoints: new Checkpoints(home),
+        checkpoints: new Checkpoints(home, new MachineHome(home)),
         worktrees: new Worktrees(home, NO_WORKTREE_AGENTS)
     });
 });

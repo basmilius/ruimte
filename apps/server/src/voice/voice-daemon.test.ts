@@ -8,6 +8,7 @@ import type { ChatTurnItem, ProjectContent, ServerFrame, VoiceStartPayload } fro
 import type { LiveEvent } from '@ruimte/voice';
 import { voiceActionCall } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions-test-helpers.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
@@ -59,7 +60,7 @@ beforeEach(async () => {
     bare = join(root, 'bare');
     await mkdir(folder, { recursive: true });
     await mkdir(bare, { recursive: true });
-    store = new ProjectStore(home, projectLinks());
+    store = new ProjectStore(home, projectLinks(), projectOverlays(home));
     for (const [path, name, withCanvas] of [
         [folder, 'Shop', true],
         [bare, 'Bare', false]

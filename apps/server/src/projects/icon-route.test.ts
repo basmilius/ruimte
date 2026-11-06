@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rename, rm, symlink, writeFile } from 'node:fs/promises
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { handleProjectRequest, PROJECTS_PATH } from './icon-route.ts';
+import { projectOverlays } from './overlays.ts';
 import { projectLinks } from './project-file-test-helpers.ts';
 import { ProjectStore } from './project-store.ts';
 
@@ -35,7 +36,7 @@ beforeEach(async () => {
     folder = join(root, 'repo');
     await mkdir(join(folder, '.ruimte'), { recursive: true });
     await writeFile(join(folder, '.ruimte', 'icon.png'), PNG);
-    store = new ProjectStore(join(root, 'home'), projectLinks());
+    store = new ProjectStore(join(root, 'home'), projectLinks(), projectOverlays(join(root, 'home')));
     projectId = (await store.openProject({ folder })).summary.projectId;
 });
 

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fakeClaude, ManualClock } from '@adecore/agents/testing';
 import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
@@ -53,7 +54,7 @@ beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-pr-watch-wiring-'));
     folder = join(root, 'repo');
     await mkdir(folder, { recursive: true });
-    store = new ProjectStore(join(root, 'home'), projectLinks());
+    store = new ProjectStore(join(root, 'home'), projectLinks(), projectOverlays(join(root, 'home')));
     const opened = await store.openProject({ folder });
     projectId = opened.summary.projectId;
     await store.save(projectId, opened.document.rev, content());

@@ -91,6 +91,91 @@ export const AGENTS_ACTIONS = {
         }),
         output: z.object({ text: z.string() })
     },
+    'tool.list': {
+        title: 'List extension tools',
+        description: 'Lists the tools the extensions on this machine offer agents, each with what it does and the input it takes.',
+        effect: 'read',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({}),
+        output: z.object({ tools: z.array(z.object({ id: z.string(), description: z.string(), parameters: z.string() })) })
+    },
+    'tool.run': {
+        title: 'Run an extension tool',
+        description: 'Runs a tool an extension on this machine offers, with its input as JSON, and prints what it answers.',
+        effect: 'external',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            id: z.string().min(1).max(256).describe('The tool, as tool list prints it'),
+            input: z.string().max(100_000).describe('Its input, as JSON')
+        }),
+        output: z.object({ text: z.string() })
+    },
+    'agent.answer': {
+        title: 'Answer an agent',
+        description: 'Answers a question an agent you opened asked and waits on, the way a person answers it in that node; an approval stays with the person.',
+        effect: 'external',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            nodeId: nodeId.describe('The agent that asked, by id; only one you opened yourself'),
+            requestId: z.string().min(1).describe('The request the question came with, as the > Question line of a read or the note about it names it'),
+            answer: z
+                .string()
+                .nullable()
+                .describe('The answer to a request with one question: a choice label as written, several separated by a comma, or your own words'),
+            answers: z.record(z.string(), z.string()).nullable().describe('The answers to a request with several questions, keyed by question id')
+        }),
+        output: z.object({ nodeId, requestId: z.string() })
+    },
+    'task.list': {
+        title: 'List tasks',
+        description:
+            'Lists the tasks you gave and the task you were given that are still open or have yet to wake you: id, direction, status, the other node, title, wake, result, batch.',
+        effect: 'read',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            all: z.boolean().describe('Also lists the history: tasks that settled and already woke their chat, and a task you were given that settled')
+        }),
+        output: z.object({
+            tasks: z.array(TaskSchema),
+            // What the list left out without all: settled tasks that already reported.
+            hidden: z.number().int()
+        })
+    },
+    'task.create': {
+        title: 'Give a task',
+        description: 'Gives a task to an agent you opened that is already running, whose result wakes you the way the task of a new one does.',
+        effect: 'external',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            nodeId: nodeId.describe('The agent to give the task to, by id; only a chat you opened yourself'),
+            prompt: z.string().nullable().describe('What the task asks'),
+            promptFile: agentField(z.string().min(1)).describe('The same assignment out of a file, for one with exact bytes'),
+            title: givenName.nullable().describe('The title of the task; without one the first line of the prompt')
+        }),
+        output: z.object({
+            taskId: z.string(),
+            nodeId,
+            // Now for an agent that starts on it as you call, waiting for one still in a turn.
+            at: z.enum(['now', 'waiting'])
+        })
+    },
+    'task.complete': {
+        title: 'Report a task',
+        description: 'Reports the result of the task you were opened with, which wakes the chat that gave it.',
+        effect: 'external',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            result: z.string().nullable().describe('The result'),
+            resultFile: agentField(z.string().min(1)).describe('The same result out of a file inside the project folder')
+        }),
+        output: z.object({ taskId: z.string(), parentId: nodeId })
+    },
     'agent.start': {
         title: 'Start an agent',
         description: 'Starts an agent in this project',
@@ -218,90 +303,5 @@ export const AGENTS_ACTIONS = {
             status: OperationStatusSchema,
             agents: z.array(z.object({ nodeId, status: OperationStatusSchema, taskId: z.string().nullable(), detail: z.string() }))
         })
-    },
-    'tool.list': {
-        title: 'List extension tools',
-        description: 'Lists the tools the extensions on this machine offer agents, each with what it does and the input it takes.',
-        effect: 'read',
-        domain: 'agents',
-        actors: AGENT,
-        input: z.object({}),
-        output: z.object({ tools: z.array(z.object({ id: z.string(), description: z.string(), parameters: z.string() })) })
-    },
-    'tool.run': {
-        title: 'Run an extension tool',
-        description: 'Runs a tool an extension on this machine offers, with its input as JSON, and prints what it answers.',
-        effect: 'external',
-        domain: 'agents',
-        actors: AGENT,
-        input: z.object({
-            id: z.string().min(1).max(256).describe('The tool, as tool list prints it'),
-            input: z.string().max(100_000).describe('Its input, as JSON')
-        }),
-        output: z.object({ text: z.string() })
-    },
-    'agent.answer': {
-        title: 'Answer an agent',
-        description: 'Answers a question an agent you opened asked and waits on, the way a person answers it in that node; an approval stays with the person.',
-        effect: 'external',
-        domain: 'agents',
-        actors: AGENT,
-        input: z.object({
-            nodeId: nodeId.describe('The agent that asked, by id; only one you opened yourself'),
-            requestId: z.string().min(1).describe('The request the question came with, as the > Question line of a read or the note about it names it'),
-            answer: z
-                .string()
-                .nullable()
-                .describe('The answer to a request with one question: a choice label as written, several separated by a comma, or your own words'),
-            answers: z.record(z.string(), z.string()).nullable().describe('The answers to a request with several questions, keyed by question id')
-        }),
-        output: z.object({ nodeId, requestId: z.string() })
-    },
-    'task.list': {
-        title: 'List tasks',
-        description:
-            'Lists the tasks you gave and the task you were given that are still open or have yet to wake you: id, direction, status, the other node, title, wake, result, batch.',
-        effect: 'read',
-        domain: 'agents',
-        actors: AGENT,
-        input: z.object({
-            all: z.boolean().describe('Also lists the history: tasks that settled and already woke their chat, and a task you were given that settled')
-        }),
-        output: z.object({
-            tasks: z.array(TaskSchema),
-            // What the list left out without all: settled tasks that already reported.
-            hidden: z.number().int()
-        })
-    },
-    'task.create': {
-        title: 'Give a task',
-        description: 'Gives a task to an agent you opened that is already running, whose result wakes you the way the task of a new one does.',
-        effect: 'external',
-        domain: 'agents',
-        actors: AGENT,
-        input: z.object({
-            nodeId: nodeId.describe('The agent to give the task to, by id; only a chat you opened yourself'),
-            prompt: z.string().nullable().describe('What the task asks'),
-            promptFile: agentField(z.string().min(1)).describe('The same assignment out of a file, for one with exact bytes'),
-            title: givenName.nullable().describe('The title of the task; without one the first line of the prompt')
-        }),
-        output: z.object({
-            taskId: z.string(),
-            nodeId,
-            // Now for an agent that starts on it as you call, waiting for one still in a turn.
-            at: z.enum(['now', 'waiting'])
-        })
-    },
-    'task.complete': {
-        title: 'Report a task',
-        description: 'Reports the result of the task you were opened with, which wakes the chat that gave it.',
-        effect: 'external',
-        domain: 'agents',
-        actors: AGENT,
-        input: z.object({
-            result: z.string().nullable().describe('The result'),
-            resultFile: agentField(z.string().min(1)).describe('The same result out of a file inside the project folder')
-        }),
-        output: z.object({ taskId: z.string(), parentId: nodeId })
     }
 } as const;

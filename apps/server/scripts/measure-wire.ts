@@ -5,6 +5,7 @@ import { inflateRawSync } from 'node:zlib';
 import { DeflatedFrameAssembler, FrameAssembler, isDeflatedPiece, splitFrame, type ProjectContent } from '@ruimte/contracts';
 import { RTCPeerConnection, type RTCDataChannel } from 'werift';
 import { readLocalSecret } from '../src/auth/local-secret.ts';
+import { projectOverlays } from '../src/projects/overlays.ts';
 import { projectLinks } from '../src/projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../src/projects/project-store.ts';
 import { directChannel, fromWerift, type DirectChannel, type RawDataChannel } from '../src/pulsar/data-channel.ts';
@@ -73,7 +74,7 @@ async function capture(repository: string, chatSource: string): Promise<string[]
     }
     console.error(`chats: ${picked.map((chat) => `${Math.round(chat.size / 1024)} KB`).join(', ')}`);
 
-    const store = new ProjectStore(home, projectLinks());
+    const store = new ProjectStore(home, projectLinks(), projectOverlays(home));
     const opened = await store.openProject({ folder });
     const content: ProjectContent = {
         name: 'repo',

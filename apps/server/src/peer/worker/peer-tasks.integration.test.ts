@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { BYTES_CHUNK_MAX, isCanvasView, type PeerTaskStartPayload, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
+import { MachineHome } from '../../disk/machine-home.ts';
 import { BundleStore, makeBundle } from '../../git/bundles.ts';
 import { Checkpoints } from '../../git/checkpoints.ts';
 import { gitIn, initRepo, NO_WORKTREE_AGENTS } from '../../git/test-repo.ts';
@@ -96,7 +97,7 @@ beforeEach(async () => {
         stopNode: async () => undefined,
         installed: async () => ['claude'],
         exists: () => false,
-        git: () => ({ bundles: bundlesB, checkpoints: new Checkpoints(homeB), worktrees: worktreesB }),
+        git: () => ({ bundles: bundlesB, checkpoints: new Checkpoints(homeB, new MachineHome(homeB)), worktrees: worktreesB }),
         peerBundles: (machineId) => {
             const held = stores.get(machineId) ?? new BundleStore(homeB, machineId);
             stores.set(machineId, held);
@@ -117,7 +118,7 @@ afterEach(async () => {
 
 async function sendFromA(): Promise<{ bundleId: string; sha256: string }> {
     await writeFile(join(repoA, 'a.txt'), 'one, changed on A\n');
-    const checkpointsA = new Checkpoints(homeA);
+    const checkpointsA = new Checkpoints(homeA, new MachineHome(homeA));
     const storeA = new BundleStore(homeA);
     const made = await makeBundle(storeA, checkpointsA, { path: repoA, from: 'files', haves: [], name: 'Handoff' });
     const bytes = new Uint8Array(await Bun.file(storeA.pathOf(made.bundleId)).arrayBuffer());

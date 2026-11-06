@@ -8,7 +8,7 @@
 - The outbox timer waits at most a minute (`wakeful-clock.ts`), so a time passed in sleep is seen within a minute of waking. Work due later holds no lane.
 - While a `resume-limit` is owed, nothing else opens a turn in that chat (`@adecore/agents/chat/wake-chat.ts`).
 - The tasks of one `agent_team` call with `task` (`batchId`) wake the parent once, when all settled. A wake that finds its chat in a turn answers `wait` and reruns when `OutboxWorker.wake` names that chat.
-- Stopping or deleting a node ends its descendants through `end-children` (`@adecore/agents/tasks/end-children.ts`), written before the node goes; their threads and screens stay. Openers no project places (`isPlaceless` in `canvas/opener.ts`) are no orphans on reindex: another machine's agent (`peer`), a Voice session and an extension.
+- Stopping or deleting a node ends its descendants through `end-children` (`@adecore/agents/tasks/end-children.ts`), written before the node goes; their threads and screens stay. Openers no project places (`isPlaceless` in `opener.ts`) are no orphans on reindex: another machine's agent (`peer`), a Voice session and an extension.
 - A task whose child runs on another machine (`machine`) is settled by that machine's report (`settleFromElsewhere`), waking the parent once. `connect-peer` counts four kinds as owed there (`remote/remote-tasks.ts`):
     - `start-remote-agent` (target the node) waits for the link and a place there and never fails the task; an ended node drops it.
     - `take-remote-result` (target the node) takes in the result and branch and acknowledges.

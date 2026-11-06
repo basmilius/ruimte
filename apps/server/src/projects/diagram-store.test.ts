@@ -8,6 +8,7 @@ import { DIAGRAM_LIMITS, EMPTY_DIAGRAM, type DiagramContent, type DiagramNode, t
 import type { SessionEvent } from '../wire.ts';
 import { DiagramStore } from './diagram-store.ts';
 import { DrawingStore } from './drawing-store.ts';
+import { projectOverlays } from './overlays.ts';
 import { projectLinks } from './project-file-test-helpers.ts';
 import { serializeDiagram } from './project-files.ts';
 import { ProjectStore } from './project-store.ts';
@@ -62,7 +63,7 @@ beforeEach(async () => {
     folder = join(root, 'repo');
     await mkdir(folder);
     fake = new FakeWatch();
-    projects = new ProjectStore(home, projectLinks({ viewFiles: () => [drawingFiles, diagrams] }), fake);
+    projects = new ProjectStore(home, projectLinks({ viewFiles: () => [drawingFiles, diagrams] }), projectOverlays(home), fake);
     const drawingFiles = new DrawingStore(projects, fake);
     diagrams = new DiagramStore(projects, fake);
     events = [];

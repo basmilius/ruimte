@@ -8,6 +8,7 @@ import { EXTENSION_API_VERSION, type ProjectContent } from '@ruimte/contracts';
 import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import type { CanvasHost } from '../canvas/host.ts';
 import { markDrawnChat } from '../projects/drawn-chat.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
@@ -46,7 +47,7 @@ beforeEach(async () => {
     const folder = join(root, 'shop');
 
     await mkdir(folder, { recursive: true });
-    store = new ProjectStore(join(root, 'home'), projectLinks());
+    store = new ProjectStore(join(root, 'home'), projectLinks(), projectOverlays(join(root, 'home')));
 
     const opened = await store.openProject({ folder });
 

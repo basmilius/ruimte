@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import type { CanvasHost } from '../canvas/host.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, invokeTool, type TestDaemon } from '../testing/test-daemon.ts';
@@ -33,7 +34,8 @@ beforeEach(async () => {
             closing: (name, nodeIds) =>
                 daemon &&
                 failTasksOfClosedProject({ tasks: daemon.tasks, locate: (id) => store.index.locate(id), coordinator: daemon.wiring.coordinator }, name, nodeIds)
-        })
+        }),
+        projectOverlays(home)
     );
     const opened = await store.openProject({ folder: own });
     ownId = opened.summary.projectId;

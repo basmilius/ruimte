@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { EventMap, EventType, RequestMap, RequestType, ServerFrame } from '@ruimte/contracts';
+import { projectOverlays } from '../../../server/src/projects/overlays.ts';
 import { DiagramClient } from '../clients/diagram/diagram-client';
 import { DrawingClient } from '../clients/drawing/drawing-client';
 import { TransportError, type Transport } from '../transport-api/transport';
@@ -93,7 +94,12 @@ for (const kind of ['drawing', 'diagram'] as const) {
                 const folder = join(root, 'repo');
                 await mkdir(folder);
                 const watch = new FakeWatch();
-                const projects = new ProjectStore(join(root, 'home'), projectLinks({ viewFiles: () => [drawings, diagrams] }), watch);
+                const projects = new ProjectStore(
+                    join(root, 'home'),
+                    projectLinks({ viewFiles: () => [drawings, diagrams] }),
+                    projectOverlays(join(root, 'home')),
+                    watch
+                );
                 const drawings = new DrawingStore(projects, watch);
                 const diagrams = new DiagramStore(projects, watch);
                 const opened = await projects.openProject({ folder });

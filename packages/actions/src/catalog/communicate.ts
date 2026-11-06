@@ -15,6 +15,118 @@ import { MAX_TERMINAL_READ_LINES } from '../limits.ts';
 import { PERSON_AND_VOICE, AGENT, PERSON, nodeId, forActors, CLIENT_ACTORS, operatedView, chatReadUsage, terminalTarget, terminalNamed } from './fields.ts';
 
 export const COMMUNICATE_ACTIONS = {
+    'terminal.clear': {
+        title: 'Clear terminal',
+        description: 'Clears the screen and scrollback of a terminal view or node, after confirmation. The process in it keeps running.',
+        effect: 'external',
+        domain: 'communicate',
+        // An agent never types into or clears the session of another node.
+        actors: PERSON_AND_VOICE,
+        input: z.object({ terminalId: z.string().min(1) }),
+        output: z.object({ terminalId: z.string().min(1), terminal: z.string() })
+    },
+    'chat.send': {
+        title: 'Send AI Chat prompt',
+        description: 'Submits a direct prompt to an existing AI Chat view or node.',
+        effect: 'external',
+        domain: 'communicate',
+        actors: CLIENT_ACTORS,
+        input: z.object({
+            chatId: z.string().min(1),
+            // Not trimmed here: the composer sends what was typed, and a message of attachments alone has no text.
+            prompt: z.string(),
+            delivery: forActors(PERSON_AND_VOICE, ChatDeliverySchema).describe('Steer the running agent, or queue until its current turn finishes'),
+            mentions: forActors(PERSON, z.array(z.string().min(1)).max(64)).describe('Paths picked with @'),
+            skills: forActors(PERSON, z.array(z.string().min(1)).max(16)).describe('Skills picked with $'),
+            chats: forActors(PERSON, z.array(z.string().min(1)).max(16)).describe('Chats of this project picked with #'),
+            quoteSource: forActors(PERSON, ChatQuoteSourceSchema).describe('The reply a quote at the head of the prompt was taken from'),
+            attachments: forActors(PERSON, ChatAttachmentUploadsSchema).describe('Files dropped or pasted into the composer'),
+            references: forActors(PERSON, z.array(z.string().min(1)).max(16)).describe('Views and nodes of this project picked with #')
+        }),
+        output: z.object({
+            chatId: z.string().min(1),
+            chat: z.string(),
+            queued: z.boolean(),
+            turnId: z.string().min(1).optional()
+        })
+    },
+    'chat.uiChoice': {
+        title: 'Send AI Chat choice',
+        description: 'Sends a choice from a completed reply using its stored label and visible context.',
+        effect: 'external',
+        domain: 'communicate',
+        actors: PERSON,
+        input: ChatUiChoicePayloadSchema,
+        output: ChatSendResultSchema
+    },
+    'chat.clear': {
+        title: 'Clear AI Chat',
+        description: 'Clears conversation history, attachments and plans, and stops the current turn after confirmation. Keeps the chat node or view.',
+        effect: 'external',
+        domain: 'communicate',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            chatId: z.string().min(1),
+            // The composer clears without it first, so a turn in the way comes back as chat-busy and the person is asked.
+            force: forActors(PERSON, z.boolean()).describe('Stops a running turn instead of refusing')
+        }),
+        output: z.object({ chatId: z.string().min(1), chat: z.string() })
+    },
+    'chat.read': {
+        title: 'Read recent AI Chat messages',
+        description:
+            'Reads a limited recent excerpt of an AI Chat of this project, also one nobody opened in this window, without including reasoning or tool output. A null limit reads the last 20 messages.',
+        effect: 'read',
+        domain: 'communicate',
+        actors: CLIENT_ACTORS,
+        input: z.object({ chatId: z.string().min(1), limit: z.number().int().min(1).max(20).nullable() }),
+        output: z.object({
+            chatId: z.string().min(1),
+            chat: z.string(),
+            messages: z.array(
+                z.object({
+                    role: z.enum(['user', 'assistant']),
+                    text: z.string(),
+                    createdAt: z.number()
+                })
+            ),
+            truncated: z.boolean()
+        })
+    },
+    'terminal.read': {
+        title: 'Read terminal output',
+        description: 'Reads the last lines on the screen and in the scrollback of a terminal that is open in this window. A null lines reads the last 40.',
+        effect: 'read',
+        domain: 'communicate',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ terminalId: terminalTarget, lines: z.number().int().min(1).max(MAX_TERMINAL_READ_LINES).nullable() }),
+        output: terminalNamed.extend({ lines: z.array(z.string()), truncated: z.boolean(), exited: z.boolean() })
+    },
+    'agent.alert': {
+        title: 'Notify the person',
+        description: 'Sends the person a notification from your own session. Use only when they asked for one, such as when your work is done.',
+        effect: 'external',
+        domain: 'communicate',
+        actors: AGENT,
+        input: z.object({ text: z.string().trim().min(1).max(500).describe('The notification message') }),
+        output: z.object({ nodeId })
+    },
+    'agent.notify': {
+        title: 'Notify an agent',
+        description: 'Sends a message to the agent in another node, along a line that runs from you into it, which gives a chat between turns a turn on it.',
+        effect: 'external',
+        domain: 'communicate',
+        actors: AGENT,
+        input: z.object({ nodeId: nodeId.describe('The node to notify, by id'), text: z.string().min(1).describe('The message') }),
+        output: z.object({
+            nodeId,
+            // Now when it was acted on as it arrived, waiting when it is held for the next turn of that node.
+            at: z.enum(['now', 'waiting']),
+            detail: z.string(),
+            // What the node is called now, which a thread keeps showing once it is gone.
+            title: z.string().optional()
+        })
+    },
     'visual.write': {
         title: 'Save visual source',
         description:
@@ -149,118 +261,6 @@ export const COMMUNICATE_ACTIONS = {
             text: z.string(),
             usage: chatReadUsage.optional().describe('Only on a chat read whole or by its tail, not on a subagent of it'),
             image: z.string().optional().describe('The path of the PNG a read in form image wrote')
-        })
-    },
-    'terminal.clear': {
-        title: 'Clear terminal',
-        description: 'Clears the screen and scrollback of a terminal view or node, after confirmation. The process in it keeps running.',
-        effect: 'external',
-        domain: 'communicate',
-        // An agent never types into or clears the session of another node.
-        actors: PERSON_AND_VOICE,
-        input: z.object({ terminalId: z.string().min(1) }),
-        output: z.object({ terminalId: z.string().min(1), terminal: z.string() })
-    },
-    'chat.send': {
-        title: 'Send AI Chat prompt',
-        description: 'Submits a direct prompt to an existing AI Chat view or node.',
-        effect: 'external',
-        domain: 'communicate',
-        actors: CLIENT_ACTORS,
-        input: z.object({
-            chatId: z.string().min(1),
-            // Not trimmed here: the composer sends what was typed, and a message of attachments alone has no text.
-            prompt: z.string(),
-            delivery: forActors(PERSON_AND_VOICE, ChatDeliverySchema).describe('Steer the running agent, or queue until its current turn finishes'),
-            mentions: forActors(PERSON, z.array(z.string().min(1)).max(64)).describe('Paths picked with @'),
-            skills: forActors(PERSON, z.array(z.string().min(1)).max(16)).describe('Skills picked with $'),
-            chats: forActors(PERSON, z.array(z.string().min(1)).max(16)).describe('Chats of this project picked with #'),
-            quoteSource: forActors(PERSON, ChatQuoteSourceSchema).describe('The reply a quote at the head of the prompt was taken from'),
-            attachments: forActors(PERSON, ChatAttachmentUploadsSchema).describe('Files dropped or pasted into the composer'),
-            references: forActors(PERSON, z.array(z.string().min(1)).max(16)).describe('Views and nodes of this project picked with #')
-        }),
-        output: z.object({
-            chatId: z.string().min(1),
-            chat: z.string(),
-            queued: z.boolean(),
-            turnId: z.string().min(1).optional()
-        })
-    },
-    'chat.uiChoice': {
-        title: 'Send AI Chat choice',
-        description: 'Sends a choice from a completed reply using its stored label and visible context.',
-        effect: 'external',
-        domain: 'communicate',
-        actors: PERSON,
-        input: ChatUiChoicePayloadSchema,
-        output: ChatSendResultSchema
-    },
-    'chat.clear': {
-        title: 'Clear AI Chat',
-        description: 'Clears conversation history, attachments and plans, and stops the current turn after confirmation. Keeps the chat node or view.',
-        effect: 'external',
-        domain: 'communicate',
-        actors: PERSON_AND_VOICE,
-        input: z.object({
-            chatId: z.string().min(1),
-            // The composer clears without it first, so a turn in the way comes back as chat-busy and the person is asked.
-            force: forActors(PERSON, z.boolean()).describe('Stops a running turn instead of refusing')
-        }),
-        output: z.object({ chatId: z.string().min(1), chat: z.string() })
-    },
-    'chat.read': {
-        title: 'Read recent AI Chat messages',
-        description:
-            'Reads a limited recent excerpt of an AI Chat of this project, also one nobody opened in this window, without including reasoning or tool output. A null limit reads the last 20 messages.',
-        effect: 'read',
-        domain: 'communicate',
-        actors: CLIENT_ACTORS,
-        input: z.object({ chatId: z.string().min(1), limit: z.number().int().min(1).max(20).nullable() }),
-        output: z.object({
-            chatId: z.string().min(1),
-            chat: z.string(),
-            messages: z.array(
-                z.object({
-                    role: z.enum(['user', 'assistant']),
-                    text: z.string(),
-                    createdAt: z.number()
-                })
-            ),
-            truncated: z.boolean()
-        })
-    },
-    'terminal.read': {
-        title: 'Read terminal output',
-        description: 'Reads the last lines on the screen and in the scrollback of a terminal that is open in this window. A null lines reads the last 40.',
-        effect: 'read',
-        domain: 'communicate',
-        actors: PERSON_AND_VOICE,
-        input: z.object({ terminalId: terminalTarget, lines: z.number().int().min(1).max(MAX_TERMINAL_READ_LINES).nullable() }),
-        output: terminalNamed.extend({ lines: z.array(z.string()), truncated: z.boolean(), exited: z.boolean() })
-    },
-    'agent.alert': {
-        title: 'Notify the person',
-        description: 'Sends the person a notification from your own session. Use only when they asked for one, such as when your work is done.',
-        effect: 'external',
-        domain: 'communicate',
-        actors: AGENT,
-        input: z.object({ text: z.string().trim().min(1).max(500).describe('The notification message') }),
-        output: z.object({ nodeId })
-    },
-    'agent.notify': {
-        title: 'Notify an agent',
-        description: 'Sends a message to the agent in another node, along a line that runs from you into it, which gives a chat between turns a turn on it.',
-        effect: 'external',
-        domain: 'communicate',
-        actors: AGENT,
-        input: z.object({ nodeId: nodeId.describe('The node to notify, by id'), text: z.string().min(1).describe('The message') }),
-        output: z.object({
-            nodeId,
-            // Now when it was acted on as it arrived, waiting when it is held for the next turn of that node.
-            at: z.enum(['now', 'waiting']),
-            detail: z.string(),
-            // What the node is called now, which a thread keeps showing once it is gone.
-            title: z.string().optional()
         })
     }
 } as const;

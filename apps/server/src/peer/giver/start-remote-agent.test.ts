@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import { MAX_RESULT_LENGTH } from '../../canvas/tasks.ts';
+import { projectOverlays } from '../../projects/overlays.ts';
 import { projectLinks } from '../../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../../projects/project-store.ts';
 import { bootTestDaemon, invokeTool, type TestDaemon } from '../../testing/test-daemon.ts';
@@ -44,7 +45,7 @@ beforeEach(async () => {
     home = join(root, 'home');
     folder = join(root, 'repo');
     await mkdir(folder, { recursive: true });
-    store = new ProjectStore(home, projectLinks());
+    store = new ProjectStore(home, projectLinks(), projectOverlays(home));
     const opened = await store.openProject({ folder });
     projectId = opened.summary.projectId;
     await store.save(projectId, opened.document.rev, leadContent());
