@@ -186,7 +186,6 @@
         "nameHint": "Everyone with the folder sees this name. Leave empty to use the view's own name."
     },
     "projectBanner": {
-        "stayHere": "Stay here",
         "goThere": "Go there",
         "back": "Back",
         "takeTheirs": "Take the file",

@@ -142,7 +142,6 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     row('chats.showToolCalls'),
     row('chats.sendKey'),
     row('chats.steerByDefault'),
-    row('chats.showViews'),
     row('chats.mapTiles'),
     { id: 'agents.visualReplies', section: 'chats', label: 'settings:agents.visualReplies.label', description: 'settings:agents.visualReplies.description' },
     {
@@ -155,6 +154,7 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     row('agents.deleteAnyView'),
     row('agents.reachOpenProjects'),
     row('agents.working.sound'),
+    row('agents.showViews'),
     {
         id: 'agents.keepAwake.mode',
         section: 'agents',

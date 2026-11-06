@@ -13,7 +13,7 @@ import {
 import { closeTab, collapseTabHosts, locateView, singleLayout } from '@/shell/split';
 import { nextId } from '@/state/canvas';
 import type { DocumentState } from '@/state/document';
-import { keptNotice, type DocumentKit } from '@/state/document-model';
+import type { DocumentKit } from '@/state/document-model';
 
 /* The list of views: adding, renaming, deleting with an undo, duplicating and reordering them. */
 export function createDocumentViewsSlice({
@@ -65,7 +65,6 @@ export function createDocumentViewsSlice({
         set({
             views,
             viewLocal,
-            viewNotice: keptNotice(state.viewNotice, views),
             ...(trash ? { trashed: [...state.trashed, { view: removed, index: at, local, layout: stood }] } : { edits: state.edits + 1 })
         });
         if (stood !== null) {

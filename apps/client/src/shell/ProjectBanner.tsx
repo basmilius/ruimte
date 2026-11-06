@@ -1,14 +1,13 @@
 import { Button, Banner } from '@adecore/ui';
-import { CircleAlert, Eye, GitBranch } from 'lucide-react';
+import { CircleAlert, GitBranch } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { diagramClient, drawingClient, projectClient } from '@/project';
 import { useDiagram } from '@/state/diagram';
-import { useDocument } from '@/state/document';
 import { useDrawing } from '@/state/drawing';
 import { useProject } from '@/state/project';
 
-// One banner slot: possible data loss outranks an agent's repeatable view request.
+// One banner slot: a conflict outranks a failed save, since only the conflict can lose edits.
 export function ProjectBanner() {
     const { t } = useTranslation(['shell', 'common']);
     const [retrying, setRetrying] = useState(false);
@@ -18,7 +17,6 @@ export function ProjectBanner() {
     const projectError = useProject((s) => s.error);
     const drawingError = useDrawing((s) => s.error);
     const diagramError = useDiagram((s) => s.error);
-    const notice = useDocument((s) => s.viewNotice);
     const files = [
         { file: 'project', client: projectClient, conflict: projectConflict, error: projectError },
         { file: 'drawing', client: drawingClient, conflict: drawingConflict, error: drawingError },
@@ -26,19 +24,7 @@ export function ProjectBanner() {
     ] as const;
     const shown = files.find((entry) => entry.conflict !== null) ?? files.find((entry) => entry.error !== null);
     if (!shown?.conflict && !shown?.error) {
-        const goes = notice?.action?.kind === 'go' || (notice?.action?.kind === 'project' && !notice.action.back);
-        return notice === null ? null : (
-            <Banner icon={Eye} tone="neutral" message={notice.message}>
-                <Button size="sm" onClick={() => useDocument.getState().dismissNotice()}>
-                    {goes ? t('projectBanner.stayHere') : t('common:action.dismiss')}
-                </Button>
-                {notice.action !== null && (
-                    <Button size="sm" variant="primary" onClick={() => useDocument.getState().runNotice()}>
-                        {goes ? t('projectBanner.goThere') : t('projectBanner.back')}
-                    </Button>
-                )}
-            </Banner>
-        );
+        return null;
     }
     const { file, client, conflict, error } = shown;
     const resolve = (choice: 'theirs' | 'mine'): void => void client.resolveConflict(choice);

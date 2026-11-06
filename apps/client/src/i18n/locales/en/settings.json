@@ -1012,6 +1012,13 @@
         "notifications": {
             "title": "Notifications"
         },
+        "views": {
+            "title": "Views"
+        },
+        "showViews": {
+            "label": "Let agents switch views",
+            "description": "A view or project an agent opens replaces yours, and a message lets you go back. When off, the message offers to go there."
+        },
         "working": {
             "title": "Keep awake",
             "description": "When this computer sleeps, every agent pauses.",
@@ -1107,8 +1114,8 @@
         "sending": {
             "title": "Sending"
         },
-        "views": {
-            "title": "Views and maps"
+        "maps": {
+            "title": "Maps"
         },
         "agents": {
             "title": "What agents may show"
@@ -1131,10 +1138,6 @@
         "readingWidth": {
             "label": "Reading width",
             "description": "The width of the messages in a chat view. A chat on a canvas fills its node."
-        },
-        "showViews": {
-            "label": "Let agents switch views",
-            "description": "A view or project an agent opens replaces yours, with a banner to go back. When off, the banner offers to go there."
         },
         "mapTiles": {
             "label": "Map tiles",

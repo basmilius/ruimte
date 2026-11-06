@@ -1,5 +1,6 @@
 import { isOpenableView, type ProjectShowViewEvent } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
+import { backOffer, goOffer, showMoveToast } from '@/project/show-toast';
 import { callerName, showViewNotice } from '@/project/show-view';
 import { showViewOnceThere } from '@/project/show-view-once';
 import { nodesOfView } from '@/project/view-nodes';
@@ -26,12 +27,9 @@ function showInWorkspace(payload: ProjectShowViewEvent): void {
     /* The grid moves first, so the way back is recorded against the grid as it stands after the move
        and a second `view open` undoes the second one rather than the first. */
     const shown = notice.action === 'back' ? useDocument.getState().showView(payload.viewId) : null;
-    /* One banner, so three views in a row leave the last on screen. An empty grid has nothing to go
+    /* One toast, so three views in a row leave the last on screen. An empty grid has nothing to go
        back to, so that one only reports. */
-    useDocument.getState().showNotice({
-        message: notice.message,
-        action: notice.action === 'go' ? { kind: 'go', viewId: payload.viewId } : shown === null ? null : { kind: 'back', shown }
-    });
+    showMoveToast(notice.message, notice.action === 'go' ? goOffer(payload.viewId) : shown === null ? null : backOffer(shown));
 }
 
 function onShowView(endpointId: string, payload: ProjectShowViewEvent): void {

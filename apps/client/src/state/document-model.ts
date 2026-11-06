@@ -12,27 +12,12 @@ import {
     type StandaloneNode
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
-import { cellAt, collapseTabHosts, focusedViewId, isTabHost, locateView, viewIdsIn, type ShownView } from '@/shell/split';
+import { cellAt, collapseTabHosts, focusedViewId, isTabHost, locateView, viewIdsIn } from '@/shell/split';
 import type { CanvasState } from '@/state/canvas';
 import type { DiagramState } from '@/state/diagram';
 import type { DocumentState } from '@/state/document';
 import type { DrawingState } from '@/state/drawing';
 import type { EditorRegistry } from '@/state/editors';
-
-/*
- * What the banner over the views says about a view an agent opened, and the one thing it can do
- * about it: go to the view nothing moved for, or step back out of the one that took the cell. Null
- * where there is nothing to offer, which is an agent pointing at the view already in front. A
- * project an agent brought forward opens a project instead: the one it named, or the one it left (`back`).
- */
-export interface ViewNotice {
-    message: string;
-    action:
-        | { kind: 'go'; viewId: string }
-        | { kind: 'back'; shown: Omit<ShownView, 'layout'> }
-        | { kind: 'project'; endpointId: string; projectId: string; back: boolean }
-        | null;
-}
 
 /* A deleted view on its way out, with what it takes to put it back as it stood. */
 export interface TrashedView {
@@ -204,34 +189,6 @@ export function canStandInCell(state: Pick<DocumentState, 'views' | 'layout'>, i
     return view === null ? state.layout !== null && locateView(state.layout, id) !== null : isOpenableView(view);
 }
 
-/* Which view a banner would put on screen if its button were pressed; null for one that offers nothing. */
-function noticeTarget(notice: ViewNotice | null): string | null {
-    if (notice === null || notice.action === null || notice.action.kind === 'project') {
-        return null;
-    }
-    return notice.action.kind === 'go' ? notice.action.viewId : notice.action.shown.replaced;
-}
-
-/* A banner whose button would open a view the project has not got any more is a door into nothing. */
-export function keptNotice(notice: ViewNotice | null, views: ProjectView[]): ViewNotice | null {
-    const target = noticeTarget(notice);
-    return target === null || views.some((view) => view.id === target) ? notice : null;
-}
-
-/*
- * A manual grid move makes an undo offer stale. A navigation offer survives until the requested
- * view becomes active; neither expires on a timer because the person may still need the action.
- */
-function afterMove(notice: ViewNotice | null, activeViewId: string | null): ViewNotice | null {
-    if (notice === null || notice.action === null || notice.action.kind === 'project') {
-        return notice;
-    }
-    if (notice.action.kind === 'back') {
-        return null;
-    }
-    return notice.action.viewId === activeViewId ? null : notice;
-}
-
 /* The view of the project with this id; a loose view is none, since the document does not hold it. */
 export function cellViewOf(state: Pick<DocumentState, 'views'>, id: string | null): ProjectView | null {
     return state.views.find((view) => view.id === id) ?? null;
@@ -259,7 +216,7 @@ export function createDocumentKit(set: DocumentKit['set'], get: DocumentKit['get
         const views = state.exportViews();
         const viewLocal = { ...state.viewLocal, ...state.exportLocal().views };
         const settled = settledOn(views, viewLocal, layout, state);
-        set({ ...settled, maximized: null, viewNotice: afterMove(state.viewNotice, settled.activeViewId) });
+        set({ ...settled, maximized: null });
         openEditors(views, viewLocal, settled.layout === null ? [] : viewIdsIn(settled.layout), settled.activeViewId, peers);
     };
 
@@ -275,7 +232,7 @@ export function createDocumentKit(set: DocumentKit['set'], get: DocumentKit['get
        for what is already there, which claims no edit and so does not make the project dirty. */
     const write = (views: ProjectView[] | null): void => {
         if (views !== null) {
-            set((state) => ({ views, edits: state.edits + 1, viewNotice: keptNotice(state.viewNotice, views) }));
+            set((state) => ({ views, edits: state.edits + 1 }));
         }
     };
 

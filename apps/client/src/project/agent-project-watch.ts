@@ -3,6 +3,7 @@ import i18next from 'i18next';
 import { create } from 'zustand';
 import { closingProject, isOpenHere, openProject } from '@/project/open';
 import type { SwitchOutcome } from '@/project/project-switch';
+import { showMoveToast } from '@/project/show-toast';
 import { callerName } from '@/project/show-view';
 import { nodesOfView } from '@/project/view-nodes';
 import { useDocument } from '@/state/document';
@@ -45,8 +46,8 @@ function agentOf(payload: ProjectAgentAskEvent): string {
 
 /*
  * `project_activate`, as `view_open` for a whole project: with "Let agents switch views" on the window
- * opens it, with a banner back to where the person was; off, the banner offers to go there. A project
- * another window has comes forward in that window, which then needs no banner here.
+ * opens it, with a toast back to where the person was; off, the toast offers to go there. A project
+ * another window has comes forward in that window, which then needs no toast here.
  */
 export async function activateProject(endpointId: string, payload: ProjectAgentAskEvent, deps: AgentProjectDeps = LIVE): Promise<void> {
     const summary = deps.listed(endpointId, payload.projectId);
@@ -55,18 +56,18 @@ export async function activateProject(endpointId: string, payload: ProjectAgentA
     }
     const agent = agentOf(payload);
     if (!deps.follow()) {
-        useDocument.getState().showNotice({
-            message: i18next.t('project:showProject.go', { agent, project: summary.name }),
-            action: { kind: 'project', endpointId, projectId: payload.projectId, back: false }
+        showMoveToast(i18next.t('project:showProject.go', { agent, project: summary.name }), {
+            label: 'goThere',
+            run: () => void deps.open(endpointId, payload.projectId)
         });
         return;
     }
     if ((await deps.open(endpointId, payload.projectId)) !== 'done' || !deps.showing(endpointId, payload.projectId)) {
         return;
     }
-    useDocument.getState().showNotice({
-        message: i18next.t('project:showProject.follow', { agent, project: summary.name }),
-        action: { kind: 'project', endpointId, projectId: payload.fromProjectId, back: true }
+    showMoveToast(i18next.t('project:showProject.follow', { agent, project: summary.name }), {
+        label: 'back',
+        run: () => void deps.open(endpointId, payload.fromProjectId)
     });
 }
 

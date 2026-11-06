@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
+import { UNDO_MS } from '@adecore/ui';
 import type { ProjectSummary } from '@ruimte/contracts';
-import { useDocument } from '@/state/document';
-import { keptNotice } from '@/state/document-model';
+import { SHOW_TOAST_ID } from '@/project/show-toast';
+import { useToasts } from '@/state/toasts';
 import { activateProject, askToClose, useAgentCloseAsk, type AgentProjectDeps } from './agent-project-watch';
 
 const TARGET: ProjectSummary = {
@@ -45,43 +46,65 @@ function fakeWindow(options: Partial<Pick<AgentProjectDeps, 'open' | 'listed'>> 
     return { deps: fake, opened, asked: () => asked };
 }
 
+function card() {
+    return useToasts.getState().toasts.find((toast) => toast.id === SHOW_TOAST_ID) ?? null;
+}
+
+beforeEach(() => {
+    jest.useFakeTimers();
+    useToasts.setState({ toasts: [] });
+});
+
 afterEach(() => {
     useAgentCloseAsk.setState({ ask: null });
+    useToasts.getState().dismiss(SHOW_TOAST_ID);
+    useToasts.setState({ toasts: [] });
+    jest.useRealTimers();
 });
 
 describe('an agent bringing a project to the front', () => {
-    test('with switching on, the window opens it and the banner leads back', async () => {
+    test('with switching on, the window opens it and the toast leads back', async () => {
         const here = fakeWindow();
         await activateProject('m', PAYLOAD, here.deps);
 
         expect(here.opened).toEqual(['atlas']);
-        expect(useDocument.getState().viewNotice).toEqual({
-            message: 'An agent brought Atlas to the front',
-            action: { kind: 'project', endpointId: 'm', projectId: 'home', back: true }
-        });
+        expect(card()).toMatchObject({ kind: 'success', title: 'An agent brought Atlas to the front', lifetime: UNDO_MS, action: { label: 'Back' } });
+
+        card()?.action?.run();
+
+        expect(here.opened).toEqual(['atlas', 'home']);
+        expect(card()).toBeNull();
     });
 
-    test('with switching off, nothing moves and the banner offers to go there', async () => {
+    test('with switching off, nothing moves and the toast offers to go there', async () => {
         const here = fakeWindow({ follow: false });
         await activateProject('m', PAYLOAD, here.deps);
 
         expect(here.opened).toEqual([]);
-        expect(useDocument.getState().viewNotice).toEqual({
-            message: 'An agent asked you to look at Atlas',
-            action: { kind: 'project', endpointId: 'm', projectId: 'atlas', back: false }
-        });
+        expect(card()).toMatchObject({ title: 'An agent asked you to look at Atlas', action: { label: 'Go there' } });
+
+        card()?.action?.run();
+
+        expect(here.opened).toEqual(['atlas']);
     });
 
-    test('a window on another project, or a project another window took up, gets no banner', async () => {
+    test('a newer request replaces the toast of the one before', async () => {
+        await activateProject('m', PAYLOAD, fakeWindow({ follow: false }).deps);
+        await activateProject('m', PAYLOAD, fakeWindow().deps);
+
+        expect(useToasts.getState().toasts.map((toast) => toast.title)).toEqual(['An agent brought Atlas to the front']);
+    });
+
+    test('a window on another project, or a project another window took up, gets no toast', async () => {
         const elsewhere = fakeWindow({ shown: 'other' });
         await activateProject('m', PAYLOAD, elsewhere.deps);
 
         expect(elsewhere.opened).toEqual([]);
-        expect(useDocument.getState().viewNotice).toBeNull();
+        expect(card()).toBeNull();
 
         await activateProject('m', PAYLOAD, fakeWindow({ open: async () => 'done' }).deps);
 
-        expect(useDocument.getState().viewNotice).toBeNull();
+        expect(card()).toBeNull();
     });
 });
 
@@ -110,10 +133,4 @@ describe('an agent asking to close a project', () => {
         expect(elsewhere.asked() + recent.asked()).toBe(0);
         expect(useAgentCloseAsk.getState().ask).toBeNull();
     });
-});
-
-test('a banner about a project outlives a change of the views, since it names no view', () => {
-    const notice = { message: 'Atlas', action: { kind: 'project', endpointId: 'm', projectId: 'atlas', back: false } } as const;
-
-    expect(keptNotice(notice, [])).toBe(notice);
 });

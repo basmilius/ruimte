@@ -1012,6 +1012,13 @@
         "notifications": {
             "title": "Meldingen"
         },
+        "views": {
+            "title": "Weergaven"
+        },
+        "showViews": {
+            "label": "Agents van weergave laten wisselen",
+            "description": "Een weergave of project dat een agent opent, vervangt het jouwe, en een melding laat je teruggaan. Als dit uit staat, biedt de melding aan erheen te gaan."
+        },
         "working": {
             "title": "Wakker houden",
             "description": "Als deze computer slaapt, pauzeert elke agent.",
@@ -1107,8 +1114,8 @@
         "sending": {
             "title": "Versturen"
         },
-        "views": {
-            "title": "Weergaven en kaarten"
+        "maps": {
+            "title": "Kaarten"
         },
         "agents": {
             "title": "Wat agents mogen tonen"
@@ -1131,10 +1138,6 @@
         "readingWidth": {
             "label": "Leesbreedte",
             "description": "De breedte van de berichten in een chatweergave. Een chat op een canvas vult zijn node."
-        },
-        "showViews": {
-            "label": "Agents van weergave laten wisselen",
-            "description": "Een weergave of project dat een agent opent, vervangt het jouwe, met een banner om terug te gaan. Als dit uit staat, biedt de banner aan erheen te gaan."
         },
         "mapTiles": {
             "label": "Kaarttegels",

@@ -53,6 +53,7 @@ import type { AgentSession } from '@/agents/nodes';
 import type { Point } from '@/canvas/math';
 import { designFoldersOnDisk } from '@/design/design-read';
 import { lastFlagColor, rememberFlagColor } from '@/project/flag-color';
+import { backOffer, showMoveToast } from '@/project/show-toast';
 import { liveViewDeletion, type ViewDeletionMachine } from '@/project/view-deletion';
 import { nodesOfView } from '@/project/view-nodes';
 import { openInNewWindow, wantsNewWindow } from '@/project/windows';
@@ -322,17 +323,14 @@ export function focusViewAction(viewId: string): void {
 
 /*
  * A view of the project opened beside the one in the focused cell, as a tab. Not an action of the catalog: only a
- * person at a grid asks for this. The banner over the views says so and offers the way back, as for any show.
+ * person at a grid asks for this. A toast says so and offers the way back, as for any show.
  */
 export function openInNewTabAction(viewId: string): void {
     const state = useDocument.getState();
     const view = state.views.find((candidate) => candidate.id === viewId);
     const shown = view === undefined || !isOpenableView(view) ? null : state.showView(viewId, { newTab: true });
     if (view !== undefined && shown?.tab !== undefined) {
-        useDocument.getState().showNotice({
-            message: i18next.t('project:showView.newTab', { view: view.name ?? viewId }),
-            action: { kind: 'back', shown }
-        });
+        showMoveToast(i18next.t('project:showView.newTab', { view: view.name ?? viewId }), backOffer(shown));
     }
 }
 

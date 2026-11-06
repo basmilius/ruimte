@@ -3,7 +3,7 @@ import { migrateFilesCell, NO_LOOSE } from '@/shell/legacy-files-cell';
 import { focusedViewId, layoutOf, viewIdsIn } from '@/shell/split';
 import { forgetCameraHistories } from '@/state/camera-history';
 import type { DocumentState } from '@/state/document';
-import { keptNotice, localOfView, looseIdsOf, openEditors, settledOn, splitTrash, type DocumentKit } from '@/state/document-model';
+import { localOfView, looseIdsOf, openEditors, settledOn, splitTrash, type DocumentKit } from '@/state/document-model';
 
 /* The project as a whole: loaded, read again, merged with another writer, and handed back to be saved. */
 export function createDocumentContentSlice({
@@ -30,12 +30,10 @@ export function createDocumentContentSlice({
                 lastCanvasViewId: views.find(isCanvasView)?.id ?? null,
                 lastHostViewId: state.reloading ? state.lastHostViewId : null
             });
-            // Another project is another set of views, so a banner about the one that just left goes with it.
             set({
                 ...settled,
                 emptyLayout: local?.emptyLayout === true,
                 maximized: null,
-                viewNotice: null,
                 loading: true,
                 edits: 0,
                 shared: document?.shared ?? [],
@@ -78,7 +76,7 @@ export function createDocumentContentSlice({
 
         applyMerge(merged, canvases, shared, flags) {
             const { views, trashed } = splitTrash(merged, get().trashed);
-            set((state) => ({ views, shared, flags, trashed, merging: true, viewNotice: keptNotice(state.viewNotice, views) }));
+            set({ views, shared, flags, trashed, merging: true });
             for (const [viewId, patch] of Object.entries(canvases)) {
                 peers.canvases.peek(viewId)?.getState().applyExternal(patch);
             }
