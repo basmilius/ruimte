@@ -65,7 +65,7 @@ extension ProviderAccountList {
     }
 
     /// Whether the machine said why it could not read the entry's numbers.
-    static func isUnavailable(_ entry: JSONValue) -> Bool { entry["unavailable"].map { $0 != .null } ?? false }
+    public static func isUnavailable(_ entry: JSONValue) -> Bool { entry["unavailable"].map { $0 != .null } ?? false }
 
     /// What a turn of this account would run into first: its session window, else its fullest one.
     private static func pressure(_ entry: JSONValue) -> Double {

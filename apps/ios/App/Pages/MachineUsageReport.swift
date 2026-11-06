@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 
 enum UsagePeriod: String, CaseIterable, Identifiable, Sendable {
     case today, week, month, quarter

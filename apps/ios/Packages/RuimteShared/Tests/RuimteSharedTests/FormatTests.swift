@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import RuimtePulsar
+@testable import RuimteShared
 
 /// `FormatPortTests` holds every function `@adecore/ui/format` has. This one is the phone's own: a time to the second,
 /// which the desktop never writes.

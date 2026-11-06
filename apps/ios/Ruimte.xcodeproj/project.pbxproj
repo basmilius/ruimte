@@ -30,7 +30,7 @@
 		0E75E028596697B06343F2F1 /* CanvasRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5B1DCD63DC630D3ABFE455 /* CanvasRenderTests.swift */; };
 		0F2AF4A02D667182FE086D79 /* ChatPromptState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07925406E3DF19A644D70108 /* ChatPromptState.swift */; };
 		10DF53C41E4349033B09883C /* MachineProjectsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA401CA82CE41046F457D507 /* MachineProjectsPage.swift */; };
-		111C46FF74454E6A1F27DE93 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 4C617C6EF19F97415409AD4F /* Sentry */; };
+		111C46FF74454E6A1F27DE93 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 37621C952E69C77E98AD85B1 /* Highlightr */; };
 		12D0242E00D0D496AF350508 /* UiInputViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3573D906C3AEB8F033DE0471 /* UiInputViews.swift */; };
 		13BAE6AC89AFF1FD2B6383B4 /* AttentionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91AE65432A65D98C4A7FE2CA /* AttentionStore.swift */; };
 		13FCE26BB6C7AEAD33A8C879 /* ChatVisualTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C54DF7B8AC1D58B4FB3566E3 /* ChatVisualTests.swift */; };
@@ -55,7 +55,7 @@
 		1D68DB039EB573C984D12915 /* UiHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF5E04A13B99B9A02435B7C /* UiHost.swift */; };
 		1D6CEEA1B77289B22B60489B /* ViewSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B046BB9BDAA4FBBD682034 /* ViewSettingsSheet.swift */; };
 		1DE7EEFABD8511F861F6E3F4 /* ports-merge.json in Resources */ = {isa = PBXBuildFile; fileRef = DCEBB48874CD75525612331D /* ports-merge.json */; };
-		2039449EB696024C64A7D640 /* RuimteIntelligentUI in Frameworks */ = {isa = PBXBuildFile; productRef = EA9DFDE6BD85D7623C050492 /* RuimteIntelligentUI */; };
+		2039449EB696024C64A7D640 /* RuimteTransport in Frameworks */ = {isa = PBXBuildFile; productRef = 6FFA42FE75679D801B5D68D6 /* RuimteTransport */; };
 		2078E1D5C84F273F381AA240 /* LaunchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6D2983C599BF780FEA70F8A /* LaunchModel.swift */; };
 		226093BDE4A09AE44CB9B90A /* GitPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D69D1BF9802A60BF9D50BA2B /* GitPage.swift */; };
 		22B64B6C83CC6D51845273A6 /* ChatOutputCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34EC3280A698C1121455FECB /* ChatOutputCards.swift */; };
@@ -132,7 +132,7 @@
 		45F45A6E761A5A10B4D4C7A9 /* VoiceFakes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 324BB4F8F59C22590EF55DDF /* VoiceFakes.swift */; };
 		463A507003FD3BD4836E508E /* VoiceActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D3C7FEE7D5E4836DE528B32 /* VoiceActivityWidget.swift */; };
 		46BDAEFA32FAF3B0D0A7A896 /* tone.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F88143232F57172C105B62F4 /* tone.m4a */; };
-		472AD5EFDFDBF34FEED69DD1 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 37621C952E69C77E98AD85B1 /* Highlightr */; };
+		472AD5EFDFDBF34FEED69DD1 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 7DD6852AA11DD8F3D8DDDBDF /* SwiftTerm */; };
 		47F63AED54BDD919F5D130A2 /* ChatFileChanges.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B3EDC89A5AF9677DD9A62E7 /* ChatFileChanges.swift */; };
 		48437C2B5BE9581B5612DF61 /* ChatActivityViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F3F8DD20F1E6829F55FE104 /* ChatActivityViews.swift */; };
 		48AB34D380F8CA764C6882F9 /* MobileFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E3E45A889DDA1793C34828F /* MobileFlow.swift */; };
@@ -157,6 +157,7 @@
 		53D62364DA576BC5C95FD341 /* TerminalScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17236BE0F16BF4DE8C134009 /* TerminalScreen.swift */; };
 		53EEFD2E8335BE813CC1207C /* MachinePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CBB92CD25F5D79234F2DAAA /* MachinePage.swift */; };
 		54E426F0BDDD1855FFF1D8C1 /* DiagramAgentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FE5B15E468820397E2C5975 /* DiagramAgentTests.swift */; };
+		5511FE0B95864AB23542ACC2 /* RuimteShared in Frameworks */ = {isa = PBXBuildFile; productRef = FACA3463B07229A7317B20BF /* RuimteShared */; };
 		55BA9CF9F17AEB4B9D055CDF /* NewViewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 823E3BBF537D466FA9731396 /* NewViewSheet.swift */; };
 		56D78BD9DE3001C07CAD384C /* AppMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBC322B49F5CB3934C36E246 /* AppMetricsTests.swift */; };
 		575E940A18BB414BF9791F67 /* image.heic in Resources */ = {isa = PBXBuildFile; fileRef = 1CE17D83D8BAED54ADDDFFD1 /* image.heic */; };
@@ -185,6 +186,7 @@
 		5FCF6A757B0B4A43BDF1B9F4 /* ChatSendTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BE20C3032455CE771452578 /* ChatSendTests.swift */; };
 		618B905E55D2BECE6783EABD /* tone.aac in Resources */ = {isa = PBXBuildFile; fileRef = 3D803A055A81FD7C2DFD3B8A /* tone.aac */; };
 		61C3DFDA97EEA6583CF2F9CD /* ports-chat.json in Resources */ = {isa = PBXBuildFile; fileRef = F7FC3796DFA48F9B0230FC21 /* ports-chat.json */; };
+		61D44980C0B0D9AE724FB231 /* RuimteVoice in Frameworks */ = {isa = PBXBuildFile; productRef = 00606F283B943C12909298AA /* RuimteVoice */; };
 		625548C2D5A0BC4D86E660A0 /* ScheduledBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18BC34E5919BC7662D31AEDE /* ScheduledBoard.swift */; };
 		62D36AE12D4AFBB7A1AECA5C /* MobileWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4494CB22D3C1F93514921B21 /* MobileWorkspace.swift */; };
 		62F374513A3A88F4B1584832 /* PadRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1836988D371F441523F1DAB /* PadRouterTests.swift */; };
@@ -201,7 +203,7 @@
 		690018DEE052CF8E2F15A728 /* image.ico in Resources */ = {isa = PBXBuildFile; fileRef = C3C0E3CC0799686666F81365 /* image.ico */; };
 		69C6630EC169F0324FDED5B1 /* LaunchPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B9D2F7B581C924224681BA8 /* LaunchPath.swift */; };
 		6A11D3C0C5C55E0730280183 /* ChatForkingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAF32399AA9411213B7BFB06 /* ChatForkingTests.swift */; };
-		6B28EC3AF9DE1B5DB8D62235 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 7DD6852AA11DD8F3D8DDDBDF /* SwiftTerm */; };
+		6B28EC3AF9DE1B5DB8D62235 /* RuimteVoice in Frameworks */ = {isa = PBXBuildFile; productRef = 2F5314964027312171660EB2 /* RuimteVoice */; };
 		6B9C49BBFF571EE172D408E5 /* ChatSheetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8BC4353277A4019C10B096E /* ChatSheetTests.swift */; };
 		6BAB625D21EB2AECB1D6579C /* tone.wav in Resources */ = {isa = PBXBuildFile; fileRef = BDC7F1DC56F0B5F307881B99 /* tone.wav */; };
 		6C6E33A68C05996747B40404 /* ChatToolBody.swift in Sources */ = {isa = PBXBuildFile; fileRef = 035178F10C535F6283A85541 /* ChatToolBody.swift */; };
@@ -337,7 +339,7 @@
 		B834A0A08E4903FFB42E0C4A /* ProcessesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C7EB90664392C5D8194C594 /* ProcessesTests.swift */; };
 		B89F5945C273D24E097E2568 /* NowBoardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3AB193736D4225923AF7F5 /* NowBoardTests.swift */; };
 		B8D72A9CB141E5034E0596D4 /* WorkspaceViewSectionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEE3E762A08E656C5BF5C92C /* WorkspaceViewSectionsTests.swift */; };
-		B949A220D4C8ECC4FF9AA838 /* RuimteTransport in Frameworks */ = {isa = PBXBuildFile; productRef = 6FFA42FE75679D801B5D68D6 /* RuimteTransport */; };
+		B949A220D4C8ECC4FF9AA838 /* RuimteShared in Frameworks */ = {isa = PBXBuildFile; productRef = 7257F9C9C381905BF3079D78 /* RuimteShared */; };
 		BA0600DD7F0BEB97CB88E30D /* LaunchEditing.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFCE6EA3CB4923959CC62504 /* LaunchEditing.swift */; };
 		BA623D7F1AD8EA29890E9E41 /* UnifiedProjects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A672F255CAFCD537E1F2A74 /* UnifiedProjects.swift */; };
 		BA96597917A6619CC1208236 /* PortFixtureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71753780F5133CB31C9B678 /* PortFixtureTests.swift */; };
@@ -371,7 +373,7 @@
 		C6A9AF487E555D31CDFBBF25 /* pele.js in Resources */ = {isa = PBXBuildFile; fileRef = 91557ECBC916E8A6930F19E1 /* pele.js */; };
 		C6D413800C46944C57D951B5 /* EclipseStars.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D5CDF11702A94CAD3FAE682 /* EclipseStars.swift */; };
 		C753D5E02FBD111AD87DB0EC /* ChatDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9AC34FA6BB3E2D39E24D463 /* ChatDraftTests.swift */; };
-		C7B1C89782EBA8CF74012E0C /* RuimteTransport in Frameworks */ = {isa = PBXBuildFile; productRef = 11D5B18726EAC79012111C1C /* RuimteTransport */; };
+		C7B1C89782EBA8CF74012E0C /* RuimteShared in Frameworks */ = {isa = PBXBuildFile; productRef = 74083C446A4511040022EC1E /* RuimteShared */; };
 		C7FB859B4CE1EDA8A7906FE0 /* MachineDevicePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FA47C6A96B4F7241EE6B652 /* MachineDevicePreview.swift */; };
 		C81AED68D1D59B9F20EFA3C5 /* NowCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C313F3BEFC69407AE4E76C7 /* NowCard.swift */; };
 		C881A4E3BA50820741FA82B1 /* ChatSavedPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA03D5FA7F4916CE743F505 /* ChatSavedPreview.swift */; };
@@ -387,7 +389,7 @@
 		D10D76C25FB0D3D9CA32934F /* AppIconImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D138E82AD1F1FC9D7F224BF /* AppIconImage.swift */; };
 		D324FDCD0D596543989B5F2B /* VoiceMicButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B6223F5C2B391E891A6A2C /* VoiceMicButton.swift */; };
 		D3AE70D4B71CD32DD8D34D42 /* NotificationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E5C2124CCC572A4A3D407AB /* NotificationCoordinator.swift */; };
-		D43A11554C08D7C39C95FAE9 /* RuimteVoice in Frameworks */ = {isa = PBXBuildFile; productRef = 2F5314964027312171660EB2 /* RuimteVoice */; };
+		D43A11554C08D7C39C95FAE9 /* RuimteIntelligentUI in Frameworks */ = {isa = PBXBuildFile; productRef = EA9DFDE6BD85D7623C050492 /* RuimteIntelligentUI */; };
 		D43CDF040DF82F5E2C648BE7 /* RuimteActivityWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 453AE6630A2DEA42EDBA0A7D /* RuimteActivityWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D5872EB8DA0D98B019783DD2 /* ChatWorkflowsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B76EE2D8119E6A43058A21EB /* ChatWorkflowsTests.swift */; };
 		D5C5B6D3EA9D21DAA758BF79 /* ChatContentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F2414AA03D39CF3F8A6A5CC /* ChatContentTests.swift */; };
@@ -454,12 +456,13 @@
 		FAECE3097D7963F88ED4A186 /* UiData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29AC2E309D31DBDFA3D52D73 /* UiData.swift */; };
 		FBCC63860740FE29DB14145A /* RemotePageState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99D8DF2FFC207D5E1CCBA09A /* RemotePageState.swift */; };
 		FBFDD77FD5548521F3B790B9 /* archive.zip in Resources */ = {isa = PBXBuildFile; fileRef = 9740DA191CE68BB6C7CBAD73 /* archive.zip */; };
-		FC0852453CC1286132A397D3 /* RuimteVoice in Frameworks */ = {isa = PBXBuildFile; productRef = 00606F283B943C12909298AA /* RuimteVoice */; };
+		FC0852453CC1286132A397D3 /* RuimteTransport in Frameworks */ = {isa = PBXBuildFile; productRef = 11D5B18726EAC79012111C1C /* RuimteTransport */; };
 		FCA2458E0B92AFC82296A583 /* ChatVisualFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = 537AABA3DEBCD8A1B04AE59F /* ChatVisualFrame.swift */; };
 		FCC93428322453F0E119E20E /* Slug.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E0A56C099A54C1CA5FCB08 /* Slug.swift */; };
 		FCDDB10FA6AF7A7443CE57B0 /* UiChoiceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12143618CBCFE0DDD802A1EC /* UiChoiceViews.swift */; };
 		FE4A928C3F92055BC800BEA4 /* SnoozeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76C42CE1B94D201D3793B3D4 /* SnoozeTests.swift */; };
 		FE689B39DE2B92F46B572019 /* GeneratedImageRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA827AA4FB7EB9485B203211 /* GeneratedImageRow.swift */; };
+		FEF7BB832639FD2D3758D296 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 4C617C6EF19F97415409AD4F /* Sentry */; };
 		FFD5BDF13AD80E52E91CB7D3 /* ChatComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C36BAD1B8EA7FCBB11B30288 /* ChatComposerView.swift */; };
 /* End PBXBuildFile section */
 
@@ -945,6 +948,7 @@
 		F7FC3796DFA48F9B0230FC21 /* ports-chat.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ports-chat.json"; sourceTree = "<group>"; };
 		F87147CB968B3A1A350EF934 /* WorkspaceNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceNavigation.swift; sourceTree = "<group>"; };
 		F88143232F57172C105B62F4 /* tone.m4a */ = {isa = PBXFileReference; path = tone.m4a; sourceTree = "<group>"; };
+		F98222F965F5136E78D6112D /* RuimteShared */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RuimteShared; path = Packages/RuimteShared; sourceTree = SOURCE_ROOT; };
 		F99B601820CBFE2046FC337E /* ProjectOverviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectOverviewTests.swift; sourceTree = "<group>"; };
 		FA3AB193736D4225923AF7F5 /* NowBoardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowBoardTests.swift; sourceTree = "<group>"; };
 		FA47C5156D96FA80DF6383D2 /* ChatPromptFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPromptFeed.swift; sourceTree = "<group>"; };
@@ -974,6 +978,7 @@
 			files = (
 				537CCF8C7593D02A36693C89 /* LucideSwift in Frameworks */,
 				637DA61429D380AEEAE04902 /* RuimtePulsar in Frameworks */,
+				5511FE0B95864AB23542ACC2 /* RuimteShared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -983,12 +988,13 @@
 			files = (
 				A4018BFBF14D0FA6CDCECEA2 /* LucideSwift in Frameworks */,
 				7790DAA9D3367EA110B768DD /* RuimtePulsar in Frameworks */,
-				B949A220D4C8ECC4FF9AA838 /* RuimteTransport in Frameworks */,
-				2039449EB696024C64A7D640 /* RuimteIntelligentUI in Frameworks */,
-				D43A11554C08D7C39C95FAE9 /* RuimteVoice in Frameworks */,
-				6B28EC3AF9DE1B5DB8D62235 /* SwiftTerm in Frameworks */,
-				472AD5EFDFDBF34FEED69DD1 /* Highlightr in Frameworks */,
-				111C46FF74454E6A1F27DE93 /* Sentry in Frameworks */,
+				B949A220D4C8ECC4FF9AA838 /* RuimteShared in Frameworks */,
+				2039449EB696024C64A7D640 /* RuimteTransport in Frameworks */,
+				D43A11554C08D7C39C95FAE9 /* RuimteIntelligentUI in Frameworks */,
+				6B28EC3AF9DE1B5DB8D62235 /* RuimteVoice in Frameworks */,
+				472AD5EFDFDBF34FEED69DD1 /* SwiftTerm in Frameworks */,
+				111C46FF74454E6A1F27DE93 /* Highlightr in Frameworks */,
+				FEF7BB832639FD2D3758D296 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -998,8 +1004,9 @@
 			files = (
 				0B547D0A6B2838F62FB295E9 /* LucideSwift in Frameworks */,
 				6DB0A1C6FE1BF1BEB67EFF37 /* RuimtePulsar in Frameworks */,
-				C7B1C89782EBA8CF74012E0C /* RuimteTransport in Frameworks */,
-				FC0852453CC1286132A397D3 /* RuimteVoice in Frameworks */,
+				C7B1C89782EBA8CF74012E0C /* RuimteShared in Frameworks */,
+				FC0852453CC1286132A397D3 /* RuimteTransport in Frameworks */,
+				61D44980C0B0D9AE724FB231 /* RuimteVoice in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1646,6 +1653,7 @@
 			children = (
 				5B0A980DBDE3AE589F27EA0B /* RuimteIntelligentUI */,
 				277C90606C3586426EE8CE7F /* RuimtePulsar */,
+				F98222F965F5136E78D6112D /* RuimteShared */,
 				5748DC9D2A5D211B6913A122 /* RuimteTransport */,
 				8CD1F877F86D4A5649A9F58B /* RuimteVoice */,
 			);
@@ -1767,6 +1775,7 @@
 			packageProductDependencies = (
 				2E14885FED297F540167B50D /* LucideSwift */,
 				7BBC3D3E95A8FFA51AEDDEE1 /* RuimtePulsar */,
+				FACA3463B07229A7317B20BF /* RuimteShared */,
 			);
 			productName = RuimteActivityWidget;
 			productReference = 453AE6630A2DEA42EDBA0A7D /* RuimteActivityWidget.appex */;
@@ -1789,6 +1798,7 @@
 			packageProductDependencies = (
 				06F665001E0BC007A06510C8 /* LucideSwift */,
 				D356DC5C4DF0605AD7A64646 /* RuimtePulsar */,
+				74083C446A4511040022EC1E /* RuimteShared */,
 				11D5B18726EAC79012111C1C /* RuimteTransport */,
 				00606F283B943C12909298AA /* RuimteVoice */,
 			);
@@ -1815,6 +1825,7 @@
 			packageProductDependencies = (
 				10DFA2EA63182CCBE1B7810F /* LucideSwift */,
 				9C53340AF650FD1171130411 /* RuimtePulsar */,
+				7257F9C9C381905BF3079D78 /* RuimteShared */,
 				6FFA42FE75679D801B5D68D6 /* RuimteTransport */,
 				EA9DFDE6BD85D7623C050492 /* RuimteIntelligentUI */,
 				2F5314964027312171660EB2 /* RuimteVoice */,
@@ -1908,6 +1919,7 @@
 				E4F09FC52CA242014D05DB21 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
 				E0C624717CB8CFD5682AA99B /* XCLocalSwiftPackageReference "Packages/RuimteIntelligentUI" */,
 				82AD56BBD81D53B5F164E4FA /* XCLocalSwiftPackageReference "Packages/RuimtePulsar" */,
+				F831FCE4F2A624015A0CABBC /* XCLocalSwiftPackageReference "Packages/RuimteShared" */,
 				26AAEDEB62D7609C88958B40 /* XCLocalSwiftPackageReference "Packages/RuimteTransport" */,
 				2809A8F75A8C44005F701CE6 /* XCLocalSwiftPackageReference "Packages/RuimteVoice" */,
 			);
@@ -2848,6 +2860,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/RuimteIntelligentUI;
 		};
+		F831FCE4F2A624015A0CABBC /* XCLocalSwiftPackageReference "Packages/RuimteShared" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/RuimteShared;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -2931,6 +2947,14 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = RuimteTransport;
 		};
+		7257F9C9C381905BF3079D78 /* RuimteShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RuimteShared;
+		};
+		74083C446A4511040022EC1E /* RuimteShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RuimteShared;
+		};
 		7BBC3D3E95A8FFA51AEDDEE1 /* RuimtePulsar */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = RuimtePulsar;
@@ -2951,6 +2975,10 @@
 		EA9DFDE6BD85D7623C050492 /* RuimteIntelligentUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = RuimteIntelligentUI;
+		};
+		FACA3463B07229A7317B20BF /* RuimteShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RuimteShared;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 
 /// One conversation below a chat: the call that opened it and what that call called it.

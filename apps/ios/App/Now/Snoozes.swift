@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 
 /// The ways to put a node aside, in the order the desktop's snooze menu offers them.

@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// A color a program asked for: one of the sixteen of the palette by number, or one of its own.

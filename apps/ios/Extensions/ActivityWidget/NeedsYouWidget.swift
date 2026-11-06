@@ -1,5 +1,6 @@
 import LucideSwift
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 import WidgetKit
 

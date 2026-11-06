@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 
 /// Numbers as a block shows them. A tone, never the renderer, says whether a change is good.
 enum UiFormat {

@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 
 /// A file of a version. Its name is a label, never a path, and a file is read by its place in the version.

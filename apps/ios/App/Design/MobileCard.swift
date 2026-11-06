@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// The one card of the app: a group of content straight on the page, without a ground or an edge, held apart by the

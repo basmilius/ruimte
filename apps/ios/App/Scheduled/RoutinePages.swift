@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// A page Scheduled pushes, on the iPhone's stack or in the iPad's content column.

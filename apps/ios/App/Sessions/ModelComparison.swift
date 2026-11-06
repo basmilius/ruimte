@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import Observation
 import RuimtePulsar
+import RuimteShared
 
 /// The pure part of Compare models, after `apps/client/src/shell/models/chart.ts`: which models the chart can draw,
 /// the points no other point beats, and the words around them.

@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// What runs in the background of a chat's CLI, as `info.background` lists it: its shells and its monitors.

@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import RuimteIntelligentUI
 import RuimtePulsar
+import RuimteShared
 
 @MainActor @Observable
 final class ChatItemState: Identifiable {

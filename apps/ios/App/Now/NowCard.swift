@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// A session waiting on a person, as a card of its own, on Now and for a routine run on Scheduled. A chat's oldest

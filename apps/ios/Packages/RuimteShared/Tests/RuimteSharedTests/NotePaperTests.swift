@@ -1,6 +1,6 @@
 import Testing
 
-@testable import RuimtePulsar
+@testable import RuimteShared
 
 @Test func aNoteReadsItsOldPaperBeforeItsAccentAndTheDefaultWithoutEither() {
     #expect(

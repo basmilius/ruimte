@@ -3,7 +3,8 @@ import { NODE_ACCENT_NAMES } from '@ruimte/contracts';
 import { notePaperClass } from '../canvas-model/accents';
 
 const STYLES = await Bun.file(new URL('../styles.css', import.meta.url)).text();
-const SWIFT = await Bun.file(new URL('../../../ios/Packages/RuimtePulsar/Sources/RuimtePulsar/RuimteColors.swift', import.meta.url)).text();
+const SWIFT = await Bun.file(new URL('../../../ios/Packages/RuimteShared/Sources/RuimteShared/RuimteColors.swift', import.meta.url)).text();
+const ACCENTS = await Bun.file(new URL('../../../ios/Packages/RuimtePulsar/Sources/RuimtePulsar/Generated/NodeAccents.swift', import.meta.url)).text();
 const THEME = await Bun.file(Bun.resolveSync('@adecore/ui/theme.css', import.meta.dir)).text();
 const TEXT = Object.fromEntries(
     (['light', 'dark'] as const).map((side, index) => {
@@ -75,8 +76,8 @@ describe('the paper of a note', () => {
 /* The iPhone app keeps the same table by hand, since a color is no wire shape the Swift generator writes. */
 describe('the paper of a note on the iPhone', () => {
     test('lists the accents in the order of the desktop', () => {
-        const listed = /nodeAccentNames = \[([^\]]*)\]/
-            .exec(SWIFT)![1]!
+        const listed = /names: \[String\] = \[([^\]]*)\]/
+            .exec(ACCENTS)![1]!
             .match(/"([a-z]+)"/g)!
             .map((name) => name.slice(1, -1));
         expect(listed).toEqual([...NODE_ACCENT_NAMES]);

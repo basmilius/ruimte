@@ -19,7 +19,7 @@ The app follows the desktop wherever a phone can. These are the deliberate diffe
 - Output is read-only and shows only while the machine names `artifact.list`. A saved page runs in the visual reply's sandbox, images open in Quick Look, and Share reads a file only once a person picks a destination. Without a link the page says the machine is unreachable and shows nothing kept.
 - Force quit asks first, and the machine refuses a pid that now names another process.
 - Git conflicts are resolved in the app, never through markers, with a Swift port of `@adecore/merge` that fingerprints as the daemon does. A merge into a branch checked out nowhere is refused.
-- `Format` in `RuimtePulsar` ports `@adecore/ui/format`: the iOS region writes the notation, the app language the words.
+- `Format` in `RuimteShared` ports `@adecore/ui/format`: the iOS region writes the notation, the app language the words.
 - Usage counts in euros in a EUR region (at the machine's ECB rate) and dollars elsewhere, until a person picks a currency.
 - Widgets never connect. They show what the app wrote into the app group (`NeedsYouWidgetRecorder`, `ProjectWidgetRecorder`), refreshed at most every half hour.
 
@@ -93,6 +93,7 @@ xcodebuild -project apps/ios/Ruimte.xcodeproj -scheme Ruimte -configuration Debu
 xcrun devicectl device install app --device <udid> \
     /tmp/ruimte-ios-xcode/Build/Products/Debug-iphoneos/Ruimte.app
 swift test --package-path apps/ios/Packages/RuimtePulsar --scratch-path /tmp/ruimte-ios-pulsar-build
+swift test --package-path apps/ios/Packages/RuimteShared --scratch-path /tmp/ruimte-ios-shared-build
 swift test --package-path apps/ios/Packages/RuimteTransport --scratch-path /tmp/ruimte-ios-transport-build
 bun run check
 ```
@@ -131,6 +132,7 @@ The system authorization sheet, with no browser callback and no web fallback. Th
 ## How the connection is built
 
 - `RuimtePulsar` owns the device key, Keychain store, PKCE, address-book API and session rotation. Every scene shares one `SessionVault` and ed25519 key. Keychain items use `AfterFirstUnlockThisDeviceOnly` without synchronization. Access tokens stay in memory.
+- `RuimteShared` holds what the app and the widget extension both draw: the colors, `Format`, the usage rows and sections, and the widget and Live Activity stores that carry data through the app group. It builds on `RuimtePulsar`, never the other way, and the Notification Service extension links only `RuimtePulsar`.
 - `RuimteTransport` shares each broker socket by URL and public key, waits for its ICE response before gathering, and refreshes expired credentials. One held connection per machine serves all scenes. The last release leaves a 30-second grace period; background closes links and foreground reconnects those still held. Liveness reads libwebrtc transport packets, not ping replies.
 - ICE prefers a direct route, with TURN as fallback. Relay-only exists only in Connection diagnostics, on its own link (`diagnostic:<machine id>`).
 - An attempt first signals at the machine's local door (`LanDoor.swift`, `Signaling.swift`), at every `lan` address from `endpoint.info` and `endpoint.changed`. The app sends a fresh nonce and says nothing about itself until the machine signed it with the pinned key (`pulsar-lan-door-v1`). The broker joins when no door is ready within 1000 ms, or at once when every door failed (also with Local Network permission refused). A door attempt gets STUN and no TURN. A door win that fails before its channel opens skips the local network for five minutes.

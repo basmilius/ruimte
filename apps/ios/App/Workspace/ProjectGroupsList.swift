@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// The iPhone's open projects under the machine each is on, with how that machine is reached, and the machine's Chats

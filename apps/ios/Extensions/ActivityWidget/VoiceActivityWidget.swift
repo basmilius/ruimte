@@ -1,5 +1,6 @@
 import ActivityKit
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 import WidgetKit
 

@@ -8,7 +8,7 @@ import { adecore, adecoreEntry, compactFixture } from './adecore-port.ts';
  */
 process.env.TZ = 'Europe/Amsterdam';
 
-const destination = resolve(import.meta.dir, '../../../apps/ios/Packages/RuimtePulsar/Tests/RuimtePulsarTests/Fixtures/ports-format.json');
+const destination = resolve(import.meta.dir, '../../../apps/ios/Packages/RuimteShared/Tests/RuimteSharedTests/Fixtures/ports-format.json');
 
 interface FormatModule {
     formatAgo(ms: number): string;

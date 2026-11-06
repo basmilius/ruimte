@@ -1,4 +1,5 @@
 import Foundation
+import RuimtePulsar
 
 public struct UsageMoneyFormatter: Sendable {
     public let locale: Locale

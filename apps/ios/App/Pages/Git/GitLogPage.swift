@@ -1,5 +1,6 @@
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import SwiftUI
 

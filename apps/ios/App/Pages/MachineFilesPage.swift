@@ -1,6 +1,7 @@
 import AVKit
 import PDFKit
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import RuimteVoice
 import SwiftUI

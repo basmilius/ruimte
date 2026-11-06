@@ -1,6 +1,7 @@
 import CoreTransferable
 import QuickLook
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import SwiftUI
 import UniformTypeIdentifiers

@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// The offer to compact before the next message, for a chat whose prompt cache went cold, so that message would pay

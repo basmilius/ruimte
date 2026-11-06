@@ -1,5 +1,6 @@
 import Charts
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import SwiftUI
 

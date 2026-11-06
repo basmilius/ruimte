@@ -1,5 +1,6 @@
 import RuimteIntelligentUI
 import RuimtePulsar
+import RuimteShared
 import SceneKit
 import SwiftUI
 import UIKit

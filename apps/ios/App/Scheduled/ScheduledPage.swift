@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// Every routine of the connected machines, grouped by what a person needs to know: what waits on them, what still

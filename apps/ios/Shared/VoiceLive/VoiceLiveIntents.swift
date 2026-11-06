@@ -1,6 +1,7 @@
 import ActivityKit
 import AppIntents
 import RuimtePulsar
+import RuimteShared
 
 /// What the buttons of Voice's Live Activity ask of the session. A `LiveActivityIntent` runs in the app's process,
 /// which sets the handler; the widget extension compiles these too, for its buttons, and never runs them.

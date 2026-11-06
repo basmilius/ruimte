@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 
 /// One launch of a project as the machine hands it over. `raw` keeps the entry whole, so a field a newer release
 /// writes survives a save; every read goes through `config`.

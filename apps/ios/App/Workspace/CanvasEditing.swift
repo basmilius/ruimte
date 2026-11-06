@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import RuimtePulsar
+import RuimteShared
 
 /// Which gestures a canvas refuses on this client. Commands from the dock always work. A phone neither moves nor
 /// resizes nodes, but it keeps those two as it read them, since the desktop writes the same local file.

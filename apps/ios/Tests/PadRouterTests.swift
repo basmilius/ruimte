@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import XCTest
 

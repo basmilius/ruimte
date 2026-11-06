@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 
 /// When a routine starts, as `RoutineScheduleSchema` writes it: a day and a time, weekdays and a time,
 /// weekdays and a repeat within a day, or a crontab expression, on the machine's clock. Its weekdays are ISO

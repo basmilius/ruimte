@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 
 /// One process as a sample lists it. With the pid, the start time names one process, since a pid is reused.

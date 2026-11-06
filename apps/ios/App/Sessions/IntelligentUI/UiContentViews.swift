@@ -1,6 +1,7 @@
 import ImageIO
 import RuimteIntelligentUI
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// The thread's own code view; the highlighter follows the text as it grows, so nothing jumps when the node closes.

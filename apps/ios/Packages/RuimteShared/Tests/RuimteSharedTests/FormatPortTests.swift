@@ -1,7 +1,8 @@
 import Foundation
+import RuimtePulsar
 import Testing
 
-@testable import RuimtePulsar
+@testable import RuimteShared
 
 /// Holds `Format` to `Fixtures/ports-format.json`, which `packages/contracts/scripts/generate-port-format.ts` writes by
 /// calling `@adecore/ui/format` on every case, so the phone writes what the desktop writes.

@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// The permission modes as the desktop names them, from the one that asks most to the one that never asks.

@@ -1,4 +1,5 @@
 import Foundation
+import RuimtePulsar
 
 public struct UsageWidgetMachine: Codable, Sendable, Equatable, Identifiable {
     public let id: String

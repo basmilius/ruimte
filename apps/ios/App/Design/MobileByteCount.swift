@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 
 /// A size the way `Format.bytes` writes one, and a size a machine never reported says so.
 func mobileByteCount(_ bytes: Double?, whole: Bool = false, locale: FormatLocale = .current) -> String {

@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 import WidgetKit
 
 /// Writes what Now shows into the app group for the needs-you widgets, which never connect themselves.

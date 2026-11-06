@@ -1,5 +1,6 @@
 import Charts
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// Compare models: the Intelligence Index against the cost per task, a line per model with a point per effort, as

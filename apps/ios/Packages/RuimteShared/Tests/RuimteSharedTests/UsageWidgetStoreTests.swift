@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import RuimtePulsar
+@testable import RuimteShared
 
 @Test func usageWidgetDayIsTheDayOfTheGivenTimeZone() throws {
     let late = Date(timeIntervalSince1970: 1_790_031_600)

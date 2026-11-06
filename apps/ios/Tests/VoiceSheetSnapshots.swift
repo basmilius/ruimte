@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 import RuimteVoice
 import SwiftUI
 import Testing
