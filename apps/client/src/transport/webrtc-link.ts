@@ -9,13 +9,12 @@ import {
     DIRECT_PING_TICK_MS,
     directPingFrame,
     DIRECT_CHANNEL_LABEL,
-    DirectChallengeFrameSchema,
-    DirectVerdictFrameSchema,
     FrameAssembler,
     isBinaryPiece,
     ICE_GATHER_TIMEOUT_MS,
     isDeflatedPiece,
     LIVE_FRAME_MAX_BYTES,
+    parseHandshakeFrame,
     protocolMismatch,
     splitFrame,
     type DirectChallengeFrame,
@@ -195,30 +194,28 @@ export function webRtcLink(options: WebRtcLinkOptions): LinkOpener {
         };
 
         const onHandshakeFrame = async (raw: string): Promise<void> => {
-            const json = JSON.parse(raw) as unknown;
-            const challenge = DirectChallengeFrameSchema.safeParse(json);
-            if (challenge.success) {
+            const frame = parseHandshakeFrame(JSON.parse(raw));
+            if (frame === null) {
+                throw new Error(i18next.t('machines:direct.badHandshake'));
+            }
+            if (frame.type === 'direct.challenge') {
                 if (binding === null) {
                     throw new Error(i18next.t('machines:direct.channelEarly'));
                 }
                 // Checked before anything is proved, since a machine on another wire could not read what follows anyway.
-                const mismatch = protocolMismatch(challenge.data.protocol);
+                const mismatch = protocolMismatch(frame.protocol);
                 if (mismatch !== null) {
                     end(protocolRefusal(mismatch));
                     return;
                 }
-                const proof = await options.prove(challenge.data, binding);
-                deflating = challenge.data.compression?.includes(DIRECT_COMPRESSION) === true && typeof DecompressionStream === 'function';
+                const proof = await options.prove(frame, binding);
+                deflating = frame.compression?.includes(DIRECT_COMPRESSION) === true && typeof DecompressionStream === 'function';
                 sendFrame(JSON.stringify(deflating ? { ...proof, compression: DIRECT_COMPRESSION } : proof));
                 return;
             }
-            const verdict = DirectVerdictFrameSchema.safeParse(json);
-            if (!verdict.success) {
-                throw new Error(i18next.t('machines:direct.badHandshake'));
-            }
-            if (verdict.data.type === 'direct.refused') {
-                const mismatch = verdict.data.protocol === undefined ? null : protocolMismatch(verdict.data.protocol);
-                end(mismatch !== null ? protocolRefusal(mismatch) : i18next.t('machines:direct.refusedVerdict', { reason: verdict.data.reason }));
+            if (frame.type === 'direct.refused') {
+                const mismatch = frame.protocol === undefined ? null : protocolMismatch(frame.protocol);
+                end(mismatch !== null ? protocolRefusal(mismatch) : i18next.t('machines:direct.refusedVerdict', { reason: frame.reason }));
                 return;
             }
             authenticated = true;
@@ -257,7 +254,7 @@ export function webRtcLink(options: WebRtcLinkOptions): LinkOpener {
                     liveness?.tick();
                 });
             }, options.pingTickMs ?? DIRECT_PING_TICK_MS);
-            options.accepted?.(verdict.data.ticket);
+            options.accepted?.(frame.ticket);
             // The channel stands on its own from here; the route the signals took was only ever for them.
             closeSignaling();
             events.open();

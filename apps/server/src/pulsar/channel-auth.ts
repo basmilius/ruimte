@@ -1,13 +1,15 @@
-import { createHmac } from 'node:crypto';
 import {
+    acceptedFrame,
+    challengeFrame,
     DIRECT_COMPRESSION,
-    DirectProofFrameSchema,
+    parseProofFrame,
     PROTOCOL_VERSION,
+    refusedFrame,
     type AuthChallengeResult,
     type AuthTicketPayload,
     type AuthTicketResult
 } from '@ruimte/contracts';
-import { localSecretChannelMessage } from '@ruimte/pulsar';
+import { localChannelProof } from '@ruimte/pulsar';
 import type { ChannelGrant } from '../auth/handshake.ts';
 import { sameSecret } from '../auth/local-secret.ts';
 import { errorText } from '../error-text.ts';
@@ -33,13 +35,6 @@ interface ChannelAuthOptions {
     localSecret: string;
     reachability: ClientAccess['reachability'];
     timeoutMs?: number;
-}
-
-/* The proof a client on the daemon's own machine sends in place of a key signature. */
-export function localSecretProof(secret: string, daemonId: string, challenge: string, binding: string): string {
-    return createHmac('sha256', secret)
-        .update(localSecretChannelMessage(daemonId, challenge, binding))
-        .digest('base64url');
 }
 
 /*
@@ -72,7 +67,7 @@ export function authenticateChannel(options: ChannelAuthOptions): Promise<Client
                 return;
             }
             channel.receiveWith(() => undefined, UNAUTHENTICATED_FRAME_CHARS);
-            channel.send(JSON.stringify({ type: 'direct.refused', reason, ...(protocol === undefined ? {} : { protocol }) }));
+            channel.send(JSON.stringify(refusedFrame(reason, protocol)));
             settle(null);
             setTimeout(() => channel.close(4003, reason), REFUSAL_LINGER_MS);
         };
@@ -88,12 +83,11 @@ export function authenticateChannel(options: ChannelAuthOptions): Promise<Client
                 refuse('Expected a proof');
                 return;
             }
-            const parsed = DirectProofFrameSchema.safeParse(json);
-            if (!parsed.success || parsed.data.challenge !== issued.challenge) {
+            const proof = parseProofFrame(json);
+            if (proof === null || proof.challenge !== issued.challenge) {
                 refuse('Expected a proof');
                 return;
             }
-            const proof = parsed.data;
             if (proof.protocol !== undefined && proof.protocol !== PROTOCOL_VERSION) {
                 refuse('This machine and this client run different versions of Ruimte', PROTOCOL_VERSION);
                 return;
@@ -111,7 +105,7 @@ export function authenticateChannel(options: ChannelAuthOptions): Promise<Client
                 );
                 return;
             }
-            const expected = localSecretProof(options.localSecret, options.daemonId, proof.challenge, binding);
+            const expected = await localChannelProof(options.localSecret, options.daemonId, proof.challenge, binding);
             if (!handshake.spend(proof.challenge, binding) || !sameSecret(proof.proof, expected)) {
                 refuse('That is not the secret of this machine');
                 return;
@@ -123,7 +117,7 @@ export function authenticateChannel(options: ChannelAuthOptions): Promise<Client
             if (settled) {
                 return;
             }
-            channel.send(JSON.stringify({ type: 'direct.accepted', ticket: ticket?.ticket ?? null, expiresIn: ticket?.expiresIn ?? null }));
+            channel.send(JSON.stringify(acceptedFrame(ticket)));
             // The verdict itself goes as text, so a client reads it whatever it chose.
             if (compression === DIRECT_COMPRESSION) {
                 channel.deflate();
@@ -140,14 +134,6 @@ export function authenticateChannel(options: ChannelAuthOptions): Promise<Client
                 refuse('The machine could not check the proof');
             });
         }, UNAUTHENTICATED_FRAME_CHARS);
-        channel.send(
-            JSON.stringify({
-                type: 'direct.challenge',
-                protocol: PROTOCOL_VERSION,
-                challenge: issued.challenge,
-                daemon: issued.daemon,
-                compression: [DIRECT_COMPRESSION]
-            })
-        );
+        channel.send(JSON.stringify(challengeFrame(issued)));
     });
 }

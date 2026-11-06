@@ -55,6 +55,9 @@ export const DirectSecretProofFrameSchema = z.object({
     compression: z.string().max(64).optional()
 });
 
+export type DirectKeyProofFrame = z.infer<typeof DirectKeyProofFrameSchema>;
+export type DirectSecretProofFrame = z.infer<typeof DirectSecretProofFrameSchema>;
+
 export const DirectProofFrameSchema = z.discriminatedUnion('type', [DirectKeyProofFrameSchema, DirectSecretProofFrameSchema]);
 export type DirectProofFrame = z.infer<typeof DirectProofFrameSchema>;
 
@@ -71,6 +74,9 @@ export const DirectRefusedFrameSchema = z.object({
     // Set when the refusal is about the wire version: the daemon's own, so the client can say which side is behind.
     protocol: ProtocolVersionSchema.optional()
 });
+
+export type DirectAcceptedFrame = z.infer<typeof DirectAcceptedFrameSchema>;
+export type DirectRefusedFrame = z.infer<typeof DirectRefusedFrameSchema>;
 
 export const DirectVerdictFrameSchema = z.discriminatedUnion('type', [DirectAcceptedFrameSchema, DirectRefusedFrameSchema]);
 

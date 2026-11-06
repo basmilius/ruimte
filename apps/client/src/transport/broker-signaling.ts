@@ -2,7 +2,7 @@ import { messageOf } from '@adecore/ui';
 import {
     BrokerPeer,
     brokerHostOf,
-    signalMessage,
+    signedByMachine,
     type BrokerError,
     type IceServer,
     type BrokerRateLimited,
@@ -213,7 +213,7 @@ export function brokerSignaling(options: BrokerSignalingOptions): SignalingOpene
             if (frame.from !== options.machineKey || frame.envelope.connectionId !== connectionId) {
                 return;
             }
-            if (!(await options.verify(options.machineKey, signalMessage(options.machineKey, clientKey, frame.envelope), frame.signature))) {
+            if (!(await signedByMachine(options.verify, options.machineKey, clientKey, frame.envelope, frame.signature))) {
                 fail(i18next.t('machines:direct.unsignedSignal'));
                 return;
             }

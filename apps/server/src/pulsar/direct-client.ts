@@ -8,16 +8,17 @@ import {
     ICE_GATHER_TIMEOUT_MS,
     directPingFrame,
     DIRECT_CHANNEL_LABEL,
-    DirectChallengeFrameSchema,
-    PROTOCOL_VERSION,
-    DirectVerdictFrameSchema,
+    daemonProvedItself,
+    keyProofFrame,
+    parseHandshakeFrame,
+    secretProofFrame,
+    type DirectChallengeFrame,
     type DirectProofFrame
 } from '@ruimte/contracts';
-import { clientChannelMessage, daemonChannelMessage, type IceServer, type SignalEnvelope, type SignalOfferAccess } from '@ruimte/pulsar';
+import type { IceServer, SignalEnvelope, SignalOfferAccess } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { RTCPeerConnection, type RTCDataChannel } from 'werift';
 import { signMessage } from '../auth/keys.ts';
-import { localSecretProof } from './channel-auth.ts';
 import { AUTHENTICATED_FRAME_CHARS, directChannel, fromWerift, UNAUTHENTICATED_FRAME_CHARS, type DirectChannel } from './data-channel.ts';
 
 // How long a close waits for the channel's stream reset to be answered before the peer goes anyway.
@@ -213,43 +214,34 @@ export class DirectClient {
         return new Promise((resolve, reject) => {
             channel.onClose(() => reject(new Error('The channel closed during the handshake')));
             channel.receiveWith((raw) => {
-                const json = JSON.parse(raw) as unknown;
-                const challenge = DirectChallengeFrameSchema.safeParse(json);
-                if (challenge.success) {
-                    const { daemon } = challenge.data;
+                const frame = parseHandshakeFrame(JSON.parse(raw));
+                if (frame === null) {
+                    reject(new Error(`The machine sent something other than a handshake: ${raw.slice(0, 120)}`));
+                    return;
+                }
+                if (frame.type === 'direct.challenge') {
                     if (credential.kind === 'none') {
                         channel.send(JSON.stringify({ id: 'unproven', type: 'endpoint.info', payload: {} }));
                         return;
                     }
-                    if (credential.kind === 'key' || credential.kind === 'signer') {
-                        const signedBy = daemon.publicKey === credential.daemonPublicKey && daemon.id === credential.daemonId;
-                        if (
-                            !signedBy ||
-                            !verifySignature(credential.daemonPublicKey, daemonChannelMessage(daemon.id, challenge.data.challenge, binding), daemon.signature)
-                        ) {
-                            reject(new Error('The other machine could not prove who it is'));
-                            channel.close(1000, 'imposter');
-                            return;
-                        }
-                    }
-                    void proofFor(credential, challenge.data.challenge, binding).then(
+                    void proofFor(credential, frame, binding).then(
                         (proof) => {
+                            if (proof === null) {
+                                reject(new Error('The other machine could not prove who it is'));
+                                channel.close(1000, 'imposter');
+                                return;
+                            }
                             channel.send(JSON.stringify(proof));
                         },
                         (e: unknown) => reject(e instanceof Error ? e : new Error(String(e)))
                     );
                     return;
                 }
-                const verdict = DirectVerdictFrameSchema.safeParse(json);
-                if (!verdict.success) {
-                    reject(new Error(`The machine sent something other than a handshake: ${raw.slice(0, 120)}`));
+                if (frame.type === 'direct.refused') {
+                    reject(new Error(frame.reason));
                     return;
                 }
-                if (verdict.data.type === 'direct.refused') {
-                    reject(new Error(verdict.data.reason));
-                    return;
-                }
-                resolve({ ticket: verdict.data.ticket });
+                resolve({ ticket: frame.ticket });
             }, UNAUTHENTICATED_FRAME_CHARS);
         });
     }
@@ -276,23 +268,22 @@ export class DirectClient {
     }
 }
 
-async function proofFor(credential: Exclude<DirectCredential, { kind: 'none' }>, challenge: string, binding: string): Promise<DirectProofFrame> {
-    if (credential.kind === 'key' || credential.kind === 'signer') {
-        const message = clientChannelMessage(credential.daemonId, challenge, credential.publicKey, binding);
-        return {
-            type: 'direct.key',
-            protocol: PROTOCOL_VERSION,
-            challenge,
-            publicKey: credential.publicKey,
-            signature: credential.kind === 'key' ? signMessage(credential.privateKey, message) : await credential.sign(message)
-        };
+/* The answer to a challenge, or null when the machine that sent it is not the one this credential pinned. */
+async function proofFor(
+    credential: Exclude<DirectCredential, { kind: 'none' }>,
+    frame: DirectChallengeFrame,
+    binding: string
+): Promise<DirectProofFrame | null> {
+    if (credential.kind === 'secret') {
+        return secretProofFrame(credential.secret, credential.daemonId, frame.challenge, binding);
     }
-    return {
-        type: 'direct.secret',
-        protocol: PROTOCOL_VERSION,
-        challenge,
-        proof: localSecretProof(credential.secret, credential.daemonId, challenge, binding)
-    };
+    const pinned = { publicKey: credential.daemonPublicKey, daemonId: credential.daemonId };
+    if (!(await daemonProvedItself(pinned, frame, binding, verifySignature))) {
+        return null;
+    }
+    const signer =
+        credential.kind === 'key' ? { publicKey: credential.publicKey, sign: (message: string) => signMessage(credential.privateKey, message) } : credential;
+    return keyProofFrame(signer, credential.daemonId, frame.challenge, binding);
 }
 
 async function waitFor(ready: () => boolean, timeoutMs: number): Promise<void> {

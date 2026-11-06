@@ -1,6 +1,6 @@
 import { withTimeout } from '@adecore/utils/async';
 import { DIRECT_ATTEMPT_TIMEOUT_MS } from '@ruimte/contracts';
-import { BrokerPeer, brokerHostOf, signalMessage, type IceServer, type PeerStatement, type SignalEnvelope } from '@ruimte/pulsar';
+import { BrokerPeer, brokerHostOf, signedByMachine, type IceServer, type PeerStatement, type SignalEnvelope } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { weriftIceServers } from '../../pulsar/broker-relay.ts';
 import type { PeerMachine } from './peer-machines.ts';
@@ -74,7 +74,7 @@ export async function openBrokerLine(options: BrokerLineOptions): Promise<Signal
             relayed: (frame) => {
                 if (
                     frame.from !== options.machinePublicKey ||
-                    !verifySignature(options.machinePublicKey, signalMessage(options.machinePublicKey, publicKey, frame.envelope), frame.signature)
+                    !signedByMachine(verifySignature, options.machinePublicKey, publicKey, frame.envelope, frame.signature)
                 ) {
                     return;
                 }

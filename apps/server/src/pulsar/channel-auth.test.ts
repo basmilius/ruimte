@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { DIRECT_COMPRESSION } from '@ruimte/contracts';
-import { authenticateChannel, localSecretProof } from './channel-auth.ts';
+import { localChannelProof } from '@ruimte/pulsar';
+import { authenticateChannel } from './channel-auth.ts';
 import type { DirectChannel } from './data-channel.ts';
 
 const SECRET = 'the-local-secret';
@@ -53,8 +54,8 @@ function authenticate(channel: DirectChannel): ReturnType<typeof authenticateCha
     });
 }
 
-function secretProof(extra: object = {}): object {
-    return { type: 'direct.secret', challenge: 'c', proof: localSecretProof(SECRET, DAEMON_ID, 'c', BINDING), ...extra };
+async function secretProof(extra: object = {}): Promise<object> {
+    return { type: 'direct.secret', challenge: 'c', proof: await localChannelProof(SECRET, DAEMON_ID, 'c', BINDING), ...extra };
 }
 
 describe('authenticateChannel', () => {
@@ -62,7 +63,7 @@ describe('authenticateChannel', () => {
         const { channel, sent, compressionAtSend, deflating, answer } = fakeChannel();
         const access = authenticate(channel);
         expect(JSON.parse(sent[0]!).compression).toEqual([DIRECT_COMPRESSION]);
-        answer(secretProof({ compression: DIRECT_COMPRESSION }));
+        answer(await secretProof({ compression: DIRECT_COMPRESSION }));
         expect(await access).toEqual({ reachability: 'lan', sessionId: null });
         expect(JSON.parse(sent[1]!).type).toBe('direct.accepted');
         expect(deflating()).toBe(true);
@@ -75,7 +76,7 @@ describe('authenticateChannel', () => {
         for (const extra of [{}, { compression: 'zstd' }]) {
             const { channel, deflating, answer } = fakeChannel();
             const access = authenticate(channel);
-            answer(secretProof(extra));
+            answer(await secretProof(extra));
             expect(await access).not.toBeNull();
             expect(deflating()).toBe(false);
         }

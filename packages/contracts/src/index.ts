@@ -74,6 +74,7 @@ export * from './claude-api.ts';
 export * from './computer.ts';
 export * from './context.ts';
 export * from './direct.ts';
+export * from './direct-handshake.ts';
 export * from './direct-liveness.ts';
 export * from './device.ts';
 export * from './change-split.ts';

@@ -1,4 +1,4 @@
-import { machineProofMessage, toBase64Url } from '@ruimte/pulsar';
+import { localSecretMac, machineProofMessage } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { KeepAwakeModeSchema } from './keep-awake.ts';
 import { LanDoorSchema } from './lan-door.ts';
@@ -149,11 +149,9 @@ export const MachineProofRequestSchema = z.object({ nonce: z.string().min(16).ma
 
 export const MachineProofResultSchema = z.object({ proof: z.string().min(1) });
 
-/* HMAC-SHA256 under the local secret, in base64url, with WebCrypto so the daemon and the shell compute the same bytes. */
-export async function localProofOf(secret: string, port: number, nonce: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    return toBase64Url(await crypto.subtle.sign('HMAC', key, encoder.encode(machineProofMessage(port, nonce))));
+/* What the daemon answers a nonce with: the local secret's HMAC over this port and that nonce. */
+export function localProofOf(secret: string, port: number, nonce: string): Promise<string> {
+    return localSecretMac(secret, machineProofMessage(port, nonce));
 }
 
 /* Whether a reply to the proof request was made with this secret, for this port and this nonce. */

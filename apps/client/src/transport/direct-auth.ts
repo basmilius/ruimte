@@ -1,5 +1,4 @@
-import { PROTOCOL_VERSION, type DirectChallengeFrame, type DirectProofFrame } from '@ruimte/contracts';
-import { clientChannelMessage, daemonChannelMessage, localSecretChannelMessage, toBase64Url } from '@ruimte/pulsar';
+import { daemonProvedItself, keyProofFrame, secretProofFrame, type DirectChallengeFrame, type DirectProofFrame } from '@ruimte/contracts';
 import { verifySignature } from '@ruimte/pulsar/verify-web';
 import i18next from 'i18next';
 import { clientKey, type ClientKey } from '@/endpoint/client-key';
@@ -14,12 +13,6 @@ export interface ProofCredentials {
     label: string;
 }
 
-async function hmac(secret: string, message: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    return toBase64Url(await crypto.subtle.sign('HMAC', key, encoder.encode(message)));
-}
-
 /*
  * What this client answers a channel's challenge with. A row of the account first checks that the
  * daemon signed this channel's binding with the key it pinned, and then signs the same binding back.
@@ -30,25 +23,16 @@ export async function proveChallenge(credentials: ProofCredentials, challenge: D
     const { daemon } = challenge;
     const { pinned } = credentials;
     if (pinned !== null) {
-        const identical = daemon.publicKey === pinned.publicKey && (pinned.daemonId === null || pinned.daemonId === daemon.id);
-        if (!identical || !(await verifySignature(pinned.publicKey, daemonChannelMessage(daemon.id, challenge.challenge, binding), daemon.signature))) {
+        if (!(await daemonProvedItself(pinned, challenge, binding, verifySignature))) {
             throw new Error(i18next.t('machines:direct.notProven', { label: credentials.label }));
         }
         if (credentials.key === null) {
             throw new Error(i18next.t('machines:direct.noKey'));
         }
-        const signature = await credentials.key.sign(
-            clientChannelMessage(pinned.daemonId ?? daemon.id, challenge.challenge, credentials.key.publicKey, binding)
-        );
-        return { type: 'direct.key', protocol: PROTOCOL_VERSION, challenge: challenge.challenge, publicKey: credentials.key.publicKey, signature };
+        return keyProofFrame(credentials.key, pinned.daemonId ?? daemon.id, challenge.challenge, binding);
     }
     if (credentials.secret !== null) {
-        return {
-            type: 'direct.secret',
-            protocol: PROTOCOL_VERSION,
-            challenge: challenge.challenge,
-            proof: await hmac(credentials.secret, localSecretChannelMessage(daemon.id, challenge.challenge, binding))
-        };
+        return secretProofFrame(credentials.secret, daemon.id, challenge.challenge, binding);
     }
     throw new Error(i18next.t('machines:direct.needsPairedKey'));
 }
