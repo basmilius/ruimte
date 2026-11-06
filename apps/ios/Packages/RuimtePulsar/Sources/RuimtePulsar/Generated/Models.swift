@@ -2641,11 +2641,13 @@ public struct DirectRefusedFrame: Codable, Sendable, Equatable {
     public let `type`: String
     public let `reason`: String
     public let `protocol`: Int64?
+    public let `code`: String?
 
-    public init(`type`: String = "direct.refused", `reason`: String, `protocol`: Int64? = nil) {
+    public init(`type`: String = "direct.refused", `reason`: String, `protocol`: Int64? = nil, `code`: String? = nil) {
         self.`type` = `type`
         self.`reason` = `reason`
         self.`protocol` = `protocol`
+        self.`code` = `code`
     }
 
     public init(from decoder: Decoder) throws {
@@ -2654,6 +2656,7 @@ public struct DirectRefusedFrame: Codable, Sendable, Equatable {
         `type` = try container.decode(String.self, forKey: .`type`)
         `reason` = try container.decode(String.self, forKey: .`reason`)
         `protocol` = try container.decodeIfPresent(Int64.self, forKey: .`protocol`)
+        `code` = try container.decodeIfPresent(String.self, forKey: .`code`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -2661,12 +2664,14 @@ public struct DirectRefusedFrame: Codable, Sendable, Equatable {
         try container.encode(`type`, forKey: .`type`)
         try container.encode(`reason`, forKey: .`reason`)
         try container.encodeIfPresent(`protocol`, forKey: .`protocol`)
+        try container.encodeIfPresent(`code`, forKey: .`code`)
     }
 
     private enum CodingKeys: String, CodingKey {
         case `type` = "type"
         case `reason` = "reason"
         case `protocol` = "protocol"
+        case `code` = "code"
     }
 }
 

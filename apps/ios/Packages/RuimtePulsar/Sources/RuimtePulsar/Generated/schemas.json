@@ -4778,6 +4778,10 @@
         "type": "integer",
         "minimum": 0,
         "maximum": 9007199254740991
+      },
+      "code": {
+        "type": "string",
+        "maxLength": 64
       }
     },
     "required": [
@@ -5145,6 +5149,10 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 64
           }
         },
         "required": [
@@ -35686,6 +35694,26 @@
       "capabilities"
     ]
   },
+  "request.device.unwatch.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.device.unwatch.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.device.watch.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.device.watch.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.diagram.close.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -65371,6 +65399,26 @@
       "projects"
     ]
   },
+  "request.project.unwatch.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.project.unwatch.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.project.watch.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.project.watch.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.provenance.read.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -80942,6 +80990,11 @@
       "projectId"
     ]
   },
+  "event.device.changed": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "event.device.frame": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -88949,6 +89002,19 @@
     "required": [
       "projectId",
       "document"
+    ]
+  },
+  "event.project.listChanged": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId"
     ]
   },
   "event.project.showView": {

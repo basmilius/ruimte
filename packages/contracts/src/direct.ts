@@ -72,7 +72,9 @@ export const DirectRefusedFrameSchema = z.object({
     type: z.literal('direct.refused'),
     reason: z.string().max(512),
     // Set when the refusal is about the wire version: the daemon's own, so the client can say which side is behind.
-    protocol: ProtocolVersionSchema.optional()
+    protocol: ProtocolVersionSchema.optional(),
+    // Why, so a dialing machine can tell one that will never have it (`not-paired`) from one worth another try; an open string, absent from a machine older than the field.
+    code: z.string().max(64).optional()
 });
 
 export type DirectAcceptedFrame = z.infer<typeof DirectAcceptedFrameSchema>;

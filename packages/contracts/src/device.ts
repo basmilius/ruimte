@@ -443,6 +443,9 @@ export type DeviceToggleSetting = z.infer<typeof DeviceToggleSettingSchema>;
 
 export const DEVICE_REQUEST_SCHEMAS = {
     'device.list': { payload: EmptySchema, result: DeviceListResultSchema },
+    // `device.changed` whenever the devices or a battery change, until `device.unwatch` or the channel closes; the client reads `device.list` and `device.power` then.
+    'device.watch': { payload: EmptySchema, result: EmptySchema },
+    'device.unwatch': { payload: EmptySchema, result: EmptySchema },
     'device.boot': { payload: DeviceTargetPayloadSchema, result: DeviceInfoSchema },
     'device.shutdown': { payload: DeviceTargetPayloadSchema, result: DeviceInfoSchema },
     'device.open': { payload: DeviceOpenPayloadSchema, result: DeviceOpenResultSchema },
@@ -461,5 +464,7 @@ export const DEVICE_REQUEST_SCHEMAS = {
 
 export const DEVICE_EVENT_SCHEMAS = {
     'device.frame': DeviceFrameSchema,
-    'device.operated': DeviceOperatedSchema
+    'device.operated': DeviceOperatedSchema,
+    // Only to the clients that asked with `device.watch`.
+    'device.changed': EmptySchema
 } as const;

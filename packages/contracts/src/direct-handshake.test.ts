@@ -41,7 +41,8 @@ describe('the frames of the handshake', () => {
         expect(JSON.stringify(acceptedFrame({ ticket: 't', expiresIn: 60 }))).toBe('{"type":"direct.accepted","ticket":"t","expiresIn":60}');
         expect(JSON.stringify(acceptedFrame(null))).toBe('{"type":"direct.accepted","ticket":null,"expiresIn":null}');
         expect(JSON.stringify(refusedFrame('no'))).toBe('{"type":"direct.refused","reason":"no"}');
-        expect(JSON.stringify(refusedFrame('old', 2))).toBe('{"type":"direct.refused","reason":"old","protocol":2}');
+        expect(JSON.stringify(refusedFrame('old', { protocol: 2 }))).toBe('{"type":"direct.refused","reason":"old","protocol":2}');
+        expect(JSON.stringify(refusedFrame('no', { code: 'not-paired' }))).toBe('{"type":"direct.refused","reason":"no","code":"not-paired"}');
     });
 
     test('are read back by the end that dials', () => {

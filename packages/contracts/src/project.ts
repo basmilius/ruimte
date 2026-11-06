@@ -1605,8 +1605,15 @@ export const ProjectSetAccountsResultSchema = z.object({
     accounts: ProjectAccountsSchema
 });
 
+/* A project the machine knows whose files changed from outside, which no client holding it would have heard. */
+export const ProjectListChangedEventSchema = z.object({ projectId: z.string().min(1) });
+export type ProjectListChangedEvent = z.infer<typeof ProjectListChangedEventSchema>;
+
 export const PROJECT_REQUEST_SCHEMAS = {
     'project.list': { payload: EmptySchema, result: ProjectListResultSchema },
+    // `project.listChanged` for every project of the machine, not only the ones this client holds, until `project.unwatch` or the channel closes.
+    'project.watch': { payload: EmptySchema, result: EmptySchema },
+    'project.unwatch': { payload: EmptySchema, result: EmptySchema },
     'project.referables': { payload: EmptySchema, result: ProjectReferablesResultSchema },
     'project.open': { payload: ProjectOpenPayloadSchema, result: ProjectOpenResultSchema },
     'project.save': { payload: ProjectSavePayloadSchema, result: ProjectSaveResultSchema },
@@ -1627,5 +1634,7 @@ export const PROJECT_REQUEST_SCHEMAS = {
 
 export const PROJECT_EVENT_SCHEMAS = {
     'project.changed': ProjectChangedEventSchema,
+    // Only to the clients that asked with `project.watch`.
+    'project.listChanged': ProjectListChangedEventSchema,
     'project.showView': ProjectShowViewEventSchema
 } as const;

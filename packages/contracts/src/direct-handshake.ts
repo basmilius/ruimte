@@ -43,8 +43,13 @@ export function acceptedFrame(ticket: { ticket: string; expiresIn: number } | nu
     return { type: 'direct.accepted', ticket: ticket?.ticket ?? null, expiresIn: ticket?.expiresIn ?? null };
 }
 
-export function refusedFrame(reason: string, protocol?: number): DirectRefusedFrame {
-    return { type: 'direct.refused', reason, ...(protocol === undefined ? {} : { protocol }) };
+export function refusedFrame(reason: string, extra: { protocol?: number; code?: string } = {}): DirectRefusedFrame {
+    return {
+        type: 'direct.refused',
+        reason,
+        ...(extra.protocol === undefined ? {} : { protocol: extra.protocol }),
+        ...(extra.code === undefined ? {} : { code: extra.code })
+    };
 }
 
 export type VerifySignature = (publicKey: string, message: string, signature: string) => boolean | Promise<boolean>;
