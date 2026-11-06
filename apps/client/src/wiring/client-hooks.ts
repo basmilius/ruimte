@@ -12,6 +12,8 @@ import { machineAnswers } from '@/transport/features';
 import { pool } from '@/transport/index';
 import { reportPresence } from '@/transport/presence';
 import { installCommands } from '@/wiring/commands';
+import { installWindowDialogs } from '@/wiring/dialogs';
+import { installSettingsSections } from '@/wiring/settings';
 import { watchEveryMachine } from '@/workspace/connections';
 import { liveDraftLink } from '@/workspace/draft-link';
 
@@ -36,6 +38,8 @@ export function installClientHooks(): ClientHooks {
     provideClientActions(actions);
     provideExtensionChat();
     installCommands();
+    installSettingsSections();
+    installWindowDialogs();
     textDrafts.provideLinks(liveDraftLink);
     watchEveryMachine((endpointId, transport) => watchPushAttention(endpointId, transport));
     watchEveryMachine((endpointId, transport) => reportPresence(transport, () => machineAnswers(pool.statusOf(endpointId), 'presence.report')));

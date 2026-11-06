@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
-import { useUi } from '@/state/ui';
+import { conflictsDialog } from '@/conflicts/dialog';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { menuItem } from '../../testing/dom-helpers';
 import { FakeMachine } from '../../testing/fake-machine';
@@ -45,12 +45,12 @@ beforeEach(async () => {
     workspace = await openFakeWorkspace(machine, { views: [CANVAS] } as never, { activeViewId: CANVAS.id, views: {} });
     page = mount();
     await page.renderApp();
-    await act(async () => useUi.getState().setConflicts({ cwd: CWD }));
+    await act(async () => conflictsDialog.set({ cwd: CWD }));
     await until(() => entry('src/b.ts') !== null);
 });
 
 afterEach(async () => {
-    await act(async () => useUi.getState().setConflicts(null));
+    await act(async () => conflictsDialog.set(null));
     await page.unmount();
     workspace.close();
 });

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { GitPullRequest } from '@ruimte/contracts';
 import { act } from 'react';
-import { useUi } from '@/state/ui';
+import { pullRequestDialog } from '@/github/dialogs';
 import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
@@ -39,7 +39,7 @@ function header(): string {
 }
 
 async function open(): Promise<void> {
-    await act(async () => useUi.getState().setPullRequestDialog({ cwd: '/work/atlas' }));
+    await act(async () => pullRequestDialog.set({ cwd: '/work/atlas' }));
     await until(() => header().includes('Add things'));
 }
 
@@ -53,7 +53,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-    await act(async () => useUi.getState().setPullRequestDialog(null));
+    await act(async () => pullRequestDialog.set(null));
     await page.unmount();
     workspace.close();
 });

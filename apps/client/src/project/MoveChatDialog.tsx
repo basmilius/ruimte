@@ -22,6 +22,8 @@ import { useEffect, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
 import { desktop } from '@/desktop/bridge';
+import type { MoveChatRequest } from '@/project/dialogs';
+import { moveChatDialog } from '@/project/dialogs';
 import {
     baseName,
     defaultOwnFiles,
@@ -39,7 +41,6 @@ import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { useEndpointId } from '@/state/current-endpoint';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
-import { useUi, type MoveChatRequest } from '@/state/ui';
 import { useViewNodes } from '@/state/view-nodes';
 import { useTransport } from '@/workspace/context';
 
@@ -61,8 +62,8 @@ const STALE_CODES: readonly string[] = ['move-refused', 'chat-busy', 'files-conf
  */
 export function MoveChatDialog() {
     const { t } = useTranslation('project');
-    const request = useUi((s) => s.moveChatDialog);
-    const close = (): void => useUi.getState().setMoveChatDialog(null);
+    const request = moveChatDialog.use((request) => request);
+    const close = (): void => moveChatDialog.set(null);
     return (
         <Dialog.Root
             open={request !== null}

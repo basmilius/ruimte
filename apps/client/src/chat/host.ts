@@ -8,6 +8,7 @@ import { perform } from '@/action-port/perform';
 import { PERSON_PROMPT_CLIENTS } from '@/action-port/person-actions';
 import { askBeforeStoppingSubagents, askBeforeStoppingTask } from '@/agents/end-children';
 import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel, type AccentId } from '@/canvas-model/accents';
+import { providerCommandDialog } from '@/chat/dialogs';
 import DiffSyntaxWorker from '@/chat/diff-syntax.worker?worker';
 import { searchFiles } from '@/chat/file-search';
 import { openLogin } from '@/chat/login';
@@ -265,7 +266,7 @@ export const CHAT_HOST: Partial<ChatHost> = {
     openSettings: (section) => useUi.getState().setSettings({ open: true, section }),
     useMachineLabel: (endpointId) => useEndpoints((s) => s.endpoints.find((endpoint) => endpoint.id === endpointId)?.label ?? null),
     // A shell of its own over the settings, so it works with no project open; the command waits for the person's Enter.
-    runProviderCommand: (endpointId, kind, command) => useUi.getState().setProviderCommand({ endpointId, kind, command }),
+    runProviderCommand: (endpointId, kind, command) => providerCommandDialog.set({ endpointId, kind, command }),
     useMachinePlatform,
     providerKeyNote: () => i18next.t('settings:providers.keyNote'),
     useResumeAtReset: (endpointId) => useServers((s) => s.byEndpoint[endpointId]?.resumeAtReset === true),

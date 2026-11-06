@@ -3,6 +3,7 @@ import { Button, Dialog, FormError, ScrollArea, Skeleton } from '@adecore/ui';
 import type { AgentIntegration, AgentIntegrationFile, AgentIntegrationReport, AgentKind } from '@ruimte/contracts';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { agentIntegrationsDialog } from '@/agents/dialogs';
 import {
     INTEGRATION_NAMES,
     pendingReview,
@@ -12,7 +13,6 @@ import {
     useIntegrationChoice
 } from '@/controllers/agent-integrations';
 import { useLocalTilde } from '@/format/home-path';
-import { useUi } from '@/state/ui';
 
 const OUTCOME_KEYS = {
     written: 'written',
@@ -94,7 +94,7 @@ const DIALOG_GAINS: Partial<Record<AgentKind, string>> = {
  */
 export function AgentIntegrationsDialog() {
     const { t } = useTranslation(['settings', 'common']);
-    const open = useUi((s) => s.agentIntegrations);
+    const open = agentIntegrationsDialog.useOpen();
     const summary = useAgentIntegrations();
     const { reports, busy, error, change: choose } = useIntegrationChoice();
     const answered = Object.keys(reports).length > 0;
@@ -106,7 +106,7 @@ export function AgentIntegrationsDialog() {
     // Answered in another window: nothing is left to ask here, unless this window shows the report of its own answer.
     useEffect(() => {
         if (open && !pending && !answered) {
-            useUi.getState().setAgentIntegrations(false);
+            agentIntegrationsDialog.set(false);
         }
     }, [open, pending, answered]);
 
@@ -115,7 +115,7 @@ export function AgentIntegrationsDialog() {
         for (const provider of providersToKeep(summary, Object.keys(reports), busy)) {
             void setAgentIntegration(provider, true).catch(() => undefined);
         }
-        useUi.getState().setAgentIntegrations(false);
+        agentIntegrationsDialog.set(false);
     };
 
     return (

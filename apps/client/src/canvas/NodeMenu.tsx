@@ -72,6 +72,7 @@ import { useWorkspace } from '@/workspace/connections';
 import { useTransport } from '@/workspace/context';
 import { NodeMachineScope } from '@/workspace/node-machine';
 import { workFolderOf, worktreeDiffTab } from '@/worktree-rules/worktree-rows';
+import { worktreeBindDialog, worktreeMergeDialog, worktreeRemovalDialog } from '@/worktrees/dialogs';
 
 interface NodeMenuProps {
     id: string;
@@ -340,7 +341,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
                             <ContextMenu.Item
                                 onClick={() => {
                                     canvas();
-                                    useUi.getState().setWorktreeDialogFor(id);
+                                    worktreeBindDialog.set(id);
                                 }}
                             >
                                 <Icon icon={GitBranch} size={14} /> {t('menu.bindWorktree')}
@@ -457,10 +458,10 @@ function WorktreeItems({ folder, paths }: { folder: string; paths: string[] }) {
     const { t } = useTranslation('canvas');
     return (
         <>
-            <ContextMenu.Item onClick={() => useUi.getState().setWorktreeMerge({ folder, paths })}>
+            <ContextMenu.Item onClick={() => worktreeMergeDialog.set({ folder, paths })}>
                 <Icon icon={GitMerge} size={14} /> {t('menu.mergeWorktrees', { count: paths.length })}
             </ContextMenu.Item>
-            <ContextMenu.Item className="text-status-error" onClick={() => useUi.getState().setWorktreeRemoval({ folder, paths })}>
+            <ContextMenu.Item className="text-status-error" onClick={() => worktreeRemovalDialog.set({ folder, paths })}>
                 <Icon icon={Trash} size={14} /> {t('menu.removeWorktrees', { count: paths.length })}
             </ContextMenu.Item>
         </>

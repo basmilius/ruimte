@@ -4,11 +4,11 @@ import type { PeerStatement } from '@ruimte/pulsar';
 import { act } from 'react';
 import { usePeerLapse } from '@/clients/project/peer-lapse';
 import { swapPeerLinker } from '@/clients/project/peer-linker';
+import { addToMachineDialog, remoteNodeDialog } from '@/machine-ui/dialogs';
 import { linkPeer } from '@/pulsar/peer-link';
 import { defaultCanvases } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { useUi } from '@/state/ui';
 import { remoteMirror } from '@/workspace/connections';
 import { clickOn, mount, openSubmenu, until, type Mounted } from '../../testing/dom';
 import { menuItem } from '../../testing/dom-helpers';
@@ -53,7 +53,7 @@ function withoutLink(asked: string[]): string[] {
 }
 
 async function openDialog(kind: 'chat' | 'terminal' | 'device' = 'chat'): Promise<void> {
-    await act(async () => useUi.getState().setRemoteNodeDialog({ machineId: REMOTE, kind, viewId: 'main', at: { x: 400, y: 400 }, relink: false }));
+    await act(async () => remoteNodeDialog.set({ machineId: REMOTE, kind, viewId: 'main', at: { x: 400, y: 400 }, relink: false }));
 }
 
 function dialog(): HTMLElement | null {
@@ -150,7 +150,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-    await act(async () => useUi.getState().setRemoteNodeDialog(null));
+    await act(async () => remoteNodeDialog.set(null));
     await page.unmount();
     workspace.close();
     disconnectThere();
@@ -181,11 +181,11 @@ describe('a new node on another machine', () => {
         there.answer('project.list', () => ({ projects: [] }));
         await openDialog();
         await until(() => button('Clone it on MacBook Pro…') !== null);
-        const request = useUi.getState().remoteNodeDialog;
+        const request = remoteNodeDialog.get();
         await clickOn(button('Clone it on MacBook Pro…'));
-        expect(useUi.getState().remoteNodeDialog).toBeNull();
-        expect(useUi.getState().addToMachineDialog).toEqual({ machineId: REMOTE, then: request! });
-        await act(async () => useUi.getState().setAddToMachineDialog(null));
+        expect(remoteNodeDialog.get()).toBeNull();
+        expect(addToMachineDialog.get()).toEqual({ machineId: REMOTE, then: request! });
+        await act(async () => addToMachineDialog.set(null));
     });
 
     test('says that the machine is not answering, and looks again on Try again', async () => {
@@ -424,7 +424,7 @@ describe('linking a machine again', () => {
     }
 
     async function openRelink(): Promise<void> {
-        await act(async () => useUi.getState().setRemoteNodeDialog({ machineId: REMOTE, kind: 'chat', viewId: 'main', at: null, relink: true }));
+        await act(async () => remoteNodeDialog.set({ machineId: REMOTE, kind: 'chat', viewId: 'main', at: null, relink: true }));
         await until(() => dialog()?.textContent?.includes('/Users/b/ruimte') === true);
         await until(() => button('Link')?.hasAttribute('disabled') === false);
     }
@@ -458,14 +458,14 @@ describe('the canvas menu', () => {
         await openCanvasMenu();
         expect(document.querySelector('[role="menu"]')?.textContent).toContain('On another machine');
         await clickOn(menuItem('MacBook Pro'));
-        expect(useUi.getState().remoteNodeDialog).toMatchObject({ machineId: REMOTE, kind: 'chat', viewId: 'main', relink: false });
+        expect(remoteNodeDialog.get()).toMatchObject({ machineId: REMOTE, kind: 'chat', viewId: 'main', relink: false });
     });
 
     test('offers to add the project to another machine below them', async () => {
         await openCanvasMenu();
         await clickOn(menuItem('Add to another machine'));
-        expect(useUi.getState().addToMachineDialog).toEqual({ machineId: null });
-        await act(async () => useUi.getState().setAddToMachineDialog(null));
+        expect(addToMachineDialog.get()).toEqual({ machineId: null });
+        await act(async () => addToMachineDialog.set(null));
     });
 
     test('says it is off on a shared canvas, since a node of another machine stays on a canvas only you have', async () => {

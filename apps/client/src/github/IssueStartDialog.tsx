@@ -6,13 +6,13 @@ import { CircleDot } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
+import { issueStartDialog } from '@/github/dialogs';
 import { findIssueNode, issueBranch, issuePrompt } from '@/github/issue-start';
 import { focusChat } from '@/plan/plan-actions';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { useUi } from '@/state/ui';
 import { nodesOfView, useViewNodes } from '@/state/view-nodes';
 import { submitOnEnter } from '@/surface/submit-on-enter';
 import { useTransport } from '@/workspace/context';
@@ -30,8 +30,8 @@ const CHAT_OPEN_TIMEOUT_MS = 10_000;
  */
 export function IssueStartDialog() {
     const { t } = useTranslation('shell');
-    const open = useUi((s) => s.issueStartOpen);
-    const close = (): void => useUi.getState().setIssueStartOpen(false);
+    const open = issueStartDialog.useOpen();
+    const close = (): void => issueStartDialog.set(false);
     return (
         <Dialog.Root open={open} onOpenChange={(next) => !next && close()}>
             <Dialog.Popup size="sm" className="flex flex-col">

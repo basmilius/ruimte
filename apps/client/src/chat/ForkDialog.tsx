@@ -25,6 +25,8 @@ import { GitFork } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
+import { forkDialog } from '@/chat/dialogs';
+import { remoteNodeDialog } from '@/machine-ui/dialogs';
 import { iconOfEntry } from '@/machines/machine-icon';
 import { nameOf } from '@/machines/machine-list';
 import { MachineGlyph } from '@/machines/MachineGlyph';
@@ -35,7 +37,6 @@ import { useDocument } from '@/state/document';
 import { endpointById } from '@/state/endpoints';
 import { forkOriginIn } from '@/state/fork-origin';
 import { useProject } from '@/state/project';
-import { useUi } from '@/state/ui';
 import { useViewNodes } from '@/state/view-nodes';
 import { useMachineAnswers } from '@/transport/features';
 import { useWorkspace } from '@/workspace/connections';
@@ -50,8 +51,8 @@ import { NodeMachineScope } from '@/workspace/node-machine';
  */
 export function ForkDialog() {
     const { t } = useTranslation('shell');
-    const fork = useUi((s) => s.forkDialog);
-    const close = (): void => useUi.getState().setForkDialog(null);
+    const fork = forkDialog.use((request) => request);
+    const close = (): void => forkDialog.set(null);
     return (
         <Dialog.Root open={fork !== null} onOpenChange={(open) => !open && close()}>
             <Dialog.Popup size="sm">
@@ -149,7 +150,7 @@ function ForkForm({ chatId, turnId, source, onDone }: { chatId: string; turnId: 
         if (remote !== null && nodeView !== null) {
             // The next dialog picks the checkout there and makes the chat; this one only hands it the turn.
             const original = defaultCanvases.peek(nodeView)?.getState().nodes[chatId];
-            useUi.getState().setRemoteNodeDialog({
+            remoteNodeDialog.set({
                 machineId: remote.id,
                 kind: 'chat',
                 viewId: nodeView,

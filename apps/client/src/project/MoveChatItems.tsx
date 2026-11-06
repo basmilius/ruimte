@@ -1,11 +1,11 @@
 import { DisabledReason, Icon, Menu } from '@adecore/ui';
 import { FolderInput, FolderPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { moveChatDialog } from '@/project/dialogs';
 import { moveTargetsOf } from '@/project/move-targets';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { useEndpoints } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
-import { useUi } from '@/state/ui';
 
 interface MoveChatItemsProps {
     chatId: string;
@@ -24,7 +24,7 @@ export function MoveChatItems({ chatId, endpointId, working }: MoveChatItemsProp
     const endpoints = useEndpoints((state) => state.endpoints);
     const targets = moveTargetsOf(rows, endpoints, endpointId);
     const reason = working ? t('viewMenu.moveWhileWorking') : null;
-    const ask = (mode: 'make' | 'pick', projectId: string | null): void => useUi.getState().setMoveChatDialog({ chatId, mode, projectId });
+    const ask = (mode: 'make' | 'pick', projectId: string | null): void => moveChatDialog.set({ chatId, mode, projectId });
     return (
         <Menu.SubmenuRoot>
             <DisabledReason reason={reason}>

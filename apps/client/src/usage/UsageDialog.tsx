@@ -11,8 +11,8 @@ import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
 import { useServers } from '@/state/server';
-import { useUi } from '@/state/ui';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
+import { usageDialog } from '@/usage/dialog';
 import { usageEndpointFor } from '@/usage/picker';
 import { chatScopeOf } from '@/workspace/chat-scope';
 
@@ -108,9 +108,9 @@ function Body() {
 
 /* What both CLIs cost and how much of the plan is left, over one whole machine at a time. */
 export function UsageDialog() {
-    const open = useUi((s) => s.usageOpen);
+    const open = usageDialog.useOpen();
     return (
-        <Frame open={open} onOpenChange={(next) => useUi.getState().setUsageOpen(next)}>
+        <Frame open={open} onOpenChange={(next) => usageDialog.set(next)}>
             <ErrorBoundary label={i18next.t('agent-usage:dialog.failed')} className="grow">
                 <Body />
             </ErrorBoundary>

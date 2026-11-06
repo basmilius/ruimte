@@ -4,6 +4,7 @@ import { Monitor, MonitorUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Point } from '@/canvas-model/math';
+import { addToMachineDialog, remoteNodeDialog } from '@/machine-ui/dialogs';
 import { iconOfEntry } from '@/machines/machine-icon';
 import { nameOf, type MachineEntry } from '@/machines/machine-list';
 import { machineLost } from '@/machines/machine-lost';
@@ -14,7 +15,6 @@ import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useServers } from '@/state/server';
-import { useUi } from '@/state/ui';
 import { machineAnswers } from '@/transport/features';
 import { useEndpointConnection } from '@/transport/status';
 import { useWorkspace } from '@/workspace/connections';
@@ -68,12 +68,12 @@ export function RemoteMachineItems({ at }: { at: () => Point }) {
                         shared={shared}
                         link={links.find((known) => known.machineId === entry.id) ?? null}
                         onPick={() => {
-                            useUi.getState().setRemoteNodeDialog({ machineId: entry.id, kind: 'chat', viewId, at: at(), relink: false });
+                            remoteNodeDialog.set({ machineId: entry.id, kind: 'chat', viewId, at: at(), relink: false });
                         }}
                     />
                 ))}
                 <ContextMenu.Separator />
-                <ContextMenu.Item onClick={() => useUi.getState().setAddToMachineDialog({ machineId: null })}>
+                <ContextMenu.Item onClick={() => addToMachineDialog.set({ machineId: null })}>
                     <Icon icon={MonitorUp} size={14} /> {t('otherMachine.addProject')}
                 </ContextMenu.Item>
             </ContextMenu.Popup>

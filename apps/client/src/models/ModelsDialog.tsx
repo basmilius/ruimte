@@ -2,9 +2,9 @@ import { ErrorBoundary, CloseButton, Dialog } from '@adecore/ui';
 import type { ModelBenchmarksResult } from '@ruimte/pulsar';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
+import { modelsDialog } from '@/models/dialog';
 import { ModelsBenchmarks } from '@/models/ModelsBenchmarks';
 import { publicAddressBook } from '@/pulsar/account';
-import { useUi } from '@/state/ui';
 
 function fetchBenchmarks(): Promise<ModelBenchmarksResult> {
     return publicAddressBook().then((client) => client.modelBenchmarks());
@@ -31,9 +31,9 @@ function Body() {
 
 /* Beside the usage dialog and outside any workspace: the numbers belong to no project and no machine. The body mounts only while open. */
 export function ModelsDialog() {
-    const open = useUi((s) => s.modelsOpen);
+    const open = modelsDialog.useOpen();
     return (
-        <Dialog.Root open={open} onOpenChange={(next) => useUi.getState().setModelsOpen(next)}>
+        <Dialog.Root open={open} onOpenChange={(next) => modelsDialog.set(next)}>
             <Dialog.Popup className="flex h-[calc(100dvh-120px)] w-[calc(100vw-120px)] flex-col">
                 <ErrorBoundary label={i18next.t('models:dialog.failed')} className="grow">
                     <Body />

@@ -5,6 +5,7 @@ import { Archive, ChevronsDownUp, ChevronsUpDown, Folder, GitBranch, GitMerge, G
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ignoreRefusal, perform } from '@/action-port/perform';
+import { conflictsDialog } from '@/conflicts/dialog';
 import { assumeStaged, useGitCheckouts, useProjectRepos, visibleRepos, withoutNestedCheckouts, type GitCheckoutRef } from '@/controllers/git-repos';
 import { useProjectNodes, useWorktrees, worktreeLists } from '@/controllers/worktrees';
 import { openInSystemBrowser } from '@/desktop/bridge';
@@ -19,6 +20,7 @@ import { GitChoice, GitDiverged, type Choice } from '@/git/GitDialogs';
 import { GitFileList, type GitWork } from '@/git/GitFileList';
 import { PushMenu } from '@/git/PushMenu';
 import { useGitActions, type ActionOutcome, type ManyJob } from '@/git/use-git-actions';
+import { pullRequestDialog } from '@/github/dialogs';
 import { basenameOf } from '@/paths/file-path';
 import { revealNode } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
@@ -31,11 +33,11 @@ import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { useUi } from '@/state/ui';
 import { PanelHeaderActions, PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeaderTitleHidden } from '@/surface/PanelHeaderSlot';
 import { useTransport } from '@/workspace/context';
 import { isUnmergedRefusal, popStashStep, pushButton, pushable, pushEntries, type CommitCandidate } from '@/worktree-rules/git-actions';
 import { nodeNames, nodesInWorktree, worktreeBase, worktreeDiffTab } from '@/worktree-rules/worktree-rows';
+import { worktreeMergeDialog, worktreeRemovalDialog } from '@/worktrees/dialogs';
 import { useWorktreeInspection } from '@/worktrees/use-worktree-inspection';
 import { WorktreeBar, WorktreeInspectDialog, type WorktreeActions } from '@/worktrees/WorktreeMenu';
 
@@ -206,7 +208,7 @@ export function GitPanel() {
             await refresh(target);
             // A merge, a pull or a rebase that ended in conflicts opens where they are resolved.
             if (outcome.ok && (outcome.result.conflicts?.length ?? 0) > 0) {
-                useUi.getState().setConflicts({ cwd: target });
+                conflictsDialog.set({ cwd: target });
             }
             return outcome;
         } finally {
@@ -317,7 +319,7 @@ export function GitPanel() {
     const openDiff = (path: string, file: GitFile): void => {
         // A conflict has three versions, so a diff with two sides is the wrong thing to open on it.
         if (file.state === 'conflicted') {
-            useUi.getState().setConflicts({ cwd: path, path: file.path });
+            conflictsDialog.set({ cwd: path, path: file.path });
             return;
         }
         const diff = diffOf(path, file);
@@ -450,8 +452,8 @@ export function GitPanel() {
 
     const worktreeActions: WorktreeActions = {
         onView: viewWorktree,
-        onMerge: (entry) => useUi.getState().setWorktreeMerge({ folder, paths: [entry.path] }),
-        onRemove: (entry) => useUi.getState().setWorktreeRemoval({ folder, paths: [entry.path] }),
+        onMerge: (entry) => worktreeMergeDialog.set({ folder, paths: [entry.path] }),
+        onRemove: (entry) => worktreeRemovalDialog.set({ folder, paths: [entry.path] }),
         onReveal: revealNode,
         onInspect: inspection.inspect
     };
@@ -482,7 +484,7 @@ export function GitPanel() {
             onAction={(kind, extra) => void act(path, kind, extra)}
             onDialog={setDialog}
             onPullRequest={() => openPullRequest(path)}
-            onShowPullRequest={() => useUi.getState().setPullRequestDialog({ cwd: path })}
+            onShowPullRequest={() => pullRequestDialog.set({ cwd: path })}
         />
     );
 
@@ -527,7 +529,7 @@ export function GitPanel() {
                     onLeaveWorktree={leaveWorktree}
                     onShowRepos={() => useGit.getState().setHiddenRepos([])}
                     onMergeWorktrees={() =>
-                        useUi.getState().setWorktreeMerge({ folder, paths: worktrees.filter((entry) => entry.missing !== true).map((entry) => entry.path) })
+                        worktreeMergeDialog.set({ folder, paths: worktrees.filter((entry) => entry.missing !== true).map((entry) => entry.path) })
                     }
                 />
             </PanelHeaderLeadingSlot>
@@ -584,12 +586,7 @@ export function GitPanel() {
                     following={followedNode !== null}
                 >
                     {inside !== null && (
-                        <Button
-                            size="xs"
-                            variant="secondary"
-                            disabled={busy}
-                            onClick={() => useUi.getState().setWorktreeMerge({ folder, paths: [inside.path] })}
-                        >
+                        <Button size="xs" variant="secondary" disabled={busy} onClick={() => worktreeMergeDialog.set({ folder, paths: [inside.path] })}>
                             <Icon icon={GitMerge} size={12} />
                             {t('git.worktree.merge')}
                         </Button>
@@ -617,7 +614,7 @@ export function GitPanel() {
                             {named ? ` (${checkout.label})` : ''}
                         </span>
                         {conflicted > 0 && <span className="shrink-0 text-xs text-text-faint">{t('git.conflict.files', { count: conflicted })}</span>}
-                        <Button size="sm" variant="secondary" onClick={() => useUi.getState().setConflicts({ cwd: checkout.path })}>
+                        <Button size="sm" variant="secondary" onClick={() => conflictsDialog.set({ cwd: checkout.path })}>
                             {t('git.conflict.resolve')}
                         </Button>
                     </div>
@@ -893,7 +890,7 @@ export function GitPanel() {
             <WorktreeInspectDialog
                 inspected={inspection.inspected}
                 onClose={inspection.close}
-                onRemove={(entry) => useUi.getState().setWorktreeRemoval({ folder, paths: [entry.path] })}
+                onRemove={(entry) => worktreeRemovalDialog.set({ folder, paths: [entry.path] })}
             />
         </div>
     );

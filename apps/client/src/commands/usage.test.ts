@@ -5,9 +5,9 @@ import { commandIds } from '@/commands/registry';
 import { commandUsageName } from '@/commands/usage';
 import { PR_SHOW_IN_PREFIX } from '@/github/commands';
 import { AFTER_SETTLE_PREFIX, LAUNCH_CHOOSE_PREFIX } from '@/launches/menu-extras';
+import { panelRegistry } from '@/registry/panels';
 import { allSettingsSections } from '@/settings/sections';
 import { openedBy, usageSectionOf } from '@/shell/command-usage';
-import { PANELS } from '@/shell/panels';
 import type { PanelState } from '@/state/ui';
 import { GO_VIEW_PREFIX } from '@/views/menu-extras';
 
@@ -44,7 +44,12 @@ describe('commandUsageName', () => {
 
 describe('the counted panels and sections', () => {
     test('are the panels and settings sections the client has', () => {
-        expect(PANELS.map((entry) => entry.kind).toSorted()).toEqual([...USAGE_DESKTOP_PANELS].toSorted());
+        expect(
+            panelRegistry
+                .all()
+                .map((entry) => entry.id)
+                .toSorted()
+        ).toEqual([...USAGE_DESKTOP_PANELS].toSorted());
         // An older client still counts the Computer use and Storage panes, which this one folded into Agents and a machine's detail.
         expect(
             allSettingsSections()

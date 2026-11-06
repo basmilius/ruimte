@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { EventMap } from '@ruimte/contracts';
 import { act } from 'react';
-import { useUi } from '@/state/ui';
+import { projectSettingsAsk } from '@/project/dialogs';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
@@ -32,7 +32,7 @@ async function open(accounts?: Record<string, { default?: string; off?: string[]
     workspace = await openFakeWorkspace(machine, { views: [MAIN], ...(accounts ? { accounts } : {}) } as never, { activeViewId: 'main', views: {} } as never);
     page = mount();
     await page.renderApp();
-    await act(async () => useUi.getState().askProjectSettings(true));
+    await act(async () => projectSettingsAsk.set(true));
     await until(() => dialog() !== null);
 }
 

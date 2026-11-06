@@ -3,8 +3,9 @@ import { readDraft } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
 import type { ProjectCanvasView, ProjectNode, RemoteLink } from '@ruimte/contracts';
 import { act } from 'react';
+import { forkDialog } from '@/chat/dialogs';
+import { remoteNodeDialog } from '@/machine-ui/dialogs';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { useUi } from '@/state/ui';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
 import { claudeProvider } from '../../testing/fake-provider';
@@ -105,14 +106,14 @@ beforeEach(async () => {
     page = mount();
     await page.renderApp();
     await until(() => Object.values(useChats.getState().byKey).some((row) => row.structure?.['turn-1'] !== undefined));
-    await act(async () => useUi.getState().setForkDialog({ chatId: LEAD.id, turnId: 'turn-1' }));
+    await act(async () => forkDialog.set({ chatId: LEAD.id, turnId: 'turn-1' }));
     await until(() => dialog()?.textContent?.includes('Fork') === true);
 });
 
 afterEach(async () => {
     await act(async () => {
-        useUi.getState().setForkDialog(null);
-        useUi.getState().setRemoteNodeDialog(null);
+        forkDialog.set(null);
+        remoteNodeDialog.set(null);
     });
     await page.unmount();
     workspace.close();
@@ -137,7 +138,7 @@ describe('forking a chat', () => {
         await until(() => dialog() === null);
         expect(here.requests('chat.fork')).toEqual([]);
 
-        await act(async () => useUi.getState().setForkDialog({ chatId: LEAD.id, turnId: 'turn-1' }));
+        await act(async () => forkDialog.set({ chatId: LEAD.id, turnId: 'turn-1' }));
         await until(() => button('Fork')?.hasAttribute('disabled') === false);
         expect(here.requests('chat.fork')).toEqual([]);
         await clickOn(button('Fork'));
@@ -160,7 +161,7 @@ describe('forking a chat to another machine', () => {
         await clickOn(button('Choose a checkout…'));
 
         await until(() => dialog()?.textContent?.includes('New chat on MacBook Pro') === true);
-        expect(useUi.getState().remoteNodeDialog?.handoff).toMatchObject({ chatId: LEAD.id, turnId: 'turn-1', title: 'Lexer (fork)' });
+        expect(remoteNodeDialog.get()?.handoff).toMatchObject({ chatId: LEAD.id, turnId: 'turn-1', title: 'Lexer (fork)' });
         expect(here.requests('chat.fork')).toEqual([]);
     });
 

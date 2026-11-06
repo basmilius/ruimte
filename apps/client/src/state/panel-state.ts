@@ -7,6 +7,7 @@ import {
     type ProjectStripTab
 } from '@ruimte/contracts';
 import type { LooseStrip } from '@/layout/legacy-files-cell';
+import { panelRegistry } from '@/registry/panels';
 import { databaseTabId, databaseTabKey } from '@/state/database-tabs';
 import { artifactTabKey, isArtifactTab, isDatabaseTab, isFileTab, tabKey, type DatabaseTab, type FileTab, type Tab } from '@/state/files';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE } from '@/state/git';
@@ -39,13 +40,8 @@ function storedPanelKind(stored: ProjectPanels, kind: ProjectPanelKind): PanelKi
     if (stored.extensionPanel?.startsWith('extension:')) {
         return stored.extensionPanel as `extension:${string}`;
     }
-    if (stored.databasesPanel === true) {
-        return 'databases';
-    }
-    if (stored.outputPanel === true) {
-        return 'output';
-    }
-    return stored.launchesPanel === true ? 'launches' : kind;
+
+    return panelRegistry.all().find((panel) => panel.storedAs !== undefined && stored[panel.storedAs] === true)?.id ?? kind;
 }
 
 function fileTabOf(tab: ProjectFileTab): FileTab {
@@ -168,20 +164,29 @@ export function parsePanels(stored: ProjectPanels | undefined, defaults: PanelsS
     };
 }
 
+/* A client from before a kind existed reads the files panel in its place; one that only lasts the session is stored closed. */
+function storedPanel(panel: PanelDefaults['panel']): ProjectPanels['panel'] {
+    const definition = panelRegistry.find(panel.kind);
+    if (panel.kind.startsWith('extension:') || definition?.storedAs !== undefined) {
+        return { open: panel.open, kind: 'files' };
+    }
+
+    return definition?.sessionOnly === true ? { open: false, kind: 'files' } : { open: panel.open, kind: panel.kind as ProjectPanelKind };
+}
+
+/* The key that says which panel it was, for a kind the file does not know. */
+function storedFlag(kind: PanelKind): Partial<ProjectPanels> {
+    const flag = panelRegistry.find(kind)?.storedAs;
+
+    return flag === undefined ? {} : { [flag]: true };
+}
+
 /* The other way, for the machine-local file. A width nobody dragged stays out of it. */
 export function serializePanels(state: PanelsState): ProjectPanels {
     return {
-        // A client from before launches, databases or output reads the files panel in its place.
-        panel:
-            state.panel.kind === 'launches' || state.panel.kind === 'databases' || state.panel.kind === 'output' || state.panel.kind.startsWith('extension:')
-                ? { open: state.panel.open, kind: 'files' }
-                : state.panel.kind === 'problems' || state.panel.kind === 'voice'
-                  ? { open: false, kind: 'files' }
-                  : { open: state.panel.open, kind: state.panel.kind as ProjectPanelKind },
+        panel: storedPanel(state.panel),
         ...(state.panel.kind.startsWith('extension:') ? { extensionPanel: state.panel.kind } : {}),
-        ...(state.panel.kind === 'launches' ? { launchesPanel: true } : {}),
-        ...(state.panel.kind === 'databases' ? { databasesPanel: true } : {}),
-        ...(state.panel.kind === 'output' ? { outputPanel: true } : {}),
+        ...storedFlag(state.panel.kind),
         ...(state.panelWidth === null ? {} : { panelWidth: Math.round(state.panelWidth) }),
         ...(state.planAnchor === null ? {} : { plan: state.planAnchor }),
         ...(state.planWidth === null ? {} : { planWidth: Math.round(state.planWidth) }),

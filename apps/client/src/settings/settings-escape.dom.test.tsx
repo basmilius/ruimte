@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
-import { useUi } from '@/state/ui';
+import { projectSettingsAsk } from '@/project/dialogs';
+import { viewDialog } from '@/views/dialogs';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
@@ -25,14 +26,14 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-    await act(async () => useUi.getState().setViewDialog(null));
+    await act(async () => viewDialog.set(null));
     await page.unmount();
     workspace.close();
 });
 
 describe('Escape in a settings dialog', () => {
     test('closes View settings while its name field has the focus', async () => {
-        await act(async () => useUi.getState().setViewDialog({ kind: 'settings', viewId: 'main' }));
+        await act(async () => viewDialog.set({ kind: 'settings', viewId: 'main' }));
         await until(() => dialogTitled('View settings') !== null);
         const field = document.querySelector<HTMLInputElement>('input[aria-label="View name"]')!;
         expect(document.activeElement).toBe(field);
@@ -42,7 +43,7 @@ describe('Escape in a settings dialog', () => {
     });
 
     test('closes Project settings while its name field has the focus', async () => {
-        await act(async () => useUi.getState().askProjectSettings(true));
+        await act(async () => projectSettingsAsk.set(true));
         await until(() => dialogTitled('Project settings') !== null);
         const field = document.querySelector<HTMLInputElement>('input[aria-label="Project name"]')!;
         expect(document.activeElement).toBe(field);

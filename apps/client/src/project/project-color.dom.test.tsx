@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
+import { projectSettingsAsk } from '@/project/dialogs';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
@@ -40,7 +41,7 @@ afterEach(async () => {
 });
 
 async function pickRed(): Promise<void> {
-    await act(async () => useUi.getState().askProjectSettings(true));
+    await act(async () => projectSettingsAsk.set(true));
     await until(() => swatch('Red') !== null);
     await clickOn(swatch('Red'));
     await until(() => glowIn('#app-sidebar')?.dataset.glowColor === RED);

@@ -24,6 +24,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { openInSystemBrowser } from '@/desktop/bridge';
 import { splitRows } from '@/files/change-size';
+import { pullRequestDialog } from '@/github/dialogs';
 import { groupChecks, mergeStateKey, threadBlock, visibleThreads } from '@/github/pr-view';
 import { stopPrWatch } from '@/github/pr-watch-actions';
 import { usePrWatches } from '@/github/pr-watches';
@@ -32,7 +33,6 @@ import { sendToChat } from '@/language/selection-to-chat';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey, isOfEndpoint } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { useUi } from '@/state/ui';
 import { useMachineAnswers } from '@/transport/features';
 import { useTransport } from '@/workspace/context';
 
@@ -42,8 +42,8 @@ import { useTransport } from '@/workspace/context';
  */
 export function PullRequestDialog() {
     const { t } = useTranslation('panels');
-    const request = useUi((s) => s.pullRequestDialog);
-    const close = (): void => useUi.getState().setPullRequestDialog(null);
+    const request = pullRequestDialog.use((request) => request);
+    const close = (): void => pullRequestDialog.set(null);
     return (
         <Dialog.Root open={request !== null} onOpenChange={(open) => !open && close()}>
             <Dialog.Popup className="flex max-h-[640px] w-[720px] flex-col">

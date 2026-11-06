@@ -2,12 +2,12 @@ import i18next from 'i18next';
 import { defineBehaviors, type Command } from '@/commands/behavior';
 import type { GeneratedCommands } from '@/commands/generated';
 import { CommandMoment } from '@/commands/moment';
+import { issueStartDialog, pullRequestDialog } from '@/github/dialogs';
 import { prReposOfCurrent } from '@/github/pr-repos';
 import { hasPrWatch, stopPrWatch } from '@/github/pr-watch-actions';
 import { shownChatOfNode } from '@/state/design-chat';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { shownFolderOf, useProject } from '@/state/project';
-import { useUi } from '@/state/ui';
 
 /* The row that shows the pull request of one repository of a folder that holds several. */
 export const PR_SHOW_IN_PREFIX = 'pr-show-in-';
@@ -27,7 +27,7 @@ export const GITHUB_BEHAVIORS = defineBehaviors({
             const cwd = prReposOfCurrent()[0]?.path;
             const folder = cwd ?? shownFolderOf(useProject.getState().current);
             if (folder !== null) {
-                useUi.getState().setPullRequestDialog({ cwd: folder });
+                pullRequestDialog.set({ cwd: folder });
             }
         },
         offered: (moment) => moment.folder !== null && prReposOfCurrent().length <= 1
@@ -46,7 +46,7 @@ export const GITHUB_BEHAVIORS = defineBehaviors({
         }
     },
     'issue-start': {
-        run: () => useUi.getState().setIssueStartOpen(true),
+        run: () => issueStartDialog.set(true),
         offered: (moment) => moment.folder !== null && !moment.scratch && { hint: i18next.t('shell:chats.name') }
     }
 });
@@ -60,7 +60,7 @@ export function githubPaletteRows(moment: CommandMoment): Command[] {
     return repos.map((repo) => ({
         id: `${PR_SHOW_IN_PREFIX}${repo.path}`,
         label: i18next.t('shell:palette.commands.showPullRequestIn', { repo: repo.label }),
-        run: () => useUi.getState().setPullRequestDialog({ cwd: repo.path })
+        run: () => pullRequestDialog.set({ cwd: repo.path })
     }));
 }
 

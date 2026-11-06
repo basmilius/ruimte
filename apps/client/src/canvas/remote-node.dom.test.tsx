@@ -4,11 +4,11 @@ import { PROMPT_SAMPLES } from '@adecore/agents-react/testing';
 import type { ChatInfo, ChatItem, ProjectCanvasView, ProjectNode, ProviderInfo } from '@ruimte/contracts';
 import { act } from 'react';
 import { markUnlinked, useRemoteRefusals } from '@/clients/project/remote-refusals';
+import { remoteNodeDialog } from '@/machine-ui/dialogs';
 import { groupAttention, useAttention } from '@/state/attention';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
-import { useUi } from '@/state/ui';
 import { projectNodes } from '@/state/view-nodes';
 import { TransportError } from '@/transport-api/transport';
 import { windowWorkspace } from '@/workspace/window';
@@ -226,7 +226,7 @@ describe('the machine of a node', () => {
 
         const again = [...frame(REMOTE_SHELL.id).querySelectorAll('button')].find((button) => button.textContent === 'Link again') ?? null;
         await clickOn(again);
-        expect(useUi.getState().remoteNodeDialog).toMatchObject({ machineId: REMOTE, relink: true });
-        await act(async () => useUi.getState().setRemoteNodeDialog(null));
+        expect(remoteNodeDialog.get()).toMatchObject({ machineId: REMOTE, relink: true });
+        await act(async () => remoteNodeDialog.set(null));
     });
 });

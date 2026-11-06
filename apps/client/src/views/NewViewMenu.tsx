@@ -16,6 +16,7 @@ import { shownFolderOf, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { useMachineAnswers } from '@/transport/features';
+import { viewDialog } from '@/views/dialogs';
 
 /* A row of one of the two lists below, with the label it is put in order by. */
 interface NewViewEntry {
@@ -56,7 +57,7 @@ export function NewViewTiles({ size = 'sm' }: { size?: 'sm' | 'md' }) {
     const hasFolder = useProject((s) => shownFolderOf(s.current) !== null);
     const tools = [
         { kind: 'terminal', icon: Terminal, run: () => void createViewAction('terminal') },
-        { kind: 'browser', icon: Globe, run: () => useUi.getState().setViewDialog({ kind: 'new-browser' }) },
+        { kind: 'browser', icon: Globe, run: () => viewDialog.set({ kind: 'new-browser' }) },
         ...(hasFolder ? [{ kind: 'file', icon: FileText, run: () => useUi.getState().openFilePicker({ kind: 'view' }) }] : []),
         { kind: 'canvas', icon: Frame, run: () => void createViewAction('canvas') },
         { kind: 'diagram', icon: Workflow, run: () => void createViewAction('diagram') },
@@ -122,7 +123,7 @@ export function NewViewItems() {
                             />
                         )
                     },
-                itemEntry('browser', Globe, t('viewKinds.browser'), () => useUi.getState().setViewDialog({ kind: 'new-browser' })),
+                itemEntry('browser', Globe, t('viewKinds.browser'), () => viewDialog.set({ kind: 'new-browser' })),
                 hasFolder && itemEntry('file', FileText, t('viewMenu.filePick'), () => useUi.getState().openFilePicker({ kind: 'view' })),
                 ...extensionViews.map((view) => itemEntry(`extension:${view.id}`, view.icon ?? Blocks, view.title, view.open))
             ])}

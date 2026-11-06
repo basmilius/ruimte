@@ -4,14 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
 import { focusedCanvas, useCanvas } from '@/state/canvas';
 import { useProject } from '@/state/project';
-import { useUi } from '@/state/ui';
+import { worktreeBindDialog } from '@/worktrees/dialogs';
 import { branchFromTitle } from '@/worktrees/new-worktree-chat';
 
 /* Binds a group to a git worktree of the project's repository; every node made inside it starts there. */
 export function WorktreeDialog() {
     const { t } = useTranslation('shell');
-    const groupId = useUi((s) => s.worktreeDialogFor);
-    const close = useUi((s) => s.setWorktreeDialogFor);
+    const groupId = worktreeBindDialog.use((request) => request);
+    const close = worktreeBindDialog.set;
     const group = useCanvas((s) => (groupId ? s.nodes[groupId] : undefined));
     const folder = useProject((s) => s.current?.folder ?? null);
 

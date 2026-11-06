@@ -54,7 +54,9 @@ import { DeviceOperatedStrip } from '@/devices/DeviceOperatedStrip';
 import { ExtensionNodeBody } from '@/extensions/ExtensionNodeBody';
 import { nodeInfoOf } from '@/extensions/slots';
 import { NodeHeaderSlot, SlotRow } from '@/extensions/SlotSurfaces';
+import { pullRequestDialog } from '@/github/dialogs';
 import { useChatPrWatch } from '@/github/pr-watches';
+import { remoteNodeDialog } from '@/machine-ui/dialogs';
 import { useMachineIcon } from '@/machines/machine-icon';
 import { nameOf } from '@/machines/machine-list';
 import { MachineGlyph } from '@/machines/MachineGlyph';
@@ -78,7 +80,6 @@ import { useEndpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useChildTask } from '@/state/tasks';
 import { useToasts } from '@/state/toasts';
-import { useUi } from '@/state/ui';
 import { KindIcon } from '@/surface/canvas/KindIcon';
 import { NODE_KIND_ICONS } from '@/surface/canvas/node-icons';
 import { Favicon } from '@/surface/Favicon';
@@ -222,12 +223,7 @@ function PrWatchPill({ chatId }: { chatId: string }) {
     }
     return (
         <Tooltip label={t('node.prWatchPill', { pr: `${watch.repo}#${watch.number}`, state: t(`node.prWatchState.${watch.checkState}`) })}>
-            <Pill
-                mono
-                tone={PR_CHECK_TONES[watch.checkState]}
-                icon={<Icon icon={Eye} size={12} />}
-                onClick={() => useUi.getState().setPullRequestDialog({ cwd: watch.cwd })}
-            >
+            <Pill mono tone={PR_CHECK_TONES[watch.checkState]} icon={<Icon icon={Eye} size={12} />} onClick={() => pullRequestDialog.set({ cwd: watch.cwd })}>
                 PR #{watch.number}
             </Pill>
         </Tooltip>
@@ -614,7 +610,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                                     state={remote === 'ready' ? 'unstarted' : remote}
                                     task={unstarted?.title}
                                     onLinkAgain={() =>
-                                        useUi.getState().setRemoteNodeDialog({
+                                        remoteNodeDialog.set({
                                             machineId: node.machine!,
                                             kind: node.kind === 'terminal' || node.kind === 'device' ? node.kind : 'chat',
                                             viewId: null,

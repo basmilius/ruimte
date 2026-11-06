@@ -1,7 +1,9 @@
 import i18next from 'i18next';
 import { defineBehaviors, takeKey } from '@/commands/behavior';
 import { keepAwakeAvailable, setKeepAwake } from '@/controllers/keep-awake';
+import { modelsDialog } from '@/models/dialog';
 import { openOnboarding } from '@/onboarding/open';
+import { projectSettingsAsk } from '@/project/dialogs';
 import { newChat, newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
 import { stepMove, stepWindowTab, useWindowTabs } from '@/project/window-tabs';
 import { canMoveToNewWindow, canOpenWindows, moveToNewWindow, openNewWindow } from '@/project/windows';
@@ -11,6 +13,7 @@ import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
 import { isInNodeBody } from '@/surface/canvas/node-body';
+import { usageDialog } from '@/usage/dialog';
 
 function togglePalette(): void {
     const ui = useUi.getState();
@@ -111,10 +114,10 @@ export const WINDOW_BEHAVIORS = defineBehaviors({
     theme: { run: () => useTheme.getState().toggle() },
     'release-notes': { run: () => openReleaseNotes(null) },
     onboarding: { run: () => openOnboarding(), offered: () => hasLocalMachine() },
-    usage: { run: () => useUi.getState().setUsageOpen(true), offered: () => ({ hint: i18next.t('shell:palette.hints.usage') }) },
-    models: { run: () => useUi.getState().setModelsOpen(true) },
+    usage: { run: () => usageDialog.set(true), offered: () => ({ hint: i18next.t('shell:palette.hints.usage') }) },
+    models: { run: () => modelsDialog.set(true) },
     'open-folder': { run: () => useUi.getState().openFolderBrowser() },
-    'project-settings': { run: () => useUi.getState().askProjectSettings(true) },
+    'project-settings': { run: () => projectSettingsAsk.set(true) },
     'keep-awake-off': { run: () => setKeepAwake({ keepAwake: 'off' }), offered: () => keepAwakeAvailable() },
     'keep-awake-working': { run: () => setKeepAwake({ keepAwake: 'working' }), offered: () => keepAwakeAvailable() },
     'keep-awake-always': { run: () => setKeepAwake({ keepAwake: 'always' }), offered: () => keepAwakeAvailable() },

@@ -1,31 +1,14 @@
-import type { AgentKind, ProjectPanelKind, ProjectPanels } from '@ruimte/contracts';
+import type { ProjectPanels } from '@ruimte/contracts';
 import { z } from 'zod';
 import { create } from 'zustand';
+import { panelRegistry } from '@/registry/panels';
 import { isScratchProject, useProject } from '@/state/project';
 import { storedJson, storedText } from '@/state/stored-json';
 
-export type CoreSettingsSectionId =
-    | 'general'
-    | 'appearance'
-    | 'keyboard'
-    | 'editor'
-    | 'terminal'
-    | 'views'
-    | 'extensions'
-    | 'files'
-    | 'providers'
-    | 'chats'
-    | 'voice'
-    | 'agents'
-    | 'usage'
-    | 'machines'
-    | 'about';
+export type SettingsSectionId = string;
 
-// A built-in brings its own section, under an id only it knows.
-export type SettingsSectionId = CoreSettingsSectionId | (string & {});
-
-/* Launches, databases and output are kinds the project's file does not know, so each is stored beside `panel` (`launchesPanel`, `databasesPanel`, `outputPanel`), and so is an extension's (`extensionPanel`). Problems and Voice Control are ones too, and only for this session: the file stores them as closed, since a voice session does not outlive the window. */
-export type PanelKind = ProjectPanelKind | 'launches' | 'databases' | 'output' | 'problems' | 'voice' | `extension:${string}`;
+/* The kind of a panel, as registered by the feature that draws it (`registry/panels.ts`), or an extension's `extension:<id>`. */
+export type PanelKind = string;
 
 const PANEL_KINDS: readonly PanelKind[] = ['files', 'git', 'processes', 'devices'];
 
@@ -51,10 +34,8 @@ export type PlanAnchor = NonNullable<ProjectPanels['plan']>;
 const CLOSED_PANEL: PanelState = { open: false, kind: 'files' };
 
 /* What the Chats project has no panel for: its folder is the daemon's, and so are its repository and what runs in it. */
-const SCRATCH_HIDDEN_PANELS: readonly PanelKind[] = ['files', 'git', 'devices', 'launches', 'databases', 'problems'];
-
 export function panelHidden(kind: PanelKind, scratch: boolean): boolean {
-    return scratch && SCRATCH_HIDDEN_PANELS.includes(kind);
+    return scratch && panelRegistry.find(kind)?.hiddenInScratch === true;
 }
 
 /* The panel as the window shows it: one the project has no place for reads as closed, whatever its file stored. */
@@ -104,69 +85,6 @@ interface SettingsState {
     searchAt: number;
 }
 
-/* A CLI's own login in a terminal of its own, for a machine no canvas on screen can hold a terminal node of. */
-export interface LoginRequest {
-    endpointId: string;
-    kind: AgentKind;
-    accountId: string;
-    /* What a person calls the account. */
-    name: string;
-}
-
-/* Where the onboarding stands while it is up: the welcome, or the list of tasks behind it. */
-export type OnboardingStep = 'welcome' | 'hub';
-
-export type ViewDialog =
-    | { kind: 'settings'; viewId: string }
-    /* Promoting a node that has lines drawn into it. Those lines do not survive the move. */
-    | { kind: 'promote'; nodeId: string }
-    | { kind: 'new-browser' }
-    | null;
-
-/*
- * A chat in Chats that leaves it. `make` starts a new project from the chat ("Make project…"); `pick`
- * moves it into a project that already exists, `projectId` being the one chosen beforehand, if any.
- */
-export interface MoveChatRequest {
-    chatId: string;
-    mode: 'make' | 'pick';
-    projectId: string | null;
-    /* What an agent in the chat suggested, which the form starts from: a name and, when it gave one, a folder. */
-    suggest?: { name: string; folder?: string };
-}
-
-/* A fork of a chat after a turn; `machine` is the daemon id of the machine the chat runs on, absent for the workspace's. */
-export interface ForkRequest {
-    chatId: string;
-    turnId: string;
-    machine?: string;
-}
-
-/*
- * A node being made on another machine, from the new-node menu, or a machine that stopped linking the
- * project being linked again (`relink`), which asks for its checkout once more.
- */
-export interface RemoteNodeRequest {
-    machineId: string;
-    kind: 'chat' | 'terminal' | 'device';
-    /* The canvas it goes on; null for a machine linked again, which makes no node. */
-    viewId: string | null;
-    /* Where on the canvas it goes, in world units; null lets the canvas place it. */
-    at: { x: number; y: number } | null;
-    relink: boolean;
-    /*
-     * A fork of this chat after this turn: the new chat starts from a transcript of the original instead of from nothing.
-     * `source` is the daemon id of the machine the original runs on, absent for the workspace's.
-     */
-    handoff?: { chatId: string; turnId: string; title: string; provider?: AgentKind; source?: string };
-}
-
-/* A project being put on another machine; `then` is the node that was being made there, which opens again once the clone is in. */
-export interface AddToMachineRequest {
-    machineId: string | null;
-    then?: RemoteNodeRequest;
-}
-
 /* What the palette is doing: jumping and running commands, searching the files of the open folder,
    searching the project's chats, or picking one file. A step inside the same dialog. */
 export type PaletteMode = 'default' | 'grep' | 'chats' | 'file';
@@ -175,38 +93,9 @@ export type PaletteMode = 'default' | 'grep' | 'chats' | 'file';
    asked knows the point that was right-clicked and the palette does not. */
 export type FilePick = { kind: 'node'; at: { x: number; y: number } } | { kind: 'view' } | { kind: 'tab' };
 
-export interface WorktreeMergeRequest {
-    /* The project folder whose repository holds the worktrees. */
-    folder: string;
-    /* In the order they are merged; a group's are in the order of its members. */
-    paths: string[];
-    /* Whether "remove afterwards" starts ticked; removing a worktree with work asks to merge first with it on. */
-    remove?: boolean;
-}
-
-/* The checkout whose unmerged files are being resolved, and the file the overlay opens on. */
-export interface ConflictRequest {
-    cwd: string;
-    path?: string;
-}
-
-/* A provider's install or sign-in command, typed into a shell of its own for the person to run. */
-export interface ProviderCommandRequest {
-    endpointId: string;
-    kind: AgentKind;
-    command: string;
-}
-
 interface UiStore {
     paletteOpen: boolean;
     paletteMode: PaletteMode;
-    usageOpen: boolean;
-    modelsOpen: boolean;
-    login: LoginRequest | null;
-    providerCommand: ProviderCommandRequest | null;
-    onboarding: OnboardingStep | null;
-    /* The consent for the CLIs' global settings is up (`state/agent-integrations.ts`). */
-    agentIntegrations: boolean;
     /* Whether the session list is in view; it survives a reload, like everything else on the canvas. */
     sidebarOpen: boolean;
     /* Which canvases the sidebar has folded open, per project, or null until the list seeds itself.
@@ -234,58 +123,10 @@ interface UiStore {
     /* True while the columns show what was stored, false from the first change by hand. A column
        only slides when it is false, so a restore lands at its width. */
     panelsRestoring: boolean;
-    layoutDialogOpen: boolean;
-    /* The group a worktree is being bound to, while its dialog is up. */
-    worktreeDialogFor: string | null;
-    /* The worktrees a person is removing, one or a group's all, by the project folder whose repository holds them, while the question is up. */
-    worktreeRemoval: { folder: string; paths: string[] } | null;
-    /* The worktrees a person is merging, one or a group's all, while the merge dialog is up. */
-    worktreeMerge: WorktreeMergeRequest | null;
-    /* The checkout whose conflicts are open in the overlay; null while it is closed. */
-    conflicts: ConflictRequest | null;
-    /* The chat and the turn a fork goes on after, while its dialog is up. */
-    forkDialog: ForkRequest | null;
-    /* The chat in Chats that moves to a project, and the project picked beforehand, while its dialog is up. */
-    moveChatDialog: MoveChatRequest | null;
-    /* The dialog that starts a chat in a worktree made for it. */
-    newWorktreeChatOpen: boolean;
-    /* The dialog that starts a chat on a GitHub issue. */
-    issueStartOpen: boolean;
-    /* The checkout whose pull request is shown, while that dialog is up. */
-    pullRequestDialog: { cwd: string } | null;
-    /* A node on another machine being made, or made over for a machine that no longer links the project. */
-    remoteNodeDialog: RemoteNodeRequest | null;
-    addToMachineDialog: AddToMachineRequest | null;
-    /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
-    viewDialog: ViewDialog;
-    /* The sidebar row the caret is in, which is how a new heading opens. */
-    renamingViewId: string | null;
-    /* The application menu asks for the open project's settings; the project menu owns that dialog. */
-    projectSettingsAsked: boolean;
     /* The launch the toolbar's chip shows, by `endpointKey(endpointId, projectId)`. This client's
        choice, so it stays in this client's storage and never in a project file. */
     chosenLaunches: Record<string, string>;
     chooseLaunch(projectKey: string, launchId: string): void;
-    setUsageOpen(open: boolean): void;
-    setModelsOpen(open: boolean): void;
-    setLogin(login: LoginRequest | null): void;
-    setProviderCommand(request: ProviderCommandRequest | null): void;
-    setOnboarding(step: OnboardingStep | null): void;
-    setAgentIntegrations(open: boolean): void;
-    askProjectSettings(asked: boolean): void;
-    setWorktreeDialogFor(groupId: string | null): void;
-    setWorktreeRemoval(removal: { folder: string; paths: string[] } | null): void;
-    setWorktreeMerge(merge: WorktreeMergeRequest | null): void;
-    setConflicts(request: ConflictRequest | null): void;
-    setForkDialog(fork: ForkRequest | null): void;
-    setMoveChatDialog(move: MoveChatRequest | null): void;
-    setNewWorktreeChatOpen(open: boolean): void;
-    setIssueStartOpen(open: boolean): void;
-    setPullRequestDialog(request: { cwd: string } | null): void;
-    setRemoteNodeDialog(request: RemoteNodeRequest | null): void;
-    setAddToMachineDialog(request: AddToMachineRequest | null): void;
-    setViewDialog(dialog: ViewDialog): void;
-    setRenamingViewId(viewId: string | null): void;
     setSidebarOpen(open: boolean): void;
     toggleSidebar(): void;
     openPalette(seed?: string): void;
@@ -300,7 +141,6 @@ interface UiStore {
     /* The palette listing the files of the open folder, to make one of them a node or a view. */
     openFilePicker(pick: FilePick): void;
     setPaletteMode(mode: PaletteMode): void;
-    setLayoutDialogOpen(open: boolean): void;
     setPaletteOpen(open: boolean): void;
     setSettings(patch: Partial<SettingsState>): void;
     setPanel(patch: Partial<PanelState>): void;
@@ -335,12 +175,6 @@ export const useUi = create<UiStore>((set, get) => {
     return {
         paletteOpen: false,
         paletteMode: 'default',
-        usageOpen: false,
-        modelsOpen: false,
-        login: null,
-        providerCommand: null,
-        onboarding: null,
-        agentIntegrations: false,
         paletteSeed: '',
         paletteBrowseAt: 0,
         paletteBrowseMachine: null,
@@ -356,21 +190,6 @@ export const useUi = create<UiStore>((set, get) => {
         planOpen: false,
         planWidth: null,
         panelsRestoring: true,
-        layoutDialogOpen: false,
-        worktreeDialogFor: null,
-        worktreeRemoval: null,
-        worktreeMerge: null,
-        conflicts: null,
-        forkDialog: null,
-        moveChatDialog: null,
-        newWorktreeChatOpen: false,
-        issueStartOpen: false,
-        pullRequestDialog: null,
-        remoteNodeDialog: null,
-        addToMachineDialog: null,
-        viewDialog: null,
-        renamingViewId: null,
-        projectSettingsAsked: false,
         chosenLaunches: storedChosenLaunches.read() ?? {},
         chooseLaunch(projectKey, launchId) {
             if (get().chosenLaunches[projectKey] === launchId) {
@@ -380,75 +199,12 @@ export const useUi = create<UiStore>((set, get) => {
             storedChosenLaunches.write(chosenLaunches);
             set({ chosenLaunches });
         },
-        setUsageOpen(open) {
-            set({ usageOpen: open });
-        },
-        setModelsOpen(open) {
-            set({ modelsOpen: open });
-        },
-        setLogin(login) {
-            set({ login });
-        },
-        setProviderCommand(request) {
-            set({ providerCommand: request });
-        },
-        setOnboarding(step) {
-            set({ onboarding: step });
-        },
-        setAgentIntegrations(open) {
-            set({ agentIntegrations: open });
-        },
-        askProjectSettings(asked) {
-            set({ projectSettingsAsked: asked });
-        },
-        setWorktreeDialogFor(groupId) {
-            set({ worktreeDialogFor: groupId });
-        },
-        setWorktreeRemoval(removal) {
-            set({ worktreeRemoval: removal });
-        },
-        setWorktreeMerge(merge) {
-            set({ worktreeMerge: merge });
-        },
-        setConflicts(request) {
-            set({ conflicts: request });
-        },
-        setForkDialog(fork) {
-            set({ forkDialog: fork });
-        },
-        setMoveChatDialog(move) {
-            set({ moveChatDialog: move });
-        },
-        setNewWorktreeChatOpen(open) {
-            set({ newWorktreeChatOpen: open });
-        },
-        setIssueStartOpen(open) {
-            set({ issueStartOpen: open });
-        },
-        setPullRequestDialog(request) {
-            set({ pullRequestDialog: request });
-        },
-        setRemoteNodeDialog(request) {
-            set({ remoteNodeDialog: request });
-        },
-        setAddToMachineDialog(request) {
-            set({ addToMachineDialog: request });
-        },
-        setViewDialog(dialog) {
-            set({ viewDialog: dialog });
-        },
-        setRenamingViewId(viewId) {
-            set({ renamingViewId: viewId });
-        },
         setSidebarOpen(open) {
             storedSidebar.write(open ? 'open' : 'closed');
             set({ sidebarOpen: open, panelsRestoring: false });
         },
         toggleSidebar() {
             get().setSidebarOpen(!get().sidebarOpen);
-        },
-        setLayoutDialogOpen(open) {
-            set({ layoutDialogOpen: open });
         },
         openPalette(seed = '') {
             openPaletteIn('default', seed);

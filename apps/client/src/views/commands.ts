@@ -12,6 +12,7 @@ import { useUi } from '@/state/ui';
 import { VIEW_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { transportFor } from '@/transport';
 import { withActiveView } from '@/views/active-view';
+import { viewDialog } from '@/views/dialogs';
 import { GO_VIEW_PREFIX } from '@/views/menu-extras';
 
 function creating(kind: Parameters<typeof createViewAction>[0]): CommandBehavior {
@@ -34,7 +35,7 @@ export const VIEW_BEHAVIORS = defineBehaviors({
         offered: (moment) => moment.inWorkspace && moment.folder !== null
     },
     'view-new-browser': {
-        run: () => useUi.getState().setViewDialog({ kind: 'new-browser' }),
+        run: () => viewDialog.set({ kind: 'new-browser' }),
         offered: (moment) => moment.inWorkspace
     },
     'view-put-on-canvas': { run: withActiveView(({ view }) => placeViewOnCanvasAction(view.id)) },

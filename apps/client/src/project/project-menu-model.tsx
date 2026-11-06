@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ignoreRefusal, perform } from '@/action-port/perform';
 import { chatsProjects, menuProjects, openableRows, type ProjectMenuRow } from '@/clients/project/list';
 import { closeWarning, sessionNodesOf } from '@/clients/project/project-sessions';
+import { projectSettingsAsk } from '@/project/dialogs';
 import { useOffersNewChat } from '@/project/new-chat';
 import { closingProject } from '@/project/open';
 import { ProjectActions, ProjectPlaceActions } from '@/project/ProjectActions';
@@ -168,10 +169,10 @@ function useProjectSettings(endpoints: readonly Endpoint[], isCurrent: (row: Pro
         () =>
             useUi.subscribe(() => {
                 // Read now and not off the change: another menu on screen may have answered the ask already.
-                if (!useUi.getState().projectSettingsAsked) {
+                if (!projectSettingsAsk.isOpen()) {
                     return;
                 }
-                useUi.getState().askProjectSettings(false);
+                projectSettingsAsk.set(false);
                 const { current: shown, currentEndpointId: endpointId } = useProject.getState();
                 const row = useProjectList
                     .getState()

@@ -7,6 +7,7 @@ import { openForkDialog } from '@/chat/open-fork';
 import { restartChatSession } from '@/chat/restart-session';
 import { defineBehaviors, type CommandBehavior, type KeyHandler } from '@/commands/behavior';
 import type { GeneratedCommands } from '@/commands/generated';
+import { moveChatDialog } from '@/project/dialogs';
 import { endpointKey } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { useUi } from '@/state/ui';
@@ -69,7 +70,7 @@ export const CHAT_BEHAVIORS = defineBehaviors({
         run: () => {
             const chatId = leavingChatId();
             if (chatId !== null) {
-                useUi.getState().setMoveChatDialog({ chatId, mode: 'make', projectId: null });
+                moveChatDialog.set({ chatId, mode: 'make', projectId: null });
             }
         },
         offered: (moment) => moment.inWorkspace && leavingChatId() !== null
@@ -78,7 +79,7 @@ export const CHAT_BEHAVIORS = defineBehaviors({
         run: () => {
             const chatId = leavingChatId();
             if (chatId !== null) {
-                useUi.getState().setMoveChatDialog({ chatId, mode: 'pick', projectId: null });
+                moveChatDialog.set({ chatId, mode: 'pick', projectId: null });
             }
         },
         offered: (moment) => moment.inWorkspace && leavingChatId() !== null
@@ -121,7 +122,7 @@ export const CHAT_GENERATED: readonly GeneratedCommands[] = [
         run: (projectId) => {
             const facts = activeViewFacts();
             if (facts !== null && facts.offers.moveToProject && !facts.working) {
-                useUi.getState().setMoveChatDialog({ chatId: facts.view.id, mode: 'pick', projectId });
+                moveChatDialog.set({ chatId: facts.view.id, mode: 'pick', projectId });
             }
         }
     }

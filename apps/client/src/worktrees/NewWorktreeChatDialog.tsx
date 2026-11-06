@@ -4,7 +4,7 @@ import { GitBranch } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProject } from '@/state/project';
-import { useUi } from '@/state/ui';
+import { newWorktreeChatDialog } from '@/worktrees/dialogs';
 import { createStartWorktree, useWorktreeStart } from '@/worktrees/use-worktree-start';
 import { createWorktreeChat } from '@/worktrees/worktree-chat';
 import { WorktreeStartFields } from '@/worktrees/WorktreeStartFields';
@@ -15,8 +15,8 @@ import { WorktreeStartFields } from '@/worktrees/WorktreeStartFields';
  */
 export function NewWorktreeChatDialog() {
     const { t } = useTranslation('shell');
-    const open = useUi((s) => s.newWorktreeChatOpen);
-    const close = (): void => useUi.getState().setNewWorktreeChatOpen(false);
+    const open = newWorktreeChatDialog.useOpen();
+    const close = (): void => newWorktreeChatDialog.set(false);
     return (
         <Dialog.Root open={open} onOpenChange={(next) => !next && close()}>
             <Dialog.Popup size="sm">

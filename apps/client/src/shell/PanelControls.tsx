@@ -41,13 +41,19 @@ export function PanelControls() {
                     {index > 0 && <WorkspaceRailSeparator />}
                     {group.entries.map((entry) => {
                         const dirty = entry.kind === 'git' && changes > 0;
-                        const badge = 'badge' in entry ? (entry.badge?.() ?? null) : null;
+                        const badge = entry.badge?.() ?? null;
 
                         return (
                             <IconButton
                                 key={entry.kind}
                                 icon={entry.icon}
-                                label={dirty ? t('panel.gitChanges', { count: changes }) : 'label' in entry ? entry.label() : t(`panel.names.${entry.kind}`)}
+                                label={
+                                    dirty
+                                        ? t('panel.gitChanges', { count: changes })
+                                        : entry.label !== undefined
+                                          ? entry.label()
+                                          : t(`panel.names.${entry.kind}`)
+                                }
                                 tooltipSide="left"
                                 active={panel.open && panel.kind === entry.kind}
                                 className={dirty || badge !== null ? 'relative' : undefined}

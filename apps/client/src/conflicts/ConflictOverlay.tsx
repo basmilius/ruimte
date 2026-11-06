@@ -21,12 +21,12 @@ import {
 } from '@/conflicts/conflict-model';
 import { ConflictEditor, type EditorHandle } from '@/conflicts/ConflictEditor';
 import { ConflictSides } from '@/conflicts/ConflictSides';
+import { conflictsDialog } from '@/conflicts/dialog';
 import type { ConflictDraft } from '@/conflicts/editor';
 import { useGitStatus } from '@/controllers/git-watch';
 import { DiffRowMenuItems } from '@/files/DiffRowMenuItems';
 import { basenameOf } from '@/paths/file-path';
 import { useToasts } from '@/state/toasts';
-import { useUi } from '@/state/ui';
 import { useTransport } from '@/workspace/context';
 import { nextActionId } from '@/worktree-rules/git-actions';
 
@@ -49,7 +49,7 @@ interface AiRun {
  */
 export function ConflictOverlay() {
     const { t } = useTranslation(['conflicts', 'common']);
-    const request = useUi((s) => s.conflicts);
+    const request = conflictsDialog.use((request) => request);
     const cwd = request?.cwd ?? null;
     const transport = useTransport();
     const status = useGitStatus(cwd);
@@ -332,7 +332,7 @@ export function ConflictOverlay() {
                 action === 'abort' ? t('finish.aborted', { operation }) : left > 0 ? t('finish.more', { count: left }) : t('finish.done', { operation });
             useToasts.getState().show({ title, kind: 'success' });
             if (left === 0) {
-                useUi.getState().setConflicts(null);
+                conflictsDialog.set(null);
             } else {
                 files.current.clear();
                 drafts.current.clear();
@@ -346,7 +346,7 @@ export function ConflictOverlay() {
         }
     };
 
-    const close = (): void => useUi.getState().setConflicts(null);
+    const close = (): void => conflictsDialog.set(null);
     const operation = answer?.operation ?? status?.operation ?? null;
     const left = list.length;
     const textFiles = list.filter((entry) => entry.kind === 'text').map((entry) => entry.path);

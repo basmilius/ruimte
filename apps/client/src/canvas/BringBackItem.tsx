@@ -9,9 +9,9 @@ import { bringBack } from '@/project/bring-back';
 import { endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
-import { useUi } from '@/state/ui';
 import { useWorkspace } from '@/workspace/connections';
 import { useTransport } from '@/workspace/context';
+import { worktreeMergeDialog } from '@/worktrees/dialogs';
 
 /*
  * "Bring back to this machine" in the menu of a node that works on another machine: its branch comes
@@ -59,7 +59,7 @@ export function BringBackItem({ node }: { node: ProjectNode }) {
                     : {
                           action: {
                               label: t('bringBack.merge'),
-                              run: () => useUi.getState().setWorktreeMerge({ folder: project.folder, paths: [result.path!] })
+                              run: () => worktreeMergeDialog.set({ folder: project.folder, paths: [result.path!] })
                           }
                       })
             });

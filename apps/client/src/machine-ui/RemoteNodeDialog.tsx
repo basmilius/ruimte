@@ -9,6 +9,8 @@ import { useTranslation } from 'react-i18next';
 import { deleteNodesAction } from '@/action-port/person-actions';
 import { linkToPeerOrMark } from '@/clients/project/peer-linker';
 import { remoteMirrorsOf } from '@/clients/project/remote-mirror';
+import type { RemoteNodeRequest } from '@/machine-ui/dialogs';
+import { addToMachineDialog, remoteNodeDialog } from '@/machine-ui/dialogs';
 import { RemoteFolderPicker } from '@/machine-ui/RemoteFolderPicker';
 import { useCheckoutState, useRemoteCheckouts, type CheckoutState, useRemoteDevices } from '@/machine-ui/use-remote-checkouts';
 import { useMachineIcon } from '@/machines/machine-icon';
@@ -23,7 +25,6 @@ import { defaultCanvases } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { endpointById, endpointIdOfMachine, useEndpointIdOfMachine, useEndpoints } from '@/state/endpoints';
 import { useProject } from '@/state/project';
-import { useUi, type RemoteNodeRequest } from '@/state/ui';
 import { nodesOfView } from '@/state/view-nodes';
 import { describeLastSeen } from '@/surface/connection-info';
 import { machineAnswers, useMachineAnswers } from '@/transport/features';
@@ -48,8 +49,8 @@ const MINUTE_MS = 60_000;
  * with the node, and only then does the other machine hear of it.
  */
 export function RemoteNodeDialog() {
-    const request = useUi((s) => s.remoteNodeDialog);
-    const close = (): void => useUi.getState().setRemoteNodeDialog(null);
+    const request = remoteNodeDialog.use((request) => request);
+    const close = (): void => remoteNodeDialog.set(null);
     return (
         <Dialog.Root open={request !== null} onOpenChange={(open) => !open && close()}>
             <Dialog.Popup size="sm">
@@ -375,7 +376,7 @@ function RemoteNodeForm({
                         canClone
                             ? () => {
                                   onDone();
-                                  useUi.getState().setAddToMachineDialog({ machineId: request.machineId, then: request });
+                                  addToMachineDialog.set({ machineId: request.machineId, then: request });
                               }
                             : null
                     }

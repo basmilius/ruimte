@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { GitIgnoredFilesResult } from '@ruimte/contracts';
 import { act } from 'react';
+import { addToMachineDialog, remoteNodeDialog } from '@/machine-ui/dialogs';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { useUi } from '@/state/ui';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
@@ -79,7 +79,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-    await act(async () => useUi.getState().setAddToMachineDialog(null));
+    await act(async () => addToMachineDialog.set(null));
     await page.unmount();
     workspace.close();
     disconnectThere();
@@ -97,7 +97,7 @@ async function chooseFolder(): Promise<void> {
 
 describe('adding a project to another machine', () => {
     test('clones it there over the protocol picked, then copies the ignored files a person chose', async () => {
-        await act(async () => useUi.getState().setAddToMachineDialog({ machineId: REMOTE }));
+        await act(async () => addToMachineDialog.set({ machineId: REMOTE }));
         await until(() => text().includes('git@github.com:basmilius/atlas.git'));
         await chooseFolder();
         await until(() => text().includes('Clones into /Users/b/atlas'));
@@ -124,7 +124,7 @@ describe('adding a project to another machine', () => {
 
     test('a clone that fails says why and goes again on Try again', async () => {
         cloneFails = true;
-        await act(async () => useUi.getState().setAddToMachineDialog({ machineId: REMOTE }));
+        await act(async () => addToMachineDialog.set({ machineId: REMOTE }));
         await chooseFolder();
         await until(() => button('Clone')?.disabled === false);
         await clickOn(button('Clone'));
@@ -136,7 +136,7 @@ describe('adding a project to another machine', () => {
 
     test('a repository without a remote has nothing to clone from', async () => {
         remoteUrl = undefined;
-        await act(async () => useUi.getState().setAddToMachineDialog({ machineId: REMOTE }));
+        await act(async () => addToMachineDialog.set({ machineId: REMOTE }));
         await until(() => text().includes('This repository has no remote'));
         await chooseFolder();
         expect(button('Clone')?.disabled).toBe(true);
@@ -144,15 +144,15 @@ describe('adding a project to another machine', () => {
 
     test('a node waiting on the clone opens again once it is in', async () => {
         const then = { machineId: REMOTE, kind: 'chat' as const, viewId: 'main', at: null, relink: false };
-        await act(async () => useUi.getState().setAddToMachineDialog({ machineId: REMOTE, then }));
+        await act(async () => addToMachineDialog.set({ machineId: REMOTE, then }));
         await chooseFolder();
         await until(() => button('Clone')?.disabled === false);
         await clickOn(button('Clone'));
         await until(() => button('Skip') !== null);
         await clickOn(button('Skip'));
         await clickOn(button('Continue'));
-        expect(useUi.getState().addToMachineDialog).toBeNull();
-        expect(useUi.getState().remoteNodeDialog).toEqual(then);
-        await act(async () => useUi.getState().setRemoteNodeDialog(null));
+        expect(addToMachineDialog.get()).toBeNull();
+        expect(remoteNodeDialog.get()).toEqual(then);
+        await act(async () => remoteNodeDialog.set(null));
     });
 });

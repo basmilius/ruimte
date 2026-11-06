@@ -3,10 +3,11 @@ import { readDraft } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
 import type { ProjectCanvasView, ProjectNode, RemoteLink } from '@ruimte/contracts';
 import { act } from 'react';
+import { forkDialog } from '@/chat/dialogs';
 import { CHAT_HOST } from '@/chat/host';
+import { remoteNodeDialog } from '@/machine-ui/dialogs';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { useUi } from '@/state/ui';
 import { nodesOfView } from '@/state/view-nodes';
 import { clickOn, mount, openSubmenu, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
@@ -118,8 +119,8 @@ beforeEach(async () => {
 
 afterEach(async () => {
     await act(async () => {
-        useUi.getState().setForkDialog(null);
-        useUi.getState().setRemoteNodeDialog(null);
+        forkDialog.set(null);
+        remoteNodeDialog.set(null);
     });
     await page.unmount();
     workspace.close();
@@ -138,17 +139,17 @@ describe('forking a chat that runs on another machine', () => {
     test('reads the chat and its turn on that machine, and offers a transcript of it here', async () => {
         await until(() => button('Fork')?.hasAttribute('disabled') === false);
 
-        expect(useUi.getState().forkDialog).toEqual({ chatId: LEAD.id, turnId: 'turn-1', machine: REMOTE });
+        expect(forkDialog.get()).toEqual({ chatId: LEAD.id, turnId: 'turn-1', machine: REMOTE });
         expect(dialog()?.textContent).toContain('A new chat node here starts from a transcript of this one');
         expect(dialog()?.textContent).not.toContain('git worktree');
         expect(here.requests('chat.forkInfo')).toEqual([]);
     });
 
     test('the fork button in its thread names that machine too', async () => {
-        await act(async () => useUi.getState().setForkDialog(null));
+        await act(async () => forkDialog.set(null));
         await act(async () => CHAT_HOST.fork!(LEAD.id, 'turn-1'));
 
-        expect(useUi.getState().forkDialog).toEqual({ chatId: LEAD.id, turnId: 'turn-1', machine: REMOTE });
+        expect(forkDialog.get()).toEqual({ chatId: LEAD.id, turnId: 'turn-1', machine: REMOTE });
     });
 
     test('Fork here asks that machine for the transcript and seeds a chat node on this machine with it', async () => {
@@ -173,7 +174,7 @@ describe('forking a chat that runs on another machine', () => {
         await pickMachine();
         await clickOn(button('Choose a checkout…'));
         await until(() => dialog()?.textContent?.includes('/Users/b/ruimte') === true);
-        expect(useUi.getState().remoteNodeDialog?.handoff).toMatchObject({ chatId: LEAD.id, source: REMOTE });
+        expect(remoteNodeDialog.get()?.handoff).toMatchObject({ chatId: LEAD.id, source: REMOTE });
         await until(() => button('Create')?.hasAttribute('disabled') === false);
         await clickOn(button('Create'));
 

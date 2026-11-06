@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { createViewAction, promoteNodeAction } from '@/action-port/person-actions';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
-import { useUi } from '@/state/ui';
+import { viewDialog } from '@/views/dialogs';
 import { ViewSettingsDialog } from '@/views/ViewSettingsDialog';
 
 /* Settings, promoting and a new page: everything a view asks before it happens. */
 export function ViewDialogs() {
     const { t } = useTranslation(['shell', 'common']);
-    const dialog = useUi((s) => s.viewDialog);
-    const setDialog = useUi((s) => s.setViewDialog);
+    const dialog = viewDialog.use((request) => request);
+    const setDialog = viewDialog.set;
     const viewId = dialog && 'viewId' in dialog ? dialog.viewId : null;
     const view = useDocument((s) => s.views.find((each) => each.id === viewId) ?? null);
     const nodeTitle = useCanvas((s) => (dialog?.kind === 'promote' ? (s.nodes[dialog.nodeId]?.title ?? null) : null));

@@ -4,8 +4,9 @@ import { copyDrawing, exportDrawing } from '@/drawing/drawing-actions';
 import { useDocument } from '@/state/document';
 import { focusedDrawing } from '@/state/drawing';
 
-const onDrawing = (moment: { inWorkspace: boolean; drawing: boolean; activeView: unknown }): boolean =>
-    moment.inWorkspace && moment.drawing && moment.activeView !== null;
+function onDrawing(moment: { inWorkspace: boolean; drawing: boolean; activeView: unknown }): boolean {
+    return moment.inWorkspace && moment.drawing && moment.activeView !== null;
+}
 
 function acting(run: () => void): CommandBehavior {
     return { run, offered: onDrawing };

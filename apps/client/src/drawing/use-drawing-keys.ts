@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import type { StoreApi } from 'zustand';
 import { fitAction, historyAction } from '@/action-port/person-actions';
 import { GRID } from '@/canvas-model/math';
+import { layoutDialog } from '@/canvas/dialogs';
 import { isApplePlatform } from '@/desktop/bridge';
 import {
     copyDrawing,
@@ -17,6 +18,7 @@ import {
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import type { DrawingState, DrawingTool } from '@/state/drawing';
 import { useUi } from '@/state/ui';
+import { viewDialog } from '@/views/dialogs';
 
 /*
  * The one place in the app where a bare letter is a shortcut. A drawing has the keyboard the way a
@@ -54,7 +56,7 @@ function isTypingTarget(el: EventTarget | null): boolean {
 /* Whether anything else on screen has a claim on the keyboard right now. */
 function somethingElseHasIt(target: EventTarget | null): boolean {
     const ui = useUi.getState();
-    return isTypingTarget(target) || isInFloatingLayer(target) || ui.settings.open || ui.paletteOpen || ui.viewDialog !== null || ui.layoutDialogOpen;
+    return isTypingTarget(target) || isInFloatingLayer(target) || ui.settings.open || ui.paletteOpen || viewDialog.get() !== null || layoutDialog.isOpen();
 }
 
 /* What a shortcut with a modifier does to the drawing, in the order they are tried. */

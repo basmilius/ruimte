@@ -25,6 +25,7 @@ import { centerWorld } from '@/actions/action-reach';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { StatusSummary } from '@/attention/StatusSummary';
 import type { Point } from '@/canvas-model/math';
+import { layoutDialog } from '@/canvas/dialogs';
 import { LOCK_KEYS, lockHint, lockLabel } from '@/canvas/locks';
 import { OVERLAY_LEDGE_ATTRIBUTE } from '@/canvas/overlay-attributes';
 import { RemoteMachineItems } from '@/canvas/RemoteMachineItems';
@@ -191,7 +192,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                             </Menu.Row>
                         ))}
                         <Menu.Separator />
-                        <Menu.Item onClick={() => useUi.getState().setLayoutDialogOpen(true)}>
+                        <Menu.Item onClick={() => layoutDialog.set(true)}>
                             <Icon icon={Save} size={14} /> {t('dock.saveLayout')}
                         </Menu.Item>
                     </Menu.Popup>

@@ -1,32 +1,18 @@
 import { ChatHostProvider } from '@adecore/agents-react';
-import { ErrorBoundary, Workspace as CoreWorkspace, lazyDialog, prefetcher } from '@adecore/ui';
+import { ErrorBoundary, Workspace as CoreWorkspace, prefetcher } from '@adecore/ui';
 import i18next from 'i18next';
-import { useEffect, useState, type ComponentType } from 'react';
-import { useStore } from 'zustand';
-import { EndChildrenDialog } from '@/agents/EndChildrenDialog';
-import { useAttentionQueue } from '@/attention/queue';
+import { useEffect, useState } from 'react';
 import { WebviewParking } from '@/browser/WebviewParking';
-import { LayoutDialog } from '@/canvas/LayoutDialog';
-import { ChatChooserMenu } from '@/chat/ChatChooserMenu';
-import { ForkDialog } from '@/chat/ForkDialog';
 import { WORKSPACE_CHAT_HOST } from '@/chat/workspace-host';
-import { useDatabasePanel } from '@/clients/database/state';
-import { useDevices } from '@/clients/devices/state';
-import { LeaveConflictDialog } from '@/conflicts/LeaveConflictDialog';
-import { ensureDatabaseConnections } from '@/database/connections';
 import { SlotRow } from '@/extensions/SlotSurfaces';
-import { DiscardEditsDialog } from '@/files/DiscardEditsDialog';
-import { UnsavedCloseDialog } from '@/files/UnsavedCloseDialog';
-import { refreshPrRepos } from '@/github/pr-repos';
 import { useServerPrompts } from '@/language/use-server-prompts';
-import { useLaunches } from '@/launches/state';
-import { startLaunchWatch } from '@/launches/watch';
 import { MachineLostScreen } from '@/machine-ui/MachineLostScreen';
 import { useMachineLost } from '@/machine-ui/use-machine-lost';
 import { PlanPanel } from '@/plan/PlanPanel';
 import { ProjectBanner } from '@/project/ProjectBanner';
 import { ProjectSwitchScreen } from '@/project/ProjectSwitchScreen';
-import { useRoutineForm } from '@/routines/form-state';
+import { workspaceDialogs } from '@/registry/dialogs';
+import { workspaceEffects } from '@/registry/workspace-effects';
 import { useCanvasShortcuts } from '@/shell/canvas-shortcuts';
 import { Panel } from '@/shell/Panel';
 import { ShellRail } from '@/shell/ShellRail';
@@ -34,163 +20,19 @@ import { TopRow } from '@/shell/TopRow';
 import { ViewHost } from '@/shell/ViewHost';
 import { Sidebar } from '@/sidebar/Sidebar';
 import { shownFolderOf, useProject } from '@/state/project';
-import { useRoutinesStage } from '@/state/routines-stage';
 import { useSettings } from '@/state/settings';
 import { useShownPanel, useUi } from '@/state/ui';
 import { CellOverlayLayer } from '@/surface/CellOverlay';
-import { imageSaveDialog, type ImageSaveDialogState } from '@/surface/image-save';
-import { useFileChoice } from '@/surface/panels/file-links';
 import { FileToolbarSlotProvider } from '@/surface/panels/file-toolbar-slot';
 import { FLOATING_FAILURE, failed } from '@/surface/surface-failure';
 import { workspaceShown } from '@/telemetry/workspace-load';
 import { startBytesWorker } from '@/transport/bytes-worker-host';
 import { useRemoteHolds } from '@/transport/remote-holds';
-import { ViewDialogs } from '@/views/ViewDialogs';
-import { stopVoice } from '@/voice/controller';
 import { VoiceOverlay } from '@/voice/VoiceOverlay';
 import { ConnectionProvider } from '@/workspace/ConnectionProvider';
 import type { Workspace } from '@/workspace/connections';
-import { MergeWorktreeDialog } from '@/worktrees/MergeWorktreeDialog';
-import { RemoveWorktreeDialog } from '@/worktrees/RemoveWorktreeDialog';
-import { WorktreeDialog } from '@/worktrees/WorktreeDialog';
 
 startBytesWorker();
-startLaunchWatch();
-
-const LaunchDialogs = lazyDialog(
-    () => import('@/launches/LaunchDialogs'),
-    'LaunchDialogs',
-    useLaunches,
-    (s) => s.dialog !== null
-);
-
-const DatabaseConnectionsDialog = lazyDialog(
-    () => import('@/database/ConnectionsDialog'),
-    'DatabaseConnectionsDialog',
-    useDatabasePanel,
-    (s) => s.dialog.open
-);
-
-const ImageSaveHost = lazyDialog(
-    () => import('@/chat/ImageSaveHost'),
-    'ImageSaveHost',
-    (select: (state: ImageSaveDialogState) => boolean) => useStore(imageSaveDialog, select),
-    (s) => s.session !== null
-);
-
-const NewWorktreeChatDialog = lazyDialog(
-    () => import('@/worktrees/NewWorktreeChatDialog'),
-    'NewWorktreeChatDialog',
-    useUi,
-    (s) => s.newWorktreeChatOpen
-);
-
-const IssueStartDialog = lazyDialog(
-    () => import('@/github/IssueStartDialog'),
-    'IssueStartDialog',
-    useUi,
-    (s) => s.issueStartOpen
-);
-
-const PullRequestDialog = lazyDialog(
-    () => import('@/github/PullRequestDialog'),
-    'PullRequestDialog',
-    useUi,
-    (s) => s.pullRequestDialog !== null
-);
-
-const FileChoiceDialog = lazyDialog(
-    () => import('@/files/FileChoiceDialog'),
-    'FileChoiceDialog',
-    useFileChoice,
-    (s) => s.choice !== null
-);
-
-const RemoteNodeDialog = lazyDialog(
-    () => import('@/machine-ui/RemoteNodeDialog'),
-    'RemoteNodeDialog',
-    useUi,
-    (s) => s.remoteNodeDialog !== null
-);
-
-const AddToMachineDialog = lazyDialog(
-    () => import('@/machine-ui/AddToMachineDialog'),
-    'AddToMachineDialog',
-    useUi,
-    (s) => s.addToMachineDialog !== null
-);
-
-const MoveChatDialog = lazyDialog(
-    () => import('@/project/MoveChatDialog'),
-    'MoveChatDialog',
-    useUi,
-    (s) => s.moveChatDialog !== null
-);
-
-const EraseDeviceDialog = lazyDialog(
-    () => import('@/devices/EraseDeviceDialog'),
-    'EraseDeviceDialog',
-    useDevices,
-    (s) => s.erasing !== null
-);
-
-const RoutinesStage = lazyDialog(
-    () => import('@/routines/RoutinesStage'),
-    'RoutinesStage',
-    useRoutinesStage,
-    (state) => state.open
-);
-
-const RoutineFormDialog = lazyDialog(
-    () => import('@/routines/RoutineFormDialog'),
-    'RoutineFormDialog',
-    useRoutineForm,
-    (s) => s.request !== null
-);
-
-const ConflictOverlay = lazyDialog(
-    () => import('@/conflicts/ConflictOverlay'),
-    'ConflictOverlay',
-    useUi,
-    (s) => s.conflicts !== null
-);
-
-const AttentionQueue = lazyDialog(
-    () => import('@/attention/AttentionQueue'),
-    'AttentionQueue',
-    useAttentionQueue,
-    (state) => state.projectKey !== null
-);
-
-/* In the order they mount, each in a boundary of its own; the fork dialog brings its own. */
-const DIALOGS: readonly (readonly [surface: string | null, dialog: ComponentType])[] = [
-    ['dialog', LayoutDialog],
-    ['dialog', ChatChooserMenu],
-    ['dialog', ViewDialogs],
-    ['dialog', EndChildrenDialog],
-    ['dialog', UnsavedCloseDialog],
-    ['dialog', DiscardEditsDialog],
-    ['dialog', LeaveConflictDialog],
-    ['dialog', WorktreeDialog],
-    ['dialog', RemoveWorktreeDialog],
-    ['dialog', MergeWorktreeDialog],
-    ['conflicts', ConflictOverlay],
-    ['dialog', LaunchDialogs],
-    ['dialog', DatabaseConnectionsDialog],
-    [null, ForkDialog],
-    ['dialog', MoveChatDialog],
-    ['dialog', RemoteNodeDialog],
-    ['dialog', AddToMachineDialog],
-    ['dialog', EraseDeviceDialog],
-    ['dialog', NewWorktreeChatDialog],
-    ['dialog', IssueStartDialog],
-    ['dialog', PullRequestDialog],
-    ['dialog', FileChoiceDialog],
-    [null, RoutinesStage],
-    ['dialog', RoutineFormDialog],
-    ['dialog', ImageSaveHost],
-    ['dialog', AttentionQueue]
-];
 
 /*
  * The project on screen, with the daemon it lives on under it. Everything inside reads its machine
@@ -199,6 +41,7 @@ const DIALOGS: readonly (readonly [surface: string | null, dialog: ComponentType
 export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
     /* Once for the whole project rather than once per cell, since a grid draws up to nine canvases. */
     useCanvasShortcuts();
+    const dialogs = workspaceDialogs.use();
     useRemoteHolds(workspace.connection.endpointId);
     useServerPrompts(workspace.connection.transport);
     /* The window's toolbar is where a file view puts its controls, and the body that draws them sits
@@ -217,15 +60,22 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
     useEffect(() => {
         workspaceShown();
     }, [workspace]);
-    useEffect(() => () => stopVoice(), []);
+    const effects = workspaceEffects.use();
+    useEffect(() => {
+        const stops = effects.map((effect) => effect.mounted?.());
+
+        return () => {
+            for (const stop of stops) {
+                stop?.();
+            }
+        };
+    }, [effects]);
     const folder = useProject((state) => shownFolderOf(state.current));
     useEffect(() => {
-        void refreshPrRepos();
-    }, [folder]);
-    /* The project's agents open its databases with the passwords this window holds, so they are read with the project rather than with the panel. */
-    useEffect(() => {
-        ensureDatabaseConnections();
-    }, []);
+        for (const effect of effects) {
+            effect.folderChanged?.(folder);
+        }
+    }, [effects, folder]);
     return (
         <ChatHostProvider host={WORKSPACE_CHAT_HOST}>
             <ConnectionProvider connection={workspace.connection}>
@@ -289,12 +139,12 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                 </ErrorBoundary>
                 <VoiceOverlay />
                 {/* About the project that is open, so they belong to its workspace and not to the shell. */}
-                {DIALOGS.map(([surface, Dialog], index) =>
-                    surface === null ? (
-                        <Dialog key={index} />
+                {dialogs.map((dialog) =>
+                    dialog.surface === null ? (
+                        <dialog.component key={dialog.id} />
                     ) : (
-                        <ErrorBoundary key={index} label={failed(surface)} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
-                            <Dialog />
+                        <ErrorBoundary key={dialog.id} label={failed(dialog.surface)} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                            <dialog.component />
                         </ErrorBoundary>
                     )
                 )}

@@ -15,6 +15,7 @@ import {
     setLocksAction
 } from '@/action-port/person-actions';
 import { toWorld } from '@/canvas-model/math';
+import { layoutDialog } from '@/canvas/dialogs';
 import { defineBehaviors, type Command, type CommandBehavior, type KeyPress } from '@/commands/behavior';
 import type { GeneratedCommands } from '@/commands/generated';
 import { keyboardOnCanvas, keyFree, onStandaloneView } from '@/commands/key-context';
@@ -113,7 +114,9 @@ function steppingCamera(delta: -1 | 1): CommandBehavior {
     };
 }
 
-const zoomable = (moment: { onCanvas: boolean; drawing: boolean; diagram: boolean }): boolean => moment.onCanvas || moment.drawing || moment.diagram;
+function zoomable(moment: { onCanvas: boolean; drawing: boolean; diagram: boolean }): boolean {
+    return moment.onCanvas || moment.drawing || moment.diagram;
+}
 
 export const CANVAS_BEHAVIORS = defineBehaviors({
     'edit-undo': {
@@ -256,7 +259,7 @@ export const CANVAS_BEHAVIORS = defineBehaviors({
             moment.onCanvas && (Object.values(moment.canvas.locks).some(Boolean) ? { label: i18next.t('shell:palette.commands.unlockAll') } : true)
     },
     'layout-save': {
-        run: () => useUi.getState().setLayoutDialogOpen(true),
+        run: () => layoutDialog.set(true),
         offered: (moment) => moment.onCanvas && { hint: i18next.t('shell:palette.hints.rememberLayout') }
     }
 });

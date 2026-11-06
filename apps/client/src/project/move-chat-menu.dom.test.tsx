@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { useChats } from '@adecore/agents-react/state';
 import { REQUEST_SCHEMAS, type ChatInfo, type ProjectView, type RequestType } from '@ruimte/contracts';
 import { act } from 'react';
+import { moveChatDialog } from '@/project/dialogs';
 import { useProposals } from '@/state/proposals';
 import { useUi } from '@/state/ui';
 import { clickOn, mount, openSubmenu, until, type Mounted } from '../../testing/dom';
@@ -75,11 +76,11 @@ describe('moving a chat out of Chats, from its view menu', () => {
         await openViewMenu(WRITTEN.id);
         await openSubmenu('Move to project');
         await clickOn(makeProjectRow() ?? null);
-        expect(useUi.getState().moveChatDialog).toEqual({ chatId: WRITTEN.id, mode: 'make', projectId: null });
+        expect(moveChatDialog.get()).toEqual({ chatId: WRITTEN.id, mode: 'make', projectId: null });
         await until(() => document.querySelector('[role="dialog"] #move-chat-name') !== null);
         expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Make project');
         expect(machine.requests('chat.moveInfo')).toEqual([expect.objectContaining({ chatId: WRITTEN.id })]);
-        await act(async () => useUi.getState().setMoveChatDialog(null));
+        await act(async () => moveChatDialog.set(null));
     });
 
     test('the row is off while the chat works', async () => {
@@ -88,7 +89,7 @@ describe('moving a chat out of Chats, from its view menu', () => {
         await openViewMenu(WRITTEN.id);
         expect(moveRow()?.getAttribute('aria-disabled')).toBe('true');
         await clickOn(moveRow() ?? null);
-        expect(useUi.getState().moveChatDialog).toBeNull();
+        expect(moveChatDialog.get()).toBeNull();
     });
 
     test('the row stays on while the only thing the chat waits for is the card of its own suggestion', async () => {
@@ -136,7 +137,7 @@ describe('moving a chat out of Chats, from its view menu', () => {
             );
             const row = [...document.querySelectorAll('[role="option"]')].find((item) => item.textContent?.includes(label));
             await clickOn(row ?? null);
-            expect(useUi.getState().moveChatDialog).toEqual({ chatId: WRITTEN.id, mode, projectId: null });
+            expect(moveChatDialog.get()).toEqual({ chatId: WRITTEN.id, mode, projectId: null });
             await until(() => document.querySelector('[role="dialog"]') !== null && machine.requests('chat.moveInfo').length > 0);
             const dialog = document.querySelector('[role="dialog"]')!;
             expect(dialog.textContent).toContain('Make project');
@@ -146,7 +147,7 @@ describe('moving a chat out of Chats, from its view menu', () => {
                 expect(dialog.textContent).toContain('Choose a project');
             }
             expect(machine.requests('chat.moveInfo')).toEqual([expect.objectContaining({ chatId: WRITTEN.id })]);
-            await act(async () => useUi.getState().setMoveChatDialog(null));
+            await act(async () => moveChatDialog.set(null));
         });
 
         test('and for a chat that only waits for the card of its own suggestion', async () => {

@@ -12,6 +12,7 @@ import { isScratchProject, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { hasUpdate, useUpdates } from '@/state/updates';
 import { APP_SHORTCUTS } from '@/surface/shortcuts';
+import { usageDialog } from '@/usage/dialog';
 import { useVoice } from '@/voice/state';
 import { VoiceButton } from '@/voice/VoiceButton';
 
@@ -61,7 +62,7 @@ export function ShellRail() {
             <VoiceButton />
             {(voice || update || connectionDot) && <WorkspaceRailSeparator />}
             <UsageLimitsCard side="left">
-                <IconButton icon={ChartNoAxesColumn} label={t('sidebar.usage')} tooltip={false} onClick={() => useUi.getState().setUsageOpen(true)} />
+                <IconButton icon={ChartNoAxesColumn} label={t('sidebar.usage')} tooltip={false} onClick={() => usageDialog.set(true)} />
             </UsageLimitsCard>
             <IconButton
                 icon={Settings}

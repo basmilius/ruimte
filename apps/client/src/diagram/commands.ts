@@ -4,8 +4,9 @@ import { copyDiagram, exportDiagram, openDiagramJson } from '@/diagram/diagram-a
 import { focusedDiagram } from '@/state/diagram';
 import { useDocument } from '@/state/document';
 
-const onDiagram = (moment: { inWorkspace: boolean; diagram: boolean; activeView: unknown }): boolean =>
-    moment.inWorkspace && moment.diagram && moment.activeView !== null;
+function onDiagram(moment: { inWorkspace: boolean; diagram: boolean; activeView: unknown }): boolean {
+    return moment.inWorkspace && moment.diagram && moment.activeView !== null;
+}
 
 function acting(run: () => void): CommandBehavior {
     return { run, offered: onDiagram };

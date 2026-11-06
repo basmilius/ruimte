@@ -24,13 +24,13 @@ import { newChatOn } from '@/project/new-chat';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { askViewSettings, revealNode, showView } from '@/project/views';
+import { renamingView } from '@/sidebar/dialogs';
 import { openSidebarTarget, showSidebarProject } from '@/sidebar/sidebar-navigation';
 import { separatorKey, useSidebarProjects, type SidebarSeparator } from '@/sidebar/sidebar-projects';
 import type { AgentWork } from '@/state/agent-work';
 import { useCanvas } from '@/state/canvas';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useServers } from '@/state/server';
-import { useUi } from '@/state/ui';
 import { CellViewContext } from '@/state/workspace-stores';
 import { NODE_KIND_ICONS } from '@/surface/canvas/node-icons';
 import { Favicon } from '@/surface/Favicon';
@@ -324,8 +324,8 @@ export function SeparatorRow({ row, tabbable, onDelete, onDrag }: Omit<ViewRowPr
 export function SubheaderRow({ row, tabbable, onDelete, onDrag }: Omit<ViewRowProps, 'onToggle'>) {
     const { t } = useTranslation(['shell', 'common']);
     const { view } = row;
-    const renaming = useUi((state) => state.renamingViewId) === view.id;
-    const rename = (on: boolean): void => useUi.getState().setRenamingViewId(on ? view.id : null);
+    const renaming = renamingView.use((request) => request) === view.id;
+    const rename = (on: boolean): void => renamingView.set(on ? view.id : null);
     if (renaming) {
         return (
             <div className="flex h-8 w-full items-center px-2">
@@ -365,7 +365,7 @@ export function SubheaderRow({ row, tabbable, onDelete, onDrag }: Omit<ViewRowPr
             >
                 <span className="min-w-0 truncate">{view.name}</span>
             </ContextMenu.Trigger>
-            <ContextMenu.Popup finalFocus={() => useUi.getState().renamingViewId !== view.id}>
+            <ContextMenu.Popup finalFocus={() => renamingView.get() !== view.id}>
                 <ContextMenu.Item onClick={() => rename(true)}>
                     <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <ContextMenu.Hint>{t('sidebar.doubleClick')}</ContextMenu.Hint>
                 </ContextMenu.Item>

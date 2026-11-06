@@ -1,10 +1,11 @@
 import { messageOf } from '@adecore/ui';
 import type { AgentIntegration, AgentIntegrationFile, AgentIntegrationReport, AgentIntegrationsSummary, AgentKind } from '@ruimte/contracts';
 import { useState } from 'react';
+import { agentIntegrationsDialog } from '@/agents/dialogs';
+import { onboardingDialog } from '@/onboarding/dialog';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { serverInfoOf, useServers } from '@/state/server';
-import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport/index';
 
 /* The CLIs' own names, which no language translates. */
@@ -78,22 +79,23 @@ export function startAgentIntegrationsPrompt(): () => void {
             return;
         }
         const pending = pendingReview(localSummary());
-        const { onboarding, agentIntegrations, setAgentIntegrations } = useUi.getState();
-        if (pending && !dismissed && !agentIntegrations && onboarding === null) {
-            setAgentIntegrations(true);
+        if (pending && !dismissed && !agentIntegrationsDialog.isOpen() && onboardingDialog.get() === null) {
+            agentIntegrationsDialog.set(true);
         }
     };
     const offServers = useServers.subscribe(check);
-    const offUi = useUi.subscribe((state, before) => {
-        if (before.agentIntegrations && !state.agentIntegrations) {
+    const offDialog = agentIntegrationsDialog.store.subscribe((state, before) => {
+        if (before.open && !state.open) {
             dismissed = true;
         }
         check();
     });
+    const offOnboarding = onboardingDialog.store.subscribe(check);
     check();
     return () => {
         offServers();
-        offUi();
+        offDialog();
+        offOnboarding();
     };
 }
 

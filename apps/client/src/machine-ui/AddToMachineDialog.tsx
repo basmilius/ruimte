@@ -3,6 +3,8 @@ import { formatBytes } from '@adecore/ui/format';
 import type { GitIgnoredFilesResult } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { AddToMachineRequest } from '@/machine-ui/dialogs';
+import { addToMachineDialog, remoteNodeDialog } from '@/machine-ui/dialogs';
 import { RemoteFolderPicker } from '@/machine-ui/RemoteFolderPicker';
 import { firstIdentity } from '@/machine-ui/use-remote-checkouts';
 import { iconOfEntry } from '@/machines/machine-icon';
@@ -21,7 +23,6 @@ import {
 } from '@/project/add-to-machine';
 import { endpointById } from '@/state/endpoints';
 import { useProject } from '@/state/project';
-import { useUi, type AddToMachineRequest } from '@/state/ui';
 import type { Transport } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { pool, transportFor } from '@/transport/index';
@@ -47,8 +48,8 @@ type Step =
  * client, read here and written there. The machines never talk to each other for it.
  */
 export function AddToMachineDialog() {
-    const request = useUi((s) => s.addToMachineDialog);
-    const close = (): void => useUi.getState().setAddToMachineDialog(null);
+    const request = addToMachineDialog.use((request) => request);
+    const close = (): void => addToMachineDialog.set(null);
     return (
         <Dialog.Root open={request !== null} onOpenChange={(open) => !open && close()}>
             <Dialog.Popup size="sm">{request !== null && <AddToMachineBody request={request} onDone={close} />}</Dialog.Popup>
@@ -246,7 +247,7 @@ function AddToMachineForm({ request, onDone }: { request: AddToMachineRequest; o
     const proceed = (): void => {
         onDone();
         if (request.then !== undefined) {
-            useUi.getState().setRemoteNodeDialog(request.then);
+            remoteNodeDialog.set(request.then);
         }
     };
 

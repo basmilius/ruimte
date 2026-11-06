@@ -1,18 +1,18 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import i18next from 'i18next';
-import { SETTINGS_INDEX, searchSettings, shortcutSearchRows } from './search';
+import { searchSettings, settingsIndex, shortcutSearchRows } from './search';
 import { shortcutGroups } from './shortcuts';
 
 describe('searching the settings', () => {
     test('every row in the index names words that exist, and leads to one row', () => {
-        for (const entry of SETTINGS_INDEX) {
+        for (const entry of settingsIndex()) {
             expect(i18next.exists(entry.label)).toBe(true);
             if (entry.description) {
                 expect(i18next.exists(entry.description)).toBe(true);
             }
         }
-        const ids = SETTINGS_INDEX.map((entry) => entry.id);
+        const ids = settingsIndex().map((entry) => entry.id);
         expect(new Set(ids).size).toBe(ids.length);
     });
 

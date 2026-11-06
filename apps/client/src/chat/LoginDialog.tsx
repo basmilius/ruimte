@@ -6,19 +6,20 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCliSession } from '@/chat/cli-session';
 import { CliTerminalDialog, CliTerminalFrame } from '@/chat/CliTerminalDialog';
+import type { LoginRequest } from '@/chat/dialogs';
+import { loginDialog } from '@/chat/dialogs';
 import { loginLanded } from '@/chat/login-landing';
-import { useUi, type LoginRequest } from '@/state/ui';
 
 /* Long enough to read that it worked, short enough not to wait on it. */
 const LANDED_MS = 1_200;
 
 function closeLogin(): void {
-    useUi.getState().setLogin(null);
+    loginDialog.set(null);
 }
 
 /* The CLI's own login in a terminal of its own, which the onboarding and the settings both open. */
 export function LoginDialog() {
-    const request = useUi((s) => s.login);
+    const request = loginDialog.use((request) => request);
 
     return (
         <CliTerminalDialog request={request} keyOf={(shown) => `${shown.endpointId}:${shown.accountId}`} close={closeLogin}>

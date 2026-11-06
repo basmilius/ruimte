@@ -1,49 +1,60 @@
-import { Activity, CircleAlert, Database, Folder, GitBranch, Mic, Package, Rocket, TabletSmartphone, type LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import type { ComponentType } from 'react';
+import { panelRegistry, type PanelDefinition } from '@/registry/panels';
 import { useContributions, type PanelContribution, type PanelGroup } from '@/state/extension-registry';
 import { panelHidden, type PanelKind } from '@/state/ui';
 
 export type { PanelGroup };
 
-export interface CorePanel {
-    kind: Exclude<PanelKind, `extension:${string}`>;
-    icon: LucideIcon;
-    minWidth: number;
-    toolbar: boolean;
-    group: PanelGroup;
+/* A panel of the side column: a feature's (`registry/panels.ts`) or an extension's. */
+export interface PanelEntry {
+    readonly kind: string;
+    readonly icon: LucideIcon;
+    readonly minWidth: number;
+    readonly toolbar: boolean;
+    readonly group: PanelGroup;
+    readonly togglesElsewhere: boolean;
+    readonly component: ComponentType;
+    /* The words of an extension's panel; a feature's are under `shell:panel.names.<kind>`. */
+    readonly label?: () => string;
+    readonly badge?: () => string | null;
 }
 
-export type PanelEntry = CorePanel | PanelContribution;
+function entryOfDefinition(definition: PanelDefinition): PanelEntry {
+    return {
+        kind: definition.id,
+        icon: definition.icon,
+        minWidth: definition.minWidth,
+        toolbar: definition.toolbar,
+        group: definition.group,
+        togglesElsewhere: definition.togglesElsewhere === true,
+        component: definition.component
+    };
+}
+
+function entryOfContribution(contribution: PanelContribution): PanelEntry {
+    return { ...contribution, togglesElsewhere: false };
+}
 
 /*
- * The panels, in the order their buttons sit in the toolbar. They share one stored width and each
- * clamps it to its own `minWidth` on screen only, so a wide minimum never overwrites it. A panel
- * without a button opens elsewhere: Processes and Problems from the Window menu, Launches from the
- * launch chip, and Voice Control beside the palette's button, since it only shows while a key is set.
+ * The panels, in the order their buttons sit in the toolbar: the features' in the order they registered,
+ * then the extensions'. They share one stored width and each clamps it to its own `minWidth` on screen
+ * only, so a wide minimum never overwrites it.
  */
-export const PANELS: readonly CorePanel[] = [
-    { kind: 'files', icon: Folder, minWidth: 240, toolbar: true, group: 'project' },
-    { kind: 'git', icon: GitBranch, minWidth: 240, toolbar: true, group: 'project' },
-    { kind: 'databases', icon: Database, minWidth: 260, toolbar: true, group: 'connected' },
-    { kind: 'devices', icon: TabletSmartphone, minWidth: 320, toolbar: true, group: 'connected' },
-    { kind: 'output', icon: Package, minWidth: 300, toolbar: true, group: 'made' },
-    { kind: 'processes', icon: Activity, minWidth: 420, toolbar: false, group: 'project' },
-    { kind: 'launches', icon: Rocket, minWidth: 480, toolbar: false, group: 'project' },
-    { kind: 'problems', icon: CircleAlert, minWidth: 360, toolbar: false, group: 'project' },
-    { kind: 'voice', icon: Mic, minWidth: 320, toolbar: false, group: 'project' }
-];
-
-function entriesOf(contributed: readonly PanelContribution[]): readonly PanelEntry[] {
-    return contributed.length === 0 ? PANELS : [...PANELS, ...contributed];
+function entriesOf(registered: readonly PanelDefinition[], contributed: readonly PanelContribution[]): readonly PanelEntry[] {
+    return [...registered.map(entryOfDefinition), ...contributed.map(entryOfContribution)];
 }
 
 export function usePanelEntries(): readonly PanelEntry[] {
-    return entriesOf(useContributions((state) => state.panels));
+    return entriesOf(
+        panelRegistry.use(),
+        useContributions((state) => state.panels)
+    );
 }
 
-/* Whether a button in the rail toggles the panel: one of the panel buttons, or Voice Control's own. The
-   rest open from a menu and close from their own header. */
+/* Whether a button in the rail toggles the panel: one of the panel buttons, or one a button elsewhere toggles. The rest open from a menu and close from their own header. */
 export function closesFromRail(kind: PanelKind): boolean {
-    return kind === 'voice' || entriesOf(useContributions.getState().panels).some((entry) => entry.kind === kind && entry.toolbar);
+    return entriesOf(panelRegistry.all(), useContributions.getState().panels).some((entry) => entry.kind === kind && (entry.toolbar || entry.togglesElsewhere));
 }
 
 /* The panels with a button in the rail of a project, which the Chats project has fewer of. */

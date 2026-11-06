@@ -11,9 +11,9 @@ import { nodeWorking } from '@/state/agent-work';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useSessions } from '@/state/sessions';
 import { useToasts } from '@/state/toasts';
-import { useUi } from '@/state/ui';
 import { useTransport } from '@/workspace/context';
 import { nodesInWorktree, removeAllQuestion, removedToast, worktreeSessionsOf } from '@/worktree-rules/worktree-rows';
+import { worktreeMergeDialog, worktreeRemovalDialog } from '@/worktrees/dialogs';
 import { inspectWorktrees, nodeNames } from '@/worktrees/worktree-inspection';
 
 type Reading = { key: string; worktrees: Worktree[]; error: { message: string | null } | null };
@@ -25,7 +25,7 @@ type Reading = { key: string; worktrees: Worktree[]; error: { message: string | 
  */
 export function RemoveWorktreeDialog() {
     const { t } = useTranslation(['shell', 'common']);
-    const removal = useUi((s) => s.worktreeRemoval);
+    const removal = worktreeRemovalDialog.use((request) => request);
     const endpointId = useEndpointId();
     const transport = useTransport();
     // Per chat of a design, so the one working in a worktree is the one stopped.
@@ -64,7 +64,7 @@ export function RemoveWorktreeDialog() {
     const close = (): void => {
         setReading(null);
         setAgentWorking(false);
-        useUi.getState().setWorktreeRemoval(null);
+        worktreeRemovalDialog.set(null);
     };
 
     const shown = key !== null && reading?.key === key ? reading : null;
@@ -154,7 +154,7 @@ export function RemoveWorktreeDialog() {
                           label: t('removeWorktree.mergeFirst'),
                           onClick: () => {
                               close();
-                              useUi.getState().setWorktreeMerge({ folder: removal.folder, paths: mergeable.map((worktree) => worktree.path), remove: true });
+                              worktreeMergeDialog.set({ folder: removal.folder, paths: mergeable.map((worktree) => worktree.path), remove: true });
                           }
                       }
                     : undefined

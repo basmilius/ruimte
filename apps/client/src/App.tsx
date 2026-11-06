@@ -1,4 +1,4 @@
-import { ErrorBoundary, ShortcutHints, UIProvider, lazyDialog, lazyNamed, prefetcher, LazyBoundary } from '@adecore/ui';
+import { ErrorBoundary, ShortcutHints, UIProvider, lazyNamed, prefetcher, LazyBoundary } from '@adecore/ui';
 import i18next from 'i18next';
 import { useEffect, type ReactNode } from 'react';
 import { startMachineUpdate } from '@/controllers/machine-update';
@@ -7,19 +7,15 @@ import { HostDialogs, HostOverlays } from '@/extensions/host/host-dialogs';
 import '@/extensions/built-in';
 import { startExtensions } from '@/extensions/watch';
 import { formatSource } from '@/format/source';
-import { useTemplateRequest } from '@/language/template-request';
-import { LinkMachineDialog } from '@/machine-ui/LinkMachineDialog';
-import { MachineUpdateDialog } from '@/machine-ui/MachineUpdateDialog';
 import { useProjectSwitch } from '@/project/open';
 import { DormantScreen, ProjectSwitchScreen } from '@/project/ProjectSwitchScreen';
-import { closeLinkRequest, useLinkRequest } from '@/pulsar/link-request';
+import { windowDialogs } from '@/registry/dialogs';
 import { allSettingsSections } from '@/settings/sections';
 import { useAppShortcuts } from '@/shell/app-shortcuts';
 import { useNativeMenu } from '@/shell/menu/native-menu';
 import { StartScreen } from '@/shell/StartScreen';
 import { Toasts } from '@/shell/Toasts';
 import { useProject } from '@/state/project';
-import { useReleaseNotes } from '@/state/release-notes';
 import { useSettings } from '@/state/settings';
 import { useUi, type SettingsSectionId } from '@/state/ui';
 import { startUpdates } from '@/state/updates';
@@ -35,67 +31,6 @@ const WorkspaceShell = lazyNamed(async () => {
     return import('@/shell/WorkspaceShell');
 }, 'WorkspaceShell');
 const FirstRunScreen = lazyNamed(() => import('@/onboarding/FirstRunScreen'), 'FirstRunScreen');
-const CommandPalette = lazyDialog(
-    () => import('@/palette/CommandPalette'),
-    'CommandPalette',
-    useUi,
-    (s) => s.paletteOpen
-);
-const SettingsDialog = lazyDialog(
-    () => import('@/settings/SettingsDialog'),
-    'SettingsDialog',
-    useUi,
-    (s) => s.settings.open
-);
-const UsageDialog = lazyDialog(
-    () => import('@/usage/UsageDialog'),
-    'UsageDialog',
-    useUi,
-    (s) => s.usageOpen
-);
-const ModelsDialog = lazyDialog(
-    () => import('@/models/ModelsDialog'),
-    'ModelsDialog',
-    useUi,
-    (s) => s.modelsOpen
-);
-const LoginDialog = lazyDialog(
-    () => import('@/chat/LoginDialog'),
-    'LoginDialog',
-    useUi,
-    (s) => s.login !== null
-);
-const ProviderCommandDialog = lazyDialog(
-    () => import('@/chat/ProviderCommandDialog'),
-    'ProviderCommandDialog',
-    useUi,
-    (s) => s.providerCommand !== null
-);
-const TemplateRequestDialog = lazyDialog(
-    () => import('@/language/TemplateDialog'),
-    'TemplateRequestDialog',
-    useTemplateRequest,
-    (s) => s.request !== null
-);
-const OnboardingDialog = lazyDialog(
-    () => import('@/onboarding/OnboardingDialog'),
-    'OnboardingDialog',
-    useUi,
-    (s) => s.onboarding !== null
-);
-const AgentIntegrationsDialog = lazyDialog(
-    () => import('@/agents/AgentIntegrationsDialog'),
-    'AgentIntegrationsDialog',
-    useUi,
-    (s) => s.agentIntegrations
-);
-const ReleaseNotesDialog = lazyDialog(
-    () => import('@/release-notes/ReleaseNotesDialog'),
-    'ReleaseNotesDialog',
-    useReleaseNotes,
-    (s) => s.open
-);
-
 const BLANK = <div className="h-full w-full bg-bg" />;
 
 /* The start screen, or the blank frame before it while a cold start is still trying the last project. */
@@ -138,13 +73,6 @@ function WindowContent() {
     );
 }
 
-/* The approval a `/link` address opened, outside every workspace. The web client shows it before a machine is picked. */
-function LinkRequestDialog() {
-    const open = useLinkRequest((s) => s.open);
-    const code = useLinkRequest((s) => s.code);
-    return <LinkMachineDialog open={open} initialCode={code} onOpenChange={(next) => (next ? undefined : closeLinkRequest())} />;
-}
-
 /* A surface that floats over the window, so its failure is a card and the rest stays usable. */
 function Floating({ surface, children }: { surface: string; children: ReactNode }) {
     return (
@@ -158,6 +86,7 @@ export function App() {
     const name = useProject((s) => s.current?.name ?? null);
     useAppShortcuts();
     useNativeMenu();
+    const dialogs = windowDialogs.use();
 
     // The Electron window has no title of its own, so this names it as well.
     useEffect(() => {
@@ -188,41 +117,20 @@ export function App() {
                 parked browser pages as well, which is why everything below carries a boundary of its own. */}
                 <ErrorBoundary label={i18next.t('common:state.error')} className="fixed inset-0 bg-bg" reload>
                     <WindowContent />
-                    <Floating surface="palette">
-                        <CommandPalette />
-                    </Floating>
-                    <Floating surface="settings">
-                        <SettingsDialog />
-                    </Floating>
-                    <UsageDialog />
-                    <ModelsDialog />
                     <Floating surface="toasts">
                         <Toasts />
                         <HostDialogs />
                         <HostOverlays />
                     </Floating>
-                    <ReleaseNotesDialog />
-                    <Floating surface="machineUpdate">
-                        <MachineUpdateDialog />
-                    </Floating>
-                    <Floating surface="link">
-                        <LinkRequestDialog />
-                    </Floating>
-                    <Floating surface="onboarding">
-                        <OnboardingDialog />
-                    </Floating>
-                    <Floating surface="agentIntegrations">
-                        <AgentIntegrationsDialog />
-                    </Floating>
-                    <Floating surface="login">
-                        <LoginDialog />
-                    </Floating>
-                    <Floating surface="providerCommand">
-                        <ProviderCommandDialog />
-                    </Floating>
-                    <Floating surface="templateRequest">
-                        <TemplateRequestDialog />
-                    </Floating>
+                    {dialogs.map((dialog) =>
+                        dialog.surface === null ? (
+                            <dialog.component key={dialog.id} />
+                        ) : (
+                            <Floating key={dialog.id} surface={dialog.surface}>
+                                <dialog.component />
+                            </Floating>
+                        )
+                    )}
                     <Floating surface="shortcutHints">
                         <ShortcutHints />
                     </Floating>

@@ -18,6 +18,7 @@ import { askBeforeEndingAgents } from '@/agents/end-children';
 import { GRID, type Point } from '@/canvas-model/math';
 import { basenameOf } from '@/paths/file-path';
 import { filesOfView } from '@/project/view-deletion';
+import { renamingView } from '@/sidebar/dialogs';
 import { focusedCanvas, liveCanvas, revealWhenItLands } from '@/state/canvas';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { databaseTargetOf, databaseViewName } from '@/state/database-view-name';
@@ -29,10 +30,10 @@ import { defaultNodeSize } from '@/state/node-size';
 import { useProject } from '@/state/project';
 import { leaveRoutines } from '@/state/routines-stage';
 import { useToasts } from '@/state/toasts';
-import { useUi } from '@/state/ui';
 import { closeAfterSaving } from '@/state/unsaved-close';
 import { nodesOfView } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
+import { viewDialog } from '@/views/dialogs';
 
 export function showView(id: string, options: { newTab?: boolean } = {}): void {
     // Picking a view is how a person leaves Routines, so it goes before the view shows.
@@ -125,7 +126,7 @@ export function revealForkWhenItLands(viewId: string, chatId: string): void {
 export async function newSubheaderView(): Promise<void> {
     const id = await createViewAction('subheader');
     if (id !== null) {
-        useUi.getState().setRenamingViewId(id);
+        renamingView.set(id);
     }
 }
 
@@ -317,7 +318,7 @@ export function askOpenAsView(nodeId: string): void {
     const view = viewOfNode(useDocument.getState().views, nodesOfView, nodeId);
     const canvas = view === null ? null : liveCanvas(view.id);
     if (canvas !== null && canvas.edges.some((edge) => edge.from === nodeId || edge.to === nodeId)) {
-        useUi.getState().setViewDialog({ kind: 'promote', nodeId });
+        viewDialog.set({ kind: 'promote', nodeId });
         return;
     }
     promoteNodeAction(nodeId);
@@ -353,5 +354,5 @@ export function askDeleteView(id: string): void {
 
 /* What a view is called and what it wears, in the one dialog that holds both. */
 export function askViewSettings(id: string): void {
-    return useUi.getState().setViewDialog({ kind: 'settings', viewId: id });
+    return viewDialog.set({ kind: 'settings', viewId: id });
 }

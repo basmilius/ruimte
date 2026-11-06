@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ChatMoveInfoResult, ChatMovePayload, ProjectSummary, ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
+import { moveChatDialog } from '@/project/dialogs';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
-import { useUi } from '@/state/ui';
 import { TransportError } from '@/transport-api/transport';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
@@ -69,7 +69,7 @@ async function open(answer: (payload: { to?: unknown }) => ChatMoveInfoResult = 
 }
 
 async function ask(mode: 'make' | 'pick', projectId: string | null = null): Promise<void> {
-    await act(async () => useUi.getState().setMoveChatDialog({ chatId: CHAT.id, mode, projectId }));
+    await act(async () => moveChatDialog.set({ chatId: CHAT.id, mode, projectId }));
     await until(() => dialog() !== null);
 }
 
@@ -103,11 +103,11 @@ function nameField(): HTMLInputElement {
 }
 
 async function dismiss(): Promise<void> {
-    await act(async () => useUi.getState().setMoveChatDialog(null));
+    await act(async () => moveChatDialog.set(null));
 }
 
 beforeEach(() => {
-    useUi.getState().setMoveChatDialog(null);
+    moveChatDialog.set(null);
 });
 
 afterEach(async () => {

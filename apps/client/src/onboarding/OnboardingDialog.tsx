@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { computerSetupOf } from '@/computer/setup';
 import { useComputerMachine } from '@/computer/use-computer-machine';
 import { ComputerTask } from '@/onboarding/ComputerTask';
+import { onboardingDialog } from '@/onboarding/dialog';
 import { closeOnboarding } from '@/onboarding/open';
 import { ProvidersTask } from '@/onboarding/ProvidersTask';
 import { RowTile, TaskPane } from '@/onboarding/TaskPane';
@@ -32,7 +33,6 @@ import { useComputer } from '@/state/computer';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
-import { useUi } from '@/state/ui';
 import { useMachineHold } from '@/transport/status';
 import { BrandSymbol } from '@/ui/Brand';
 import { Eclipse } from '@/ui/Eclipse';
@@ -59,7 +59,7 @@ function useLocalMachine(): Endpoint | null {
  */
 export function OnboardingDialog() {
     const { t } = useTranslation('onboarding');
-    const step = useUi((s) => s.onboarding);
+    const step = onboardingDialog.use((request) => request);
     // What the popup keeps showing while it animates closed, after the step is gone.
     const [shown, setShown] = useState(step);
     const titleId = useId();
@@ -111,7 +111,7 @@ function Welcome({ titleId }: { titleId: string }) {
                 </h2>
                 <p className="max-w-[420px] text-base text-text-muted">{t(total === 2 ? 'welcome.bodyTwo' : 'welcome.bodyThree')}</p>
                 <div className="mt-2 flex items-center gap-2.5">
-                    <Button variant="primary" onClick={() => useUi.getState().setOnboarding('hub')}>
+                    <Button variant="primary" onClick={() => onboardingDialog.set('hub')}>
                         {t('welcome.start')}
                     </Button>
                     <Button onClick={closeOnboarding}>{t('welcome.notNow')}</Button>
