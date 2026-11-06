@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { join } from 'node:path';
 import type { ProjectContent } from '@ruimte/contracts';
 import type { CanvasHost } from '../canvas/host.ts';
+import { catalog } from './catalog-test-helpers.ts';
 import type { InputSchema, Tool } from './catalog.ts';
 import { visibleTools } from './mcp-route.ts';
 import FIXTURE from './tool-list.fixture.json';
@@ -61,8 +62,8 @@ function host(everything: boolean): CanvasHost {
 }
 
 async function current(): Promise<ToolList> {
-    const chat = await visibleTools('chat-1', host(true));
-    const terminal = await visibleTools('term-1', host(false));
+    const chat = await visibleTools('chat-1', host(true), catalog());
+    const terminal = await visibleTools('term-1', host(false), catalog());
     const names = (tools: readonly Tool[]): string[] => tools.map((tool) => tool.name).sort();
 
     return {

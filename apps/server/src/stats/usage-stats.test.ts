@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { CONTEXT_VERBS } from '@ruimte/contracts';
 import { USAGE_VERB_COUNTERS } from '@ruimte/pulsar';
+import { AGENT_TOOLKITS as TOOLKITS } from '../agent-features/list.ts';
 import type { CanvasHost } from '../canvas/host.ts';
 import { guideTool } from '../mcp/guide.ts';
 import { toolCall } from '../tools/tool-test-helpers.ts';
 import { runTool } from '../tools/tool.ts';
-import { TOOLKITS } from '../tools/toolkits.ts';
 import { UsageCounter } from './usage-counter.ts';
 import {
     countClient,

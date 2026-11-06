@@ -10,7 +10,7 @@ import { errorText } from '../error-text.ts';
 import { ProjectError } from '../projects/project-error.ts';
 import { MCP_MAX_IMAGE_BYTES } from '../ruimte-mcp.ts';
 import { VERSION } from '../version.ts';
-import { catalog, type Tool, type ToolContext } from './catalog.ts';
+import type { Tool, ToolContext } from './catalog.ts';
 import { MCP_INSTRUCTIONS } from './instructions.ts';
 
 export { MCP_PATH, MCP_REQUEST_TIMEOUT_S } from '../ruimte-mcp.ts';
@@ -20,6 +20,8 @@ export interface McpDeps {
     targetForToken(token: string): string | null;
     host: CanvasHost;
     actions: ServerActions;
+    /* Every tool of the daemon, which `buildCatalog` made from its features. */
+    tools: readonly Tool[];
     uploads?: ArtifactUploads;
     /* The caller's own folders under `$RUIMTE_HOME` (its attachments and visuals), from which its files may come too. */
     callerFolders?(caller: string): string[];
@@ -28,7 +30,7 @@ export interface McpDeps {
 }
 
 /* The tools this caller sees: the chat tools only for an AI chat, computer use while it is on, databases where the project has a connection. */
-export async function visibleTools(caller: string, host: CanvasHost): Promise<Tool[]> {
+export async function visibleTools(caller: string, host: CanvasHost, tools: readonly Tool[]): Promise<Tool[]> {
     const place = host.projects.locate(caller);
     const kind = (place === null ? null : callerKind(await host.projects.read(place.projectId), caller)) ?? host.hiddenAgents?.get(caller)?.node.kind ?? null;
     const databases = place === null || host.databases === undefined ? [] : await host.databases.list(place).catch(() => []);
@@ -39,7 +41,7 @@ export async function visibleTools(caller: string, host: CanvasHost): Promise<To
         database: databases.length > 0
     };
 
-    return catalog().filter((tool) => shown[tool.audience]);
+    return tools.filter((tool) => shown[tool.audience]);
 }
 
 /* A refusal as a model reads it: the code and sentence first, then only what the call would accept. */
@@ -129,7 +131,7 @@ export async function handleMcpRequest(request: Request, deps: McpDeps): Promise
     const server = new Server({ name: 'ruimte', version: VERSION }, { capabilities: { tools: {} }, instructions: MCP_INSTRUCTIONS });
 
     server.setRequestHandler('tools/list', async () => ({
-        tools: (await visibleTools(caller, deps.host)).map((tool) => ({
+        tools: (await visibleTools(caller, deps.host, deps.tools)).map((tool) => ({
             name: tool.name,
             description: tool.description,
             inputSchema: tool.inputSchema,
@@ -138,7 +140,7 @@ export async function handleMcpRequest(request: Request, deps: McpDeps): Promise
     }));
 
     server.setRequestHandler('tools/call', async (call) =>
-        callTool(await visibleTools(caller, deps.host), call.params.name, call.params.arguments ?? {}, toolContext(caller, deps))
+        callTool(await visibleTools(caller, deps.host, deps.tools), call.params.name, call.params.arguments ?? {}, toolContext(caller, deps))
     );
 
     const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });

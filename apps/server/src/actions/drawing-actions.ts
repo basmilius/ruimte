@@ -1,7 +1,7 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { ToolRefusal } from '@adecore/agents/context';
 import { DrawingEditSchema, type DrawingEditMint } from '@adecore/drawing';
-import type { ActionHandlers } from '@ruimte/actions';
+import type { ActionHandlers, ActionName } from '@ruimte/actions';
 import { isCanvasView, isDrawingView, type ProjectContent, type ProjectDrawingView } from '@ruimte/contracts';
 import type { z } from 'zod';
 import { field, orNote, type CanvasHost } from '../canvas/host.ts';
@@ -58,6 +58,9 @@ function editProblems(error: z.ZodError): ToolRefusal {
 
     return problemsRefusal('bad-edit', problems);
 }
+
+/* The actions of this file that honor a dry run. */
+export const drawingPreviews: readonly ActionName[] = ['drawing.edit'];
 
 export const drawingActions: ActionHandlers<ServerActionContext> = {
     'drawing.edit': async ({ viewId, revision, edit }, { actor, context, dryRun }) => {

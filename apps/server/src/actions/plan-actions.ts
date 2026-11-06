@@ -1,6 +1,6 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { parsePlanDraft, parsePlanMarkdown, progressText, type PlanApplied, type PlanRefusal } from '@adecore/plan';
-import type { ActionActor, ActionHandlers } from '@ruimte/actions';
+import type { ActionActor, ActionHandlers, ActionName } from '@ruimte/actions';
 import type { Plan, PlanActor, PlanOp } from '@ruimte/contracts';
 import { field, orNote, type CanvasHost } from '../canvas/host.ts';
 import { callerKind } from '../canvas/tasks.ts';
@@ -67,6 +67,9 @@ async function applyOps(actor: ActionActor, context: ServerActionContext, planId
 function changed(applied: PlanApplied) {
     return { output: { plan: applied.plan, dropped: applied.dropped } };
 }
+
+/* The actions of this file that honor a dry run. */
+export const planPreviews: readonly ActionName[] = ['plan.create'];
 
 export const planActions: ActionHandlers<ServerActionContext> = {
     'plan.list': async (_input, { actor, context }) => ({

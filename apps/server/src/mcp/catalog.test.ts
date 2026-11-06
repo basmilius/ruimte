@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { catalog, type ToolContext } from './catalog.ts';
+import { catalog } from './catalog-test-helpers.ts';
+import type { ToolContext } from './catalog.ts';
 
 const DESIGN_NAMES = [
     'context_list',

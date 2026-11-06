@@ -1,5 +1,6 @@
 import { nodeSessionFs } from '@adecore/agents/chat';
 import { createServerActions } from './actions/server-actions.ts';
+import { AGENT_FEATURES, AGENT_TOOLKITS } from './agent-features/list.ts';
 import { stopSteps, type StopPhase } from './area.ts';
 import { dropEmptyMark } from './chat/scratch-project.ts';
 import { greetingLines } from './cli/greeting.ts';
@@ -7,6 +8,7 @@ import type { ServerConfig } from './config.ts';
 import { Dispatcher } from './dispatcher.ts';
 import { errorText } from './error-text.ts';
 import { readMachineModel } from './machine-model.ts';
+import { buildCatalog } from './mcp/catalog.ts';
 import { probeCodexNoDaemon } from './providers/launch.ts';
 import { armShutdownDeadline } from './shutdown-deadline.ts';
 import { countUsages } from './stats/usage-stats.ts';
@@ -59,7 +61,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     const runtime: DaemonRuntime = { config, compiled, sourceDir: import.meta.dir, ...loopbackUrls(doorway.port) };
     const { home } = config;
     const { later, provide } = lateness<DaemonBundles>();
-    provide('actions', createServerActions());
+    provide('actions', createServerActions(AGENT_FEATURES));
     const extensions = provide('extensions', wireExtensions(home, later));
 
     // Runs while the stores load; it never rejects, and the managers await it before any launch.
@@ -109,7 +111,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     const maintenance = provide('maintenance', wireMaintenance(home, processes, later));
     const canvasHost = provide(
         'canvasHost',
-        wireCanvasHost({
+        wireCanvasHost(AGENT_FEATURES, {
             extensions: extensions.host,
             identity,
             stores,
@@ -279,6 +281,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         clients,
         canvasHost,
         actions: later.actions(),
+        tools: buildCatalog(AGENT_TOOLKITS),
         voice,
         artifacts
     });

@@ -53,7 +53,7 @@ import { untilChecked } from '../until-test-helpers.ts';
 import { agentVisuals, type VisualHost } from '../visuals/agent-host.ts';
 import { agentMessages } from '../wiring/agent-messages.ts';
 import { agentStates, openedAgentCount } from '../wiring/agent-state.ts';
-import { chatAccess } from '../wiring/canvas-host.ts';
+import { chatAccess } from '../agent-features/voice.ts';
 import { OutboxLink, wireOutbox } from '../wiring/outbox.ts';
 import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 

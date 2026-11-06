@@ -1,86 +1,26 @@
 import { CodedError } from '@adecore/agents';
-import { ActionRegistry } from '@ruimte/actions';
-import { agentActions } from './agent-actions.ts';
-import { artifactActions } from './artifact-actions.ts';
-import { browserActions } from './browser-actions.ts';
-import { chatAttachActions } from './chat-attach-actions.ts';
-import { computerActions } from './computer-actions.ts';
-import { contextActions } from './context-actions.ts';
+import { ActionRegistry, type ActionHandlers, type ActionName } from '@ruimte/actions';
 import type { ServerActionContext } from './context.ts';
-import { databaseActions } from './database-actions.ts';
-import { deviceActions } from './device-actions.ts';
-import { diagramActions } from './diagram-actions.ts';
-import { drawingActions } from './drawing-actions.ts';
-import { flagActions } from './flag-actions.ts';
-import { forkActions } from './fork-actions.ts';
-import { languageActions } from './language-actions.ts';
-import { launchActions } from './launch-actions.ts';
-import { linkActions } from './link-actions.ts';
-import { nodeActions } from './node-actions.ts';
-import { operationActions } from './operation-actions.ts';
-import { planActions } from './plan-actions.ts';
-import { projectIgnoredActions } from './project-ignored-actions.ts';
-import { projectProposalActions } from './project-proposal-actions.ts';
-import { providerActions } from './provider-actions.ts';
 import { checkProjectRevision } from './revision.ts';
-import { routineActions } from './routine-actions.ts';
-import { secretActions } from './secret-actions.ts';
-import { startActions } from './start-actions.ts';
-import { taskActions } from './task-actions.ts';
-import { templateActions } from './template-actions.ts';
-import { toolActions } from './tool-actions.ts';
-import { viewActions } from './view-actions.ts';
-import { visualActions } from './visual-actions.ts';
-import { voiceActions } from './voice-actions.ts';
-import { worktreeActions } from './worktree-actions.ts';
 
 export type ServerActions = ActionRegistry<ServerActionContext>;
+
+/* What a feature gives the registry: the handlers of its actions, and which of them preview. */
+export interface ActionSource {
+    readonly actions?: ActionHandlers<ServerActionContext>;
+    readonly previews?: readonly ActionName[];
+}
 
 /*
  * What the daemon itself carries out, on the project file rather than on a client's stores. A client
  * has its own handlers for the same actions; an agent's tool call lands here. The wiring makes one
- * and the `CanvasHost` carries it, so no module reaches the registry by importing it.
+ * from the agent features and the `CanvasHost` carries it, so no module reaches the registry by importing it.
  */
-export function createServerActions(): ServerActions {
-    return new ActionRegistry<ServerActionContext>(
-        {
-            ...viewActions,
-            ...flagActions,
-            ...nodeActions,
-            ...linkActions,
-            ...agentActions,
-            ...toolActions,
-            ...forkActions,
-            ...startActions,
-            ...operationActions,
-            ...taskActions,
-            ...planActions,
-            ...visualActions,
-            ...chatAttachActions,
-            ...artifactActions,
-            ...diagramActions,
-            ...drawingActions,
-            ...browserActions,
-            ...computerActions,
-            ...deviceActions,
-            ...worktreeActions,
-            ...launchActions,
-            ...routineActions,
-            ...secretActions,
-            ...projectProposalActions,
-            ...projectIgnoredActions,
-            ...databaseActions,
-            ...languageActions,
-            ...templateActions,
-            ...providerActions,
-            ...contextActions,
-            ...voiceActions
-        },
-        {
-            previews: ['node.create', 'node.createMany', 'node.setColor', 'plan.create', 'agent.start', 'team.start', 'drawing.edit', 'template.add'],
-            checkRevision: checkProjectRevision,
-            // Every refusal the daemon raises is coded, with what to pick instead as its lines.
-            refusalOf: (error) => (error instanceof CodedError ? { code: error.code, message: error.message, details: error.lines } : null)
-        }
-    );
+export function createServerActions(sources: readonly ActionSource[]): ServerActions {
+    return new ActionRegistry<ServerActionContext>(Object.assign({}, ...sources.map((source) => source.actions ?? {})), {
+        previews: sources.flatMap((source) => source.previews ?? []),
+        checkRevision: checkProjectRevision,
+        // Every refusal the daemon raises is coded, with what to pick instead as its lines.
+        refusalOf: (error) => (error instanceof CodedError ? { code: error.code, message: error.message, details: error.lines } : null)
+    });
 }

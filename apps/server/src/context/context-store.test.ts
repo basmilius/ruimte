@@ -5,7 +5,7 @@ import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import { ArtifactError } from '../artifacts/artifact-names.ts';
 import { artifactReport } from '../artifacts/artifact-report.ts';
 import type { CanvasHost } from '../canvas/host.ts';
-import { catalog } from '../mcp/catalog.ts';
+import { catalog } from '../mcp/catalog-test-helpers.ts';
 import { callTool } from '../mcp/mcp-route.ts';
 import type { ChatUsageInfo } from './chat-usage.ts';
 import { ContextStore, MAX_SCREEN_LINES } from './context-store.ts';

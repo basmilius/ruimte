@@ -1,9 +1,9 @@
 import { refusalBody, ToolRefusal } from '@adecore/agents/context';
 import { serverActions } from '../actions/server-actions-test-helpers.ts';
+import { AGENT_TOOLKITS } from '../agent-features/list.ts';
 import type { CanvasHost, LaunchReading } from '../canvas/host.ts';
 import { ProjectError } from '../projects/project-error.ts';
 import { runTool, type ToolCaller } from './tool.ts';
-import { TOOLKITS } from './toolkits.ts';
 
 export interface ToolAnswer {
     refused: boolean;
@@ -22,7 +22,7 @@ export function toolCall(caller: string, host: CanvasHost): ToolCaller {
  * runs: its lines, or a refusal as its `refused` rows, as the daemon words it before the route does.
  */
 export async function toolAnswer(name: string, input: Readonly<Record<string, unknown>>, call: ToolCaller): Promise<ToolAnswer> {
-    const tool = TOOLKITS.flatMap((toolkit) => toolkit.tools).find((candidate) => candidate.name === name);
+    const tool = AGENT_TOOLKITS.flatMap((toolkit) => toolkit.tools).find((candidate) => candidate.name === name);
 
     if (tool === undefined) {
         throw new Error(`${name} is no tool of a toolkit`);

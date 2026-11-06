@@ -1,6 +1,5 @@
 import { toolInputSchema, type ToolInputSchema } from '@adecore/agents/context';
 import { runTool, type Audience, type Tool as KitTool, type Toolkit, type ToolCaller, type ToolOutcome } from '../tools/tool.ts';
-import { TOOLKITS } from '../tools/toolkits.ts';
 import { guideTool } from './guide.ts';
 
 export type { Audience, ToolOutcome } from '../tools/tool.ts';
@@ -36,7 +35,7 @@ function listed(tool: KitTool): Tool {
 }
 
 /* Every tool of the toolkits, and `guide` over their guide topics. Throws when two tools would share a name. */
-export function buildCatalog(toolkits: readonly Toolkit[] = TOOLKITS): Tool[] {
+export function buildCatalog(toolkits: readonly Toolkit[]): Tool[] {
     const all = [guideTool(toolkits), ...toolkits.flatMap((toolkit) => toolkit.tools)].map(listed);
     const seen = new Set<string>();
 
@@ -49,13 +48,4 @@ export function buildCatalog(toolkits: readonly Toolkit[] = TOOLKITS): Tool[] {
     }
 
     return all;
-}
-
-let built: readonly Tool[] | null = null;
-
-/* The catalog this daemon serves, built once. */
-export function catalog(): readonly Tool[] {
-    built ??= buildCatalog();
-
-    return built;
 }

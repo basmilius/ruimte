@@ -1,7 +1,7 @@
 import { basename } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
 import { isWithin } from '@adecore/utils/path';
-import { ARRANGE_LAYOUTS, ActionRefusal, type ActionHandlers, type ActionInput, type ActionOutput } from '@ruimte/actions';
+import { ARRANGE_LAYOUTS, ActionRefusal, type ActionHandlers, type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
 import {
     DEFAULT_TITLES,
     NODE_ACCENT_NAMES,
@@ -403,6 +403,9 @@ async function createNodes(call: ServerActionCall, viewId: string, specs: readon
     });
     return output;
 }
+
+/* The actions of this file that honor a dry run. */
+export const nodePreviews: readonly ActionName[] = ['node.create', 'node.createMany', 'node.setColor'];
 
 export const nodeActions: ActionHandlers<ServerActionContext> = {
     'node.list': async ({ viewId }, { actor, context }) => {

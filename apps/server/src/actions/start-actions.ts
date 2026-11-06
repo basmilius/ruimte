@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { ToolRefusal } from '@adecore/agents/context';
 import { KeyedSerializer } from '@adecore/utils/async';
-import type { ActionActor, ActionHandlers, ActionOutput } from '@ruimte/actions';
+import type { ActionActor, ActionHandlers, ActionName, ActionOutput } from '@ruimte/actions';
 import {
     isCanvasView,
     joinGroupUnder,
@@ -557,6 +557,9 @@ const claimedStart: StartHandler = (input, call) => {
     const claim = { actor: call.actor, requestId: input.requestId, inputHash: startInputHash(call.context.place.projectId, input) };
     return claims.run(claim, async () => await startAgent(input, call));
 };
+
+/* The actions of this file that honor a dry run. */
+export const startPreviews: readonly ActionName[] = ['agent.start', 'team.start'];
 
 /*
  * Everything a start enforces lives here, whoever asks: the depth and the count of agents a caller

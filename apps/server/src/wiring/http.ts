@@ -33,6 +33,7 @@ import type { ExtensionHost } from '../extensions/extension-host.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from '../fs/file-route.ts';
 import { PAIRING_REMOVED } from '../handlers/auth.ts';
 import { answerRoute, type Route } from '../http-routes.ts';
+import type { Tool } from '../mcp/catalog.ts';
 import { handleMcpRequest, MCP_PATH, MCP_REQUEST_TIMEOUT_S } from '../mcp/mcp-route.ts';
 import { handleProjectRequest, PROJECTS_PATH } from '../projects/icon-route.ts';
 import { noteOnLine } from '../providers/launch.ts';
@@ -90,6 +91,7 @@ export interface HttpInput {
     clients: ClientsBundle;
     canvasHost: CanvasHost;
     actions: ServerActions;
+    tools: readonly Tool[];
     voice: VoiceBundle;
     artifacts: ArtifactsBundle;
     extensions: ExtensionHost;
@@ -303,6 +305,7 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     targetForToken: agents.targetForToken,
                     host: canvasHost,
                     actions: input.actions,
+                    tools: input.tools,
                     uploads: input.artifacts.artifacts,
                     callerFolders: (caller) => [join(config.home, 'attachments', caller), agents.visuals.workspacePath(caller)],
                     shotFolders: shotFolders(config.home)
