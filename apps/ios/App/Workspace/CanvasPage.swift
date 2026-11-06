@@ -268,8 +268,9 @@ private struct CanvasLinkSheet: View {
     private var canvas: JSONValue { workspace.view(viewID) }
     private var source: JSONValue? { canvas.list("nodes").first { $0.stableID == sourceID } }
     private var targets: [JSONValue] {
+        guard let source, !CanvasEditing.isFolded(source) else { return [] }
         let others = canvas.list("nodes").filter {
-            CanvasEditing.canLink(canvas.list("edges"), from: sourceID, to: $0.stableID)
+            !CanvasEditing.isFolded($0) && CanvasEditing.canLink(canvas.list("edges"), from: sourceID, to: $0.stableID)
         }
         return others.filter { CanvasEditing.isAgent($0.text("kind")) }
             + others.filter { !CanvasEditing.isAgent($0.text("kind")) }

@@ -32,10 +32,9 @@ enum WorkspaceViewSections {
 
     /// Whether a view stands in the list. A chat of the Chats project nobody wrote in yet stays out, as the desktop's
     /// sidebar leaves it out, unless it is the one open. A hidden view (the canvas another machine draws its nodes on,
-    /// or an inline chat) is never listed, open or not.
+    /// or an inline chat) and a chat an extension draws are never listed, open or not.
     static func isListed(_ view: JSONValue, selectedID: String?) -> Bool {
-        guard view["hidden"]?.boolValue != true else { return false }
-        return view["empty"]?.boolValue != true || view.text("kind") != "chat" || view.stableID == selectedID
+        !ProjectListLogic.isUnlisted(view, emptyChatStays: view.stableID == selectedID)
     }
 
     /// Moves rows of one section as the list shows it. A view the list leaves out keeps its slot, so only the slots of

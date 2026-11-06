@@ -51,27 +51,8 @@ enum LaunchDraftProblem: Equatable {
 /// The editor's rules, as the desktop dialog keeps them, so a launch saved from the phone reads the same.
 enum LaunchEditing {
     /// The daemon's import writes ids the same way, so an imported launch and a typed one read alike.
-    static func slug(_ name: String) -> String {
-        var slug = ""
-        var gap = false
-        for scalar in name.lowercased().unicodeScalars {
-            if ("a"..."z").contains(scalar) || ("0"..."9").contains(scalar) {
-                if gap && !slug.isEmpty { slug += "-" }
-                gap = false
-                slug.unicodeScalars.append(scalar)
-            } else {
-                gap = true
-            }
-        }
-        return slug.isEmpty ? "launch" : slug
-    }
-
     static func uniqueID(_ name: String, taken: Set<String>) -> String {
-        let base = slug(name)
-        guard taken.contains(base) else { return base }
-        var index = 2
-        while taken.contains("\(base)-\(index)") { index += 1 }
-        return "\(base)-\(index)"
+        Slug.free(name, fallback: "launch", taken: taken)
     }
 
     static func draft(of entry: LaunchEntry) -> LaunchDraft {
@@ -136,14 +117,19 @@ enum LaunchEditing {
         return drafts.map { tidy($0, id: rename[$0.id] ?? $0.id, rename: rename) }
     }
 
+    /// What a launch lacks before it can start anything, as `launchGap` in `packages/contracts` has it: the launches of
+    /// a group, or the command of the rest.
+    static func gap(kind: LaunchConfigKind, command: String?, members: [String]?) -> LaunchDraftProblem? {
+        if kind == .group { return (members ?? []).isEmpty ? .members : nil }
+        return JSText.trimmed(command ?? "").isEmpty ? .command : nil
+    }
+
     /// The first launch the editor cannot save; the daemon checks the rest.
     static func problem(_ drafts: [LaunchDraft]) -> (id: String, problem: LaunchDraftProblem)? {
         for draft in drafts {
-            if draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return (draft.id, .name) }
-            if draft.kind == .group {
-                if draft.members.isEmpty { return (draft.id, .members) }
-            } else if draft.command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                return (draft.id, .command)
+            if JSText.trimmed(draft.name).isEmpty { return (draft.id, .name) }
+            if let gap = gap(kind: draft.kind, command: draft.command, members: draft.members) {
+                return (draft.id, gap)
             }
         }
         return nil

@@ -24,8 +24,10 @@ enum ViewSettings {
         }
         if view.text("kind") == "browser", let address {
             changed = changed.setting("url", .string(address))
-            // A browser nobody named takes the name of what it shows, as the desktop names one.
-            if changed.text("titleSource") != "user" { changed = changed.setting("name", .string(address)) }
+            // A browser nobody named takes the name of what it shows, cut as the desktop cuts the title of its page.
+            if changed.text("titleSource") != "user" {
+                changed = changed.setting("name", .string(NodeTitle.derive(address) ?? address))
+            }
         }
         return changed
     }

@@ -192,8 +192,8 @@ final class LaunchEditingTests: XCTestCase {
         XCTAssertEqual(LaunchEditing.source(suggestions[1]), "apps/site · package.json")
         XCTAssertEqual(LaunchEditing.source(suggestions[2]), "Docker")
         XCTAssertNil(LaunchEditing.foundText([suggestions[2]]))
-        XCTAssertEqual(LaunchEditing.slug("  "), "launch")
-        XCTAssertEqual(LaunchEditing.slug("Web: Dev"), "web-dev")
+        XCTAssertEqual(LaunchEditing.uniqueID("  ", taken: []), "launch")
+        XCTAssertEqual(LaunchEditing.uniqueID("Web: Dev", taken: ["web-dev"]), "web-dev-2")
     }
 
     @MainActor func testAVSCodeImportReadsAsARunConfigurationAndStaysUnapproved() async throws {

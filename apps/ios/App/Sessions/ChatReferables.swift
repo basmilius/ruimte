@@ -290,10 +290,11 @@ enum ChatReferables {
             id: view.id, name: view.name, kind: view.kind, group: .views, icon: WorkspaceViewIcon.name(for: view))
     }
 
-    /// A chat nobody wrote in yet, or a view that is shown nowhere (an inline chat, another machine's canvas).
+    /// A chat nobody wrote in yet or an extension draws, or a view that is shown nowhere (an inline chat, another
+    /// machine's canvas): `isUnlistedView` in `packages/contracts`.
     private static func unlisted(_ view: StoredView) -> Bool {
         switch view {
-        case .chat(let chat): chat.empty == true || chat.hidden == true
+        case .chat(let chat): chat.empty == true || chat.hidden == true || chat.drawnBy != nil
         case .canvas(let canvas): canvas.hidden == true
         default: false
         }

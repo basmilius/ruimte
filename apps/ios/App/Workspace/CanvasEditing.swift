@@ -70,11 +70,15 @@ enum CanvasNodeAction: Equatable {
 /// stay testable: grouping (`groupFrame` in `packages/contracts`), context links (`addEdge` in the client), layouts
 /// and the view a node becomes.
 enum CanvasEditing {
-    static let grid = 8.0
-    static let groupPadding = 32.0
-    static let groupHeader = 40.0
+    static let grid = WireVocabulary.canvasGrid
+    static let groupPadding = WireVocabulary.groupPadding
+    static let groupHeader = WireVocabulary.groupHeader
 
-    static func isAgent(_ kind: String) -> Bool { kind == "chat" || kind == "terminal" }
+    /// A node an agent works in, which reads what runs into it (`isAgentKind` in `packages/contracts`).
+    static func isAgent(_ kind: String) -> Bool { kind == "chat" || kind == "terminal" || kind == "design" }
+
+    /// A node folded to its header takes no new line, from or to it; the ones it has stay.
+    static func isFolded(_ node: JSONValue) -> Bool { node["collapsed"]?.boolValue == true }
     static func opensAsView(_ kind: String) -> Bool { ProjectKinds.runs(kind) }
 
     /// `Math.round` of the desktop, which rounds a half up where Swift rounds it away from zero.
@@ -204,10 +208,12 @@ enum CanvasEditing {
     static func linking(_ canvas: JSONValue, from source: String, to target: String, newID: () -> String) -> JSONValue {
         let nodes = Dictionary(
             canvas.list("nodes").map { ($0.stableID, $0) }, uniquingKeysWith: { first, _ in first })
-        guard let from = nodes[source], let to = nodes[target] else { return canvas }
+        guard let from = nodes[source], let to = nodes[target], !isFolded(from), !isFolded(to) else { return canvas }
+        var edges = canvas.list("edges")
+        // A line that already runs this way draws nothing, not even the way back that is missing.
+        guard canLink(edges, from: source, to: target) else { return canvas }
         var pairs = [(from, to)]
         if isAgent(from.text("kind")) && isAgent(to.text("kind")) { pairs.append((to, from)) }
-        var edges = canvas.list("edges")
         for (start, end) in pairs where canLink(edges, from: start.stableID, to: end.stableID) {
             var edge: [String: JSONValue] = [
                 "id": .string(newID()), "from": .string(start.stableID), "to": .string(end.stableID),

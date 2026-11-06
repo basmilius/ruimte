@@ -91,6 +91,17 @@ enum ProjectListLogic {
         return actions
     }
 
+    /// A view the list leaves out, as `isUnlistedView` in `packages/contracts` has it: a chat an extension draws or
+    /// nobody wrote in yet, and a hidden chat or canvas (an inline edit, or the canvas another machine draws its nodes
+    /// on). `emptyChatStays` keeps the empty chat that is open.
+    static func isUnlisted(_ view: JSONValue, emptyChatStays: Bool = false) -> Bool {
+        let kind = view.text("kind")
+        guard kind == "chat" || kind == "canvas" else { return false }
+        if view["hidden"]?.boolValue == true { return true }
+        guard kind == "chat" else { return false }
+        return view["drawnBy"]?.stringValue != nil || (view["empty"]?.boolValue == true && !emptyChatStays)
+    }
+
     /// The CLI a chat runs: on a view it sits in its node, on a canvas node on the node itself.
     static func provider(of item: JSONValue) -> String {
         item["node"]?["provider"]?.stringValue ?? item["provider"]?.stringValue ?? ""

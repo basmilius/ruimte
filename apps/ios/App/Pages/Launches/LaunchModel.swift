@@ -212,15 +212,7 @@ enum LaunchLogic {
 
     /// Where a launch runs, absolute. A private overlay may name a folder of its own.
     static func folder(of launch: LaunchEntry, in folder: String) -> String {
-        let cwd = (launch.overlay?.cwd ?? launch.cwd ?? "").trimmingCharacters(in: .whitespaces)
-        if cwd.hasPrefix("/") { return trimmingSlashes(cwd) }
-        var relative = cwd
-        if relative.hasPrefix("./") {
-            relative.removeFirst(2)
-        } else if relative == "." {
-            relative = ""
-        }
-        return relative.isEmpty ? trimmingSlashes(folder) : "\(trimmingSlashes(folder))/\(trimmingSlashes(relative))"
+        LaunchPath.cwd(launch.overlay?.cwd ?? launch.cwd, in: folder)
     }
 
     /// The launches grouped by the checkout they run in, the way the git page groups a folder of repositories. A group

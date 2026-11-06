@@ -64,6 +64,8 @@ Compare models reads `GET /v1/models/benchmarks` on every opening. The data's te
 
 `@` offers files and `#` the project's views, as `ChatReferables` mirrors the desktop's `referables.ts`. `references` is sent only to a machine with `viewReferences` in `endpoint.info`. `Tests/Fixtures/view-references.json` holds iPhone, desktop and daemon to one payload.
 
+A rule the phone keeps a Swift copy of is held to `Tests/Fixtures/ports.json`, which `packages/contracts/scripts/generate-port-fixtures.ts` writes by calling the TypeScript rule on every case (`PortFixtureTests`): node titles, slugs, a launch's folder and gaps, a group's frame, the lines a link draws, a session's status and which views the sidebar lists. A new port adds its cases there. Signature prefixes come from the generated `SigningPurposes`, and every kind in `wire.json` must be built by the app or listed as the machines' own.
+
 A lost send acknowledgement keeps the draft and asks the person to check the conversation before retrying.
 
 A machine without a request the app uses (forks, bookmarks, snoozes, plans) says it needs an update.
