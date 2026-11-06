@@ -5,6 +5,8 @@
     "": {
       "name": "ruimte",
       "devDependencies": {
+        "@adecore/diagram": "0.54.10",
+        "@adecore/drawing": "0.54.10",
         "@adecore/ui": "0.54.10",
         "@types/bun": "^1.4.4",
         "oxc-parser": "^0.156.0",

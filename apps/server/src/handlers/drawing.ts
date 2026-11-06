@@ -1,6 +1,6 @@
+import { drawingScene } from '@adecore/drawing';
 import type { Area } from '../area.ts';
 import type { DrawingStore } from '../projects/drawing-store.ts';
-import { renderDrawing } from '../render/scenes.ts';
 import { viewFileHandlers } from './view-files.ts';
 
 export interface DrawingDeps {
@@ -14,7 +14,7 @@ export function drawingArea({ store }: DrawingDeps): Area {
         handlers: (dispatcher) => {
             const handlers = viewFileHandlers(store);
 
-            dispatcher.register('drawing.paths', (payload) => handlers.scene(payload, renderDrawing));
+            dispatcher.register('drawing.paths', (payload) => handlers.scene(payload, drawingScene));
             dispatcher.register('drawing.open', handlers.open);
             dispatcher.register('drawing.save', handlers.save);
             dispatcher.register('drawing.close', handlers.close);
