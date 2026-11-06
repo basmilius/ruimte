@@ -19,8 +19,8 @@ import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 import { emptyCanvas, projectSummary } from '../../testing/project-fixtures';
+import { sidebarMachineSnapshot } from '../project/sidebar-projects';
 import { menuContext } from '../shell/menu/context';
-import { sidebarMachineSnapshot } from '../sidebar/sidebar-projects';
 import { nextWaitingTitle } from './next-waiting';
 
 const ENDPOINT = 'fake-machine';

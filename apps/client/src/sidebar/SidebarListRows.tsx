@@ -19,14 +19,14 @@ import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { wantsNewTab } from '@/layout/tab-drop';
 import { MachineGlyph } from '@/machines/MachineGlyph';
+import { renamingView } from '@/project/dialogs';
 import { FlagMark } from '@/project/FlagMark';
 import { newChatOn } from '@/project/new-chat';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
+import { openSidebarTarget, showSidebarProject } from '@/project/sidebar-navigation';
+import { separatorKey, useSidebarProjects, type SidebarSeparator } from '@/project/sidebar-projects';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { askViewSettings, revealNode, showView } from '@/project/views';
-import { renamingView } from '@/sidebar/dialogs';
-import { openSidebarTarget, showSidebarProject } from '@/sidebar/sidebar-navigation';
-import { separatorKey, useSidebarProjects, type SidebarSeparator } from '@/sidebar/sidebar-projects';
 import type { AgentWork } from '@/state/agent-work';
 import { useCanvas } from '@/state/canvas';
 import { useEndpointId } from '@/state/current-endpoint';
@@ -41,8 +41,8 @@ import { SnoozeButton, SnoozedMark, SnoozeMenuItems } from '@/surface/Snooze';
 import { StatusDot } from '@/surface/StatusDot';
 import { showsTaskMark } from '@/tasks/task-mark';
 import { TaskMark } from '@/tasks/TaskMark';
+import { ViewMenuItems } from '@/view-menu/ViewMenuItems';
 import { NewViewItems } from '@/views/NewViewMenu';
-import { ViewMenuItems } from '@/views/ViewMenuItems';
 
 const ROW = 'w-full gap-2 text-left text-sm';
 
@@ -324,7 +324,7 @@ export function SeparatorRow({ row, tabbable, onDelete, onDrag }: Omit<ViewRowPr
 export function SubheaderRow({ row, tabbable, onDelete, onDrag }: Omit<ViewRowProps, 'onToggle'>) {
     const { t } = useTranslation(['shell', 'common']);
     const { view } = row;
-    const renaming = renamingView.use((request) => request) === view.id;
+    const renaming = renamingView.useRequest((request) => request) === view.id;
     const rename = (on: boolean): void => renamingView.set(on ? view.id : null);
     if (renaming) {
         return (

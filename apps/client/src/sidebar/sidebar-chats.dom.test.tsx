@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { projectSidebarViews, type ProjectSummary, type ProjectView } from '@ruimte/contracts';
-import { SIDEBAR_ORDER_STORAGE_KEY, useSidebarProjects } from '@/sidebar/sidebar-projects';
+import { SIDEBAR_ORDER_STORAGE_KEY, useSidebarProjects } from '@/project/sidebar-projects';
 import { useSettings } from '@/state/settings';
 import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';

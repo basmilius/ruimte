@@ -1,7 +1,7 @@
 import { defineBehaviors, type CommandBehavior } from '@/commands/behavior';
 import { keyFree } from '@/commands/key-context';
-import { stepFocusedEditorFind } from '@/files/use-editor-find';
 import { openFocusedFind } from '@/find/hosts';
+import { stepFocusedEditorFind } from '@/find/use-editor-find';
 import { languageForCommand } from '@/language/focused-language';
 
 function finding(options?: { replace: true }): CommandBehavior {

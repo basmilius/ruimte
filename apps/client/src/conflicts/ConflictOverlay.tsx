@@ -21,7 +21,6 @@ import {
 } from '@/conflicts/conflict-model';
 import { ConflictEditor, type EditorHandle } from '@/conflicts/ConflictEditor';
 import { ConflictSides } from '@/conflicts/ConflictSides';
-import { conflictsDialog } from '@/conflicts/dialog';
 import type { ConflictDraft } from '@/conflicts/editor';
 import { useGitStatus } from '@/controllers/git-watch';
 import { DiffRowMenuItems } from '@/files/DiffRowMenuItems';
@@ -29,6 +28,7 @@ import { basenameOf } from '@/paths/file-path';
 import { useToasts } from '@/state/toasts';
 import { useTransport } from '@/workspace/context';
 import { nextActionId } from '@/worktree-rules/git-actions';
+import { conflictsDialog } from '@/worktrees/dialogs';
 
 type Reading = { cwd: string; answer: GitConflictsResult } | { cwd: string; failure: string };
 
@@ -49,7 +49,7 @@ interface AiRun {
  */
 export function ConflictOverlay() {
     const { t } = useTranslation(['conflicts', 'common']);
-    const request = conflictsDialog.use((request) => request);
+    const request = conflictsDialog.useRequest((request) => request);
     const cwd = request?.cwd ?? null;
     const transport = useTransport();
     const status = useGitStatus(cwd);

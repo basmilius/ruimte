@@ -1,9 +1,9 @@
-import { AGENT_SETTINGS_SECTION } from '@/agents/settings-section';
 import { CHAT_SETTINGS_SECTION } from '@/chat/settings-section';
 import { EXTENSION_SETTINGS_SECTION } from '@/extensions/settings-section';
 import { MACHINE_SETTINGS_SECTION } from '@/machine-ui/settings-section';
 import { PROVIDER_SETTINGS_SECTION } from '@/providers/settings-section';
 import { settingsSectionRegistry } from '@/registry/settings-sections';
+import { AGENT_SETTINGS_SECTION } from '@/settings/agents-section';
 import { APP_SETTINGS_SECTIONS } from '@/settings/app-sections';
 import { USAGE_SETTINGS_SECTION } from '@/usage/settings-section';
 import { VOICE_SETTINGS_SECTION } from '@/voice/settings-section';

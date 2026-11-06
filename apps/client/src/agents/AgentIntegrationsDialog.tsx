@@ -3,7 +3,7 @@ import { Button, Dialog, FormError, ScrollArea, Skeleton } from '@adecore/ui';
 import type { AgentIntegration, AgentIntegrationFile, AgentIntegrationReport, AgentKind } from '@ruimte/contracts';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { agentIntegrationsDialog } from '@/agents/dialogs';
+import { agentIntegrationsDialog } from '@/controllers/agent-integrations';
 import {
     INTEGRATION_NAMES,
     pendingReview,

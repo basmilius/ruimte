@@ -1,10 +1,7 @@
 import { lazyDialog } from '@adecore/ui';
 import { EndChildrenDialog } from '@/agents/EndChildrenDialog';
-import { createFlagState } from '@/registry/dialog-state';
+import { agentIntegrationsDialog } from '@/controllers/agent-integrations';
 import type { DialogContribution } from '@/registry/dialogs';
-
-/* The consent for the CLIs' global settings is up (`controllers/agent-integrations.ts`). */
-export const agentIntegrationsDialog = createFlagState();
 
 const AgentIntegrationsDialog = lazyDialog(
     () => import('@/agents/AgentIntegrationsDialog'),

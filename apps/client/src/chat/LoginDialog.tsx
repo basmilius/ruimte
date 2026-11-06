@@ -19,7 +19,7 @@ function closeLogin(): void {
 
 /* The CLI's own login in a terminal of its own, which the onboarding and the settings both open. */
 export function LoginDialog() {
-    const request = loginDialog.use((request) => request);
+    const request = loginDialog.useRequest((request) => request);
 
     return (
         <CliTerminalDialog request={request} keyOf={(shown) => `${shown.endpointId}:${shown.accountId}`} close={closeLogin}>

@@ -49,7 +49,7 @@ const MINUTE_MS = 60_000;
  * with the node, and only then does the other machine hear of it.
  */
 export function RemoteNodeDialog() {
-    const request = remoteNodeDialog.use((request) => request);
+    const request = remoteNodeDialog.useRequest((request) => request);
     const close = (): void => remoteNodeDialog.set(null);
     return (
         <Dialog.Root open={request !== null} onOpenChange={(open) => !open && close()}>

@@ -8,7 +8,6 @@ import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { moveViewAction } from '@/action-port/person-actions';
-import { hasLogoMenu } from '@/desktop/bridge';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { useChatDrawers } from '@/extensions/drawn-chats';
 import { SidebarCards } from '@/extensions/SidebarCards';
@@ -16,8 +15,9 @@ import { SlotRow } from '@/extensions/SlotSurfaces';
 import { addArtifactToSidebar, carriesArtifact, droppedArtifact } from '@/output/artifact-drag';
 import { newChat } from '@/project/new-chat';
 import { useProjectMenu } from '@/project/project-menu-model';
+import { openSidebarTarget } from '@/project/sidebar-navigation';
+import { foldedProjects, movableKeys, separatorKey, useSidebarProjects, type SeparatorPlaces, type SidebarSeparator } from '@/project/sidebar-projects';
 import { askDeleteView, newFileViewsAfter, promoteLooseDatabase, promoteLooseFile, revealNode } from '@/project/views';
-import { foldedProjects, movableKeys, separatorKey, useSidebarProjects, type SeparatorPlaces, type SidebarSeparator } from '@/sidebar/sidebar-projects';
 import { SIDEBAR_WIDTH_PX, SidebarGlow } from '@/sidebar/SidebarGlow';
 import {
     BackgroundRow,
@@ -31,7 +31,6 @@ import {
     ViewRow
 } from '@/sidebar/SidebarListRows';
 import { SidebarToggle } from '@/sidebar/SidebarToggle';
-import { StationMenu } from '@/sidebar/StationMenu';
 import { nodeWork } from '@/state/agent-work';
 import { isUnseen, useAttention } from '@/state/attention';
 import { useEndpointId } from '@/state/current-endpoint';
@@ -47,7 +46,6 @@ import { snoozeOf, useSnoozes } from '@/state/snooze';
 import { childTask, useTasks } from '@/state/tasks';
 import { useUi } from '@/state/ui';
 import { useWaitingSince, waitDetailsOf } from '@/state/waiting';
-import { IS_STATION } from '@/station';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/surface/canvas/drop';
 import { finderPaths } from '@/surface/canvas/finder-drop';
 import { viewGlyphOf } from '@/surface/cell-view';
@@ -82,7 +80,6 @@ import { Brand } from '@/ui/Brand';
 import { NewViewItems } from '@/views/NewViewMenu';
 import { NeedsYouCard } from '../attention/NeedsYouCard';
 import { useSidebarGroups } from './sidebar-groups';
-import { openSidebarTarget } from './sidebar-navigation';
 
 const NO_SEPARATORS: SeparatorPlaces = { before: {}, trailing: [] };
 
@@ -124,7 +121,8 @@ function sidebarRowOrder(sections: readonly SidebarSection[], separators: Separa
     ];
 }
 
-export function Sidebar() {
+/* `brandMenu` replaces the wordmark with the menu the shell draws there, where the window has one. */
+export function Sidebar({ brandMenu }: { brandMenu?: ReactNode }) {
     const gap = usePanelGap();
     const { t } = useTranslation('shell');
     const source = useSidebarSource();
@@ -458,7 +456,7 @@ export function Sidebar() {
                     className="app-drag relative flex h-12 shrink-0 items-center justify-between pr-2"
                     style={{ paddingLeft: inset === undefined ? BRAND_PADDING_PX : inset + 8 }}
                 >
-                    {IS_STATION || hasLogoMenu() ? <StationMenu variant="wordmark" /> : <Brand className="pointer-events-none" />}
+                    {brandMenu ?? <Brand className="pointer-events-none" />}
                     <SidebarToggle />
                 </div>
 

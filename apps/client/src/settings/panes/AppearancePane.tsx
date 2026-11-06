@@ -8,11 +8,11 @@ import { chooseExtensionTheme, listExtensionThemes, type ThemeChoice } from '@/e
 import { SettingsSection } from '@/machines/SettingsSection';
 import { AccentRow, PaletteRow } from '@/settings/panes/ColorRows';
 import { FontSection } from '@/settings/panes/FontSection';
-import { SettingSwitchRow } from '@/settings/SettingSwitchRow';
 import { useContributions } from '@/state/extension-registry';
 import { useExtensionTheme } from '@/state/extension-theme';
 import { useSettings } from '@/state/settings';
 import { useTheme, type Theme } from '@/state/theme';
+import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
 
 const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
 

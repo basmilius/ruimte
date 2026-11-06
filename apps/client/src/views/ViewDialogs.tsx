@@ -1,15 +1,15 @@
 import { PromptDialog, Dialog } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
 import { createViewAction, promoteNodeAction } from '@/action-port/person-actions';
+import { viewDialog } from '@/project/dialogs';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
-import { viewDialog } from '@/views/dialogs';
 import { ViewSettingsDialog } from '@/views/ViewSettingsDialog';
 
 /* Settings, promoting and a new page: everything a view asks before it happens. */
 export function ViewDialogs() {
     const { t } = useTranslation(['shell', 'common']);
-    const dialog = viewDialog.use((request) => request);
+    const dialog = viewDialog.useRequest((request) => request);
     const setDialog = viewDialog.set;
     const viewId = dialog && 'viewId' in dialog ? dialog.viewId : null;
     const view = useDocument((s) => s.views.find((each) => each.id === viewId) ?? null);

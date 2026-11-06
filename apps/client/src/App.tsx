@@ -86,7 +86,7 @@ export function App() {
     const name = useProject((s) => s.current?.name ?? null);
     useAppShortcuts();
     useNativeMenu();
-    const dialogs = windowDialogs.use();
+    const dialogs = windowDialogs.useAll();
 
     // The Electron window has no title of its own, so this names it as well.
     useEffect(() => {

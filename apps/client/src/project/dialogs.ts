@@ -27,3 +27,15 @@ const MoveChatDialog = lazyDialog(
 );
 
 export const PROJECT_DIALOGS: readonly DialogContribution[] = [{ id: 'move-chat', surface: 'dialog', component: MoveChatDialog }];
+
+/* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
+export type ViewDialog =
+    | { kind: 'settings'; viewId: string }
+    /* Promoting a node that has lines drawn into it. Those lines do not survive the move. */
+    | { kind: 'promote'; nodeId: string }
+    | { kind: 'new-browser' };
+
+export const viewDialog = createDialogState<ViewDialog>();
+
+/* The sidebar row the caret is in, which is how a new heading opens. */
+export const renamingView = createDialogState<string>();

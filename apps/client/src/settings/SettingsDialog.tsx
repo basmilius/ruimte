@@ -32,7 +32,7 @@ export function SettingsDialog() {
     const searchAt = useUi((s) => s.settings.searchAt);
     const setSettings = useUi((s) => s.setSettings);
     const contributed = useContributions((state) => state.settingsSections);
-    settingsSectionRegistry.use();
+    settingsSectionRegistry.useAll();
     // The labels come from `i18next.t`, which no redraw follows: this one is what draws them again in a language picked here.
     useTranslation('settings');
 

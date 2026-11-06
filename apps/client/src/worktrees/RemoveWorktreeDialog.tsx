@@ -25,7 +25,7 @@ type Reading = { key: string; worktrees: Worktree[]; error: { message: string | 
  */
 export function RemoveWorktreeDialog() {
     const { t } = useTranslation(['shell', 'common']);
-    const removal = worktreeRemovalDialog.use((request) => request);
+    const removal = worktreeRemovalDialog.useRequest((request) => request);
     const endpointId = useEndpointId();
     const transport = useTransport();
     // Per chat of a design, so the one working in a worktree is the one stopped.

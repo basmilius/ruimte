@@ -6,8 +6,8 @@ import { RENDER_DISTANCES, type RenderDistance } from '@/canvas-model/render-dis
 import { canSwipeBetweenPages } from '@/desktop/bridge';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { NodeSizeSection } from '@/settings/NodeSizeSection';
-import { SettingSwitchRow } from '@/settings/SettingSwitchRow';
 import { useSettings } from '@/state/settings';
+import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
 
 type ViewTab = 'canvas' | 'drawing' | 'browser';
 

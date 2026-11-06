@@ -18,7 +18,6 @@ import { listedEndpoints } from '@/state/local-machine';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useServers } from '@/state/server';
-import { useUi } from '@/state/ui';
 import { useMachineHold, useOpenEndpoints } from '@/transport/status';
 
 interface SwitcherItem extends ProjectSwitcherItem {
@@ -167,7 +166,7 @@ function useProjectSettings(endpoints: readonly Endpoint[], isCurrent: (row: Pro
     // The application menu asks for the settings of the project that is open.
     useEffect(
         () =>
-            useUi.subscribe(() => {
+            projectSettingsAsk.store.subscribe(() => {
                 // Read now and not off the change: another menu on screen may have answered the ask already.
                 if (!projectSettingsAsk.isOpen()) {
                     return;

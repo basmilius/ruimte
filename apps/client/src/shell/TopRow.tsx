@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { hasLogoMenu, hasOverlayControls } from '@/desktop/bridge';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
 import { ProjectMenu } from '@/project/ProjectMenu';
+import { StationMenu } from '@/shell/menu/StationMenu';
 import { SIDEBAR_WIDTH_PX, SidebarGlow } from '@/sidebar/SidebarGlow';
 import { SidebarToggle } from '@/sidebar/SidebarToggle';
-import { StationMenu } from '@/sidebar/StationMenu';
 import { useDiagram } from '@/state/diagram';
 import { useDrawing } from '@/state/drawing';
 import { useProject } from '@/state/project';
@@ -14,7 +14,7 @@ import { useSettings } from '@/state/settings';
 import { useShownPanel, useUi } from '@/state/ui';
 import { IS_STATION } from '@/station';
 
-const ProjectTabs = lazyNamed(() => import('@/project/ProjectTabs'), 'ProjectTabs');
+const ProjectTabs = lazyNamed(() => import('@/shell/ProjectTabs'), 'ProjectTabs');
 
 /*
  * The band above the work: the project, and beside it the bar of a lone cell, which the cell draws in

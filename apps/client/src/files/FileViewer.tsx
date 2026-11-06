@@ -1,15 +1,13 @@
-import { ErrorBoundary, lazyNamed, LazyBoundary } from '@adecore/ui';
+import { ErrorBoundary, LazyBoundary } from '@adecore/ui';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DiffFile } from '@/files/DiffFile';
 import { FileBody } from '@/files/FileBody';
 import { keptTabs, shownAfter } from '@/files/kept-tabs';
 import { basenameOf } from '@/paths/file-path';
-import { isArtifactTab, isDatabaseTab, useFiles, type Tab } from '@/state/files';
+import { isFileTab, useFiles, type Tab } from '@/state/files';
+import { tabBodyRegistry, type TabBodyDefinition } from '@/state/tab-bodies';
 import { fixedSlot, FileToolbarSlotProvider, useFileToolbarSlot } from '@/surface/panels/file-toolbar-slot';
-
-const DatabaseTabBody = lazyNamed(() => import('@/database/DatabaseTabBody'), 'DatabaseTabBody');
-const ArtifactView = lazyNamed(() => import('@/output/ArtifactView'), 'ArtifactView');
 
 /*
  * One tab the viewer keeps drawn. One that is not up is invisible and inert, and its controls go into a
@@ -27,14 +25,36 @@ function KeptTab({ up, children }: { up: boolean; children: ReactNode }) {
     );
 }
 
+/* A tab that is not a file draws what the feature of its kind registered, with a failure of its own words; a file or a diff is drawn here. */
+function drawn(bodies: readonly TabBodyDefinition[], entry: Tab) {
+    for (const body of bodies) {
+        const content = body.render(entry);
+        if (content !== null) {
+            return (
+                <ErrorBoundary label={body.failed()} resetKeys={[entry.key]} className="h-full">
+                    <LazyBoundary>{content}</LazyBoundary>
+                </ErrorBoundary>
+            );
+        }
+    }
+    if (!isFileTab(entry)) {
+        return null;
+    }
+    if (entry.view) {
+        return <DiffFile key={entry.key} tabKey={entry.key} path={entry.path} name={basenameOf(entry.path)} view={entry.view} />;
+    }
+    return <FileBody key={entry.key} path={entry.path} name={basenameOf(entry.path)} on="tab" tabKey={entry.key} />;
+}
+
 /*
  * The body of a host's loose views: whichever tab is up. The tabs shown last keep their editor hidden
  * underneath, so going back to one finds its colors and folds as they were. A table with unsubmitted
  * edits stays drawn however long ago it was up, or the edits would go with it.
  */
 export function FileViewer({ active, ids }: { active: string | null; ids: readonly string[] }) {
-    const { t } = useTranslation('databases');
-    const { t: to } = useTranslation('output');
+    // Read again with the language, since the words of a failed body come from the feature that owns it.
+    useTranslation();
+    const bodies = tabBodyRegistry.useAll();
     const pool = useFiles((s) => s.tabs);
     const unsubmitted = useFiles((s) => s.unsubmitted);
     const [shown, setShown] = useState<readonly string[]>([]);
@@ -54,23 +74,7 @@ export function FileViewer({ active, ids }: { active: string | null; ids: readon
         <div className="relative min-h-0 min-w-0 grow">
             {kept.map((entry) => (
                 <KeptTab key={entry.key} up={entry.key === up}>
-                    {isDatabaseTab(entry) ? (
-                        <ErrorBoundary label={t('tab.failed')} resetKeys={[entry.key]} className="h-full">
-                            <LazyBoundary>
-                                <DatabaseTabBody tab={entry} />
-                            </LazyBoundary>
-                        </ErrorBoundary>
-                    ) : isArtifactTab(entry) ? (
-                        <ErrorBoundary label={to('view.failed')} resetKeys={[entry.key]} className="h-full">
-                            <LazyBoundary>
-                                <ArtifactView artifactId={entry.artifactId} machineId={entry.machineId} />
-                            </LazyBoundary>
-                        </ErrorBoundary>
-                    ) : entry.view ? (
-                        <DiffFile key={entry.key} tabKey={entry.key} path={entry.path} name={basenameOf(entry.path)} view={entry.view} />
-                    ) : (
-                        <FileBody key={entry.key} path={entry.path} name={basenameOf(entry.path)} on="tab" tabKey={entry.key} />
-                    )}
+                    {drawn(bodies, entry)}
                 </KeptTab>
             ))}
         </div>

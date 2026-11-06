@@ -12,6 +12,7 @@ import { startRemoteStatusWatch } from '@/controllers/remote-status';
 import { desktop } from '@/desktop/bridge';
 import { startDeviceOperatedWatch } from '@/devices/operated';
 import { connectFormat } from '@/format/source';
+import { onboardingDialog } from '@/onboarding/dialog';
 import { startOnboarding } from '@/onboarding/open';
 import { startPlanPanelWatch } from '@/plan/plan-panel-watch';
 import { startProcessWarnings } from '@/processes/watch';
@@ -147,7 +148,11 @@ const STEPS: readonly Step[] = [
     { name: 'autoRegistration', start: startAutoRegistration },
     { name: 'removal', start: startRemovalWatch },
     { name: 'onboarding', start: startOnboarding },
-    { name: 'agentIntegrations', start: startAgentIntegrationsPrompt },
+    {
+        name: 'agentIntegrations',
+        start: () =>
+            startAgentIntegrationsPrompt({ up: () => onboardingDialog.get() !== null, subscribe: (listener) => onboardingDialog.store.subscribe(listener) })
+    },
     { name: 'wakeReconnect', start: () => startWakeReconnect(pool) },
     { name: 'providerDetection', start: startProviderDetection },
     { name: 'lastSeen', start: startLastSeen },

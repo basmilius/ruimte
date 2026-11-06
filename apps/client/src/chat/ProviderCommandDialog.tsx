@@ -14,7 +14,7 @@ function closeCommand(): void {
  * needs no project. The command is typed and never sent: nothing starts a command a person did not run.
  */
 export function ProviderCommandDialog() {
-    const request = providerCommandDialog.use((request) => request);
+    const request = providerCommandDialog.useRequest((request) => request);
 
     return (
         <CliTerminalDialog request={request} keyOf={(shown) => `${shown.endpointId}:${shown.command}`} close={closeCommand}>

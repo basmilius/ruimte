@@ -5,6 +5,7 @@ import { Layers } from 'lucide-react';
 import { createViewAction, duplicateViewAction, placeViewOnCanvasAction, toggleFlagAction } from '@/action-port/person-actions';
 import { defineBehaviors, takeKey, type CommandBehavior, type KeyHandler } from '@/commands/behavior';
 import type { GeneratedCommands } from '@/commands/generated';
+import { viewDialog } from '@/project/dialogs';
 import { askDeleteView, askViewSettings, newSubheaderView, openSessionInKind, setViewShared, showView, viewAtIndex } from '@/project/views';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
@@ -12,7 +13,6 @@ import { useUi } from '@/state/ui';
 import { VIEW_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { transportFor } from '@/transport';
 import { withActiveView } from '@/views/active-view';
-import { viewDialog } from '@/views/dialogs';
 import { GO_VIEW_PREFIX } from '@/views/menu-extras';
 
 function creating(kind: Parameters<typeof createViewAction>[0]): CommandBehavior {

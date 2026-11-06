@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { RENDERED_DOC_COMMENTS } from '@/features';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { CodeThemePreview } from '@/settings/panes/CodeSection';
-import { SettingSwitchRow } from '@/settings/SettingSwitchRow';
 import { useCodeTheme } from '@/state/code-theme';
 import { CODE_LINE_HEIGHT_RANGE, FONT_SIZE_RANGE, MONO_FONTS, TRAILING_WHITESPACE_MODES, type TrailingWhitespaceMode, useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
+import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
 
 const CODE_SIZE_PREVIEW = ['export function greet(name: string): string {', '    return `Hello ${name}.`;', '}'].join('\n');
 

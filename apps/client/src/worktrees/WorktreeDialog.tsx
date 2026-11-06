@@ -10,7 +10,7 @@ import { branchFromTitle } from '@/worktrees/new-worktree-chat';
 /* Binds a group to a git worktree of the project's repository; every node made inside it starts there. */
 export function WorktreeDialog() {
     const { t } = useTranslation('shell');
-    const groupId = worktreeBindDialog.use((request) => request);
+    const groupId = worktreeBindDialog.useRequest((request) => request);
     const close = worktreeBindDialog.set;
     const group = useCanvas((s) => (groupId ? s.nodes[groupId] : undefined));
     const folder = useProject((s) => s.current?.folder ?? null);

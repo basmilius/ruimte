@@ -1,6 +1,7 @@
 import type { EditorIndentation } from '@adecore/editor';
 import { absoluteOf } from '@ruimte/contracts';
 import type { FsReadResult } from '@ruimte/contracts';
+import { escapeRegExp } from '@/find/escape-regexp';
 import { dirnameOf, isUnderFolder } from '@/paths/file-path';
 
 export const DEFAULT_INDENTATION: EditorIndentation = { tabSize: 4, insertSpaces: true };
@@ -117,11 +118,6 @@ export function globToRegExp(glob: string): RegExp {
         }
     }
     return new RegExp(`^${source}$`);
-}
-
-/* A regular expression finds the text it was given, not a pattern made of it. */
-export function escapeRegExp(text: string): string {
-    return text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
 }
 
 function escapeSet(text: string): string {

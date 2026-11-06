@@ -14,9 +14,9 @@ import { registerFocusedEditor } from '@/surface/panels/focused-editor';
 import { openCanvasPage, menuItem, type CanvasPage } from '../../../testing/canvas-page';
 import { clickOn, openSubmenu, until } from '../../../testing/dom';
 import { FakeMachine } from '../../../testing/fake-machine';
-import { StationMenu } from '../../sidebar/StationMenu';
 import { menuContext } from './context';
 import { menuModel } from './model';
+import { StationMenu } from './StationMenu';
 
 const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [], texts: [], edges: [], layouts: [] };
 const LEFT: ProjectNode = { id: 'left', kind: 'note', title: 'Left', body: '', x: 0, y: 0, w: 200, h: 100 };

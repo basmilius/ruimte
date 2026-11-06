@@ -5,7 +5,7 @@ import { useSettings } from '@/state/settings';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { useSidebarProjects } from './sidebar-projects';
+import { useSidebarProjects } from '../project/sidebar-projects';
 
 const background: ProjectSummary = {
     projectId: 'background',

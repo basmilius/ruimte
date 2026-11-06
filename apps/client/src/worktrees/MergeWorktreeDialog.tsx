@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
 import { cancelGitRunAction } from '@/action-port/person-actions';
 import { agentsEndedWith } from '@/agents/end-children';
-import { conflictsDialog } from '@/conflicts/dialog';
 import { useProjectNodes, worktreeLists, type WorktreeNode } from '@/controllers/worktrees';
 import { nodeWorking } from '@/state/agent-work';
 import { useEndpointId } from '@/state/current-endpoint';
@@ -20,7 +19,7 @@ import { useTransport } from '@/workspace/context';
 import { nextActionId, phaseLabel } from '@/worktree-rules/git-actions';
 import { nodesInWorktree, worktreeSessionsOf } from '@/worktree-rules/worktree-rows';
 import type { WorktreeMergeRequest } from '@/worktrees/dialogs';
-import { worktreeMergeDialog } from '@/worktrees/dialogs';
+import { conflictsDialog, worktreeMergeDialog } from '@/worktrees/dialogs';
 import { inspectWorktrees, nodeNames } from '@/worktrees/worktree-inspection';
 import {
     checkedOutBranch,
@@ -47,7 +46,7 @@ type Reading = { request: WorktreeMergeRequest; worktrees: Worktree[]; error: { 
  */
 export function MergeWorktreeDialog() {
     const { t } = useTranslation(['shell', 'common']);
-    const request = worktreeMergeDialog.use((request) => request);
+    const request = worktreeMergeDialog.useRequest((request) => request);
     const endpointId = useEndpointId();
     const transport = useTransport();
     const strategy = useSettings((s) => s.worktreeMergeStrategy);

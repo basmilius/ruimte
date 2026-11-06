@@ -39,3 +39,12 @@ export const WORKTREE_DIALOGS: readonly DialogContribution[] = [
     { id: 'worktree-merge', surface: 'dialog', component: MergeWorktreeDialog },
     { id: 'worktree-new-chat', surface: 'dialog', component: NewWorktreeChatDialog }
 ];
+
+/* The checkout whose unmerged files are being resolved, and the file the overlay opens on. */
+export interface ConflictRequest {
+    cwd: string;
+    path?: string;
+}
+
+/* The checkout whose conflicts are open in the overlay; null while it is closed. A merge that stops on conflicts opens it, so it sits beside the merge. */
+export const conflictsDialog = createDialogState<ConflictRequest>();

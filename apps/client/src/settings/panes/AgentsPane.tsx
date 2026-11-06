@@ -18,8 +18,8 @@ import {
 } from '@/controllers/keep-awake';
 import { MachineSwitchSection } from '@/machine-ui/MachineSwitchSection';
 import { SettingsSection } from '@/machines/SettingsSection';
-import { SettingSwitchRow } from '@/settings/SettingSwitchRow';
 import { useUi } from '@/state/ui';
+import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
 
 /* Both mode rows offer the same choices, and each one explains itself in the popup. Built while the
    pane draws, so the words are the ones the interface is in right now. */

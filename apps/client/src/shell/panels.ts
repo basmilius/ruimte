@@ -47,7 +47,7 @@ function entriesOf(registered: readonly PanelDefinition[], contributed: readonly
 
 export function usePanelEntries(): readonly PanelEntry[] {
     return entriesOf(
-        panelRegistry.use(),
+        panelRegistry.useAll(),
         useContributions((state) => state.panels)
     );
 }

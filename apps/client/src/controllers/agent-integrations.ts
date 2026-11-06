@@ -1,8 +1,7 @@
 import { messageOf } from '@adecore/ui';
 import type { AgentIntegration, AgentIntegrationFile, AgentIntegrationReport, AgentIntegrationsSummary, AgentKind } from '@ruimte/contracts';
 import { useState } from 'react';
-import { agentIntegrationsDialog } from '@/agents/dialogs';
-import { onboardingDialog } from '@/onboarding/dialog';
+import { createFlagState } from '@/registry/dialog-state';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { serverInfoOf, useServers } from '@/state/server';
@@ -67,19 +66,22 @@ export async function setAgentIntegration(provider: AgentKind, on: boolean): Pro
     return report;
 }
 
+/* The consent for the CLIs' global settings is up. */
+export const agentIntegrationsDialog = createFlagState();
+
 /*
  * Opens the consent dialog once this computer's machine has something to ask and the welcome is out of
  * the way, and closes it in a window whose question was answered elsewhere. "Not now" only closes it
  * for this run, so a home that stays undecided asks again at the next start.
  */
-export function startAgentIntegrationsPrompt(): () => void {
+export function startAgentIntegrationsPrompt(welcome: { up(): boolean; subscribe(listener: () => void): () => void }): () => void {
     let dismissed = false;
     const check = (): void => {
         if (!hasLocalMachine()) {
             return;
         }
         const pending = pendingReview(localSummary());
-        if (pending && !dismissed && !agentIntegrationsDialog.isOpen() && onboardingDialog.get() === null) {
+        if (pending && !dismissed && !agentIntegrationsDialog.isOpen() && !welcome.up()) {
             agentIntegrationsDialog.set(true);
         }
     };
@@ -90,7 +92,7 @@ export function startAgentIntegrationsPrompt(): () => void {
         }
         check();
     });
-    const offOnboarding = onboardingDialog.store.subscribe(check);
+    const offOnboarding = welcome.subscribe(check);
     check();
     return () => {
         offServers();

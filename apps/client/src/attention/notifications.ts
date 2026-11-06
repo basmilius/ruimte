@@ -1,8 +1,8 @@
 import { useChats } from '@adecore/agents-react/state';
 import type { EventMap } from '@ruimte/contracts';
 import i18next from 'i18next';
+import { openSidebarTarget } from '@/project/sidebar-navigation';
 import { revealNode } from '@/project/views';
-import { openSidebarTarget } from '@/sidebar/sidebar-navigation';
 import { subscribeChatStatuses } from '@/state/chats';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { seenNodeIds } from '@/state/in-sight';

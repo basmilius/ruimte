@@ -6,7 +6,7 @@ export interface Registry<Item extends { readonly id: string }> {
     all(): readonly Item[];
     find(id: string): Item | undefined;
     /* The items as a render sees them: a feature that registers later redraws what read the list. */
-    use(): readonly Item[];
+    useAll(): readonly Item[];
     /* Empties the registry, for a test that registers its own items. */
     clear(): void;
 }
@@ -41,7 +41,7 @@ export function createRegistry<Item extends { readonly id: string }>(name: strin
         },
         all: () => items,
         find: (id) => items.find((item) => item.id === id),
-        use: () => useSyncExternalStore(subscribe, () => items),
+        useAll: () => useSyncExternalStore(subscribe, () => items),
         clear() {
             items = [];
             for (const listener of listeners) {

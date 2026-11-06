@@ -22,7 +22,7 @@ import { isDatabaseTab } from '@/state/files';
 import { isLooseView, viewGlyphOf, type CellView } from '@/surface/cell-view';
 import { FileToolbarSlotProvider } from '@/surface/panels/file-toolbar-slot';
 import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
-import { SplitItems, ViewMenuItems } from '@/views/ViewMenuItems';
+import { SplitItems, ViewMenuItems } from '@/view-menu/ViewMenuItems';
 
 /* What a cell is: its tabs when it hosts them, or the glyph and the name of the view. */
 function CellTitle({ at, view, tabs, title }: { at: CellAt; view: CellView; tabs: readonly string[] | undefined; title: string | undefined }) {

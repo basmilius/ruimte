@@ -32,7 +32,7 @@ import { isLooseView, viewGlyphOf, type LooseCellView } from '@/surface/cell-vie
 import { StatusDot } from '@/surface/StatusDot';
 import { databaseTabTitle } from '@/surface/tab-look';
 import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
-import { ViewMenuItems } from '@/views/ViewMenuItems';
+import { ViewMenuItems } from '@/view-menu/ViewMenuItems';
 
 interface TabShellProps {
     id: string;

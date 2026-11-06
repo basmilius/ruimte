@@ -17,8 +17,8 @@ import {
 import { askBeforeEndingAgents } from '@/agents/end-children';
 import { GRID, type Point } from '@/canvas-model/math';
 import { basenameOf } from '@/paths/file-path';
+import { renamingView, viewDialog } from '@/project/dialogs';
 import { filesOfView } from '@/project/view-deletion';
-import { renamingView } from '@/sidebar/dialogs';
 import { focusedCanvas, liveCanvas, revealWhenItLands } from '@/state/canvas';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { databaseTargetOf, databaseViewName } from '@/state/database-view-name';
@@ -33,7 +33,6 @@ import { useToasts } from '@/state/toasts';
 import { closeAfterSaving } from '@/state/unsaved-close';
 import { nodesOfView } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
-import { viewDialog } from '@/views/dialogs';
 
 export function showView(id: string, options: { newTab?: boolean } = {}): void {
     // Picking a view is how a person leaves Routines, so it goes before the view shows.

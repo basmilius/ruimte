@@ -1,5 +1,8 @@
+import { DATABASE_TAB_BODY } from '@/database/tab-body';
 import { InlineEditFeature } from '@/editor-ai/inline-edit';
 import { provideInlineEdit } from '@/language/ruimte-editor-language';
+import { ARTIFACT_TAB_BODY } from '@/output/tab-body';
+import { tabBodyRegistry } from '@/state/tab-bodies';
 import { installPanels } from '@/wiring/panels';
 import { installWorkspaceCommands } from '@/wiring/workspace-commands';
 import { installWorkspaceDialogs } from '@/wiring/workspace-dialogs';
@@ -18,6 +21,7 @@ export function installWorkspace(): void {
     installed = true;
     provideInlineEdit((language) => new InlineEditFeature(language));
     installPanels();
+    tabBodyRegistry.add(DATABASE_TAB_BODY, ARTIFACT_TAB_BODY);
     installWorkspaceEffects();
     installWorkspaceDialogs();
     installWorkspaceCommands();

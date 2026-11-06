@@ -5,7 +5,6 @@ import { Archive, ChevronsDownUp, ChevronsUpDown, Folder, GitBranch, GitMerge, G
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ignoreRefusal, perform } from '@/action-port/perform';
-import { conflictsDialog } from '@/conflicts/dialog';
 import { assumeStaged, useGitCheckouts, useProjectRepos, visibleRepos, withoutNestedCheckouts, type GitCheckoutRef } from '@/controllers/git-repos';
 import { useProjectNodes, useWorktrees, worktreeLists } from '@/controllers/worktrees';
 import { openInSystemBrowser } from '@/desktop/bridge';
@@ -37,7 +36,7 @@ import { PanelHeaderActions, PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeade
 import { useTransport } from '@/workspace/context';
 import { isUnmergedRefusal, popStashStep, pushButton, pushable, pushEntries, type CommitCandidate } from '@/worktree-rules/git-actions';
 import { nodeNames, nodesInWorktree, worktreeBase, worktreeDiffTab } from '@/worktree-rules/worktree-rows';
-import { worktreeMergeDialog, worktreeRemovalDialog } from '@/worktrees/dialogs';
+import { conflictsDialog, worktreeMergeDialog, worktreeRemovalDialog } from '@/worktrees/dialogs';
 import { useWorktreeInspection } from '@/worktrees/use-worktree-inspection';
 import { WorktreeBar, WorktreeInspectDialog, type WorktreeActions } from '@/worktrees/WorktreeMenu';
 

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { Editor, EditorRange } from '@adecore/editor';
 import { EMPTY_FIND_QUERY } from '@adecore/editor-react/models';
-import { seedFromSelection } from '@/files/use-editor-find';
+import { seedFromSelection } from '@/find/use-editor-find';
 
 function editorWith(text: string, range: EditorRange): Editor {
     const offset = (line: number, character: number): number => text.split('\n').slice(0, line).join('\n').length + (line > 0 ? 1 : 0) + character;

@@ -48,7 +48,7 @@ type Step =
  * client, read here and written there. The machines never talk to each other for it.
  */
 export function AddToMachineDialog() {
-    const request = addToMachineDialog.use((request) => request);
+    const request = addToMachineDialog.useRequest((request) => request);
     const close = (): void => addToMachineDialog.set(null);
     return (
         <Dialog.Root open={request !== null} onOpenChange={(open) => !open && close()}>

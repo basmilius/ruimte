@@ -1,13 +1,13 @@
 import type { ChatUiLinkReading } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { ignoreRefusal, perform } from '@/action-port/perform';
-import { conflictsDialog } from '@/conflicts/dialog';
 import { openInSystemBrowser } from '@/desktop/bridge';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
+import { conflictsDialog } from '@/worktrees/dialogs';
 
 function refuse(key: 'elsewhere' | 'invalidUrl'): void {
     useToasts.getState().show({ kind: 'error', title: i18next.t(`chat:uiLink.${key}`) });

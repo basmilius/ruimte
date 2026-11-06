@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { foldedProjects, moveInOrder, movableKeys, placeSeparators, separatorKey } from './sidebar-projects';
+import { foldedProjects, moveInOrder, movableKeys, placeSeparators, separatorKey } from '../project/sidebar-projects';
 
 describe('moveInOrder', () => {
     test('moves a project among the ones on screen', () => {

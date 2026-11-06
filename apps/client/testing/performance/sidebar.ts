@@ -1,5 +1,5 @@
 import { ProjectSidebarResultSchema, type EventMap, type EventType, type RequestMap, type RequestType, type SessionStatusEvent } from '@ruimte/contracts';
-import { SidebarWatch } from '../../src/sidebar/sidebar-watch';
+import { SidebarWatch } from '../../src/project/sidebar-watch';
 import type { Transport } from '../../src/transport-api/transport';
 import { median } from './bench';
 

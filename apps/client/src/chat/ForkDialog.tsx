@@ -51,7 +51,7 @@ import { NodeMachineScope } from '@/workspace/node-machine';
  */
 export function ForkDialog() {
     const { t } = useTranslation('shell');
-    const fork = forkDialog.use((request) => request);
+    const fork = forkDialog.useRequest((request) => request);
     const close = (): void => forkDialog.set(null);
     return (
         <Dialog.Root open={fork !== null} onOpenChange={(open) => !open && close()}>

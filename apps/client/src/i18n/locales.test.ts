@@ -132,7 +132,7 @@ describe('the translation files', () => {
 });
 
 test('starter screens keep their visible prose in translation files', async () => {
-    for (const path of ['drawing/DrawingView.tsx', 'project/ProjectStartScreen.tsx', 'agents/ProviderRows.tsx']) {
+    for (const path of ['drawing/DrawingView.tsx', 'shell/ProjectStartScreen.tsx', 'agents/ProviderRows.tsx']) {
         const text = await Bun.file(join(HERE, '..', path)).text();
         const prose: string[] = [];
         new Visitor({

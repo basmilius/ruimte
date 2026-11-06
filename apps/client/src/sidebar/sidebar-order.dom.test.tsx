@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectSummary } from '@ruimte/contracts';
 import { act } from 'react';
-import { SIDEBAR_ORDER_STORAGE_KEY, SIDEBAR_SEPARATORS_STORAGE_KEY, useSidebarProjects } from '@/sidebar/sidebar-projects';
+import { SIDEBAR_ORDER_STORAGE_KEY, SIDEBAR_SEPARATORS_STORAGE_KEY, useSidebarProjects } from '@/project/sidebar-projects';
 import { useSettings } from '@/state/settings';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { menuItem } from '../../testing/dom-helpers';

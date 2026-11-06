@@ -59,7 +59,7 @@ function useLocalMachine(): Endpoint | null {
  */
 export function OnboardingDialog() {
     const { t } = useTranslation('onboarding');
-    const step = onboardingDialog.use((request) => request);
+    const step = onboardingDialog.useRequest((request) => request);
     // What the popup keeps showing while it animates closed, after the step is gone.
     const [shown, setShown] = useState(step);
     const titleId = useId();

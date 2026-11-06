@@ -9,7 +9,7 @@ import { useFiles } from '@/state/files';
 import { setTabPinned, tabsToClose } from '@/state/tab-close';
 import { useCurrentProjectKey, useViewPins } from '@/state/view-pins';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
-import { SplitItems } from '@/views/ViewMenuItems';
+import { SplitItems } from '@/view-menu/ViewMenuItems';
 
 /* Whether a tab of a host is pinned, for a loose tab in the pool and for a view of the project in this client's pins. */
 function usePinnedOf(): (id: string) => boolean {

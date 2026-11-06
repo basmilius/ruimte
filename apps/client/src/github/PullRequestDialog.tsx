@@ -42,7 +42,7 @@ import { useTransport } from '@/workspace/context';
  */
 export function PullRequestDialog() {
     const { t } = useTranslation('panels');
-    const request = pullRequestDialog.use((request) => request);
+    const request = pullRequestDialog.useRequest((request) => request);
     const close = (): void => pullRequestDialog.set(null);
     return (
         <Dialog.Root open={request !== null} onOpenChange={(open) => !open && close()}>

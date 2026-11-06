@@ -29,7 +29,7 @@ import { useProject } from '@/state/project';
 import { useProjectList, type ProjectRow } from '@/state/project-list';
 import { useServers } from '@/state/server';
 import { useSnoozes } from '@/state/snooze';
-import { useSidebarMachines } from '../sidebar/sidebar-projects';
+import { useSidebarMachines } from '../project/sidebar-projects';
 
 function CurrentProjectAttention() {
     return <WaitingCount count={useWaitingCount()} />;

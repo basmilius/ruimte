@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
-import { conflictsDialog } from '@/conflicts/dialog';
+import { conflictsDialog } from '@/worktrees/dialogs';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { menuItem } from '../../testing/dom-helpers';
 import { FakeMachine } from '../../testing/fake-machine';

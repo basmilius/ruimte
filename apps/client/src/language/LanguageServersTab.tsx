@@ -13,8 +13,8 @@ import { report, serverDetail, sidecarDetails, useStatuses } from '@/language/se
 import { Dot, LogDialog, ServerActionButtons } from '@/language/ServerParts';
 import type { LanguageStatusTracker } from '@/language/status';
 import { actionsOf, groupedStatuses, isOwn, kindOf, nameOf, packageOf, toneOf } from '@/language/status-view';
+import { useWindowProjectLanguage } from '@/language/window-project-language';
 import { SettingsSection } from '@/machines/SettingsSection';
-import { useWindowProjectLanguage } from '@/settings/panes/window-project-language';
 import { useWindow, workspaceOf } from '@/workspace/window';
 
 /* The servers a person added on the machine of this window, for as long as the tab is up. */

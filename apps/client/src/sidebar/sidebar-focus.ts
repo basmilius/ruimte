@@ -1,5 +1,5 @@
 import { useProject } from '@/state/project';
-import { sidebarProjectKey } from './sidebar-projects';
+import { sidebarProjectKey } from '../project/sidebar-projects';
 
 /*
  * Moving the keyboard to a row of the sidebar, which is where leaving the body of a standalone view

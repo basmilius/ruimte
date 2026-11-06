@@ -16,9 +16,9 @@ import { isApplePlatform } from '@/desktop/bridge';
 import { saveMachineSetting } from '@/machine-ui/machine-setting';
 import { MachineSwitchSection } from '@/machine-ui/MachineSwitchSection';
 import { SettingsSection } from '@/machines/SettingsSection';
-import { SettingSwitchRow } from '@/settings/SettingSwitchRow';
 import { useEndpoints } from '@/state/endpoints';
 import { useSettings } from '@/state/settings';
+import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
 
 const STREAMING_MODES = ['words', 'blocks', 'whole'] as const;
 

@@ -62,7 +62,7 @@ const STALE_CODES: readonly string[] = ['move-refused', 'chat-busy', 'files-conf
  */
 export function MoveChatDialog() {
     const { t } = useTranslation('project');
-    const request = moveChatDialog.use((request) => request);
+    const request = moveChatDialog.useRequest((request) => request);
     const close = (): void => moveChatDialog.set(null);
     return (
         <Dialog.Root

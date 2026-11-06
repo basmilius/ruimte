@@ -6,9 +6,9 @@ import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { nodesOfView } from '@/state/view-nodes';
-import { sidebarNavigator } from '../surface/sidebar-target';
+import { sidebarNavigator } from '@/surface/sidebar-target';
 import { sidebarProjectKey, useSidebarProjects } from './sidebar-projects';
-export type { SidebarTarget } from '../surface/sidebar-target';
+export type { SidebarTarget } from '@/surface/sidebar-target';
 
 async function openProject(endpointId: string, projectId: string): Promise<'done' | 'failed'> {
     return (await perform('project.switch', { endpointId, projectId }).catch(ignoreRefusal)) === null ? 'failed' : 'done';

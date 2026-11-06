@@ -12,7 +12,7 @@ import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody } from '@/nodes/TerminalBody';
 import { usePage } from '@/nodes/use-page';
 import { newChatOn } from '@/project/new-chat';
-import { ProjectStartScreen } from '@/project/ProjectStartScreen';
+import { ProjectStartScreen } from '@/shell/ProjectStartScreen';
 import { SplitGrid } from '@/shell/SplitGrid';
 import { useDiagram } from '@/state/diagram';
 import { useDocument } from '@/state/document';

@@ -5,7 +5,7 @@ import { formatNumber } from '@adecore/ui/format';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isApplePlatform } from '@/desktop/bridge';
-import { escapeRegExp } from '@/files/editor-config';
+import { escapeRegExp } from '@/find/escape-regexp';
 import { openFocusedFind } from '@/find/hosts';
 import { lastFindQuery, type FindSeed, type FindState } from '@/find/use-find';
 import { requiredShortcut } from '@/surface/editor-keymap';

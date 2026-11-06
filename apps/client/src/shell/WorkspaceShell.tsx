@@ -4,6 +4,7 @@ import i18next from 'i18next';
 import { useEffect, useState } from 'react';
 import { WebviewParking } from '@/browser/WebviewParking';
 import { WORKSPACE_CHAT_HOST } from '@/chat/workspace-host';
+import { hasLogoMenu } from '@/desktop/bridge';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { useServerPrompts } from '@/language/use-server-prompts';
 import { MachineLostScreen } from '@/machine-ui/MachineLostScreen';
@@ -14,6 +15,7 @@ import { ProjectSwitchScreen } from '@/project/ProjectSwitchScreen';
 import { workspaceDialogs } from '@/registry/dialogs';
 import { workspaceEffects } from '@/registry/workspace-effects';
 import { useCanvasShortcuts } from '@/shell/canvas-shortcuts';
+import { StationMenu } from '@/shell/menu/StationMenu';
 import { Panel } from '@/shell/Panel';
 import { ShellRail } from '@/shell/ShellRail';
 import { TopRow } from '@/shell/TopRow';
@@ -22,6 +24,7 @@ import { Sidebar } from '@/sidebar/Sidebar';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useShownPanel, useUi } from '@/state/ui';
+import { IS_STATION } from '@/station';
 import { CellOverlayLayer } from '@/surface/CellOverlay';
 import { FileToolbarSlotProvider } from '@/surface/panels/file-toolbar-slot';
 import { FLOATING_FAILURE, failed } from '@/surface/surface-failure';
@@ -41,7 +44,7 @@ startBytesWorker();
 export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
     /* Once for the whole project rather than once per cell, since a grid draws up to nine canvases. */
     useCanvasShortcuts();
-    const dialogs = workspaceDialogs.use();
+    const dialogs = workspaceDialogs.useAll();
     useRemoteHolds(workspace.connection.endpointId);
     useServerPrompts(workspace.connection.transport);
     /* The window's toolbar is where a file view puts its controls, and the body that draws them sits
@@ -60,7 +63,7 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
     useEffect(() => {
         workspaceShown();
     }, [workspace]);
-    const effects = workspaceEffects.use();
+    const effects = workspaceEffects.useAll();
     useEffect(() => {
         const stops = effects.map((effect) => effect.mounted?.());
 
@@ -89,7 +92,7 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                         sidebarOpen={sidebarOpen}
                         sidebar={
                             <ErrorBoundary label={i18next.t('common:state.sidebarFailed')} className="h-full w-[248px] shrink-0 border-r border-border">
-                                <Sidebar />
+                                <Sidebar brandMenu={IS_STATION || hasLogoMenu() ? <StationMenu variant="wordmark" /> : undefined} />
                             </ErrorBoundary>
                         }
                         toolbar={

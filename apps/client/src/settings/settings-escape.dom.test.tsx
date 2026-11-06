@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { projectSettingsAsk } from '@/project/dialogs';
-import { viewDialog } from '@/views/dialogs';
+import { viewDialog } from '@/project/dialogs';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';

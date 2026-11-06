@@ -6,7 +6,7 @@ interface DialogStore<Request> {
 
 /* The state of one dialog: what it was asked for, or null while it is closed. The feature that owns the dialog owns this too. */
 export interface DialogState<Request> {
-    use<Selected>(select: (request: Request | null) => Selected): Selected;
+    useRequest<Selected>(select: (request: Request | null) => Selected): Selected;
     get(): Request | null;
     open(request: Request): void;
     close(): void;
@@ -15,12 +15,20 @@ export interface DialogState<Request> {
     readonly store: UseBoundStore<StoreApi<DialogStore<Request>>>;
 }
 
+const openChecks: Array<() => boolean> = [];
+
+/* Whether any dialog made with these factories is up, for a key that must wait while a person answers one. */
+export function anyDialogOpen(): boolean {
+    return openChecks.some((isOpen) => isOpen());
+}
+
 export function createDialogState<Request>(): DialogState<Request> {
     const store = create<DialogStore<Request>>(() => ({ request: null }));
     const set = (request: Request | null): void => store.setState({ request });
+    openChecks.push(() => store.getState().request !== null);
 
     return {
-        use: (select) => store((state) => select(state.request)),
+        useRequest: (select) => store((state) => select(state.request)),
         get: () => store.getState().request,
         open: (request) => set(request),
         close: () => set(null),
@@ -42,6 +50,7 @@ export interface FlagState {
 export function createFlagState(): FlagState {
     const store = create<{ open: boolean }>(() => ({ open: false }));
     const set = (open: boolean): void => store.setState({ open });
+    openChecks.push(() => store.getState().open);
 
     return {
         useOpen: () => store((state) => state.open),
