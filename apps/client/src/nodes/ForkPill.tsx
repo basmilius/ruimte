@@ -4,7 +4,7 @@ import { Icon, Pill, Tooltip } from '@adecore/ui';
 import { formatDayClock } from '@adecore/ui/format';
 import { GitFork } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useChatPlace } from '@/chat/use-chat-place';
+import { useChatPlace } from '@/project/use-chat-place';
 
 /*
  * Where a forked chat came from, in its node's header or its view's toolbar. Pressing it leads back

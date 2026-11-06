@@ -1,6 +1,6 @@
 import { runtimeModeHint, runtimeModeLabel } from '@adecore/agents-react/chat';
 import { Pill, Tooltip } from '@adecore/ui';
-import { ForkPill } from '@/chat/ForkPill';
+import { ForkPill } from '@/nodes/ForkPill';
 import { ComputerIndicator } from '@/computer/ComputerIndicator';
 import { useNodeComputerSession } from '@/computer/indicator';
 import { DesignActions } from '@/design/DesignActions';

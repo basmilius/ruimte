@@ -1,3 +1,4 @@
+import type { ProjectView } from '@ruimte/contracts';
 import { DeviceBody, DevicePlate, DeviceToolbar } from '@/devices/DeviceBody';
 import type { NodeBodyProps, NodeHeaderProps } from '@/registry/node-kinds';
 
@@ -7,4 +8,8 @@ export function DeviceNodeBody({ id, live, renderBody }: NodeBodyProps) {
 
 export function DeviceNodeToolbar({ id, narrow }: NodeHeaderProps) {
     return <DeviceToolbar id={id} narrow={narrow} />;
+}
+
+export function DeviceViewBody({ view }: { view: ProjectView }) {
+    return <DeviceBody id={view.id} />;
 }

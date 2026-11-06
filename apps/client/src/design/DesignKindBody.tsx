@@ -1,3 +1,4 @@
+import type { ProjectDesignView } from '@ruimte/contracts';
 import { lazyNamed, LazyBoundary } from '@adecore/ui';
 import type { NodeBodyProps } from '@/registry/node-kinds';
 
@@ -7,6 +8,16 @@ export function DesignBody({ id, focused }: NodeBodyProps) {
     return (
         <LazyBoundary>
             <DesignNodeBody id={id} focused={focused} />
+        </LazyBoundary>
+    );
+}
+
+const DesignView = lazyNamed(() => import('@/design/DesignView'), 'DesignView');
+
+export function DesignViewKindBody({ view, focused }: { view: ProjectDesignView; focused: boolean }) {
+    return (
+        <LazyBoundary>
+            <DesignView view={view} focused={focused} />
         </LazyBoundary>
     );
 }

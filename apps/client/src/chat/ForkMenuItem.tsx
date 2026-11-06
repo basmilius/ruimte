@@ -5,7 +5,7 @@ import { GitFork, MessageSquareShare, Undo2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
 import { openForkDialog } from '@/chat/open-fork';
-import { useChatPlace } from '@/chat/use-chat-place';
+import { useChatPlace } from '@/project/use-chat-place';
 import { useToasts } from '@/state/toasts';
 
 /*

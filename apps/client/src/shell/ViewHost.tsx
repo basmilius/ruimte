@@ -1,34 +1,23 @@
-import { ErrorBoundary, lazyNamed, LazyBoundary } from '@adecore/ui';
-import { isArtifactView, isCanvasView, isDatabaseView, isDesignView, isFileView, type ProjectView } from '@ruimte/contracts';
-import { useEffect, useRef, useState } from 'react';
+import { ErrorBoundary } from '@adecore/ui';
+import { isCanvasView, type ProjectView } from '@ruimte/contracts';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Canvas } from '@/canvas/Canvas';
-import { DeviceBody } from '@/devices/DeviceBody';
-import { ExtensionViewBody } from '@/extensions/ExtensionNodeBody';
-import { FileSurface } from '@/files/FileSurface';
 import { FileViewer } from '@/files/FileViewer';
-import { BrowserFallback } from '@/nodes/BrowserBody';
-import { ChatBody } from '@/nodes/ChatBody';
-import { TerminalBody } from '@/nodes/TerminalBody';
-import { usePage } from '@/nodes/use-page';
 import { newChatOn } from '@/project/new-chat';
+import { viewKindRegistry } from '@/registry/view-kinds';
 import { ProjectStartScreen } from '@/shell/ProjectStartScreen';
 import { SplitGrid } from '@/shell/SplitGrid';
 import { useDiagram } from '@/state/diagram';
 import { useDocument } from '@/state/document';
 import { useDrawing } from '@/state/drawing';
-import { extensionKeyOf } from '@/state/extension-registry';
 import { useFiles } from '@/state/files';
 import { isScratchProject, useProject } from '@/state/project';
 import { isLooseView, type CellView } from '@/surface/cell-view';
 
-const DrawingView = lazyNamed(() => import('@/drawing/DrawingView'), 'DrawingView');
-const DiagramView = lazyNamed(() => import('@/diagram/DiagramView'), 'DiagramView');
-const DatabaseViewBody = lazyNamed(() => import('@/database/DatabaseViewBody'), 'DatabaseViewBody');
-const ArtifactViewBody = lazyNamed(() => import('@/output/ArtifactViewBody'), 'ArtifactViewBody');
-const DesignView = lazyNamed(() => import('@/design/DesignView'), 'DesignView');
-
+/* A view the feature of its kind draws: the registry names the body, the host gives it the surface and the focus. */
 function StandaloneView({ view }: { view: ProjectView }) {
+    const kinds = viewKindRegistry.useAll();
     // `bodyFocused` is one flag for the whole grid, so without the cell every chat and terminal would grab it.
     const focused = useDocument((s) => s.bodyFocused && s.activeViewId === view.id);
     return (
@@ -37,43 +26,9 @@ function StandaloneView({ view }: { view: ProjectView }) {
             // A press anywhere in the body is the way back in, the way clicking a node's body is.
             onPointerDownCapture={() => useDocument.getState().setBodyFocused(true)}
         >
-            {/* A thread that runs the whole window is unreadable, so a chat of its own keeps a column
-                of content as wide as the person's reading width, centered, with the surface filling
-                what is left beside it. The scroller itself stays the width of the column, so its
-                scrollbar sits at the column's own edge (`.chat-column` in `styles.css`). The type is
-                the app's own: a thread reads the same here as it does in a node on the canvas. */}
-            {view.kind === 'chat' && (
-                <div className="chat-column flex h-full w-full flex-col">
-                    <ChatBody id={view.id} focused={focused} accessories={{ title: view.name }} />
-                </div>
-            )}
-            {view.kind === 'terminal' && <TerminalBody id={view.id} focused={focused} />}
-            {view.kind === 'browser' && <BrowserViewSurface id={view.id} />}
-            {view.kind === 'device' && <DeviceBody id={view.id} />}
-            {view.kind === 'unknown' && extensionKeyOf(view.raw) !== null && <ExtensionViewBody raw={view.raw} />}
-            {view.kind === 'drawing' && (
-                <LazyBoundary>
-                    <DrawingView id={view.id} />
-                </LazyBoundary>
-            )}
-            {view.kind === 'diagram' && (
-                <LazyBoundary>
-                    <DiagramView id={view.id} />
-                </LazyBoundary>
-            )}
-            {/* No column around it: prose centers itself at 768px inside its own renderer, and
-                code wants every pixel the window has. */}
-            {isFileView(view) && <FileSurface path={view.path} on="view" />}
-            {isArtifactView(view) && (
-                <LazyBoundary>
-                    <ArtifactViewBody view={view} />
-                </LazyBoundary>
-            )}
-            {isDesignView(view) && (
-                <LazyBoundary>
-                    <DesignView view={view} focused={focused} />
-                </LazyBoundary>
-            )}
+            {kinds.map((kind) => (
+                <Fragment key={kind.id}>{kind.render(view, focused)}</Fragment>
+            ))}
         </div>
     );
 }
@@ -113,13 +68,6 @@ function FilesSurface({ tabKey, ids }: { tabKey: string | null; ids: readonly st
     );
 }
 
-/* The page of a browser view is the parked element, placed over this whole column by the layer. A
-   view without an address has no page yet, so what is left under it is the splash. */
-function BrowserViewSurface({ id }: { id: string }) {
-    usePage(id);
-    return <BrowserFallback id={id} className="h-full" />;
-}
-
 /* SplitView keeps this view mounted while tabs, pane positions and maximization change. */
 export function ViewSurface({ view }: { view: CellView }) {
     const { t } = useTranslation('shell');
@@ -130,12 +78,6 @@ export function ViewSurface({ view }: { view: CellView }) {
         <ErrorBoundary key={view.id} label={t('viewHost.failed')} resetKeys={[view.id, rev, drawing, diagram]}>
             {isLooseView(view) ? (
                 <FilesSurface tabKey={view.id} ids={[view.id]} />
-            ) : isDatabaseView(view) ? (
-                <div className="absolute inset-0 bg-surface" onPointerDownCapture={() => useDocument.getState().setBodyFocused(true)}>
-                    <LazyBoundary>
-                        <DatabaseViewBody view={view} />
-                    </LazyBoundary>
-                </div>
             ) : isCanvasView(view) ? (
                 <Canvas />
             ) : (

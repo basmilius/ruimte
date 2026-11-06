@@ -13,7 +13,7 @@ import { openReference, useReferables } from '@/chat/referables';
 import { ReferenceGlyph } from '@/chat/ReferenceGlyph';
 import { openUiLink, openUiUrl } from '@/chat/ui-links';
 import { useTimelineFind } from '@/chat/use-chat-find';
-import { useChatPlace } from '@/chat/use-chat-place';
+import { useChatPlace } from '@/project/use-chat-place';
 import { useContextSources } from '@/context/sources';
 import { DesignComposerHeader } from '@/design/DesignChats';
 import { isApplePlatform } from '@/desktop/bridge';

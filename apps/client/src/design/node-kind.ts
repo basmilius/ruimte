@@ -1,6 +1,8 @@
-import { NodeChatPills } from '@/chat/NodeChatPills';
-import { DesignBody } from '@/design/DesignKindBody';
+import { isDesignView } from '@ruimte/contracts';
+import { NodeChatPills } from '@/nodes/NodeChatPills';
+import { DesignBody, DesignViewKindBody } from '@/design/DesignKindBody';
 import type { NodeKindDefinition } from '@/registry/node-kinds';
+import { viewKind } from '@/registry/view-kinds';
 
 export const DESIGN_NODE_KIND: NodeKindDefinition = {
     id: 'design',
@@ -9,3 +11,5 @@ export const DESIGN_NODE_KIND: NodeKindDefinition = {
     afterTitle: NodeChatPills,
     bodyClass: '[--text-sm--line-height:22px]'
 };
+
+export const DESIGN_VIEW_KIND = viewKind({ id: 'design', owns: isDesignView, body: DesignViewKindBody });
