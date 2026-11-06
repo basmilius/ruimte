@@ -257,7 +257,7 @@ export interface SummaryWiring {
     summarize(chatId: string): Promise<ChatSummarizeResult>;
 }
 
-/* The summaries of the daemon in one place, wired the same for `daemon.ts` and the test daemon. */
+/* The summaries of the daemon in one place. */
 export function wireSummaries(wiring: {
     chats: ChatManager;
     projects: Pick<ProjectHost, 'locate' | 'mutate'>;

@@ -4,14 +4,14 @@ import { guardWeriftTurn } from './pulsar/turn-guard.ts';
 import { armShutdownDeadline } from './shutdown-deadline.ts';
 import { noteMoment, noteShutdown, reportFatal, rememberSecret, watchProjects, type Launcher } from './telemetry/reporter.ts';
 import { COMPILED as compiled, VERSION } from './version.ts';
-import { wireDaemon } from './wiring/daemon.ts';
+import { wireDaemon } from './wire-daemon.ts';
 import { listenFirst } from './wiring/http.ts';
 import { productionSeams } from './wiring/production-seams.ts';
 import { loopbackUrls, type DaemonRuntime } from './wiring/runtime.ts';
 
 /*
  * Runs the daemon until a signal ends the process. The port is taken first, so every URL a session
- * is told is known before anything is wired (`wireDaemon`, `wiring/daemon.ts`).
+ * is told is known before anything is wired (`wireDaemon`, `wire-daemon.ts`).
  */
 export async function startDaemon(config: ServerConfig, launcher: Launcher = 'standalone'): Promise<void> {
     const doorway = listenFirst(config);

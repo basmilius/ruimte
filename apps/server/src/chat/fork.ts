@@ -793,7 +793,7 @@ function forkCanvas(content: ProjectContent, place: IndexedPlace, payload: ChatF
     return canvas;
 }
 
-/* The daemon's pieces a fork is made of, wired once for `daemon.ts` and the test daemon alike. */
+/* The daemon's pieces a fork is made of. */
 export function chatForkDeps(wiring: {
     chats: ChatManager;
     host: {

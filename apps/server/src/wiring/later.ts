@@ -3,7 +3,7 @@ import { Binding } from '../binding.ts';
 /*
  * The way a wiring module reaches a bundle that is made after it: `later.git()` gives the bundle, and
  * throws when the daemon has not wired it yet, so a call before then fails where it is made instead
- * of answering for a service that is not there. `provide` hands the bundle over; `daemon.ts` does
+ * of answering for a service that is not there. `provide` hands the bundle over; `wire-daemon.ts` does
  * that right after each wiring step.
  */
 export type Later<Bundles> = { readonly [Name in keyof Bundles]: () => Bundles[Name] };

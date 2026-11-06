@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
-import { tempHomes } from '../temp-home-test-helpers.ts';
-import { testRuntime, testSeams } from '../testing/test-seams.ts';
-import { wireDaemon } from './daemon.ts';
+import { tempHomes } from './temp-home-test-helpers.ts';
+import { testRuntime, testSeams } from './testing/test-seams.ts';
+import { wireDaemon } from './wire-daemon.ts';
 
 const homeOf = tempHomes('ruimte-wire-daemon-');
 

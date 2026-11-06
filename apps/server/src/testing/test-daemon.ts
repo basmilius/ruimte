@@ -28,8 +28,8 @@ import type { SessionManager } from '../sessions/manager.ts';
 import type { TaskWiring } from '../tasks/wiring.ts';
 import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import type { VisualHost } from '../visuals/agent-host.ts';
+import { wireDaemon } from '../wire-daemon.ts';
 import type { DaemonBundles } from '../wiring/bundles.ts';
-import { wireDaemon } from '../wiring/daemon.ts';
 import { testRuntime, testSeams, type TestSeams } from './test-seams.ts';
 
 /* One run of the daemon over a home, wired by `wireDaemon` with the seams of `test-seams.ts` where a process or the outside world would be. */
