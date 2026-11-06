@@ -40,7 +40,9 @@ describe('the download suffixes of the site', () => {
             windows: suffixOf(config.nsis.artifactName, 'x64', 'exe')
         };
 
-        expect(Object.fromEntries(Object.entries(PLATFORMS).map(([platform, entry]) => [platform, entry.suffix]))).toEqual(expected);
+        const actual: Record<string, string> = Object.fromEntries(Object.entries(PLATFORMS).map(([platform, entry]) => [platform, entry.suffix]));
+
+        expect(actual).toEqual(expected);
     });
 
     test('rest on a Linux template that names the version and the architecture, and on the builder default for the disk image', () => {
