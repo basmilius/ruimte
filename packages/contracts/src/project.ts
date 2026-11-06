@@ -679,11 +679,13 @@ export function isDesignPath(path: string): boolean {
     return path.split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..');
 }
 
+export const ProjectDesignPathSchema = z.string().min(1).refine(isDesignPath, 'must name a folder of its own');
+
 // The first chat is `node` under the view's own id; `chats` are the ones started after it, oldest first, read through `viewChats`. `path` is the folder's name.
 export const ProjectDesignViewSchema = ViewBaseSchema.extend({
     kind: z.literal('design'),
     node: StandaloneNodeSchema,
-    path: z.string().min(1).refine(isDesignPath, 'must name a folder of its own'),
+    path: ProjectDesignPathSchema,
     // Raw like a design node's, so one entry this version cannot read never makes the whole file unreadable.
     chats: z.array(RawEntrySchema).optional()
 });

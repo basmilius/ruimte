@@ -59,6 +59,13 @@ export function brokerUrlProblem(value: string): string | null {
     return null;
 }
 
+export const CustomBrokerUrlSchema = z.string().superRefine((url, context) => {
+    const problem = brokerUrlProblem(url);
+    if (problem !== null) {
+        context.addIssue({ code: 'custom', message: problem });
+    }
+});
+
 /*
  * What a machine keeps in `endpoint.json` about its broker: the build's default, one of its own, or
  * none at all. A flag or an environment variable on the daemon wins over it.
@@ -66,15 +73,7 @@ export function brokerUrlProblem(value: string): string | null {
 export const BrokerSettingSchema = z.discriminatedUnion('mode', [
     z.object({ mode: z.literal('default') }),
     z.object({ mode: z.literal('off') }),
-    z.object({
-        mode: z.literal('custom'),
-        url: z.string().superRefine((url, context) => {
-            const problem = brokerUrlProblem(url);
-            if (problem !== null) {
-                context.addIssue({ code: 'custom', message: problem });
-            }
-        })
-    })
+    z.object({ mode: z.literal('custom'), url: CustomBrokerUrlSchema })
 ]);
 export type BrokerSetting = z.infer<typeof BrokerSettingSchema>;
 

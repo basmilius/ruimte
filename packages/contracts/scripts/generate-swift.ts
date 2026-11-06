@@ -38,6 +38,7 @@ import { PushNotifyKindSchema } from '../src/push.ts';
 import * as server from '../src/server.ts';
 import * as task from '../src/task.ts';
 import { VoiceActivityKindSchema, VoiceActivityStatusSchema, VoicePhaseSchema } from '../src/voice.ts';
+import { refinementsOf, UNNAMED_REFINEMENTS } from './refinements.ts';
 
 type Schema = Record<string, any>;
 const roots: Record<string, z.ZodType> = {};
@@ -72,27 +73,19 @@ roots.PairPayloadSchema = PairPayloadSchema;
 roots.PairResultSchema = PairResultSchema;
 roots.ProjectCanvasDefaultsSchema = ProjectCanvasViewSchema.pick({ layouts: true });
 const schemas: Record<string, Schema> = {};
+function stampRefinements(zodSchema: z.ZodType, jsonSchema: Schema, where: string): void {
+    const refinements = refinementsOf(zodSchema, where);
+    if (refinements?.length) {
+        jsonSchema['x-refinements'] = refinements;
+    }
+}
 for (const [name, schema] of Object.entries(roots)) {
-    schemas[name] = z.toJSONSchema(schema, { io: 'input', unrepresentable: 'throw' });
+    schemas[name] = z.toJSONSchema(schema, {
+        io: 'input',
+        unrepresentable: 'throw',
+        override: ({ zodSchema, jsonSchema, path }) => stampRefinements(zodSchema, jsonSchema, `${name} ${path.join('.')}`)
+    });
 }
-// JSON Schema cannot carry Zod refinements; retain the statement lifetime check explicitly.
-function stampStatement(schema: Schema): void {
-    if (schema.type === 'object' && schema.properties?.machineId && schema.properties?.clientPublicKey && schema.properties?.expiresAt) {
-        schema['x-statement-lifetime-ms'] = address.ACCESS_STATEMENT_LIFETIME_MS;
-    }
-    for (const value of Object.values(schema)) {
-        if (Array.isArray(value)) {
-            value.forEach((child) => {
-                if (child && typeof child === 'object') {
-                    stampStatement(child);
-                }
-            });
-        } else if (value && typeof value === 'object') {
-            stampStatement(value);
-        }
-    }
-}
-Object.values(schemas).forEach(stampStatement);
 function canonical(schema: Schema): string {
     return JSON.stringify(schema, (key, value) => (key === '$schema' ? undefined : value));
 }
@@ -297,12 +290,13 @@ for (const [name, schema] of Object.entries(apiRoots)) {
     schemas[name] = z.toJSONSchema(schema, {
         io: 'input',
         unrepresentable: 'throw',
-        override: ({ zodSchema, jsonSchema }) => {
+        override: ({ zodSchema, jsonSchema, path }) => {
             const known = openVocabularies.get(zodSchema);
             if (known) {
                 jsonSchema['x-open-enum'] = [...known];
                 delete jsonSchema.enum;
             }
+            stampRefinements(zodSchema, jsonSchema, `${name} ${path.join('.')}`);
             if (zodSchema instanceof z.ZodPipe && zodSchema.in === CameraSchema) {
                 jsonSchema['x-output-null'] = true;
             }
@@ -317,13 +311,9 @@ for (const [name, schema] of Object.entries(apiRoots)) {
             }
         }
     });
-    stampStatement(schemas[name]!);
-    if (name === 'request.chat.send.payload') {
-        schemas[name]!['x-message-content'] = true;
-    }
-    if (name === 'request.session.attach.payload') {
-        schemas[name]!['x-follow-dimensions'] = true;
-    }
+}
+if (UNNAMED_REFINEMENTS.length > 0) {
+    throw new Error(`Name these refinements in scripts/refinements.ts:\n${[...new Set(UNNAMED_REFINEMENTS)].join('\n')}`);
 }
 /*
  * The payloads the app reads on its hot paths become structs, so a renamed field stops the app's build instead of

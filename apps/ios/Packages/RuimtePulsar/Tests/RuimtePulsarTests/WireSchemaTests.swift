@@ -23,6 +23,23 @@ struct WireSchemaTests {
         }
     }
 
+    @Test func everyStampedRefinementHasAnImplementation() {
+        func names(in value: JSONValue) -> Set<String> {
+            var found: Set<String> = []
+            for entry in value["x-refinements"]?.arrayValue ?? [] {
+                if let name = entry["name"]?.stringValue { found.insert(name) }
+            }
+            for child in value.objectValue.map({ Array($0.values) }) ?? value.arrayValue ?? [] {
+                found.formUnion(names(in: child))
+            }
+            return found
+        }
+        let stamped = WireSchema.all.values.reduce(into: Set<String>()) { $0.formUnion(names(in: $1)) }
+        #expect(!stamped.isEmpty)
+        #expect(stamped.subtracting(WireSchema.enforcedRefinements.keys).isEmpty)
+        #expect(Set(WireSchema.enforcedRefinements.keys).subtracting(stamped).isEmpty)
+    }
+
     @Test func literalTagsStillRequireTheirWholePayloadAndStripUnknownKeys() throws {
         let action: [String: JSONValue] = [
             "deviceId": .string("phone"), "backendId": .string("ios"),

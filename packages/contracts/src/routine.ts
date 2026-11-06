@@ -34,26 +34,32 @@ export const WeekdaySchema = z.number().int().min(1).max(7);
 // Minutes between the runs of an interval: a quarter hour at the least, half a day at the most.
 const ROUTINE_INTERVAL = { min: 15, max: 720, step: 15 } as const;
 
-export const RoutineScheduleSchema = z.discriminatedUnion('kind', [
-    z.looseObject({ kind: z.literal('once'), date: DaySchema, time: ClockTimeSchema }),
-    z.looseObject({ kind: z.literal('weekly'), days: z.array(WeekdaySchema).min(1).max(7), time: ClockTimeSchema }),
-    // From `from` on every `every` minutes, up to and including `to`: 09:00 to 17:00 every 60 runs nine times a day.
-    z
-        .looseObject({
-            kind: z.literal('interval'),
-            days: z.array(WeekdaySchema).min(1).max(7),
-            every: z.number().int().min(ROUTINE_INTERVAL.min).max(ROUTINE_INTERVAL.max).multipleOf(ROUTINE_INTERVAL.step),
-            from: ClockTimeSchema,
-            to: ClockTimeSchema
-        })
-        .refine((schedule) => schedule.to > schedule.from, { message: 'to comes after from', path: ['to'] }),
-    // Five crontab fields on the machine's clock, such as `0 9 * * 1-5` (`routine-cron.ts`).
-    z.looseObject({ kind: z.literal('cron'), expression: z.string().min(1).max(ROUTINE_LIMITS.cron) }).superRefine((schedule, context) => {
+// From `from` on every `every` minutes, up to and including `to`: 09:00 to 17:00 every 60 runs nine times a day.
+export const RoutineIntervalScheduleSchema = z
+    .looseObject({
+        kind: z.literal('interval'),
+        days: z.array(WeekdaySchema).min(1).max(7),
+        every: z.number().int().min(ROUTINE_INTERVAL.min).max(ROUTINE_INTERVAL.max).multipleOf(ROUTINE_INTERVAL.step),
+        from: ClockTimeSchema,
+        to: ClockTimeSchema
+    })
+    .refine((schedule) => schedule.to > schedule.from, { message: 'to comes after from', path: ['to'] });
+
+// Five crontab fields on the machine's clock, such as `0 9 * * 1-5` (`routine-cron.ts`).
+export const RoutineCronScheduleSchema = z
+    .looseObject({ kind: z.literal('cron'), expression: z.string().min(1).max(ROUTINE_LIMITS.cron) })
+    .superRefine((schedule, context) => {
         const parsed = parseCron(schedule.expression);
         if (!parsed.ok) {
             context.addIssue({ code: 'custom', message: cronProblemText(parsed.problem), path: ['expression'] });
         }
-    })
+    });
+
+export const RoutineScheduleSchema = z.discriminatedUnion('kind', [
+    z.looseObject({ kind: z.literal('once'), date: DaySchema, time: ClockTimeSchema }),
+    z.looseObject({ kind: z.literal('weekly'), days: z.array(WeekdaySchema).min(1).max(7), time: ClockTimeSchema }),
+    RoutineIntervalScheduleSchema,
+    RoutineCronScheduleSchema
 ]);
 export type RoutineSchedule = z.infer<typeof RoutineScheduleSchema>;
 

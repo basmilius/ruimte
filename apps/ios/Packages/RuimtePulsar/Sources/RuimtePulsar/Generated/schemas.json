@@ -81,7 +81,12 @@
       "expiresAt",
       "signature"
     ],
-    "x-statement-lifetime-ms": 120000
+    "x-refinements": [
+      {
+        "name": "statement-lifetime",
+        "lifetimeMs": 120000
+      }
+    ]
   },
   "AccountDeletePayloadSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -2139,7 +2144,12 @@
                                   "expiresAt",
                                   "signature"
                                 ],
-                                "x-statement-lifetime-ms": 120000
+                                "x-refinements": [
+                                  {
+                                    "name": "statement-lifetime",
+                                    "lifetimeMs": 120000
+                                  }
+                                ]
                               },
                               "label": {
                                 "type": "string",
@@ -2520,7 +2530,12 @@
                               "expiresAt",
                               "signature"
                             ],
-                            "x-statement-lifetime-ms": 120000
+                            "x-refinements": [
+                              {
+                                "name": "statement-lifetime",
+                                "lifetimeMs": 120000
+                              }
+                            ]
                           },
                           "label": {
                             "type": "string",
@@ -2813,7 +2828,12 @@
                               "expiresAt",
                               "signature"
                             ],
-                            "x-statement-lifetime-ms": 120000
+                            "x-refinements": [
+                              {
+                                "name": "statement-lifetime",
+                                "lifetimeMs": 120000
+                              }
+                            ]
                           },
                           "label": {
                             "type": "string",
@@ -3168,7 +3188,12 @@
                                   "expiresAt",
                                   "signature"
                                 ],
-                                "x-statement-lifetime-ms": 120000
+                                "x-refinements": [
+                                  {
+                                    "name": "statement-lifetime",
+                                    "lifetimeMs": 120000
+                                  }
+                                ]
                               },
                               "label": {
                                 "type": "string",
@@ -3522,7 +3547,12 @@
           "expiresAt",
           "signature"
         ],
-        "x-statement-lifetime-ms": 120000
+        "x-refinements": [
+          {
+            "name": "statement-lifetime",
+            "lifetimeMs": 120000
+          }
+        ]
       },
       "label": {
         "type": "string",
@@ -3790,7 +3820,12 @@
                           "expiresAt",
                           "signature"
                         ],
-                        "x-statement-lifetime-ms": 120000
+                        "x-refinements": [
+                          {
+                            "name": "statement-lifetime",
+                            "lifetimeMs": 120000
+                          }
+                        ]
                       },
                       "label": {
                         "type": "string",
@@ -4038,7 +4073,12 @@
               "expiresAt",
               "signature"
             ],
-            "x-statement-lifetime-ms": 120000
+            "x-refinements": [
+              {
+                "name": "statement-lifetime",
+                "lifetimeMs": 120000
+              }
+            ]
           },
           "label": {
             "type": "string",
@@ -4200,7 +4240,12 @@
                   "expiresAt",
                   "signature"
                 ],
-                "x-statement-lifetime-ms": 120000
+                "x-refinements": [
+                  {
+                    "name": "statement-lifetime",
+                    "lifetimeMs": 120000
+                  }
+                ]
               },
               "label": {
                 "type": "string",
@@ -4448,7 +4493,12 @@
                       "expiresAt",
                       "signature"
                     ],
-                    "x-statement-lifetime-ms": 120000
+                    "x-refinements": [
+                      {
+                        "name": "statement-lifetime",
+                        "lifetimeMs": 120000
+                      }
+                    ]
                   },
                   "label": {
                     "type": "string",
@@ -4982,7 +5032,12 @@
                               "expiresAt",
                               "signature"
                             ],
-                            "x-statement-lifetime-ms": 120000
+                            "x-refinements": [
+                              {
+                                "name": "statement-lifetime",
+                                "lifetimeMs": 120000
+                              }
+                            ]
                           },
                           "label": {
                             "type": "string",
@@ -29299,7 +29354,11 @@
       "chatId",
       "text"
     ],
-    "x-message-content": true
+    "x-refinements": [
+      {
+        "name": "message-content"
+      }
+    ]
   },
   "request.chat.send.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -36712,7 +36771,12 @@
                               "expiresAt",
                               "signature"
                             ],
-                            "x-statement-lifetime-ms": 120000
+                            "x-refinements": [
+                              {
+                                "name": "statement-lifetime",
+                                "lifetimeMs": 120000
+                              }
+                            ]
                           },
                           "label": {
                             "type": "string",
@@ -54327,7 +54391,12 @@
       "createFolder": {
         "type": "boolean"
       }
-    }
+    },
+    "x-refinements": [
+      {
+        "name": "project-id-or-folder"
+      }
+    ]
   },
   "request.project.open.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -70190,7 +70259,11 @@
     "required": [
       "sessionId"
     ],
-    "x-follow-dimensions": true
+    "x-refinements": [
+      {
+        "name": "follow-dimensions"
+      }
+    ]
   },
   "request.session.attach.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -74171,6 +74244,11 @@
     },
     "required": [
       "sceneId"
+    ],
+    "x-refinements": [
+      {
+        "name": "voice-stop-target"
+      }
     ]
   },
   "request.voice.stop.result": {
@@ -81615,7 +81693,12 @@
                               "expiresAt",
                               "signature"
                             ],
-                            "x-statement-lifetime-ms": 120000
+                            "x-refinements": [
+                              {
+                                "name": "statement-lifetime",
+                                "lifetimeMs": 120000
+                              }
+                            ]
                           },
                           "label": {
                             "type": "string",
