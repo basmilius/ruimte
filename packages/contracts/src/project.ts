@@ -1580,6 +1580,19 @@ export const ProjectAgentAskEventSchema = z.object({
 });
 export type ProjectAgentAskEvent = z.infer<typeof ProjectAgentAskEventSchema>;
 
+/*
+ * An agent asked to make a folder that holds no project yet into one (`project.askOpen`). It goes to the
+ * clients that have the agent's own project on screen, and the folder becomes a project only once a
+ * person there confirms it, as their own open of a folder.
+ */
+export const ProjectAgentFolderEventSchema = z.object({
+    // An absolute path on the machine, as the machine resolved it.
+    folder: z.string().min(1),
+    fromProjectId: ProjectIdSchema,
+    by: z.string().min(1)
+});
+export type ProjectAgentFolderEvent = z.infer<typeof ProjectAgentFolderEventSchema>;
+
 // Writes or removes `.ruimte/icon.<ext>`; a null image deletes what is there. The bytes are
 // base64 because a JSON frame carries no binary, and the daemon checks them against its own cap.
 export const ProjectSetIconPayloadSchema = z.object({

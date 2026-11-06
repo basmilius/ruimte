@@ -984,7 +984,7 @@
         "reachOpenProjects": {
             "label": "Agents may reach all open projects",
             "rowLabel": "Agents on {{machine}} may reach all open projects",
-            "description": "Agents in one project can read your other open projects and start agents there. They can also open a project from Recent, bring one to the front, and ask you to close one.",
+            "description": "Agents in one project can read your other open projects and start agents there. They can also open a project from Recent, bring one to the front, and ask you to close one. They make a new project only once you confirm.",
             "notConnected": "{{machine}} is not connected. Change this from its details under Account, or open one of its projects."
         },
         "resumeAtReset": {

@@ -303,6 +303,7 @@
     "event processes.sample #/properties/machine": ["cores","cpu","diskFree","diskRead","diskTotal","diskWrite","memoryTotal","memoryUsed"],
     "event project.activate #": ["by","fromProjectId","projectId"],
     "event project.askClose #": ["by","fromProjectId","projectId"],
+    "event project.askOpen #": ["by","folder","fromProjectId"],
     "event project.changed #": ["document","projectId"],
     "event project.changed #/properties/document": ["color","name","rev","version","views"],
     "event project.changed #/properties/document/properties/accounts/additionalProperties": [],

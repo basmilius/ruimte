@@ -1,9 +1,10 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import { PROJECT_PROPOSAL_LIMITS } from '@ruimte/contracts';
 import { z } from 'zod';
 import { defineActionTool, runAction } from './action-tool.ts';
 import { field, orNote } from './host.ts';
-import { reachableLines, reachableProjects, reachedProject, recentLines, SETTING_LINE } from './reach.ts';
-import { defineTool, defineToolkit, textInput } from './tool.ts';
+import { reachableLines, reachableProjects, reachedFolder, reachedProject, recentLines, SETTING_LINE } from './reach.ts';
+import { defineTool, defineToolkit, textInput, type ToolCall } from './tool.ts';
 
 function projectIdInput(tool: string) {
     const needs = `${tool} needs project_id, the id of a project; project_list lists them`;
@@ -30,12 +31,50 @@ const projectList = defineTool('project', {
     }
 });
 
-/* Opening is always allowed, so no person is asked; nobody holds the project for it, so nothing shows it and no launch starts. */
+async function openFolder(folder: string, call: ToolCall): Promise<string[]> {
+    const reached = await reachedFolder(call.host, call.caller, folder);
+
+    if (reached.hasProject) {
+        const opened = await reached.reach.openFolder(reached.folder);
+
+        return [`project\t${opened.projectId}\t${field(opened.name)}\topened`];
+    }
+
+    const sent = reached.reach.askOpen(reached.ownProjectId, reached.folder, call.caller);
+
+    return [
+        `asked\t${field(reached.folder)}`,
+        sent
+            ? 'sent\tyes\tIt becomes a project only once a person confirms; project_list shows whether it did'
+            : 'sent\tno\tNobody has your project on screen right now, so nobody was asked and nothing was made'
+    ];
+}
+
+/*
+ * Opening a project the machine has, or one a folder already holds, needs no one's answer; nobody holds
+ * it for this, so nothing shows it and no launch starts. A folder without a project becomes one only
+ * once a person confirms, as their own open of it; the call does not wait for that answer.
+ */
 const projectOpen = defineTool('project', {
     name: 'project_open',
-    description: 'Takes a project out of Recent, without showing it.',
-    input: z.object({ project_id: projectIdInput('project_open') }),
+    description: 'Opens a project from Recent or a folder, without showing it.',
+    input: z.object({
+        project_id: projectIdInput('project_open').optional(),
+        folder: z
+            .string({ error: 'folder needs an absolute path' })
+            .min(1, 'folder needs an absolute path')
+            .optional()
+            .describe('An absolute folder on this machine')
+    }),
     async run(input, call) {
+        if (input.folder !== undefined && input.project_id === undefined) {
+            return openFolder(input.folder, call);
+        }
+
+        if (input.project_id === undefined || input.folder !== undefined) {
+            throw new ToolRefusal('bad-arguments', 'project_open takes project_id or folder; give one of them');
+        }
+
         const { target, recent } = await reachedProject(call.host, call.caller, input.project_id, 'project_id', true);
 
         if (!recent) {

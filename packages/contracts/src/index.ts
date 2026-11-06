@@ -386,6 +386,7 @@ import {
     ProjectSetAccountsResultSchema,
     ProjectShowViewEventSchema,
     ProjectAgentAskEventSchema,
+    ProjectAgentFolderEventSchema,
     ProjectSummaryResultSchema,
     ProjectTargetPayloadSchema
 } from './project.ts';
@@ -1023,6 +1024,7 @@ export const EVENT_SCHEMAS = {
     'project.showView': ProjectShowViewEventSchema,
     'project.activate': ProjectAgentAskEventSchema,
     'project.askClose': ProjectAgentAskEventSchema,
+    'project.askOpen': ProjectAgentFolderEventSchema,
     'project.summary': ProjectSummaryEventSchema,
     'drawing.changed': DrawingChangedEventSchema,
     'diagram.changed': DiagramChangedEventSchema,

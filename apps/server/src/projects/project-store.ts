@@ -954,6 +954,11 @@ export class ProjectStore {
         return this.tellHolders(fromProjectId, { event: `project.${kind}`, payload: { projectId, fromProjectId, by } });
     }
 
+    /* The same for a folder without a project, which only a person's confirmed open there makes one. */
+    askToOpenFolder(fromProjectId: string, folder: string, by: string): boolean {
+        return this.tellHolders(fromProjectId, { event: 'project.askOpen', payload: { folder, fromProjectId, by } });
+    }
+
     private tellHolders(projectId: string, message: SessionEvent): boolean {
         let told = 0;
         for (const clientId of this.sinks.clientIds()) {

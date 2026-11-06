@@ -148,7 +148,11 @@ export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
         artifacts: input.artifacts.artifacts,
         routines: agentRoutines(input.routines.routines, (id) => projects.index.titleFor(id)),
         templates: input.templates.store,
-        reach: projectReach(projects, () => identity.reachOpenProjects)
+        reach: projectReach(
+            projects,
+            () => identity.reachOpenProjects,
+            () => identity.worktreeRoot
+        )
     };
     const forkDeps = chatForkDeps({
         chats,

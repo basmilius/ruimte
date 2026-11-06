@@ -488,6 +488,7 @@
     "project.showView",
     "project.activate",
     "project.askClose",
+    "project.askOpen",
     "project.summary",
     "drawing.changed",
     "diagram.changed",

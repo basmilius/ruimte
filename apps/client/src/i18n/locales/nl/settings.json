@@ -984,7 +984,7 @@
         "reachOpenProjects": {
             "label": "Agents mogen alle open projecten bereiken",
             "rowLabel": "Agents op {{machine}} mogen alle open projecten bereiken",
-            "description": "Agents in het ene project kunnen je andere open projecten lezen en daar agents starten. Ze kunnen ook een project uit Recent openen, er een naar voren halen en je vragen er een te sluiten.",
+            "description": "Agents in het ene project kunnen je andere open projecten lezen en daar agents starten. Ze kunnen ook een project uit Recent openen, er een naar voren halen en je vragen er een te sluiten. Een nieuw project maken ze pas als jij dat bevestigt.",
             "notConnected": "{{machine}} is niet verbonden. Pas dit aan in de details onder Account, of open een van zijn projecten."
         },
         "resumeAtReset": {

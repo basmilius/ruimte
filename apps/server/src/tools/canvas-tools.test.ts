@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, realpath, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { withViewAsNode, type ProjectCanvasView } from '@ruimte/contracts';
+import { projectLinks } from '../projects/project-file-test-helpers.ts';
+import { ProjectStore } from '../projects/project-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import {
     canvasFixture,
@@ -596,6 +598,101 @@ describe('reaching another open project', () => {
             ]);
             expect((await invoke(tool, { project_id: projectId }, 'chat', reaching())).lines[0]).toStartWith('refused\town-project\t');
         }
+    });
+
+    test('project open takes a folder with a project file of its own at once, without anyone holding it', async () => {
+        const cloned = join(root, 'cloned');
+        await mkdir(cloned);
+        const elsewhere = new ProjectStore(join(root, 'elsewhere'), projectLinks());
+        await elsewhere.openProject({ folder: cloned, name: 'Cloned' });
+        elsewhere.closeAll();
+        const asked: SessionEvent[] = [];
+        store.hold('client-2', projectId, { startsLaunches: false });
+        store.subscribe('client-2', (event) => asked.push(event));
+
+        const lines = (await invoke('project_open', { folder: cloned }, 'chat', reaching())).lines;
+        const real = await realpath(cloned);
+        const opened = (await store.list()).find((project) => project.folder === real);
+
+        expect(opened?.closedAt ?? null).toBeNull();
+        expect(lines).toEqual([`project\t${opened?.projectId}\tCloned\topened`]);
+        expect(store.holdersOf(opened?.projectId ?? '')).toEqual([]);
+        expect(asked.filter((event) => event.event === 'project.askOpen')).toEqual([]);
+        expect((await invoke('project_list', {}, 'chat', reaching())).lines).toContain(`project\t${opened?.projectId}\tCloned`);
+        expect((await invoke('project_open', { folder: cloned }, 'chat', reaching())).lines).toEqual([
+            `refused\tfolder-is-project\tfolder ${cloned} is the folder of ${opened?.projectId}; open it with project_id instead`,
+            `project\t${opened?.projectId}\tCloned`
+        ]);
+    });
+
+    test('project open asks the clients with the caller project on screen before a folder without a project becomes one', async () => {
+        const fresh = join(root, 'fresh');
+        await mkdir(fresh);
+        const real = await realpath(fresh);
+        const asked: SessionEvent[] = [];
+        store.subscribe('client-2', (event) => asked.push(event));
+
+        expect((await invoke('project_open', { folder: fresh }, 'chat', reaching())).lines).toEqual([
+            `asked\t${real}`,
+            'sent\tno\tNobody has your project on screen right now, so nobody was asked and nothing was made'
+        ]);
+
+        store.hold('client-2', projectId, { startsLaunches: false });
+
+        expect((await invoke('project_open', { folder: fresh }, 'chat', reaching())).lines).toEqual([
+            `asked\t${real}`,
+            'sent\tyes\tIt becomes a project only once a person confirms; project_list shows whether it did'
+        ]);
+        expect(asked).toEqual([{ event: 'project.askOpen', payload: { folder: real, fromProjectId: projectId, by: 'chat-1' } }]);
+        expect((await store.list()).some((project) => project.folder === real)).toBe(false);
+        expect(await Bun.file(join(fresh, '.ruimte', 'project.json')).exists()).toBe(false);
+    });
+
+    test('project open refuses a folder outside what it may open, and both or neither of its fields', async () => {
+        const file = join(root, 'notes.txt');
+        await writeFile(file, 'x');
+        const chosenRoot = join(root, 'checkouts');
+        await mkdir(join(chosenRoot, 'one'), { recursive: true });
+        await mkdir(join(root, 'home', 'worktrees', 'two'), { recursive: true });
+        await mkdir(store.scratchFolder, { recursive: true });
+        await symlink(join(root, 'home'), join(root, 'home-link'));
+        await symlink(join(root, 'repo'), join(root, 'repo-link'));
+        const through: CanvasHost = {
+            ...host(),
+            reach: projectReach(
+                store,
+                () => reachOn,
+                () => chosenRoot
+            )
+        };
+
+        const codeOf = async (input: Record<string, unknown>): Promise<string | undefined> =>
+            (await invoke('project_open', input, 'chat', through)).lines[0]?.split('\t').slice(0, 2).join('\t');
+
+        expect(await codeOf({})).toBe('refused\tbad-arguments');
+        expect(await codeOf({ project_id: otherId, folder: other })).toBe('refused\tbad-arguments');
+        expect(await codeOf({ folder: 'relative/path' })).toBe('refused\tfolder-not-absolute');
+        expect(await codeOf({ folder: join(root, 'missing') })).toBe('refused\tfolder-not-found');
+        expect(await codeOf({ folder: file })).toBe('refused\tfolder-not-found');
+        expect(await codeOf({ folder: join(root, 'home') })).toBe('refused\tmachine-folder');
+        expect(await codeOf({ folder: store.scratchFolder })).toBe('refused\tmachine-folder');
+        expect(await codeOf({ folder: join(root, 'home', 'worktrees', 'two') })).toBe('refused\tmachine-folder');
+        expect(await codeOf({ folder: join(root, 'home-link') })).toBe('refused\tmachine-folder');
+        expect(await codeOf({ folder: join(chosenRoot, 'one') })).toBe('refused\tmachine-folder');
+        expect(await codeOf({ folder: join(root, 'repo') })).toBe('refused\town-project');
+        expect(await codeOf({ folder: join(root, 'repo-link') })).toBe('refused\town-project');
+        expect((await invoke('project_open', { folder: other }, 'chat', through)).lines).toEqual([
+            `refused\tfolder-is-project\tfolder ${other} is the folder of ${otherId}; open it with project_id instead`,
+            `project\t${otherId}\tother`
+        ]);
+
+        await store.closeProject(otherId, 'client-1');
+
+        expect((await invoke('project_open', { folder: other }, 'chat', through)).lines[1]).toBe(`recent\t${otherId}\tother`);
+
+        reachOn = false;
+
+        expect(await codeOf({ folder: join(root, 'repo') })).toBe('refused\tprojects-not-reachable');
     });
 
     test('a tool that does not cross refuses project as a field it does not take, before it does anything', async () => {

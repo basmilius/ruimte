@@ -29,6 +29,10 @@
     "askClose": {
         "asked": "{{agent}} vraagt je dit project te sluiten."
     },
+    "askOpen": {
+        "title": "Map openen als project?",
+        "asked": "{{agent}} vraagt {{folder}} als project te openen. Het opent in dit venster."
+    },
     "diagram": {
         "draft": "Vul het lege diagram \"{{name}}\" met `view_diagram {{viewId}}`. Het moet dit laten zien: "
     },

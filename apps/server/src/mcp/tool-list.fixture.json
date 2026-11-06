@@ -2771,17 +2771,18 @@
         },
         {
             "name": "project_open",
-            "description": "Takes a project out of Recent, without showing it.",
+            "description": "Opens a project from Recent or a folder, without showing it.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "project_id": {
                         "type": "string"
+                    },
+                    "folder": {
+                        "type": "string",
+                        "description": "An absolute folder on this machine"
                     }
-                },
-                "required": [
-                    "project_id"
-                ]
+                }
             },
             "annotations": {
                 "destructiveHint": false

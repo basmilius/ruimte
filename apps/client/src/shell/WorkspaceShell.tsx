@@ -18,6 +18,7 @@ import { useServerPrompts } from '@/language/use-server-prompts';
 import { useLaunches } from '@/launches/state';
 import { startLaunchWatch } from '@/launches/watch';
 import { AgentCloseDialog } from '@/project/AgentCloseDialog';
+import { AgentOpenFolderDialog } from '@/project/AgentOpenFolderDialog';
 import { useRoutineForm } from '@/routines/form-state';
 import { useRoutinesStage } from '@/routines/stage';
 import { CellOverlayLayer } from '@/shell/CellOverlay';
@@ -170,6 +171,7 @@ const DIALOGS: readonly (readonly [surface: string | null, dialog: ComponentType
     ['dialog', ViewDialogs],
     ['dialog', EndChildrenDialog],
     ['dialog', AgentCloseDialog],
+    ['dialog', AgentOpenFolderDialog],
     ['dialog', UnsavedCloseDialog],
     ['dialog', DiscardEditsDialog],
     ['dialog', LeaveConflictDialog],
