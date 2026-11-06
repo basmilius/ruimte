@@ -96,4 +96,73 @@ public enum WireVocabulary {
         "users": ["team"],
         "wallet": ["finance", "money"],
     ]
+
+    /// The pixels a canvas snaps to, and the room a group keeps around what it holds and above it: `CANVAS_GRID`, `GROUP_PADDING` and `GROUP_HEADER`.
+    public static let canvasGrid: Double = 8
+    public static let groupPadding: Double = 32
+    public static let groupHeader: Double = 40
+
+    /// `DEFAULT_VOICE_PREFERENCES`: what a machine speaks while no client set anything.
+    public static let voiceDefaultLanguage: String = "en"
+    public static let voiceDefaultVoice: String = "marin"
+}
+
+/// `SIGNING_PURPOSES`: the first line of every message the app signs, MACs or derives a key under.
+public enum SigningPurposes {
+    public static let brokerHello: String = "pulsar-broker-hello-v1"
+    public static let signal: String = "pulsar-signal-v1"
+    public static let machineRegistration: String = "pulsar-machine-registration-v1"
+    public static let accessRequest: String = "pulsar-access-request-v1"
+    public static let accessStatement: String = "pulsar-access-statement-v1"
+    public static let accessStatementV2: String = "pulsar-access-statement-v2"
+    public static let sessionKey: String = "pulsar-session-key-v1"
+    public static let sessionRefresh: String = "pulsar-session-refresh-v1"
+    public static let deviceLinkStart: String = "pulsar-device-link-start-v1"
+    public static let push: String = "pulsar-push-v1"
+    public static let pushRouting: String = "pulsar-push-routing-v1"
+    public static let pushEncryption: String = "pulsar-push-encryption-v1"
+    public static let lanDoor: String = "pulsar-lan-door-v1"
+    public static let mapsTicketMac: String = "pulsar-maps-ticket-mac-v1"
+    public static let mapsTicketSubject: String = "pulsar-maps-ticket-subject-v1"
+    public static let mapsPathKey: String = "pulsar-maps-path-key-v1"
+    public static let mapsPath: String = "pulsar-maps-path-v1"
+    public static let peerAccessRequest: String = "pulsar-peer-access-request-v1"
+    public static let peerStatement: String = "pulsar-peer-statement-v1"
+    public static let extensionStore: String = "ruimte-extension-store-v1"
+    public static let daemonChallenge: String = "ruimte-daemon-v1"
+    public static let clientAuth: String = "ruimte-client-v1"
+    public static let daemonChannel: String = "ruimte-daemon-channel-v1"
+    public static let clientChannel: String = "ruimte-client-channel-v1"
+    public static let localChannel: String = "ruimte-local-channel-v1"
+    public static let machineProof: String = "ruimte machine proof v1"
+
+    /// Every purpose by its name, for a test that holds the table to the one the machines sign with.
+    public static let all: [String: String] = [
+        "brokerHello": brokerHello,
+        "signal": signal,
+        "machineRegistration": machineRegistration,
+        "accessRequest": accessRequest,
+        "accessStatement": accessStatement,
+        "accessStatementV2": accessStatementV2,
+        "sessionKey": sessionKey,
+        "sessionRefresh": sessionRefresh,
+        "deviceLinkStart": deviceLinkStart,
+        "push": push,
+        "pushRouting": pushRouting,
+        "pushEncryption": pushEncryption,
+        "lanDoor": lanDoor,
+        "mapsTicketMac": mapsTicketMac,
+        "mapsTicketSubject": mapsTicketSubject,
+        "mapsPathKey": mapsPathKey,
+        "mapsPath": mapsPath,
+        "peerAccessRequest": peerAccessRequest,
+        "peerStatement": peerStatement,
+        "extensionStore": extensionStore,
+        "daemonChallenge": daemonChallenge,
+        "clientAuth": clientAuth,
+        "daemonChannel": daemonChannel,
+        "clientChannel": clientChannel,
+        "localChannel": localChannel,
+        "machineProof": machineProof,
+    ]
 }

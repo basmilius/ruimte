@@ -103,7 +103,7 @@ public enum PushSigning {
         ]
     }
     public static func routing(_ push: JSONValue) throws -> String {
-        try SigningBytes.message("pulsar-push-routing-v1", fields: fields(push))
+        try SigningBytes.message(SigningPurposes.pushRouting, fields: fields(push))
     }
     public static func message(_ push: JSONValue) throws -> String {
         var fields = try fields(push)
@@ -148,6 +148,6 @@ public enum PushSigning {
                 }
             }
         }
-        return try SigningBytes.message("pulsar-push-v1", fields: fields)
+        return try SigningBytes.message(SigningPurposes.push, fields: fields)
     }
 }

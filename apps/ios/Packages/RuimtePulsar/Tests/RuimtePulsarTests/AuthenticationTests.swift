@@ -370,6 +370,8 @@ struct AuthenticationTests {
         let url = try #require(Bundle.module.url(forResource: "wire", withExtension: "json"))
         let root = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
         let cases = try #require(root["signatures"] as? [[String: Any]])
+        let purposes = try #require(root["purposes"] as? [String: String])
+        #expect(purposes == SigningPurposes.all)
         for fixture in cases {
             let kind = try #require(fixture["kind"] as? String)
             let arguments = try #require(fixture["args"] as? [Any])
@@ -386,9 +388,13 @@ struct AuthenticationTests {
                 actual = try SigningBytes.accessRequest(
                     machineID: #require(arguments[0] as? String), publicKey: #require(arguments[1] as? String),
                     nonce: #require(arguments[2] as? String))
-            default: continue
+            default:
+                // The transport tests build the rest and fail on a kind that nobody builds (`WireFixtureTests`).
+                #expect(purposes[kind] != nil, "\(kind) has no purpose")
+                continue
             }
             #expect(actual == expected)
+            #expect(expected.hasPrefix((try #require(purposes[kind])) + "\n"))
             #expect(Data(actual.utf8) == Data(expected.utf8))
         }
         let crypto = try #require(root["crypto"] as? [[String: String]])

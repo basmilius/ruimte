@@ -1,7 +1,7 @@
 import { writeMentionDrag } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
 import { ContextMenu, DocumentTab, TabStrip as CoreTabStrip } from '@adecore/ui';
-import type { AgentStatus, ProjectView } from '@ruimte/contracts';
+import { sessionStatus, type AgentStatus, type ProjectView } from '@ruimte/contracts';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { closeTabAction } from '@/action-port/person-actions';
@@ -22,7 +22,7 @@ import { useDocument } from '@/state/document';
 import { isArtifactTab, isCheckoutDiff, isDatabaseTab, useFiles, type ArtifactTab, type DatabaseTab, type FileTab } from '@/state/files';
 import { useGit } from '@/state/git';
 import { endpointKey } from '@/state/keys';
-import { sessionStatus, useSessionRow } from '@/state/sessions';
+import { useSessionRow } from '@/state/sessions';
 import { setTabPinned } from '@/state/tab-close';
 import { isUnsavedDraft, useTextDrafts } from '@/state/text-drafts';
 import { useViewPinned } from '@/state/view-pins';

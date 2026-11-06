@@ -101,7 +101,7 @@ public enum DirectIdentity {
         }
         let daemon = try field(challenge, "daemon")
         let nonce = try string(challenge, "challenge")
-        let message = "ruimte-daemon-channel-v1\n\(machineID)\n\(nonce)\n\(binding)"
+        let message = daemonChannelMessage(machineID: machineID, challenge: nonce, binding: binding)
         guard try string(daemon, "id") == machineID,
             try string(daemon, "publicKey") == machineKey,
             DeviceKey.verify(signature: try string(daemon, "signature"), message: message, publicKey: machineKey)
@@ -110,7 +110,7 @@ public enum DirectIdentity {
                 String(localized: "The machine did not prove its identity over this connection.", bundle: .module))
         }
         let signature = try signer.sign(
-            "ruimte-client-channel-v1\n\(machineID)\n\(nonce)\n\(signer.publicKey)\n\(binding)")
+            clientChannelMessage(machineID: machineID, challenge: nonce, publicKey: signer.publicKey, binding: binding))
         var fields: [String: JSONValue] = [
             "type": .string("direct.key"), "protocol": .number(Double(WireConstants.protocolVersion)),
             "challenge": .string(nonce), "publicKey": .string(signer.publicKey), "signature": .string(signature),
@@ -119,6 +119,18 @@ public enum DirectIdentity {
             fields["compression"] = .string(WireConstants.directCompression)
         }
         return try WireSchema.validate("DirectProofFrameSchema", .object(fields))
+    }
+
+    /// What a machine signs over a channel: `daemonChannelMessage` in `packages/pulsar/src/signing.ts`.
+    public static func daemonChannelMessage(machineID: String, challenge: String, binding: String) -> String {
+        [SigningPurposes.daemonChannel, machineID, challenge, binding].joined(separator: "\n")
+    }
+
+    /// What this app signs over a channel: `clientChannelMessage` in `packages/pulsar/src/signing.ts`.
+    public static func clientChannelMessage(machineID: String, challenge: String, publicKey: String, binding: String)
+        -> String
+    {
+        [SigningPurposes.clientChannel, machineID, challenge, publicKey, binding].joined(separator: "\n")
     }
 
     public static func signalMessage(from: String, to: String, envelope raw: JSONValue) throws -> String {
@@ -144,11 +156,11 @@ public enum DirectIdentity {
         case "close": fields.append(try field(signal, "reason"))
         default: throw TransportFailure.invalid("Unknown signal")
         }
-        return "pulsar-signal-v1\n" + (try wireText(.array(fields)))
+        return SigningPurposes.signal + "\n" + (try wireText(.array(fields)))
     }
 
     /// What a machine signs at its door on the local network: `lanDoorMessage` in `packages/pulsar/src/signing.ts`.
     public static func lanDoorMessage(nonce: String, machineID: String, publicKey: String) throws -> String {
-        "pulsar-lan-door-v1\n" + (try wireText(.array([.string(nonce), .string(machineID), .string(publicKey)])))
+        SigningPurposes.lanDoor + "\n" + (try wireText(.array([.string(nonce), .string(machineID), .string(publicKey)])))
     }
 }

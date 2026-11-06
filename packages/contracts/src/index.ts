@@ -128,6 +128,7 @@ export * from './render.ts';
 export * from './push.ts';
 export * from './peer.ts';
 export * from './remote.ts';
+export * from './session-status.ts';
 export * from './slug.ts';
 export * from './snooze.ts';
 export * from './activity.ts';

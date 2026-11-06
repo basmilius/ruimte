@@ -6,7 +6,7 @@ import SwiftUI
 /// How Voice talks on a machine, which keeps it for every client that starts Voice there. The languages and voices are
 /// the ones the machine takes, read from the generated schema, so the picker never offers what the machine refuses.
 struct VoicePreferences: Equatable {
-    static let defaultVoice = "marin"
+    static let defaultVoice = WireVocabulary.voiceDefaultVoice
 
     var language: String
     var voice: String
@@ -30,7 +30,7 @@ struct VoicePreferences: Equatable {
                 return code
             }
         }
-        return "en"
+        return WireVocabulary.voiceDefaultLanguage
     }
 
     /// A language in its own words, as the desktop's picker shows it.

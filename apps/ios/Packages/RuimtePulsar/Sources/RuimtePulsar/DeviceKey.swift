@@ -96,14 +96,14 @@ public enum SigningBytes {
     }
 
     public static func sessionKey(code: String, publicKey: String) throws -> String {
-        try message("pulsar-session-key-v1", fields: [.string(code), .string(publicKey)])
+        try message(SigningPurposes.sessionKey, fields: [.string(code), .string(publicKey)])
     }
 
     public static func sessionRefresh(token: String, issuedAt: Int64) throws -> String {
-        try message("pulsar-session-refresh-v1", fields: [.string(token), .integer(issuedAt)])
+        try message(SigningPurposes.sessionRefresh, fields: [.string(token), .integer(issuedAt)])
     }
 
     public static func accessRequest(machineID: String, publicKey: String, nonce: String) throws -> String {
-        try message("pulsar-access-request-v1", fields: [.string(machineID), .string(publicKey), .string(nonce)])
+        try message(SigningPurposes.accessRequest, fields: [.string(machineID), .string(publicKey), .string(nonce)])
     }
 }

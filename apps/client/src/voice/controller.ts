@@ -1,7 +1,7 @@
 import { useChats } from '@adecore/agents-react/state';
 import { messageOf } from '@adecore/ui';
 import { localTimeZone } from '@adecore/ui/format';
-import { isCanvasView, isOpenableView, type AgentStatus } from '@ruimte/contracts';
+import { isCanvasView, isOpenableView, sessionStatus, type AgentStatus } from '@ruimte/contracts';
 import {
     chatRunsTurn,
     FollowedTurn,
@@ -31,7 +31,7 @@ import { activeViewOf, useDocument } from '@/state/document';
 import { endpointById } from '@/state/endpoints';
 import { splitKey } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { sessionStatus, useSessions } from '@/state/sessions';
+import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { pool, transportFor } from '@/transport';
 import { fireAndForget } from '@/transport-api/transport';

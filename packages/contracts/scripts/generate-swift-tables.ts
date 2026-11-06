@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { PROJECT_ICON_GROUPS, PROJECT_ICON_KEYWORDS } from '../../../apps/client/src/surface/project-icons.ts';
+import { SIGNING_PURPOSES } from '../../pulsar/src/signing.ts';
 import { ARTIFACT_KINDS } from '../src/artifact.ts';
 import {
     DeviceColorFilterSchema,
@@ -12,8 +13,10 @@ import {
 } from '../src/device.ts';
 import { DRAWING_COLORS } from '../src/drawing-host.ts';
 import { RuntimeModeSchema } from '../src/model.ts';
+import { CANVAS_GRID, GROUP_HEADER, GROUP_PADDING } from '../src/node-defaults.ts';
 import { NodeKindSchema, PROJECT_VIEW_KINDS } from '../src/project.ts';
 import { PushNotifyKindSchema } from '../src/push.ts';
+import { DEFAULT_VOICE_PREFERENCES } from '../src/voice.ts';
 
 /*
  * The closed lists the app offers or matches, written from the schemas and tables that own them, so no Swift file
@@ -74,6 +77,29 @@ ${PROJECT_ICON_GROUPS.map((group) => `        (${JSON.stringify(group.id)}, ${wo
     public static let projectIconKeywords: [String: [String]] = [
 ${Object.entries(PROJECT_ICON_KEYWORDS)
     .map(([name, keywords]) => `        ${JSON.stringify(name)}: ${words(keywords ?? [])},`)
+    .join('\n')}
+    ]
+
+    /// The pixels a canvas snaps to, and the room a group keeps around what it holds and above it: \`CANVAS_GRID\`, \`GROUP_PADDING\` and \`GROUP_HEADER\`.
+    public static let canvasGrid: Double = ${CANVAS_GRID}
+    public static let groupPadding: Double = ${GROUP_PADDING}
+    public static let groupHeader: Double = ${GROUP_HEADER}
+
+    /// \`DEFAULT_VOICE_PREFERENCES\`: what a machine speaks while no client set anything.
+    public static let voiceDefaultLanguage: String = ${JSON.stringify(DEFAULT_VOICE_PREFERENCES.language)}
+    public static let voiceDefaultVoice: String = ${JSON.stringify(DEFAULT_VOICE_PREFERENCES.voice)}
+}
+
+/// \`SIGNING_PURPOSES\`: the first line of every message the app signs, MACs or derives a key under.
+public enum SigningPurposes {
+${Object.entries(SIGNING_PURPOSES)
+    .map(([name, purpose]) => `    public static let ${name}: String = ${JSON.stringify(purpose)}`)
+    .join('\n')}
+
+    /// Every purpose by its name, for a test that holds the table to the one the machines sign with.
+    public static let all: [String: String] = [
+${Object.keys(SIGNING_PURPOSES)
+    .map((name) => `        ${JSON.stringify(name)}: ${name},`)
     .join('\n')}
     ]
 }
