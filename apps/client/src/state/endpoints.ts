@@ -1,4 +1,5 @@
-import type { LanDoor, Reachability } from '@ruimte/contracts';
+import type { Reachability } from '@ruimte/contracts';
+import type { LanDoor } from '@ruimte/pulsar';
 import i18next from 'i18next';
 import { create } from 'zustand';
 import { desktop } from '@/desktop/bridge';

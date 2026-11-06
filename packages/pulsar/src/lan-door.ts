@@ -12,6 +12,13 @@ import { SignalEnvelopeSchema } from './signaling.ts';
  */
 export const LAN_DOOR_PATH = '/signal';
 
+/* The door as `endpoint.info` reports it: its port and the addresses of the interfaces it listens on. */
+export const LanDoorSchema = z.object({
+    port: z.number().int().min(1).max(65_535),
+    addresses: z.array(z.string().min(1).max(64)).max(16)
+});
+export type LanDoor = z.infer<typeof LanDoorSchema>;
+
 // The client's opening, before it says who it is.
 export const LanDoorHelloSchema = z.object({
     type: z.literal('hello'),

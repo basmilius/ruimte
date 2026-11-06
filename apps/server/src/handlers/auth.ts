@@ -4,12 +4,11 @@ import {
     type AgentIntegrationReport,
     type AgentIntegrationsResult,
     type EndpointSettings,
-    type LanDoor,
     type MachineUpdate,
     type MachineUpdateReport,
     type MachineWork
 } from '@ruimte/contracts';
-import { peerAccessRequestMessage } from '@ruimte/pulsar';
+import { peerAccessRequestMessage, type LanDoor } from '@ruimte/pulsar';
 import { INTEGRATION_KINDS, IntegrationsFixed, isIntegrationKind } from '../agents/integrations.ts';
 import type { Area } from '../area.ts';
 import { isOwner } from '../auth/access.ts';

@@ -2,6 +2,7 @@ import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import {
     BrokerSettingSchema,
     MachineIdSchema,
+    LanDoorSchema,
     NonceSchema,
     PublicKeySchema,
     RegisterMachinePayloadSchema,
@@ -13,7 +14,6 @@ import {
 import { z } from 'zod';
 import { AgentIntegrationsSummarySchema } from './agent-integrations.ts';
 import { KeepAwakeModeSchema } from './keep-awake.ts';
-import { LanDoorSchema } from './lan-door.ts';
 import { MachineUpdateSchema } from './machine-update.ts';
 import { NODE_SIZE_MAX, NODE_SIZE_MIN } from './node-defaults.ts';
 import { NodeKindSchema, ProjectIconChoiceSchema } from './project.ts';

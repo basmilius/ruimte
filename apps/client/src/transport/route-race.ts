@@ -1,5 +1,4 @@
-import type { LanDoor } from '@ruimte/contracts';
-import { lanDoorUrl } from '@ruimte/pulsar';
+import { lanDoorUrl, type LanDoor } from '@ruimte/pulsar';
 import i18next from 'i18next';
 import type { SignalRoute } from '../transport-api/transport';
 import type { LinkOpener } from './link-transport';

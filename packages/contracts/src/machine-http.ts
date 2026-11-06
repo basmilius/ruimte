@@ -1,7 +1,6 @@
-import { localSecretMac, machineProofMessage } from '@ruimte/pulsar';
+import { LanDoorSchema, localSecretMac, machineProofMessage } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { KeepAwakeModeSchema } from './keep-awake.ts';
-import { LanDoorSchema } from './lan-door.ts';
 import { ReachCheckSchema } from './reach.ts';
 
 /*

@@ -15,12 +15,11 @@ import {
     type NodeSizes,
     type KeepAwakeMode,
     type AgentIntegrationsSummary,
-    type LanDoor,
     type ProjectIconChoice,
     TerminalShellSchema,
     type TerminalShell
 } from '@ruimte/contracts';
-import { BrokerSettingSchema, type BrokerSetting } from '@ruimte/pulsar';
+import { BrokerSettingSchema, type BrokerSetting, type LanDoor } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { generateKeyPair, signMessage } from './auth/keys.ts';
 import { Binding } from './binding.ts';
