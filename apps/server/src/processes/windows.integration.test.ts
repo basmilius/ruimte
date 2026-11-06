@@ -5,8 +5,8 @@ import { BunPtyAdapter } from '../pty/bun-pty.ts';
 import { gitBash } from '../pty/pty.ts';
 import { childCounter } from '../service/work.ts';
 import { SessionManager } from '../sessions/manager.ts';
+import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
 import { waitFor, waitForAsync } from '../sessions/test-helpers.ts';
-import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { identityOf, processRates, type ProcessSampler, type RawProcess } from './sampler.ts';
 
 function bunArgs(script: string): string[] {

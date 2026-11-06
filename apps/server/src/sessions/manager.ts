@@ -133,7 +133,7 @@ export interface SessionManagerOptions {
     codexTitles?: { forThread(threadId: string, index?: string): Promise<string | null> };
     // Lets a test shorten the wait before a session without a name looks again.
     titleRetryMs?: number;
-    // Which commands a person on this machine let a shell type; a test about something else passes `OPEN_BOUNDS`.
+    // Which commands a person on this machine let a shell type; a test about something else passes `OPEN_BOUNDS` (`open-bounds-test-helpers.ts`).
     commands: CommandGate;
     // The widest mode the agent of this node may start in, whatever the node says; null for no limit.
     modeCeiling: (sessionId: string) => RuntimeMode | null;

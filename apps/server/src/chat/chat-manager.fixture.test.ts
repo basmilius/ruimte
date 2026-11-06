@@ -6,7 +6,7 @@ import { AttachmentStore } from '@adecore/agents/chat';
 import { fakeClaude, inProcess } from '@adecore/agents/testing';
 import type { ChatItem, ContextSource } from '@ruimte/contracts';
 import { ProviderRegistry } from '../providers/registry.ts';
-import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
+import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder, RecordingStore } from './chat-test-helpers.ts';
 

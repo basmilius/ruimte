@@ -19,8 +19,8 @@ import {
 import { toolsNote } from '../context/context-note.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
+import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
 import { bootTestDaemon, releasedProject, type TestDaemon } from '../testing/test-daemon.ts';
-import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { retire } from './chat-manager.fixture.test.ts';
 import { ChatManager } from './chat-manager.ts';
 import { assistantTexts, turnsOf } from './chat-test-helpers.ts';

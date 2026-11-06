@@ -15,8 +15,8 @@ import { sessionArea } from '../handlers/session.ts';
 import { sessionDepsWith } from '../handlers/test-helpers.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
 import type { ClientAccess } from '../wire.ts';
-import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { SessionManager } from './manager.ts';
+import { OPEN_BOUNDS } from './open-bounds-test-helpers.ts';
 import { testPath, testShell, waitFor } from './test-helpers.ts';
 
 /*

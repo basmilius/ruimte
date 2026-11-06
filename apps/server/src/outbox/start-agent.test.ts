@@ -14,10 +14,11 @@ import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import { SessionManager } from '../sessions/manager.ts';
+import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
 import { releasedProject } from '../testing/test-daemon.ts';
 import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { untilChecked } from '../until-test-helpers.ts';
-import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
+import { outboxRetries } from './kinds.ts';
 import { refusingHandlers } from './outbox-test-helpers.ts';
 import { OutboxStore, type OutboxWork, type StartAgentEntry } from './outbox.ts';
 import { HEADLESS_TERMINAL, nodeMode, startAgentHandler, startAgentWork, type StartAgentDeps } from './start-agent.ts';
@@ -137,9 +138,9 @@ async function boot(): Promise<Daemon> {
     const worker = new OutboxWorker({
         store: outbox,
         clock: stillClock,
-        handlers: refusingHandlers({
         retries: outboxRetries(),
         onParked: (entry, error) => logged.push(`Starting the agent of ${entry.target} failed: ${errorText(error)}`),
+        handlers: refusingHandlers({
             'start-agent': startAgentHandler({
                 placed: (nodeId) => store.index.locate(nodeId) !== null,
                 hasChat: (chatId) => chats.get(chatId) !== undefined,

@@ -9,7 +9,7 @@ import { generatedImageAttachment, type ChatInfo, type ChatItem, type ChatSubage
 import type { ContextSource } from '@ruimte/contracts';
 import { CONTEXT_LEAD, chatNote, chatPrompt, contextPrompt, toolsNote } from '../context/context-note.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
-import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
+import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
 import { retire } from './chat-manager.fixture.test.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder } from './chat-test-helpers.ts';

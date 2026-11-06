@@ -48,6 +48,7 @@ import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import type { PtyAdapter } from '../pty/pty.ts';
 import { SessionManager } from '../sessions/manager.ts';
+import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
 import { TEST_GIT_BASH } from '../sessions/test-helpers.ts';
 import type { TaskWiring } from '../tasks/wiring.ts';
 import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
@@ -56,7 +57,6 @@ import { agentVisuals, type VisualHost } from '../visuals/agent-host.ts';
 import { agentMessages } from '../wiring/agent-messages.ts';
 import { agentStates, openedAgentCount } from '../wiring/agent-state.ts';
 import { OutboxLink, wireOutbox } from '../wiring/outbox.ts';
-import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 
 const detect = async () => ({ installed: true, version: '0.0.0' });
 const sharedProviders = new ProviderRegistry({ detect });

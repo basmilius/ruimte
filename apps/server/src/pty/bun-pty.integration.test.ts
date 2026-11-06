@@ -3,8 +3,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SessionManager } from '../sessions/manager.ts';
+import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
 import { Recorder, testPath, testShell, waitFor } from '../sessions/test-helpers.ts';
-import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { BunPtyAdapter } from './bun-pty.ts';
 
 /*
