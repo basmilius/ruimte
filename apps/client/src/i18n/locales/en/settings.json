@@ -1905,6 +1905,13 @@
         "installFailed": "{{name}} could not be installed",
         "fromFileTrust": "This pack comes from a file, and the store has not reviewed it. It runs inside Ruimte and can do what you can, on all your machines.",
         "fromFileUnreadable": "This file is not an extension pack",
+        "fromFileUpdates": "Updates {{name}} to version {{version}}. It takes over the data and secrets {{name}} stored.",
+        "unknownPublisher": "an unnamed publisher",
+        "otherPublisher": {
+            "title": "Replace {{name}} with a pack from another publisher?",
+            "description": "{{name}} on this computer comes from {{installed}}, this pack from {{publisher}}. The pack takes over the data and secrets {{name}} stored.",
+            "action": "Replace"
+        },
         "enabled": "On",
         "remove": "Remove",
         "desktopOnly": "Extensions work in the desktop app.",

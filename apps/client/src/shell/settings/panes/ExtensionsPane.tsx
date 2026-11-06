@@ -1,5 +1,5 @@
 import { Button, EmptyState, Icon, Pill, SectionLabel, Switch } from '@adecore/ui';
-import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
+import { ConfirmDialog, MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
 import { isExtensionPermission } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import i18next from 'i18next';
@@ -93,10 +93,26 @@ function PermissionsSection({ permissions }: { permissions: Readonly<Record<stri
     );
 }
 
-/* A pack a person picked, shown as the store shows an entry: what it is and what it asks for, before it runs. */
+/* A pack a person picked, shown as the store shows an entry: what it is and what it asks for, before it runs. A pack
+   with the id of an installed extension takes over its data and secrets, so it says so, and asks again when another
+   publisher made it. */
 function FileDetail({ preview, onShown, onBack }: { preview: PackPreview; onShown: (id: string) => void; onBack: () => void }) {
     const { t } = useTranslation('settings');
     const { manifest } = preview;
+    const replaces = useInstalledExtensions((state) => state.installed.find((entry) => entry.manifest.id === manifest.id));
+    const [confirming, setConfirming] = useState(false);
+    const otherPublisher = replaces !== undefined && replaces.manifest.publisher !== manifest.publisher;
+    const unknownPublisher = t('extensions.unknownPublisher');
+
+    const install = () => {
+        void installPack(preview.bytes).then(
+            (result) => {
+                showMachineInstall(result, manifest.name);
+                onShown(manifest.id);
+            },
+            (e: unknown) => useToasts.getState().show({ kind: 'error', title: t('extensions.installFailed', { name: manifest.name }), description: String(e) })
+        );
+    };
 
     return (
         <div className={DETAIL}>
@@ -104,31 +120,34 @@ function FileDetail({ preview, onShown, onBack }: { preview: PackPreview; onShow
                 icon={preview.icon}
                 color={manifest.color}
                 name={manifest.name}
-                meta={[manifest.publisher, manifest.version]}
+                meta={[manifest.id, manifest.publisher, manifest.version]}
                 description={manifest.description}
             />
+            {replaces !== undefined && (
+                <p className="text-sm text-text">{t('extensions.fromFileUpdates', { name: replaces.manifest.name, version: manifest.version })}</p>
+            )}
             <PermissionsSection permissions={manifest.permissions} />
             <p className="text-sm text-text-muted">{t('extensions.fromFileTrust')}</p>
             <div className="flex gap-2">
-                <Button
-                    variant="primary"
-                    onClick={() => {
-                        void installPack(preview.bytes).then(
-                            (result) => {
-                                showMachineInstall(result, manifest.name);
-                                onShown(manifest.id);
-                            },
-                            (e: unknown) =>
-                                useToasts
-                                    .getState()
-                                    .show({ kind: 'error', title: t('extensions.installFailed', { name: manifest.name }), description: String(e) })
-                        );
-                    }}
-                >
+                <Button variant="primary" onClick={() => (otherPublisher ? setConfirming(true) : install())}>
                     {t('extensions.install')}
                 </Button>
                 <Button onClick={onBack}>{t('extensions.back')}</Button>
             </div>
+            {replaces !== undefined && (
+                <ConfirmDialog
+                    open={confirming}
+                    onOpenChange={setConfirming}
+                    title={t('extensions.otherPublisher.title', { name: replaces.manifest.name })}
+                    description={t('extensions.otherPublisher.description', {
+                        name: replaces.manifest.name,
+                        installed: replaces.manifest.publisher ?? unknownPublisher,
+                        publisher: manifest.publisher ?? unknownPublisher
+                    })}
+                    confirmLabel={t('extensions.otherPublisher.action')}
+                    onConfirm={install}
+                />
+            )}
         </div>
     );
 }
