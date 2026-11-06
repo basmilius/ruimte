@@ -1,6 +1,6 @@
 import { isAbsolute, resolve } from 'node:path';
+import { toolFileEdit, type ToolFileEditPiece } from '@adecore/agents/chat';
 import { splitLines } from '@adecore/merge';
-import { isRecord } from '@adecore/utils/record';
 import type { ChatToolItem } from '@ruimte/contracts';
 import type { WriteSignature } from './runs.ts';
 
@@ -8,14 +8,6 @@ import type { WriteSignature } from './runs.ts';
 interface ToolWrite {
     path: string;
     signature: WriteSignature;
-}
-
-function text(value: unknown): string | null {
-    return typeof value === 'string' ? value : null;
-}
-
-function record(value: unknown): Record<string, unknown> {
-    return isRecord(value) ? value : {};
 }
 
 function absolute(cwd: string, path: string): string {
@@ -39,8 +31,8 @@ function blocksOfDiff(diff: string): WriteSignature['blocks'] {
     return blocks;
 }
 
-function editBlock(oldText: string | null, newText: string | null): WriteSignature['blocks'][number] {
-    return { added: splitLines(newText ?? ''), removed: splitLines(oldText ?? '') };
+function editBlock(piece: ToolFileEditPiece): WriteSignature['blocks'][number] {
+    return { added: splitLines(piece.after), removed: splitLines(piece.before) };
 }
 
 /*
@@ -55,22 +47,12 @@ export function toolWrites(item: Pick<ChatToolItem, 'name' | 'input' | 'changes'
             signature: change.kind === 'add' || change.diff === '' ? { all: true, blocks: [] } : { all: false, blocks: blocksOfDiff(change.diff) }
         }));
     }
-    const input = record(item.input);
-    const path = text(input.file_path);
-    if (path === null) {
+
+    const edit = toolFileEdit(item.name, item.input);
+
+    if (edit === null) {
         return [];
     }
-    const target = absolute(cwd, path);
-    switch (item.name) {
-        case 'Write':
-            return [{ path: target, signature: { all: true, blocks: [] } }];
-        case 'Edit':
-            return [{ path: target, signature: { all: false, blocks: [editBlock(text(input.old_string), text(input.new_string))] } }];
-        case 'MultiEdit': {
-            const edits = Array.isArray(input.edits) ? input.edits.map(record) : [];
-            return [{ path: target, signature: { all: false, blocks: edits.map((edit) => editBlock(text(edit.old_string), text(edit.new_string))) } }];
-        }
-        default:
-            return [];
-    }
+
+    return [{ path: absolute(cwd, edit.path), signature: edit.write ? { all: true, blocks: [] } : { all: false, blocks: edit.pieces.map(editBlock) } }];
 }
