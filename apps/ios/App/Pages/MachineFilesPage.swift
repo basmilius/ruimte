@@ -15,7 +15,7 @@ struct MachineFilesPage: View {
     /// The project's repositories, for the git status each row carries.
     var marks: GitRepositories?
     @State private var state = RemotePageState()
-    @AppStorage("ruimte.ios.showHiddenFiles") private var hidden = false
+    @AppStorage(Settings.showHiddenFiles) private var hidden
     @State private var search = ""
     @State private var selectedEntry: FileDestination?
     @State private var finding = false

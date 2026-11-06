@@ -238,16 +238,15 @@ final class UnifiedProjects {
             ).values)
     }
 
-    private func cacheKey(_ id: String) -> String { "ruimte.ios.projects.\(id)" }
-
     private func forgetCache(_ id: String) {
-        defaults.removeObject(forKey: cacheKey(id))
-        defaults.removeObject(forKey: cacheKey(id) + ".publicKey")
+        defaults.removeObject(forKey: ProjectsCache.key(machineID: id))
+        defaults.removeObject(forKey: ProjectsCache.publicKeyKey(machineID: id))
     }
 
     private func readCache(_ machine: Machine) -> [JSONValue] {
-        let key = cacheKey(machine.id)
-        if let publicKey = defaults.string(forKey: key + ".publicKey"), publicKey != machine.publicKey {
+        let key = ProjectsCache.key(machineID: machine.id)
+        let publicKeyKey = ProjectsCache.publicKeyKey(machineID: machine.id)
+        if let publicKey = defaults.string(forKey: publicKeyKey), publicKey != machine.publicKey {
             forgetCache(machine.id)
             return []
         }
@@ -256,7 +255,7 @@ final class UnifiedProjects {
         else {
             return []
         }
-        defaults.set(machine.publicKey, forKey: key + ".publicKey")
+        defaults.set(machine.publicKey, forKey: publicKeyKey)
         CrashRedactions.remember(array.flatMap { [$0.text("name"), $0.text("folder")] })
         return unique(
             array.compactMap { summary in
@@ -270,8 +269,8 @@ final class UnifiedProjects {
         let kept = entry.summaries.sorted { $0.number("lastOpenedAt") > $1.number("lastOpenedAt") }
             .prefix(50)
         if let data = try? JSONValue.array(Array(kept)).encoded() {
-            defaults.set(data, forKey: cacheKey(entry.machine.id))
-            defaults.set(entry.machine.publicKey, forKey: cacheKey(entry.machine.id) + ".publicKey")
+            defaults.set(data, forKey: ProjectsCache.key(machineID: entry.machine.id))
+            defaults.set(entry.machine.publicKey, forKey: ProjectsCache.publicKeyKey(machineID: entry.machine.id))
         }
     }
 

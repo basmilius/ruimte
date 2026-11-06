@@ -15,7 +15,7 @@ struct SearchPage: View {
     @State private var searchAttempt = 0
     @State private var newChat: NewChatTarget?
     @State private var usage: NewChatTarget?
-    @AppStorage("ruimte.ios.appearance") private var appearance = "system"
+    @AppStorage(Settings.appearance) private var appearance
     @Environment(\.openMobileWorkspace) private var openWorkspace
 
     var body: some View {

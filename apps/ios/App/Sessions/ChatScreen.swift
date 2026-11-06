@@ -3,7 +3,7 @@ import RuimteTransport
 import SwiftUI
 
 struct ChatScreen: View {
-    @AppStorage("ruimte.chat.streaming") private var streamingMode: ChatStreamingMode = .words
+    @AppStorage(Settings.chatStreaming) private var streamingMode
     @State private var model: ChatModel
     @State private var visible = false
     @State private var holdingChat = false

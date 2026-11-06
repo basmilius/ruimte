@@ -6,8 +6,8 @@ import UIKit
 
 struct TerminalScreen: View {
     @State private var model: TerminalModel
-    @AppStorage("ruimte.ios.terminalFontSize") private var fontSize = 14.0
-    @AppStorage("ruimte.ios.appearance") private var theme = "system"
+    @AppStorage(Settings.terminalFontSize) private var fontSize
+    @AppStorage(Settings.appearance) private var theme
     @State private var clearing = false
     @State private var keyboardShown = false
     let title: String

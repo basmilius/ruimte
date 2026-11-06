@@ -41,7 +41,7 @@ enum ChatStreamingMode: String, CaseIterable {
 struct ChatStreamingMessage: View {
     let text: String
     let streaming: Bool
-    @AppStorage("ruimte.chat.streaming") private var mode: ChatStreamingMode = .words
+    @AppStorage(Settings.chatStreaming) private var mode
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @State private var source: String

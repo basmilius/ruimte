@@ -32,7 +32,7 @@ import UIKit
         _ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any],
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) {
-        let data = userInfo["ruimte"].flatMap { try? JSONSerialization.data(withJSONObject: $0) }
+        let data = userInfo[NotificationKeys.envelope].flatMap { try? JSONSerialization.data(withJSONObject: $0) }
         Task { @MainActor in
             guard let data else {
                 completionHandler(.noData)
@@ -96,8 +96,8 @@ private final class NotificationDeliveryBridge: NSObject, UNUserNotificationCent
         withCompletionHandler completionHandler: @escaping @Sendable (UNNotificationPresentationOptions) -> Void
     ) {
         let info = notification.request.content.userInfo
-        let nodeKey = info["ruimte.seenKey"] as? String
-        let issuedAt = (info["ruimte.issuedAt"] as? NSNumber)?.doubleValue
+        let nodeKey = info[NotificationKeys.seenKey] as? String
+        let issuedAt = (info[NotificationKeys.issuedAt] as? NSNumber)?.doubleValue
         Task { @MainActor in
             if let nodeKey, let issuedAt, let through = try? SharedPushStore().readThrough(node: nodeKey),
                 through >= issuedAt
@@ -113,7 +113,7 @@ private final class NotificationDeliveryBridge: NSObject, UNUserNotificationCent
         _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping @Sendable () -> Void
     ) {
-        let data = response.notification.request.content.userInfo["ruimte"].flatMap {
+        let data = response.notification.request.content.userInfo[NotificationKeys.envelope].flatMap {
             try? JSONSerialization.data(withJSONObject: $0)
         }
         let action = response.actionIdentifier
@@ -214,9 +214,9 @@ struct NotificationDestination: Identifiable, Hashable {
         let allow = action(.allow, String(localized: "Allow"))
         let deny = action(.deny, String(localized: "Deny"))
         UNUserNotificationCenter.current().setNotificationCategories([
-            UNNotificationCategory(identifier: "ruimte.approval", actions: [allow, deny], intentIdentifiers: []),
+            UNNotificationCategory(identifier: NotificationCategory.approval, actions: [allow, deny], intentIdentifiers: []),
             UNNotificationCategory(
-                identifier: "ruimte.approval.remember",
+                identifier: NotificationCategory.approvalRemember,
                 actions: [allow, action(.allowAlways, String(localized: "Always allow")), deny],
                 intentIdentifiers: []),
         ])
@@ -620,7 +620,7 @@ struct NotificationDestination: Identifiable, Hashable {
         guard let key = try? PushReplayLedger.nodeKey(machineID: machineID, nodeID: nodeID) else { return }
         _ = try? store().clearAttention(node: key)
         let delivered = await UNUserNotificationCenter.current().deliveredNotifications()
-        let identifiers = delivered.filter { $0.request.content.userInfo["ruimte.seenKey"] as? String == key }.map {
+        let identifiers = delivered.filter { $0.request.content.userInfo[NotificationKeys.seenKey] as? String == key }.map {
             $0.request.identifier
         }
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: identifiers)
@@ -783,10 +783,10 @@ struct NotificationDestination: Identifiable, Hashable {
         let delivered = await center.deliveredNotifications()
         let identifiers = delivered.filter { notification in
             let info = notification.request.content.userInfo
-            guard info["ruimte.seenKey"] as? String == key else { return false }
+            guard info[NotificationKeys.seenKey] as? String == key else { return false }
             let issuedAt =
-                (info["ruimte.issuedAt"] as? NSNumber)?.doubleValue
-                ?? ((info["ruimte"] as? [String: Any])?["issuedAt"] as? NSNumber)?.doubleValue
+                (info[NotificationKeys.issuedAt] as? NSNumber)?.doubleValue
+                ?? ((info[NotificationKeys.envelope] as? [String: Any])?["issuedAt"] as? NSNumber)?.doubleValue
             return issuedAt.map { $0 <= through } ?? false
         }.map { $0.request.identifier }
         center.removeDeliveredNotifications(withIdentifiers: identifiers)

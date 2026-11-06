@@ -15,7 +15,7 @@ struct AppHome: View {
     @State private var sceneID: String
     @State private var voiceScene: VoiceScene
     @Environment(\.scenePhase) private var phase
-    @AppStorage("ruimte.ios.appearance") private var appearance = "system"
+    @AppStorage(Settings.appearance) private var appearance
 
     init(runtime: AppRuntime, projects: UnifiedProjects = UnifiedProjects()) {
         self.runtime = runtime

@@ -22,7 +22,7 @@ final class MachineProjectList {
         }
     }
 
-    private var cacheKey: String { "ruimte.ios.projects.\(session.machine.id)" }
+    private var cacheKey: String { ProjectsCache.key(machineID: session.machine.id) }
 
     /// The projects without the machine's Chats project, which has a row of its own.
     var listed: [JSONValue] { projects.filter { !NewChat.isChats($0) } }

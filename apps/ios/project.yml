@@ -113,6 +113,7 @@ targets:
     platform: iOS
     sources:
       - path: Extensions/NotificationService
+      - path: Shared/Notifications
       - path: App/PrivacyInfo.xcprivacy
     dependencies:
       - package: RuimtePulsar

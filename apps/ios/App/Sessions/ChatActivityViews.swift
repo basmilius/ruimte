@@ -95,7 +95,7 @@ struct ChatWorkingRow: View {
 
 struct ChatThinkingRow: View {
     let item: ChatThinkingItem
-    @AppStorage("ruimte.chat.streaming") private var streamingMode: ChatStreamingMode = .words
+    @AppStorage(Settings.chatStreaming) private var streamingMode
     @State private var expanded = false
     private var streaming: Bool { item.streaming }
 
