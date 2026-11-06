@@ -1,5 +1,5 @@
 import { AGENT_COLORS } from '@adecore/editor';
-import { diffLines } from '@adecore/merge';
+import { lineMap } from '@adecore/merge';
 import type { ProvenanceRun } from '@ruimte/contracts';
 
 /* One piece of a run in the text of the editor, as the lines the bar covers. */
@@ -10,31 +10,6 @@ export interface DrawnRun {
     /* One-based and inclusive. */
     startLine: number;
     endLine: number;
-}
-
-/*
- * Where each line of the text on disk stands in the text of the editor, or -1 for a line typed over or
- * removed since. A line the editor still has from the disk keeps its place, as for the blame of code
- * vision (`mapBlame`).
- */
-export function lineMap(disk: readonly string[], text: readonly string[]): Int32Array {
-    const changes = diffLines(disk, text);
-    const where = new Int32Array(disk.length);
-    let shift = 0;
-    let index = 0;
-    for (const change of changes) {
-        for (; index < change.baseStart; index++) {
-            where[index] = index + shift;
-        }
-        for (; index < change.baseEnd; index++) {
-            where[index] = -1;
-        }
-        shift += change.otherEnd - change.otherStart - (change.baseEnd - change.baseStart);
-    }
-    for (; index < disk.length; index++) {
-        where[index] = index + shift;
-    }
-    return where;
 }
 
 /*

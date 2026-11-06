@@ -1,4 +1,4 @@
-import { diffLines, type Change } from '@adecore/merge';
+import { diffLines, lineMap, type Change } from '@adecore/merge';
 import { PROVENANCE_LIMITS, type ProvenanceRun } from '@ruimte/contracts';
 import { hashLine } from './line-hash.ts';
 
@@ -28,26 +28,6 @@ function groupsOf(indices: readonly number[]): Array<[number, number]> {
         }
     }
     return groups;
-}
-
-/* Where every line of the old text went; -1 for a line a change replaced or removed. */
-function lineMap(oldLength: number, changes: readonly Change[]): Int32Array {
-    const map = new Int32Array(oldLength);
-    let shift = 0;
-    let index = 0;
-    for (const change of changes) {
-        for (; index < change.baseStart; index++) {
-            map[index] = index + shift;
-        }
-        for (; index < change.baseEnd; index++) {
-            map[index] = -1;
-        }
-        shift += change.otherEnd - change.otherStart - (change.baseEnd - change.baseStart);
-    }
-    for (; index < oldLength; index++) {
-        map[index] = index + shift;
-    }
-    return map;
 }
 
 /* The place between two lines of the old text, as the new text has it; -1 when a change cut through it. */
@@ -92,7 +72,7 @@ export function mapRuns(runs: readonly ProvenanceRun[], from: readonly string[],
     if (changes.length === 0) {
         return [...runs];
     }
-    const map = lineMap(from.length, changes);
+    const map = lineMap(from, to, changes);
     return runs.flatMap((run) => {
         if (lineCount(run) === 0) {
             const point = pointMap(run.start - 1, changes);

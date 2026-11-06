@@ -1,9 +1,9 @@
 import type { Editor, EditorRect } from '@adecore/editor';
 import { realTimers, type Timers } from '@adecore/editor-react';
-import { splitLines } from '@adecore/merge';
+import { lineMap, splitLines } from '@adecore/merge';
 import type { AgentKind, ProvenanceChangedEvent, ProvenanceReadResult, ProvenanceRun } from '@ruimte/contracts';
 import type { AgentChangesMode } from '@/state/ai-settings';
-import { colorOfChat, drawnRuns, lastWritten, lineMap, removalRuns, type DrawnRun, type RemovalRun } from './agent-runs';
+import { colorOfChat, drawnRuns, lastWritten, removalRuns, type DrawnRun, type RemovalRun } from './agent-runs';
 
 /* A pause in typing this long before the bars are worked out again, since that reads both texts. */
 const REMAP_DELAY_MS = 200;
