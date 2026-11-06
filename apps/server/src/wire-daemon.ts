@@ -38,6 +38,7 @@ import { wireRemote } from './wiring/remote.ts';
 import { wireRoutines } from './wiring/routines.ts';
 import type { DaemonRuntime } from './wiring/runtime.ts';
 import type { DaemonSeams } from './wiring/seams.ts';
+import { wireSettingPorts } from './wiring/setting-ports.ts';
 import { wireTemplates } from './wiring/templates.ts';
 import { wireUsageStats } from './wiring/usage-stats.ts';
 import { wireUsage } from './wiring/usage.ts';
@@ -84,12 +85,12 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     const extensions = provide('extensions', wireExtensions(home, later));
 
     const machineModel = seams.machine.model();
-    const machine = provide('machine', await wireMachine(config));
+    const machine = provide('machine', await wireMachine(config, later));
     const { identity } = machine;
     const stores = provide('stores', await loadAgentStores(home, seams.clock));
     const computer = provide('computer', createComputer(runtime, stores.computerStore, stores.lifecycle, later));
     const stats = provide('stats', await wireUsageStats(home, identity, machine.auth, launcher));
-    const providers = provide('providers', await wireProviders(config, identity, () => computer.start(), stats.flush, seams));
+    const providers = provide('providers', await wireProviders(config, () => computer.start(), stats.flush, seams));
     const agents = provide('agents', await wireAgents({ runtime, identity, stores, providers, computer, machineHome: machine.machineHome, seams, later }));
     const projects = provide('projects', await wireProjects({ home, machineId: identity.id, machineHome: machine.machineHome, stores, agents, seams, later }));
     const templates = provide('templates', wireTemplates(home, projects));
@@ -182,6 +183,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
         })
     );
     const network = provide('network', wireNetwork(config, compiled, machine, later));
+    const settingPorts = provide('settingPorts', wireSettingPorts({ stats, providers, agents, devices, power, network }));
     const mover = provide(
         'chatMover',
         chatMover({
@@ -229,6 +231,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             voice,
             power,
             network,
+            settingPorts,
             actions: later.actions(),
             canvasHost,
             extensions
@@ -290,6 +293,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
         voice,
         power,
         network,
+        settingPorts,
         clients,
         actions: later.actions(),
         canvasHost,

@@ -7,7 +7,6 @@ import { ExternalChatSessions, ownSessionSources } from '../chat/external.ts';
 import { chatForkDeps, forkChat, readForkInfo, readHandoff } from '../chat/fork.ts';
 import { ChatImageFiles } from '../chat/image-files.ts';
 import { chatsLocatedIn, chatsOfViews, ProjectChatSearch } from '../chat/project-search.ts';
-import { errorText } from '../error-text.ts';
 import { readServedFile } from '../fs/read.ts';
 import type { WriteBoundary } from '../fs/write.ts';
 import type { ArchiveDeps } from '../handlers/archive.ts';
@@ -51,9 +50,8 @@ function boundaryOf({ projects, git }: AreaInput): (clientId: string) => Promise
 }
 
 export function authDeps(input: AreaInput, later: AreaLater): AuthDeps {
-    const { runtime, machine, providers, agents, devices, processes, power, stats, network } = input;
+    const { runtime, machine, providers, processes, power } = input;
     const { config } = runtime;
-    const { chats } = agents;
 
     return {
         store: machine.auth,
@@ -61,21 +59,12 @@ export function authDeps(input: AreaInput, later: AreaLater): AuthDeps {
         peerKey: machine.peerKey,
         home: config.home,
         version: VERSION,
-        broker: () => network.brokerSwitch.describe(),
-        lanDoor: () => network.describeLanDoor(),
-        streamingChanged: (allowed) => {
-            if (!allowed) {
-                devices.browsers.closeAll();
-                devices.devices.closeAll();
-            }
-        },
-        usageStatsChanged: (on) => stats.changed(on),
         agentIntegrations: {
             summary: () => providers.integrations.summary(),
             files: () => providers.integrations.files(),
             set: (kind, on) => providers.integrations.set(kind, on)
         },
-        keepAwake: { available: power.keepAwake.available, changed: power.checkAwake },
+        keepAwake: { available: power.keepAwake.available },
         closedLid: {
             available: power.closedLid.available,
             rule: () => power.closedLid.refreshRule(),
@@ -87,13 +76,6 @@ export function authDeps(input: AreaInput, later: AreaLater): AuthDeps {
             report: (clientId, report) => power.updates.report(clientId, report),
             requestInstall: () => power.updates.requestInstall(),
             ending: () => workEndedByInstall(config.underService, processes.machineWork())
-        },
-        resumeChanged: (on) => {
-            chats.resumeSettingChanged();
-            // A chat nobody loaded owes a resume only on disk, so turning the switch off drops those there.
-            if (!on) {
-                void agents.outboxLink.lapseLimitResume().catch((e: unknown) => console.error('Dropping the resumes after a limit failed:', errorText(e)));
-            }
         },
         disconnect: (sessionId) => later.clients().disconnectSession(sessionId)
     };

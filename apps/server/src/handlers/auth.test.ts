@@ -10,7 +10,7 @@ import { AuthStore, type StatementAdmission } from '../auth/auth-store.ts';
 import { generateKeyPair } from '../auth/keys.ts';
 import { admitClient } from '../auth/test-admit.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { LENT_NOTHING, lendNothing } from '../endpoint-id-test-helpers.ts';
+import { NO_SETTING_PORTS } from '../endpoint-id-test-helpers.ts';
 import { readOrCreateEndpointIdentity, type EndpointIdentity } from '../endpoint-id.ts';
 import { PeerKey } from '../peer/giver/peer-key.ts';
 import { ClosedLidError, DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
@@ -69,8 +69,6 @@ beforeEach(async () => {
     setSystemTime(NOW);
     home = await mkdtemp(join(tmpdir(), 'ruimte-auth-handlers-'));
     store = new AuthStore(home);
-    identity = lendNothing(await readOrCreateEndpointIdentity(home, 'box'));
-    dispatcher = new Dispatcher();
     lanDoorOpen = true;
     disconnected = [];
     streamingChanges = [];
@@ -79,6 +77,22 @@ beforeEach(async () => {
     lidCancels = false;
     ruleRequests = [];
     updates = new MachineUpdates();
+    identity = await readOrCreateEndpointIdentity(home, 'box', () => ({
+        ...NO_SETTING_PORTS,
+        describe: () => ({
+            keepAwakeLidRule: lidRule,
+            agentIntegrations: integrations.summary(),
+            brokerUrl: identity.broker.mode === 'custom' ? identity.broker.url : null,
+            brokerFixed: false,
+            lan: lanDoorOpen ? { port: 4220, addresses: ['192.168.1.20'] } : null,
+            lanDoorFixed: false
+        }),
+        keepAwakeChanged: () => {
+            keepAwakeChanges += 1;
+        },
+        streamingChanged: (allowed) => streamingChanges.push(allowed)
+    }));
+    dispatcher = new Dispatcher();
     integrations = new AgentIntegrations({
         home,
         fixed: false,
@@ -95,15 +109,7 @@ beforeEach(async () => {
         peerKey,
         home,
         version: '0.0.0',
-        broker: () => ({ brokerUrl: identity.broker.mode === 'custom' ? identity.broker.url : null, brokerFixed: false }),
-        lanDoor: () => ({ lan: lanDoorOpen ? { port: 4220, addresses: ['192.168.1.20'] } : null, lanDoorFixed: false }),
-        streamingChanged: (allowed) => streamingChanges.push(allowed),
-        keepAwake: {
-            available: true,
-            changed: () => {
-                keepAwakeChanges += 1;
-            }
-        },
+        keepAwake: { available: true },
         closedLid: {
             available: true,
             rule: async () => lidRule,
@@ -123,8 +129,6 @@ beforeEach(async () => {
             requestInstall: () => updates.requestInstall(),
             ending: () => ({ terminals: 1, agents: 2 })
         },
-        resumeChanged: () => undefined,
-        usageStatsChanged: async () => undefined,
         disconnect: (sessionId) => disconnected.push(sessionId)
     }).handlers?.(dispatcher);
 });
@@ -186,7 +190,7 @@ describe('auth handlers', () => {
             ok: false,
             error: { code: 'closed-lid-no-rule' }
         });
-        expect([identity.keepAwake.lidClosed, keepAwakeChanges]).toEqual([false, 0]);
+        expect([identity.keepAwakeLidClosed, keepAwakeChanges]).toEqual([false, 0]);
 
         lidRule = true;
         expect(await ask(paired, 'endpoint.setIdentity', { name: null, icon: null, keepAwakeLidClosed: true })).toMatchObject({
@@ -307,6 +311,81 @@ describe('auth handlers', () => {
         expect(heard.at(-1)).toEqual({ event: 'endpoint.updateInstall', payload: {} });
     });
 
+    test('endpoint.info spells every field of a machine away from its defaults, and keeps the owner-only ones from other clients', async () => {
+        const chosen = join(await mkdtemp(join(tmpdir(), 'ruimte-wt-root-')), 'wt');
+        await identity.setIdentity(
+            'Studio',
+            { kind: 'lucide', value: 'server' },
+            {
+                agentsDeleteAnyView: true,
+                reachOpenProjects: true,
+                steerMessages: true,
+                streamingAllowed: false,
+                resumeAtReset: true,
+                visualReplies: false,
+                keepAwake: 'always',
+                keepAwakeOnBattery: true,
+                keepAwakeDisplay: true,
+                broker: { mode: 'custom', url: 'wss://mine.example.com' },
+                lanDoor: false,
+                worktreeRoot: chosen,
+                terminalShell: 'cmd',
+                usageStats: false
+            }
+        );
+        await identity.setNodeSize('terminal', { w: 800, h: 480 });
+        const fields = {
+            id: identity.id,
+            label: 'Studio',
+            nameSource: 'chosen',
+            icon: { kind: 'lucide', value: 'server' },
+            agentsDeleteAnyView: true,
+            reachOpenProjects: true,
+            steerMessages: true,
+            streamingAllowed: false,
+            resumeAtReset: true,
+            visualReplies: false,
+            keepAwake: 'always',
+            keepAwakeOnBattery: true,
+            keepAwakeDisplay: true,
+            keepAwakeLidClosed: false,
+            keepAwakeAvailable: true,
+            keepAwakeLidAvailable: true,
+            keepAwakeLidRule: false,
+            agentIntegrations: integrations.summary(),
+            update: updates.state(),
+            platform: process.platform,
+            version: '0.0.0',
+            protocol: PROTOCOL_VERSION,
+            publicKey: identity.publicKey,
+            broker: { mode: 'custom', url: 'wss://mine.example.com' },
+            brokerUrl: 'wss://mine.example.com',
+            brokerFixed: false,
+            lan: { port: 4220, addresses: ['192.168.1.20'] },
+            lanDoor: false,
+            lanDoorFixed: false,
+            nodeSizes: { terminal: { w: 800, h: 480 } },
+            usageStats: false,
+            viewReferences: true
+        };
+        const features = dispatcher.types();
+
+        const paired = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.info');
+        expect(paired).toEqual({ id: '1', ok: true, result: { ...fields, reachability: 'lan', authenticated: true, features } });
+
+        const local = (await ask(LOCAL, 'endpoint.info')) as { result: Record<string, unknown> };
+        const { gitBashMissing: _gitBashMissing, ...localResult } = local.result;
+        expect(localResult).toEqual({
+            ...fields,
+            reachability: 'loopback',
+            authenticated: false,
+            features,
+            accountId: null,
+            worktreeRoot: chosen,
+            terminalShell: 'cmd'
+        });
+    });
+
     test('endpoint.info carries the key a client pins the machine on', async () => {
         const info = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.info');
         expect(info).toMatchObject({ ok: true, result: { id: identity.id, publicKey: identity.publicKey, authenticated: true } });
@@ -359,7 +438,12 @@ describe('auth handlers', () => {
                     keepAwakeOnBattery: false,
                     keepAwakeDisplay: false,
                     keepAwakeLidClosed: false,
-                    ...LENT_NOTHING,
+                    keepAwakeLidRule: false,
+                    agentIntegrations: integrations.summary(),
+                    brokerUrl: null,
+                    brokerFixed: false,
+                    lan: { port: 4220, addresses: ['192.168.1.20'] },
+                    lanDoorFixed: false,
                     broker: { mode: 'default' },
                     lanDoor: true,
                     nodeSizes: {},

@@ -181,10 +181,10 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     broker: { url: brokerSwitch.describe().brokerUrl, connected: brokerSwitch.isReady },
                     ...network.describeLanDoor(),
                     keepAwake: {
-                        mode: identity.keepAwake.mode,
-                        onBattery: identity.keepAwake.onBattery,
+                        mode: identity.keepAwake,
+                        onBattery: identity.keepAwakeOnBattery,
                         holding: keepAwake.holding,
-                        lid: closedLid.available ? { on: identity.keepAwake.lidClosed, rule: await closedLid.refreshRule(), holding: closedLid.holding } : null
+                        lid: closedLid.available ? { on: identity.keepAwakeLidClosed, rule: await closedLid.refreshRule(), holding: closedLid.holding } : null
                     },
                     reach
                 } satisfies MachineStatus);

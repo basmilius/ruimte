@@ -8,7 +8,7 @@ import {
     type MachineUpdateReport,
     type MachineWork
 } from '@ruimte/contracts';
-import { peerAccessRequestMessage, type LanDoor } from '@ruimte/pulsar';
+import { peerAccessRequestMessage } from '@ruimte/pulsar';
 import { INTEGRATION_KINDS, IntegrationsFixed, isIntegrationKind } from '../agents/integrations.ts';
 import type { Area } from '../area.ts';
 import { isOwner } from '../auth/access.ts';
@@ -16,13 +16,12 @@ import type { AuthStore } from '../auth/auth-store.ts';
 import { signForAccount } from '../auth/registration.ts';
 import type { LiveSink } from '../client-sinks.ts';
 import { type Dispatcher } from '../dispatcher.ts';
-import type { EndpointIdentity, IdentityFlags } from '../endpoint-id.ts';
-import { checkWorktreeRoot } from '../git/worktree-root.ts';
+import type { EndpointIdentity } from '../endpoint-id.ts';
+import { prepareSettings, type SettingPatch } from '../machine-settings.ts';
 import type { PeerKey } from '../peer/giver/peer-key.ts';
 import { DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
 import type { InstallVerdict } from '../power/machine-update.ts';
 import { gitBash } from '../pty/pty.ts';
-import type { BrokerDescription } from '../pulsar/broker-switch.ts';
 import { countClient, countUsage, recordStartup, recordTiming } from '../stats/usage-stats.ts';
 import type { ClientAccess } from '../wire.ts';
 
@@ -34,20 +33,10 @@ export interface AuthDeps {
     // `$RUIMTE_HOME`, which a worktree folder may not sit in.
     home: string;
     version: string;
-    // The broker clients are told to dial right now (null when this machine announces itself to none), and whether a flag decides it.
-    broker(): BrokerDescription;
-    // Where the door on the local network stands right now (null while it is closed), and whether a flag decides it.
-    lanDoor(): { lan: LanDoor | null; lanDoorFixed: boolean };
     // Revoking must take effect now, not at the next connection, so the daemon drops that session's sockets here.
     disconnect(sessionId: string): void;
-    // A disabled policy stops streams already in flight as well as refusing the next one.
-    streamingChanged(allowed: boolean): void;
-    // Chats take up a limited turn on a clock only while this is on; turning it off drops what was owed.
-    resumeChanged(on: boolean): void;
-    // Off drops the days not sent yet, so nothing counted before goes out later.
-    usageStatsChanged(on: boolean): Promise<void>;
-    // Whether this machine can hold a block on sleep, and the call that follows a changed setting.
-    keepAwake: { available: boolean; changed(): void };
+    // Whether this machine can hold a block on sleep.
+    keepAwake: { available: boolean };
     // The closed-lid mode of a Mac: whether it is offered, whether its rule is installed, and installing or removing that.
     closedLid: {
         available: boolean;
@@ -85,21 +74,10 @@ function registerRequests(dispatcher: Dispatcher, host: AuthDeps): void {
 
     // Built per client, so what the machine is called travels alongside what this connection is allowed.
     const info = async (access: ClientAccess | undefined) => ({
-        id: identity.id,
-        label: identity.label,
-        nameSource: identity.nameSource,
-        icon: identity.icon,
-        agentsDeleteAnyView: identity.agentsDeleteAnyView,
-        reachOpenProjects: identity.reachOpenProjects,
-        steerMessages: identity.steerMessages,
-        streamingAllowed: identity.streamingAllowed,
-        resumeAtReset: identity.resumeAtReset,
-        visualReplies: identity.visualReplies,
-        ...identity.keepAwakeFields(),
+        ...identity.snapshot(),
         keepAwakeAvailable: host.keepAwake.available,
         keepAwakeLidAvailable: host.closedLid.available,
         keepAwakeLidRule: host.closedLid.available ? await host.closedLid.rule() : false,
-        agentIntegrations: host.agentIntegrations.summary(),
         update: host.updates.state(),
         platform: process.platform,
         version: host.version,
@@ -107,18 +85,11 @@ function registerRequests(dispatcher: Dispatcher, host: AuthDeps): void {
         reachability: access?.reachability ?? 'loopback',
         authenticated: access?.sessionId !== null && access?.sessionId !== undefined,
         publicKey: identity.publicKey,
-        broker: identity.broker,
-        ...host.broker(),
-        lanDoor: identity.lanDoor,
-        ...host.lanDoor(),
-        nodeSizes: identity.nodeSizes,
-        usageStats: identity.usageStats,
         // Only the app on this machine is told which account it is on; it is the one that can take it off.
         ...(isOwner(access)
             ? {
                   accountId: (await store.accountBinding())?.id ?? null,
-                  worktreeRoot: identity.worktreeRoot,
-                  ...(identity.terminalShell === null ? {} : { terminalShell: identity.terminalShell }),
+                  ...identity.ownerSettings(),
                   ...(process.platform === 'win32' && gitBash() === null ? { gitBashMissing: true } : {})
               }
             : {})
@@ -150,79 +121,13 @@ function registerRequests(dispatcher: Dispatcher, host: AuthDeps): void {
         { peer: true }
     );
 
-    /* The checks and the side effects of the switches both requests set; `write` stores them, with or without a new name. */
+    /* The checks of the settings both requests set; `write` keeps them, with or without a new name, and follows what changed. */
     const applySettings = async (
         settings: EndpointSettings,
         access: ClientAccess | undefined,
-        write: (flags: IdentityFlags) => Promise<void>
+        write: (patch: SettingPatch) => Promise<void>
     ): Promise<void> => {
-        // Off always goes through, and a switch already on stays on; only turning it on needs the rule.
-        if (settings.keepAwakeLidClosed === true && !identity.keepAwake.lidClosed) {
-            if (!host.closedLid.available) {
-                throw new CodedError('closed-lid-unavailable', 'Only a Mac can stay awake with its lid closed');
-            }
-            if (!(await host.closedLid.rule())) {
-                throw new CodedError('closed-lid-no-rule', 'Allow it on the Mac first: Ruimte there installs the rule with an administrator password');
-            }
-        }
-        // Where checkouts land decides which folders the daemon makes and writes in, so it is the owner's alone.
-        let worktreeRoot: string | undefined;
-        if (settings.worktreeRoot !== undefined) {
-            if (!isOwner(access)) {
-                throw new CodedError('owner-only', 'Only a person on this machine can choose where it makes worktrees');
-            }
-            if (settings.worktreeRoot === '') {
-                worktreeRoot = '';
-            } else {
-                const checked = await checkWorktreeRoot(settings.worktreeRoot, host.home);
-                if ('refusal' in checked) {
-                    throw new CodedError(checked.refusal, checked.message);
-                }
-                worktreeRoot = checked.root;
-            }
-        }
-        // Whether this machine sends anything is the decision of the person who runs it.
-        if (settings.usageStats !== undefined && !isOwner(access)) {
-            throw new CodedError('owner-only', 'Only a person on this machine can turn its usage statistics on or off');
-        }
-        // What the daemon starts as a person's shell is the owner's alone.
-        if (settings.terminalShell !== undefined && !isOwner(access)) {
-            throw new CodedError('owner-only', 'Only a person on this machine can choose the shell of its terminals');
-        }
-        await write({
-            worktreeRoot,
-            terminalShell: settings.terminalShell,
-            usageStats: settings.usageStats,
-            agentsDeleteAnyView: settings.agentsDeleteAnyView,
-            reachOpenProjects: settings.reachOpenProjects,
-            steerMessages: settings.steerMessages,
-            streamingAllowed: settings.streamingAllowed,
-            resumeAtReset: settings.resumeAtReset,
-            visualReplies: settings.visualReplies,
-            keepAwake: settings.keepAwake,
-            keepAwakeOnBattery: settings.keepAwakeOnBattery,
-            keepAwakeDisplay: settings.keepAwakeDisplay,
-            keepAwakeLidClosed: settings.keepAwakeLidClosed,
-            broker: settings.broker,
-            lanDoor: settings.lanDoor
-        });
-        if (
-            settings.keepAwake !== undefined ||
-            settings.keepAwakeOnBattery !== undefined ||
-            settings.keepAwakeDisplay !== undefined ||
-            settings.keepAwakeLidClosed !== undefined
-        ) {
-            host.keepAwake.changed();
-        }
-        if (settings.streamingAllowed !== undefined) {
-            host.streamingChanged(identity.streamingAllowed);
-        }
-        if (settings.resumeAtReset !== undefined) {
-            host.resumeChanged(identity.resumeAtReset);
-        }
-        if (settings.usageStats !== undefined) {
-            await host.usageStatsChanged(identity.usageStats);
-        }
+        await write(await prepareSettings(settings, { owner: isOwner(access), home: host.home, closedLid: host.closedLid, current: identity.settings() }));
     };
 
     /*
@@ -366,7 +271,7 @@ function registerRequests(dispatcher: Dispatcher, host: AuthDeps): void {
     dispatcher.register(
         'endpoint.signRegistration',
         async (payload) => ({
-            registration: await signForAccount(store, identity, host.broker().brokerUrl, payload.accountId, (sessionId) => host.disconnect(sessionId))
+            registration: await signForAccount(store, identity, identity.describe().brokerUrl, payload.accountId, (sessionId) => host.disconnect(sessionId))
         }),
         { owner: true }
     );

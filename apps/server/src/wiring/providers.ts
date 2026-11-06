@@ -2,7 +2,6 @@ import { cliExecutable, type ProviderAccountsService } from '@adecore/agents/pro
 import type { AgentKind } from '@ruimte/contracts';
 import { AgentIntegrations } from '../agents/integrations.ts';
 import type { ServerConfig } from '../config.ts';
-import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { AgentServers } from '../handlers/agent-servers.ts';
 import { AcpRegistry } from '../providers/acp-registry.ts';
 import type { AnthropicClaudeApiService } from '../providers/anthropic-claude-api-service.ts';
@@ -40,7 +39,6 @@ export interface ProvidersBundle {
  */
 export async function wireProviders(
     config: ServerConfig,
-    identity: EndpointIdentity,
     alongside: () => Promise<void>,
     fetched: () => void,
     seams: Pick<DaemonSeams, 'providers' | 'accounts'>
@@ -86,7 +84,6 @@ export async function wireProviders(
     await Promise.all([integrations.load(), modelCatalogs.load(), alongside()]);
     void modelCatalogs.refresh();
     fetched();
-    identity.attachAgentIntegrations({ describe: () => ({ agentIntegrations: integrations.summary() }) });
     // Before the managers, which start every CLI under the account its node or chat names.
     const accounts = seams.accounts({ home: config.home, providers, install: (kind, folder) => integrations.installFolder(kind, folder) });
     await accounts.load();

@@ -1,6 +1,5 @@
 import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import {
-    BrokerSettingSchema,
     MachineIdSchema,
     LanDoorSchema,
     NonceSchema,
@@ -13,14 +12,11 @@ import {
 } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { AgentIntegrationsSummarySchema } from './agent-integrations.ts';
-import { KeepAwakeModeSchema } from './keep-awake.ts';
+import { ENDPOINT_CHANGED_SETTINGS, ENDPOINT_INFO_SETTINGS, ENDPOINT_REQUEST_SETTINGS } from './machine-settings.ts';
 import { MachineUpdateSchema } from './machine-update.ts';
 import { NODE_SIZE_MAX, NODE_SIZE_MIN } from './node-defaults.ts';
 import { NodeKindSchema, ProjectIconChoiceSchema } from './project.ts';
 import { ProtocolVersionSchema } from './protocol.ts';
-
-export const TerminalShellSchema = z.enum(['powershell', 'git-bash', 'cmd', 'wsl']);
-export type TerminalShell = z.infer<typeof TerminalShellSchema>;
 
 // How a client reaches a daemon; the loopback one is what the app starts with.
 export const ReachabilitySchema = z.enum(['loopback', 'lan', 'tunnel', 'public']);
@@ -33,36 +29,9 @@ export type EndpointNameSource = z.infer<typeof EndpointNameSourceSchema>;
 export { CLOSED_LID_BATTERY_FLOOR, KeepAwakeModeSchema, type KeepAwakeMode } from './keep-awake.ts';
 
 /*
- * The sizes a person gave new nodes on a machine, by kind; a kind left out takes its built-in size.
- * Open on purpose: a newer machine may name a kind or allow a size an older client never heard of,
- * and a client that validates the whole reply must not refuse the machine over it.
+ * What a person sets on a machine comes from `MACHINE_SETTINGS`, and an absent field reads as the row's
+ * default. `endpoint.info` also tells the owner of the machine the settings only it sees.
  */
-export const EndpointNodeSizesSchema = z.record(z.string(), z.object({ w: z.number(), h: z.number() }));
-
-/* The switches a person sets on a machine, which its info, its settings and its change event all carry. */
-const MACHINE_SWITCHES = {
-    // Lets `view_delete` remove views an agent did not make. Enforced by the daemon, so it
-    // lives in `endpoint.json`, not in a client's settings. Absent reads as false.
-    agentsDeleteAnyView: z.boolean().optional(),
-    // Lets an agent read the other projects open on this machine and start agents there (`--project`). Enforced
-    // by the daemon, so it lives in `endpoint.json`. Absent reads as false.
-    reachOpenProjects: z.boolean().optional(),
-    // Lets a message of an agent join a running turn, as a person's "Send to a working agent right away" does. Absent reads as false.
-    steerMessages: z.boolean().optional(),
-    // Browser pages and device screens. Absent reads as true.
-    streamingAllowed: z.boolean().optional(),
-    // Lets a chat that stopped on a limit resume on a clock when its own switch allows. Absent reads as false.
-    resumeAtReset: z.boolean().optional(),
-    // The `visual_*` tools. Off only when a person turned it off; absent reads as on.
-    visualReplies: z.boolean().optional(),
-    // The daemon holds the block, so it holds without a window and for a phone. Absent reads as off.
-    keepAwake: KeepAwakeModeSchema.optional(),
-    // Hold the block on battery as well; off, it holds on the power adapter only.
-    keepAwakeOnBattery: z.boolean().optional(),
-    // Keep the display on too, only under `always`.
-    keepAwakeDisplay: z.boolean().optional()
-};
-
 export const EndpointInfoSchema = z.object({
     // The daemon's own id, minted once and kept in its home; a client keys a machine on this because an address moves.
     id: z.string().min(1),
@@ -73,12 +42,9 @@ export const EndpointInfoSchema = z.object({
     // The set a project and a view pick from; no image, since a machine has no folder to keep one in.
     // Null or absent when nobody picked one.
     icon: ProjectIconChoiceSchema.nullish(),
-    ...MACHINE_SWITCHES,
+    ...ENDPOINT_INFO_SETTINGS,
     // Only macOS has a way to hold the block.
     keepAwakeAvailable: z.boolean().optional(),
-    // Turns sleep off (`pmset disablesleep`) while the block holds: on the adapter, or on battery above
-    // `CLOSED_LID_BATTERY_FLOOR` when the block may hold there.
-    keepAwakeLidClosed: z.boolean().optional(),
     // Only a Mac offers the closed-lid mode.
     keepAwakeLidAvailable: z.boolean().optional(),
     // Without the sudoers rule the closed-lid switch does nothing. Only the local secret installs or
@@ -98,30 +64,18 @@ export const EndpointInfoSchema = z.object({
     // The effective broker a client signals a direct connection through: a flag or the environment, then
     // `broker`, then the build's default. Null when there is none.
     brokerUrl: z.string().nullish(),
-    // A person's pick, kept in `endpoint.json`.
-    broker: BrokerSettingSchema.optional(),
     // True when a flag or the environment decides the broker, so `broker` is kept but changes nothing.
     brokerFixed: z.boolean().optional(),
     // A client on the same network signals there before it tries the broker. Null while the door is closed.
     lan: LanDoorSchema.nullish(),
-    // Kept in `endpoint.json`.
-    lanDoor: z.boolean().optional(),
     // True when a flag decides the door, so `lanDoor` is kept but changes nothing.
     lanDoorFixed: z.boolean().optional(),
     // Null when on none. Only told to a client that presented the local secret.
     accountId: z.string().nullable().optional(),
     // What a person allowed in the CLIs' global settings. No paths, so a remote client learns none.
     agentIntegrations: AgentIntegrationsSummarySchema.optional(),
-    // Null while worktrees go in the data folder. Only told to a client that presented the local secret.
-    worktreeRoot: z.string().nullable().optional(),
-    // The same client only: the shell of a new terminal on Windows. Absent is PowerShell.
-    terminalShell: TerminalShellSchema.optional(),
-    // The same client only: this Windows machine has no Git for Windows, so agents cannot start and a terminal cannot open in Git Bash.
+    // Only told to a client that presented the local secret: this Windows machine has no Git for Windows, so agents cannot start and a terminal cannot open in Git Bash.
     gitBashMissing: z.boolean().optional(),
-    // Kept in `endpoint.json`; empty while nobody set one.
-    nodeSizes: EndpointNodeSizesSchema.optional(),
-    // Anonymous daily usage counts sent from a release build. Absent reads as on, from a machine that has the switch.
-    usageStats: z.boolean().optional(),
     // Every request this machine answers, so a client checks a request newer than 0.18.0 before it sends one
     // instead of catching `unknown-request`. Only `endpoint.info` carries it; a machine without it is refused as older.
     features: z.array(z.string()).optional(),
@@ -167,19 +121,7 @@ export const PairResultSchema = z.object({
  * The switches a person sets on a machine, one schema for both requests that change them. Every field
  * left out leaves the machine as it stands. `endpoint.settings` takes these alone.
  */
-export const EndpointSettingsSchema = z.object({
-    ...MACHINE_SWITCHES,
-    // Turning it on is refused with `closed-lid-no-rule` while the rule is not installed; off always goes through.
-    keepAwakeLidClosed: z.boolean().optional(),
-    broker: BrokerSettingSchema.optional(),
-    lanDoor: z.boolean().optional(),
-    // Only the owner of the machine may set it: the folder new worktrees are made in. An empty string puts it back.
-    worktreeRoot: z.string().max(4096).optional(),
-    // Only the owner of the machine may set it.
-    terminalShell: TerminalShellSchema.optional(),
-    // Only the owner of the machine may set it.
-    usageStats: z.boolean().optional()
-});
+export const EndpointSettingsSchema = z.object(ENDPOINT_REQUEST_SETTINGS);
 export type EndpointSettings = z.infer<typeof EndpointSettingsSchema>;
 
 /*
@@ -197,18 +139,13 @@ export const EndpointChangedEventSchema = z.object({
     label: z.string(),
     nameSource: EndpointNameSourceSchema,
     icon: ProjectIconChoiceSchema.nullable(),
-    ...MACHINE_SWITCHES,
-    keepAwakeLidClosed: z.boolean().optional(),
+    ...ENDPOINT_CHANGED_SETTINGS,
     keepAwakeLidRule: z.boolean().optional(),
-    broker: BrokerSettingSchema.optional(),
     brokerUrl: z.string().nullish(),
     brokerFixed: z.boolean().optional(),
     lan: LanDoorSchema.nullish(),
-    lanDoor: z.boolean().optional(),
     lanDoorFixed: z.boolean().optional(),
-    agentIntegrations: AgentIntegrationsSummarySchema.optional(),
-    nodeSizes: EndpointNodeSizesSchema.optional(),
-    usageStats: z.boolean().optional()
+    agentIntegrations: AgentIntegrationsSummarySchema.optional()
 });
 export type EndpointChangedEvent = z.infer<typeof EndpointChangedEventSchema>;
 

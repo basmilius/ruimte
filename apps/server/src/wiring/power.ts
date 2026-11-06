@@ -32,7 +32,7 @@ export function wirePower(home: string, identity: EndpointIdentity, agents: Agen
     // Held by the daemon, so the machine stays awake with no window open and for a daemon from npm.
     const keepAwake = new KeepAwake({
         platform: process.platform,
-        setting: () => identity.keepAwake,
+        setting: () => identity.keepAwakeSetting,
         work: () => ({ sessions: sessions.list(), chats: chats.list() }),
         hold: blockHolder(),
         log: (line) => console.log(line)
@@ -43,12 +43,12 @@ export function wirePower(home: string, identity: EndpointIdentity, agents: Agen
         platform: process.platform,
         uid,
         user: userInfo().username,
-        setting: () => identity.keepAwake,
+        setting: () => identity.keepAwakeSetting,
         working: () => agentsWorking({ sessions: sessions.list(), chats: chats.list() }),
         system: macClosedLidSystem(home, uid),
         // A rule that went takes the switch with it, so a new rule never turns sleep off on a choice made before it.
         ruleChanged: (present) => {
-            if (!present && identity.keepAwake.lidClosed) {
+            if (!present && identity.keepAwakeLidClosed) {
                 void identity
                     .setSwitches({ keepAwakeLidClosed: false })
                     .catch((e: unknown) => console.error('Turning the closed-lid switch off failed:', errorText(e)));
@@ -58,7 +58,6 @@ export function wirePower(home: string, identity: EndpointIdentity, agents: Agen
         },
         log: (line) => console.log(line)
     });
-    identity.attachClosedLid({ describe: () => ({ keepAwakeLidRule: closedLid.ruleInstalled }) });
     const checkAwake = (): void => {
         keepAwake.check();
         closedLid.check();

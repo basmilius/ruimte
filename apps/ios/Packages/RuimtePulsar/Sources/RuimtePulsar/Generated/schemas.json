@@ -6417,10 +6417,96 @@
           "keepAwakeDisplay": {
             "type": "boolean"
           },
-          "keepAwakeAvailable": {
+          "keepAwakeLidClosed": {
             "type": "boolean"
           },
-          "keepAwakeLidClosed": {
+          "broker": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "const": "default"
+                  }
+                },
+                "required": [
+                  "mode"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "const": "off"
+                  }
+                },
+                "required": [
+                  "mode"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "const": "custom"
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode",
+                  "url"
+                ]
+              }
+            ]
+          },
+          "lanDoor": {
+            "type": "boolean"
+          },
+          "worktreeRoot": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "terminalShell": {
+            "type": "string",
+            "enum": [
+              "powershell",
+              "git-bash",
+              "cmd",
+              "wsl"
+            ]
+          },
+          "nodeSizes": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "w": {
+                  "type": "number"
+                },
+                "h": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "w",
+                "h"
+              ]
+            }
+          },
+          "usageStats": {
+            "type": "boolean"
+          },
+          "keepAwakeAvailable": {
             "type": "boolean"
           },
           "keepAwakeLidAvailable": {
@@ -6510,50 +6596,6 @@
               "null"
             ]
           },
-          "broker": {
-            "oneOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "mode": {
-                    "type": "string",
-                    "const": "default"
-                  }
-                },
-                "required": [
-                  "mode"
-                ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "mode": {
-                    "type": "string",
-                    "const": "off"
-                  }
-                },
-                "required": [
-                  "mode"
-                ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "mode": {
-                    "type": "string",
-                    "const": "custom"
-                  },
-                  "url": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "mode",
-                  "url"
-                ]
-              }
-            ]
-          },
           "brokerFixed": {
             "type": "boolean"
           },
@@ -6586,9 +6628,6 @@
                 "type": "null"
               }
             ]
-          },
-          "lanDoor": {
-            "type": "boolean"
           },
           "lanDoorFixed": {
             "type": "boolean"
@@ -6641,46 +6680,7 @@
               "fixed"
             ]
           },
-          "worktreeRoot": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "terminalShell": {
-            "type": "string",
-            "enum": [
-              "powershell",
-              "git-bash",
-              "cmd",
-              "wsl"
-            ]
-          },
           "gitBashMissing": {
-            "type": "boolean"
-          },
-          "nodeSizes": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string"
-            },
-            "additionalProperties": {
-              "type": "object",
-              "properties": {
-                "w": {
-                  "type": "number"
-                },
-                "h": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "w",
-                "h"
-              ]
-            }
-          },
-          "usageStats": {
             "type": "boolean"
           },
           "features": {
@@ -39719,10 +39719,96 @@
       "keepAwakeDisplay": {
         "type": "boolean"
       },
-      "keepAwakeAvailable": {
+      "keepAwakeLidClosed": {
         "type": "boolean"
       },
-      "keepAwakeLidClosed": {
+      "broker": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "default"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "off"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "custom"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode",
+              "url"
+            ]
+          }
+        ]
+      },
+      "lanDoor": {
+        "type": "boolean"
+      },
+      "worktreeRoot": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "terminalShell": {
+        "type": "string",
+        "enum": [
+          "powershell",
+          "git-bash",
+          "cmd",
+          "wsl"
+        ]
+      },
+      "nodeSizes": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "w": {
+              "type": "number"
+            },
+            "h": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "w",
+            "h"
+          ]
+        }
+      },
+      "usageStats": {
+        "type": "boolean"
+      },
+      "keepAwakeAvailable": {
         "type": "boolean"
       },
       "keepAwakeLidAvailable": {
@@ -39812,50 +39898,6 @@
           "null"
         ]
       },
-      "broker": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "default"
-              }
-            },
-            "required": [
-              "mode"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "off"
-              }
-            },
-            "required": [
-              "mode"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "custom"
-              },
-              "url": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "mode",
-              "url"
-            ]
-          }
-        ]
-      },
       "brokerFixed": {
         "type": "boolean"
       },
@@ -39888,9 +39930,6 @@
             "type": "null"
           }
         ]
-      },
-      "lanDoor": {
-        "type": "boolean"
       },
       "lanDoorFixed": {
         "type": "boolean"
@@ -39950,46 +39989,7 @@
           "fixed"
         ]
       },
-      "worktreeRoot": {
-        "type": [
-          "string",
-          "null"
-        ]
-      },
-      "terminalShell": {
-        "type": "string",
-        "enum": [
-          "powershell",
-          "git-bash",
-          "cmd",
-          "wsl"
-        ]
-      },
       "gitBashMissing": {
-        "type": "boolean"
-      },
-      "nodeSizes": {
-        "type": "object",
-        "propertyNames": {
-          "type": "string"
-        },
-        "additionalProperties": {
-          "type": "object",
-          "properties": {
-            "w": {
-              "type": "number"
-            },
-            "h": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "w",
-            "h"
-          ]
-        }
-      },
-      "usageStats": {
         "type": "boolean"
       },
       "features": {
@@ -40268,10 +40268,96 @@
       "keepAwakeDisplay": {
         "type": "boolean"
       },
-      "keepAwakeAvailable": {
+      "keepAwakeLidClosed": {
         "type": "boolean"
       },
-      "keepAwakeLidClosed": {
+      "broker": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "default"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "off"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "custom"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode",
+              "url"
+            ]
+          }
+        ]
+      },
+      "lanDoor": {
+        "type": "boolean"
+      },
+      "worktreeRoot": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "terminalShell": {
+        "type": "string",
+        "enum": [
+          "powershell",
+          "git-bash",
+          "cmd",
+          "wsl"
+        ]
+      },
+      "nodeSizes": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "w": {
+              "type": "number"
+            },
+            "h": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "w",
+            "h"
+          ]
+        }
+      },
+      "usageStats": {
+        "type": "boolean"
+      },
+      "keepAwakeAvailable": {
         "type": "boolean"
       },
       "keepAwakeLidAvailable": {
@@ -40361,50 +40447,6 @@
           "null"
         ]
       },
-      "broker": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "default"
-              }
-            },
-            "required": [
-              "mode"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "off"
-              }
-            },
-            "required": [
-              "mode"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "custom"
-              },
-              "url": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "mode",
-              "url"
-            ]
-          }
-        ]
-      },
       "brokerFixed": {
         "type": "boolean"
       },
@@ -40437,9 +40479,6 @@
             "type": "null"
           }
         ]
-      },
-      "lanDoor": {
-        "type": "boolean"
       },
       "lanDoorFixed": {
         "type": "boolean"
@@ -40499,46 +40538,7 @@
           "fixed"
         ]
       },
-      "worktreeRoot": {
-        "type": [
-          "string",
-          "null"
-        ]
-      },
-      "terminalShell": {
-        "type": "string",
-        "enum": [
-          "powershell",
-          "git-bash",
-          "cmd",
-          "wsl"
-        ]
-      },
       "gitBashMissing": {
-        "type": "boolean"
-      },
-      "nodeSizes": {
-        "type": "object",
-        "propertyNames": {
-          "type": "string"
-        },
-        "additionalProperties": {
-          "type": "object",
-          "properties": {
-            "w": {
-              "type": "number"
-            },
-            "h": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "w",
-            "h"
-          ]
-        }
-      },
-      "usageStats": {
         "type": "boolean"
       },
       "features": {
@@ -41530,10 +41530,96 @@
       "keepAwakeDisplay": {
         "type": "boolean"
       },
-      "keepAwakeAvailable": {
+      "keepAwakeLidClosed": {
         "type": "boolean"
       },
-      "keepAwakeLidClosed": {
+      "broker": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "default"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "off"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "custom"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode",
+              "url"
+            ]
+          }
+        ]
+      },
+      "lanDoor": {
+        "type": "boolean"
+      },
+      "worktreeRoot": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "terminalShell": {
+        "type": "string",
+        "enum": [
+          "powershell",
+          "git-bash",
+          "cmd",
+          "wsl"
+        ]
+      },
+      "nodeSizes": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "w": {
+              "type": "number"
+            },
+            "h": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "w",
+            "h"
+          ]
+        }
+      },
+      "usageStats": {
+        "type": "boolean"
+      },
+      "keepAwakeAvailable": {
         "type": "boolean"
       },
       "keepAwakeLidAvailable": {
@@ -41623,50 +41709,6 @@
           "null"
         ]
       },
-      "broker": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "default"
-              }
-            },
-            "required": [
-              "mode"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "off"
-              }
-            },
-            "required": [
-              "mode"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "custom"
-              },
-              "url": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "mode",
-              "url"
-            ]
-          }
-        ]
-      },
       "brokerFixed": {
         "type": "boolean"
       },
@@ -41699,9 +41741,6 @@
             "type": "null"
           }
         ]
-      },
-      "lanDoor": {
-        "type": "boolean"
       },
       "lanDoorFixed": {
         "type": "boolean"
@@ -41761,46 +41800,7 @@
           "fixed"
         ]
       },
-      "worktreeRoot": {
-        "type": [
-          "string",
-          "null"
-        ]
-      },
-      "terminalShell": {
-        "type": "string",
-        "enum": [
-          "powershell",
-          "git-bash",
-          "cmd",
-          "wsl"
-        ]
-      },
       "gitBashMissing": {
-        "type": "boolean"
-      },
-      "nodeSizes": {
-        "type": "object",
-        "propertyNames": {
-          "type": "string"
-        },
-        "additionalProperties": {
-          "type": "object",
-          "properties": {
-            "w": {
-              "type": "number"
-            },
-            "h": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "w",
-            "h"
-          ]
-        }
-      },
-      "usageStats": {
         "type": "boolean"
       },
       "features": {
@@ -42122,10 +42122,96 @@
       "keepAwakeDisplay": {
         "type": "boolean"
       },
-      "keepAwakeAvailable": {
+      "keepAwakeLidClosed": {
         "type": "boolean"
       },
-      "keepAwakeLidClosed": {
+      "broker": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "default"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "off"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "custom"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode",
+              "url"
+            ]
+          }
+        ]
+      },
+      "lanDoor": {
+        "type": "boolean"
+      },
+      "worktreeRoot": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "terminalShell": {
+        "type": "string",
+        "enum": [
+          "powershell",
+          "git-bash",
+          "cmd",
+          "wsl"
+        ]
+      },
+      "nodeSizes": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "w": {
+              "type": "number"
+            },
+            "h": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "w",
+            "h"
+          ]
+        }
+      },
+      "usageStats": {
+        "type": "boolean"
+      },
+      "keepAwakeAvailable": {
         "type": "boolean"
       },
       "keepAwakeLidAvailable": {
@@ -42215,50 +42301,6 @@
           "null"
         ]
       },
-      "broker": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "default"
-              }
-            },
-            "required": [
-              "mode"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "off"
-              }
-            },
-            "required": [
-              "mode"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "custom"
-              },
-              "url": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "mode",
-              "url"
-            ]
-          }
-        ]
-      },
       "brokerFixed": {
         "type": "boolean"
       },
@@ -42291,9 +42333,6 @@
             "type": "null"
           }
         ]
-      },
-      "lanDoor": {
-        "type": "boolean"
       },
       "lanDoorFixed": {
         "type": "boolean"
@@ -42353,46 +42392,7 @@
           "fixed"
         ]
       },
-      "worktreeRoot": {
-        "type": [
-          "string",
-          "null"
-        ]
-      },
-      "terminalShell": {
-        "type": "string",
-        "enum": [
-          "powershell",
-          "git-bash",
-          "cmd",
-          "wsl"
-        ]
-      },
       "gitBashMissing": {
-        "type": "boolean"
-      },
-      "nodeSizes": {
-        "type": "object",
-        "propertyNames": {
-          "type": "string"
-        },
-        "additionalProperties": {
-          "type": "object",
-          "properties": {
-            "w": {
-              "type": "number"
-            },
-            "h": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "w",
-            "h"
-          ]
-        }
-      },
-      "usageStats": {
         "type": "boolean"
       },
       "features": {
@@ -42765,10 +42765,96 @@
       "keepAwakeDisplay": {
         "type": "boolean"
       },
-      "keepAwakeAvailable": {
+      "keepAwakeLidClosed": {
         "type": "boolean"
       },
-      "keepAwakeLidClosed": {
+      "broker": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "default"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "off"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "custom"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode",
+              "url"
+            ]
+          }
+        ]
+      },
+      "lanDoor": {
+        "type": "boolean"
+      },
+      "worktreeRoot": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "terminalShell": {
+        "type": "string",
+        "enum": [
+          "powershell",
+          "git-bash",
+          "cmd",
+          "wsl"
+        ]
+      },
+      "nodeSizes": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "w": {
+              "type": "number"
+            },
+            "h": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "w",
+            "h"
+          ]
+        }
+      },
+      "usageStats": {
+        "type": "boolean"
+      },
+      "keepAwakeAvailable": {
         "type": "boolean"
       },
       "keepAwakeLidAvailable": {
@@ -42858,50 +42944,6 @@
           "null"
         ]
       },
-      "broker": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "default"
-              }
-            },
-            "required": [
-              "mode"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "off"
-              }
-            },
-            "required": [
-              "mode"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "custom"
-              },
-              "url": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "mode",
-              "url"
-            ]
-          }
-        ]
-      },
       "brokerFixed": {
         "type": "boolean"
       },
@@ -42934,9 +42976,6 @@
             "type": "null"
           }
         ]
-      },
-      "lanDoor": {
-        "type": "boolean"
       },
       "lanDoorFixed": {
         "type": "boolean"
@@ -42996,46 +43035,7 @@
           "fixed"
         ]
       },
-      "worktreeRoot": {
-        "type": [
-          "string",
-          "null"
-        ]
-      },
-      "terminalShell": {
-        "type": "string",
-        "enum": [
-          "powershell",
-          "git-bash",
-          "cmd",
-          "wsl"
-        ]
-      },
       "gitBashMissing": {
-        "type": "boolean"
-      },
-      "nodeSizes": {
-        "type": "object",
-        "propertyNames": {
-          "type": "string"
-        },
-        "additionalProperties": {
-          "type": "object",
-          "properties": {
-            "w": {
-              "type": "number"
-            },
-            "h": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "w",
-            "h"
-          ]
-        }
-      },
-      "usageStats": {
         "type": "boolean"
       },
       "features": {
@@ -82872,9 +82872,6 @@
       "keepAwakeLidClosed": {
         "type": "boolean"
       },
-      "keepAwakeLidRule": {
-        "type": "boolean"
-      },
       "broker": {
         "oneOf": [
           {
@@ -82919,6 +82916,36 @@
           }
         ]
       },
+      "lanDoor": {
+        "type": "boolean"
+      },
+      "nodeSizes": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "w": {
+              "type": "number"
+            },
+            "h": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "w",
+            "h"
+          ]
+        }
+      },
+      "usageStats": {
+        "type": "boolean"
+      },
+      "keepAwakeLidRule": {
+        "type": "boolean"
+      },
       "brokerUrl": {
         "type": [
           "string",
@@ -82957,9 +82984,6 @@
             "type": "null"
           }
         ]
-      },
-      "lanDoor": {
-        "type": "boolean"
       },
       "lanDoorFixed": {
         "type": "boolean"
@@ -83012,30 +83036,6 @@
           "providers",
           "fixed"
         ]
-      },
-      "nodeSizes": {
-        "type": "object",
-        "propertyNames": {
-          "type": "string"
-        },
-        "additionalProperties": {
-          "type": "object",
-          "properties": {
-            "w": {
-              "type": "number"
-            },
-            "h": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "w",
-            "h"
-          ]
-        }
-      },
-      "usageStats": {
-        "type": "boolean"
       }
     },
     "required": [

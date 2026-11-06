@@ -1,7 +1,7 @@
 import type { Area } from '../area.ts';
 import { reachabilityOf } from '../auth/access.ts';
 import type { ServerConfig } from '../config.ts';
-import type { IdentityLanDoor } from '../endpoint-id.ts';
+import type { SettingDescription } from '../machine-settings.ts';
 import { BrokerRelay } from '../pulsar/broker-relay.ts';
 import { BrokerSwitch } from '../pulsar/broker-switch.ts';
 import { authenticateChannel } from '../pulsar/channel-auth.ts';
@@ -17,6 +17,8 @@ import type { DaemonBundles } from './bundles.ts';
 import type { Later } from './later.ts';
 import type { MachineBundle } from './machine.ts';
 
+type LanDoorDescription = Pick<SettingDescription, 'lan' | 'lanDoorFixed'>;
+
 /* How a client away from this machine reaches it: a direct channel, signaled over the broker or the door on the local network. */
 export interface NetworkBundle {
     peers: DirectPeers;
@@ -25,7 +27,7 @@ export interface NetworkBundle {
     lanDoor: LanDoor;
     /* Open unless a person closed it or `--no-lan` keeps it closed. */
     lanDoorWanted(): boolean;
-    describeLanDoor: IdentityLanDoor['describe'];
+    describeLanDoor(): LanDoorDescription;
     /* Whether other devices reach this machine, for `endpoint.reach` and `ruimte status`. */
     reach: ReachChecker;
 }
@@ -86,7 +88,6 @@ export function wireNetwork(config: ServerConfig, compiled: boolean, machine: Ma
                 onSettled: () => reach.brokerSettled()
             })
     });
-    identity.attachBroker(brokerSwitch);
 
     // The addresses are read per answer, so a machine that moved to another network says so without a timer.
     const lanDoor = new LanDoor({
@@ -95,20 +96,10 @@ export function wireNetwork(config: ServerConfig, compiled: boolean, machine: Ma
         gate
     });
     const lanDoorWanted = (): boolean => !config.lanDoorOff && identity.lanDoor;
-    const describeLanDoor: IdentityLanDoor['describe'] = () => {
+    const describeLanDoor = (): LanDoorDescription => {
         const port = lanDoor.port;
         return { lan: port === null ? null : { port, addresses: lanAddresses() }, lanDoorFixed: config.lanDoorOff };
     };
-    identity.attachLanDoor({
-        apply: () => {
-            if (lanDoorWanted()) {
-                lanDoor.start();
-            } else {
-                lanDoor.stop();
-            }
-        },
-        describe: describeLanDoor
-    });
     const reach = new ReachChecker({
         broker: () => ({ url: brokerSwitch.describe().brokerUrl, connected: brokerSwitch.isReady }),
         iceServers: () => [...config.stun.map((urls) => ({ urls })), ...brokerSwitch.grantedIceServers()],

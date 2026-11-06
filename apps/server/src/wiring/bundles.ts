@@ -1,6 +1,7 @@
 import type { ServerActions } from '../actions/server-actions.ts';
 import type { CanvasHost } from '../canvas/host.ts';
 import type { ComputerUse } from '../computer/computer-use.ts';
+import type { SettingPorts } from '../machine-settings.ts';
 import type { Maintenance } from '../maintenance/maintenance.ts';
 import type { PushService } from '../push/service.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
@@ -54,6 +55,7 @@ export interface DaemonBundles {
     voice: VoiceBundle;
     power: PowerBundle;
     network: NetworkBundle;
+    settingPorts: SettingPorts;
     clients: ClientsBundle;
     actions: ServerActions;
     canvasHost: CanvasHost;

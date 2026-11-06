@@ -100,6 +100,7 @@ export * from './secrets.ts';
 export * from './live-stream.ts';
 export * from './live-frame.ts';
 export * from './machine-http.ts';
+export * from './machine-settings.ts';
 export * from './machine-update.ts';
 export * from './model.ts';
 export * from './model-sniff.ts';

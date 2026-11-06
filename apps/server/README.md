@@ -132,6 +132,8 @@ A bare `ruimte` at a terminal prints its address and the commands; under the ser
 
 Keep awake is the daemon's own (`src/power/keep-awake.ts`), so it holds with no window open. On macOS it is a `caffeinate -w <daemon pid>` child, so a dead daemon never leaves the Mac awake. On Windows the daemon's own thread holds `SetThreadExecutionState`, which ends with it (`src/power/windows-keep-awake.ts`). Elsewhere `keepAwakeAvailable` is false.
 
+A setting is one row of `MACHINE_SETTINGS` in `packages/contracts/src/machine-settings.ts` (schema, default, request form, owner-only), and `endpoint.info`, `endpoint.changed`, `endpoint.settings`, the file and the owner check all follow from it. A row needs an entry in `src/machine-settings.ts` only for an owner-only message, a check of the request, a file form that differs or an effect once it changed. A change reaches the parts of the daemon through `SettingPorts`, wired in `src/wiring/setting-ports.ts`.
+
 `endpoint.json` stays at `version: 1` and gains only optional fields, since a bump would make an older daemon mint a new id. A field that will not read is dropped and the id and key pair survive. A file that will not read at all becomes `endpoint.json.corrupt-<time>` before a new id is minted, so the old key pair can be put back by hand.
 
 ### With the lid closed

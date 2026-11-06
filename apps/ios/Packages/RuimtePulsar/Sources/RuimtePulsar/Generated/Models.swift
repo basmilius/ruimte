@@ -3891,8 +3891,14 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `keepAwake`: PairResultEndpointKeepAwake?
     public let `keepAwakeOnBattery`: Bool?
     public let `keepAwakeDisplay`: Bool?
-    public let `keepAwakeAvailable`: Bool?
     public let `keepAwakeLidClosed`: Bool?
+    public let `broker`: PairResultEndpointBroker?
+    public let `lanDoor`: Bool?
+    public let `worktreeRoot`: Presence<String>
+    public let `terminalShell`: PairResultEndpointTerminalShell?
+    public let `nodeSizes`: [String: PairResultEndpointNodeSizesValue]?
+    public let `usageStats`: Bool?
+    public let `keepAwakeAvailable`: Bool?
     public let `keepAwakeLidAvailable`: Bool?
     public let `keepAwakeLidRule`: Bool?
     public let `update`: PairResultEndpointUpdate?
@@ -3903,22 +3909,16 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `authenticated`: Bool
     public let `publicKey`: String?
     public let `brokerUrl`: Presence<String>
-    public let `broker`: PairResultEndpointBroker?
     public let `brokerFixed`: Bool?
     public let `lan`: Presence<PairResultEndpointLan>
-    public let `lanDoor`: Bool?
     public let `lanDoorFixed`: Bool?
     public let `accountId`: Presence<String>
     public let `agentIntegrations`: PairResultEndpointAgentIntegrations?
-    public let `worktreeRoot`: Presence<String>
-    public let `terminalShell`: PairResultEndpointTerminalShell?
     public let `gitBashMissing`: Bool?
-    public let `nodeSizes`: [String: PairResultEndpointNodeSizesValue]?
-    public let `usageStats`: Bool?
     public let `features`: [String]?
     public let `viewReferences`: Bool?
 
-    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `keepAwake`: PairResultEndpointKeepAwake? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: PairResultEndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil, `lan`: Presence<PairResultEndpointLan> = .missing, `lanDoor`: Bool? = nil, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing, `agentIntegrations`: PairResultEndpointAgentIntegrations? = nil, `worktreeRoot`: Presence<String> = .missing, `terminalShell`: PairResultEndpointTerminalShell? = nil, `gitBashMissing`: Bool? = nil, `nodeSizes`: [String: PairResultEndpointNodeSizesValue]? = nil, `usageStats`: Bool? = nil, `features`: [String]? = nil, `viewReferences`: Bool? = nil) {
+    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `keepAwake`: PairResultEndpointKeepAwake? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: PairResultEndpointBroker? = nil, `lanDoor`: Bool? = nil, `worktreeRoot`: Presence<String> = .missing, `terminalShell`: PairResultEndpointTerminalShell? = nil, `nodeSizes`: [String: PairResultEndpointNodeSizesValue]? = nil, `usageStats`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: PairResultEndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<PairResultEndpointLan> = .missing, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing, `agentIntegrations`: PairResultEndpointAgentIntegrations? = nil, `gitBashMissing`: Bool? = nil, `features`: [String]? = nil, `viewReferences`: Bool? = nil) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
@@ -3932,8 +3932,14 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         self.`keepAwake` = `keepAwake`
         self.`keepAwakeOnBattery` = `keepAwakeOnBattery`
         self.`keepAwakeDisplay` = `keepAwakeDisplay`
-        self.`keepAwakeAvailable` = `keepAwakeAvailable`
         self.`keepAwakeLidClosed` = `keepAwakeLidClosed`
+        self.`broker` = `broker`
+        self.`lanDoor` = `lanDoor`
+        self.`worktreeRoot` = `worktreeRoot`
+        self.`terminalShell` = `terminalShell`
+        self.`nodeSizes` = `nodeSizes`
+        self.`usageStats` = `usageStats`
+        self.`keepAwakeAvailable` = `keepAwakeAvailable`
         self.`keepAwakeLidAvailable` = `keepAwakeLidAvailable`
         self.`keepAwakeLidRule` = `keepAwakeLidRule`
         self.`update` = `update`
@@ -3944,18 +3950,12 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         self.`authenticated` = `authenticated`
         self.`publicKey` = `publicKey`
         self.`brokerUrl` = `brokerUrl`
-        self.`broker` = `broker`
         self.`brokerFixed` = `brokerFixed`
         self.`lan` = `lan`
-        self.`lanDoor` = `lanDoor`
         self.`lanDoorFixed` = `lanDoorFixed`
         self.`accountId` = `accountId`
         self.`agentIntegrations` = `agentIntegrations`
-        self.`worktreeRoot` = `worktreeRoot`
-        self.`terminalShell` = `terminalShell`
         self.`gitBashMissing` = `gitBashMissing`
-        self.`nodeSizes` = `nodeSizes`
-        self.`usageStats` = `usageStats`
         self.`features` = `features`
         self.`viewReferences` = `viewReferences`
     }
@@ -3975,8 +3975,14 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         `keepAwake` = try container.decodeIfPresent(PairResultEndpointKeepAwake.self, forKey: .`keepAwake`)
         `keepAwakeOnBattery` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeOnBattery`)
         `keepAwakeDisplay` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeDisplay`)
-        `keepAwakeAvailable` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeAvailable`)
         `keepAwakeLidClosed` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidClosed`)
+        `broker` = try container.decodeIfPresent(PairResultEndpointBroker.self, forKey: .`broker`)
+        `lanDoor` = try container.decodeIfPresent(Bool.self, forKey: .`lanDoor`)
+        `worktreeRoot` = try container.contains(.`worktreeRoot`) ? (container.decodeNil(forKey: .`worktreeRoot`) ? .null : .value(container.decode(String.self, forKey: .`worktreeRoot`))) : .missing
+        `terminalShell` = try container.decodeIfPresent(PairResultEndpointTerminalShell.self, forKey: .`terminalShell`)
+        `nodeSizes` = try container.decodeIfPresent([String: PairResultEndpointNodeSizesValue].self, forKey: .`nodeSizes`)
+        `usageStats` = try container.decodeIfPresent(Bool.self, forKey: .`usageStats`)
+        `keepAwakeAvailable` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeAvailable`)
         `keepAwakeLidAvailable` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidAvailable`)
         `keepAwakeLidRule` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidRule`)
         `update` = try container.decodeIfPresent(PairResultEndpointUpdate.self, forKey: .`update`)
@@ -3987,18 +3993,12 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         `authenticated` = try container.decode(Bool.self, forKey: .`authenticated`)
         `publicKey` = try container.decodeIfPresent(String.self, forKey: .`publicKey`)
         `brokerUrl` = try container.contains(.`brokerUrl`) ? (container.decodeNil(forKey: .`brokerUrl`) ? .null : .value(container.decode(String.self, forKey: .`brokerUrl`))) : .missing
-        `broker` = try container.decodeIfPresent(PairResultEndpointBroker.self, forKey: .`broker`)
         `brokerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`brokerFixed`)
         `lan` = try container.contains(.`lan`) ? (container.decodeNil(forKey: .`lan`) ? .null : .value(container.decode(PairResultEndpointLan.self, forKey: .`lan`))) : .missing
-        `lanDoor` = try container.decodeIfPresent(Bool.self, forKey: .`lanDoor`)
         `lanDoorFixed` = try container.decodeIfPresent(Bool.self, forKey: .`lanDoorFixed`)
         `accountId` = try container.contains(.`accountId`) ? (container.decodeNil(forKey: .`accountId`) ? .null : .value(container.decode(String.self, forKey: .`accountId`))) : .missing
         `agentIntegrations` = try container.decodeIfPresent(PairResultEndpointAgentIntegrations.self, forKey: .`agentIntegrations`)
-        `worktreeRoot` = try container.contains(.`worktreeRoot`) ? (container.decodeNil(forKey: .`worktreeRoot`) ? .null : .value(container.decode(String.self, forKey: .`worktreeRoot`))) : .missing
-        `terminalShell` = try container.decodeIfPresent(PairResultEndpointTerminalShell.self, forKey: .`terminalShell`)
         `gitBashMissing` = try container.decodeIfPresent(Bool.self, forKey: .`gitBashMissing`)
-        `nodeSizes` = try container.decodeIfPresent([String: PairResultEndpointNodeSizesValue].self, forKey: .`nodeSizes`)
-        `usageStats` = try container.decodeIfPresent(Bool.self, forKey: .`usageStats`)
         `features` = try container.decodeIfPresent([String].self, forKey: .`features`)
         `viewReferences` = try container.decodeIfPresent(Bool.self, forKey: .`viewReferences`)
     }
@@ -4022,8 +4022,18 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`keepAwake`, forKey: .`keepAwake`)
         try container.encodeIfPresent(`keepAwakeOnBattery`, forKey: .`keepAwakeOnBattery`)
         try container.encodeIfPresent(`keepAwakeDisplay`, forKey: .`keepAwakeDisplay`)
-        try container.encodeIfPresent(`keepAwakeAvailable`, forKey: .`keepAwakeAvailable`)
         try container.encodeIfPresent(`keepAwakeLidClosed`, forKey: .`keepAwakeLidClosed`)
+        try container.encodeIfPresent(`broker`, forKey: .`broker`)
+        try container.encodeIfPresent(`lanDoor`, forKey: .`lanDoor`)
+        switch `worktreeRoot` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`worktreeRoot`)
+        case .value(let value): try container.encode(value, forKey: .`worktreeRoot`)
+        }
+        try container.encodeIfPresent(`terminalShell`, forKey: .`terminalShell`)
+        try container.encodeIfPresent(`nodeSizes`, forKey: .`nodeSizes`)
+        try container.encodeIfPresent(`usageStats`, forKey: .`usageStats`)
+        try container.encodeIfPresent(`keepAwakeAvailable`, forKey: .`keepAwakeAvailable`)
         try container.encodeIfPresent(`keepAwakeLidAvailable`, forKey: .`keepAwakeLidAvailable`)
         try container.encodeIfPresent(`keepAwakeLidRule`, forKey: .`keepAwakeLidRule`)
         try container.encodeIfPresent(`update`, forKey: .`update`)
@@ -4038,14 +4048,12 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         case .null: try container.encodeNil(forKey: .`brokerUrl`)
         case .value(let value): try container.encode(value, forKey: .`brokerUrl`)
         }
-        try container.encodeIfPresent(`broker`, forKey: .`broker`)
         try container.encodeIfPresent(`brokerFixed`, forKey: .`brokerFixed`)
         switch `lan` {
         case .missing: break
         case .null: try container.encodeNil(forKey: .`lan`)
         case .value(let value): try container.encode(value, forKey: .`lan`)
         }
-        try container.encodeIfPresent(`lanDoor`, forKey: .`lanDoor`)
         try container.encodeIfPresent(`lanDoorFixed`, forKey: .`lanDoorFixed`)
         switch `accountId` {
         case .missing: break
@@ -4053,15 +4061,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         case .value(let value): try container.encode(value, forKey: .`accountId`)
         }
         try container.encodeIfPresent(`agentIntegrations`, forKey: .`agentIntegrations`)
-        switch `worktreeRoot` {
-        case .missing: break
-        case .null: try container.encodeNil(forKey: .`worktreeRoot`)
-        case .value(let value): try container.encode(value, forKey: .`worktreeRoot`)
-        }
-        try container.encodeIfPresent(`terminalShell`, forKey: .`terminalShell`)
         try container.encodeIfPresent(`gitBashMissing`, forKey: .`gitBashMissing`)
-        try container.encodeIfPresent(`nodeSizes`, forKey: .`nodeSizes`)
-        try container.encodeIfPresent(`usageStats`, forKey: .`usageStats`)
         try container.encodeIfPresent(`features`, forKey: .`features`)
         try container.encodeIfPresent(`viewReferences`, forKey: .`viewReferences`)
     }
@@ -4080,8 +4080,14 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         case `keepAwake` = "keepAwake"
         case `keepAwakeOnBattery` = "keepAwakeOnBattery"
         case `keepAwakeDisplay` = "keepAwakeDisplay"
-        case `keepAwakeAvailable` = "keepAwakeAvailable"
         case `keepAwakeLidClosed` = "keepAwakeLidClosed"
+        case `broker` = "broker"
+        case `lanDoor` = "lanDoor"
+        case `worktreeRoot` = "worktreeRoot"
+        case `terminalShell` = "terminalShell"
+        case `nodeSizes` = "nodeSizes"
+        case `usageStats` = "usageStats"
+        case `keepAwakeAvailable` = "keepAwakeAvailable"
         case `keepAwakeLidAvailable` = "keepAwakeLidAvailable"
         case `keepAwakeLidRule` = "keepAwakeLidRule"
         case `update` = "update"
@@ -4092,18 +4098,12 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         case `authenticated` = "authenticated"
         case `publicKey` = "publicKey"
         case `brokerUrl` = "brokerUrl"
-        case `broker` = "broker"
         case `brokerFixed` = "brokerFixed"
         case `lan` = "lan"
-        case `lanDoor` = "lanDoor"
         case `lanDoorFixed` = "lanDoorFixed"
         case `accountId` = "accountId"
         case `agentIntegrations` = "agentIntegrations"
-        case `worktreeRoot` = "worktreeRoot"
-        case `terminalShell` = "terminalShell"
         case `gitBashMissing` = "gitBashMissing"
-        case `nodeSizes` = "nodeSizes"
-        case `usageStats` = "usageStats"
         case `features` = "features"
         case `viewReferences` = "viewReferences"
     }
@@ -4118,75 +4118,6 @@ public enum PairResultEndpointKeepAwake: String, CaseIterable, Codable, Sendable
     case `off` = "off"
     case `working` = "working"
     case `always` = "always"
-}
-
-public struct PairResultEndpointUpdate: Codable, Sendable, Equatable {
-    public let `status`: PairResultEndpointUpdateStatus
-    public let `currentVersion`: String?
-    public let `version`: String?
-    public let `percent`: Double?
-    public let `error`: Presence<String>
-    public let `app`: Bool
-
-    public init(`status`: PairResultEndpointUpdateStatus, `currentVersion`: String? = nil, `version`: String? = nil, `percent`: Double? = nil, `error`: Presence<String> = .missing, `app`: Bool) {
-        self.`status` = `status`
-        self.`currentVersion` = `currentVersion`
-        self.`version` = `version`
-        self.`percent` = `percent`
-        self.`error` = `error`
-        self.`app` = `app`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `status` = try container.decode(PairResultEndpointUpdateStatus.self, forKey: .`status`)
-        `currentVersion` = try container.decodeIfPresent(String.self, forKey: .`currentVersion`)
-        `version` = try container.decodeIfPresent(String.self, forKey: .`version`)
-        `percent` = try container.decodeIfPresent(Double.self, forKey: .`percent`)
-        `error` = try container.contains(.`error`) ? (container.decodeNil(forKey: .`error`) ? .null : .value(container.decode(String.self, forKey: .`error`))) : .missing
-        `app` = try container.decode(Bool.self, forKey: .`app`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`status`, forKey: .`status`)
-        try container.encodeIfPresent(`currentVersion`, forKey: .`currentVersion`)
-        try container.encodeIfPresent(`version`, forKey: .`version`)
-        try container.encodeIfPresent(`percent`, forKey: .`percent`)
-        switch `error` {
-        case .missing: break
-        case .null: try container.encodeNil(forKey: .`error`)
-        case .value(let value): try container.encode(value, forKey: .`error`)
-        }
-        try container.encode(`app`, forKey: .`app`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `status` = "status"
-        case `currentVersion` = "currentVersion"
-        case `version` = "version"
-        case `percent` = "percent"
-        case `error` = "error"
-        case `app` = "app"
-    }
-}
-
-public enum PairResultEndpointUpdateStatus: String, CaseIterable, Codable, Sendable, Equatable {
-    case `unsupported` = "unsupported"
-    case `idle` = "idle"
-    case `checking` = "checking"
-    case `current` = "current"
-    case `available` = "available"
-    case `downloading` = "downloading"
-    case `ready` = "ready"
-    case `error` = "error"
-}
-
-public enum PairResultEndpointReachability: String, CaseIterable, Codable, Sendable, Equatable {
-    case `loopback` = "loopback"
-    case `lan` = "lan"
-    case `tunnel` = "tunnel"
-    case `public` = "public"
 }
 
 public enum PairResultEndpointBroker: Codable, Sendable, Equatable {
@@ -4286,6 +4217,109 @@ public struct PairResultEndpointBrokerVariant2: Codable, Sendable, Equatable {
     }
 }
 
+public enum PairResultEndpointTerminalShell: String, CaseIterable, Codable, Sendable, Equatable {
+    case `powershell` = "powershell"
+    case `gitBash` = "git-bash"
+    case `cmd` = "cmd"
+    case `wsl` = "wsl"
+}
+
+public struct PairResultEndpointNodeSizesValue: Codable, Sendable, Equatable {
+    public let `w`: Double
+    public let `h`: Double
+
+    public init(`w`: Double, `h`: Double) {
+        self.`w` = `w`
+        self.`h` = `h`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `w` = try container.decode(Double.self, forKey: .`w`)
+        `h` = try container.decode(Double.self, forKey: .`h`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`w`, forKey: .`w`)
+        try container.encode(`h`, forKey: .`h`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `w` = "w"
+        case `h` = "h"
+    }
+}
+
+public struct PairResultEndpointUpdate: Codable, Sendable, Equatable {
+    public let `status`: PairResultEndpointUpdateStatus
+    public let `currentVersion`: String?
+    public let `version`: String?
+    public let `percent`: Double?
+    public let `error`: Presence<String>
+    public let `app`: Bool
+
+    public init(`status`: PairResultEndpointUpdateStatus, `currentVersion`: String? = nil, `version`: String? = nil, `percent`: Double? = nil, `error`: Presence<String> = .missing, `app`: Bool) {
+        self.`status` = `status`
+        self.`currentVersion` = `currentVersion`
+        self.`version` = `version`
+        self.`percent` = `percent`
+        self.`error` = `error`
+        self.`app` = `app`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `status` = try container.decode(PairResultEndpointUpdateStatus.self, forKey: .`status`)
+        `currentVersion` = try container.decodeIfPresent(String.self, forKey: .`currentVersion`)
+        `version` = try container.decodeIfPresent(String.self, forKey: .`version`)
+        `percent` = try container.decodeIfPresent(Double.self, forKey: .`percent`)
+        `error` = try container.contains(.`error`) ? (container.decodeNil(forKey: .`error`) ? .null : .value(container.decode(String.self, forKey: .`error`))) : .missing
+        `app` = try container.decode(Bool.self, forKey: .`app`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`status`, forKey: .`status`)
+        try container.encodeIfPresent(`currentVersion`, forKey: .`currentVersion`)
+        try container.encodeIfPresent(`version`, forKey: .`version`)
+        try container.encodeIfPresent(`percent`, forKey: .`percent`)
+        switch `error` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`error`)
+        case .value(let value): try container.encode(value, forKey: .`error`)
+        }
+        try container.encode(`app`, forKey: .`app`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `status` = "status"
+        case `currentVersion` = "currentVersion"
+        case `version` = "version"
+        case `percent` = "percent"
+        case `error` = "error"
+        case `app` = "app"
+    }
+}
+
+public enum PairResultEndpointUpdateStatus: String, CaseIterable, Codable, Sendable, Equatable {
+    case `unsupported` = "unsupported"
+    case `idle` = "idle"
+    case `checking` = "checking"
+    case `current` = "current"
+    case `available` = "available"
+    case `downloading` = "downloading"
+    case `ready` = "ready"
+    case `error` = "error"
+}
+
+public enum PairResultEndpointReachability: String, CaseIterable, Codable, Sendable, Equatable {
+    case `loopback` = "loopback"
+    case `lan` = "lan"
+    case `tunnel` = "tunnel"
+    case `public` = "public"
+}
+
 public struct PairResultEndpointLan: Codable, Sendable, Equatable {
     public let `port`: Int64
     public let `addresses`: [String]
@@ -4376,40 +4410,6 @@ public enum PairResultEndpointAgentIntegrationsProvidersItemState: String, CaseI
     case `unset` = "unset"
     case `on` = "on"
     case `off` = "off"
-}
-
-public enum PairResultEndpointTerminalShell: String, CaseIterable, Codable, Sendable, Equatable {
-    case `powershell` = "powershell"
-    case `gitBash` = "git-bash"
-    case `cmd` = "cmd"
-    case `wsl` = "wsl"
-}
-
-public struct PairResultEndpointNodeSizesValue: Codable, Sendable, Equatable {
-    public let `w`: Double
-    public let `h`: Double
-
-    public init(`w`: Double, `h`: Double) {
-        self.`w` = `w`
-        self.`h` = `h`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `w` = try container.decode(Double.self, forKey: .`w`)
-        `h` = try container.decode(Double.self, forKey: .`h`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`w`, forKey: .`w`)
-        try container.encode(`h`, forKey: .`h`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `w` = "w"
-        case `h` = "h"
-    }
 }
 
 public struct ProjectCanvasDefaults: Codable, Sendable, Equatable {
