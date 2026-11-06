@@ -5,6 +5,7 @@ import {
     isSessionView,
     mapDesignChats,
     sessionKindOfView,
+    suggestedTitleFor,
     type AgentKind,
     type CanvasNodeKind,
     type DeviceReference,
@@ -18,7 +19,6 @@ import { deleteNodesAction, deleteViewAction } from '@/action-port/person-action
 import { canvasOfNode, DEFAULT_TITLES, useCanvas } from '@/state/canvas';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { suggestedTitleFor } from '@/state/node-title';
 import { nodesOfView, useViewNodes } from '@/state/view-nodes';
 
 /*

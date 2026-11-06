@@ -1,8 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import { SUGGESTED_TITLE_LIMIT } from '@ruimte/contracts';
-import { deriveNodeTitle, suggestedTitleFor } from './node-title.ts';
+import { SUGGESTED_TITLE_LIMIT } from '@adecore/agent-contracts/agent';
+import { deriveNodeTitle, mayReplaceTitle, suggestedTitleFor } from './node-title.ts';
 
 describe('suggestedTitleFor', () => {
+    test('only a name a person gave is kept', () => {
+        expect(mayReplaceTitle(undefined)).toBe(true);
+        expect(mayReplaceTitle('auto')).toBe(true);
+        expect(mayReplaceTitle('user')).toBe(false);
+    });
+
     test('replaces a title nobody named and one the session derived', () => {
         expect(suggestedTitleFor({ title: 'Chat' }, 'Fix the flaky test')).toBe('Fix the flaky test');
         expect(suggestedTitleFor({ title: 'Why does the test fail on…', titleSource: 'auto' }, 'Fix the flaky test')).toBe('Fix the flaky test');
@@ -29,6 +35,7 @@ describe('suggestedTitleFor', () => {
 describe('deriveNodeTitle', () => {
     test('takes the first line and leaves the rest of the prompt alone', () => {
         expect(deriveNodeTitle('Fix the flaky test\n\nIt fails on CI only')).toBe('Fix the flaky test');
+        expect(deriveNodeTitle('\n\nthe second line is the first with words\nand a third')).toBe('the second line is the first with words');
     });
 
     test('collapses the whitespace of that line and trims it', () => {
@@ -57,7 +64,7 @@ describe('deriveNodeTitle', () => {
 
     test('answers null when nothing readable is left', () => {
         expect(deriveNodeTitle('')).toBeNull();
-        expect(deriveNodeTitle('\n\nthe second line does not count')).toBeNull();
+        expect(deriveNodeTitle('\n  \n')).toBeNull();
         expect(deriveNodeTitle('  ...  ')).toBeNull();
     });
 });

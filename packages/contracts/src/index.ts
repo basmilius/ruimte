@@ -96,6 +96,7 @@ export * from './machine-update.ts';
 export * from './model.ts';
 export * from './nanogpt.ts';
 export * from './node-defaults.ts';
+export * from './node-title.ts';
 export { emptyCanvasGroupIds, groupUnder, joinGroupUnder } from './canvas-groups.ts';
 export * from './plan-host.ts';
 export * from './processes.ts';

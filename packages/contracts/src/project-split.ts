@@ -1,4 +1,5 @@
 import { DEFAULT_TITLES } from './node-defaults.ts';
+import { mayReplaceTitle } from './node-title.ts';
 import { liveFlags } from './project-flags.ts';
 import {
     EMPTY_PRIVATE_FILE,
@@ -212,12 +213,12 @@ function withSessionTitles(view: ProjectView, overlay: Record<string, ProjectNod
             ...view,
             nodes: view.nodes.map((node: ProjectNode) => {
                 const title = overlay[node.id]?.title;
-                return title === undefined || node.titleSource === 'user' ? node : { ...node, title, titleSource: 'auto' as const };
+                return title === undefined || !mayReplaceTitle(node.titleSource) ? node : { ...node, title, titleSource: 'auto' as const };
             })
         };
     }
     const name = overlay[next.id]?.name;
-    if (name === undefined || ('titleSource' in next && next.titleSource === 'user')) {
+    if (name === undefined || ('titleSource' in next && !mayReplaceTitle(next.titleSource))) {
         return next;
     }
     return { ...next, name, titleSource: 'auto' } as ProjectView;

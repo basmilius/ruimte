@@ -11,7 +11,7 @@ import {
 import { Composer, SubagentTimeline, Timeline } from '@adecore/agents-react/chat/ui';
 import { providersOf, useChats, useChatRow } from '@adecore/agents-react/state';
 import { ErrorBoundary, LazyBoundary, messageOf } from '@adecore/ui';
-import type { AgentKind, ModelSelection } from '@ruimte/contracts';
+import { deriveNodeTitle, type AgentKind, type ModelSelection } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,7 +26,6 @@ import { OutputChatContext } from '@/output/chat-scope';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
-import { deriveNodeTitle } from '@/state/node-title';
 import { useProject } from '@/state/project';
 import { bringPromptToFront } from '@/surface/canvas/prompt-stack';
 import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/surface/nodes/node-host';
