@@ -3,9 +3,9 @@ import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { fileExists } from '@adecore/utils/fs';
-import type { FsBrowseResult } from '@ruimte/contracts';
+import { PROJECT_DIR, type FsBrowseResult } from '@ruimte/contracts';
 import { isDirectory } from '../disk/is-directory.ts';
-import { PROJECT_DIR, PROJECT_FILE } from '../projects/project-files.ts';
+import { PROJECT_FILE } from '../projects/project-files.ts';
 import { classifyEntry } from './visibility.ts';
 
 type BrowseErrorCode = 'cwd-required' | 'windows-path';

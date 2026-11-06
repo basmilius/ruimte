@@ -5,6 +5,7 @@ import { CodedError, SYSTEM_WATCH, settled, type DirectoryWatcher, type Settled,
 import { Serializer } from '@adecore/utils/async';
 import { writeAtomic } from '@adecore/utils/fs';
 import {
+    PROJECT_DIR,
     BUILT_IN_LIVE_TEMPLATE_KEYS,
     BUILT_IN_POSTFIX_TEMPLATE_KEYS,
     LiveTemplateSchema,
@@ -28,7 +29,6 @@ import {
 } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import {
-    PROJECT_DIR,
     WATCH_SETTLE_MS,
     closeLoaded,
     readJsonDocument,

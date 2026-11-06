@@ -1,8 +1,5 @@
 import { designPlaces, type ProjectView } from '@ruimte/contracts';
 
-/* The two places design folders live, relative to the project folder: one person's, and the team's. */
-export const DESIGN_FOLDERS = ['.ruimte/private/designs', '.ruimte/designs'] as const;
-
 /* A folder name a person reads back in a path: the name in lowercase words joined by dashes. */
 export function designSlug(name: string): string {
     const slug = name

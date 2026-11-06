@@ -1,6 +1,5 @@
-import type { GitActionPhase, WorktreeMergePayload, WorktreeMergeResult } from '@ruimte/contracts';
+import { PROJECT_DIR, type GitActionPhase, type WorktreeMergePayload, type WorktreeMergeResult } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
-import { PROJECT_DIR } from '../projects/project-files.ts';
 import { countUsage } from '../stats/usage-stats.ts';
 import { Job, type ProgressSink } from './actions.ts';
 import { abortOperation, conflictedFiles, dropSquashMessage, existingGitPaths, hasStaged, operationOf, squashWaits } from './conflict.ts';

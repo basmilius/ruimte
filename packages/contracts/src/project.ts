@@ -651,15 +651,6 @@ export type ProjectChatView = z.infer<typeof ProjectChatViewSchema>;
 export const DesignChatSchema = keepingUnknown(z.object({ id: z.string().min(1), name: z.string().min(1), node: StandaloneNodeSchema }));
 export type DesignChat = z.infer<typeof DesignChatSchema>;
 
-/*
- * The folder of a design, relative to the project folder: its name under `.ruimte/private/designs/`
- * while the design is one person's, and under `.ruimte/designs/` once it is shared, so it goes into git
- * with its view. A path with a slash is a folder of the project a design named itself and stays put.
- */
-export function designFolderOf(view: { path: string }, shared: boolean): string {
-    return view.path.includes('/') ? view.path : `.ruimte/${shared ? '' : 'private/'}designs/${view.path}`;
-}
-
 // A control character or a backtick would break out of the code span the path stands in, in the chat's prompt.
 function hasUnsafeCharacter(path: string): boolean {
     return [...path].some((character) => {

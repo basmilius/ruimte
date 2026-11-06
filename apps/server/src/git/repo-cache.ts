@@ -1,7 +1,6 @@
 import { join, resolve } from 'node:path';
 import { isWithin } from '@adecore/utils/path';
-import type { GitReposResult } from '@ruimte/contracts';
-import { PROJECT_DIR } from '../projects/project-files.ts';
+import { PROJECT_DIR, type GitReposResult } from '@ruimte/contracts';
 import { listRepos } from './repos.ts';
 
 // Covers the burst of commit links a chat resolves at once; past it a checkout no watcher saw shows up anyway.

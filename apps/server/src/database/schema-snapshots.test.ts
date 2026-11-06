@@ -2,9 +2,8 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { DatabaseResponse, TableStructure } from '@adecore/database/protocol';
-import type { DatabaseConnection } from '@ruimte/contracts';
+import { startDatabaseOf, type DatabaseConnection } from '@ruimte/contracts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
-import { startDatabaseOf } from './agent-databases.ts';
 import { generationOf, SchemaSnapshots, viewQueryOf } from './schema-snapshots.ts';
 
 let root = '';

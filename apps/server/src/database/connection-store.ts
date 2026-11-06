@@ -4,6 +4,8 @@ import { CodedError, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type Wat
 import { Serializer } from '@adecore/utils/async';
 import { isWithin } from '@adecore/utils/path';
 import {
+    PRIVATE_DIR,
+    PROJECT_DIR,
     DATABASES_VERSION,
     DatabasesPrivateFileSchema,
     DatabasesSharedFileSchema,
@@ -21,8 +23,6 @@ import {
 import { ClientSinks } from '../client-sinks.ts';
 import { PairedWriteRaced, PairedWriteStuck, recoverPaired, writePaired, type PairedFile } from '../projects/paired-write.ts';
 import {
-    PRIVATE_DIR,
-    PROJECT_DIR,
     PROJECT_FILE,
     parseVersioned,
     readJsonDocument,

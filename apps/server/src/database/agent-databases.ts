@@ -4,7 +4,7 @@ import { CodedError } from '@adecore/agents';
 import { field } from '@adecore/agents/context';
 import type { DatabaseError, RowsResult, SchemaInfo, StatementResult, TableInfo, TableStructure } from '@adecore/database/protocol';
 import { isWithin } from '@adecore/utils/path';
-import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
+import { startDatabaseOf, type DatabaseAgentAccess, type DatabaseConnection } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { realOrSelf } from '../disk/real-path.ts';
 import type { SessionEvent, SessionSink } from '../wire.ts';
@@ -89,15 +89,6 @@ function refuse(code: string, message: string, lines: string[] = []): never {
 export function connectionTarget(config: DatabaseConnection['config']): string {
     const { password: _password, readOnly: _readOnly, database: _database, create: _create, ...rest } = config as Record<string, unknown>;
     return JSON.stringify(Object.entries(rest).sort(([a], [b]) => a.localeCompare(b)));
-}
-
-/* The database a connection starts in: `main` for a SQLite file, the configured one of a server, or null for a server that starts in none. */
-export function startDatabaseOf(connection: DatabaseConnection): string | null {
-    if (connection.config.engine === 'sqlite') {
-        return 'main';
-    }
-    const database = (connection.config as MysqlConfig).database;
-    return typeof database === 'string' && database !== '' ? database : null;
 }
 
 function describeTarget(config: DatabaseConnection['config']): string {

@@ -7,7 +7,11 @@ import { fileExists, writeAtomic } from '@adecore/utils/fs';
 import { climbsOut } from '@adecore/utils/path';
 import { isRecord } from '@adecore/utils/record';
 import {
+    DIAGRAMS_DIR,
     DIAGRAM_VERSION,
+    DRAWINGS_DIR,
+    PRIVATE_DIR,
+    PROJECT_DIR,
     DRAWING_VERSION,
     PROJECT_PRIVATE_VERSION,
     PROJECT_VERSION,
@@ -37,38 +41,10 @@ import {
 import { retryingRename } from '../disk/busy-retry.ts';
 import { errorText } from '../error-text.ts';
 
-export const PROJECT_DIR = '.ruimte';
 export const PROJECT_FILE = 'project.json';
-/* The mirror of `.ruimte` that holds what belongs to one person. The `.gitignore` beside it names this one line. */
-export const PRIVATE_DIR = 'private';
 const GITIGNORE_FILE = '.gitignore';
 // Editors and git write in bursts; one event per burst is what a client wants.
 export const WATCH_SETTLE_MS = 150;
-// One file per drawing view, in a directory of their own: `.ruimte` is read by people and by git,
-// and its top level stays the two files the daemon documents.
-const DRAWINGS_DIR = 'drawings';
-// The same rule for diagrams, in a directory beside it, so a file name never says which kind it is.
-const DIAGRAMS_DIR = 'diagrams';
-// A person's database consoles, plain `.sql` files under `private`, so git never sees them.
-export const CONSOLES_DIR = 'consoles';
-// A folder per design, under `private` until its view is shared (`designFolderOf`).
-const DESIGNS_DIR = 'designs';
-
-/*
- * Whether a path inside a project folder, as the names below that folder, is Ruimte's own state, which a
- * file request never writes, creates, moves or deletes: the files there change only through their own
- * requests and revs. A person's consoles and the folders of designs are the exception, since they are
- * files like any other: a design's chat and the person's edits write its pages.
- */
-export function isRuimteState(segments: readonly string[]): boolean {
-    if (segments[0] !== PROJECT_DIR) {
-        return false;
-    }
-    if (segments[1] === DESIGNS_DIR && segments.length > 2) {
-        return false;
-    }
-    return !(segments[1] === PRIVATE_DIR && (segments[2] === CONSOLES_DIR || segments[2] === DESIGNS_DIR) && segments.length > 3);
-}
 
 /*
  * `unreadable` is broken JSON or a shape no version of ours ever wrote; `invalid` is a file that

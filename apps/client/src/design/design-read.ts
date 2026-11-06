@@ -1,7 +1,6 @@
 import { formatBytes } from '@adecore/ui/format';
-import { injectVisualBootstrap, type FsEntry, type FsReadText } from '@ruimte/contracts';
+import { DESIGN_FOLDERS, injectVisualBootstrap, type FsEntry, type FsReadText } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { DESIGN_FOLDERS } from '@/design/design-folder';
 import { inlineDesignPage } from '@/design/design-inline';
 import { DESIGN_ASSET_MAX_BYTES, DESIGN_PAGE_MAX_BYTES } from '@/design/design-page';
 import { withDesignRuntime } from '@/design/design-runtime';

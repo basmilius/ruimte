@@ -1,9 +1,8 @@
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { extname, isAbsolute, resolve, sep } from 'node:path';
 import { isBelow } from '@adecore/utils/path';
-import { clipText } from '@ruimte/contracts';
+import { PROJECT_DIR, clipText } from '@ruimte/contracts';
 import { looksLikeSvg, sniffMime } from '../disk/sniff.ts';
-import { PROJECT_DIR } from './project-files.ts';
 
 // A logo is a few kilobytes; anything past this is a photo that happens to be called icon.png.
 export const ICON_MAX_BYTES = 256 * 1024;

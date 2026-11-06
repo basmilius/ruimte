@@ -1,5 +1,5 @@
 import { messageOf } from '@adecore/ui';
-import { absoluteOf, isPathBelow, relativeTo } from '@ruimte/contracts';
+import { absoluteOf, consoleConnectionOf, consoleFolderOf } from '@ruimte/contracts';
 import type { DatabaseConnection } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useDatabasePanel } from '@/clients/database/state';
@@ -26,36 +26,6 @@ const CREATE_ATTEMPTS = 20;
 
 /* What a path would read as a separator, or a file system on one of the platforms refuses in a name. */
 const UNSAFE_CHARACTERS = new Set(['/', '\\', ':', '*', '?', '"', '<', '>', '|']);
-
-/* Where a project keeps a person's consoles: beside its private file, which the `.gitignore` of `.ruimte` keeps out of git. */
-export function consolesFolderOf(folder: string): string {
-    return absoluteOf(folder, '.ruimte/private/consoles');
-}
-
-/*
- * A console lives in a folder of its connection, so which connection a closed console runs on is where it is:
- * no second record to keep in step, and a rename or a delete of the file takes its binding along.
- */
-export function consoleFolderOf(folder: string, connectionId: string): string {
-    return absoluteOf(consolesFolderOf(folder), encodeURIComponent(connectionId));
-}
-
-/* The connection a console file belongs to by its folder, or null for any other file. */
-export function consoleConnectionOf(folder: string, path: string): string | null {
-    const consoles = consolesFolderOf(folder);
-    if (!isPathBelow(consoles, path) || !isSqlPath(path)) {
-        return null;
-    }
-    const [segment, name, ...deeper] = relativeTo(consoles, path).split('/');
-    if (segment === undefined || segment === '' || name === undefined || name === '' || deeper.length > 0) {
-        return null;
-    }
-    try {
-        return decodeURIComponent(segment);
-    } catch {
-        return null;
-    }
-}
 
 /* The console files of a listing of the consoles folder two levels deep, by connection id, in the order listed. */
 export function consoleFilesOf(folder: string, entries: readonly { path: string; kind: string }[]): Record<string, string[]> {

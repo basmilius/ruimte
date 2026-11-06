@@ -1,4 +1,4 @@
-import { absoluteOf } from '@ruimte/contracts';
+import { isRuimteState, relativeTo } from '@ruimte/contracts';
 import { createContext, useContext } from 'react';
 import { isUnderFolder } from '@/paths/file-path';
 
@@ -34,8 +34,7 @@ export function editBlockOf({ path, roots, large, plain, longLines = false, coar
     if (inside.length === 0) {
         return 'outside-project';
     }
-    // A person's database consoles are files like any other, the one place in `.ruimte` the machine writes from here.
-    if (inside.some((root) => isInside(absoluteOf(root, '.ruimte'), path) && !isUnderFolder(path, absoluteOf(root, '.ruimte/private/consoles')))) {
+    if (inside.some((root) => isRuimteState(relativeTo(root, path).split('/')))) {
         return 'ruimte-state';
     }
     if (large) {

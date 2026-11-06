@@ -2,6 +2,8 @@ import { join } from 'node:path';
 import { CodedError, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import { Serializer } from '@adecore/utils/async';
 import {
+    PRIVATE_DIR,
+    PROJECT_DIR,
     readRoutineEntries,
     ROUTINE_LIMITS,
     ROUTINES_VERSION,
@@ -14,8 +16,6 @@ import {
     type RoutinesSharedFile
 } from '@ruimte/contracts';
 import {
-    PRIVATE_DIR,
-    PROJECT_DIR,
     PROJECT_FILE,
     readJsonDocument,
     inPersonalOrder,

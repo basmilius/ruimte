@@ -31,6 +31,9 @@ describe('editBlockOf', () => {
         // A person's consoles are files like any other, though they live with the private state.
         expect(editBlockOf(gate({ path: '/repo/.ruimte/private/consoles/shop 1.sql' }))).toBeNull();
         expect(editBlockOf(gate({ path: '/repo/.ruimte/private/consoles' }))).toBe('ruimte-state');
+        // So are a design's pages, which the machine takes from a person as well.
+        expect(editBlockOf(gate({ path: '/repo/.ruimte/designs/home/index.html' }))).toBeNull();
+        expect(editBlockOf(gate({ path: '/repo/.ruimte/private/designs/home/index.html' }))).toBeNull();
     });
 
     test('refuses a file too large to save, one drawn as plain text, and a finger', () => {

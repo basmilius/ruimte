@@ -3,6 +3,8 @@ import { CodedError, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type Wat
 import { Serializer } from '@adecore/utils/async';
 import { climbsOut, isWithin } from '@adecore/utils/path';
 import {
+    PRIVATE_DIR,
+    PROJECT_DIR,
     isSecretReference,
     LAUNCH_SECRET_REFERENCE,
     LAUNCHES_VERSION,
@@ -23,8 +25,6 @@ import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import { cachedRepos } from '../git/repo-cache.ts';
 import {
-    PRIVATE_DIR,
-    PROJECT_DIR,
     PROJECT_FILE,
     readJsonDocument,
     inPersonalOrder,

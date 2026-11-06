@@ -12,10 +12,10 @@ import {
     type ChatImageSaveResult,
     type ChatImageTargetPayload,
     type ChatImageTargetResult,
+    isRuimteState,
     sniffImageMime
 } from '@ruimte/contracts';
 import { realOrNull } from '../disk/real-path.ts';
-import { isRuimteState } from '../projects/project-files.ts';
 
 class ImageFileError extends CodedError {}
 

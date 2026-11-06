@@ -1,8 +1,7 @@
 import { messageOf } from '@adecore/ui';
-import type { DatabaseConnection, LanguageSqlChangedEvent, LanguageSqlState, ProjectSql, SqlBinding, SqlSnapshotInfo } from '@ruimte/contracts';
+import type { LanguageSqlChangedEvent, LanguageSqlState, ProjectSql, SqlBinding, SqlSnapshotInfo } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
-import { consoleConnectionOf } from '@/database/console-file';
 import { windowProjectFollower } from '@/database/window-project';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
@@ -24,52 +23,6 @@ interface SqlBindingsTarget {
 
 interface SqlBindingsDeps {
     notify(title: string, description: string): void;
-}
-
-/* What a `.sql` file reads its SQL against, and why: a console's folder, its own choice, the project's default, or nothing. */
-export type SqlFileChoice =
-    | { source: 'console' | 'file' | 'default'; connectionId: string; database: string | null }
-    | { source: 'unbound' }
-    | { source: 'none' };
-
-/* The database a connection starts in: `main` for a SQLite file, the configured one of a server, else none. */
-export function startDatabaseOf(connection: DatabaseConnection): string | null {
-    if (connection.config.engine === 'sqlite') {
-        return 'main';
-    }
-    const database = (connection.config as Record<string, unknown>).database;
-    return typeof database === 'string' && database !== '' ? database : null;
-}
-
-/* What a file reads, by the same rules the machine applies (`sql-analysis.ts`). `storedPath` is the one the private file keys it by. */
-export function choiceOf(sql: ProjectSql, connections: readonly DatabaseConnection[], folder: string | null, path: string, storedPath: string): SqlFileChoice {
-    const byId = (id: string | null): DatabaseConnection | undefined => connections.find((connection) => connection.id === id);
-    const console = folder === null ? null : consoleConnectionOf(folder, path);
-    if (console !== null) {
-        const connection = byId(console);
-        const binding = sql.files?.[storedPath];
-        return connection === undefined
-            ? { source: 'none' }
-            : {
-                  source: 'console',
-                  connectionId: connection.id,
-                  database: binding?.connectionId === console ? (binding.database ?? startDatabaseOf(connection)) : startDatabaseOf(connection)
-              };
-    }
-    const own = sql.files?.[storedPath];
-    if (own !== undefined) {
-        if (own.connectionId === null) {
-            return { source: 'unbound' };
-        }
-        const connection = byId(own.connectionId);
-        if (connection !== undefined) {
-            return { source: 'file', connectionId: connection.id, database: own.database ?? startDatabaseOf(connection) };
-        }
-    }
-    const fallback = sql.default === undefined ? undefined : byId(sql.default.connectionId);
-    return fallback === undefined || sql.default === undefined
-        ? { source: 'none' }
-        : { source: 'default', connectionId: fallback.id, database: sql.default.database ?? startDatabaseOf(fallback) };
 }
 
 /* The snapshot a choice reads, when the machine took one. */

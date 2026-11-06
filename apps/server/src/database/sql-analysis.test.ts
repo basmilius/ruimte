@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { join, relative, resolve, sep } from 'node:path';
-import type { DatabaseConnection, ProjectContent } from '@ruimte/contracts';
+import { consoleFolderOf, type DatabaseConnection, type ProjectContent } from '@ruimte/contracts';
 import type { FileChange } from '../language/file-watch.ts';
 import type { SnapshotFacts } from '../language/sql-file-context.ts';
 import type { SessionEvent } from '../wire.ts';
 import type { SchemaSnapshots } from './schema-snapshots.ts';
-import { boundTargets, choiceFor, consoleConnectionOf, consoleFolderOf, SqlAnalysis, sqlSettingsOf } from './sql-analysis.ts';
+import { boundTargets, SqlAnalysis, sqlSettingsOf } from './sql-analysis.ts';
 
 const FOLDER = resolve('/work/shop');
 
@@ -37,41 +37,10 @@ describe('what a file is read against', () => {
     };
     const connections = [SHOP, LOCAL, WIDE];
 
-    test('a console by its folder, a file by its own choice, anything else by the default', () => {
-        const console = join(consoleFolderOf(FOLDER, 'local'), 'Local 1.sql');
-        expect(consoleConnectionOf(FOLDER, console)).toBe('local');
-        expect(choiceFor(FOLDER, sql, connections, console)).toMatchObject({ source: 'console', connection: { id: 'local' }, database: 'main' });
-        expect(choiceFor(FOLDER, sql, connections, join(FOLDER, 'db/local.sql'))).toMatchObject({
-            source: 'file',
-            connection: { id: 'local' },
-            database: 'main'
-        });
-        expect(choiceFor(FOLDER, sql, connections, join(FOLDER, 'db/stats.sql'))).toMatchObject({ source: 'file', database: 'stats' });
-        expect(choiceFor(FOLDER, sql, connections, join(FOLDER, 'db/loose.sql'))).toEqual({ source: 'unbound' });
-        expect(choiceFor(FOLDER, sql, connections, join(FOLDER, 'db/other.sql'))).toMatchObject({
-            source: 'default',
-            connection: { id: 'shop' },
-            database: 'shop'
-        });
-        expect(choiceFor(FOLDER, {}, connections, join(FOLDER, 'db/other.sql'))).toEqual({ source: 'none' });
-    });
-
-    test('a console on a Windows machine, by either separator', () => {
-        expect(consoleConnectionOf('C:\\work\\shop', 'C:\\work\\shop\\.ruimte\\private\\consoles\\local\\Local 1.sql')).toBe('local');
-        expect(consoleConnectionOf('C:\\work\\shop', 'C:\\work\\shop\\.ruimte\\private\\consoles\\local\\deeper\\Local 1.sql')).toBeNull();
-        expect(consoleConnectionOf('C:\\work\\shop', 'C:\\work\\shop-old\\.ruimte\\private\\consoles\\local\\Local 1.sql')).toBeNull();
-        expect(consoleFolderOf('C:\\work\\shop', 'local')).toBe('C:\\work\\shop\\.ruimte\\private\\consoles\\local');
-    });
-
-    test('a choice of a connection that left the project falls back on the default', () => {
-        expect(choiceFor(FOLDER, { files: { 'a.sql': { connectionId: 'gone' } } }, connections, join(FOLDER, 'a.sql'))).toEqual({ source: 'none' });
-    });
-
     test('a console reads its selected database instead of the empty connection default', () => {
         const path = join(consoleFolderOf(FOLDER, 'shop'), 'Shop 1.sql');
         const stored = relative(FOLDER, path).split(sep).join('/');
         const sql = { files: { [stored]: { connectionId: 'shop', database: 'pool_transvita' } } };
-        expect(choiceFor(FOLDER, sql, [SHOP], path)).toMatchObject({ source: 'console', database: 'pool_transvita' });
         const settings = sqlSettingsOf({ folder: FOLDER, sql, connections: [SHOP], snapshots: [facts('shop', 'shop'), facts('shop', 'pool_transvita')] });
         expect(settings.sql.overrides).toContainEqual({
             path,
