@@ -651,7 +651,10 @@ describe('team', () => {
     test('a role that is wrong is named by its place in the array', async () => {
         const cases: Array<[unknown, string]> = [
             [[THREE[0], { title: 'Parser', provider: 'codex' }], 'role 1 (prompt): prompt says what this agent starts working on'],
-            [[{ title: 'Lexer', prompt: 'go', provider: 'Kimi CLI' }], `role 0 (provider): provider needs a CLI: ${AGENT_KINDS.join(', ')}, or the kind of an agent installed from the ACP registry`],
+            [
+                [{ title: 'Lexer', prompt: 'go', provider: 'Kimi CLI' }],
+                `role 0 (provider): provider needs a CLI: ${AGENT_KINDS.join(', ')}, or the kind of an agent installed from the ACP registry`
+            ],
             [[{ prompt: 'go', provider: 'claude' }], 'role 0 (title): title needs a name for the node'],
             [[THREE[0], { title: 'Parser', prompt: 'go', provider: 'codex', terminal: 'yes' }], 'role 1 (terminal): terminal is true or false'],
             [[{ title: 'Lexer', prompt: 'go', provider: 'claude', chat: true }], 'role 0: Unrecognized key: "chat"'],
