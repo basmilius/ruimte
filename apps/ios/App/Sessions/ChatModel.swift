@@ -728,8 +728,9 @@ final class ChatModel {
                         payload: .object([
                             "cwd": .string(info?.cwd ?? ""), "query": .string(String(query.prefix(256))),
                             "limit": .number(20),
-                        ]))
-                    found = result.list("files").compactMap(\.stringValue).map {
+                        ])
+                    ).decoded(as: FsSearchResult.self)
+                    found = result.files.map {
                         ChatSuggestion(kind: "@", value: $0, title: ($0 as NSString).lastPathComponent, detail: $0)
                     }
                 }

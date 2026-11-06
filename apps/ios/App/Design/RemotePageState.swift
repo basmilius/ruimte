@@ -82,6 +82,13 @@ import SwiftUI
         await live.run()
         await withTaskCancellationShield { await stop() }
     }
+
+    /// A test on an event as its generated type; a payload that does not decode matches nothing.
+    static func typed<Event: Decodable>(
+        _ type: Event.Type, _ matches: @escaping @MainActor @Sendable (Event) -> Bool
+    ) -> @MainActor @Sendable (JSONValue) -> Bool {
+        { payload in (try? payload.decoded(as: type)).map(matches) ?? false }
+    }
 }
 
 /// The spinner of a surface that is reading, with the one thing VoiceOver needs beside it: what is being read. Where

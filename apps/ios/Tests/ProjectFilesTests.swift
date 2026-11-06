@@ -146,19 +146,11 @@ final class ProjectFilesTests: XCTestCase {
     }
 
     func testFindInFilesGroupsTheHitsPerFileAndCutsTheLineAtTheHit() {
-        let matches: [JSONValue] = [
-            .object([
-                "path": .string("src/a.ts"), "line": .number(3), "column": .number(6), "length": .number(7),
-                "text": .string("const backoff = 1"),
-            ]),
-            .object([
-                "path": .string("src/b.ts"), "line": .number(1), "column": .number(0), "length": .number(7),
-                "text": .string("backoff()"),
-            ]),
-            .object([
-                "path": .string("src/a.ts"), "line": .number(9), "column": .number(2), "length": .number(7),
-                "text": .string("🙂 backoff"),
-            ]),
+        let matches = [
+            FsGrepMatch(
+                path: "src/a.ts", line: 3, column: 6, length: 7, text: "const backoff = 1", before: [], after: []),
+            FsGrepMatch(path: "src/b.ts", line: 1, column: 0, length: 7, text: "backoff()", before: [], after: []),
+            FsGrepMatch(path: "src/a.ts", line: 9, column: 2, length: 7, text: "🙂 backoff", before: [], after: []),
         ]
         let groups = FileGrepModel.group(matches)
         XCTAssertEqual(groups.map(\.path), ["src/a.ts", "src/b.ts"])
@@ -262,7 +254,7 @@ final class ProjectFilesTests: XCTestCase {
                 "matches": .array([
                     .object([
                         "path": .string("a.ts"), "line": .number(1), "column": .number(0), "length": .number(7),
-                        "text": .string("backoff"),
+                        "text": .string("backoff"), "before": .array([]), "after": .array([]),
                     ])
                 ]),
                 "files": .number(1), "truncated": .bool(false),

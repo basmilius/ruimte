@@ -582,7 +582,13 @@ final class IntelligentUIPresentationTests: XCTestCase {
 
     private func entries(_ names: [String], truncated: Bool = false) -> JSONValue {
         .object([
-            "entries": .array(names.map { .object(["kind": .string("directory"), "name": .string($0)]) }),
+            "entries": .array(names.map {
+                .object([
+                    "kind": .string("directory"), "name": .string($0), "path": .string("/work/ruimte/\($0)"),
+                    "size": .null, "mtime": .number(0), "hidden": .bool(false), "ignored": .bool(false),
+                ])
+            }),
+            "path": .string("/work/ruimte"),
             "truncated": .bool(truncated),
         ])
     }

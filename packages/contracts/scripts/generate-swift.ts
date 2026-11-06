@@ -472,6 +472,16 @@ const typedRoots: [name: string, source: string, path: (string | number)[], keep
     ['AgentTaskPaused', 'request.task.list.result', ['properties', 'tasks', 'items', 'properties', 'paused']],
     ['AgentTaskBackground', 'request.task.list.result', ['properties', 'tasks', 'items', 'properties', 'background']],
     ['TaskChangedEvent', 'event.task.changed', []],
+    ['ServerHelloResult', 'request.server.hello.result', []],
+    ['FsListResult', 'request.fs.list.result', []],
+    ['FsEntry', 'request.fs.list.result', ['properties', 'entries', 'items']],
+    ['FsEntryKind', 'request.fs.list.result', ['properties', 'entries', 'items', 'properties', 'kind']],
+    ['FsReadResult', 'request.fs.read.result', []],
+    ['FsWriteResult', 'request.fs.write.result', []],
+    ['FsChangedEvent', 'event.fs.changed', []],
+    ['FsSearchResult', 'request.fs.search.result', []],
+    ['FsGrepResult', 'request.fs.grep.result', []],
+    ['FsGrepMatch', 'request.fs.grep.result', ['properties', 'matches', 'items']],
     // The document stays JSON to merge and save, so a node or view this app has no word for survives a save. The
     // summary is the row the project lists keep as JSON too.
     ['ProjectOpenResult', 'request.project.open.result', [], ['summary', 'document', 'local']],
@@ -512,6 +522,10 @@ for (const [value, member] of typedMembers('StoredView', 'kind')) {
     names.set(canonical(member), `Stored${pascal(value)}View`);
 }
 // `AgentRoutine`, `RoutineWeeklySchedule`.
+// `FsTextRead`, `FsBinaryRead`, `FsTooLargeRead`.
+for (const [value, member] of typedMembers('FsReadResult', 'kind')) {
+    names.set(canonical(member), `Fs${pascal(value)}Read`);
+}
 for (const [value, member] of typedMembers('Routine', 'kind')) {
     names.set(canonical(member), `${pascal(value)}Routine`);
 }

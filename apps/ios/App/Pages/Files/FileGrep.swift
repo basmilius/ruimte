@@ -57,16 +57,14 @@ struct FileGrepGroup: Identifiable, Equatable {
     var options: String { "\(caseSensitive)\(wholeWord)\(regex)" }
     var hitCount: Int { groups.reduce(0) { $0 + $1.hits.count } }
 
-    static func group(_ matches: [JSONValue]) -> [FileGrepGroup] {
+    static func group(_ matches: [FsGrepMatch]) -> [FileGrepGroup] {
         var order: [String] = []
         var hits: [String: [FileGrepHit]] = [:]
         for match in matches {
-            let path = match.text("path")
-            if hits[path] == nil { order.append(path) }
-            hits[path, default: []].append(
+            if hits[match.path] == nil { order.append(match.path) }
+            hits[match.path, default: []].append(
                 FileGrepHit(
-                    line: Int(match.number("line")), column: Int(match.number("column")),
-                    length: Int(match.number("length")), text: match.text("text")))
+                    line: Int(match.line), column: Int(match.column), length: Int(match.length), text: match.text))
         }
         return order.map { FileGrepGroup(path: $0, hits: hits[$0] ?? []) }
     }
@@ -89,11 +87,11 @@ struct FileGrepGroup: Identifiable, Equatable {
         if wholeWord { payload["wholeWord"] = .bool(true) }
         if regex { payload["regex"] = .bool(true) }
         do {
-            let answer = try await client.request(.fsGrep, payload: .object(payload))
+            let answer = try await client.request(.fsGrep, payload: .object(payload)).decoded(as: FsGrepResult.self)
             guard mine == generation else { return }
-            groups = Self.group(answer.list("matches"))
-            fileCount = Int(answer.number("files"))
-            truncated = answer["truncated"] == .bool(true)
+            groups = Self.group(answer.matches)
+            fileCount = Int(answer.files)
+            truncated = answer.truncated
             answered = needle
             problem = nil
         } catch is CancellationError {

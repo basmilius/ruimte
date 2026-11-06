@@ -207,9 +207,10 @@ final class PaletteFiles {
                         payload: .object([
                             "cwd": .string(folder), "query": .string(typed),
                             "limit": .number(Double(Self.perProject)),
-                        ]))
+                        ])
+                    ).decoded(as: FsSearchResult.self)
                     return (
-                        answer.list("files").compactMap(\.stringValue).map {
+                        answer.files.map {
                             PaletteFile(project: row.id, projectName: name, path: $0, folder: folder)
                         }, nil
                     )

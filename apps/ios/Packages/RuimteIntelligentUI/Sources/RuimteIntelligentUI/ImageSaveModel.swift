@@ -139,16 +139,18 @@ public final class ImageSaveModel {
         defer { loadingFolders.remove(directory) }
         do {
             let result = try await request(
-                .fsList, .object(["path": .string(path(directory)), "depth": .number(1), "hidden": .bool(true)]))
+                .fsList, .object(["path": .string(path(directory)), "depth": .number(1), "hidden": .bool(true)])
+            ).decoded(as: FsListResult.self)
             guard !closed else { return }
             var seen: Set<String> = []
-            folders[directory] = (result["entries"]?.arrayValue ?? []).compactMap { entry in
-                guard entry["kind"] == .string("directory"), let name = entry["name"]?.stringValue,
+            folders[directory] = result.entries.compactMap { entry in
+                let name = entry.name
+                guard entry.kind == .directory,
                     Self.validFileName(name), name != ".git", name != ".ruimte", seen.insert(name).inserted
                 else { return nil }
                 return ImageSaveFolder(directory: directory.isEmpty ? name : "\(directory)/\(name)", name: name)
             }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-            if result["truncated"]?.boolValue == true { truncatedFolders.insert(directory) }
+            if result.truncated { truncatedFolders.insert(directory) }
         } catch {
             if !closed { folderErrors[directory] = error.localizedDescription }
         }

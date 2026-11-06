@@ -12040,6 +12040,409 @@ public struct TaskChangedEvent: Codable, Sendable, Equatable {
     }
 }
 
+public struct FsListResult: Codable, Sendable, Equatable {
+    public let `path`: String
+    public let `entries`: [FsEntry]
+    public let `truncated`: Bool
+
+    public init(`path`: String, `entries`: [FsEntry], `truncated`: Bool) {
+        self.`path` = `path`
+        self.`entries` = `entries`
+        self.`truncated` = `truncated`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `path` = try container.decode(String.self, forKey: .`path`)
+        `entries` = try container.decode([FsEntry].self, forKey: .`entries`)
+        `truncated` = try container.decode(Bool.self, forKey: .`truncated`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`entries`, forKey: .`entries`)
+        try container.encode(`truncated`, forKey: .`truncated`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `path` = "path"
+        case `entries` = "entries"
+        case `truncated` = "truncated"
+    }
+}
+
+public struct FsEntry: Codable, Sendable, Equatable {
+    public let `name`: String
+    public let `path`: String
+    public let `kind`: FsEntryKind
+    public let `size`: Double?
+    public let `mtime`: Double
+    public let `hidden`: Bool
+    public let `ignored`: Bool
+
+    public init(`name`: String, `path`: String, `kind`: FsEntryKind, `size`: Double?, `mtime`: Double, `hidden`: Bool, `ignored`: Bool) {
+        self.`name` = `name`
+        self.`path` = `path`
+        self.`kind` = `kind`
+        self.`size` = `size`
+        self.`mtime` = `mtime`
+        self.`hidden` = `hidden`
+        self.`ignored` = `ignored`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `path` = try container.decode(String.self, forKey: .`path`)
+        `kind` = try container.decode(FsEntryKind.self, forKey: .`kind`)
+        `size` = try container.decode(Double?.self, forKey: .`size`)
+        `mtime` = try container.decode(Double.self, forKey: .`mtime`)
+        `hidden` = try container.decode(Bool.self, forKey: .`hidden`)
+        `ignored` = try container.decode(Bool.self, forKey: .`ignored`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`size`, forKey: .`size`)
+        try container.encode(`mtime`, forKey: .`mtime`)
+        try container.encode(`hidden`, forKey: .`hidden`)
+        try container.encode(`ignored`, forKey: .`ignored`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `name` = "name"
+        case `path` = "path"
+        case `kind` = "kind"
+        case `size` = "size"
+        case `mtime` = "mtime"
+        case `hidden` = "hidden"
+        case `ignored` = "ignored"
+    }
+}
+
+public enum FsEntryKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `file` = "file"
+    case `directory` = "directory"
+    case `symlink` = "symlink"
+    case `other` = "other"
+}
+
+public enum FsReadResult: Codable, Sendable, Equatable {
+    case `text`(FsTextRead)
+    case `binary`(FsBinaryRead)
+    case `tooLarge`(FsTooLargeRead)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Tag.self)
+        switch try container.decode(String.self, forKey: .value) {
+        case "text": self = .`text`(try FsTextRead(from: decoder))
+        case "binary": self = .`binary`(try FsBinaryRead(from: decoder))
+        case "too-large": self = .`tooLarge`(try FsTooLargeRead(from: decoder))
+        default: throw WireValidationError.invalid("Unknown FsReadResult tag")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case .`text`(let value): try value.encode(to: encoder)
+        case .`binary`(let value): try value.encode(to: encoder)
+        case .`tooLarge`(let value): try value.encode(to: encoder)
+        }
+    }
+
+    private enum Tag: String, CodingKey { case value = "kind" }
+}
+
+public struct FsTextRead: Codable, Sendable, Equatable {
+    public let `kind`: String
+    public let `text`: String
+    public let `encoding`: String
+    public let `size`: Double
+    public let `mtime`: Double
+    public let `language`: String?
+
+    public init(`kind`: String = "text", `text`: String, `encoding`: String = "utf-8", `size`: Double, `mtime`: Double, `language`: String? = nil) {
+        self.`kind` = `kind`
+        self.`text` = `text`
+        self.`encoding` = `encoding`
+        self.`size` = `size`
+        self.`mtime` = `mtime`
+        self.`language` = `language`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `text` = try container.decode(String.self, forKey: .`text`)
+        `encoding` = try container.decode(String.self, forKey: .`encoding`)
+        `size` = try container.decode(Double.self, forKey: .`size`)
+        `mtime` = try container.decode(Double.self, forKey: .`mtime`)
+        `language` = try container.decodeIfPresent(String.self, forKey: .`language`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`text`, forKey: .`text`)
+        try container.encode(`encoding`, forKey: .`encoding`)
+        try container.encode(`size`, forKey: .`size`)
+        try container.encode(`mtime`, forKey: .`mtime`)
+        try container.encodeIfPresent(`language`, forKey: .`language`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `text` = "text"
+        case `encoding` = "encoding"
+        case `size` = "size"
+        case `mtime` = "mtime"
+        case `language` = "language"
+    }
+}
+
+public struct FsBinaryRead: Codable, Sendable, Equatable {
+    public let `kind`: String
+    public let `mime`: String
+    public let `size`: Double
+    public let `mtime`: Double
+
+    public init(`kind`: String = "binary", `mime`: String, `size`: Double, `mtime`: Double) {
+        self.`kind` = `kind`
+        self.`mime` = `mime`
+        self.`size` = `size`
+        self.`mtime` = `mtime`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `mime` = try container.decode(String.self, forKey: .`mime`)
+        `size` = try container.decode(Double.self, forKey: .`size`)
+        `mtime` = try container.decode(Double.self, forKey: .`mtime`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`mime`, forKey: .`mime`)
+        try container.encode(`size`, forKey: .`size`)
+        try container.encode(`mtime`, forKey: .`mtime`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `mime` = "mime"
+        case `size` = "size"
+        case `mtime` = "mtime"
+    }
+}
+
+public struct FsTooLargeRead: Codable, Sendable, Equatable {
+    public let `kind`: String
+    public let `size`: Double
+    public let `mtime`: Double?
+
+    public init(`kind`: String = "too-large", `size`: Double, `mtime`: Double? = nil) {
+        self.`kind` = `kind`
+        self.`size` = `size`
+        self.`mtime` = `mtime`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `size` = try container.decode(Double.self, forKey: .`size`)
+        `mtime` = try container.decodeIfPresent(Double.self, forKey: .`mtime`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`size`, forKey: .`size`)
+        try container.encodeIfPresent(`mtime`, forKey: .`mtime`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `size` = "size"
+        case `mtime` = "mtime"
+    }
+}
+
+public struct FsWriteResult: Codable, Sendable, Equatable {
+    public let `size`: Double
+    public let `mtime`: Double
+
+    public init(`size`: Double, `mtime`: Double) {
+        self.`size` = `size`
+        self.`mtime` = `mtime`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `size` = try container.decode(Double.self, forKey: .`size`)
+        `mtime` = try container.decode(Double.self, forKey: .`mtime`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`size`, forKey: .`size`)
+        try container.encode(`mtime`, forKey: .`mtime`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `size` = "size"
+        case `mtime` = "mtime"
+    }
+}
+
+public struct FsChangedEvent: Codable, Sendable, Equatable {
+    public let `root`: String
+    public let `paths`: [String]
+    public let `changedPaths`: [String]?
+
+    public init(`root`: String, `paths`: [String], `changedPaths`: [String]? = nil) {
+        self.`root` = `root`
+        self.`paths` = `paths`
+        self.`changedPaths` = `changedPaths`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `root` = try container.decode(String.self, forKey: .`root`)
+        `paths` = try container.decode([String].self, forKey: .`paths`)
+        `changedPaths` = try container.decodeIfPresent([String].self, forKey: .`changedPaths`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`root`, forKey: .`root`)
+        try container.encode(`paths`, forKey: .`paths`)
+        try container.encodeIfPresent(`changedPaths`, forKey: .`changedPaths`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `root` = "root"
+        case `paths` = "paths"
+        case `changedPaths` = "changedPaths"
+    }
+}
+
+public struct FsSearchResult: Codable, Sendable, Equatable {
+    public let `files`: [String]
+    public let `truncated`: Bool
+
+    public init(`files`: [String], `truncated`: Bool) {
+        self.`files` = `files`
+        self.`truncated` = `truncated`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `files` = try container.decode([String].self, forKey: .`files`)
+        `truncated` = try container.decode(Bool.self, forKey: .`truncated`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`files`, forKey: .`files`)
+        try container.encode(`truncated`, forKey: .`truncated`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `files` = "files"
+        case `truncated` = "truncated"
+    }
+}
+
+public struct FsGrepResult: Codable, Sendable, Equatable {
+    public let `matches`: [FsGrepMatch]
+    public let `files`: Int64
+    public let `truncated`: Bool
+
+    public init(`matches`: [FsGrepMatch], `files`: Int64, `truncated`: Bool) {
+        self.`matches` = `matches`
+        self.`files` = `files`
+        self.`truncated` = `truncated`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `matches` = try container.decode([FsGrepMatch].self, forKey: .`matches`)
+        `files` = try container.decode(Int64.self, forKey: .`files`)
+        `truncated` = try container.decode(Bool.self, forKey: .`truncated`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`matches`, forKey: .`matches`)
+        try container.encode(`files`, forKey: .`files`)
+        try container.encode(`truncated`, forKey: .`truncated`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `matches` = "matches"
+        case `files` = "files"
+        case `truncated` = "truncated"
+    }
+}
+
+public struct FsGrepMatch: Codable, Sendable, Equatable {
+    public let `path`: String
+    public let `line`: Int64
+    public let `column`: Int64
+    public let `length`: Int64
+    public let `text`: String
+    public let `before`: [String]
+    public let `after`: [String]
+
+    public init(`path`: String, `line`: Int64, `column`: Int64, `length`: Int64, `text`: String, `before`: [String], `after`: [String]) {
+        self.`path` = `path`
+        self.`line` = `line`
+        self.`column` = `column`
+        self.`length` = `length`
+        self.`text` = `text`
+        self.`before` = `before`
+        self.`after` = `after`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `path` = try container.decode(String.self, forKey: .`path`)
+        `line` = try container.decode(Int64.self, forKey: .`line`)
+        `column` = try container.decode(Int64.self, forKey: .`column`)
+        `length` = try container.decode(Int64.self, forKey: .`length`)
+        `text` = try container.decode(String.self, forKey: .`text`)
+        `before` = try container.decode([String].self, forKey: .`before`)
+        `after` = try container.decode([String].self, forKey: .`after`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`line`, forKey: .`line`)
+        try container.encode(`column`, forKey: .`column`)
+        try container.encode(`length`, forKey: .`length`)
+        try container.encode(`text`, forKey: .`text`)
+        try container.encode(`before`, forKey: .`before`)
+        try container.encode(`after`, forKey: .`after`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `path` = "path"
+        case `line` = "line"
+        case `column` = "column"
+        case `length` = "length"
+        case `text` = "text"
+        case `before` = "before"
+        case `after` = "after"
+    }
+}
+
 public struct ProjectOpenResult: Codable, Sendable, Equatable {
     public let `summary`: JSONValue
     public let `document`: JSONValue

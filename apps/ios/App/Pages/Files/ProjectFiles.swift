@@ -287,8 +287,9 @@ enum FileLineChanges {
         do {
             let result = try await client.request(
                 .fsWrite,
-                payload: .object(["path": .string(path), "text": .string(sent), "expectedMtime": .number(mtime)]))
-            mtime = result.number("mtime")
+                payload: .object(["path": .string(path), "text": .string(sent), "expectedMtime": .number(mtime)])
+            ).decoded(as: FsWriteResult.self)
+            mtime = result.mtime
             // Only what went out is saved; text typed while the write was under way stays an open edit.
             original = sent
             editing = text != sent
