@@ -13,7 +13,6 @@ import * as signing from '../../pulsar/src/signing.ts';
 import { PULSAR_STATEMENT_PUBLIC_KEYS } from '../../pulsar/src/statement-key.ts';
 import * as agent from '../src/agent.ts';
 import { ARTIFACT_KINDS, ArtifactKindSchema } from '../src/artifact.ts';
-import { PairPayloadSchema, PairResultSchema } from '../src/auth.ts';
 import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, BYTES_REPLY_KIND, BYTES_REPLY_MAX_BYTES, CHAT_MODEL_MAX_BYTES } from '../src/bytes.ts';
 import * as chat from '../src/chat.ts';
 import * as liveness from '../src/direct-liveness.ts';
@@ -69,8 +68,6 @@ for (const module of [agent, task, plan, chat]) {
         }
     }
 }
-roots.PairPayloadSchema = PairPayloadSchema;
-roots.PairResultSchema = PairResultSchema;
 roots.ProjectCanvasDefaultsSchema = ProjectCanvasViewSchema.pick({ layouts: true });
 const schemas: Record<string, Schema> = {};
 function stampRefinements(zodSchema: z.ZodType, jsonSchema: Schema, where: string): void {
@@ -353,7 +350,15 @@ const typedRoots: [name: string, source: string, path: (string | number)[]][] = 
     ['GitStatusFile', 'request.git.status.result', ['properties', 'files', 'items']],
     ['GitStatus', 'request.git.status.result', []],
     ['GitStatusEvent', 'event.git.status', []],
-    ['ProjectSummary', 'event.project.summary', ['properties', 'summary']]
+    ['ProjectSummary', 'event.project.summary', ['properties', 'summary']],
+    ['EndpointInfo', 'request.endpoint.info.result', []],
+    ['EndpointChangedEvent', 'event.endpoint.changed', []],
+    ['EndpointUpdate', 'request.endpoint.info.result', ['properties', 'update']],
+    ['EndpointUpdateChangedEvent', 'event.endpoint.updateChanged', []],
+    ['EndpointInstallUpdateResult', 'request.endpoint.installUpdate.result', []],
+    ['MachineWork', 'request.endpoint.installUpdate.result', ['properties', 'ending']],
+    ['LanDoor', 'request.endpoint.info.result', ['properties', 'lan', 'anyOf', 0]],
+    ['KeepAwakeMode', 'request.endpoint.info.result', ['properties', 'keepAwake']]
 ];
 const typed = typedRoots.map(([name, source, path]) => {
     const schema = path.reduce((node: any, key) => node?.[key], typedSchema(schemas[source]));
@@ -381,6 +386,14 @@ const assistant = typedMembers('ChatItem', 'kind').get('assistant')!.properties;
 names.set(canonical(assistant.ui.items), 'ChatUiBlock');
 names.set(canonical(assistant.uiQueries), 'ChatUiQueryState');
 names.set(canonical(assistant.uiAnswers.additionalProperties), 'ChatUiAnswer');
+// What `endpoint.info` and `endpoint.changed` share is declared once, under a name that does not say which of them.
+const endpointInfo = typed.find(([name]) => name === 'EndpointInfo')![1].properties;
+names.set(canonical(endpointInfo.icon.anyOf[0]), 'MachineIcon');
+names.set(canonical(endpointInfo.nameSource), 'EndpointNameSource');
+names.set(canonical(endpointInfo.broker), 'EndpointBroker');
+names.set(canonical(endpointInfo.terminalShell), 'EndpointTerminalShell');
+names.set(canonical(endpointInfo.nodeSizes.additionalProperties), 'EndpointNodeSize');
+names.set(canonical(endpointInfo.agentIntegrations), 'EndpointAgentIntegrations');
 validatingStructs = false;
 for (const [name, schema] of typed) {
     const type = typeOf(schema, name);
@@ -518,23 +531,11 @@ const signatureFixtures = [
 ];
 const framingFixtures = ['hello', 'A'.repeat(15999) + '📱' + '終', 'e\u0301'.repeat(9000), ''].map((input) => ({ input, pieces: direct.splitFrame(input) }));
 const validationInputs: { schema: string; input: unknown }[] = [
-    { schema: 'PairPayloadSchema', input: { token: 'one-use', label: 'iPhone', publicKey: key } },
-    { schema: 'PairPayloadSchema', input: { token: '', label: 'iPhone' } },
     {
-        schema: 'PairResultSchema',
-        input: {
-            endpoint: {
-                id: 'machine-1',
-                label: 'Mac',
-                platform: 'darwin',
-                version: '1.0',
-                protocol: PROTOCOL_VERSION,
-                reachability: 'public',
-                authenticated: true
-            }
-        }
+        schema: 'request.endpoint.info.result',
+        input: { id: 'machine-1', label: 'Mac', platform: 'darwin', version: '1.0', protocol: PROTOCOL_VERSION, reachability: 'public', authenticated: true }
     },
-    { schema: 'PairResultSchema', input: { endpoint: { id: 'machine-1' } } },
+    { schema: 'request.endpoint.info.result', input: { id: 'machine-1' } },
     ...[0, -1, 1].map((width) => ({
         schema: 'ProjectCanvasDefaultsSchema',
         input: { layouts: [{ name: 'Canvas', nodes: { node: { x: 0, y: 0, w: width, h: 1 } }, texts: {} }] }

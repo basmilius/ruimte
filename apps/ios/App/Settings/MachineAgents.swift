@@ -3,6 +3,21 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
+/// A switch of the machine that `endpoint.setIdentity` takes beside the name and icon. The case is the field's name, and
+/// reading it through `keyPath` keeps a renamed field from building.
+enum EndpointSwitch: String {
+    case resumeAtReset, agentsDeleteAnyView, reachOpenProjects, visualReplies
+
+    var keyPath: KeyPath<EndpointInfo, Bool?> {
+        switch self {
+        case .resumeAtReset: \.resumeAtReset
+        case .agentsDeleteAnyView: \.agentsDeleteAnyView
+        case .reachOpenProjects: \.reachOpenProjects
+        case .visualReplies: \.visualReplies
+        }
+    }
+}
+
 /// One machine's agents as the desktop's agents settings show them: the CLIs it has with their accounts, the defaults
 /// a chat starts with and Computer Use. Installing a CLI, adding an account and turning Computer Use on happen on the
 /// machine itself; signing a signed-out account in runs the CLI's own login in a terminal there.
@@ -39,7 +54,7 @@ import SwiftUI
     private var providers: [JSONValue] = []
     /// Per CLI, what the machine types to log in under an account; a CLI without one has no login to offer here.
     private(set) var loginCommands: [String: String] = [:]
-    private(set) var endpoint: JSONValue?
+    private(set) var endpoint: EndpointInfo?
     /// Nil for a machine without the helper app.
     private(set) var computer: JSONValue?
 
@@ -51,7 +66,7 @@ import SwiftUI
         await state.read(loaded: !agents.isEmpty) { stillTheLatest in
             let providers = try await AgentCatalog.load(client)
             let accounts = try? await client.request(.accountsList)
-            let endpoint = try? await client.request(.endpointInfo)
+            let endpoint = try? await client.request(.endpointInfo).decoded(as: EndpointInfo.self)
             let computer = try? await client.request(.computerStatus)
             try stillTheLatest()
             self.providers = providers
@@ -88,21 +103,22 @@ import SwiftUI
     }
 
     /// Turns a switch the machine keeps in `endpoint.json`, leaving its name and icon as they stand.
-    func set(_ key: String, _ value: Bool) async {
+    func set(_ setting: EndpointSwitch, _ value: Bool) async {
         guard let endpoint else { return }
         await state.perform {
             self.endpoint = try await client.request(
-                .endpointSetIdentity, payload: Self.identityPayload(endpoint: endpoint, key: key, value: value))
+                .endpointSetIdentity, payload: Self.identityPayload(endpoint: endpoint, setting: setting, value: value)
+            ).decoded(as: EndpointInfo.self)
         }
     }
 
     /// A machine nobody named answers to its own default, and sending that name back would make it a chosen one.
-    static func identityPayload(endpoint: JSONValue, key: String, value: Bool) -> JSONValue {
-        let chosen = endpoint["nameSource"] == .string("chosen")
+    static func identityPayload(endpoint: EndpointInfo, setting: EndpointSwitch, value: Bool) -> JSONValue {
+        let icon = endpoint.icon.present.flatMap { try? JSONValue(encoding: $0) }
         return .object([
-            "name": chosen ? .string(endpoint.text("label")) : .null,
-            "icon": endpoint["icon"] ?? .null,
-            key: .bool(value),
+            "name": endpoint.nameSource == .chosen ? .string(endpoint.label) : .null,
+            "icon": icon ?? .null,
+            setting.rawValue: .bool(value),
         ])
     }
 
@@ -303,20 +319,20 @@ struct MachineAgentsPage: View {
             ) { agent in
                 modelPicker(agent)
             }
-            if model.endpoint?["resumeAtReset"]?.boolValue != nil {
-                Toggle("Chats resume after a limit", isOn: endpointBinding("resumeAtReset"))
+            if model.endpoint?.resumeAtReset != nil {
+                Toggle("Chats resume after a limit", isOn: endpointBinding(.resumeAtReset))
                     .disabled(model.state.busy)
             }
-            if model.endpoint?["agentsDeleteAnyView"]?.boolValue != nil {
-                Toggle("Agents may delete any view or node", isOn: endpointBinding("agentsDeleteAnyView"))
+            if model.endpoint?.agentsDeleteAnyView != nil {
+                Toggle("Agents may delete any view or node", isOn: endpointBinding(.agentsDeleteAnyView))
                     .disabled(model.state.busy)
             }
-            if model.endpoint?["reachOpenProjects"]?.boolValue != nil {
-                Toggle("Agents may reach all open projects", isOn: endpointBinding("reachOpenProjects"))
+            if model.endpoint?.reachOpenProjects != nil {
+                Toggle("Agents may reach all open projects", isOn: endpointBinding(.reachOpenProjects))
                     .disabled(model.state.busy)
             }
-            if model.endpoint?["visualReplies"]?.boolValue != nil {
-                Toggle(isOn: endpointBinding("visualReplies")) {
+            if model.endpoint?.visualReplies != nil {
+                Toggle(isOn: endpointBinding(.visualReplies)) {
                     Text("Visual replies")
                     Text(
                         "Agents may show a chart, table or mockup above a reply. Off, they answer in text. Existing visuals stay."
@@ -351,10 +367,10 @@ struct MachineAgentsPage: View {
         .pickerStyle(.menu)
     }
 
-    private func endpointBinding(_ key: String) -> Binding<Bool> {
+    private func endpointBinding(_ setting: EndpointSwitch) -> Binding<Bool> {
         Binding(
-            get: { model.endpoint?[key]?.boolValue ?? false },
-            set: { value in Task { await model.set(key, value) } })
+            get: { model.endpoint?[keyPath: setting.keyPath] ?? false },
+            set: { value in Task { await model.set(setting, value) } })
     }
 
     @ViewBuilder private var computerUse: some View {

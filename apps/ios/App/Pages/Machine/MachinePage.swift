@@ -27,7 +27,7 @@ struct MachinePage: View {
         _projects = State(initialValue: MachineProjectList(session: session))
         let endpoint = session.endpoint
         _devices = State(
-            initialValue: MachineDevices(client: session.rpc) { endpoint.info?["platform"]?.stringValue })
+            initialValue: MachineDevices(client: session.rpc) { endpoint.info?.platform })
     }
 
     private var endpoint: MachineEndpoint { session.endpoint }
@@ -118,7 +118,7 @@ struct MachinePage: View {
             Button("Restart", role: .destructive) { Task { await endpoint.confirmInstall() } }
             Button("Cancel", role: .cancel) { endpoint.cancelInstall() }
         } message: { work in
-            Text(MachineUpdate.restartQuestion(update: endpoint.update, work: work, machine: name))
+            Text(EndpointUpdate.restartQuestion(update: endpoint.update, work: work, machine: name))
         }
         .mobileSheet(isPresented: $openingFolder) { OpenFolderSheet(session: session) }
         .mobileSheet(isPresented: $naming) {
@@ -277,7 +277,7 @@ struct MachinePage: View {
                         selection: Binding(
                             get: { keepAwake.mode }, set: { mode in changeKeepAwake { $0.mode = mode } })
                     ) {
-                        ForEach(KeepAwakeMode.allCases) { Text($0.label).tag($0) }
+                        ForEach(KeepAwakeMode.allCases, id: \.self) { Text($0.label).tag($0) }
                     }
                     .pickerStyle(.menu)
                     .labelsHidden()
@@ -566,7 +566,7 @@ struct MachineLimitLegend: View {
 
 /// The update of the machine's app: what is there, and Restart where a phone may install it.
 struct MachineUpdateBanner: View {
-    let update: MachineUpdate
+    let update: EndpointUpdate
     let install: MachineInstallStep
     let start: () -> Void
 

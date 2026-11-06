@@ -971,59 +971,31 @@
   ],
   "validations": [
     {
-      "schema": "PairPayloadSchema",
+      "schema": "request.endpoint.info.result",
       "input": {
-        "token": "one-use",
-        "label": "iPhone",
-        "publicKey": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "id": "machine-1",
+        "label": "Mac",
+        "platform": "darwin",
+        "version": "1.0",
+        "protocol": 1,
+        "reachability": "public",
+        "authenticated": true
       },
       "valid": true,
       "output": {
-        "token": "one-use",
-        "label": "iPhone",
-        "publicKey": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "id": "machine-1",
+        "label": "Mac",
+        "platform": "darwin",
+        "version": "1.0",
+        "protocol": 1,
+        "reachability": "public",
+        "authenticated": true
       }
     },
     {
-      "schema": "PairPayloadSchema",
+      "schema": "request.endpoint.info.result",
       "input": {
-        "token": "",
-        "label": "iPhone"
-      },
-      "valid": false
-    },
-    {
-      "schema": "PairResultSchema",
-      "input": {
-        "endpoint": {
-          "id": "machine-1",
-          "label": "Mac",
-          "platform": "darwin",
-          "version": "1.0",
-          "protocol": 1,
-          "reachability": "public",
-          "authenticated": true
-        }
-      },
-      "valid": true,
-      "output": {
-        "endpoint": {
-          "id": "machine-1",
-          "label": "Mac",
-          "platform": "darwin",
-          "version": "1.0",
-          "protocol": 1,
-          "reachability": "public",
-          "authenticated": true
-        }
-      }
-    },
-    {
-      "schema": "PairResultSchema",
-      "input": {
-        "endpoint": {
-          "id": "machine-1"
-        }
+        "id": "machine-1"
       },
       "valid": false
     },

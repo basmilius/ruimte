@@ -227,18 +227,18 @@ private actor FakeAccountAPI: AccountAPI {
 
 @MainActor final class MachineAgentsTests: XCTestCase {
     func testASwitchKeepsANameNobodyChoseUnchosen() {
-        let endpoint = JSONValue.object([
-            "label": .string("studio.local"), "nameSource": .string("default"), "icon": .null,
-        ])
+        let endpoint = EndpointWire.decoded(
+            EndpointWire.info(["label": .string("studio.local"), "nameSource": .string("default"), "icon": .null]))
         XCTAssertEqual(
-            MachineAgentsModel.identityPayload(endpoint: endpoint, key: "resumeAtReset", value: true),
+            MachineAgentsModel.identityPayload(endpoint: endpoint, setting: .resumeAtReset, value: true),
             .object(["name": .null, "icon": .null, "resumeAtReset": .bool(true)]))
-        let named = JSONValue.object([
-            "label": .string("Studio"), "nameSource": .string("chosen"),
-            "icon": .object(["kind": .string("lucide"), "value": .string("monitor")]),
-        ])
+        let named = EndpointWire.decoded(
+            EndpointWire.info([
+                "label": .string("Studio"), "nameSource": .string("chosen"),
+                "icon": .object(["kind": .string("lucide"), "value": .string("monitor")]),
+            ]))
         XCTAssertEqual(
-            MachineAgentsModel.identityPayload(endpoint: named, key: "agentsDeleteAnyView", value: false),
+            MachineAgentsModel.identityPayload(endpoint: named, setting: .agentsDeleteAnyView, value: false),
             .object([
                 "name": .string("Studio"), "icon": .object(["kind": .string("lucide"), "value": .string("monitor")]),
                 "agentsDeleteAnyView": .bool(false),

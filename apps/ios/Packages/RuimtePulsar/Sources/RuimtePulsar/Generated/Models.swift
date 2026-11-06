@@ -3821,602 +3821,6 @@ public enum ChatToolState: String, CaseIterable, Codable, Sendable, Equatable {
     case `error` = "error"
 }
 
-public struct PairPayload: Codable, Sendable, Equatable {
-    public let `token`: String
-    public let `label`: String
-    public let `publicKey`: String?
-
-    public init(`token`: String, `label`: String, `publicKey`: String? = nil) {
-        self.`token` = `token`
-        self.`label` = `label`
-        self.`publicKey` = `publicKey`
-    }
-
-    public init(from decoder: Decoder) throws {
-        _ = try WireSchema.validate("PairPayloadSchema", JSONValue(from: decoder))
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `token` = try container.decode(String.self, forKey: .`token`)
-        `label` = try container.decode(String.self, forKey: .`label`)
-        `publicKey` = try container.decodeIfPresent(String.self, forKey: .`publicKey`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`token`, forKey: .`token`)
-        try container.encode(`label`, forKey: .`label`)
-        try container.encodeIfPresent(`publicKey`, forKey: .`publicKey`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `token` = "token"
-        case `label` = "label"
-        case `publicKey` = "publicKey"
-    }
-}
-
-public struct PairResult: Codable, Sendable, Equatable {
-    public let `sessionToken`: String?
-    public let `endpoint`: PairResultEndpoint
-
-    public init(`sessionToken`: String? = nil, `endpoint`: PairResultEndpoint) {
-        self.`sessionToken` = `sessionToken`
-        self.`endpoint` = `endpoint`
-    }
-
-    public init(from decoder: Decoder) throws {
-        _ = try WireSchema.validate("PairResultSchema", JSONValue(from: decoder))
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `sessionToken` = try container.decodeIfPresent(String.self, forKey: .`sessionToken`)
-        `endpoint` = try container.decode(PairResultEndpoint.self, forKey: .`endpoint`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(`sessionToken`, forKey: .`sessionToken`)
-        try container.encode(`endpoint`, forKey: .`endpoint`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `sessionToken` = "sessionToken"
-        case `endpoint` = "endpoint"
-    }
-}
-
-public struct PairResultEndpoint: Codable, Sendable, Equatable {
-    public let `id`: String
-    public let `label`: String
-    public let `nameSource`: PairResultEndpointNameSource?
-    public let `icon`: Presence<MachineIcon>
-    public let `agentsDeleteAnyView`: Bool?
-    public let `reachOpenProjects`: Bool?
-    public let `steerMessages`: Bool?
-    public let `streamingAllowed`: Bool?
-    public let `resumeAtReset`: Bool?
-    public let `visualReplies`: Bool?
-    public let `keepAwake`: PairResultEndpointKeepAwake?
-    public let `keepAwakeOnBattery`: Bool?
-    public let `keepAwakeDisplay`: Bool?
-    public let `keepAwakeLidClosed`: Bool?
-    public let `broker`: PairResultEndpointBroker?
-    public let `lanDoor`: Bool?
-    public let `worktreeRoot`: Presence<String>
-    public let `terminalShell`: PairResultEndpointTerminalShell?
-    public let `nodeSizes`: [String: PairResultEndpointNodeSizesValue]?
-    public let `usageStats`: Bool?
-    public let `keepAwakeAvailable`: Bool?
-    public let `keepAwakeLidAvailable`: Bool?
-    public let `keepAwakeLidRule`: Bool?
-    public let `update`: PairResultEndpointUpdate?
-    public let `platform`: String
-    public let `version`: String
-    public let `protocol`: Int64?
-    public let `reachability`: PairResultEndpointReachability
-    public let `authenticated`: Bool
-    public let `publicKey`: String?
-    public let `brokerUrl`: Presence<String>
-    public let `brokerFixed`: Bool?
-    public let `lan`: Presence<PairResultEndpointLan>
-    public let `lanDoorFixed`: Bool?
-    public let `accountId`: Presence<String>
-    public let `agentIntegrations`: PairResultEndpointAgentIntegrations?
-    public let `gitBashMissing`: Bool?
-    public let `features`: [String]?
-    public let `viewReferences`: Bool?
-
-    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `keepAwake`: PairResultEndpointKeepAwake? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: PairResultEndpointBroker? = nil, `lanDoor`: Bool? = nil, `worktreeRoot`: Presence<String> = .missing, `terminalShell`: PairResultEndpointTerminalShell? = nil, `nodeSizes`: [String: PairResultEndpointNodeSizesValue]? = nil, `usageStats`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: PairResultEndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<PairResultEndpointLan> = .missing, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing, `agentIntegrations`: PairResultEndpointAgentIntegrations? = nil, `gitBashMissing`: Bool? = nil, `features`: [String]? = nil, `viewReferences`: Bool? = nil) {
-        self.`id` = `id`
-        self.`label` = `label`
-        self.`nameSource` = `nameSource`
-        self.`icon` = `icon`
-        self.`agentsDeleteAnyView` = `agentsDeleteAnyView`
-        self.`reachOpenProjects` = `reachOpenProjects`
-        self.`steerMessages` = `steerMessages`
-        self.`streamingAllowed` = `streamingAllowed`
-        self.`resumeAtReset` = `resumeAtReset`
-        self.`visualReplies` = `visualReplies`
-        self.`keepAwake` = `keepAwake`
-        self.`keepAwakeOnBattery` = `keepAwakeOnBattery`
-        self.`keepAwakeDisplay` = `keepAwakeDisplay`
-        self.`keepAwakeLidClosed` = `keepAwakeLidClosed`
-        self.`broker` = `broker`
-        self.`lanDoor` = `lanDoor`
-        self.`worktreeRoot` = `worktreeRoot`
-        self.`terminalShell` = `terminalShell`
-        self.`nodeSizes` = `nodeSizes`
-        self.`usageStats` = `usageStats`
-        self.`keepAwakeAvailable` = `keepAwakeAvailable`
-        self.`keepAwakeLidAvailable` = `keepAwakeLidAvailable`
-        self.`keepAwakeLidRule` = `keepAwakeLidRule`
-        self.`update` = `update`
-        self.`platform` = `platform`
-        self.`version` = `version`
-        self.`protocol` = `protocol`
-        self.`reachability` = `reachability`
-        self.`authenticated` = `authenticated`
-        self.`publicKey` = `publicKey`
-        self.`brokerUrl` = `brokerUrl`
-        self.`brokerFixed` = `brokerFixed`
-        self.`lan` = `lan`
-        self.`lanDoorFixed` = `lanDoorFixed`
-        self.`accountId` = `accountId`
-        self.`agentIntegrations` = `agentIntegrations`
-        self.`gitBashMissing` = `gitBashMissing`
-        self.`features` = `features`
-        self.`viewReferences` = `viewReferences`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `id` = try container.decode(String.self, forKey: .`id`)
-        `label` = try container.decode(String.self, forKey: .`label`)
-        `nameSource` = try container.decodeIfPresent(PairResultEndpointNameSource.self, forKey: .`nameSource`)
-        `icon` = try container.contains(.`icon`) ? (container.decodeNil(forKey: .`icon`) ? .null : .value(container.decode(MachineIcon.self, forKey: .`icon`))) : .missing
-        `agentsDeleteAnyView` = try container.decodeIfPresent(Bool.self, forKey: .`agentsDeleteAnyView`)
-        `reachOpenProjects` = try container.decodeIfPresent(Bool.self, forKey: .`reachOpenProjects`)
-        `steerMessages` = try container.decodeIfPresent(Bool.self, forKey: .`steerMessages`)
-        `streamingAllowed` = try container.decodeIfPresent(Bool.self, forKey: .`streamingAllowed`)
-        `resumeAtReset` = try container.decodeIfPresent(Bool.self, forKey: .`resumeAtReset`)
-        `visualReplies` = try container.decodeIfPresent(Bool.self, forKey: .`visualReplies`)
-        `keepAwake` = try container.decodeIfPresent(PairResultEndpointKeepAwake.self, forKey: .`keepAwake`)
-        `keepAwakeOnBattery` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeOnBattery`)
-        `keepAwakeDisplay` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeDisplay`)
-        `keepAwakeLidClosed` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidClosed`)
-        `broker` = try container.decodeIfPresent(PairResultEndpointBroker.self, forKey: .`broker`)
-        `lanDoor` = try container.decodeIfPresent(Bool.self, forKey: .`lanDoor`)
-        `worktreeRoot` = try container.contains(.`worktreeRoot`) ? (container.decodeNil(forKey: .`worktreeRoot`) ? .null : .value(container.decode(String.self, forKey: .`worktreeRoot`))) : .missing
-        `terminalShell` = try container.decodeIfPresent(PairResultEndpointTerminalShell.self, forKey: .`terminalShell`)
-        `nodeSizes` = try container.decodeIfPresent([String: PairResultEndpointNodeSizesValue].self, forKey: .`nodeSizes`)
-        `usageStats` = try container.decodeIfPresent(Bool.self, forKey: .`usageStats`)
-        `keepAwakeAvailable` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeAvailable`)
-        `keepAwakeLidAvailable` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidAvailable`)
-        `keepAwakeLidRule` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidRule`)
-        `update` = try container.decodeIfPresent(PairResultEndpointUpdate.self, forKey: .`update`)
-        `platform` = try container.decode(String.self, forKey: .`platform`)
-        `version` = try container.decode(String.self, forKey: .`version`)
-        `protocol` = try container.decodeIfPresent(Int64.self, forKey: .`protocol`)
-        `reachability` = try container.decode(PairResultEndpointReachability.self, forKey: .`reachability`)
-        `authenticated` = try container.decode(Bool.self, forKey: .`authenticated`)
-        `publicKey` = try container.decodeIfPresent(String.self, forKey: .`publicKey`)
-        `brokerUrl` = try container.contains(.`brokerUrl`) ? (container.decodeNil(forKey: .`brokerUrl`) ? .null : .value(container.decode(String.self, forKey: .`brokerUrl`))) : .missing
-        `brokerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`brokerFixed`)
-        `lan` = try container.contains(.`lan`) ? (container.decodeNil(forKey: .`lan`) ? .null : .value(container.decode(PairResultEndpointLan.self, forKey: .`lan`))) : .missing
-        `lanDoorFixed` = try container.decodeIfPresent(Bool.self, forKey: .`lanDoorFixed`)
-        `accountId` = try container.contains(.`accountId`) ? (container.decodeNil(forKey: .`accountId`) ? .null : .value(container.decode(String.self, forKey: .`accountId`))) : .missing
-        `agentIntegrations` = try container.decodeIfPresent(PairResultEndpointAgentIntegrations.self, forKey: .`agentIntegrations`)
-        `gitBashMissing` = try container.decodeIfPresent(Bool.self, forKey: .`gitBashMissing`)
-        `features` = try container.decodeIfPresent([String].self, forKey: .`features`)
-        `viewReferences` = try container.decodeIfPresent(Bool.self, forKey: .`viewReferences`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`id`, forKey: .`id`)
-        try container.encode(`label`, forKey: .`label`)
-        try container.encodeIfPresent(`nameSource`, forKey: .`nameSource`)
-        switch `icon` {
-        case .missing: break
-        case .null: try container.encodeNil(forKey: .`icon`)
-        case .value(let value): try container.encode(value, forKey: .`icon`)
-        }
-        try container.encodeIfPresent(`agentsDeleteAnyView`, forKey: .`agentsDeleteAnyView`)
-        try container.encodeIfPresent(`reachOpenProjects`, forKey: .`reachOpenProjects`)
-        try container.encodeIfPresent(`steerMessages`, forKey: .`steerMessages`)
-        try container.encodeIfPresent(`streamingAllowed`, forKey: .`streamingAllowed`)
-        try container.encodeIfPresent(`resumeAtReset`, forKey: .`resumeAtReset`)
-        try container.encodeIfPresent(`visualReplies`, forKey: .`visualReplies`)
-        try container.encodeIfPresent(`keepAwake`, forKey: .`keepAwake`)
-        try container.encodeIfPresent(`keepAwakeOnBattery`, forKey: .`keepAwakeOnBattery`)
-        try container.encodeIfPresent(`keepAwakeDisplay`, forKey: .`keepAwakeDisplay`)
-        try container.encodeIfPresent(`keepAwakeLidClosed`, forKey: .`keepAwakeLidClosed`)
-        try container.encodeIfPresent(`broker`, forKey: .`broker`)
-        try container.encodeIfPresent(`lanDoor`, forKey: .`lanDoor`)
-        switch `worktreeRoot` {
-        case .missing: break
-        case .null: try container.encodeNil(forKey: .`worktreeRoot`)
-        case .value(let value): try container.encode(value, forKey: .`worktreeRoot`)
-        }
-        try container.encodeIfPresent(`terminalShell`, forKey: .`terminalShell`)
-        try container.encodeIfPresent(`nodeSizes`, forKey: .`nodeSizes`)
-        try container.encodeIfPresent(`usageStats`, forKey: .`usageStats`)
-        try container.encodeIfPresent(`keepAwakeAvailable`, forKey: .`keepAwakeAvailable`)
-        try container.encodeIfPresent(`keepAwakeLidAvailable`, forKey: .`keepAwakeLidAvailable`)
-        try container.encodeIfPresent(`keepAwakeLidRule`, forKey: .`keepAwakeLidRule`)
-        try container.encodeIfPresent(`update`, forKey: .`update`)
-        try container.encode(`platform`, forKey: .`platform`)
-        try container.encode(`version`, forKey: .`version`)
-        try container.encodeIfPresent(`protocol`, forKey: .`protocol`)
-        try container.encode(`reachability`, forKey: .`reachability`)
-        try container.encode(`authenticated`, forKey: .`authenticated`)
-        try container.encodeIfPresent(`publicKey`, forKey: .`publicKey`)
-        switch `brokerUrl` {
-        case .missing: break
-        case .null: try container.encodeNil(forKey: .`brokerUrl`)
-        case .value(let value): try container.encode(value, forKey: .`brokerUrl`)
-        }
-        try container.encodeIfPresent(`brokerFixed`, forKey: .`brokerFixed`)
-        switch `lan` {
-        case .missing: break
-        case .null: try container.encodeNil(forKey: .`lan`)
-        case .value(let value): try container.encode(value, forKey: .`lan`)
-        }
-        try container.encodeIfPresent(`lanDoorFixed`, forKey: .`lanDoorFixed`)
-        switch `accountId` {
-        case .missing: break
-        case .null: try container.encodeNil(forKey: .`accountId`)
-        case .value(let value): try container.encode(value, forKey: .`accountId`)
-        }
-        try container.encodeIfPresent(`agentIntegrations`, forKey: .`agentIntegrations`)
-        try container.encodeIfPresent(`gitBashMissing`, forKey: .`gitBashMissing`)
-        try container.encodeIfPresent(`features`, forKey: .`features`)
-        try container.encodeIfPresent(`viewReferences`, forKey: .`viewReferences`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `id` = "id"
-        case `label` = "label"
-        case `nameSource` = "nameSource"
-        case `icon` = "icon"
-        case `agentsDeleteAnyView` = "agentsDeleteAnyView"
-        case `reachOpenProjects` = "reachOpenProjects"
-        case `steerMessages` = "steerMessages"
-        case `streamingAllowed` = "streamingAllowed"
-        case `resumeAtReset` = "resumeAtReset"
-        case `visualReplies` = "visualReplies"
-        case `keepAwake` = "keepAwake"
-        case `keepAwakeOnBattery` = "keepAwakeOnBattery"
-        case `keepAwakeDisplay` = "keepAwakeDisplay"
-        case `keepAwakeLidClosed` = "keepAwakeLidClosed"
-        case `broker` = "broker"
-        case `lanDoor` = "lanDoor"
-        case `worktreeRoot` = "worktreeRoot"
-        case `terminalShell` = "terminalShell"
-        case `nodeSizes` = "nodeSizes"
-        case `usageStats` = "usageStats"
-        case `keepAwakeAvailable` = "keepAwakeAvailable"
-        case `keepAwakeLidAvailable` = "keepAwakeLidAvailable"
-        case `keepAwakeLidRule` = "keepAwakeLidRule"
-        case `update` = "update"
-        case `platform` = "platform"
-        case `version` = "version"
-        case `protocol` = "protocol"
-        case `reachability` = "reachability"
-        case `authenticated` = "authenticated"
-        case `publicKey` = "publicKey"
-        case `brokerUrl` = "brokerUrl"
-        case `brokerFixed` = "brokerFixed"
-        case `lan` = "lan"
-        case `lanDoorFixed` = "lanDoorFixed"
-        case `accountId` = "accountId"
-        case `agentIntegrations` = "agentIntegrations"
-        case `gitBashMissing` = "gitBashMissing"
-        case `features` = "features"
-        case `viewReferences` = "viewReferences"
-    }
-}
-
-public enum PairResultEndpointNameSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `chosen` = "chosen"
-    case `default` = "default"
-}
-
-public enum PairResultEndpointKeepAwake: String, CaseIterable, Codable, Sendable, Equatable {
-    case `off` = "off"
-    case `working` = "working"
-    case `always` = "always"
-}
-
-public enum PairResultEndpointBroker: Codable, Sendable, Equatable {
-    case `default`(PairResultEndpointBrokerVariant0)
-    case `off`(PairResultEndpointBrokerVariant1)
-    case `custom`(PairResultEndpointBrokerVariant2)
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: Tag.self)
-        switch try container.decode(String.self, forKey: .value) {
-        case "default": self = .`default`(try PairResultEndpointBrokerVariant0(from: decoder))
-        case "off": self = .`off`(try PairResultEndpointBrokerVariant1(from: decoder))
-        case "custom": self = .`custom`(try PairResultEndpointBrokerVariant2(from: decoder))
-        default: throw WireValidationError.invalid("Unknown PairResultEndpointBroker tag")
-        }
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        switch self {
-        case .`default`(let value): try value.encode(to: encoder)
-        case .`off`(let value): try value.encode(to: encoder)
-        case .`custom`(let value): try value.encode(to: encoder)
-        }
-    }
-
-    private enum Tag: String, CodingKey { case value = "mode" }
-}
-
-public struct PairResultEndpointBrokerVariant0: Codable, Sendable, Equatable {
-    public let `mode`: String
-
-    public init(`mode`: String = "default") {
-        self.`mode` = `mode`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `mode` = try container.decode(String.self, forKey: .`mode`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`mode`, forKey: .`mode`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `mode` = "mode"
-    }
-}
-
-public struct PairResultEndpointBrokerVariant1: Codable, Sendable, Equatable {
-    public let `mode`: String
-
-    public init(`mode`: String = "off") {
-        self.`mode` = `mode`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `mode` = try container.decode(String.self, forKey: .`mode`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`mode`, forKey: .`mode`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `mode` = "mode"
-    }
-}
-
-public struct PairResultEndpointBrokerVariant2: Codable, Sendable, Equatable {
-    public let `mode`: String
-    public let `url`: String
-
-    public init(`mode`: String = "custom", `url`: String) {
-        self.`mode` = `mode`
-        self.`url` = `url`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `mode` = try container.decode(String.self, forKey: .`mode`)
-        `url` = try container.decode(String.self, forKey: .`url`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`mode`, forKey: .`mode`)
-        try container.encode(`url`, forKey: .`url`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `mode` = "mode"
-        case `url` = "url"
-    }
-}
-
-public enum PairResultEndpointTerminalShell: String, CaseIterable, Codable, Sendable, Equatable {
-    case `powershell` = "powershell"
-    case `gitBash` = "git-bash"
-    case `cmd` = "cmd"
-    case `wsl` = "wsl"
-}
-
-public struct PairResultEndpointNodeSizesValue: Codable, Sendable, Equatable {
-    public let `w`: Double
-    public let `h`: Double
-
-    public init(`w`: Double, `h`: Double) {
-        self.`w` = `w`
-        self.`h` = `h`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `w` = try container.decode(Double.self, forKey: .`w`)
-        `h` = try container.decode(Double.self, forKey: .`h`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`w`, forKey: .`w`)
-        try container.encode(`h`, forKey: .`h`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `w` = "w"
-        case `h` = "h"
-    }
-}
-
-public struct PairResultEndpointUpdate: Codable, Sendable, Equatable {
-    public let `status`: PairResultEndpointUpdateStatus
-    public let `currentVersion`: String?
-    public let `version`: String?
-    public let `percent`: Double?
-    public let `error`: Presence<String>
-    public let `app`: Bool
-
-    public init(`status`: PairResultEndpointUpdateStatus, `currentVersion`: String? = nil, `version`: String? = nil, `percent`: Double? = nil, `error`: Presence<String> = .missing, `app`: Bool) {
-        self.`status` = `status`
-        self.`currentVersion` = `currentVersion`
-        self.`version` = `version`
-        self.`percent` = `percent`
-        self.`error` = `error`
-        self.`app` = `app`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `status` = try container.decode(PairResultEndpointUpdateStatus.self, forKey: .`status`)
-        `currentVersion` = try container.decodeIfPresent(String.self, forKey: .`currentVersion`)
-        `version` = try container.decodeIfPresent(String.self, forKey: .`version`)
-        `percent` = try container.decodeIfPresent(Double.self, forKey: .`percent`)
-        `error` = try container.contains(.`error`) ? (container.decodeNil(forKey: .`error`) ? .null : .value(container.decode(String.self, forKey: .`error`))) : .missing
-        `app` = try container.decode(Bool.self, forKey: .`app`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`status`, forKey: .`status`)
-        try container.encodeIfPresent(`currentVersion`, forKey: .`currentVersion`)
-        try container.encodeIfPresent(`version`, forKey: .`version`)
-        try container.encodeIfPresent(`percent`, forKey: .`percent`)
-        switch `error` {
-        case .missing: break
-        case .null: try container.encodeNil(forKey: .`error`)
-        case .value(let value): try container.encode(value, forKey: .`error`)
-        }
-        try container.encode(`app`, forKey: .`app`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `status` = "status"
-        case `currentVersion` = "currentVersion"
-        case `version` = "version"
-        case `percent` = "percent"
-        case `error` = "error"
-        case `app` = "app"
-    }
-}
-
-public enum PairResultEndpointUpdateStatus: String, CaseIterable, Codable, Sendable, Equatable {
-    case `unsupported` = "unsupported"
-    case `idle` = "idle"
-    case `checking` = "checking"
-    case `current` = "current"
-    case `available` = "available"
-    case `downloading` = "downloading"
-    case `ready` = "ready"
-    case `error` = "error"
-}
-
-public enum PairResultEndpointReachability: String, CaseIterable, Codable, Sendable, Equatable {
-    case `loopback` = "loopback"
-    case `lan` = "lan"
-    case `tunnel` = "tunnel"
-    case `public` = "public"
-}
-
-public struct PairResultEndpointLan: Codable, Sendable, Equatable {
-    public let `port`: Int64
-    public let `addresses`: [String]
-
-    public init(`port`: Int64, `addresses`: [String]) {
-        self.`port` = `port`
-        self.`addresses` = `addresses`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `port` = try container.decode(Int64.self, forKey: .`port`)
-        `addresses` = try container.decode([String].self, forKey: .`addresses`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`port`, forKey: .`port`)
-        try container.encode(`addresses`, forKey: .`addresses`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `port` = "port"
-        case `addresses` = "addresses"
-    }
-}
-
-public struct PairResultEndpointAgentIntegrations: Codable, Sendable, Equatable {
-    public let `providers`: [PairResultEndpointAgentIntegrationsProvidersItem]
-    public let `fixed`: Bool
-
-    public init(`providers`: [PairResultEndpointAgentIntegrationsProvidersItem], `fixed`: Bool) {
-        self.`providers` = `providers`
-        self.`fixed` = `fixed`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `providers` = try container.decode([PairResultEndpointAgentIntegrationsProvidersItem].self, forKey: .`providers`)
-        `fixed` = try container.decode(Bool.self, forKey: .`fixed`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`providers`, forKey: .`providers`)
-        try container.encode(`fixed`, forKey: .`fixed`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `providers` = "providers"
-        case `fixed` = "fixed"
-    }
-}
-
-public struct PairResultEndpointAgentIntegrationsProvidersItem: Codable, Sendable, Equatable {
-    public let `provider`: String
-    public let `state`: PairResultEndpointAgentIntegrationsProvidersItemState
-    public let `reviewed`: Bool
-
-    public init(`provider`: String, `state`: PairResultEndpointAgentIntegrationsProvidersItemState, `reviewed`: Bool) {
-        self.`provider` = `provider`
-        self.`state` = `state`
-        self.`reviewed` = `reviewed`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `provider` = try container.decode(String.self, forKey: .`provider`)
-        `state` = try container.decode(PairResultEndpointAgentIntegrationsProvidersItemState.self, forKey: .`state`)
-        `reviewed` = try container.decode(Bool.self, forKey: .`reviewed`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`provider`, forKey: .`provider`)
-        try container.encode(`state`, forKey: .`state`)
-        try container.encode(`reviewed`, forKey: .`reviewed`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `provider` = "provider"
-        case `state` = "state"
-        case `reviewed` = "reviewed"
-    }
-}
-
-public enum PairResultEndpointAgentIntegrationsProvidersItemState: String, CaseIterable, Codable, Sendable, Equatable {
-    case `unset` = "unset"
-    case `on` = "on"
-    case `off` = "off"
-}
-
 public struct ProjectCanvasDefaults: Codable, Sendable, Equatable {
     public let `layouts`: [ProjectCanvasDefaultsLayoutsItem]
 
@@ -8525,14 +7929,14 @@ public struct ProjectSummary: Codable, Sendable, Equatable {
 }
 
 public enum ProjectSummaryIcon: Codable, Sendable, Equatable {
-    case `lucide`(ProjectSummaryIconVariant0)
+    case `lucide`(MachineIcon)
     case `image`(ProjectSummaryIconVariant1)
     case `initial`(ProjectSummaryIconVariant2)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: Tag.self)
         switch try container.decode(String.self, forKey: .value) {
-        case "lucide": self = .`lucide`(try ProjectSummaryIconVariant0(from: decoder))
+        case "lucide": self = .`lucide`(try MachineIcon(from: decoder))
         case "image": self = .`image`(try ProjectSummaryIconVariant1(from: decoder))
         case "initial": self = .`initial`(try ProjectSummaryIconVariant2(from: decoder))
         default: throw WireValidationError.invalid("Unknown ProjectSummaryIcon tag")
@@ -8548,33 +7952,6 @@ public enum ProjectSummaryIcon: Codable, Sendable, Equatable {
     }
 
     private enum Tag: String, CodingKey { case value = "kind" }
-}
-
-public struct ProjectSummaryIconVariant0: Codable, Sendable, Equatable {
-    public let `kind`: String
-    public let `value`: String
-
-    public init(`kind`: String = "lucide", `value`: String) {
-        self.`kind` = `kind`
-        self.`value` = `value`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `kind` = try container.decode(String.self, forKey: .`kind`)
-        `value` = try container.decode(String.self, forKey: .`value`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`kind`, forKey: .`kind`)
-        try container.encode(`value`, forKey: .`value`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `kind` = "kind"
-        case `value` = "value"
-    }
 }
 
 public struct ProjectSummaryIconVariant1: Codable, Sendable, Equatable {
@@ -8639,6 +8016,751 @@ public struct ProjectSummaryIconVariant2: Codable, Sendable, Equatable {
 public enum ProjectSummaryNameSource: String, CaseIterable, Codable, Sendable, Equatable {
     case `chosen` = "chosen"
     case `folder` = "folder"
+}
+
+public struct EndpointInfo: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `label`: String
+    public let `nameSource`: EndpointNameSource?
+    public let `icon`: Presence<MachineIcon>
+    public let `agentsDeleteAnyView`: Bool?
+    public let `reachOpenProjects`: Bool?
+    public let `steerMessages`: Bool?
+    public let `streamingAllowed`: Bool?
+    public let `resumeAtReset`: Bool?
+    public let `visualReplies`: Bool?
+    public let `keepAwake`: KeepAwakeMode?
+    public let `keepAwakeOnBattery`: Bool?
+    public let `keepAwakeDisplay`: Bool?
+    public let `keepAwakeLidClosed`: Bool?
+    public let `broker`: EndpointBroker?
+    public let `lanDoor`: Bool?
+    public let `worktreeRoot`: Presence<String>
+    public let `terminalShell`: EndpointTerminalShell?
+    public let `nodeSizes`: [String: EndpointNodeSize]?
+    public let `usageStats`: Bool?
+    public let `keepAwakeAvailable`: Bool?
+    public let `keepAwakeLidAvailable`: Bool?
+    public let `keepAwakeLidRule`: Bool?
+    public let `update`: EndpointUpdate?
+    public let `platform`: String
+    public let `version`: String
+    public let `protocol`: Int64?
+    public let `reachability`: EndpointInfoReachability
+    public let `authenticated`: Bool
+    public let `publicKey`: String?
+    public let `brokerUrl`: Presence<String>
+    public let `brokerFixed`: Bool?
+    public let `lan`: Presence<LanDoor>
+    public let `lanDoorFixed`: Bool?
+    public let `accountId`: Presence<String>
+    public let `agentIntegrations`: EndpointAgentIntegrations?
+    public let `gitBashMissing`: Bool?
+    public let `features`: [String]?
+    public let `viewReferences`: Bool?
+
+    public init(`id`: String, `label`: String, `nameSource`: EndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `keepAwake`: KeepAwakeMode? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: EndpointBroker? = nil, `lanDoor`: Bool? = nil, `worktreeRoot`: Presence<String> = .missing, `terminalShell`: EndpointTerminalShell? = nil, `nodeSizes`: [String: EndpointNodeSize]? = nil, `usageStats`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: EndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: EndpointInfoReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<LanDoor> = .missing, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing, `agentIntegrations`: EndpointAgentIntegrations? = nil, `gitBashMissing`: Bool? = nil, `features`: [String]? = nil, `viewReferences`: Bool? = nil) {
+        self.`id` = `id`
+        self.`label` = `label`
+        self.`nameSource` = `nameSource`
+        self.`icon` = `icon`
+        self.`agentsDeleteAnyView` = `agentsDeleteAnyView`
+        self.`reachOpenProjects` = `reachOpenProjects`
+        self.`steerMessages` = `steerMessages`
+        self.`streamingAllowed` = `streamingAllowed`
+        self.`resumeAtReset` = `resumeAtReset`
+        self.`visualReplies` = `visualReplies`
+        self.`keepAwake` = `keepAwake`
+        self.`keepAwakeOnBattery` = `keepAwakeOnBattery`
+        self.`keepAwakeDisplay` = `keepAwakeDisplay`
+        self.`keepAwakeLidClosed` = `keepAwakeLidClosed`
+        self.`broker` = `broker`
+        self.`lanDoor` = `lanDoor`
+        self.`worktreeRoot` = `worktreeRoot`
+        self.`terminalShell` = `terminalShell`
+        self.`nodeSizes` = `nodeSizes`
+        self.`usageStats` = `usageStats`
+        self.`keepAwakeAvailable` = `keepAwakeAvailable`
+        self.`keepAwakeLidAvailable` = `keepAwakeLidAvailable`
+        self.`keepAwakeLidRule` = `keepAwakeLidRule`
+        self.`update` = `update`
+        self.`platform` = `platform`
+        self.`version` = `version`
+        self.`protocol` = `protocol`
+        self.`reachability` = `reachability`
+        self.`authenticated` = `authenticated`
+        self.`publicKey` = `publicKey`
+        self.`brokerUrl` = `brokerUrl`
+        self.`brokerFixed` = `brokerFixed`
+        self.`lan` = `lan`
+        self.`lanDoorFixed` = `lanDoorFixed`
+        self.`accountId` = `accountId`
+        self.`agentIntegrations` = `agentIntegrations`
+        self.`gitBashMissing` = `gitBashMissing`
+        self.`features` = `features`
+        self.`viewReferences` = `viewReferences`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `label` = try container.decode(String.self, forKey: .`label`)
+        `nameSource` = try container.decodeIfPresent(EndpointNameSource.self, forKey: .`nameSource`)
+        `icon` = try container.contains(.`icon`) ? (container.decodeNil(forKey: .`icon`) ? .null : .value(container.decode(MachineIcon.self, forKey: .`icon`))) : .missing
+        `agentsDeleteAnyView` = try container.decodeIfPresent(Bool.self, forKey: .`agentsDeleteAnyView`)
+        `reachOpenProjects` = try container.decodeIfPresent(Bool.self, forKey: .`reachOpenProjects`)
+        `steerMessages` = try container.decodeIfPresent(Bool.self, forKey: .`steerMessages`)
+        `streamingAllowed` = try container.decodeIfPresent(Bool.self, forKey: .`streamingAllowed`)
+        `resumeAtReset` = try container.decodeIfPresent(Bool.self, forKey: .`resumeAtReset`)
+        `visualReplies` = try container.decodeIfPresent(Bool.self, forKey: .`visualReplies`)
+        `keepAwake` = try container.decodeIfPresent(KeepAwakeMode.self, forKey: .`keepAwake`)
+        `keepAwakeOnBattery` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeOnBattery`)
+        `keepAwakeDisplay` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeDisplay`)
+        `keepAwakeLidClosed` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidClosed`)
+        `broker` = try container.decodeIfPresent(EndpointBroker.self, forKey: .`broker`)
+        `lanDoor` = try container.decodeIfPresent(Bool.self, forKey: .`lanDoor`)
+        `worktreeRoot` = try container.contains(.`worktreeRoot`) ? (container.decodeNil(forKey: .`worktreeRoot`) ? .null : .value(container.decode(String.self, forKey: .`worktreeRoot`))) : .missing
+        `terminalShell` = try container.decodeIfPresent(EndpointTerminalShell.self, forKey: .`terminalShell`)
+        `nodeSizes` = try container.decodeIfPresent([String: EndpointNodeSize].self, forKey: .`nodeSizes`)
+        `usageStats` = try container.decodeIfPresent(Bool.self, forKey: .`usageStats`)
+        `keepAwakeAvailable` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeAvailable`)
+        `keepAwakeLidAvailable` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidAvailable`)
+        `keepAwakeLidRule` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidRule`)
+        `update` = try container.decodeIfPresent(EndpointUpdate.self, forKey: .`update`)
+        `platform` = try container.decode(String.self, forKey: .`platform`)
+        `version` = try container.decode(String.self, forKey: .`version`)
+        `protocol` = try container.decodeIfPresent(Int64.self, forKey: .`protocol`)
+        `reachability` = try container.decode(EndpointInfoReachability.self, forKey: .`reachability`)
+        `authenticated` = try container.decode(Bool.self, forKey: .`authenticated`)
+        `publicKey` = try container.decodeIfPresent(String.self, forKey: .`publicKey`)
+        `brokerUrl` = try container.contains(.`brokerUrl`) ? (container.decodeNil(forKey: .`brokerUrl`) ? .null : .value(container.decode(String.self, forKey: .`brokerUrl`))) : .missing
+        `brokerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`brokerFixed`)
+        `lan` = try container.contains(.`lan`) ? (container.decodeNil(forKey: .`lan`) ? .null : .value(container.decode(LanDoor.self, forKey: .`lan`))) : .missing
+        `lanDoorFixed` = try container.decodeIfPresent(Bool.self, forKey: .`lanDoorFixed`)
+        `accountId` = try container.contains(.`accountId`) ? (container.decodeNil(forKey: .`accountId`) ? .null : .value(container.decode(String.self, forKey: .`accountId`))) : .missing
+        `agentIntegrations` = try container.decodeIfPresent(EndpointAgentIntegrations.self, forKey: .`agentIntegrations`)
+        `gitBashMissing` = try container.decodeIfPresent(Bool.self, forKey: .`gitBashMissing`)
+        `features` = try container.decodeIfPresent([String].self, forKey: .`features`)
+        `viewReferences` = try container.decodeIfPresent(Bool.self, forKey: .`viewReferences`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`label`, forKey: .`label`)
+        try container.encodeIfPresent(`nameSource`, forKey: .`nameSource`)
+        switch `icon` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`icon`)
+        case .value(let value): try container.encode(value, forKey: .`icon`)
+        }
+        try container.encodeIfPresent(`agentsDeleteAnyView`, forKey: .`agentsDeleteAnyView`)
+        try container.encodeIfPresent(`reachOpenProjects`, forKey: .`reachOpenProjects`)
+        try container.encodeIfPresent(`steerMessages`, forKey: .`steerMessages`)
+        try container.encodeIfPresent(`streamingAllowed`, forKey: .`streamingAllowed`)
+        try container.encodeIfPresent(`resumeAtReset`, forKey: .`resumeAtReset`)
+        try container.encodeIfPresent(`visualReplies`, forKey: .`visualReplies`)
+        try container.encodeIfPresent(`keepAwake`, forKey: .`keepAwake`)
+        try container.encodeIfPresent(`keepAwakeOnBattery`, forKey: .`keepAwakeOnBattery`)
+        try container.encodeIfPresent(`keepAwakeDisplay`, forKey: .`keepAwakeDisplay`)
+        try container.encodeIfPresent(`keepAwakeLidClosed`, forKey: .`keepAwakeLidClosed`)
+        try container.encodeIfPresent(`broker`, forKey: .`broker`)
+        try container.encodeIfPresent(`lanDoor`, forKey: .`lanDoor`)
+        switch `worktreeRoot` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`worktreeRoot`)
+        case .value(let value): try container.encode(value, forKey: .`worktreeRoot`)
+        }
+        try container.encodeIfPresent(`terminalShell`, forKey: .`terminalShell`)
+        try container.encodeIfPresent(`nodeSizes`, forKey: .`nodeSizes`)
+        try container.encodeIfPresent(`usageStats`, forKey: .`usageStats`)
+        try container.encodeIfPresent(`keepAwakeAvailable`, forKey: .`keepAwakeAvailable`)
+        try container.encodeIfPresent(`keepAwakeLidAvailable`, forKey: .`keepAwakeLidAvailable`)
+        try container.encodeIfPresent(`keepAwakeLidRule`, forKey: .`keepAwakeLidRule`)
+        try container.encodeIfPresent(`update`, forKey: .`update`)
+        try container.encode(`platform`, forKey: .`platform`)
+        try container.encode(`version`, forKey: .`version`)
+        try container.encodeIfPresent(`protocol`, forKey: .`protocol`)
+        try container.encode(`reachability`, forKey: .`reachability`)
+        try container.encode(`authenticated`, forKey: .`authenticated`)
+        try container.encodeIfPresent(`publicKey`, forKey: .`publicKey`)
+        switch `brokerUrl` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`brokerUrl`)
+        case .value(let value): try container.encode(value, forKey: .`brokerUrl`)
+        }
+        try container.encodeIfPresent(`brokerFixed`, forKey: .`brokerFixed`)
+        switch `lan` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`lan`)
+        case .value(let value): try container.encode(value, forKey: .`lan`)
+        }
+        try container.encodeIfPresent(`lanDoorFixed`, forKey: .`lanDoorFixed`)
+        switch `accountId` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`accountId`)
+        case .value(let value): try container.encode(value, forKey: .`accountId`)
+        }
+        try container.encodeIfPresent(`agentIntegrations`, forKey: .`agentIntegrations`)
+        try container.encodeIfPresent(`gitBashMissing`, forKey: .`gitBashMissing`)
+        try container.encodeIfPresent(`features`, forKey: .`features`)
+        try container.encodeIfPresent(`viewReferences`, forKey: .`viewReferences`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `label` = "label"
+        case `nameSource` = "nameSource"
+        case `icon` = "icon"
+        case `agentsDeleteAnyView` = "agentsDeleteAnyView"
+        case `reachOpenProjects` = "reachOpenProjects"
+        case `steerMessages` = "steerMessages"
+        case `streamingAllowed` = "streamingAllowed"
+        case `resumeAtReset` = "resumeAtReset"
+        case `visualReplies` = "visualReplies"
+        case `keepAwake` = "keepAwake"
+        case `keepAwakeOnBattery` = "keepAwakeOnBattery"
+        case `keepAwakeDisplay` = "keepAwakeDisplay"
+        case `keepAwakeLidClosed` = "keepAwakeLidClosed"
+        case `broker` = "broker"
+        case `lanDoor` = "lanDoor"
+        case `worktreeRoot` = "worktreeRoot"
+        case `terminalShell` = "terminalShell"
+        case `nodeSizes` = "nodeSizes"
+        case `usageStats` = "usageStats"
+        case `keepAwakeAvailable` = "keepAwakeAvailable"
+        case `keepAwakeLidAvailable` = "keepAwakeLidAvailable"
+        case `keepAwakeLidRule` = "keepAwakeLidRule"
+        case `update` = "update"
+        case `platform` = "platform"
+        case `version` = "version"
+        case `protocol` = "protocol"
+        case `reachability` = "reachability"
+        case `authenticated` = "authenticated"
+        case `publicKey` = "publicKey"
+        case `brokerUrl` = "brokerUrl"
+        case `brokerFixed` = "brokerFixed"
+        case `lan` = "lan"
+        case `lanDoorFixed` = "lanDoorFixed"
+        case `accountId` = "accountId"
+        case `agentIntegrations` = "agentIntegrations"
+        case `gitBashMissing` = "gitBashMissing"
+        case `features` = "features"
+        case `viewReferences` = "viewReferences"
+    }
+}
+
+public enum EndpointNameSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `chosen` = "chosen"
+    case `default` = "default"
+}
+
+public enum KeepAwakeMode: String, CaseIterable, Codable, Sendable, Equatable {
+    case `off` = "off"
+    case `working` = "working"
+    case `always` = "always"
+}
+
+public enum EndpointBroker: Codable, Sendable, Equatable {
+    case `default`(EndpointBrokerVariant0)
+    case `off`(EndpointBrokerVariant1)
+    case `custom`(EndpointBrokerVariant2)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Tag.self)
+        switch try container.decode(String.self, forKey: .value) {
+        case "default": self = .`default`(try EndpointBrokerVariant0(from: decoder))
+        case "off": self = .`off`(try EndpointBrokerVariant1(from: decoder))
+        case "custom": self = .`custom`(try EndpointBrokerVariant2(from: decoder))
+        default: throw WireValidationError.invalid("Unknown EndpointBroker tag")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case .`default`(let value): try value.encode(to: encoder)
+        case .`off`(let value): try value.encode(to: encoder)
+        case .`custom`(let value): try value.encode(to: encoder)
+        }
+    }
+
+    private enum Tag: String, CodingKey { case value = "mode" }
+}
+
+public struct EndpointBrokerVariant0: Codable, Sendable, Equatable {
+    public let `mode`: String
+
+    public init(`mode`: String = "default") {
+        self.`mode` = `mode`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `mode` = try container.decode(String.self, forKey: .`mode`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`mode`, forKey: .`mode`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `mode` = "mode"
+    }
+}
+
+public struct EndpointBrokerVariant1: Codable, Sendable, Equatable {
+    public let `mode`: String
+
+    public init(`mode`: String = "off") {
+        self.`mode` = `mode`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `mode` = try container.decode(String.self, forKey: .`mode`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`mode`, forKey: .`mode`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `mode` = "mode"
+    }
+}
+
+public struct EndpointBrokerVariant2: Codable, Sendable, Equatable {
+    public let `mode`: String
+    public let `url`: String
+
+    public init(`mode`: String = "custom", `url`: String) {
+        self.`mode` = `mode`
+        self.`url` = `url`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `mode` = try container.decode(String.self, forKey: .`mode`)
+        `url` = try container.decode(String.self, forKey: .`url`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`mode`, forKey: .`mode`)
+        try container.encode(`url`, forKey: .`url`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `mode` = "mode"
+        case `url` = "url"
+    }
+}
+
+public enum EndpointTerminalShell: String, CaseIterable, Codable, Sendable, Equatable {
+    case `powershell` = "powershell"
+    case `gitBash` = "git-bash"
+    case `cmd` = "cmd"
+    case `wsl` = "wsl"
+}
+
+public struct EndpointNodeSize: Codable, Sendable, Equatable {
+    public let `w`: Double
+    public let `h`: Double
+
+    public init(`w`: Double, `h`: Double) {
+        self.`w` = `w`
+        self.`h` = `h`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `w` = try container.decode(Double.self, forKey: .`w`)
+        `h` = try container.decode(Double.self, forKey: .`h`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`w`, forKey: .`w`)
+        try container.encode(`h`, forKey: .`h`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `w` = "w"
+        case `h` = "h"
+    }
+}
+
+public struct EndpointUpdate: Codable, Sendable, Equatable {
+    public let `status`: String
+    public let `currentVersion`: String?
+    public let `version`: String?
+    public let `percent`: Double?
+    public let `error`: Presence<String>
+    public let `app`: Bool
+
+    public init(`status`: String, `currentVersion`: String? = nil, `version`: String? = nil, `percent`: Double? = nil, `error`: Presence<String> = .missing, `app`: Bool) {
+        self.`status` = `status`
+        self.`currentVersion` = `currentVersion`
+        self.`version` = `version`
+        self.`percent` = `percent`
+        self.`error` = `error`
+        self.`app` = `app`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `status` = try container.decode(String.self, forKey: .`status`)
+        `currentVersion` = try container.decodeIfPresent(String.self, forKey: .`currentVersion`)
+        `version` = try container.decodeIfPresent(String.self, forKey: .`version`)
+        `percent` = try container.decodeIfPresent(Double.self, forKey: .`percent`)
+        `error` = try container.contains(.`error`) ? (container.decodeNil(forKey: .`error`) ? .null : .value(container.decode(String.self, forKey: .`error`))) : .missing
+        `app` = try container.decode(Bool.self, forKey: .`app`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`status`, forKey: .`status`)
+        try container.encodeIfPresent(`currentVersion`, forKey: .`currentVersion`)
+        try container.encodeIfPresent(`version`, forKey: .`version`)
+        try container.encodeIfPresent(`percent`, forKey: .`percent`)
+        switch `error` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`error`)
+        case .value(let value): try container.encode(value, forKey: .`error`)
+        }
+        try container.encode(`app`, forKey: .`app`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `status` = "status"
+        case `currentVersion` = "currentVersion"
+        case `version` = "version"
+        case `percent` = "percent"
+        case `error` = "error"
+        case `app` = "app"
+    }
+}
+
+public enum EndpointInfoReachability: String, CaseIterable, Codable, Sendable, Equatable {
+    case `loopback` = "loopback"
+    case `lan` = "lan"
+    case `tunnel` = "tunnel"
+    case `public` = "public"
+}
+
+public struct LanDoor: Codable, Sendable, Equatable {
+    public let `port`: Int64
+    public let `addresses`: [String]
+
+    public init(`port`: Int64, `addresses`: [String]) {
+        self.`port` = `port`
+        self.`addresses` = `addresses`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `port` = try container.decode(Int64.self, forKey: .`port`)
+        `addresses` = try container.decode([String].self, forKey: .`addresses`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`port`, forKey: .`port`)
+        try container.encode(`addresses`, forKey: .`addresses`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `port` = "port"
+        case `addresses` = "addresses"
+    }
+}
+
+public struct EndpointAgentIntegrations: Codable, Sendable, Equatable {
+    public let `providers`: [EndpointAgentIntegrationsProvidersItem]
+    public let `fixed`: Bool
+
+    public init(`providers`: [EndpointAgentIntegrationsProvidersItem], `fixed`: Bool) {
+        self.`providers` = `providers`
+        self.`fixed` = `fixed`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `providers` = try container.decode([EndpointAgentIntegrationsProvidersItem].self, forKey: .`providers`)
+        `fixed` = try container.decode(Bool.self, forKey: .`fixed`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`providers`, forKey: .`providers`)
+        try container.encode(`fixed`, forKey: .`fixed`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `providers` = "providers"
+        case `fixed` = "fixed"
+    }
+}
+
+public struct EndpointAgentIntegrationsProvidersItem: Codable, Sendable, Equatable {
+    public let `provider`: String
+    public let `state`: EndpointAgentIntegrationsProvidersItemState
+    public let `reviewed`: Bool
+
+    public init(`provider`: String, `state`: EndpointAgentIntegrationsProvidersItemState, `reviewed`: Bool) {
+        self.`provider` = `provider`
+        self.`state` = `state`
+        self.`reviewed` = `reviewed`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `provider` = try container.decode(String.self, forKey: .`provider`)
+        `state` = try container.decode(EndpointAgentIntegrationsProvidersItemState.self, forKey: .`state`)
+        `reviewed` = try container.decode(Bool.self, forKey: .`reviewed`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`provider`, forKey: .`provider`)
+        try container.encode(`state`, forKey: .`state`)
+        try container.encode(`reviewed`, forKey: .`reviewed`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `provider` = "provider"
+        case `state` = "state"
+        case `reviewed` = "reviewed"
+    }
+}
+
+public enum EndpointAgentIntegrationsProvidersItemState: String, CaseIterable, Codable, Sendable, Equatable {
+    case `unset` = "unset"
+    case `on` = "on"
+    case `off` = "off"
+}
+
+public struct EndpointChangedEvent: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `label`: String
+    public let `nameSource`: EndpointNameSource
+    public let `icon`: MachineIcon?
+    public let `agentsDeleteAnyView`: Bool?
+    public let `reachOpenProjects`: Bool?
+    public let `steerMessages`: Bool?
+    public let `streamingAllowed`: Bool?
+    public let `resumeAtReset`: Bool?
+    public let `visualReplies`: Bool?
+    public let `keepAwake`: KeepAwakeMode?
+    public let `keepAwakeOnBattery`: Bool?
+    public let `keepAwakeDisplay`: Bool?
+    public let `keepAwakeLidClosed`: Bool?
+    public let `broker`: EndpointBroker?
+    public let `lanDoor`: Bool?
+    public let `nodeSizes`: [String: EndpointNodeSize]?
+    public let `usageStats`: Bool?
+    public let `keepAwakeLidRule`: Bool?
+    public let `brokerUrl`: Presence<String>
+    public let `brokerFixed`: Bool?
+    public let `lan`: Presence<LanDoor>
+    public let `lanDoorFixed`: Bool?
+    public let `agentIntegrations`: EndpointAgentIntegrations?
+
+    public init(`id`: String, `label`: String, `nameSource`: EndpointNameSource, `icon`: MachineIcon?, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `keepAwake`: KeepAwakeMode? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: EndpointBroker? = nil, `lanDoor`: Bool? = nil, `nodeSizes`: [String: EndpointNodeSize]? = nil, `usageStats`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<LanDoor> = .missing, `lanDoorFixed`: Bool? = nil, `agentIntegrations`: EndpointAgentIntegrations? = nil) {
+        self.`id` = `id`
+        self.`label` = `label`
+        self.`nameSource` = `nameSource`
+        self.`icon` = `icon`
+        self.`agentsDeleteAnyView` = `agentsDeleteAnyView`
+        self.`reachOpenProjects` = `reachOpenProjects`
+        self.`steerMessages` = `steerMessages`
+        self.`streamingAllowed` = `streamingAllowed`
+        self.`resumeAtReset` = `resumeAtReset`
+        self.`visualReplies` = `visualReplies`
+        self.`keepAwake` = `keepAwake`
+        self.`keepAwakeOnBattery` = `keepAwakeOnBattery`
+        self.`keepAwakeDisplay` = `keepAwakeDisplay`
+        self.`keepAwakeLidClosed` = `keepAwakeLidClosed`
+        self.`broker` = `broker`
+        self.`lanDoor` = `lanDoor`
+        self.`nodeSizes` = `nodeSizes`
+        self.`usageStats` = `usageStats`
+        self.`keepAwakeLidRule` = `keepAwakeLidRule`
+        self.`brokerUrl` = `brokerUrl`
+        self.`brokerFixed` = `brokerFixed`
+        self.`lan` = `lan`
+        self.`lanDoorFixed` = `lanDoorFixed`
+        self.`agentIntegrations` = `agentIntegrations`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `label` = try container.decode(String.self, forKey: .`label`)
+        `nameSource` = try container.decode(EndpointNameSource.self, forKey: .`nameSource`)
+        `icon` = try container.decode(MachineIcon?.self, forKey: .`icon`)
+        `agentsDeleteAnyView` = try container.decodeIfPresent(Bool.self, forKey: .`agentsDeleteAnyView`)
+        `reachOpenProjects` = try container.decodeIfPresent(Bool.self, forKey: .`reachOpenProjects`)
+        `steerMessages` = try container.decodeIfPresent(Bool.self, forKey: .`steerMessages`)
+        `streamingAllowed` = try container.decodeIfPresent(Bool.self, forKey: .`streamingAllowed`)
+        `resumeAtReset` = try container.decodeIfPresent(Bool.self, forKey: .`resumeAtReset`)
+        `visualReplies` = try container.decodeIfPresent(Bool.self, forKey: .`visualReplies`)
+        `keepAwake` = try container.decodeIfPresent(KeepAwakeMode.self, forKey: .`keepAwake`)
+        `keepAwakeOnBattery` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeOnBattery`)
+        `keepAwakeDisplay` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeDisplay`)
+        `keepAwakeLidClosed` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidClosed`)
+        `broker` = try container.decodeIfPresent(EndpointBroker.self, forKey: .`broker`)
+        `lanDoor` = try container.decodeIfPresent(Bool.self, forKey: .`lanDoor`)
+        `nodeSizes` = try container.decodeIfPresent([String: EndpointNodeSize].self, forKey: .`nodeSizes`)
+        `usageStats` = try container.decodeIfPresent(Bool.self, forKey: .`usageStats`)
+        `keepAwakeLidRule` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidRule`)
+        `brokerUrl` = try container.contains(.`brokerUrl`) ? (container.decodeNil(forKey: .`brokerUrl`) ? .null : .value(container.decode(String.self, forKey: .`brokerUrl`))) : .missing
+        `brokerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`brokerFixed`)
+        `lan` = try container.contains(.`lan`) ? (container.decodeNil(forKey: .`lan`) ? .null : .value(container.decode(LanDoor.self, forKey: .`lan`))) : .missing
+        `lanDoorFixed` = try container.decodeIfPresent(Bool.self, forKey: .`lanDoorFixed`)
+        `agentIntegrations` = try container.decodeIfPresent(EndpointAgentIntegrations.self, forKey: .`agentIntegrations`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`label`, forKey: .`label`)
+        try container.encode(`nameSource`, forKey: .`nameSource`)
+        try container.encode(`icon`, forKey: .`icon`)
+        try container.encodeIfPresent(`agentsDeleteAnyView`, forKey: .`agentsDeleteAnyView`)
+        try container.encodeIfPresent(`reachOpenProjects`, forKey: .`reachOpenProjects`)
+        try container.encodeIfPresent(`steerMessages`, forKey: .`steerMessages`)
+        try container.encodeIfPresent(`streamingAllowed`, forKey: .`streamingAllowed`)
+        try container.encodeIfPresent(`resumeAtReset`, forKey: .`resumeAtReset`)
+        try container.encodeIfPresent(`visualReplies`, forKey: .`visualReplies`)
+        try container.encodeIfPresent(`keepAwake`, forKey: .`keepAwake`)
+        try container.encodeIfPresent(`keepAwakeOnBattery`, forKey: .`keepAwakeOnBattery`)
+        try container.encodeIfPresent(`keepAwakeDisplay`, forKey: .`keepAwakeDisplay`)
+        try container.encodeIfPresent(`keepAwakeLidClosed`, forKey: .`keepAwakeLidClosed`)
+        try container.encodeIfPresent(`broker`, forKey: .`broker`)
+        try container.encodeIfPresent(`lanDoor`, forKey: .`lanDoor`)
+        try container.encodeIfPresent(`nodeSizes`, forKey: .`nodeSizes`)
+        try container.encodeIfPresent(`usageStats`, forKey: .`usageStats`)
+        try container.encodeIfPresent(`keepAwakeLidRule`, forKey: .`keepAwakeLidRule`)
+        switch `brokerUrl` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`brokerUrl`)
+        case .value(let value): try container.encode(value, forKey: .`brokerUrl`)
+        }
+        try container.encodeIfPresent(`brokerFixed`, forKey: .`brokerFixed`)
+        switch `lan` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`lan`)
+        case .value(let value): try container.encode(value, forKey: .`lan`)
+        }
+        try container.encodeIfPresent(`lanDoorFixed`, forKey: .`lanDoorFixed`)
+        try container.encodeIfPresent(`agentIntegrations`, forKey: .`agentIntegrations`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `label` = "label"
+        case `nameSource` = "nameSource"
+        case `icon` = "icon"
+        case `agentsDeleteAnyView` = "agentsDeleteAnyView"
+        case `reachOpenProjects` = "reachOpenProjects"
+        case `steerMessages` = "steerMessages"
+        case `streamingAllowed` = "streamingAllowed"
+        case `resumeAtReset` = "resumeAtReset"
+        case `visualReplies` = "visualReplies"
+        case `keepAwake` = "keepAwake"
+        case `keepAwakeOnBattery` = "keepAwakeOnBattery"
+        case `keepAwakeDisplay` = "keepAwakeDisplay"
+        case `keepAwakeLidClosed` = "keepAwakeLidClosed"
+        case `broker` = "broker"
+        case `lanDoor` = "lanDoor"
+        case `nodeSizes` = "nodeSizes"
+        case `usageStats` = "usageStats"
+        case `keepAwakeLidRule` = "keepAwakeLidRule"
+        case `brokerUrl` = "brokerUrl"
+        case `brokerFixed` = "brokerFixed"
+        case `lan` = "lan"
+        case `lanDoorFixed` = "lanDoorFixed"
+        case `agentIntegrations` = "agentIntegrations"
+    }
+}
+
+public struct EndpointUpdateChangedEvent: Codable, Sendable, Equatable {
+    public let `update`: EndpointUpdate
+
+    public init(`update`: EndpointUpdate) {
+        self.`update` = `update`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `update` = try container.decode(EndpointUpdate.self, forKey: .`update`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`update`, forKey: .`update`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `update` = "update"
+    }
+}
+
+public struct EndpointInstallUpdateResult: Codable, Sendable, Equatable {
+    public let `started`: Bool
+    public let `ending`: MachineWork
+
+    public init(`started`: Bool, `ending`: MachineWork) {
+        self.`started` = `started`
+        self.`ending` = `ending`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `started` = try container.decode(Bool.self, forKey: .`started`)
+        `ending` = try container.decode(MachineWork.self, forKey: .`ending`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`started`, forKey: .`started`)
+        try container.encode(`ending`, forKey: .`ending`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `started` = "started"
+        case `ending` = "ending"
+    }
+}
+
+public struct MachineWork: Codable, Sendable, Equatable {
+    public let `terminals`: Int64
+    public let `agents`: Int64
+
+    public init(`terminals`: Int64, `agents`: Int64) {
+        self.`terminals` = `terminals`
+        self.`agents` = `agents`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `terminals` = try container.decode(Int64.self, forKey: .`terminals`)
+        `agents` = try container.decode(Int64.self, forKey: .`agents`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`terminals`, forKey: .`terminals`)
+        try container.encode(`agents`, forKey: .`agents`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `terminals` = "terminals"
+        case `agents` = "agents"
+    }
 }
 
 public extension PlanStepState {

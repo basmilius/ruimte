@@ -27,11 +27,9 @@ final class MachineIconState {
     func start() {
         guard unobserve == nil else { return }
         unsubscribe = client.subscribe(.endpointChanged) { [weak self] value in
-            guard let self, connected,
-                let endpoint = try? WireEvent.endpointChanged.validatePayload(value)
-            else { return }
+            guard let self, connected, let event = try? value.decoded(as: EndpointChangedEvent.self) else { return }
             cancelRefresh()
-            apply(endpoint, complete: false)
+            apply(event)
         }
         unobserve = client.observeConnection { [weak self] connected in
             guard let self else { return }
@@ -42,9 +40,9 @@ final class MachineIconState {
             task = Task { [weak self] in
                 guard let self else { return }
                 do {
-                    let endpoint = try await client.request(.endpointInfo)
+                    let answer = try await client.request(.endpointInfo)
                     guard !Task.isCancelled, self.connected, revision == operation else { return }
-                    apply(try WireRequest.endpointInfo.validateResult(endpoint), complete: true)
+                    apply(try answer.decoded(as: EndpointInfo.self))
                 } catch {
                     // An unavailable icon must not hide projects or change the connection's error state.
                 }
@@ -67,22 +65,21 @@ final class MachineIconState {
         task = nil
     }
 
-    /// `complete` is an answer to `endpoint.info`, where an absent switch is off; an event leaves out what it does not
-    /// change.
-    private func apply(_ endpoint: JSONValue, complete: Bool) {
-        if let resume = endpoint["resumeAtReset"]?.boolValue {
-            resumeAtReset = resume
-        } else if complete {
-            resumeAtReset = false
+    /// An answer to `endpoint.info`, where an absent switch is off.
+    private func apply(_ info: EndpointInfo) {
+        resumeAtReset = info.resumeAtReset ?? false
+        viewReferences = info.viewReferences == true
+        switch info.icon {
+        case .missing: break
+        case .null: icon = nil
+        case .value(let value): icon = value
         }
-        if complete { viewReferences = endpoint["viewReferences"]?.boolValue == true }
-        guard let value = endpoint["icon"] else { return }
-        if value == .null {
-            icon = nil
-        } else if let data = try? value.encoded(), let decoded = try? JSONDecoder().decode(MachineIcon.self, from: data)
-        {
-            icon = decoded
-        }
+    }
+
+    /// An event leaves out the switches it does not change.
+    private func apply(_ event: EndpointChangedEvent) {
+        if let resume = event.resumeAtReset { resumeAtReset = resume }
+        icon = event.icon
     }
 
     isolated deinit {

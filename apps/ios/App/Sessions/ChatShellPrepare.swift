@@ -174,7 +174,7 @@ struct ChatPreparePreview: Identifiable, Equatable {
 
     private func machineID() async throws -> String {
         let info = try await context.client.request(.endpointInfo)
-        guard let id = info["id"]?.stringValue, !id.isEmpty else { throw Self.wrongMachine }
+        guard let id = try? info.decoded(as: EndpointInfo.self).id, !id.isEmpty else { throw Self.wrongMachine }
         return id
     }
 

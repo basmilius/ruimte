@@ -90,3 +90,25 @@ enum GitWire {
         return (try? JSONValue.decode(data)) ?? .object([:])
     }
 }
+
+/// `endpoint.info` and `endpoint.changed` as a machine writes them, with the fields the schema requires and whatever a
+/// test names on top.
+enum EndpointWire {
+    static func info(_ fields: [String: JSONValue] = [:]) -> JSONValue {
+        let defaults: [String: JSONValue] = [
+            "id": .string("studio"), "label": .string("Studio"), "platform": .string("darwin"),
+            "version": .string("0.42.1"), "reachability": .string("lan"), "authenticated": .bool(true),
+        ]
+        return .object(defaults.merging(fields) { _, given in given })
+    }
+
+    static func changed(_ fields: [String: JSONValue] = [:]) -> JSONValue {
+        let defaults: [String: JSONValue] = [
+            "id": .string("studio"), "label": .string("Studio"), "nameSource": .string("default"), "icon": .null,
+        ]
+        return .object(defaults.merging(fields) { _, given in given })
+    }
+
+    /// A fixture that does not decode is a broken test, not a case to cover.
+    static func decoded(_ info: JSONValue) -> EndpointInfo { try! info.decoded(as: EndpointInfo.self) }
+}

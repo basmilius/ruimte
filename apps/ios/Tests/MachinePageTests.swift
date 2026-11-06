@@ -70,14 +70,13 @@ final class MachinePageTests: XCTestCase {
     }
 
     @MainActor func testAnUpdateWithoutTheAppIsToldButCannotBeStartedFromThePhone() {
-        let update = MachineUpdate(
-            .object(["status": .string("available"), "version": .string("0.43.0"), "app": .bool(false)]))
-        XCTAssertEqual(update?.installable, true)
-        XCTAssertNil(update?.action)
-        XCTAssertEqual(update?.note, "Open Ruimte on the machine to install it there.")
-        XCTAssertNil(MachineUpdate(.object(["status": .string("unsupported"), "app": .bool(false)]))?.headline)
+        let update = EndpointUpdate(status: "available", version: "0.43.0", app: false)
+        XCTAssertTrue(update.installable)
+        XCTAssertNil(update.action)
+        XCTAssertEqual(update.note, "Open Ruimte on the machine to install it there.")
+        XCTAssertNil(EndpointUpdate(status: "unsupported", app: false).headline)
         XCTAssertNil(
-            MachineUpdate(.object(["status": .string("something-newer"), "app": .bool(true)]))?.action,
+            EndpointUpdate(status: "something-newer", app: true).action,
             "A step this phone does not know is nothing to act on")
     }
 
@@ -87,7 +86,8 @@ final class MachinePageTests: XCTestCase {
         let endpoint = await started(machine)
         XCTAssertNil(endpoint.keepAwake)
         XCTAssertNil(
-            MachineEndpoint.keepAwake(in: info(["keepAwake": .null])), "Without a mode there is nothing to show")
+            MachineEndpoint.keepAwake(in: EndpointWire.decoded(EndpointWire.info(["keepAwakeAvailable": .bool(true)]))),
+            "Without a mode there is nothing to show")
         endpoint.stop()
     }
 
@@ -129,13 +129,13 @@ final class MachinePageTests: XCTestCase {
         machine.answers[.endpointSetIdentity] = { payload in
             self.info([
                 "keepAwakeLidAvailable": .bool(true), "keepAwakeLidRule": .bool(true),
-                "keepAwakeLidClosed": payload["keepAwakeLidClosed"] ?? .null,
+                "keepAwakeLidClosed": payload["keepAwakeLidClosed"] ?? .bool(false),
             ])
         }
         let endpoint = await started(machine)
         XCTAssertEqual(endpoint.closedLid, MachineClosedLid(ruleInstalled: false))
 
-        machine.emit(.endpointChanged, .object(["keepAwakeLidRule": .bool(true)]))
+        machine.emit(.endpointChanged, EndpointWire.changed(["keepAwakeLidRule": .bool(true)]))
         XCTAssertEqual(
             endpoint.closedLid, MachineClosedLid(ruleInstalled: true), "Installing on the Mac reaches the phone")
 
@@ -169,11 +169,11 @@ final class MachinePageTests: XCTestCase {
         let read = NativeTaskDrain { endpoint.start() }
         await read.finish()
         XCTAssertEqual(learned, [LanDoorAddress(port: 4220, addresses: ["192.168.1.20"])])
-        machine.emit(.endpointChanged, .object(["id": .string("studio"), "label": .string("Studio")]))
+        machine.emit(.endpointChanged, EndpointWire.changed())
         XCTAssertEqual(
             learned.last, LanDoorAddress(port: 4220, addresses: ["192.168.1.20"]),
             "An event that leaves it out changes nothing")
-        machine.emit(.endpointChanged, .object(["lan": .null, "lanDoor": .bool(false)]))
+        machine.emit(.endpointChanged, EndpointWire.changed(["lan": .null, "lanDoor": .bool(false)]))
         XCTAssertEqual(learned.last, .some(nil))
         XCTAssertEqual(endpoint.lanDoor, false)
         endpoint.stop()
@@ -244,12 +244,12 @@ final class MachinePageTests: XCTestCase {
         XCTAssertEqual(machine.sent.last?.1["confirm"], .bool(false))
         XCTAssertEqual(endpoint.install, .confirming(MachineWork(terminals: 2, agents: 1)))
         XCTAssertEqual(
-            MachineUpdate.restartQuestion(
+            EndpointUpdate.restartQuestion(
                 update: endpoint.update, work: MachineWork(terminals: 2, agents: 1), machine: "Studio"),
             "Ruimte 0.43.0 installs and Ruimte restarts on Studio. That ends 2 terminals and 1 agent running there now."
         )
         XCTAssertEqual(
-            MachineUpdate.restartQuestion(update: nil, work: MachineWork(terminals: 0, agents: 0), machine: "Studio"),
+            EndpointUpdate.restartQuestion(update: nil, work: MachineWork(terminals: 0, agents: 0), machine: "Studio"),
             "The update downloads, installs and Ruimte restarts on Studio. Nothing that runs there ends.")
 
         await endpoint.confirmInstall()
