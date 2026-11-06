@@ -1,6 +1,6 @@
 import { composerEditorExtensions } from '@adecore/agents-react/chat/ui';
 import { createSmartEditorEngine, type Editor } from '@adecore/editor';
-import dutchEditor from '@adecore/editor-react/locales/nl.json' with { type: 'json' };
+import dutchEditor from '@adecore/editor-react/locales/nl';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import i18next from 'i18next';

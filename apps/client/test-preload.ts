@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AGENTS_LOCALES } from '@adecore/agents-react/locales';
 import { CHARTS_NAMESPACE, CHARTS_RESOURCES } from '@adecore/charts';
-import editorWords from '@adecore/editor-react/locales/en.json' with { type: 'json' };
+import editorWords from '@adecore/editor-react/locales/en';
 import { UI_NAMESPACE, UI_RESOURCES } from '@adecore/ui';
 import i18next from 'i18next';
 import { connectPlatform } from './src/desktop/bridge';

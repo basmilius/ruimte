@@ -17,8 +17,8 @@ const bundles = {
 };
 
 const editorBundles = {
-    en: () => import('@adecore/editor-react/locales/en.json'),
-    nl: () => import('@adecore/editor-react/locales/nl.json')
+    en: () => import('@adecore/editor-react/locales/en'),
+    nl: () => import('@adecore/editor-react/locales/nl')
 };
 
 const loaded = new Map<AppLanguage, Promise<void>>();
