@@ -21,6 +21,11 @@ final class IntelligentUIPresentationTests: XCTestCase {
         XCTAssertNil(UiChoiceJump(choice(itemID: "item", blockID: "block", revision: "")))
     }
 
+    func testTheRendererOnlyNamesComponentsTheCatalogHas() {
+        XCTAssertTrue(UiCatalog.literalParents.isSubset(of: UiCatalog.components))
+        XCTAssertTrue(UiCatalog.links.isSubset(of: UiCatalog.components))
+    }
+
     private func choice(itemID: String, blockID: String, revision: String) -> ChatUserItemUiChoice {
         ChatUserItemUiChoice(
             itemId: itemID, blockId: blockID, revision: revision, choiceId: "choice", label: "Yes", sourceAt: 0,

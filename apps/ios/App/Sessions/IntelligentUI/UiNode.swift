@@ -1,4 +1,5 @@
 import Foundation
+import RuimteIntelligentUI
 import RuimtePulsar
 
 /// One evaluated node of a block, as the interpreter hands it over: props are already evaluated and validated, a
@@ -99,15 +100,9 @@ enum UiTone: String {
 
 /// What the interpreter knows about the components of this version, so a newer one reads as unknown.
 enum UiCatalog {
-    static let version = 1
-    static let components: Set<String> = [
-        "Summary", "Callout", "Tag", "Progress", "Steps", "Step", "Stats", "Stat", "EntityList", "Entry", "Table",
-        "Column", "Chart", "Tabs", "Tab", "Sections", "Section", "CodeBlock", "Image", "Sources", "Source", "File",
-        "Diff", "Commit", "Node", "Checklist", "Item", "Switch", "Slider", "Segmented", "Option", "Show", "Each",
-        "Button", "Choices", "Choice", "Timeline", "Event", "Gallery", "Compare", "TextField", "Select",
-        "Map", "Place", "Model",
-    ]
-    static let links: Set<String> = ["File", "Diff", "Commit", "Node"]
+    static let version = UiCatalogData.version
+    static let components = UiCatalogData.components
+    static let links = UiCatalogData.links
     /// Parents whose text is read as written: code, a short tag and the labels of controls, whose accessible name
     /// and sent text are that same string.
     static let literalParents: Set<String> = [
