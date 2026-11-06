@@ -114,20 +114,29 @@ function blurActive(): void {
 type PointerCapture = { element: HTMLElement; pointerId: number };
 
 /* Where a press began and whether its node had the keyboard then, read again by the double-click it may start. */
-type Press = { nodeId: string | null; active: boolean; group: boolean };
+type Press = { nodeId: string | null; active: boolean; group: boolean; header: boolean };
 
 /* Parts of a node that keep their own double-click: a control or a port answers its own press, and a drawing or diagram opens its view. */
 const OWN_DOUBLE_CLICK = 'button, input, select, [data-port], [data-opens-view]';
 
 /*
- * A double-click whose first press found a node without the keyboard zooms to that node, wherever on it
- * but `OWN_DOUBLE_CLICK`, its title too: that press hands the keyboard to the body, which would take it from a rename field. The
- * first press is the one that counts, since by the second the node has the keyboard already.
+ * A double-click whose first press found the header of a node without the keyboard zooms to that node, wherever
+ * on the header but `OWN_DOUBLE_CLICK`, its title too: that press hands the keyboard to the body, which would take it from a
+ * rename field. The body keeps its own double-click, so a word in a terminal or an editor still selects. The first press is
+ * the one that counts, since by the second the node has the keyboard already.
  */
 function zoomPressOf(presses: [Press | null, Press | null], target: HTMLElement): string | null {
     const [first, second] = presses;
     // A group never takes the keyboard, so it would always zoom: its title renames on a double-click instead.
-    if (first === null || first.nodeId === null || first.active || first.group || second?.nodeId !== first.nodeId || target.closest(OWN_DOUBLE_CLICK)) {
+    if (
+        first === null ||
+        first.nodeId === null ||
+        !first.header ||
+        first.active ||
+        first.group ||
+        second?.nodeId !== first.nodeId ||
+        target.closest(OWN_DOUBLE_CLICK)
+    ) {
         return null;
     }
     return first.nodeId;
@@ -435,12 +444,14 @@ export function Canvas() {
 
     const onPointerDownCapture = (e: ReactPointerEvent): void => {
         if (e.button === 0 && !isInFloatingLayer(e.target)) {
-            const nodeId = (e.target as HTMLElement).closest<HTMLElement>('[data-node-id]')?.dataset.nodeId ?? null;
+            const target = e.target as HTMLElement;
+            const nodeId = target.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId ?? null;
             const state = canvasStore.getState();
             const press = {
                 nodeId,
                 active: nodeId !== null && isNodeActive(state.bodyFocusId, nodeId),
-                group: nodeId !== null && state.nodes[nodeId]?.kind === 'group'
+                group: nodeId !== null && state.nodes[nodeId]?.kind === 'group',
+                header: target.closest('[data-node-header]') !== null
             };
             pressesRef.current = [pressesRef.current[1], press];
         }

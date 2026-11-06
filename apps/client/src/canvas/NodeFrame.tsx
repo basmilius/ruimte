@@ -481,6 +481,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                 }}
             >
                 <header
+                    data-node-header
                     className={clsx(
                         'group/header flex h-[39px] shrink-0 items-center gap-2 pr-1 text-text-muted',
                         // The collapse button carries 6px of optical padding, so 4px puts its glyph in the column of a node's kind icon.
