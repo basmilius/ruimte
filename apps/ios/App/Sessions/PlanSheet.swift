@@ -598,7 +598,7 @@ private struct PlanStepRow: View {
             .foregroundStyle(MobileStyle.muted)
         } else {
             HStack(spacing: 4) {
-                if step.by == "person", step.state != .open {
+                if step.by == .person, step.state != .open {
                     Text(
                         [String(localized: "you", comment: "Who set a plan step: the person"), time].compactMap { $0 }
                             .joined(separator: " · "))
@@ -650,7 +650,7 @@ private struct PlanStepRow: View {
     private var setBy: String? {
         guard let by = step.by, step.state != .open else { return nil }
         let who =
-            by == "person" ? String(localized: "you", comment: "Who set a plan step: the person") : context.agentName
+            by == .person ? String(localized: "you", comment: "Who set a plan step: the person") : context.agentName
         return time.map { String(localized: "Set by \(who) at \($0)") } ?? String(localized: "Set by \(who)")
     }
 

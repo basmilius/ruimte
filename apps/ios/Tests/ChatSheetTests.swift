@@ -40,13 +40,12 @@ final class ChatSheetTests: XCTestCase {
     }
 
     private func plan(_ items: [JSONValue]) throws -> PlanDocument {
-        try XCTUnwrap(
-            PlanDocument(
-                .object([
-                    "id": .string("plan"), "rev": .number(1), "createdAt": .string("2026-10-03T10:00:00Z"),
-                    "meta": .object(["title": .string("Split"), "kind": .string("test"), "checks": .string("anyone")]),
-                    "items": .array(items),
-                ])))
+        PlanDocument(
+            try JSONValue.object([
+                "id": .string("plan"), "rev": .number(1), "createdAt": .string("2026-10-03T10:00:00Z"),
+                "meta": .object(["title": .string("Split"), "kind": .string("test"), "checks": .string("anyone")]),
+                "items": .array(items),
+            ]).decoded(as: StoredPlan.self))
     }
 
     func testResultsNameEveryStepThatDidNotSimplyPassWithItsNote() throws {

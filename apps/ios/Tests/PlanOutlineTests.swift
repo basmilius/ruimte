@@ -30,11 +30,17 @@ final class PlanOutlineTests: XCTestCase {
         ])
     }
 
-    private func document(_ value: JSONValue) throws -> PlanDocument { try XCTUnwrap(PlanDocument(value)) }
+    private func document(_ value: JSONValue) throws -> PlanDocument {
+        PlanDocument(try value.decoded(as: StoredPlan.self))
+    }
+
+    private func planStep(_ value: JSONValue) throws -> PlanStep {
+        PlanStep(try value.decoded(as: StoredPlanStep.self))
+    }
 
     private func parent(_ states: [PlanStepState]) throws -> PlanStep {
         let steps = states.enumerated().map { step("c\($0.offset)", state: $0.element.rawValue) }
-        return try XCTUnwrap(PlanStep(step("p", steps: steps)))
+        return try planStep(step("p", steps: steps))
     }
 
     /// Every pair of `derived state` in `@adecore/plan/plan.test.ts`, in the order that file has them. The
@@ -105,16 +111,16 @@ final class PlanOutlineTests: XCTestCase {
             steps: [
                 step("b", steps: [step("c", state: "done"), step("d", state: "warning")]), step("e", state: "info"),
             ])
-        XCTAssertEqual(try XCTUnwrap(PlanStep(warned)).state, .warning)
+        XCTAssertEqual(try planStep(warned).state, .warning)
         let informed = step(
             "a",
             steps: [
                 step("b", steps: [step("c", state: "info"), step("d", state: "skipped")]), step("e", state: "done"),
             ])
-        XCTAssertEqual(try XCTUnwrap(PlanStep(informed)).state, .done)
+        XCTAssertEqual(try planStep(informed).state, .done)
         let unfinished = step(
             "a", steps: [step("b", steps: [step("c", state: "warning"), step("d")]), step("e", state: "info")])
-        XCTAssertEqual(try XCTUnwrap(PlanStep(unfinished)).state, .active)
+        XCTAssertEqual(try planStep(unfinished).state, .active)
     }
 
     /// A state added to `PlanStepStateSchema` reaches the generated enum on its own; these hold the hand-written
@@ -196,9 +202,9 @@ final class PlanOutlineTests: XCTestCase {
     }
 
     func testTappingTheCircleTogglesBetweenOpenAndDone() throws {
-        XCTAssertEqual(try XCTUnwrap(PlanStep(step("a"))).toggled, .done)
-        XCTAssertEqual(try XCTUnwrap(PlanStep(step("a", state: "active"))).toggled, .done)
-        XCTAssertEqual(try XCTUnwrap(PlanStep(step("a", state: "done"))).toggled, .open)
+        XCTAssertEqual(try planStep(step("a")).toggled, .done)
+        XCTAssertEqual(try planStep(step("a", state: "active")).toggled, .done)
+        XCTAssertEqual(try planStep(step("a", state: "done")).toggled, .open)
     }
 
     func testRowsFollowTheFilterAndTheFolds() throws {
@@ -282,7 +288,7 @@ final class PlanOutlineTests: XCTestCase {
             value = .object(fields)
         }
         XCTAssertEqual(
-            document.markdown(for: try XCTUnwrap(PlanStep(value))), "- [ ] Step a (failed)\n    > Broke\n    > twice")
+            document.markdown(for: try planStep(value)), "- [ ] Step a (failed)\n    > Broke\n    > twice")
     }
 
     func testNewestPlanComesFirst() throws {
@@ -314,7 +320,10 @@ final class PlanOutlineTests: XCTestCase {
         machine.emit(.planChanged, .object(["chatId": .string("chat"), "plan": plan("p", rev: 2, items: [])]))
         XCTAssertEqual(store.plans(for: "chat").map(\.rev), [3])
 
-        store.setListed([.object(["chatId": .string("chat"), "plan": plan("p", rev: 1, items: [])])])
+        store.setListed([
+            try JSONValue.object(["chatId": .string("chat"), "plan": plan("p", rev: 1, items: [])])
+                .decoded(as: PlanOfChat.self)
+        ])
         XCTAssertEqual(store.plans(for: "chat").map(\.rev), [3], "a list answer older than an event does not win")
 
         machine.emit(.planCreated, .object(["chatId": .string("chat"), "planId": .string("q")]))
@@ -506,13 +515,13 @@ final class PlanActivityHoldTests: XCTestCase {
                 ])
             ]),
         ])
-        let document = try XCTUnwrap(PlanDocument(value))
+        let plan = PlanDocument(try value.decoded(as: StoredPlan.self))
         XCTAssertEqual(
-            document.reveal("c", filter: .all, collapseDone: false, collapsed: ["s", "p", "other"]),
+            plan.reveal("c", filter: .all, collapseDone: false, collapsed: ["s", "p", "other"]),
             PlanReveal(filter: .all, collapseDone: false, collapsed: ["other"]))
         XCTAssertEqual(
-            document.reveal("c", filter: .open, collapseDone: true, collapsed: []),
+            plan.reveal("c", filter: .open, collapseDone: true, collapsed: []),
             PlanReveal(filter: .all, collapseDone: false, collapsed: []))
-        XCTAssertNil(document.reveal("missing", filter: .all, collapseDone: false, collapsed: []))
+        XCTAssertNil(plan.reveal("missing", filter: .all, collapseDone: false, collapsed: []))
     }
 }

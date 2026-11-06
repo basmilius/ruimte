@@ -50,9 +50,8 @@ for (const module of [address, broker, signaling, direct, server, envelope, push
 }
 /*
  * The closed vocabularies of the daemon's own domain, so a Swift switch over one stops compiling when
- * a case is added instead of falling into a default. Their object schemas stay out: a plan step holds
- * its own sub-steps, so its JSON Schema carries a `$ref` this generator does not resolve, and the app
- * reads those shapes through the dynamic `WireSchema` tables anyway.
+ * a case is added instead of falling into a default. Their object schemas stay out: the app reads the
+ * plan document through the typed roots below and the rest through the dynamic `WireSchema` tables.
  */
 const vocabularies: Record<string, z.ZodType> = {};
 // Open on the wire, so its Swift enum holds the kinds this version knows by name and a newer one decodes as nil.
@@ -106,6 +105,9 @@ function nullable(schema: Schema): Schema | undefined {
           : undefined;
 }
 function typeOf(schema: Schema, suggested: string, force = false): string {
+    if (schema['x-ref']) {
+        return refNames.get(schema['x-ref'])!;
+    }
     const inner = nullable(schema);
     if (inner) {
         return `${typeOf(inner, suggested)}?`;
@@ -315,25 +317,43 @@ if (UNNAMED_REFINEMENTS.length > 0) {
 /*
  * The payloads the app reads on its hot paths become structs, so a renamed field stops the app's build instead of
  * reading as an empty string. They come from the API's own JSON Schemas, open vocabularies included, so a newer
- * machine's word still decodes. A `$ref` only reaches the recursive blocks of an intelligent UI reply, which the app
- * reads as JSON.
+ * machine's word still decodes. A `$ref` reaches the recursive blocks of an intelligent UI reply, which the app reads as
+ * JSON, so it becomes `{}`. The plan document is the one tree typed: its `$ref` is inlined where it first appears and
+ * a repeat inside itself becomes an `x-ref`, which `typeOf` answers with the name of the struct being declared.
  */
-function typedSchema(value: unknown): any {
+interface RefScope {
+    defs: Record<string, unknown>;
+    active: string[];
+}
+function typedSchema(value: unknown, scope?: RefScope): any {
     if (Array.isArray(value)) {
-        return value.map(typedSchema);
+        return value.map((child) => typedSchema(child, scope));
     }
     if (!value || typeof value !== 'object') {
         return value;
     }
     if ('$ref' in value) {
-        return {};
+        const ref = String(value.$ref);
+        if (!scope) {
+            return {};
+        }
+        if (scope.active.includes(ref)) {
+            return { 'x-ref': ref };
+        }
+        return typedSchema(scope.defs[ref.split('/').pop()!], { defs: scope.defs, active: [...scope.active, ref] });
     }
     return Object.fromEntries(
         Object.entries(value)
             .filter(([key]) => key !== '$defs' && key !== '$schema')
-            .map(([key, child]) => [key, typedSchema(child)])
+            .map(([key, child]) => [key, typedSchema(child, scope)])
     );
 }
+function typedSource(source: string): any {
+    const schema = schemas[source];
+    return typedSchema(schema, source.includes('.plan.') ? { defs: schema.$defs ?? {}, active: [] } : undefined);
+}
+// The Swift name of each `x-ref` in the typed schemas, filled in once the struct it points at is named.
+const refNames = new Map<string, string>();
 function pascal(word: string): string {
     return camel(word).charAt(0).toUpperCase() + camel(word).slice(1);
 }
@@ -412,10 +432,22 @@ const typedRoots: [name: string, source: string, path: (string | number)[]][] = 
     ['ArtifactOrigin', 'request.artifact.list.result', ['properties', 'artifacts', 'items', 'properties', 'latest', 'properties', 'origin']],
     ['ArtifactGetResult', 'request.artifact.get.result', []],
     ['Artifact', 'request.artifact.get.result', ['properties', 'artifact']],
-    ['ArtifactChangedEvent', 'event.artifact.changed', []]
+    ['ArtifactChangedEvent', 'event.artifact.changed', []],
+    ['PlanListResult', 'request.plan.list.result', []],
+    ['PlanOfChat', 'request.plan.list.result', ['properties', 'plans', 'items']],
+    ['StoredPlan', 'request.plan.list.result', ['properties', 'plans', 'items', 'properties', 'plan']],
+    ['StoredPlanMeta', 'request.plan.list.result', ['properties', 'plans', 'items', 'properties', 'plan', 'properties', 'meta']],
+    ['StoredPlanItem', 'request.plan.list.result', ['properties', 'plans', 'items', 'properties', 'plan', 'properties', 'items', 'items']],
+    ['StoredPlanSection', 'request.plan.list.result', ['properties', 'plans', 'items', 'properties', 'plan', 'properties', 'items', 'items', 'oneOf', 0]],
+    ['StoredPlanText', 'request.plan.list.result', ['properties', 'plans', 'items', 'properties', 'plan', 'properties', 'items', 'items', 'oneOf', 1]],
+    ['StoredPlanStep', 'request.plan.list.result', ['properties', 'plans', 'items', 'properties', 'plan', 'properties', 'items', 'items', 'oneOf', 2]],
+    ['PlanApplyResult', 'request.plan.apply.result', []],
+    ['PlanChangedEvent', 'event.plan.changed', []],
+    ['PlanRemovedEvent', 'event.plan.removed', []],
+    ['PlanCreatedEvent', 'event.plan.created', []]
 ];
 const typed = typedRoots.map(([name, source, path]) => {
-    const schema = path.reduce((node: any, key) => node?.[key], typedSchema(schemas[source]));
+    const schema = path.reduce((node: any, key) => node?.[key], typedSource(source));
     if (!schema) {
         throw new Error(`No schema at ${source} ${path.join('.')}`);
     }
@@ -458,6 +490,10 @@ names.set(canonical(endpointInfo.agentIntegrations), 'EndpointAgentIntegrations'
 names.set(canonical(typed.find(([name]) => name === 'ProcessSample')![1].properties.scope), 'ProcessScope');
 // A launch and a suggestion for one both say where an import read it from.
 names.set(canonical(typed.find(([name]) => name === 'LaunchConfig')![1].properties.origin), 'LaunchOrigin');
+// A step holds its own sub-steps, and the section's items are the same union without a section.
+const storedStep = typed.find(([name]) => name === 'StoredPlanStep')![1];
+refNames.set(storedStep.properties.steps.items['x-ref'], 'StoredPlanStep');
+names.set(canonical(typed.find(([name]) => name === 'StoredPlanSection')![1].properties.items.items), 'StoredPlanSectionItem');
 validatingStructs = false;
 for (const [name, schema] of typed) {
     const type = typeOf(schema, name);

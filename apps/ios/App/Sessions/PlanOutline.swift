@@ -59,7 +59,7 @@ struct PlanStep: Identifiable, Equatable, Sendable {
     let checks: PlanChecks?
     /// Only a leaf stores a state; a parent's follows from its children.
     let storedState: PlanStepState?
-    let by: String?
+    let by: PlanActor?
     let at: String?
     let note: String?
     let unlocked: Bool
@@ -89,18 +89,17 @@ struct PlanStep: Identifiable, Equatable, Sendable {
     /// A tap on the circle of a steps plan: done goes back to open, anything else becomes done.
     var toggled: PlanStepState { state == .done ? .open : .done }
 
-    init?(_ value: JSONValue) {
-        guard value.text("type") == "step", let id = value["id"]?.stringValue else { return nil }
-        self.id = id
-        title = value.text("title")
-        description = value["description"]?.stringValue
-        checks = value["checks"]?.stringValue.flatMap(PlanChecks.init(rawValue:))
-        storedState = value["state"]?.stringValue.flatMap(PlanStepState.init(rawValue:))
-        by = value["by"]?.stringValue
-        at = value["at"]?.stringValue
-        note = value["note"]?.stringValue
-        unlocked = value["unlocked"]?.boolValue == true
-        steps = value.list("steps").compactMap(PlanStep.init)
+    init(_ stored: StoredPlanStep) {
+        id = stored.id
+        title = stored.title
+        description = stored.description
+        checks = stored.checks
+        storedState = stored.state
+        by = stored.by
+        at = stored.at
+        note = stored.note
+        unlocked = stored.unlocked == true
+        steps = (stored.steps ?? []).map(PlanStep.init)
     }
 }
 
@@ -108,6 +107,12 @@ struct PlanText: Identifiable, Equatable, Sendable {
     let id: String
     let title: String
     let description: String?
+
+    init(_ stored: StoredPlanText) {
+        id = stored.id
+        title = stored.title
+        description = stored.description
+    }
 }
 
 enum PlanEntry: Identifiable, Equatable, Sendable {
@@ -121,16 +126,10 @@ enum PlanEntry: Identifiable, Equatable, Sendable {
         }
     }
 
-    init?(_ value: JSONValue) {
-        switch value.text("type") {
-        case "text":
-            guard let id = value["id"]?.stringValue else { return nil }
-            self = .text(PlanText(id: id, title: value.text("title"), description: value["description"]?.stringValue))
-        case "step":
-            guard let step = PlanStep(value) else { return nil }
-            self = .step(step)
-        default:
-            return nil
+    init(_ stored: StoredPlanSectionItem) {
+        switch stored {
+        case .text(let text): self = .text(PlanText(text))
+        case .step(let step): self = .step(PlanStep(step))
         }
     }
 }
@@ -184,16 +183,15 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
     let checks: PlanChecks
     let groups: [PlanGroup]
 
-    init?(_ value: JSONValue) {
-        guard let id = value["id"]?.stringValue, let meta = value["meta"] else { return nil }
-        self.id = id
-        rev = Int(value.number("rev"))
-        createdAt = value.text("createdAt")
-        title = meta.text("title")
-        kind = PlanKind(rawValue: meta.text("kind")) ?? .steps
-        summary = meta["summary"]?.stringValue.flatMap { $0.isEmpty ? nil : $0 }
-        status = meta["status"]?.stringValue.flatMap { $0.isEmpty ? nil : $0 }
-        checks = PlanChecks(rawValue: meta.text("checks")) ?? .anyone
+    init(_ stored: StoredPlan) {
+        id = stored.id
+        rev = Int(stored.rev)
+        createdAt = stored.createdAt
+        title = stored.meta.title
+        kind = stored.meta.kind
+        summary = stored.meta.summary.flatMap { $0.isEmpty ? nil : $0 }
+        status = stored.meta.status.flatMap { $0.isEmpty ? nil : $0 }
+        checks = stored.meta.checks
         var groups: [PlanGroup] = []
         var loose: [PlanEntry] = []
         let closeLoose = {
@@ -201,15 +199,16 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
             groups.append(PlanGroup(id: "top-\(first.id)", title: nil, description: nil, entries: loose))
             loose = []
         }
-        for item in value.list("items") {
-            if item.text("type") == "section" {
+        for item in stored.items {
+            switch item {
+            case .section(let section):
                 closeLoose()
                 groups.append(
                     PlanGroup(
-                        id: item.text("id"), title: item.text("title"), description: item["description"]?.stringValue,
-                        entries: item.list("items").compactMap(PlanEntry.init)))
-            } else if let entry = PlanEntry(item) {
-                loose.append(entry)
+                        id: section.id, title: section.title, description: section.description,
+                        entries: section.items.map(PlanEntry.init)))
+            case .text(let text): loose.append(.text(PlanText(text)))
+            case .step(let step): loose.append(.step(PlanStep(step)))
             }
         }
         closeLoose()

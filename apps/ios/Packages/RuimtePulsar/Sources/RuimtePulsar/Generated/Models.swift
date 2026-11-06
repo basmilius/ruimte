@@ -11405,6 +11405,392 @@ public struct ArtifactChangedEvent: Codable, Sendable, Equatable {
     }
 }
 
+public struct PlanListResult: Codable, Sendable, Equatable {
+    public let `plans`: [PlanChangedEvent]
+
+    public init(`plans`: [PlanChangedEvent]) {
+        self.`plans` = `plans`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `plans` = try container.decode([PlanChangedEvent].self, forKey: .`plans`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`plans`, forKey: .`plans`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `plans` = "plans"
+    }
+}
+
+public struct PlanChangedEvent: Codable, Sendable, Equatable {
+    public let `chatId`: String
+    public let `plan`: StoredPlan
+
+    public init(`chatId`: String, `plan`: StoredPlan) {
+        self.`chatId` = `chatId`
+        self.`plan` = `plan`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `chatId` = try container.decode(String.self, forKey: .`chatId`)
+        `plan` = try container.decode(StoredPlan.self, forKey: .`plan`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`chatId`, forKey: .`chatId`)
+        try container.encode(`plan`, forKey: .`plan`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `chatId` = "chatId"
+        case `plan` = "plan"
+    }
+}
+
+public struct StoredPlan: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `rev`: Int64
+    public let `createdAt`: String
+    public let `meta`: StoredPlanMeta
+    public let `items`: [StoredPlanItem]
+
+    public init(`id`: String, `rev`: Int64, `createdAt`: String, `meta`: StoredPlanMeta, `items`: [StoredPlanItem]) {
+        self.`id` = `id`
+        self.`rev` = `rev`
+        self.`createdAt` = `createdAt`
+        self.`meta` = `meta`
+        self.`items` = `items`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `rev` = try container.decode(Int64.self, forKey: .`rev`)
+        `createdAt` = try container.decode(String.self, forKey: .`createdAt`)
+        `meta` = try container.decode(StoredPlanMeta.self, forKey: .`meta`)
+        `items` = try container.decode([StoredPlanItem].self, forKey: .`items`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`rev`, forKey: .`rev`)
+        try container.encode(`createdAt`, forKey: .`createdAt`)
+        try container.encode(`meta`, forKey: .`meta`)
+        try container.encode(`items`, forKey: .`items`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `rev` = "rev"
+        case `createdAt` = "createdAt"
+        case `meta` = "meta"
+        case `items` = "items"
+    }
+}
+
+public struct StoredPlanMeta: Codable, Sendable, Equatable {
+    public let `title`: String
+    public let `kind`: PlanKind
+    public let `summary`: String?
+    public let `status`: String?
+    public let `checks`: PlanChecks
+
+    public init(`title`: String, `kind`: PlanKind, `summary`: String? = nil, `status`: String? = nil, `checks`: PlanChecks) {
+        self.`title` = `title`
+        self.`kind` = `kind`
+        self.`summary` = `summary`
+        self.`status` = `status`
+        self.`checks` = `checks`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `title` = try container.decode(String.self, forKey: .`title`)
+        `kind` = try container.decode(PlanKind.self, forKey: .`kind`)
+        `summary` = try container.decodeIfPresent(String.self, forKey: .`summary`)
+        `status` = try container.decodeIfPresent(String.self, forKey: .`status`)
+        `checks` = try container.decode(PlanChecks.self, forKey: .`checks`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`title`, forKey: .`title`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encodeIfPresent(`summary`, forKey: .`summary`)
+        try container.encodeIfPresent(`status`, forKey: .`status`)
+        try container.encode(`checks`, forKey: .`checks`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `title` = "title"
+        case `kind` = "kind"
+        case `summary` = "summary"
+        case `status` = "status"
+        case `checks` = "checks"
+    }
+}
+
+public enum StoredPlanItem: Codable, Sendable, Equatable {
+    case `section`(StoredPlanSection)
+    case `text`(StoredPlanText)
+    case `step`(StoredPlanStep)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Tag.self)
+        switch try container.decode(String.self, forKey: .value) {
+        case "section": self = .`section`(try StoredPlanSection(from: decoder))
+        case "text": self = .`text`(try StoredPlanText(from: decoder))
+        case "step": self = .`step`(try StoredPlanStep(from: decoder))
+        default: throw WireValidationError.invalid("Unknown StoredPlanItem tag")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case .`section`(let value): try value.encode(to: encoder)
+        case .`text`(let value): try value.encode(to: encoder)
+        case .`step`(let value): try value.encode(to: encoder)
+        }
+    }
+
+    private enum Tag: String, CodingKey { case value = "type" }
+}
+
+public struct StoredPlanSection: Codable, Sendable, Equatable {
+    public let `type`: String
+    public let `id`: String
+    public let `title`: String
+    public let `description`: String?
+    public let `items`: [StoredPlanSectionItem]
+
+    public init(`type`: String = "section", `id`: String, `title`: String, `description`: String? = nil, `items`: [StoredPlanSectionItem]) {
+        self.`type` = `type`
+        self.`id` = `id`
+        self.`title` = `title`
+        self.`description` = `description`
+        self.`items` = `items`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `type` = try container.decode(String.self, forKey: .`type`)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `title` = try container.decode(String.self, forKey: .`title`)
+        `description` = try container.decodeIfPresent(String.self, forKey: .`description`)
+        `items` = try container.decode([StoredPlanSectionItem].self, forKey: .`items`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`type`, forKey: .`type`)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`title`, forKey: .`title`)
+        try container.encodeIfPresent(`description`, forKey: .`description`)
+        try container.encode(`items`, forKey: .`items`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `type` = "type"
+        case `id` = "id"
+        case `title` = "title"
+        case `description` = "description"
+        case `items` = "items"
+    }
+}
+
+public enum StoredPlanSectionItem: Codable, Sendable, Equatable {
+    case `text`(StoredPlanText)
+    case `step`(StoredPlanStep)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Tag.self)
+        switch try container.decode(String.self, forKey: .value) {
+        case "text": self = .`text`(try StoredPlanText(from: decoder))
+        case "step": self = .`step`(try StoredPlanStep(from: decoder))
+        default: throw WireValidationError.invalid("Unknown StoredPlanSectionItem tag")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case .`text`(let value): try value.encode(to: encoder)
+        case .`step`(let value): try value.encode(to: encoder)
+        }
+    }
+
+    private enum Tag: String, CodingKey { case value = "type" }
+}
+
+public struct StoredPlanText: Codable, Sendable, Equatable {
+    public let `type`: String
+    public let `id`: String
+    public let `title`: String
+    public let `description`: String?
+
+    public init(`type`: String = "text", `id`: String, `title`: String, `description`: String? = nil) {
+        self.`type` = `type`
+        self.`id` = `id`
+        self.`title` = `title`
+        self.`description` = `description`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `type` = try container.decode(String.self, forKey: .`type`)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `title` = try container.decode(String.self, forKey: .`title`)
+        `description` = try container.decodeIfPresent(String.self, forKey: .`description`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`type`, forKey: .`type`)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`title`, forKey: .`title`)
+        try container.encodeIfPresent(`description`, forKey: .`description`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `type` = "type"
+        case `id` = "id"
+        case `title` = "title"
+        case `description` = "description"
+    }
+}
+
+public struct StoredPlanStep: Codable, Sendable, Equatable {
+    public let `type`: String
+    public let `id`: String
+    public let `title`: String
+    public let `description`: String?
+    public let `checks`: PlanChecks?
+    public let `state`: PlanStepState?
+    public let `by`: PlanActor?
+    public let `at`: String?
+    public let `note`: String?
+    public let `unlocked`: Bool?
+    public let `steps`: [StoredPlanStep]?
+
+    public init(`type`: String = "step", `id`: String, `title`: String, `description`: String? = nil, `checks`: PlanChecks? = nil, `state`: PlanStepState? = nil, `by`: PlanActor? = nil, `at`: String? = nil, `note`: String? = nil, `unlocked`: Bool? = nil, `steps`: [StoredPlanStep]? = nil) {
+        self.`type` = `type`
+        self.`id` = `id`
+        self.`title` = `title`
+        self.`description` = `description`
+        self.`checks` = `checks`
+        self.`state` = `state`
+        self.`by` = `by`
+        self.`at` = `at`
+        self.`note` = `note`
+        self.`unlocked` = `unlocked`
+        self.`steps` = `steps`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `type` = try container.decode(String.self, forKey: .`type`)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `title` = try container.decode(String.self, forKey: .`title`)
+        `description` = try container.decodeIfPresent(String.self, forKey: .`description`)
+        `checks` = try container.decodeIfPresent(PlanChecks.self, forKey: .`checks`)
+        `state` = try container.decodeIfPresent(PlanStepState.self, forKey: .`state`)
+        `by` = try container.decodeIfPresent(PlanActor.self, forKey: .`by`)
+        `at` = try container.decodeIfPresent(String.self, forKey: .`at`)
+        `note` = try container.decodeIfPresent(String.self, forKey: .`note`)
+        `unlocked` = try container.decodeIfPresent(Bool.self, forKey: .`unlocked`)
+        `steps` = try container.decodeIfPresent([StoredPlanStep].self, forKey: .`steps`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`type`, forKey: .`type`)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`title`, forKey: .`title`)
+        try container.encodeIfPresent(`description`, forKey: .`description`)
+        try container.encodeIfPresent(`checks`, forKey: .`checks`)
+        try container.encodeIfPresent(`state`, forKey: .`state`)
+        try container.encodeIfPresent(`by`, forKey: .`by`)
+        try container.encodeIfPresent(`at`, forKey: .`at`)
+        try container.encodeIfPresent(`note`, forKey: .`note`)
+        try container.encodeIfPresent(`unlocked`, forKey: .`unlocked`)
+        try container.encodeIfPresent(`steps`, forKey: .`steps`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `type` = "type"
+        case `id` = "id"
+        case `title` = "title"
+        case `description` = "description"
+        case `checks` = "checks"
+        case `state` = "state"
+        case `by` = "by"
+        case `at` = "at"
+        case `note` = "note"
+        case `unlocked` = "unlocked"
+        case `steps` = "steps"
+    }
+}
+
+public typealias PlanOfChat = PlanChangedEvent
+
+public struct PlanApplyResult: Codable, Sendable, Equatable {
+    public let `plan`: StoredPlan
+
+    public init(`plan`: StoredPlan) {
+        self.`plan` = `plan`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `plan` = try container.decode(StoredPlan.self, forKey: .`plan`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`plan`, forKey: .`plan`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `plan` = "plan"
+    }
+}
+
+public struct PlanCreatedEvent: Codable, Sendable, Equatable {
+    public let `chatId`: String
+    public let `planId`: String
+
+    public init(`chatId`: String, `planId`: String) {
+        self.`chatId` = `chatId`
+        self.`planId` = `planId`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `chatId` = try container.decode(String.self, forKey: .`chatId`)
+        `planId` = try container.decode(String.self, forKey: .`planId`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`chatId`, forKey: .`chatId`)
+        try container.encode(`planId`, forKey: .`planId`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `chatId` = "chatId"
+        case `planId` = "planId"
+    }
+}
+
+public typealias PlanRemovedEvent = PlanCreatedEvent
+
 public extension PlanStepState {
     /// The marker of this state, as `PLAN_STATE_MARKERS` in `@adecore/plan` writes it.
     var marker: String {

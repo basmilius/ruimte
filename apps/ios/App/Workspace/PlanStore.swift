@@ -17,15 +17,17 @@ final class PlanStore {
     func start() {
         guard subscriptions.isEmpty else { return }
         subscriptions = [
-            client.subscribe(.planChanged) { [weak self] event in
-                guard let plan = event["plan"].flatMap(PlanDocument.init) else { return }
-                self?.put(chatID: event.text("chatId"), plan)
+            client.subscribe(.planChanged) { [weak self] payload in
+                guard let event = try? payload.decoded(as: PlanChangedEvent.self) else { return }
+                self?.put(chatID: event.chatId, PlanDocument(event.plan))
             },
-            client.subscribe(.planRemoved) { [weak self] event in
-                self?.remove(chatID: event.text("chatId"), planID: event.text("planId"))
+            client.subscribe(.planRemoved) { [weak self] payload in
+                guard let event = try? payload.decoded(as: PlanRemovedEvent.self) else { return }
+                self?.remove(chatID: event.chatId, planID: event.planId)
             },
-            client.subscribe(.planCreated) { [weak self] event in
-                self?.unseen.insert(event.text("chatId"))
+            client.subscribe(.planCreated) { [weak self] payload in
+                guard let event = try? payload.decoded(as: PlanCreatedEvent.self) else { return }
+                self?.unseen.insert(event.chatId)
             },
             client.observeConnection { [weak self] connected in
                 guard connected else { return }
@@ -47,11 +49,11 @@ final class PlanStore {
     func markSeen(_ chatID: String) { unseen.remove(chatID) }
 
     /// What the machine answered replaces what was known, except a plan an event already brought at a later rev.
-    func setListed(_ entries: [JSONValue]) {
+    func setListed(_ entries: [PlanOfChat]) {
         var next: [String: [PlanDocument]] = [:]
         for entry in entries {
-            guard let plan = entry["plan"].flatMap(PlanDocument.init) else { continue }
-            let chatID = entry.text("chatId")
+            let plan = PlanDocument(entry.plan)
+            let chatID = entry.chatId
             let known = plans[chatID]?.first { $0.id == plan.id }
             next[chatID, default: []].append(known.map { $0.rev > plan.rev ? $0 : plan } ?? plan)
         }
@@ -81,15 +83,18 @@ final class PlanStore {
     func apply(chatID: String, planID: String, ops: [JSONValue]) async throws {
         let result = try await client.request(
             .planApply,
-            payload: .object(["chatId": .string(chatID), "planId": .string(planID), "ops": .array(ops)]))
-        if let plan = result["plan"].flatMap(PlanDocument.init) { put(chatID: chatID, plan) }
+            payload: .object(["chatId": .string(chatID), "planId": .string(planID), "ops": .array(ops)])
+        ).decoded(as: PlanApplyResult.self)
+        put(chatID: chatID, PlanDocument(result.plan))
     }
 
     private func list() {
         Task { [weak self, client] in
-            guard let result = try? await client.request(.planList, payload: .object([:])) else { return }
+            guard
+                let result = try? await client.request(.planList, payload: .object([:])).decoded(as: PlanListResult.self)
+            else { return }
             guard let self, !subscriptions.isEmpty else { return }
-            setListed(result.list("plans"))
+            setListed(result.plans)
         }
     }
 }
