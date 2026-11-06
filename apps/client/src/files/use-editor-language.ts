@@ -1,6 +1,6 @@
 import type { Editor } from '@adecore/editor';
-import { createHolder, lspLanguageIdOf, realTimers } from '@adecore/editor-react';
-import { pathToFileUri } from '@adecore/lsp';
+import { createHolder, realTimers } from '@adecore/editor-react';
+import { lspLanguageIdOf, pathToFileUri } from '@adecore/lsp';
 import { storedPathOf } from '@ruimte/contracts';
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { customLanguageIdOf } from '@/language/language-ids-host';

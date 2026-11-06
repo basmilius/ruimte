@@ -5,10 +5,8 @@ import {
     additionKindsForLanguage,
     alongsideKindsForPath,
     componentServes,
-    documentLanguageId,
     KIND_PROFILES,
     kindForLanguage,
-    lspLanguageId,
     resolveNativeTypescript,
     resolveTypescriptLib,
     usesVue,
@@ -45,8 +43,6 @@ describe('server profiles', () => {
         expect(kindForLanguage('twig')).toBe('php-native');
         expect(kindForLanguage('blade')).toBe('php-native');
         expect(kindForLanguage('plaintext', {}, 'templates/base.html.twig')).toBe('php-native');
-        expect(lspLanguageId('tsx')).toBe('typescriptreact');
-        expect(lspLanguageId('php')).toBe('php');
     });
 
     it('keeps ESLint and Tailwind out of the kind of a language, and offers them beside it', () => {
@@ -111,14 +107,6 @@ describe('server profiles', () => {
         expect(component!.initializationOptions(launch)).toEqual({});
         const manifests = ['/work/apps/bridge/Cargo.toml', '/work/apps/speech/Cargo.toml'];
         expect(component!.initializationOptions({ ...launch, cargoManifests: manifests })).toEqual({ linkedProjects: manifests });
-    });
-
-    it('opens a JSON file that allows comments as JSONC and any other as JSON', () => {
-        expect(documentLanguageId('json', 'tsconfig.json')).toBe('jsonc');
-        expect(documentLanguageId('json', 'packages/app/tsconfig.build.json')).toBe('jsonc');
-        expect(documentLanguageId('json', '.vscode/settings.json')).toBe('jsonc');
-        expect(documentLanguageId('json', 'package.json')).toBe('json');
-        expect(documentLanguageId('tsx', 'a.tsx')).toBe('typescriptreact');
     });
 
     it('gives every server that pulls its diagnostics the pull, and lets the others push', () => {

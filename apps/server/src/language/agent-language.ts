@@ -1,11 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
-import { fileUriToPath, type Diagnostic, type Range } from '@adecore/lsp';
+import { fileUriToPath, lspLanguageId, type Diagnostic, type Range } from '@adecore/lsp';
 import { storedPathOf, type LanguageMethod, type SqlChoice } from '@ruimte/contracts';
 import { languageOf } from '../fs/read.ts';
 import type { AgentDocument, LanguageHost } from './host.ts';
-import { KIND_PROFILES, lspLanguageId } from './profiles.ts';
+import { KIND_PROFILES } from './profiles.ts';
 import type { SqlFileContext } from './sql-file-context.ts';
 
 /* The project's running language servers as an agent may ask them; absent on a host without them. */

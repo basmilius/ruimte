@@ -1,3 +1,4 @@
+import { SCRIPT_LANGUAGE_IDS } from '@adecore/lsp';
 import { boundLines, UNTRUSTED_CODE } from './editor-assist-text.ts';
 
 /* How many names the model is asked for; the editor shows the first few it can use. */
@@ -58,7 +59,7 @@ const RESERVED = new Set(
 const HYPHENATED = new Set(['css', 'scss', 'less', 'sass', 'html', 'vue', 'svelte', 'astro', 'xml', 'yaml', 'json', 'jsonc', 'toml', 'tailwindcss']);
 
 /* Languages whose names may hold a dollar sign. */
-const DOLLAR_NAMED = new Set(['typescript', 'javascript', 'typescriptreact', 'javascriptreact']);
+const DOLLAR_NAMED = new Set<string>(SCRIPT_LANGUAGE_IDS);
 
 const PLAIN_NAME = /^[\p{L}_][\p{L}\p{N}_]*$/u;
 const DOLLAR_NAME = /^[\p{L}_$][\p{L}\p{N}_$]*$/u;

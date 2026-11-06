@@ -1,4 +1,5 @@
 import { dirname, join } from 'node:path';
+import { lspLanguageId, SCRIPT_LANGUAGE_IDS } from '@adecore/lsp';
 import { matchesFilePattern, type LanguageServerId, type LanguageServerKind } from '@ruimte/contracts';
 import { nativeStorageOf, nativeStubsOf } from './native.ts';
 import { toolchainPath } from './toolchain.ts';
@@ -97,8 +98,6 @@ export interface KindProfile {
 /* Where the TypeScript 6 SDK of the `typescript` kind sits beside its TypeScript 7 package, under an alias of the same npm package. */
 const SIDECAR_SDK_PACKAGE = 'typescript-6';
 
-const SCRIPT_LANGUAGES = ['typescript', 'typescriptreact', 'javascript', 'javascriptreact'] as const;
-
 /* `sql` names no dialect; the others name the one the SQL server reads a document in when its settings do not. */
 const SQL_LANGUAGES = ['sql', 'mysql', 'mariadb', 'postgres', 'sqlite'] as const;
 
@@ -146,7 +145,7 @@ function tsserverOptions(context: LaunchContext): Record<string, unknown> {
 function nativeTypescriptComponent(): ComponentProfile {
     return {
         name: 'typescript',
-        languages: SCRIPT_LANGUAGES,
+        languages: SCRIPT_LANGUAGE_IDS,
         entry: NATIVE_ENTRY,
         native: true,
         args: () => ['--lsp', '--stdio'],
@@ -165,7 +164,7 @@ function typescriptActionsComponent(): ComponentProfile {
     return {
         name: 'typescript-actions',
         title: 'TypeScript 6',
-        languages: SCRIPT_LANGUAGES,
+        languages: SCRIPT_LANGUAGE_IDS,
         entry: 'typescript-language-server/lib/cli.mjs',
         sidecar: true,
         sdkPackage: SIDECAR_SDK_PACKAGE,
@@ -178,7 +177,7 @@ function typescriptActionsComponent(): ComponentProfile {
 function vueTypescriptComponent(): ComponentProfile {
     return {
         name: 'typescript',
-        languages: [...SCRIPT_LANGUAGES, 'vue'],
+        languages: [...SCRIPT_LANGUAGE_IDS, 'vue'],
         entry: 'typescript-language-server/lib/cli.mjs',
         args: () => ['--stdio'],
         initializationOptions: (context) => ({
@@ -445,7 +444,7 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
         components: [
             {
                 name: 'eslint',
-                languages: [...SCRIPT_LANGUAGES, 'vue'],
+                languages: [...SCRIPT_LANGUAGE_IDS, 'vue'],
                 entry: extractedScript('eslint'),
                 args: () => ['--stdio'],
                 initializationOptions: () => ({}),
@@ -489,7 +488,7 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
         components: [
             {
                 name: 'tailwind',
-                languages: ['html', 'css', 'scss', 'less', ...SCRIPT_LANGUAGES, 'vue', 'php'],
+                languages: ['html', 'css', 'scss', 'less', ...SCRIPT_LANGUAGE_IDS, 'vue', 'php'],
                 entry: '@tailwindcss/language-server/bin/tailwindcss-language-server',
                 args: () => ['--stdio'],
                 initializationOptions: () => ({}),
@@ -498,38 +497,6 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
         ]
     }
 };
-
-/* The names a client may use for a language, by the id LSP gives it. */
-const LANGUAGE_ALIASES: Record<string, string> = {
-    ts: 'typescript',
-    tsx: 'typescriptreact',
-    js: 'javascript',
-    jsx: 'javascriptreact',
-    mjs: 'javascript',
-    cjs: 'javascript',
-    mts: 'typescript',
-    cts: 'typescript',
-    sh: 'shellscript',
-    bash: 'shellscript',
-    zsh: 'shellscript',
-    docker: 'dockerfile',
-    yml: 'yaml',
-    py: 'python'
-};
-
-export function lspLanguageId(languageId: string): string {
-    return LANGUAGE_ALIASES[languageId] ?? languageId;
-}
-
-/* Files that are JSON with comments and trailing commas: a JSON server reports both as errors in a plain `json` document. */
-const JSONC_FILES =
-    /(^|\/)(tsconfig(\..+)?\.json|jsconfig(\..+)?\.json|\.eslintrc(\.json)?|\.babelrc(\.json)?|\.swcrc|devcontainer\.json|\.devcontainer\/.+\.json|\.vscode\/.+\.json|.+\.jsonc)$/;
-
-/* The language id a document opens with: the client's, except for a JSON file that allows comments. */
-export function documentLanguageId(languageId: string, storedPath: string): string {
-    const id = lspLanguageId(languageId);
-    return id === 'json' && JSONC_FILES.test(storedPath) ? 'jsonc' : id;
-}
 
 /* Whether a process serves a document, by its language or by its path. */
 export function componentServes(component: ComponentProfile, languageId: string, storedPath: string): boolean {

@@ -459,6 +459,7 @@
         "@adecore/agent-contracts": "0.54.10",
         "@adecore/diagram": "0.54.10",
         "@adecore/drawing": "0.54.10",
+        "@adecore/lsp": "0.54.10",
         "@adecore/plan": "0.54.10",
         "@adecore/utils": "0.54.10",
         "@ruimte/pulsar": "workspace:*",

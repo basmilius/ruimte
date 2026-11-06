@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { CodedError, type WatchSeams } from '@adecore/agents';
 import {
+    documentLanguageId,
     ErrorCodes,
     LspError,
     fileUriToPath,
@@ -78,7 +79,6 @@ import {
     alternativesOf,
     CATALOG_KINDS,
     componentServes,
-    documentLanguageId,
     KIND_PROFILES,
     kindForLanguage,
     usesVue,
