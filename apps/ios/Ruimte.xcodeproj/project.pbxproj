@@ -88,6 +88,7 @@
 		3039DFBD66A9835549E21DCC /* ChatShellPrepareTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 619E5D2CE354026694C8D72A /* ChatShellPrepareTests.swift */; };
 		31331E72B88E3B8976522A03 /* AccountDeletion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26E964FFD73FB59D62676602 /* AccountDeletion.swift */; };
 		317B5BF409E7694D2E814204 /* MobileCapsuleButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30FC6A5B77DF68B1BBA70283 /* MobileCapsuleButtonStyle.swift */; };
+		3318BFE4967B225E0C21B4D7 /* ProjectNavigator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB111D36F725470CFC9DB6F1 /* ProjectNavigator.swift */; };
 		335A19076A65C7684FE67F22 /* ChatPromptStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF96EC87E6B24E01AC048549 /* ChatPromptStateTests.swift */; };
 		3391D7C7568ED8FABAA9E13F /* BrowserPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D779BA807ED5F459698AC2C0 /* BrowserPage.swift */; };
 		346C76C7C0A6590725E3537E /* DeviceTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A2ED80E79C98BD6F9D140B4 /* DeviceTools.swift */; };
@@ -953,6 +954,7 @@
 		FA3AB193736D4225923AF7F5 /* NowBoardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowBoardTests.swift; sourceTree = "<group>"; };
 		FA47C5156D96FA80DF6383D2 /* ChatPromptFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPromptFeed.swift; sourceTree = "<group>"; };
 		FAF32399AA9411213B7BFB06 /* ChatForkingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatForkingTests.swift; sourceTree = "<group>"; };
+		FB111D36F725470CFC9DB6F1 /* ProjectNavigator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectNavigator.swift; sourceTree = "<group>"; };
 		FBC322B49F5CB3934C36E246 /* AppMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMetricsTests.swift; sourceTree = "<group>"; };
 		FC93B189294B4D798A653EDC /* ChatAttachmentButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAttachmentButton.swift; sourceTree = "<group>"; };
 		FDD0B866219FA2F1AA2DEED9 /* GitRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitRepositories.swift; sourceTree = "<group>"; };
@@ -1560,6 +1562,7 @@
 				CE48345F04BA4B8E778C12FD /* PhoneHome.swift */,
 				0E342A07018739FE303A2EAF /* PhoneRouter.swift */,
 				51636DA92A46280BE23BA72A /* ProjectFilePage.swift */,
+				FB111D36F725470CFC9DB6F1 /* ProjectNavigator.swift */,
 				9A5221AF91DEE568E2DF38A4 /* ProjectViewPage.swift */,
 				8E3C280A49506D171C893DB2 /* SearchPage.swift */,
 			);
@@ -2370,6 +2373,7 @@
 				3FAF0D1DF299ABD133FF3818 /* ProjectKinds.swift in Sources */,
 				F57AA854DB471B03DE066B63 /* ProjectLaunches.swift in Sources */,
 				42E049420542BC2919930382 /* ProjectListViews.swift in Sources */,
+				3318BFE4967B225E0C21B4D7 /* ProjectNavigator.swift in Sources */,
 				6729F03577E0CC5B78782A39 /* ProjectOutput.swift in Sources */,
 				C3F95FAA2A6A70480F88D00A /* ProjectOverview.swift in Sources */,
 				8B77DAF04DE9F9840327A5CC /* ProjectSVGRasterizer.swift in Sources */,

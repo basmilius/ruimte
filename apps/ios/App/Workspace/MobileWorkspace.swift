@@ -303,6 +303,17 @@ final class MobileWorkspace {
         views.first { $0.stableID == id } ?? views.lazy.flatMap { $0.list("nodes") }.first { $0.stableID == id }
     }
 
+    /// Whether a router can show the item: a view or node the project holds, and not a divider of its list.
+    func canOpen(_ id: String) -> Bool {
+        item(id).map { !WorkspaceViewSections.isDivider($0) } ?? false
+    }
+
+    /// The view the project remembers as open while `id` shows. A node opens on its own, and the project remembers the
+    /// canvas it stands on; any other item is its own.
+    func rememberedView(opening id: String) -> String {
+        views.first { $0.list("nodes").contains { $0.stableID == id } }?.stableID ?? id
+    }
+
     /// Waits for an item the machine wrote to reach this copy of the project. An item that never comes is the case
     /// the five seconds are for.
     func arrival(of id: String) async -> Bool {

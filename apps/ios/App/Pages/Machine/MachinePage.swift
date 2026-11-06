@@ -32,7 +32,6 @@ struct MachinePage: View {
     }
 
     private var endpoint: MachineEndpoint { session.endpoint }
-    private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
     private var name: String { endpoint.label ?? session.machine.name }
 
     var body: some View {
@@ -74,7 +73,7 @@ struct MachinePage: View {
             }
             ToolbarItem(id: "machine.menu", placement: .topBarTrailing) {
                 Menu {
-                    if isPad {
+                    if MobileDevice.isPad {
                         Button(String(localized: "Machine settings"), lucideIcon: "pencil") { naming = true }
                     } else {
                         Button(String(localized: "Name and icon"), lucideIcon: "pencil") { naming = true }
@@ -123,7 +122,8 @@ struct MachinePage: View {
         .mobileSheet(isPresented: $openingFolder) { OpenFolderSheet(session: session) }
         .mobileSheet(isPresented: $naming) {
             MachineIdentitySheet(
-                endpoint: endpoint, fallbackName: name, access: isPad ? (session: session, runtime: runtime) : nil)
+                endpoint: endpoint, fallbackName: name,
+                access: MobileDevice.isPad ? (session: session, runtime: runtime) : nil)
         }
         .mobileSheet(isPresented: $access) { MachineAccessSheet(session: session, runtime: runtime, name: name) }
         .onAppear { AppUsage.screen(.screenMachine) }

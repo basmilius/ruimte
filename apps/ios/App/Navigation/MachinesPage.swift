@@ -54,7 +54,7 @@ struct MachinesPage: View {
             }
         }
         .navigationTitle("Machines")
-        .navigationBarTitleDisplayMode(UIDevice.current.userInterfaceIdiom == .pad ? .inline : .automatic)
+        .navigationBarTitleDisplayMode(MobileDevice.isPad ? .inline : .automatic)
         .onAppear { AppUsage.screen(.screenMachines) }
     }
 

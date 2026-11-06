@@ -44,7 +44,7 @@ struct ProcessesPage: View {
     }
 
     /// An iPad beside its sidebar has the room for the desktop's table.
-    private var wide: Bool { UIDevice.current.userInterfaceIdiom == .pad && sizeClass == .regular }
+    private var wide: Bool { MobileDevice.isWide(sizeClass) }
 
     private var form: some View {
         List {

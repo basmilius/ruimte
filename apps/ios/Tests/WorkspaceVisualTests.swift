@@ -210,7 +210,7 @@ private struct WorkspaceNavigationFixture: View {
     var body: some View {
         if sidebar {
             NavigationSplitView {
-                NavigationStack { WorkspacePage(navigation: navigation, sidebar: PadRouter()) }
+                NavigationStack { WorkspacePage(navigation: navigation, navigator: PadRouter()) }
             } detail: {
                 NavigationStack { Text("Select a view") }
             }
@@ -218,7 +218,9 @@ private struct WorkspaceNavigationFixture: View {
             NavigationStack {
                 Text("Projects")
                     .navigationTitle("Projects")
-                    .navigationDestination(isPresented: $opened) { WorkspacePage(navigation: navigation) }
+                    .navigationDestination(isPresented: $opened) {
+                        WorkspacePage(navigation: navigation, navigator: PhoneRouter())
+                    }
             }
             .onAppear { opened = true }
         }

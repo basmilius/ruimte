@@ -129,7 +129,9 @@ struct PhoneHome: View {
     @ViewBuilder private func page(for route: PhoneRoute) -> some View {
         switch route {
         case .project(let navigation):
-            WorkspacePage(navigation: navigation, settingsLink: settingsLink, gitLines: gitLines, runtime: runtime)
+            WorkspacePage(
+                navigation: navigation, navigator: router, settingsLink: settingsLink, gitLines: gitLines,
+                runtime: runtime)
         case .view(let target):
             ProjectViewPage(runtime: runtime, target: target, preview: now.preview(of: target)).id(target.id)
         case .notification(let notification):

@@ -209,6 +209,93 @@ final class PadRouterTests: XCTestCase {
         router.open(NotificationDestination(machineID: "mac", nodeID: "", target: "machine"))
         XCTAssertEqual(router.detail, .now)
     }
+
+    @MainActor func testAProjectPageOpensANodeBesideItsListAndRemembersTheCanvasItStandsOn() {
+        let project = ProjectRouterFixture()
+        defer { project.shutdown() }
+        let router = PadRouter()
+        let navigation = router.openProject(project.workspace)
+        router.detail = .now
+
+        router.open(view: "chat", in: navigation, animation: nil)
+        XCTAssertEqual(router.detail, .project)
+        XCTAssertEqual(navigation.selectedViewID, "chat")
+        XCTAssertEqual(router.highlightedViewID, "chat")
+        XCTAssertEqual(project.workspace.selectedID, "canvas")
+        XCTAssertNil(navigation.openedViewID, "Nothing is pushed over a list that has its content beside it")
+
+        router.detail = .machines
+        XCTAssertNil(router.highlightedViewID, "The list marks nothing while another page shows")
+    }
+
+    @MainActor func testAProjectPageOpensNothingForADividerOrAViewTheProjectLost() {
+        let project = ProjectRouterFixture()
+        defer { project.shutdown() }
+        let router = PadRouter()
+        let navigation = router.openProject(project.workspace)
+        router.detail = .now
+        router.open(view: "rule", in: navigation, animation: nil)
+        router.open(view: "gone", in: navigation, animation: nil)
+        XCTAssertNil(navigation.selectedViewID)
+        XCTAssertEqual(router.detail, .now)
+    }
+
+    @MainActor func testFilesAndGitStandInTheInspectorAndEverySheetElseStaysASheet() {
+        let project = ProjectRouterFixture()
+        defer { project.shutdown() }
+        let router = PadRouter()
+        let navigation = router.openProject(project.workspace)
+        XCTAssertEqual(router.placement, .beside)
+        router.present(.files, in: navigation)
+        XCTAssertEqual(router.inspector, .files)
+        router.present(.git, in: navigation)
+        XCTAssertEqual(router.inspector, .git)
+        XCTAssertFalse(navigation.showingFiles || navigation.showingGit)
+        router.present(.launches, in: navigation)
+        XCTAssertTrue(navigation.showingLaunches)
+    }
+
+    @MainActor func testLeavingAProjectPageClosesTheProjectAndNeverDismissesAPushedPage() {
+        let project = ProjectRouterFixture()
+        defer { project.shutdown() }
+        let router = PadRouter()
+        let navigation = router.openProject(project.workspace)
+        var dismissed = false
+        router.leave(navigation) { dismissed = true }
+        XCTAssertNil(router.project)
+        XCTAssertFalse(dismissed)
+    }
+}
+
+/// A machine and a project on it whose document holds a canvas with a chat node, a chat view and a divider.
+@MainActor final class ProjectRouterFixture {
+    private let connections = MachineConnections(monitorPaths: false)
+    let workspace: MobileWorkspace
+
+    init() {
+        let runtime = AppRuntime(connections: connections)
+        let machine = Machine(
+            id: "router-\(UUID().uuidString)", name: "MacBook Pro", icon: nil,
+            publicKey: DeviceKey().publicKey, brokerUrl: nil, lastSeenAt: nil)
+        runtime.machines = [machine]
+        workspace = MobileWorkspace(session: runtime.session(for: machine), projectID: "app")
+        workspace.receive(
+            .object([
+                "version": .number(3), "rev": .number(1), "name": .string("App"), "color": .string("#155dfc"),
+                "views": .array([
+                    .object([
+                        "id": .string("canvas"), "kind": .string("canvas"), "name": .string("Main"),
+                        "nodes": .array([.object(["id": .string("chat"), "kind": .string("chat")])]),
+                    ]),
+                    .object(["id": .string("notes"), "kind": .string("chat"), "name": .string("Notes")]),
+                    .object(["id": .string("rule"), "kind": .string("separator")]),
+                ]),
+            ]))
+    }
+
+    func shutdown() {
+        connections.shutdown()
+    }
 }
 
 final class ProjectWidgetRecorderTests: XCTestCase {

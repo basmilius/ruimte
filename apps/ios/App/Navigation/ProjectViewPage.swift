@@ -54,11 +54,13 @@ struct ProjectViewPage: View {
 }
 
 /// A notification's chat or terminal, opened in its project once the machine says which one holds it. A node no
-/// open project holds opens on its own.
+/// open project holds opens on its own. With `open` the router takes the node it found, as the iPad's sidebar pushes
+/// its project; without, the page shows the node in place.
 struct NotificationRoutePage: View {
     let runtime: AppRuntime
     let now: NowModel
     let destination: NotificationDestination
+    var open: ((ProjectViewTarget) -> Void)?
     @State private var target: ProjectViewTarget?
     @State private var searched = false
 
@@ -74,8 +76,13 @@ struct NotificationRoutePage: View {
         }
         .task {
             guard !searched, target == nil else { return }
-            target = await now.locate(machineID: destination.machineID, itemID: destination.nodeID)
-            searched = true
+            let found = await now.locate(machineID: destination.machineID, itemID: destination.nodeID)
+            if let found, let open {
+                open(found)
+            } else {
+                target = found
+                searched = true
+            }
         }
     }
 }

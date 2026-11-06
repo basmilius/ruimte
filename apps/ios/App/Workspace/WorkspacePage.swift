@@ -4,9 +4,8 @@ import SwiftUI
 
 struct WorkspacePage: View {
     @Bindable var navigation: WorkspaceNavigation
-    /// The iPad's router, set when this page is pushed in its sidebar: the list opens views beside it instead of over
-    /// it.
-    var sidebar: PadRouter?
+    /// The router the page stands in: on an iPad the list opens views beside it instead of over it.
+    let navigator: any ProjectNavigator
     var settingsLink: SettingsLink?
     /// The branch line under the title on an iPhone.
     var gitLines: ProjectGitLines?
@@ -31,27 +30,27 @@ struct WorkspacePage: View {
     @Environment(\.voiceScene) private var voiceScene
 
     init(
-        navigation: WorkspaceNavigation, sidebar: PadRouter? = nil, settingsLink: SettingsLink? = nil,
+        navigation: WorkspaceNavigation, navigator: any ProjectNavigator, settingsLink: SettingsLink? = nil,
         gitLines: ProjectGitLines? = nil, runtime: AppRuntime? = nil
     ) {
         _navigation = Bindable(navigation)
-        self.sidebar = sidebar
+        self.navigator = navigator
         self.settingsLink = settingsLink
         self.gitLines = gitLines
         self.runtime = runtime
         _listState = State(initialValue: ProjectListState())
     }
 
-    private var isSidebar: Bool { sidebar != nil }
+    private var isSidebar: Bool { navigator.placement == .beside }
 
     var body: some View {
         Group {
-            if let sidebar {
+            if isSidebar {
                 // The machine-lost card stands in the content column, so the sidebar stays usable to go back.
                 PhoneProjectList(
                     workspace: workspace, state: listState, views: listedViews,
                     selectedID: navigation.selectedViewID, open: openView, act: act, header: AnyView(sidebarTitle),
-                    highlightedID: sidebar.detail == .project ? sidebar.shownID : nil
+                    highlightedID: navigator.highlightedViewID
                 )
                 .overlay {
                     if !workspace.ready {
@@ -193,9 +192,7 @@ struct WorkspacePage: View {
             onDismiss: {
                 // The next sheet or the way back waits for this one to be gone.
                 if afterSettings == .launches { navigation.showingLaunches = true }
-                if afterSettings == .leave {
-                    if let sidebar { sidebar.closeProject() } else { dismiss() }
-                }
+                if afterSettings == .leave { navigator.leave(navigation) { dismiss() } }
                 afterSettings = nil
             }
         ) {
@@ -463,7 +460,7 @@ struct WorkspacePage: View {
         case .heading(let item):
             renameText = ""
             renamed = item
-        case .file: present(.files)
+        case .file: navigator.present(.files, in: navigation)
         }
     }
 
@@ -488,28 +485,7 @@ struct WorkspacePage: View {
     }
 
     private func openView(_ id: String) {
-        if let sidebar {
-            guard workspace.item(id) != nil, !WorkspaceViewSections.isDivider(workspace.item(id) ?? .null) else {
-                return
-            }
-            sidebar.show(view: id)
-            return
-        }
-        if let canvas = workspace.views.first(where: { $0.list("nodes").contains { $0.stableID == id } }) {
-            // A node opens on its own; what the project remembers as open is the canvas it stands on.
-            workspace.select(canvas.stableID)
-            navigation.selectedViewID = canvas.stableID
-            navigation.openedViewID = id
-            return
-        }
-        guard workspace.views.contains(where: { $0.stableID == id && !WorkspaceViewSections.isDivider($0) }) else {
-            return
-        }
-        workspace.select(id)
-        withAnimation(reduceMotion ? nil : .default) {
-            navigation.selectedViewID = id
-            navigation.openedViewID = id
-        }
+        navigator.open(view: id, in: navigation, animation: reduceMotion ? nil : .default)
     }
 
     /// A sheet of the iPhone's project page; on an iPad its content has a place of its own and it never stands.
@@ -517,24 +493,11 @@ struct WorkspacePage: View {
         isSidebar ? .constant(false) : binding
     }
 
-    /// Puts a sheet up, where an iPad keeps the files and git in the inspector beside the content instead.
-    private func present(_ sheet: ProjectSheet) {
-        guard let router = sidebar else {
-            navigation.show(sheet)
-            return
-        }
-        switch sheet {
-        case .files: router.inspector = .files
-        case .git: router.inspector = .git
-        default: navigation.show(sheet)
-        }
-    }
-
     /// A sheet a command asked for before the project was there, or while it already was.
     private func showPendingSheet() {
         guard workspace.ready, let sheet = navigation.pendingSheet else { return }
         navigation.pendingSheet = nil
-        present(sheet)
+        navigator.present(sheet, in: navigation)
     }
 
     /// The project's name over its views in the iPad's sidebar, where the bar holds the way back and its buttons.

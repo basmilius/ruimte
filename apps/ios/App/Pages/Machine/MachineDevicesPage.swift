@@ -66,7 +66,7 @@ struct MachineDevicesPage: View {
     }
 
     /// An iPad has the room for the devices as a grid, each running one with its live picture.
-    private var wide: Bool { UIDevice.current.userInterfaceIdiom == .pad && sizeClass == .regular }
+    private var wide: Bool { MobileDevice.isWide(sizeClass) }
 
     private var grid: some View {
         ScrollView {

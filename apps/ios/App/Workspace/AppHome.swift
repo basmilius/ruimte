@@ -102,7 +102,7 @@ struct AppHome: View {
             guard let destination else { return }
             settings = false
             addingMachine = false
-            if isPad {
+            if MobileDevice.isPad {
                 padRouter.open(destination)
             } else {
                 router.open(destination)
@@ -122,11 +122,10 @@ struct AppHome: View {
         }
     }
 
-    private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
     private var voicePanel: Binding<Bool> {
         Binding(get: { voiceScene.showsPanel }, set: { voiceScene.showsPanel = $0 })
     }
-    private var usesSidebar: Bool { isPad && hasWorkspace }
+    private var usesSidebar: Bool { MobileDevice.isPad && hasWorkspace }
 
     private var notificationStep: some View {
         NotificationStepPage(
@@ -134,7 +133,7 @@ struct AppHome: View {
     }
 
     private func openWorkspace(_ workspace: MobileWorkspace, view: String?) {
-        if isPad {
+        if MobileDevice.isPad {
             padRouter.openProject(workspace, view: view)
         } else {
             // The stack animates its push itself. Inside an animation of ours the page's bar items would animate in

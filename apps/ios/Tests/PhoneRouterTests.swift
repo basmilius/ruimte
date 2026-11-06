@@ -80,4 +80,47 @@ final class PhoneRouterTests: XCTestCase {
         XCTAssertEqual(router.project?.workspace.projectID, "app")
         XCTAssertEqual(router.project?.pendingViewID, "chat")
     }
+
+    @MainActor func testAProjectPageOpensANodeOnItsOwnAndRemembersTheCanvasItStandsOn() {
+        let project = ProjectRouterFixture()
+        defer { project.shutdown() }
+        let router = PhoneRouter()
+        let navigation = router.openProject(project.workspace)
+
+        router.open(view: "chat", in: navigation, animation: nil)
+        XCTAssertEqual(navigation.openedViewID, "chat")
+        XCTAssertEqual(navigation.selectedViewID, "canvas")
+        XCTAssertEqual(project.workspace.selectedID, "canvas")
+    }
+
+    @MainActor func testAProjectPageOpensAViewAsItselfAndNothingForADividerOrAViewTheProjectLost() {
+        let project = ProjectRouterFixture()
+        defer { project.shutdown() }
+        let router = PhoneRouter()
+        let navigation = router.openProject(project.workspace)
+
+        router.open(view: "rule", in: navigation, animation: nil)
+        router.open(view: "gone", in: navigation, animation: nil)
+        XCTAssertNil(navigation.openedViewID)
+        router.open(view: "notes", in: navigation, animation: nil)
+        XCTAssertEqual(navigation.openedViewID, "notes")
+        XCTAssertEqual(navigation.selectedViewID, "notes")
+        XCTAssertEqual(project.workspace.selectedID, "notes")
+    }
+
+    @MainActor func testAPushedProjectPageKeepsEverySheetAndDismissesItselfToLeave() {
+        let project = ProjectRouterFixture()
+        defer { project.shutdown() }
+        let router = PhoneRouter()
+        let navigation = router.openProject(project.workspace)
+        XCTAssertEqual(router.placement, .pushed)
+        XCTAssertNil(router.highlightedViewID)
+        router.present(.files, in: navigation)
+        router.present(.git, in: navigation)
+        XCTAssertTrue(navigation.showingFiles && navigation.showingGit)
+
+        var dismissed = false
+        router.leave(navigation) { dismissed = true }
+        XCTAssertTrue(dismissed)
+    }
 }

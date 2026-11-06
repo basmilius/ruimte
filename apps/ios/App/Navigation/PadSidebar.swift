@@ -47,7 +47,7 @@ struct PadSidebar: View {
                 SettingsToolbarItem(link: settingsLink)
             }
             .navigationDestination(item: pushedProject) { project in
-                WorkspacePage(navigation: project, sidebar: router).id(project.id)
+                WorkspacePage(navigation: project, navigator: router).id(project.id)
             }
         }
         .containerBackground(MobileStyle.surface, for: .navigation)

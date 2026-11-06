@@ -37,8 +37,9 @@ struct ChatScreen: View {
     @State private var bookmarkName = ""
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    /// Set in the content beside the iPad's sidebar, where a sub-agent opens in an inspector.
-    @Environment(\.padCells) private var padCells
+    @Environment(\.projectNavigator) private var navigator
+    /// The router that shows a sub-agent beside the chat; a chat pushed over a list opens it in its own stack.
+    private var inspector: (any ProjectNavigator)? { navigator?.placement == .beside ? navigator : nil }
     let title: String
     let isPrepared: Bool
     /// The project the chat stands in, which is what a fork's way back and a summary's way to the fork need.
@@ -239,7 +240,7 @@ struct ChatScreen: View {
         }
         .navigationDestination(
             item: Binding(
-                get: { padCells == nil ? model.presentation.conversationRequest : nil },
+                get: { inspector == nil ? model.presentation.conversationRequest : nil },
                 set: { model.presentation.conversationRequest = $0 })
         ) { crumb in
             SubagentConversationPage(model: model, crumb: crumb, session: machineSession)
@@ -250,9 +251,9 @@ struct ChatScreen: View {
             }
         }
         .onChange(of: model.presentation.conversationRequest) { _, crumb in
-            guard let crumb, let padCells else { return }
+            guard let crumb, let inspector else { return }
             model.presentation.conversationRequest = nil
-            padCells.inspectSubagent(PadSubagentPane(model: model, crumb: crumb, session: machineSession))
+            inspector.inspect(PadSubagentPane(model: model, crumb: crumb, session: machineSession))
         }
         .onAppear {
             chatPresentationLog.notice("chat appeared \(model.chatID, privacy: .public)")

@@ -1,6 +1,14 @@
 import SwiftUI
 import UIKit
 
+/// What kind of device a layout choice is made for.
+enum MobileDevice {
+    static var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
+
+    /// An iPad with the room for a table or columns, which a narrow window of it (Split View) does not have.
+    static func isWide(_ sizeClass: UserInterfaceSizeClass?) -> Bool { isPad && sizeClass == .regular }
+}
+
 /// The rhythm every page is spaced in: steps of 4, 8, 12, 16 and 24 points.
 enum MobileSpacing {
     static let xSmall: CGFloat = 4
