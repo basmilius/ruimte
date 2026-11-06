@@ -1,4 +1,4 @@
-import { AgentIcon, ProviderLogo } from '@adecore/agents-react/providers';
+import { AgentIcon, hasProviderLogo, ProviderLogo } from '@adecore/agents-react/providers';
 import { useProviders } from '@adecore/agents-react/state';
 import { diffSegments, emphasisOf } from '@adecore/editor-react/models';
 import { Button, Icon, IconButton, Input, Kbd, Spinner, shortcut } from '@adecore/ui';
@@ -8,7 +8,6 @@ import { Square, X } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
-import { hasProviderLogo } from '@/agents/provider-logo';
 import type { EditorLanguage as RuimteEditorLanguage } from '@/language/ruimte-editor-language';
 import { isShortcut } from '@/language/shortcut-keys';
 import type { ApplyOutcome, InlineEditSession, InlineEditState } from './inline-edit-session';

@@ -1,8 +1,8 @@
+import { separatesGroups } from '@ruimte/contracts';
 import type { MenuNode } from '@ruimte/desktop-bridge';
 import type { MenuAgent } from '@/agents/menu-facts';
 import { only, separator, submenu, t } from '@/commands/menu-builders';
 import type { MenuExtra } from '@/commands/menu-extras';
-import { separatesGroups } from '@/state/agent-availability';
 
 function agentRows(agents: MenuAgent[], rowsOf: (agent: MenuAgent) => MenuNode[]): MenuNode[] {
     return agents.flatMap((agent, i) => [...only(separatesGroups(agents[i - 1]?.kind, agent.kind), separator), ...rowsOf(agent)]);

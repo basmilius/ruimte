@@ -1,6 +1,6 @@
 import { providersOf } from '@adecore/agents-react/state';
+import { inPickerOrder } from '@ruimte/contracts';
 import type { MenuFacts, MenuHost } from '@/commands/menu-context';
-import { inPickerOrder } from '@/state/agent-availability';
 import { currentEndpointId } from '@/state/current-endpoint';
 
 export interface MenuAgent {

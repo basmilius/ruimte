@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProviderInfo } from '@ruimte/contracts';
-import { availableAgents, separatesGroups } from './agent-availability';
+import { availableAgents } from './agent-availability';
 
 const provider = (kind: string, name: string, installed = true): ProviderInfo =>
     ({ kind, name, installed, capabilities: { chat: true, terminal: true } }) as ProviderInfo;
@@ -19,16 +19,5 @@ describe('availableAgents', () => {
         ];
         const names = availableAgents(providers, 'chat').map((entry) => entry.name);
         expect(names).toEqual(['Claude Code', 'Codex', 'Antigravity', 'GitHub Copilot', 'Grok', 'Claude API', 'NanoGPT']);
-    });
-});
-
-describe('separatesGroups', () => {
-    test('only where one group ends and the next begins', () => {
-        expect(separatesGroups('codex', 'antigravity')).toBe(true);
-        expect(separatesGroups('grok', 'anthropic-claude-api')).toBe(true);
-        expect(separatesGroups('claude', 'codex')).toBe(false);
-        expect(separatesGroups('antigravity', 'grok')).toBe(false);
-        expect(separatesGroups('anthropic-claude-api', 'nanogpt')).toBe(false);
-        expect(separatesGroups(undefined, 'grok')).toBe(false);
     });
 });

@@ -2,7 +2,7 @@ import { runtimeModeLabel, useChatPreferences, useNewAccountChoice } from '@adec
 import { AccountDot, AgentIcon } from '@adecore/agents-react/providers';
 import { useProviders } from '@adecore/agents-react/state';
 import { Icon, IconButton, Menu } from '@adecore/ui';
-import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
+import { separatesGroups, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
 import { Bot, MessageSquare, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +11,7 @@ import type { AgentTarget } from '@/state/agent-availability';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { useDetectProviders } from '@/transport/provider-detection';
-import { availableAgents, separatesGroups } from '../state/agent-availability';
+import { availableAgents } from '../state/agent-availability';
 
 function Submenu({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
     return (
