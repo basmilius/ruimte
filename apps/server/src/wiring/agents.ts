@@ -1,4 +1,4 @@
-import { AttachmentStore, BookmarkStore, ChatStore, ClaudeTitleReader, VisualStore } from '@adecore/agents/chat';
+import { AttachmentStore, BookmarkStore, ChatCore, ChatStore, ClaudeTitleReader, VisualStore } from '@adecore/agents/chat';
 import { AgentLineageStore, NoticeNotes, NoticeStore, TaskStore, restartBackgroundLimits, unshownNotes, type Clock } from '@adecore/agents/coordination';
 import { AgentStore } from '../agents/agent-store.ts';
 import { CodexTitleReader } from '../agents/codex-title.ts';
@@ -148,7 +148,9 @@ interface AgentsInput {
 export interface AgentsBundle {
     sessions: SessionManager;
     snapshotSchedule: SnapshotSchedule;
-    chats: ChatManager;
+    // The generic chats, which most of the daemon reads and drives, and Ruimte's own part over them.
+    chats: ChatCore;
+    chatManager: ChatManager;
     context: ContextStore;
     outboxLink: OutboxLink;
     attachments: AttachmentStore;
@@ -244,7 +246,7 @@ export async function wireAgents({
         prepareAgent: (kind) => (kind === 'codex' ? codexProbe : Promise.resolve())
     });
     const snapshotSchedule = scheduleSnapshots(sessions, snapshots);
-    const targetForToken = (token: string): string | null => sessions.sessionIdForToken(token) ?? chats.chatIdForToken(token);
+    const targetForToken = (token: string): string | null => sessions.sessionIdForToken(token) ?? chatManager.chatIdForToken(token);
     const context: ContextStore = new ContextStore({
         sources: (targetId) =>
             withForkOrigin(targetId, index().sourcesFor(targetId), {
@@ -294,9 +296,8 @@ export async function wireAgents({
     const visuals = new VisualStore(config.home, attachments);
     // A microtask: a queue is taken in the middle of building a prompt, which a thread write must not cut into.
     notices.onSettled((chatId, settled, state) => queueMicrotask(() => chats.settleMessages(chatId, settled, state)));
-    const chats: ChatManager = new ChatManager({
+    const chatManager: ChatManager = new ChatManager({
         providers: providers.providers,
-        projectAccount,
         intelligentUi: ruimteUiSources({
             place: (chatId) => index().locate(chatId),
             node: (id) => {
@@ -325,41 +326,6 @@ export async function wireAgents({
         contextUrl: runtime.contextUrl,
         spawn: seams.chatSpawn,
         env: seams.env,
-        depthOf: (chatId) => lineage.depthOf(chatId),
-        computer: () => computer.usable,
-        reachOpenProjects: () => identity.reachOpenProjects,
-        visualReplies: () => identity.visualReplies,
-        databases: (chatId) => {
-            const folder = index().locate(chatId)?.folder;
-            return folder !== undefined && hasDatabaseConnections(folder);
-        },
-        modeCeiling: bounds.modeCeiling,
-        peerChat: (chatId) => untrusted.node(chatId),
-        checkCwd: bounds.checkCwd,
-        holdsProject: async (chatId, clientId) => {
-            const place = index().locate(chatId);
-            return place !== null && (await later.projects().store.heldFolders(clientId)).includes(place.folder);
-        },
-        contextSources: (chatId) => context.list(chatId),
-        reference: (chatId, id) => index().referenceBeside(chatId, id) ?? (identity.reachOpenProjects ? index().referenceElsewhere(chatId, id) : null),
-        standalone: (chatId) => index().locate(chatId)?.canvasId === null,
-        inlineChat: (chatId) => index().isHiddenChat(chatId),
-        design: (chatId) => index().designOf(chatId),
-        turnEnded: (chatId, state) => {
-            void stores.lifecycle.emit('turnEnded', chatId, state);
-            if (index().designOf(chatId) !== null) {
-                void later.projects().store.settleDesignsAfterTurn(chatId);
-            }
-
-            void wakeForWaitingMessages(notices, chatId, state, index().locate(chatId)?.projectId ?? null, (projectId, work) =>
-                outboxLink.enqueue(projectId, chatId, work)
-            );
-        },
-        openingAgent: agentChatOpening(outbox, (provider) => chats.composerPreferences.for(provider)),
-        messageNotes: (chatId) => new NoticeNotes(notices, chatId, MESSAGE_WORDS),
-        // The other reader: what a chat has to show a person in its thread, which is never taken from the model.
-        unshownMessages: (chatId) => unshownNotes(notices, chatId, MESSAGE_WORDS),
-        firstPrompt: (chatId) => prompts.take(chatId),
         // A turn reports what is left of its plan in passing; that belongs to the machine's numbers.
         onLimits: (update) => {
             seams.observers.limits(update);
@@ -369,10 +335,48 @@ export async function wireAgents({
         // One one-shot call per Codex chat, on whichever CLI here answers a single prompt.
         nameChat: async (provider, input) => seams.nameChat(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) }),
         onInterruptedRun: outboxLink.onInterruptedRun,
-        taskRows: (chatId) => tasks.ofParent(chatId),
-        dropWakes: (chatId) => tasks.dropWake(chatId),
-        endChildren: (chatId) => later.work().endChildren.stopNode(chatId, 'a person cleared this chat'),
-        endedAt: (chatId) => lineage.endedAt(chatId),
+        facts: {
+            projectAccount,
+            depthOf: (chatId) => lineage.depthOf(chatId),
+            computer: () => computer.usable,
+            reachOpenProjects: () => identity.reachOpenProjects,
+            visualReplies: () => identity.visualReplies,
+            databases: (chatId) => {
+                const folder = index().locate(chatId)?.folder;
+                return folder !== undefined && hasDatabaseConnections(folder);
+            },
+            modeCeiling: bounds.modeCeiling,
+            peerChat: (chatId) => untrusted.node(chatId),
+            checkCwd: bounds.checkCwd,
+            holdsProject: async (chatId, clientId) => {
+                const place = index().locate(chatId);
+                return place !== null && (await later.projects().store.heldFolders(clientId)).includes(place.folder);
+            },
+            contextSources: (chatId) => context.list(chatId),
+            reference: (chatId, id) => index().referenceBeside(chatId, id) ?? (identity.reachOpenProjects ? index().referenceElsewhere(chatId, id) : null),
+            standalone: (chatId) => index().locate(chatId)?.canvasId === null,
+            inlineChat: (chatId) => index().isHiddenChat(chatId),
+            design: (chatId) => index().designOf(chatId),
+            turnEnded: (chatId, state) => {
+                void stores.lifecycle.emit('turnEnded', chatId, state);
+                if (index().designOf(chatId) !== null) {
+                    void later.projects().store.settleDesignsAfterTurn(chatId);
+                }
+
+                void wakeForWaitingMessages(notices, chatId, state, index().locate(chatId)?.projectId ?? null, (projectId, work) =>
+                    outboxLink.enqueue(projectId, chatId, work)
+                );
+            },
+            openingAgent: agentChatOpening(outbox, (provider) => chats.composerPreferences.for(provider)),
+            messageNotes: (chatId) => new NoticeNotes(notices, chatId, MESSAGE_WORDS),
+            // The other reader: what a chat has to show a person in its thread, which is never taken from the model.
+            unshownMessages: (chatId) => unshownNotes(notices, chatId, MESSAGE_WORDS),
+            firstPrompt: (chatId) => prompts.take(chatId),
+            taskRows: (chatId) => tasks.ofParent(chatId),
+            dropWakes: (chatId) => tasks.dropWake(chatId),
+            endChildren: (chatId) => later.work().endChildren.stopNode(chatId, 'a person cleared this chat'),
+            endedAt: (chatId) => lineage.endedAt(chatId)
+        },
         plans,
         bookmarks,
         visuals,
@@ -385,10 +389,12 @@ export async function wireAgents({
         },
         accounts: providers.accounts
     });
+    const chats: ChatCore = chatManager.core;
     return {
         sessions,
         snapshotSchedule,
         chats,
+        chatManager,
         context,
         outboxLink,
         attachments,

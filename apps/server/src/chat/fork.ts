@@ -809,10 +809,10 @@ export function chatForkDeps(wiring: {
 }): ChatForkDeps {
     const { hiddenAgents } = wiring;
     return {
-        source: (chatId) => wiring.chats.forkSource(chatId),
+        source: (chatId) => wiring.chats.core.readChat(chatId),
         installed: () => wiring.host.starts.installedAgents(),
-        relocating: (chatId) => wiring.chats.isRelocating(chatId),
-        startingPoint: (provider, selection) => wiring.chats.startingPoint(provider, selection),
+        relocating: (chatId) => wiring.chats.core.isRelocating(chatId),
+        startingPoint: (provider, selection) => wiring.chats.core.startingPoint(provider, selection),
         locate: (id) => wiring.host.projects.locate(id),
         titleFor: (id) => wiring.titleFor(id),
         read: (projectId) => wiring.host.projects.read(projectId),
@@ -823,7 +823,7 @@ export function chatForkDeps(wiring: {
         ...(hiddenAgents ? { hideFork: (agent: HiddenAgent) => hiddenAgents.put(agent) } : {}),
         forkClaude: ({ source, at, newSessionId, cwd }) =>
             forkClaudeTranscript({
-                projectsDir: wiring.chats.claudeProjectsDirOf(source),
+                projectsDir: wiring.chats.core.claudeProjectsDirOf(source),
                 cwd: source.cwd,
                 sessionId: source.agentSessionId ?? '',
                 at,
@@ -832,7 +832,7 @@ export function chatForkDeps(wiring: {
             }),
         forkCodex: ({ source, at, cwd }) => {
             const tier = codexServiceTier(source.selection);
-            return forkThreadOnce(wiring.chats.codexProcess(source), {
+            return forkThreadOnce(wiring.chats.core.codexProcess(source), {
                 threadId: source.agentSessionId ?? '',
                 at,
                 options: {
@@ -870,21 +870,21 @@ export function chatForkDeps(wiring: {
             }
             await wiring.checkpoints.restore(cwd, tree);
         },
-        writeRecord: (chatId, info, items, preambles) => wiring.chats.writeRecord(chatId, info, items, preambles),
+        writeRecord: (chatId, info, items, preambles) => wiring.chats.core.writeRecord(chatId, info, items, preambles),
         deleteRecord: async (chatId) => {
-            await wiring.chats.deleteRecord(chatId);
+            await wiring.chats.core.deleteRecord(chatId);
         },
         copyPlans: (fromChatId, toChatId) => wiring.chats.copyPlans(fromChatId, toChatId),
-        copyBookmarks: (fromChatId, toChatId, itemIds) => wiring.chats.copyBookmarks(fromChatId, toChatId, itemIds),
-        copyVisuals: (fromChatId, toChatId, keep) => wiring.chats.copyVisuals(fromChatId, toChatId, keep),
+        copyBookmarks: (fromChatId, toChatId, itemIds) => wiring.chats.core.copyBookmarks(fromChatId, toChatId, (itemId) => itemIds.has(itemId)),
+        copyVisuals: (fromChatId, toChatId, keep) => wiring.chats.core.copyVisuals(fromChatId, toChatId, keep),
         copyAgentImages: (fromChatId, toChatId) => wiring.chats.copyAgentImages(fromChatId, toChatId),
         newSessionId: () => randomUUID(),
         now: () => Date.now(),
         accounts: {
-            require: (kind, account) => wiring.chats.requireAccount(kind, account),
-            opening: (chatId, kind, named) => wiring.chats.openingAccount(chatId, kind, named),
-            canContinue: (kind, from, to) => wiring.chats.canContinue(kind, from, to),
-            label: (kind, account) => wiring.chats.accountLabel(kind, account)
+            require: (kind, account) => wiring.chats.core.requireAccount(kind, account),
+            opening: (chatId, kind, named) => wiring.chats.core.openingAccount(chatId, kind, named),
+            canContinue: (kind, from, to) => wiring.chats.core.canContinue(kind, from, to),
+            label: (kind, account) => wiring.chats.core.accountLabel(kind, account)
         }
     };
 }

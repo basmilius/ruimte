@@ -1,9 +1,9 @@
 import { stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
+import type { ChatCore } from '@adecore/agents/chat';
 import type { AgentLineageStore, NoticeStore, TaskStore } from '@adecore/agents/coordination';
 import { chatIsWorking, type ChatInfo } from '@ruimte/contracts';
-import type { ChatManager } from '../chat/chat-manager.ts';
 import { ChatError } from '../chat/errors.ts';
 import { moveChat, type MoveChatDeps } from '../chat/move-chat.ts';
 import { chatMoveInfo, type MoveInfoDeps } from '../chat/move-info.ts';
@@ -22,7 +22,7 @@ import type { ProjectStore } from '../projects/project-store.ts';
 import type { SnoozeStore } from '../push/snoozes.ts';
 
 export interface ChatMoveWiring {
-    chats: ChatManager;
+    chats: ChatCore;
     store: ProjectStore;
     lineage: AgentLineageStore;
     tasks: TaskStore;
@@ -88,7 +88,7 @@ function chatMoveRefusalDeps(wiring: ChatMoveWiring): MoveRefusalDeps {
 }
 
 /* The info of a chat, loaded from disk when nobody has it. */
-async function loadedInfo(chats: ChatManager, chatId: string): Promise<ChatInfo> {
+async function loadedInfo(chats: ChatCore, chatId: string): Promise<ChatInfo> {
     if (chats.get(chatId) === undefined && (await chats.hasStored(chatId))) {
         await chats.create({ chatId });
     }
@@ -100,7 +100,7 @@ async function loadedInfo(chats: ChatManager, chatId: string): Promise<ChatInfo>
 }
 
 /* The chat steps a move and its repair share. */
-function sharedChatSteps(chats: ChatManager) {
+function sharedChatSteps(chats: ChatCore) {
     return {
         load: (chatId: string) => loadedInfo(chats, chatId),
         relocate: (chatId: string, cwd: string, during: () => Promise<void>) => chats.relocate(chatId, cwd, during),

@@ -1,10 +1,9 @@
-import type { ComposerPreference } from '@adecore/agents/chat';
+import type { ChatCore, ComposerPreference } from '@adecore/agents/chat';
 import type { AgentLineageStore } from '@adecore/agents/coordination';
 import { narrowerMode } from '@adecore/agents/providers';
 import type { AgentInfo, AgentKind, AgentLaunch, ChatCreatePayload, ChatInfo, RuntimeMode } from '@ruimte/contracts';
 import type { AgentStart, AgentStartHost, NodeAccount } from '../canvas/host.ts';
 import type { PendingPromptStore } from '../canvas/pending-prompts.ts';
-import type { ChatManager } from '../chat/chat-manager.ts';
 import { DEFAULT_RUNTIME_MODE, launchedMode } from '../providers/launch.ts';
 import type { SessionManager } from '../sessions/manager.ts';
 import type { OutboxStore, OutboxWork, StartAgentEntry } from './outbox.ts';
@@ -79,7 +78,7 @@ interface AgentStartHostDeps {
     installed(): Promise<AgentKind[]>;
     prompts: Pick<PendingPromptStore, 'put'>;
     enqueue(projectId: string, nodeId: string, work: OutboxWork): Promise<void>;
-    chats: Pick<ChatManager, 'get' | 'composerPreferences'>;
+    chats: Pick<ChatCore, 'get' | 'composerPreferences'>;
     sessions: Pick<SessionManager, 'get'>;
     lineage: Pick<AgentLineageStore, 'ceilingOf'>;
     /* The agent nodes a caller holds open, which caps one caller in a loop. */

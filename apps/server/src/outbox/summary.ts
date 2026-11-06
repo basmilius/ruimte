@@ -265,18 +265,18 @@ export function wireSummaries(wiring: {
     enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;
 }): SummaryWiring {
     const coordinator = new SummaryCoordinator({
-        chatItems: (chatId) => wiring.chats.get(chatId)?.thread.list() ?? null,
+        chatItems: (chatId) => wiring.chats.core.get(chatId)?.thread.list() ?? null,
         projectOf: (chatId) => wiring.projects.locate(chatId)?.projectId ?? null,
         enqueue: wiring.enqueue
     });
-    wiring.chats.observe((event) => coordinator.chatEvent(event));
+    wiring.chats.core.observe((event) => coordinator.chatEvent(event));
     const deps: DeliverSummaryDeps = {
-        source: (chatId) => wiring.chats.forkSource(chatId),
+        source: (chatId) => wiring.chats.core.readChat(chatId),
         locate: (id) => wiring.projects.locate(id),
         titleFor: wiring.titleFor,
         mutate: (projectId, apply) => wiring.projects.mutate(projectId, apply),
-        deliver: (chatId, summary) => wiring.chats.deliverNote(chatId, summary),
-        note: (chatId, text) => wiring.chats.addNote(chatId, 'warning', text)
+        deliver: (chatId, summary) => wiring.chats.core.deliverNote(chatId, summary),
+        note: (chatId, text) => wiring.chats.core.addNote(chatId, 'warning', text)
     };
     return {
         coordinator,
@@ -288,7 +288,7 @@ export function wireSummaries(wiring: {
                     source: deps.source,
                     locate: deps.locate,
                     titleFor: deps.titleFor,
-                    relocating: (id) => wiring.chats.isRelocating(id),
+                    relocating: (id) => wiring.chats.core.isRelocating(id),
                     openTurn: (id, wake) => wiring.chats.openSummaryTurn(id, wake)
                 },
                 chatId

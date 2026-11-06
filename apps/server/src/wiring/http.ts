@@ -103,7 +103,7 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
     const { config } = runtime;
     const { extensions } = input;
     const { identity, auth, handshake, access, machineHome } = machine;
-    const { sessions, chats, context } = agents;
+    const { sessions, chatManager, context } = agents;
     const { brokerSwitch } = network;
     // What a route only the local secret reaches answers before it does anything: null to go on.
     const refuseUnlessOwner = async (request: Request, remote: string, method: 'GET' | 'POST'): Promise<Response | null> => {
@@ -264,7 +264,7 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
         },
         {
             below: ATTACHMENTS_PATH,
-            handle: ({ request, url, remote }) => handleAttachmentRequest(request, url, remote, access, (chatId, id) => chats.findAttachment(chatId, id))
+            handle: ({ request, url, remote }) => handleAttachmentRequest(request, url, remote, access, (chatId, id) => chatManager.findAttachment(chatId, id))
         },
         { below: PROJECTS_PATH, handle: ({ request, url, remote }) => handleProjectRequest(request, url, remote, access, projects.store) },
         { exact: [FS_FILE_PATH], handle: ({ request, url, remote }) => handleFsFileRequest(request, url, remote, access, machineHome) },

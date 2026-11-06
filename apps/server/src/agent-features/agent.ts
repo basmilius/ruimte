@@ -24,9 +24,9 @@ export const agentFeature = defineAgentFeature({
     previews: startPreviews,
     host: ({ stores, providers, agents, store, remote, git, enqueue }, whole) => {
         const { lineage, outbox, tasks } = stores;
-        const { sessions, chats } = agents;
+        const { sessions, chats, chatManager } = agents;
         const forkDeps = chatForkDeps({
-            chats,
+            chats: chatManager,
             host: whole,
             titleFor: (id) => store.index.titleFor(id),
             lineage,

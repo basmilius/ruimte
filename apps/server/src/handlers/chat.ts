@@ -1,4 +1,5 @@
 import { CodedError } from '@adecore/agents';
+import type { ChatCore } from '@adecore/agents/chat';
 import { chatHandlers, type AgentHandler } from '@adecore/agents/host';
 import type {
     ChatContinueOnPayload,
@@ -16,7 +17,6 @@ import type {
     ChatSummarizeResult
 } from '@ruimte/contracts';
 import type { Area } from '../area.ts';
-import type { ChatManager } from '../chat/chat-manager.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import { refuseBoundNode, type MachineOfNode } from '../peer/giver/bound-nodes.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
@@ -37,7 +37,7 @@ export interface ChatMoveHandlers {
 }
 
 export interface ChatDeps {
-    manager: ChatManager;
+    manager: ChatCore;
     providers: ProviderRegistry;
     beforeKill: BeforeKill;
     stopNode(nodeId: string, reason: string): Promise<void>;

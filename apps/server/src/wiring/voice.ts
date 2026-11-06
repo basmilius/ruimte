@@ -1,6 +1,6 @@
+import type { ChatCore } from '@adecore/agents/chat';
 import type { ServerActions } from '../actions/server-actions.ts';
 import type { CanvasHost } from '../canvas/host.ts';
-import type { ChatManager } from '../chat/chat-manager.ts';
 import type { ServerConfig } from '../config.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { SYSTEM_CLOCK } from '../voice/clock.ts';
@@ -22,7 +22,7 @@ interface VoiceInput {
     machine: { id: string; label: string };
     canvasHost: CanvasHost;
     actions: ServerActions;
-    chats: Pick<ChatManager, 'observe' | 'get'>;
+    chats: Pick<ChatCore, 'observe' | 'get'>;
     live: OpenAiLive;
 }
 

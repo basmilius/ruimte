@@ -3,7 +3,7 @@ import type { ChatManager } from './chat-manager.ts';
 import { ChatError } from './errors.ts';
 
 interface ContinueOnDeps {
-    chats: Pick<ChatManager, 'isRelocating' | 'limitedTurnFor' | 'continueInPlace' | 'continueInFork' | 'continuedInFork'>;
+    chats: ChatManager;
     fork(payload: ChatForkPayload): Promise<ChatForkResult>;
 }
 
@@ -13,7 +13,7 @@ interface ContinueOnDeps {
  * cut after the limited turn. The original's resume at the reset lapses either way.
  */
 export async function continueOn(deps: ContinueOnDeps, payload: ChatContinueOnPayload): Promise<ChatContinueOnResult> {
-    if (deps.chats.isRelocating(payload.chatId)) {
+    if (deps.chats.core.isRelocating(payload.chatId)) {
         throw new ChatError('chat-busy', 'The chat is being moved to a project; go on under another account once that is done');
     }
     const { turnId, limit, inPlace } = await deps.chats.limitedTurnFor(payload.chatId, payload.account);

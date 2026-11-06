@@ -19,5 +19,5 @@ export const chatFeature = defineAgentFeature({
     name: 'chat',
     toolkit: chatToolkit,
     actions: chatAttachActions,
-    host: ({ agents }) => ({ agentImages: { attach: (chatId, upload) => agents.chats.attachAgentImage(chatId, upload) } })
+    host: ({ agents }) => ({ agentImages: { attach: (chatId, upload) => agents.chatManager.attachAgentImage(chatId, upload) } })
 });

@@ -50,11 +50,11 @@ export interface TaskWiring {
 export function wireTasks(deps: TaskWiringDeps): TaskWiring {
     const core = wireTaskCore({
         tasks: deps.tasks,
-        chats: deps.chats,
+        chats: deps.chats.core,
         outbox: { list: deps.entries, enqueue: deps.enqueue, remove: deps.remove, wake: deps.wake },
         placed: deps.placed,
         titleFor: deps.titleFor,
-        alert: (nodeId, title, body) => deps.alert(deps.chats.get(nodeId) ? 'chat' : 'terminal', nodeId, title, body),
+        alert: (nodeId, title, body) => deps.alert(deps.chats.core.get(nodeId) ? 'chat' : 'terminal', nodeId, title, body),
         // Deferred, so a row is never written into a parent from inside the broadcast of the child that settled it.
         changed: (task: Task) => queueMicrotask(() => deps.chats.syncTaskRow(task)),
         ...(deps.retryAt ? { retryAt: deps.retryAt } : {}),
@@ -65,7 +65,7 @@ export function wireTasks(deps: TaskWiringDeps): TaskWiring {
     const onParked = parkedNote({
         madeBy: deps.madeBy,
         titleFor: deps.titleFor,
-        note: (chatId, text) => deps.chats.addNote(chatId, 'warning', text),
+        note: (chatId, text) => deps.chats.core.addNote(chatId, 'warning', text),
         alert: (chatId, text) => deps.alert('chat', chatId, 'Could not wake the chat', text)
     });
 

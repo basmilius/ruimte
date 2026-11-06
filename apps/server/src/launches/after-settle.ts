@@ -1,10 +1,9 @@
 import { join, relative } from 'node:path';
-import { runningInBackground } from '@adecore/agents/chat';
+import { type ChatCore, runningInBackground } from '@adecore/agents/chat';
 import type { AgentEvent } from '@adecore/agents/host';
 import { isWithin } from '@adecore/utils/path';
 import type { ChatItem, ChatTurnItem, LaunchStatus } from '@ruimte/contracts';
 import { z } from 'zod';
-import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
 import { JsonFileStore } from '../json-file-store.ts';
 import type { OutboxWork, RunAfterSettleEntry } from '../outbox/outbox.ts';
@@ -75,7 +74,7 @@ export class AfterSettleStore implements AfterSettleChoices {
 
 export interface AfterSettleDeps {
     store: AfterSettleStore;
-    chats: Pick<ChatManager, 'get' | 'isLoading' | 'deliverNote'>;
+    chats: Pick<ChatCore, 'get' | 'isLoading' | 'deliverNote'>;
     launches: Pick<LaunchStore, 'inWorktree'>;
     runner: Pick<LaunchRunner, 'startIn'>;
     /* The project that places a chat node; null for none. */

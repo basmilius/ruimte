@@ -5,6 +5,7 @@ import type { SpawnChatProcess } from '@adecore/agents/chat';
 import { OutboxWorker, oweResume, resumeRunHandler, resumeRunParked, RETRY_DELAYS_MS } from '@adecore/agents/coordination';
 import { fakeClaude, fakeCodex, inProcess, type InProcessCli, ManualClock } from '@adecore/agents/testing';
 import type { ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
+import { testChatManager } from '../chat/chat-manager-test-helpers.ts';
 import { ChatManager, RESUME_PROMPT } from '../chat/chat-manager.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
@@ -76,7 +77,7 @@ async function boot(spawn?: SpawnChatProcess): Promise<Daemon> {
     const attachments = new AttachmentStore(home);
     // Declared before the chats, which ask it to owe a resume while they load.
     const box: { worker: OutboxWorker<OutboxWork> | null } = { worker: null };
-    const chats = new ChatManager({
+    const chats = testChatManager({
         ...OPEN_BOUNDS,
         providers,
         store: new ChatStore(home, { attachments: attachments }),
@@ -92,12 +93,12 @@ async function boot(spawn?: SpawnChatProcess): Promise<Daemon> {
     const worker = new OutboxWorker({
         store: outbox,
         clock,
-        handlers: refusingHandlers({ 'resume-run': resumeRunHandler(chats) }),
-        onParked: resumeRunParked(chats)
+        handlers: refusingHandlers({ 'resume-run': resumeRunHandler(chats.core) }),
+        onParked: resumeRunParked(chats.core)
     });
     box.worker = worker;
     const { until, recheck } = untilChecked();
-    chats.observe(recheck);
+    chats.core.observe(recheck);
     const daemon: Daemon = {
         chats,
         outbox,
@@ -108,10 +109,10 @@ async function boot(spawn?: SpawnChatProcess): Promise<Daemon> {
         stop: async () => {
             worker.stop();
             // The order the daemon's own shutdown takes. Every thread down before anything is awaited.
-            chats.persistAllSync();
-            await chats.shutdown();
-            for (const info of chats.list()) {
-                chats.get(info.chatId)?.dispose();
+            chats.core.persistAllSync();
+            await chats.core.shutdown();
+            for (const info of chats.core.list()) {
+                chats.core.get(info.chatId)?.dispose();
             }
         }
     };
@@ -123,9 +124,9 @@ async function boot(spawn?: SpawnChatProcess): Promise<Daemon> {
 async function interruptChild(provider: 'claude' | 'codex' = 'claude', chatId = 'chat-child'): Promise<{ turnId: string; agentSessionId: string }> {
     const daemon = await boot();
     daemon.worker.start();
-    await daemon.chats.create({ chatId, cwd: folder, provider });
-    await daemon.chats.send(chatId, 'slow');
-    const session = daemon.chats.get(chatId)!;
+    await daemon.chats.core.create({ chatId, cwd: folder, provider });
+    await daemon.chats.core.send(chatId, 'slow');
+    const session = daemon.chats.core.get(chatId)!;
     await daemon.until(() => session.info.agentSessionId !== null);
     const turnId = session.info.activeTurnId!;
     const agentSessionId = session.info.agentSessionId!;
@@ -135,7 +136,7 @@ async function interruptChild(provider: 'claude' | 'codex' = 'claude', chatId = 
 }
 
 function turnOf(daemon: Daemon, turnId: string, chatId = 'chat-child'): ChatItem | undefined {
-    return daemon.chats.get(chatId)?.thread.get(turnId);
+    return daemon.chats.core.get(chatId)?.thread.get(turnId);
 }
 
 async function untilTurnDone(daemon: Daemon, turnId: string, chatId = 'chat-child'): Promise<void> {
@@ -148,11 +149,11 @@ describe('resume-run', () => {
 
         const daemon = await boot();
         daemon.worker.start();
-        await daemon.chats.recoverInterrupted();
+        await daemon.chats.core.recoverInterrupted();
         await untilTurnDone(daemon, turnId);
         await daemon.worker.settled();
 
-        const session = daemon.chats.get('chat-child')!;
+        const session = daemon.chats.core.get('chat-child')!;
         expect(turnOf(daemon, turnId)).toMatchObject({ state: 'done', attempt: 2 });
         expect(session.info).toMatchObject({ status: 'idle', activeTurnId: null, agentSessionId });
         const argv = daemon.claude.started[0]!.argv;
@@ -166,7 +167,7 @@ describe('resume-run', () => {
         expect(daemon.outbox.list()).toEqual([]);
 
         // Run again (a restart between the work and the removal of its entry), it starts nothing.
-        await daemon.chats.resumeRun('chat-child', turnId, 2);
+        await daemon.chats.core.resumeRun('chat-child', turnId, 2);
         expect(daemon.claude.started).toHaveLength(1);
     });
 
@@ -175,12 +176,12 @@ describe('resume-run', () => {
 
         const daemon = await boot();
         daemon.worker.start();
-        await daemon.chats.recoverInterrupted();
+        await daemon.chats.core.recoverInterrupted();
         await untilTurnDone(daemon, turnId);
 
         expect(turnOf(daemon, turnId)).toMatchObject({ state: 'done', attempt: 2 });
         // The fake hands a resumed thread its own id back and makes a new one for `thread/start`.
-        expect(daemon.chats.get('chat-child')?.info.agentSessionId).toBe(agentSessionId);
+        expect(daemon.chats.core.get('chat-child')?.info.agentSessionId).toBe(agentSessionId);
         expect(daemon.codex.started).toHaveLength(1);
     });
 
@@ -189,12 +190,12 @@ describe('resume-run', () => {
 
         const daemon = await boot();
         daemon.worker.start();
-        await daemon.chats.recoverInterrupted();
+        await daemon.chats.core.recoverInterrupted();
         await untilTurnDone(daemon, turnId, 'chat-view');
         await daemon.worker.settled();
 
         expect(turnOf(daemon, turnId, 'chat-view')).toMatchObject({ state: 'done', attempt: 2 });
-        expect(daemon.chats.get('chat-view')?.info).toMatchObject({ status: 'idle', activeTurnId: null, agentSessionId });
+        expect(daemon.chats.core.get('chat-view')?.info).toMatchObject({ status: 'idle', activeTurnId: null, agentSessionId });
         const argv = daemon.claude.started[0]!.argv;
         expect(argv).toContain(`--resume=${agentSessionId}`);
         expect(daemon.outbox.list()).toEqual([]);
@@ -205,11 +206,11 @@ describe('resume-run', () => {
 
         const daemon = await boot();
         daemon.worker.enqueue = () => Promise.reject(new Error('the outbox is not writable'));
-        await daemon.chats.recoverInterrupted();
+        await daemon.chats.core.recoverInterrupted();
 
         expect(turnOf(daemon, turnId)).toMatchObject({ state: 'aborted' });
         expect(
-            daemon.chats
+            daemon.chats.core
                 .get('chat-child')
                 ?.thread.list()
                 .find((item) => item.kind === 'note')
@@ -230,7 +231,7 @@ describe('resume-run', () => {
             throw new Error('claude is not installed');
         });
         daemon.worker.start();
-        await daemon.chats.recoverInterrupted();
+        await daemon.chats.core.recoverInterrupted();
         await daemon.worker.settled();
         expect(spawns).toBe(1);
         expect(turnOf(daemon, turnId)).toMatchObject({ state: 'running' });
@@ -241,7 +242,7 @@ describe('resume-run', () => {
         }
         expect(spawns).toBe(RETRY_DELAYS_MS.length + 1);
         expect(turnOf(daemon, turnId)).toMatchObject({ state: 'aborted' });
-        const session = daemon.chats.get('chat-child')!;
+        const session = daemon.chats.core.get('chat-child')!;
         expect(session.info).toMatchObject({ status: 'idle', activeTurnId: null, running: false });
         expect(
             session.thread.list().find((item) => item.kind === 'note' && item.level === 'warning' && item.text.includes('could not be resumed'))
@@ -297,10 +298,10 @@ describe('resume-run', () => {
         }
 
         const daemon = await boot();
-        await daemon.chats.recoverInterrupted();
+        await daemon.chats.core.recoverInterrupted();
         expect(daemon.outbox.list()).toEqual([]);
         const notesOf = (chatId: string): Array<{ turnId: string | null; level: string; text: string }> =>
-            (daemon.chats.get(chatId)?.thread.list() ?? []).flatMap((item) =>
+            (daemon.chats.core.get(chatId)?.thread.list() ?? []).flatMap((item) =>
                 item.kind === 'note' ? [{ turnId: item.turnId, level: item.level, text: item.text }] : []
             );
         const note = (turnId: string, reason: string) => ({
@@ -315,10 +316,10 @@ describe('resume-run', () => {
         expect(notesOf('chat-elsewhere')).toEqual([note('turn-1', 'no project holds this chat any more')]);
         expect(notesOf('chat-view')).toEqual([note('turn-1', 'the agent had not started a session to resume yet')]);
         for (const { chatId } of cases) {
-            expect(daemon.chats.get(chatId)?.thread.get('turn-1')).toMatchObject({ state: 'aborted' });
-            expect(daemon.chats.get(chatId)?.info).toMatchObject({ status: 'idle', activeTurnId: null });
+            expect(daemon.chats.core.get(chatId)?.thread.get('turn-1')).toMatchObject({ state: 'aborted' });
+            expect(daemon.chats.core.get(chatId)?.info).toMatchObject({ status: 'idle', activeTurnId: null });
         }
-        expect(daemon.chats.get('chat-child')?.thread.get('turn-0')).toMatchObject({ state: 'aborted' });
+        expect(daemon.chats.core.get('chat-child')?.thread.get('turn-0')).toMatchObject({ state: 'aborted' });
         expect(daemon.claude.started).toHaveLength(0);
     });
 
@@ -326,9 +327,9 @@ describe('resume-run', () => {
         const { turnId } = await interruptChild();
 
         const daemon = await boot();
-        await daemon.chats.recoverInterrupted();
+        await daemon.chats.core.recoverInterrupted();
         expect(daemon.outbox.list()).toHaveLength(1);
-        daemon.chats.cancel('chat-child');
+        daemon.chats.core.cancel('chat-child');
         expect(turnOf(daemon, turnId)).toMatchObject({ state: 'aborted' });
 
         daemon.worker.start();

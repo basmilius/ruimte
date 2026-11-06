@@ -28,7 +28,7 @@ interface ArtifactsInput {
 
 export async function wireArtifacts(input: ArtifactsInput): Promise<ArtifactsBundle> {
     const { home, machineId, stores, agents } = input;
-    const { chats } = agents;
+    const { chats, chatManager } = agents;
     const projects = input.projects.store;
     const store = new ArtifactStore({ root: join(home, 'artifacts') });
     // Before a client or an agent can ask, so a save a stop cut short is gone or whole by then.
@@ -54,7 +54,7 @@ export async function wireArtifacts(input: ArtifactsInput): Promise<ArtifactsBun
         home,
         machineId,
         projects: { known: () => projects.known(), projectOf: (id) => projects.locate(id)?.projectId ?? null },
-        chats: { findAttachment: (chatId, id) => chats.findAttachment(chatId, id), hasStored: (chatId) => chats.hasStored(chatId) },
+        chats: { findAttachment: (chatId, id) => chatManager.findAttachment(chatId, id), hasStored: (chatId) => chats.hasStored(chatId) },
         machineHome: input.machineHome,
         provenanceOf,
         pinned: () => pinnedVersionsOf(projects.index.pinnedArtifactVersions())

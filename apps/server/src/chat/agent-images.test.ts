@@ -88,7 +88,7 @@ describe('chat attach', () => {
         const image = await readFile(new URL(`../../../ios/Tests/Fixtures/Files/image.${extension}`, import.meta.url));
         const lines = await attach(daemon, 'chat-lead', image, `photo.${extension}`);
         const [, id] = lines[0]!.split('\t');
-        const found = await daemon.chats.findAttachment('chat-lead', id!);
+        const found = await daemon.chatManager.findAttachment('chat-lead', id!);
 
         expect(found).toMatchObject({ name: `photo.${extension}`, mime: 'image/heic' });
         expect(await readFile(found!.path)).toEqual(image);
@@ -102,7 +102,7 @@ describe('chat attach', () => {
         expect(id).toMatch(/^agent-[0-9a-f-]{36}$/);
         expect(lines[1]).toBe(`next\tShow it with <Image attachment="${id}" alt="..."/> in a ruimte-ui block`);
 
-        const found = await daemon.chats.findAttachment('chat-lead', id!);
+        const found = await daemon.chatManager.findAttachment('chat-lead', id!);
         expect(found).toMatchObject({ id, name: 'shot.png', mime: 'image/png', size: PNG.byteLength });
         expect(found!.path).toStartWith(join(home, 'attachments', 'chat-lead', `${id}~`));
         expect(await readFile(found!.path)).toEqual(PNG);
@@ -150,7 +150,7 @@ describe('chat attach', () => {
             const [kind, id, kept, type, size] = lines[0]!.split('\t');
             expect([kind, kept, type, size]).toEqual(['attachment', name, mime, String(bytes.byteLength)]);
             expect(lines[1]).toBe(`next\tShow it with <Model attachment="${id}">caption</Model> in a ruimte-ui block once the person asks to see it`);
-            const found = await daemon.chats.findAttachment('chat-lead', id!);
+            const found = await daemon.chatManager.findAttachment('chat-lead', id!);
             expect(found).toMatchObject({ id, name, mime, size: bytes.byteLength });
             expect(new Uint8Array(await readFile(found!.path))).toEqual(new Uint8Array(bytes));
         }
@@ -199,10 +199,10 @@ describe('finding an agent image', () => {
     test('answers only the exact ids of this chat, never a path or another chat', async () => {
         const daemon = await bootWithChat();
         const [, id] = (await attach(daemon, 'chat-lead', PNG))[0]!.split('\t');
-        expect(await daemon.chats.findAttachment('chat-lead', id!)).not.toBeNull();
-        expect(await daemon.chats.findAttachment('other-chat', id!)).toBeNull();
+        expect(await daemon.chatManager.findAttachment('chat-lead', id!)).not.toBeNull();
+        expect(await daemon.chatManager.findAttachment('other-chat', id!)).toBeNull();
         for (const bad of [`${id}.png`, `../${id}`, 'agent-', 'agent-../../x', '']) {
-            expect(await daemon.chats.findAttachment('chat-lead', bad)).toBeNull();
+            expect(await daemon.chatManager.findAttachment('chat-lead', bad)).toBeNull();
         }
     });
 
@@ -211,7 +211,7 @@ describe('finding an agent image', () => {
         const names = ['Home screen (dark).png', 'a/b\\c ~ d?.png', 'häuser-🏠.png', 'x'.repeat(190), 'tab\tand\nnewline.png'];
         for (const name of names) {
             const [, id, kept] = (await attach(daemon, 'chat-lead', PNG, name))[0]!.split('\t');
-            const found = await daemon.chats.findAttachment('chat-lead', id!);
+            const found = await daemon.chatManager.findAttachment('chat-lead', id!);
             expect(found!.name).toBe(kept!);
             expect(found!.name).toBe(name.length > 150 ? name.slice(0, found!.name.length) : name.replaceAll(/[\t\n]/g, ''));
             expect(Buffer.byteLength(basename(found!.path))).toBeLessThan(255);
@@ -221,21 +221,21 @@ describe('finding an agent image', () => {
     test('a fork gets the same images under the same ids, and the original keeps its own', async () => {
         const daemon = await bootWithChat();
         const [, id] = (await attach(daemon, 'chat-lead', PNG))[0]!.split('\t');
-        await daemon.chats.copyAgentImages('chat-lead', 'chat-fork');
-        const copy = await daemon.chats.findAttachment('chat-fork', id!);
+        await daemon.chatManager.copyAgentImages('chat-lead', 'chat-fork');
+        const copy = await daemon.chatManager.findAttachment('chat-fork', id!);
         expect(copy).toMatchObject({ id, name: 'shot.png', size: PNG.byteLength });
         expect(copy!.path).toStartWith(join(home, 'attachments', 'chat-fork', `${id}~`));
-        expect(await daemon.chats.findAttachment('chat-lead', id!)).not.toBeNull();
+        expect(await daemon.chatManager.findAttachment('chat-lead', id!)).not.toBeNull();
         // A link in the folder is not an image of the chat: it is neither found nor copied.
         const outside = join(root, 'secret.png');
         await writeFile(outside, PNG);
         const linked = 'agent-00000000-0000-4000-8000-000000000000';
         await symlink(outside, join(home, 'attachments', 'chat-lead', `${linked}.png`));
-        expect(await daemon.chats.findAttachment('chat-lead', linked)).toBeNull();
-        await daemon.chats.copyAgentImages('chat-lead', 'chat-fork-2');
-        expect(await readdir(join(home, 'attachments', 'chat-fork-2'))).toEqual([basename((await daemon.chats.findAttachment('chat-lead', id!))!.path)]);
+        expect(await daemon.chatManager.findAttachment('chat-lead', linked)).toBeNull();
+        await daemon.chatManager.copyAgentImages('chat-lead', 'chat-fork-2');
+        expect(await readdir(join(home, 'attachments', 'chat-fork-2'))).toEqual([basename((await daemon.chatManager.findAttachment('chat-lead', id!))!.path)]);
         // Nothing to copy leaves no folder behind.
-        await daemon.chats.copyAgentImages('chat-without-images', 'chat-empty');
+        await daemon.chatManager.copyAgentImages('chat-without-images', 'chat-empty');
         expect(await stat(join(home, 'attachments', 'chat-empty')).catch(() => null)).toBeNull();
     });
 });

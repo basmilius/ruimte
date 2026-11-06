@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { VisualStore } from '@adecore/agents/chat';
+import type { ChatCore, VisualStore } from '@adecore/agents/chat';
 import type { AgentLineageStore, NoticeStore, OutboxWorker, TaskStore } from '@adecore/agents/coordination';
 import type { ChatProvider, ProviderAccountsService } from '@adecore/agents/providers';
 import type { FakeCli, InProcessCli, ManualClock } from '@adecore/agents/testing';
@@ -42,7 +42,8 @@ export interface TestDaemon {
     prWatches: PrWatchStore;
     worker: OutboxWorker<OutboxWork>;
     sessions: SessionManager;
-    chats: ChatManager;
+    chats: ChatCore;
+    chatManager: ChatManager;
     plans: PlanStore;
     visuals: VisualStore;
     /* The fake terminals, which stay empty when `ptyAdapter` brings real ones. */
@@ -159,7 +160,7 @@ export async function bootTestDaemon(options: TestDaemonOptions): Promise<TestDa
     };
     const wired = await wireDaemon({ runtime: testRuntime(home), launcher: 'standalone', seams, shutdown: async () => undefined });
     const { stores, agents, work, canvasHost: host, machine: machineBundle } = wired.bundles;
-    const { sessions, chats } = agents;
+    const { sessions, chats, chatManager } = agents;
     const { fakes } = seams;
 
     // Written down by `setSwitches`, so a second boot over the same home starts from what a fresh machine has, as the test says.
@@ -188,6 +189,7 @@ export async function bootTestDaemon(options: TestDaemonOptions): Promise<TestDa
         worker: work.worker,
         sessions,
         chats,
+        chatManager,
         plans: agents.plans,
         visuals: agents.visuals,
         adapter: fakes.adapter,

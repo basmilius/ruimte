@@ -118,6 +118,7 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         notices: stores.notices,
         tasks: stores.tasks,
         chats: agents.chats,
+        chatManager: agents.chatManager,
         sessions: agents.sessions,
         lifecycle,
         alert: (target, nodeId, title, body) => {

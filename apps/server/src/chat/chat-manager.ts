@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ChatCore, type ChatCoreOptions, type CodexProcessSpec, claudeProjectSlug, limitedTurn } from '@adecore/agents/chat';
+import { ChatCore, type ChatCoreOptions, claudeProjectSlug, limitedTurn, type VisualStore } from '@adecore/agents/chat';
 import type { ChatReferences, ChatSession, PromptNotes, ResumeWords, ChatRecord, ChatRecordExtras } from '@adecore/agents/chat';
 import { cliMcpArgs, storedAccount, narrowerMode, type AccountUnusable } from '@adecore/agents/providers';
 import type {
@@ -15,11 +15,6 @@ import type {
     ChatNoteMessage,
     ChatSubagentItem,
     ChatTurnLimit,
-    ChatUiLinkPayload,
-    ChatUiLinkReading,
-    ChatUiQueryPayload,
-    ChatUiQueryReading,
-    ChatVisual,
     ContextSource,
     RuntimeMode,
     Task
@@ -64,56 +59,61 @@ export interface ChatPlans {
     hasOpenSteps(chatId: string): Promise<boolean>;
 }
 
-interface ChatManagerOptions extends ChatCoreOptions {
+/* What Ruimte's chats ask of the rest of the daemon. Every member is answered by the wiring; a test names the ones it cares about with `quietFacts`. */
+export interface ChatFacts {
+    // How deep a chat sits in a chain of agents; an unknown chat is one a person opened.
+    depthOf(chatId: string): number;
+    standalone(chatId: string): boolean;
+    // Whether computer use is on for this machine, read when a chat's CLI starts.
+    computer(): boolean;
+    // Whether agents may reach the machine's other open projects, read when a chat's CLI starts.
+    reachOpenProjects(): boolean;
+    // Whether an agent may show a page above its reply, read when a chat's CLI starts.
+    visualReplies(): boolean;
+    // Whether the chat's project has database connections, read when a chat's CLI starts.
+    databases(chatId: string): boolean;
+    // A client may open an agent before its outbox start; the planned configuration wins over client defaults.
+    openingAgent(chatId: string): ChatCreatePayload | undefined;
+    // The sources themselves, so a chat can name them to its agent and tell it what came and went between turns.
+    contextSources(chatId: string): ContextSource[];
+    // A view, node or text of the chat's own project, for a message a person attached it to; null for any other id.
+    reference(chatId: string, id: string): Reference | null;
+    // What another node left for this chat, taken once and put in front of the next prompt (`NoticeNotes`).
+    messageNotes(chatId: string): PromptNotes | null;
+    // The same messages, as the lines a person reads in the thread; asked once, when the chat is loaded.
+    unshownMessages(chatId: string): Promise<{ text: string; message: ChatNoteMessage }[]>;
+    // The prompt an agent node was made with, taken once; it becomes the thread's first message, and its brief is heard beside it.
+    firstPrompt(chatId: string): Promise<FirstPrompt | null>;
+    // When stopping the agent that opened a chat ended it too; a turn from before that is never resumed.
+    endedAt(chatId: string): number | null;
+    // Whether the chat is the hidden one an inline edit runs in, which hears how to answer and is no list's business.
+    inlineChat(chatId: string): boolean;
+    // The folder a chat works on as a design and whether that design stands on a canvas, which it hears about when its CLI starts; null for any other chat.
+    design(chatId: string): { folder: string; onCanvas: boolean } | null;
+    // Told each time a turn of a chat ends, so a design folder that moved during it takes in what the turn still wrote to the old one.
+    turnEnded(chatId: string, state: 'done' | 'aborted' | 'error'): void;
+    // The tasks a chat gave, so a chat loaded from disk shows a row for each even when a crash lost the write of one.
+    taskRows(chatId: string): Task[];
+    // A cleared chat is a conversation that gave no task, so what it gave before wakes it no more; the rows stay for a person.
+    dropWakes(chatId: string): Promise<void>;
+    endChildren(chatId: string): Promise<unknown>;
+    // The widest mode this chat may run in, whatever its record or its node says; null for no limit.
+    modeCeiling(chatId: string): RuntimeMode | null;
+    // Whether another machine gave this chat its task, which then never runs on the configuration the files it sent carry.
+    peerChat(chatId: string): boolean;
+    // Refuses a directory this chat may not start in, asked every time a chat is loaded.
+    checkCwd(chatId: string, cwd: string): Promise<void>;
+    // Whether the client holds the project the chat is in; a UI block reads and links only for one that does.
+    holdsProject(chatId: string, clientId: string): Promise<boolean>;
+    // The account a new chat in a project takes, or null where its project says nothing about the CLI.
+    projectAccount: ProjectAccountChooser;
+}
+
+interface ChatManagerOptions extends Omit<ChatCoreOptions, 'hooks' | 'codexSideCommand'> {
     // Where an agent reads its linked context, with Ruimte's MCP server beside it.
     contextUrl?: string;
-    // How deep a chat sits in a chain of agents; an unknown chat is one a person opened.
-    depthOf?: (chatId: string) => number;
-    standalone?: (chatId: string) => boolean;
-    // Whether computer use is on for this machine, read when a chat's CLI starts.
-    computer?: () => boolean;
-    // Whether agents may reach the machine's other open projects, read when a chat's CLI starts.
-    reachOpenProjects?: () => boolean;
-    // Whether an agent may show a page above its reply, read when a chat's CLI starts.
-    visualReplies?: () => boolean;
-    // Whether the chat's project has database connections, read when a chat's CLI starts.
-    databases?: (chatId: string) => boolean;
-    // A client may open an agent before its outbox start; the planned configuration wins over client defaults.
-    openingAgent?: (chatId: string) => ChatCreatePayload | undefined;
-    // The sources themselves, so a chat can name them to its agent and tell it what came and went between turns.
-    contextSources?: (chatId: string) => ContextSource[];
-    // A view, node or text of the chat's own project, for a message a person attached it to; null for any other id.
-    reference?: (chatId: string, id: string) => Reference | null;
-    // What another node left for this chat, taken once and put in front of the next prompt (`NoticeNotes`).
-    messageNotes?: (chatId: string) => PromptNotes;
-    // The same messages, as the lines a person reads in the thread; asked once, when the chat is loaded.
-    unshownMessages?: (chatId: string) => Promise<{ text: string; message: ChatNoteMessage }[]>;
-    // The prompt an agent node was made with, taken once; it becomes the thread's first message, and its brief is heard beside it.
-    firstPrompt?: (chatId: string) => Promise<FirstPrompt | null>;
-    // When stopping the agent that opened a chat ended it too; a turn from before that is never resumed.
-    endedAt?: (chatId: string) => number | null;
-    // Whether the chat is the hidden one an inline edit runs in, which hears how to answer and is no list's business.
-    inlineChat?: (chatId: string) => boolean;
-    // The folder a chat works on as a design and whether that design stands on a canvas, which it hears about when its CLI starts; null for any other chat.
-    design?: (chatId: string) => { folder: string; onCanvas: boolean } | null;
-    // Told each time a turn of a chat ends, so a design folder that moved during it takes in what the turn still wrote to the old one.
-    turnEnded?: (chatId: string, state: 'done' | 'aborted' | 'error') => void;
-    // The tasks a chat gave, so a chat loaded from disk shows a row for each even when a crash lost the write of one.
-    taskRows?: (chatId: string) => Task[];
-    // A cleared chat is a conversation that gave no task, so what it gave before wakes it no more; the rows stay for a person.
-    dropWakes?: (chatId: string) => Promise<void>;
-    endChildren?: (chatId: string) => Promise<unknown>;
+    facts: ChatFacts;
     plans?: ChatPlans;
-    // The widest mode this chat may run in, whatever its record or its node says; null for no limit.
-    modeCeiling: (chatId: string) => RuntimeMode | null;
-    // Whether another machine gave this chat its task, which then never runs on the configuration the files it sent carry.
-    peerChat?: (chatId: string) => boolean;
-    // Refuses a directory this chat may not start in, asked every time a chat is loaded.
-    checkCwd: (chatId: string, cwd: string) => Promise<void>;
-    // Whether the client holds the project the chat is in; a UI block reads and links only for one that does.
-    holdsProject?: (chatId: string, clientId: string) => Promise<boolean>;
-    // The account a new chat in a project takes, or null where its project says nothing about the CLI.
-    projectAccount?: ProjectAccountChooser;
 }
 
 /* The environment every CLI of a chat starts in: the daemon's own, without a terminal's hook variables. */
@@ -256,37 +256,17 @@ function taskRowItems(session: ChatSession, task: Task): ChatItem[] {
  * Ruimte's chats: the generic core with what the daemon adds to it. A chat runs in a project, hears
  * about the tools and its links, draws a row per task it gave, keeps its plans beside its record and
  * forks into the canvas, and a turn cut off by a restart or a limit is taken up through the outbox.
+ * The generic part is `core`, which this holds and gives its hooks.
  */
-export class ChatManager extends ChatCore {
+export class ChatManager {
+    readonly core: ChatCore;
+    private readonly facts: ChatFacts;
     private readonly contextUrl: string | null;
-    private readonly depthOf: (chatId: string) => number;
-    private readonly standalone: (chatId: string) => boolean;
-    private readonly computer: () => boolean;
-    private readonly reachOpenProjects: () => boolean;
-    private readonly visualReplies: () => boolean;
-    private readonly databases: (chatId: string) => boolean;
-    private readonly opening: NonNullable<ChatManagerOptions['openingAgent']>;
-    private readonly contextSources: (chatId: string) => ContextSource[];
-    private readonly reference: (chatId: string, id: string) => Reference | null;
-    private readonly messageNotes: ((chatId: string) => PromptNotes) | null;
-    private readonly unshownMessages: (chatId: string) => Promise<{ text: string; message: ChatNoteMessage }[]>;
-    private readonly firstPrompt: (chatId: string) => Promise<FirstPrompt | null>;
-    // Ruimte's instructions for a chat's next prompt, handed out once (`ContextNotes`).
-    private readonly briefs = new Map<string, string>();
-    private readonly inlineChat: (chatId: string) => boolean;
-    private readonly design: (chatId: string) => { folder: string; onCanvas: boolean } | null;
-    private readonly turnEnded: (chatId: string, state: 'done' | 'aborted' | 'error') => void;
-    private readonly modeCeiling: (chatId: string) => RuntimeMode | null;
-    private readonly peerChat: (chatId: string) => boolean;
-    private readonly checkCwd: (chatId: string, cwd: string) => Promise<void>;
-    private readonly holdsProject: (chatId: string, clientId: string) => Promise<boolean>;
-    private readonly ended: (chatId: string) => number | null;
-    private readonly taskRows: (chatId: string) => Task[];
-    private readonly dropWakes: (chatId: string) => Promise<void>;
-    private readonly endChildren: (chatId: string) => Promise<unknown>;
     private readonly plans: ChatPlans | null;
     private readonly agentImages: AgentImages;
-    private readonly sideCodexCommand: string[];
+    private readonly visuals: VisualStore | null;
+    // Ruimte's instructions for a chat's next prompt, handed out once (`ContextNotes`).
+    private readonly briefs = new Map<string, string>();
     private readonly tokens = new Map<string, string>();
     // The tasks whose rows a clear hid, per chat.
     private readonly clearedTasks = new Map<string, Set<string>>();
@@ -294,27 +274,36 @@ export class ChatManager extends ChatCore {
     private readonly instructed = new Map<string, string>();
     /* The project default a new chat passed over and why, from its start until it opens. */
     private readonly passedOver = new Map<string, { account: string; reason: AccountUnusable }>();
-    private readonly projectAccount: ProjectAccountChooser;
     private readonly turnUsage = new TurnUsage();
 
     constructor(options: ChatManagerOptions) {
-        super({
+        const { contextUrl, facts, plans, ...coreOptions } = options;
+        this.facts = facts;
+        this.contextUrl = contextUrl ?? null;
+        this.plans = plans ?? null;
+        this.agentImages = new AgentImages(options.attachments);
+        this.visuals = options.visuals ?? null;
+        this.core = new ChatCore({
             codexClient: RUIMTE_CODEX_CLIENT,
             uiFenceLanguage: RUIMTE_UI_FENCE,
-            ...options,
+            ...coreOptions,
             ...mcpCommands(options),
+            // The app-server opened beside a chat runs no turn, so it starts without Ruimte's MCP server, for which it holds no token.
+            codexSideCommand: options.codexCommand ?? options.providers.get('codex').command,
             env: chatEnvOf(options.env ?? process.env),
             hooks: {
                 instructionsFor: (chatId) => this.instructionsFor(chatId),
                 resumeNoteFor: (chatId) => this.resumeNoteFor(chatId),
                 resumeInstructionsFor: (chatId) => this.resumeInstructionsFor(chatId),
                 foldersFor: (chatId) => this.foldersFor(chatId),
-                projectConfigFor: (chatId) => !this.peerChat(chatId),
+                projectConfigFor: (chatId) => !facts.peerChat(chatId),
                 promptNotesFor: (chatId) => this.promptNotesFor(chatId),
-                hiddenFor: (chatId) => this.inlineChat(chatId),
+                hiddenFor: (chatId) => facts.inlineChat(chatId),
                 referencesFor: (chatId) => this.referencesFor(chatId),
                 envFor: (chatId, base) => this.envFor(chatId, base),
-                admit: (chatId, cwd) => this.checkCwd(chatId, cwd),
+                admit: (chatId, cwd) => facts.checkCwd(chatId, cwd),
+                admitUi: (chatId, clientId) => this.requireHeldProject(chatId, clientId),
+                opening: (payload) => ({ ...payload, ...facts.openingAgent(payload.chatId) }),
                 runtimeModeFor: (chatId, mode) => this.runtimeModeFor(chatId, mode),
                 openingAccount: (chatId, kind, named) => this.openingAccountOf(chatId, kind, named),
                 opened: (session, stored) => this.opened(session, stored),
@@ -323,75 +312,22 @@ export class ChatManager extends ChatCore {
                     return { ...clearedExtras(this.clearedTasks.get(chatId)), ...(digest === undefined ? {} : { instructions: digest }) };
                 },
                 clearing: async (chatId) => {
-                    await this.endChildren(chatId);
+                    await facts.endChildren(chatId);
                 },
                 cleared: (chatId) => this.cleared(chatId),
                 forgotten: (chatId) => this.forgotten(chatId),
+                deleted: (chatId) => this.plans?.removeChat(chatId) ?? Promise.resolve(),
                 removed: (chatId, chat) => this.removed(chatId, chat),
                 broadcasted: (chatId, event) => this.broadcasted(chatId, event),
-                endedAt: (chatId) => this.ended(chatId),
+                endedAt: (chatId) => facts.endedAt(chatId),
                 unownedReason: () => 'no project holds this chat any more',
                 resumeWords: (chatId) => this.resumeWords(chatId)
             }
         });
-        this.contextUrl = options.contextUrl ?? null;
-        this.depthOf = options.depthOf ?? (() => 0);
-        this.standalone = options.standalone ?? (() => false);
-        this.computer = options.computer ?? (() => false);
-        this.reachOpenProjects = options.reachOpenProjects ?? (() => false);
-        this.visualReplies = options.visualReplies ?? (() => false);
-        this.databases = options.databases ?? (() => false);
-        this.opening = options.openingAgent ?? (() => undefined);
-        this.contextSources = options.contextSources ?? (() => []);
-        this.reference = options.reference ?? (() => null);
-        this.messageNotes = options.messageNotes ?? null;
-        this.unshownMessages = options.unshownMessages ?? (() => Promise.resolve([]));
-        this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
-        this.inlineChat = options.inlineChat ?? (() => false);
-        this.design = options.design ?? (() => null);
-        this.turnEnded = options.turnEnded ?? (() => undefined);
-        this.modeCeiling = options.modeCeiling;
-        this.peerChat = options.peerChat ?? (() => false);
-        this.checkCwd = options.checkCwd;
-        this.holdsProject = options.holdsProject ?? (() => Promise.resolve(true));
-        this.projectAccount = options.projectAccount ?? (() => null);
-        this.ended = options.endedAt ?? (() => null);
-        this.taskRows = options.taskRows ?? (() => []);
-        this.dropWakes = options.dropWakes ?? (() => Promise.resolve());
-        this.endChildren = options.endChildren ?? (() => Promise.resolve());
-        this.plans = options.plans ?? null;
-        this.agentImages = new AgentImages(options.attachments);
-        this.sideCodexCommand = options.codexCommand ?? options.providers.get('codex').command;
     }
 
     chatIdForToken(token: string): string | null {
         return this.tokens.get(token) ?? null;
-    }
-
-    /*
-     * The app-server opened beside a chat to read or fork one of its threads runs no turn, so it starts
-     * without Ruimte's MCP server, for which it holds no token.
-     */
-    override codexProcess(info: Pick<ChatInfo, 'cwd' | 'account'>): CodexProcessSpec {
-        return { ...super.codexProcess(info), command: this.sideCodexCommand };
-    }
-
-    override create(payload: ChatCreatePayload): Promise<ChatInfo> {
-        return super.create({ ...payload, ...this.opening(payload.chatId) });
-    }
-
-    forkSource(chatId: string): Promise<{ info: ChatInfo; items: ChatItem[] } | null> {
-        return this.readChat(chatId);
-    }
-
-    /* Also takes back the plans the fork was given and the helper's own conversation, beside what the core removes. */
-    override async deleteRecord(chatId: string): Promise<boolean> {
-        // Read before the record goes, since only the record names the helper's session; a loaded chat is `kill`'s.
-        const deleted = await super.deleteRecord(chatId);
-        if (deleted) {
-            await this.plans?.removeChat(chatId);
-        }
-        return deleted;
     }
 
     /* Gives a fork the plans of the chat it was forked from. */
@@ -399,35 +335,9 @@ export class ChatManager extends ChatCore {
         await this.plans?.copyChat(fromChatId, toChatId);
     }
 
-    /* Gives a fork the bookmarks on the messages it copied. */
-    async copyBookmarks(fromChatId: string, toChatId: string, itemIds: ReadonlySet<string>): Promise<void> {
-        await this.bookmarks?.copyChat(fromChatId, toChatId, (itemId) => itemIds.has(itemId));
-    }
-
-    /* Gives a fork the visuals `keep` picks, each with a page of its own. */
-    async copyVisuals(fromChatId: string, toChatId: string, keep: (visual: ChatVisual) => boolean): Promise<void> {
-        await this.visuals?.copyChat(fromChatId, toChatId, keep);
-    }
-
-    /*
-     * The file behind an attachment id, also of a chat nobody loaded since the daemon started: a
-     * visual's page is known to the store only once it read that chat's list, and an image an agent
-     * attached is found by its id in the chat's folder.
-     */
+    /* The file behind an attachment id, also of a chat nobody loaded since the daemon started, and of an image an agent attached. */
     async findAttachment(chatId: string, id: string): Promise<ChatAttachment | null> {
-        const found = this.attachment(chatId, id);
-        if (found !== null) {
-            return found;
-        }
-        if (this.visuals) {
-            // Reading the list is what lets the store answer for the pages of that chat.
-            await this.visuals.list(chatId).catch(() => []);
-            const page = this.visuals.attachment(chatId, id);
-            if (page !== null) {
-                return page;
-            }
-        }
-        return this.agentImages.find(chatId, id);
+        return (await this.core.findAttachment(chatId, id)) ?? this.agentImages.find(chatId, id);
     }
 
     /* Makes an image an agent has of its own an attachment of its chat; the bytes are checked by the caller. */
@@ -442,7 +352,7 @@ export class ChatManager extends ChatCore {
 
     /* Writes the row of a task into the chat that gave it, when that chat is loaded; loading it lays every row down anyway. */
     syncTaskRow(task: Task): void {
-        const session = this.get(task.parentId);
+        const session = this.core.get(task.parentId);
         if (session) {
             this.upsertTaskRow(session, task);
         }
@@ -453,19 +363,19 @@ export class ChatManager extends ChatCore {
         if (!(await this.loadStored(chatId))) {
             throw new ChatError('chat-not-found', `No chat ${chatId}`);
         }
-        return this.require(chatId).wake({ ...wake, taskIds: [] });
+        return this.core.require(chatId).wake({ ...wake, taskIds: [] });
     }
 
     /* Loads a chat nobody holds from its record; false when it has none. */
     private async loadStored(chatId: string): Promise<boolean> {
-        await this.loaded(chatId);
-        if (this.get(chatId)) {
+        await this.core.loaded(chatId);
+        if (this.core.get(chatId)) {
             return true;
         }
-        if (!(await this.hasStored(chatId))) {
+        if (!(await this.core.hasStored(chatId))) {
             return false;
         }
-        await this.create({ chatId });
+        await this.core.create({ chatId });
         return true;
     }
 
@@ -475,15 +385,15 @@ export class ChatManager extends ChatCore {
      * own is a conversation, and a worktree is never removed on its own.
      */
     async dropUnspokenFork(chatId: string): Promise<void> {
-        await this.loaded(chatId);
-        if (this.get(chatId)) {
+        await this.core.loaded(chatId);
+        if (this.core.get(chatId)) {
             return;
         }
-        const stored = await this.readChat(chatId);
+        const stored = await this.core.readChat(chatId);
         if (stored === null || !unspokenFork(stored.items, stored.info)) {
             return;
         }
-        await Promise.all([this.deleteRecord(chatId), this.dropForkCopy(stored)]);
+        await Promise.all([this.core.deleteRecord(chatId), this.dropForkCopy(stored)]);
     }
 
     /*
@@ -491,12 +401,12 @@ export class ChatManager extends ChatCore {
      * fork along: false, with nothing removed, for a loaded chat. A worktree is never removed.
      */
     async dropStored(chatId: string): Promise<boolean> {
-        await this.loaded(chatId);
-        if (this.get(chatId)) {
+        await this.core.loaded(chatId);
+        if (this.core.get(chatId)) {
             return false;
         }
-        const stored = await this.readChat(chatId);
-        const [deleted] = await Promise.all([this.deleteRecord(chatId), stored === null ? undefined : this.dropForkCopy(stored)]);
+        const stored = await this.core.readChat(chatId);
+        const [deleted] = await Promise.all([this.core.deleteRecord(chatId), stored === null ? undefined : this.dropForkCopy(stored)]);
         return deleted;
     }
 
@@ -507,15 +417,15 @@ export class ChatManager extends ChatCore {
      */
     async limitedTurnFor(chatId: string, account: string): Promise<{ turnId: string; limit: ChatTurnLimit['kind']; inPlace: boolean }> {
         await this.loadStored(chatId);
-        const session = this.require(chatId);
+        const session = this.core.require(chatId);
         const { provider: kind, account: from } = session.info;
         const to = storedAccount(kind, account);
         if (to === from) {
-            throw new ChatError('same-account', `The chat already runs under the account '${this.accountLabel(kind, to)}'`);
+            throw new ChatError('same-account', `The chat already runs under the account '${this.core.accountLabel(kind, to)}'`);
         }
         // As named and not as stored, which reads the default account as none: a turned-off default account is refused, and one the chat's project turned off.
-        this.projectAccount(chatId, kind, account);
-        this.requireAccount(kind, account);
+        this.facts.projectAccount(chatId, kind, account);
+        this.core.requireAccount(kind, account);
         if (session.info.activeTurnId !== null) {
             throw new ChatError('chat-busy', 'The chat is working on a turn; go on under another account once it ends');
         }
@@ -523,22 +433,12 @@ export class ChatManager extends ChatCore {
         if (turn === null) {
             throw new ChatError('not-limited', 'The last turn of this chat did not stop on a limit');
         }
-        return { turnId: turn.id, limit: turn.limit.kind, inPlace: this.canContinue(kind, from, to) };
+        return { turnId: turn.id, limit: turn.limit.kind, inPlace: this.core.canContinue(kind, from, to) };
     }
 
     // Attached to a chat is not enough: a UI block reads the project's git, launches and databases.
-    override async linkUi(payload: ChatUiLinkPayload, clientId: string): Promise<ChatUiLinkReading> {
-        await this.requireHeldProject(payload.chatId, clientId);
-        return super.linkUi(payload, clientId);
-    }
-
-    override async queryUi(payload: ChatUiQueryPayload, clientId: string): Promise<ChatUiQueryReading> {
-        await this.requireHeldProject(payload.chatId, clientId);
-        return super.queryUi(payload, clientId);
-    }
-
     private async requireHeldProject(chatId: string, clientId: string): Promise<void> {
-        if (!(await this.holdsProject(chatId, clientId))) {
+        if (!(await this.facts.holdsProject(chatId, clientId))) {
             throw new ChatError('refused-query', "Open this chat's project before reading its UI.");
         }
     }
@@ -564,7 +464,7 @@ export class ChatManager extends ChatCore {
      * once, carrying the tasks and messages that turn answered, the way a resume at the reset does.
      */
     continueInPlace(chatId: string, account: string): void {
-        const session = this.require(chatId);
+        const session = this.core.require(chatId);
         const turn = limitedTurn(session.thread.list());
         if (turn === null) {
             throw new ChatError('not-limited', 'The last turn of this chat did not stop on a limit');
@@ -573,10 +473,10 @@ export class ChatManager extends ChatCore {
         if (session.replacementWouldWait) {
             throw new ChatError('chat-busy', 'This chat still runs work in the background or waits on a request; go on under another account once that ends');
         }
-        this.switchAccount(session, account);
+        this.core.switchAccount(session, account);
         const { provider: kind, account: to } = session.info;
         session.wake({
-            ...continueOnWake(turn.limit.kind, this.accountLabel(kind, to), false),
+            ...continueOnWake(turn.limit.kind, this.core.accountLabel(kind, to), false),
             taskIds: turn.taskIds ?? [],
             ...(turn.messageFrom === undefined ? {} : { messageFrom: turn.messageFrom }),
             ...(turn.messageHop === undefined ? {} : { messageHop: turn.messageHop })
@@ -585,27 +485,27 @@ export class ChatManager extends ChatCore {
 
     /* Opens the first turn of a fork that goes on after the limited turn of its original. */
     async continueInFork(forkId: string, limit: ChatTurnLimit['kind']): Promise<void> {
-        const info = await this.create({ chatId: forkId });
-        this.require(forkId).wake({ ...continueOnWake(limit, this.accountLabel(info.provider, info.account), true), taskIds: [] });
+        const info = await this.core.create({ chatId: forkId });
+        this.core.require(forkId).wake({ ...continueOnWake(limit, this.core.accountLabel(info.provider, info.account), true), taskIds: [] });
     }
 
     /* The limited turn of the chat went on in a fork under `account`, so the chat itself never takes it up. */
     continuedInFork(chatId: string, account: string | undefined): void {
-        const session = this.get(chatId);
-        session?.continuedElsewhere(continuedInForkNote(this.accountLabel(session.info.provider, account)));
+        const session = this.core.get(chatId);
+        session?.continuedElsewhere(continuedInForkNote(this.core.accountLabel(session.info.provider, account)));
     }
 
     private promptOptions(chatId: string): ChatPromptOptions {
         return {
-            sources: this.contextSources(chatId),
-            depth: this.depthOf(chatId),
-            standalone: this.standalone(chatId),
-            computer: this.computer(),
+            sources: this.facts.contextSources(chatId),
+            depth: this.facts.depthOf(chatId),
+            standalone: this.facts.standalone(chatId),
+            computer: this.facts.computer(),
             // An inline edit answers with one replacement block, which a page above it would only contradict.
-            visuals: this.visualReplies() && !this.inlineChat(chatId),
-            databases: !this.inlineChat(chatId) && this.databases(chatId),
-            reach: !this.inlineChat(chatId) && this.reachOpenProjects(),
-            design: this.design(chatId)
+            visuals: this.facts.visualReplies() && !this.facts.inlineChat(chatId),
+            databases: !this.facts.inlineChat(chatId) && this.facts.databases(chatId),
+            reach: !this.facts.inlineChat(chatId) && this.facts.reachOpenProjects(),
+            design: this.facts.design(chatId)
         };
     }
 
@@ -622,18 +522,18 @@ export class ChatManager extends ChatCore {
         const digest = noteDigest(note);
         const known = this.instructed.get(chatId);
         this.instructed.set(chatId, digest);
-        const resumes = (this.get(chatId)?.info.agentSessionId ?? null) !== null;
+        const resumes = (this.core.get(chatId)?.info.agentSessionId ?? null) !== null;
         return resumes && known !== digest ? note : null;
     }
 
     private resumeNoteFor(chatId: string): string | null {
-        const context = contextPrompt(this.contextSources(chatId));
-        const visuals = this.visualReplies() && !this.inlineChat(chatId) ? VISUAL_RESUME_NOTE : null;
+        const context = contextPrompt(this.facts.contextSources(chatId));
+        const visuals = this.facts.visualReplies() && !this.facts.inlineChat(chatId) ? VISUAL_RESUME_NOTE : null;
         return [context, visuals].filter((part) => part !== null).join(' ') || null;
     }
 
     private foldersFor(chatId: string): readonly string[] {
-        if (!this.visuals || !this.visualReplies() || this.inlineChat(chatId)) {
+        if (!this.visuals || !this.facts.visualReplies() || this.facts.inlineChat(chatId)) {
             return [];
         }
         const path = this.visuals.workspacePath(chatId);
@@ -649,16 +549,16 @@ export class ChatManager extends ChatCore {
             return brief;
         };
         const notes = new ContextNotes(
-            () => this.contextSources(chatId),
-            this.messageNotes?.(chatId) ?? null,
+            () => this.facts.contextSources(chatId),
+            this.facts.messageNotes(chatId),
             takeBrief,
-            () => this.design(chatId)?.folder ?? null
+            () => this.facts.design(chatId)?.folder ?? null
         );
-        return this.inlineChat(chatId) ? new InlineEditNotes(notes) : notes;
+        return this.facts.inlineChat(chatId) ? new InlineEditNotes(notes) : notes;
     }
 
     private referencesFor(chatId: string): ChatReferences {
-        return (attached) => attachedReferences(attached, (id: string): Reference | null => this.reference(chatId, id));
+        return (attached) => attachedReferences(attached, (id: string): Reference | null => this.facts.reference(chatId, id));
     }
 
     /* A token per load of the chat, which the CLI presents to the daemon's MCP server as its bearer. */
@@ -672,18 +572,18 @@ export class ChatManager extends ChatCore {
     }
 
     private runtimeModeFor(chatId: string, mode: RuntimeMode): RuntimeMode {
-        const ceiling = this.modeCeiling(chatId);
+        const ceiling = this.facts.modeCeiling(chatId);
         return ceiling === null ? mode : narrowerMode(mode, ceiling);
     }
 
     /* The project's account for a new chat, remembering a default it passed over so the chat can say so once it opens. */
     private openingAccountOf(chatId: string, kind: AgentKind, named: string | undefined): string | undefined {
-        const chosen = this.projectAccount(chatId, kind, named);
+        const chosen = this.facts.projectAccount(chatId, kind, named);
         if (chosen === null) {
             return undefined;
         }
         // A chat that is already open asks for another start of its own, such as a fork, which gets no note.
-        if (chosen.passedOver && !this.get(chatId)) {
+        if (chosen.passedOver && !this.core.get(chatId)) {
             this.passedOver.set(chatId, chosen.passedOver);
         }
         return chosen.account;
@@ -697,7 +597,10 @@ export class ChatManager extends ChatCore {
             countChatStarted(session.info.provider);
             if (passed) {
                 const { provider, account } = session.info;
-                session.addNote('info', passedOverNote(this.accountLabel(provider, account), this.accountLabel(provider, passed.account), passed.reason));
+                session.addNote(
+                    'info',
+                    passedOverNote(this.core.accountLabel(provider, account), this.core.accountLabel(provider, passed.account), passed.reason)
+                );
             }
         }
         this.clearedTasks.set(chatId, new Set(clearedTaskIdsOf(stored?.extras ?? {})));
@@ -705,12 +608,12 @@ export class ChatManager extends ChatCore {
         if (typeof digest === 'string') {
             this.instructed.set(chatId, digest);
         }
-        for (const task of this.taskRows(chatId)) {
+        for (const task of this.facts.taskRows(chatId)) {
             this.upsertTaskRow(session, task);
         }
         // A message that landed while nobody held this chat shows here; the model hears it from the queue.
         try {
-            for (const { text, message } of await this.unshownMessages(chatId)) {
+            for (const { text, message } of await this.facts.unshownMessages(chatId)) {
                 session.addNote('info', text, message);
             }
         } catch (e) {
@@ -718,7 +621,7 @@ export class ChatManager extends ChatCore {
             console.error(`Showing the messages left for chat ${chatId} failed:`, errorText(e));
         }
         // Send before returning info so attach includes the initial prompt as the thread's first message.
-        const first = await this.firstPrompt(chatId);
+        const first = await this.facts.firstPrompt(chatId);
         if (first !== null) {
             // Left in place after the send: a send that queues hears its notes only when the queue lets it go.
             if (first.brief !== undefined) {
@@ -737,11 +640,11 @@ export class ChatManager extends ChatCore {
     /* A cleared chat hides the rows of the tasks it gave, and loses its plans and what those tasks still owed it. */
     private async cleared(chatId: string): Promise<void> {
         const cleared = this.clearedTasks.get(chatId) ?? new Set<string>();
-        for (const task of this.taskRows(chatId)) {
+        for (const task of this.facts.taskRows(chatId)) {
             cleared.add(task.id);
         }
         this.clearedTasks.set(chatId, cleared);
-        await Promise.all([this.plans?.removeChat(chatId), this.dropWakes(chatId)]);
+        await Promise.all([this.plans?.removeChat(chatId), this.facts.dropWakes(chatId)]);
     }
 
     private forgotten(chatId: string): void {
@@ -762,7 +665,7 @@ export class ChatManager extends ChatCore {
 
     /* A client following a task's node hears whenever an item of that node's thread lands; a delta alone does not. */
     private broadcasted(chatId: string, event: ChatEvent): void {
-        const info = this.get(chatId)?.info;
+        const info = this.core.get(chatId)?.info;
         if (event.type === 'delta') {
             if (info !== undefined) {
                 this.turnUsage.words(chatId, info.provider);
@@ -773,7 +676,7 @@ export class ChatManager extends ChatCore {
             this.turnUsage.turn(chatId, event.item, info);
         }
         if (event.type === 'item' && event.item.kind === 'turn' && event.item.state !== 'running') {
-            this.turnEnded(chatId, event.item.state);
+            this.facts.turnEnded(chatId, event.item.state);
         }
     }
 
@@ -797,7 +700,7 @@ export class ChatManager extends ChatCore {
     private async dropForkCopy(chat: { info: ChatInfo; items: readonly ChatItem[] }): Promise<void> {
         const { info } = chat;
         // Empty for a provider that does not run Claude Code.
-        const projectsDir = this.claudeProjectsDirOf(info);
+        const projectsDir = this.core.claudeProjectsDirOf(info);
         if (info.agentSessionId === null || projectsDir === '' || !unspokenFork(chat.items, info)) {
             return;
         }

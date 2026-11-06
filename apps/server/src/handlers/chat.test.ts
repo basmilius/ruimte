@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import type { ChatCore } from '@adecore/agents/chat';
 import type { ServerFrame } from '@ruimte/contracts';
-import type { ChatManager } from '../chat/chat-manager.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { ClientAccess } from '../wire.ts';
@@ -22,7 +22,7 @@ function register(started: string[]): Dispatcher {
             started.push(chatId);
             return `whole output of ${itemId}`;
         }
-    } as unknown as ChatManager;
+    } as unknown as ChatCore;
     const noMoves = (): Promise<never> => Promise.reject(new Error('Not under test'));
     chatArea({
         manager,

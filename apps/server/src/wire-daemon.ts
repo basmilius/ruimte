@@ -327,7 +327,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
                 index: projects.store.index,
                 tasks: stores.tasks,
                 lineage: stores.lineage,
-                chats,
+                chats: agents.chatManager,
                 now: () => seams.clock.now()
             }).catch((e) => console.error('Removing old hidden agent chats failed:', errorText(e)));
             serve({

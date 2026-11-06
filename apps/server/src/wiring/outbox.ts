@@ -1,4 +1,4 @@
-import { chatOpener, limitResumeAt } from '@adecore/agents/chat';
+import { chatOpener, limitResumeAt, type ChatCore } from '@adecore/agents/chat';
 import {
     deliverMessageHandler,
     OutboxWorker,
@@ -105,7 +105,8 @@ interface OutboxWiringDeps {
     prompts: PendingPromptStore;
     notices: NoticeStore;
     tasks: TaskStore;
-    chats: ChatManager;
+    chats: ChatCore;
+    chatManager: ChatManager;
     sessions: SessionManager;
     lifecycle: NodeLifecycle;
     /* Raises attention on a node. */
@@ -139,7 +140,7 @@ interface OutboxWiring {
  * The kinds of work the other features owe are handled where those are wired.
  */
 export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
-    const { link, outbox, projects, lineage, prompts, notices, tasks, chats, sessions, lifecycle } = deps;
+    const { link, outbox, projects, lineage, prompts, notices, tasks, chats, chatManager, sessions, lifecycle } = deps;
     const { worker } = link;
     const enqueue = (projectId: string, target: string, work: OutboxWork, notBefore?: number): Promise<void> =>
         link.enqueue(projectId, target, work, notBefore);
@@ -159,7 +160,7 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
 
     const taskWiring = wireTasks({
         tasks,
-        chats,
+        chats: chatManager,
         placed,
         entries: () => outbox.list(),
         remove: (id) => outbox.remove(id),
@@ -198,7 +199,7 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
     lifecycle.on('placed', (projectId, ids) => endChildren.places(projectId, ids));
 
     const summaries = wireSummaries({
-        chats,
+        chats: chatManager,
         projects,
         titleFor: (id) => projects.index.titleFor(id),
         enqueue
@@ -243,7 +244,7 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
     lifecycle.on('placed', (projectId, ids) => {
         void prompts.pruneLeftNodes(projectId, ids).catch((e) => failed('Pruning pending prompts failed', e));
         for (const forkId of lineage.forksLeaving(projectId, ids)) {
-            observers.dropped(chats.dropUnspokenFork(forkId));
+            observers.dropped(chatManager.dropUnspokenFork(forkId));
         }
         void lineage.prune(projectId, ids).catch((e) => failed('Pruning agent lineage failed', e));
         void notices.prune(projectId, ids).catch((e) => failed('Pruning waiting messages failed', e));

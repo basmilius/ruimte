@@ -1,6 +1,6 @@
+import type { ChatCore } from '@adecore/agents/chat';
 import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import type { AgentStateHost } from '../agents/agent-state.ts';
-import type { ChatManager } from '../chat/chat-manager.ts';
 import type { OutboxStore } from '../outbox/outbox.ts';
 import type { HiddenAgentStore } from '../projects/hidden-agents.ts';
 import type { SessionManager } from '../sessions/manager.ts';
@@ -8,7 +8,7 @@ import type { SessionManager } from '../sessions/manager.ts';
 export interface AgentStateSources {
     outbox: Pick<OutboxStore, 'owes'>;
     lineage: Pick<AgentLineageStore, 'endedAt' | 'startedBy'>;
-    chats: Pick<ChatManager, 'get' | 'hasStored' | 'cancel' | 'lastTurn'>;
+    chats: Pick<ChatCore, 'get' | 'hasStored' | 'cancel' | 'lastTurn'>;
     sessions: Pick<SessionManager, 'get'>;
 }
 
@@ -59,7 +59,7 @@ export function openedAgentCount(
         hiddenAgents: HiddenAgentStore;
         tasks: TaskStore;
         outbox: Pick<OutboxStore, 'ofTarget'>;
-        chats: Pick<ChatManager, 'get'>;
+        chats: Pick<ChatCore, 'get'>;
         sessions: Pick<SessionManager, 'get'>;
     },
     caller: string

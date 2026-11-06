@@ -113,10 +113,10 @@ export function sessionDeps({ agents, providers, stores, projects }: AreaInput):
 
 export function chatDeps(input: AreaInput): ChatDeps {
     const { agents, providers, stores, projects, work, git, canvasHost, chatMover } = input;
-    const { chats } = agents;
+    const { chats, chatManager } = agents;
     const store = projects.store;
     const forkDeps = chatForkDeps({
-        chats,
+        chats: chatManager,
         host: canvasHost,
         titleFor: (id) => store.index.titleFor(id),
         lineage: stores.lineage,
@@ -134,7 +134,7 @@ export function chatDeps(input: AreaInput): ChatDeps {
             info: (payload) => readForkInfo(forkDeps, payload),
             handoff: (payload) => readHandoff(forkDeps, payload),
             summarize: (chatId) => work.summaries.summarize(chatId),
-            continueOn: (payload) => continueOn({ chats, fork: (fork) => forkChat(forkDeps, fork) }, payload)
+            continueOn: (payload) => continueOn({ chats: chatManager, fork: (fork) => forkChat(forkDeps, fork) }, payload)
         },
         killed: (chatId) => work.prWatches.stop(chatId),
         moves: chatMover,
@@ -156,7 +156,7 @@ export function chatImageDeps({ projects, agents, machine }: AreaInput): ChatIma
                 const project = (await store.known()).find((entry) => entry.projectId === place.projectId);
                 return project === undefined ? null : { folder: place.folder, name: project.name };
             },
-            attachment: (chatId, attachmentId) => agents.chats.findAttachment(chatId, attachmentId),
+            attachment: (chatId, attachmentId) => agents.chatManager.findAttachment(chatId, attachmentId),
             refusePath: (path) => machine.machineHome.refuse(path)
         })
     };
@@ -287,7 +287,7 @@ export function archiveDeps(input: AreaInput): ArchiveDeps {
 export function bytesDeps({ agents, projects, git, artifacts, machine }: AreaInput): BytesDeps {
     return {
         sources: {
-            attachment: (chatId, id) => agents.chats.findAttachment(chatId, id),
+            attachment: (chatId, id) => agents.chatManager.findAttachment(chatId, id),
             projectIcon: (projectId, theme) => projects.store.iconFile(projectId, theme),
             file: readServedFile,
             archiveEntry: readArchiveEntry,

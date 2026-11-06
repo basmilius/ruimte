@@ -21,6 +21,7 @@ import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
 import { bootTestDaemon, releasedProject, type TestDaemon } from '../testing/test-daemon.ts';
+import { testChatManager } from './chat-manager-test-helpers.ts';
 import { retire } from './chat-manager.fixture.test.ts';
 import { ChatManager } from './chat-manager.ts';
 import { assistantTexts, turnsOf } from './chat-test-helpers.ts';
@@ -638,7 +639,7 @@ describe('forking a Codex chat', () => {
     beforeEach(async () => {
         home = await mkdtemp(join(tmpdir(), 'ruimte-fork-codex-'));
         const attachments = new AttachmentStore(home);
-        manager = new ChatManager({
+        manager = testChatManager({
             ...OPEN_BOUNDS,
             providers: new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) }),
             store: new ChatStore(home, { attachments: attachments }),
@@ -654,13 +655,13 @@ describe('forking a Codex chat', () => {
     });
 
     test('thread/fork is asked with the turn id Codex gave turn 2, beside the original that keeps its own process', async () => {
-        await manager.create({ chatId: 'chat-lead', provider: 'codex', cwd: home });
+        await manager.core.create({ chatId: 'chat-lead', provider: 'codex', cwd: home });
         for (const word of ['alpha', 'bravo', 'charlie', 'delta']) {
-            const before = turnsOf(manager.get('chat-lead')!.thread.list()).length;
-            await manager.send('chat-lead', word);
+            const before = turnsOf(manager.core.get('chat-lead')!.thread.list()).length;
+            await manager.core.send('chat-lead', word);
             await new Promise<void>((resolve) => {
-                const stop = manager.observe(() => {
-                    const lead = manager.get('chat-lead')!;
+                const stop = manager.core.observe(() => {
+                    const lead = manager.core.get('chat-lead')!;
                     if (lead.info.activeTurnId === null && turnsOf(lead.thread.list()).length === before + 1) {
                         stop();
                         resolve();
@@ -668,7 +669,7 @@ describe('forking a Codex chat', () => {
                 });
             });
         }
-        const lead = manager.get('chat-lead')!;
+        const lead = manager.core.get('chat-lead')!;
         const turns = turnsOf(lead.thread.list());
         const leadView = leadProject().views[0] as ProjectCanvasView;
         const canvas = inMemoryCanvas({ ...leadProject(), views: [{ ...leadView, nodes: [{ ...leadView.nodes[0]!, provider: 'codex' as const }] }] });

@@ -54,7 +54,7 @@ interface RoutinesInput {
 /* Routines on this machine: their files in each project, what ran and the clock the outbox keeps for them. */
 export async function wireRoutines({ home, machineId, stores, agents, projects, launches, artifacts }: RoutinesInput): Promise<RoutinesBundle> {
     const project = projects.store;
-    const { chats, outboxLink } = agents;
+    const { chats, chatManager, outboxLink } = agents;
     const runs = new RoutineRunStore(home);
     const authors = new RoutineAuthorStore(home);
     await Promise.all([runs.load(), authors.load()]);
@@ -108,7 +108,7 @@ export async function wireRoutines({ home, machineId, stores, agents, projects, 
                     return false;
                 }
                 const { mentions, skills } = routine.picked ?? {};
-                return chats.withBrief(
+                return chatManager.withBrief(
                     chatId,
                     continuedBrief(brief, routine.picked, (id) => project.index.referenceBeside(chatId, id)),
                     () => chat.wake({ text: prompt, label: routine.title, taskIds: [], ...(mentions ? { mentions } : {}), ...(skills ? { skills } : {}) })

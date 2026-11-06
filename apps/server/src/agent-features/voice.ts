@@ -1,7 +1,7 @@
+import type { ChatCore } from '@adecore/agents/chat';
 import type { AgentInfo, ChatDelivery, ChatInfo, ChatItem } from '@ruimte/contracts';
 import { voiceActions } from '../actions/voice-actions.ts';
 import type { CanvasHost } from '../canvas/host.ts';
-import type { ChatManager } from '../chat/chat-manager.ts';
 import type { SessionManager } from '../sessions/manager.ts';
 import { defineAgentFeature } from './feature.ts';
 
@@ -36,7 +36,7 @@ declare module '../canvas/host.ts' {
 }
 
 /* How a tool reads and prompts chats and asks which agent a terminal runs. */
-export function chatAccess(chats: ChatManager, sessions: SessionManager): Pick<CanvasHost, 'chatThreads' | 'chatPrompts' | 'terminals'> {
+export function chatAccess(chats: ChatCore, sessions: SessionManager): Pick<CanvasHost, 'chatThreads' | 'chatPrompts' | 'terminals'> {
     return {
         // A chat nobody opened since a restart is read from its record, which starts no CLI.
         chatThreads: {

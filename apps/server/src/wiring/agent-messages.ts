@@ -1,6 +1,6 @@
+import type { ChatCore } from '@adecore/agents/chat';
 import { chatNoticeTargets, showNotices, steerNotices, withinHops, type NoticeChat, type NoticeStore } from '@adecore/agents/coordination';
 import type { MessageHost } from '../canvas/host.ts';
-import type { ChatManager } from '../chat/chat-manager.ts';
 import { deliverNotice, MESSAGE_WORDS } from '../context/notices.ts';
 import { errorText } from '../error-text.ts';
 import type { OutboxWork } from '../outbox/outbox.ts';
@@ -11,7 +11,7 @@ import type { SessionManager } from '../sessions/manager.ts';
 interface AgentMessageDeps {
     notices: NoticeStore;
     sessions: Pick<SessionManager, 'get'>;
-    chats: ChatManager;
+    chats: ChatCore;
     projects: Pick<ProjectStore, 'index'>;
     enqueue(projectId: string, nodeId: string, work: OutboxWork): Promise<void>;
     push(): Pick<PushService, 'notify'>;
