@@ -69,7 +69,7 @@ for (const module of [agent, task, plan, chat]) {
 }
 roots.ProjectCanvasDefaultsSchema = ProjectCanvasViewSchema.pick({ layouts: true });
 const schemas: Record<string, Schema> = {};
-function stampRefinements(zodSchema: z.ZodType, jsonSchema: Schema, where: string): void {
+function stampRefinements(zodSchema: object, jsonSchema: Schema, where: string): void {
     const refinements = refinementsOf(zodSchema, where);
     if (refinements?.length) {
         jsonSchema['x-refinements'] = refinements;

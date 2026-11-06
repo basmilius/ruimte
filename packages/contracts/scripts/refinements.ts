@@ -54,7 +54,7 @@ interface CustomCheck {
     readonly _zod: { readonly def: { readonly check: string; readonly error?: (issue: unknown) => unknown } };
 }
 
-function customChecksOf(schema: z.ZodType): CustomCheck[] {
+function customChecksOf(schema: object): CustomCheck[] {
     const checks = (schema as unknown as { _zod: { def: { checks?: CustomCheck[] } } })._zod.def.checks ?? [];
 
     return checks.filter((check) => check._zod.def.check === 'custom');
@@ -70,7 +70,7 @@ function messageOf(check: CustomCheck): string | undefined {
  * The `x-refinements` of one zod schema as `toJSONSchema` meets it, or nothing. A custom check that no row names lands
  * in `UNNAMED_REFINEMENTS`.
  */
-export function refinementsOf(schema: z.ZodType, where: string): Record<string, number | string>[] | undefined {
+export function refinementsOf(schema: object, where: string): Record<string, number | string>[] | undefined {
     const stamped: Record<string, number | string>[] = [];
 
     for (const check of customChecksOf(schema)) {
