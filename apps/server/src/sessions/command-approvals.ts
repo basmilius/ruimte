@@ -131,13 +131,33 @@ export class CommandApprovals {
         });
     }
 
+    /* A person's yes for this cwd also spends an approval from before the cwd was bound, so it never carries over to another one. */
     approve(folder: string, nodeId: string, command: string, cwd?: string): Promise<void> {
         return this.ledger.run(async () => {
-            if (this.has(folder, nodeId, command, cwd)) {
+            const hash = hashOf(folder, nodeId, command, cwd);
+            const unbound = approvalHash(folder, nodeId, command);
+
+            if (this.unbound.has(unbound)) {
+                this.unbound.delete(unbound);
+
+                try {
+                    await this.saveUnbound();
+                } catch (e) {
+                    this.unbound.add(unbound);
+                    throw e;
+                }
+
+                // Kept only where it already holds: a node in its project folder hashes the same as before.
+                if (hash !== unbound) {
+                    await this.approvals.remove(unbound);
+                }
+            }
+
+            if (this.approvals.has(hash)) {
                 return;
             }
 
-            await this.approvals.write({ hash: hashOf(folder, nodeId, command, cwd), approvedAt: Date.now() });
+            await this.approvals.write({ hash, approvedAt: Date.now() });
         });
     }
 
