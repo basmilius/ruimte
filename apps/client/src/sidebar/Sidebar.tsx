@@ -1,7 +1,16 @@
 import { useDrafts } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
 import { Icon, Menu, ScrollArea, SectionLabel } from '@adecore/ui';
-import { designNodeChats, isDesignView, isExtensionView, isSessionView, isUnlistedView, sessionKindOfView, viewChats, type AgentKind } from '@ruimte/contracts';
+import {
+    designNodeChats,
+    isDesignView,
+    isExtensionView,
+    isUnlistedView,
+    projectSidebarRowHead,
+    projectSidebarSelf,
+    viewChats,
+    type AgentKind
+} from '@ruimte/contracts';
 import clsx from 'clsx';
 import { ArrowDown, ArrowUp, Plus } from 'lucide-react';
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -48,7 +57,6 @@ import { useUi } from '@/state/ui';
 import { useWaitingSince, waitDetailsOf } from '@/state/waiting';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/surface/canvas/drop';
 import { finderPaths } from '@/surface/canvas/finder-drop';
-import { viewGlyphOf } from '@/surface/cell-view';
 import { usePanelGap } from '@/surface/panel-layout';
 import {
     buildCombinedSidebar,
@@ -205,20 +213,11 @@ export function Sidebar({ brandMenu }: { brandMenu?: ReactNode }) {
                 ]);
             };
             const designChats = isDesignView(view) ? viewChats(view) : [];
-            const { icon, provider, path } = viewGlyphOf(view);
-            const own = isSessionView(view)
-                ? asRow({ id: view.id, kind: sessionKindOfView(view), title: view.name, titleSource: view.titleSource, provider: provider ?? undefined })
-                : null;
+            const self = projectSidebarSelf(view);
+            const own = self === null ? null : asRow({ ...self, provider: self.provider ?? undefined });
             return {
-                id: view.id,
-                name: view.name ?? '',
-                titleSource: 'titleSource' in view ? view.titleSource : undefined,
+                ...projectSidebarRowHead(view, shared, flags),
                 kind: view.kind,
-                shared: shared.includes(view.id),
-                flag: flags[view.id],
-                icon,
-                provider,
-                path,
                 nodes: live.filter((node) => isSessionKind(node.kind)).map(nodeRow),
                 // Only a session view is a node of its own; a divider and a drawing have no status.
                 self:

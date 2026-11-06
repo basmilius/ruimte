@@ -1,6 +1,6 @@
 import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
-import { AgentKindSchema, AgentStatusSchema } from './agent.ts';
+import { AgentKindSchema, AgentStatusSchema, type AgentKind } from './agent.ts';
 import { flagOf } from './project-flags.ts';
 import {
     ProjectSummaryResultSchema,
@@ -70,25 +70,59 @@ export const ProjectSummaryEventSchema = ProjectSummaryResultSchema.extend({
 });
 export type ProjectSummaryEvent = z.infer<typeof ProjectSummaryEventSchema>;
 
+function providerOfView(view: ProjectView): AgentKind | null {
+    return isChatHostView(view) || view.kind === 'terminal' ? (view.node.provider ?? null) : null;
+}
+
+/*
+ * What a row says of its view whoever builds it: the sidebar of the open project, which adds what it knows live, and the rows
+ * of a machine's sidebar. The kind stays with each, since the wire's list is closed.
+ */
+export function projectSidebarRowHead(
+    view: ProjectView,
+    shared: readonly string[],
+    flags?: ProjectFlags
+): Pick<ProjectSidebarView, 'id' | 'name' | 'titleSource' | 'icon' | 'provider' | 'path' | 'shared' | 'flag'> {
+    const flag = flagOf(flags, view.id);
+
+    return {
+        id: view.id,
+        name: view.name ?? '',
+        titleSource: 'titleSource' in view ? view.titleSource : undefined,
+        icon: viewIconOf(view),
+        provider: providerOfView(view),
+        path: view.kind === 'file' ? view.path : null,
+        shared: shared.includes(view.id),
+        ...(flag === null ? {} : { flag })
+    };
+}
+
+/* The node a session view is by itself, or null for a view that is not one. A design lists its later chats too. */
+export function projectSidebarSelf(view: ProjectView): ProjectSidebarView['self'] {
+    if (!isSessionView(view)) {
+        return null;
+    }
+
+    return {
+        id: view.id,
+        title: view.name,
+        titleSource: view.titleSource,
+        kind: sessionKindOfView(view),
+        provider: providerOfView(view),
+        ...(isDesignView(view) ? { chats: designNodeChats(view).map((chat) => chat.id) } : {})
+    };
+}
+
 /* Keep canvas geometry, note text and embedded files off background sidebar requests. A chat nobody
    wrote in yet, a chat an inline edit runs in and a canvas kept for another machine are not listed, so the rows a client builds for its own project read the same. */
 export function projectSidebarViews(views: readonly ProjectView[], shared: readonly string[], flags?: ProjectFlags): ProjectSidebarView[] {
     return views
         .filter((view): boolean => !isUnlistedView(view))
         .map((view) => {
-            const provider = isChatHostView(view) || view.kind === 'terminal' ? (view.node.provider ?? null) : null;
-            const flag = flagOf(flags, view.id);
             return {
-                id: view.id,
-                name: view.name ?? '',
-                titleSource: 'titleSource' in view ? view.titleSource : undefined,
+                ...projectSidebarRowHead(view, shared, flags),
                 // The row's kinds are a closed list on the wire, which an artifact view and a design join only as a row an older client can draw.
                 kind: view.kind === 'artifact' || view.kind === 'design' ? UNKNOWN_KIND : view.kind,
-                icon: viewIconOf(view),
-                provider,
-                path: view.kind === 'file' ? view.path : null,
-                shared: shared.includes(view.id),
-                ...(flag === null ? {} : { flag }),
                 nodes: isCanvasView(view)
                     ? view.nodes.flatMap((node) =>
                           // A design node goes as the chat it is, since the kinds are a closed list on the wire.
@@ -106,16 +140,7 @@ export function projectSidebarViews(views: readonly ProjectView[], shared: reado
                               : []
                       )
                     : [],
-                self: isSessionView(view)
-                    ? {
-                          id: view.id,
-                          title: view.name,
-                          titleSource: view.titleSource,
-                          kind: sessionKindOfView(view),
-                          provider,
-                          ...(isDesignView(view) ? { chats: designNodeChats(view).map((chat) => chat.id) } : {})
-                      }
-                    : null,
+                self: projectSidebarSelf(view),
                 ...(isDesignView(view) ? { design: true } : {})
             };
         });

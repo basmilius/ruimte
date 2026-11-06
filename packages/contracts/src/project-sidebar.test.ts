@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { isOpenableView, isUnlistedView, type ProjectView } from './project';
-import { projectSidebarViews, ProjectSidebarResultSchema, ProjectSidebarViewSchema } from './project-sidebar';
+import { projectSidebarRowHead, projectSidebarSelf, projectSidebarViews, ProjectSidebarResultSchema, ProjectSidebarViewSchema } from './project-sidebar';
 
 test('the sidebar projection keeps navigation and session identity but excludes canvas content', () => {
     const views: ProjectView[] = [
@@ -136,4 +136,32 @@ test('a chat an extension draws is unlisted only where its extension runs, and a
     expect(isUnlistedView(drawn, () => false)).toBe(false);
     expect(isUnlistedView(drawnEmpty, () => false)).toBe(true);
     expect(projectSidebarViews([drawn], [])).toEqual([]);
+});
+
+test('the open project builds its rows from the same head and session node as the machine does', () => {
+    const chat: ProjectView = {
+        id: 'chat',
+        kind: 'chat',
+        name: 'Discussion',
+        titleSource: 'user',
+        node: { provider: 'claude' },
+        icon: { kind: 'lucide', value: 'star' }
+    };
+    const file: ProjectView = { id: 'file', kind: 'file', name: 'Readme', path: 'README.md' };
+    const [row] = projectSidebarViews([chat], ['chat'], { chat: 'blue' });
+
+    expect(projectSidebarRowHead(chat, ['chat'], { chat: 'blue' })).toEqual({
+        id: 'chat',
+        name: 'Discussion',
+        titleSource: 'user',
+        icon: { kind: 'lucide', value: 'star' },
+        provider: 'claude',
+        path: null,
+        shared: true,
+        flag: 'blue'
+    });
+    expect(row).toMatchObject(projectSidebarRowHead(chat, ['chat'], { chat: 'blue' }));
+    expect(row?.self).toEqual(projectSidebarSelf(chat));
+    expect(projectSidebarRowHead(file, [])).toMatchObject({ path: 'README.md', provider: null, shared: false });
+    expect(projectSidebarSelf(file)).toBeNull();
 });
