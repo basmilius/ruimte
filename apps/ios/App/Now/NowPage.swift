@@ -58,7 +58,9 @@ struct NowWatch: ViewModifier {
     }
 }
 
-/// The groups of Now as sections of a list: Needs you, Working, Finished and Coming up.
+/// The groups of Now: Needs you, Working, Finished and Coming up. With one column they are sections of a list, the
+/// iPhone's. With more they are blocks for a page to stack, beside the iPad's sidebar: the cards in a grid, and Working
+/// and Finished side by side.
 struct NowSections: View {
     let now: NowModel
     let board: NowBoard
@@ -69,6 +71,7 @@ struct NowSections: View {
     let open: (ProjectViewTarget) -> Void
     let openProject: (ProjectViewTarget) -> Void
     let openRoutine: (ScheduledRoute) -> Void
+    var columns = 1
 
     /// Half the gap between two cards above and below each. A card pads its own content, so its sides stand in from the
     /// margin by that padding and the content lines up with the page.
@@ -76,52 +79,109 @@ struct NowSections: View {
         top: MobileSpacing.medium / 2, leading: MobileSpacing.margin - MobileSpacing.cardPadding,
         bottom: MobileSpacing.medium / 2, trailing: MobileSpacing.margin - MobileSpacing.cardPadding)
 
+    private var isList: Bool { columns <= 1 }
+
+    /// The columns of the card grid; the last one has no gap after it.
+    static func grid(columns: Int) -> [GridItem] {
+        (0..<max(columns, 1)).map { column in
+            GridItem(
+                .flexible(), spacing: column < columns - 1 ? MobileSpacing.medium : nil, alignment: .top)
+        }
+    }
+
     var body: some View {
+        needsYou
+        working
+        comingUpGroup
+    }
+
+    @ViewBuilder private var needsYou: some View {
         if board.needsYou.isEmpty {
             NowNothingWaits(notifies: notifies).listRowInsets(Self.cardInsets)
-        } else {
+        } else if isList {
             Section {
                 header(String(localized: "Needs you"), count: board.needsYou.count, first: true)
                 ForEach(board.needsYou) { entry in
-                    NowCard(
-                        now: now, entry: entry,
-                        subtitle: NowCard.subtitle(entry, namesMachine: board.namesMachines, at: date),
-                        connected: connected(entry.target.machineID), task: now.task(for: entry.target)
-                    ) { open(entry.target) }
-                    .contextMenu { menu(entry) }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button {
-                            now.snoozes(for: entry.target.machineID)?.snooze(
-                                entry.target.itemID, until: SnoozeChoice.hour.until(from: .now))
-                        } label: {
-                            Label(String(localized: "1 hour"), lucideIcon: "alarm-clock")
-                        }
-                        .tint(MobileStyle.statusIdle)
-                    }
-                    .accessibilityIdentifier("now.\(entry.target.itemID)")
-                    .listRowInsets(Self.cardInsets)
+                    card(entry).listRowInsets(Self.cardInsets)
+                }
+            }
+        } else {
+            VStack(alignment: .leading, spacing: MobileSpacing.medium) {
+                MobileSectionHeader(title: String(localized: "Needs you"), count: board.needsYou.count)
+                LazyVGrid(columns: Self.grid(columns: columns), alignment: .leading, spacing: MobileSpacing.medium) {
+                    ForEach(board.needsYou) { card($0) }
                 }
             }
         }
-        section(String(localized: "Working"), board.working) { entry in
-            NowWorkingRow(
-                entry: entry, namesMachine: board.namesMachines, task: now.task(for: entry.target), date: date)
+    }
+
+    /// Snoozing for an hour is a swipe on a card, which only a card that is a row of a list can take.
+    private func card(_ entry: ProjectViewEntry) -> some View {
+        NowCard(
+            now: now, entry: entry,
+            subtitle: NowCard.subtitle(entry, namesMachine: board.namesMachines, at: date),
+            connected: connected(entry.target.machineID), task: now.task(for: entry.target)
+        ) { open(entry.target) }
+        .contextMenu { menu(entry) }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button {
+                now.snoozes(for: entry.target.machineID)?.snooze(
+                    entry.target.itemID, until: SnoozeChoice.hour.until(from: .now))
+            } label: {
+                Label(String(localized: "1 hour"), lucideIcon: "alarm-clock")
+            }
+            .tint(MobileStyle.statusIdle)
         }
-        section(String(localized: "Finished"), board.finished) { entry in
-            NowFinishedRow(
-                entry: entry, namesMachine: board.namesMachines, task: now.task(for: entry.target), date: date)
+        .accessibilityIdentifier("now.\(entry.target.itemID)")
+    }
+
+    @ViewBuilder private var working: some View {
+        if isList {
+            section(String(localized: "Working"), board.working, workingRow)
+            section(String(localized: "Finished"), board.finished, finishedRow)
+        } else if !board.working.isEmpty || !board.finished.isEmpty {
+            HStack(alignment: .top, spacing: MobileSpacing.medium) {
+                column(
+                    String(localized: "Working"), empty: String(localized: "Nothing is working."), board.working,
+                    workingRow)
+                column(
+                    String(localized: "Finished"), empty: String(localized: "Nothing finished while you were away."),
+                    board.finished, finishedRow)
+            }
         }
+    }
+
+    private func workingRow(_ entry: ProjectViewEntry) -> some View {
+        NowWorkingRow(
+            entry: entry, namesMachine: board.namesMachines, task: now.task(for: entry.target), date: date)
+    }
+
+    private func finishedRow(_ entry: ProjectViewEntry) -> some View {
+        NowFinishedRow(
+            entry: entry, namesMachine: board.namesMachines, task: now.task(for: entry.target), date: date)
+    }
+
+    @ViewBuilder private var comingUpGroup: some View {
         if !comingUp.isEmpty {
-            Section {
-                header(String(localized: "Coming up"))
-                MobileRowGroup(items: comingUp) { item in
-                    NowComingUpButton(
-                        item: item, namesMachine: board.namesMachines, date: date, open: open,
-                        openRoutine: openRoutine
-                    ) { menu($0) }
+            if isList {
+                Section {
+                    header(String(localized: "Coming up"))
+                    comingUpRows.listRowInsets(Self.cardInsets)
                 }
-                .listRowInsets(Self.cardInsets)
+            } else {
+                VStack(alignment: .leading, spacing: MobileSpacing.medium) {
+                    MobileSectionHeader(title: String(localized: "Coming up"))
+                    VStack(spacing: 0) { comingUpRows }
+                }
             }
+        }
+    }
+
+    private var comingUpRows: some View {
+        MobileRowGroup(items: comingUp) { item in
+            NowComingUpButton(
+                item: item, namesMachine: board.namesMachines, date: date, open: open, openRoutine: openRoutine
+            ) { menu($0) }
         }
     }
 
@@ -132,7 +192,7 @@ struct NowSections: View {
     }
 
     @ViewBuilder private func section<Label: View>(
-        _ title: String, _ entries: [ProjectViewEntry], @ViewBuilder label: @escaping (ProjectViewEntry) -> Label
+        _ title: String, _ entries: [ProjectViewEntry], _ label: @escaping (ProjectViewEntry) -> Label
     ) -> some View {
         if !entries.isEmpty {
             Section {
@@ -141,6 +201,27 @@ struct NowSections: View {
                     .listRowInsets(Self.cardInsets)
             }
         }
+    }
+
+    /// One of the two columns under the cards; an empty one keeps its place, so the other does not stretch across.
+    private func column<Label: View>(
+        _ title: String, empty: String, _ entries: [ProjectViewEntry], _ label: @escaping (ProjectViewEntry) -> Label
+    ) -> some View {
+        VStack(alignment: .leading, spacing: MobileSpacing.medium) {
+            MobileSectionHeader(title: title, count: entries.count)
+            if entries.isEmpty {
+                Text(empty)
+                    .font(.footnote).foregroundStyle(MobileStyle.faint)
+                    .padding(.horizontal, MobileSpacing.cardPadding)
+                    .frame(maxWidth: .infinity, minHeight: MobileMetrics.rowHeight, alignment: .leading)
+                    .mobileCard(padding: 0)
+            } else {
+                VStack(spacing: 0) {
+                    MobileRowGroup(items: entries) { entry in row(entry) { label(entry) } }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .top)
     }
 
     private func row<Label: View>(_ entry: ProjectViewEntry, @ViewBuilder label: () -> Label) -> some View {

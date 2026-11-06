@@ -338,4 +338,11 @@ final class NowBoardTests: XCTestCase {
         XCTAssertEqual(items.map(\.id), ["routine:mac:p:render", "snoozed:mac:app:a", "routine:mac:p:changelog"])
         XCTAssertEqual(items.map(\.at), [1, 2, 3].map { start.addingTimeInterval($0 * 3_600) })
     }
+
+    func testTheCardGridHasOneColumnPerCountWithAGapOnlyBetweenThem() {
+        XCTAssertEqual(NowSections.grid(columns: 1).map(\.spacing), [nil])
+        XCTAssertEqual(NowSections.grid(columns: 2).map(\.spacing), [MobileSpacing.medium, nil])
+        XCTAssertEqual(NowSections.grid(columns: 3).map(\.spacing), [MobileSpacing.medium, MobileSpacing.medium, nil])
+        XCTAssertEqual(NowSections.grid(columns: 0).count, 1, "A count under one is the phone's single column")
+    }
 }
