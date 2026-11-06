@@ -1,21 +1,11 @@
 import type { AgentStatus, ChatInfo } from '@adecore/agent-contracts';
+import { EXTENSION_ERROR_CODES } from './extension-vocabularies.generated.ts';
 
 /*
- * Why a call of an extension came back without its answer, the `ExtensionErrorCode` of `@ruimte/extension`. A daemon
- * refuses an extension under one of these, and a host turns any other code into one before an extension reads it.
+ * A daemon refuses an extension under one of the `ExtensionErrorCode`s of `@ruimte/extension`, and a host turns any other
+ * code into one before an extension reads it. The list follows the `.d.ts` (`extension-vocabularies.generated.ts`).
  */
-export const EXTENSION_ERROR_CODES = [
-    'permission-denied',
-    'no-project',
-    'no-canvas',
-    'not-found',
-    'outside-project',
-    'refused',
-    'limit',
-    'timeout',
-    'unavailable',
-    'failed'
-] as const;
+export { EXTENSION_ERROR_CODES };
 export type ExtensionErrorCode = (typeof EXTENSION_ERROR_CODES)[number];
 
 export type ExtensionResult<Value> = { ok: true; value: Value } | { ok: false; error: { code: ExtensionErrorCode; message: string } };

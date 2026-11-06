@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { EXTENSION_SLOT_NAMES, type ExtensionSlotName } from '@ruimte/contracts';
 import { Package } from 'lucide-react';
 import { contribute, useContributions, type PanelContribution } from '@/state/extension-registry';
-import type * as PublicClient from '../../../../packages/extension/client';
 
 function panel(label: string): PanelContribution {
     return {
@@ -35,15 +33,5 @@ describe('contribute', () => {
         remove();
 
         expect(useContributions.getState().panels.map((entry) => entry.label())).toEqual(['Second']);
-    });
-});
-
-describe('the slot names', () => {
-    test('are the places the types promise, each once', () => {
-        // Both assignments compile only while the list and `SlotName` of `@ruimte/extension/client` hold the same names.
-        const promised: readonly PublicClient.SlotName[] = EXTENSION_SLOT_NAMES;
-        const known: readonly ExtensionSlotName[] = promised;
-
-        expect(new Set(known).size).toBe(EXTENSION_SLOT_NAMES.length);
     });
 });

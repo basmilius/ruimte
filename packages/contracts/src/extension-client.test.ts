@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { extensionProjectPath } from './extension-client.ts';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { EXTENSION_CALLS_WITHOUT_PERMISSION, EXTENSION_CLIENT_PERMISSIONS, extensionCallPermission, extensionProjectPath } from './extension-client.ts';
 
 describe('a path an extension names', () => {
     test.each([
@@ -40,5 +42,86 @@ describe('a path an extension names', () => {
         ['/work/app', '//work/app/notes.md']
     ])('in %p, %p is outside', (folder, path) => {
         expect(extensionProjectPath(folder, path)).toBeNull();
+    });
+});
+
+interface DeclaredCall {
+    readonly call: string;
+    /* The permission its doc comment says it needs, if it names one. */
+    readonly documented: string | null;
+}
+
+/*
+ * The calls an `.d.ts` of `@ruimte/extension` declares: the members of its `export const area: {` objects and, when asked,
+ * its `export function`s, each with the permission its doc comment names. A doc on the object covers its members.
+ */
+function declaredCalls(module: 'client' | 'server', options: { functions: boolean }): DeclaredCall[] {
+    const calls: DeclaredCall[] = [];
+    let area: { name: string; documented: string | null } | null = null;
+    let doc = '';
+    let inDoc = false;
+
+    for (const line of readFileSync(join(import.meta.dir, '../../extension', `${module}.d.ts`), 'utf8').split('\n')) {
+        const trimmed = line.trim();
+
+        if (inDoc || trimmed.startsWith('/**')) {
+            doc = inDoc ? `${doc} ${trimmed}` : trimmed;
+            inDoc = !trimmed.endsWith('*/');
+            continue;
+        }
+
+        const documented = /Needs (?:the permission )?`([\w.]+)`/.exec(doc)?.[1] ?? null;
+        const objectDocumented = /Needs the permission `([\w.]+)`/.exec(doc)?.[1] ?? null;
+        const open = /^export const (\w+): \{$/.exec(line);
+        doc = '';
+
+        if (open !== null) {
+            area = { name: open[1] as string, documented: objectDocumented };
+        } else if (line === '};') {
+            area = null;
+        } else if (area !== null) {
+            const member = /^ {4}(\w+)[(<]/.exec(line)?.[1];
+
+            if (member !== undefined) {
+                calls.push({ call: `${area.name}.${member}`, documented: documented ?? area.documented });
+            }
+        } else if (options.functions) {
+            const name = /^export function (\w+)/.exec(line)?.[1];
+
+            if (name !== undefined) {
+                calls.push({ call: name, documented });
+            }
+        }
+    }
+
+    return calls;
+}
+
+describe('the permission of each call', () => {
+    const client = declaredCalls('client', { functions: true });
+    const server = declaredCalls('server', { functions: true });
+    const members = (calls: DeclaredCall[]) => calls.filter((entry) => entry.call.includes('.')).map((entry) => entry.call);
+    const guarded = Object.keys(EXTENSION_CLIENT_PERMISSIONS);
+
+    test('is in the table or in the list of calls that need none, for every call of an area the API declares', () => {
+        const accounted = new Set([...guarded, ...EXTENSION_CALLS_WITHOUT_PERMISSION]);
+
+        expect(client.length).toBeGreaterThan(30);
+        expect(server.length).toBeGreaterThan(5);
+        expect([...members(client), ...members(server)].filter((call) => !accounted.has(call))).toEqual([]);
+    });
+
+    test('is asked for only calls the API declares, and no call is in both lists', () => {
+        const declared = new Set([...client, ...server].map((entry) => entry.call));
+
+        expect([...guarded, ...EXTENSION_CALLS_WITHOUT_PERMISSION].filter((call) => !declared.has(call))).toEqual([]);
+        expect(guarded.filter((call) => EXTENSION_CALLS_WITHOUT_PERMISSION.includes(call))).toEqual([]);
+    });
+
+    test('is the one the docs of a call name', () => {
+        const documented = [...client, ...server].filter((entry) => entry.documented !== null && entry.call in EXTENSION_CLIENT_PERMISSIONS);
+
+        expect(documented.length).toBeGreaterThan(5);
+        expect(documented.filter((entry) => extensionCallPermission(entry.call) !== entry.documented)).toEqual([]);
     });
 });

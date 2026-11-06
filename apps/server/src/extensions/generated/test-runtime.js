@@ -6049,20 +6049,16 @@ function extensionActionPermission(action) {
   return Object.hasOwn(EXTENSION_ACTIONS, action) ? EXTENSION_ACTIONS[action] ?? null : null;
 }
 
-// packages/contracts/src/extension-client.ts
+// packages/contracts/src/extension-vocabularies.generated.ts
 var EXTENSION_SLOT_NAMES = [
   "selectionBar",
   "nodeHeader",
   "nodeMenu",
   "canvasMenu",
-  "lineMenu",
   "viewToolbar",
   "viewMenu",
   "panelHeader",
   "commandPalette",
-  "projectMenu",
-  "sidebarFooter",
-  "editorStatusBar",
   "sidebarRow",
   "tabMenu",
   "emptyCanvas",
@@ -6079,7 +6075,11 @@ var EXTENSION_SLOT_NAMES = [
   "noteToolbar",
   "routineMenu",
   "composer",
+  "projectMenu",
+  "sidebarFooter",
+  "editorStatusBar",
   "messageActions",
+  "lineMenu",
   "fileMenu",
   "editorToolbar",
   "editorMenu",
@@ -6087,6 +6087,8 @@ var EXTENSION_SLOT_NAMES = [
   "terminalToolbar",
   "browserToolbar"
 ];
+
+// packages/contracts/src/extension-client.ts
 function isExtensionSlotName(name) {
   return EXTENSION_SLOT_NAMES.includes(name);
 }
