@@ -7,6 +7,7 @@ import { CHARTS_NAMESPACE, CHARTS_RESOURCES } from '@adecore/charts';
 import editorWords from '@adecore/editor-react/locales/en.json' with { type: 'json' };
 import { UI_NAMESPACE, UI_RESOURCES } from '@adecore/ui';
 import i18next from 'i18next';
+import { connectPlatform } from './src/desktop/bridge';
 import { connectFormat } from './src/format/source';
 import { defaultCanvases, focusedCanvas } from './src/state/canvas';
 import './src/extensions/built-in';
@@ -70,6 +71,7 @@ installWorkspaceRegistries();
 
 // The formatters of @adecore/ui read the client's settings, which the tests set.
 connectFormat();
+connectPlatform();
 
 /*
  * Files share a worker under `--no-isolate`, and a preload's `afterAll` only runs when the worker ends,

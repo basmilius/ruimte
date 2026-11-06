@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { isApplePlatform } from '@adecore/ui';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
 import { canvasOfNode } from '@/state/canvas';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';

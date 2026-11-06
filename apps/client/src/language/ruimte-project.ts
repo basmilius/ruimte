@@ -9,9 +9,10 @@ import {
     type RenameSuggestionsRequest
 } from '@adecore/editor-react';
 import { fileUriToPath, pathToFileUri, type Diagnostic } from '@adecore/lsp';
+import { isApplePlatform } from '@adecore/ui';
 import { isPathBelow, namesPrompt, parseNames } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { isApplePlatform, openInSystemBrowser } from '@/desktop/bridge';
+import { openInSystemBrowser } from '@/desktop/bridge';
 import { editorAssistClientFor } from '@/editor-assist/client';
 import { useTemplateRequest } from '@/language/template-request';
 import { useSettings } from '@/state/settings';

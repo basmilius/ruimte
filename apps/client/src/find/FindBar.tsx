@@ -1,5 +1,5 @@
 import type { FindOptions } from '@adecore/editor-react/models';
-import { Button, ButtonGroup, Icon, IconButton, Surface, matchesShortcut, type Shortcut, Tooltip } from '@adecore/ui';
+import { Button, ButtonGroup, Icon, IconButton, Surface, matchesShortcut, type Shortcut, Tooltip, isApplePlatform } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
 import clsx from 'clsx';
 import {
@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import { useLayoutEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isApplePlatform } from '@/desktop/bridge';
 import { FIND_SHORTCUTS } from '@/find/shortcuts';
 import type { FindState } from '@/find/use-find';
 import { requiredShortcut } from '@/surface/editor-keymap';

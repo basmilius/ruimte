@@ -1,6 +1,6 @@
 import type { EditorEngine } from '@adecore/editor';
+import { isApplePlatform } from '@adecore/ui';
 import { codeHighlighter } from '@/code-highlighter';
-import { isApplePlatform } from '@/desktop/bridge';
 import { RUIMTE_EDITOR_KEYMAP } from '@/surface/editor-keymap';
 import { shellShortcuts } from '@/surface/terminal-keymap';
 import SearchWorker from './search.worker.ts?worker';

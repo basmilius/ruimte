@@ -1,5 +1,4 @@
-import type { Shortcut } from '@adecore/ui';
-import { isApplePlatform } from '@/desktop/bridge';
+import { isApplePlatform, type Shortcut } from '@adecore/ui';
 
 const CODES: Record<string, string> = {
     ',': 'Comma',

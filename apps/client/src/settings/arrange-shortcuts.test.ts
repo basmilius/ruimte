@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { shortcut, shortcutParts, type Shortcut } from '@adecore/ui';
+import { shortcut, shortcutParts, type Shortcut, isApplePlatform } from '@adecore/ui';
 import { commandIds, commandSpec } from '@/commands/registry';
-import { isApplePlatform } from '@/desktop/bridge';
 import { arrangeShortcuts } from '@/settings/arrange-shortcuts';
 import { commandArea, editorShortcutRows, isEditorCommand } from '@/settings/editor-shortcuts';
 import { searchSettings, shortcutSearchRows } from '@/settings/search';

@@ -1,5 +1,5 @@
 import { AgentIcon } from '@adecore/agents-react/providers';
-import { Tooltip, Icon, Input, ListRow, ContextMenu, Menu, SectionLabel } from '@adecore/ui';
+import { Tooltip, Icon, Input, ListRow, ContextMenu, Menu, SectionLabel, isApplePlatform } from '@adecore/ui';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import type { AgentKind, AgentStatus, CanvasNodeKind } from '@ruimte/contracts';
 import clsx from 'clsx';
@@ -14,7 +14,6 @@ import { WorkingMark } from '@/attention/WorkingMark';
 import { useBrowserDisplayTitle } from '@/browser/title';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import type { ProjectMenuRow } from '@/clients/project/list';
-import { isApplePlatform } from '@/desktop/bridge';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { wantsNewTab } from '@/layout/tab-drop';

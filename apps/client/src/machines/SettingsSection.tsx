@@ -1,9 +1,9 @@
-import { Icon, Select } from '@adecore/ui';
+import { Icon, Select, isApplePlatform } from '@adecore/ui';
 import { SettingsSection as Section, type SettingsSectionProps as SectionProps } from '@adecore/ui/settings';
 import { Laptop, Server, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { desktop, isApplePlatform } from '@/desktop/bridge';
+import { desktop } from '@/desktop/bridge';
 import { useListedMachines } from '@/machines/machine-list';
 import { usePickedMachine, usePickedMachineState } from '@/machines/picked-machine';
 import { useEndpointId } from '@/state/current-endpoint';

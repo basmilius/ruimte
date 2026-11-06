@@ -1,4 +1,4 @@
-import { EmptyState, Icon, messageOf } from '@adecore/ui';
+import { EmptyState, Icon, messageOf, isApplePlatform } from '@adecore/ui';
 import { deviceTools, liveStreamFormatOf, type DeviceInfo, type DeviceInput } from '@ruimte/contracts';
 import clsx from 'clsx';
 import i18next from 'i18next';
@@ -13,7 +13,6 @@ import {
     type WheelEvent as ReactWheelEvent
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isApplePlatform } from '@/desktop/bridge';
 import { routeDeviceKey } from '@/devices/device-keys';
 import {
     approachGestureTotal,

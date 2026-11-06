@@ -1,8 +1,9 @@
+import { isApplePlatform } from '@adecore/ui';
 import { isOpenableView, type SplitLayout } from '@ruimte/contracts';
 import type { MenuContext, MenuHost } from '@/commands/menu-context';
 import { menuFactsOf } from '@/commands/menu-facts';
 import { keepAwakeAvailable, keepAwakeChoice } from '@/controllers/keep-awake';
-import { desktop, isApplePlatform } from '@/desktop/bridge';
+import { desktop } from '@/desktop/bridge';
 import { canSplit, cellAt, cellCount, cellsRightOf, focusDirection, freeViewFor, isTabHost, maximizedCell, type SplitDirection } from '@/layout/split';
 import { viewStepTarget } from '@/project/views';
 import { canOpenWindows } from '@/project/windows';

@@ -1,5 +1,5 @@
 import type { TerminalViewHandle } from '@adecore/terminal';
-import { Button, ButtonGroup, Icon, Menu, PanelEmpty, useNow, messageOf } from '@adecore/ui';
+import { Button, ButtonGroup, Icon, Menu, PanelEmpty, useNow, messageOf, isApplePlatform } from '@adecore/ui';
 import { formatAgo, formatDuration } from '@adecore/ui/format';
 import clsx from 'clsx';
 import i18next from 'i18next';
@@ -8,7 +8,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDeviceList } from '@/clients/devices/state';
 import { useProjectRepos } from '@/controllers/git-repos';
-import { isApplePlatform } from '@/desktop/bridge';
 import { openLaunchAddress, showLaunchDevice, startLaunch } from '@/launches/actions';
 import { deviceTargetOf, matchLaunchDevice, type DeviceTarget } from '@/launches/device-target';
 import { LaunchMenu } from '@/launches/LaunchChip';

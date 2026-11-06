@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { useSubagentView } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
+import { isApplePlatform } from '@adecore/ui';
 import type { ProjectCanvasView, ProjectNode, ProviderInfo } from '@ruimte/contracts';
 import { act } from 'react';
 import { runBehavior } from '@/commands/behavior';
-import { isApplePlatform } from '@/desktop/bridge';
 import { focusedCanvas } from '@/state/canvas';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { endpointKey } from '@/state/keys';

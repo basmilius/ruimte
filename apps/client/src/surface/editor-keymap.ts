@@ -1,6 +1,5 @@
 import { chordOf, resolveKeymap, type KeymapId } from '@adecore/editor/keymap';
-import { shortcut, type Shortcut } from '@adecore/ui';
-import { isApplePlatform } from '@/desktop/bridge';
+import { shortcut, type Shortcut, isApplePlatform } from '@adecore/ui';
 
 export const RUIMTE_EDITOR_KEYMAP = resolveKeymap({
     expandSelection: {

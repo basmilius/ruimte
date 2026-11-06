@@ -1,4 +1,18 @@
-import { Button, Checkbox, Icon, IconButton, Menu, ScrollArea, SplitButton, TextArea, Tooltip, KEY_SHORTCUTS, matchesShortcut, messageOf } from '@adecore/ui';
+import {
+    Button,
+    Checkbox,
+    Icon,
+    IconButton,
+    Menu,
+    ScrollArea,
+    SplitButton,
+    TextArea,
+    Tooltip,
+    KEY_SHORTCUTS,
+    matchesShortcut,
+    messageOf,
+    isApplePlatform
+} from '@adecore/ui';
 import type { GitCapabilitiesResult } from '@ruimte/contracts';
 import clsx from 'clsx';
 import { ArrowUp, FolderGit2, LoaderCircle, Sparkles } from 'lucide-react';
@@ -6,7 +20,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
 import { cancelGitRunAction } from '@/action-port/person-actions';
-import { isApplePlatform } from '@/desktop/bridge';
 import { useGit } from '@/state/git';
 import { useToasts } from '@/state/toasts';
 import { amendTarget, commitTargets, nextActionId, splitMessage, type CommitCandidate } from '@/worktree-rules/git-actions';

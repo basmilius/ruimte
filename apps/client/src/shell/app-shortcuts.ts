@@ -1,6 +1,6 @@
+import { isApplePlatform } from '@adecore/ui';
 import { useEffect } from 'react';
 import { answerWindowKey } from '@/commands/key-dispatch';
-import { isApplePlatform } from '@/desktop/bridge';
 import { runActionShortcut } from '@/extensions/action-shortcuts';
 
 /* Mounted once by the app; a second listener would toggle the palette open and shut again. */

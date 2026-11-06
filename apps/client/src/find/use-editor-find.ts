@@ -1,10 +1,9 @@
 import { MAX_REPLACEMENT_PAGE, MAX_REPLACEMENT_CHARACTERS, type Editor, type EditorFindState } from '@adecore/editor';
 import { compileFind, type FindQuery } from '@adecore/editor-react/models';
-import { matchesShortcut } from '@adecore/ui';
+import { matchesShortcut, isApplePlatform } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isApplePlatform } from '@/desktop/bridge';
 import { escapeRegExp } from '@/find/escape-regexp';
 import { openFocusedFind } from '@/find/hosts';
 import { lastFindQuery, type FindSeed, type FindState } from '@/find/use-find';

@@ -21,7 +21,7 @@ import { useMapSource } from '@/chat/use-map-source';
 import { visualHostFor } from '@/chat/visuals';
 import { codeHighlighter } from '@/code-highlighter';
 import { CODE_THEMES } from '@/code-themes';
-import { desktop, isApplePlatform } from '@/desktop/bridge';
+import { desktop } from '@/desktop/bridge';
 import { downloadBlob } from '@/download';
 import { renderEmptyThread, renderMessageActions, renderToolActions, renderToolResult, useExpandingCommands } from '@/extensions/chat-seams';
 import { renderCodeFence } from '@/extensions/code-fences';
@@ -126,7 +126,6 @@ export const CHAT_HOST: ChatHostLayer = {
         label: (id) => accentLabel(id as AccentId),
         current: () => useSettings.getState().accent
     },
-    isApplePlatform,
     renderCodeFence,
     renderEmptyThread,
     renderMessageActions,

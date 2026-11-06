@@ -1,4 +1,4 @@
-import { isApplePlatform as isApplePlatformFromNavigator } from '@adecore/ui';
+import { setApplePlatform } from '@adecore/ui';
 import type { DesktopBridge, MachineMode } from '@ruimte/desktop-bridge';
 
 export type {
@@ -72,11 +72,14 @@ export function hasTrafficLights(): boolean {
    shell), and the first control starts 20px after that, so the lights read as their own group. */
 export const TRAFFIC_LIGHTS_INSET_PX = 84;
 
-/* In the desktop app and in a browser tab alike. Shortcuts differ there: Ctrl+B is readline's
-   backward-char and tmux's prefix, while Cmd+B is free. */
-export function isApplePlatform(): boolean {
-    const bridge = desktop();
-    return bridge ? bridge.platform === 'darwin' : isApplePlatformFromNavigator();
+/* `isApplePlatform` of `@adecore/ui` answers the desktop app's platform first and a browser tab's after. Shortcuts differ
+   there: Ctrl+B is readline's backward-char and tmux's prefix, while Cmd+B is free. */
+export function connectPlatform(): void {
+    setApplePlatform(() => {
+        const bridge = desktop();
+
+        return bridge === null ? undefined : bridge.platform === 'darwin';
+    });
 }
 
 /* Windows hides its menu bar, so the logo at the top of the sidebar opens the application menu. */

@@ -1,5 +1,17 @@
 import type { TerminalViewHandle } from '@adecore/terminal';
-import { Button, copyText, readClipboardText, Icon, ContextMenu, ErrorBoundary, Kbd, prefetcher, EDIT_SHORTCUTS, messageOf } from '@adecore/ui';
+import {
+    Button,
+    copyText,
+    readClipboardText,
+    Icon,
+    ContextMenu,
+    ErrorBoundary,
+    Kbd,
+    prefetcher,
+    EDIT_SHORTCUTS,
+    messageOf,
+    isApplePlatform
+} from '@adecore/ui';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { ClipboardPaste, Copy, Eraser, Eye, Play, RotateCw, Scan } from 'lucide-react';
@@ -7,7 +19,6 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { clearTerminalAction, restartTerminalAction, resumeTerminalAgentAction } from '@/action-port/person-actions';
 import { lastScreenOf, registerTerminal } from '@/clients/terminal/registry';
-import { isApplePlatform } from '@/desktop/bridge';
 import { TerminalDictation } from '@/dictation/TerminalDictation';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';

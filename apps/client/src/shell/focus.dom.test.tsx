@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { isApplePlatform } from '@adecore/ui';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
 import { StationMenu } from '@/shell/menu/StationMenu';
 import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';

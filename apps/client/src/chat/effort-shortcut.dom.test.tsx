@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import { isApplePlatform } from '@adecore/ui';
 import type { ProjectCanvasView, ProviderInfo } from '@ruimte/contracts';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
 import { focusedCanvas } from '@/state/canvas';
 import { chatInfoOf } from '../../testing/chat-info';
 import { mount, until, type Mounted } from '../../testing/dom';

@@ -2,7 +2,6 @@ import { ErrorBoundary, Tooltip, UIProvider } from '@adecore/ui';
 import { AddressBookClient, type ModelBenchmarksResult } from '@ruimte/pulsar';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { formatSource } from '@/format/source';
 import { ModelsBenchmarks } from '@/models/ModelsBenchmarks';
 import { RuimteMark } from '@/ui/RuimteMark';
 
@@ -37,7 +36,7 @@ function Page() {
 /* The model comparison on a page of its own at `bench.ruimte.app`: no machine, no account, only the address book. */
 export function BenchPage() {
     return (
-        <UIProvider i18n={i18next} formatSource={formatSource}>
+        <UIProvider i18n={i18next}>
             <ErrorBoundary label={i18next.t('models:dialog.failed')} className="fixed inset-0 bg-bg" reload>
                 <Page />
             </ErrorBoundary>

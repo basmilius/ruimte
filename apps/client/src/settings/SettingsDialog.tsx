@@ -1,7 +1,6 @@
-import { formatShortcut } from '@adecore/ui';
+import { formatShortcut, isApplePlatform } from '@adecore/ui';
 import { SettingsDialog as Dialog, type SettingsSectionEntry } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
-import { isApplePlatform } from '@/desktop/bridge';
 import { AccountTab } from '@/machine-ui/AccountTab';
 import { settingsSectionRegistry } from '@/registry/settings-sections';
 import { findSettings } from '@/settings/find-settings';

@@ -1,4 +1,5 @@
-import { desktop, isApplePlatform, type DesktopBridge, type WindowPoint } from '@/desktop/bridge';
+import { isApplePlatform } from '@adecore/ui';
+import { desktop, type DesktopBridge, type WindowPoint } from '@/desktop/bridge';
 import { confirmLeavingConflict } from '@/project/leave-conflict';
 import { detachWindowTab, dropWindowTab, restoreWindowTabs, tabAfterClosing, useWindowTabs } from '@/project/window-tabs';
 import { endpointKey, splitKey } from '@/state/keys';

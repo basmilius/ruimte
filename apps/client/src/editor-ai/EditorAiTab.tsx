@@ -1,8 +1,7 @@
-import { formatShortcut, Segmented, Switch } from '@adecore/ui';
+import { formatShortcut, Segmented, Switch, isApplePlatform } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { EDITOR_ASSIST_PROVIDERS, EditorAssistProviderSchema } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
-import { isApplePlatform } from '@/desktop/bridge';
 import { InlineAgentPicker } from '@/editor-ai/InlineAgentPicker';
 import { useEditorAssistAvailability } from '@/editor-assist/use-availability';
 import { SettingsSection } from '@/machines/SettingsSection';

@@ -1,9 +1,9 @@
-import { Icon, IconButton, Input, Keys, formatShortcut } from '@adecore/ui';
+import { Icon, IconButton, Input, Keys, formatShortcut, isApplePlatform } from '@adecore/ui';
 import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
 import { Search, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isApplePlatform, isDesktop } from '@/desktop/bridge';
+import { isDesktop } from '@/desktop/bridge';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { keyboardGroups } from '@/settings/keyboard-groups';
 import { filterShortcuts, shortcutGroupOf, shortcutRowId, type ShortcutGroup } from '@/settings/shortcuts';

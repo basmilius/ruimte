@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
+import { isApplePlatform } from '@adecore/ui';
 import { projectSidebarViews, type ChatInfo, type ProjectSummary, type ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
 import { projectSwitch } from '@/project/open';
 import { startWindowTabs, useWindowTabs } from '@/project/window-tabs';
 import { useEndpoints } from '@/state/endpoints';

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { PROMPT_SAMPLES } from '@adecore/agents-react/testing';
+import { isApplePlatform } from '@adecore/ui';
 import type { ChatApprovalItem, ChatInfo, ChatQuestionItem, ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
 import { showView } from '@/project/views';
 import { menuContext } from '@/shell/menu/context';
 import { useSnoozes } from '@/state/snooze';

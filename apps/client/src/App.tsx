@@ -6,7 +6,6 @@ import { desktop, machineMode } from '@/desktop/bridge';
 import { HostDialogs, HostOverlays } from '@/extensions/host/host-dialogs';
 import '@/extensions/built-in';
 import { startExtensions } from '@/extensions/watch';
-import { formatSource } from '@/format/source';
 import { useProjectSwitch } from '@/project/open';
 import { DormantScreen, ProjectSwitchScreen } from '@/project/ProjectSwitchScreen';
 import { windowDialogs } from '@/registry/dialogs';
@@ -111,7 +110,7 @@ export function App() {
     );
 
     return (
-        <UIProvider i18n={i18next} formatSource={formatSource}>
+        <UIProvider i18n={i18next}>
             <ChatScopeProvider>
                 {/* The last resort, for a failure outside every view, node and panel. It unmounts the
                 parked browser pages as well, which is why everything below carries a boundary of its own. */}

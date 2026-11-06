@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { isApplePlatform } from '@adecore/ui';
 import { EditorView } from '@codemirror/view';
 import type { ChatInfo } from '@ruimte/contracts';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
 import { useDocument } from '@/state/document';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';

@@ -1,5 +1,5 @@
 import { AgentIcon } from '@adecore/agents-react/providers';
-import { Icon } from '@adecore/ui';
+import { Icon, isApplePlatform } from '@adecore/ui';
 import { isCanvasView, isOpenableView } from '@ruimte/contracts';
 import { Blocks, SlidersHorizontal, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -8,7 +8,6 @@ import { shallow } from 'zustand/shallow';
 import { useBrowser } from '@/clients/browser/registry';
 import type { Command } from '@/commands/behavior';
 import { countCommand } from '@/commands/usage';
-import { isApplePlatform } from '@/desktop/bridge';
 import { usePaletteHits } from '@/extensions/palette-sources';
 import { refreshPrRepos, useCurrentPrRepos } from '@/github/pr-repos';
 import { appCommands, OPENING_COMMAND_IDS } from '@/palette/app-commands';

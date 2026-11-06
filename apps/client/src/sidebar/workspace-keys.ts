@@ -1,7 +1,6 @@
-import { isInFloatingLayer } from '@adecore/ui';
+import { isInFloatingLayer, isApplePlatform } from '@adecore/ui';
 import { onStandaloneView } from '@/commands/key-context';
 import type { WorkspaceKeys } from '@/commands/workspace-keys';
-import { isApplePlatform } from '@/desktop/bridge';
 import { focusViewRow } from '@/sidebar/sidebar-focus';
 import { activeViewOf, useDocument } from '@/state/document';
 import { drawingHasSomethingToClear, focusedDrawing } from '@/state/drawing';

@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, EmptyState, Icon, IconButton, Select, formatShortcut, KEY_SHORTCUTS } from '@adecore/ui';
+import { Button, ButtonGroup, EmptyState, Icon, IconButton, Select, formatShortcut, KEY_SHORTCUTS, isApplePlatform } from '@adecore/ui';
 import clsx from 'clsx';
 import { ArrowLeft, ArrowRight, Code, ExternalLink, Lock, RotateCw, Unplug, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -16,7 +16,7 @@ import { browserStreamScaleLimit, browserStreamScaleOptions, clampBrowserStreamS
 import { browserRouteAvailable } from '@/clients/browser/owner-route';
 import { browserRegistry, useBrowserRow } from '@/clients/browser/registry';
 import { useSwipeOverlay } from '@/clients/browser/swipe-overlay';
-import { desktop, isApplePlatform, isDesktop } from '@/desktop/bridge';
+import { desktop, isDesktop } from '@/desktop/bridge';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { useLocalDaemonId, usePage } from '@/nodes/use-page';

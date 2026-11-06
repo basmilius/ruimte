@@ -1,9 +1,8 @@
-import { matchesShortcut } from '@adecore/ui';
+import { matchesShortcut, isApplePlatform } from '@adecore/ui';
 import { behaviorOf, rawCanvasKeyHandlers, rawKeyHandlers, takeKey, type KeyHandler, type KeyPress } from '@/commands/behavior';
 import { keyboardOnCanvas } from '@/commands/key-context';
 import { commandForKey } from '@/commands/registry';
 import { countCommand } from '@/commands/usage';
-import { isApplePlatform } from '@/desktop/bridge';
 import { focusedCanvas } from '@/state/canvas';
 
 function pressOf(event: KeyboardEvent, apple: boolean): KeyPress {

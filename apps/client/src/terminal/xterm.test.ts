@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { isApplePlatform } from '@adecore/ui';
 import type { Terminal } from '@xterm/xterm';
-import { isApplePlatform } from '@/desktop/bridge';
 import { bindTerminalKeys } from './xterm';
 
 type KeyHandler = (event: KeyboardEvent) => boolean;

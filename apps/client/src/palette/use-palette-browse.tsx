@@ -1,11 +1,11 @@
-import { Button, Icon, Kbd, KEY_SHORTCUTS, matchesShortcut, messageOf, Tooltip } from '@adecore/ui';
+import { Button, Icon, Kbd, KEY_SHORTCUTS, matchesShortcut, messageOf, Tooltip, isApplePlatform } from '@adecore/ui';
 import type { FsBrowseResult } from '@ruimte/contracts';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { ArrowLeft, CornerLeftUp, Folder, FolderCheck } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { desktop, isApplePlatform } from '@/desktop/bridge';
+import { desktop } from '@/desktop/bridge';
 import { iconOfEntry } from '@/machines/machine-icon';
 import { MachineGlyph } from '@/machines/MachineGlyph';
 import { useMachineEntries } from '@/machines/use-machine-entries';

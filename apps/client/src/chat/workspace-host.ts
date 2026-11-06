@@ -1,4 +1,5 @@
 import type { ChatHostLayer } from '@adecore/agents-react';
+import { isApplePlatform } from '@adecore/ui';
 import i18next from 'i18next';
 import { createElement, useMemo } from 'react';
 import { answerComputerAsPerson } from '@/action-port/person-actions';
@@ -15,7 +16,6 @@ import { useTimelineFind } from '@/chat/use-chat-find';
 import { useNodeComputerApprovals } from '@/computer/computer';
 import { useContextSources } from '@/context/sources';
 import { DesignComposerHeader } from '@/design/DesignChats';
-import { isApplePlatform } from '@/desktop/bridge';
 import { DictationTextarea } from '@/dictation/DictationTextarea';
 import { dictationPreview, dictationRange } from '@/dictation/editor';
 import { saveToOutputActions } from '@/output/save';

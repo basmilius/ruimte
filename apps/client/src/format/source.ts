@@ -4,14 +4,14 @@ import { activeLanguage } from '@/i18n/active';
 import { useSettings } from '@/state/settings';
 
 /* The language and region a person set here, and the system's region the shell reads. */
-export const formatSource: FormatSource = {
+const formatSource: FormatSource = {
     language: activeLanguage,
     region: () => useSettings.getState().formatRegion,
     systemLocale: () => desktop()?.systemLocale,
     subscribe: (onChange) => useSettings.subscribe(onChange)
 };
 
-/* Before the first render as well as through `UIProvider`, so code outside React formats in the right region too. */
+/* Before the first render, so code outside React formats in the right region too. */
 export function connectFormat(): void {
     setFormatSource(formatSource);
 }

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
+import { isApplePlatform } from '@adecore/ui';
 import { formatDateTime } from '@adecore/ui/format';
 import { EditorView } from '@codemirror/view';
 import { REQUEST_SCHEMAS, zonedTime, type RequestType, type RoutineEntry, type RoutineRun } from '@ruimte/contracts';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
 import { liveCanvas } from '@/state/canvas';
 import { showRoutine, useRoutinesStage } from '@/state/routines-stage';
 import { useUi } from '@/state/ui';

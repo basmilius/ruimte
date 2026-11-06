@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import type { Editor } from '@adecore/editor';
+import { isApplePlatform } from '@adecore/ui';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import type { MenuNode } from '@ruimte/desktop-bridge';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
 import { registerFocusedLanguage } from '@/language/focused-language';
 import type { EditorLanguage } from '@/language/ruimte-editor-language';
 import { cellElement } from '@/layout/cell-rects';

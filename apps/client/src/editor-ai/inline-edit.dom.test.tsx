@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { isApplePlatform } from '@adecore/ui';
 import type { ChatItem } from '@ruimte/contracts';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
 import { textDrafts } from '@/state/text-drafts';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';

@@ -1,9 +1,8 @@
-import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@adecore/ui';
+import { matchesShortcut, type Shortcut, isInFloatingLayer, isApplePlatform } from '@adecore/ui';
 import { useEffect } from 'react';
 import type { StoreApi } from 'zustand';
 import { fitAction, historyAction } from '@/action-port/person-actions';
 import { GRID } from '@/canvas-model/math';
-import { isApplePlatform } from '@/desktop/bridge';
 import {
     copyDrawing,
     cutSelection,

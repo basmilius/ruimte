@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import { useChats } from '@adecore/agents-react/state';
 import { PROMPT_SAMPLES } from '@adecore/agents-react/testing';
+import { isApplePlatform } from '@adecore/ui';
 import type { ChatApprovalItem, ChatInfo, ChatItem, ChatQuestionItem, ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
 import { useAttention } from '@/state/attention';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';

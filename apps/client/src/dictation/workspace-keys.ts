@@ -1,6 +1,5 @@
-import { isInFloatingLayer, matchesShortcut } from '@adecore/ui';
+import { isInFloatingLayer, matchesShortcut, isApplePlatform } from '@adecore/ui';
 import type { WorkspaceKeys } from '@/commands/workspace-keys';
-import { isApplePlatform } from '@/desktop/bridge';
 import { cancelDictation, stopDictation, toggleFocusedDictation, useDictation } from '@/dictation/controller';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 

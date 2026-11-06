@@ -1,8 +1,7 @@
-import { isModHeld } from '@adecore/ui';
+import { isModHeld, isApplePlatform } from '@adecore/ui';
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import type { StoreApi } from 'zustand';
 import type { CameraSlice } from '@/canvas-model/camera-slice';
-import { isApplePlatform } from '@/desktop/bridge';
 import { createPanBatch } from '@/surface/canvas/pan-batch';
 import { createWheelPanSession, PAN_IDLE_MS } from '@/surface/canvas/wheel-pan-session';
 import { createZoomGlide, wheelZoomOf } from '@/surface/canvas/wheel-zoom';

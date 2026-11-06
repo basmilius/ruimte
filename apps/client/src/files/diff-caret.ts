@@ -1,10 +1,9 @@
 import type { DiffSource } from '@adecore/editor-react';
 import type { DiffSourceLine } from '@adecore/merge';
-import { matchesShortcut } from '@adecore/ui';
+import { matchesShortcut, isApplePlatform } from '@adecore/ui';
 import { useRef, type RefObject } from 'react';
 import { create } from 'zustand';
 import { ignoreRefusal, perform } from '@/action-port/perform';
-import { isApplePlatform } from '@/desktop/bridge';
 import { cellElement } from '@/layout/cell-rects';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';

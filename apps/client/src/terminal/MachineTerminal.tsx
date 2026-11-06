@@ -1,8 +1,8 @@
 import { TerminalView, type TerminalViewProps, type TerminalLinkBounds, type TerminalViewHandle } from '@adecore/terminal';
-import { Tooltip } from '@adecore/ui';
+import { Tooltip, isApplePlatform } from '@adecore/ui';
 import { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isApplePlatform, isDesktop } from '@/desktop/bridge';
+import { isDesktop } from '@/desktop/bridge';
 import { useEndpoints } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';

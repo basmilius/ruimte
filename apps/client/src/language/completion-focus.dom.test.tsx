@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { typeInto } from '@adecore/editor/testing';
+import { isApplePlatform } from '@adecore/ui';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
 import { useSettings } from '@/state/settings';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
