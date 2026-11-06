@@ -26,7 +26,7 @@ describe('the channels of the main process', () => {
         expect([...sent].filter((channel) => !registered.has(channel))).toEqual([]);
     });
 
-    test('main.ts installs no channel itself, only through the modules in src/main', () => {
-        expect(channels(readFileSync(join(SOURCE, 'main.ts'), 'utf8'), REGISTERED)).toEqual([]);
+    test('entry.ts installs no channel itself, only through the modules in src/main', () => {
+        expect(channels(readFileSync(join(SOURCE, 'entry.ts'), 'utf8'), REGISTERED)).toEqual([]);
     });
 });

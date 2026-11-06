@@ -58,7 +58,7 @@ async function run(): Promise<void> {
     protocol.handle(scheme.scheme, (request) => answerAppRequest(scheme, request));
     let window: Electron.BrowserWindow | null = null;
     const guard = installBrowserRoutes((event) => scheme.isAppSender(window?.webContents === event.sender, event.senderFrame), join(directory, 'guest.cjs'));
-    // As the shell answers it in `main.ts`: what an agent's `browser shot` and the plate's picture come through.
+    // As the shell answers it in `entry.ts`: what an agent's `browser shot` and the plate's picture come through.
     ipcMain.handle('browser:capture', async (_event, id: number) => {
         const guest = webContents.fromId(id);
         return guest ? (await guest.capturePage()).toPNG() : null;

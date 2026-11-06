@@ -2,7 +2,7 @@ import type { NavigationVerdict } from '@adecore/shell';
 import { EXTENSION_FILES_PATH, VISUAL_HOST_PATH } from '@ruimte/csp';
 
 /*
- * What the shell lets a page do, as pure decisions, so `main.ts` only wires them to Electron's events.
+ * What the shell lets a page do, as pure decisions, so `entry.ts` only wires them to Electron's events.
  * The app's page carries the whole bridge (the local secret included) and a browser node carries any
  * site on the web, so each rule here is a security boundary.
  */

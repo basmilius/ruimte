@@ -1,4 +1,4 @@
-import type { ModelInfo } from './index.ts';
+import type { ModelInfo } from '@adecore/agent-contracts/model';
 
 export interface EditorModelPrice {
     input_cost_per_token?: number;

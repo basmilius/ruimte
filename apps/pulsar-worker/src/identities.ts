@@ -11,7 +11,8 @@ import {
 } from '@ruimte/pulsar';
 import type { Env } from './env.ts';
 import { clientIp, failure, json, readBody, signInAgain } from './http.ts';
-import { PROVIDERS, type ProviderIdentity } from './providers.ts';
+import type { ProviderIdentity } from './oauth-provider.ts';
+import { PROVIDERS } from './providers.ts';
 import { LIMITS, overAnyLimit, sessionWithinLimits } from './rate-limit.ts';
 import { accountDisplayNameSql, accountLoginSql, accountProviderSql, authenticate, type AccountRow, type SessionContext } from './sessions.ts';
 

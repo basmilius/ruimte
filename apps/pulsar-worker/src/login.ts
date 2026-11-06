@@ -13,7 +13,7 @@ import type { Env } from './env.ts';
 import { clientIp, failure, json, noContent, signInAgain } from './http.ts';
 import { resolveAccount, spendLinkToken, storeLinkCode } from './identities.ts';
 import { countLogin } from './metrics.ts';
-import type { OAuthProvider } from './providers.ts';
+import type { OAuthProvider } from './oauth-provider.ts';
 import { bodyWithinLimit, LIMITS, overAnyLimit } from './rate-limit.ts';
 import {
     accountDisplayNameSql,

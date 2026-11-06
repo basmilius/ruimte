@@ -2,7 +2,7 @@ import { APPLE_NATIVE_CLIENT_ID, sha256 } from '@ruimte/pulsar';
 import { cleanDisplayName } from './display-name.ts';
 import type { Env } from './env.ts';
 import { decodeJwt, importP8, signEs256Jwt, verifyRs256 } from './jwt.ts';
-import type { OAuthProvider } from './providers.ts';
+import type { OAuthProvider } from './oauth-provider.ts';
 
 export const APPLE_ISSUER = 'https://appleid.apple.com';
 const AUTHORIZE_URL = 'https://appleid.apple.com/auth/authorize';
