@@ -1,6 +1,6 @@
 import type { RoutineListResult } from '@ruimte/contracts';
 import { field } from '../canvas/host.ts';
-import { approvalOf, runStateOf, scheduleText } from '../tools/routine-tools.ts';
+import { approvalOf, runStateOf, scheduleText } from './routine-words.ts';
 
 // The newest runs a read prints; the stage and `routine_list` reach the rest.
 export const REPORTED_RUNS = 10;

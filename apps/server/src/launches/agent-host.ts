@@ -1,6 +1,37 @@
-import type { LaunchHost } from '../canvas/host.ts';
+import type { LaunchConfig, LaunchConfigEntry, LaunchConfigKind, LaunchStartResult, LaunchStatus } from '@ruimte/contracts';
 import type { LaunchRunner } from './runner.ts';
 import type { LaunchStore } from './store.ts';
+
+/* A launch of a project as an agent sees it: what it is, whether a person approved it here, and what runs of it now. */
+export interface LaunchReading {
+    launchId: string;
+    name: string;
+    kind: LaunchConfigKind;
+    /* A group counts as approved once every launch it starts is. */
+    approved: boolean;
+    url: string | null;
+    port: number | null;
+    members: string[];
+    /* Null for one that has not run since the daemon started, and for a group. */
+    status: LaunchStatus | null;
+}
+
+/*
+ * The launches of a project. Every start through here is an agent's, so only a launch a person
+ * approved on this machine starts, and a stop is Ctrl+C and then SIGTERM, never a kill.
+ */
+export interface LaunchHost {
+    list(projectId: string): Promise<LaunchReading[]>;
+    /* The screen and scrollback of the launch's terminal; null when it has not run since the daemon started. */
+    text(projectId: string, launchId: string): Promise<string | null>;
+    start(projectId: string, launchId: string, restart: boolean): Promise<LaunchStartResult>;
+    /* How many of its launches ran and are being stopped. */
+    stop(projectId: string, launchId: string): Promise<number>;
+    /* The launches as their files hold them, which an agent's edit starts from. */
+    entries(projectId: string): Promise<LaunchConfigEntry[]>;
+    /* Never an approval: the launch is held until a person approves it as it stands. One that exists keeps its file. */
+    save(projectId: string, launch: LaunchConfig, shared: boolean): Promise<void>;
+}
 
 /*
  * The launches as the tools reach them. The actor is fixed to an agent here rather than passed in,

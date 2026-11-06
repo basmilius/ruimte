@@ -10,9 +10,10 @@ import {
     type ProjectCanvasView,
     type ProjectNode
 } from '@ruimte/contracts';
+import type { BrowserDriveHost } from '../browser/agent-host.ts';
 import type { DriveOutcome } from '../browser/drive.ts';
 import { arrangedCanvas, isChatView, notOnView, viewRequired } from '../canvas/chat-view.ts';
-import { field, orNote, referencedBy, type BrowserDriveHost, type CanvasHost } from '../canvas/host.ts';
+import { field, orNote, referencedBy, type CanvasHost } from '../canvas/host.ts';
 import { checkUrl } from '../canvas/nodes.ts';
 import { refuseOtherMachine } from '../canvas/remote-node.ts';
 import { hostService, type ServerActionContext } from './context.ts';

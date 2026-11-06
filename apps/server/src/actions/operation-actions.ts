@@ -1,7 +1,8 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { OPERATION_ACTIONS, type ActionHandlers, type ActionOutput, type OperationStatus } from '@ruimte/actions';
 import type { Task } from '@ruimte/contracts';
-import { type AgentState, type AgentStateHost, type CanvasHost } from '../canvas/host.ts';
+import type { AgentState, AgentStateHost } from '../agents/agent-state.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 type OperationAction = (typeof OPERATION_ACTIONS)[number];

@@ -34,7 +34,7 @@ import {
     type Worktree
 } from '@ruimte/contracts';
 import { agentNode, nameOf } from '../canvas/agents.ts';
-import type { AgentForkInput, CanvasHost, ForkOpener, MachineHost, ProjectHost } from '../canvas/host.ts';
+import type { CanvasHost, MachineHost, ProjectHost } from '../canvas/host.ts';
 import { MAX_CANVAS_NODES, newId } from '../canvas/nodes.ts';
 import { placeFree } from '../canvas/placement.ts';
 import { branchSlug } from '../canvas/worktree.ts';
@@ -50,6 +50,32 @@ import type { ChatManager } from './chat-manager.ts';
 import { forkClaudeTranscript, type TranscriptCutPoint } from './claude-fork.ts';
 import { ChatError } from './errors.ts';
 import { handoffBudget, handoffText } from './handoff.ts';
+
+/*
+ * The agent that forks a chat it opened itself. The fork becomes its child: one deeper than the agent,
+ * no wider than its mode, and counted against it. `recount` runs under the lock of the write, since
+ * a start at the same moment read the same count.
+ */
+export interface ForkOpener {
+    id: string;
+    depth: number;
+    ceiling: RuntimeMode;
+    recount(): void;
+}
+
+/* What an agent may ask of a fork: the person's choices of CLI, account, model, view and files stay theirs. */
+export interface AgentForkInput {
+    chatId: string;
+    /* Null forks after the last turn that finished. */
+    turnId: string | null;
+    title?: string;
+    branch?: string;
+}
+
+/* Forks a chat an agent opened into a child of that agent; absent on a host that forks none. */
+export interface AgentForkHost {
+    fork(input: AgentForkInput, opener: ForkOpener): Promise<ChatForkResult & { title: string }>;
+}
 
 /* Where a Codex fork goes on after (the turn Codex named, the n-th turn when it named none, or all of it). */
 type ThreadCutPoint = { turnId: string } | { turns: number } | null;

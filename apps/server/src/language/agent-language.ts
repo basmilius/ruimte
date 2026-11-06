@@ -8,6 +8,12 @@ import type { AgentDocument, LanguageHost } from './host.ts';
 import { KIND_PROFILES, lspLanguageId } from './profiles.ts';
 import type { SqlChoice, SqlFileContext } from './sql-file-context.ts';
 
+/* The project's running language servers as an agent may ask them; absent on a host without them. */
+export type LanguageAgentHost = Pick<
+    AgentLanguage,
+    'diagnostics' | 'hover' | 'definition' | 'references' | 'symbols' | 'sqlFile' | 'problems' | 'supertypes' | 'subtypes'
+>;
+
 /* A place in a file as an agent writes it: lines and columns from 1, a column counting characters. */
 interface AgentPosition {
     line: number;

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { LAUNCH_SECRET_REFERENCE, type LaunchConfig, type LaunchConfigEntry, type LaunchStartResult, type LaunchStatus } from '@ruimte/contracts';
-import type { CanvasHost, LaunchHost, LaunchReading } from '../canvas/host.ts';
+import type { CanvasHost } from '../canvas/host.ts';
+import type { LaunchHost, LaunchReading } from '../launches/agent-host.ts';
 import { agentLaunches } from '../launches/agent-host.ts';
 import type { LaunchStartOptions } from '../launches/runner.ts';
 import type { ResolvedLaunch } from '../launches/store.ts';

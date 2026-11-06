@@ -1,7 +1,7 @@
-import type { LaunchHost } from '../canvas/host.ts';
 import { checkCwd } from '../canvas/project-paths.ts';
 import { toplevel } from '../git/run.ts';
 import { AfterSettleLaunches } from '../launches/after-settle.ts';
+import type { LaunchHost } from '../launches/agent-host.ts';
 import { agentLaunches } from '../launches/agent-host.ts';
 import { LaunchRunner } from '../launches/runner.ts';
 import { managerSessions } from '../launches/sessions.ts';

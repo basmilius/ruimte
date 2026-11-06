@@ -1,5 +1,5 @@
 import type { ChatInfo } from '@ruimte/contracts';
-import type { ChatReadUsage } from '../canvas/host.ts';
+import type { ChatReadUsage } from './agent-host.ts';
 
 export type ChatUsageInfo = Pick<ChatInfo, 'provider' | 'model' | 'selection' | 'usage'>;
 

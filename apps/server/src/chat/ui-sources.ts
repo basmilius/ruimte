@@ -12,16 +12,25 @@ import {
     type GitFileState,
     type GitLogResult,
     type GitStatus,
+    type LaunchStatus,
     type Task
 } from '@ruimte/contracts';
 import { z } from 'zod';
-import type { LaunchReading } from '../canvas/host.ts';
 import { checkCwd } from '../canvas/project-paths.ts';
 import { UI_SOURCE_ARGS } from '../context/ui-source-args.ts';
 import type { AgentDatabases, DatabasePlace } from '../database/agent-databases.ts';
 import { realOrNull } from '../disk/real-path.ts';
 import { UiSourceAccessSchema } from './ui-access.ts';
 import { resolveUiProjectLink } from './ui-links.ts';
+
+/* A launch as the `launch.status` source reads it. */
+interface UiLaunch {
+    launchId: string;
+    name: string;
+    port: number | null;
+    url: string | null;
+    status: Pick<LaunchStatus, 'state' | 'exitCode'> | null;
+}
 
 export interface UiSourceHosts {
     place(chatId: string): DatabasePlace | null;
@@ -30,7 +39,7 @@ export interface UiSourceHosts {
     worktreePaths(folder: string): Promise<string[]>;
     gitStatus(cwd: string): Promise<GitStatus>;
     gitLog(cwd: string, limit: number): Promise<GitLogResult>;
-    launches(projectId: string): Promise<LaunchReading[]>;
+    launches(projectId: string): Promise<UiLaunch[]>;
     tasks(chatId: string): Task[];
     databases(): Pick<AgentDatabases, 'captureUiAccess' | 'authorizeUiRead' | 'query'>;
 }

@@ -1,5 +1,5 @@
 import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
-import type { AgentStateHost } from '../canvas/host.ts';
+import type { AgentStateHost } from '../agents/agent-state.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { OutboxStore } from '../outbox/outbox.ts';
 import type { HiddenAgentStore } from '../projects/hidden-agents.ts';

@@ -1,7 +1,8 @@
 import { refusalBody, ToolRefusal } from '@adecore/agents/context';
 import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import { AGENT_TOOLKITS } from '../agent-features/list.ts';
-import type { CanvasHost, LaunchReading } from '../canvas/host.ts';
+import type { CanvasHost } from '../canvas/host.ts';
+import type { LaunchReading } from '../launches/agent-host.ts';
 import { ProjectError } from '../projects/project-error.ts';
 import { runTool, type ToolCaller } from './tool.ts';
 

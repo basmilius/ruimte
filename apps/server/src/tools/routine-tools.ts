@@ -1,26 +1,11 @@
 import { modeField } from '@adecore/agents/providers';
-import {
-    cronProblemText,
-    parseCron,
-    RoutinePerRunSchema,
-    RoutineScheduleSchema,
-    type RoutineEntry,
-    type RoutineRun,
-    type RoutineSchedule
-} from '@ruimte/contracts';
+import { cronProblemText, parseCron, RoutinePerRunSchema, RoutineScheduleSchema, type RoutineEntry, type RoutineSchedule } from '@ruimte/contracts';
 import { z } from 'zod';
 import { field, orNote, requiredField } from '../canvas/host.ts';
 import { modelFlag } from '../canvas/model.ts';
+import { approvalOf, DAY_NAMES, DAY_SETS, runStateOf, scheduleText } from '../routines/routine-words.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
 import { defineTool, defineToolkit } from './tool.ts';
-
-const DAY_NAMES = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
-
-const DAY_SETS: Record<string, readonly number[]> = {
-    daily: [1, 2, 3, 4, 5, 6, 7],
-    weekdays: [1, 2, 3, 4, 5],
-    weekends: [6, 7]
-};
 
 const SCHEDULE_SYNTAX =
     '"daily 23:00", "weekdays 09:00", "weekends 10:30", "mon,thu 17:00", "once 2026-10-27 22:00", a repeat within a day such as "weekdays every 1h 09:00-17:00" or "daily every 30m 08:00-18:00" (steps of 15m up to 12h, both ends included), or "cron" and five crontab fields such as "cron 0 9 * * 1-5" or "cron */30 8-18 * * mon-fri" (at most every 15m)';
@@ -92,38 +77,6 @@ function intervalOf(dayText: string, everyText: string, windowText: string): Rou
         to: clockOf(toText)
     });
     return schedule.success ? schedule.data : null;
-}
-
-function everyText(minutes: number): string {
-    return minutes % 60 === 0 ? `${minutes / 60}h` : `${minutes}m`;
-}
-
-/* A schedule in the words `at` takes, so a list reads back as what an edit would give. */
-export function scheduleText(schedule: RoutineSchedule): string {
-    if (schedule.kind === 'once') {
-        return `once ${schedule.date} ${schedule.time}`;
-    }
-    if (schedule.kind === 'cron') {
-        return `cron ${schedule.expression}`;
-    }
-    const days = [...schedule.days].sort((a, b) => a - b).join(',');
-    const named = Object.entries(DAY_SETS).find(([, set]) => set.join(',') === days)?.[0] ?? schedule.days.map((day) => DAY_NAMES[day - 1]).join(',');
-    if (schedule.kind === 'interval') {
-        return `${named} every ${everyText(schedule.every)} ${schedule.from}-${schedule.to}`;
-    }
-    return `${named} ${schedule.time}`;
-}
-
-export function approvalOf(entry: RoutineEntry): string {
-    if (entry.approved) {
-        return 'yes';
-    }
-    return entry.held === undefined ? 'declined' : 'held';
-}
-
-/* A run's state, with why it was skipped after a colon. */
-export function runStateOf(run: RoutineRun): string {
-    return run.skipped === undefined ? run.state : `${run.state}:${run.skipped}`;
 }
 
 function lastOf(entry: RoutineEntry): string {

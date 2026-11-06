@@ -1,7 +1,8 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
 import { evenPace, registryAgentMatches, type UsageLimitsProvider, type UsageLimitsSnapshot } from '@ruimte/contracts';
-import { type NodeAccount, type ProviderInstallHost } from '../canvas/host.ts';
+import type { NodeAccount } from '../canvas/host.ts';
+import type { ProviderInstallHost } from '../providers/agent-host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 function installsOf(context: ServerActionContext): ProviderInstallHost {

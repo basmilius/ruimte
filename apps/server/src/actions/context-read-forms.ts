@@ -3,7 +3,7 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { toSvg as diagramSvg } from '@adecore/diagram';
 import { DEFAULT_PALETTE, toSvg as drawingSvg } from '@adecore/drawing';
 import { VISUAL_LIMITS, isCanvasView, type ContextSource, type DrawingElement } from '@ruimte/contracts';
-import type { ContextReading } from '../canvas/host.ts';
+import type { ContextReading } from '../context/agent-host.ts';
 import { canvasSvg, renderCanvas } from '../context/context-canvas.ts';
 import { renderDatabaseView } from '../context/context-database.ts';
 import { ContextRefusal } from '../context/context-store.ts';

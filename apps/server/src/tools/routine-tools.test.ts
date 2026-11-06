@@ -3,8 +3,9 @@ import { narrowerMode } from '@adecore/agents/providers';
 import type { Routine, RoutineEntry, RoutineMadeBy, RoutineRunNowResult, RuntimeMode } from '@ruimte/contracts';
 import type { CanvasHost } from '../canvas/host.ts';
 import { agentRoutines } from '../routines/agent-host.ts';
+import { scheduleText } from '../routines/routine-words.ts';
 import type { Routines } from '../routines/routines.ts';
-import { parseSchedule, routineToolkit, scheduleText } from './routine-tools.ts';
+import { parseSchedule, routineToolkit } from './routine-tools.ts';
 import { launchReading, toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 interface Saved {

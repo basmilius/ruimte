@@ -1,7 +1,14 @@
 import { languageActions } from '../actions/language-actions.ts';
-import { AgentLanguage } from '../language/agent-language.ts';
+import { AgentLanguage, type LanguageAgentHost } from '../language/agent-language.ts';
 import { languageToolkit } from '../tools/language-tools.ts';
 import { defineAgentFeature } from './feature.ts';
+
+declare module '../canvas/host.ts' {
+    interface CanvasHost {
+        /* The project's running language servers as an agent may ask them; absent on a host without them. */
+        language?: LanguageAgentHost;
+    }
+}
 
 export const languageFeature = defineAgentFeature({
     name: 'language',
