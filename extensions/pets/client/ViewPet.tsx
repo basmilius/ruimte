@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useSessions, type StatusOf } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
-import { useTasks } from '@/state/tasks';
+import { useTasks } from '@/tasks/tasks';
 
 /* Below this width a composer has no room for a pet beside what it holds, so a narrow cell shows none. */
 export const VIEW_PET_MIN_WIDTH = 320;

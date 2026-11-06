@@ -47,7 +47,7 @@ import { editorShortcut } from '@/surface/editor-keymap';
  * The commands that act on the editor with the keyboard in it: the id the menu and the palette share, the
  * key of its words (`shell:menu.<key>` and `shell:palette.commands.<key>`), its icon and its shortcut. What
  * each one does is in `language-commands.ts`, so a menu can list them without loading an editor. The command
- * table (`shell/command-table.ts`) takes them in.
+ * table (`commands/registry.ts`) takes them in.
  */
 interface LanguageCommandSpec {
     readonly menu: 'code' | 'go' | 'edit';

@@ -6,7 +6,7 @@ import { requiredShortcut } from '@/surface/editor-keymap';
 /*
  * The keys of the workspace, in a module of their own so a menu, the palette, the Keyboard pane and the
  * terminal keymap can print or test them without loading the stores behind the handler. A key that gives a
- * command is a row of the command table (`shell/command-table.ts`), which says what binds it.
+ * command is a row of the command table (`commands/registry.ts`), which says what binds it.
  */
 export const CANVAS_SHORTCUTS = {
     dictation: shortcut('Mod+Shift+D'),

@@ -54,7 +54,7 @@ import { editorForCommand } from '@/surface/panels/focused-editor';
 /*
  * The editing commands of a file editor that have a place in the menu and the palette, with their words
  * at `shell:menu.<key>` and `shell:palette.commands.<key>`. A table of their own, so a menu can list
- * them without loading an editor; the command table (`shell/command-table.ts`) takes them in.
+ * them without loading an editor; the command table (`commands/registry.ts`) takes them in.
  */
 interface EditorCommandSpec {
     readonly key: string;

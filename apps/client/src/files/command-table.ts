@@ -28,7 +28,7 @@ export const FILE_COMMANDS = {
             words: (context) => ({ key: 'reveal', values: { app: context.fileManager } })
         }
     },
-    // A diff answers the key on its own editors (`shell/panels/diff-caret.ts`), since a file's editor gives it to Text End.
+    // A diff answers the key on its own editors (`files/diff-caret.ts`), since a file's editor gives it to Text End.
     'open-file-at-line': {
         key: 'jumpToSource',
         icon: FileText,

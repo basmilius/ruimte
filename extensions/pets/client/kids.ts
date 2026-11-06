@@ -4,7 +4,7 @@ import { isChatNode, type ChatItem, type ChatSubagentItem } from '@ruimte/contra
 import { memoByIdentity } from '@/state/identity-memo';
 import { endpointKey, endpointOfNode } from '@/state/keys';
 import type { StatusOf } from '@/state/sessions';
-import { childTask, type TasksById } from '@/state/tasks';
+import { childTask, type TasksById } from '@/tasks/tasks';
 
 /* At most this many kids follow one pet; more would crowd the top edge of a node and the bottom of the screen. */
 export const MAX_PET_KIDS = 3;

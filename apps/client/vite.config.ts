@@ -113,7 +113,7 @@ function bytesWorker(): Plugin {
  * What pdf.js fetches by folder and file name while it reads a PDF: the wasm decoders, the standard
  * fonts, the character maps and the color profile. Hashed names would break that lookup, so they keep
  * their own under a folder named after the version, served in dev and written beside the chunks. The
- * page builds the same path from pdf.js's `version` (`src/shell/panels/PdfFile.tsx`). QuickJS runs a
+ * page builds the same path from pdf.js's `version` (`src/files/PdfFile.tsx`). QuickJS runs a
  * PDF's own scripts, which this viewer never does, so it stays out.
  */
 function pdfjsAssets(): Plugin {

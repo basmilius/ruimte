@@ -1374,7 +1374,7 @@ export const SplitColumnSchema = z.object({
 });
 export type SplitColumn = z.infer<typeof SplitColumnSchema>;
 
-// The limits live in the client's `shell/split.ts`, so a file edited past them is trimmed rather than refused.
+// The limits live in the client's `layout/split.ts`, so a file edited past them is trimmed rather than refused.
 export const SplitLayoutSchema = z.object({
     columns: z.array(SplitColumnSchema).min(1),
     // The sidebar reads the view in this cell as the active row.

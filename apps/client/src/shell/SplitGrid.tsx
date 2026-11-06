@@ -415,7 +415,7 @@ function applyCommand(command: SplitCommand): void {
 
 /*
  * The views of one project beside each other: columns of cells, at most three by three. The model
- * and its limits are pure (`shell/split.ts`); this only draws what the layout says and hands a drag
+ * and its limits are pure (`layout/split.ts`); this only draws what the layout says and hands a drag
  * back to it.
  */
 export function SplitGrid(): ReactElement | null {
