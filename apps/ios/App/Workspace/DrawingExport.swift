@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 
 @MainActor enum DrawingPalette {
-    static let names = ["ink", "muted", "accent", "red", "orange", "yellow", "green", "blue", "purple", "pink"]
+    static let names = WireVocabulary.drawingColors
     static func color(_ name: String) -> UIColor {
         switch name {
         case "muted": .secondaryLabel

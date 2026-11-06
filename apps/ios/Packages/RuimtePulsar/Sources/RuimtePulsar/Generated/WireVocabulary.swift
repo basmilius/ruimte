@@ -16,6 +16,27 @@ public enum WireVocabulary {
     /// `ARTIFACT_KINDS`.
     public static let artifactKinds: [String] = ["report", "image", "build", "export", "recording", "page"]
 
+    /// `DRAWING_COLORS`: the names a drawing paints with.
+    public static let drawingColors: [String] = ["ink", "muted", "accent", "red", "orange", "yellow", "green", "blue", "purple", "pink"]
+
+    /// `DeviceTextSizeSchema`.
+    public static let deviceTextSizes: [String] = ["small", "default", "large", "extra-large"]
+
+    /// `DeviceColorFilterSchema`.
+    public static let deviceColorFilters: [String] = ["none", "grayscale", "red-green", "green-red", "blue-yellow"]
+
+    /// `DeviceToggleSettingSchema`.
+    public static let deviceToggleSettings: [String] = ["reduceMotion", "increaseContrast", "reduceTransparency", "showBorders", "voiceOver"]
+
+    /// `IOS_SIMULATOR_TOOLS`: what a simulator that announces no tools can do.
+    public static let iosSimulatorTools: [String] = ["openUrl", "launchApp", "terminateApp", "appearance", "textSize", "liquidGlass", "colorFilter", "reduceMotion", "increaseContrast", "reduceTransparency", "showBorders", "voiceOver", "location", "clearLocation", "permissions", "push"]
+
+    /// `DevicePermissionSchema`.
+    public static let devicePermissions: [String] = ["camera", "microphone", "photos", "contacts", "calendar", "reminders", "location", "motion", "media-library", "faceid"]
+
+    /// `DevicePermissionDecisionSchema`.
+    public static let devicePermissionDecisions: [String] = ["grant", "revoke", "reset"]
+
     /// The project icons in the order a person browses them, grouped as `PROJECT_ICON_GROUPS` on the desktop.
     public static let projectIconGroups: [(id: String, names: [String])] = [
         ("general", ["folder", "box", "boxes", "package", "layers", "puzzle", "star", "heart", "flag", "bookmark", "pin", "target", "lightbulb", "archive", "inbox", "house", "briefcase", "sparkles", "zap", "flame", "rocket"]),

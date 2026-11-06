@@ -1,7 +1,8 @@
 import Foundation
 import RuimtePulsar
 
-/// A kind of push a machine sends (`PushNotifyKindSchema`).
+/// A kind of push a machine sends (`PushNotifyKindSchema`). A test holds the cases against
+/// `WireVocabulary.pushNotifyKinds`.
 enum PushNotifyKind: String, CaseIterable, Codable, Sendable {
     case needsYou = "needs-you"
     case turn

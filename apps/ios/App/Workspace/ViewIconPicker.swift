@@ -43,122 +43,28 @@ struct IconChoiceGrid: View {
         let names: [String]
     }
 
-    // The project protocol accepts this same closed set in contracts/src/project.ts; the groups, their
-    // order and the keywords follow apps/client/src/project/project-icons.ts.
-    private static let groups = [
-        IconGroup(
-            label: String(localized: "General", comment: "Group of icons"),
-            names: [
-                "folder", "box", "boxes", "package", "layers", "puzzle", "star", "heart", "flag", "bookmark", "pin",
-                "target", "lightbulb", "archive", "inbox", "house", "briefcase", "sparkles", "zap", "flame", "rocket",
-            ]),
-        IconGroup(
-            label: String(localized: "Code", comment: "Group of icons"),
-            names: [
-                "code", "code-xml", "braces", "terminal", "square-terminal", "file-code", "binary", "regex", "variable",
-                "blocks", "component", "git-branch", "git-merge", "git-pull-request", "git-fork", "bug",
-                "test-tube-diagonal", "flask-conical", "beaker", "wrench", "hammer", "workflow", "webhook",
-            ]),
-        IconGroup(
-            label: String(localized: "AI & agents", comment: "Group of icons"),
-            names: [
-                "bot", "bot-message-square", "brain", "brain-circuit", "wand-sparkles", "messages-square", "scan-eye",
-                "audio-waveform",
-            ]),
-        IconGroup(
-            label: String(localized: "Web & apps", comment: "Group of icons"),
-            names: [
-                "globe", "app-window", "layout-dashboard", "layout-template", "panels-top-left", "mouse-pointer-click",
-                "smartphone", "tablet", "shopping-cart", "store", "mail",
-            ]),
-        IconGroup(
-            label: String(localized: "Infrastructure", comment: "Group of icons"),
-            names: [
-                "server", "server-cog", "database", "container", "cloud", "cloud-cog", "network", "router", "gauge",
-                "activity", "scroll-text", "bell", "shield", "lock", "key", "fingerprint-pattern",
-            ]),
-        IconGroup(
-            label: String(localized: "Data & science", comment: "Group of icons"),
-            names: [
-                "chart-line", "chart-column", "chart-pie", "table", "sheet", "calculator", "sigma", "atom", "dna",
-                "telescope", "orbit",
-            ]),
-        IconGroup(
-            label: String(localized: "Hardware", comment: "Group of icons"),
-            names: [
-                "cpu", "microchip", "circuit-board", "memory-stick", "pc-case", "laptop", "monitor", "keyboard",
-                "mouse", "webcam", "printer", "hard-drive", "usb", "headphones", "watch", "battery", "bluetooth",
-                "thermometer", "ethernet-port", "cable", "plug", "wifi", "radio-tower", "satellite-dish",
-            ]),
-        IconGroup(
-            label: String(localized: "Design & media", comment: "Group of icons"),
-            names: [
-                "palette", "brush", "pen-tool", "pencil-ruler", "shapes", "frame", "swatch-book", "type", "image",
-                "camera", "film", "clapperboard", "video", "music", "mic", "gamepad-2",
-            ]),
-        IconGroup(
-            label: String(localized: "Writing & learning", comment: "Group of icons"),
-            names: [
-                "file-text", "book", "notebook", "notebook-pen", "library-big", "newspaper", "graduation-cap",
-                "languages", "quote", "presentation", "megaphone",
-            ]),
-        IconGroup(
-            label: String(localized: "Planning", comment: "Group of icons"),
-            names: [
-                "list-todo", "square-kanban", "clipboard-list", "calendar", "milestone", "trophy", "hourglass", "timer",
-                "users", "handshake", "wallet", "compass", "map",
-            ]),
-        IconGroup(
-            label: String(localized: "Life & world", comment: "Group of icons"),
-            names: [
-                "leaf", "sprout", "trees", "mountain", "sun", "moon", "plane", "ship", "anchor", "life-buoy", "coffee",
-                "pizza", "gift", "dumbbell", "bike", "paw-print",
-            ]),
-    ]
+    private static let groups = WireVocabulary.projectIconGroups.map { group in
+        IconGroup(label: groupLabel(group.id) ?? group.id.capitalized, names: group.names)
+    }
 
-    private static let keywords: [String: [String]] = [
-        "house": ["home", "smart home"],
-        "git-branch": ["version"],
-        "git-pull-request": ["pr", "review"],
-        "bug": ["debug", "issue"],
-        "test-tube-diagonal": ["test"],
-        "flask-conical": ["test", "experiment"],
-        "workflow": ["pipeline", "ci"],
-        "webhook": ["api"],
-        "bot": ["agent", "ai", "claude", "codex"],
-        "bot-message-square": ["chat", "agent"],
-        "brain": ["ai", "model"],
-        "wand-sparkles": ["magic", "generate"],
-        "messages-square": ["chat"],
-        "audio-waveform": ["voice", "speech"],
-        "app-window": ["desktop", "electron"],
-        "layout-dashboard": ["admin"],
-        "panels-top-left": ["website"],
-        "smartphone": ["ios", "mobile"],
-        "shopping-cart": ["shop", "ecommerce"],
-        "store": ["shop"],
-        "mail": ["email", "newsletter"],
-        "container": ["docker", "kubernetes"],
-        "gauge": ["performance"],
-        "activity": ["monitoring"],
-        "scroll-text": ["logs"],
-        "fingerprint-pattern": ["auth", "identity"],
-        "sheet": ["spreadsheet"],
-        "dna": ["bio"],
-        "microchip": ["embedded", "firmware"],
-        "thermometer": ["sensor"],
-        "pen-tool": ["vector"],
-        "image": ["photo"],
-        "gamepad-2": ["game"],
-        "library-big": ["docs", "documentation"],
-        "graduation-cap": ["course", "school"],
-        "languages": ["i18n", "translation"],
-        "presentation": ["slides"],
-        "list-todo": ["tasks", "checklist"],
-        "square-kanban": ["board"],
-        "users": ["team"],
-        "wallet": ["finance", "money"],
-    ]
+    /// The words over a group of icons. The groups, their order and the keywords come from the contracts, so a group
+    /// the desktop adds shows under its id until it has a label here.
+    static func groupLabel(_ id: String) -> String? {
+        switch id {
+        case "general": String(localized: "General", comment: "Group of icons")
+        case "code": String(localized: "Code", comment: "Group of icons")
+        case "ai": String(localized: "AI & agents", comment: "Group of icons")
+        case "web": String(localized: "Web & apps", comment: "Group of icons")
+        case "infra": String(localized: "Infrastructure", comment: "Group of icons")
+        case "data": String(localized: "Data & science", comment: "Group of icons")
+        case "hardware": String(localized: "Hardware", comment: "Group of icons")
+        case "design": String(localized: "Design & media", comment: "Group of icons")
+        case "writing": String(localized: "Writing & learning", comment: "Group of icons")
+        case "planning": String(localized: "Planning", comment: "Group of icons")
+        case "life": String(localized: "Life & world", comment: "Group of icons")
+        default: nil
+        }
+    }
 
     private var shownGroups: [IconGroup] {
         let needle = query.trimmingCharacters(in: .whitespaces)
@@ -209,6 +115,6 @@ struct IconChoiceGrid: View {
     private static func matches(_ name: String, _ needle: String) -> Bool {
         name.localizedCaseInsensitiveContains(needle)
             || name.replacingOccurrences(of: "-", with: " ").localizedCaseInsensitiveContains(needle)
-            || keywords[name, default: []].contains { $0.localizedCaseInsensitiveContains(needle) }
+            || WireVocabulary.projectIconKeywords[name, default: []].contains { $0.localizedCaseInsensitiveContains(needle) }
     }
 }

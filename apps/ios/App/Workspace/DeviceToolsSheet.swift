@@ -198,7 +198,7 @@ struct DeviceToolsSheet: View {
                     ForEach(DeviceTools.permissions(model.device), id: \.self) { Text(Self.permissionName($0)).tag($0) }
                 }
                 HStack {
-                    ForEach(["grant", "revoke", "reset"], id: \.self) { decision in
+                    ForEach(WireVocabulary.devicePermissionDecisions, id: \.self) { decision in
                         Button(Self.decisionName(decision)) {
                             Task {
                                 await model.act(

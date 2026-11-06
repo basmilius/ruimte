@@ -150,4 +150,20 @@ final class WorkspaceViewSectionsTests: XCTestCase {
     private func subheader(_ id: String, _ name: String) -> JSONValue {
         .object(["id": .string(id), "kind": .string("subheader"), "name": .string(name)])
     }
+
+    func testEveryIconGroupTheContractsNameHasALabel() {
+        for group in WireVocabulary.projectIconGroups {
+            XCTAssertNotNil(IconChoiceGrid.groupLabel(group.id), "No label for the icon group \(group.id)")
+        }
+    }
+
+    @MainActor func testEveryIconOfTheContractsHasAShapeAndEveryKeywordNamesAnIcon() {
+        let names = Set(WireVocabulary.projectIconGroups.flatMap(\.names))
+        for name in names {
+            XCTAssertNotNil(LucideIcon.icon(named: name), "Missing Lucide shape \(name)")
+        }
+        for name in WireVocabulary.projectIconKeywords.keys {
+            XCTAssertTrue(names.contains(name), "Keywords for \(name), which no group offers")
+        }
+    }
 }

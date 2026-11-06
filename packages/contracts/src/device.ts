@@ -138,7 +138,7 @@ export const DevicePermissionSchema = z.enum([
 ]);
 
 const DeviceLiquidGlassSchema = z.enum(['clear', 'tinted']);
-const DevicePermissionDecisionSchema = z.enum(['grant', 'revoke', 'reset']);
+export const DevicePermissionDecisionSchema = z.enum(['grant', 'revoke', 'reset']);
 
 export const DeviceStatusBarSchema = z.enum(['clean', 'default']);
 export const DeviceFoldPoseSchema = z.enum(['closed', 'tent', 'tabletop', 'book', 'open']);
@@ -379,7 +379,7 @@ function known<Value extends string>(schema: z.ZodEnum<Record<Value, Value>>, an
 
 const IOS_BUTTONS: readonly DeviceButton[] = ['home', 'swipeHome', 'appSwitcher', 'lock', 'siri'];
 /* What a simulator could do before a daemon announced its tools; one that announces them says the rest. */
-const IOS_SIMULATOR_TOOLS: readonly DeviceTool[] = [
+export const IOS_SIMULATOR_TOOLS: readonly DeviceTool[] = [
     'openUrl',
     'launchApp',
     'terminateApp',

@@ -2,6 +2,15 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { PROJECT_ICON_GROUPS, PROJECT_ICON_KEYWORDS } from '../../../apps/client/src/surface/project-icons.ts';
 import { ARTIFACT_KINDS } from '../src/artifact.ts';
+import {
+    DeviceColorFilterSchema,
+    DevicePermissionDecisionSchema,
+    DevicePermissionSchema,
+    DeviceTextSizeSchema,
+    DeviceToggleSettingSchema,
+    IOS_SIMULATOR_TOOLS
+} from '../src/device.ts';
+import { DRAWING_COLORS } from '../src/drawing-host.ts';
 import { RuntimeModeSchema } from '../src/model.ts';
 import { NodeKindSchema, PROJECT_VIEW_KINDS } from '../src/project.ts';
 import { PushNotifyKindSchema } from '../src/push.ts';
@@ -34,6 +43,27 @@ public enum WireVocabulary {
 
     /// \`ARTIFACT_KINDS\`.
     public static let artifactKinds: [String] = ${words(ARTIFACT_KINDS)}
+
+    /// \`DRAWING_COLORS\`: the names a drawing paints with.
+    public static let drawingColors: [String] = ${words(DRAWING_COLORS)}
+
+    /// \`DeviceTextSizeSchema\`.
+    public static let deviceTextSizes: [String] = ${words(DeviceTextSizeSchema.options)}
+
+    /// \`DeviceColorFilterSchema\`.
+    public static let deviceColorFilters: [String] = ${words(DeviceColorFilterSchema.options)}
+
+    /// \`DeviceToggleSettingSchema\`.
+    public static let deviceToggleSettings: [String] = ${words(DeviceToggleSettingSchema.options)}
+
+    /// \`IOS_SIMULATOR_TOOLS\`: what a simulator that announces no tools can do.
+    public static let iosSimulatorTools: [String] = ${words(IOS_SIMULATOR_TOOLS)}
+
+    /// \`DevicePermissionSchema\`.
+    public static let devicePermissions: [String] = ${words(DevicePermissionSchema.options)}
+
+    /// \`DevicePermissionDecisionSchema\`.
+    public static let devicePermissionDecisions: [String] = ${words(DevicePermissionDecisionSchema.options)}
 
     /// The project icons in the order a person browses them, grouped as \`PROJECT_ICON_GROUPS\` on the desktop.
     public static let projectIconGroups: [(id: String, names: [String])] = [

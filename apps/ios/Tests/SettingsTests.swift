@@ -4,6 +4,10 @@ import XCTest
 @testable import Ruimte
 
 final class NotificationPreferencesTests: XCTestCase {
+    func testTheKindsAPhoneChoosesFromAreTheKindsThePushSchemaNames() {
+        XCTAssertEqual(PushNotifyKind.allCases.map(\.rawValue), WireVocabulary.pushNotifyKinds)
+    }
+
     func testWithoutChoicesAMachineHearsOfWhatNeedsYouAndNoProject() {
         let preferences = NotificationPreferences()
         XCTAssertEqual(

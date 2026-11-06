@@ -8,21 +8,13 @@ import UIKit
 /// `deviceTools` reads them.
 enum DeviceTools {
     /// What a simulator from before the list was announced has, which is what `deviceTools` assumes for one.
-    static let simulatorFallback = [
-        "openUrl", "launchApp", "terminateApp", "appearance", "textSize", "liquidGlass", "colorFilter", "reduceMotion",
-        "increaseContrast", "reduceTransparency", "showBorders", "voiceOver", "location", "clearLocation",
-        "permissions",
-        "push",
-    ]
-    static let toggles = ["reduceMotion", "increaseContrast", "reduceTransparency", "showBorders", "voiceOver"]
+    static let simulatorFallback = WireVocabulary.iosSimulatorTools
+    static let toggles = WireVocabulary.deviceToggleSettings
     static let display = ["appearance", "textSize", "liquidGlass", "colorFilter"] + toggles
     static let apps = ["openUrl", "launchApp", "terminateApp"]
-    static let textSizes = ["small", "default", "large", "extra-large"]
-    static let colorFilters = ["none", "grayscale", "red-green", "green-red", "blue-yellow"]
-    static let permissions = [
-        "camera", "microphone", "photos", "contacts", "calendar", "reminders", "location", "motion", "media-library",
-        "faceid",
-    ]
+    static let textSizes = WireVocabulary.deviceTextSizes
+    static let colorFilters = WireVocabulary.deviceColorFilters
+    static let permissions = WireVocabulary.devicePermissions
     /// City names and their coordinates, which read the same in every language.
     static let locations: [(name: String, latitude: Double, longitude: Double)] = [
         ("San Francisco", 37.7749, -122.4194), ("New York", 40.7128, -74.006), ("London", 51.5074, -0.1278),
