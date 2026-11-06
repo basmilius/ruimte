@@ -103,7 +103,7 @@ export function allowAppPermission(ask: AppPermissionAsk): boolean {
     return APP_PERMISSIONS.has(ask.permission);
 }
 
-/* The part of a `<webview>`'s preferences a guest could use to reach Node or another session. */
+/* The part of a `<webview>`'s preferences a guest could use to reach Node or another session, or to resize the app's window. */
 export interface GuestWebPreferences {
     partition?: string;
     preload?: string;
@@ -111,13 +111,15 @@ export interface GuestWebPreferences {
     nodeIntegrationInSubFrames?: boolean;
     contextIsolation?: boolean;
     sandbox?: boolean;
+    disableHtmlFullscreenWindowResize?: boolean;
 }
 
 /*
  * Makes the preferences of a `<webview>` about to attach safe, in place, since that is how Electron
  * reads them back. False means the element names a session no guest belongs in, the app's own
  * included, and must not attach. A script in the page could otherwise ask for Node or a preload of
- * its own; the guest preload is registered on the session and survives this.
+ * its own; the guest preload is registered on the session and survives this. A guest never sets the
+ * window's full screen itself either, so leaving a video's full screen keeps the window as it was.
  */
 export function hardenGuestPreferences(preferences: GuestWebPreferences): boolean {
     if (preferences.partition !== BROWSER_PARTITION && preferences.partition !== PREVIEW_PARTITION) {
@@ -128,5 +130,9 @@ export function hardenGuestPreferences(preferences: GuestWebPreferences): boolea
     preferences.nodeIntegrationInSubFrames = false;
     preferences.contextIsolation = true;
     preferences.sandbox = true;
+    // Electron tells every guest when the app's page leaves HTML full screen, and a guest that was never
+    // in it does not know the window already was, so it would take the window out of full screen. A guest
+    // fills the screen through the app's page instead, which remembers how the window was.
+    preferences.disableHtmlFullscreenWindowResize = true;
     return true;
 }
