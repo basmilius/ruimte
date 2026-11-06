@@ -31,7 +31,7 @@ A session browser saves its owning machine with the URL. Reopening, navigating a
 
 ## Model comparison
 
-The models dialog (`src/shell/models`) shares one set of model, provider, legacy and reasoning filters across its score/cost comparison, speed chart and bar charts. Metrics are the Intelligence, Coding and Agentic indices, cost per task, total benchmark cost and output speed. A selected reference and comparison point keep their model and effort across views.
+The models dialog (`src/models`) shares one set of model, provider, legacy and reasoning filters across its score/cost comparison, speed chart and bar charts. Metrics are the Intelligence, Coding and Agentic indices, cost per task, total benchmark cost and output speed. A selected reference and comparison point keep their model and effort across views.
 
 Missing data stays missing and never becomes zero. The dialog shows the source and age of the snapshot. Benchmark costs describe benchmark tasks, not a Ruimte session.
 

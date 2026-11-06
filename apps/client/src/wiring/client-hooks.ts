@@ -4,7 +4,7 @@ import { createClientActionRegistry } from '@/actions/client-actions';
 import { provideExtensionChat } from '@/nodes/extension-chat';
 import { useDocument } from '@/state/document';
 import { PlanSync } from '@/state/plans';
-import { watchPrWatches } from '@/state/pr-watches';
+import { watchPrWatches } from '@/github/pr-watches';
 import { watchPushAttention } from '@/state/push-attention';
 import { watchSnoozes } from '@/state/snooze';
 import { textDrafts } from '@/state/text-drafts';

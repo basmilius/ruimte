@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { closeTabAction, closeTabsAction } from '@/action-port/person-actions';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { canSplit, cellAt, locateView } from '@/layout/split';
-import { SplitItems } from '@/shell/ViewMenuItems';
+import { SplitItems } from '@/views/ViewMenuItems';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { setTabPinned, tabsToClose } from '@/state/tab-close';

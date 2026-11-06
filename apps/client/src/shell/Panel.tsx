@@ -7,14 +7,14 @@ import { DevicesPanel } from '@/devices/DevicesPanel';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { ProcessesPanel } from '@/processes/ProcessesPanel';
 import { closesFromRail, usePanelEntries, type CorePanel, type PanelEntry } from '@/shell/panels';
-import { FilesPanel } from '@/shell/panels/FilesPanel';
+import { FilesPanel } from '@/files/FilesPanel';
 import { useShownPanel, useUi } from '@/state/ui';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { usePanelGap } from '@/surface/panel-layout';
 import { PanelHeaderProvider } from '@/surface/PanelHeaderSlot';
 import { useInstantWidth } from '@/surface/useInstantWidth';
 
-const GitPanel = lazyNamed(() => import('@/shell/panels/GitPanel'), 'GitPanel');
+const GitPanel = lazyNamed(() => import('@/git/GitPanel'), 'GitPanel');
 const ProblemsPanel = lazyNamed(() => import('@/language/ProblemsPanel'), 'ProblemsPanel');
 const LaunchesPanel = lazyNamed(() => import('@/launches/LaunchesPanel'), 'LaunchesPanel');
 const DatabasesPanel = lazyNamed(() => import('@/database/DatabasesPanel'), 'DatabasesPanel');

@@ -107,7 +107,7 @@ import {
     type LucideIcon
 } from 'lucide-react';
 import { LANGUAGE_COMMAND_IDS, LANGUAGE_COMMANDS, type LanguageCommandId } from '@/language/command-table';
-import { EDITOR_COMMAND_IDS, EDITOR_COMMANDS, type EditorCommandGroup, type EditorCommandId } from '@/shell/editor-commands';
+import { EDITOR_COMMAND_IDS, EDITOR_COMMANDS, type EditorCommandGroup, type EditorCommandId } from '@/language/editor-commands';
 import type { MenuContext } from '@/shell/menu/model';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, NODE_NAVIGATION_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { editorShortcut } from '@/surface/editor-keymap';

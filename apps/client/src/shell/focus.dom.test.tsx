@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { isApplePlatform } from '@/desktop/bridge';
-import { StationMenu } from '@/shell/menu/StationMenu';
+import { StationMenu } from '@/sidebar/StationMenu';
 import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';

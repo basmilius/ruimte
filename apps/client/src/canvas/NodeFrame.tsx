@@ -74,7 +74,7 @@ import { useCellHasFocus } from '@/state/document';
 import { useEndpointIdOfMachine } from '@/state/endpoints';
 import { extensionKeyOf } from '@/state/extension-registry';
 import { useEndpointOfNode } from '@/state/keys';
-import { useChatPrWatch } from '@/state/pr-watches';
+import { useChatPrWatch } from '@/github/pr-watches';
 import { useProject } from '@/state/project';
 import { useChildTask } from '@/state/tasks';
 import { useToasts } from '@/state/toasts';

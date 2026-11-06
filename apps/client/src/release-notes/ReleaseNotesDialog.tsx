@@ -4,7 +4,7 @@ import { formatDay, formatDayWithYear } from '@adecore/ui/format';
 import { ExternalLink, Heart } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { UpdateAction } from '@/shell/settings/panes/AboutPane';
+import { UpdateAction } from '@/settings/panes/AboutPane';
 import {
     closeReleaseNotes,
     missingNotesNotice,

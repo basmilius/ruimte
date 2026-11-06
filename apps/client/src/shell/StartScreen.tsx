@@ -19,8 +19,8 @@ import { openProjectAction, openProjectClickAction } from '@/project/open-action
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { usePulsarAccount } from '@/pulsar/account';
 import { runAppShortcut } from '@/shell/app-shortcuts';
-import { linkDot, linkHint, machineLink } from '@/shell/palette-browse';
-import { ProjectPlaceActions } from '@/shell/ProjectActions';
+import { linkDot, linkHint, machineLink } from '@/palette/palette-browse';
+import { ProjectPlaceActions } from '@/project/ProjectActions';
 import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine, startScreenMachine } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';

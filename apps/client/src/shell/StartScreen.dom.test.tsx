@@ -6,7 +6,7 @@ import { usePulsarAccount } from '@/pulsar/account';
 import { appCommands } from '@/shell/commands';
 import { menuContext } from '@/shell/menu/context';
 import { menuModel } from '@/shell/menu/model';
-import { searchSettings } from '@/shell/settings/search';
+import { searchSettings } from '@/settings/search';
 import { usePulsarMachines } from '@/state/pulsar-machines';
 import { useUi } from '@/state/ui';
 import { useWindow } from '@/workspace/window';

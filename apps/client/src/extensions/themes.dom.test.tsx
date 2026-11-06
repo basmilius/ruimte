@@ -8,7 +8,7 @@ import {
     refreshExtensionTheme,
     type ThemeChoice
 } from '@/extensions/themes';
-import { AppearancePane } from '@/shell/settings/panes/AppearancePane';
+import { AppearancePane } from '@/settings/panes/AppearancePane';
 import { contribute, type BuiltInThemeContribution } from '@/state/extension-registry';
 import { useSettings } from '@/state/settings';
 import { mount } from '../../testing/dom';

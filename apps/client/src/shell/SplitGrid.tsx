@@ -11,7 +11,7 @@ import { clampTabLeft, DEFAULT_TAB_WIDTH, gapLeft, positionAfterLifting } from '
 import { carriesArtifact, dropArtifactTab, droppedArtifact } from '@/output/artifact-drag';
 import { CellToolbar } from '@/shell/CellToolbar';
 import { cellForPane, columnForSplit, coreLayout } from '@/shell/core-layout';
-import { carriesDiff, droppedDiff } from '@/shell/diff-drag';
+import { carriesDiff, droppedDiff } from '@/git/diff-drag';
 import { Dock } from '@/shell/Dock';
 import { useCellView } from '@/shell/use-cell-view';
 import { ViewSurface } from '@/shell/ViewHost';

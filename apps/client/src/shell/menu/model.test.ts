@@ -5,7 +5,7 @@ import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
 import { LANGUAGE_COMMAND_IDS } from '@/language/command-table';
 import { languageCommandRows } from '@/language/language-commands';
 import { COMMAND_IDS, COMMANDS, isCommandId, menuPlacesOf } from '@/shell/command-table';
-import { EDITOR_COMMAND_IDS, editorCommandRows } from '@/shell/editor-commands';
+import { EDITOR_COMMAND_IDS, editorCommandRows } from '@/language/editor-commands';
 import { CANVAS_SHORTCUTS, ADD_NODE_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { menuIconOf } from './icons';
 import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, isPaletteId, LAUNCH_CHOOSE_PREFIX } from './ids';
@@ -669,7 +669,7 @@ describe('the commands behind the menu', () => {
 
     test('every row of the table the palette has is a row of the palette', () => {
         const source = readFileSync(join(import.meta.dir, '..', 'commands.ts'), 'utf8');
-        const pullRequestRows = readFileSync(join(import.meta.dir, '..', 'pull-request-commands.ts'), 'utf8');
+        const pullRequestRows = readFileSync(join(import.meta.dir, '..', '..', 'github', 'pull-request-commands.ts'), 'utf8');
         for (const id of COMMAND_IDS.filter((candidate) => COMMANDS[candidate].palette)) {
             // The language commands are rows of `languageCommandRows()`, which `appCommands()` spreads in.
             const listed =

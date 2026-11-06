@@ -1,0 +1,292 @@
+import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui';
+import { useChatRow, useProviders } from '@adecore/agents-react/state';
+import { Icon, Kbd, KEY_SHORTCUTS, Menu, Tooltip } from '@adecore/ui';
+import { canShareView, chatIsWorking, isCanvasView, isChatHostView, isEmptyChatView, type ProjectView, resolveStoredPath } from '@ruimte/contracts';
+import {
+    ArrowRightToLine,
+    Copy,
+    CornerUpRight,
+    Expand,
+    Frame,
+    ListX,
+    MessageSquare,
+    MessagesSquare,
+    PanelBottom,
+    PanelRight,
+    Settings2,
+    Shrink,
+    Terminal,
+    Trash,
+    UserRoundMinus,
+    Users,
+    X
+} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import {
+    closeCellAction,
+    closeCellsRightOfAction,
+    closeOtherCellsAction,
+    duplicateViewAction,
+    placeViewOnCanvasAction,
+    showViewOnCanvasAction,
+    splitAction
+} from '@/action-port/person-actions';
+import { ForkMenuItem } from '@/chat/ForkMenuItem';
+import { useOffersFork } from '@/chat/use-offers-fork';
+import { useDatabaseViewShareRefusal } from '@/database/view-sharing';
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
+import { FileActionItems } from '@/files/FileActionItems';
+import { canSplit, cellAt, cellCount, cellsRightOf, freeViewFor, isTabHost, maximizedCell, type CellAt } from '@/layout/split';
+import { FlagSubmenu } from '@/project/FlagSubmenu';
+import { MoveChatItems } from '@/project/MoveChatItems';
+import { askDeleteView, askViewSettings, openSessionInKind, setViewShared } from '@/project/views';
+import { sessionHandoffs, viewOffers } from '@/views/view-offers';
+import { cellViewOf, hasActiveCanvas, useDocument } from '@/state/document';
+import { isScratchProject, useProject } from '@/state/project';
+import { useNodeProposals } from '@/state/proposals';
+import { fileManagerName, useServer } from '@/state/server';
+import { useSessionRow } from '@/state/sessions';
+import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { useMachineAnswers } from '@/transport/features';
+import { useTransport } from '@/workspace/context';
+
+interface ViewMenuItemsProps {
+    viewId: string;
+    kind: ProjectView['kind'];
+    /* In the sidebar the focused row takes F2 itself, so only there does the hint hold. */
+    onSidebar?: boolean;
+}
+
+/*
+ * Everything a view can be asked, as menu items. The sidebar, the toolbar's view menu and a cell's bar
+ * offer this one list, so they never drift apart; `ContextMenu` draws a `Menu.Item` as its own. A group
+ * nobody is offered takes its separator with it.
+ */
+export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItemsProps) {
+    const { t } = useTranslation(['shell', 'common']);
+    const shared = useDocument((state) => state.shared).includes(viewId);
+    const saved = useDocument((state) => state.views.some((candidate) => candidate.id === viewId));
+    const view = useDocument((state) => cellViewOf(state, viewId) ?? undefined);
+    /* Sharing is offered whether or not the folder is a repository: finding that out would start a
+       git watch, which opening a menu has no business doing. */
+    const shareRefusal = useDatabaseViewShareRefusal(view);
+    const hasCanvas = useDocument((state) => state.views.some(isCanvasView));
+    const onCanvas = useDocument(hasActiveCanvas);
+    const folder = useProject((state) => state.current?.folder ?? null);
+    const scratch = useProject((state) => isScratchProject(state.current));
+    const platform = useServer((state) => state.platform);
+    /* What the daemon knows about the session, which is newer than what the view was opened with. */
+    const chat = useChatRow(viewId, (row) => row?.info);
+    const agent = useSessionRow(viewId, (row) => row?.agent);
+    const sessionAccount = useSessionRow(viewId, (row) => row?.account);
+    const providers = useProviders((state) => state.providers);
+    const offersFork = useOffersFork(viewId);
+    const endpointId = useProject((state) => state.currentEndpointId ?? '');
+    const ownCard = useNodeProposals(endpointId, viewId).length > 0;
+    const moves = useMachineAnswers(endpointId, 'chat.move');
+    const transport = useTransport();
+
+    const { asChat, asTerminal } = sessionHandoffs(kind, view, chat, { agent, account: sessionAccount }, providers);
+    // The node of a session view works somewhere; without a folder of its own that is the project's. The Chats project shows none.
+    const workingFolder = !scratch && view !== undefined && (isChatHostView(view) || view.kind === 'terminal') ? (view.node.cwd ?? chat?.cwd ?? folder) : null;
+    // What a file view holds is stored against the project folder; the menu acts on the daemon's path.
+    const filePath = view?.kind === 'file' ? resolveStoredPath(folder, view.path) : null;
+    const offers = viewOffers({
+        kind,
+        shared,
+        canShare: view !== undefined && canShareView(view) && shareRefusal === null,
+        hasCanvas,
+        onCanvas,
+        offersFork,
+        asChat,
+        asTerminal,
+        workingFolder,
+        filePath,
+        scratch,
+        written: view !== undefined && !(view.kind === 'chat' && isEmptyChatView(view)),
+        moves
+    });
+    const drawn = offers.duplicate;
+    const offerShare = view !== undefined && offers.share;
+    const offerFork = offers.fork;
+    const offerMove = offers.makeProject;
+    const offerPut = offers.putOnCanvas;
+    const offerShow = offers.showOnCanvas;
+    // A chat's own rows go under one heading once there is more than the bookmarks to put there.
+    const conversation = (kind === 'chat' || kind === 'design') && (offerFork || asTerminal !== null);
+    const handoffs = !conversation && (asChat !== null || asTerminal !== null);
+    const kindRows = conversation || handoffs || offerMove;
+    const place = offerPut || offerShow || filePath !== null || workingFolder !== null;
+    if (!saved && filePath !== null) {
+        return <FileActionItems path={filePath} on="view" />;
+    }
+    return (
+        <>
+            <Menu.Item onClick={() => askViewSettings(viewId)}>
+                <Icon icon={Settings2} size={14} /> {t('viewMenu.viewSettings')} {onSidebar && <Kbd shortcut={KEY_SHORTCUTS.rename} />}
+            </Menu.Item>
+            {drawn && (
+                <Menu.Item onClick={() => duplicateViewAction(viewId)}>
+                    <Icon icon={Copy} size={14} /> {t('sidebar.duplicate')}
+                </Menu.Item>
+            )}
+
+            {kindRows && <Menu.Separator />}
+            {conversation && (
+                <Menu.SubmenuRoot>
+                    <Menu.SubmenuTrigger>
+                        <Icon icon={MessagesSquare} size={14} /> {t('viewMenu.conversation')}
+                    </Menu.SubmenuTrigger>
+                    <Menu.Popup>
+                        {offerFork && <ForkMenuItem chatId={viewId} />}
+                        <BookmarkSubmenu chatId={viewId} />
+                        {asTerminal !== null && (
+                            <Menu.Item onClick={() => void openSessionInKind(viewId, 'terminal', asTerminal)}>
+                                <Icon icon={Terminal} size={14} /> {t('viewMenu.openInTerminal')}
+                            </Menu.Item>
+                        )}
+                    </Menu.Popup>
+                </Menu.SubmenuRoot>
+            )}
+            {!conversation && (kind === 'chat' || kind === 'design') && <BookmarkSubmenu chatId={viewId} />}
+            {handoffs && asChat !== null && (
+                <Menu.Item onClick={() => void openSessionInKind(viewId, 'chat', asChat)}>
+                    <Icon icon={MessageSquare} size={14} /> {t('viewMenu.openInChat')}
+                </Menu.Item>
+            )}
+            {handoffs && asTerminal !== null && (
+                <Menu.Item onClick={() => void openSessionInKind(viewId, 'terminal', asTerminal)}>
+                    <Icon icon={Terminal} size={14} /> {t('viewMenu.openInTerminal')}
+                </Menu.Item>
+            )}
+            {offerMove && <MoveChatItems chatId={viewId} endpointId={endpointId} working={chatIsWorking(chat, ownCard)} />}
+
+            <Menu.Separator />
+            <FlagSubmenu id={viewId} />
+
+            {place && <Menu.Separator />}
+            {offerPut && (
+                <Menu.Item onClick={() => placeViewOnCanvasAction(viewId)}>
+                    <Icon icon={Frame} size={14} /> {t('viewMenu.showOnCanvas')}
+                </Menu.Item>
+            )}
+            {offerShow && (
+                <Menu.Item onClick={() => void showViewOnCanvasAction(viewId)}>
+                    <Icon icon={Frame} size={14} /> {t('viewMenu.showOnCanvas')}
+                </Menu.Item>
+            )}
+            {/* A file offers the same things wherever it is drawn, so a view of one says what a node
+                of it says: show it, reveal it, copy its path. */}
+            {filePath !== null && <FileActionItems path={filePath} on="view" />}
+            {workingFolder !== null && (
+                <Menu.Item onClick={() => void transport.request('fs.reveal', { path: workingFolder }).catch(() => undefined)}>
+                    <Icon icon={CornerUpRight} size={14} /> {t('viewMenu.openIn', { app: fileManagerName(platform) })}
+                </Menu.Item>
+            )}
+
+            {offerShare && (
+                <>
+                    <Menu.Separator />
+                    <Menu.Item onClick={() => void setViewShared(viewId, !shared)}>
+                        <Icon icon={shared ? UserRoundMinus : Users} size={14} /> {t(shared ? 'share.stop' : 'share.start')}
+                    </Menu.Item>
+                </>
+            )}
+            {/* A row cannot explain why it is off, so the reason rides on a tooltip around it. */}
+            {!offerShare && saved && !shared && shareRefusal !== null && (
+                <>
+                    <Menu.Separator />
+                    <Tooltip label={t('share.privateConnection')} side="right">
+                        <div>
+                            <Menu.Item disabled>
+                                <Icon icon={Users} size={14} /> {t('share.start')}
+                            </Menu.Item>
+                        </div>
+                    </Tooltip>
+                </>
+            )}
+
+            <Menu.Separator />
+            <Menu.Item className="text-status-error" onClick={() => askDeleteView(viewId)}>
+                <Icon icon={Trash} size={14} /> {t('common:action.delete')}
+            </Menu.Item>
+            <SlotMenuItems kit={Menu} place="viewMenu" context={{ target: { id: viewId, kind } }} />
+        </>
+    );
+}
+
+/*
+ * Putting a view beside the one on screen, and closing the cell. The view that lands there is the one
+ * the shortcut picks (`freeViewFor`); with none free or the grid full, the row is not offered. Without
+ * an `at` the rows act on the focused cell; a cell's own bar names itself and takes the focus first,
+ * because a split always lands beside the focus.
+ */
+export function SplitItems({ at, separated = false }: { at?: CellAt; separated?: boolean }) {
+    const { t } = useTranslation('shell');
+    const layout = useDocument((s) => s.layout);
+    const free = useDocument(freeViewFor);
+    const filling = useDocument((s) => maximizedCell(s.layout, s.maximized) !== null);
+    const cell = at ?? layout?.focus ?? null;
+    const closable = layout !== null;
+    const multiple = layout !== null && cellCount(layout) > 1;
+    const held = layout !== null && cell !== null ? cellAt(layout, cell) : null;
+    const standing = held?.viewId ?? null;
+    const hosted = held !== null && isTabHost(held);
+    const closesRight = layout !== null && cell !== null && standing !== null && cellsRightOf(layout, cell) > 0;
+    const room = (direction: 'right' | 'down'): boolean => layout !== null && free !== null && cell !== null && canSplit(layout, cell, direction, free);
+    if (!room('right') && !room('down') && !closable) {
+        return null;
+    }
+    const split = (direction: 'right' | 'down'): void => {
+        if (at !== undefined) {
+            useDocument.getState().focusCellAt(at);
+        }
+        splitAction(direction);
+    };
+    const toggleMaximized = (): void => {
+        if (at !== undefined) {
+            useDocument.getState().focusCellAt(at);
+        }
+        useDocument.getState().toggleMaximized();
+    };
+    return (
+        <>
+            {room('right') && (
+                <Menu.Item onClick={() => split('right')}>
+                    <Icon icon={PanelRight} size={14} /> {t('viewMenu.splitRight')} <Kbd shortcut={CANVAS_SHORTCUTS.splitRight} />
+                </Menu.Item>
+            )}
+            {room('down') && (
+                <Menu.Item onClick={() => split('down')}>
+                    <Icon icon={PanelBottom} size={14} /> {t('viewMenu.splitDown')} <Kbd shortcut={CANVAS_SHORTCUTS.splitDown} />
+                </Menu.Item>
+            )}
+            {multiple && standing !== null && (
+                <Menu.Item onClick={toggleMaximized}>
+                    <Icon icon={filling ? Shrink : Expand} size={14} /> {t(filling ? 'viewMenu.restoreSplit' : 'viewMenu.maximizeCell')}{' '}
+                    <Kbd shortcut={CANVAS_SHORTCUTS.maximizeCell} />
+                </Menu.Item>
+            )}
+            {(room('right') || room('down') || (multiple && standing !== null)) && closable && standing !== null && <Menu.Separator />}
+            {closable && standing !== null && (
+                <Menu.Item onClick={() => closeCellAction(standing)}>
+                    {/* In a host the key closes the tab in front, and the cell goes with its last one. */}
+                    <Icon icon={X} size={14} /> {t('viewMenu.closeThisCell')} {!hosted && <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />}
+                </Menu.Item>
+            )}
+            {multiple && cell !== null && standing !== null && (
+                <Menu.Item onClick={() => closeOtherCellsAction(cell)}>
+                    <Icon icon={ListX} size={14} /> {t('viewMenu.closeOtherCells')}
+                </Menu.Item>
+            )}
+            {closesRight && cell !== null && (
+                <Menu.Item onClick={() => closeCellsRightOfAction(cell)}>
+                    <Icon icon={ArrowRightToLine} size={14} /> {t('viewMenu.closeCellsToRight')}
+                </Menu.Item>
+            )}
+            {/* The line under the group, drawn here rather than by the caller: with nothing to split
+                these rows are gone, and a line the caller drew would sit against the next one. */}
+            {separated && <Menu.Separator />}
+        </>
+    );
+}

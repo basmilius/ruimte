@@ -1,6 +1,6 @@
 # Git
 
-Worktrees and an agent's merge are in the root `CLAUDE.md`; `apps/server/README.md` ("Git", "Worktrees") has the requests. The panel is `apps/client/src/shell/panels/GitPanel.tsx`, the conflict overlay `apps/client/src/conflicts`.
+Worktrees and an agent's merge are in the root `CLAUDE.md`; `apps/server/README.md` ("Git", "Worktrees") has the requests. The panel is `apps/client/src/git/GitPanel.tsx`, the conflict overlay `apps/client/src/conflicts`.
 
 - A project folder holds one or more checkouts: its repository, initialized submodules, and repositories one level down (`repos.ts`).
 - The panel has no active repository. One message commits every repository with something staged; nothing staged with several repositories changed commits nothing. Everything else in the panel covers every repository at once, except what names one repository (merge, rebase, stash, a branch, a pull request), which sits on its row and its own branch-menu level. A folder with one repository keeps the single-repository panel, chip and actions menu included.

@@ -31,7 +31,7 @@ import { DesignAddItem } from '@/design/DesignAddItem';
 import { useDictation } from '@/dictation/controller';
 import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
 import { RoutineAddItems } from '@/routines/RoutineAddItems';
-import { StatusSummary } from '@/shell/StatusSummary';
+import { StatusSummary } from '@/attention/StatusSummary';
 import { maximizedNodeOf, useCanvas, useCanvasCamera, useCanvasStore } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import { shownFolderOf, useProject } from '@/state/project';

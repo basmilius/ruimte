@@ -13,7 +13,7 @@ import { WORKSPACE_CHAT_HOST } from '@/chat/workspace-host';
 import { useDatabasePanel } from '@/clients/database/state';
 import { useDevices } from '@/clients/devices/state';
 import { LeaveConflictDialog } from '@/conflicts/LeaveConflictDialog';
-import { refreshPrRepos } from '@/controllers/pr-repos';
+import { refreshPrRepos } from '@/github/pr-repos';
 import { ensureDatabaseConnections } from '@/database/connections';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { useServerPrompts } from '@/language/use-server-prompts';
@@ -25,14 +25,14 @@ import { PlanPanel } from '@/plan/PlanPanel';
 import { useRoutineForm } from '@/routines/form-state';
 import { useCanvasShortcuts } from '@/shell/canvas-shortcuts';
 import { Panel } from '@/shell/Panel';
-import { DiscardEditsDialog } from '@/shell/panels/DiscardEditsDialog';
-import { UnsavedCloseDialog } from '@/shell/panels/UnsavedCloseDialog';
-import { ProjectBanner } from '@/shell/ProjectBanner';
-import { ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
+import { DiscardEditsDialog } from '@/files/DiscardEditsDialog';
+import { UnsavedCloseDialog } from '@/files/UnsavedCloseDialog';
+import { ProjectBanner } from '@/project/ProjectBanner';
+import { ProjectSwitchScreen } from '@/project/ProjectSwitchScreen';
 import { ShellRail } from '@/shell/ShellRail';
-import { Sidebar } from '@/shell/Sidebar';
+import { Sidebar } from '@/sidebar/Sidebar';
 import { TopRow } from '@/shell/TopRow';
-import { ViewDialogs } from '@/shell/ViewDialogs';
+import { ViewDialogs } from '@/views/ViewDialogs';
 import { ViewHost } from '@/shell/ViewHost';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useRoutinesStage } from '@/state/routines-stage';
@@ -86,14 +86,14 @@ const NewWorktreeChatDialog = lazyDialog(
 );
 
 const IssueStartDialog = lazyDialog(
-    () => import('@/shell/IssueStartDialog'),
+    () => import('@/github/IssueStartDialog'),
     'IssueStartDialog',
     useUi,
     (s) => s.issueStartOpen
 );
 
 const PullRequestDialog = lazyDialog(
-    () => import('@/shell/PullRequestDialog'),
+    () => import('@/github/PullRequestDialog'),
     'PullRequestDialog',
     useUi,
     (s) => s.pullRequestDialog !== null

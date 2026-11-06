@@ -1,7 +1,7 @@
 import { useProvidersStore } from '@adecore/agents-react/state';
 import i18next from 'i18next';
 import { useEffect } from 'react';
-import { usePrRepos } from '@/controllers/pr-repos';
+import { usePrRepos } from '@/github/pr-repos';
 import { desktop } from '@/desktop/bridge';
 import { subscribeFocusedLanguages } from '@/language/focused-language';
 import { useLaunches } from '@/launches/state';

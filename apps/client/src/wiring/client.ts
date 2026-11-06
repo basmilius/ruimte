@@ -23,7 +23,7 @@ import { startLinkRequest } from '@/pulsar/link-request';
 import { startSecretWatch } from '@/secrets/watch';
 import { startSharedStorage } from '@/shared-storage';
 import { watchDesktopUsage } from '@/shell/command-usage';
-import { startAgentNotifications } from '@/shell/notifications';
+import { startAgentNotifications } from '@/attention/notifications';
 import { reloadOnStaleChunk } from '@/stale-chunks';
 import { startAttentionWatch } from '@/state/attention';
 import { usePalette } from '@/state/palette';

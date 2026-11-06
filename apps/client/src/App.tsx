@@ -14,8 +14,8 @@ import { useProjectSwitch } from '@/project/open';
 import { closeLinkRequest, useLinkRequest } from '@/pulsar/link-request';
 import { useAppShortcuts } from '@/shell/app-shortcuts';
 import { useNativeMenu } from '@/shell/menu/native-menu';
-import { DormantScreen, ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
-import { allSettingsSections } from '@/shell/settings/sections';
+import { DormantScreen, ProjectSwitchScreen } from '@/project/ProjectSwitchScreen';
+import { allSettingsSections } from '@/settings/sections';
 import { StartScreen } from '@/shell/StartScreen';
 import { Toasts } from '@/shell/Toasts';
 import { useProject } from '@/state/project';
@@ -36,13 +36,13 @@ const WorkspaceShell = lazyNamed(async () => {
 }, 'WorkspaceShell');
 const FirstRunScreen = lazyNamed(() => import('@/onboarding/FirstRunScreen'), 'FirstRunScreen');
 const CommandPalette = lazyDialog(
-    () => import('@/shell/CommandPalette'),
+    () => import('@/palette/CommandPalette'),
     'CommandPalette',
     useUi,
     (s) => s.paletteOpen
 );
 const SettingsDialog = lazyDialog(
-    () => import('@/shell/SettingsDialog'),
+    () => import('@/settings/SettingsDialog'),
     'SettingsDialog',
     useUi,
     (s) => s.settings.open
