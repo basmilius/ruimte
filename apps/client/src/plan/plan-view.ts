@@ -185,17 +185,6 @@ export function stateLabel(kind: Plan['meta']['kind'], state: PlanStepState): st
     return i18next.t(`plan:state.${kind}.${state}`);
 }
 
-/* The states a person picks from; active is the agent's word for where it works. */
-export const PERSON_STATES: readonly PlanStepState[] = ['open', 'done', 'warning', 'info', 'failed', 'skipped', 'blocked'];
-
-/* The outcomes the mark of a test step offers. */
-export const TEST_OUTCOMES: readonly PlanStepState[] = ['done', 'warning', 'info', 'failed', 'skipped', 'blocked'];
-
-/* A state that is only worth something with a line about what happened, so picking it opens the note. */
-export function asksForNote(state: PlanStepState): boolean {
-    return state === 'failed' || state === 'warning' || state === 'info';
-}
-
 /* A click on the mark of a step in a steps plan: done, or back to open. */
 export function toggledState(state: PlanStepState): PlanStepState {
     return state === 'done' ? 'open' : 'done';
@@ -245,14 +234,6 @@ export function resultsText(plan: Plan): string | null {
         return null;
     }
     return [i18next.t('plan:results.title', { title: plan.meta.title }), ...groups.map((group) => [group.heading, ...group.lines].join('\n'))].join('\n\n');
-}
-
-/* One step as a line of Markdown, for Copy in its menu. */
-export function stepMarkdown(kind: Plan['meta']['kind'], step: PlanStep): string {
-    const state = stepState(step);
-    const mark = state === 'done' ? '[x]' : '[ ]';
-    const label = state === 'open' || state === 'done' ? '' : ` (${stateLabel(kind, state).toLowerCase()})`;
-    return `- ${mark} ${step.title}${label}${step.note ? `\n    > ${step.note.replace(/\n/g, '\n    > ')}` : ''}`;
 }
 
 /*

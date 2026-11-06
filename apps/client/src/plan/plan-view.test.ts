@@ -1,10 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import type { Plan, PlanStepState } from '@ruimte/contracts';
+import type { Plan } from '@ruimte/contracts';
 import {
     activeSteps,
     activeStepsLabel,
     ancestorIds,
-    asksForNote,
     foldableIds,
     nextActiveTarget,
     revealOptions,
@@ -137,13 +136,6 @@ describe('what the plan says in a line', () => {
         expect(resultsText({ ...plan, items })).toBe(
             'Results of the plan "Test the split placement":\n\nFailed:\n- Three\n\nWarning:\n- Two\n\nInfo:\n- One: Slow on a cold start'
         );
-    });
-
-    test('failed, warning and info open the note, the other states do not', () => {
-        const noting: PlanStepState[] = ['failed', 'warning', 'info'];
-        const silent: PlanStepState[] = ['open', 'active', 'done', 'skipped', 'blocked'];
-        expect(noting.every(asksForNote)).toBe(true);
-        expect(silent.some(asksForNote)).toBe(false);
     });
 
     test('no results when nothing failed or is blocked', () => {
