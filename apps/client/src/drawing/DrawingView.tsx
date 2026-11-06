@@ -1,5 +1,5 @@
 import { boundsOfElements, elementAt, rectFromPoints, resizeRect, scaleElement, type Point, type Rect, type ResizeHandle } from '@adecore/drawing';
-import { isInFloatingLayer, Kbd, isModHeld, ContextMenu } from '@adecore/ui';
+import { EmptyState, isInFloatingLayer, Kbd, isModHeld, ContextMenu } from '@adecore/ui';
 import type { DrawingElement } from '@ruimte/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -35,6 +35,7 @@ import { useDocument } from '@/state/document';
 import { isWritten, newSeed, useDrawing, useDrawingStore } from '@/state/drawing';
 import { useSettings } from '@/state/settings';
 import { usePaletteKey } from '@/state/theme';
+import { DrawingScene } from '@/ui/EmptyScenes';
 import { nearestHandle } from './handle-hit';
 
 /*
@@ -76,7 +77,7 @@ function EmptyDrawing({ id }: { id: string }) {
     }
     return (
         <div className="pointer-events-none absolute inset-0 grid place-items-center px-6 pt-6 pb-20">
-            <p className="max-w-md text-center text-sm leading-relaxed text-text-muted">
+            <EmptyState scene={<DrawingScene />} title={t('empty.title')}>
                 <Trans
                     t={t}
                     i18nKey="empty.description"
@@ -94,7 +95,7 @@ function EmptyDrawing({ id }: { id: string }) {
                         paste: <Kbd shortcut={DRAWING_SHORTCUTS.paste} variant="inline" />
                     }}
                 />
-            </p>
+            </EmptyState>
         </div>
     );
 }

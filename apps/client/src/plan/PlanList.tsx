@@ -51,6 +51,7 @@ import {
     type PlanRow
 } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
+import { PlanScene } from '@/ui/EmptyScenes';
 
 const STATE_ICON: Record<PlanStepState, LucideIcon> = {
     open: Circle,
@@ -189,7 +190,14 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
                 </div>
             </PlanTextMenu>
             <ScrollArea viewportRef={scroller} className="grow" viewportClassName="py-1">
-                {rows.length === 0 && <EmptyState>{filter === 'issues' ? t('empty.issues') : filter === 'open' ? t('empty.open') : t('empty.all')}</EmptyState>}
+                {rows.length === 0 &&
+                    (filter === 'issues' || filter === 'open' ? (
+                        <EmptyState>{filter === 'issues' ? t('empty.issues') : t('empty.open')}</EmptyState>
+                    ) : (
+                        <EmptyState scene={<PlanScene />} title={t('empty.all')}>
+                            {t('empty.allHint')}
+                        </EmptyState>
+                    ))}
                 {rows.map((row) => (
                     <PlanRowView key={row.item.id} row={row} context={context} />
                 ))}

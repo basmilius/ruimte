@@ -7,6 +7,7 @@ import { runActionShortcut } from '@/extensions/action-shortcuts';
 import { newChat } from '@/project/new-chat';
 import { canOpenWindows, openNewWindow } from '@/project/windows';
 import { commandForKey, type WindowCommandId } from '@/shell/command-table';
+import { createUsagePeek } from '@/shell/usage-peek';
 import { useUi } from '@/state/ui';
 
 // Window shortcuts also work on the start screen; project shortcuts are bound by the workspace.
@@ -64,8 +65,41 @@ export function runAppShortcut(shortcut: AppShortcut): void {
     WINDOW_SHORTCUTS[shortcut]();
 }
 
+function useUsagePeek(): void {
+    useEffect(() => {
+        const peek = createUsagePeek((shown) => useUi.getState().setUsagePeek(shown), {
+            set: (run, ms) => window.setTimeout(run, ms),
+            clear: (handle) => window.clearTimeout(handle)
+        });
+        const onKeyDown = (e: KeyboardEvent): void => peek.keyDown(e);
+        const onKeyUp = (e: KeyboardEvent): void => peek.keyUp(e);
+        const onPointerDown = (): void => peek.pointerDown();
+        const onPointerUp = (): void => peek.pointerUp();
+        const onBlur = (): void => peek.blur();
+
+        window.addEventListener('keydown', onKeyDown, true);
+        window.addEventListener('keyup', onKeyUp, true);
+        window.addEventListener('pointerdown', onPointerDown, true);
+        window.addEventListener('pointerup', onPointerUp, true);
+        window.addEventListener('pointercancel', onPointerUp, true);
+        window.addEventListener('blur', onBlur);
+
+        return () => {
+            window.removeEventListener('keydown', onKeyDown, true);
+            window.removeEventListener('keyup', onKeyUp, true);
+            window.removeEventListener('pointerdown', onPointerDown, true);
+            window.removeEventListener('pointerup', onPointerUp, true);
+            window.removeEventListener('pointercancel', onPointerUp, true);
+            window.removeEventListener('blur', onBlur);
+            peek.blur();
+        };
+    }, []);
+}
+
 /* Mounted once by the app; a second listener would toggle the palette open and shut again. */
 export function useAppShortcuts(): void {
+    useUsagePeek();
+
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent): void => {
             // A key something on the page already acted on is that thing's, such as Run all in a database console.

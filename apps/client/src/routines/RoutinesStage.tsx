@@ -35,6 +35,7 @@ import { useEndpointId } from '@/state/keys';
 import { isThisMachine } from '@/state/local-machine';
 import { useProject } from '@/state/project';
 import { machineTransport } from '@/transport';
+import { RoutinesScene } from '@/ui/EmptyScenes';
 
 const MINUTE_MS = 60_000;
 
@@ -176,7 +177,21 @@ function WeekStage({ endpointId, result, projectId, projectName }: { endpointId:
                         <RoutineAgenda endpointId={endpointId} groups={[]} empty week={week} now={now} timeZone={result.timeZone} />
                         {/* Over the empty week, which shows through. */}
                         <div className="pointer-events-none absolute inset-x-0 top-14 bottom-0 grid place-items-center bg-surface/50 p-6">
-                            <EmptyState icon={Clock} title={t('stage.emptyTitle')}>
+                            <EmptyState
+                                scene={<RoutinesScene />}
+                                title={t('stage.emptyTitle')}
+                                action={
+                                    <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        className="pointer-events-auto"
+                                        onClick={() => openRoutineForm({ projectId, pickProject: grouped })}
+                                    >
+                                        <Icon icon={Plus} size={14} />
+                                        {t('actions.new')}
+                                    </Button>
+                                }
+                            >
                                 {t('stage.empty')}
                             </EmptyState>
                         </div>

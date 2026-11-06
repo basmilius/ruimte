@@ -95,19 +95,9 @@
         "tone": "Tint",
         "resetPosition": "Positie terugzetten",
         "empty": {
-            "description": "Leeg diagram. Een agent kan het voor je vullen.",
-            "agent": {
-                "title": "Vraag het een agent",
-                "description": "Opent een chat ernaast"
-            },
-            "json": {
-                "title": "JSON openen",
-                "description": "Nodes en verbindingen met de hand schrijven"
-            },
-            "example": {
-                "title": "Voorbeeld invoegen",
-                "description": "Een kleine flow om mee te beginnen"
-            }
+            "title": "Leeg diagram",
+            "description": "Vakken en lijnen voor architectuur en flows. Een agent tekent ze vanuit de code.",
+            "agent": "Vraag het een agent"
         }
     },
     "error": {
@@ -130,6 +120,7 @@
         "zoom": "Zoom"
     },
     "empty": {
-        "description": "Nog niets getekend. Kies gereedschap met <tools/> of plak met <paste/>."
+        "title": "Nog niets getekend",
+        "description": "Schets een scherm of een flow met de hand. Kies gereedschap met <tools/> of plak met <paste/>."
     }
 }

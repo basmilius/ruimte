@@ -2,7 +2,7 @@ import { connectionFromContainer, containerTitle, DatabaseExplorer, useDatabaseC
 import type { DockerContainer } from '@adecore/database/protocol';
 import { Button, ButtonGroup, Icon, IconButton, ListRow, PanelEmpty, SectionLabel } from '@adecore/ui';
 import type { DatabaseConnection } from '@ruimte/contracts';
-import { CircleAlert, Container, Database, KeyRound, Plus, Settings2, SquareTerminal } from 'lucide-react';
+import { CircleAlert, Container, KeyRound, Plus, Settings2, SquareTerminal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -26,6 +26,7 @@ import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { setDragging } from '@/shell/view-drag';
 import { useProject } from '@/state/project';
+import { DatabasesScene } from '@/ui/EmptyScenes';
 
 /*
  * The connections of the project, with their schemas, tables and columns, and the consoles of each. A table
@@ -169,7 +170,8 @@ function NoConnections() {
     return (
         <div className="flex min-h-0 grow flex-col">
             <PanelEmpty
-                icon={Database}
+                scene={<DatabasesScene />}
+                title={t('panel.emptyTitle')}
                 action={
                     <Button size="sm" variant="secondary" onClick={() => useDatabasePanel.getState().openConnections()}>
                         <Icon icon={Plus} size={14} /> {t('panel.add')}

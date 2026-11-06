@@ -58,7 +58,8 @@
         }
     },
     "empty": {
-        "all": "Nog geen stappen.",
+        "all": "Nog geen stappen",
+        "allHint": "Een plan bevat de stappen van het werk, voor jou en je agents. Vraag een chat om het te plannen.",
         "open": "Niets open.",
         "issues": "Geen problemen."
     },
