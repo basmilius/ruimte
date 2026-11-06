@@ -128,6 +128,16 @@ describe('buildSidebar', () => {
         expect(list!.rows.map((row) => row.rowId)).toEqual(['view:backend', 'node:backend:shell', 'node:backend:claude', 'node:backend:docs', 'view:frontend']);
     });
 
+    test('a picked order lists the nodes of an open canvas in it, the views and Needs you as they were', () => {
+        const [needs, list] = buildSidebar({
+            project: project([backend, frontend], 'backend'),
+            expandedIds: new Set(['backend']),
+            order: { sort: 'name', then: 'newest' }
+        });
+        expect(list!.rows.map((row) => row.rowId)).toEqual(['view:backend', 'node:backend:claude', 'node:backend:docs', 'node:backend:shell', 'view:frontend']);
+        expect(needs!.rows.map((row) => row.rowId)).toEqual(['needs:claude']);
+    });
+
     test('an agent that waits shows up top with the view it lives in named', () => {
         const [needs] = build([frontend, backend], 'frontend', ['frontend']);
         expect(needs!.rows).toHaveLength(1);

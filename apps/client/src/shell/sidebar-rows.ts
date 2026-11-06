@@ -2,6 +2,7 @@ import type { AgentKind, AgentStatus, CanvasNodeKind, NodeTitleSource, ProjectIc
 import i18next from 'i18next';
 import type { AgentWork } from '@/state/agent-work';
 import { compareWaits, type WaitDetails } from '@/state/waiting';
+import { sortNodes, type NodeSort, type NodeSortThen } from './sidebar-node-sort';
 import type { SidebarTarget } from './sidebar-target';
 
 export interface SidebarNode {
@@ -126,9 +127,16 @@ export interface SidebarProject {
     openViewIds: readonly string[];
 }
 
+/* How the nodes under an open canvas are listed; absent keeps the canvas order. */
+export interface SidebarNodeOrder {
+    sort: NodeSort;
+    then: NodeSortThen;
+}
+
 interface SidebarInput {
     project: SidebarProject;
     expandedIds: ReadonlySet<string>;
+    order?: SidebarNodeOrder;
 }
 
 /* Groups, notes and drawings are frames, paper and files; the list is about what runs. */
@@ -186,7 +194,7 @@ export function waitsOnYou(node: SidebarNode): boolean {
 }
 
 /* What waits for you first, then the views in project order, with the nodes of an open canvas under it. */
-export function buildSidebar({ project, expandedIds }: SidebarInput): SidebarSection[] {
+export function buildSidebar({ project, expandedIds, order }: SidebarInput): SidebarSection[] {
     const sections: SidebarSection[] = [];
     const waiting: SidebarRow[] = [];
     for (const view of project.views.filter((candidate) => !candidate.hidden)) {
@@ -234,7 +242,7 @@ export function buildSidebar({ project, expandedIds }: SidebarInput): SidebarSec
         if (!expanded) {
             continue;
         }
-        for (const node of view.nodes) {
+        for (const node of order ? sortNodes(view.nodes, order.sort, order.then) : view.nodes) {
             rows.push({ type: 'node', rowId: `node:${view.id}:${node.id}`, node, viewId: view.id, viewName: null });
         }
     }
@@ -348,10 +356,10 @@ export function needsYouSection(groups: readonly SidebarGroup[], onScreen?: read
     );
 }
 
-export function buildCombinedSidebar(groups: readonly SidebarGroup[]): SidebarSection[] {
+export function buildCombinedSidebar(groups: readonly SidebarGroup[], order?: SidebarNodeOrder): SidebarSection[] {
     const sections: SidebarSection[] = [];
     for (const group of groups) {
-        const views = buildSidebar({ project: group.project, expandedIds: group.expandedIds }).find((section) => section.kind === 'views')!;
+        const views = buildSidebar({ project: group.project, expandedIds: group.expandedIds, order }).find((section) => section.kind === 'views')!;
         sections.push({ ...views, id: group.key, group, rows: group.collapsed ? [] : views.rows.map((row) => qualify(group, row)) });
     }
     const waiting = needsYouSection(groups);

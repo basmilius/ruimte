@@ -123,6 +123,8 @@ export function Sidebar() {
     const draws = useChatDrawers();
     const combined = useSettings((s) => s.sidebarScope === 'all-open');
     const everywhere = useSettings((s) => s.needsYouAllProjects);
+    const nodeSort = useSettings((s) => s.sidebarNodeSort);
+    const nodeSortThen = useSettings((s) => s.sidebarNodeSortThen);
     const currentProject = useProject((s) => s.current);
     const shared = useDocument(useShallow((state) => state.shared));
     const flags = useDocument((state) => state.flags);
@@ -246,11 +248,12 @@ export function Sidebar() {
         separators
     );
     const hidden = foldedProjects(movable, [...Object.values(separators.before).flat(), ...separators.trailing]);
+    const order = { sort: nodeSort, then: nodeSortThen };
     const sections = combined
-        ? buildCombinedSidebar(groups)
+        ? buildCombinedSidebar(groups, order)
         : everywhere
-          ? buildSidebarEverywhere({ project, expandedIds }, groups)
-          : buildSidebar({ project, expandedIds });
+          ? buildSidebarEverywhere({ project, expandedIds, order }, groups)
+          : buildSidebar({ project, expandedIds, order });
     const empty = !combined && project.views.every((view) => view.hidden);
     const rows = sidebarRowOrder(sections, separators, hidden, empty);
     const roving = rovingId !== null && rows.includes(rovingId) ? rovingId : (rows[0] ?? null);
