@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize, sep } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { Serializer } from '@adecore/utils/async';
@@ -179,6 +179,13 @@ export class ClientExtensions {
                     for (const path of paths) {
                         await mkdir(dirname(join(unpacking, path)), { recursive: true });
                         await writeFile(join(unpacking, path), Buffer.from(files[path] as string, 'base64'));
+                    }
+
+                    const unpacked = await readdir(unpacking, { recursive: true, withFileTypes: true });
+
+                    // No comparison of names matches every file system's folding, so what landed is counted: fewer files means one replaced another.
+                    if (unpacked.filter((entry) => entry.isFile()).length !== paths.length) {
+                        throw new Error('The pack names one file twice under names this file system treats as the same');
                     }
 
                     await rm(folder, { recursive: true, force: true });

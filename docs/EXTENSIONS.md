@@ -105,7 +105,7 @@ Still to set up before the store opens:
 
 ## Safe mode
 
-Opening a window with `?safe-mode` loads no extension and no theme, so a person can always remove one that hangs the app.
+A window with `?safe-mode` on its address loads no extension and no theme, so a person can always remove one that hangs the app. A desktop window has no address bar: Help, Restart Without Extensions starts the app again with `--safe-mode`, which puts it on every window of that start (`apps/desktop/src/main/safe-mode.ts`). A page that no longer answers its menu needs the app quit and started with the flag by hand (`open -a Ruimte --args --safe-mode` on macOS). The next ordinary start loads them again.
 
 ## The machine
 

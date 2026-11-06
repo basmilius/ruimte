@@ -21,6 +21,7 @@ import {
     Search,
     Server,
     Settings,
+    ShieldOff,
     SquareArrowOutUpRight,
     Sun,
     SunMoon
@@ -61,6 +62,13 @@ export const WINDOW_COMMANDS = {
         menu: { menu: 'edit', group: 'search', order: 10, when: (context) => context.settingsOpen }
     },
     'settings-keyboard': { key: 'keyboardShortcuts', icon: Keyboard, palette: true, menu: { menu: 'help', group: 'help', order: 30 } },
+    // A desktop window has no address to add `?safe-mode` to.
+    'restart-safe-mode': {
+        key: 'restartSafeMode',
+        icon: ShieldOff,
+        palette: false,
+        menu: { menu: 'help', group: 'help', order: 40, when: (context) => context.safeModeRestart }
+    },
     'settings-editor': { key: 'editorSettings', icon: CodeXml, palette: true, menu: { menu: 'window', group: 'panels', order: 50 } },
     'settings-machines': { key: 'machines', icon: Server, palette: true, menu: { menu: 'window', group: 'panels', order: 60 } },
     'settings-computer': { key: 'computerUse', icon: MousePointer2, palette: true, menu: { menu: 'window', group: 'panels', order: 70 } },

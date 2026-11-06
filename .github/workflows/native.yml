@@ -137,8 +137,7 @@ jobs:
       - run: swift build
       - run: swift test
 
-  # The app itself is tested by Xcode Cloud's Check workflow on every push to main (apps/ios/README.md),
-  # so it has no job here.
+  # The app itself has no job here: its tests take too long on these runners and run by hand (apps/ios/README.md).
 
   # One result for a caller to wait on: a skipped check passes only when this run left it to the paths.
   native:

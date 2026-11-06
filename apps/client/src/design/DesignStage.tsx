@@ -1,7 +1,7 @@
 import { Button, EmptyState, Icon, Menu, PromptDialog, Segmented, Separator, ZoomControls, useNow } from '@adecore/ui';
 import { formatAgo } from '@adecore/ui/format';
 import type { ChatAttachmentUpload, FsEntry } from '@ruimte/contracts';
-import { ChevronDown, FileCode2, MessageSquarePlus, MousePointer2, PenLine, Send, SquareMousePointer, SwatchBook, Trash2 } from 'lucide-react';
+import { ChevronDown, FileCode2, MessageSquarePlus, MousePointer2, PenLine, Send, SquareMousePointer, Trash2 } from 'lucide-react';
 import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -33,6 +33,7 @@ import { designCameraKey, useDesignChat } from '@/state/design-chat';
 import { useToasts } from '@/state/toasts';
 import { CellViewContext } from '@/state/workspace-stores';
 import { focusCellOfView } from '@/surface/guest-focus';
+import { DesignScene } from '@/ui/EmptyScenes';
 import { useTransport } from '@/workspace/context';
 
 const MINUTE_MS = 60_000;
@@ -410,8 +411,8 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
 
     if (files === null || files.length === 0 || active === null) {
         return (
-            <EmptyState icon={SwatchBook} className="grow">
-                {t('design.empty')}
+            <EmptyState scene={<DesignScene />} title={t('design.emptyTitle')} className="grow">
+                {t('design.emptyHint')}
             </EmptyState>
         );
     }

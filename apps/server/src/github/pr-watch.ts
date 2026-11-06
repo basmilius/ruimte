@@ -47,6 +47,8 @@ interface PrWatchOptions {
     removeEntry(id: string): Promise<void>;
     random?: () => number;
     onError?: (what: string, error: unknown) => void;
+    /* Whether the watch's project is closed, which holds its polls until `resume` names it; never without it. */
+    paused?: (projectId: string) => Promise<boolean>;
 }
 
 function publicOf(record: WatchRecord): GitPrWatch {
@@ -167,6 +169,8 @@ export class PrWatchStore {
     private readonly records = new Map<string, WatchRecord>();
     private readonly timers = new Map<string, unknown>();
     private readonly due = new Map<string, number>();
+    // Watches whose project was closed at their last poll; they wait for `resume`, not for a clock.
+    private readonly held = new Set<string>();
     private readonly queue: string[] = [];
     private readonly flying = new Set<Promise<void>>();
     private readonly sinks = new ClientSinks();
@@ -271,6 +275,16 @@ export class PrWatchStore {
         }
     }
 
+    /* The project opened again, so its watches that a closed project held poll again. */
+    resume(projectId: string): void {
+        for (const id of [...this.held]) {
+            if (this.records.get(id)?.projectId === projectId) {
+                this.held.delete(id);
+                this.arm(id, 0);
+            }
+        }
+    }
+
     /* Resolves once every poll in flight is done, for a test and for a shutdown. */
     async settled(): Promise<void> {
         while (this.flying.size > 0) {
@@ -343,6 +357,10 @@ export class PrWatchStore {
         }
         if (this.clock.now() - record.startedAt >= WATCH_LIFETIME_MS) {
             await this.end(id, 'expired');
+            return;
+        }
+        if ((await this.options.paused?.(record.projectId)) === true) {
+            this.held.add(id);
             return;
         }
         let poll: PrPoll | null;
@@ -434,6 +452,7 @@ export class PrWatchStore {
         }
         this.timers.delete(id);
         this.due.delete(id);
+        this.held.delete(id);
         this.save();
         for (const entry of this.options.entries()) {
             if (entry.kind === 'deliver-pr-watch' && entry.payload.watchId === id) {

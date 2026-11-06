@@ -1,5 +1,5 @@
 import { extensionPermissionProblems } from './extension-permissions.ts';
-import { EXTENSION_API_VERSION, ExtensionManifestSchema, ExtensionPackSchema, isSafePackPath, type ExtensionManifest } from './extension.ts';
+import { clashingPackPath, EXTENSION_API_VERSION, ExtensionManifestSchema, ExtensionPackSchema, isSafePackPath, type ExtensionManifest } from './extension.ts';
 
 export type ExtensionPackProblemCode = 'pack-unreadable' | 'pack-manifest' | 'pack-api' | 'pack-path';
 
@@ -59,6 +59,12 @@ function readUnzipped(unzipped: Uint8Array): ExtensionPackReading {
 
     if (outside !== undefined) {
         return { ok: false, code: 'pack-path', message: `The pack names a path outside itself: ${outside}` };
+    }
+
+    const clash = clashingPackPath(Object.keys(pack.data.files));
+
+    if (clash !== null) {
+        return { ok: false, code: 'pack-path', message: `The pack names ${clash} twice, in another case` };
     }
 
     const raw = pack.data.files['manifest.json'];

@@ -75,6 +75,7 @@ import { readIdeaName } from './project-identity.ts';
 import { placesOf, ProjectIndex, type IndexedPlace } from './project-index.ts';
 import { ProjectRegistry, type RegistryEntry } from './project-registry.ts';
 import { isIconFile, sameIcon, ProjectSummaries } from './project-summaries.ts';
+import { ProjectWakes } from './project-wakes.ts';
 import { PROJECT_WRITE_IO, ProjectWriteRaced, ProjectWriteStuck, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
 import { referablesOfViews } from './references.ts';
 import { idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines, type RemoteStore } from './remote-store.ts';
@@ -282,12 +283,14 @@ export class ProjectStore {
     /* Which client has which project on screen. Only those hear `project.changed` and `project.showView`;
        every other client hears a change of the document as the rows of its sidebar (`announceChange`). */
     private readonly holds = new ProjectHolds();
+    private readonly wakes = new ProjectWakes();
     private readonly registry: ProjectRegistry;
     private readonly summaries: ProjectSummaries;
     // One project's reads and writes run one after the other, and never wait on another project's.
     private readonly projectLocks = new KeyedSerializer();
     // Opening by folder decides which project a folder is, so two opens of one new folder never make two.
     private readonly opens = new Serializer();
+    private readonly reopenListeners = new Set<(projectId: string) => void>();
 
     // A folder a client names to open stops at the machine's own state, as its file requests do.
     private readonly machineHome: MachineHome;
@@ -611,6 +614,10 @@ export class ProjectStore {
         await this.registry.update((entries) => [...entries.filter((candidate) => candidate.projectId !== opened.projectId), opened]);
         // Every other client lists it too: a project new to this machine, or one moving to the top.
         this.publish(entry);
+
+        if (found.closedAt != null) {
+            this.tellReopened(entry.projectId);
+        }
 
         this.release(entry.projectId);
         await this.settleDesigns(entry.projectId, entry.folder, { views: document.views, shared: document.shared ?? [] });
@@ -1092,6 +1099,50 @@ export class ProjectStore {
     }
 
     /*
+     * Whether the last client out closed this project, which puts it under Recent until someone opens it again.
+     * A holder still works in it: another machine's channel holds a project without taking it out of Recent.
+     * Closing counts from its first step, since a chat woken once its sessions ended would stay running.
+     */
+    async isClosed(projectId: string): Promise<boolean> {
+        if (this.holds.holders(projectId) > 0) {
+            return false;
+        }
+
+        if (this.wakes.isClosing(projectId)) {
+            return true;
+        }
+
+        const entry = await this.registry.entry(projectId).catch(() => null);
+
+        return entry?.closedAt != null;
+    }
+
+    /* The last look of a wake before it opens a turn, so it awaits nothing: `isClosed` for a wake that `runWake` counts. */
+    isClosing(projectId: string): boolean {
+        return this.wakes.isClosing(projectId) && this.holds.holders(projectId) === 0;
+    }
+
+    /* Runs a wake that may open a turn in this project; `closeProject` waits for it before it ends the sessions. */
+    runWake<T>(projectId: string, wake: () => Promise<T>): Promise<T> {
+        return this.wakes.run(projectId, wake);
+    }
+
+    /* Hears a project that was closed open again, after the registry says so, or one that stayed open after a close began. */
+    onReopened(listener: (projectId: string) => void): () => void {
+        this.reopenListeners.add(listener);
+
+        return () => {
+            this.reopenListeners.delete(listener);
+        };
+    }
+
+    private tellReopened(projectId: string): void {
+        for (const listener of this.reopenListeners) {
+            listener(projectId);
+        }
+    }
+
+    /*
      * A person closed this project on one client. Another client that still has it open keeps it:
      * its sessions go on running and its place in the list does not move, so only this client's hold
      * goes. The last one out ends the sessions and drops the project under Recent.
@@ -1102,13 +1153,30 @@ export class ProjectStore {
         if (otherClients > 0) {
             return { ended: 0, otherClients };
         }
-        /* The sessions go before the write, the rule `view_delete` follows: a shell that outlived
-           the project it stood in would answer to a canvas nobody can open any more. */
-        const sessions = this.index.sessionNodes(projectId);
+        let kept = true;
+        const wakesEnded = this.wakes.startClosing(projectId);
+        try {
+            const closing = await this.endProject(projectId, wakesEnded);
+            kept = closing.kept;
+            return { ended: closing.ended, otherClients: kept ? this.holds.holders(projectId) : 0 };
+        } finally {
+            this.wakes.endClosing(projectId);
+            // What was turned away while this ran did so for a project that stays open after all.
+            if (kept) {
+                this.tellReopened(projectId);
+            }
+        }
+    }
+
+    private async endProject(projectId: string, wakesEnded: Promise<void>): Promise<{ ended: number; kept: boolean }> {
         /* A client may open the project while its sessions end, and keeps what is left of it. An open
            replaces the loaded project before its client holds it, so that is checked as well. */
         const loaded = this.open.get(projectId);
         const reopened = (): boolean => this.holds.holders(projectId) > 0 || this.open.get(projectId) !== loaded;
+        await wakesEnded;
+        /* The sessions go before the write, the rule `view_delete` follows: a shell that outlived
+           the project it stood in would answer to a canvas nobody can open any more. */
+        const sessions = this.index.sessionNodes(projectId);
         let ended = 0;
         if (this.links.closing && sessions.length > 0) {
             this.links.closing(
@@ -1138,7 +1206,7 @@ export class ProjectStore {
             this.publish(closed);
             return false;
         });
-        return { ended: ended + launches, otherClients: kept ? this.holds.holders(projectId) : 0 };
+        return { ended: ended + launches, kept };
     }
 
     delete(projectId: string, removeFiles: boolean): Promise<void> {

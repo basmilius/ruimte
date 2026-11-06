@@ -4,6 +4,7 @@ import { useUi } from '@/state/ui';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
+import { claudeProvider } from '../../testing/fake-provider';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 
 const GROK = {
@@ -38,11 +39,12 @@ let machine: FakeMachine;
 let workspace: FakeWorkspace;
 let page: Mounted;
 
-async function open(views: unknown[], activeViewId: string, grok: ProviderInfo = GROK): Promise<void> {
+async function open(views: unknown[], activeViewId: string, grok: ProviderInfo = GROK, prepare?: (fake: FakeMachine) => void): Promise<void> {
     machine = new FakeMachine();
     machine.answer('project.save', ({ baseRev }) => ({ rev: baseRev + 1 }) as never);
     machine.answer('provider.list', () => ({ providers: [grok] }));
     machine.answer('chat.attach', ({ chatId }) => ({ info: chatInfoOf(chatId, { provider: 'grok' }), items: [], seq: 0 }) as never);
+    prepare?.(machine);
     workspace = await openFakeWorkspace(machine, { views } as never, { activeViewId, views: {} });
     page = mount();
     await page.renderApp();
@@ -79,6 +81,36 @@ describe('a node whose CLI is not on its machine', () => {
         const node = (): Element | null => page.host.querySelector('[data-node-id="old-agent"]');
         await until(() => node()?.textContent?.includes('gemini is not available on this machine.') === true);
         expect(button('Install')).toBeNull();
+    });
+
+    test('a chat on a provider that is gone goes on with an installed one from its notice', async () => {
+        const claude = claudeProvider({ chat: true, terminal: true });
+        const started = (chatId: string) => ({
+            info: chatInfoOf(chatId, { provider: 'apple', selection: { model: 'apple-system', options: {} } }),
+            items: [
+                { id: 'turn-1', kind: 'turn', createdAt: 1, turnId: 'turn-1', state: 'done', endedAt: 2, costUsd: 0 },
+                { id: 'user-1', kind: 'user', createdAt: 1, turnId: 'turn-1', text: 'Write the lexer' }
+            ],
+            seq: 1
+        });
+
+        await open([{ kind: 'chat', id: 'apple-chat', name: 'Lexer', node: { provider: 'apple' } }], 'apple-chat', claude, (fake) => {
+            fake.answer('chat.attach', ({ chatId }) => started(chatId) as never);
+            fake.answer('chat.forkInfo', () => ({ repository: false, branches: [], branch: null, filesAfterTurn: false }));
+            fake.answer(
+                'chat.fork',
+                () => ({ info: chatInfoOf('forked', { provider: claude.kind }), nodeId: 'forked', viewId: 'forked', edgeId: null }) as never
+            );
+        });
+        await until(() => button('Continue with another provider') !== null);
+        expect(page.host.textContent).toContain('apple is not available on this machine.');
+
+        await clickOn(button('Continue with another provider'));
+        await until(() => button('Fork')?.disabled === false);
+        await clickOn(button('Fork'));
+        await until(() => machine.requests('chat.fork').length > 0);
+
+        expect(machine.requests('chat.fork')[0]).toMatchObject({ chatId: 'apple-chat', turnId: 'turn-1', provider: claude.kind });
     });
 
     test('an installed CLI says nothing', async () => {

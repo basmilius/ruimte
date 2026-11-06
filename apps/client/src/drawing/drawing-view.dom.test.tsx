@@ -12,7 +12,7 @@ const DRAWN: DrawingDocument = {
     rev: 3,
     elements: [{ kind: 'rect', id: 'box', x: 0, y: 0, w: 100, h: 60, stroke: 'ink', strokeWidth: 2, seed: 1 }]
 } as DrawingDocument;
-const EMPTY_HINT = 'Nothing drawn yet.';
+const EMPTY_HINT = 'Nothing drawn yet';
 
 let machine: FakeMachine;
 let workspace: FakeWorkspace;

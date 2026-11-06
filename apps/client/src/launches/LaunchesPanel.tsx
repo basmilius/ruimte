@@ -3,7 +3,7 @@ import { Button, ButtonGroup, Icon, Menu, PanelEmpty, useNow, messageOf, isApple
 import { formatAgo, formatDuration } from '@adecore/ui/format';
 import clsx from 'clsx';
 import i18next from 'i18next';
-import { ChevronDown, ExternalLink, Play, Plus, Rocket, Smartphone } from 'lucide-react';
+import { ChevronDown, ExternalLink, Play, Plus, Smartphone } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDeviceList } from '@/clients/devices/state';
@@ -23,6 +23,7 @@ import { PanelHeaderActions, PanelHeaderSlot } from '@/surface/PanelHeaderSlot';
 import { isAppShortcut, isTerminalPaste, macMotionSequence } from '@/surface/terminal-keymap';
 import { MachineTerminal } from '@/terminal/MachineTerminal';
 import { drawSession, fittedGrid } from '@/terminal/xterm';
+import { LaunchesScene } from '@/ui/EmptyScenes';
 import { deviceClientFor, sessionClientFor } from '@/workspace/connections';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
@@ -66,7 +67,8 @@ export function LaunchesPanel() {
     if (document.launches.length === 0) {
         return (
             <PanelEmpty
-                icon={Rocket}
+                scene={<LaunchesScene />}
+                title={t('panel.emptyTitle')}
                 action={
                     <Button size="sm" variant="secondary" onClick={() => useLaunches.getState().setDialog({ kind: 'edit', launchId: null })}>
                         <Icon icon={Plus} size={14} /> {t('menu.new')}

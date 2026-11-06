@@ -26,6 +26,9 @@ function descriptionFor(status: OpenAiCredentialStatus): string {
     if (status.configured) {
         return i18next.t('settings:voice.key.session');
     }
+    if (status.machineKeyLeft === true) {
+        return i18next.t('settings:voice.key.machineKeyLeft');
+    }
     return i18next.t('settings:voice.key.missing');
 }
 
@@ -185,7 +188,7 @@ export function VoicePane() {
                         <Button type="submit" disabled={busy || draft.trim() === ''}>
                             {t('common:action.save')}
                         </Button>
-                        {displayStatus?.configured && (
+                        {(displayStatus?.configured === true || displayStatus?.machineKeyLeft === true) && (
                             <IconButton icon={Trash2} label={t('voice.key.remove')} className="shrink-0" disabled={busy} onClick={() => void remove()} />
                         )}
                     </form>

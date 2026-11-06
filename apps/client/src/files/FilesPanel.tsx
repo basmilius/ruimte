@@ -87,6 +87,7 @@ import {
     type EntryCache
 } from '@/surface/panels/files-tree';
 import { APP_SHORTCUTS } from '@/surface/shortcuts';
+import { FilesScene } from '@/ui/EmptyScenes';
 import { useTransport } from '@/workspace/context';
 import { nodeNames, nodesInWorktree, worktreeBase } from '@/worktree-rules/worktree-rows';
 import { WorktreeBar } from '@/worktrees/WorktreeMenu';
@@ -808,7 +809,19 @@ export function FilesPanel() {
         if (!showHidden && (cache.get(root)?.length ?? 0) > 0) {
             return <EmptyState icon={Folder}>{t('files.onlyHidden')}</EmptyState>;
         }
-        return <EmptyState icon={Folder}>{t('files.empty')}</EmptyState>;
+        return (
+            <EmptyState
+                scene={<FilesScene />}
+                title={t('files.emptyTitle')}
+                action={
+                    <Button size="sm" variant="secondary" onClick={() => startCreate('file', creationParentOf(selectionRef.current[0] ?? null))}>
+                        <Icon icon={FilePlus} size={14} /> {t('files.create.file')}
+                    </Button>
+                }
+            >
+                {t('files.empty')}
+            </EmptyState>
+        );
     };
 
     const empty = placeholder();

@@ -49,6 +49,7 @@ export function shortcutGroups(apple: boolean): ShortcutGroup[] {
             title: areaTitle('general'),
             shortcuts: [
                 { keys: APP_SHORTCUTS.palette, label: say('canvas.palette') },
+                { keys: shortcut('Alt'), then: i18next.t('settings:gesture.hold'), label: say('canvas.usagePeek') },
                 { keys: CANVAS_SHORTCUTS.voiceControl, label: i18next.t('voice:shortcut') }
             ]
         },

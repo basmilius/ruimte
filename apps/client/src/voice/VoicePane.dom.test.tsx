@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { REQUEST_SCHEMAS, type RequestType, type VoicePreferences } from '@ruimte/contracts';
+import type { OpenAiCredentialStatus } from '@ruimte/desktop-bridge';
 import { act } from 'react';
 import { useSettings } from '@/state/settings';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
@@ -12,6 +13,8 @@ let page: Mounted;
 let machine: FakeMachine;
 let release: () => void;
 let stored: VoicePreferences | null;
+let credential: OpenAiCredentialStatus;
+let removals: number;
 
 function trigger(label: string): HTMLElement | null {
     return document.querySelector<HTMLElement>(`[aria-label="${label}"]`);
@@ -37,9 +40,13 @@ async function open(answers: readonly RequestType[] | null = null): Promise<void
     installDesktop({
         machine: machineBridge('local'),
         openAi: {
-            credentialStatus: async () => ({ configured: true, persistent: true }),
+            credentialStatus: async () => credential,
             saveApiKey: async () => ({ configured: true, persistent: true }),
-            clearApiKey: async () => ({ configured: false, persistent: true }),
+            clearApiKey: async () => {
+                removals += 1;
+
+                return credential;
+            },
             createLiveSession: async () => ({ session: { id: 'session' }, transport: { type: 'webrtc', sdp: 'v=0' } })
         }
     });
@@ -50,6 +57,8 @@ async function open(answers: readonly RequestType[] | null = null): Promise<void
 
 beforeEach(() => {
     stored = null;
+    credential = { configured: true, persistent: true };
+    removals = 0;
     useSettings.getState().update({ voiceLanguage: 'nl', liveVoice: 'marin' });
 });
 
@@ -89,5 +98,17 @@ describe('Settings > Voice, language and voice of the machine', () => {
         expect(useSettings.getState().liveVoice).toBe('cedar');
         expect(machine.requests('voice.preferences')).toEqual([]);
         expect(machine.requests('voice.setPreferences')).toEqual([]);
+    });
+});
+
+describe('Settings > Voice, the API key', () => {
+    test('a key the machine kept after a removal is said, and can be removed again', async () => {
+        credential = { configured: false, persistent: false, machineKeyLeft: true };
+        await open();
+        await until(() => document.body.textContent?.includes('This machine still holds the key for Voice.') === true);
+
+        await clickOn(trigger('Remove API key'));
+
+        expect(removals).toBe(1);
     });
 });

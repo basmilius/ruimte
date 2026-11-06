@@ -43,6 +43,8 @@ export interface MenuContext extends MenuFacts {
     /* The openable views in sidebar order; the first nine have a shortcut. */
     views: string[];
     releaseNotes: boolean;
+    /* The shell can start the app again without extensions, and this start loads them. */
+    safeModeRestart: boolean;
     /* The page fills the screen, which only the web client asks the page itself. */
     fullscreen: boolean;
     /* When this computer stays awake, or null where the shell cannot hold it awake. */

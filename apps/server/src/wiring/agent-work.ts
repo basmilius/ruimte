@@ -81,13 +81,11 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         enqueue: (projectId, chatId, work) => outboxLink.enqueue(projectId, chatId, work),
         entries: () => outbox.list(),
         removeEntry: (id) => outbox.remove(id),
-        onError: (what, error) => console.error(`${what}:`, errorText(error))
+        onError: (what, error) => console.error(`${what}:`, errorText(error)),
+        paused: (projectId) => projects.isClosed(projectId)
     });
-    worker.handle(
-        'deliver-pr-watch',
-        prWatchHandler({ watches: prWatches, openChat: chatOpener({ chats: agents.chats, placed: (nodeId) => projects.index.locate(nodeId) !== null }) })
-    );
     lifecycle.on('placed', (projectId, ids) => prWatches.prune(projectId, ids));
+    projects.onReopened((projectId) => prWatches.resume(projectId));
 
     // The reconnect and the tasks given to other machines need each other, and the tasks of this machine need the wiring of the outbox.
     const reconnect = new ConnectPeer({
@@ -133,6 +131,12 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         peerParents: (projectId) => projects.peers.canvasIdsOf(projectId),
         remoteStop: (nodeId) => remoteTasks.oweStop(nodeId)
     });
+    worker.handle(
+        'deliver-pr-watch',
+        wiring.unlessClosed(
+            prWatchHandler({ watches: prWatches, openChat: chatOpener({ chats: agents.chats, placed: (nodeId) => projects.index.locate(nodeId) !== null }) })
+        )
+    );
     const remoteTasks = new RemoteTasks({
         connections: seams.remote.connections(remote.connections),
         reconnect: seams.remote.reconnect(reconnect),

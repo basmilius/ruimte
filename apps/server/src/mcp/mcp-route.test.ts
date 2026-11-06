@@ -353,7 +353,8 @@ describe('images', () => {
 });
 
 describe('http', () => {
-    const deps = { targetForToken: (token: string) => (token === 'tok-chat' ? 'chat-1' : null), host: host(), actions: serverActions, tools: catalog() };
+    const callers: Record<string, string> = { 'tok-chat': 'chat-1', 'tok-dots': '..', 'tok-up': '../x' };
+    const deps = { targetForToken: (token: string) => callers[token] ?? null, host: host(), actions: serverActions, tools: catalog() };
 
     function post(body: unknown, token: string | null): Request {
         return new Request('http://127.0.0.1:4210/mcp', {
@@ -377,6 +378,12 @@ describe('http', () => {
     test('an unknown token gets 401', async () => {
         expect((await handleMcpRequest(post(initialize, 'stale'), deps)).status).toBe(401);
         expect((await handleMcpRequest(post(initialize, null), deps)).status).toBe(401);
+    });
+
+    // A cloned project file picks its node ids, and the caller's id names folders under the machine's home.
+    test('a caller whose id is not one path segment gets 401', async () => {
+        expect((await handleMcpRequest(post(initialize, 'tok-dots'), deps)).status).toBe(401);
+        expect((await handleMcpRequest(post(initialize, 'tok-up'), deps)).status).toBe(401);
     });
 
     test('initialize answers the instructions, and the tool list is the caller own', async () => {

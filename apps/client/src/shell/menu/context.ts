@@ -4,6 +4,7 @@ import type { MenuContext, MenuHost } from '@/commands/menu-context';
 import { menuFactsOf } from '@/commands/menu-facts';
 import { keepAwakeAvailable, keepAwakeChoice } from '@/controllers/keep-awake';
 import { desktop } from '@/desktop/bridge';
+import { extensionsInSafeMode } from '@/extensions/safe-mode';
 import { canSplit, cellAt, cellCount, cellsRightOf, focusDirection, freeViewFor, isTabHost, maximizedCell, type SplitDirection } from '@/layout/split';
 import { viewStepTarget } from '@/project/views';
 import { canOpenWindows } from '@/project/windows';
@@ -62,6 +63,7 @@ export function menuContext(host: MenuHost): MenuContext {
         sidebar: ui.sidebarOpen,
         views: documentState.views.filter(isOpenableView).map(nameOf),
         releaseNotes: typeof desktop()?.releaseNotes === 'function',
+        safeModeRestart: typeof desktop()?.restartInSafeMode === 'function' && !extensionsInSafeMode(),
         fullscreen: typeof document !== 'undefined' && document.fullscreenElement !== null,
         keepAwake: host === 'desktop' && keepAwakeAvailable() ? keepAwakeChoice().keepAwake : null,
         settingsOpen: ui.settings.open,

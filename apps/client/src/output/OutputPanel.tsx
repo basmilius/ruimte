@@ -25,7 +25,6 @@ import {
     LayoutGrid,
     ListFilter,
     MonitorDown,
-    Package,
     PanelLeft,
     Search,
     Pin,
@@ -65,6 +64,7 @@ import { useUi } from '@/state/ui';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/surface/PanelHeaderSlot';
 import { FILE_TOOLBAR } from '@/surface/panels/classes';
 import { useMachineAnswers } from '@/transport/features';
+import { OutputScene } from '@/ui/EmptyScenes';
 
 const CopyToProjectDialog = lazyNamed(() => import('@/output/CopyToProjectDialog'), 'CopyToProjectDialog');
 
@@ -139,6 +139,8 @@ export function OutputPanel() {
     }
 
     const shown = list.artifacts.filter((artifact) => matchesFilters(artifact, filters, query, now));
+    // The list is the machine's: a project without output shows none of it with no filter a person set.
+    const nothingSaved = list.artifacts.length === 0 || (shown.length === 0 && query === '' && !filtersChanged(filters, projectId));
     const everywhere = filters.project === ALL;
     const shownBytes = shown.reduce((sum, artifact) => sum + artifact.totalBytes, 0);
 
@@ -167,12 +169,9 @@ export function OutputPanel() {
                 </div>
             )}
             <ScrollArea className="grow" viewportClassName="px-2 pb-2">
-                {list.artifacts.length === 0 ? (
-                    <PanelEmpty icon={Package} fill="full">
-                        <span className="flex flex-col gap-1">
-                            <span className="text-text">{t('panel.emptyTitle')}</span>
-                            <span>{t('panel.empty')}</span>
-                        </span>
+                {nothingSaved ? (
+                    <PanelEmpty scene={<OutputScene />} title={t('panel.emptyTitle')} fill="full">
+                        {t('panel.empty')}
                     </PanelEmpty>
                 ) : shown.length === 0 ? (
                     <PanelEmpty fill="full">{t('panel.noMatch')}</PanelEmpty>

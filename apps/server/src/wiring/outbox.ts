@@ -8,6 +8,7 @@ import {
     type AgentLineageStore,
     type NoticeStore,
     type Clock,
+    type OutboxOutcome,
     type TaskStore
 } from '@adecore/agents/coordination';
 import type { Task } from '@ruimte/contracts';
@@ -15,6 +16,7 @@ import type { PendingPromptStore } from '../canvas/pending-prompts.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { MESSAGE_WORDS } from '../context/notices.ts';
 import type { NodeLifecycle } from '../node-lifecycle.ts';
+import { openerOf } from '../opener.ts';
 import { wireEndChildren, type EndChildrenWiring } from '../outbox/end-children.ts';
 import { OUTBOX_KIND_NAMES, outboxRetries } from '../outbox/kinds/index.ts';
 import type { OutboxStore, OutboxWork } from '../outbox/outbox.ts';
@@ -133,6 +135,8 @@ interface OutboxWiring {
     tasks: TaskWiring;
     endChildren: EndChildrenWiring;
     summaries: SummaryWiring;
+    /* Holds a wake for a chat in a closed project, which waits until the project opens again; for the features that wake a chat. */
+    unlessClosed<Entry extends { target: string }>(handler: (entry: Entry) => Promise<OutboxOutcome>): (entry: Entry) => Promise<OutboxOutcome>;
 }
 
 /*
@@ -205,6 +209,58 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
         enqueue
     });
 
+    // A peer and a routine start in a project under Recent, and nobody comes to open it for them.
+    const workOfPeerOrRoutine = (nodeId: string): boolean => {
+        const seen = new Set<string>();
+        let current: string | null = nodeId;
+
+        while (current !== null && !seen.has(current)) {
+            seen.add(current);
+            const hiddenOpener: string | undefined = projects.hiddenAgents.get(current)?.openedBy;
+
+            if (lineage.peerOf(current) !== null || (hiddenOpener !== undefined && openerOf(hiddenOpener).kind === 'routine')) {
+                return true;
+            }
+
+            current = lineage.madeBy(current) ?? hiddenOpener ?? null;
+        }
+
+        return false;
+    };
+
+    const openChat = chatOpener({ chats, placed });
+
+    // Closing keeps a chat's record for the next open, so nothing may start its CLI while every project that places it is under Recent.
+    const unlessClosed =
+        <Entry extends { target: string }>(handler: (entry: Entry) => Promise<OutboxOutcome>) =>
+        async (entry: Entry): Promise<OutboxOutcome> => {
+            const placing = projects.index.projectsPlacing(entry.target);
+
+            if (placing.length === 0 || workOfPeerOrRoutine(entry.target)) {
+                return handler(entry);
+            }
+
+            for (const projectId of placing) {
+                const outcome = await projects.runWake(projectId, async (): Promise<OutboxOutcome | 'closed'> => {
+                    if (await projects.isClosed(projectId)) {
+                        return 'closed';
+                    }
+
+                    // A stored chat takes I/O to load, in which the project may start closing, so it loads before the last look.
+                    await openChat(entry.target);
+
+                    return projects.isClosing(projectId) ? 'closed' : handler(entry);
+                });
+
+                if (outcome !== 'closed') {
+                    return outcome;
+                }
+            }
+
+            return 'wait';
+        };
+
+    const wakeParent = unlessClosed(taskWiring.wakeParent);
     const runParked = resumeRunParked(chats);
     worker.onParked((entry, error) => {
         runParked(entry, error);
@@ -227,15 +283,18 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
     );
     worker.handle('resume-run', resumeRunHandler(chats));
     // A node that left the document takes its entry along through the prune; one that is still owed runs here.
-    worker.handle('resume-limit', (entry) => (placed(entry.target) ? chats.takeUpAfterLimit(entry.target, entry.payload.turnId) : Promise.resolve()));
+    worker.handle(
+        'resume-limit',
+        unlessClosed((entry) => (placed(entry.target) ? chats.takeUpAfterLimit(entry.target, entry.payload.turnId) : Promise.resolve()))
+    );
     worker.handle('background-limit', taskWiring.backgroundLimit);
     // A task another machine gave has no chat here to wake; its result goes back over the link instead.
     worker.handle('wake-parent', (entry) => {
         const task = tasks.get(entry.payload.taskId);
-        return task !== undefined && deps.isPeerTask(task) ? Promise.resolve() : taskWiring.wakeParent(entry);
+        return task !== undefined && deps.isPeerTask(task) ? Promise.resolve() : wakeParent(entry);
     });
     worker.handle('give-task', taskWiring.giveTask);
-    worker.handle('deliver-message', deliverMessageHandler({ notices, chat: chatOpener({ chats, placed }), placed, words: MESSAGE_WORDS }));
+    worker.handle('deliver-message', unlessClosed(deliverMessageHandler({ notices, chat: openChat, placed, words: MESSAGE_WORDS })));
     worker.handle('end-children', endChildren.handler);
     worker.handle('deliver-summary', summaries.handler);
     worker.handle('deliver-waiting', taskWiring.deliverWaiting);
@@ -254,5 +313,14 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
         void taskWiring.prune(projectId, new Set([...kept, ...deps.peerParents(projectId)])).catch((e) => failed('Pruning tasks failed', e));
     });
 
-    return { worker, tasks: taskWiring, endChildren, summaries };
+    // What was held back for a closed project runs once it opens again.
+    projects.onReopened((projectId) => {
+        for (const entry of outbox.list()) {
+            if (projects.index.projectsPlacing(entry.target).includes(projectId)) {
+                worker.wake(entry.target);
+            }
+        }
+    });
+
+    return { worker, tasks: taskWiring, endChildren, summaries, unlessClosed };
 }

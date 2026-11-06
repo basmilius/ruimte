@@ -42,7 +42,8 @@
     "stopFailed": "Could not stop {{name}}",
     "panel": {
         "reading": "Reading launches…",
-        "empty": "No launches yet.",
+        "emptyTitle": "No launches yet",
+        "empty": "A launch starts a command you run often, like a dev server, with one click. Its output stays here.",
         "notRun": "{{name}} has not run since the machine started.",
         "stopped": "stopped",
         "attachFailed": "Could not show the output."

@@ -12,10 +12,10 @@ function workflow(name: string): Workflow {
 
 describe('ci.yml', () => {
     // A web client deploys only after a release is published, so a build that breaks has to break here first.
-    test('builds every web client a release deploys, the way its deploy builds it', () => {
+    test('bundles every web client a release deploys', () => {
         const runs = Object.values(workflow('ci.yml').jobs).flatMap((job) => (job.steps ?? []).map((step) => step.run));
 
-        expect(runs).toContain('bun run --cwd apps/station build');
-        expect(runs).toContain('bun run --cwd apps/bench build');
+        expect(runs).toContain('bun run --cwd apps/client bundle:station');
+        expect(runs).toContain('bun run --cwd apps/client bundle:bench');
     });
 });

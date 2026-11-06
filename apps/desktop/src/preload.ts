@@ -132,6 +132,7 @@ const bridge = {
     downloadUpdate: () => invoke('update:download'),
     installUpdate: (confirmed) => send('update:install', confirmed === true),
     releaseNotes: (refresh) => invoke('releases:list', refresh === true),
+    restartInSafeMode: () => invoke('app:restart-safe-mode'),
     requestMicrophoneAccess: () => invoke('media:request-microphone'),
     openAi: {
         credentialStatus: () => invoke('openai:credential-status'),

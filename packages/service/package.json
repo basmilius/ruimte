@@ -18,7 +18,7 @@
         "typescript": "^7.0.2"
     },
     "dependencies": {
-        "@adecore/service": "0.54.10",
+        "@adecore/service": "0.54.12",
         "@ruimte/contracts": "workspace:*"
     }
 }

@@ -69,6 +69,7 @@ function context(patch: Partial<MenuContext> = {}): MenuContext {
         chosenLaunch: null,
         afterSettle: { tasks: [], chosen: null },
         releaseNotes: true,
+        safeModeRestart: false,
         fullscreen: false,
         keepAwake: null,
         settingsOpen: false,

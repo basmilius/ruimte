@@ -13,7 +13,7 @@ describe('the folders of a chat', () => {
         const attachments = new AttachmentStore(HOME);
         const visuals = new VisualStore(HOME, attachments);
 
-        for (const chatId of ['chat-1', 'chat 1', 'chat/1', '..', '.', 'ünï']) {
+        for (const chatId of ['chat-1', 'chat 1', 'chat/1', '..', '.', '../x', '../../etc', 'a/b', 'ünï']) {
             expect(chatFolders(HOME, chatId)).toEqual([attachments.folderOf(chatId), visuals.workspacePath(chatId)]);
         }
     });

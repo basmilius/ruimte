@@ -35,10 +35,11 @@ let home: string;
 let folder: string;
 let store: ProjectStore;
 let clock: ManualClock;
+let projectId: string;
 let running: TestDaemon[];
 
 beforeEach(async () => {
-    ({ root, home, folder, store } = await releasedProject('ruimte-message-', content()));
+    ({ root, home, folder, store, projectId } = await releasedProject('ruimte-message-', content()));
     clock = new ManualClock();
     running = [];
 });
@@ -180,6 +181,24 @@ describe('a message to a chat', () => {
         await daemon.until(() => repliesOf(daemon, 'chat-other').some((text) => text.includes('sent you a message: the build is green')));
         // The turn a person's prompt opened, not one the machine started for the message.
         expect(turnsOf(daemon, 'chat-other').every((turn) => (turn.messageFrom ?? []).length === 0)).toBe(true);
+    });
+
+    test('to a chat in a closed project waits until the project opens again', async () => {
+        const daemon = await boot();
+        await idle(daemon, 'chat-lead');
+        await idle(daemon, 'chat-other');
+        await link(daemon, 'chat-lead', 'chat-other');
+        await store.closeProject(projectId, 'client-1');
+        await notify(daemon, 'chat-lead', 'chat-other', 'what is the secret word');
+        await daemon.worker.settled();
+
+        expect(turnsOf(daemon, 'chat-other').filter((turn) => (turn.messageFrom ?? []).length > 0)).toEqual([]);
+        expect(daemon.outbox.list()).toMatchObject([{ kind: 'deliver-message', target: 'chat-other' }]);
+
+        await store.openProject({ projectId });
+        await daemon.until(() => turnsOf(daemon, 'chat-other').some((turn) => (turn.messageFrom ?? []).length > 0 && turn.state === 'done'));
+
+        expect(daemon.outbox.list()).toEqual([]);
     });
 
     test('to a terminal changes nothing: it goes on the screen and starts no turn', async () => {

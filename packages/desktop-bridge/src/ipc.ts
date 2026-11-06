@@ -93,6 +93,7 @@ export const IPC_INVOKE = {
     'update:check': invoke<[]>(),
     'update:download': invoke<[]>(),
     'releases:list': invoke<[refresh: boolean], ReleaseNotesState>(),
+    'app:restart-safe-mode': invoke<[]>(),
     'media:request-microphone': invoke<[], boolean>(),
     'openai:credential-status': invoke<[], OpenAiCredentialStatus>(),
     'openai:save-api-key': invoke<[apiKey: string], OpenAiCredentialStatus>(),

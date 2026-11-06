@@ -62,4 +62,4 @@ defineCommand({
 
 The desktop app loads the extensions you installed and runs their server parts on its machine. Station, the web app, runs the extensions of the machine it is connected to, without `frame` surfaces.
 
-Add `?safe-mode` to a window's address to start without extensions or themes, and remove one that breaks the app.
+To remove an extension or theme that breaks the app, start without them. In the desktop app, choose Help, Restart Without Extensions. If the window no longer answers, quit Ruimte and start it with `--safe-mode`; on macOS that is `open -a Ruimte --args --safe-mode`. In Station, add `?safe-mode` to the address. The next ordinary start loads them again.

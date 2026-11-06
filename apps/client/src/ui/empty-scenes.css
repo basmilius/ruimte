@@ -1,0 +1,188 @@
+/*
+ * What the scenes of `EmptyScenes.tsx` play on the 8 second loop of `EmptyScene`, each a real action
+ * of its place. Outside the media query stands where the action ends: a drawing at rest, and what
+ * reduced motion shows.
+ */
+.design-scene-pin { transform-box: fill-box; transform-origin: 50% 100%; }
+.design-scene-pin-hole { fill: var(--surface); }
+.design-scene-cursor { transform-box: view-box; transform: translate(102px, 56px); opacity: 0; }
+
+.drawing-scene-ink { stroke-width: 2.25; stroke-dasharray: 1; }
+/* Offset paths place the group's own origin, so its children draw the pencil around (0, 0), the point of the lead. */
+.drawing-scene-pencil { offset-path: path("M20 76C36 42 54 40 62 62S84 92 98 66S120 30 140 44"); offset-distance: 100%; offset-rotate: 0deg; }
+.drawing-scene-lift { transform: translate(5px, -11px); }
+.drawing-scene-tilt { transform: rotate(35deg); }
+
+.diagram-scene-first, .diagram-scene-second { transform-box: view-box; }
+.diagram-scene-first-cursor, .diagram-scene-second-cursor { opacity: 0; }
+
+.routines-scene-minute, .routines-scene-second, .routines-scene-ring { transform-box: view-box; transform-origin: 80px 54px; }
+.routines-scene-ring { opacity: 0; }
+.routines-scene-chip { transform-box: fill-box; transform-origin: 0% 100%; }
+
+.files-scene-file { transform-box: view-box; transform-origin: 80px 40px; }
+.files-scene-flap { transform-box: view-box; transform-origin: 80px 92px; }
+.files-scene-cursor { opacity: 0; }
+
+.git-scene-origin { transform-box: view-box; }
+
+.databases-scene-cable { fill: none; stroke: var(--text-faint); stroke-width: 3.5; stroke-linecap: round; }
+.databases-scene-plug { transform-box: view-box; }
+.databases-scene-glow, .launches-scene-glow { transform-box: fill-box; transform-origin: center; opacity: 0; }
+
+.output-scene-stack { transform-box: view-box; }
+.output-scene-card { transform-box: view-box; transform-origin: 76px 62px; }
+.output-scene-ribbon { transform-box: fill-box; transform-origin: 50% 0%; }
+
+.plan-scene-done { opacity: 0.45; }
+.plan-scene-fill { transform-box: fill-box; transform-origin: center; }
+.plan-scene-tick { fill: none; stroke: var(--accent-text); stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.plan-scene-cursor { transform-box: view-box; opacity: 0; }
+
+.launches-scene-command { stroke-dasharray: 1; }
+.launches-scene-caret { transform-box: view-box; opacity: 0; }
+
+.problems-scene-read { transform-box: view-box; opacity: 0; }
+
+@keyframes design-scene-cursor {
+    0%, 44% { transform: translate(150px, 104px); opacity: 0; }
+    46% { opacity: 1; }
+    56% { transform: translate(102px, 56px); }
+    57.5% { transform: translate(102px, 56px) scale(0.86); }
+    59%, 64% { transform: translate(102px, 56px) scale(1); opacity: 1; }
+    72%, 100% { transform: translate(124px, 92px); opacity: 0; }
+}
+@keyframes design-scene-pin { 0%, 58% { opacity: 0; transform: translateY(-7px) scale(0.6); } 64%, 100% { opacity: 1; transform: none; } }
+
+@keyframes drawing-scene-loop { 0% { opacity: 0; } 5%, 90% { opacity: 1; } 97%, 100% { opacity: 0; } }
+@keyframes drawing-scene-ink { 0%, 10% { stroke-dashoffset: 1; } 62%, 100% { stroke-dashoffset: 0; } }
+@keyframes drawing-scene-pencil { 0%, 10% { offset-distance: 0%; } 62%, 100% { offset-distance: 100%; } }
+@keyframes drawing-scene-lift {
+    0% { transform: translate(6px, -14px); animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+    10% { transform: translate(0, 0); animation-timing-function: linear; }
+    62% { transform: translate(0, 0); animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1); }
+    70%, 100% { transform: translate(5px, -11px); }
+}
+@keyframes drawing-scene-tilt {
+    0%, 10% { transform: rotate(35deg); }
+    22% { transform: rotate(30deg); }
+    34% { transform: rotate(39deg); }
+    46% { transform: rotate(31deg); }
+    56% { transform: rotate(37deg); }
+    62%, 100% { transform: rotate(35deg); }
+}
+
+@keyframes diagram-scene-first { 0%, 4% { transform: translate(22px, 30px); opacity: 0; } 8% { transform: translate(22px, 30px); opacity: 1; } 22%, 100% { transform: none; opacity: 1; } }
+@keyframes diagram-scene-first-cursor { 0%, 4% { opacity: 0; } 8%, 22% { opacity: 1; } 27%, 100% { opacity: 0; } }
+@keyframes diagram-scene-second { 0%, 34% { transform: translate(20px, 24px); opacity: 0; } 38% { transform: translate(20px, 24px); opacity: 1; } 52%, 100% { transform: none; opacity: 1; } }
+@keyframes diagram-scene-second-cursor { 0%, 34% { opacity: 0; } 38%, 52% { opacity: 1; } 57%, 100% { opacity: 0; } }
+
+@keyframes routines-scene-minute { 0%, 29% { transform: rotate(-6deg); } 31% { transform: rotate(1.2deg); } 33%, 92% { transform: rotate(0deg); } 98%, 100% { transform: rotate(-6deg); } }
+@keyframes routines-scene-second { from { transform: rotate(-108deg); } 30% { transform: rotate(0deg); } to { transform: rotate(252deg); } }
+@keyframes routines-scene-ring { 0%, 29% { opacity: 0; transform: scale(1); } 30% { opacity: 0.8; transform: scale(1); } 46%, 100% { opacity: 0; transform: scale(1.22); } }
+@keyframes routines-scene-chip { 0%, 31% { opacity: 0; transform: translate(-10px, 6px) scale(0.9); } 37%, 86% { opacity: 1; transform: none; } 92%, 100% { opacity: 0; transform: none; } }
+
+@keyframes files-scene-file {
+    0%, 3% { transform: translate(36px, -36px) rotate(12deg); opacity: 0; }
+    8% { transform: translate(36px, -36px) rotate(12deg); opacity: 1; animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1); }
+    24% { transform: translate(0, -16px) rotate(-2deg); }
+    27% { transform: translate(0, -16px) rotate(0deg); animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.45); }
+    33% { transform: translate(0, 4px); animation-timing-function: cubic-bezier(0.2, 0.6, 0.3, 1); }
+    37%, 88% { transform: none; opacity: 1; }
+    95%, 100% { transform: none; opacity: 0; }
+}
+@keyframes files-scene-cursor { 0%, 3% { opacity: 0; } 8%, 24% { opacity: 1; } 27%, 100% { opacity: 0; } }
+@keyframes files-scene-flap { 0%, 32% { transform: scaleY(1); } 34% { transform: scaleY(0.95); } 40%, 100% { transform: scaleY(1); } }
+
+@keyframes git-scene-origin { 0%, 4% { transform: translate(-48px, 22px); opacity: 0; } 9%, 30% { transform: translate(-48px, 22px); opacity: 1; } 44%, 100% { transform: none; opacity: 1; } }
+
+@keyframes databases-scene-plug {
+    0%, 6% { transform: translate(30px, -8px); }
+    18% { transform: translate(30px, 0); }
+    30% { transform: translate(-1.5px, 0); }
+    33%, 84% { transform: none; }
+    92%, 100% { transform: translate(30px, -8px); }
+}
+@keyframes databases-scene-cable {
+    0%, 6% { d: path("M143 46C160 46 148 96 150 96S156 90 162 90"); }
+    18% { d: path("M143 54C160 54 148 96 150 96S156 90 162 90"); }
+    30% { d: path("M111.5 54C132.5 54 121 96 141 96S156 90 162 90"); }
+    33%, 84% { d: path("M113 54C134 54 122 96 142 96S156 90 162 90"); }
+    92%, 100% { d: path("M143 46C160 46 148 96 150 96S156 90 162 90"); }
+}
+@keyframes databases-scene-light { 0%, 32% { opacity: 0.15; } 34%, 84% { opacity: 1; } 87%, 100% { opacity: 0.15; } }
+@keyframes databases-scene-glow { 0%, 33% { opacity: 0; transform: scale(1); } 34% { opacity: 0.5; transform: scale(1); } 48%, 100% { opacity: 0; transform: scale(3.2); } }
+
+@keyframes output-scene-card { 0%, 4% { transform: translate(44px, -40px) rotate(12deg); opacity: 0; } 10% { opacity: 1; } 28% { transform: rotate(-2deg); } 33%, 88% { transform: none; opacity: 1; } 95%, 100% { transform: none; opacity: 0; } }
+@keyframes output-scene-stack { 0%, 27% { transform: none; } 29.5% { transform: translateY(1.5px); } 35%, 100% { transform: none; } }
+@keyframes output-scene-ribbon { 0%, 40% { transform: scaleY(0); } 47%, 100% { transform: scaleY(1); } }
+
+@keyframes plan-scene-fill { 0%, 49% { transform: scale(0); } 54%, 100% { transform: scale(1); } }
+@keyframes plan-scene-done { 0%, 52% { opacity: 1; } 58%, 100% { opacity: 0.45; } }
+@keyframes plan-scene-cursor {
+    0%, 38% { transform: translate(124px, 100px); opacity: 0; }
+    40% { opacity: 1; }
+    47% { transform: translate(50px, 31px); }
+    48.5% { transform: translate(50px, 31px) scale(0.86); }
+    50%, 56% { transform: translate(50px, 31px) scale(1); opacity: 1; }
+    64%, 100% { transform: translate(78px, 70px); opacity: 0; }
+}
+
+@keyframes launches-scene-command { 0%, 6% { stroke-dashoffset: 1; } 26%, 100% { stroke-dashoffset: 0; } }
+@keyframes launches-scene-caret { 0%, 6% { transform: translateX(0); opacity: 0.7; } 26%, 29% { transform: translateX(36px); opacity: 0.7; } 30%, 100% { transform: translateX(36px); opacity: 0; } }
+@keyframes launches-scene-light { 0%, 52% { opacity: 0; } 54%, 100% { opacity: 1; } }
+@keyframes launches-scene-glow { 0%, 53% { opacity: 0; transform: scale(1); } 54% { opacity: 0.5; transform: scale(1); } 68%, 100% { opacity: 0; transform: scale(3.2); } }
+
+@keyframes problems-scene-read {
+    0%, 5% { transform: translateY(0); opacity: 0; }
+    7% { transform: translateY(0); opacity: 1; animation-timing-function: steps(5, jump-none); }
+    47% { transform: translateY(65px); opacity: 1; }
+    51%, 100% { transform: translateY(65px); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .design-scene-cursor { animation: design-scene-cursor 8s cubic-bezier(0.3, 0, 0.2, 1) infinite; }
+    .design-scene-pin { animation: design-scene-pin 8s var(--scene-arrive) infinite; }
+
+    .drawing-scene-loop { animation: drawing-scene-loop 8s linear infinite; }
+    .drawing-scene-ink { animation: drawing-scene-ink 8s linear infinite; }
+    .drawing-scene-pencil { animation: drawing-scene-pencil 8s linear infinite; }
+    .drawing-scene-lift { animation: drawing-scene-lift 8s infinite; }
+    .drawing-scene-tilt { animation: drawing-scene-tilt 8s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+    .diagram-scene-first { animation: diagram-scene-first 8s var(--scene-arrive) infinite; }
+    .diagram-scene-second { animation: diagram-scene-second 8s var(--scene-arrive) infinite; }
+    .diagram-scene-first-cursor { animation: diagram-scene-first-cursor 8s infinite; }
+    .diagram-scene-second-cursor { animation: diagram-scene-second-cursor 8s infinite; }
+
+    .routines-scene-minute { animation: routines-scene-minute 8s cubic-bezier(0.5, 0, 0.3, 1) infinite; }
+    .routines-scene-second { animation: routines-scene-second 8s linear infinite; }
+    .routines-scene-ring { animation: routines-scene-ring 8s ease-out infinite; }
+    .routines-scene-chip { animation: routines-scene-chip 8s var(--scene-arrive) infinite; }
+
+    .files-scene-file { animation: files-scene-file 8s infinite; }
+    .files-scene-cursor { animation: files-scene-cursor 8s infinite; }
+    .files-scene-flap { animation: files-scene-flap 8s var(--scene-arrive) infinite; }
+
+    .git-scene-origin { animation: git-scene-origin 8s var(--scene-arrive) infinite; }
+
+    .databases-scene-plug { animation: databases-scene-plug 8s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
+    .databases-scene-cable { animation: databases-scene-cable 8s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
+    .databases-scene-light { animation: databases-scene-light 8s infinite; }
+    .databases-scene-glow { animation: databases-scene-glow 8s ease-out infinite; }
+
+    .output-scene-card { animation: output-scene-card 8s var(--scene-arrive) infinite; }
+    .output-scene-stack { animation: output-scene-stack 8s ease-out infinite; }
+    .output-scene-ribbon { animation: output-scene-ribbon 8s var(--scene-arrive) infinite; }
+
+    .plan-scene-fill { animation: plan-scene-fill 8s var(--scene-arrive) infinite; }
+    .plan-scene-done { animation: plan-scene-done 8s infinite; }
+    .plan-scene-cursor { animation: plan-scene-cursor 8s cubic-bezier(0.3, 0, 0.2, 1) infinite; }
+
+    .launches-scene-command { animation: launches-scene-command 8s steps(7, jump-none) infinite; }
+    .launches-scene-caret { animation: launches-scene-caret 8s steps(7, jump-none) infinite; }
+    .launches-scene-light { animation: launches-scene-light 8s infinite; }
+    .launches-scene-glow { animation: launches-scene-glow 8s ease-out infinite; }
+
+    .problems-scene-read { animation: problems-scene-read 8s infinite; }
+}

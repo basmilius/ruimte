@@ -1,9 +1,21 @@
-import { ProviderRegistry as AgentProviderRegistry, type AcpServerLaunch, type ChatProvider, type CliDetection } from '@adecore/agents/providers';
-import { pickerGroupsOf, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
+import { ModelCatalog, ProviderRegistry as AgentProviderRegistry, type AcpServerLaunch, type ChatProvider, type CliDetection } from '@adecore/agents/providers';
+import { pickerGroupsOf, type AgentKind, type ModelSelection, type ProviderInfo } from '@ruimte/contracts';
 import type { AcpServerInstall, AcpServerRelease } from './acp-server.ts';
 import type { AnthropicClaudeApiService } from './anthropic-claude-api-service.ts';
 import type { NanoGptService } from './nanogpt-service.ts';
 import { createProviders, type ProviderCommands } from './table.ts';
+
+/*
+ * Knows no model of a provider that is gone, so it keeps the one a stored chat names: without one the chat's selection
+ * fails the schema of its record and of the wire, and it never opens again after the next write.
+ */
+class StoredSelectionCatalog extends ModelCatalog {
+    override normalize(selection: Partial<ModelSelection> | undefined): ModelSelection {
+        return selection?.model ? { model: selection.model, options: selection.options ?? {} } : super.normalize(selection);
+    }
+}
+
+const UNOFFERED_CATALOG = new StoredSelectionCatalog({ defaultModel: '', profiles: {}, models: [] });
 
 interface ProviderRegistryOptions {
     providers?: ChatProvider[];
@@ -40,6 +52,10 @@ export class ProviderRegistry extends AgentProviderRegistry {
         this.claudeApi = table.claudeApi;
         this.servers = table.servers;
         this.onList = options.onList ?? null;
+    }
+
+    protected override fallback(kind: AgentKind): ChatProvider {
+        return { ...super.fallback(kind), catalog: UNOFFERED_CATALOG };
     }
 
     override list(): Promise<ProviderInfo[]> {

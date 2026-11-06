@@ -50,6 +50,7 @@ import { useGit } from '@/state/git';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { revealableInFiles } from '@/surface/panels/files-tree';
+import { GitScene } from '@/ui/EmptyScenes';
 import { useTransport } from '@/workspace/context';
 
 const { applyExpansion, directoryHandle, menuTargetsOf, mergeCollapsedPaths, rebuildPaths, rowPathOf, selectOnly, visibleRows } = FileTree;
@@ -134,7 +135,14 @@ export function GitFileList({ checkouts, reposTruncated, ...props }: ListProps) 
         return <div className="grid min-h-0 grow place-items-center" />;
     }
     if (layout.paths.length === 0) {
-        return <PanelEmpty icon={GitBranch}>{t('git.list.noChanges')}</PanelEmpty>;
+        const status = read.length === 1 ? read[0]!.status : null;
+        const inStep = status?.branch && status.upstream && status.ahead === 0 && status.behind === 0;
+
+        return (
+            <PanelEmpty scene={<GitScene />} title={t('git.list.noChanges')}>
+                {inStep ? t('git.list.matchesUpstream', { branch: status.branch, upstream: status.upstream }) : t('git.list.committed')}
+            </PanelEmpty>
+        );
     }
     const truncated = reposTruncated || read.some((checkout) => checkout.status?.truncated === true);
     return (

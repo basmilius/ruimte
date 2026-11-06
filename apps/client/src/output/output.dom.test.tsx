@@ -273,6 +273,13 @@ describe('the Output panel', () => {
         await until(() => text().includes('Nothing saved yet'));
     });
 
+    test('a project with nothing saved says so, also while another project has output', async () => {
+        machine.answer('artifact.list', () => ({ artifacts: [summary('elsewhere', 'Elsewhere', { projectId: 'project-other', projectName: 'Other' })] }));
+        await openPanel();
+        await until(() => text().includes('Nothing saved yet'));
+        expect(text()).not.toContain('Nothing matches these filters.');
+    });
+
     test('a machine that does not keep Output asks for an update and is never asked', async () => {
         const all = Object.keys(REQUEST_SCHEMAS) as RequestType[];
         machine.answersOnly(all.filter((type) => !type.startsWith('artifact.')));

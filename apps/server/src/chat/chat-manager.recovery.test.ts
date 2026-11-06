@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
-import type { ChatCheckpointDiff } from '@ruimte/contracts';
+import { ChatInfoSchema, type ChatCheckpointDiff } from '@ruimte/contracts';
 import { makeChatFixture, retire } from './chat-manager.fixture.test.ts';
 import { FakeCheckpoints } from './chat-test-helpers.ts';
 
@@ -19,6 +19,42 @@ beforeEach(async () => {
 afterEach(async () => {
     await retire(manager);
     await rm(home, { recursive: true, force: true });
+});
+
+test('a chat on a provider that is gone keeps opening with its messages, and says so when written in', async () => {
+    const selection = { model: 'apple-system', options: {} };
+    await store.write(
+        'chat-apple',
+        {
+            chatId: 'chat-apple',
+            provider: 'apple',
+            cwd: home,
+            agentSessionId: 'apple-session',
+            model: 'apple-system',
+            selection,
+            runtimeMode: 'supervised',
+            status: 'idle',
+            running: false,
+            activeTurnId: null,
+            slashCommands: [],
+            usage: { contextTokens: 0, contextWindow: 4096, costUsd: 0, turns: 1 },
+            createdAt: 1
+        },
+        [
+            { id: 'turn-1', kind: 'turn', createdAt: 1, turnId: 'turn-1', state: 'done', endedAt: 2, costUsd: 0 },
+            { id: 'user-1', kind: 'user', createdAt: 1, turnId: 'turn-1', text: 'Hello' }
+        ]
+    );
+
+    expect(ChatInfoSchema.safeParse(await manager.core.create({ chatId: 'chat-apple' })).success).toBe(true);
+    manager.core.attach('chat-apple', 'c1');
+    await manager.core.send('chat-apple', 'Still there?');
+    await recorder.until(() => recorder.ofKind('note').length > 0);
+    expect(recorder.ofKind('note')[0]).toMatchObject({ level: 'error', text: 'apple is not offered here' });
+
+    manager = await remake(manager);
+    expect((await manager.core.create({ chatId: 'chat-apple' })).selection).toEqual(selection);
+    expect(manager.core.attach('chat-apple', 'c1').items.flatMap((item) => (item.kind === 'user' ? [item.text] : []))).toEqual(['Hello', 'Still there?']);
 });
 
 test('a CLI that dies mid-turn leaves an error note and the chat can go on', async () => {

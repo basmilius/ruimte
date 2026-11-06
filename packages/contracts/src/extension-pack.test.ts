@@ -42,6 +42,15 @@ describe('a pack read whole', () => {
         });
     });
 
+    // On a file system that ignores case the later file would land on the manifest that was checked.
+    test('refuses a pack that names one file twice in another case', async () => {
+        expect(await readExtensionPack(packOf({ 'manifest.json': manifestOf(), 'MANIFEST.json': 'eA==' }), gunzip)).toMatchObject({
+            ok: false,
+            code: 'pack-path',
+            message: expect.stringContaining('MANIFEST.json twice')
+        });
+    });
+
     test('refuses a pack without a valid manifest', async () => {
         expect(await readExtensionPack(packOf({ 'client/index.js': 'eA==' }), gunzip)).toMatchObject({ ok: false, code: 'pack-manifest' });
         expect(await readExtensionPack(packOf({ 'manifest.json': base64Of('{"id":') }), gunzip)).toMatchObject({ ok: false, code: 'pack-manifest' });

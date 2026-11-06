@@ -47,7 +47,7 @@ describe('the problems panel', () => {
         await openPanel();
         await until(() => checkButton() !== null);
 
-        expect(everything()).toContain('No problems in open files.');
+        expect(everything()).toContain('found nothing in the open files.');
 
         await clickOn(checkButton());
         await act(async () => {
@@ -68,13 +68,13 @@ describe('the problems panel', () => {
         await openPanel();
         await until(() => checkButton() !== null);
         await clickOn(checkButton());
-        await until(() => everything().includes('No problems in the project.'));
+        await until(() => everything().includes('found nothing in the project.'));
     });
 
     test('offers no check while no server reports for the whole project', async () => {
         machine.answer('language.status', () => ({ servers: [{ ...STATUS, capabilities: {} }] }));
         await openPanel();
-        await until(() => everything().includes('No problems in open files.'));
+        await until(() => everything().includes('found nothing in the open files.'));
 
         expect(checkButton()).toBeNull();
     });

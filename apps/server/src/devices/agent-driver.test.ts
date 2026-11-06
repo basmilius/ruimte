@@ -56,6 +56,12 @@ function settle() {
 }
 
 describe('DeviceDriver', () => {
+    test('a caller named like a path still hands files only from its own folders', () => {
+        const folders = driver.pathFolders('..').filter((folder) => folder.startsWith(home));
+
+        expect(folders).toEqual([join(home, 'attachments', '%2E%2E'), join(home, 'chats', '...visuals')]);
+    });
+
     test('writes a shot under the home folder and counts later coordinates in its pixels', async () => {
         backend.shot = pngOf(1000, 2000);
         const shot = await driver.shot('chat-1', SIMULATOR, 'phone-node');

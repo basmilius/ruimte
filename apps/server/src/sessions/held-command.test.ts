@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
@@ -30,7 +30,7 @@ beforeEach(async () => {
             commands: {
                 approved: (sessionId, command, cwd) => {
                     const folder = placed.get(sessionId);
-                    return folder !== undefined && approvals.has(folder, sessionId, command, cwd);
+                    return folder !== undefined && approvals.admit(folder, sessionId, command, cwd);
                 },
                 approve: (sessionId, command, cwd) => approvals.approve(placed.get(sessionId)!, sessionId, command, cwd)
             }
@@ -141,16 +141,91 @@ describe('a command from a project file', () => {
             const updated = new CommandApprovals(home);
             await updated.load();
 
-            expect(updated.has(FOLDER, 'term-web', 'bun dev', web)).toBe(true);
-            expect(updated.has(FOLDER, 'term-web', 'bun dev', web)).toBe(true);
-            expect(updated.has(FOLDER, 'term-web', 'bun dev', join(FOLDER, 'api'))).toBe(false);
+            expect(await updated.admit(FOLDER, 'term-web', 'bun dev', web)).toBe(true);
+            expect(await updated.admit(FOLDER, 'term-web', 'bun dev', web)).toBe(true);
+            expect(await updated.admit(FOLDER, 'term-web', 'bun dev', join(FOLDER, 'api'))).toBe(false);
+            // The approval moved to that folder, so the project folder is asked for again.
+            expect(await updated.admit(FOLDER, 'term-web', 'bun dev', FOLDER)).toBe(false);
             // A node still in the project folder keeps its approval there, and a cwd a commit sets later is asked for.
-            expect(updated.has(FOLDER, 'term-root', 'bun dev', FOLDER)).toBe(true);
-            expect(updated.has(FOLDER, 'term-root', 'bun dev', web)).toBe(false);
+            expect(await updated.admit(FOLDER, 'term-root', 'bun dev', FOLDER)).toBe(true);
+            expect(await updated.admit(FOLDER, 'term-root', 'bun dev', web)).toBe(false);
 
             await updated.approve(FOLDER, 'term-new', 'bun dev');
 
-            expect(updated.has(FOLDER, 'term-new', 'bun dev', web)).toBe(false);
+            expect(await updated.admit(FOLDER, 'term-new', 'bun dev', web)).toBe(false);
+
+            const restarted = new CommandApprovals(home);
+            await restarted.load();
+
+            expect(await restarted.admit(FOLDER, 'term-web', 'bun dev', web)).toBe(true);
+            expect(await restarted.admit(FOLDER, 'term-web', 'bun dev', FOLDER)).toBe(false);
+            expect(await restarted.admit(FOLDER, 'term-root', 'bun dev', FOLDER)).toBe(true);
+        } finally {
+            await rm(home, { recursive: true, force: true });
+        }
+    });
+
+    test('a carried approval lets its command start only once the move is on disk', async () => {
+        const home = await mkdtemp(join(tmpdir(), 'ruimte-unbound-'));
+
+        let diskFull = true;
+
+        try {
+            await new CommandApprovals(home).approve(FOLDER, 'term-web', 'bun dev');
+            await new CommandApprovals(home).load();
+            const updated = new CommandApprovals(home, {
+                writeDocument: async (path, text) => {
+                    if (diskFull) {
+                        throw new Error('disk full');
+                    }
+
+                    await writeFile(path, text);
+                }
+            });
+            await updated.load();
+
+            expect(await updated.admit(FOLDER, 'term-web', 'bun dev', join(FOLDER, 'web'))).toBe(false);
+
+            diskFull = false;
+
+            expect(await updated.admit(FOLDER, 'term-web', 'bun dev', join(FOLDER, 'web'))).toBe(true);
+            expect(JSON.parse(await readFile(join(home, 'command-approvals-unbound.json'), 'utf8'))).toEqual({ hashes: [] });
+        } finally {
+            await rm(home, { recursive: true, force: true });
+        }
+    });
+
+    test('two first starts at once write the ledger one after the other, so a spent approval never comes back', async () => {
+        const home = await mkdtemp(join(tmpdir(), 'ruimte-unbound-'));
+        const written: string[] = [];
+        const writes = [Promise.withResolvers<() => void>(), Promise.withResolvers<() => void>()];
+
+        try {
+            await new CommandApprovals(home).approve(FOLDER, 'term-a', 'bun dev');
+            await new CommandApprovals(home).approve(FOLDER, 'term-b', 'bun dev');
+            await new CommandApprovals(home).load();
+            const updated = new CommandApprovals(home, {
+                writeDocument: async (_path, text) => {
+                    const done = Promise.withResolvers<void>();
+                    writes[written.length]?.resolve(done.resolve);
+                    written.push(text);
+                    await done.promise;
+                }
+            });
+            await updated.load();
+            const first = updated.admit(FOLDER, 'term-a', 'bun dev', join(FOLDER, 'web'));
+            const second = updated.admit(FOLDER, 'term-b', 'bun dev', join(FOLDER, 'api'));
+            const releaseFirst = await writes[0]!.promise;
+            await Promise.resolve();
+
+            expect(written).toHaveLength(1);
+
+            releaseFirst();
+            (await writes[1]!.promise)();
+
+            expect(await first).toBe(true);
+            expect(await second).toBe(true);
+            expect(JSON.parse(written.at(-1)!)).toEqual({ hashes: [] });
         } finally {
             await rm(home, { recursive: true, force: true });
         }

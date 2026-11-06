@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import { defineBehaviors, takeKey } from '@/commands/behavior';
 import { keepAwakeAvailable, setKeepAwake } from '@/controllers/keep-awake';
+import { desktop } from '@/desktop/bridge';
 import { modelsDialog } from '@/models/dialog';
 import { openOnboarding } from '@/onboarding/open';
 import { projectSettingsAsk } from '@/project/dialogs';
@@ -113,6 +114,12 @@ export const WINDOW_BEHAVIORS = defineBehaviors({
     fullscreen: { run: toggleFullscreen },
     theme: { run: () => useTheme.getState().toggle() },
     'release-notes': { run: () => openReleaseNotes(null) },
+    'restart-safe-mode': {
+        run: () =>
+            void desktop()
+                ?.restartInSafeMode?.()
+                .catch(() => undefined)
+    },
     onboarding: { run: () => openOnboarding(), offered: () => hasLocalMachine() },
     usage: { run: () => usageDialog.set(true), offered: () => ({ hint: i18next.t('shell:palette.hints.usage') }) },
     models: { run: () => modelsDialog.set(true) },

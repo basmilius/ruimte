@@ -8,7 +8,6 @@ import {
     forkPayload,
     forkPointLabel,
     forkPointOf,
-    forkRefusal,
     forkShapes,
     type ForkCliChoice,
     type ForkShape,
@@ -26,6 +25,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
 import { forkDialog } from '@/chat/dialogs';
+import { chatForkRefusal, chatProviderGone } from '@/chat/fork-refusal';
 import { remoteNodeDialog } from '@/machine-ui/dialogs';
 import { iconOfEntry } from '@/machines/machine-icon';
 import { nameOf } from '@/machines/machine-list';
@@ -108,15 +108,20 @@ function ForkForm({ chatId, turnId, source, onDone }: { chatId: string; turnId: 
 
     const point = items && order ? forkPointOf(items, order, turnId, whole) : null;
     const loaded = useProviders((s) => s.loaded);
-    const refusal = forkRefusal(info, items?.[turnId], { providers, loaded });
+    const refusal = chatForkRefusal(info, items?.[turnId], { providers, loaded });
     const worktree = folder?.repository === true && inWorktree;
     const branchName = branch ?? folder?.branch ?? '';
     const branchProblem = worktree ? branchRefusal(branchName, folder.branches) : null;
     const originalCli: ForkCliChoice | null =
         info === null ? null : { provider: info.provider, selection: info.selection, account: info.account ?? info.provider };
-    const chosenCli = cli ?? originalCli;
-    const accountChoice = useAccountChoice(chosenCli?.provider ?? null, chosenCli?.account, chatId);
     const pickable = providers.filter((entry) => canForkWith(entry) && entry.installed && entry.capabilities.chat);
+    const providerGone = chatProviderGone(info, providers);
+    const firstPickable = providerGone ? pickable[0] : undefined;
+    const startingCli: ForkCliChoice | null = firstPickable?.defaultModel
+        ? { provider: firstPickable.kind, selection: { model: firstPickable.defaultModel, options: {} } }
+        : originalCli;
+    const chosenCli = cli ?? startingCli;
+    const accountChoice = useAccountChoice(chosenCli?.provider ?? null, chosenCli?.account, chatId);
     const switching = chosenCli !== null && originalCli !== null && chosenCli.provider !== originalCli.provider;
     // Another account of the same CLI that does not read the original's conversation gets it handed over, as another CLI does.
     const handoff =
@@ -142,7 +147,12 @@ function ForkForm({ chatId, turnId, source, onDone }: { chatId: string; turnId: 
         const remembered = provider === info?.provider ? info.selection : selectionFor(readChatPreferences(), provider);
         setCli({ provider, selection: remembered?.model === model ? remembered : { model, options: {} }, account: accountOn(provider) });
     };
-    const ready = refusal === null && point !== null && title.trim() !== '' && (remote !== null || elsewhere || (folder !== null && branchProblem === null));
+    const ready =
+        refusal === null &&
+        point !== null &&
+        title.trim() !== '' &&
+        (!providerGone || switching) &&
+        (remote !== null || elsewhere || (folder !== null && branchProblem === null));
 
     const submit = async (): Promise<void> => {
         if (!ready || busy) {

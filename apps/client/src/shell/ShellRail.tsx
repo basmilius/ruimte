@@ -8,6 +8,7 @@ import { useConnectionDotShown } from '@/machines/connection-dot';
 import { ConnectionDot } from '@/machines/ConnectionDot';
 import { PanelControls } from '@/shell/PanelControls';
 import { useToolbarPanels } from '@/shell/panels';
+import { useUsagePeekShown } from '@/shell/usage-peek';
 import { isScratchProject, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { hasUpdate, useUpdates } from '@/state/updates';
@@ -26,6 +27,7 @@ const OVERLAY_INSET_PX = 47;
 export function ShellRail() {
     const { t } = useTranslation('shell');
     const paletteOpen = useUi((s) => s.paletteOpen);
+    const usagePeek = useUsagePeekShown((s) => s.shown);
     // The Chats project has no folder to show, so no files, git, devices or launches either.
     const scratch = useProject((s) => isScratchProject(s.current));
     const hasPanelButtons = useToolbarPanels(scratch).length > 0;
@@ -61,7 +63,7 @@ export function ShellRail() {
             <ConnectionDot />
             <VoiceButton />
             {(voice || update || connectionDot) && <WorkspaceRailSeparator />}
-            <UsageLimitsCard side="left">
+            <UsageLimitsCard side="left" open={usagePeek}>
                 <IconButton icon={ChartNoAxesColumn} label={t('sidebar.usage')} tooltip={false} onClick={() => usageDialog.set(true)} />
             </UsageLimitsCard>
             <IconButton

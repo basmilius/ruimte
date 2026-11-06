@@ -671,7 +671,8 @@
     "gesture": {
         "drag": "drag",
         "scroll": "scroll",
-        "click": "click"
+        "click": "click",
+        "hold": "hold"
     },
     "views": {
         "tabs": "Kinds of view",
@@ -793,6 +794,7 @@
         },
         "canvas": {
             "palette": "Command palette",
+            "usagePeek": "Show plan limits",
             "pan": "Pan canvas",
             "zoomPointer": "Zoom at pointer",
             "zoomIn": "Zoom in",
@@ -1226,6 +1228,7 @@
             "persistent": "Encrypted in this computer's keychain and never shown again.",
             "session": "Encryption unavailable; the key is kept until Ruimte quits.",
             "missing": "Required for GPT-Live. Never stored in a project.",
+            "machineKeyLeft": "This machine still holds the key for Voice. Ruimte removes it as soon as the machine runs, or remove it again.",
             "replacePlaceholder": "New key",
             "remove": "Remove API key",
             "saveFailure": "Could not save API key.",

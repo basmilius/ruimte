@@ -42,7 +42,8 @@
     "stopFailed": "Kon {{name}} niet stoppen",
     "panel": {
         "reading": "Launches lezen…",
-        "empty": "Nog geen launches.",
+        "emptyTitle": "Nog geen launches",
+        "empty": "Een launch start met één klik een commando dat je vaak gebruikt, zoals een dev server. De uitvoer blijft hier staan.",
         "notRun": "{{name}} liep nog niet sinds de machine startte.",
         "stopped": "gestopt",
         "attachFailed": "Kon de output niet tonen."

@@ -1,7 +1,7 @@
 import { DEFAULT_NODE_TONE } from '@adecore/diagram';
-import { isInFloatingLayer, Icon, IconButton, Input, Tile, ContextMenu, Menu } from '@adecore/ui';
+import { Button, EmptyState, isInFloatingLayer, Icon, IconButton, Input, ContextMenu, Menu } from '@adecore/ui';
 import type { ActionInput } from '@ruimte/actions';
-import { Bot, Braces, FileJson, MoreHorizontal, Pencil, RotateCcw, Sparkles } from 'lucide-react';
+import { Bot, Braces, FileJson, MoreHorizontal, Pencil, RotateCcw } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +11,6 @@ import { groundPlacement, type Point } from '@/canvas-model/math';
 import { copyDiagram, openDiagramJson } from '@/diagram/diagram-actions';
 import { DiagramDock } from '@/diagram/DiagramDock';
 import { DiagramScene } from '@/diagram/DiagramScene';
-import { exampleDiagram } from '@/diagram/example';
 import { Swatches } from '@/drawing/DrawingDock';
 import { useViewportSize } from '@/drawing/use-viewport-size';
 import { askAgentAboutDiagram } from '@/project/views';
@@ -19,6 +18,7 @@ import { useDiagram, useDiagramStore } from '@/state/diagram';
 import { useProject } from '@/state/project';
 import { useWheelCamera } from '@/surface/canvas/use-wheel-camera';
 import { useFileToolbarSlot } from '@/surface/panels/file-toolbar-slot';
+import { EmptyDiagramScene } from '@/ui/EmptyScenes';
 
 function isChrome(target: EventTarget | null): boolean {
     return isInFloatingLayer(target) || (target instanceof Element && target.closest('[data-diagram-chrome]') !== null);
@@ -146,44 +146,26 @@ function NodeMenuPopup({ id, onRename }: { id: string; onRename: () => void }) {
 }
 
 /*
- * What an empty diagram offers: an agent to write it, its file to write it by hand, or an example to
- * start from. It stands over the paper outside the gestures (`data-diagram-chrome`), so a press on a
- * tile is a click and not the start of a pan, and it goes the moment the diagram has a node.
+ * What an empty diagram offers: an agent to write it. It stands over the paper outside the gestures
+ * (`data-diagram-chrome`), so a press on the button is a click and not the start of a pan, and it goes
+ * the moment the diagram has a node.
  */
 function EmptyDiagram({ viewId }: { viewId: string }) {
     const { t } = useTranslation('drawing');
-    const store = useDiagramStore();
-    const written = useDiagram((s) => s.rev > 0);
-    const hasFolder = useProject((s) => s.current?.folder != null);
     return (
         <div className="pointer-events-none absolute inset-0 grid place-items-center px-6 pt-6 pb-20">
-            <div data-diagram-chrome className="pointer-events-auto flex w-full max-w-md flex-col gap-2">
-                <p className="pb-2 text-center text-sm text-text-muted">{t('diagram.empty.description')}</p>
-                <Tile
-                    icon={<Icon icon={Bot} size={16} />}
-                    title={t('diagram.empty.agent.title')}
-                    description={t('diagram.empty.agent.description')}
-                    primary
-                    onClick={() => askAgentAboutDiagram(viewId)}
-                />
-                {hasFolder && written && (
-                    <Tile
-                        icon={<Icon icon={FileJson} size={16} />}
-                        title={t('diagram.empty.json.title')}
-                        description={t('diagram.empty.json.description')}
-                        onClick={() => openDiagramJson(viewId)}
-                    />
-                )}
-                <Tile
-                    icon={<Icon icon={Sparkles} size={16} />}
-                    title={t('diagram.empty.example.title')}
-                    description={t('diagram.empty.example.description')}
-                    onClick={() =>
-                        void perform('diagram.replaceContent', { viewId, document: JSON.stringify(exampleDiagram(store.getState().content.meta.title)) }).catch(
-                            ignoreRefusal
-                        )
+            <div data-diagram-chrome className="pointer-events-auto">
+                <EmptyState
+                    scene={<EmptyDiagramScene />}
+                    title={t('diagram.empty.title')}
+                    action={
+                        <Button size="sm" variant="secondary" onClick={() => askAgentAboutDiagram(viewId)}>
+                            <Icon icon={Bot} size={14} /> {t('diagram.empty.agent')}
+                        </Button>
                     }
-                />
+                >
+                    {t('diagram.empty.description')}
+                </EmptyState>
             </div>
         </div>
     );
