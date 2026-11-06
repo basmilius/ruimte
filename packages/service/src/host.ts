@@ -1,7 +1,14 @@
 import { execFileSync } from 'node:child_process';
 import { homedir, userInfo } from 'node:os';
 import { posix, win32 } from 'node:path';
-import { diskFiles, platformServiceManager as createPlatformServiceManager, runCommand, type ServiceManager, type ServiceSpec } from '@adecore/service';
+import {
+    diskFiles,
+    platformServiceManager as createPlatformServiceManager,
+    runCommand,
+    type ServiceIdentity,
+    type ServiceManager,
+    type ServiceSpec
+} from '@adecore/service';
 import { SERVICE_LABEL } from './runtime';
 
 const SYSTEMD_UNIT_NAME = 'ruimte-daemon.service';
@@ -21,6 +28,11 @@ export function serviceLogFile(home: string, platform: NodeJS.Platform = process
         return win32.join(localAppData(home, env), 'Ruimte', 'logs', 'daemon.log');
     }
     return posix.join(home, 'Library', 'Logs', 'Ruimte', 'daemon.log');
+}
+
+/* What the managers and the definition both name, so they cannot disagree on it. */
+function serviceIdentity(home: string, platform: NodeJS.Platform, env: HostEnvironment): ServiceIdentity {
+    return { label: SERVICE_LABEL, logFile: serviceLogFile(home, platform, env) };
 }
 
 /* The copy of the scheduled task's definition that `schtasks /Create` registers from. */
@@ -61,12 +73,12 @@ function serviceUser(env: HostEnvironment, authority: (env: HostEnvironment) => 
 export function platformServiceManager(platform: NodeJS.Platform, env: HostEnvironment = process.env): ServiceManager | null {
     const home = homedir();
     const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+    const service = serviceIdentity(home, platform, env);
     return createPlatformServiceManager(platform, {
         launchd: {
+            service,
             uid: process.getuid?.() ?? 0,
             home,
-            label: SERVICE_LABEL,
-            logFile: serviceLogFile(home, platform, env),
             run: runCommand,
             files: diskFiles,
             sleep
@@ -79,10 +91,8 @@ export function platformServiceManager(platform: NodeJS.Platform, env: HostEnvir
             files: diskFiles
         },
         taskScheduler: {
-            // A stop finds the task's processes by the label of its spec, so the task carries that name.
-            taskName: SERVICE_LABEL,
+            service,
             definitionFile: scheduledTaskFile(home, env),
-            logFile: serviceLogFile(home, platform, env),
             run: runCommand,
             files: diskFiles,
             sleep
@@ -110,14 +120,13 @@ export interface DaemonService {
 export function daemonServiceSpec(service: DaemonService): ServiceSpec {
     const env = service.env ?? process.env;
     return {
-        label: SERVICE_LABEL,
+        ...serviceIdentity(service.home, service.platform, env),
         description: 'Ruimte machine',
         program: service.program,
         args: service.args,
         // RUIMTE_SERVICE tells the daemon a service starts it again, which decides how it updates itself.
         environment: { RUIMTE_HOME: service.ruimteHome, PATH: service.path, RUIMTE_SERVICE: '1' },
         workingDirectory: service.home,
-        logFile: serviceLogFile(service.home, service.platform, env),
         ...(service.platform === 'win32'
             ? { user: serviceUser(env, service.authority ?? systemAuthority), scriptDirectory: win32.dirname(scheduledTaskFile(service.home, env)) }
             : {})
