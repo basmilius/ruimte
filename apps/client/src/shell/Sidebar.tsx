@@ -1,9 +1,9 @@
 import { useDrafts } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
-import { Icon, Menu, ScrollArea, SectionLabel } from '@adecore/ui';
+import { Icon, Menu, ScrollArea, SectionLabel, Segmented } from '@adecore/ui';
 import { designNodeChats, isDesignView, isExtensionView, isSessionView, isUnlistedView, sessionKindOfView, viewChats, type AgentKind } from '@ruimte/contracts';
 import clsx from 'clsx';
-import { ArrowDown, ArrowUp, Plus } from 'lucide-react';
+import { Activity, ArrowDown, ArrowDownAZ, ArrowUp, List, Plus, Shapes, type LucideIcon } from 'lucide-react';
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
@@ -24,6 +24,7 @@ import { StationMenu } from '@/shell/menu/StationMenu';
 import { NewViewItems } from '@/shell/NewViewMenu';
 import { usePanelGap } from '@/shell/panel-layout';
 import { useProjectMenu } from '@/shell/project-menu-model';
+import { NODE_SORTS, type NodeSort } from '@/shell/sidebar-node-sort';
 import { foldedProjects, movableKeys, separatorKey, useSidebarProjects, type SeparatorPlaces, type SidebarSeparator } from '@/shell/sidebar-projects';
 import {
     buildCombinedSidebar,
@@ -77,6 +78,26 @@ import { useSidebarGroups } from './sidebar-groups';
 import { openSidebarTarget } from './sidebar-navigation';
 
 const NO_SEPARATORS: SeparatorPlaces = { before: {}, trailing: [] };
+
+const SORT_ICONS: Record<NodeSort, LucideIcon> = { canvas: List, name: ArrowDownAZ, kind: Shapes, status: Activity };
+
+/* The order of the nodes under an open canvas, at hand without opening Settings: icons alone, so the footer stays quiet. */
+function SidebarSortBar() {
+    const { t } = useTranslation('shell');
+    const sort = useSettings((s) => s.sidebarNodeSort);
+    const update = useSettings((s) => s.update);
+    return (
+        <Segmented<NodeSort>
+            iconOnly
+            size="sm"
+            className="shrink-0"
+            label={t('sidebar.sort.label')}
+            value={sort}
+            onValueChange={(value) => update({ sidebarNodeSort: value })}
+            options={NODE_SORTS.map((id) => ({ id, label: t(`sidebar.sort.${id}`), icon: SORT_ICONS[id] }))}
+        />
+    );
+}
 
 const FOOTER_BUTTON =
     'flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:outline-accent';
@@ -701,6 +722,7 @@ export function Sidebar() {
 
                 <div className="flex shrink-0 items-center justify-end gap-1 border-t border-border px-2 py-1.5">
                     <SlotRow place="sidebarFooter" context={{}} />
+                    {(combined || !isScratchProject(currentProject)) && <SidebarSortBar />}
                     {combined ? (
                         <button type="button" className={FOOTER_BUTTON} onClick={() => useSidebarProjects.getState().addSeparator(movable, movable.length)}>
                             <Icon icon={Plus} size={14} /> {t('sidebar.separator')}
