@@ -10,69 +10,30 @@ struct LaunchEnvRow: Equatable, Identifiable {
 
 /// A launch while the editor holds it. A new launch has a stand-in id until the save names it after the launch.
 struct LaunchDraft: Equatable, Identifiable {
-    var entry: JSONValue
-    var env: [LaunchEnvRow]
+    var id: String
+    var name: String
+    var kind: LaunchConfigKind
+    var cwd = ""
+    var command = ""
+    var url = ""
+    var members: [String] = []
+    var autostart = false
+    var shared = false
+    var env: [LaunchEnvRow] = []
     var fresh: Bool
-
-    var id: String { entry.text("id") }
-    var name: String {
-        get { entry.text("name") }
-        set { entry = entry.setting("name", .string(newValue)) }
-    }
-    var kind: String {
-        get { entry.text("kind", fallback: "service") }
-        set { entry = entry.setting("kind", .string(newValue)) }
-    }
-    var cwd: String {
-        get { entry.text("cwd") }
-        set { entry = entry.setting("cwd", .string(newValue)) }
-    }
-    var command: String {
-        get { entry.text("command") }
-        set { entry = entry.setting("command", .string(newValue)) }
-    }
-    var url: String {
-        get { entry.text("url") }
-        set { entry = entry.setting("url", .string(newValue)) }
-    }
-    var members: [String] {
-        get { entry.list("launches").compactMap(\.stringValue) }
-        set { entry = entry.setting("launches", .array(newValue.map(JSONValue.string))) }
-    }
-    var autostart: Bool {
-        get { entry["autostart"]?.boolValue == true }
-        set { entry = entry.setting("autostart", .bool(newValue)) }
-    }
-    var shared: Bool {
-        get { entry["shared"]?.boolValue == true }
-        set { entry = entry.setting("shared", .bool(newValue)) }
-    }
-    var hasOverlay: Bool { LaunchEntry(raw: entry).hasOverlay }
+    /// Where an import read it from.
+    var origin: LaunchOrigin?
+    var hasOverlay = false
+    /// What the machine sent besides the fields above, which a save returns as it came: the overlay of this machine
+    /// and any field a newer release writes.
+    var rest: [String: JSONValue] = [:]
 }
 
-/// A launch the machine found in the project's own files, ready to import.
-struct LaunchSuggestion: Equatable, Identifiable {
-    var launch: JSONValue
-    /// `run-xml`, `package-json`, `composer-json` or `vscode-launch`.
-    var source: String
-    /// The file it came from, relative to the project folder.
-    var path: String
-    var detail: String
+extension LaunchSuggestion: Identifiable {
+    public var id: String { launch.id }
+
     /// A path in it points outside the project, so it stays on this machine.
-    var isPrivate: Bool
-    /// The type of run configuration the import cannot read; shown, but never imported.
-    var unsupported: String?
-
-    var id: String { launch.text("id") }
-
-    init(json: JSONValue) {
-        launch = json["launch"] ?? .object([:])
-        source = json.text("source")
-        path = json.text("path")
-        detail = json.text("detail")
-        isPrivate = json["private"]?.boolValue ?? false
-        unsupported = json["unsupported"]?.stringValue
-    }
+    var isPrivate: Bool { `private` }
 }
 
 enum LaunchDraftProblem: Equatable {
@@ -117,13 +78,19 @@ enum LaunchEditing {
         let env = entry.env.sorted { $0.key < $1.key }.enumerated().map {
             LaunchEnvRow(id: $0.offset, key: $0.element.key, value: $0.element.value)
         }
-        return LaunchDraft(entry: entry.raw, env: env, fresh: false)
+        var rest = entry.raw.objectValue ?? [:]
+        for key in editedKeys { rest.removeValue(forKey: key) }
+        return LaunchDraft(
+            id: entry.id, name: entry.name, kind: entry.kind, cwd: entry.cwd ?? "", command: entry.command ?? "",
+            url: entry.url ?? "", members: entry.members, autostart: entry.autostart, shared: entry.shared, env: env,
+            fresh: false, origin: entry.config.origin, hasOverlay: entry.hasOverlay, rest: rest)
     }
 
-    static func newDraft(id: String, kind: String = "service") -> LaunchDraft {
-        LaunchDraft(
-            entry: .object(["id": .string(id), "name": .string(""), "kind": .string(kind), "shared": .bool(false)]),
-            env: [], fresh: true)
+    /// The fields of a launch the editor holds apart; `tidy` writes them back.
+    private static let editedKeys = ["id", "name", "kind", "cwd", "command", "url", "env", "launches", "autostart", "shared"]
+
+    static func newDraft(id: String, kind: LaunchConfigKind = .service) -> LaunchDraft {
+        LaunchDraft(id: id, name: "", kind: kind, fresh: true)
     }
 
     static func emptyRow(after rows: [LaunchEnvRow]) -> LaunchEnvRow {
@@ -132,26 +99,22 @@ enum LaunchEditing {
 
     /// A launch with only the fields its kind reads, so a launch that was a group once keeps no command.
     private static func tidy(_ draft: LaunchDraft, id: String, rename: [String: String]) -> JSONValue {
-        var object = draft.entry.objectValue ?? [:]
-        let cwd = object["cwd"]?.stringValue ?? ""
-        let command = object["command"]?.stringValue ?? ""
-        let url = object["url"]?.stringValue ?? ""
-        let members = object["launches"]?.arrayValue?.compactMap(\.stringValue) ?? []
-        let autostart = object["autostart"]?.boolValue == true
-        for key in ["cwd", "command", "url", "launches", "autostart", "env"] { object.removeValue(forKey: key) }
+        var object = draft.rest
         object["id"] = .string(id)
         object["name"] = .string(draft.name.trimmingCharacters(in: .whitespacesAndNewlines))
-        if autostart { object["autostart"] = .bool(true) }
-        if draft.kind == "group" {
-            object["launches"] = .array(members.map { .string(rename[$0] ?? $0) })
+        object["kind"] = .string(draft.kind.rawValue)
+        object["shared"] = .bool(draft.shared)
+        if draft.autostart { object["autostart"] = .bool(true) }
+        if draft.kind == .group {
+            object["launches"] = .array(draft.members.map { .string(rename[$0] ?? $0) })
             return .object(object)
         }
-        object["command"] = .string(command.trimmingCharacters(in: .whitespacesAndNewlines))
-        var folder = cwd.trimmingCharacters(in: .whitespacesAndNewlines)
+        object["command"] = .string(draft.command.trimmingCharacters(in: .whitespacesAndNewlines))
+        var folder = draft.cwd.trimmingCharacters(in: .whitespacesAndNewlines)
         while folder.hasSuffix("/") { folder.removeLast() }
         if !folder.isEmpty && folder != "." { object["cwd"] = .string(folder) }
-        let address = url.trimmingCharacters(in: .whitespacesAndNewlines)
-        if draft.kind == "service" && !address.isEmpty { object["url"] = .string(address) }
+        let address = draft.url.trimmingCharacters(in: .whitespacesAndNewlines)
+        if draft.kind == .service && !address.isEmpty { object["url"] = .string(address) }
         var env: [String: JSONValue] = [:]
         for row in draft.env {
             let key = row.key.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -177,7 +140,7 @@ enum LaunchEditing {
     static func problem(_ drafts: [LaunchDraft]) -> (id: String, problem: LaunchDraftProblem)? {
         for draft in drafts {
             if draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return (draft.id, .name) }
-            if draft.kind == "group" {
+            if draft.kind == .group {
                 if draft.members.isEmpty { return (draft.id, .members) }
             } else if draft.command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 return (draft.id, .command)
@@ -197,8 +160,8 @@ enum LaunchEditing {
     }
 
     /// The folders a launch picks from: the project folder itself (""), then each checkout inside it, by its path there.
-    static func folderRoots(_ repos: [LaunchRepo]) -> [String] {
-        [""] + repos.filter { $0.kind != "root" && !$0.label.hasPrefix("/") && !$0.label.hasPrefix("..") }.map(\.label)
+    static func folderRoots(_ repos: [GitRepo]) -> [String] {
+        [""] + repos.filter { $0.kind != .root && !$0.label.hasPrefix("/") && !$0.label.hasPrefix("..") }.map(\.label)
     }
 
     /// A launch's folder as the checkout it is in and the path below that.
@@ -225,22 +188,19 @@ enum LaunchEditing {
     }
 
     private static func sameRun(_ launch: LaunchEntry, _ suggestion: LaunchSuggestion) -> Bool {
-        let offered = LaunchEntry(raw: suggestion.launch)
+        let offered = suggestion.launch
         return !launch.isGroup && (launch.cwd ?? "") == (offered.cwd ?? "")
             && (launch.command ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                 == (offered.command ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// The file and name an imported launch came from, as the desktop records it.
-    private static func origin(_ suggestion: LaunchSuggestion) -> JSONValue {
-        .object([
-            "source": .string(suggestion.source), "path": .string(suggestion.path),
-            "name": .string(suggestion.launch.text("name")),
-        ])
+    private static func origin(_ suggestion: LaunchSuggestion) -> LaunchOrigin {
+        LaunchOrigin(source: suggestion.source.rawValue, path: suggestion.path, name: suggestion.launch.name)
     }
 
     private static func hasOrigin(_ launch: LaunchEntry, _ suggestion: LaunchSuggestion) -> Bool {
-        launch.raw["origin"] == origin(suggestion)
+        launch.config.origin == origin(suggestion)
     }
 
     /// What the project offers that is not a launch yet.
@@ -249,25 +209,37 @@ enum LaunchEditing {
     }
 
     /// The launches of a save that an import added: each stays unapproved until a person runs it and says yes.
-    static func importedIDs(_ saved: [JSONValue], existing: [LaunchEntry]) -> [String] {
+    static func importedIDs(_ drafts: [LaunchDraft], existing: [LaunchEntry]) -> [String] {
         let known = Set(existing.map(\.id))
-        return saved.filter { $0["origin"] != nil && !known.contains($0.text("id")) }.map { $0.text("id") }
+        return drafts.filter { $0.origin != nil && !known.contains($0.id) }.map(\.id)
     }
 
     /// A configuration an IDE keeps, as against the script of a package manifest.
     private static func readsAsRunConfiguration(_ suggestion: LaunchSuggestion) -> Bool {
-        suggestion.source == "run-xml" || suggestion.source == "vscode-launch"
+        suggestion.source == .runXml || suggestion.source == .vscodeLaunch
+    }
+
+    /// A launch an import adds, as a save sends it.
+    struct ImportedLaunch: Equatable {
+        let id: String
+        let entry: JSONValue
     }
 
     /// The launches an import adds. Sharing is the person's choice for the lot, except for one that names a path
     /// outside the project, which would not work on another machine.
-    static func imported(_ suggestions: [LaunchSuggestion], share: Bool, existing: [LaunchEntry]) -> [JSONValue] {
+    static func imported(_ suggestions: [LaunchSuggestion], share: Bool, existing: [LaunchEntry]) throws
+        -> [ImportedLaunch]
+    {
         var taken = Set(existing.map(\.id))
-        return suggestions.map { suggestion in
-            let id = uniqueID(suggestion.launch.text("id"), taken: taken)
+        return try suggestions.map { suggestion in
+            let offered = suggestion.launch
+            let id = uniqueID(offered.id, taken: taken)
             taken.insert(id)
-            return suggestion.launch.setting("id", .string(id)).setting("shared", .bool(share && !suggestion.isPrivate))
-                .setting("origin", origin(suggestion))
+            let entry = LaunchConfigEntry(
+                id: id, name: offered.name, kind: offered.kind, cwd: offered.cwd, command: offered.command,
+                url: offered.url, env: offered.env, launches: offered.launches, autostart: offered.autostart,
+                origin: origin(suggestion), shared: share && !suggestion.isPrivate)
+            return ImportedLaunch(id: id, entry: try JSONValue(encoding: entry))
         }
     }
 

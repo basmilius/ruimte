@@ -1,6 +1,8 @@
 import Foundation
 import RuimtePulsar
 
+@testable import Ruimte
+
 /// Chat payloads as a machine sends them. A test names only the fields it is about; the rest takes the defaults of the
 /// item's kind, so the thread decodes into the generated types as a real one does.
 enum ChatWire {
@@ -82,6 +84,20 @@ enum GitWire {
         ]
         // A fixture that does not decode is a broken test, not a case to cover.
         return try! JSONValue.object(defaults.merging(fields) { _, given in given }).decoded(as: GitStatus.self)
+    }
+
+    /// One repository of a folder as `git.repos` lists it.
+    static func repo(path: String, label: String, name: String? = nil, kind: GitRepoKind = .nested) -> JSONValue {
+        var fields: [String: JSONValue] = [
+            "path": .string(path), "label": .string(label), "kind": .string(kind.rawValue),
+        ]
+        if let name { fields["name"] = .string(name) }
+        return .object(fields)
+    }
+
+    /// What `git.repos` answers.
+    static func repos(_ repos: [JSONValue], truncated: Bool = false) -> JSONValue {
+        .object(["repos": .array(repos), "truncated": .bool(truncated)])
     }
 
     /// The status as the machine writes it, for a fake machine to answer with.
@@ -182,4 +198,63 @@ extension JSONValue {
     var processSample: ProcessSample { try! decoded(as: ProcessSample.self) }
     var processAlert: ProcessAlert { try! decoded(as: ProcessAlert.self) }
     var processSubscribed: ProcessesSubscribeResult { try! decoded(as: ProcessesSubscribeResult.self) }
+}
+
+/// `launches.*` and `launch.*` replies and events as a machine writes them, with the fields the schema requires.
+enum LaunchWire {
+    static func entry(
+        _ id: String, kind: String = "service", command: String? = "bun dev", cwd: String? = nil,
+        members: [String] = [], shared: Bool = false, extra: [String: JSONValue] = [:]
+    ) -> JSONValue {
+        var fields: [String: JSONValue] = [
+            "id": .string(id), "name": .string(id), "kind": .string(kind), "shared": .bool(shared),
+        ]
+        if kind == "group" {
+            fields["launches"] = .array(members.map(JSONValue.string))
+        } else if let command {
+            fields["command"] = .string(command)
+        }
+        if let cwd { fields["cwd"] = .string(cwd) }
+        fields.merge(extra) { _, new in new }
+        return .object(fields)
+    }
+
+    static func status(
+        _ id: String, project: String = "p1", kind: String = "service", state: String, exit: Int? = nil,
+        stopped: Bool = false, port: Int? = nil, endedAt: Double? = nil
+    ) -> JSONValue {
+        .object([
+            "projectId": .string(project), "launchId": .string(id), "sessionId": .string("launch:\(id)"),
+            "kind": .string(kind), "state": .string(state), "exitCode": exit.map { .number(Double($0)) } ?? .null,
+            "startedAt": .number(1000), "endedAt": endedAt.map(JSONValue.number) ?? (state == "exited" ? .number(6000) : .null),
+            "port": port.map { .number(Double($0)) } ?? .null, "url": .null, "stopped": .bool(stopped),
+        ])
+    }
+
+    static func document(_ launches: [JSONValue], approved: [String], rev: Int = 3) -> JSONValue {
+        .object([
+            "rev": .number(Double(rev)), "launches": .array(launches),
+            "approved": .array(approved.map(JSONValue.string)),
+        ])
+    }
+
+    static func suggestion(
+        _ launch: JSONValue, source: String = "package-json", path: String = "package.json", detail: String = "dev",
+        isPrivate: Bool = false, unsupported: String? = nil
+    ) -> JSONValue {
+        var fields: [String: JSONValue] = [
+            "launch": launch, "source": .string(source), "path": .string(path), "detail": .string(detail),
+            "private": .bool(isPrivate),
+        ]
+        if let unsupported { fields["unsupported"] = .string(unsupported) }
+        return .object(fields)
+    }
+}
+
+extension JSONValue {
+    // A fixture that does not decode is a broken test, not a case to cover.
+    var launchEntry: LaunchEntry { try! LaunchEntry(raw: self) }
+    var launchStatus: LaunchStatus { try! decoded(as: LaunchStatus.self) }
+    var launchBook: LaunchBook { try! decoded(as: LaunchBook.self) }
+    var launchSuggestion: LaunchSuggestion { try! decoded(as: LaunchSuggestion.self) }
 }

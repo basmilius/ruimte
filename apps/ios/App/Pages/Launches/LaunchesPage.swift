@@ -378,7 +378,7 @@ struct LaunchApprovalSheet: View {
                 .foregroundStyle(MobileStyle.muted)
                 ForEach(held) { entry in
                     VStack(alignment: .leading, spacing: 2) {
-                        ForEach(entry.env.sorted { $0.key < $1.key }, id: \.key) { variable in
+                        ForEach((entry.env ?? [:]).sorted { $0.key < $1.key }, id: \.key) { variable in
                             Text("\(Text("\(variable.key)=").foregroundStyle(MobileStyle.faint))\(variable.value)")
                         }
                         Text("\(Text("\(entry.cwd) $ ").foregroundStyle(MobileStyle.faint))\(entry.command)")

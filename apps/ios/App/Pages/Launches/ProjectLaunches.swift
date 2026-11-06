@@ -28,10 +28,10 @@ enum LaunchesText {
     let projectID: String
     let folder: String
     /// Nil until the machine answered.
-    private(set) var document: LaunchesDocument?
+    private(set) var document: LaunchBook?
     /// By launch id: what ran since the machine started.
     private(set) var statuses: [String: LaunchStatus] = [:]
-    private(set) var repos: [LaunchRepo] = []
+    private(set) var repos: [GitRepo] = []
     private(set) var connected = false
     var problem: String?
     var ask: LaunchAsk?
@@ -60,16 +60,16 @@ enum LaunchesText {
         guard subscriptions.isEmpty else { return }
         subscriptions.append(
             client.subscribe(.launchStatus) { [weak self] payload in
-                guard let self, payload.text("projectId") == projectID else { return }
-                let status = LaunchStatus(json: payload)
-                statuses[status.launchID] = status
+                guard let self, let status = try? payload.decoded(as: LaunchStatus.self), status.projectId == projectID
+                else { return }
+                statuses[status.launchId] = status
             })
         subscriptions.append(
             client.subscribe(.launchesChanged) { [weak self] payload in
-                guard let self, payload.text("projectId") == projectID, let document = payload["document"] else {
-                    return
-                }
-                self.document = LaunchesDocument(json: document)
+                guard let self, let change = try? payload.decoded(as: LaunchesChanged.self),
+                    change.projectId == projectID
+                else { return }
+                document = change.document
             })
         subscriptions.append(
             client.observeConnection { [weak self] available in
@@ -87,21 +87,23 @@ enum LaunchesText {
 
     func load() async {
         do {
-            let answer = try await client.request(.launchesRead, payload: .object(["projectId": .string(projectID)]))
-            document = LaunchesDocument(json: answer)
+            document = try await client.request(.launchesRead, payload: .object(["projectId": .string(projectID)]))
+                .decoded(as: LaunchBook.self)
         } catch is CancellationError {
             return
         } catch {
             problem = error.localizedDescription
             return
         }
-        if let list = try? await client.request(.launchList) {
-            let own = list.list("launches").map(LaunchStatus.init(json:)).filter { $0.projectID == projectID }
-            statuses = Dictionary(own.map { ($0.launchID, $0) }, uniquingKeysWith: { _, last in last })
+        if let list = try? await client.request(.launchList).decoded(as: LaunchListResult.self) {
+            let own = list.launches.filter { $0.projectId == projectID }
+            statuses = Dictionary(own.map { ($0.launchId, $0) }, uniquingKeysWith: { _, last in last })
         }
         // Without the repositories the launches list without headings.
-        if let answer = try? await client.request(.gitRepos, payload: .object(["folder": .string(folder)])) {
-            repos = answer.list("repos").map(LaunchRepo.init(json:))
+        if let answer = try? await client.request(.gitRepos, payload: .object(["folder": .string(folder)]))
+            .decoded(as: GitReposResult.self)
+        {
+            repos = answer.repos
         }
     }
 
@@ -113,18 +115,20 @@ enum LaunchesText {
         if replace { payload["replace"] = .bool(true) }
         do {
             let result = try await client.request(restart ? .launchRestart : .launchStart, payload: .object(payload))
+                .decoded(as: LaunchStartResult.self)
             problem = nil
-            switch result.text("outcome") {
-            case "held":
-                ask = .held(
-                    launchID: launchID, restart: restart, held: result.list("held").map(LaunchHeld.init(json:)),
-                    replace: replace)
-            case "busy":
-                let busy = result["busy"] ?? .object([:])
-                ask = .busy(
-                    launchID: launchID, restart: restart, holder: busy.text("launchId"), port: Int(busy.number("port")),
-                    approve: approve)
-            default:
+            switch result.outcome {
+            case .held:
+                ask = .held(launchID: launchID, restart: restart, held: result.held ?? [], replace: replace)
+            case .busy:
+                if let busy = result.busy {
+                    ask = .busy(
+                        launchID: launchID, restart: restart, holder: busy.launchId, port: Int(busy.port),
+                        approve: approve)
+                } else {
+                    ask = nil
+                }
+            case .started:
                 ask = nil
             }
         } catch {
@@ -151,7 +155,7 @@ enum LaunchesText {
 
     /// Every launch of the project that runs; a group stops through its members.
     func stopAll() async {
-        for status in statuses.values where status.live { await stop(status.launchID) }
+        for status in statuses.values where status.live { await stop(status.launchId) }
     }
 
     /// Saves the whole list against the rev it was read at. A save by a person approves what it adds or changes.
@@ -189,8 +193,9 @@ enum LaunchesText {
         guard
             let result = try? await client.request(
                 .launchesDetect,
-                payload: .object(["projectId": .string(projectID), "sources": .array([.string("vscode-launch")])]))
+                payload: .object(["projectId": .string(projectID), "sources": .array([.string("vscode-launch")])])
+            ).decoded(as: LaunchesDetectResult.self)
         else { return nil }
-        return result.list("suggestions").map(LaunchSuggestion.init(json:))
+        return result.suggestions
     }
 }

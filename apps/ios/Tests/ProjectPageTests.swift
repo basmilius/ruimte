@@ -169,16 +169,12 @@ final class ProjectSettingsTests: XCTestCase {
 
 final class LaunchListTests: XCTestCase {
     private func view(_ phase: LaunchPhase, port: Int? = nil, ended: Double? = nil, exit: Int? = nil) -> LaunchView {
-        let status = LaunchStatus(
-            json: .object([
-                "projectId": .string("p"), "launchId": .string("dev"), "sessionId": .string("launch:dev"),
-                "kind": .string("service"), "state": .string(ended == nil ? "running" : "exited"),
-                "exitCode": exit.map { .number(Double($0)) } ?? .null, "startedAt": .number(0),
-                "endedAt": ended.map(JSONValue.number) ?? .null, "port": .null, "url": .null, "stopped": .bool(false),
-            ]))
+        let status = LaunchWire.status(
+            "dev", project: "p", state: ended == nil ? "running" : "exited", exit: exit, endedAt: ended
+        ).launchStatus
         return LaunchView(
-            launch: LaunchEntry(raw: .object(["id": .string("dev"), "name": .string("dev")])), phase: phase,
-            live: phase == .running, status: status, exitCode: exit, port: port)
+            launch: LaunchWire.entry("dev").launchEntry, phase: phase, live: phase == .running, status: status,
+            exitCode: exit, port: port)
     }
 
     func testTheStateLineSaysWhatTheLaunchDoes() {
@@ -195,7 +191,7 @@ final class LaunchListTests: XCTestCase {
             ("package-json", "package.json"), ("package-json", "package.json"), ("package-json", "package.json"),
             ("run-xml", ".run/Docker.run.xml"),
         ].map { source, path in
-            LaunchSuggestion(json: .object(["launch": .object([:]), "source": .string(source), "path": .string(path)]))
+            LaunchWire.suggestion(LaunchWire.entry("dev"), source: source, path: path).launchSuggestion
         }
         XCTAssertEqual(
             LaunchEditing.foundRows(suggestions).map(\.text),

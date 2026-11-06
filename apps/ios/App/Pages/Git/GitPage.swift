@@ -4,10 +4,10 @@ import SwiftUI
 
 /// The mark a repository row carries: a module git tracks for the project reads apart from one that
 /// only happens to sit beside it.
-func gitRepoIcon(_ kind: String) -> String {
+func gitRepoIcon(_ kind: GitRepoKind) -> String {
     switch kind {
-    case "submodule": "boxes"
-    default: "folder-git-2"
+    case .submodule: "boxes"
+    case .root, .nested: "folder-git-2"
     }
 }
 

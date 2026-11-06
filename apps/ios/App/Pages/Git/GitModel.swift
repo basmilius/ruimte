@@ -11,8 +11,7 @@ struct GitCheckout: Identifiable, Equatable {
     /// What a person reads: the path under the project folder, or the folder's own name for the
     /// repository the folder itself is in.
     let label: String
-    /// `root`, `submodule` or `nested`, as `git.repos` reports it.
-    let kind: String
+    let kind: GitRepoKind
     var status: GitStatus?
     var failure: String?
 
@@ -57,12 +56,6 @@ enum GitPanel {
     @MainActor static func watch(_ client: any MachineRequesting, cwd: String) -> MachineSubscription {
         let payload: JSONValue = .object(["cwd": .string(cwd)])
         return client.acquireSubscription(start: .gitWatch, stop: .gitUnwatch, payload: payload, stopPayload: payload)
-    }
-
-    /// The label a repository is listed under, for a page that only has its path.
-    static func label(folder: String, path: String) -> String {
-        guard path != folder, path.hasPrefix(folder + "/") else { return (path as NSString).lastPathComponent }
-        return String(path.dropFirst(folder.count + 1))
     }
 
     /// One checkout's status without the repositories standing inside it. A repository git does not

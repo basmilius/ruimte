@@ -26,7 +26,7 @@ final class GitSheetTests: XCTestCase {
         ]
         fields["branch"] = branch.map { .string($0) } ?? .null
         if let operation { fields["operation"] = .string(operation) }
-        return GitCheckout(path: "/work/\(label)", label: label, kind: "nested", status: GitWire.status(fields))
+        return GitCheckout(path: "/work/\(label)", label: label, kind: .nested, status: GitWire.status(fields))
     }
 
     func testThePillNamesTheBranchOfOneRepositoryAndCountsSeveral() {
@@ -322,12 +322,7 @@ final class GitSheetTests: XCTestCase {
         func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
             switch type {
             case .gitRepos:
-                return .object([
-                    "repos": .array(
-                        checkouts.map {
-                            .object(["path": .string($0.path), "label": .string($0.label), "kind": .string($0.kind)])
-                        })
-                ])
+                return GitWire.repos(checkouts.map { GitWire.repo(path: $0.path, label: $0.label, kind: $0.kind) })
             case .gitStatus:
                 return GitWire.json(checkouts.first { $0.path == payload.text("cwd") }?.status)
             default:

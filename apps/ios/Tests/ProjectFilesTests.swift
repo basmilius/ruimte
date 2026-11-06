@@ -15,7 +15,7 @@ final class ProjectFilesTests: XCTestCase {
 
     func testARowCarriesTheLetterOfItsChangeAndAFolderOneForWhatChangedUnderIt() {
         let checkout = GitCheckout(
-            path: "/work/app", label: "app", kind: "root",
+            path: "/work/app", label: "app", kind: .root,
             status: GitWire.status([
                 "root": .string("/work/app"),
                 "files": .array([
@@ -42,7 +42,7 @@ final class ProjectFilesTests: XCTestCase {
 
     func testAStagedAdditionWithLaterEditsReadsAsNew() {
         let checkout = GitCheckout(
-            path: "/w", label: "w", kind: "root",
+            path: "/w", label: "w", kind: .root,
             status: GitWire.status([
                 "root": .string("/w"),
                 "files": .array([change("a.ts", "unstaged", "M"), change("a.ts", "staged", "A")]),

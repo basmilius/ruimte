@@ -9221,6 +9221,639 @@ public enum ProcessAlertKind: String, CaseIterable, Codable, Sendable, Equatable
     case `probeHung` = "probe-hung"
 }
 
+public struct LaunchesDocument: Codable, Sendable, Equatable {
+    public let `rev`: Int64
+    public let `launches`: [LaunchConfigEntry]
+    public let `approved`: [String]
+    public let `afterSettle`: LaunchesDocumentAfterSettle?
+
+    public init(`rev`: Int64, `launches`: [LaunchConfigEntry], `approved`: [String], `afterSettle`: LaunchesDocumentAfterSettle? = nil) {
+        self.`rev` = `rev`
+        self.`launches` = `launches`
+        self.`approved` = `approved`
+        self.`afterSettle` = `afterSettle`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `rev` = try container.decode(Int64.self, forKey: .`rev`)
+        `launches` = try container.decode([LaunchConfigEntry].self, forKey: .`launches`)
+        `approved` = try container.decode([String].self, forKey: .`approved`)
+        `afterSettle` = try container.decodeIfPresent(LaunchesDocumentAfterSettle.self, forKey: .`afterSettle`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`rev`, forKey: .`rev`)
+        try container.encode(`launches`, forKey: .`launches`)
+        try container.encode(`approved`, forKey: .`approved`)
+        try container.encodeIfPresent(`afterSettle`, forKey: .`afterSettle`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `rev` = "rev"
+        case `launches` = "launches"
+        case `approved` = "approved"
+        case `afterSettle` = "afterSettle"
+    }
+}
+
+public struct LaunchConfigEntry: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `kind`: LaunchConfigKind
+    public let `cwd`: String?
+    public let `command`: String?
+    public let `url`: String?
+    public let `env`: [String: String]?
+    public let `launches`: [String]?
+    public let `autostart`: Bool?
+    public let `origin`: LaunchOrigin?
+    public let `shared`: Bool
+    public let `overlay`: LaunchConfigOverlay?
+
+    public init(`id`: String, `name`: String, `kind`: LaunchConfigKind, `cwd`: String? = nil, `command`: String? = nil, `url`: String? = nil, `env`: [String: String]? = nil, `launches`: [String]? = nil, `autostart`: Bool? = nil, `origin`: LaunchOrigin? = nil, `shared`: Bool, `overlay`: LaunchConfigOverlay? = nil) {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`kind` = `kind`
+        self.`cwd` = `cwd`
+        self.`command` = `command`
+        self.`url` = `url`
+        self.`env` = `env`
+        self.`launches` = `launches`
+        self.`autostart` = `autostart`
+        self.`origin` = `origin`
+        self.`shared` = `shared`
+        self.`overlay` = `overlay`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `kind` = try container.decode(LaunchConfigKind.self, forKey: .`kind`)
+        `cwd` = try container.decodeIfPresent(String.self, forKey: .`cwd`)
+        `command` = try container.decodeIfPresent(String.self, forKey: .`command`)
+        `url` = try container.decodeIfPresent(String.self, forKey: .`url`)
+        `env` = try container.decodeIfPresent([String: String].self, forKey: .`env`)
+        `launches` = try container.decodeIfPresent([String].self, forKey: .`launches`)
+        `autostart` = try container.decodeIfPresent(Bool.self, forKey: .`autostart`)
+        `origin` = try container.decodeIfPresent(LaunchOrigin.self, forKey: .`origin`)
+        `shared` = try container.decode(Bool.self, forKey: .`shared`)
+        `overlay` = try container.decodeIfPresent(LaunchConfigOverlay.self, forKey: .`overlay`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encodeIfPresent(`cwd`, forKey: .`cwd`)
+        try container.encodeIfPresent(`command`, forKey: .`command`)
+        try container.encodeIfPresent(`url`, forKey: .`url`)
+        try container.encodeIfPresent(`env`, forKey: .`env`)
+        try container.encodeIfPresent(`launches`, forKey: .`launches`)
+        try container.encodeIfPresent(`autostart`, forKey: .`autostart`)
+        try container.encodeIfPresent(`origin`, forKey: .`origin`)
+        try container.encode(`shared`, forKey: .`shared`)
+        try container.encodeIfPresent(`overlay`, forKey: .`overlay`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `kind` = "kind"
+        case `cwd` = "cwd"
+        case `command` = "command"
+        case `url` = "url"
+        case `env` = "env"
+        case `launches` = "launches"
+        case `autostart` = "autostart"
+        case `origin` = "origin"
+        case `shared` = "shared"
+        case `overlay` = "overlay"
+    }
+}
+
+public enum LaunchConfigKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `service` = "service"
+    case `task` = "task"
+    case `group` = "group"
+}
+
+public struct LaunchOrigin: Codable, Sendable, Equatable {
+    public let `source`: String
+    public let `path`: String
+    public let `name`: String
+
+    public init(`source`: String, `path`: String, `name`: String) {
+        self.`source` = `source`
+        self.`path` = `path`
+        self.`name` = `name`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `source` = try container.decode(String.self, forKey: .`source`)
+        `path` = try container.decode(String.self, forKey: .`path`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`source`, forKey: .`source`)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`name`, forKey: .`name`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `source` = "source"
+        case `path` = "path"
+        case `name` = "name"
+    }
+}
+
+public struct LaunchConfigOverlay: Codable, Sendable, Equatable {
+    public let `cwd`: String?
+    public let `env`: [String: String]?
+
+    public init(`cwd`: String? = nil, `env`: [String: String]? = nil) {
+        self.`cwd` = `cwd`
+        self.`env` = `env`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `cwd` = try container.decodeIfPresent(String.self, forKey: .`cwd`)
+        `env` = try container.decodeIfPresent([String: String].self, forKey: .`env`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(`cwd`, forKey: .`cwd`)
+        try container.encodeIfPresent(`env`, forKey: .`env`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `cwd` = "cwd"
+        case `env` = "env"
+    }
+}
+
+public struct LaunchesDocumentAfterSettle: Codable, Sendable, Equatable {
+    public let `launchId`: String
+    public let `approved`: Bool
+
+    public init(`launchId`: String, `approved`: Bool) {
+        self.`launchId` = `launchId`
+        self.`approved` = `approved`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `launchId` = try container.decode(String.self, forKey: .`launchId`)
+        `approved` = try container.decode(Bool.self, forKey: .`approved`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`launchId`, forKey: .`launchId`)
+        try container.encode(`approved`, forKey: .`approved`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `launchId` = "launchId"
+        case `approved` = "approved"
+    }
+}
+
+public struct LaunchStatus: Codable, Sendable, Equatable {
+    public let `projectId`: String
+    public let `launchId`: String
+    public let `sessionId`: String
+    public let `kind`: LaunchConfigKind
+    public let `state`: LaunchState
+    public let `exitCode`: Int64?
+    public let `startedAt`: Double
+    public let `endedAt`: Double?
+    public let `port`: Int64?
+    public let `url`: String?
+    public let `stopped`: Bool
+    public let `worktree`: String?
+
+    public init(`projectId`: String, `launchId`: String, `sessionId`: String, `kind`: LaunchConfigKind, `state`: LaunchState, `exitCode`: Int64?, `startedAt`: Double, `endedAt`: Double?, `port`: Int64?, `url`: String?, `stopped`: Bool, `worktree`: String? = nil) {
+        self.`projectId` = `projectId`
+        self.`launchId` = `launchId`
+        self.`sessionId` = `sessionId`
+        self.`kind` = `kind`
+        self.`state` = `state`
+        self.`exitCode` = `exitCode`
+        self.`startedAt` = `startedAt`
+        self.`endedAt` = `endedAt`
+        self.`port` = `port`
+        self.`url` = `url`
+        self.`stopped` = `stopped`
+        self.`worktree` = `worktree`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `projectId` = try container.decode(String.self, forKey: .`projectId`)
+        `launchId` = try container.decode(String.self, forKey: .`launchId`)
+        `sessionId` = try container.decode(String.self, forKey: .`sessionId`)
+        `kind` = try container.decode(LaunchConfigKind.self, forKey: .`kind`)
+        `state` = try container.decode(LaunchState.self, forKey: .`state`)
+        `exitCode` = try container.decode(Int64?.self, forKey: .`exitCode`)
+        `startedAt` = try container.decode(Double.self, forKey: .`startedAt`)
+        `endedAt` = try container.decode(Double?.self, forKey: .`endedAt`)
+        `port` = try container.decode(Int64?.self, forKey: .`port`)
+        `url` = try container.decode(String?.self, forKey: .`url`)
+        `stopped` = try container.decode(Bool.self, forKey: .`stopped`)
+        `worktree` = try container.decodeIfPresent(String.self, forKey: .`worktree`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`projectId`, forKey: .`projectId`)
+        try container.encode(`launchId`, forKey: .`launchId`)
+        try container.encode(`sessionId`, forKey: .`sessionId`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`state`, forKey: .`state`)
+        try container.encode(`exitCode`, forKey: .`exitCode`)
+        try container.encode(`startedAt`, forKey: .`startedAt`)
+        try container.encode(`endedAt`, forKey: .`endedAt`)
+        try container.encode(`port`, forKey: .`port`)
+        try container.encode(`url`, forKey: .`url`)
+        try container.encode(`stopped`, forKey: .`stopped`)
+        try container.encodeIfPresent(`worktree`, forKey: .`worktree`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `projectId` = "projectId"
+        case `launchId` = "launchId"
+        case `sessionId` = "sessionId"
+        case `kind` = "kind"
+        case `state` = "state"
+        case `exitCode` = "exitCode"
+        case `startedAt` = "startedAt"
+        case `endedAt` = "endedAt"
+        case `port` = "port"
+        case `url` = "url"
+        case `stopped` = "stopped"
+        case `worktree` = "worktree"
+    }
+}
+
+public enum LaunchState: String, CaseIterable, Codable, Sendable, Equatable {
+    case `starting` = "starting"
+    case `running` = "running"
+    case `stopping` = "stopping"
+    case `exited` = "exited"
+}
+
+public struct LaunchListResult: Codable, Sendable, Equatable {
+    public let `launches`: [LaunchStatus]
+
+    public init(`launches`: [LaunchStatus]) {
+        self.`launches` = `launches`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `launches` = try container.decode([LaunchStatus].self, forKey: .`launches`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`launches`, forKey: .`launches`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `launches` = "launches"
+    }
+}
+
+public struct LaunchStartResult: Codable, Sendable, Equatable {
+    public let `outcome`: LaunchStartResultOutcome
+    public let `held`: [LaunchHeld]?
+    public let `busy`: LaunchBusy?
+
+    public init(`outcome`: LaunchStartResultOutcome, `held`: [LaunchHeld]? = nil, `busy`: LaunchBusy? = nil) {
+        self.`outcome` = `outcome`
+        self.`held` = `held`
+        self.`busy` = `busy`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `outcome` = try container.decode(LaunchStartResultOutcome.self, forKey: .`outcome`)
+        `held` = try container.decodeIfPresent([LaunchHeld].self, forKey: .`held`)
+        `busy` = try container.decodeIfPresent(LaunchBusy.self, forKey: .`busy`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`outcome`, forKey: .`outcome`)
+        try container.encodeIfPresent(`held`, forKey: .`held`)
+        try container.encodeIfPresent(`busy`, forKey: .`busy`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `outcome` = "outcome"
+        case `held` = "held"
+        case `busy` = "busy"
+    }
+}
+
+public enum LaunchStartResultOutcome: String, CaseIterable, Codable, Sendable, Equatable {
+    case `started` = "started"
+    case `held` = "held"
+    case `busy` = "busy"
+}
+
+public struct LaunchHeld: Codable, Sendable, Equatable {
+    public let `launchId`: String
+    public let `command`: String
+    public let `cwd`: String
+    public let `env`: [String: String]?
+
+    public init(`launchId`: String, `command`: String, `cwd`: String, `env`: [String: String]? = nil) {
+        self.`launchId` = `launchId`
+        self.`command` = `command`
+        self.`cwd` = `cwd`
+        self.`env` = `env`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `launchId` = try container.decode(String.self, forKey: .`launchId`)
+        `command` = try container.decode(String.self, forKey: .`command`)
+        `cwd` = try container.decode(String.self, forKey: .`cwd`)
+        `env` = try container.decodeIfPresent([String: String].self, forKey: .`env`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`launchId`, forKey: .`launchId`)
+        try container.encode(`command`, forKey: .`command`)
+        try container.encode(`cwd`, forKey: .`cwd`)
+        try container.encodeIfPresent(`env`, forKey: .`env`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `launchId` = "launchId"
+        case `command` = "command"
+        case `cwd` = "cwd"
+        case `env` = "env"
+    }
+}
+
+public struct LaunchBusy: Codable, Sendable, Equatable {
+    public let `projectId`: String
+    public let `launchId`: String
+    public let `port`: Int64
+
+    public init(`projectId`: String, `launchId`: String, `port`: Int64) {
+        self.`projectId` = `projectId`
+        self.`launchId` = `launchId`
+        self.`port` = `port`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `projectId` = try container.decode(String.self, forKey: .`projectId`)
+        `launchId` = try container.decode(String.self, forKey: .`launchId`)
+        `port` = try container.decode(Int64.self, forKey: .`port`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`projectId`, forKey: .`projectId`)
+        try container.encode(`launchId`, forKey: .`launchId`)
+        try container.encode(`port`, forKey: .`port`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `projectId` = "projectId"
+        case `launchId` = "launchId"
+        case `port` = "port"
+    }
+}
+
+public struct LaunchesDetectResult: Codable, Sendable, Equatable {
+    public let `suggestions`: [LaunchSuggestion]
+
+    public init(`suggestions`: [LaunchSuggestion]) {
+        self.`suggestions` = `suggestions`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `suggestions` = try container.decode([LaunchSuggestion].self, forKey: .`suggestions`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`suggestions`, forKey: .`suggestions`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `suggestions` = "suggestions"
+    }
+}
+
+public struct LaunchSuggestion: Codable, Sendable, Equatable {
+    public let `launch`: LaunchConfig
+    public let `source`: LaunchSuggestionSource
+    public let `path`: String
+    public let `detail`: String
+    public let `private`: Bool
+    public let `unsupported`: String?
+
+    public init(`launch`: LaunchConfig, `source`: LaunchSuggestionSource, `path`: String, `detail`: String, `private`: Bool, `unsupported`: String? = nil) {
+        self.`launch` = `launch`
+        self.`source` = `source`
+        self.`path` = `path`
+        self.`detail` = `detail`
+        self.`private` = `private`
+        self.`unsupported` = `unsupported`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `launch` = try container.decode(LaunchConfig.self, forKey: .`launch`)
+        `source` = try container.decode(LaunchSuggestionSource.self, forKey: .`source`)
+        `path` = try container.decode(String.self, forKey: .`path`)
+        `detail` = try container.decode(String.self, forKey: .`detail`)
+        `private` = try container.decode(Bool.self, forKey: .`private`)
+        `unsupported` = try container.decodeIfPresent(String.self, forKey: .`unsupported`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`launch`, forKey: .`launch`)
+        try container.encode(`source`, forKey: .`source`)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`detail`, forKey: .`detail`)
+        try container.encode(`private`, forKey: .`private`)
+        try container.encodeIfPresent(`unsupported`, forKey: .`unsupported`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `launch` = "launch"
+        case `source` = "source"
+        case `path` = "path"
+        case `detail` = "detail"
+        case `private` = "private"
+        case `unsupported` = "unsupported"
+    }
+}
+
+public struct LaunchConfig: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `kind`: LaunchConfigKind
+    public let `cwd`: String?
+    public let `command`: String?
+    public let `url`: String?
+    public let `env`: [String: String]?
+    public let `launches`: [String]?
+    public let `autostart`: Bool?
+    public let `origin`: LaunchOrigin?
+
+    public init(`id`: String, `name`: String, `kind`: LaunchConfigKind, `cwd`: String? = nil, `command`: String? = nil, `url`: String? = nil, `env`: [String: String]? = nil, `launches`: [String]? = nil, `autostart`: Bool? = nil, `origin`: LaunchOrigin? = nil) {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`kind` = `kind`
+        self.`cwd` = `cwd`
+        self.`command` = `command`
+        self.`url` = `url`
+        self.`env` = `env`
+        self.`launches` = `launches`
+        self.`autostart` = `autostart`
+        self.`origin` = `origin`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `kind` = try container.decode(LaunchConfigKind.self, forKey: .`kind`)
+        `cwd` = try container.decodeIfPresent(String.self, forKey: .`cwd`)
+        `command` = try container.decodeIfPresent(String.self, forKey: .`command`)
+        `url` = try container.decodeIfPresent(String.self, forKey: .`url`)
+        `env` = try container.decodeIfPresent([String: String].self, forKey: .`env`)
+        `launches` = try container.decodeIfPresent([String].self, forKey: .`launches`)
+        `autostart` = try container.decodeIfPresent(Bool.self, forKey: .`autostart`)
+        `origin` = try container.decodeIfPresent(LaunchOrigin.self, forKey: .`origin`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encodeIfPresent(`cwd`, forKey: .`cwd`)
+        try container.encodeIfPresent(`command`, forKey: .`command`)
+        try container.encodeIfPresent(`url`, forKey: .`url`)
+        try container.encodeIfPresent(`env`, forKey: .`env`)
+        try container.encodeIfPresent(`launches`, forKey: .`launches`)
+        try container.encodeIfPresent(`autostart`, forKey: .`autostart`)
+        try container.encodeIfPresent(`origin`, forKey: .`origin`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `kind` = "kind"
+        case `cwd` = "cwd"
+        case `command` = "command"
+        case `url` = "url"
+        case `env` = "env"
+        case `launches` = "launches"
+        case `autostart` = "autostart"
+        case `origin` = "origin"
+    }
+}
+
+public enum LaunchSuggestionSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `runXml` = "run-xml"
+    case `packageJson` = "package-json"
+    case `composerJson` = "composer-json"
+    case `vscodeLaunch` = "vscode-launch"
+    case `pubspecYaml` = "pubspec-yaml"
+}
+
+public struct GitReposResult: Codable, Sendable, Equatable {
+    public let `repos`: [GitRepo]
+    public let `truncated`: Bool
+
+    public init(`repos`: [GitRepo], `truncated`: Bool) {
+        self.`repos` = `repos`
+        self.`truncated` = `truncated`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `repos` = try container.decode([GitRepo].self, forKey: .`repos`)
+        `truncated` = try container.decode(Bool.self, forKey: .`truncated`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`repos`, forKey: .`repos`)
+        try container.encode(`truncated`, forKey: .`truncated`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `repos` = "repos"
+        case `truncated` = "truncated"
+    }
+}
+
+public struct GitRepo: Codable, Sendable, Equatable {
+    public let `path`: String
+    public let `label`: String
+    public let `name`: String?
+    public let `kind`: GitRepoKind
+
+    public init(`path`: String, `label`: String, `name`: String? = nil, `kind`: GitRepoKind) {
+        self.`path` = `path`
+        self.`label` = `label`
+        self.`name` = `name`
+        self.`kind` = `kind`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `path` = try container.decode(String.self, forKey: .`path`)
+        `label` = try container.decode(String.self, forKey: .`label`)
+        `name` = try container.decodeIfPresent(String.self, forKey: .`name`)
+        `kind` = try container.decode(GitRepoKind.self, forKey: .`kind`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`label`, forKey: .`label`)
+        try container.encodeIfPresent(`name`, forKey: .`name`)
+        try container.encode(`kind`, forKey: .`kind`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `path` = "path"
+        case `label` = "label"
+        case `name` = "name"
+        case `kind` = "kind"
+    }
+}
+
+public enum GitRepoKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `root` = "root"
+    case `submodule` = "submodule"
+    case `nested` = "nested"
+}
+
 public extension PlanStepState {
     /// The marker of this state, as `PLAN_STATE_MARKERS` in `@adecore/plan` writes it.
     var marker: String {

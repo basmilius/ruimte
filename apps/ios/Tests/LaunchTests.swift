@@ -8,47 +8,30 @@ private func launch(
     _ id: String, kind: String = "service", command: String? = "bun dev", cwd: String? = nil, members: [String] = [],
     shared: Bool = false, extra: [String: JSONValue] = [:]
 ) -> JSONValue {
-    var fields: [String: JSONValue] = [
-        "id": .string(id), "name": .string(id), "kind": .string(kind), "shared": .bool(shared),
-    ]
-    if kind == "group" {
-        fields["launches"] = .array(members.map(JSONValue.string))
-    } else if let command {
-        fields["command"] = .string(command)
-    }
-    if let cwd { fields["cwd"] = .string(cwd) }
-    fields.merge(extra) { _, new in new }
-    return .object(fields)
+    LaunchWire.entry(id, kind: kind, command: command, cwd: cwd, members: members, shared: shared, extra: extra)
 }
 
 private func status(
     _ id: String, project: String = "p1", kind: String = "service", state: String, exit: Int? = nil,
     stopped: Bool = false, port: Int? = nil
 ) -> JSONValue {
-    .object([
-        "projectId": .string(project), "launchId": .string(id), "sessionId": .string("launch:\(id)"),
-        "kind": .string(kind), "state": .string(state), "exitCode": exit.map { .number(Double($0)) } ?? .null,
-        "startedAt": .number(1000), "endedAt": state == "exited" ? .number(6000) : .null,
-        "port": port.map { .number(Double($0)) } ?? .null, "url": .null, "stopped": .bool(stopped),
-    ])
+    LaunchWire.status(id, project: project, kind: kind, state: state, exit: exit, stopped: stopped, port: port)
 }
 
 private func document(_ launches: [JSONValue], approved: [String], rev: Int = 3) -> JSONValue {
-    .object([
-        "rev": .number(Double(rev)), "launches": .array(launches), "approved": .array(approved.map(JSONValue.string)),
-    ])
+    LaunchWire.document(launches, approved: approved, rev: rev)
 }
 
 final class LaunchLogicTests: XCTestCase {
     private func views(_ statuses: [JSONValue], approved: [String]) -> [String: LaunchView] {
-        let doc = LaunchesDocument(
-            json: document(
-                [
-                    launch("web"), launch("test", kind: "task", command: "bun test"), launch("api"),
-                    launch("all", kind: "group", members: ["web", "api"]),
-                ], approved: approved))
+        let doc = document(
+            [
+                launch("web"), launch("test", kind: "task", command: "bun test"), launch("api"),
+                launch("all", kind: "group", members: ["web", "api"]),
+            ], approved: approved
+        ).launchBook
         let byID = Dictionary(
-            statuses.map(LaunchStatus.init(json:)).map { ($0.launchID, $0) }, uniquingKeysWith: { $1 })
+            statuses.map(\.launchStatus).map { ($0.launchId, $0) }, uniquingKeysWith: { $1 })
         return LaunchLogic.views(document: doc, statuses: byID)
     }
 
@@ -76,12 +59,12 @@ final class LaunchLogicTests: XCTestCase {
         XCTAssertEqual(failed["all"]?.phase, .failed)
         XCTAssertEqual(failed["all"]?.exitCode, 2)
         XCTAssertEqual(views([], approved: ["web", "api"])["all"]?.phase, .held)
-        let group = LaunchEntry(raw: launch("all", kind: "group", members: ["web", "api"]))
+        let group = launch("all", kind: "group", members: ["web", "api"]).launchEntry
         XCTAssertEqual(LaunchLogic.output(views: failed, launch: group)?.launch.id, "web")
         XCTAssertEqual(LaunchLogic.output(views: running, launch: group)?.launch.id, "web")
-        let statuses = ["api": LaunchStatus(json: status("api", state: "running"))]
+        let statuses = ["api": status("api", state: "running").launchStatus]
         XCTAssertTrue(LaunchLogic.runs(group, statuses: statuses))
-        XCTAssertFalse(LaunchLogic.runs(LaunchEntry(raw: launch("web")), statuses: statuses))
+        XCTAssertFalse(LaunchLogic.runs(launch("web").launchEntry, statuses: statuses))
     }
 
     func testAnAddressReadsWithoutItsSchemeOrTrailingSlash() {
@@ -90,13 +73,13 @@ final class LaunchLogicTests: XCTestCase {
 
     func testLaunchesAreGroupedByTheCheckoutTheyRunIn() {
         let launches = [
-            LaunchEntry(raw: launch("site", cwd: "apps/site")), LaunchEntry(raw: launch("root")),
-            LaunchEntry(raw: launch("lib", cwd: "/work/p/libs/core/src")),
-            LaunchEntry(raw: launch("all", kind: "group", members: ["site"])),
+            launch("site", cwd: "apps/site").launchEntry, launch("root").launchEntry,
+            launch("lib", cwd: "/work/p/libs/core/src").launchEntry,
+            launch("all", kind: "group", members: ["site"]).launchEntry,
         ]
         let repos = [
-            LaunchRepo(path: "/work/p", label: "p", kind: "root"),
-            LaunchRepo(path: "/work/p/libs/core", label: "libs/core", name: "Core"),
+            GitRepo(path: "/work/p", label: "p", kind: .root),
+            GitRepo(path: "/work/p/libs/core", label: "libs/core", name: "Core", kind: .nested),
         ]
         let sections = LaunchLogic.sections(launches, folder: "/work/p/", repos: repos)
         XCTAssertEqual(sections.map(\.label), [nil, "Core"])
@@ -104,8 +87,7 @@ final class LaunchLogicTests: XCTestCase {
         XCTAssertEqual(sections[1].launches.map(\.id), ["lib"])
         XCTAssertEqual(
             LaunchLogic.sections(Array(launches.prefix(2)), folder: "/work/p", repos: repos).map(\.label), [nil])
-        let overlaid = LaunchEntry(
-            raw: launch("x", cwd: "a", extra: ["overlay": .object(["cwd": .string("/elsewhere")])]))
+        let overlaid = launch("x", cwd: "a", extra: ["overlay": .object(["cwd": .string("/elsewhere")])]).launchEntry
         XCTAssertEqual(LaunchLogic.folder(of: overlaid, in: "/work/p"), "/elsewhere")
     }
 }
@@ -118,10 +100,10 @@ final class LaunchEditingTests: XCTestCase {
         site.cwd = "apps/site/"
         site.url = " http://localhost:3000 "
         site.env = [LaunchEnvRow(id: 0, key: " PORT ", value: "3000"), LaunchEnvRow(id: 1, key: " ", value: "x")]
-        var group = LaunchEditing.newDraft(id: "new:2", kind: "group")
+        var group = LaunchEditing.newDraft(id: "new:2", kind: .group)
         group.name = "All"
         group.members = ["new:1"]
-        let existing = LaunchEditing.draft(of: LaunchEntry(raw: launch("dev-server", extra: ["future": .bool(true)])))
+        let existing = LaunchEditing.draft(of: launch("dev-server", extra: ["future": .bool(true)]).launchEntry)
         let saved = LaunchEditing.saved([existing, site, group])
         XCTAssertEqual(saved[0]["future"], .bool(true))
         XCTAssertEqual(saved[1].text("id"), "dev-server-2")
@@ -136,12 +118,24 @@ final class LaunchEditingTests: XCTestCase {
 
     func testAKindKeepsOnlyTheFieldsItReads() {
         var draft = LaunchEditing.draft(
-            of: LaunchEntry(raw: launch("t", cwd: ".", extra: ["url": .string("http://x")])))
-        draft.kind = "task"
+            of: launch("t", cwd: ".", extra: ["url": .string("http://x")]).launchEntry)
+        draft.kind = .task
         let saved = LaunchEditing.saved([draft])[0]
         XCTAssertNil(saved["url"])
         XCTAssertNil(saved["cwd"])
         XCTAssertNil(saved["autostart"])
+    }
+
+    func testAnEditKeepsWhatTheMachineSentBesideIt() {
+        let overlaid = launch(
+            "web", shared: true, extra: ["overlay": .object(["cwd": .string("/elsewhere")]), "future": .number(2)]
+        ).launchEntry
+        let draft = LaunchEditing.draft(of: overlaid)
+        XCTAssertTrue(draft.hasOverlay)
+        let saved = LaunchEditing.saved([draft])[0]
+        XCTAssertEqual(saved["overlay"], .object(["cwd": .string("/elsewhere")]))
+        XCTAssertEqual(saved["future"], .number(2))
+        XCTAssertEqual(saved["shared"], .bool(true))
     }
 
     func testTheFirstLaunchThatCannotBeSavedIsNamed() {
@@ -151,14 +145,14 @@ final class LaunchEditingTests: XCTestCase {
         var commandless = LaunchEditing.newDraft(id: "b")
         commandless.name = "B"
         XCTAssertTrue(LaunchEditing.problem([commandless])! == ("b", .command))
-        var empty = LaunchEditing.newDraft(id: "c", kind: "group")
+        var empty = LaunchEditing.newDraft(id: "c", kind: .group)
         empty.name = "C"
         XCTAssertTrue(LaunchEditing.problem([empty])! == ("c", .members))
     }
 
     func testALaunchThatGoesLeavesEveryGroup() {
         let drafts = [launch("web"), launch("api"), launch("all", kind: "group", members: ["web", "api"])].map {
-            LaunchEditing.draft(of: LaunchEntry(raw: $0))
+            LaunchEditing.draft(of: $0.launchEntry)
         }
         let rest = LaunchEditing.without(drafts, id: "web")
         XCTAssertEqual(rest.map(\.id), ["api", "all"])
@@ -167,8 +161,8 @@ final class LaunchEditingTests: XCTestCase {
 
     func testAFolderSplitsIntoItsCheckoutAndThePathBelow() {
         let roots = LaunchEditing.folderRoots([
-            LaunchRepo(path: "/p", label: "p", kind: "root"), LaunchRepo(path: "/p/apps/site", label: "apps/site"),
-            LaunchRepo(path: "/elsewhere", label: "../elsewhere"),
+            GitRepo(path: "/p", label: "p", kind: .root), GitRepo(path: "/p/apps/site", label: "apps/site", kind: .nested),
+            GitRepo(path: "/elsewhere", label: "../elsewhere", kind: .nested),
         ])
         XCTAssertEqual(roots, ["", "apps/site"])
         XCTAssertTrue(LaunchEditing.splitFolder("./apps/site/web", roots: roots) == ("apps/site", "web"))
@@ -178,35 +172,22 @@ final class LaunchEditingTests: XCTestCase {
         XCTAssertEqual(LaunchEditing.joinFolder(root: "", sub: "./x"), "x")
     }
 
-    func testAnImportOffersOnlyWhatIsNotALaunchYet() {
+    func testAnImportOffersOnlyWhatIsNotALaunchYet() throws {
         let suggestions = [
-            LaunchSuggestion(
-                json: .object([
-                    "launch": launch("dev"), "source": .string("package-json"), "path": .string("package.json"),
-                    "detail": .string("dev"), "private": .bool(false),
-                ])),
-            LaunchSuggestion(
-                json: .object([
-                    "launch": launch("test", command: "bun test"), "source": .string("package-json"),
-                    "path": .string("apps/site/package.json"), "detail": .string("test"), "private": .bool(true),
-                ])),
-            LaunchSuggestion(
-                json: .object([
-                    "launch": launch("Docker", command: "docker"), "source": .string("run-xml"),
-                    "path": .string(".run/Docker.run.xml"), "detail": .string("Docker"), "private": .bool(false),
-                    "unsupported": .string("Docker"),
-                ])),
-        ]
-        let existing = [LaunchEntry(raw: launch("mine", command: " bun dev "))]
+            LaunchWire.suggestion(launch("dev")),
+            LaunchWire.suggestion(
+                launch("test", command: "bun test"), path: "apps/site/package.json", detail: "test", isPrivate: true),
+            LaunchWire.suggestion(
+                launch("Docker", command: "docker"), source: "run-xml", path: ".run/Docker.run.xml", detail: "Docker",
+                unsupported: "Docker"),
+        ].map(\.launchSuggestion)
+        let existing = [launch("mine", command: " bun dev ").launchEntry]
         let offered = LaunchEditing.newSuggestions(suggestions, existing: existing)
         XCTAssertEqual(offered.map(\.id), ["test", "Docker"])
-        let imported = LaunchEditing.imported(
-            Array(suggestions.prefix(2)), share: true,
-            existing: [
-                LaunchEntry(raw: launch("dev"))
-            ])
-        XCTAssertEqual(imported.map { $0.text("id") }, ["dev-2", "test"])
-        XCTAssertEqual(imported.map { $0["shared"] }, [.bool(true), .bool(false)])
+        let imported = try LaunchEditing.imported(
+            Array(suggestions.prefix(2)), share: true, existing: [launch("dev").launchEntry])
+        XCTAssertEqual(imported.map(\.id), ["dev-2", "test"])
+        XCTAssertEqual(imported.map { $0.entry["shared"] }, [.bool(true), .bool(false)])
         XCTAssertEqual(LaunchEditing.foundText(suggestions), "2 scripts in 2 files.")
         XCTAssertEqual(LaunchEditing.source(suggestions[1]), "apps/site · package.json")
         XCTAssertEqual(LaunchEditing.source(suggestions[2]), "Docker")
@@ -216,24 +197,26 @@ final class LaunchEditingTests: XCTestCase {
     }
 
     @MainActor func testAVSCodeImportReadsAsARunConfigurationAndStaysUnapproved() async throws {
-        let suggestion = LaunchSuggestion(
-            json: .object([
-                "launch": launch("api", command: "node server.js"), "source": .string("vscode-launch"),
-                "path": .string(".vscode/launch.json"), "detail": .string("node"), "private": .bool(false),
-            ]))
+        let suggestion = LaunchWire.suggestion(
+            launch("api", command: "node server.js"), source: "vscode-launch", path: ".vscode/launch.json",
+            detail: "node"
+        ).launchSuggestion
         XCTAssertEqual(LaunchEditing.foundText([suggestion]), "1 run configuration in .vscode.")
         XCTAssertEqual(LaunchEditing.source(suggestion), "node")
-        let imported = LaunchEditing.imported([suggestion], share: false, existing: [])
-        XCTAssertEqual(LaunchEditing.importedIDs(imported, existing: []), ["api"])
-        XCTAssertEqual(LaunchEditing.importedIDs(imported, existing: [LaunchEntry(raw: imported[0])]), [])
-        XCTAssertTrue(LaunchEditing.newSuggestions([suggestion], existing: [LaunchEntry(raw: imported[0])]).isEmpty)
+        let imported = try LaunchEditing.imported([suggestion], share: false, existing: [])
+        XCTAssertEqual(imported.map(\.id), ["api"])
+        let importedEntry = imported[0].entry.launchEntry
+        XCTAssertTrue(LaunchEditing.newSuggestions([suggestion], existing: [importedEntry]).isEmpty)
+        let drafts = [LaunchEditing.draft(of: importedEntry)]
+        XCTAssertEqual(LaunchEditing.importedIDs(drafts, existing: []), ["api"])
+        XCTAssertEqual(LaunchEditing.importedIDs(drafts, existing: [importedEntry]), [])
         let machine = LaunchMachine()
         let store = ProjectLaunches(client: machine, projectID: "p1", folder: "/p")
-        try await store.save(imported, baseRev: 3, imported: LaunchEditing.importedIDs(imported, existing: []))
+        try await store.save(imported.map(\.entry), baseRev: 3, imported: imported.map(\.id))
         XCTAssertEqual(
             machine.last(.launchesSave),
             .object([
-                "projectId": .string("p1"), "baseRev": .number(3), "launches": .array(imported),
+                "projectId": .string("p1"), "baseRev": .number(3), "launches": .array(imported.map(\.entry)),
                 "imported": .array([.string("api")]),
             ]))
         XCTAssertFalse(machine.sent.contains { $0.0 == .launchStart || $0.0 == .launchRestart })
@@ -372,7 +355,7 @@ final class LaunchEditingTests: XCTestCase {
                 "launches": .array([status("web", state: "running"), status("dev", project: "p2", state: "running")])
             ])
         case .gitRepos:
-            return .object(["repos": .array([])])
+            return GitWire.repos([])
         case .launchStart, .launchRestart:
             return outcome
         case .launchesSave:

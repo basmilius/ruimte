@@ -368,7 +368,23 @@ const typedRoots: [name: string, source: string, path: (string | number)[]][] = 
     ['ProcessPoint', 'event.processes.sample', ['properties', 'fine', 'anyOf', 0]],
     ['ProcessesAlerts', 'event.processes.alerts', []],
     ['ProcessAlert', 'event.processes.alerts', ['properties', 'alerts', 'items']],
-    ['ProcessAlertKind', 'event.processes.alerts', ['properties', 'alerts', 'items', 'properties', 'kind']]
+    ['ProcessAlertKind', 'event.processes.alerts', ['properties', 'alerts', 'items', 'properties', 'kind']],
+    ['LaunchesDocument', 'request.launches.read.result', []],
+    ['LaunchConfigEntry', 'request.launches.read.result', ['properties', 'launches', 'items']],
+    ['LaunchConfigKind', 'request.launches.read.result', ['properties', 'launches', 'items', 'properties', 'kind']],
+    ['LaunchConfigOverlay', 'request.launches.read.result', ['properties', 'launches', 'items', 'properties', 'overlay']],
+    ['LaunchStatus', 'event.launch.status', []],
+    ['LaunchState', 'event.launch.status', ['properties', 'state']],
+    ['LaunchListResult', 'request.launch.list.result', []],
+    ['LaunchStartResult', 'request.launch.start.result', []],
+    ['LaunchHeld', 'request.launch.start.result', ['properties', 'held', 'items']],
+    ['LaunchBusy', 'request.launch.start.result', ['properties', 'busy']],
+    ['LaunchesDetectResult', 'request.launches.detect.result', []],
+    ['LaunchSuggestion', 'request.launches.detect.result', ['properties', 'suggestions', 'items']],
+    ['LaunchConfig', 'request.launches.detect.result', ['properties', 'suggestions', 'items', 'properties', 'launch']],
+    ['LaunchSuggestionSource', 'request.launches.detect.result', ['properties', 'suggestions', 'items', 'properties', 'source']],
+    ['GitReposResult', 'request.git.repos.result', []],
+    ['GitRepo', 'request.git.repos.result', ['properties', 'repos', 'items']]
 ];
 const typed = typedRoots.map(([name, source, path]) => {
     const schema = path.reduce((node: any, key) => node?.[key], typedSchema(schemas[source]));
@@ -405,6 +421,8 @@ names.set(canonical(endpointInfo.terminalShell), 'EndpointTerminalShell');
 names.set(canonical(endpointInfo.nodeSizes.additionalProperties), 'EndpointNodeSize');
 names.set(canonical(endpointInfo.agentIntegrations), 'EndpointAgentIntegrations');
 names.set(canonical(typed.find(([name]) => name === 'ProcessSample')![1].properties.scope), 'ProcessScope');
+// A launch and a suggestion for one both say where an import read it from.
+names.set(canonical(typed.find(([name]) => name === 'LaunchConfig')![1].properties.origin), 'LaunchOrigin');
 validatingStructs = false;
 for (const [name, schema] of typed) {
     const type = typeOf(schema, name);

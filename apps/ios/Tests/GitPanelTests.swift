@@ -25,15 +25,9 @@ final class GitPanelTests: XCTestCase {
         -> GitCheckout
     {
         GitCheckout(
-            path: "/work/\(label)", label: label, kind: "nested",
+            path: "/work/\(label)", label: label, kind: .nested,
             status: status(
                 states.enumerated().map { file("\($0.offset).ts", $0.element) }, ahead: ahead, upstream: upstream))
-    }
-
-    func testARepositoryIsListedUnderItsPathInTheFolder() {
-        XCTAssertEqual(GitPanel.label(folder: "/work/app", path: "/work/app/packages/ui"), "packages/ui")
-        XCTAssertEqual(GitPanel.label(folder: "/work/app", path: "/work/app"), "app")
-        XCTAssertEqual(GitPanel.label(folder: "/work/app/apps/client", path: "/work/app"), "app")
     }
 
     func testTheUntrackedFolderARepositoryShowsUpAsInTheOneAboveItIsDropped() {

@@ -19,7 +19,7 @@ import SwiftUI
 
     init(store: ProjectLaunches, launchID: String?) {
         self.store = store
-        let document = store.document ?? LaunchesDocument()
+        let document = store.document ?? LaunchBook()
         var drafts = document.launches.map(LaunchEditing.draft(of:))
         let editing: String
         if let launchID, drafts.contains(where: { $0.id == launchID }) {
@@ -52,7 +52,7 @@ import SwiftUI
     }
 
     /// The other services and tasks a group can start.
-    var candidates: [LaunchDraft] { drafts.filter { $0.kind != "group" && $0.id != draftID } }
+    var candidates: [LaunchDraft] { drafts.filter { $0.kind != .group && $0.id != draftID } }
 
     /// What keeps the save from going out, shown once a save was tried.
     var problem: (id: String, problem: LaunchDraftProblem)? { LaunchEditing.problem(drafts) }
@@ -78,10 +78,9 @@ import SwiftUI
         failure = nil
         conflict = false
         do {
-            let saved = LaunchEditing.saved(drafts)
             try await store.save(
-                saved, baseRev: baseRev,
-                imported: LaunchEditing.importedIDs(saved, existing: store.document?.launches ?? []))
+                LaunchEditing.saved(drafts), baseRev: baseRev,
+                imported: LaunchEditing.importedIDs(drafts, existing: store.document?.launches ?? []))
             return true
         } catch {
             conflict = error as? LaunchSaveFailure == .conflict
@@ -93,7 +92,7 @@ import SwiftUI
     /// The latest the machine sent, with what this sheet edits laid over it again: a new launch stays new, and an
     /// existing one is read again as it stands now.
     func startOver() {
-        let document = store.document ?? LaunchesDocument()
+        let document = store.document ?? LaunchBook()
         var fresh = document.launches.map(LaunchEditing.draft(of:))
         if isNew { fresh.append(draft) }
         drafts = fresh
@@ -152,9 +151,9 @@ struct LaunchEditorSheet: View {
         Section {
             TextField("Name", text: $model.draft.name)
             Picker("Kind", selection: $model.draft.kind) {
-                Text("Service").tag("service")
-                Text("Task").tag("task")
-                Text("Group").tag("group")
+                Text("Service").tag(LaunchConfigKind.service)
+                Text("Task").tag(LaunchConfigKind.task)
+                Text("Group").tag(LaunchConfigKind.group)
             }
             .pickerStyle(.segmented)
         } footer: {
@@ -165,7 +164,7 @@ struct LaunchEditorSheet: View {
                 Text(Self.kindHint(model.draft.kind))
             }
         }
-        if model.draft.kind == "group" {
+        if model.draft.kind == .group {
             members(shown)
         } else {
             run(shown)
@@ -233,7 +232,7 @@ struct LaunchEditorSheet: View {
             TextField("Command", text: $model.draft.command, axis: .vertical)
                 .font(.callout.monospaced()).textInputAutocapitalization(.never).autocorrectionDisabled()
                 .lineLimit(1...6)
-            if model.draft.kind == "service" {
+            if model.draft.kind == .service {
                 TextField("Address, such as http://localhost:8000", text: $model.draft.url)
                     .font(.callout.monospaced()).textInputAutocapitalization(.never).autocorrectionDisabled()
                     .keyboardType(.URL)
@@ -259,11 +258,11 @@ struct LaunchEditorSheet: View {
         }
     }
 
-    private static func kindHint(_ kind: String) -> String {
+    private static func kindHint(_ kind: LaunchConfigKind) -> String {
         switch kind {
-        case "task": String(localized: "Runs until done, like tests or a build.")
-        case "group": String(localized: "Starts the checked launches together.")
-        default:
+        case .task: String(localized: "Runs until done, like tests or a build.")
+        case .group: String(localized: "Starts the checked launches together.")
+        case .service:
             String(localized: "Keeps running, like a web server. With an address, it counts as running once the port answers.")
         }
     }
@@ -328,7 +327,7 @@ struct LaunchImportSheet: View {
     }
 
     private func suggestionRow(_ suggestion: LaunchSuggestion) -> some View {
-        let launch = LaunchEntry(raw: suggestion.launch)
+        let launch = suggestion.launch
         return Toggle(
             isOn: Binding(
                 get: { suggestion.unsupported == nil && !skipped.contains(suggestion.id) },
@@ -361,12 +360,11 @@ struct LaunchImportSheet: View {
         busy = true
         defer { busy = false }
         failure = nil
-        let launches =
-            document.launches.map(\.raw) + LaunchEditing.imported(picked, share: share, existing: document.launches)
         do {
+            let imported = try LaunchEditing.imported(picked, share: share, existing: document.launches)
             try await store.save(
-                launches, baseRev: document.rev,
-                imported: LaunchEditing.importedIDs(launches, existing: document.launches))
+                document.launches.map(\.raw) + imported.map(\.entry), baseRev: document.rev,
+                imported: imported.map(\.id))
             dismiss()
         } catch {
             failure = LaunchesText.reason(error)

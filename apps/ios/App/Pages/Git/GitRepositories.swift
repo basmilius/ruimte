@@ -68,13 +68,10 @@ import SwiftUI
     func reload(client: any MachineRequesting, folder: String) async {
         do {
             let answer = try await client.request(.gitRepos, payload: .object(["folder": .string(folder)]))
-            let repos = answer.list("repos")
-            truncated = answer["truncated"] == .bool(true)
-            checkouts = repos.map { repo in
-                let path = repo.text("path")
-                return GitCheckout(
-                    path: path, label: repo.text("label", fallback: GitPanel.label(folder: folder, path: path)),
-                    kind: repo.text("kind", fallback: "nested"), status: checkout(path)?.status)
+                .decoded(as: GitReposResult.self)
+            truncated = answer.truncated
+            checkouts = answer.repos.map { repo in
+                GitCheckout(path: repo.path, label: repo.label, kind: repo.kind, status: checkout(repo.path)?.status)
             }
             problem = nil
         } catch is CancellationError {

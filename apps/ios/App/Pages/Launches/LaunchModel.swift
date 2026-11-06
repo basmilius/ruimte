@@ -1,67 +1,61 @@
 import Foundation
 import RuimtePulsar
 
-/// One launch of a project as the machine hands it over, kept whole so a field a newer release writes survives a save.
+/// One launch of a project as the machine hands it over. `raw` keeps the entry whole, so a field a newer release
+/// writes survives a save; every read goes through `config`.
 struct LaunchEntry: Equatable, Identifiable {
-    var raw: JSONValue
+    let raw: JSONValue
+    let config: LaunchConfigEntry
 
-    var id: String { raw.text("id") }
-    var name: String { raw.text("name") }
-    /// `service`, `task` or `group`.
-    var kind: String { raw.text("kind", fallback: "service") }
-    var cwd: String? { raw["cwd"]?.stringValue }
-    var command: String? { raw["command"]?.stringValue }
-    var url: String? { raw["url"]?.stringValue }
-    var env: [String: String] { (raw["env"]?.objectValue ?? [:]).compactMapValues(\.stringValue) }
+    init(raw: JSONValue, config: LaunchConfigEntry) {
+        self.raw = raw
+        self.config = config
+    }
+
+    init(raw: JSONValue) throws {
+        self.init(raw: raw, config: try raw.decoded(as: LaunchConfigEntry.self))
+    }
+
+    var id: String { config.id }
+    var name: String { config.name }
+    var kind: LaunchConfigKind { config.kind }
+    var cwd: String? { config.cwd }
+    var command: String? { config.command }
+    var url: String? { config.url }
+    var env: [String: String] { config.env ?? [:] }
     /// The launch ids a group starts, in order.
-    var members: [String] { raw.list("launches").compactMap(\.stringValue) }
-    var autostart: Bool { raw["autostart"]?.boolValue == true }
-    var shared: Bool { raw["shared"]?.boolValue == true }
-    var overlay: JSONValue? { raw["overlay"] }
+    var members: [String] { config.launches ?? [] }
+    var autostart: Bool { config.autostart ?? false }
+    var shared: Bool { config.shared }
+    var overlay: LaunchConfigOverlay? { config.overlay }
     /// A shared launch this machine lays a folder or variables of its own over.
     var hasOverlay: Bool {
         guard let overlay else { return false }
-        return overlay["cwd"]?.stringValue != nil || !(overlay["env"]?.objectValue ?? [:]).isEmpty
+        return overlay.cwd != nil || !(overlay.env ?? [:]).isEmpty
     }
-    var isGroup: Bool { kind == "group" }
+    var isGroup: Bool { kind == .group }
 }
 
-/// A launch that ran on the machine since the daemon started; one that never ran has none.
-struct LaunchStatus: Equatable {
-    var projectID: String
-    var launchID: String
-    /// The terminal its output is in, which the phone attaches to like any session.
-    var sessionID: String
-    var kind: String
-    /// `starting`, `running`, `stopping` or `exited`.
-    var state: String
-    var exitCode: Int?
-    /// Milliseconds since the epoch.
-    var startedAt: Double
-    var endedAt: Double?
-    var port: Int?
-    var url: String?
-    /// Stopped by a person or an agent rather than on its own.
-    var stopped: Bool
-
-    init(json: JSONValue) {
-        projectID = json.text("projectId")
-        launchID = json.text("launchId")
-        sessionID = json.text("sessionId")
-        kind = json.text("kind", fallback: "service")
-        state = json.text("state", fallback: "exited")
-        exitCode = json["exitCode"]?.numberValue.map { Int($0) }
-        startedAt = json.number("startedAt")
-        endedAt = json["endedAt"]?.numberValue
-        port = json["port"]?.numberValue.map { Int($0) }
-        url = json["url"]?.stringValue
-        stopped = json["stopped"]?.boolValue ?? false
-    }
-
-    var live: Bool { state != "exited" }
+extension LaunchStatus {
+    var live: Bool { state != .exited }
+    var exit: Int? { exitCode.map { Int($0) } }
+    /// The port it waits on, or listens on once running.
+    var listening: Int? { port.map { Int($0) } }
 }
 
-struct LaunchesDocument: Equatable {
+extension LaunchState {
+    var phase: LaunchPhase {
+        switch self {
+        case .starting: .starting
+        case .running: .running
+        case .stopping: .stopping
+        case .exited: .idle
+        }
+    }
+}
+
+/// The launches file as `launches.read` answers it, each launch kept whole beside its typed reading.
+struct LaunchBook: Equatable {
     var rev = 0
     /// In the order of the menu.
     var launches: [LaunchEntry] = []
@@ -71,12 +65,25 @@ struct LaunchesDocument: Equatable {
     func launch(_ id: String) -> LaunchEntry? { launches.first { $0.id == id } }
 }
 
-extension LaunchesDocument {
-    init(json: JSONValue) {
-        self.init(
-            rev: Int(json.number("rev")), launches: json.list("launches").map(LaunchEntry.init(raw:)),
-            approved: Set(json.list("approved").compactMap(\.stringValue)))
+extension LaunchBook: Decodable {
+    private struct Kept: Decodable {
+        let launches: [JSONValue]
     }
+
+    init(from decoder: any Decoder) throws {
+        let wire = try LaunchesDocument(from: decoder)
+        let kept = try Kept(from: decoder)
+        self.init(
+            rev: Int(wire.rev),
+            launches: zip(kept.launches, wire.launches).map { LaunchEntry(raw: $0, config: $1) },
+            approved: Set(wire.approved))
+    }
+}
+
+/// `launches.changed`: one project's launches file changed.
+struct LaunchesChanged: Decodable {
+    let projectId: String
+    let document: LaunchBook
 }
 
 /// What a launch looks like from here. A launch a person stopped, or a service that ended cleanly on its own, is at
@@ -108,22 +115,6 @@ struct LaunchView: Equatable {
     var port: Int?
 }
 
-/// A checkout of the project folder, as `git.repos` names it, which the launches list groups by.
-struct LaunchRepo: Equatable {
-    var path: String
-    var label: String
-    var name: String? = nil
-    var kind = "nested"
-}
-
-extension LaunchRepo {
-    init(json: JSONValue) {
-        self.init(
-            path: json.text("path"), label: json.text("label"), name: json["name"]?.stringValue,
-            kind: json.text("kind", fallback: "nested"))
-    }
-}
-
 struct LaunchSection: Equatable, Identifiable {
     /// The checkout the launches run in; nil for the ones in the project folder itself, which go first.
     var label: String?
@@ -132,23 +123,10 @@ struct LaunchSection: Equatable, Identifiable {
     var id: String { label ?? "" }
 }
 
-/// One launch waiting on a person's approval before it may run here.
-struct LaunchHeld: Equatable, Identifiable {
-    var launchID: String
-    var command: String
-    /// Absolute, where it would run.
-    var cwd: String
-    /// Every variable the approval covers, since a change to those alone asks again.
-    var env: [String: String]
-
-    var id: String { launchID }
-
-    init(json: JSONValue) {
-        launchID = json.text("launchId")
-        command = json.text("command")
-        cwd = json.text("cwd")
-        env = (json["env"]?.objectValue ?? [:]).compactMapValues(\.stringValue)
-    }
+/// One launch waiting on a person's approval before it may run here. Its variables are everything the approval covers,
+/// since a change to those alone asks again.
+extension LaunchHeld: Identifiable {
+    public var id: String { launchId }
 }
 
 /// A start that came back with a question for the person who asked.
@@ -165,7 +143,7 @@ enum LaunchAsk: Equatable, Identifiable {
 }
 
 enum LaunchLogic {
-    static func views(document: LaunchesDocument, statuses: [String: LaunchStatus]) -> [String: LaunchView] {
+    static func views(document: LaunchBook, statuses: [String: LaunchStatus]) -> [String: LaunchView] {
         var views: [String: LaunchView] = [:]
         for launch in document.launches where !launch.isGroup {
             views[launch.id] = single(launch, status: statuses[launch.id], approved: document.approved.contains(launch.id))
@@ -179,21 +157,20 @@ enum LaunchLogic {
 
     private static func ended(_ status: LaunchStatus) -> LaunchPhase {
         if status.stopped { return .idle }
-        if status.kind == "task" { return status.exitCode == 0 ? .passed : .failed }
+        if status.kind == .task { return status.exitCode == 0 ? .passed : .failed }
         return status.exitCode == 0 ? .idle : .failed
     }
 
     private static func single(_ launch: LaunchEntry, status: LaunchStatus?, approved: Bool) -> LaunchView {
         if let status, status.live {
             return LaunchView(
-                launch: launch, phase: LaunchPhase(rawValue: status.state) ?? .running, live: true, status: status,
-                port: status.port)
+                launch: launch, phase: status.state.phase, live: true, status: status, port: status.listening)
         }
         if !approved {
-            return LaunchView(launch: launch, phase: .held, live: false, status: status, exitCode: status?.exitCode)
+            return LaunchView(launch: launch, phase: .held, live: false, status: status, exitCode: status?.exit)
         }
         guard let status else { return LaunchView(launch: launch, phase: .idle, live: false) }
-        return LaunchView(launch: launch, phase: ended(status), live: false, status: status, exitCode: status.exitCode)
+        return LaunchView(launch: launch, phase: ended(status), live: false, status: status, exitCode: status.exit)
     }
 
     /// A group runs while one of its members does; a failed member makes it red once none runs.
@@ -235,7 +212,7 @@ enum LaunchLogic {
 
     /// Where a launch runs, absolute. A private overlay may name a folder of its own.
     static func folder(of launch: LaunchEntry, in folder: String) -> String {
-        let cwd = (launch.overlay?["cwd"]?.stringValue ?? launch.cwd ?? "").trimmingCharacters(in: .whitespaces)
+        let cwd = (launch.overlay?.cwd ?? launch.cwd ?? "").trimmingCharacters(in: .whitespaces)
         if cwd.hasPrefix("/") { return trimmingSlashes(cwd) }
         var relative = cwd
         if relative.hasPrefix("./") {
@@ -248,7 +225,7 @@ enum LaunchLogic {
 
     /// The launches grouped by the checkout they run in, the way the git page groups a folder of repositories. A group
     /// and a launch in the project folder itself come first under no heading; one checkout has no headings at all.
-    static func sections(_ launches: [LaunchEntry], folder: String, repos: [LaunchRepo]) -> [LaunchSection] {
+    static func sections(_ launches: [LaunchEntry], folder: String, repos: [GitRepo]) -> [LaunchSection] {
         let root = trimmingSlashes(folder)
         let inner = repos.filter { trimmingSlashes($0.path) != root }.sorted { $0.path.count > $1.path.count }
         var loose: [LaunchEntry] = []
@@ -295,7 +272,7 @@ enum LaunchLogic {
                 String(localized: "Passed \(ago($0))", comment: "%@ is a relative time, like 5 minutes ago")
             } ?? String(localized: "Passed", comment: "A task that ended successfully")
         case .failed:
-            let code = view.status?.exitCode.map(String.init) ?? "?"
+            let code = view.status?.exit.map(String.init) ?? "?"
             return String(localized: "Failed · exit \(code)", comment: "%@ is the exit code of a process")
         case .idle:
             return view.status?.endedAt.map {
