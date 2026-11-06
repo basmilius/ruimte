@@ -282,11 +282,12 @@ final class SessionVisualTests: XCTestCase {
                 "y": .number(400), "w": .number(480), "h": .number(280),
             ]),
         ]
-        let document: JSONValue = .object([
-            "nodes": .array(nodes),
-            "edges": .array([.object(["id": .string("link"), "from": .string("chat"), "to": .string("terminal")])]),
-            "texts": .array([]),
-        ])
+        let document = try! ProjectWire.view(
+            .object([
+                "id": .string("canvas"), "kind": .string("canvas"), "nodes": .array(nodes),
+                "edges": .array([.object(["id": .string("link"), "from": .string("chat"), "to": .string("terminal")])]),
+            ])
+        ).decoded(as: StoredCanvasView.self)
         canvas.update(document, camera: nil, fit: 0)
         canvas.setAttention(
             statuses: ["chat": .running, "terminal": .needsYou], unseen: [], needingYou: ["terminal"])

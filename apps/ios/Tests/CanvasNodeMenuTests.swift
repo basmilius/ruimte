@@ -138,9 +138,11 @@ import Testing
 
         let again = CanvasEditing.linking(agents, from: "note", to: "chat") { "unused" }
         #expect(again == agents)
-        let nodes = Dictionary(uniqueKeysWithValues: canvas.list("nodes").map { ($0.stableID, $0) })
-        #expect(CanvasEditing.isContext(fromNote.list("edges")[0], nodes: nodes))
-        let intoNote: JSONValue = .object(["from": .string("chat"), "to": .string("note")])
+        let stored = try! ProjectWire.view(fromNote.setting("id", .string("canvas")).setting("kind", .string("canvas")))
+            .decoded(as: StoredCanvasView.self)
+        let nodes = Dictionary(uniqueKeysWithValues: stored.nodes.map { ($0.id, $0) })
+        #expect(CanvasEditing.isContext(stored.edges[0], nodes: nodes))
+        let intoNote = StoredCanvasViewEdgesItem(id: "back", from: "chat", to: "note")
         #expect(!CanvasEditing.isContext(intoNote, nodes: nodes))
     }
 

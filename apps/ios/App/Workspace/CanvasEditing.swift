@@ -222,8 +222,8 @@ enum CanvasEditing {
     }
 
     /// A line an agent reads along: one into an agent, or one that says so in its role.
-    static func isContext(_ edge: JSONValue, nodes: [String: JSONValue]) -> Bool {
-        edge.text("role") == "context" || isAgent(nodes[edge.text("to")]?.text("kind") ?? "")
+    static func isContext(_ edge: StoredCanvasViewEdgesItem, nodes: [String: StoredNode]) -> Bool {
+        edge.role == "context" || isAgent(nodes[edge.to]?.kind.rawValue ?? "")
     }
 
     // MARK: Layouts

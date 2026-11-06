@@ -57,7 +57,7 @@ struct CanvasPage: View {
             } else if workspace.ready {
                 MobileScrollViewport { insets in
                     CanvasViewport(
-                        canvas: canvas, statuses: workspace.session.attention.statuses,
+                        canvas: workspace.storedView(viewID)?.canvas, statuses: workspace.session.attention.statuses,
                         tasks: workspace.session.tasks.tasks.values.reduce(into: [:]) { marks, task in
                             if marks[task.childId].map({ $0.createdAt <= task.createdAt }) ?? true {
                                 marks[task.childId] = task
@@ -516,7 +516,7 @@ func canvasWithoutNode(_ canvas: JSONValue, id: String) -> JSONValue {
 }
 
 private struct CanvasViewport: UIViewRepresentable {
-    let canvas: JSONValue
+    let canvas: StoredCanvasView?
     let statuses: [String: AgentStatus]
     let tasks: [String: AgentTask]
     let unseen: Set<String>
@@ -543,9 +543,23 @@ private struct CanvasViewport: UIViewRepresentable {
     }
 }
 
+/// What a canvas draws; the rest of its view changes nothing on screen.
+private struct CanvasContent: Equatable {
+    var nodes: [StoredNode] = []
+    var texts: [StoredCanvasViewTextsItem] = []
+    var edges: [StoredCanvasViewEdgesItem] = []
+
+    init(_ canvas: StoredCanvasView?) {
+        guard let canvas else { return }
+        nodes = canvas.nodes
+        texts = canvas.texts
+        edges = canvas.edges
+    }
+}
+
 final class CanvasScrollView: UIScrollView, UIScrollViewDelegate {
     private let surface = CanvasSurface()
-    private var content: JSONValue?
+    private var content: CanvasContent?
     private var fitToken = -1
     private var restored = false
     private var initialCamera: JSONValue?
@@ -569,7 +583,8 @@ final class CanvasScrollView: UIScrollView, UIScrollViewDelegate {
         surface.open = { [weak self] id in self?.open(id) }
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    func update(_ document: JSONValue, camera: JSONValue?, fit: Int) {
+    func update(_ canvas: StoredCanvasView?, camera: JSONValue?, fit: Int) {
+        let document = CanvasContent(canvas)
         if content != document {
             let center = worldCenter
             let hadContent = content != nil
@@ -698,12 +713,12 @@ private final class CanvasSurface: UIView {
     var tasks: [String: AgentTask] = [:]
     var unseen = Set<String>()
     var needingYou = Set<String>()
-    private var nodes: [JSONValue] = []
+    private var nodes: [StoredNode] = []
     /// Groups first, so their frames lie under the nodes they hold.
     private var drawOrder: [Int] = []
-    private var texts: [JSONValue] = []
-    private var edges: [JSONValue] = []
-    private var nodeMap: [String: JSONValue] = [:]
+    private var texts: [StoredCanvasViewTextsItem] = []
+    private var edges: [StoredCanvasViewEdgesItem] = []
+    private var nodeMap: [String: StoredNode] = [:]
     private var grid: [String: [Int]] = [:]
     private let tile: CGFloat = 800
     override init(frame: CGRect) {
@@ -714,23 +729,26 @@ private final class CanvasSurface: UIView {
         drawing.paint = { [weak self] context in self?.drawScene(context) }
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    private func nodeRect(_ node: JSONValue) -> CGRect {
+    private func nodeRect(_ node: StoredNode) -> CGRect {
         CGRect(
-            x: node.number("x").clamped(), y: node.number("y").clamped(),
-            width: max(1, node.number("w", fallback: 320).clamped()),
-            height: max(1, node.number("h", fallback: 200).clamped()))
+            x: node.x.clamped(), y: node.y.clamped(), width: max(1, node.w.clamped()), height: max(1, node.h.clamped()))
     }
-    func configure(_ canvas: JSONValue) {
-        nodes = canvas.list("nodes")
+    /// A text has no size of its own on the wire, so its frame is the one a node without a size takes.
+    private func textRect(_ text: StoredCanvasViewTextsItem) -> CGRect {
+        CGRect(x: text.x.clamped(), y: text.y.clamped(), width: 320, height: 200)
+    }
+    fileprivate func configure(_ canvas: CanvasContent) {
+        nodes = canvas.nodes
         drawOrder = nodes.indices.sorted { lhs, rhs in
-            let lhsGroup = nodes[lhs].text("kind") == "group"
-            let rhsGroup = nodes[rhs].text("kind") == "group"
+            let lhsGroup = nodes[lhs].kind == .group
+            let rhsGroup = nodes[rhs].kind == .group
             return lhsGroup != rhsGroup ? lhsGroup : lhs < rhs
         }
-        texts = canvas.list("texts")
-        edges = canvas.list("edges")
-        nodeMap = Dictionary(nodes.map { ($0.stableID, $0) }, uniquingKeysWith: { _, last in last })
-        worldBounds = (nodes + texts).reduce(CGRect.null) { $0.union(nodeRect($1)) }
+        texts = canvas.texts
+        edges = canvas.edges
+        nodeMap = Dictionary(nodes.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
+        worldBounds = nodes.map(nodeRect).reduce(CGRect.null) { $0.union($1) }
+        worldBounds = texts.map(textRect).reduce(worldBounds) { $0.union($1) }
         if worldBounds.isNull { worldBounds = CGRect(x: 0, y: 0, width: 480, height: 320) }
         let extent = worldBounds.insetBy(dx: -1800, dy: -1800)
         origin = extent.origin
@@ -771,10 +789,10 @@ private final class CanvasSurface: UIView {
             .sorted { order[$0, default: 0] > order[$1, default: 0] }
             .first(where: { index in
                 let frame = nodeRect(nodes[index])
-                guard nodes[index].text("kind") == "group" else { return frame.contains(world) }
+                guard nodes[index].kind == .group else { return frame.contains(world) }
                 return CGRect(x: frame.minX, y: frame.minY, width: frame.width, height: CanvasEditing.groupHeader)
                     .contains(world)
-            }).map { nodes[$0].stableID }
+            }).map { nodes[$0].id }
     }
     func redraw() { drawing.setNeedsDisplay() }
     private func updateDrawing() {
@@ -788,18 +806,18 @@ private final class CanvasSurface: UIView {
         let viewport = visible.offsetBy(dx: origin.x, dy: origin.y).insetBy(dx: -96, dy: -96)
         context.translateBy(x: -origin.x - drawing.frame.minX, y: -origin.y - drawing.frame.minY)
         let visibleIndices = Set(candidates(viewport))
-        for index in drawOrder where visibleIndices.contains(index) && nodes[index].text("kind") == "group" {
+        for index in drawOrder where visibleIndices.contains(index) && nodes[index].kind == .group {
             drawGroup(nodes[index], viewport: viewport)
         }
         drawEdges(viewport: viewport)
-        for index in drawOrder where visibleIndices.contains(index) && nodes[index].text("kind") != "group" {
+        for index in drawOrder where visibleIndices.contains(index) && nodes[index].kind != .group {
             let node = nodes[index]
             let frame = nodeRect(node)
             guard frame.intersects(viewport) else { continue }
             let path = UIBezierPath(roundedRect: frame, cornerRadius: 16)
-            let accent = node.text("kind") == "note" ? nil : MobileStyle.nodeAccentColor(node.text("accent"))
-            if node.text("kind") == "note" {
-                MobileStyle.notePaperColor(accent: node.text("accent"), color: node.text("color")).setFill()
+            let accent = node.kind == .note ? nil : MobileStyle.nodeAccentColor(node.accent ?? "")
+            if node.kind == .note {
+                MobileStyle.notePaperColor(accent: node.accent ?? "", color: node.color ?? "").setFill()
             } else {
                 MobileStyle.panelColor.setFill()
             }
@@ -808,7 +826,7 @@ private final class CanvasSurface: UIView {
             (accent?.withAlphaComponent(0.6) ?? UIColor.separator).setStroke()
             path.lineWidth = accent == nil ? 1 : 1.5
             path.stroke()
-            let id = node.stableID
+            let id = node.id
             if needingYou.contains(id) || statuses[id] == .running || unseen.contains(id) {
                 let color: UIColor =
                     needingYou.contains(id)
@@ -817,9 +835,8 @@ private final class CanvasSurface: UIView {
                 color.setFill()
                 UIBezierPath(ovalIn: CGRect(x: frame.maxX - 28, y: frame.minY + 20, width: 10, height: 10)).fill()
             }
-            let title = node.text("title", fallback: NewViewFactory.kindTitle(node.text("kind")))
             drawText(
-                title,
+                node.title,
                 rect: CGRect(
                     x: frame.minX + 20, y: frame.minY + 18, width: frame.width - 40, height: tasks[id] == nil ? 50 : 30),
                 font: .preferredFont(forTextStyle: .headline), color: .label)
@@ -832,10 +849,10 @@ private final class CanvasSurface: UIView {
                     font: .preferredFont(forTextStyle: .caption1), color: AgentWorkLook(taskStatus: status).uiColor)
             }
             let detail =
-                node.text("kind") == "note"
-                ? node.text("body")
-                : NewViewFactory.kindTitle(node.text("kind"))
-                    + (node.text("url").isEmpty ? "" : "\n" + node.text("url"))
+                node.kind == .note
+                ? node.body ?? ""
+                : NewViewFactory.kindTitle(node.kind.rawValue)
+                    + ((node.url ?? "").isEmpty ? "" : "\n" + (node.url ?? ""))
             drawText(
                 detail,
                 rect: CGRect(
@@ -843,20 +860,18 @@ private final class CanvasSurface: UIView {
                 font: .preferredFont(forTextStyle: .body), color: .secondaryLabel)
         }
         for text in texts {
-            let frame = nodeRect(text)
+            let frame = textRect(text)
             if frame.intersects(viewport) {
-                drawText(
-                    text.text("text"), rect: frame, font: .systemFont(ofSize: text.number("fontSize", fallback: 24)),
-                    color: .label)
+                drawText(text.text, rect: frame, font: .systemFont(ofSize: 24), color: .label)
             }
         }
     }
     /// A group is a frame with its title in a chip on the band at its top.
-    private func drawGroup(_ group: JSONValue, viewport: CGRect) {
+    private func drawGroup(_ group: StoredNode, viewport: CGRect) {
         let frame = nodeRect(group)
         guard frame.intersects(viewport) else { return }
-        let collapsed = group["collapsed"]?.boolValue == true
-        let tint = MobileStyle.nodeAccentColor(group.text("accent")) ?? MobileStyle.accentColor
+        let collapsed = group.collapsed == true
+        let tint = MobileStyle.nodeAccentColor(group.accent ?? "") ?? MobileStyle.accentColor
         let path = UIBezierPath(roundedRect: frame, cornerRadius: 18)
         tint.withAlphaComponent(collapsed ? 0.14 : 0.06).setFill()
         path.fill()
@@ -864,7 +879,7 @@ private final class CanvasSurface: UIView {
         path.lineWidth = 1.5
         path.stroke()
         let font = UIFont.preferredFont(forTextStyle: .subheadline).withWeight(.semibold)
-        let title = group.text("title", fallback: String(localized: "Group"))
+        let title = group.title
         let width = min(frame.width - 24, (title as NSString).size(withAttributes: [.font: font]).width + 20)
         let chip = CGRect(x: frame.minX + 12, y: frame.minY + 8, width: max(0, width), height: font.lineHeight + 8)
         tint.withAlphaComponent(0.22).setFill()
@@ -875,7 +890,7 @@ private final class CanvasSurface: UIView {
     /// Lines between nodes. One an agent reads along is amber and carries its label in a chip halfway.
     private func drawEdges(viewport: CGRect) {
         for edge in edges {
-            guard let from = nodeMap[edge.text("from")], let to = nodeMap[edge.text("to")] else { continue }
+            guard let from = nodeMap[edge.from], let to = nodeMap[edge.to] else { continue }
             let a = nodeRect(from)
             let b = nodeRect(to)
             guard a.union(b).intersects(viewport) else { continue }
@@ -889,8 +904,7 @@ private final class CanvasSurface: UIView {
             line.lineWidth = context ? 2 : 1.5
             color.setStroke()
             line.stroke()
-            let label = edge.text("label")
-            guard !label.isEmpty else { continue }
+            guard let label = edge.label, !label.isEmpty else { continue }
             let font = UIFont.preferredFont(forTextStyle: .caption1).withWeight(.semibold)
             let size = (label as NSString).size(withAttributes: [.font: font])
             let chip = CGRect(
@@ -921,9 +935,9 @@ private final class CanvasSurface: UIView {
             let rect = nodeRect(node)
             guard rect.intersects(viewport) else { return nil }
             let element = CanvasAccessibleNode(accessibilityContainer: self)
-            let title = node.text("title")
-            let kind = NewViewFactory.kindTitle(node.text("kind"))
-            if let task = tasks[node.stableID] {
+            let title = node.title
+            let kind = NewViewFactory.kindTitle(node.kind.rawValue)
+            if let task = tasks[node.id] {
                 let word = TaskMark.word(task.status)
                 element.accessibilityLabel = String(
                     localized: "\(title), \(kind), task \(word)",
@@ -933,7 +947,7 @@ private final class CanvasSurface: UIView {
             }
             element.accessibilityTraits = .button
             element.accessibilityFrameInContainerSpace = rect.offsetBy(dx: -origin.x, dy: -origin.y)
-            element.action = { [weak self] in self?.open(node.stableID) }
+            element.action = { [weak self] in self?.open(node.id) }
             return element
         }
     }
