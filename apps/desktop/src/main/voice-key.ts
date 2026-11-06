@@ -1,5 +1,6 @@
 import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { Serializer } from '@adecore/utils/async';
 import type { OpenAiCredentialStatus } from '@ruimte/desktop-bridge';
 import type { SecretStore } from '../secret-store';
 
@@ -89,28 +90,33 @@ export function voiceKey(keys: () => SecretStore, pending: PendingRemoval, machi
         await machine.hand(key);
     };
 
+    // One at a time: a slow clear from an earlier status must not land after a key saved meanwhile.
+    const queue = new Serializer();
+
     return {
-        status,
-        handOver,
-        async save(key) {
-            await keys().write(key);
-            // The key handed over next takes the place of the copy that was owed a removal.
-            await pending.set(false);
-            await handOver();
+        status: () => queue.run(status),
+        handOver: () => queue.run(handOver),
+        save: (key) =>
+            queue.run(async () => {
+                await keys().write(key);
+                // The key handed over next takes the place of the copy that was owed a removal.
+                await pending.set(false);
+                await handOver();
 
-            return status();
-        },
-        async remove() {
-            /* Owed before the shell's copy goes, so a crash in between still takes the machine's copy. Also
-               owed outside machine mode `local`: the next start that runs the machine takes its copy then. */
-            await pending.set(true);
-            await keys().write(null);
+                return status();
+            }),
+        remove: () =>
+            queue.run(async () => {
+                /* Owed before the shell's copy goes, so a crash in between still takes the machine's copy. Also
+                   owed outside machine mode `local`: the next start that runs the machine takes its copy then. */
+                await pending.set(true);
+                await keys().write(null);
 
-            if (!(await settleRemoval())) {
-                throw new Error(MACHINE_STILL_HOLDS_KEY);
-            }
+                if (!(await settleRemoval())) {
+                    throw new Error(MACHINE_STILL_HOLDS_KEY);
+                }
 
-            return status();
-        }
+                return status();
+            })
     };
 }
