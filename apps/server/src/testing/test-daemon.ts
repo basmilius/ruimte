@@ -10,7 +10,7 @@ import type { CanvasHost } from '../canvas/host.ts';
 import type { PendingPromptStore } from '../canvas/pending-prompts.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { Dispatcher } from '../dispatcher.ts';
-import type { CheckpointService } from '../git/checkpoints.ts';
+import type { Checkpoints } from '../git/checkpoints.ts';
 import type { GhRunner } from '../git/github.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import type { PrWatchStore } from '../github/pr-watch.ts';
@@ -83,7 +83,7 @@ interface TestDaemonOptions {
     clock: ManualClock;
     /* What runs a terminal; the fake adapter unless a measurement needs real processes. */
     ptyAdapter?: PtyAdapter;
-    checkpoints?: CheckpointService;
+    checkpoints?: Checkpoints;
     /* Real worktrees for the tools; without them a project is in no repository. */
     worktrees?: Worktrees;
     /* The CLIs this machine says it has; Claude Code alone unless a test needs another. */
@@ -150,11 +150,11 @@ export async function bootTestDaemon(options: TestDaemonOptions): Promise<TestDa
         git: {
             ...base.git,
             ...(worktrees ? { worktrees: () => worktrees } : {}),
-            ...(checkpoints ? { checkpoints: () => checkpoints as ReturnType<TestSeams['git']['checkpoints']> } : {})
+            ...(checkpoints ? { checkpoints: () => checkpoints } : {})
         },
         observers: { ...base.observers, ...(onLimits ? { limits: onLimits } : {}) },
         ...(accounts ? { accounts: () => accounts } : {}),
-        ...(remote ? { remote: { connections: () => remote.connections as never, reconnect: () => remote.reconnect as never } } : {}),
+        ...(remote ? { remote: { connections: () => remote.connections, reconnect: () => remote.reconnect } } : {}),
         ...(peer ? { peerNotify: () => peer.notify } : {})
     };
     const wired = await wireDaemon({ runtime: testRuntime(home), launcher: 'standalone', seams, shutdown: async () => undefined });
