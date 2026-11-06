@@ -4,9 +4,8 @@ import { claudeProjectSlug, type BackendChange, type BackendLaunch } from '@adec
 import { createClaudeProvider, type ChatProvider, type ClaudeCodeRuntime, type CliDetection } from '@adecore/agents/providers';
 import { claudeTranscriptRoot, type UsageRootPath } from '@adecore/agents/usage';
 import { withRuimteMcp } from '../ruimte-mcp.ts';
-import { AnthropicClaudeApiService } from './anthropic-claude-api-service.ts';
+import type { AnthropicClaudeApiService } from './anthropic-claude-api-service.ts';
 import { cliMcpServers, readApiMcpConfigSync } from './api-mcp.ts';
-import { claudeProvider } from './claude-provider.ts';
 
 // The CLI's own configuration folder for these chats, so the person's sign-in, settings and sessions stay out.
 const CONFIG_FOLDER = 'claude-config';
@@ -59,21 +58,30 @@ function withoutForeignResume(launch: BackendLaunch, configDir: string): Backend
 
 /*
  * Claude Code on the key a person saved in Settings, beside their own sign-in. It is there once the key brought models
- * and the CLI is installed. The servers of `api-mcp.json` the CLI can load go along with Ruimte's own.
+ * and the CLI is installed. The servers of `api-mcp.json` the CLI can load go along with Ruimte's own. `claude` is
+ * the provider of Claude Code itself, whose command, capabilities and install steps these chats share.
  */
-export function createAnthropicClaudeApiProvider(service: AnthropicClaudeApiService, options: ClaudeApiProviderOptions = {}): ChatProvider {
-    const detectClaude = options.detect ?? claudeProvider.detect;
+export function createAnthropicClaudeApiProvider(
+    service: AnthropicClaudeApiService,
+    claude: ChatProvider,
+    options: ClaudeApiProviderOptions = {}
+): ChatProvider {
+    const detectClaude = options.detect ?? claude.detect;
+    // Only Claude Code itself offers a fork; a chat on a key never did.
+    const { fork: _fork, ...capabilities } = claude.capabilities;
 
     return {
         kind: 'anthropic-claude-api',
         name: 'Claude API',
-        command: claudeProvider.command,
+        command: claude.command,
         // A terminal would run on the person's own sign-in, so nothing resumes these sessions there.
         resumeCommand: '',
         catalog: service.catalog,
         ignoresProjectConfig: true,
-        capabilities: { ...claudeProvider.capabilities, terminal: false, hooks: false },
-        ...(claudeProvider.install ? { install: claudeProvider.install } : {}),
+        capabilities: { ...capabilities, terminal: false, hooks: false },
+        subagentSource: 'claude-transcript',
+        launch: withRuimteMcp,
+        ...(claude.install ? { install: claude.install } : {}),
         // Read only once a chat runs, by when the daemon loaded the service and its folder is known.
         get claudeCode(): ClaudeCodeRuntime {
             return { configDir: claudeApiConfigDir(service) };
@@ -99,11 +107,11 @@ export function createAnthropicClaudeApiProvider(service: AnthropicClaudeApiServ
             }
 
             const configDir = claudeApiConfigDir(service);
-            const claude = createClaudeProvider({ apiKey: { key: () => service.apiKey, configDir } });
+            const keyed = createClaudeProvider({ apiKey: { key: () => service.apiKey, configDir } });
             const mcpServers = [...(launch.mcpServers ?? []), ...cliMcpServers(readApiMcpConfigSync(dirname(service.directory)))];
             const limit = service.maxOutputTokensFor(launch.selection.model);
             const env = { ...launch.env, CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(limit) };
-            const backend = claude.createBackend(withRuimteMcp({ ...withoutForeignResume(launch, configDir), env, mcpServers }, 'variable'), host);
+            const backend = keyed.createBackend({ ...withoutForeignResume(launch, configDir), env, mcpServers }, host);
             const inPlace = backend.reconfigure?.bind(backend);
             // The CLI reads its output limit only as it starts, so a new limit, or a model with another one, needs a new process.
             const outdated = (change: BackendChange): boolean => service.maxOutputTokensFor(change.selection.model) !== limit;
@@ -115,10 +123,3 @@ export function createAnthropicClaudeApiProvider(service: AnthropicClaudeApiServ
         }
     };
 }
-
-/*
- * One per daemon, so the places without a registry at hand (`providerFor`) see the same name and models
- * as the registry. The daemon loads it from its home at boot.
- */
-export const anthropicClaudeApiService = new AnthropicClaudeApiService(fetch, claudeProvider.catalog);
-export const anthropicClaudeApiProvider = createAnthropicClaudeApiProvider(anthropicClaudeApiService);

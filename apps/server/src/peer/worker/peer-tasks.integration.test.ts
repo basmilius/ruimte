@@ -11,6 +11,7 @@ import { gitIn, initRepo, NO_WORKTREE_AGENTS } from '../../git/test-repo.ts';
 import { Worktrees } from '../../git/worktrees.ts';
 import type { OutboxWork } from '../../outbox/outbox.ts';
 import { PeerLinks, peerCanvasId } from '../../projects/peer-links.ts';
+import { ProviderRegistry } from '../../providers/registry.ts';
 import { PEER_MAX_BRANCH_LENGTH, PeerTasks } from './peer-tasks.ts';
 
 /*
@@ -96,6 +97,7 @@ beforeEach(async () => {
         prompts: { put: async () => undefined, take: async () => null },
         stopNode: async () => undefined,
         installed: async () => ['claude'],
+        providers: new ProviderRegistry(),
         exists: () => false,
         git: () => ({ bundles: bundlesB, checkpoints: new Checkpoints(homeB, new MachineHome(homeB)), worktrees: worktreesB }),
         peerBundles: (machineId) => {

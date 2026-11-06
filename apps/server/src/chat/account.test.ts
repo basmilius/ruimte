@@ -160,7 +160,7 @@ describe('a chat under an account', () => {
         expect(await daemon.request('chat.configure', { chatId: 'chat-codex', account: 'codex_work' })).toMatchObject({ ok: true });
         await say('chat-codex', 'again');
         expect(daemon.chatEnvs.at(-1)!.CODEX_HOME).toBe(join(root, 'codex_work'));
-        expect(daemon.chats.codexProcess(daemon.chats.get('chat-codex')!.info).env.CODEX_HOME).toBe(join(root, 'codex_work'));
+        expect(daemon.chats.threadProcess(daemon.chats.get('chat-codex')!.info).env.CODEX_HOME).toBe(join(root, 'codex_work'));
     });
 
     test("the app-server that reads a Codex thread starts without Ruimte's MCP server, which only the chat's own process holds a token for", async () => {
@@ -168,7 +168,7 @@ describe('a chat under an account', () => {
         await say('chat-codex', 'hello');
         const mcp = (command: readonly string[]): boolean => command.some((arg) => arg.startsWith('mcp_servers.ruimte.'));
         expect(mcp(daemon.chatCommands.at(-1)!)).toBe(true);
-        expect(mcp(daemon.chats.codexProcess(daemon.chats.get('chat-codex')!.info).command)).toBe(false);
+        expect(mcp(daemon.chats.threadProcess(daemon.chats.get('chat-codex')!.info).command)).toBe(false);
     });
 });
 

@@ -11,6 +11,7 @@ import { projectOverlays } from '../../projects/overlays.ts';
 import { peerCanvasId } from '../../projects/peer-links.ts';
 import { projectLinks } from '../../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../../projects/project-store.ts';
+import { ProviderRegistry } from '../../providers/registry.ts';
 import { peerLinksArea } from './area-links.ts';
 import { PeerTasks } from './peer-tasks.ts';
 
@@ -38,6 +39,7 @@ function makePeerTasks(): PeerTasks {
         prompts: { put: async () => undefined, take: async () => null },
         stopNode: async () => undefined,
         installed: async () => ['claude'],
+        providers: new ProviderRegistry(),
         exists: () => false,
         git: () => {
             throw new Error('no git in this test');

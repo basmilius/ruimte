@@ -21,7 +21,7 @@ import { ChatRecorder } from './chat-test-helpers.ts';
 const FAKE_CLAUDE = ['bun', fileURLToPath(import.meta.resolve('@adecore/agents/testing/bin/fake-claude'))];
 const FAKE_CODEX = ['bun', fileURLToPath(import.meta.resolve('@adecore/agents/testing/bin/fake-codex'))];
 
-const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
+const providers = new ProviderRegistry({ commands: { claude: FAKE_CLAUDE, codex: FAKE_CODEX }, detect: async () => ({ installed: true, version: '0.0.0' }) });
 
 let home: string;
 let manager: ChatManager;
@@ -33,8 +33,6 @@ beforeEach(async () => {
         ...OPEN_BOUNDS,
         providers,
         attachments: new AttachmentStore(home),
-        command: FAKE_CLAUDE,
-        codexCommand: FAKE_CODEX,
         env: { PATH: process.env.PATH, HOME: home }
     });
     recorder = new ChatRecorder();

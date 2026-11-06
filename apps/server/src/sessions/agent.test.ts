@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import type { AgentLaunch } from '@ruimte/contracts';
 import { toolsNote } from '../context/context-note.ts';
 import { terminalCommand } from '../providers/launch.ts';
+import { ProviderRegistry } from '../providers/registry.ts';
 import { SessionError, type SessionManagerOptions } from './manager.ts';
 import { START_LINE_ENV } from './session.ts';
 import { Recorder, makeHarness, type Harness } from './test-helpers.ts';
@@ -355,7 +356,7 @@ describe('agent status via hooks', () => {
         const pty = harness.adapter.forSession('s8');
         await harness.manager.resumeAgent('s8');
         expect(pty.input).toEqual([
-            `codex resume --ask-for-approval never --sandbox danger-full-access 'codex-1' || ${terminalCommand({ kind: 'codex', runtimeMode: 'full-access' }, undefined, toolsNote({ depth: 0, terminal: true }))}\n`
+            `codex resume --ask-for-approval never --sandbox danger-full-access 'codex-1' || ${terminalCommand(new ProviderRegistry(), { kind: 'codex', runtimeMode: 'full-access' }, undefined, toolsNote({ depth: 0, terminal: true }))}\n`
         ]);
     });
 

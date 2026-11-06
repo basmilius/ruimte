@@ -1,151 +1,57 @@
-import type { CliDetection, ChatProvider } from '@adecore/agents/providers';
-import {
-    ANTIGRAVITY_CLI,
-    antigravityOneShotArgs,
-    copilotUsageDirectory,
-    ProviderRegistry as AgentProviderRegistry,
-    detectCli,
-    type AcpServerLaunch
-} from '@adecore/agents/providers';
+import { ProviderRegistry as AgentProviderRegistry, type AcpServerLaunch, type ChatProvider, type CliDetection } from '@adecore/agents/providers';
 import { pickerGroupsOf, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
-import { acpCatalogStore } from './acp-catalog-store.ts';
-import { copilotProvider, createAntigravityProvider, createCopilotProvider, createGrokProvider, grokProvider } from './acp-providers.ts';
-import { anthropicClaudeApiProvider } from './anthropic-claude-api-provider.ts';
-import { claudeProvider } from './claude-provider.ts';
-import { codexProvider } from './codex-provider.ts';
-import { BUILT_IN_KINDS, offersKind } from './kinds.ts';
-import { nanoGptProvider } from './nanogpt-provider.ts';
-
-// The providers the daemon ships with, in the order of `BUILT_IN_KINDS`. A new one is one more value there, here and in `builtInProviders`.
-const BUILT_IN_PROVIDERS: ChatProvider[] = [
-    claudeProvider,
-    codexProvider,
-    createAntigravityProvider(null),
-    copilotProvider,
-    grokProvider,
-    nanoGptProvider,
-    anthropicClaudeApiProvider
-];
-
-// As long as the base registry keeps whether a CLI is there.
-const AGY_DETECTION_TTL_MS = 60_000;
-
-// Offers nothing, so it answers a kind this version does not know with a provider that starts nothing.
-const UNOFFERED = new AgentProviderRegistry({ providers: [] });
-
-// The providers a person installed while the daemon runs (agents of the ACP registry), kept in step by the registry that offers them.
-const ADDED_PROVIDERS = new Map<AgentKind, ChatProvider>();
-
-/* The provider of a kind, for the places that have no registry at hand (the hooks). */
-export function providerFor(kind: AgentKind): ChatProvider {
-    return BUILT_IN_PROVIDERS.find((provider) => provider.kind === kind) ?? ADDED_PROVIDERS.get(kind) ?? UNOFFERED.get(kind);
-}
-
-/* The kinds an agent may name: the CLIs the daemon ships with, then the agents a person installed from the ACP registry. */
-export function offeredAgentKinds(): AgentKind[] {
-    return [...BUILT_IN_KINDS, ...ADDED_PROVIDERS.keys()];
-}
+import type { AcpServerInstall, AcpServerRelease } from './acp-server.ts';
+import type { AnthropicClaudeApiService } from './anthropic-claude-api-service.ts';
+import type { NanoGptService } from './nanogpt-service.ts';
+import { createProviders, type ProviderCommands } from './table.ts';
 
 interface ProviderRegistryOptions {
     providers?: ChatProvider[];
-    // Where Antigravity's chat server is installed; without it Antigravity is a terminal only.
-    antigravityServer?: AcpServerLaunch;
-    // The executables to probe, when they are not the ones the providers name.
-    commands?: Partial<Record<AgentKind, string>>;
+    // Stands in for the chat server a person installed apart from a CLI, as a test's.
+    serverLaunches?: Partial<Record<AgentKind, AcpServerLaunch>>;
     // How to probe; a test answers without spawning anything.
     detect?: (command: string) => Promise<CliDetection>;
     // Called on every `provider.list`, which is when a newer model catalog is worth asking for.
     onList?: () => void;
     // Where the ACP agents keep what they reported across a restart; absent keeps it in memory only.
     home?: string;
-}
-
-/* The providers of one registry; the ACP agents are made for it, so what one learns is kept in its home and reaches its listeners. */
-function builtInProviders(options: ProviderRegistryOptions): ChatProvider[] {
-    const store = (kind: AgentKind) => (options.home === undefined ? undefined : acpCatalogStore(options.home, kind));
-    return [
-        claudeProvider,
-        codexProvider,
-        createAntigravityProvider(options.antigravityServer ?? null, store('antigravity')),
-        createCopilotProvider(store('copilot'), options.home === undefined ? undefined : copilotUsageDirectory(options.home)),
-        createGrokProvider(store('grok')),
-        nanoGptProvider,
-        anthropicClaudeApiProvider
-    ];
+    // What starts Claude Code and Codex when it is not the one on the path, and how Codex's help is read: a test's fakes.
+    commands?: ProviderCommands;
 }
 
 /* What the daemon knows about each agent CLI: the chat CLIs, the ones it only starts in a terminal and the API providers. */
 export class ProviderRegistry extends AgentProviderRegistry {
+    // The services behind the API providers, which keep a key and its models in the daemon's home.
+    readonly nanogpt: NanoGptService;
+    readonly claudeApi: AnthropicClaudeApiService;
+    // The chat servers a person installs apart from their CLI, which exist once the registry has a home to install into.
+    readonly servers: ReadonlyMap<AgentKind, { install: AcpServerInstall; release: AcpServerRelease }>;
     private readonly onList: (() => void) | null;
-    private readonly probe: (command: string) => Promise<CliDetection>;
-    private agyAt: { at: number; installed: boolean } | null = null;
 
     constructor(options: ProviderRegistryOptions = {}) {
-        super({
-            providers: options.providers ?? builtInProviders(options),
-            // `agy`, never the server that stands in its place once installed: the server's state is its own status.
-            commands: { antigravity: ANTIGRAVITY_CLI, ...options.commands },
-            ...(options.detect ? { detect: options.detect } : {})
+        const table = createProviders({
+            ...(options.home === undefined ? {} : { home: options.home }),
+            ...(options.serverLaunches === undefined ? {} : { serverLaunches: options.serverLaunches }),
+            ...(options.commands === undefined ? {} : { commands: options.commands })
         });
+
+        super({ providers: options.providers ?? table.providers, ...(options.detect ? { detect: options.detect } : {}) });
+        this.nanogpt = table.nanogpt;
+        this.claudeApi = table.claudeApi;
+        this.servers = table.servers;
         this.onList = options.onList ?? null;
-        this.probe = options.detect ?? ((command) => detectCli(command));
-    }
-
-    /* A provider a person installed since the start, which `providerFor` answers too while this registry offers it. */
-    override add(provider: ChatProvider): void {
-        super.add(provider);
-        if (!offersKind(provider.kind)) {
-            ADDED_PROVIDERS.set(provider.kind, provider);
-        }
-    }
-
-    override remove(kind: AgentKind): void {
-        super.remove(kind);
-        ADDED_PROVIDERS.delete(kind);
     }
 
     override list(): Promise<ProviderInfo[]> {
         this.onList?.();
+
         return this.current();
     }
 
     /* The list as it stands, without the fetches a client's `provider.list` sets off, in the order a picker shows it. */
     async current(): Promise<ProviderInfo[]> {
         const groups = pickerGroupsOf(await super.list());
+
         return [...groups.frontier, ...groups.others, ...groups.api];
-    }
-
-    /*
-     * Antigravity answers a single prompt through `agy`, which is installed apart from the server its chats run on,
-     * so it is asked by that executable; every other CLI goes the way the base registry picks it.
-     */
-    override async oneShotProvider(preferred?: AgentKind): Promise<ChatProvider | null> {
-        if (preferred === 'antigravity' && (await this.agyInstalled())) {
-            return this.agyOneShot();
-        }
-        const found = await super.oneShotProvider(preferred);
-        if (found !== null) {
-            return found;
-        }
-        return (await this.agyInstalled()) ? this.agyOneShot() : null;
-    }
-
-    private agyOneShot(): ChatProvider {
-        return { ...this.get('antigravity'), command: [ANTIGRAVITY_CLI], oneShotArgs: antigravityOneShotArgs };
-    }
-
-    private async agyInstalled(): Promise<boolean> {
-        if (!this.kinds().includes('antigravity')) {
-            return false;
-        }
-        if (this.agyAt === null || Date.now() - this.agyAt.at >= AGY_DETECTION_TTL_MS) {
-            const installed = (await this.probe(ANTIGRAVITY_CLI).catch(() => ({ installed: false }))).installed;
-            this.agyAt = { at: Date.now(), installed };
-        }
-        return this.agyAt.installed;
-    }
-
-    protected override fallback(kind: AgentKind): ChatProvider {
-        return providerFor(kind);
     }
 }

@@ -78,6 +78,8 @@ export interface DaemonSeams {
         detect: ((command: string) => Promise<CliDetection>) | null;
         /* Providers in place of the built-in ones of their kind. */
         added: readonly ChatProvider[];
+        /* What `codex --help` prints, which decides the terminal flags Codex takes; null runs the real Codex. */
+        codexHelp: ((executable: string) => Promise<string>) | null;
     };
     accounts(input: AccountsInput): ProviderAccountsService;
     git: {
@@ -108,8 +110,6 @@ export interface DaemonSeams {
     machine: {
         /* The hardware's name in a person's words. */
         model(): Promise<string | null>;
-        /* Whether the Codex on this machine runs terminal commands; the managers wait for it before a launch. */
-        codexProbe(): Promise<void>;
         sessionFs(): Promise<SessionFs>;
     };
     /* The links to other machines, which a test replaces by one it controls. */

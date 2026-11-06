@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import type { ChatProvider } from '@adecore/agents/providers';
+import { cliExecutable, type ChatProvider } from '@adecore/agents/providers';
 import { isCanvasView, sourceOf, type ContextSource, type ExtensionDatabaseValue, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import { contextSelection } from '@ruimte/contracts/extension-context';
 import type { Area } from '../area.ts';
@@ -235,7 +235,7 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
             return {};
         }
 
-        const child = Bun.spawn([provider.command[0] as string, ...run.args], {
+        const child = Bun.spawn([cliExecutable(provider), ...run.args], {
             cwd: deps.folderOf(payload.projectId) ?? homedir(),
             stdin: run.stdin === undefined ? 'ignore' : new TextEncoder().encode(run.stdin),
             stdout: 'pipe',

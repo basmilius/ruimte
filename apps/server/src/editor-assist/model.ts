@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { ChatChild, type SpawnChatProcess } from '@adecore/agents/chat';
+import { cliExecutable } from '@adecore/agents/providers';
 import type { EditorAssistAgent, EditorAssistGenerateResult, EditorAssistPurpose, EditorAssistStatusResult } from '@ruimte/contracts';
 import { oneShotRun } from '../git/one-shot.ts';
 import { PURPOSES } from './instructions.ts';
@@ -85,18 +86,7 @@ export class EditorAssistModel {
                 throw new CodedError('unavailable', `${provider.name} cannot answer an editor request.`);
             }
 
-            const args = [...run.args];
-            // Codex's stdin marker is positional, so flags must precede it.
-            const modelAt = provider.kind === 'codex' && args.at(-1) === '-' ? args.length - 1 : args.length;
-            args.splice(modelAt, 0, '--model', model);
-
-            if (provider.kind === 'claude') {
-                args.push('--tools', '', '--strict-mcp-config', '--setting-sources', '', '--no-session-persistence', '--effort', 'low');
-            } else if (provider.kind === 'grok') {
-                args.push('--tools', '', '--max-turns', '1', '--reasoning-effort', 'low');
-            } else if (provider.kind === 'codex') {
-                args.splice(1, 0, '-c', 'model_reasoning_effort="low"');
-            }
+            const args = provider.leanOneShotArgs?.(run.args, model) ?? [...run.args, '--model', model];
 
             const inherited = this.options.accounts.envFor(provider.kind, account, this.options.env ?? process.env);
             const env = Object.fromEntries(
@@ -109,7 +99,7 @@ export class EditorAssistModel {
                 exit = resolve;
             });
             child = new ChatChild({
-                command: [provider.command[0]!, ...args],
+                command: [cliExecutable(provider), ...args],
                 cwd,
                 env,
                 ...(this.options.spawn === undefined ? {} : { spawn: this.options.spawn }),

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ChatSession, type BackendLaunch } from '@adecore/agents/chat';
-import { ModelCatalog } from '@adecore/agents/providers';
+import { createClaudeProvider, ModelCatalog } from '@adecore/agents/providers';
 import { fakeClaude, inProcess } from '@adecore/agents/testing';
 import { UsageService } from '@adecore/agents/usage';
 import { tempHomes } from '../temp-home-test-helpers.ts';
@@ -64,7 +64,9 @@ async function started(
             };
         }
     };
-    const backend = createAnthropicClaudeApiProvider(service, { detect: installed }).createBackend(launch, { onEvent: () => undefined });
+    const provider = createAnthropicClaudeApiProvider(service, createClaudeProvider(), { detect: installed });
+    // The session applies the provider's launch additions where it makes a backend; a test that builds one itself does the same.
+    const backend = provider.createBackend(provider.launch?.(launch) ?? launch, { onEvent: () => undefined });
     await backend.start();
     await backend.dispose();
 
@@ -75,7 +77,7 @@ test('saving, refreshing and removing a Claude API key update the provider offer
     let model = 'claude-sonnet-example';
     const service = new AnthropicClaudeApiService(async () => Response.json({ data: [{ id: model, display_name: model, line: 'sonnet' }] }));
     await service.load(await newHome());
-    const provider = createAnthropicClaudeApiProvider(service, { detect: installed });
+    const provider = createAnthropicClaudeApiProvider(service, createClaudeProvider(), { detect: installed });
     const registry = new ProviderRegistry({ providers: [provider] });
     service.onChange(() => registry.invalidate('anthropic-claude-api'));
     const changes: string[] = [];
@@ -96,7 +98,7 @@ test('saving, refreshing and removing a Claude API key update the provider offer
 
 test('with a key but no Claude Code installed, the provider is unavailable and says how to install it', async () => {
     const service = await keyedService(await newHome());
-    const provider = createAnthropicClaudeApiProvider(service, { detect: async () => ({ installed: false, version: null }) });
+    const provider = createAnthropicClaudeApiProvider(service, createClaudeProvider(), { detect: async () => ({ installed: false, version: null }) });
     const [info] = await new ProviderRegistry({ providers: [provider] }).list();
 
     expect(info).toMatchObject({ installed: false, version: null });
@@ -104,7 +106,7 @@ test('with a key but no Claude Code installed, the provider is unavailable and s
 });
 
 test('a chat compacts, reports its cost and never runs in a terminal', () => {
-    const { capabilities } = createAnthropicClaudeApiProvider(new AnthropicClaudeApiService());
+    const { capabilities } = createAnthropicClaudeApiProvider(new AnthropicClaudeApiService(), createClaudeProvider());
 
     expect(capabilities).toMatchObject({ chat: true, terminal: false, hooks: false, compaction: 'prompt', reportsCost: true });
 });
@@ -200,7 +202,9 @@ test("its chats run Claude Code in the provider's own config folder", async () =
     const home = await newHome();
     const service = await keyedService(home);
 
-    expect(createAnthropicClaudeApiProvider(service).claudeCode).toEqual({ configDir: join(home, 'anthropic-claude-api', 'claude-config') });
+    expect(createAnthropicClaudeApiProvider(service, createClaudeProvider()).claudeCode).toEqual({
+        configDir: join(home, 'anthropic-claude-api', 'claude-config')
+    });
 });
 
 test("a Claude API model offers Claude Code's reasoning levels, and the one picked reaches the CLI", async () => {
@@ -210,7 +214,7 @@ test("a Claude API model offers Claude Code's reasoning levels, and the one pick
     );
     await service.load(await newHome());
     await service.configure('sk-ant-test-only');
-    const provider = createAnthropicClaudeApiProvider(service, { detect: installed });
+    const provider = createAnthropicClaudeApiProvider(service, createClaudeProvider(), { detect: installed });
     const effort = provider.catalog.list()[0]!.options.find((option) => option.id === 'effort');
 
     expect(effort?.type === 'select' ? effort.choices.map((choice) => choice.id) : []).toEqual(expect.arrayContaining(['low', 'medium', 'high']));
@@ -256,8 +260,7 @@ test('a running chat takes a changed output limit, or a model with another one, 
             usage: { contextTokens: 0, contextWindow: 200_000, costUsd: 0, turns: 0 },
             createdAt: 1
         },
-        provider: createAnthropicClaudeApiProvider(service, { detect: installed }),
-        command: ['claude'],
+        provider: createAnthropicClaudeApiProvider(service, createClaudeProvider(), { detect: installed }),
         env: () => ({}),
         emit: () => undefined,
         persist: () => undefined,

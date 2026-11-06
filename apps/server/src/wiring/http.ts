@@ -37,6 +37,7 @@ import type { Tool } from '../mcp/catalog.ts';
 import { handleMcpRequest, MCP_PATH, MCP_REQUEST_TIMEOUT_S } from '../mcp/mcp-route.ts';
 import { handleProjectRequest, PROJECTS_PATH } from '../projects/icon-route.ts';
 import { noteOnLine } from '../providers/launch.ts';
+import type { ProviderRegistry } from '../providers/registry.ts';
 import { handleMachineNotify } from '../push/notify-route.ts';
 import { HOOKS_PATH, handleHookRequest } from '../sessions/hook-receiver.ts';
 import { shotFolders } from '../shots.ts';
@@ -83,6 +84,7 @@ export interface HttpInput {
     machine: MachineBundle;
     stores: AgentStores;
     agents: AgentsBundle;
+    providers: ProviderRegistry;
     projects: ProjectsBundle;
     devices: DevicesBundle;
     processes: ProcessesBundle;
@@ -99,7 +101,7 @@ export interface HttpInput {
 
 /* Every HTTP route and the upgrade, before the cross-origin headers the desktop app's page needs. */
 function daemonRoutes(input: HttpInput): Route<SocketData>[] {
-    const { runtime, machine, stores, agents, projects, devices, processes, power, network, clients, canvasHost, voice } = input;
+    const { runtime, machine, stores, agents, providers, projects, devices, processes, power, network, clients, canvasHost, voice } = input;
     const { config } = runtime;
     const { extensions } = input;
     const { identity, auth, handshake, access, machineHome } = machine;
@@ -284,7 +286,7 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     // agent was told keeps up with its turns even where nothing is printed.
                     const changed = context.changeSince(sessionId);
                     // A CLI the node launched fresh got the tools note on its line; a resume or one typed by hand in the shell did not.
-                    const tools = !noteOnLine(kind, sessions.get(sessionId)?.launch);
+                    const tools = !noteOnLine(providers.get(kind), sessions.get(sessionId)?.launch);
                     return hookContext(event, context.list(sessionId), {
                         changed,
                         messages: agents.messagesFor(sessionId),

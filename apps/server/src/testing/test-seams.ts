@@ -148,14 +148,20 @@ export function testSeams(choices: TestSeamChoices, overrides: Partial<DaemonSea
         },
         providers: {
             detect: async (command) => ({ installed: (installed as string[]).includes(command), version: '0.0.0' }),
-            added: []
+            added: [],
+            codexHelp: async () => ''
         },
         accounts: ({ home: accountsHome, providers }) =>
             new ProviderAccountsService({
                 home: accountsHome,
-                providers,
+                // Every CLI is signed in without being asked.
+                providers: {
+                    list: () => providers.list(),
+                    get: (kind) => ({ ...providers.get(kind), askAccount: async () => ({ signedIn: true, email: null, plan: null, organization: null }) }),
+                    enabled: (kind) => providers.enabled?.(kind) ?? true,
+                    kinds: () => providers.kinds()
+                },
                 env,
-                ask: async () => ({ signedIn: true, email: null, plan: null, organization: null }),
                 prepareShadow: async () => ({ linked: [], unshared: [], sharedLogin: false }),
                 secrets: null
             }),
@@ -174,7 +180,7 @@ export function testSeams(choices: TestSeamChoices, overrides: Partial<DaemonSea
             throw new Error('no browser in this test');
         },
         voiceLive: openAiLive(),
-        machine: { model: async () => null, codexProbe: async () => undefined, sessionFs: nodeSessionFs },
+        machine: { model: async () => null, sessionFs: nodeSessionFs },
         remote: { connections: (real) => real, reconnect: (real) => real },
         peerNotify: (real) => real,
         observers: {

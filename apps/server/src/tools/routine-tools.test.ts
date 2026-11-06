@@ -4,9 +4,12 @@ import type { Routine, RoutineEntry, RoutineMadeBy, RoutineRunNowResult, Runtime
 import type { CanvasHost } from '../canvas/host.ts';
 import { agentRoutines } from '../routines/agent-host.ts';
 import { scheduleText } from '../routines/routine-words.ts';
+import { ProviderRegistry } from '../providers/registry.ts';
 import type { Routines } from '../routines/routines.ts';
 import { parseSchedule, routineToolkit } from './routine-tools.ts';
 import { launchReading, toolAnswer, toolCall } from './tool-test-helpers.ts';
+
+const providers = new ProviderRegistry();
 
 interface Saved {
     routine: Routine;
@@ -102,6 +105,7 @@ beforeEach(() => {
             modeOf: () => callerMode,
             accountOf: () => ({ kind: 'claude' }),
             installedAgents: async () => ['claude', 'codex'],
+            provider: (kind: string) => providers.get(kind),
             preferredSelection: () => undefined
         },
         launches: { list: async () => launches },

@@ -191,6 +191,7 @@ async function boot(): Promise<Daemon> {
         },
         starts: {
             installedAgents: async () => ['claude', 'codex'],
+            provider: (kind) => providers.get(kind),
             holdPrompt: (id, nodeId, prompt) => prompts.put(id, nodeId, prompt),
             startAgent: (start: AgentStart) => worker.enqueue(start.projectId, start.nodeId, startAgentWork(start, modes)),
             modeOf: nodeMode(modes),

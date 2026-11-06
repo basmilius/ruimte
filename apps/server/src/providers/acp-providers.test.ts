@@ -3,8 +3,9 @@ import type { BackendEvent, BackendLaunch } from '@adecore/agents/chat';
 import { agentDefaultCatalog, copilotUsageDirectory, createAcpProvider, type AcpServerLaunch, type ChatProvider } from '@adecore/agents/providers';
 import { fakeAcpWith, inProcess, type FakeAcpOptions } from '@adecore/agents/testing';
 import { UsageService } from '@adecore/agents/usage';
+import { withRuimteMcp } from '../ruimte-mcp.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
-import { copilotProvider, createAntigravityProvider, createCopilotProvider, createGrokProvider, loadingRuimteMcp } from './acp-providers.ts';
+import { createAntigravityProvider, createCopilotProvider, createGrokProvider } from './acp-providers.ts';
 import { ProviderRegistry as RuimteProviderRegistry } from './registry.ts';
 
 const newHome = tempHomes('ruimte-acp-providers-');
@@ -26,30 +27,29 @@ function run(provider: ChatProvider, options: FakeAcpOptions, overrides: Partial
             }
         };
     });
-    const backend = provider.createBackend(
-        {
-            command: provider.command,
-            cwd: '/tmp',
-            env: {},
-            selection: provider.catalog.normalize(undefined),
-            modelName: provider.catalog.nameOf(provider.catalog.defaultModel),
-            runtimeMode: 'supervised',
-            resume: null,
-            generation: 1,
-            instructions: null,
-            resumeNote: null,
-            spawn: fake.spawn,
-            ...overrides
-        },
-        {
-            onEvent: (event) => {
-                events.push(event);
-                if (event.type === 'turn.done') {
-                    done.resolve();
-                }
+    // The session applies the provider's launch additions where it makes a backend; a test that builds one itself does the same.
+    const launch: BackendLaunch = {
+        command: provider.command,
+        cwd: '/tmp',
+        env: {},
+        selection: provider.catalog.normalize(undefined),
+        modelName: provider.catalog.nameOf(provider.catalog.defaultModel),
+        runtimeMode: 'supervised',
+        resume: null,
+        generation: 1,
+        instructions: null,
+        resumeNote: null,
+        spawn: fake.spawn,
+        ...overrides
+    };
+    const backend = provider.createBackend(provider.launch?.(launch) ?? launch, {
+        onEvent: (event) => {
+            events.push(event);
+            if (event.type === 'turn.done') {
+                done.resolve();
             }
         }
-    );
+    });
     return { backend, events, requests, turnDone: done.promise };
 }
 
@@ -99,7 +99,7 @@ describe("Ruimte's MCP server in an ACP chat", () => {
         ['Antigravity', () => createAntigravityProvider(installed)],
         [
             'an agent of the ACP registry',
-            () => loadingRuimteMcp(createAcpProvider({ kind: 'example', name: 'Example', command: 'example', catalog: agentDefaultCatalog() }))
+            () => createAcpProvider({ kind: 'example', name: 'Example', command: 'example', catalog: agentDefaultCatalog(), launch: withRuimteMcp })
         ]
     ];
 
@@ -129,7 +129,8 @@ describe("Ruimte's MCP server in an ACP chat", () => {
 
     // Copilot names no server in a permission request, so its own flag allows the tools; a second copy on its line would load the server twice.
     test('Copilot allows the tools on its line and no longer loads the server there', () => {
-        expect(copilotProvider.command).toContain('--allow-tool=ruimte');
-        expect(copilotProvider.command.some((arg) => arg.startsWith('--additional-mcp-config'))).toBe(false);
+        const copilot = createCopilotProvider();
+        expect(copilot.terminal?.mcpAllowArgs?.('ruimte')).toEqual(['--allow-tool=ruimte']);
+        expect(copilot.command.some((arg) => arg.startsWith('--additional-mcp-config'))).toBe(false);
     });
 });

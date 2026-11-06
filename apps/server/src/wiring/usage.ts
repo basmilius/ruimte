@@ -3,7 +3,6 @@ import { limitAccountsOf, usageAccountsOf, usageRootsOf, UsageMonitor, UsageServ
 import type { ServerConfig } from '../config.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { claudeApiUsageRoots } from '../providers/anthropic-claude-api-provider.ts';
-import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { readGrokPlan } from '../usage/grok-plan.ts';
 import { followPlan } from '../usage/nanogpt-live.ts';
 import { sessionAccountsOf } from '../usage/session-accounts.ts';
@@ -50,7 +49,6 @@ export function wireUsage(
     const limits = new UsageMonitor({
         providers: providers.providers,
         accounts: limitAccounts,
-        client: RUIMTE_CODEX_CLIENT,
         now: () => seams.clock.now(),
         ...(seams.usage.probe === null ? {} : { probe: seams.usage.probe }),
         plans: {

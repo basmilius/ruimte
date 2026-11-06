@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, symlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { AgentLineageStore } from '@adecore/agents/coordination';
+import type { ChatProvider } from '@adecore/agents/providers';
+import { shippedProviders } from '../providers/table.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { PeerLinks } from './peer-links.ts';
 import { UntrustedFolders, untrustedStartProblem } from './untrusted.ts';
@@ -99,10 +101,14 @@ describe('a folder made from work another machine sent', () => {
     });
 });
 
+function provider(kind: string): ChatProvider {
+    return shippedProviders().find((candidate) => candidate.kind === kind)!;
+}
+
 describe('what may start in an untrusted place', () => {
     test('only a chat of a provider that can leave the configuration out', () => {
-        expect(untrustedStartProblem('claude', false)).toBeNull();
-        expect(untrustedStartProblem('codex', false)).toContain('Codex cannot run there');
-        expect(untrustedStartProblem('claude', true)).toContain('terminal agent');
+        expect(untrustedStartProblem(provider('claude'), false)).toBeNull();
+        expect(untrustedStartProblem(provider('codex'), false)).toContain('Codex cannot run there');
+        expect(untrustedStartProblem(provider('claude'), true)).toContain('terminal agent');
     });
 });

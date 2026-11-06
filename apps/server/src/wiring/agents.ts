@@ -138,8 +138,6 @@ interface AgentsInput {
     providers: ProvidersBundle;
     computer: ComputerUse;
     machineHome: MachineHome;
-    /* Runs beside boot; only Codex terminal commands need its result. */
-    codexProbe: Promise<void>;
     seams: Pick<DaemonSeams, 'clock' | 'env' | 'pty' | 'chatSpawn' | 'git' | 'nameChat' | 'observers'>;
     later: AgentsLater;
 }
@@ -172,17 +170,7 @@ export interface AgentsBundle {
     messagesFor(targetId: string): string[];
 }
 
-export async function wireAgents({
-    runtime,
-    identity,
-    stores,
-    providers,
-    computer,
-    machineHome,
-    codexProbe,
-    seams,
-    later
-}: AgentsInput): Promise<AgentsBundle> {
+export async function wireAgents({ runtime, identity, stores, providers, computer, machineHome, seams, later }: AgentsInput): Promise<AgentsBundle> {
     const { config } = runtime;
     const { clock } = seams;
     const { snapshots, prompts, lineage, notices, outbox, tasks, commandApprovals, modeApprovals } = stores;
@@ -243,8 +231,10 @@ export async function wireAgents({
         codexTitles: new CodexTitleReader(),
         accounts: providers.accounts,
         openingAccount: (sessionId, kind, named) => projectAccount(sessionId, kind, named)?.account ?? named ?? providers.accounts.defaultFor(kind),
-        prepareAgent: (kind) => (kind === 'codex' ? codexProbe : Promise.resolve())
+        providers: providers.providers
     });
+    // Asked while the stores load; a CLI that needs it for a terminal line waits for the answer there.
+    void Promise.all(providers.providers.kinds().map((kind) => providers.providers.get(kind).terminal?.prepare?.()));
     const snapshotSchedule = scheduleSnapshots(sessions, snapshots);
     const targetForToken = (token: string): string | null => sessions.sessionIdForToken(token) ?? chatManager.chatIdForToken(token);
     const context: ContextStore = new ContextStore({

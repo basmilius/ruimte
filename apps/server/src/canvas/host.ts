@@ -1,5 +1,6 @@
 import { ToolRefusal, field, lengthOf, orNote } from '@adecore/agents/context';
 import type { AgentLineageStore, Notice } from '@adecore/agents/coordination';
+import type { ChatProvider } from '@adecore/agents/providers';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import {
     isCanvasView,
@@ -84,6 +85,8 @@ export type MachineHost = Pick<EndpointIdentity, 'agentsDeleteAnyView' | 'nodeSi
 export interface AgentStartHost {
     /* The agent CLIs this machine has; a tool that starts one refuses the rest by name. */
     installedAgents(): Promise<AgentKind[]>;
+    /* The provider of a kind, one this machine does not offer included (it starts nothing). */
+    provider(kind: AgentKind): ChatProvider;
     /* Holds the first prompt of a node against its id until the session or the chat for it is made; a chat hears `brief` beside it. */
     holdPrompt(projectId: string, nodeId: string, prompt: string, brief?: string): Promise<void>;
     /* Owes the start of an agent node's chat or terminal, which the daemon makes whether or not a client shows the node. */

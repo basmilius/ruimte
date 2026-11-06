@@ -38,6 +38,7 @@ export const agentFeature = defineAgentFeature({
         return {
             starts: agentStartHost({
                 installed: async () => (await providers.providers.list()).filter((provider) => provider.installed).map((provider) => provider.kind),
+                providers: providers.providers,
                 prompts: stores.prompts,
                 enqueue,
                 chats,

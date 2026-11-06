@@ -1,8 +1,9 @@
 import type { ApiHostTools, ApiToolDefinition, BackendHost, BackendLaunch } from '@adecore/agents/chat';
+import { cliMcpHeaders } from '@adecore/agents/providers';
 import type { Tool } from '@modelcontextprotocol/client';
 import { errorText } from '../error-text.ts';
 import { MCP_SERVER } from '../ruimte-mcp.ts';
-import { connectApiMcp, mcpResultText, RUIMTE_MCP_LIMITS, ruimteMcpServer, type ApiMcpConnection, type ConnectApiMcp } from './api-mcp.ts';
+import { connectApiMcp, mcpResultText, RUIMTE_MCP_LIMITS, type ApiHttpMcpServer, type ApiMcpConnection, type ConnectApiMcp } from './api-mcp.ts';
 
 // The name the model and the thread give a tool of Ruimte's MCP server, the one Claude Code gives it too.
 const RUIMTE_TOOL_PREFIX = `mcp__${MCP_SERVER}__`;
@@ -21,11 +22,13 @@ interface Connected {
  * the server gets a note and runs on the project tools alone.
  */
 export function ruimteApiTools(launch: BackendLaunch, host: BackendHost, connectMcp: ConnectApiMcp = connectApiMcp): ApiHostTools | null {
-    const server = ruimteMcpServer(launch.env)[MCP_SERVER];
+    const ruimte = launch.mcpServers?.find((candidate) => candidate.name === MCP_SERVER);
 
-    if (server === undefined) {
+    if (ruimte === undefined || ruimte.tokenVariable === undefined) {
         return null;
     }
+
+    const server: ApiHttpMcpServer = { type: 'http', url: ruimte.url, headers: cliMcpHeaders(ruimte.tokenVariable) };
 
     let connected: Promise<Connected | null> | null = null;
 

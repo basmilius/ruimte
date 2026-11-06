@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
+import { ProviderRegistry } from '../providers/registry.ts';
 import { makeHarness, type Harness } from './test-helpers.ts';
 
 let harness: Harness;
@@ -21,13 +22,25 @@ async function withPreparation() {
     const ready = Promise.withResolvers<void>();
     const preparing = Promise.withResolvers<void>();
     pending.add(ready.resolve);
+    const registry = new ProviderRegistry();
+    const codex = registry.get('codex');
     harness = await makeHarness({
-        prepareAgent: (kind) => {
-            if (kind === 'codex') {
-                preparing.resolve();
-                return ready.promise;
-            }
-            return Promise.resolve();
+        providers: {
+            kinds: () => registry.kinds(),
+            // Codex is the CLI that needs preparing; the wait is held here until the test lets it go.
+            get: (kind) =>
+                kind === 'codex'
+                    ? {
+                          ...codex,
+                          terminal: {
+                              ...codex.terminal,
+                              prepare: () => {
+                                  preparing.resolve();
+                                  return ready.promise;
+                              }
+                          }
+                      }
+                    : registry.get(kind)
         }
     });
     return { ready, preparing };

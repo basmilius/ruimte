@@ -10,6 +10,7 @@ import { BundleStore } from '../../git/bundles.ts';
 import { peerOpener } from '../../opener.ts';
 import type { OutboxEntry, OutboxWork } from '../../outbox/outbox.ts';
 import { PeerLinks, peerCanvasId } from '../../projects/peer-links.ts';
+import { ProviderRegistry } from '../../providers/registry.ts';
 import { tempHomes } from '../../temp-home-test-helpers.ts';
 import type { ClientConnection } from '../../wire.ts';
 import { peerTasksArea } from './area-tasks.ts';
@@ -86,6 +87,7 @@ function deps(): PeerTasksDeps {
         },
         stopNode: async () => undefined,
         installed: async () => ['claude', 'codex'],
+        providers: new ProviderRegistry(),
         exists: (nodeId) => existing.has(nodeId),
         git: () => {
             throw new Error('no git in this test');

@@ -1,7 +1,7 @@
 import { ToolRefusal } from '@adecore/agents/context';
-import type { AgentKind, ModelSelection } from '@ruimte/contracts';
+import type { ChatProvider } from '@adecore/agents/providers';
+import type { ModelSelection } from '@ruimte/contracts';
 import { z } from 'zod';
-import { providerFor } from '../providers/registry.ts';
 
 export const modelFlag = z.string().trim().min(1, 'model needs a model id').optional();
 
@@ -11,9 +11,9 @@ export const effortFlag = z.string().trim().min(1, 'effort needs a reasoning eff
 export const EFFORT_REFUSALS: ReadonlySet<string> = new Set(['effort-needs-chat', 'no-effort', 'unknown-choice']);
 
 /* The effort choices of a model and its default; null for a model without the option. */
-function effortOf(kind: AgentKind, slug: string): { choices: string[]; defaultChoice: string } | null {
-    const option = providerFor(kind)
-        .catalog.list()
+function effortOf(provider: ChatProvider, slug: string): { choices: string[]; defaultChoice: string } | null {
+    const option = provider.catalog
+        .list()
         .find((model) => model.slug === slug)
         ?.options.find((candidate) => candidate.id === 'effort');
     if (option === undefined || option.type !== 'select') {
@@ -23,24 +23,22 @@ function effortOf(kind: AgentKind, slug: string): { choices: string[]; defaultCh
 }
 
 /* `normalize` would quietly swap an effort the model lacks for its default, so it is refused first. */
-function requireEffort(kind: AgentKind, slug: string, effort: string): void {
-    const offered = effortOf(kind, slug);
+function requireEffort(provider: ChatProvider, slug: string, effort: string): void {
+    const offered = effortOf(provider, slug);
     if (offered === null) {
-        throw new ToolRefusal('no-effort', `${slug} takes no reasoning effort; leave out the effort`, modelLines(kind));
+        throw new ToolRefusal('no-effort', `${slug} takes no reasoning effort; leave out the effort`, modelLines(provider));
     }
     if (!offered.choices.includes(effort)) {
-        throw new ToolRefusal('unknown-choice', `${effort} is no reasoning effort of ${slug}; it takes ${offered.choices.join(', ')}`, modelLines(kind));
+        throw new ToolRefusal('unknown-choice', `${effort} is no reasoning effort of ${slug}; it takes ${offered.choices.join(', ')}`, modelLines(provider));
     }
 }
 
-export function modelLines(kind: AgentKind): string[] {
-    return providerFor(kind)
-        .catalog.list()
-        .map((model) => {
-            const line = `model\t${kind}\t${model.slug}\t${model.name}`;
-            const effort = effortOf(kind, model.slug);
-            return effort === null ? line : `${line}\teffort ${effort.choices.join(', ')}, default ${effort.defaultChoice}`;
-        });
+export function modelLines(provider: ChatProvider): string[] {
+    return provider.catalog.list().map((model) => {
+        const line = `model\t${provider.kind}\t${model.slug}\t${model.name}`;
+        const effort = effortOf(provider, model.slug);
+        return effort === null ? line : `${line}\teffort ${effort.choices.join(', ')}, default ${effort.defaultChoice}`;
+    });
 }
 
 /*
@@ -49,7 +47,7 @@ export function modelLines(kind: AgentKind): string[] {
  * pick for that model, or the model's defaults, since what they cost is the person's call.
  */
 export function selectionForOpening(
-    kind: AgentKind,
+    provider: ChatProvider,
     chat: boolean,
     model: string | undefined,
     effort: string | undefined,
@@ -63,13 +61,13 @@ export function selectionForOpening(
             ? new ToolRefusal('effort-needs-chat', 'Reasoning effort is supported for chat agents only; leave out terminal or the effort')
             : new ToolRefusal('model-needs-chat', 'Model selection is supported for chat agents only; leave out terminal or the model');
     }
-    const catalog = providerFor(kind).catalog;
+    const catalog = provider.catalog;
     const resolved = model === undefined ? catalog.normalize(preferred).model : catalog.resolveModel(model);
     if (resolved === null) {
-        throw new ToolRefusal('unknown-model', `${model} is not a known model for ${kind}`, modelLines(kind));
+        throw new ToolRefusal('unknown-model', `${model} is not a known model for ${provider.kind}`, modelLines(provider));
     }
     if (effort !== undefined) {
-        requireEffort(kind, resolved, effort);
+        requireEffort(provider, resolved, effort);
     }
     // The person's last effort carries over to another model that offers it; normalize drops it otherwise.
     const options = preferred?.model === resolved ? { ...preferred.options } : {};

@@ -3,10 +3,9 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { isWithin } from '@adecore/utils/path';
 import type { ActionHandlers, ActionInput } from '@ruimte/actions';
 import { ROUTINE_LIMITS, RoutineSchema, type Routine, type RoutineEntry, type RoutineKind } from '@ruimte/contracts';
-import { nameOf, requireInstalled } from '../canvas/agents.ts';
+import { requireInstalled } from '../canvas/agents.ts';
 import { field, orNote } from '../canvas/host.ts';
 import { selectionForOpening } from '../canvas/model.ts';
-import { providerFor } from '../providers/registry.ts';
 import type { RoutineAgentHost } from '../routines/agent-host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 import { launchHostOf, named } from './launch-actions.ts';
@@ -96,14 +95,15 @@ async function routineFrom(context: ServerActionContext, caller: string, id: str
             throw new ToolRefusal('agent-required', 'Name the CLI of the agent with agent; this session runs none to take after');
         }
         if (input.provider !== undefined || agent === null) {
-            requireInstalled(await host.starts.installedAgents(), provider);
-            if (!providerFor(provider).capabilities.chat) {
-                throw new ToolRefusal('agent-needs-chat', `${nameOf(provider)} has no chat, and a routine runs its agent as a chat`);
+            requireInstalled(host.starts, await host.starts.installedAgents(), provider);
+            const cli = host.starts.provider(provider);
+            if (!cli.capabilities.chat) {
+                throw new ToolRefusal('agent-needs-chat', `${cli.name} has no chat, and a routine runs its agent as a chat`);
             }
         }
         const selection =
             input.model !== undefined || (input.provider !== undefined && input.provider !== agent?.provider)
-                ? selectionForOpening(provider, true, input.model, undefined, host.starts.preferredSelection(provider))
+                ? selectionForOpening(host.starts.provider(provider), true, input.model, undefined, host.starts.preferredSelection(provider))
                 : agent?.selection;
         const { selection: _selection, ...kept } = agent ?? {};
         routine = {

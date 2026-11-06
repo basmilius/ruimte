@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, writeFile } f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
+import { createClaudeProvider } from '@adecore/agents/providers';
 import { FakeWatch, ManualClock } from '@adecore/agents/testing';
 import type { ChatMovePayload } from '@ruimte/contracts';
 import { MachineHome } from '../disk/machine-home.ts';
@@ -83,7 +84,12 @@ describe('moving a chat from Chats into a project', () => {
         claudeApi = new AnthropicClaudeApiService(async () => Response.json({ data: [{ id: 'claude-sonnet-example', line: 'sonnet' }] }));
         await claudeApi.load(home);
         await claudeApi.configure('sk-ant-test-only');
-        daemon = await bootTestDaemon({ home, store, clock: new ManualClock(), providers: [createAnthropicClaudeApiProvider(claudeApi)] });
+        daemon = await bootTestDaemon({
+            home,
+            store,
+            clock: new ManualClock(),
+            providers: [createAnthropicClaudeApiProvider(claudeApi, createClaudeProvider())]
+        });
         const made = await newScratchChat(store, {}, OUTSIDE_CHECKOUT);
         chatId = made.viewId;
         chatsId = made.summary.projectId;

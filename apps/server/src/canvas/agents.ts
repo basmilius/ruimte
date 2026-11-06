@@ -1,37 +1,37 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { narrowerMode } from '@adecore/agents/providers';
 import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
-import { spellsOutMembers, type AgentKind, type ProjectCanvasView, type ProjectNode, type RuntimeMode } from '@ruimte/contracts';
+import { AgentKindSchema, spellsOutMembers, type AgentKind, type ProjectCanvasView, type ProjectNode, type RuntimeMode } from '@ruimte/contracts';
 import { z } from 'zod';
-import { BUILT_IN_KINDS } from '../providers/kinds.ts';
 import { DEFAULT_RUNTIME_MODE } from '../providers/launch.ts';
-import { offeredAgentKinds, providerFor } from '../providers/registry.ts';
-import { field, orNote, type CanvasHost, type AgentCall } from './host.ts';
+import { shippedProviders, tableKinds } from '../providers/table.ts';
+import { field, orNote, type AgentStartHost, type CanvasHost, type AgentCall } from './host.ts';
 import { MAX_LINKS } from './links.ts';
 import type { placeInGroup, Rect } from './placement.ts';
 import { readPromptFile } from './project-paths.ts';
 
-export const AGENT_KINDS = BUILT_IN_KINDS;
+/* The CLIs the daemon ships with, in menu order; an agent a person installed from the ACP registry comes on top. */
+export const AGENT_KINDS = tableKinds();
 
-/* A kind an agent may name: one the daemon ships with, or an agent a person installed from the ACP registry. */
+/* A kind an agent may name. Whether this machine offers and has it is asked of its providers, where the agent starts. */
 export function agentKindField(what: string) {
-    const message = () => `${what} needs a CLI: ${offeredAgentKinds().join(', ')}`;
-    return z.string({ error: message }).refine((kind) => offeredAgentKinds().includes(kind), { error: message });
+    const message = () => `${what} needs a CLI: ${AGENT_KINDS.join(', ')}, or the kind of an agent installed from the ACP registry`;
+    return z.string({ error: message }).refine((kind) => AgentKindSchema.safeParse(kind).success, { error: message });
 }
 
-/* The CLIs with a chat backend; the rest only ever runs in a shell, so an agent of theirs is always a terminal. */
+/* The shipped CLIs with a chat backend; the rest only ever runs in a shell, so an agent of theirs is always a terminal. */
 export function chatKinds(): AgentKind[] {
-    return AGENT_KINDS.filter((kind) => providerFor(kind).capabilities.chat);
-}
-
-export function nameOf(kind: AgentKind): string {
-    return providerFor(kind).name;
+    return shippedProviders()
+        .filter((provider) => provider.capabilities.chat)
+        .map((provider) => provider.kind);
 }
 
 interface AgentNodeSpec {
     id: string;
     chat: boolean;
     kind: AgentKind;
+    /* The CLI's name, which titles the node when the agent chose none. */
+    kindName: string;
     title: string | undefined;
     rect: Rect;
     cwd: string | undefined;
@@ -47,7 +47,7 @@ export function agentNode(spec: AgentNodeSpec): ProjectNode {
     return {
         id: spec.id,
         kind: spec.chat ? 'chat' : 'terminal',
-        title: spec.title ?? nameOf(spec.kind),
+        title: spec.title ?? spec.kindName,
         // A title the agent chose is not one the session may rename, the rule a person's typing follows.
         ...(spec.title === undefined ? {} : { titleSource: 'user' as const }),
         ...spec.rect,
@@ -108,14 +108,16 @@ export function readsOf(ids: readonly string[] | null): string[] {
 }
 
 /* Refuses a CLI this machine does not have; `role` names the role of a team it belongs to. */
-export function requireInstalled(installed: readonly AgentKind[], kind: AgentKind, role?: string): void {
+export function requireInstalled(starts: Pick<AgentStartHost, 'provider'>, installed: readonly AgentKind[], kind: AgentKind, role?: string): void {
     if (installed.includes(kind)) {
         return;
     }
     throw new ToolRefusal(
         'cli-not-installed',
-        `${role === undefined ? '' : `${role}: `}${nameOf(kind)} is not installed on this machine`,
-        installed.length === 0 ? ['note\tNo agent CLI is installed on this machine'] : installed.map((candidate) => `cli\t${candidate}\t${nameOf(candidate)}`)
+        `${role === undefined ? '' : `${role}: `}${starts.provider(kind).name} is not installed on this machine`,
+        installed.length === 0
+            ? ['note\tNo agent CLI is installed on this machine']
+            : installed.map((candidate) => `cli\t${candidate}\t${starts.provider(candidate).name}`)
     );
 }
 

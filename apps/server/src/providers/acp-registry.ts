@@ -2,10 +2,10 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { isNotFound } from '@adecore/utils/errors';
 import { writeAtomic } from '@adecore/utils/fs';
-import { AgentKindSchema, KNOWN_AGENT_KINDS, type AgentKind } from '@ruimte/contracts';
+import { AgentKindSchema, type AgentKind } from '@ruimte/contracts';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';
-import { offersKind } from './kinds.ts';
+import { offersKind } from './table.ts';
 
 /* The public ACP registry, the same list the Antigravity server's pin is taken from. */
 const ACP_REGISTRY_URL = 'https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json';
@@ -81,12 +81,15 @@ export function registryPlatform(platform: NodeJS.Platform, arch: string): strin
     return os === undefined || cpu === undefined ? null : `${os}-${cpu}`;
 }
 
+// Kinds this daemon once offered, whose old nodes keep them; a registry agent of the same id must not bring one back.
+const RETIRED_KINDS: ReadonlySet<string> = new Set(['gemini', 'apple']);
+
 /*
  * The kind an agent of the registry runs as: its id, when that is a kind at all and names no CLI this daemon or an
  * older one knows by itself (Gemini's id would bring back the kind its old nodes keep).
  */
 export function registryKind(id: string): AgentKind | null {
-    if (BUILT_IN_REGISTRY_IDS.has(id) || offersKind(id) || (KNOWN_AGENT_KINDS as readonly string[]).includes(id)) {
+    if (BUILT_IN_REGISTRY_IDS.has(id) || offersKind(id) || RETIRED_KINDS.has(id)) {
         return null;
     }
     return AgentKindSchema.safeParse(id).success ? id : null;

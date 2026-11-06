@@ -13,8 +13,16 @@ import { borrowedHook, modeOfHook, normalizeHook, requestOfHook, settleWaiting }
 import { ClientSinks } from '../client-sinks.ts';
 import { contextHint, toolsNote } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
-import { offersKind } from '../providers/kinds.ts';
-import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, quote, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
+import {
+    DEFAULT_RUNTIME_MODE,
+    freshCommand,
+    launchedMode,
+    quote,
+    resumeCommand,
+    resumeOrFreshCommand,
+    terminalCommand,
+    type LaunchProviders
+} from '../providers/launch.ts';
 import { defaultShell, defaultShellArgs, gitBash, shellName, type PtyAdapter } from '../pty/pty.ts';
 import { TERMINAL_TOKEN_VARIABLE, ruimteCliMcp } from '../ruimte-mcp.ts';
 import { countUsage } from '../stats/usage-stats.ts';
@@ -146,8 +154,8 @@ export interface SessionManagerOptions {
     accounts?: AccountLaunches;
     // The account a first launch takes, given the one it named: the project's choice, else the top account of the CLI. Throws to refuse it.
     openingAccount?: (sessionId: string, kind: AgentKind, named: string | undefined) => string | undefined;
-    // CLI capabilities must be known before building a launch or resume command.
-    prepareAgent?: (kind: AgentKind) => Promise<void>;
+    // The CLIs this machine offers, which say how a launch or resume line is built; a CLI that has to ask its binary first is awaited before a line is built.
+    providers: LaunchProviders & { kinds(): readonly AgentKind[] };
     // Lets a test pose as Windows, where a session that types a line needs Git Bash.
     platform?: string;
     findGitBash?: () => string | null;
@@ -219,7 +227,7 @@ export class SessionManager {
     private readonly checkCwd: (sessionId: string, cwd: string) => Promise<void>;
     private readonly accounts: AccountLaunches | null;
     private readonly openingAccount: (sessionId: string, kind: AgentKind, named: string | undefined) => string | undefined;
-    private readonly prepareAgent: (kind: AgentKind) => Promise<void>;
+    private readonly providers: SessionManagerOptions['providers'];
     private readonly platform: string;
     private readonly findGitBash: () => string | null;
     private readonly personShell: () => string;
@@ -255,7 +263,7 @@ export class SessionManager {
         this.checkCwd = options.checkCwd;
         this.accounts = options.accounts ?? null;
         this.openingAccount = options.openingAccount ?? ((_sessionId, _kind, named) => named);
-        this.prepareAgent = options.prepareAgent ?? (() => Promise.resolve());
+        this.providers = options.providers;
         this.platform = options.platform ?? process.platform;
         this.findGitBash = options.findGitBash ?? (() => gitBash(this.env));
         this.personShell = options.personShell ?? (() => defaultShell(this.env, this.platform));
@@ -323,7 +331,7 @@ export class SessionManager {
         const restoredAgent: AgentInfo | undefined = restored?.agent;
         const ranUnder = restoredAgent?.kind === options.agent?.kind ? restored?.account : undefined;
         // A node of a CLI this daemon does not offer keeps its shell, and its stored kind, and is told why nothing started.
-        const unoffered = options.agent !== undefined && !offersKind(options.agent.kind) ? options.agent.kind : null;
+        const unoffered = options.agent !== undefined && !this.providers.kinds().includes(options.agent.kind) ? options.agent.kind : null;
         const launch = unoffered === null ? this.startingLaunch(options.sessionId, options.agent, restoredAgent !== undefined, ranUnder) : undefined;
         // On the shell and not on the typed line, so a resume and whatever a person types there run under the same account.
         const env = launch ? launchEnv(this.accounts, launch.kind, launch.account, this.env) : this.env;
@@ -585,7 +593,7 @@ export class SessionManager {
         this.resuming.set(sessionId, this.now());
         let line: string;
         try {
-            await this.prepareAgent(kind);
+            await this.providers.get(kind).terminal?.prepare?.();
             // The line goes to whatever holds the terminal: a vim or an ssh started after the agent left would take it.
             if ((await this.holdsForeground(session.pid)) === false) {
                 throw new SessionError('shell-busy', 'Another program runs in front of the shell; quit it and resume again');
@@ -836,15 +844,15 @@ export class SessionManager {
         if (!launch || restored) {
             return undefined;
         }
-        await this.prepareAgent(launch.kind);
+        await this.providers.get(launch.kind).terminal?.prepare?.();
         const note = this.noteFor(sessionId);
         const mcp = this.mcpEndpoint();
         if (launch.resume) {
-            return resumeOrFreshCommand(launch, launch.resume, note, mcp);
+            return resumeOrFreshCommand(this.providers, launch, launch.resume, note, mcp);
         }
         // Taken only here: a prompt that is not put on a line is a prompt nobody would ever see.
         const prompt = (await this.firstPrompt(sessionId)) ?? undefined;
-        const line = terminalCommand(launch, prompt, note, mcp);
+        const line = terminalCommand(this.providers, launch, prompt, note, mcp);
 
         return this.platform === 'win32' && prompt?.startsWith('/') ? `${keepingFromPathConversion(prompt)} ${line}` : line;
     }
@@ -859,12 +867,12 @@ export class SessionManager {
         const note = this.noteFor(session.id);
         const mcp = this.mcpEndpoint();
         if (agent.transcriptPath === null) {
-            return resumeOrFreshCommand(launch, agent.agentSessionId, note, mcp);
+            return resumeOrFreshCommand(this.providers, launch, agent.agentSessionId, note, mcp);
         }
         if (existsSync(agent.transcriptPath)) {
-            return resumeCommand(launch, agent.agentSessionId, mcp);
+            return resumeCommand(this.providers, launch, agent.agentSessionId, mcp);
         }
-        return freshCommand(launch, note, mcp);
+        return freshCommand(this.providers, launch, note, mcp);
     }
 
     /* Ruimte's MCP server for an agent this manager launches, which needs the hook token the session carries as its bearer. */
@@ -969,16 +977,17 @@ export class SessionManager {
         const codex = this.codexTitles;
         const path = agent.transcriptPath;
         const threadId = agent.agentSessionId;
+        const source = this.providers.get(agent.kind).subagentSource;
         // The hooks name the transcript, which already sits in the folder of the account the CLI runs under.
-        if (agent.kind === 'claude' && claude && path !== null) {
+        if (source === 'claude-transcript' && claude && path !== null) {
             return () => claude.forTranscript(path);
         }
-        if (agent.kind === 'codex' && codex && threadId !== null) {
+        if (source === 'codex-thread' && codex && threadId !== null) {
             if (this.accounts === null) {
                 return () => codex.forThread(threadId);
             }
-            // A Codex started by hand in a shell opened for another CLI runs under the default account.
-            const home = this.accounts.homeFolder('codex', session.launch?.kind === 'codex' ? session.launch.account : undefined);
+            // A CLI started by hand in a shell opened for another CLI runs under the default account.
+            const home = this.accounts.homeFolder(agent.kind, session.launch?.kind === agent.kind ? session.launch.account : undefined);
             return home === null ? null : () => codex.forThread(threadId, codexIndexIn(home));
         }
         return null;

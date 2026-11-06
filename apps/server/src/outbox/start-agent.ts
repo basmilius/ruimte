@@ -1,6 +1,6 @@
 import type { ChatCore, ComposerPreference } from '@adecore/agents/chat';
 import type { AgentLineageStore } from '@adecore/agents/coordination';
-import { narrowerMode } from '@adecore/agents/providers';
+import { narrowerMode, type ChatProvider } from '@adecore/agents/providers';
 import type { AgentInfo, AgentKind, AgentLaunch, ChatCreatePayload, ChatInfo, RuntimeMode } from '@ruimte/contracts';
 import type { AgentStart, AgentStartHost, NodeAccount } from '../canvas/host.ts';
 import type { PendingPromptStore } from '../canvas/pending-prompts.ts';
@@ -76,6 +76,7 @@ export function startAgentWork(start: AgentStart, deps: NodeModeDeps): OutboxWor
 interface AgentStartHostDeps {
     /* The agent CLIs installed on this machine. */
     installed(): Promise<AgentKind[]>;
+    providers: { get(kind: AgentKind): ChatProvider };
     prompts: Pick<PendingPromptStore, 'put'>;
     enqueue(projectId: string, nodeId: string, work: OutboxWork): Promise<void>;
     chats: Pick<ChatCore, 'get' | 'composerPreferences'>;
@@ -97,6 +98,7 @@ export function agentStartHost(deps: AgentStartHostDeps): AgentStartHost {
     };
     return {
         installedAgents: () => deps.installed(),
+        provider: (kind) => deps.providers.get(kind),
         holdPrompt: (projectId, nodeId, prompt, brief) => deps.prompts.put(projectId, nodeId, prompt, { brief }),
         startAgent: (start) => deps.enqueue(start.projectId, start.nodeId, startAgentWork(start, modes)),
         modeOf: nodeMode(modes),

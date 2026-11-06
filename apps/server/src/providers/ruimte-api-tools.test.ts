@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { BackendEvent, BackendLaunch } from '@adecore/agents/chat';
-import { MCP_REQUEST_TIMEOUT_S } from '../ruimte-mcp.ts';
+import { MCP_REQUEST_TIMEOUT_S, withRuimteMcp } from '../ruimte-mcp.ts';
 import { RUIMTE_MCP_LIMITS, type ApiMcpLimits, type ApiMcpServer, type ConnectApiMcp } from './api-mcp.ts';
 import { ruimteApiTools } from './ruimte-api-tools.ts';
 
@@ -9,7 +9,8 @@ const ENV = { RUIMTE_MCP_URL: 'http://127.0.0.1:4210/mcp', RUIMTE_CONTEXT_TOKEN:
 function harness(env: Record<string, string>, connectMcp: ConnectApiMcp) {
     const events: BackendEvent[] = [];
 
-    const launch: BackendLaunch = {
+    // The session applies the provider's launch additions before it makes a backend, which is how the server gets on the launch.
+    const launch: BackendLaunch = withRuimteMcp({
         command: ['nanogpt'],
         cwd: '/work',
         env,
@@ -20,7 +21,7 @@ function harness(env: Record<string, string>, connectMcp: ConnectApiMcp) {
         generation: 1,
         instructions: null,
         resumeNote: null
-    };
+    });
 
     return { tools: ruimteApiTools(launch, { onEvent: (event) => events.push(event) }, connectMcp), events };
 }

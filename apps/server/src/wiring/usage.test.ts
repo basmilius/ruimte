@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ProviderAccountsService, ProviderRegistry } from '@adecore/agents/providers';
 import { UsageService, usageRootsOf, type LimitAccounts } from '@adecore/agents/usage';
-import { grokProvider } from '../providers/acp-providers.ts';
+import { createGrokProvider } from '../providers/acp-providers.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { withoutNanoGptUntilKeyed } from './usage.ts';
 
@@ -38,7 +38,7 @@ describe('usage of Grok', () => {
         );
         const accounts = new ProviderAccountsService({
             home: join(root, 'ruimte'),
-            providers: new ProviderRegistry({ providers: [grokProvider], detect: async () => ({ installed: true, version: null }) }),
+            providers: new ProviderRegistry({ providers: [createGrokProvider()], detect: async () => ({ installed: true, version: null }) }),
             env: { HOME: root, GROK_HOME: grokHome },
             secrets: null,
             folderExists: () => true

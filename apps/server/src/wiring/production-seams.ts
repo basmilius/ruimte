@@ -12,8 +12,6 @@ import { readMachineModel } from '../machine-model.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { repositoryOf } from '../provenance/file-versions.ts';
 import { RUIMTE_ACCOUNTS_HOST } from '../providers/accounts-host.ts';
-import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
-import { probeCodexNoDaemon } from '../providers/launch.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
 import { childLauncher, renderCommand } from '../visuals/renderer.ts';
 import { openAiLive } from '../voice/openai-live.ts';
@@ -30,9 +28,8 @@ export function productionSeams(runtime: DaemonRuntime): DaemonSeams {
         env: process.env,
         pty: new BunPtyAdapter(),
         chatSpawn: spawnChatProcess,
-        providers: { detect: null, added: [] },
-        accounts: ({ home, providers, install }) =>
-            new ProviderAccountsService({ home, host: RUIMTE_ACCOUNTS_HOST, client: RUIMTE_CODEX_CLIENT, providers, install }),
+        providers: { detect: null, added: [], codexHelp: null },
+        accounts: ({ home, providers, install }) => new ProviderAccountsService({ home, host: RUIMTE_ACCOUNTS_HOST, providers, install }),
         git: {
             worktrees: ({ home, agents, now, checkoutRoot, foreign }) => new Worktrees(home, agents, now, checkoutRoot, foreign),
             checkpoints: (home, machineHome) => new Checkpoints(home, machineHome),
@@ -46,7 +43,7 @@ export function productionSeams(runtime: DaemonRuntime): DaemonSeams {
         language: { run: runCommand, findProgram: toolchainCandidates },
         visualLauncher: childLauncher(renderCommand(runtime.compiled, process.execPath, process.execArgv, runtime.sourceDir)),
         voiceLive: openAiLive(),
-        machine: { model: readMachineModel, codexProbe: () => probeCodexNoDaemon(), sessionFs: nodeSessionFs },
+        machine: { model: readMachineModel, sessionFs: nodeSessionFs },
         remote: { connections: (real) => real, reconnect: (real) => real },
         peerNotify: (real) => real,
         observers: {

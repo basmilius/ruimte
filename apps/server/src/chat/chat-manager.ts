@@ -4,7 +4,7 @@ import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ChatCore, type ChatCoreOptions, claudeProjectSlug, limitedTurn, type VisualStore } from '@adecore/agents/chat';
 import type { ChatReferences, ChatSession, PromptNotes, ResumeWords, ChatRecord, ChatRecordExtras } from '@adecore/agents/chat';
-import { cliMcpArgs, storedAccount, narrowerMode, type AccountUnusable } from '@adecore/agents/providers';
+import { storedAccount, narrowerMode, type AccountUnusable } from '@adecore/agents/providers';
 import type {
     AgentKind,
     ChatAttachment,
@@ -34,9 +34,7 @@ import { RUIMTE_UI_FENCE } from '../context/ui-fence.ts';
 import { errorText } from '../error-text.ts';
 import { passedOverNote, type ProjectAccountChooser } from '../projects/project-accounts.ts';
 import { attachedReferences, type Reference } from '../projects/references.ts';
-import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
-import { codexProvider } from '../providers/codex-provider.ts';
-import { CHAT_TOKEN_VARIABLE, MCP_URL_VARIABLE, mcpUrlOf, ruimteCliMcp } from '../ruimte-mcp.ts';
+import { CHAT_TOKEN_VARIABLE, MCP_URL_VARIABLE, mcpUrlOf } from '../ruimte-mcp.ts';
 import { TurnUsage } from '../stats/turn-usage.ts';
 import { countChatStarted } from '../stats/usage-stats.ts';
 import { AgentImages } from './agent-images.ts';
@@ -109,7 +107,7 @@ export interface ChatFacts {
     projectAccount: ProjectAccountChooser;
 }
 
-interface ChatManagerOptions extends Omit<ChatCoreOptions, 'hooks' | 'codexSideCommand'> {
+interface ChatManagerOptions extends Omit<ChatCoreOptions, 'hooks'> {
     // Where an agent reads its linked context, with Ruimte's MCP server beside it.
     contextUrl?: string;
     facts: ChatFacts;
@@ -126,19 +124,6 @@ function chatEnvOf(env: Record<string, string | undefined>): Record<string, stri
         }
     }
     return chat;
-}
-
-/*
- * Codex with Ruimte's MCP server on its line, reading the chat's token from its environment. A command a caller
- * passes (a test's fake CLI) gets the server too. Claude Code gets it in its launch (`claude-provider.ts`).
- */
-function mcpCommands(options: ChatManagerOptions): Pick<ChatCoreOptions, 'codexCommand'> {
-    if (options.contextUrl === undefined) {
-        return {};
-    }
-    const server = ruimteCliMcp(options.contextUrl, CHAT_TOKEN_VARIABLE);
-
-    return { codexCommand: [...(options.codexCommand ?? codexProvider.command), ...cliMcpArgs('codex', server)] };
 }
 
 export const BRIEF_TITLE = 'Instructions from Ruimte';
@@ -284,12 +269,8 @@ export class ChatManager {
         this.agentImages = new AgentImages(options.attachments);
         this.visuals = options.visuals ?? null;
         this.core = new ChatCore({
-            codexClient: RUIMTE_CODEX_CLIENT,
             uiFenceLanguage: RUIMTE_UI_FENCE,
             ...coreOptions,
-            ...mcpCommands(options),
-            // The app-server opened beside a chat runs no turn, so it starts without Ruimte's MCP server, for which it holds no token.
-            codexSideCommand: options.codexCommand ?? options.providers.get('codex').command,
             env: chatEnvOf(options.env ?? process.env),
             hooks: {
                 instructionsFor: (chatId) => this.instructionsFor(chatId),

@@ -11,8 +11,9 @@ import { z } from 'zod';
 import { extractEntries, extractZipFile, readArchive } from '../disk/archive.ts';
 import { downloadFile, type FileDownload } from '../disk/download.ts';
 import { errorText } from '../error-text.ts';
+import { withRuimteMcp } from '../ruimte-mcp.ts';
 import { acpCatalogStore } from './acp-catalog-store.ts';
-import { RUIMTE_ACP_CLIENT, loadingRuimteMcp } from './acp-providers.ts';
+import { RUIMTE_ACP_CLIENT } from './acp-providers.ts';
 import type { AcpRegistry, RegistryDistribution, RegistryEntry } from './acp-registry.ts';
 import { downloadChecked } from './acp-server.ts';
 import { throwOnFailure } from './cli-versions.ts';
@@ -330,22 +331,21 @@ export class RegistryAgents {
     private offer(agent: InstalledAgent): void {
         this.agents.set(agent.id, agent);
         const [command, ...args] = this.launch(agent);
-        const provider = loadingRuimteMcp(
-            createAcpProvider({
-                kind: agent.kind,
-                name: agent.name,
-                command: command!,
-                args,
-                env: agent.env,
-                catalog: agentDefaultCatalog(),
-                model: agentModel,
-                loginHint: `Sign in to ${agent.name} the way its own documentation says, then start the chat again.`,
-                client: RUIMTE_ACP_CLIENT,
-                catalogStore: acpCatalogStore(this.home, agent.kind),
-                // The record says what is installed; starting the agent to ask would run code a person never asked to run.
-                detect: (path) => Promise.resolve({ installed: existsSync(path), version: agent.version })
-            })
-        );
+        const provider = createAcpProvider({
+            kind: agent.kind,
+            name: agent.name,
+            command: command!,
+            args,
+            env: agent.env,
+            catalog: agentDefaultCatalog(),
+            model: agentModel,
+            loginHint: `Sign in to ${agent.name} the way its own documentation says, then start the chat again.`,
+            client: RUIMTE_ACP_CLIENT,
+            launch: withRuimteMcp,
+            catalogStore: acpCatalogStore(this.home, agent.kind),
+            // The record says what is installed; starting the agent to ask would run code a person never asked to run.
+            detect: (path) => Promise.resolve({ installed: existsSync(path), version: agent.version })
+        });
         this.providers.add(provider);
         this.providers.invalidate(agent.kind);
     }

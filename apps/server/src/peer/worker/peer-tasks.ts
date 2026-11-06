@@ -2,7 +2,7 @@ import { stat } from 'node:fs/promises';
 import { CodedError } from '@adecore/agents';
 import { ToolRefusal } from '@adecore/agents/context';
 import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
-import { narrowerMode } from '@adecore/agents/providers';
+import { narrowerMode, type ChatProvider } from '@adecore/agents/providers';
 import { KeyedSerializer } from '@adecore/utils/async';
 import { MAX_OPENED_PER_CALLER } from '@ruimte/actions';
 import {
@@ -36,7 +36,6 @@ import type { DeliverRemoteResultEntry, OutboxStore, OutboxWork } from '../../ou
 import { peerCanvasId, type PeerLinks } from '../../projects/peer-links.ts';
 import type { ProjectStore } from '../../projects/project-store.ts';
 import { DEFAULT_RUNTIME_MODE } from '../../providers/launch.ts';
-import { providerFor } from '../../providers/registry.ts';
 import { peerLane } from '../giver/connect-peer.ts';
 import { idTakenOutside, nodeOf, sameCanvas, stripHidden } from './peer-canvas.ts';
 
@@ -55,6 +54,7 @@ export interface PeerTasksDeps {
     /* Ends the agent and cancels its task, so nobody is woken by a stopped one. */
     stopNode(nodeId: string, reason: string): Promise<void>;
     installed(): Promise<AgentKind[]>;
+    providers: { get(kind: AgentKind): ChatProvider };
     /* Whether a chat or a terminal with this id exists here already. */
     exists(nodeId: string): boolean;
     /* The git of this machine, asked for when a task needs it: it is wired after the outbox that owes these tasks. */
@@ -140,7 +140,7 @@ export class PeerTasks {
         if (payload.branch !== undefined && payload.branch.length > PEER_MAX_BRANCH_LENGTH) {
             throw new CodedError('branch-too-long', `A branch from another machine may be ${PEER_MAX_BRANCH_LENGTH} characters long at most here`);
         }
-        const provider = providerFor(payload.provider);
+        const provider = this.deps.providers.get(payload.provider);
         if (provider.ignoresProjectConfig !== true) {
             throw new CodedError(
                 'peer-provider-unsupported',

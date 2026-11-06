@@ -3,7 +3,7 @@ import { compileUi } from '@adecore/intelligent-ui';
 import type { ContextSource } from '@ruimte/contracts';
 import { NODE_NEW_KINDS } from '../canvas/node-kinds.ts';
 import { ruimteUiSources, type UiSourceHosts } from '../chat/ui-sources.ts';
-import { BUILT_IN_KINDS } from '../providers/kinds.ts';
+import { tableKinds } from '../providers/table.ts';
 import {
     chatPrompt,
     contextChangeNote,
@@ -209,7 +209,7 @@ describe('toolsNote', () => {
         expect(helper).not.toContain('agent_team');
         expect(helper).toContain('With a `task`');
         // Named where the tool is offered, since a prompt asks for a CLI by name and never by flag.
-        for (const cli of BUILT_IN_KINDS) {
+        for (const cli of tableKinds()) {
             expect(TOOLS_NOTE).toContain(cli);
             expect(helper).toContain(cli);
         }

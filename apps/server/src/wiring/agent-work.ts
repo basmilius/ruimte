@@ -165,6 +165,7 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         stopNode: (nodeId, reason) => wiring.endChildren.stopNode(nodeId, reason),
         exists: (nodeId) => agents.chats.get(nodeId) !== undefined || agents.sessions.get(nodeId) !== undefined,
         installed: async () => (await providers.providers.list()).filter((provider) => provider.installed).map((provider) => provider.kind),
+        providers: providers.providers,
         peerBundles: (machineId) => {
             let held = peerStores.get(machineId);
             if (held === undefined) {

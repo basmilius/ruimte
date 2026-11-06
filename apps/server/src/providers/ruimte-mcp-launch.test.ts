@@ -1,11 +1,13 @@
 import { expect, test } from 'bun:test';
-import { claudeProvider } from './claude-provider.ts';
+import { createClaudeProvider } from '@adecore/agents/providers';
+import { withRuimteMcp } from '../ruimte-mcp.ts';
 import { terminalCommand } from './launch.ts';
+import { ProviderRegistry } from './registry.ts';
 
 test("a chat and a terminal let Ruimte's MCP tools through without a prompt", async () => {
     let command: string[] = [];
-    const backend = claudeProvider.createBackend(
-        {
+    const backend = createClaudeProvider().createBackend(
+        withRuimteMcp({
             command: ['claude'],
             cwd: '/',
             env: { RUIMTE_MCP_URL: 'http://127.0.0.1:4210/mcp', RUIMTE_CONTEXT_TOKEN: 'secret-token' },
@@ -25,13 +27,15 @@ test("a chat and a terminal let Ruimte's MCP tools through without a prompt", as
                     kill: () => undefined
                 };
             }
-        },
+        }),
         { onEvent: () => undefined }
     );
     await backend.start();
     expect(command).toContain('--allowedTools=mcp__ruimte__*');
     expect(command.join(' ')).toContain('"Authorization":"Bearer ${RUIMTE_CONTEXT_TOKEN}"');
     expect(command.join(' ')).not.toContain('secret-token');
-    expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' })).toBe("claude '--allowedTools=mcp__ruimte' --permission-mode default");
+    expect(terminalCommand(new ProviderRegistry(), { kind: 'claude', runtimeMode: 'supervised' })).toBe(
+        "claude '--allowedTools=mcp__ruimte' --permission-mode default"
+    );
     await backend.dispose();
 });

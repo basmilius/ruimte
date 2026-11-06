@@ -1,10 +1,9 @@
 import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { AgentLineageStore } from '@adecore/agents/coordination';
+import type { ChatProvider } from '@adecore/agents/providers';
 import { isWithin } from '@adecore/utils/path';
-import type { AgentKind } from '@ruimte/contracts';
 import { openerOf } from '../opener.ts';
-import { providerFor } from '../providers/registry.ts';
 
 interface UntrustedFoldersDeps {
     lineage: Pick<AgentLineageStore, 'peerOf' | 'startedBy' | 'forkedFrom'>;
@@ -75,11 +74,11 @@ export class UntrustedFolders {
 }
 
 /* What keeps a provider from being started in an untrusted place, or null when it can be. */
-export function untrustedStartProblem(provider: AgentKind, terminal: boolean): string | null {
+export function untrustedStartProblem(provider: ChatProvider, terminal: boolean): string | null {
     if (terminal) {
         return 'A terminal agent cannot run there: it cannot be kept from loading the settings, hooks and tools of files that came from another machine';
     }
-    const { name, ignoresProjectConfig } = providerFor(provider);
+    const { name, ignoresProjectConfig } = provider;
     return ignoresProjectConfig === true
         ? null
         : `${name} cannot run there: it cannot be kept from loading the settings, hooks and tools of files that came from another machine. Use a Claude agent instead`;

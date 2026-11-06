@@ -35,6 +35,7 @@ import { projectOverlays } from '../projects/overlays.ts';
 import { documentOnDisk, projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { resolveReference, resolveReferences, type Reference } from '../projects/references.ts';
+import { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionEvent } from '../wire.ts';
 import { composeHost, type HostSource } from '../wiring/canvas-host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
@@ -68,6 +69,8 @@ export function withRepeatedId(current: ProjectContent): ProjectContent {
         )
     };
 }
+
+const FIXTURE_PROVIDERS = new ProviderRegistry();
 
 export const TOKENS: Record<string, string> = { term: 'term-1', chat: 'chat-1', stray: 'nobody', later: 'later-1' };
 
@@ -508,6 +511,7 @@ const PARTS: readonly HostSource<CanvasFixture>[] = [
                 terminalModePreference: () => fixture.knobs.terminalPreference,
                 preferredSelection: (kind) => fixture.knobs.preferredSelections[kind],
                 installedAgents: async () => fixture.knobs.installed,
+                provider: (kind) => FIXTURE_PROVIDERS.get(kind),
                 holdPrompt: async (projectId, nodeId, prompt, brief) => {
                     fixture.held.push({ projectId, nodeId, prompt, ...(brief === undefined ? {} : { brief }) });
                 },

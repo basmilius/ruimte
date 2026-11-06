@@ -16,9 +16,9 @@ import {
     type ProjectNode,
     type RuntimeMode
 } from '@ruimte/contracts';
-import { agentNode, groupLines, grownGroup, inheritedAccount, nameOf, readsOf, requireInstalled, startPrompt, terminalMode } from '../canvas/agents.ts';
+import { agentNode, groupLines, grownGroup, inheritedAccount, readsOf, requireInstalled, startPrompt, terminalMode } from '../canvas/agents.ts';
 import { depthForOpening } from '../canvas/depth.ts';
-import { NEW_NODE, OPENING_OFF_CANVAS, canvasFor, canvasLines, field, newNode, type ProjectHost, type AgentCall } from '../canvas/host.ts';
+import { NEW_NODE, OPENING_OFF_CANVAS, canvasFor, canvasLines, field, newNode, type AgentStartHost, type ProjectHost, type AgentCall } from '../canvas/host.ts';
 import { modeForOpening } from '../canvas/mode.ts';
 import { EFFORT_REFUSALS, selectionForOpening } from '../canvas/model.ts';
 import { MAX_CANVAS_NODES, canvasFull, newId, nodeLines, nodesNamed } from '../canvas/nodes.ts';
@@ -36,14 +36,13 @@ import { errorText } from '../error-text.ts';
 import type { WorktreeWant } from '../git/worktree-host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { untrustedStartProblem } from '../projects/untrusted.ts';
-import { providerFor } from '../providers/registry.ts';
 import { agentCallOf, type ServerActionContext } from './context.ts';
 import { operationIdOf } from './operation-actions.ts';
 
 type TeamRole = { provider: AgentKind; terminal: boolean };
 
-function kindOf(role: TeamRole): 'chat' | 'terminal' {
-    return !role.terminal && providerFor(role.provider).capabilities.chat ? 'chat' : 'terminal';
+function kindOf(starts: Pick<AgentStartHost, 'provider'>, role: TeamRole): 'chat' | 'terminal' {
+    return !role.terminal && starts.provider(role.provider).capabilities.chat ? 'chat' : 'terminal';
 }
 
 /*
@@ -64,7 +63,7 @@ function refuseUntrustedStart(
         return;
     }
     for (const agent of agents) {
-        const problem = untrustedStartProblem(agent.provider, !agent.chat);
+        const problem = untrustedStartProblem(host.starts.provider(agent.provider), !agent.chat);
         if (problem !== null) {
             throw new ToolRefusal('untrusted-folder', problem);
         }
@@ -139,13 +138,15 @@ function boundedOpener(actor: ActionActor): BoundedOpener | null {
  * The refusals left of what a bounded opener may start: an AI Chat, never a terminal, and no wider than supervised,
  * which is also the ceiling a caller that is no node gets. Worded for a voice or an extension, not for a command line.
  */
-function refuseBoundedStart(opener: BoundedOpener, input: StartInput): void {
+function refuseBoundedStart(starts: Pick<AgentStartHost, 'provider'>, opener: BoundedOpener, input: StartInput): void {
     const { sentence, inline } = BOUNDED_NAMES[opener];
     if (input.terminal) {
         throw new ToolRefusal('voice-chat-only', `${sentence} starts an AI Chat, never a terminal`);
     }
-    if (!providerFor(input.provider).capabilities.chat) {
-        throw new ToolRefusal('voice-chat-only', `${nameOf(input.provider)} has no AI Chat, and ${inline} starts only AI Chats`);
+    const provider = starts.provider(input.provider);
+
+    if (!provider.capabilities.chat) {
+        throw new ToolRefusal('voice-chat-only', `${provider.name} has no AI Chat, and ${inline} starts only AI Chats`);
     }
     if (input.mode != null && input.mode !== BOUNDED_CEILING) {
         throw new ToolRefusal('mode-above-voice', `A chat ${inline} starts runs supervised at most, never ${input.mode}`);
@@ -257,7 +258,7 @@ const startAgentNow: StartHandler = async (input, call) => {
     const boundedBy = boundedOpener(call.actor);
     const bounded = boundedBy !== null;
     if (boundedBy !== null) {
-        refuseBoundedStart(boundedBy, input);
+        refuseBoundedStart(host.starts, boundedBy, input);
     }
     await refuseCrossingStart(context, caller.caller, { viewId: input.viewId, machine: input.machine, task: input.task != null });
     const readIds = readsOf(input.reads ?? null);
@@ -281,8 +282,9 @@ const startAgentNow: StartHandler = async (input, call) => {
     const depth = depthForOpening(caller, 'agent_start', 1);
     // A bounded opener is no node, so the daemon knows no mode of its own; what it starts is held to supervised, whatever the host says.
     const ceiling = bounded ? BOUNDED_CEILING : modeForOpening(caller, input.mode ?? undefined);
-    const chat = !input.terminal && providerFor(kind).capabilities.chat;
-    const selection = selectionForOpening(kind, chat, input.model ?? undefined, input.effort ?? undefined, host.starts.preferredSelection(kind));
+    const provider = host.starts.provider(kind);
+    const chat = !input.terminal && provider.capabilities.chat;
+    const selection = selectionForOpening(provider, chat, input.model ?? undefined, input.effort ?? undefined, host.starts.preferredSelection(kind));
     if (input.branch != null && !input.worktree) {
         throw new ToolRefusal('branch-needs-worktree', 'branch names the branch of a worktree; add worktree');
     }
@@ -306,7 +308,7 @@ const startAgentNow: StartHandler = async (input, call) => {
     }
     // An agent on another machine runs that machine's CLI, which it checks itself when the task starts.
     if (remote === null) {
-        requireInstalled(await host.starts.installedAgents(), kind);
+        requireInstalled(host.starts, await host.starts.installedAgents(), kind);
     }
 
     // Everything that touches the disk or git runs before the lock, so a slow repository holds up no save.
@@ -402,6 +404,7 @@ const startAgentNow: StartHandler = async (input, call) => {
                 id,
                 chat,
                 kind,
+                kindName: provider.name,
                 title: input.title ?? input.task ?? undefined,
                 rect,
                 cwd,
@@ -584,7 +587,7 @@ export const startActions: ActionHandlers<ServerActionContext> = {
                 (project) => project.name ?? null,
                 () => null
             );
-            ticket.bind(result.output.nodeId, { chat: input.title ?? nameOf(input.provider), project: name ?? projectId });
+            ticket.bind(result.output.nodeId, { chat: input.title ?? call.context.host.starts.provider(input.provider).name, project: name ?? projectId });
         }
         return result;
     },
@@ -601,8 +604,8 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
     const selections = roles.map((role, index): ModelSelection | undefined => {
         try {
             return selectionForOpening(
-                role.provider,
-                kindOf(role) === 'chat',
+                host.starts.provider(role.provider),
+                kindOf(host.starts, role) === 'chat',
                 role.model ?? undefined,
                 role.effort ?? undefined,
                 host.starts.preferredSelection(role.provider)
@@ -649,7 +652,7 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
 
     if (remote === null) {
         const installed = await host.starts.installedAgents();
-        roles.forEach((role, index) => requireInstalled(installed, role.provider, `role ${index} (${role.provider})`));
+        roles.forEach((role, index) => requireInstalled(host.starts, installed, role.provider, `role ${index} (${role.provider})`));
     }
 
     // Everything that touches the disk or git runs before the lock, so a slow repository holds up no save.
@@ -658,7 +661,7 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
         host,
         caller.caller,
         cwd,
-        roles.map((role) => ({ provider: role.provider, chat: kindOf(role) === 'chat' })),
+        roles.map((role) => ({ provider: role.provider, chat: kindOf(host.starts, role) === 'chat' })),
         context.origin === undefined ? undefined : place.folder
     );
     const worktrees = input.worktree
@@ -667,7 +670,7 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
     const source = worktrees?.source;
     const roleCwds = roles.map((_role, index) => worktrees?.paths[index] ?? cwd);
     const modes: Array<RuntimeMode | undefined> = roles.map((role) =>
-        kindOf(role) === 'chat' ? (input.mode ?? undefined) : terminalMode(caller, input.mode ?? undefined, ceiling)
+        kindOf(host.starts, role) === 'chat' ? (input.mode ?? undefined) : terminalMode(caller, input.mode ?? undefined, ceiling)
     );
     const accounts = roles.map((role) => inheritedAccount(caller, role.provider, place.projectId));
 
@@ -685,7 +688,7 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
             }
 
             const read = canvas ? nodesNamed(content, canvas, readIds, { cannot: 'no line can run from it into the agents this opens' }) : [];
-            const layout = placeTeam(roles.map((role) => host.machine.nodeSize(kindOf(role))));
+            const layout = placeTeam(roles.map((role) => host.machine.nodeSize(kindOf(host.starts, role))));
             const self = canvas?.nodes.find((node) => node.id === caller.caller) ?? null;
             const origin = canvas ? placeFree(canvas.nodes, layout.frame, self) : { x: 0, y: 0, ...layout.frame };
 
@@ -699,7 +702,7 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
                             group: canvas ? { nodeId: NEW_NODE, title: input.label, viewId: canvas.id } : null,
                             agents: roles.map((role, index) => ({
                                 nodeId: placeholders[index]!,
-                                kind: kindOf(role),
+                                kind: kindOf(host.starts, role),
                                 title: role.title,
                                 provider: role.provider,
                                 edge: self && remote === null ? { edgeId: null, from: self.id, to: placeholders[index]! } : null,
@@ -729,7 +732,7 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
             };
 
             for (const [index, role] of roles.entries()) {
-                const chat = kindOf(role) === 'chat';
+                const chat = kindOf(host.starts, role) === 'chat';
                 const rect = layout.rects[index]!;
                 const id = mint(chat ? 'chat' : 'terminal');
                 nodes.push(
@@ -737,6 +740,7 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
                         id,
                         chat,
                         kind: role.provider,
+                        kindName: host.starts.provider(role.provider).name,
                         title: role.title,
                         rect: { ...rect, x: origin.x + rect.x, y: origin.y + rect.y },
                         cwd: roleCwds[index],

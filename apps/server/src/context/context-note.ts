@@ -2,7 +2,7 @@ import { uiSessionNote } from '@adecore/intelligent-ui/text';
 import type { ContextSource } from '@ruimte/contracts';
 import { MAX_AGENT_DEPTH, MAX_TEAM_DEPTH } from '../canvas/depth.ts';
 import { NODE_NEW_KINDS } from '../canvas/node-kinds.ts';
-import { BUILT_IN_KINDS } from '../providers/kinds.ts';
+import { tableKinds } from '../providers/table.ts';
 import { RUIMTE_UI_FENCE } from './ui-fence.ts';
 import { uiSourceExamples } from './ui-source-args.ts';
 
@@ -12,7 +12,7 @@ import { uiSourceExamples } from './ui-source-args.ts';
  */
 
 /* Asked for a CLI by name, a model that has not read the names reports that this machine has none. */
-const CLI_NAMES = BUILT_IN_KINDS.join(', ');
+const CLI_NAMES = tableKinds().join(', ');
 
 /* Told only that it places "nodes", a model asked for a note writes a file and the canvas stays empty. */
 const NODE_KINDS = NODE_NEW_KINDS.join(', ');

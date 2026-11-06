@@ -83,8 +83,6 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     provide('actions', createServerActions(AGENT_FEATURES));
     const extensions = provide('extensions', wireExtensions(home, later));
 
-    // Runs while the stores load; it never rejects, and the managers await it before any launch.
-    const codexProbe = seams.machine.codexProbe();
     const machineModel = seams.machine.model();
     const machine = provide('machine', await wireMachine(config));
     const { identity } = machine;
@@ -92,10 +90,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     const computer = provide('computer', createComputer(runtime, stores.computerStore, stores.lifecycle, later));
     const stats = provide('stats', await wireUsageStats(home, identity, machine.auth, launcher));
     const providers = provide('providers', await wireProviders(config, identity, () => computer.start(), stats.flush, seams));
-    const agents = provide(
-        'agents',
-        await wireAgents({ runtime, identity, stores, providers, computer, machineHome: machine.machineHome, codexProbe, seams, later })
-    );
+    const agents = provide('agents', await wireAgents({ runtime, identity, stores, providers, computer, machineHome: machine.machineHome, seams, later }));
     const projects = provide('projects', await wireProjects({ home, machineId: identity.id, machineHome: machine.machineHome, stores, agents, seams, later }));
     const templates = provide('templates', wireTemplates(home, projects));
     const artifacts = provide(
@@ -337,6 +332,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
                 machine,
                 stores,
                 agents,
+                providers: providers.providers,
                 projects,
                 devices,
                 processes,

@@ -6,6 +6,7 @@ import { AGENT_KINDS, agentKindField, chatKinds } from '../canvas/agents.ts';
 import { MAX_TITLE_LENGTH, field, lengthOf, titleField } from '../canvas/host.ts';
 import { effortFlag, modelFlag, modelLines } from '../canvas/model.ts';
 import { idList } from '../canvas/nodes.ts';
+import { shippedProviders } from '../providers/table.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
 import { nextLine } from './task-tools.ts';
 import { defineToolkit, PROJECT_INPUT, VIEW_INPUT, type GuideTopic } from './tool.ts';
@@ -68,7 +69,9 @@ const ROLES_LINES: readonly string[] = [
     `roles\tterminal\toptional\ttrue opens a terminal node instead of a chat node; a CLI without a chat backend is a terminal anyway (only ${chatKinds().join(', ')} have one)`,
     "roles\tmodel\toptional\tThe model id for a chat role, with that model's default options; omitted uses the composer preference. Refused for terminals and unknown models",
     "roles\teffort\toptional\tThe reasoning effort for a chat role, one its model offers; omitted keeps the person's last pick when the model offers it, else the model's default. Refused for terminals",
-    ...chatKinds().flatMap(modelLines),
+    ...shippedProviders()
+        .filter((provider) => provider.capabilities.chat)
+        .flatMap(modelLines),
     `roles\tcount\tbetween 1 and ${MAX_ROLES}`
 ];
 
@@ -80,7 +83,12 @@ const GUIDES: readonly GuideTopic[] = [
             'json\tA prompt is a JSON string, so a line break in it is \\n of JSON itself and nothing is escaped twice'
         ]
     },
-    { name: 'models', lines: chatKinds().flatMap(modelLines) }
+    {
+        name: 'models',
+        lines: shippedProviders()
+            .filter((provider) => provider.capabilities.chat)
+            .flatMap(modelLines)
+    }
 ];
 
 /*

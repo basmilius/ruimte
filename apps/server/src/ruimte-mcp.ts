@@ -1,5 +1,5 @@
-import type { BackendLaunch } from '@adecore/agents/chat';
-import { cliMcpHeaders, type CliMcpServer } from '@adecore/agents/providers';
+import type { ChatMcpServer } from '@adecore/agents/chat';
+import type { CliMcpServer, LaunchDecorator } from '@adecore/agents/providers';
 
 /*
  * How an agent Ruimte starts reaches the daemon's MCP server: one HTTP server named `ruimte` on the
@@ -36,21 +36,18 @@ export function ruimteCliMcp(contextUrl: string, tokenVariable: string): CliMcpS
 }
 
 /*
- * A chat's launch with the server in it, every tool allowed. An ACP agent loads it from its session request and
- * expands no variable, so its header carries the chat's token itself, over the agent's stdio and never on its line.
- * Claude Code gets its servers on its line and expands `${VAR}` there, so it gets the `variable` header instead.
- * A chat the daemon gave no token starts without it.
+ * The one addition Ruimte makes to the launch of a chat, on every provider: its server with every tool allowed and
+ * the chat's token named by variable, which each backend hands to its CLI in the form the CLI reads. A chat the
+ * daemon gave no token starts without it.
  */
-export function withRuimteMcp(launch: BackendLaunch, token: 'inline' | 'variable' = 'inline'): BackendLaunch {
+export const withRuimteMcp: LaunchDecorator = (launch) => {
     const url = launch.env[MCP_URL_VARIABLE];
-    const value = launch.env[CHAT_TOKEN_VARIABLE];
 
-    if (url === undefined || value === undefined) {
+    if (url === undefined || launch.env[CHAT_TOKEN_VARIABLE] === undefined) {
         return launch;
     }
 
-    const headers = token === 'inline' ? { Authorization: `Bearer ${value}` } : cliMcpHeaders(CHAT_TOKEN_VARIABLE);
-    const server = { name: MCP_SERVER, url, headers, allowTools: true };
+    const server: ChatMcpServer = { name: MCP_SERVER, url, tokenVariable: CHAT_TOKEN_VARIABLE, allowTools: true };
 
     return { ...launch, mcpServers: [...(launch.mcpServers ?? []), server] };
-}
+};
