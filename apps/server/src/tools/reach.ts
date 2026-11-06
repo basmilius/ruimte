@@ -18,12 +18,28 @@ export interface ReachHost {
     enabled(): boolean;
     /* Projects outside Recent, including those in the background; Chats is left out. */
     open(): Promise<ReachableProject[]>;
+    /* Projects under Recent, which only `project_open` takes; Chats is left out. */
+    recent(): Promise<ReachableProject[]>;
+    /* Takes a project back out of Recent. No client holds it for this, so no window shows it and no launch starts. */
+    reopen(projectId: string): Promise<void>;
+    /* Tells the clients with `fromProjectId` on screen; false when nobody had it there. */
+    ask(kind: 'activate' | 'askClose', fromProjectId: string, projectId: string, by: string): boolean;
 }
 
-export function projectReach(projects: Pick<ProjectStore, 'list'>, enabled: () => boolean): ReachHost {
+export function projectReach(projects: Pick<ProjectStore, 'list' | 'openProject' | 'askAboutProject'>, enabled: () => boolean): ReachHost {
+    const listed = async (recent: boolean): Promise<ReachableProject[]> =>
+        (await projects.list())
+            .filter((project) => (project.closedAt != null) === recent && project.scratch !== true)
+            .map((project) => ({ projectId: project.projectId, name: project.name, folder: project.folder }));
+
     return {
         enabled,
-        open: async () => (await projects.list()).filter((project) => project.closedAt == null && project.scratch !== true)
+        open: () => listed(false),
+        recent: () => listed(true),
+        reopen: async (projectId) => {
+            await projects.openProject({ projectId });
+        },
+        ask: (kind, fromProjectId, projectId, by) => projects.askAboutProject(kind, fromProjectId, projectId, by)
     };
 }
 
@@ -48,8 +64,29 @@ export async function reachableProjects(host: Pick<CanvasHost, 'reach'>, ownProj
  * of the caller's, since the caller stands in another project. Checked again at every call.
  */
 export async function reachedPlace(host: Pick<CanvasHost, 'reach' | 'projects'>, caller: string, projectId: string): Promise<IndexedPlace> {
+    const { target } = await reachedProject(host, caller, projectId, 'project', false);
+
+    return { projectId: target.projectId, folder: target.folder, canvasId: null };
+}
+
+export function recentLines(projects: readonly ReachableProject[]): string[] {
+    return projects.map((project) => `recent\t${project.projectId}\t${field(project.name)}`);
+}
+
+/*
+ * Another project of this machine that `name` (the field `project`, or `project_id` of the project
+ * tools) names, behind the same switch and never the caller's own or Chats. Only `project_open` takes
+ * one under Recent (`withRecent`), so `recent` says which it is. Checked again at every call.
+ */
+export async function reachedProject(
+    host: Pick<CanvasHost, 'reach' | 'projects'>,
+    caller: string,
+    projectId: string,
+    name: string,
+    withRecent: boolean
+): Promise<{ ownProjectId: string; target: ReachableProject; recent: boolean }> {
     if (host.reach?.enabled() !== true) {
-        throw new ToolRefusal('projects-not-reachable', 'Agents on this machine reach only their own project; project needs the switch a person turns on', [
+        throw new ToolRefusal('projects-not-reachable', `Agents on this machine reach only their own project; ${name} needs the switch a person turns on`, [
             SETTING_LINE
         ]);
     }
@@ -57,19 +94,27 @@ export async function reachedPlace(host: Pick<CanvasHost, 'reach' | 'projects'>,
     if (own === null) {
         throw new ToolRefusal('not-in-project', 'This session is not a node or a view of any project on this machine');
     }
-    const open = await host.reach.open();
-    const others = open.filter((project) => project.projectId !== own.projectId);
+    const others = (await host.reach.open()).filter((project) => project.projectId !== own.projectId);
+    const recent = withRecent ? await host.reach.recent() : [];
+    const accepted = (): string[] => [...reachableLines(others), ...recentLines(recent)];
     if (projectId === own.projectId) {
-        throw new ToolRefusal('own-project', `${projectId} is your own project; leave project out to work in it`, reachableLines(others));
+        const instead = name === 'project' ? 'leave project out to work in it' : `${name} names another one`;
+        throw new ToolRefusal('own-project', `${projectId} is your own project; ${instead}`, accepted());
     }
-    const target = others.find((project) => project.projectId === projectId);
-    if (target === undefined) {
-        throw new ToolRefusal(
-            'project-not-open',
-            `${projectId} is no project open on this machine; open it from Recent to make it reachable`,
-            reachableLines(others)
-        );
+    const open = others.find((project) => project.projectId === projectId);
+    if (open !== undefined) {
+        return { ownProjectId: own.projectId, target: open, recent: false };
+    }
+    const closed = recent.find((project) => project.projectId === projectId);
+    if (closed !== undefined) {
+        return { ownProjectId: own.projectId, target: closed, recent: true };
     }
 
-    return { projectId: target.projectId, folder: target.folder, canvasId: null };
+    throw new ToolRefusal(
+        'project-not-open',
+        withRecent
+            ? `${projectId} is no project of this machine; project_list lists them`
+            : `${projectId} is no project open on this machine; project_open takes one back out of Recent`,
+        accepted()
+    );
 }

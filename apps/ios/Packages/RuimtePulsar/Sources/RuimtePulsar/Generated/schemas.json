@@ -85618,6 +85618,52 @@
       "by"
     ]
   },
+  "event.project.activate": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "fromProjectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "by": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "fromProjectId",
+      "by"
+    ]
+  },
+  "event.project.askClose": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "fromProjectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "by": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "fromProjectId",
+      "by"
+    ]
+  },
   "event.project.summary": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

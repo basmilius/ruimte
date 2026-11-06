@@ -6,6 +6,7 @@ import { ManualClock } from '@adecore/agents/testing';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import type { CanvasHost } from '../tools/host.ts';
+import { projectReach } from '../tools/reach.ts';
 import { failTasksOfClosedProject } from './closed-project.ts';
 import { bootTestDaemon, invokeTool, type TestDaemon } from './test-daemon.ts';
 
@@ -79,7 +80,7 @@ function reaching(booted: TestDaemon): { host: CanvasHost } {
         host: {
             ...booted.host,
             reach: {
-                enabled: () => true,
+                ...projectReach(store, () => true),
                 open: async () =>
                     [
                         { projectId: ownId, name: 'repo', folder: join(root, 'repo') },

@@ -16,6 +16,7 @@ import { initI18n } from '@/i18n';
 import { startOnboarding } from '@/onboarding/open';
 import { startPlanPanelWatch } from '@/plan/plan-panel-watch';
 import { startProcessWarnings } from '@/processes/watch';
+import { startAgentProjectWatch } from '@/project/agent-project-watch';
 import { startFileReadPreparation } from '@/project/file-read-preparation';
 import { startProjectList } from '@/project/list';
 import { bootWindow } from '@/project/open';
@@ -109,6 +110,7 @@ startWindowTabs();
 /* After the cached lists are in, so the switch screen can name the project it is opening. */
 void bootWindow();
 startShowViewWatch();
+startAgentProjectWatch();
 startPageHolds();
 syncAnimations(['status-pulse']);
 startKeepAwake();

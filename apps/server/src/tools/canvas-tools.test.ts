@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { withViewAsNode, type ProjectCanvasView } from '@ruimte/contracts';
+import type { SessionEvent } from '../sessions/manager.ts';
 import {
     canvasFixture,
     root,
@@ -510,7 +511,7 @@ describe('reaching another open project', () => {
 
         await store.closeProject(otherId, 'client-1');
 
-        expect((await invoke('project_list', {}, 'chat', through)).lines).toEqual([]);
+        expect((await invoke('project_list', {}, 'chat', through)).lines).toEqual([`recent\t${otherId}\tother`]);
         expect((await invoke('view_list', { project: otherId }, 'chat', through)).lines[0]).toStartWith('refused\tproject-not-open\t');
 
         await store.openProject({ projectId: otherId });
@@ -541,6 +542,60 @@ describe('reaching another open project', () => {
         ]);
         await store.closeProject(otherId, 'client-1');
         expect((await invoke('view_list', { project: otherId }, 'term', reaching())).lines[0]).toStartWith('refused\tproject-not-open\t');
+    });
+
+    test('project open takes a project back out of Recent without anyone holding it, and only behind the switch', async () => {
+        await store.closeProject(otherId, 'client-1');
+        reachOn = false;
+
+        expect((await invoke('project_open', { project_id: otherId }, 'chat', reaching())).lines[0]).toStartWith('refused\tprojects-not-reachable\t');
+        expect(await store.isClosed(otherId)).toBe(true);
+
+        reachOn = true;
+
+        expect((await invoke('project_open', { project_id: projectId }, 'chat', reaching())).lines).toEqual([
+            `refused\town-project\t${projectId} is your own project; project_id names another one`,
+            `recent\t${otherId}\tother`
+        ]);
+        expect((await invoke('project_open', { project_id: otherId }, 'chat', reaching())).lines).toEqual([`project\t${otherId}\tother\topened`]);
+        expect(await store.isClosed(otherId)).toBe(false);
+        expect(store.holdersOf(otherId)).toEqual([]);
+        expect((await invoke('project_list', {}, 'chat', reaching())).lines).toEqual([`project\t${otherId}\tother`]);
+        expect((await invoke('project_open', { project_id: otherId }, 'chat', reaching())).lines).toEqual([`project\t${otherId}\tother\talready open`]);
+    });
+
+    test('project activate and project close only ask the clients with the caller project on screen', async () => {
+        const asked: SessionEvent[] = [];
+        store.subscribe('client-2', (event) => asked.push(event));
+
+        expect((await invoke('project_activate', { project_id: otherId }, 'chat', reaching())).lines).toEqual([
+            `showing\t${otherId}\tother`,
+            'sent\tno\tNobody has your project on screen right now, so nothing was shown'
+        ]);
+
+        store.hold('client-2', projectId, { startsLaunches: false });
+
+        expect((await invoke('project_activate', { project_id: otherId }, 'chat', reaching())).lines[1]).toStartWith('sent\tyes\t');
+        expect((await invoke('project_close', { project_id: otherId }, 'chat', reaching())).lines).toEqual([
+            `asked\t${otherId}\tother`,
+            'sent\tyes\tIt closes only once a person confirms; project_list shows whether it did'
+        ]);
+        expect(asked).toEqual([
+            { event: 'project.activate', payload: { projectId: otherId, fromProjectId: projectId, by: 'chat-1' } },
+            { event: 'project.askClose', payload: { projectId: otherId, fromProjectId: projectId, by: 'chat-1' } }
+        ]);
+        expect(await store.isClosed(otherId)).toBe(false);
+    });
+
+    test('project activate and project close refuse a project under Recent and the caller own project', async () => {
+        await store.closeProject(otherId, 'client-1');
+
+        for (const tool of ['project_activate', 'project_close']) {
+            expect((await invoke(tool, { project_id: otherId }, 'chat', reaching())).lines).toEqual([
+                `refused\tproject-not-open\t${otherId} is no project open on this machine; project_open takes one back out of Recent`
+            ]);
+            expect((await invoke(tool, { project_id: projectId }, 'chat', reaching())).lines[0]).toStartWith('refused\town-project\t');
+        }
     });
 
     test('a tool that does not cross refuses project as a field it does not take, before it does anything', async () => {

@@ -486,6 +486,8 @@
     "direct.signaled",
     "project.changed",
     "project.showView",
+    "project.activate",
+    "project.askClose",
     "project.summary",
     "drawing.changed",
     "diagram.changed",

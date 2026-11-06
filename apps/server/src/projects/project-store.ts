@@ -46,7 +46,7 @@ import { isDirectory } from '../fs/browse.ts';
 import { MachineHome } from '../fs/machine-home.ts';
 import { PeerLinks, withHiddenCanvases } from '../peering/links.ts';
 import { RemoteStore, idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines } from '../remote/remote-store.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { moveDesignFolders, settleDesignFolders, takenDesignFolders, type DesignAtWork, type DesignSides } from './design-folders.ts';
 import { folderToOpen } from './folder-to-open.ts';
 import { splitLegacy, type LoadedFiles, type TrackedProbe } from './legacy-split.ts';
@@ -942,10 +942,23 @@ export class ProjectStore {
      * nobody was watching, which is what the tool reports back rather than failing over.
      */
     showView(projectId: string, viewId: string, by: string): boolean {
+        return this.tellHolders(projectId, { event: 'project.showView', payload: { projectId, viewId, by } });
+    }
+
+    /*
+     * An agent of `fromProjectId` asks the clients that have its project on screen to bring another
+     * project to the front, or to ask their person to close it. Neither moves anything here: what a
+     * window shows and closing a project are a client's. False when nobody had the agent's project on screen.
+     */
+    askAboutProject(kind: 'activate' | 'askClose', fromProjectId: string, projectId: string, by: string): boolean {
+        return this.tellHolders(fromProjectId, { event: `project.${kind}`, payload: { projectId, fromProjectId, by } });
+    }
+
+    private tellHolders(projectId: string, message: SessionEvent): boolean {
         let told = 0;
         for (const clientId of this.sinks.clientIds()) {
             if (this.holds.has(clientId, projectId)) {
-                this.sinks.to(clientId, { event: 'project.showView', payload: { projectId, viewId, by } });
+                this.sinks.to(clientId, message);
                 told += 1;
             }
         }

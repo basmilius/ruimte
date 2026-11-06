@@ -984,7 +984,7 @@
         "reachOpenProjects": {
             "label": "Agents may reach all open projects",
             "rowLabel": "Agents on {{machine}} may reach all open projects",
-            "description": "Agents in one project can read your other open projects and start agents there.",
+            "description": "Agents in one project can read your other open projects and start agents there. They can also open a project from Recent, bring one to the front, and ask you to close one.",
             "notConnected": "{{machine}} is not connected. Change this from its details under Account, or open one of its projects."
         },
         "resumeAtReset": {
@@ -1134,7 +1134,7 @@
         },
         "showViews": {
             "label": "Let agents switch views",
-            "description": "A view an agent opens replaces yours, with a banner to go back. When off, the banner offers to go there."
+            "description": "A view or project an agent opens replaces yours, with a banner to go back. When off, the banner offers to go there."
         },
         "mapTiles": {
             "label": "Map tiles",

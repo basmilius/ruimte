@@ -17,6 +17,7 @@ import { SlotRow } from '@/extensions/SlotSurfaces';
 import { useServerPrompts } from '@/language/use-server-prompts';
 import { useLaunches } from '@/launches/state';
 import { startLaunchWatch } from '@/launches/watch';
+import { AgentCloseDialog } from '@/project/AgentCloseDialog';
 import { useRoutineForm } from '@/routines/form-state';
 import { useRoutinesStage } from '@/routines/stage';
 import { CellOverlayLayer } from '@/shell/CellOverlay';
@@ -168,6 +169,7 @@ const DIALOGS: readonly (readonly [surface: string | null, dialog: ComponentType
     ['dialog', ChatChooserMenu],
     ['dialog', ViewDialogs],
     ['dialog', EndChildrenDialog],
+    ['dialog', AgentCloseDialog],
     ['dialog', UnsavedCloseDialog],
     ['dialog', DiscardEditsDialog],
     ['dialog', LeaveConflictDialog],

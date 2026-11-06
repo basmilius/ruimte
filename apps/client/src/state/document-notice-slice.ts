@@ -15,6 +15,10 @@ export function createDocumentNoticeSlice({ set, get }: DocumentKit): Pick<Docum
                 return;
             }
             set({ viewNotice: null });
+            if (action.kind === 'project') {
+                void import('@/project/open').then(({ openProject }) => openProject(action.endpointId, action.projectId));
+                return;
+            }
             if (action.kind === 'go') {
                 get().setActiveView(action.viewId);
                 return;

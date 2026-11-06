@@ -301,6 +301,8 @@
     "event processes.sample #/properties/groups/items": ["cpu","diskRead","diskWrite","hidden","id","kind","memory","nodeId","processes"],
     "event processes.sample #/properties/groups/items/properties/processes/items": ["cpu","depth","diskRead","diskWrite","family","memory","name","path","pid","ppid","readable","startTime"],
     "event processes.sample #/properties/machine": ["cores","cpu","diskFree","diskRead","diskTotal","diskWrite","memoryTotal","memoryUsed"],
+    "event project.activate #": ["by","fromProjectId","projectId"],
+    "event project.askClose #": ["by","fromProjectId","projectId"],
     "event project.changed #": ["document","projectId"],
     "event project.changed #/properties/document": ["color","name","rev","version","views"],
     "event project.changed #/properties/document/properties/accounts/additionalProperties": [],

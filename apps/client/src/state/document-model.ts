@@ -22,11 +22,16 @@ import type { EditorRegistry } from '@/state/editors';
 /*
  * What the banner over the views says about a view an agent opened, and the one thing it can do
  * about it: go to the view nothing moved for, or step back out of the one that took the cell. Null
- * where there is nothing to offer, which is an agent pointing at the view already in front.
+ * where there is nothing to offer, which is an agent pointing at the view already in front. A
+ * project an agent brought forward opens a project instead: the one it named, or the one it left (`back`).
  */
 export interface ViewNotice {
     message: string;
-    action: { kind: 'go'; viewId: string } | { kind: 'back'; shown: Omit<ShownView, 'layout'> } | null;
+    action:
+        | { kind: 'go'; viewId: string }
+        | { kind: 'back'; shown: Omit<ShownView, 'layout'> }
+        | { kind: 'project'; endpointId: string; projectId: string; back: boolean }
+        | null;
 }
 
 /* A deleted view on its way out, with what it takes to put it back as it stood. */
@@ -201,7 +206,7 @@ export function canStandInCell(state: Pick<DocumentState, 'views' | 'layout'>, i
 
 /* Which view a banner would put on screen if its button were pressed; null for one that offers nothing. */
 function noticeTarget(notice: ViewNotice | null): string | null {
-    if (notice === null || notice.action === null) {
+    if (notice === null || notice.action === null || notice.action.kind === 'project') {
         return null;
     }
     return notice.action.kind === 'go' ? notice.action.viewId : notice.action.shown.replaced;
@@ -218,7 +223,7 @@ export function keptNotice(notice: ViewNotice | null, views: ProjectView[]): Vie
  * view becomes active; neither expires on a timer because the person may still need the action.
  */
 function afterMove(notice: ViewNotice | null, activeViewId: string | null): ViewNotice | null {
-    if (notice === null || notice.action === null) {
+    if (notice === null || notice.action === null || notice.action.kind === 'project') {
         return notice;
     }
     if (notice.action.kind === 'back') {

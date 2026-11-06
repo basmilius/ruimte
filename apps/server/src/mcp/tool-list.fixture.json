@@ -75,8 +75,11 @@
             "plan_remove",
             "plan_set",
             "plan_status",
+            "project_activate",
+            "project_close",
             "project_ignored",
             "project_list",
+            "project_open",
             "project_propose",
             "provider_info",
             "routine_edit",
@@ -162,8 +165,11 @@
             "notify",
             "operation_cancel",
             "operation_get",
+            "project_activate",
+            "project_close",
             "project_ignored",
             "project_list",
+            "project_open",
             "provider_info",
             "routine_edit",
             "routine_list",
@@ -2702,6 +2708,44 @@
             "audience": "chat"
         },
         {
+            "name": "project_activate",
+            "description": "Shows another project to whoever has yours on screen.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "project_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "project_id"
+                ]
+            },
+            "annotations": {
+                "destructiveHint": false
+            },
+            "audience": "everyone"
+        },
+        {
+            "name": "project_close",
+            "description": "Asks whoever has your project on screen to close another.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "project_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "project_id"
+                ]
+            },
+            "annotations": {
+                "destructiveHint": false
+            },
+            "audience": "everyone"
+        },
+        {
             "name": "project_ignored",
             "description": "Lists the files git ignores in the project.",
             "inputSchema": {
@@ -2715,13 +2759,32 @@
         },
         {
             "name": "project_list",
-            "description": "Lists the other open projects project reaches.",
+            "description": "Lists the other open projects project reaches, and the Recent ones.",
             "inputSchema": {
                 "type": "object",
                 "properties": {}
             },
             "annotations": {
                 "readOnlyHint": true
+            },
+            "audience": "everyone"
+        },
+        {
+            "name": "project_open",
+            "description": "Takes a project out of Recent, without showing it.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "project_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "project_id"
+                ]
+            },
+            "annotations": {
+                "destructiveHint": false
             },
             "audience": "everyone"
         },

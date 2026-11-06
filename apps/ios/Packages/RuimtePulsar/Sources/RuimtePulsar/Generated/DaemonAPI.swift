@@ -398,6 +398,8 @@ public enum WireEvent: String, CaseIterable, Sendable {
     case `directSignaled` = "direct.signaled"
     case `projectChanged` = "project.changed"
     case `projectShowView` = "project.showView"
+    case `projectActivate` = "project.activate"
+    case `projectAskClose` = "project.askClose"
     case `projectSummary` = "project.summary"
     case `drawingChanged` = "drawing.changed"
     case `diagramChanged` = "diagram.changed"

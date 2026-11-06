@@ -1566,6 +1566,20 @@ export const ProjectShowViewEventSchema = z.object({
 });
 export type ProjectShowViewEvent = z.infer<typeof ProjectShowViewEventSchema>;
 
+/*
+ * An agent asked to bring another project to the front (`project.activate`) or to close one
+ * (`project.askClose`). It goes to the clients that have the agent's own project on screen; each
+ * decides for itself, and a close happens only once a person there confirms it.
+ */
+export const ProjectAgentAskEventSchema = z.object({
+    projectId: ProjectIdSchema,
+    // The project the agent stands in, which the client checks is the one on screen.
+    fromProjectId: ProjectIdSchema,
+    // The node or view the verb ran from.
+    by: z.string().min(1)
+});
+export type ProjectAgentAskEvent = z.infer<typeof ProjectAgentAskEventSchema>;
+
 // Writes or removes `.ruimte/icon.<ext>`; a null image deletes what is there. The bytes are
 // base64 because a JSON frame carries no binary, and the daemon checks them against its own cap.
 export const ProjectSetIconPayloadSchema = z.object({

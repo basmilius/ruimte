@@ -984,7 +984,7 @@
         "reachOpenProjects": {
             "label": "Agents mogen alle open projecten bereiken",
             "rowLabel": "Agents op {{machine}} mogen alle open projecten bereiken",
-            "description": "Agents in het ene project kunnen je andere open projecten lezen en daar agents starten.",
+            "description": "Agents in het ene project kunnen je andere open projecten lezen en daar agents starten. Ze kunnen ook een project uit Recent openen, er een naar voren halen en je vragen er een te sluiten.",
             "notConnected": "{{machine}} is niet verbonden. Pas dit aan in de details onder Account, of open een van zijn projecten."
         },
         "resumeAtReset": {
@@ -1134,7 +1134,7 @@
         },
         "showViews": {
             "label": "Agents van weergave laten wisselen",
-            "description": "Een weergave die een agent opent, vervangt de jouwe, met een banner om terug te gaan. Als dit uit staat, biedt de banner aan erheen te gaan."
+            "description": "Een weergave of project dat een agent opent, vervangt het jouwe, met een banner om terug te gaan. Als dit uit staat, biedt de banner aan erheen te gaan."
         },
         "mapTiles": {
             "label": "Kaarttegels",

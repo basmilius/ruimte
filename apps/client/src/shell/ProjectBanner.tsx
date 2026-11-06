@@ -26,14 +26,15 @@ export function ProjectBanner() {
     ] as const;
     const shown = files.find((entry) => entry.conflict !== null) ?? files.find((entry) => entry.error !== null);
     if (!shown?.conflict && !shown?.error) {
+        const goes = notice?.action?.kind === 'go' || (notice?.action?.kind === 'project' && !notice.action.back);
         return notice === null ? null : (
             <Banner icon={Eye} tone="neutral" message={notice.message}>
                 <Button size="sm" onClick={() => useDocument.getState().dismissNotice()}>
-                    {notice.action?.kind === 'go' ? t('projectBanner.stayHere') : t('common:action.dismiss')}
+                    {goes ? t('projectBanner.stayHere') : t('common:action.dismiss')}
                 </Button>
                 {notice.action !== null && (
                     <Button size="sm" variant="primary" onClick={() => useDocument.getState().runNotice()}>
-                        {notice.action.kind === 'go' ? t('projectBanner.goThere') : t('projectBanner.back')}
+                        {goes ? t('projectBanner.goThere') : t('projectBanner.back')}
                     </Button>
                 )}
             </Banner>
