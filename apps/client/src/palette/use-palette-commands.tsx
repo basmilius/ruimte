@@ -6,9 +6,12 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 import { useBrowser } from '@/clients/browser/registry';
+import type { Command } from '@/commands/behavior';
+import { countCommand } from '@/commands/usage';
 import { isApplePlatform } from '@/desktop/bridge';
 import { usePaletteHits } from '@/extensions/palette-sources';
 import { refreshPrRepos, useCurrentPrRepos } from '@/github/pr-repos';
+import { appCommands, OPENING_COMMAND_IDS } from '@/palette/app-commands';
 import { entryMatches, groupBySection, pageKeywords, type Entry, type PaletteContext, type PaletteModeView } from '@/palette/palette-entries';
 import { readRecents, rememberRecent, sortByRecency } from '@/palette/palette-recents';
 import { namesSetting, orderBelowJumps, settingsEntries } from '@/palette/palette-settings';
@@ -19,8 +22,6 @@ import { ViewGlyph } from '@/project/ViewGlyph';
 import { revealNode, showView } from '@/project/views';
 import { openInNewWindow, wantsNewWindow } from '@/project/windows';
 import { findSettings } from '@/settings/find-settings';
-import { countCommand } from '@/shell/command-usage';
-import { appCommands, OPENING_COMMAND_IDS, type Command } from '@/shell/commands';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { useContributions } from '@/state/extension-registry';
@@ -47,7 +48,7 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
     const views = useDocument((s) => s.views);
     const activeViewId = useDocument((s) => s.activeViewId);
     // The command rows read it with appCommands(); the list only needs to redraw when it moves.
-    const prRepos = useCurrentPrRepos();
+    useCurrentPrRepos();
     // The same for what extensions add, so a command that came or went while the palette is open shows at once.
     const extensionCommands = useContributions((s) => s.commands);
     const extensionActions = useContributions((s) => s.slotEntries);
@@ -125,7 +126,7 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
                     inNewWindow: () => openInNewWindow(endpointId, summary.projectId)
                 };
             });
-        const commands = appCommands(prRepos, { commands: extensionCommands, slotEntries: extensionActions });
+        const commands = appCommands({ commands: extensionCommands, slotEntries: extensionActions });
         return { jumps, viewSwitches, switches, commands };
     })();
 

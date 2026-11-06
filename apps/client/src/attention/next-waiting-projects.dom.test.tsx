@@ -135,7 +135,7 @@ describe("next wait across this window's project tabs", () => {
     test('the Go menu offers a wait that only a background tab holds', async () => {
         await act(async () => useSnoozes.getState().receive(ENDPOINT, [{ nodeId: newer.id, until: NOW + 60_000 }]));
         expect(nextWaitingTitle()).toBe('Borealis / Background review');
-        expect(menuContext('station').navigation.waiting).toBe(true);
+        expect(menuContext('station').somethingWaits).toBe(true);
     });
 
     test('a snoozed background wait is skipped without opening its project', async () => {

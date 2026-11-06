@@ -1,20 +1,22 @@
 import { describe, expect, test } from 'bun:test';
 import { shortcut, shortcutParts, type Shortcut } from '@adecore/ui';
+import { commandIds, commandSpec } from '@/commands/registry';
 import { isApplePlatform } from '@/desktop/bridge';
 import { arrangeShortcuts } from '@/settings/arrange-shortcuts';
 import { commandArea, editorShortcutRows, isEditorCommand } from '@/settings/editor-shortcuts';
 import { searchSettings, shortcutSearchRows } from '@/settings/search';
 import { KEYBOARD_AREAS, shortcutGroups, type ShortcutGroup } from '@/settings/shortcuts';
-import { COMMAND_IDS, COMMANDS } from '@/shell/command-table';
 
 const EDITOR_AREAS = ['editor', 'navigation', 'code'];
 
 /* The rows of the palette that carry a key, as the Keyboard pane is handed them. */
-const COMMAND_ROWS = COMMAND_IDS.filter((id) => COMMANDS[id].palette !== false && COMMANDS[id].shortcut !== undefined).map((id) => ({
-    id,
-    label: `row ${id}`,
-    shortcut: COMMANDS[id].shortcut
-}));
+const COMMAND_ROWS = commandIds()
+    .filter((id) => commandSpec(id).palette !== false && commandSpec(id).shortcut !== undefined)
+    .map((id) => ({
+        id,
+        label: `row ${id}`,
+        shortcut: commandSpec(id).shortcut
+    }));
 
 function labelsOf(groups: readonly ShortcutGroup[], area?: string): string[] {
     return groups.filter((group) => area === undefined || group.id === area).flatMap((group) => group.shortcuts.map((row) => row.label));

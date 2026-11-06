@@ -1,18 +1,22 @@
 import { describe, expect, test } from 'bun:test';
 import { USAGE_DESKTOP_COMMANDS, USAGE_DESKTOP_PANELS, USAGE_DESKTOP_SETTINGS_SECTIONS } from '@ruimte/pulsar';
+import { CHAT_MOVE_PREFIX } from '@/chat/menu-extras';
+import { commandIds } from '@/commands/registry';
+import { commandUsageName } from '@/commands/usage';
+import { PR_SHOW_IN_PREFIX } from '@/github/commands';
+import { AFTER_SETTLE_PREFIX, LAUNCH_CHOOSE_PREFIX } from '@/launches/menu-extras';
 import { allSettingsSections } from '@/settings/sections';
-import { COMMAND_IDS } from '@/shell/command-table';
-import { commandUsageName, openedBy, usageSectionOf } from '@/shell/command-usage';
-import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, LAUNCH_CHOOSE_PREFIX, PR_SHOW_IN_PREFIX } from '@/shell/menu/ids';
+import { openedBy, usageSectionOf } from '@/shell/command-usage';
 import { PANELS } from '@/shell/panels';
 import type { PanelState } from '@/state/ui';
+import { GO_VIEW_PREFIX } from '@/views/menu-extras';
 
 const CLOSED: PanelState = { open: false, kind: 'files' };
 const SETTINGS_CLOSED = { open: false, section: 'appearance' as const, target: null, searchAt: 0 };
 
 describe('commandUsageName', () => {
     test('names every row of the command table, and the list holds no row the table lost', () => {
-        const names = COMMAND_IDS.map(commandUsageName);
+        const names = commandIds().map(commandUsageName);
 
         expect(names.filter((name) => name === null)).toEqual([]);
         expect(names.toSorted()).toEqual([...USAGE_DESKTOP_COMMANDS].toSorted());

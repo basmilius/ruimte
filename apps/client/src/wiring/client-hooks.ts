@@ -11,6 +11,7 @@ import { textDrafts } from '@/state/text-drafts';
 import { machineAnswers } from '@/transport/features';
 import { pool } from '@/transport/index';
 import { reportPresence } from '@/transport/presence';
+import { installCommands } from '@/wiring/commands';
 import { watchEveryMachine } from '@/workspace/connections';
 import { liveDraftLink } from '@/workspace/draft-link';
 
@@ -34,6 +35,7 @@ export function installClientHooks(): ClientHooks {
     const actions = createClientActionRegistry(useDocument);
     provideClientActions(actions);
     provideExtensionChat();
+    installCommands();
     textDrafts.provideLinks(liveDraftLink);
     watchEveryMachine((endpointId, transport) => watchPushAttention(endpointId, transport));
     watchEveryMachine((endpointId, transport) => reportPresence(transport, () => machineAnswers(pool.statusOf(endpointId), 'presence.report')));

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { COMMAND_IDS } from '@/shell/command-table';
+import { commandIds as registeredIds } from '@/commands/registry';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { LANGUAGE_COMMANDS, LANGUAGE_COMMAND_IDS, offeredLanguageCommands } from './command-table';
 
@@ -13,7 +13,7 @@ describe('toggle rendered documentation command', () => {
     });
 
     test('is left out of the menu and the palette while the feature is off', () => {
-        expect(COMMAND_IDS).not.toContain('toggle-rendered-docs');
+        expect(registeredIds()).not.toContain('toggle-rendered-docs');
         expect(LANGUAGE_COMMAND_IDS).not.toContain('toggle-rendered-docs');
     });
 

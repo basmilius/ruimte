@@ -1,0 +1,181 @@
+import {
+    ArrowDown,
+    ArrowLeft,
+    ArrowRight,
+    ArrowRightToLine,
+    ArrowUp,
+    ChevronsLeft,
+    ChevronsRight,
+    Expand,
+    ListX,
+    PanelBottom,
+    PanelRight,
+    Ungroup,
+    X
+} from 'lucide-react';
+import { desktop, severalCells, hosted } from '@/commands/conditions';
+import { type CommandSpec } from '@/commands/types';
+import { CANVAS_SHORTCUTS, FOCUS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+
+export const GRID_COMMANDS = {
+    // The key is bound once, through Close Cell, which closes the tab in front of a host first.
+    'tab-close': {
+        key: 'closeTab',
+        icon: X,
+        shortcut: CANVAS_SHORTCUTS.closeCell,
+        palette: true,
+        menu: { menu: 'file', group: 'close', order: 20, when: (context) => context.workspace && hosted(context) }
+    },
+    // Without a cell the desktop app closes the window in its place; in a host the key is the tab's.
+    'close-cell': {
+        key: 'closeCell',
+        icon: X,
+        shortcut: CANVAS_SHORTCUTS.closeCell,
+        binds: 'workspace',
+        palette: false,
+        menu: {
+            menu: 'file',
+            group: 'close',
+            order: 30,
+            when: (context) => context.workspace && (context.cells > 0 || !desktop(context)),
+            enabled: (context) => (context.cells > 0 ? undefined : false),
+            showsShortcut: (context) => context.cells > 0 && !hosted(context)
+        }
+    },
+    'cell-close-others': {
+        key: 'closeOtherCells',
+        icon: ListX,
+        palette: true,
+        menu: { menu: 'file', group: 'close', order: 40, when: (context) => context.workspace, enabled: severalCells }
+    },
+    'cell-close-right': {
+        key: 'closeCellsRight',
+        icon: ArrowRightToLine,
+        palette: true,
+        menu: { menu: 'file', group: 'close', order: 50, when: (context) => context.workspace, enabled: (context) => context.closesRight }
+    },
+    'split-right': {
+        key: 'splitRight',
+        icon: PanelRight,
+        shortcut: CANVAS_SHORTCUTS.splitRight,
+        binds: 'workspace',
+        palette: false,
+        menu: { menu: 'view', group: 'split', order: 10, enabled: (context) => context.split.right }
+    },
+    'split-down': {
+        key: 'splitDown',
+        icon: PanelBottom,
+        shortcut: CANVAS_SHORTCUTS.splitDown,
+        binds: 'workspace',
+        palette: false,
+        menu: { menu: 'view', group: 'split', order: 20, enabled: (context) => context.split.down }
+    },
+    'tab-move-left': {
+        key: 'moveTabLeft',
+        icon: ArrowLeft,
+        shortcut: CANVAS_SHORTCUTS.moveTabLeft,
+        binds: 'workspace',
+        palette: true,
+        menu: { menu: 'view', group: 'split', order: 30, when: hosted, enabled: (context) => context.tabs.index > 0 }
+    },
+    'tab-move-right': {
+        key: 'moveTabRight',
+        icon: ArrowRight,
+        shortcut: CANVAS_SHORTCUTS.moveTabRight,
+        binds: 'workspace',
+        palette: true,
+        menu: { menu: 'view', group: 'split', order: 40, when: hosted, enabled: (context) => context.tabs.index < context.tabs.count - 1 }
+    },
+    'tab-split-off': {
+        key: 'moveTabToNewCell',
+        icon: PanelRight,
+        palette: true,
+        menu: { menu: 'view', group: 'split', order: 50, when: hosted, enabled: (context) => context.tabs.splitOff }
+    },
+    'tab-ungroup': {
+        key: 'ungroup',
+        icon: Ungroup,
+        palette: true,
+        menu: { menu: 'view', group: 'split', order: 60, when: hosted, enabled: (context) => context.tabs.count === 1 }
+    },
+    // One key for both: a node on the canvas takes it first (`maximizeTargetOf`), so the row it acts on shows it.
+    'cell-maximize': {
+        key: 'maximizeCell',
+        icon: Expand,
+        shortcut: CANVAS_SHORTCUTS.maximizeCell,
+        binds: 'workspace',
+        palette: true,
+        menu: {
+            menu: 'view',
+            group: 'split',
+            order: 70,
+            enabled: severalCells,
+            checked: (context) => context.maximized,
+            showsShortcut: (context) => !context.nodeMaximizable
+        }
+    },
+    'tab-previous': {
+        key: 'previousTab',
+        icon: ArrowLeft,
+        shortcut: CANVAS_SHORTCUTS.previousTab,
+        binds: 'workspace',
+        palette: true,
+        menu: { menu: 'go', group: 'views', order: 50, when: hosted, enabled: (context) => context.tabs.count > 1 }
+    },
+    'tab-next': {
+        key: 'nextTab',
+        icon: ArrowRight,
+        shortcut: CANVAS_SHORTCUTS.nextTab,
+        binds: 'workspace',
+        palette: true,
+        menu: { menu: 'go', group: 'views', order: 60, when: hosted, enabled: (context) => context.tabs.count > 1 }
+    },
+    'focus-left': {
+        key: 'focusLeft',
+        icon: ArrowLeft,
+        shortcut: FOCUS_SHORTCUTS.left,
+        binds: 'workspace',
+        palette: false,
+        menu: { menu: 'go', group: 'focus', order: 10, enabled: (context) => context.cellNeighbors.left }
+    },
+    'focus-right': {
+        key: 'focusRight',
+        icon: ArrowRight,
+        shortcut: FOCUS_SHORTCUTS.right,
+        binds: 'workspace',
+        palette: false,
+        menu: { menu: 'go', group: 'focus', order: 20, enabled: (context) => context.cellNeighbors.right }
+    },
+    'focus-up': {
+        key: 'focusUp',
+        icon: ArrowUp,
+        shortcut: FOCUS_SHORTCUTS.up,
+        binds: 'workspace',
+        palette: false,
+        menu: { menu: 'go', group: 'focus', order: 30, enabled: (context) => context.cellNeighbors.up }
+    },
+    'focus-down': {
+        key: 'focusDown',
+        icon: ArrowDown,
+        shortcut: FOCUS_SHORTCUTS.down,
+        binds: 'workspace',
+        palette: false,
+        menu: { menu: 'go', group: 'focus', order: 40, enabled: (context) => context.cellNeighbors.down }
+    },
+    'view-previous': {
+        key: 'previousView',
+        icon: ChevronsLeft,
+        shortcut: CANVAS_SHORTCUTS.previousView,
+        binds: 'workspace',
+        palette: false,
+        menu: { menu: 'go', group: 'views', order: 10, enabled: (context) => context.viewsSteppable }
+    },
+    'view-next': {
+        key: 'nextView',
+        icon: ChevronsRight,
+        shortcut: CANVAS_SHORTCUTS.nextView,
+        binds: 'workspace',
+        palette: false,
+        menu: { menu: 'go', group: 'views', order: 20, enabled: (context) => context.viewsSteppable }
+    }
+} satisfies Record<string, CommandSpec>;

@@ -1,7 +1,6 @@
 import type { AgentKind } from '@ruimte/contracts';
 import {
     AppWindow,
-    ArrowRight,
     Bot,
     CircleHelp,
     CodeXml,
@@ -11,14 +10,11 @@ import {
     File,
     FileText,
     FoldVertical,
-    Folder,
     FolderInput,
     Frame,
     GitBranch,
     Globe,
-    Layers,
     LayoutDashboard,
-    ListChecks,
     MessageSquare,
     PenTool,
     Pencil,
@@ -29,8 +25,8 @@ import {
     Workflow,
     type LucideIcon
 } from 'lucide-react';
-import { COMMANDS, isCommandId } from '@/shell/command-table';
-import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, LAUNCH_CHOOSE_PREFIX } from '@/shell/menu/ids';
+import { generatedOf } from '@/commands/generated';
+import { commandSpec, isCommandId } from '@/commands/registry';
 
 /* What the web client draws in front of a row, so every label starts on the same line. The shell's native menu has none. */
 type MenuIcon = { icon: LucideIcon } | { agent: AgentKind };
@@ -62,17 +58,6 @@ const MENU_ICONS: Partial<Record<string, LucideIcon>> = {
     'launches-after-settle': GitBranch
 };
 
-/* Rows that exist once per layout, view, launch or task, by the start of their id. */
-const PREFIXES: [prefix: string, icon: LucideIcon][] = [
-    ['layout-apply-', LayoutDashboard],
-    ['layout-delete-', Trash],
-    ['view-move-', ArrowRight],
-    [GO_VIEW_PREFIX, Layers],
-    [CHAT_MOVE_PREFIX, Folder],
-    [LAUNCH_CHOOSE_PREFIX, Rocket],
-    [AFTER_SETTLE_PREFIX, ListChecks]
-];
-
 const AGENT_ROW = /^agent-(?:view-)?(?:chat|terminal)-(.+)$/;
 
 export function menuIconOf(id: string): MenuIcon | null {
@@ -81,8 +66,8 @@ export function menuIconOf(id: string): MenuIcon | null {
         return { agent: agent as AgentKind };
     }
     if (isCommandId(id)) {
-        return { icon: COMMANDS[id].icon };
+        return { icon: commandSpec(id).icon };
     }
-    const icon = MENU_ICONS[id] ?? PREFIXES.find(([prefix]) => id.startsWith(prefix))?.[1];
+    const icon = MENU_ICONS[id] ?? generatedOf(id)?.icon;
     return icon === undefined ? null : { icon };
 }

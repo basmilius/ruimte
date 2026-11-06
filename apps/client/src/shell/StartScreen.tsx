@@ -5,6 +5,7 @@ import { FolderOpen, LogIn, MessageSquarePlus, MessagesSquare, MonitorSmartphone
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { chatsProjects, openableRows, recentProjects, type ProjectMenuRow } from '@/clients/project/list';
+import { runCommand } from '@/commands/key-dispatch';
 import { isDesktop } from '@/desktop/bridge';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
 import { AddMachineDialog } from '@/machine-ui/AddMachineDialog';
@@ -20,7 +21,6 @@ import { openProjectAction, openProjectClickAction } from '@/project/open-action
 import { ProjectPlaceActions } from '@/project/ProjectActions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { usePulsarAccount } from '@/pulsar/account';
-import { runAppShortcut } from '@/shell/app-shortcuts';
 import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine, startScreenMachine } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';
@@ -181,10 +181,10 @@ function Footer() {
     const version = isDesktop() && currentVersion ? currentVersion : null;
     return (
         <footer className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-linear-to-t from-bg from-40% to-transparent px-8 pt-10 pb-4 text-xs text-text-faint *:pointer-events-auto">
-            <button className={FOOTER_BUTTON} onClick={() => runAppShortcut('palette')}>
+            <button className={FOOTER_BUTTON} onClick={() => runCommand('palette')}>
                 <Kbd shortcut={APP_SHORTCUTS.palette} variant="inline" /> {t('start.commandPalette')}
             </button>
-            <button className={FOOTER_BUTTON} onClick={() => runAppShortcut('settings')}>
+            <button className={FOOTER_BUTTON} onClick={() => runCommand('settings')}>
                 <Kbd shortcut={APP_SHORTCUTS.settings} variant="inline" /> {t('settingsDialog.title')}
             </button>
             {version && <span>{t('connection.version', { version })}</span>}

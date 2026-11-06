@@ -1,5 +1,6 @@
 import { InlineEditFeature } from '@/editor-ai/inline-edit';
 import { provideInlineEdit } from '@/language/ruimte-editor-language';
+import { installWorkspaceCommands } from '@/wiring/workspace-commands';
 
 let installed = false;
 
@@ -13,4 +14,5 @@ export function installWorkspace(): void {
     }
     installed = true;
     provideInlineEdit((language) => new InlineEditFeature(language));
+    installWorkspaceCommands();
 }

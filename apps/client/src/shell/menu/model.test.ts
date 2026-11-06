@@ -1,14 +1,17 @@
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
+import { CHAT_MOVE_PREFIX } from '@/chat/menu-extras';
+import { behaviorOf } from '@/commands/behavior';
+import { generatedOf } from '@/commands/generated';
+import { commandIds as tableIds, commandSpec, isCommandId, menuPlacesOf } from '@/commands/registry';
+import { isPaletteId } from '@/commands/run';
 import { LANGUAGE_COMMAND_IDS } from '@/language/command-table';
 import { EDITOR_COMMAND_IDS, editorCommandRows } from '@/language/editor-commands';
 import { languageCommandRows } from '@/language/language-commands';
-import { COMMAND_IDS, COMMANDS, isCommandId, menuPlacesOf } from '@/shell/command-table';
-import { CANVAS_SHORTCUTS, ADD_NODE_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { AFTER_SETTLE_PREFIX, LAUNCH_CHOOSE_PREFIX } from '@/launches/menu-extras';
+import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { GO_VIEW_PREFIX } from '@/views/menu-extras';
 import { menuIconOf } from './icons';
-import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, isPaletteId, LAUNCH_CHOOSE_PREFIX } from './ids';
 import { menuModel, toAccelerator, type MenuContext } from './model';
 
 const NO_OFFERS = {
@@ -51,16 +54,14 @@ function context(patch: Partial<MenuContext> = {}): MenuContext {
         panel: null,
         sidebar: true,
         views: ['Main', 'Sketch'],
-        navigation: {
-            views: false,
-            camera: { back: false, forward: false },
-            focus: { left: false, right: false, up: false, down: false },
-            nodes: { left: false, right: false, up: false, down: false },
-            prompts: false,
-            waiting: false,
-            editor: false,
-            language: false
-        },
+        cellNeighbors: { left: false, right: false, up: false, down: false },
+        viewsSteppable: false,
+        cameraHistory: { back: false, forward: false },
+        nodeNeighbors: { left: false, right: false, up: false, down: false },
+        promptStack: false,
+        somethingWaits: false,
+        editorAvailable: false,
+        languageAvailable: false,
         moveTargets: [],
         layouts: ['Review'],
         agents: [{ kind: 'claude', name: 'Claude Code', chat: true, terminal: true }],
@@ -198,16 +199,16 @@ describe('the menus', () => {
 
     test('Go follows each direction and keeps canvas-only navigation out of other views', () => {
         const navigation = {
-            views: true,
-            camera: { back: true, forward: false },
-            focus: { left: false, right: true, up: false, down: true },
-            nodes: { left: true, right: false, up: false, down: true },
-            prompts: true,
-            waiting: true,
-            editor: true,
-            language: true
+            viewsSteppable: true,
+            cameraHistory: { back: true, forward: false },
+            cellNeighbors: { left: false, right: true, up: false, down: true },
+            nodeNeighbors: { left: true, right: false, up: false, down: true },
+            promptStack: true,
+            somethingWaits: true,
+            editorAvailable: true,
+            languageAvailable: true
         };
-        const spec = menuModel(context({ navigation }));
+        const spec = menuModel(context(navigation));
 
         for (const id of [
             'view-next',
@@ -228,7 +229,7 @@ describe('the menus', () => {
             expect(offered(spec, id).enabled).toBe(false);
         }
 
-        const chat = menuModel(context({ view: 'chat', navigation }));
+        const chat = menuModel(context({ view: 'chat', ...navigation }));
 
         for (const id of ['camera-back', 'camera-forward', 'node-left', 'node-right', 'node-up', 'node-down', 'prompts']) {
             expect(find(chat, id)).toBeUndefined();
@@ -652,49 +653,29 @@ describe('the menus', () => {
 });
 
 describe('the commands behind the menu', () => {
-    // A row of the table runs through the palette or through `MENU_ACTIONS`, which the type holds to every row the palette lacks.
-    test('every id in any menu fits the known command route grammar', () => {
+    // A row of the table has a behavior, and a generated one belongs to a registered kind.
+    test('every id in any menu is a row of the table or of a generated kind', () => {
         const ids = new Set(EVERY_CONTEXT.flatMap((entry) => commandIds(menuModel(entry))));
         for (const id of ids) {
-            const handled =
-                isCommandId(id) ||
-                isPaletteId(id) ||
-                id.startsWith(GO_VIEW_PREFIX) ||
-                id.startsWith(LAUNCH_CHOOSE_PREFIX) ||
-                id.startsWith(AFTER_SETTLE_PREFIX) ||
-                id.startsWith(CHAT_MOVE_PREFIX);
+            const handled = isCommandId(id) || generatedOf(id) !== undefined;
             expect(handled ? id : `${id} has no handler`).toBe(id);
         }
     });
 
-    test('every row of the table the palette has is a row of the palette', () => {
-        const source = readFileSync(join(import.meta.dir, '..', 'commands.ts'), 'utf8');
-        const pullRequestRows = readFileSync(join(import.meta.dir, '..', '..', 'github', 'pull-request-commands.ts'), 'utf8');
-        for (const id of COMMAND_IDS.filter((candidate) => COMMANDS[candidate].palette)) {
-            // The language commands are rows of `languageCommandRows()`, which `appCommands()` spreads in.
-            const listed =
+    test('every row of the table has something that does it', () => {
+        for (const id of tableIds()) {
+            // The language and editing commands are rows of `languageCommandRows()` and `editorCommandRows()`, which the palette spreads in.
+            const done =
+                behaviorOf(id) !== undefined ||
                 (LANGUAGE_COMMAND_IDS as readonly string[]).includes(id) ||
-                (EDITOR_COMMAND_IDS as readonly string[]).includes(id) ||
-                source.includes(`id: '${id}'`) ||
-                new RegExp(`row\\(\\s*'${id}'`).test(source) ||
-                pullRequestRows.includes(`id: '${id}'`);
-            expect(listed ? id : `${id} is not in appCommands()`).toBe(id);
+                (EDITOR_COMMAND_IDS as readonly string[]).includes(id);
+            expect(done ? id : `${id} does nothing`).toBe(id);
         }
-        expect(source).toContain('languageCommandRows()');
         expect(languageCommandRows().map((row) => row.id)).toEqual([...LANGUAGE_COMMAND_IDS]);
-        expect(source).toContain('editorCommandRows()');
         expect(editorCommandRows().map((row) => row.id)).toEqual([...EDITOR_COMMAND_IDS]);
-        for (const row of [
-            '`agent-${target}-${provider.kind}`',
-            '`agent-view-${target}-${provider.kind}`',
-            '`layout-apply-${layout.name}`',
-            '`layout-delete-${layout.name}`',
-            '`view-move-${view.id}`'
-        ]) {
-            expect(source).toContain(row);
-        }
-        expect(pullRequestRows).toContain('`${PR_SHOW_IN_PREFIX}${repo.path}`');
         expect(isPaletteId('pr-show-in-/work/web')).toBe(true);
+        expect(isPaletteId('layout-apply-Review')).toBe(true);
+        expect(isPaletteId('go-view-2')).toBe(false);
     });
 });
 
@@ -730,8 +711,8 @@ describe('accelerators', () => {
         const electronKey = /^(?:.|Backspace|Delete|Enter|Tab|Escape|Space|Up|Down|Left|Right|Home|End|PageUp|PageDown|Insert|F\d{1,2}|Plus)$/;
         const checked: string[] = [];
 
-        for (const id of COMMAND_IDS) {
-            const chord = COMMANDS[id].shortcut;
+        for (const id of tableIds()) {
+            const chord = commandSpec(id).shortcut;
 
             if (chord === undefined || menuPlacesOf(id).length === 0) {
                 continue;

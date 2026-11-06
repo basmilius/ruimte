@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { Shortcut } from '@adecore/ui';
 import i18next from 'i18next';
-import { boundCommands, COMMAND_IDS, COMMANDS, menuPlacesOf } from './command-table';
+import { boundCommands, commandIds, commandSpec, menuPlacesOf } from '@/commands/registry';
 
 function keysOf(shortcut: Shortcut, apple: boolean): string {
     const meta = shortcut.meta || (shortcut.mod && apple);
@@ -12,8 +12,8 @@ function keysOf(shortcut: Shortcut, apple: boolean): string {
 describe('the command table', () => {
     test('every shortcut has a modifier', () => {
         // The bare keys CLAUDE.md allows, a drawing's tools and a prompt card's widget keys, are bound where they act and never here.
-        for (const id of COMMAND_IDS) {
-            const shortcut = COMMANDS[id].shortcut;
+        for (const id of commandIds()) {
+            const shortcut = commandSpec(id).shortcut;
             if (shortcut !== undefined) {
                 const modified = shortcut.mod || shortcut.ctrl || shortcut.meta || shortcut.alt || shortcut.shift;
                 expect(modified ? id : `${id} has no modifier`).toBe(id);
@@ -45,8 +45,8 @@ describe('the command table', () => {
     });
 
     test('a row has the words of every place it shows in', () => {
-        for (const id of COMMAND_IDS) {
-            const { key, palette } = COMMANDS[id];
+        for (const id of commandIds()) {
+            const { key, palette } = commandSpec(id);
             if (menuPlacesOf(id).length > 0) {
                 expect(i18next.exists(`shell:menu.${key}`) ? id : `${id} has no shell:menu.${key}`).toBe(id);
             }
@@ -57,8 +57,8 @@ describe('the command table', () => {
     });
 
     test('a row the palette does not have sits in the menu', () => {
-        for (const id of COMMAND_IDS) {
-            if (!COMMANDS[id].palette) {
+        for (const id of commandIds()) {
+            if (!commandSpec(id).palette) {
                 expect(menuPlacesOf(id).length > 0 ? id : `${id} is offered nowhere`).toBe(id);
             }
         }

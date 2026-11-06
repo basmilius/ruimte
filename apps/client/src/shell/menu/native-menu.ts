@@ -1,12 +1,12 @@
 import { useProvidersStore } from '@adecore/agents-react/state';
 import i18next from 'i18next';
 import { useEffect } from 'react';
+import { runMenuCommand } from '@/commands/run';
 import { desktop } from '@/desktop/bridge';
 import { usePrRepos } from '@/github/pr-repos';
 import { subscribeFocusedLanguages } from '@/language/focused-language';
 import { useLaunches } from '@/launches/state';
 import { useNewChat } from '@/project/new-chat';
-import { runMenuCommand } from '@/shell/menu/actions';
 import { menuContext } from '@/shell/menu/context';
 import { menuModel } from '@/shell/menu/model';
 import { subscribeCameraHistories } from '@/state/camera-history';

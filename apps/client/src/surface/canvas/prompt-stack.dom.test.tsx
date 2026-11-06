@@ -94,7 +94,7 @@ describe('the prompt stack of a canvas', () => {
     });
 
     test('folds into a bar that says who asks, how many wait and what the front one asks, and opens again', async () => {
-        expect(menuContext('station').navigation.prompts).toBe(true);
+        expect(menuContext('station').promptStack).toBe(true);
         await clickOn(stackButton('Fold prompt'));
 
         expect(stackCard()).toBeNull();
@@ -102,7 +102,7 @@ describe('the prompt stack of a canvas', () => {
         expect(stack().textContent).toContain('2 waiting');
         expect(stack().textContent).toContain('Which endpoints should share the backoff?');
         expect(document.activeElement).toBe(stackButton('Open prompt'));
-        expect(menuContext('station').navigation.prompts).toBe(true);
+        expect(menuContext('station').promptStack).toBe(true);
 
         await clickOn(stackButton('Open prompt'));
 
@@ -138,8 +138,8 @@ describe('the prompt stack of a canvas', () => {
         expect(machine.requests('snooze.set').map((payload) => payload.nodeId)).toEqual([WRITER.id]);
         expect(snoozedButton()).not.toBeNull();
         expect(snoozedButton()!.textContent).toContain('1 snoozed');
-        expect(menuContext('station').navigation.prompts).toBe(false);
-        expect(menuContext('station').navigation.waiting).toBe(false);
+        expect(menuContext('station').promptStack).toBe(false);
+        expect(menuContext('station').somethingWaits).toBe(false);
     });
 
     test('Unsnooze in the list ends the snooze and brings the card back', async () => {

@@ -1,8 +1,8 @@
 import { KEYMAP_IDS, type KeymapId } from '@adecore/editor/keymap';
 import i18next from 'i18next';
+import { commandSpec, isCommandId, menuPlacesOf } from '@/commands/registry';
 import { RENDERED_DOC_COMMENTS } from '@/features';
 import type { KeyboardArea, ShortcutRow } from '@/settings/shortcuts';
-import { COMMANDS, isCommandId, menuPlacesOf } from '@/shell/command-table';
 import { shortcutFor } from '@/surface/editor-keymap';
 
 type EditorArea = Extract<KeyboardArea, 'editor' | 'navigation' | 'code'>;
@@ -146,7 +146,7 @@ const WORD_KEYS = new Set<string>([...KEYMAP_IDS, ...Object.values(WORDS_OF_KEY)
  * without a list to keep. A row of another kind with a key of its own (Find, Settings) stays a command.
  */
 export function isEditorCommand(id: string): boolean {
-    return isCommandId(id) && WORD_KEYS.has(COMMANDS[id].key);
+    return isCommandId(id) && WORD_KEYS.has(commandSpec(id).key);
 }
 
 /* The words a command row has for the key, and else the ones of this pane. */
