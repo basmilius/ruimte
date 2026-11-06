@@ -71,6 +71,11 @@ const DOMAIN_TOOLS: Record<ActionDomain, { name: string; description: string }> 
     }
 };
 
+/* The name of the tool that reaches a domain, for a prompt that points the model at it. */
+export function voiceToolName(domain: ActionDomain): string {
+    return DOMAIN_TOOLS[domain].name;
+}
+
 const CONTROL_TOOL: VoiceToolDefinition = {
     type: 'function',
     name: VOICE_CONTROL_TOOL,
