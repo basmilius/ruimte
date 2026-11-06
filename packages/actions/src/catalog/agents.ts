@@ -108,7 +108,10 @@ export const AGENT_ACTIONS = {
                 .trim()
                 .min(1)
                 .nullish()
-                .describe("The reasoning effort for a chat agent, one the model offers; null keeps the person's last pick when the model offers it")
+                .describe("The reasoning effort for a chat agent, one the model offers; null keeps the person's last pick when the model offers it"),
+            account: agentField(z.string().min(1)).describe(
+                "An account a person named in the calling chat as @account:<cli>/<id>, for this CLI; null inherits the caller's"
+            )
         }),
         output: z.object({
             nodeId,
@@ -143,7 +146,12 @@ export const AGENT_ACTIONS = {
                             .trim()
                             .min(1)
                             .nullish()
-                            .describe("The reasoning effort for a chat role, one the model offers; null keeps the person's last pick when the model offers it")
+                            .describe("The reasoning effort for a chat role, one the model offers; null keeps the person's last pick when the model offers it"),
+                        account: z
+                            .string()
+                            .min(1)
+                            .nullish()
+                            .describe("An account a person named in the calling chat as @account:<cli>/<id>, for this role's CLI; null inherits the caller's")
                     })
                 )
                 .min(1)

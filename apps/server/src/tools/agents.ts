@@ -60,15 +60,74 @@ export function agentNode(spec: AgentNodeSpec): ProjectNode {
 }
 
 /*
- * The account a child starts under: its opener's when it runs the same CLI, named even when that is
- * the default one so the order of the accounts does not replace it; else none, which starts it where
- * its project or that order says. One the child's project turned off is dropped rather than refused,
- * since nobody chose it. Never one the agent picks, since an account is someone's costs.
+ * The account a child starts under when the call names none: its opener's when it runs the same CLI,
+ * named even when that is the default one so the order of the accounts does not replace it; else none,
+ * which starts it where its project or that order says. One the child's project turned off is dropped
+ * rather than refused, since nobody chose it. An agent names an account only as `namedAccount` allows,
+ * since an account is someone's costs.
  */
 export function inheritedAccount(call: AgentCall, kind: AgentKind, projectId: string): string | undefined {
     const opener = call.host.starts.accountOf?.(call.caller) ?? null;
     const account = opener !== null && opener.kind === kind ? (opener.account ?? kind) : undefined;
     return account !== undefined && call.host.starts.accountsOff?.(projectId, kind).includes(account) ? undefined : account;
+}
+
+// The composer's `@account:<cli>/<id>`, with the id as `ProviderAccountIdSchema` spells it, so punctuation after it is no part of it.
+const ACCOUNT_TOKEN = /(?<=^|[\s([{"'“‘])@account:([a-z0-9][a-z0-9-]*)\/([a-z][a-z0-9_-]{0,63})(?![a-z0-9_-])/g;
+
+/* The CLIs a person named this account for with `@account:<cli>/<id>`, in the messages of their own turns of the calling chat. */
+async function accountNamedFor(call: AgentCall, account: string): Promise<Set<string>> {
+    const items = (await call.host.chatThreads?.items(call.caller)) ?? [];
+    const agentTurns = new Set(items.flatMap((item) => (item.kind === 'turn' && item.origin === 'agent' ? [item.id] : [])));
+    const clis = new Set<string>();
+
+    for (const item of items) {
+        if (item.kind !== 'user' || (item.turnId !== null && agentTurns.has(item.turnId))) {
+            continue;
+        }
+
+        for (const found of item.text.matchAll(ACCOUNT_TOKEN)) {
+            if (found[2] === account) {
+                clis.add(found[1]!);
+            }
+        }
+    }
+
+    return clis;
+}
+
+/*
+ * The account a call names for a child, or the inherited one when it names none. An agent may pass on
+ * only an account a person spelled in its own chat, for the CLI the child runs, on this machine, and
+ * one the project offers.
+ */
+export async function namedAccount(
+    call: AgentCall,
+    kind: AgentKind,
+    projectId: string,
+    account: string | null | undefined,
+    machine: string | null | undefined
+): Promise<string | undefined> {
+    if (account == null) {
+        return inheritedAccount(call, kind, projectId);
+    }
+    if (machine != null) {
+        throw new ToolRefusal('account-elsewhere', `account names an account of this machine, and the agent runs on ${machine}; leave account out`);
+    }
+
+    const named = await accountNamedFor(call, account);
+
+    if (named.size === 0) {
+        throw new ToolRefusal('account-not-named', `account takes only an account a person named in this chat as @account:<cli>/${account}; leave account out`);
+    }
+    if (!named.has(kind)) {
+        throw new ToolRefusal('account-other-cli', `${account} was named for ${[...named].join(', ')}, and the agent runs ${kind}`);
+    }
+    if (call.host.starts.accountsOff?.(projectId, kind).includes(account)) {
+        throw new ToolRefusal('account-off', `This project turned ${account} off for ${kind}; leave account out`);
+    }
+
+    return account;
 }
 
 /* The mode a terminal agent is written down with: the one asked for, else the person's default narrowed to the caller's. */

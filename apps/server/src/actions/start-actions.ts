@@ -21,7 +21,7 @@ import { errorText } from '../error-text.ts';
 import { untrustedStartProblem } from '../peering/untrusted.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { providerFor } from '../providers/registry.ts';
-import { agentNode, groupLines, grownGroup, inheritedAccount, nameOf, readsOf, requireInstalled, startPrompt, terminalMode } from '../tools/agents.ts';
+import { agentNode, groupLines, grownGroup, nameOf, namedAccount, readsOf, requireInstalled, startPrompt, terminalMode } from '../tools/agents.ts';
 import { depthForOpening } from '../tools/depth.ts';
 import { NEW_NODE, OPENING_OFF_CANVAS, canvasFor, canvasLines, field, newNode, type ProjectHost, type AgentCall, type WorktreeWant } from '../tools/host.ts';
 import { modeForOpening } from '../tools/mode.ts';
@@ -306,7 +306,7 @@ const startAgentNow: StartHandler = async (input, call) => {
     // Voice gives no cwd, and an agent of another project stands in none of this one's folders, so the project's own folder is judged for both.
     refuseUntrustedStart(host, caller.caller, checkedCwd, [{ provider: kind, chat }], voice || context.origin !== undefined ? place.folder : undefined);
     const runtimeMode = chat ? (input.mode ?? undefined) : terminalMode(caller, input.mode ?? undefined, ceiling);
-    const account = inheritedAccount(caller, kind, place.projectId);
+    const account = await namedAccount(caller, kind, place.projectId, input.account, input.machine);
     context.stillAllowed?.();
     const worktrees = input.worktree
         ? await startWorktrees(caller, place, remote !== null, dryRun, () => {
@@ -648,7 +648,7 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
     const modes: Array<RuntimeMode | undefined> = roles.map((role) =>
         kindOf(role) === 'chat' ? (input.mode ?? undefined) : terminalMode(caller, input.mode ?? undefined, ceiling)
     );
-    const accounts = roles.map((role) => inheritedAccount(caller, role.provider, place.projectId));
+    const accounts = await Promise.all(roles.map((role) => namedAccount(caller, role.provider, place.projectId, role.account, input.machine)));
 
     return host.projects
         .mutate<{ output: ActionOutput<'team.start'>; operation?: { id: string; status: 'running' } }>(place.projectId, async (content) => {

@@ -244,7 +244,8 @@ private enum ChatDraftStyle {
                     .backgroundColor: UIColor.secondarySystemFill,
                 ], range: range)
         }
-        for token in ChatDraftSyntax.tokens(in: text, mentions: mentions, skills: skills, references: references) {
+        let picked = ChatDraftSyntax.tokens(in: text, mentions: mentions, skills: skills, references: references)
+        for token in ChatDraftSyntax.allTokens(in: text, picked: picked) {
             if token.kind == "#" {
                 // Neutral, so a reference never reads as a file or a skill.
                 result.addAttributes(

@@ -199,4 +199,24 @@ final class ChatDraftTests: XCTestCase {
         XCTAssertNotNil(draft.validation)
         await draft.flush()
     }
+
+    func testFindsModelAndAccountTokensByTheirPattern() {
+        let text = "Use @model:claude/claude-opus-5-5[1m], on @account:codex/codex_work. `@model:codex/gpt-5`"
+        XCTAssertEqual(
+            ChatDraftSyntax.namedTokens(in: text),
+            [
+                ChatDraftToken(range: NSRange(location: 4, length: 33), value: "claude/claude-opus-5-5[1m]", kind: "model"),
+                ChatDraftToken(range: NSRange(location: 42, length: 25), value: "codex/codex_work", kind: "account"),
+            ])
+        XCTAssertTrue(ChatDraftSyntax.namedTokens(in: "mail@model:claude/x").isEmpty)
+    }
+
+    @MainActor func testModelTokensStayOutOfTheMentionLimit() async {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let draft = ChatComposition(machineID: "machine", chatID: "chat", root: root, defaults: defaults)
+        draft.text = (0..<70).map { "@model:claude/model-\($0)" }.joined(separator: " ")
+        XCTAssertNil(draft.validation)
+        await draft.flush()
+    }
 }

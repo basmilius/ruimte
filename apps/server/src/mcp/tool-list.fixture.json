@@ -312,6 +312,10 @@
                     "effort": {
                         "type": "string"
                     },
+                    "account": {
+                        "type": "string",
+                        "description": "An account from a person's @account:<cli>/<id>"
+                    },
                     "branch": {
                         "type": "string"
                     },

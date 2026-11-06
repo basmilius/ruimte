@@ -6814,6 +6814,16 @@
         }
       }
     },
+    "Accounts" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accounts"
+          }
+        }
+      }
+    },
     "Account %@" : {
       "comment" : "%@ is the account name",
       "localizations" : {

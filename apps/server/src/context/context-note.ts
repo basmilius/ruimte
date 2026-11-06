@@ -43,6 +43,9 @@ const NOT_A_SUBAGENT = 'An agent the person asks for is one of these, never a su
 const AGENT_PERMISSION_NOTE =
     'Leave `mode` out unless the person asks for another permission mode; a read-only or review assignment does not imply `supervised`.';
 
+/* The tokens the composer's `@` menu writes, which a model cannot tell from a path without being told. */
+const TAG_NOTE = '`@model:<cli>/<id>` sets `cli` and `model` of an agent you start, `@account:<cli>/<id>` its `account`.';
+
 /* What the tools open, with the reason not to: every agent leaves a node behind. */
 function opensAt(depth: number): string | null {
     if (depth < MAX_TEAM_DEPTH) {
@@ -172,6 +175,7 @@ export function toolsNote({
                 ? [
                       `For an agent or model the person names, use \`agent_start\` with a \`task\` (cli: ${CLI_NAMES})${depth < MAX_TEAM_DEPTH ? ', or `agent_team` for several' : ''}. These agents stay hidden and their results return to this chat, so end your turn after delegating instead of polling.`,
                       AGENT_PERMISSION_NOTE,
+                      TAG_NOTE,
                       'Set `view` only when the person asks to place the agent on a canvas.'
                   ]
                 : []),
@@ -187,7 +191,7 @@ export function toolsNote({
         PRODUCT_NOTE,
         standalone ? TERMINAL_VIEW_NOTE : CANVAS_NODE_NOTE,
         ALERT_NOTE,
-        ...(opens === null ? [] : [opens, AGENT_PERMISSION_NOTE]),
+        ...(opens === null ? [] : [opens, AGENT_PERMISSION_NOTE, ...(terminal ? [] : [TAG_NOTE])]),
         ...(depth < MAX_AGENT_DEPTH && !standalone ? ['With a `task`, the result comes back as your next message, so end your turn instead of polling.'] : []),
         ...closing
     ].join(' ');
