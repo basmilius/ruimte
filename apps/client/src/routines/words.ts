@@ -1,5 +1,5 @@
 import { formatClock, formatDateTime, formatDay, formatDuration, formatElapsedShort } from '@adecore/ui/format';
-import { isDeclined, type CronProblem, type RoutineEntry, RoutineRun, RoutineSchedule } from '@ruimte/contracts';
+import { isDeclined, type CronProblem, type RoutineEntry, type RoutineRun, type RoutineSchedule } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { awaitsApproval, type AgendaBlock, type CellItem } from '@/routines/agenda';
 
