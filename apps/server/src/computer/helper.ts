@@ -5,7 +5,11 @@ import { CodedError } from '@adecore/agents';
 import { homeFolder } from '@ruimte/service/home';
 import type { z } from 'zod';
 import { readLocalSecret } from '../auth/local-secret.ts';
+import { errorText } from '../error-text.ts';
 import { HelperReplySchema, type HelperRequest } from './helper-protocol.ts';
+
+/* The helper's code for a request that does not carry the secret of the home it serves. */
+const HOME_REFUSED = 'home-refused';
 
 type HelperFailureCode = 'unavailable' | 'helper-unreachable' | 'helper-busy' | 'helper-error' | 'helper-invalid';
 
@@ -19,12 +23,17 @@ export class HelperFailure extends CodedError<HelperFailureCode> {
     }
 }
 
-export function messageOf(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
+function unreachable(error: unknown): HelperFailure {
+    return new HelperFailure('helper-unreachable', errorText(error));
 }
 
-function unreachable(error: unknown): HelperFailure {
-    return new HelperFailure('helper-unreachable', messageOf(error));
+/* A helper from before the codes said these in words only, and one may still run for another Ruimte on this Mac. */
+function legacyHelperCode(message: string): string | null {
+    if (message.startsWith('refused:')) {
+        return HOME_REFUSED;
+    }
+
+    return /^stopped by the (user|person)\b/.test(message) ? 'stopped' : null;
 }
 
 const UNKNOWN_SHAPE = 'The computer use helper answered in a shape this machine does not know';
@@ -190,16 +199,26 @@ export class ComputerHelper {
     /* Quits a running helper and waits until its socket is closed, so the next request starts a fresh one rather than reaching the one on its way out. */
     async quitAndWait(): Promise<void> {
         await this.quit();
-        for (let waited = 0; waited < this.startWaitMs; waited += START_POLL_MS) {
+        const gone = await this.pollUntil(async () => {
             const answered = await this.deliver({ command: 'doctor', prompt: false }, false)
                 .then((reply) => reply !== null)
                 .catch(() => false);
-            if (!answered) {
-                return;
+            return !answered;
+        });
+        if (!gone) {
+            throw new HelperFailure('helper-unreachable', `Ruimte Computer Use did not quit within ${this.startWaitMs / 1000} s`);
+        }
+    }
+
+    /* Asks `done` every `START_POLL_MS` for as long as a helper may take to open or close its socket. */
+    private async pollUntil(done: () => Promise<boolean>): Promise<boolean> {
+        for (let waited = 0; waited < this.startWaitMs; waited += START_POLL_MS) {
+            if (await done()) {
+                return true;
             }
             await this.sleep(START_POLL_MS);
         }
-        throw new HelperFailure('helper-unreachable', `Ruimte Computer Use did not quit within ${this.startWaitMs / 1000} s`);
+        return false;
     }
 
     private resultOf<Schema extends z.ZodType>(reply: unknown, schema: Schema): z.infer<Schema> {
@@ -209,14 +228,15 @@ export class ComputerHelper {
         }
         if (!parsed.data.ok) {
             const message = parsed.data.error;
+            const code = parsed.data.code ?? legacyHelperCode(message);
             // The helper serves one home at a time and checks the secret of its own before anything else.
-            if (message.startsWith('refused:')) {
+            if (code === HOME_REFUSED) {
                 throw new HelperFailure(
                     'helper-busy',
                     'Ruimte Computer Use is running for another Ruimte on this Mac; it has to quit before this machine can use it'
                 );
             }
-            throw new HelperFailure('helper-error', message, parsed.data.code ?? null);
+            throw new HelperFailure('helper-error', message, code);
         }
         const result = schema.safeParse(parsed.data.result);
         if (!result.success) {
@@ -262,23 +282,25 @@ export class ComputerHelper {
         try {
             await this.launch(appPath, this.home);
         } catch (error) {
-            throw new HelperFailure('helper-unreachable', `Ruimte Computer Use did not start: ${messageOf(error)}`);
+            throw new HelperFailure('helper-unreachable', `Ruimte Computer Use did not start: ${errorText(error)}`);
         }
         const secret = await this.secret();
-        for (let waited = 0; waited < this.startWaitMs; waited += START_POLL_MS) {
+        const open = await this.pollUntil(async () => {
             try {
                 await this.transport.send({ command: 'doctor', prompt: false, ...(secret === null ? {} : { secret }) });
-                return;
+                return true;
             } catch (error) {
                 if (!(error instanceof HelperUnreachable)) {
                     throw unreachable(error);
                 }
+                return false;
             }
-            await this.sleep(START_POLL_MS);
+        });
+        if (!open) {
+            throw new HelperFailure(
+                'helper-unreachable',
+                `Ruimte Computer Use started but did not open its socket within ${this.startWaitMs / 1000} s; a copy running for another Ruimte keeps this one from starting`
+            );
         }
-        throw new HelperFailure(
-            'helper-unreachable',
-            `Ruimte Computer Use started but did not open its socket within ${this.startWaitMs / 1000} s; a copy running for another Ruimte keeps this one from starting`
-        );
     }
 }

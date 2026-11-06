@@ -37,7 +37,7 @@ screenshots/      window captures; one older than an hour goes at the next captu
 A connection carries one request: the client writes one JSON object and half-closes, the helper answers one object and closes. `Request` in `Sources/ComputerUseCore/Wire.swift` holds `command`, its fields, and `secret`, the content of `$RUIMTE_HOME/local.key`.
 
 - The helper accepts a connection only from a process of the same user.
-- It accepts a request only when `secret` matches `local.key`, read again per request and compared in constant time. A request without it gets `refused: ...` before anything else is read.
+- It accepts a request only when `secret` matches `local.key`, read again per request and compared in constant time. A request without it gets a `home-refused` failure (its message starts with `refused:`) before anything else is read.
 - The reply is `{"ok": true, "result": {...}}` or `{"ok": false, "error": "...", "code": "..."}`. `code` appears only for refusals a caller branches on (`paused`, `taken-over`, `stopped`, `needs-front`).
 
 The commands are those `cu` sends, with field names in `Wire.swift`. `doctor` also takes `grant` (`accessibility` or `screenRecording`) to ask macOS for one grant without opening the pane; `cu` has no flag for it.
