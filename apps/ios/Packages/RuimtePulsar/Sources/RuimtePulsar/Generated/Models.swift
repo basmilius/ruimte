@@ -8763,6 +8763,464 @@ public struct MachineWork: Codable, Sendable, Equatable {
     }
 }
 
+public struct ProcessesSubscribeResult: Codable, Sendable, Equatable {
+    public let `supported`: Bool
+    public let `fineIntervalMs`: Int64
+    public let `coarseIntervalMs`: Int64
+    public let `fine`: [ProcessPoint]
+    public let `coarse`: [ProcessPoint]
+    public let `sample`: ProcessSample?
+
+    public init(`supported`: Bool, `fineIntervalMs`: Int64, `coarseIntervalMs`: Int64, `fine`: [ProcessPoint], `coarse`: [ProcessPoint], `sample`: ProcessSample?) {
+        self.`supported` = `supported`
+        self.`fineIntervalMs` = `fineIntervalMs`
+        self.`coarseIntervalMs` = `coarseIntervalMs`
+        self.`fine` = `fine`
+        self.`coarse` = `coarse`
+        self.`sample` = `sample`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `supported` = try container.decode(Bool.self, forKey: .`supported`)
+        `fineIntervalMs` = try container.decode(Int64.self, forKey: .`fineIntervalMs`)
+        `coarseIntervalMs` = try container.decode(Int64.self, forKey: .`coarseIntervalMs`)
+        `fine` = try container.decode([ProcessPoint].self, forKey: .`fine`)
+        `coarse` = try container.decode([ProcessPoint].self, forKey: .`coarse`)
+        `sample` = try container.decode(ProcessSample?.self, forKey: .`sample`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`supported`, forKey: .`supported`)
+        try container.encode(`fineIntervalMs`, forKey: .`fineIntervalMs`)
+        try container.encode(`coarseIntervalMs`, forKey: .`coarseIntervalMs`)
+        try container.encode(`fine`, forKey: .`fine`)
+        try container.encode(`coarse`, forKey: .`coarse`)
+        try container.encode(`sample`, forKey: .`sample`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `supported` = "supported"
+        case `fineIntervalMs` = "fineIntervalMs"
+        case `coarseIntervalMs` = "coarseIntervalMs"
+        case `fine` = "fine"
+        case `coarse` = "coarse"
+        case `sample` = "sample"
+    }
+}
+
+public struct ProcessPoint: Codable, Sendable, Equatable {
+    public let `at`: Double
+    public let `cpu`: Double?
+    public let `cpuRuimte`: Double?
+    public let `memory`: Double?
+    public let `memoryRuimte`: Double?
+    public let `disk`: Double?
+    public let `diskRuimte`: Double?
+
+    public init(`at`: Double, `cpu`: Double?, `cpuRuimte`: Double?, `memory`: Double?, `memoryRuimte`: Double?, `disk`: Double?, `diskRuimte`: Double?) {
+        self.`at` = `at`
+        self.`cpu` = `cpu`
+        self.`cpuRuimte` = `cpuRuimte`
+        self.`memory` = `memory`
+        self.`memoryRuimte` = `memoryRuimte`
+        self.`disk` = `disk`
+        self.`diskRuimte` = `diskRuimte`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `at` = try container.decode(Double.self, forKey: .`at`)
+        `cpu` = try container.decode(Double?.self, forKey: .`cpu`)
+        `cpuRuimte` = try container.decode(Double?.self, forKey: .`cpuRuimte`)
+        `memory` = try container.decode(Double?.self, forKey: .`memory`)
+        `memoryRuimte` = try container.decode(Double?.self, forKey: .`memoryRuimte`)
+        `disk` = try container.decode(Double?.self, forKey: .`disk`)
+        `diskRuimte` = try container.decode(Double?.self, forKey: .`diskRuimte`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`at`, forKey: .`at`)
+        try container.encode(`cpu`, forKey: .`cpu`)
+        try container.encode(`cpuRuimte`, forKey: .`cpuRuimte`)
+        try container.encode(`memory`, forKey: .`memory`)
+        try container.encode(`memoryRuimte`, forKey: .`memoryRuimte`)
+        try container.encode(`disk`, forKey: .`disk`)
+        try container.encode(`diskRuimte`, forKey: .`diskRuimte`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `at` = "at"
+        case `cpu` = "cpu"
+        case `cpuRuimte` = "cpuRuimte"
+        case `memory` = "memory"
+        case `memoryRuimte` = "memoryRuimte"
+        case `disk` = "disk"
+        case `diskRuimte` = "diskRuimte"
+    }
+}
+
+public struct ProcessSample: Codable, Sendable, Equatable {
+    public let `at`: Double
+    public let `scope`: ProcessScope
+    public let `machine`: ProcessMachine
+    public let `groups`: [ProcessGroup]
+    public let `fine`: ProcessPoint?
+    public let `coarse`: ProcessPoint?
+    public let `reset`: Bool
+
+    public init(`at`: Double, `scope`: ProcessScope, `machine`: ProcessMachine, `groups`: [ProcessGroup], `fine`: ProcessPoint?, `coarse`: ProcessPoint?, `reset`: Bool) {
+        self.`at` = `at`
+        self.`scope` = `scope`
+        self.`machine` = `machine`
+        self.`groups` = `groups`
+        self.`fine` = `fine`
+        self.`coarse` = `coarse`
+        self.`reset` = `reset`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `at` = try container.decode(Double.self, forKey: .`at`)
+        `scope` = try container.decode(ProcessScope.self, forKey: .`scope`)
+        `machine` = try container.decode(ProcessMachine.self, forKey: .`machine`)
+        `groups` = try container.decode([ProcessGroup].self, forKey: .`groups`)
+        `fine` = try container.decode(ProcessPoint?.self, forKey: .`fine`)
+        `coarse` = try container.decode(ProcessPoint?.self, forKey: .`coarse`)
+        `reset` = try container.decode(Bool.self, forKey: .`reset`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`at`, forKey: .`at`)
+        try container.encode(`scope`, forKey: .`scope`)
+        try container.encode(`machine`, forKey: .`machine`)
+        try container.encode(`groups`, forKey: .`groups`)
+        try container.encode(`fine`, forKey: .`fine`)
+        try container.encode(`coarse`, forKey: .`coarse`)
+        try container.encode(`reset`, forKey: .`reset`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `at` = "at"
+        case `scope` = "scope"
+        case `machine` = "machine"
+        case `groups` = "groups"
+        case `fine` = "fine"
+        case `coarse` = "coarse"
+        case `reset` = "reset"
+    }
+}
+
+public enum ProcessScope: String, CaseIterable, Codable, Sendable, Equatable {
+    case `ruimte` = "ruimte"
+    case `all` = "all"
+}
+
+public struct ProcessMachine: Codable, Sendable, Equatable {
+    public let `cores`: Int64
+    public let `cpu`: Double?
+    public let `memoryUsed`: Double?
+    public let `memoryTotal`: Double
+    public let `diskRead`: Double?
+    public let `diskWrite`: Double?
+    public let `diskFree`: Double?
+    public let `diskTotal`: Double?
+
+    public init(`cores`: Int64, `cpu`: Double?, `memoryUsed`: Double?, `memoryTotal`: Double, `diskRead`: Double?, `diskWrite`: Double?, `diskFree`: Double?, `diskTotal`: Double?) {
+        self.`cores` = `cores`
+        self.`cpu` = `cpu`
+        self.`memoryUsed` = `memoryUsed`
+        self.`memoryTotal` = `memoryTotal`
+        self.`diskRead` = `diskRead`
+        self.`diskWrite` = `diskWrite`
+        self.`diskFree` = `diskFree`
+        self.`diskTotal` = `diskTotal`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `cores` = try container.decode(Int64.self, forKey: .`cores`)
+        `cpu` = try container.decode(Double?.self, forKey: .`cpu`)
+        `memoryUsed` = try container.decode(Double?.self, forKey: .`memoryUsed`)
+        `memoryTotal` = try container.decode(Double.self, forKey: .`memoryTotal`)
+        `diskRead` = try container.decode(Double?.self, forKey: .`diskRead`)
+        `diskWrite` = try container.decode(Double?.self, forKey: .`diskWrite`)
+        `diskFree` = try container.decode(Double?.self, forKey: .`diskFree`)
+        `diskTotal` = try container.decode(Double?.self, forKey: .`diskTotal`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`cores`, forKey: .`cores`)
+        try container.encode(`cpu`, forKey: .`cpu`)
+        try container.encode(`memoryUsed`, forKey: .`memoryUsed`)
+        try container.encode(`memoryTotal`, forKey: .`memoryTotal`)
+        try container.encode(`diskRead`, forKey: .`diskRead`)
+        try container.encode(`diskWrite`, forKey: .`diskWrite`)
+        try container.encode(`diskFree`, forKey: .`diskFree`)
+        try container.encode(`diskTotal`, forKey: .`diskTotal`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `cores` = "cores"
+        case `cpu` = "cpu"
+        case `memoryUsed` = "memoryUsed"
+        case `memoryTotal` = "memoryTotal"
+        case `diskRead` = "diskRead"
+        case `diskWrite` = "diskWrite"
+        case `diskFree` = "diskFree"
+        case `diskTotal` = "diskTotal"
+    }
+}
+
+public struct ProcessGroup: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `kind`: ProcessGroupKind
+    public let `nodeId`: String?
+    public let `label`: String?
+    public let `projectId`: String?
+    public let `cpu`: Double?
+    public let `memory`: Double?
+    public let `diskRead`: Double?
+    public let `diskWrite`: Double?
+    public let `processes`: [ProcessRow]
+    public let `hidden`: Int64
+
+    public init(`id`: String, `kind`: ProcessGroupKind, `nodeId`: String?, `label`: String? = nil, `projectId`: String? = nil, `cpu`: Double?, `memory`: Double?, `diskRead`: Double?, `diskWrite`: Double?, `processes`: [ProcessRow], `hidden`: Int64) {
+        self.`id` = `id`
+        self.`kind` = `kind`
+        self.`nodeId` = `nodeId`
+        self.`label` = `label`
+        self.`projectId` = `projectId`
+        self.`cpu` = `cpu`
+        self.`memory` = `memory`
+        self.`diskRead` = `diskRead`
+        self.`diskWrite` = `diskWrite`
+        self.`processes` = `processes`
+        self.`hidden` = `hidden`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `kind` = try container.decode(ProcessGroupKind.self, forKey: .`kind`)
+        `nodeId` = try container.decode(String?.self, forKey: .`nodeId`)
+        `label` = try container.decodeIfPresent(String.self, forKey: .`label`)
+        `projectId` = try container.decodeIfPresent(String.self, forKey: .`projectId`)
+        `cpu` = try container.decode(Double?.self, forKey: .`cpu`)
+        `memory` = try container.decode(Double?.self, forKey: .`memory`)
+        `diskRead` = try container.decode(Double?.self, forKey: .`diskRead`)
+        `diskWrite` = try container.decode(Double?.self, forKey: .`diskWrite`)
+        `processes` = try container.decode([ProcessRow].self, forKey: .`processes`)
+        `hidden` = try container.decode(Int64.self, forKey: .`hidden`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`nodeId`, forKey: .`nodeId`)
+        try container.encodeIfPresent(`label`, forKey: .`label`)
+        try container.encodeIfPresent(`projectId`, forKey: .`projectId`)
+        try container.encode(`cpu`, forKey: .`cpu`)
+        try container.encode(`memory`, forKey: .`memory`)
+        try container.encode(`diskRead`, forKey: .`diskRead`)
+        try container.encode(`diskWrite`, forKey: .`diskWrite`)
+        try container.encode(`processes`, forKey: .`processes`)
+        try container.encode(`hidden`, forKey: .`hidden`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `kind` = "kind"
+        case `nodeId` = "nodeId"
+        case `label` = "label"
+        case `projectId` = "projectId"
+        case `cpu` = "cpu"
+        case `memory` = "memory"
+        case `diskRead` = "diskRead"
+        case `diskWrite` = "diskWrite"
+        case `processes` = "processes"
+        case `hidden` = "hidden"
+    }
+}
+
+public enum ProcessGroupKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `terminal` = "terminal"
+    case `chat` = "chat"
+    case `app` = "app"
+    case `daemon` = "daemon"
+    case `other` = "other"
+}
+
+public struct ProcessRow: Codable, Sendable, Equatable {
+    public let `pid`: Int64
+    public let `startTime`: Double
+    public let `ppid`: Int64
+    public let `name`: String
+    public let `path`: String?
+    public let `readable`: Bool
+    public let `cpu`: Double?
+    public let `memory`: Double?
+    public let `diskRead`: Double?
+    public let `diskWrite`: Double?
+    public let `family`: String?
+    public let `depth`: Int64
+
+    public init(`pid`: Int64, `startTime`: Double, `ppid`: Int64, `name`: String, `path`: String?, `readable`: Bool, `cpu`: Double?, `memory`: Double?, `diskRead`: Double?, `diskWrite`: Double?, `family`: String?, `depth`: Int64) {
+        self.`pid` = `pid`
+        self.`startTime` = `startTime`
+        self.`ppid` = `ppid`
+        self.`name` = `name`
+        self.`path` = `path`
+        self.`readable` = `readable`
+        self.`cpu` = `cpu`
+        self.`memory` = `memory`
+        self.`diskRead` = `diskRead`
+        self.`diskWrite` = `diskWrite`
+        self.`family` = `family`
+        self.`depth` = `depth`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `pid` = try container.decode(Int64.self, forKey: .`pid`)
+        `startTime` = try container.decode(Double.self, forKey: .`startTime`)
+        `ppid` = try container.decode(Int64.self, forKey: .`ppid`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `path` = try container.decode(String?.self, forKey: .`path`)
+        `readable` = try container.decode(Bool.self, forKey: .`readable`)
+        `cpu` = try container.decode(Double?.self, forKey: .`cpu`)
+        `memory` = try container.decode(Double?.self, forKey: .`memory`)
+        `diskRead` = try container.decode(Double?.self, forKey: .`diskRead`)
+        `diskWrite` = try container.decode(Double?.self, forKey: .`diskWrite`)
+        `family` = try container.decode(String?.self, forKey: .`family`)
+        `depth` = try container.decode(Int64.self, forKey: .`depth`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`pid`, forKey: .`pid`)
+        try container.encode(`startTime`, forKey: .`startTime`)
+        try container.encode(`ppid`, forKey: .`ppid`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`readable`, forKey: .`readable`)
+        try container.encode(`cpu`, forKey: .`cpu`)
+        try container.encode(`memory`, forKey: .`memory`)
+        try container.encode(`diskRead`, forKey: .`diskRead`)
+        try container.encode(`diskWrite`, forKey: .`diskWrite`)
+        try container.encode(`family`, forKey: .`family`)
+        try container.encode(`depth`, forKey: .`depth`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `pid` = "pid"
+        case `startTime` = "startTime"
+        case `ppid` = "ppid"
+        case `name` = "name"
+        case `path` = "path"
+        case `readable` = "readable"
+        case `cpu` = "cpu"
+        case `memory` = "memory"
+        case `diskRead` = "diskRead"
+        case `diskWrite` = "diskWrite"
+        case `family` = "family"
+        case `depth` = "depth"
+    }
+}
+
+public struct ProcessesAlerts: Codable, Sendable, Equatable {
+    public let `alerts`: [ProcessAlert]
+
+    public init(`alerts`: [ProcessAlert]) {
+        self.`alerts` = `alerts`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `alerts` = try container.decode([ProcessAlert].self, forKey: .`alerts`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`alerts`, forKey: .`alerts`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `alerts` = "alerts"
+    }
+}
+
+public struct ProcessAlert: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `kind`: ProcessAlertKind
+    public let `nodeId`: String?
+    public let `pid`: Int64?
+    public let `startTime`: Double?
+    public let `name`: String?
+    public let `since`: Double
+    public let `value`: Double?
+
+    public init(`id`: String, `kind`: ProcessAlertKind, `nodeId`: String?, `pid`: Int64?, `startTime`: Double?, `name`: String?, `since`: Double, `value`: Double?) {
+        self.`id` = `id`
+        self.`kind` = `kind`
+        self.`nodeId` = `nodeId`
+        self.`pid` = `pid`
+        self.`startTime` = `startTime`
+        self.`name` = `name`
+        self.`since` = `since`
+        self.`value` = `value`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `kind` = try container.decode(ProcessAlertKind.self, forKey: .`kind`)
+        `nodeId` = try container.decode(String?.self, forKey: .`nodeId`)
+        `pid` = try container.decode(Int64?.self, forKey: .`pid`)
+        `startTime` = try container.decode(Double?.self, forKey: .`startTime`)
+        `name` = try container.decode(String?.self, forKey: .`name`)
+        `since` = try container.decode(Double.self, forKey: .`since`)
+        `value` = try container.decode(Double?.self, forKey: .`value`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`nodeId`, forKey: .`nodeId`)
+        try container.encode(`pid`, forKey: .`pid`)
+        try container.encode(`startTime`, forKey: .`startTime`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`since`, forKey: .`since`)
+        try container.encode(`value`, forKey: .`value`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `kind` = "kind"
+        case `nodeId` = "nodeId"
+        case `pid` = "pid"
+        case `startTime` = "startTime"
+        case `name` = "name"
+        case `since` = "since"
+        case `value` = "value"
+    }
+}
+
+public enum ProcessAlertKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `silent` = "silent"
+    case `busyAfterTurn` = "busy-after-turn"
+    case `memory` = "memory"
+    case `agentGone` = "agent-gone"
+    case `orphan` = "orphan"
+    case `probeHung` = "probe-hung"
+}
+
 public extension PlanStepState {
     /// The marker of this state, as `PLAN_STATE_MARKERS` in `@adecore/plan` writes it.
     var marker: String {

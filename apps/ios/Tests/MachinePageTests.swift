@@ -763,11 +763,7 @@ final class MachinePageTests: XCTestCase {
 
     func testProcessesGroupPerProjectWithMachineTasksLast() {
         let group: (String, String?) -> ProcessGroup = { id, project in
-            ProcessGroup(
-                json: .object([
-                    "id": .string(id), "kind": .string("terminal"),
-                    "projectId": project.map(JSONValue.string) ?? .null, "processes": .array([]),
-                ]))
+            ProcessWire.group(id, project: project).processGroup
         }
         let sections = ProcessesText.sections(
             [group("daemon", nil), group("a", "p1"), group("b", "p2"), group("c", "p1")],

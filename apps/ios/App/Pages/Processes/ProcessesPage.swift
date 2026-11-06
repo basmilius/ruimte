@@ -289,7 +289,7 @@ struct ProcessesPage: View {
                             }
                         }
                         if !named.known {
-                            Text(group.projectID.flatMap { projectNames[$0] } ?? String(localized: "another project"))
+                            Text(group.projectId.flatMap { projectNames[$0] } ?? String(localized: "another project"))
                                 .font(.caption).foregroundStyle(MobileStyle.faint).lineLimit(1)
                         }
                     }
@@ -311,7 +311,7 @@ struct ProcessesPage: View {
     }
 
     private func processRow(_ process: ProcessRow) -> some View {
-        let highlighted = model.highlight?.pid == process.pid && model.highlight?.startTime == process.startTime
+        let highlighted = model.highlight?.pid == Int(process.pid) && model.highlight?.startTime == process.startTime
         return HStack(spacing: 6) {
             Text(process.name).foregroundStyle(process.readable ? MobileStyle.text : MobileStyle.faint)
                 .lineLimit(1)
@@ -378,13 +378,13 @@ struct ProcessesPage: View {
         .accessibilityLabel("CPU \(ProcessesText.percent(cpu)), memory \(ProcessesText.bytes(memory))")
     }
 
-    private static func icon(_ kind: String) -> String {
+    private static func icon(_ kind: ProcessGroupKind) -> String {
         switch kind {
-        case "terminal": "terminal"
-        case "chat": "message-square"
-        case "app": "app-window"
-        case "daemon": "server"
-        default: "cpu"
+        case .terminal: "terminal"
+        case .chat: "message-square"
+        case .app: "app-window"
+        case .daemon: "server"
+        case .other: "cpu"
         }
     }
 

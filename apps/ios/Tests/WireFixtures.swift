@@ -112,3 +112,74 @@ enum EndpointWire {
     /// A fixture that does not decode is a broken test, not a case to cover.
     static func decoded(_ info: JSONValue) -> EndpointInfo { try! info.decoded(as: EndpointInfo.self) }
 }
+
+/// `processes.*` replies and events as a machine writes them. Each builder takes what a test is about and fills in the
+/// rest the way a sample reads.
+enum ProcessWire {
+    static func row(_ pid: Int, start: Double = 100, readable: Bool = true, cpu: Double? = 3) -> JSONValue {
+        .object([
+            "pid": .number(Double(pid)), "startTime": .number(start), "ppid": .number(1), "name": .string("bun"),
+            "path": .null, "readable": .bool(readable), "cpu": cpu.map(JSONValue.number) ?? .null,
+            "memory": .number(2048), "diskRead": .null, "diskWrite": .null, "family": .null, "depth": .number(0),
+        ])
+    }
+
+    static func group(
+        _ id: String, kind: String = "terminal", node: String? = nil, project: String? = nil, label: String? = nil,
+        rows: [JSONValue] = []
+    ) -> JSONValue {
+        var fields: [String: JSONValue] = [
+            "id": .string(id), "kind": .string(kind), "nodeId": node.map(JSONValue.string) ?? .null,
+            "cpu": .number(3), "memory": .number(2048), "diskRead": .null, "diskWrite": .null,
+            "processes": .array(rows), "hidden": .number(0),
+        ]
+        if let label { fields["label"] = .string(label) }
+        if let project { fields["projectId"] = .string(project) }
+        return .object(fields)
+    }
+
+    static func sample(scope: String, at: Double, groups: [JSONValue], point: Bool = true, reset: Bool = false)
+        -> JSONValue
+    {
+        .object([
+            "at": .number(at), "scope": .string(scope),
+            "machine": .object([
+                "cores": .number(8), "cpu": .number(12), "memoryUsed": .number(1), "memoryTotal": .number(2),
+                "diskRead": .null, "diskWrite": .null, "diskFree": .null, "diskTotal": .null,
+            ]),
+            "groups": .array(groups), "fine": point ? .object(finePoint(at: at)) : .null, "coarse": .null,
+            "reset": .bool(reset),
+        ])
+    }
+
+    private static func finePoint(at: Double) -> [String: JSONValue] {
+        [
+            "at": .number(at), "cpu": .number(12), "cpuRuimte": .null, "memory": .null, "memoryRuimte": .null,
+            "disk": .null, "diskRuimte": .null,
+        ]
+    }
+
+    static func alert(_ kind: String, node: String? = nil, pid: Int? = nil, value: Double? = nil) -> JSONValue {
+        .object([
+            "id": .string("a1"), "kind": .string(kind), "nodeId": node.map(JSONValue.string) ?? .null,
+            "pid": pid.map { .number(Double($0)) } ?? .null, "startTime": pid == nil ? .null : .number(100),
+            "name": .string("bun"), "since": .number(0), "value": value.map(JSONValue.number) ?? .null,
+        ])
+    }
+
+    /// What `processes.subscribe` answers.
+    static func subscribed(supported: Bool = true, sample: JSONValue = .null) -> JSONValue {
+        .object([
+            "supported": .bool(supported), "fineIntervalMs": .number(2000), "coarseIntervalMs": .number(300_000),
+            "fine": .array([]), "coarse": .array([]), "sample": sample,
+        ])
+    }
+}
+
+extension JSONValue {
+    // A fixture that does not decode is a broken test, not a case to cover.
+    var processGroup: ProcessGroup { try! decoded(as: ProcessGroup.self) }
+    var processSample: ProcessSample { try! decoded(as: ProcessSample.self) }
+    var processAlert: ProcessAlert { try! decoded(as: ProcessAlert.self) }
+    var processSubscribed: ProcessesSubscribeResult { try! decoded(as: ProcessesSubscribeResult.self) }
+}

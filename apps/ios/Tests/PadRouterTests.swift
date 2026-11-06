@@ -245,24 +245,13 @@ final class ProjectWidgetRecorderTests: XCTestCase {
 }
 
 final class PadProcessTableTests: XCTestCase {
-    private func process(_ pid: Int, cpu: Double?) -> JSONValue {
-        .object([
-            "pid": .number(Double(pid)), "startTime": .number(100), "name": .string("bun"), "readable": .bool(true),
-            "cpu": cpu.map(JSONValue.number) ?? .null, "memory": .number(2048), "depth": .number(0),
-        ])
-    }
-
     func testEveryProcessIsARowNamedAfterItsNodeAndProject() {
         let groups = [
-            ProcessGroup(
-                json: .object([
-                    "id": .string("g1"), "kind": .string("terminal"), "nodeId": .string("t1"),
-                    "projectId": .string("app"), "processes": .array([process(10, cpu: 3), process(11, cpu: nil)]),
-                ])),
-            ProcessGroup(
-                json: .object([
-                    "id": .string("g2"), "kind": .string("daemon"), "processes": .array([process(20, cpu: 96)]),
-                ])),
+            ProcessWire.group(
+                "g1", node: "t1", project: "app",
+                rows: [ProcessWire.row(10, cpu: 3), ProcessWire.row(11, cpu: nil)]
+            ).processGroup,
+            ProcessWire.group("g2", kind: "daemon", rows: [ProcessWire.row(20, cpu: 96)]).processGroup,
         ]
         let rows = ProcessTableRow.rows(groups, titles: ["t1": "bun dev"], projectNames: ["app": "Recept Maker"])
         XCTAssertEqual(rows.map(\.pid), [10, 11, 20])

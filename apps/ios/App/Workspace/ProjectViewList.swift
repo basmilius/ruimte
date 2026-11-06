@@ -151,6 +151,7 @@ final class ProjectListState {
     }
 
     private func receive(_ payload: JSONValue) {
-        warnings = Set(payload.list("alerts").compactMap { $0["nodeId"]?.stringValue })
+        guard let list = try? payload.decoded(as: ProcessesAlerts.self) else { return }
+        warnings = Set(list.alerts.compactMap(\.nodeId))
     }
 }

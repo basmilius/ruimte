@@ -358,7 +358,17 @@ const typedRoots: [name: string, source: string, path: (string | number)[]][] = 
     ['EndpointInstallUpdateResult', 'request.endpoint.installUpdate.result', []],
     ['MachineWork', 'request.endpoint.installUpdate.result', ['properties', 'ending']],
     ['LanDoor', 'request.endpoint.info.result', ['properties', 'lan', 'anyOf', 0]],
-    ['KeepAwakeMode', 'request.endpoint.info.result', ['properties', 'keepAwake']]
+    ['KeepAwakeMode', 'request.endpoint.info.result', ['properties', 'keepAwake']],
+    ['ProcessesSubscribeResult', 'request.processes.subscribe.result', []],
+    ['ProcessSample', 'event.processes.sample', []],
+    ['ProcessMachine', 'event.processes.sample', ['properties', 'machine']],
+    ['ProcessGroup', 'event.processes.sample', ['properties', 'groups', 'items']],
+    ['ProcessGroupKind', 'event.processes.sample', ['properties', 'groups', 'items', 'properties', 'kind']],
+    ['ProcessRow', 'event.processes.sample', ['properties', 'groups', 'items', 'properties', 'processes', 'items']],
+    ['ProcessPoint', 'event.processes.sample', ['properties', 'fine', 'anyOf', 0]],
+    ['ProcessesAlerts', 'event.processes.alerts', []],
+    ['ProcessAlert', 'event.processes.alerts', ['properties', 'alerts', 'items']],
+    ['ProcessAlertKind', 'event.processes.alerts', ['properties', 'alerts', 'items', 'properties', 'kind']]
 ];
 const typed = typedRoots.map(([name, source, path]) => {
     const schema = path.reduce((node: any, key) => node?.[key], typedSchema(schemas[source]));
@@ -394,6 +404,7 @@ names.set(canonical(endpointInfo.broker), 'EndpointBroker');
 names.set(canonical(endpointInfo.terminalShell), 'EndpointTerminalShell');
 names.set(canonical(endpointInfo.nodeSizes.additionalProperties), 'EndpointNodeSize');
 names.set(canonical(endpointInfo.agentIntegrations), 'EndpointAgentIntegrations');
+names.set(canonical(typed.find(([name]) => name === 'ProcessSample')![1].properties.scope), 'ProcessScope');
 validatingStructs = false;
 for (const [name, schema] of typed) {
     const type = typeOf(schema, name);
