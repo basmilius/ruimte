@@ -12,8 +12,9 @@ import { AddMachineDialog } from '@/machine-ui/AddMachineDialog';
 import { LinkMachineDialog } from '@/machine-ui/LinkMachineDialog';
 import { SignInButtons } from '@/machine-ui/SignInButtons';
 import { useMachineIcon } from '@/machines/machine-icon';
-import { mergeMachines, nameOf, type MachineEntry } from '@/machines/machine-list';
+import { nameOf, type MachineEntry } from '@/machines/machine-list';
 import { MachineGlyph } from '@/machines/MachineGlyph';
+import { useMachineEntries } from '@/machines/use-machine-entries';
 import { linkDot, linkHint, machineLink } from '@/palette/palette-browse';
 import { newChat, useOffersNewChat } from '@/project/new-chat';
 import { openProject } from '@/project/open';
@@ -212,7 +213,7 @@ function StartContent() {
     const boot = stationBoot({ withoutMachine: !hasLocalMachine(), accountStatus, machines: accountMachines });
     const recent = recentProjects(rows, endpoints, connected);
     const chats = openableRows(chatsProjects(rows, endpoints, connected));
-    const machines = mergeMachines({ endpoints, accountMachines: accountStatus === 'signed-in' ? accountMachines : null, showLocal: hasLocalMachine() });
+    const machines = useMachineEntries();
     const failedRow =
         failure === null ? null : (recent.find((row) => row.endpointId === failure.endpointId && row.summary.projectId === failure.projectId) ?? null);
     /* The row that failed is already on top with its reason, and one nobody can open is left out. */

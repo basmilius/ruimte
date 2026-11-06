@@ -5,14 +5,12 @@ import { create } from 'zustand';
 import { openChatInMode } from '@/action-port/opening-mode';
 import { listProjects } from '@/clients/project/list';
 import { desktop } from '@/desktop/bridge';
-import { mergeMachines } from '@/machines/machine-list';
+import { liveMachineEntries } from '@/machines/use-machine-entries';
 import { isOpenHere, openProject } from '@/project/open';
 import { showViewOnceThere } from '@/project/show-view-once';
-import { usePulsarAccount } from '@/pulsar/account';
-import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { endpointKey } from '@/state/keys';
 import { hasLocalMachine } from '@/state/local-machine';
-import { usePulsarMachines } from '@/state/pulsar-machines';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
@@ -108,10 +106,7 @@ export async function newChatOn(endpointId: string, payload: ProjectNewChatPaylo
 
 /* The machines a person picks between where no machine is implied, in the order the Machines pane lists them. */
 function pickableMachines(): string[] {
-    const account = usePulsarAccount.getState().status === 'signed-in' ? usePulsarMachines.getState().machines : null;
-    return mergeMachines({ endpoints: useEndpoints.getState().endpoints, accountMachines: account, showLocal: hasLocalMachine() }).map(
-        (entry) => entry.endpoint?.id ?? entry.id
-    );
+    return liveMachineEntries().map((entry) => entry.endpoint?.id ?? entry.id);
 }
 
 export function newChat(): void {

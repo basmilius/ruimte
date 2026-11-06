@@ -3,11 +3,9 @@ import { Tabs } from '@base-ui/react/tabs';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AccountAvatar } from '@/machine-ui/AccountAvatar';
-import { mergeMachines } from '@/machines/machine-list';
+import { useMachineEntries } from '@/machines/use-machine-entries';
 import { usePulsarAccount } from '@/pulsar/account';
 import { accountName } from '@/pulsar/account-name';
-import { useEndpoints } from '@/state/endpoints';
-import { hasLocalMachine } from '@/state/local-machine';
 import { usePulsarMachines } from '@/state/pulsar-machines';
 import { refreshAccountMachines } from '@/workspace/account-machines';
 
@@ -17,9 +15,8 @@ export function AccountTab({ sectionId }: { sectionId: string }) {
     const status = usePulsarAccount((s) => s.status);
     const account = usePulsarAccount((s) => s.account);
     const accountMachines = usePulsarMachines((s) => s.machines);
-    const endpoints = useEndpoints((s) => s.endpoints);
     const signedIn = status === 'signed-in' && account !== null;
-    const count = mergeMachines({ endpoints, accountMachines: signedIn ? accountMachines : null, showLocal: hasLocalMachine() }).length;
+    const count = useMachineEntries().length;
     const name = signedIn ? accountName(account) : null;
 
     // The count includes the account's machines, which this client only learns by asking. The Account pane asks again whenever it opens.

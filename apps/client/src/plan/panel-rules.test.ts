@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectView, SplitLayout } from '@ruimte/contracts';
 import { PLAN_CLOSE_DELAY_MS, PlanPanelRules, type PlanClock, type PlanPanelState } from '@/plan/panel-rules';
-import { chatsInSight, seenNodes, type ChatSightCanvas, type ChatSightWorkspace } from '@/state/attention';
+import { seenNodes } from '@/state/attention';
+import { chatsInSight, type SightCanvas, type SightWorkspace } from '@/state/in-sight';
 
 /* Time moves only when a test says so. */
 class FakeClock implements PlanClock {
@@ -185,7 +186,7 @@ describe('what counts as in sight for the plan panel', () => {
     });
     const canvasView = { kind: 'canvas', id: 'canvas', name: 'Canvas', nodes: [], texts: [], edges: [], layouts: [] } as unknown as ProjectView;
     const chatView = { kind: 'chat', id: 'chat-view', name: 'Chat', node: {} } as unknown as ProjectView;
-    const canvas = (patch: Partial<ChatSightCanvas> = {}): ChatSightCanvas => ({
+    const canvas = (patch: Partial<SightCanvas> = {}): SightCanvas => ({
         camera: { x: 0, y: 0, zoom: 1 },
         viewport: { w: 1000, h: 800 },
         nodes: [
@@ -195,7 +196,7 @@ describe('what counts as in sight for the plan panel', () => {
         ],
         ...patch
     });
-    const workspace = (patch: Partial<ChatSightWorkspace> = {}, sightCanvas: ChatSightCanvas = canvas()): ChatSightWorkspace => ({
+    const workspace = (patch: Partial<SightWorkspace> = {}, sightCanvas: SightCanvas = canvas()): SightWorkspace => ({
         views: [canvasView, chatView],
         layout: layout('canvas', 'chat-view'),
         canvasOf: (viewId) => (viewId === 'canvas' ? sightCanvas : null),

@@ -9,11 +9,11 @@ import { MachineDetail } from '@/machine-ui/MachineDetail';
 import { MachineListItem } from '@/machine-ui/MachineListItem';
 import { RuimteAccountDetail } from '@/machine-ui/RuimteAccountDetail';
 import { ThisComputerDetail } from '@/machine-ui/ThisComputerDetail';
-import { currentPick, mergeMachines, pickForTarget, type MachinePick } from '@/machines/machine-list';
+import { currentPick, pickForTarget, type MachinePick } from '@/machines/machine-list';
+import { useMachineEntries } from '@/machines/use-machine-entries';
 import { usePulsarAccount } from '@/pulsar/account';
 import { accountName } from '@/pulsar/account-name';
 import { useEndpointId } from '@/state/current-endpoint';
-import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { usePulsarMachines } from '@/state/pulsar-machines';
 import { useUi } from '@/state/ui';
@@ -26,7 +26,6 @@ import { forgetAccountMachines, refreshAccountMachines } from '@/workspace/accou
  */
 export function MachinesPane() {
     const { t } = useTranslation('settings');
-    const endpoints = useEndpoints((s) => s.endpoints);
     const status = usePulsarAccount((s) => s.status);
     const account = usePulsarAccount((s) => s.account);
     const machines = usePulsarMachines((s) => s.machines);
@@ -45,7 +44,7 @@ export function MachinesPane() {
     }, [status]);
 
     const signedIn = status === 'signed-in';
-    const entries = mergeMachines({ endpoints, accountMachines: signedIn ? machines : null, showLocal: hasLocalMachine() });
+    const entries = useMachineEntries();
     const offersThisComputer = isDesktop() && !hasLocalMachine();
     const current = currentPick(picked, entries, offersThisComputer);
     const currentEntry = current.kind === 'machine' ? (entries.find((entry) => entry.id === current.id) ?? null) : null;

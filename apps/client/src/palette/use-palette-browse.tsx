@@ -7,8 +7,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
 import { iconOfEntry } from '@/machines/machine-icon';
-import { mergeMachines } from '@/machines/machine-list';
 import { MachineGlyph } from '@/machines/MachineGlyph';
+import { useMachineEntries } from '@/machines/use-machine-entries';
 import {
     browseBack,
     browseMachines,
@@ -34,9 +34,8 @@ import { newChatOn } from '@/project/new-chat';
 import { openFolderAction } from '@/project/open-actions';
 import { usePulsarAccount } from '@/pulsar/account';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { hasLocalMachine, isRealMachine } from '@/state/local-machine';
+import { isRealMachine } from '@/state/local-machine';
 import { shownFolderOf, useProject } from '@/state/project';
-import { usePulsarMachines } from '@/state/pulsar-machines';
 import { fileManagerName, serverInfoOf, useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
@@ -128,7 +127,6 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
     const browseFor = useUi((s) => s.paletteBrowseFor);
     const browseStartFolder = useSettings((s) => s.browseStartFolder);
     const accountStatus = usePulsarAccount((s) => s.status);
-    const accountMachines = usePulsarMachines((s) => s.machines);
     const connections = useConnections();
     /* Which step of browsing the palette is on, and null when it is not browsing at all. A step of
        its own rather than something the text says, so browsing can open on nothing typed. */
@@ -146,10 +144,7 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
     const sep = separatorFor(platform);
     /* Every machine this client knows, joined the way the Machines pane joins them, so one the account
        has and nothing here ever opened is a row to pick like any other. */
-    const machines = browseMachines(
-        mergeMachines({ endpoints, accountMachines: accountStatus === 'signed-in' ? accountMachines : null, showLocal: hasLocalMachine() }),
-        activeId
-    );
+    const machines = browseMachines(useMachineEntries(), activeId);
     const connectionOf = (endpointId: string): ConnectionState => connections[endpointId] ?? NO_LINK;
     const linkWait = browse !== null && !browse.machines ? (browse.link ?? null) : null;
     const browseRow = machines.find((row) => row.endpointId === browseEndpointId) ?? null;

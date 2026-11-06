@@ -1,24 +1,12 @@
 import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
-import {
-    isCanvasView,
-    isChatHostView,
-    isDesignView,
-    type AgentStatus,
-    type ProjectNode,
-    type ProjectSidebarView,
-    type ProjectView,
-    type SplitLayout
-} from '@ruimte/contracts';
+import type { AgentStatus, ProjectSidebarView } from '@ruimte/contracts';
 import { create } from 'zustand';
-import { intersects, isMeasured, visibleRect, type Rect } from '@/canvas-model/math';
 import { desktop } from '@/desktop/bridge';
-import { shownViewIdsIn } from '@/layout/split';
 import { nodeWorking } from '@/state/agent-work';
-import { liveCanvas, subscribeCanvases } from '@/state/canvas';
+import { subscribeCanvases } from '@/state/canvas';
 import { subscribeChatStatuses } from '@/state/chats';
-import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/state/design-chat';
 import { useDocument } from '@/state/document';
-import { nodesInSight, seenNodes, sightOf, type CanvasSight } from '@/state/in-sight';
+import { nodesInSight, seenNodes } from '@/state/in-sight';
 import { endpointKey, endpointOfNode } from '@/state/keys';
 import { seePushNotifications, subscribePushAttention, unreadOnMachine } from '@/state/push-attention';
 import { nodeStatus, useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
@@ -32,67 +20,6 @@ export { readableNodes, seenNodes, sightOf, visibleNodes, type CanvasSight } fro
  * One source of unread and working counts for marks, badges, notifications and quit protection.
  * Endpoint-scoped keys preserve marks across machine switches and remove them with the machine.
  */
-
-/* One canvas as a question about which chats stand on it. */
-export interface ChatSightCanvas extends CanvasSight {
-    nodes: readonly (Rect & { id: string; kind: string; chats?: ProjectNode['chats'] })[];
-}
-
-/* What `chatsInSight` reads of a workspace, handed in so a test builds one without a store. */
-export interface ChatSightWorkspace {
-    views: readonly ProjectView[];
-    layout: SplitLayout | null;
-    canvasOf(viewId: string): ChatSightCanvas | null;
-}
-
-/*
- * Plan visibility ignores zoom and window focus. It also uses the pre-panel viewport so opening the
- * panel cannot push its own chat out of sight and immediately close it.
- */
-export function chatsInSight(workspace: ChatSightWorkspace, { planWidth }: { planWidth: number }): Set<string> {
-    const onScreen = new Set(workspace.layout === null ? [] : shownViewIdsIn(workspace.layout));
-    const chats = new Set<string>();
-    for (const view of workspace.views) {
-        if (!onScreen.has(view.id)) {
-            continue;
-        }
-        if (isDesignView(view)) {
-            // Only the chat in front is in sight; the others of the design wait behind its picker.
-            chats.add(activeDesignChat(placeOfView(view), useDesignChat.getState().picked));
-            continue;
-        }
-        if (isChatHostView(view)) {
-            chats.add(view.id);
-            continue;
-        }
-        const canvas = isCanvasView(view) ? workspace.canvasOf(view.id) : null;
-        if (canvas === null || !isMeasured(canvas.viewport)) {
-            continue;
-        }
-        const rect = visibleRect(canvas.camera, { w: canvas.viewport.w + planWidth, h: canvas.viewport.h });
-        for (const node of canvas.nodes) {
-            const inFront = canvas.maximized ? node.id === canvas.maximized : canvas.hidden?.has(node.id) !== true && intersects(node, rect);
-            const shown = inFront ? shownChatOfNode(node) : null;
-            if (shown !== null) {
-                chats.add(shown);
-            }
-        }
-    }
-    return chats;
-}
-
-/* The open project, as `chatsInSight` reads it. */
-export function liveChatSight(): ChatSightWorkspace {
-    const { views, layout } = useDocument.getState();
-    return {
-        views,
-        layout,
-        canvasOf: (viewId) => {
-            const canvas = liveCanvas(viewId);
-            return canvas === null ? null : sightOf(canvas);
-        }
-    };
-}
 
 /* Everything one pass of the watcher needs to decide, all of it keyed the same way. */
 export interface AttentionPass {

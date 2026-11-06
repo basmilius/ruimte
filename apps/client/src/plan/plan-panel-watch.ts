@@ -1,8 +1,8 @@
 import { PlanPanelRules, type PlanClock, type PlanPanelIo } from '@/plan/panel-rules';
-import { chatsInSight, liveChatSight } from '@/state/attention';
 import { subscribeCanvases } from '@/state/canvas';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
+import { chatsInSight, liveSight } from '@/state/in-sight';
 import { endpointKey } from '@/state/keys';
 import { findPlan, subscribePlanCreated, usePlans } from '@/state/plans';
 import { useUi } from '@/state/ui';
@@ -57,7 +57,7 @@ export function startPlanPanelWatch(clock: PlanClock = windowClock): () => void 
     const pass = (): void => {
         const ui = useUi.getState();
         const planWidth = ui.planOpen ? Math.max(PLAN_MIN_WIDTH, ui.planWidth ?? PLAN_DEFAULT_WIDTH) : 0;
-        own.sight(chatsInSight(liveChatSight(), { planWidth }));
+        own.sight(chatsInSight(liveSight(), { planWidth }));
         const { planAnchor, planOpen } = useUi.getState();
         if (planAnchor === null) {
             return;
