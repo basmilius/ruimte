@@ -23,6 +23,7 @@ import {
     type Task
 } from '@ruimte/contracts';
 import { MAX_AGENT_DEPTH } from '../../canvas/depth.ts';
+import { peerOpener } from '../../canvas/opener.ts';
 import type { PendingPromptStore } from '../../canvas/pending-prompts.ts';
 import { checkCwd } from '../../canvas/project-paths.ts';
 import { taskFirstPrompt } from '../../canvas/tasks.ts';
@@ -36,7 +37,7 @@ import { peerCanvasId, type PeerLinks } from '../../projects/peer-links.ts';
 import type { ProjectStore } from '../../projects/project-store.ts';
 import { DEFAULT_RUNTIME_MODE } from '../../providers/launch.ts';
 import { providerFor } from '../../providers/registry.ts';
-import { peerTarget } from '../giver/connect-peer.ts';
+import { peerLane } from '../giver/connect-peer.ts';
 import { idTakenOutside, nodeOf, sameCanvas, stripHidden } from './peer-canvas.ts';
 
 /* What a machine that works here is given of this one: its tasks, bundles and holds, each judged by the link a person made. */
@@ -71,11 +72,6 @@ export const PEER_MAX_BRANCH_LENGTH = 100;
 
 // How many worktrees one machine's tasks may leave on this machine; a person removes them, nothing here does.
 export const PEER_MAX_WORKTREES = 8;
-
-/* The caller a peer's agents are counted under: the node that gave the task, on the machine that did. */
-export function peerCaller(machineId: string, parentId: string): string {
-    return `peer:${machineId}:${parentId}`;
-}
 
 /*
  * The tasks another machine gives agents here. B (this machine) decides everything that matters: the
@@ -168,7 +164,7 @@ export class PeerTasks {
         if (depth > MAX_AGENT_DEPTH) {
             throw new CodedError('depth-limit', `An agent from another machine may sit at depth ${MAX_AGENT_DEPTH} here, and this one would be at ${depth}`);
         }
-        const caller = peerCaller(machineId, payload.parentId);
+        const caller = peerOpener(machineId, payload.parentId);
         if (deps.lineage.openedCount(caller) >= MAX_OPENED_PER_CALLER) {
             throw new CodedError('too-many-agents', `That agent has ${MAX_OPENED_PER_CALLER} agents open here already`);
         }
@@ -600,7 +596,7 @@ export class PeerTasks {
     private async oweResult(machineId: string, task: Task): Promise<void> {
         const owed = this.deps.outbox.list().some((entry) => entry.kind === 'deliver-remote-result' && entry.payload.taskId === task.id);
         if (!owed) {
-            await this.deps.enqueue(task.projectId, peerTarget(machineId), {
+            await this.deps.enqueue(task.projectId, peerLane(machineId), {
                 kind: 'deliver-remote-result',
                 payload: { machineId, nodeId: task.childId, taskId: task.id }
             });

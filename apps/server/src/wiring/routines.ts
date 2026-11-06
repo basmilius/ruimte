@@ -1,12 +1,13 @@
 import { chatOpener } from '@adecore/agents/chat';
 import { WatchedSinks } from '@adecore/agents/host';
 import type { RoutinePicked, RoutineSkillsPayload, RoutineSkillsResult } from '@ruimte/contracts';
+import { routineOpener } from '../canvas/opener.ts';
 import { errorText } from '../error-text.ts';
 import { attachedReferences, type Reference } from '../projects/references.ts';
 import { runCommand } from '../routines/command-run.ts';
 import { RoutineAuthorStore, RoutineRunStore } from '../routines/routine-runs.ts';
 import { RoutineError, RoutineStore } from '../routines/routine-store.ts';
-import { routineOpener, Routines } from '../routines/routines.ts';
+import { Routines } from '../routines/routines.ts';
 import type { SessionEvent } from '../wire.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { ArtifactsBundle } from './artifacts.ts';

@@ -3,6 +3,7 @@ import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { isCanvasView, type PeerTaskStartPayload, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
+import { peerOpener } from '../../canvas/opener.ts';
 import type { FirstPrompt } from '../../canvas/pending-prompts.ts';
 import { taskFirstPrompt } from '../../canvas/tasks.ts';
 import { Dispatcher } from '../../dispatcher.ts';
@@ -12,7 +13,7 @@ import { PeerLinks, peerCanvasId } from '../../projects/peer-links.ts';
 import { tempHomes } from '../../temp-home-test-helpers.ts';
 import type { ClientConnection } from '../../wire.ts';
 import { registerPeerTaskHandlers } from './area-tasks.ts';
-import { PEER_MAX_BRANCH_LENGTH, PEER_MAX_WORKTREES, PeerTasks, peerCaller, type PeerTasksDeps } from './peer-tasks.ts';
+import { PEER_MAX_BRANCH_LENGTH, PEER_MAX_WORKTREES, PeerTasks, type PeerTasksDeps } from './peer-tasks.ts';
 
 const MACHINE = 'machine-a';
 const PROJECT = 'project-1';
@@ -168,7 +169,7 @@ describe('starting a task for another machine', () => {
     test('everything it starts is an agent of this machine, owed to the machine, and held against its parent there', async () => {
         await new PeerTasks(deps()).start(MACHINE, 'client-1', start());
         expect(lineage.peerOf('chat-one')).toEqual({ machineId: MACHINE });
-        expect(lineage.startedBy('chat-one')).toBe(peerCaller(MACHINE, 'chat-parent'));
+        expect(lineage.startedBy('chat-one')).toBe(peerOpener(MACHINE, 'chat-parent'));
         const [task] = tasks.all();
         expect(task).toMatchObject({ parentId: peerCanvasId(MACHINE), childId: 'chat-one', status: 'open' });
         expect(task?.machine).toBeUndefined();

@@ -21,7 +21,7 @@ Every tool an agent calls is an MCP tool (`src/mcp`). This folder is only the ad
 
 ## Product rules
 
-- An extension whose manifest names `browser.control` or `devices.control` drives a page or device without a line (`ServerActionContext.extension`). Only `ExtensionHost.runAction` reaches it, within `EXTENSION_ACTIONS`.
+- An extension whose manifest names `browser.control` or `devices.control` drives a page or device without a line (`ServerActionContext.extension`, set with the `extension` actor by `extensionActionCall`). Only `ExtensionHost.runAction` reaches it, within `EXTENSION_ACTIONS`.
 
 Decisions the code cannot show. Do not reverse one without asking Bas.
 

@@ -85,6 +85,11 @@ const TIMELINE: Partial<Record<ActionDomain, VoiceActivityKind>> = {
     plans: 'chat'
 };
 
+/* What the session holds its project under in the project holds. Not an opener, though it shares the prefix. */
+function voiceHolder(sessionId: string): string {
+    return `voice:${sessionId}`;
+}
+
 /* Cut to the bounds of the wire, since a title names a chat whose name has none. */
 function confirmationOf(question: VoiceToolQuestion): VoiceActivityConfirmation {
     return {
@@ -141,7 +146,7 @@ export class VoiceSession {
         this.owner = start.owner;
         this.#start = start;
         this.#deps = deps;
-        this.#holder = `voice:${start.sessionId}`;
+        this.#holder = voiceHolder(start.sessionId);
     }
 
     get phase(): VoicePhase {

@@ -13,7 +13,7 @@ import {
     RECONNECT_MAX_MS,
     RECONNECT_START_MS,
     machineOwed,
-    peerTarget,
+    peerLane,
     restartConnectPeers
 } from './connect-peer.ts';
 import { RemoteLinkError } from './remote-connections.ts';
@@ -121,7 +121,7 @@ describe('the reconnect of a link to another machine', () => {
         expect(rest).toEqual([]);
         expect(entry).toMatchObject({
             projectId: PEERS_PROJECT,
-            target: peerTarget(MACHINE),
+            target: peerLane(MACHINE),
             payload: { machineId: MACHINE, interval: RECONNECT_START_MS * 2 }
         });
     });
@@ -318,7 +318,7 @@ describe('the reconnect of a link to another machine', () => {
         await outbox.prune('project-1', new Set());
         await outbox.prune(PEERS_PROJECT, new Set());
         expect(connectEntries()).toHaveLength(1);
-        expect(outbox.lanesOf(connectEntries()[0]!)).toEqual([peerTarget(MACHINE)]);
+        expect(outbox.lanesOf(connectEntries()[0]!)).toEqual([peerLane(MACHINE)]);
     });
 });
 

@@ -1,6 +1,6 @@
 import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { endChildren } from '@adecore/agents/coordination';
-import { isVoiceActor } from '../canvas/depth.ts';
+import { isPlaceless, openerOf } from '../canvas/opener.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
 import type { SessionManager } from '../sessions/manager.ts';
@@ -90,7 +90,10 @@ export function wireEndChildren({
         for (const openedBy of new Set(
             lineage
                 .orphans(projectId, ids)
-                .filter((orphan) => lineage.peerOf(orphan.nodeId) === null && !isVoiceActor(orphan.openedBy) && !placedElsewhere(orphan.openedBy, projectId))
+                .filter(
+                    (orphan) =>
+                        lineage.peerOf(orphan.nodeId) === null && !isPlaceless(openerOf(orphan.openedBy)) && !placedElsewhere(orphan.openedBy, projectId)
+                )
                 .map((orphan) => orphan.openedBy)
         )) {
             void owe(openedBy).catch((e: unknown) => log(`Owing the end of the agents ${openedBy} opened failed: ${errorText(e)}`));

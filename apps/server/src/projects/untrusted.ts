@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import type { AgentLineageStore } from '@adecore/agents/coordination';
 import { isWithin } from '@adecore/utils/path';
 import type { AgentKind } from '@ruimte/contracts';
+import { openerOf } from '../canvas/opener.ts';
 import { providerFor } from '../providers/registry.ts';
 
 interface UntrustedFoldersDeps {
@@ -44,7 +45,7 @@ export class UntrustedFolders {
         let current: string | null = nodeId;
         while (current !== null && !seen.has(current) && seen.size < MAX_CHAIN) {
             seen.add(current);
-            if (lineage.peerOf(current) !== null || current.startsWith('peer:')) {
+            if (lineage.peerOf(current) !== null || openerOf(current).kind === 'peer') {
                 return true;
             }
             // A fork carries the files and the conversation of the chat it was cut from.

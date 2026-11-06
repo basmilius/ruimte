@@ -7,7 +7,7 @@ import { BundleStore, bundleIdFor, fetchBundle, makeBundle } from '../../git/bun
 import type { CheckpointService } from '../../git/checkpoints.ts';
 import type { Worktrees } from '../../git/worktrees.ts';
 import type { OutboxEntry, OutboxWork, StartRemoteAgentEntry, StopRemoteAgentEntry, TakeRemoteResultEntry } from '../../outbox/outbox.ts';
-import { RECONNECT_LIFETIME_MS, peerTarget } from './connect-peer.ts';
+import { RECONNECT_LIFETIME_MS, peerLane } from './connect-peer.ts';
 import type { PeerLink } from './peer-connection.ts';
 import type { RemoteConnections } from './remote-connections.ts';
 
@@ -216,7 +216,7 @@ export class RemoteTasks {
         if (this.deps.outbox.list().some((entry) => entry.kind === 'stop-remote-agent' && entry.payload.nodeId === nodeId && entry.payload.once !== true)) {
             return;
         }
-        await this.deps.enqueue(projectId, peerTarget(machineId), { kind: 'stop-remote-agent', payload: { machineId, nodeId } });
+        await this.deps.enqueue(projectId, peerLane(machineId), { kind: 'stop-remote-agent', payload: { machineId, nodeId } });
     }
 
     private wakeStarts(machineId: string, except: string): void {
@@ -465,7 +465,7 @@ export class RemoteTasks {
             // A start may have reached the machine without its answer reaching this one, so it too may have an agent to stop.
             if (!stopOwed) {
                 const task = deps.tasks.get(entry.payload.taskId);
-                await deps.enqueue(task?.projectId ?? entry.projectId, peerTarget(machineId), {
+                await deps.enqueue(task?.projectId ?? entry.projectId, peerLane(machineId), {
                     kind: 'stop-remote-agent',
                     payload: { machineId, nodeId: entry.target, once: true }
                 });

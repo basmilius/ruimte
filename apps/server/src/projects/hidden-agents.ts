@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { RecordDirectory } from '@adecore/agents';
 import { ProjectNodeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
+import { openerOf } from '../canvas/opener.ts';
 
 const HiddenAgentSchema = z.object({
     projectId: z.string().min(1),
@@ -55,7 +56,7 @@ export class HiddenAgentStore {
     /* A routine's run chats stay without a place of their own, and outlive their routine. */
     async pruneOrphans(projectId: string, placed: ReadonlySet<string>): Promise<void> {
         const agents = this.inProject(projectId);
-        const kept = new Set([...placed, ...agents.flatMap((agent) => (agent.openedBy.startsWith('routine:') ? [agent.openedBy] : []))]);
+        const kept = new Set([...placed, ...agents.flatMap((agent) => (openerOf(agent.openedBy).kind === 'routine' ? [agent.openedBy] : []))]);
         let added = true;
         while (added) {
             added = false;

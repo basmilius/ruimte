@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { ToolRefusal } from '@adecore/agents/context';
 import { KeyedSerializer } from '@adecore/utils/async';
-import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
+import type { ActionActor, ActionHandlers, ActionOutput } from '@ruimte/actions';
 import {
     isCanvasView,
     joinGroupUnder,
@@ -58,7 +58,7 @@ function refuseUntrustedStart(
     folder?: string
 ): void {
     const { untrusted } = host;
-    // Voice is no node and gives no cwd, so the folder its session works in is what is judged for it.
+    // A bounded opener is no node and gives no cwd, so the folder it works in is what is judged for it.
     const inUntrusted = (cwd !== undefined && untrusted?.inFolder(cwd) === true) || (folder !== undefined && untrusted?.inFolder(folder) === true);
     if (untrusted === undefined || !(untrusted.node(callerId) || inUntrusted)) {
         return;
@@ -116,23 +116,39 @@ type StartHandler = NonNullable<ActionHandlers<ServerActionContext>['agent.start
 type TeamHandler = NonNullable<ActionHandlers<ServerActionContext>['team.start']>;
 type StartInput = Parameters<StartHandler>[0];
 
-/* The widest mode a chat Voice starts may run in, until a person decides Voice may give more. */
-const VOICE_CEILING: RuntimeMode = 'supervised';
+/* The widest mode a chat a bounded opener starts may run in, until a person decides Voice may give more. */
+const BOUNDED_CEILING: RuntimeMode = 'supervised';
+
+type BoundedOpener = 'voice' | 'extension';
+
+const BOUNDED_NAMES: Record<BoundedOpener, { sentence: string; inline: string }> = {
+    voice: { sentence: 'Voice', inline: 'Voice' },
+    extension: { sentence: 'An extension', inline: 'an extension' }
+};
 
 /*
- * What Voice may start: an AI Chat under the person's own CLI, never a terminal, and no wider than
- * supervised, which is also the ceiling a caller that is no node gets. The catalog keeps every other
- * field an agent's, so these are the refusals left, worded for a voice and not for a command line.
+ * Voice and an extension are no node, so each starts only an AI Chat under the person's own CLI, no wider than
+ * supervised, with a view of its own in the sidebar when it has no canvas to stand on. The catalog keeps every
+ * other field an agent's.
  */
-function refuseVoiceStart(input: StartInput): void {
+function boundedOpener(actor: ActionActor): BoundedOpener | null {
+    return actor.kind === 'voice' || actor.kind === 'extension' ? actor.kind : null;
+}
+
+/*
+ * The refusals left of what a bounded opener may start: an AI Chat, never a terminal, and no wider than supervised,
+ * which is also the ceiling a caller that is no node gets. Worded for a voice or an extension, not for a command line.
+ */
+function refuseBoundedStart(opener: BoundedOpener, input: StartInput): void {
+    const { sentence, inline } = BOUNDED_NAMES[opener];
     if (input.terminal) {
-        throw new ToolRefusal('voice-chat-only', 'Voice starts an AI Chat, never a terminal');
+        throw new ToolRefusal('voice-chat-only', `${sentence} starts an AI Chat, never a terminal`);
     }
     if (!providerFor(input.provider).capabilities.chat) {
-        throw new ToolRefusal('voice-chat-only', `${nameOf(input.provider)} has no AI Chat, and Voice starts only AI Chats`);
+        throw new ToolRefusal('voice-chat-only', `${nameOf(input.provider)} has no AI Chat, and ${inline} starts only AI Chats`);
     }
-    if (input.mode != null && input.mode !== VOICE_CEILING) {
-        throw new ToolRefusal('mode-above-voice', `A chat Voice starts runs supervised at most, never ${input.mode}`);
+    if (input.mode != null && input.mode !== BOUNDED_CEILING) {
+        throw new ToolRefusal('mode-above-voice', `A chat ${inline} starts runs supervised at most, never ${input.mode}`);
     }
 }
 
@@ -238,16 +254,17 @@ const startAgentNow: StartHandler = async (input, call) => {
     const { host, place } = context;
     const caller = agentCallOf(call);
     const kind = input.provider;
-    const voice = call.actor.kind === 'voice';
-    if (voice) {
-        refuseVoiceStart(input);
+    const boundedBy = boundedOpener(call.actor);
+    const bounded = boundedBy !== null;
+    if (boundedBy !== null) {
+        refuseBoundedStart(boundedBy, input);
     }
     await refuseCrossingStart(context, caller.caller, { viewId: input.viewId, machine: input.machine, task: input.task != null });
     const readIds = readsOf(input.reads ?? null);
     const offCanvas = input.viewId == null && place.canvasId === null;
-    // A chat view keeps an agent it opens off every canvas; Voice has no chat of its own, so its chat gets a view instead.
-    const loose = voice && offCanvas;
-    const hidden = offCanvas && !voice;
+    // A chat view keeps an agent it opens off every canvas; a bounded opener has no chat of its own, so its chat gets a view instead.
+    const loose = bounded && offCanvas;
+    const hidden = offCanvas && !bounded;
     // The machine is judged before the agent is: a name that is none, or a combination that means nothing there, makes nothing.
     const remote = input.machine == null ? null : resolveMachine(host, place.projectId, input.machine);
     if (remote !== null) {
@@ -262,8 +279,8 @@ const startAgentNow: StartHandler = async (input, call) => {
         });
     }
     const depth = depthForOpening(caller, 'agent_start', 1);
-    // Voice is no node, so the daemon knows no mode of its own; what it starts is held to supervised, whatever the host says.
-    const ceiling = voice ? VOICE_CEILING : modeForOpening(caller, input.mode ?? undefined);
+    // A bounded opener is no node, so the daemon knows no mode of its own; what it starts is held to supervised, whatever the host says.
+    const ceiling = bounded ? BOUNDED_CEILING : modeForOpening(caller, input.mode ?? undefined);
     const chat = !input.terminal && providerFor(kind).capabilities.chat;
     const selection = selectionForOpening(kind, chat, input.model ?? undefined, input.effort ?? undefined, host.starts.preferredSelection(kind));
     if (input.branch != null && !input.worktree) {
@@ -304,8 +321,8 @@ const startAgentNow: StartHandler = async (input, call) => {
         );
     }
     const checkedCwd = input.cwd == null ? undefined : await checkCwd(place.folder, input.cwd, (folder) => host.checkouts.paths(folder));
-    // Voice gives no cwd, and an agent of another project stands in none of this one's folders, so the project's own folder is judged for both.
-    refuseUntrustedStart(host, caller.caller, checkedCwd, [{ provider: kind, chat }], voice || context.origin !== undefined ? place.folder : undefined);
+    // A bounded opener gives no cwd, and an agent of another project stands in none of this one's folders, so the project's own folder is judged for both.
+    refuseUntrustedStart(host, caller.caller, checkedCwd, [{ provider: kind, chat }], bounded || context.origin !== undefined ? place.folder : undefined);
     const runtimeMode = chat ? (input.mode ?? undefined) : terminalMode(caller, input.mode ?? undefined, ceiling);
     const account = inheritedAccount(caller, kind, place.projectId);
     context.stillAllowed?.();

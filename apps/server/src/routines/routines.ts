@@ -93,13 +93,9 @@ interface RoutineDeps {
     log?: (line: string) => void;
 }
 
+/* The outbox target of a routine's runs. Not an opener, though it shares the prefix. */
 function routineTarget(projectId: string, routineId: string): string {
     return `routine:${projectId}:${routineId}`;
-}
-
-/* The id a run's chat is opened by, which keeps it in the project without a canvas and outlives the routine. */
-export function routineOpener(routineId: string): string {
-    return `routine:${routineId}`;
 }
 
 /* Everything an approval covers, so a change to any of it asks again. Title and output key only label the run. */
@@ -127,6 +123,7 @@ export function digestOf(routine: Routine): string {
         .slice(0, 32);
 }
 
+/* The key of a routine's approval under `$RUIMTE_HOME/command-approvals`. Not an opener, though it shares the prefix. */
 function approvalKey(routineId: string): string {
     return `routine:${routineId}`;
 }

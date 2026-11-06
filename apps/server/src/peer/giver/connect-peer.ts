@@ -10,8 +10,8 @@ export const RECONNECT_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 /* The project an entry for a machine is filed under: a reconnect belongs to no project, and no project has this id. */
 export const PEERS_PROJECT = 'peers';
 
-/* The lane of a machine in the outbox, which the entries owed to it share. */
-export function peerTarget(machineId: string): string {
+/* The lane of a machine in the outbox, which the entries owed to it share. Not an opener, though it shares the prefix. */
+export function peerLane(machineId: string): string {
     return `peer:${machineId}`;
 }
 
@@ -158,7 +158,7 @@ export class ConnectPeer {
     }
 
     private write(machineId: string, since: number, interval: number, notBefore: number, projectId = PEERS_PROJECT): Promise<void> {
-        return this.deps.enqueue(projectId, peerTarget(machineId), { kind: 'connect-peer', payload: { machineId, since, interval } }, notBefore);
+        return this.deps.enqueue(projectId, peerLane(machineId), { kind: 'connect-peer', payload: { machineId, since, interval } }, notBefore);
     }
 
     private entriesOf(machineId: string): ConnectPeerEntry[] {

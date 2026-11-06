@@ -1,7 +1,7 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionCall } from '@ruimte/actions';
-import { voiceActorId } from '../canvas/depth.ts';
 import { type CanvasHost, type ProjectHost, type AgentCall } from '../canvas/host.ts';
+import { extensionOpener, voiceOpener } from '../canvas/opener.ts';
 import { callerKind } from '../canvas/tasks.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 
@@ -42,7 +42,7 @@ export interface ServerActionContext {
     origin?: IndexedPlace;
     /* Set only for the voice actor, so a handler open to Voice and an agent tells the two apart. */
     voice?: VoiceCaller;
-    /* Set only for an extension whose manifest names the permission: it has no node, so no line can run to it. */
+    /* Set with the extension actor, whose manifest names the permission: it has no node, so no line can run to it. */
     extension?: true;
     /*
      * Throws once whoever asked may no longer, such as an extension turned off since. Set for an extension's chat start,
@@ -186,7 +186,7 @@ export function serverActionCall(
  * Without a current project, an action that needs one refuses and says how to pick one.
  */
 export function voiceActionCall(host: CanvasHost, place: IndexedPlace | null, voice: VoiceCaller): ActionCall<VoiceActionContext> {
-    const actor = { kind: 'voice' as const, id: voiceActorId(voice.sessionId) };
+    const actor = { kind: 'voice' as const, id: voiceOpener(voice.sessionId) };
     if (place !== null) {
         return { actor, context: { host, place, voice } };
     }
@@ -200,6 +200,14 @@ export function voiceActionCall(host: CanvasHost, place: IndexedPlace | null, vo
             }
         }
     };
+}
+
+/*
+ * The call of an extension whose manifest names the permission. Its place is the project the request came from, with the
+ * canvas it names or none, and its actor id is the extension's opener, apart from every node id.
+ */
+export function extensionActionCall(host: CanvasHost, place: IndexedPlace, extensionId: string): ServerActionCall {
+    return { actor: { kind: 'extension', id: extensionOpener(extensionId) }, context: { host, place, extension: true } };
 }
 
 export function noVoiceProject(): ToolRefusal {

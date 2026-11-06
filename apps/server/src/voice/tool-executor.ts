@@ -71,6 +71,11 @@ const UNCODED_FAILURE = 'action-failed';
 /* The words of a reply only reach the model, so they stay English; the timeline takes its label from the catalog. */
 const REPLY_WORDS: VoiceReplyWords = { activity: () => '', machine: (endpointId) => endpointId, color: (accent) => accent ?? '' };
 
+/* The id a Voice start is claimed under, so a repeated call is the same start. Another namespace than an opener, which shares its prefix. */
+function voiceStartRequestId(sessionId: string, callId: string): string {
+    return `voice:${sessionId}:${callId}`;
+}
+
 function refused(code: string, message: string): VoiceToolOutput {
     return { ok: false, code, message };
 }
@@ -222,7 +227,7 @@ export class VoiceToolExecutor<Context> {
         }
         if (name === 'agent.start') {
             // The model's own id is never trusted: one per call, so a repeated call is the same start and a new call a new one.
-            input.requestId = `voice:${this.#options.sessionId}:${callId}`;
+            input.requestId = voiceStartRequestId(this.#options.sessionId, callId);
             // Voice starts an AI Chat in the folder of its session, so these are fixed and never the model's to state.
             input.terminal = false;
             input.worktree = null;

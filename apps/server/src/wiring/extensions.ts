@@ -1,5 +1,5 @@
 import { CustomLanguageServerInputSchema, extensionChatOf } from '@ruimte/contracts';
-import { serverActionCall } from '../actions/context.ts';
+import { extensionActionCall } from '../actions/context.ts';
 import { extensionChatStarter } from '../extensions/extension-chat.ts';
 import { ExtensionHost, type ExtensionAsks } from '../extensions/extension-host.ts';
 import { runMachineAction, outputOf } from '../extensions/machine-actions.ts';
@@ -63,9 +63,7 @@ export function wireExtensions(home: string, later: ExtensionsLater): Extensions
         startChat: async (...args) => startChat(...args),
         runAction: async (id, projectId, action, input) => {
             const folder = folderOfProject(projectId);
-            const call = serverActionCall(later.canvasHost(), { projectId, folder, canvasId: null }, `extension:${id}`);
-
-            call.context.extension = true;
+            const call = extensionActionCall(later.canvasHost(), { projectId, folder, canvasId: null }, id);
 
             return runMachineAction(
                 action,
