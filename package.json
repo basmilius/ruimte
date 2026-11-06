@@ -42,6 +42,7 @@
     "dist": "bun run --cwd apps/client build && bun run --cwd apps/server compile && bun run --cwd apps/desktop pack"
   },
   "devDependencies": {
+    "@adecore/ui": "0.54.10",
     "@types/bun": "^1.4.4",
     "oxfmt": "^0.75.0",
     "oxlint": "^1.90.0",
