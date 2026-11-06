@@ -33,7 +33,7 @@ import { DeviceManager } from '../devices/manager.ts';
 import { freeBranch } from '../git/worktrees.ts';
 import { DiagramStore } from '../projects/diagram-store.ts';
 import { DrawingStore } from '../projects/drawing-store.ts';
-import { documentOnDisk, projectLinks } from '../projects/project-file-test-helpers.ts';
+import { documentOnDisk, projectLinks, UNSYNCED_WRITE_IO } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import type { AgentStart, CanvasHost } from './host.ts';
@@ -211,7 +211,7 @@ export function canvasFixture(): void {
         lineage = new AgentLineageStore(join(root, 'home'));
         tasks = new TaskStore(join(root, 'home'));
         await lineage.load();
-        store = new ProjectStore(join(root, 'home'), projectLinks({ viewFiles: () => [diagrams, drawings] }));
+        store = new ProjectStore(join(root, 'home'), projectLinks({ viewFiles: () => [diagrams, drawings] }), undefined, UNSYNCED_WRITE_IO);
         diagrams = new DiagramStore(store);
         diagramEvents = [];
         diagrams.subscribe('client-1', (event) => diagramEvents.push(event));

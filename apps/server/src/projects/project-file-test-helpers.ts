@@ -1,11 +1,22 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
+import { writeAtomic } from '@adecore/utils/fs';
 import { PROJECT_VERSION, mergeFiles, migrateSharedFile, type ProjectChatView, type ProjectDocument, type ProjectPrivateFile } from '@ruimte/contracts';
 import { documentPathInFolder, parsePrivateFile, privatePathOf } from './project-files.ts';
 import type { ProjectLinks, ProjectStore } from './project-store.ts';
+import type { ProjectWriteIO } from './project-write.ts';
 import type { ScratchChatOptions } from './scratch-project.ts';
 
 /* A home the test made in the temp folder, which no checkout holds, without asking git. */
 export const OUTSIDE_CHECKOUT: ScratchChatOptions = { insideCheckout: async () => false };
+
+/*
+ * Project writes in the same order, without a single fsync. Every write flushes several files, which the
+ * Windows runner makes slow enough to time out a test that writes many times; durability has tests of its own.
+ */
+export const UNSYNCED_WRITE_IO: ProjectWriteIO = {
+    write: (path, content, mode) => writeAtomic(path, content, mode),
+    remove: (path) => rm(path, { force: true })
+};
 
 export async function chatViewsOf(store: ProjectStore, projectId: string): Promise<ProjectChatView[]> {
     return (await store.read(projectId)).views.filter((view): view is ProjectChatView => view.kind === 'chat');
