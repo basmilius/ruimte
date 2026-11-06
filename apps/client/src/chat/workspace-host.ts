@@ -1,10 +1,9 @@
-import type { ChatHost } from '@adecore/agents-react';
+import type { ChatHostLayer } from '@adecore/agents-react';
 import i18next from 'i18next';
 import { createElement, useMemo } from 'react';
 import { answerComputerAsPerson } from '@/action-port/person-actions';
 import { ChatModelView } from '@/chat/ChatModelView';
 import { ComposerDictation } from '@/chat/ComposerDictation';
-import { CHAT_HOST } from '@/chat/host';
 import { openNewChatAfterSend } from '@/chat/new-chat-after-send';
 import { prepareCodeBlockAction } from '@/chat/prepare-code-block';
 import { useProjectChats } from '@/chat/project-chats';
@@ -37,15 +36,10 @@ import { isComposerShortcut } from '@/surface/terminal-keymap';
  * What the chat takes from Ruimte that only a workspace draws: the find over a thread, dictation, the
  * cards the machine raises beside a chat's own prompts, a card in the thread for what it saved to
  * Output, the ways to a file or another chat of the project, the 3D view of a Model block, and the new
- * chat a send opens beside its own. The workspace hands it to the chat views under it, over `CHAT_HOST`.
+ * chat a send opens beside its own. The workspace hands it to the chat views under it, a layer over `CHAT_HOST`.
  */
-const intelligentUi = CHAT_HOST.intelligentUi;
-// `CHAT_HOST` always sets both; it is typed as a part of a host since the library fills in the rest.
-const attachments = CHAT_HOST.attachments!;
-const visuals = CHAT_HOST.visuals ?? null;
-
-export const WORKSPACE_CHAT_HOST: Partial<ChatHost> = {
-    ...(intelligentUi ? { intelligentUi: { ...intelligentUi, openLink: openUiLink, openUrl: openUiUrl } } : {}),
+export const WORKSPACE_CHAT_HOST: ChatHostLayer = {
+    intelligentUi: { openLink: openUiLink, openUrl: openUiUrl },
     isAppShortcut: (event) => isComposerShortcut(event, isApplePlatform()),
     ReadImage,
     MarkdownImage,
@@ -96,17 +90,12 @@ export const WORKSPACE_CHAT_HOST: Partial<ChatHost> = {
     useThreadCards: useOutputThreadCards,
     // Saving needs the project the chat is in, which only a workspace has.
     attachments: {
-        ...attachments,
         actions: (scopeId, chatId, attachment) =>
             attachment.mime.startsWith('image/')
                 ? saveToOutputActions(scopeId, { kind: 'attachment', chatId, attachmentId: attachment.id }, attachment.name)
                 : []
     },
-    visuals:
-        visuals === null
-            ? null
-            : {
-                  ...visuals,
-                  actions: (scopeId, chatId, visual) => saveToOutputActions(scopeId, { kind: 'visual', chatId, visualId: visual.id }, visual.title)
-              }
+    visuals: {
+        actions: (scopeId, chatId, visual) => saveToOutputActions(scopeId, { kind: 'visual', chatId, visualId: visual.id }, visual.title)
+    }
 };

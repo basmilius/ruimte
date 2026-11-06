@@ -1,4 +1,4 @@
-import { type AgentMark, configureAgentMarks, configureChatStorage, type ChatActions, type ChatHost, setLazyPrefetch } from '@adecore/agents-react';
+import { type AgentMark, configureChatStorage, type ChatActions, type ChatHostLayer, setLazyPrefetch } from '@adecore/agents-react';
 import { useChats } from '@adecore/agents-react/state';
 import { prefetcher, messageOf } from '@adecore/ui';
 import { type AgentKind, CHAT_MODEL_MAX_BYTES } from '@ruimte/contracts';
@@ -111,7 +111,6 @@ const AGENT_MARKS: Partial<Record<AgentKind, AgentMark>> = {
 /* The stores every chat view shares, set up before the first render. */
 export function configureChat(): void {
     configureChatStorage({ namespace: 'ruimte' });
-    configureAgentMarks(AGENT_MARKS);
     setLazyPrefetch((load) => prefetcher.register(load));
 }
 
@@ -119,7 +118,8 @@ export function configureChat(): void {
  * What the chat takes from Ruimte that the start screen may already need. What only a workspace draws
  * is in `workspace-host.ts`, so none of it reaches the first chunk.
  */
-export const CHAT_HOST: Partial<ChatHost> = {
+export const CHAT_HOST: ChatHostLayer = {
+    agentMarks: AGENT_MARKS,
     accents: {
         all: NODE_ACCENTS,
         featured: FEATURED_ACCENTS,
