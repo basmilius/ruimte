@@ -3,8 +3,10 @@ import { homedir, userInfo } from 'node:os';
 import { join } from 'node:path';
 import { definitionRunsProgram, diskFiles, serviceDefinition, type ServiceFiles, type ServiceManager } from '@adecore/service';
 import { replaceSync, tempNameFor } from '@adecore/utils/fs';
-import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
+import type { BuildIdentity } from '@ruimte/contracts';
+import { probeHealth } from '@ruimte/service/health';
 import { commandLineServiceProgram, daemonServiceSpec, pathsOf, platformServiceManager, type HostEnvironment } from '@ruimte/service/host';
+import { BUILD_FILE } from '@ruimte/service/runtime';
 import { describeError } from '../error-text.ts';
 import { buildFileOf, readBuildFile } from '../service/self-update.ts';
 
@@ -18,9 +20,9 @@ import { buildFileOf, readBuildFile } from '../service/self-update.ts';
 /* What travels with the daemon: `ruimte.build` is how an update is seen. */
 function binaryFiles(platform: NodeJS.Platform): string[] {
     if (platform === 'win32') {
-        return ['ruimte.exe', 'ruimte.build'];
+        return ['ruimte.exe', BUILD_FILE];
     }
-    return ['ruimte', 'ruimte.build'];
+    return ['ruimte', BUILD_FILE];
 }
 
 /* What an earlier release copied and this one no longer does; a copy left behind would answer in place of the new one. */
@@ -247,7 +249,7 @@ export function copyServiceBinaries(from: string, to: string, platform: NodeJS.P
         const target = join(to, name);
         const temporary = tempNameFor(target);
         copyFileSync(join(from, name), temporary);
-        chmodSync(temporary, name === 'ruimte.build' ? 0o644 : 0o755);
+        chmodSync(temporary, name === BUILD_FILE ? 0o644 : 0o755);
         if (platform === 'win32' && name.endsWith('.exe') && existsSync(target)) {
             renameSync(target, `${tempNameFor(target)}${RETIRED_SUFFIX}`);
         }
@@ -289,15 +291,6 @@ export function removeServiceBinaries(dir: string, platform: NodeJS.Platform = p
     return existsSync(dir) ? readdirSync(dir).filter((entry) => entry.endsWith(RETIRED_SUFFIX)) : [];
 }
 
-async function health(port: number): Promise<BuildIdentity | null> {
-    try {
-        const response = await fetch(`http://127.0.0.1:${port}${MACHINE_HEALTH_PATH}`, { signal: AbortSignal.timeout(2000) });
-        return buildIdentityOf(await response.json());
-    } catch {
-        return null;
-    }
-}
-
 export async function runService(args: string[], options: { port: number; ruimteHome: string; compiled: boolean }): Promise<number> {
     const manager = platformServiceManager(process.platform);
     if (manager === null) {
@@ -322,7 +315,7 @@ export async function runService(args: string[], options: { port: number; ruimte
             files: diskFiles,
             copyBinaries: copyServiceBinaries,
             removeBinaries: removeServiceBinaries,
-            health,
+            health: (port) => probeHealth(port, { timeoutMs: 2000 }),
             readBuild: (dir) => readBuildFile(buildFileOf(join(dir, 'ruimte'))),
             user: userInfo().username,
             out: (line) => console.log(line),

@@ -1,8 +1,8 @@
-import { homedir, hostname } from 'node:os';
-import { join } from 'node:path';
+import { hostname } from 'node:os';
 import { parseArgs } from 'node:util';
 import { RUIMTE_SESSION_VARIABLES } from '@adecore/agents/host';
 import { DEFAULT_STUN_SERVER, brokerUrlProblem, type BrokerOverride } from '@ruimte/pulsar';
+import { DEFAULT_PORT, ruimteHome } from '@ruimte/service/runtime';
 import { MCP_URL_VARIABLE } from './ruimte-mcp.ts';
 
 const COMMANDS = ['serve', 'login', 'logout', 'status', 'extension', 'service', 'closed-lid', 'notify', 'voice', 'version'] as const;
@@ -67,7 +67,6 @@ export function forgetInheritedSession(env: Record<string, string | undefined>):
 }
 
 export const DEFAULT_HOST = '127.0.0.1';
-export const DEFAULT_PORT = 4210;
 
 /* The ` --port N` a command a person copies needs, empty on the default port. */
 export function portFlag(port: number): string {
@@ -181,7 +180,7 @@ export function parseServerArgs(argv: string[], env: Record<string, string | und
     return {
         host: values.host,
         port,
-        home: env.RUIMTE_HOME ?? join(homedir(), '.ruimte'),
+        home: ruimteHome(env),
         installHooks: !values['no-hooks'],
         label: values.label ?? env.RUIMTE_LABEL ?? hostname(),
         priceFetch: !values['no-price-fetch'],

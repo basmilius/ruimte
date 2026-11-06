@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs';
 import { Socket } from 'node:net';
-import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createAppIpc, createPageKeys, createTheme, createWindows, type WindowOrigin, createWindowState, fileStorage } from '@adecore/shell';
+import { DEFAULT_PORT, DEV_PORT, devRuimteHome, ruimteHome as installedRuimteHome } from '@ruimte/service/runtime';
 import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
 import { windowUrl } from './app-windows';
 import { installBrowserRoutes } from './browser-routes';
@@ -40,7 +40,7 @@ const { app, BrowserWindow, dialog, ipcMain, nativeTheme, protocol, screen, sess
 
 // A checkout keeps its own port, name and profile, so it runs beside an installed Ruimte instead of
 // quitting on that app's single instance lock or talking to its daemon.
-const DEFAULT_PORT = app.isPackaged ? 4210 : 4211;
+const defaultPort = app.isPackaged ? DEFAULT_PORT : DEV_PORT;
 if (!app.isPackaged) {
     app.setName('Ruimte Dev');
     app.setPath('userData', join(app.getPath('appData'), 'Ruimte Dev'));
@@ -77,9 +77,9 @@ if (decidedMode.write) {
 }
 const machineMode = decidedMode.mode;
 const localMachine = machineMode === 'local';
-const port = Number(process.env.RUIMTE_PORT ?? DEFAULT_PORT);
+const port = Number(process.env.RUIMTE_PORT ?? defaultPort);
 // The home the daemon runs with, where its local secret lives; a checkout uses the dev home, as the server's `bun dev` does.
-const ruimteHome = app.isPackaged ? (process.env.RUIMTE_HOME ?? join(homedir(), '.ruimte')) : (process.env.RUIMTE_DEV_HOME ?? join(homedir(), '.ruimte-dev'));
+const ruimteHome = app.isPackaged ? installedRuimteHome() : devRuimteHome();
 
 function clientRoot(): string {
     return app.isPackaged ? join(process.resourcesPath, 'client') : join(repoRoot, 'apps', 'client', 'dist');

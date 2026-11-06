@@ -1,12 +1,8 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { isNotFound } from '@adecore/utils/errors';
 import { writeAtomic } from '@adecore/utils/fs';
-
-function localSecretPath(home: string): string {
-    return join(home, 'local.key');
-}
+import { localKeyPath } from '@ruimte/service/home';
 
 /*
  * What a process on this machine presents instead of its source address. Behind a tunnel or a
@@ -16,7 +12,7 @@ function localSecretPath(home: string): string {
  */
 export async function readLocalSecret(home: string): Promise<string | null> {
     try {
-        const secret = (await readFile(localSecretPath(home), 'utf8')).trim();
+        const secret = (await readFile(localKeyPath(home), 'utf8')).trim();
         return secret === '' ? null : secret;
     } catch (e) {
         if (isNotFound(e)) {
@@ -37,7 +33,7 @@ export async function readOrCreateLocalSecret(home: string): Promise<string> {
     }
     const secret = randomBytes(32).toString('base64url');
     await mkdir(home, { recursive: true, mode: 0o700 });
-    await writeAtomic(localSecretPath(home), `${secret}\n`, 0o600);
+    await writeAtomic(localKeyPath(home), `${secret}\n`, 0o600);
     return secret;
 }
 

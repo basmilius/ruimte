@@ -1,6 +1,7 @@
 import { parseServerFrame, type RequestMap, type RequestType } from '@ruimte/contracts';
+import { DEFAULT_PORT } from '@ruimte/service/runtime';
 import { readLocalSecret } from './auth/local-secret.ts';
-import { DEFAULT_HOST, DEFAULT_PORT, parseServerArgs } from './config.ts';
+import { DEFAULT_HOST, parseServerArgs } from './config.ts';
 
 // Manual check against a running daemon: create a session, run uname, print the screen, kill it.
 // Usage: bun run --cwd apps/server smoke [ws://host:port/ws]

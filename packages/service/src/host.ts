@@ -2,8 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { homedir, userInfo } from 'node:os';
 import { posix, win32 } from 'node:path';
 import { diskFiles, platformServiceManager as createPlatformServiceManager, runCommand, type ServiceManager, type ServiceSpec } from '@adecore/service';
+import { SERVICE_LABEL } from './runtime';
 
-const LAUNCH_AGENT_LABEL = 'app.ruimte.daemon';
 const SYSTEMD_UNIT_NAME = 'ruimte-daemon.service';
 
 export type HostEnvironment = Record<string, string | undefined>;
@@ -25,7 +25,7 @@ export function serviceLogFile(home: string, platform: NodeJS.Platform = process
 
 /* The copy of the scheduled task's definition that `schtasks /Create` registers from. */
 export function scheduledTaskFile(home: string, env: HostEnvironment = process.env): string {
-    return win32.join(localAppData(home, env), 'Ruimte', 'service', `${LAUNCH_AGENT_LABEL}.xml`);
+    return win32.join(localAppData(home, env), 'Ruimte', 'service', `${SERVICE_LABEL}.xml`);
 }
 
 /*
@@ -65,7 +65,7 @@ export function platformServiceManager(platform: NodeJS.Platform, env: HostEnvir
         launchd: {
             uid: process.getuid?.() ?? 0,
             home,
-            label: LAUNCH_AGENT_LABEL,
+            label: SERVICE_LABEL,
             logFile: serviceLogFile(home, platform, env),
             run: runCommand,
             files: diskFiles,
@@ -80,7 +80,7 @@ export function platformServiceManager(platform: NodeJS.Platform, env: HostEnvir
         },
         taskScheduler: {
             // A stop finds the task's processes by the label of its spec, so the task carries that name.
-            taskName: LAUNCH_AGENT_LABEL,
+            taskName: SERVICE_LABEL,
             definitionFile: scheduledTaskFile(home, env),
             logFile: serviceLogFile(home, platform, env),
             run: runCommand,
@@ -110,7 +110,7 @@ export interface DaemonService {
 export function daemonServiceSpec(service: DaemonService): ServiceSpec {
     const env = service.env ?? process.env;
     return {
-        label: LAUNCH_AGENT_LABEL,
+        label: SERVICE_LABEL,
         description: 'Ruimte machine',
         program: service.program,
         args: service.args,

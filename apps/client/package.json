@@ -45,6 +45,7 @@
         "@ruimte/csp": "workspace:*",
         "@ruimte/desktop-bridge": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
+        "@ruimte/service": "workspace:*",
         "@ruimte/telemetry": "workspace:*",
         "@ruimte/voice": "workspace:*",
         "@sentry/browser": "11.7.0",

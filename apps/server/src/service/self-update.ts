@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { unrefTimeout } from '@adecore/utils/async';
+import { BUILD_FILE } from '@ruimte/service/runtime';
 
 /*
  * A daemon under the background service that finds a newer binary on disk ends itself once nothing
@@ -40,7 +41,7 @@ function selfUpdateVerdict(facts: SelfUpdateFacts): SelfUpdateVerdict {
 
 /* Where `scripts/compile.ts` writes the id, beside the binary, so the new id is read without running the new binary. */
 export function buildFileOf(executable: string): string {
-    return join(dirname(executable), 'ruimte.build');
+    return join(dirname(executable), BUILD_FILE);
 }
 
 export function readBuildFile(path: string): string | null {
