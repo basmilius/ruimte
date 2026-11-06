@@ -154,12 +154,12 @@ enum LaunchesText {
             "projectId": .string(projectID), "baseRev": .number(Double(baseRev)), "launches": .array(launches),
         ]
         if !imported.isEmpty { payload["imported"] = .array(imported.map { .string($0) }) }
-        do {
-            _ = try await client.request(.launchesSave, payload: .object(payload))
-        } catch MachineClientError.server(let code, _) where code == "rev-conflict" {
-            throw LaunchSaveFailure.conflict
-        } catch {
-            throw LaunchSaveFailure.failed(error.localizedDescription)
+        // No reload to merge onto: the list is the person's edit of a whole, so a conflict goes back to them.
+        var rev = RevSave()
+        switch await rev.send({ try await client.request(.launchesSave, payload: .object(payload)) }) {
+        case .saved: return
+        case .conflict: throw LaunchSaveFailure.conflict
+        case .failed(let error): throw LaunchSaveFailure.failed(error.localizedDescription)
         }
     }
 

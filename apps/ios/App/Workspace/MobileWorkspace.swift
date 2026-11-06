@@ -192,39 +192,48 @@ final class MobileWorkspace {
         guard !saving, conflict == nil, session.rpc.isConnected else { return }
         saving = true
         defer { saving = false }
-        var retries = 0
+        var rev = RevSave()
         while pendingSave && conflict == nil && session.rpc.isConnected {
-            pendingSave = false
-            let sent = document
-            let content = sent.setting("rev", nil).setting("version", nil)
-            do {
-                let result = try await client.request(
-                    .projectSave,
-                    payload: .object([
-                        "projectId": .string(projectID), "baseRev": .number(Double(revision)), "content": content,
-                    ]))
-                let writtenRevision = Int(try result.decoded(as: ProjectSaveResult.self).rev)
-                if writtenRevision >= revision {
-                    revision = writtenRevision
-                    base = sent.setting("rev", .number(Double(revision)))
-                    document = document.setting("rev", .number(Double(revision)))
-                }
-                problem = nil
-            } catch {
-                pendingSave = true
-                problem = error.localizedDescription
-                let failedRevision = revision
-                // Reopen retrieves the conflicting revision without discarding this client's edits.
-                if session.rpc.isConnected {
-                    if let result = try? await session.openProject(projectID).decoded(as: ProjectOpenResult.self) {
-                        receive(result.document)
+            let outcome = await rev.send(
+                { [self] in
+                    pendingSave = false
+                    let sent = document
+                    let content = sent.setting("rev", nil).setting("version", nil)
+                    do {
+                        let result = try await client.request(
+                            .projectSave,
+                            payload: .object([
+                                "projectId": .string(projectID), "baseRev": .number(Double(revision)),
+                                "content": content,
+                            ]))
+                        return (sent, Int(try result.decoded(as: ProjectSaveResult.self).rev))
+                    } catch {
+                        pendingSave = true
+                        problem = error.localizedDescription
+                        throw error
                     }
-                }
-                // Merged onto a newer revision, the edit goes out again.
-                guard revision > failedRevision, conflict == nil, retries < 2 else { break }
-                retries += 1
+                },
+                reload: { [self] in await mergeNewerRevision() })
+            guard case .saved(let (sent, writtenRevision)) = outcome else { break }
+            if writtenRevision >= revision {
+                revision = writtenRevision
+                base = sent.setting("rev", .number(Double(revision)))
+                document = document.setting("rev", .number(Double(revision)))
             }
+            problem = nil
         }
+    }
+
+    /// Reopen retrieves the conflicting revision without discarding this client's edits. True when they merged onto
+    /// a newer revision, so the edit can go out again.
+    private func mergeNewerRevision() async -> Bool {
+        guard session.rpc.isConnected else { return false }
+        let failedRevision = revision
+        guard let result = try? await session.openProject(projectID).decoded(as: ProjectOpenResult.self) else {
+            return false
+        }
+        receive(result.document)
+        return revision > failedRevision && conflict == nil
     }
 
     private func reconcileSelection() {
