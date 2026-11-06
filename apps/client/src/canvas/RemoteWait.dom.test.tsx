@@ -4,7 +4,7 @@ import { act } from 'react';
 import { startRemoteStatusWatch } from '@/controllers/remote-status';
 import { useAttention } from '@/state/attention';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { useTasks } from '@/state/tasks';
+import { useTasks } from '@/tasks/tasks';
 import { startTaskWatch } from '@/tasks/watch';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';

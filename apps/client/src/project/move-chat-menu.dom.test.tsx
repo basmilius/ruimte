@@ -3,7 +3,7 @@ import { useChats } from '@adecore/agents-react/state';
 import { REQUEST_SCHEMAS, type ChatInfo, type ProjectView, type RequestType } from '@ruimte/contracts';
 import { act } from 'react';
 import { moveChatDialog } from '@/project/dialogs';
-import { useProposals } from '@/state/proposals';
+import { useProposals } from '@/proposals/proposals';
 import { useUi } from '@/state/ui';
 import { clickOn, mount, openSubmenu, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';

@@ -1,8 +1,8 @@
 import { applyPlanOps } from '@adecore/plan';
 import { ActionRefusal } from '@ruimte/actions';
 import type { Plan, PlanPersonOp } from '@ruimte/contracts';
+import { usePlans } from '@/plan/plans';
 import { endpointKey } from '@/state/keys';
-import { usePlans } from '@/state/plans';
 import { TransportError, type Transport } from '@/transport-api/transport';
 
 /* What a plan write needs of the stores, so a test hands in its own. */

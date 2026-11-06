@@ -4,11 +4,11 @@ import { canShareView, chatIsWorking, isCanvasView, isChatHostView, isEmptyChatV
 import i18next from 'i18next';
 import { databaseViewShareRefusal } from '@/database/view-sharing';
 import type { SessionHandoff } from '@/project/views';
+import { proposalsOf } from '@/proposals/proposals';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { activeViewOf, hasActiveCanvas, useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
 import { isScratchProject, useProject } from '@/state/project';
-import { proposalsOf } from '@/state/proposals';
 import { useSessions } from '@/state/sessions';
 import { pool } from '@/transport';
 import { machineAnswers } from '@/transport/features';

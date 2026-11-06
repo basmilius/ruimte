@@ -32,9 +32,9 @@ import {
 import { closePlanPanel, pickPlan, PLAN_DEFAULT_WIDTH, PLAN_MIN_WIDTH } from '@/plan/plan-panel-watch';
 import { resultsText, type PlanFilter } from '@/plan/plan-view';
 import { PlanList } from '@/plan/PlanList';
+import { useChatPlans } from '@/plan/plans';
 import { useEndpointId } from '@/state/current-endpoint';
 import { forkOriginIn } from '@/state/fork-origin';
-import { useChatPlans } from '@/state/plans';
 import { useShownPanel, useUi } from '@/state/ui';
 import { useViewNodes } from '@/state/view-nodes';
 import { usePanelGap } from '@/surface/panel-layout';

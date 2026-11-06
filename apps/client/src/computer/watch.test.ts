@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { ComputerAppGrants, EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
-import { useComputer } from '@/state/computer';
+import { useComputer } from '@/computer/computer';
 import type { Transport, TransportStatus } from '@/transport-api/transport';
 import type { WatchablePool } from '@/transport/pool-watch';
 import { startComputerWatch } from './watch';

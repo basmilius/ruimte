@@ -1,10 +1,10 @@
 import { messageOf } from '@adecore/ui';
 import type { ComputerAppGrants, ComputerGrant, ComputerRevokePayload, ComputerUseStatus } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
+import { useComputer } from '@/computer/computer';
 import { computerSetupOf, opensSystemSettings, recheckOf, SYSTEM_SETTINGS_PANES, type ComputerSetup } from '@/computer/setup';
 import { desktop } from '@/desktop/bridge';
 import { activeLanguage } from '@/i18n/active';
-import { useComputer } from '@/state/computer';
 import { useServers } from '@/state/server';
 import { transportFor } from '@/transport';
 import type { Transport } from '@/transport-api/transport';

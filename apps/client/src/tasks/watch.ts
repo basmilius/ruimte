@@ -1,5 +1,5 @@
 import { useProjectList } from '@/state/project-list';
-import { useTasks } from '@/state/tasks';
+import { useTasks } from '@/tasks/tasks';
 import { watchPool } from '@/transport/pool-watch';
 
 /*

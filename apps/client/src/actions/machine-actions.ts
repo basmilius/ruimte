@@ -16,8 +16,8 @@ import {
     type UsageSummaryResult
 } from '@ruimte/contracts';
 import { refusing, type Requester } from '@/actions/refusal';
+import { useComputer } from '@/computer/computer';
 import { useDeviceOperated } from '@/devices/operated';
-import { useComputer } from '@/state/computer';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useProcesses, useProcessWarnings } from '@/state/processes';
 import { serverInfoOf } from '@/state/server';

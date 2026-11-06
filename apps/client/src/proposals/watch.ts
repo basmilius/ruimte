@@ -1,4 +1,4 @@
-import { useProposals } from '@/state/proposals';
+import { useProposals } from '@/proposals/proposals';
 import { pool } from '@/transport';
 import { machineAnswers } from '@/transport/features';
 import { joinWatches, snapshotWatch, watchPool, type WatchablePool } from '@/transport/pool-watch';

@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { ArrowRight, Check, Info, PanelsTopLeft, Server, Terminal } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useComputer } from '@/computer/computer';
 import { computerSetupOf } from '@/computer/setup';
 import { useComputerMachine } from '@/computer/use-computer-machine';
 import { ComputerTask } from '@/onboarding/ComputerTask';
@@ -29,7 +30,6 @@ import {
     type OnboardingTask
 } from '@/onboarding/tasks';
 import { WELCOME_SKY } from '@/onboarding/welcome-sky';
-import { useComputer } from '@/state/computer';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';

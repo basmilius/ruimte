@@ -16,6 +16,7 @@ import {
 } from '@/action-port/person-actions';
 import { toWorld } from '@/canvas-model/math';
 import { layoutDialog } from '@/canvas/dialogs';
+import { isNotePreviewLocked, setNotePreviewLocked } from '@/canvas/note-previews';
 import { defineBehaviors, type Command, type CommandBehavior, type KeyPress } from '@/commands/behavior';
 import type { GeneratedCommands } from '@/commands/generated';
 import { keyboardOnCanvas, keyFree, onStandaloneView } from '@/commands/key-context';
@@ -29,7 +30,6 @@ import { cameraHistoryStep } from '@/state/canvas-camera-history';
 import { focusedDiagram } from '@/state/diagram';
 import { activeViewOf, useDocument } from '@/state/document';
 import { focusedDrawing } from '@/state/drawing';
-import { isNotePreviewLocked, setNotePreviewLocked } from '@/state/note-previews';
 import { useUi } from '@/state/ui';
 import { isTypingTarget } from '@/surface/canvas/typing-target';
 

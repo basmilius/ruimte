@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { useComputer } from '@/state/computer';
+import { useComputer } from '@/computer/computer';
 import { pool } from '@/transport';
 import { joinWatches, snapshotWatch, watchPool, type WatchablePool } from '@/transport/pool-watch';
 

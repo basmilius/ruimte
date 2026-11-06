@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { act } from 'react';
+import { useNotePreviews } from '@/canvas/note-previews';
 import { liveCanvas } from '@/state/canvas';
-import { useNotePreviews } from '@/state/note-previews';
 import { menuItem, openCanvasPage, openContextMenu, type CanvasPage } from '../../testing/canvas-page';
 import { clickOn, openSubmenu, until } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';

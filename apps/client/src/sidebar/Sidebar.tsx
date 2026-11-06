@@ -44,7 +44,6 @@ import { isScratchProject, useProject } from '@/state/project';
 import { nodeProvider, nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
-import { childTask, useTasks } from '@/state/tasks';
 import { useUi } from '@/state/ui';
 import { useWaitingSince, waitDetailsOf } from '@/state/waiting';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/surface/canvas/drop';
@@ -76,6 +75,7 @@ import {
     setDragging as setDraggedView,
     VIEW_DRAG_TYPE
 } from '@/surface/view-drag';
+import { childTask, useTasks } from '@/tasks/tasks';
 import { Brand } from '@/ui/Brand';
 import { NewViewItems } from '@/views/NewViewMenu';
 import { NeedsYouCard } from '../attention/NeedsYouCard';
