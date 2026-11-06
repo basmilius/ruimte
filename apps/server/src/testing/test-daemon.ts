@@ -28,6 +28,7 @@ import type { SessionManager } from '../sessions/manager.ts';
 import type { TaskWiring } from '../tasks/wiring.ts';
 import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import type { VisualHost } from '../visuals/agent-host.ts';
+import type { DaemonBundles } from '../wiring/bundles.ts';
 import { wireDaemon } from '../wiring/daemon.ts';
 import { testRuntime, testSeams, type TestSeams } from './test-seams.ts';
 
@@ -60,6 +61,8 @@ export interface TestDaemon {
     /* The tasks this machine gave other machines. */
     remoteTasks: RemoteTasks;
     host: CanvasHost;
+    /* Every bundle the wiring made, for what a test reads that no field above names. */
+    bundles: DaemonBundles;
     alerts: string[];
     /* Every piece of work owed since boot, kept after the worker took it off the outbox. */
     enqueued: OutboxWork[];
@@ -199,6 +202,7 @@ export async function bootTestDaemon(options: TestDaemonOptions): Promise<TestDa
         remoteTasks: work.remoteTasks,
         prWatches: work.prWatches,
         host,
+        bundles: wired.bundles,
         alerts: fakes.alerts,
         enqueued: fakes.enqueued,
         request: async (type, payload) => {

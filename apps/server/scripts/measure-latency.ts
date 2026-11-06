@@ -4,16 +4,10 @@ import { cpus, release, tmpdir, totalmem } from 'node:os';
 import { parseArgs } from 'node:util';
 import { ManualClock } from '@adecore/agents/testing';
 import { PROTOCOL_VERSION, type ProjectContent } from '@ruimte/contracts';
-import { AuthStore } from '../src/auth/auth-store.ts';
-import { Handshake } from '../src/auth/handshake.ts';
-import { generateKeyPair, signMessage } from '../src/auth/keys.ts';
 import { SOCKET_BACKPRESSURE_LIMIT } from '../src/backpressure.ts';
-import { connectionOpener, socketChannel, type ConnectionServices, type SocketChannel } from '../src/connection.ts';
+import { socketChannel, type SocketChannel } from '../src/connection.ts';
 import { BunPtyAdapter } from '../src/pty/bun-pty.ts';
-import { authenticateChannel } from '../src/pulsar/channel-auth.ts';
-import { AUTHENTICATED_FRAME_CHARS } from '../src/pulsar/data-channel.ts';
 import { DirectClient } from '../src/pulsar/direct-client.ts';
-import { DirectPeers } from '../src/pulsar/peers.ts';
 import { bootTestDaemon, releasedProject } from '../src/testing/test-daemon.ts';
 import type { ClientAccess, ClientChannel } from '../src/wire.ts';
 import { renderReport, type Channel, type ChannelRun, type Environment, type PhaseData, type Run } from './latency-report.ts';
@@ -29,8 +23,6 @@ import { renderReport, type Channel, type ChannelRun, type Environment, type Pha
  * is werift on both ends over loopback, which measures the daemon's side of it and not a network.
  */
 
-const DAEMON_ID = 'daemon-latency';
-const LOCAL_SECRET = 'the-local-secret-of-the-latency-run';
 const CHAT_ID = 'chat-measure';
 const COLS = 120;
 const ROWS = 30;
@@ -42,7 +34,7 @@ const DEFAULT_BUSY = 'yes "$(printf \'%0200d\' 0)"';
 type ParentMessage = { type: 'signal'; envelope: unknown } | { type: 'phase'; name: string } | { type: 'report' } | { type: 'stop' };
 
 type ChildMessage =
-    | { type: 'ready'; port: number }
+    | { type: 'ready'; port: number; daemonId: string; secret: string }
     | { type: 'signal'; envelope: unknown }
     | { type: 'report'; lag: number[]; pauses: Record<Channel, number> };
 
@@ -52,6 +44,8 @@ function post(message: ChildMessage): void {
 
 /* The daemon: the real wiring on real terminals, behind a socket and a direct channel. */
 async function serve(): Promise<void> {
+    // The wiring logs to the console, and stdout is the protocol with the parent.
+    console.log = (...parts: unknown[]) => console.error(...parts);
     const content: ProjectContent = {
         name: 'repo',
         color: '#123456',
@@ -72,22 +66,7 @@ async function serve(): Promise<void> {
     daemon.worker.start();
     await daemon.chats.create({ chatId: CHAT_ID, provider: 'claude', cwd: folder });
 
-    const noSource = { subscribe: () => () => undefined, detachAll: () => undefined };
-    const services: ConnectionServices = {
-        dispatcher: daemon.dispatcher,
-        sessions: daemon.sessions,
-        chats: daemon.chats,
-        identity: noSource,
-        projects: noSource,
-        drawings: noSource,
-        diagrams: noSource,
-        folders: noSource,
-        statuses: noSource,
-        usage: noSource,
-        limits: noSource,
-        processes: noSource
-    };
-    const openConnection = connectionOpener(services);
+    const { clients, machine, network } = daemon.bundles;
 
     const pauses: Record<Channel, number> = { socket: 0, direct: 0 };
     /* Counts the sends the channel answered with backpressure or a drop: where the output gate stops streaming. */
@@ -106,22 +85,10 @@ async function serve(): Promise<void> {
         outputShare: channel.outputShare
     });
 
-    const authStore = new AuthStore(home);
-    const key = generateKeyPair();
-    const handshake = new Handshake(authStore, { id: DAEMON_ID, publicKey: key.publicKey, sign: (message) => signMessage(key.privateKey, message) });
-    const peers = new DirectPeers({
-        iceServers: () => [],
-        portRange: null,
-        hostAddresses: [],
-        attemptTimeoutMs: 20_000,
-        log: { log: () => undefined, warn: (...parts: unknown[]) => console.error(...parts) },
-        authenticate: (channel, binding) =>
-            authenticateChannel({ channel, binding, handshake, daemonId: DAEMON_ID, localSecret: LOCAL_SECRET, reachability: 'lan', timeoutMs: 10_000 }),
-        open: (channel, access) => {
-            const connection = openConnection(counted(channel, 'direct'), access);
-            channel.receiveWith((frame) => connection.receive(frame), AUTHENTICATED_FRAME_CHARS);
-        }
-    });
+    // The direct channels open through the daemon's own network wiring; only the count of their pauses is added.
+    const addDirect = clients.addDirect.bind(clients);
+    clients.addDirect = (channel, access) => addDirect(counted(channel, 'direct'), access);
+    const { peers } = network;
 
     const sockets = new Map<object, { channel: SocketChannel; receive(frame: string | Uint8Array | Buffer): void }>();
     const server = Bun.serve<ClientAccess>({
@@ -138,7 +105,7 @@ async function serve(): Promise<void> {
             closeOnBackpressureLimit: true,
             open(ws) {
                 const channel = socketChannel(ws);
-                const connection = openConnection(counted(channel, 'socket'), ws.data);
+                const connection = clients.open(counted(channel, 'socket'), ws.data);
                 sockets.set(ws, { channel, receive: (frame) => connection.receive(frame) });
             },
             drain(ws) {
@@ -162,7 +129,7 @@ async function serve(): Promise<void> {
         last = now;
     }, LAG_SAMPLE_MS);
 
-    post({ type: 'ready', port: server.port ?? 0 });
+    post({ type: 'ready', port: server.port ?? 0, daemonId: machine.identity.id, secret: machine.access.localSecret });
     for await (const line of console) {
         if (line.trim() === '') {
             continue;
@@ -244,10 +211,14 @@ function socketLink(port: number): Promise<Link> {
     });
 }
 
-async function directLink(send: (message: ParentMessage) => void, signals: { deliver?: (envelope: never) => void }): Promise<Link> {
+async function directLink(
+    send: (message: ParentMessage) => void,
+    signals: { deliver?: (envelope: never) => void },
+    daemon: { daemonId: string; secret: string }
+): Promise<Link> {
     const client: DirectClient = new DirectClient({
         stunServers: [],
-        credential: { kind: 'secret', secret: LOCAL_SECRET, daemonId: DAEMON_ID },
+        credential: { kind: 'secret', secret: daemon.secret, daemonId: daemon.daemonId },
         timeoutMs: 30_000,
         signal: (envelope) => send({ type: 'signal', envelope })
     });
@@ -493,8 +464,8 @@ async function measure(): Promise<void> {
         void child.stdin.flush();
     };
     const signals: { deliver?: (envelope: never) => void } = {};
-    let ready: (port: number) => void = () => undefined;
-    const port = new Promise<number>((resolve) => {
+    let ready: (daemon: { port: number; daemonId: string; secret: string }) => void = () => undefined;
+    const started = new Promise<{ port: number; daemonId: string; secret: string }>((resolve) => {
         ready = resolve;
     });
     // Set by the wait below; declared through `as` so the reader above keeps the wide type.
@@ -509,7 +480,7 @@ async function measure(): Promise<void> {
                 buffered = buffered.slice(at + 1);
                 const message = JSON.parse(line) as ChildMessage;
                 if (message.type === 'ready') {
-                    ready(message.port);
+                    ready(message);
                 } else if (message.type === 'signal') {
                     signals.deliver?.(message.envelope as never);
                 } else if (message.type === 'report') {
@@ -530,9 +501,9 @@ async function measure(): Promise<void> {
 
     const results: ChannelRun[] = [];
     try {
-        const daemonPort = await port;
+        const daemon = await started;
         for (const channel of options.channels) {
-            const link = channel === 'socket' ? await socketLink(daemonPort) : await directLink(send, signals);
+            const link = channel === 'socket' ? await socketLink(daemon.port) : await directLink(send, signals, daemon);
             try {
                 results.push(await measureChannel(channel, link, options, controls));
             } finally {
