@@ -1,10 +1,29 @@
+import type { Area } from '../area.ts';
 import { probeDevServers } from '../browser/dev-servers.ts';
 import type { BrowserManager } from '../browser/manager.ts';
 import type { BrowserPages } from '../browser/pages.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import { streamingGate } from '../streams/streaming-gate.ts';
 
-export function registerBrowserHandlers(dispatcher: Dispatcher, browsers: BrowserManager, pages: BrowserPages, streamingAllowed: () => boolean): void {
+export interface BrowserDeps {
+    browsers: BrowserManager;
+    pages: BrowserPages;
+    streamingAllowed(): boolean;
+}
+
+export function browserArea(deps: BrowserDeps): Area {
+    const { browsers, pages } = deps;
+
+    return {
+        name: 'browser',
+        sources: [browsers, pages],
+        holders: [browsers, pages],
+        handlers: (dispatcher) => registerRequests(dispatcher, deps),
+        stop: [{ phase: 'end', label: 'Closing browsers', run: () => browsers.closeAll() }]
+    };
+}
+
+function registerRequests(dispatcher: Dispatcher, { browsers, pages, streamingAllowed }: BrowserDeps): void {
     const requireStreaming = streamingGate(streamingAllowed);
 
     dispatcher.register('browser.open', (payload, client) => {
@@ -29,14 +48,22 @@ export function registerBrowserHandlers(dispatcher: Dispatcher, browsers: Browse
         browsers.kill(payload.browserId, client.id);
         return {};
     });
-    dispatcher.register('browser.navigate', (payload, client) => {
-        requireStreaming();
-        return browsers.navigate(payload.browserId, client.id, payload.url);
-    });
-    dispatcher.register('browser.command', (payload, client) => {
-        requireStreaming();
-        return browsers.command(payload.browserId, client.id, payload.command, payload.ignoreCache);
-    });
+    dispatcher.register(
+        'browser.navigate',
+        (payload, client) => {
+            requireStreaming();
+            return browsers.navigate(payload.browserId, client.id, payload.url);
+        },
+        { count: ['actions.browser'] }
+    );
+    dispatcher.register(
+        'browser.command',
+        (payload, client) => {
+            requireStreaming();
+            return browsers.command(payload.browserId, client.id, payload.command, payload.ignoreCache);
+        },
+        { count: ['actions.browser'] }
+    );
     dispatcher.register('browser.resize', async (payload, client) => {
         requireStreaming();
         await browsers.resize(payload.browserId, client.id, payload.width, payload.height, payload.deviceScaleFactor);

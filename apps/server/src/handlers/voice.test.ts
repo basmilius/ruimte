@@ -11,7 +11,7 @@ import { VoiceKeyStore } from '../voice/key-store.ts';
 import { VoicePreferencesStore } from '../voice/preferences-store.ts';
 import type { ClientAccess, ClientConnection, ClientChannel } from '../wire.ts';
 import { wireVoice } from '../wiring/voice.ts';
-import { registerVoiceHandlers, type VoiceHandlerDeps } from './voice.ts';
+import { voiceArea, type VoiceDeps } from './voice.ts';
 
 const KEY = 'sk-test-voice-0123456789abcdef';
 const OWNER: ClientAccess = { reachability: 'loopback', sessionId: null };
@@ -35,15 +35,17 @@ async function ask(dispatcher: Dispatcher, client: ClientConnection & { frames: 
 
 function voiceDispatcher(): Dispatcher {
     const dispatcher = new Dispatcher();
-    const sessions: VoiceHandlerDeps['sessions'] = {
+    const sessions: VoiceDeps['sessions'] = {
         start: async (client, payload) => {
             started.push(`${client.id} ${payload.sceneId}`);
             return { sessionId: 'session-1', sdp: 'answer', status: { sessionId: 'session-1', sceneId: payload.sceneId, seq: 1, phase: 'active' } };
         },
         stop: async (client, payload) => ({ stopped: client.id === 'phone' && payload.sceneId === 'scene-1' }),
-        confirm: async () => ({ accepted: false })
+        confirm: async () => ({ accepted: false }),
+        channelClosed: () => undefined,
+        stopAll: async () => undefined
     };
-    registerVoiceHandlers(dispatcher, { keys, preferences, sessions });
+    voiceArea({ keys, preferences, sessions }).handlers?.(dispatcher);
     return dispatcher;
 }
 
@@ -105,7 +107,7 @@ describe('the voice requests', () => {
             chats: { observe: () => () => undefined, get: () => undefined }
         });
         const dispatcher = new Dispatcher();
-        registerVoiceHandlers(dispatcher, wired);
+        voiceArea(wired).handlers?.(dispatcher);
         const owner = connection('owner', OWNER);
         expect(await ask(dispatcher, owner, 'voice.setKey', { key: KEY })).toMatchObject({ ok: true, result: { present: true } });
         expect(await new VoiceKeyStore(home).read()).toBe(KEY);
@@ -164,7 +166,7 @@ describe('the voice requests', () => {
             });
             expect(log).not.toHaveBeenCalled();
             const dispatcher = new Dispatcher();
-            registerVoiceHandlers(dispatcher, wired);
+            voiceArea(wired).handlers?.(dispatcher);
             expect(
                 dispatcher
                     .types()

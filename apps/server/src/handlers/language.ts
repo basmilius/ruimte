@@ -1,8 +1,24 @@
+import type { Area } from '../area.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import type { LanguageHost } from '../language/host.ts';
 
+export interface LanguageDeps {
+    host: LanguageHost;
+}
+
 /* Every request here comes from a client, so an install or a restart is a person's. */
-export function registerLanguageHandlers(dispatcher: Dispatcher, host: LanguageHost): void {
+export function languageArea(deps: LanguageDeps): Area {
+    const { host } = deps;
+
+    return {
+        name: 'language',
+        sources: [host],
+        handlers: (dispatcher) => registerRequests(dispatcher, deps),
+        stop: [{ phase: 'end', label: 'Stopping language servers', run: () => host.close() }]
+    };
+}
+
+function registerRequests(dispatcher: Dispatcher, { host }: LanguageDeps): void {
     dispatcher.register('language.status', async (payload) => ({ servers: await host.status(payload.projectId) }));
 
     dispatcher.register('language.install', async (payload) => ({ status: await host.install(payload.server) }));

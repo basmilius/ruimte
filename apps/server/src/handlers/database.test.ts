@@ -13,7 +13,7 @@ import { FakeHelper } from '../database/fake-helper.ts';
 import { MachineHome } from '../disk/machine-home.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import type { ClientAccess } from '../wire.ts';
-import { registerDatabaseHandlers } from './database.ts';
+import { databaseArea } from './database.ts';
 import { askOnce } from './test-helpers.ts';
 
 const OWNER: ClientAccess = { reachability: 'loopback', sessionId: null };
@@ -51,7 +51,18 @@ beforeEach(async () => {
         scratchFolder: join(root, 'home', 'scratch')
     });
     dispatcher = new Dispatcher();
-    registerDatabaseHandlers(dispatcher, service, connections, agents);
+    databaseArea({
+        service,
+        connections,
+        agents,
+        sql: {
+            state: async () => ({}) as never,
+            bind: async () => ({}) as never,
+            refresh: async () => undefined,
+            passwordsHanded: () => undefined,
+            subscribe: () => () => undefined
+        }
+    }).handlers?.(dispatcher);
 });
 
 afterEach(async () => {

@@ -6,7 +6,8 @@ import type { ProviderAccountsService } from '@adecore/agents/providers';
 import { testAccounts } from '@adecore/agents/testing';
 import type { AgentKind, ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
-import { registerSessionHandlers, type LoginCommands } from '../handlers/session.ts';
+import { sessionArea, type LoginCommands } from '../handlers/session.ts';
+import { sessionDepsWith } from '../handlers/test-helpers.ts';
 import { makeHarness, type Harness } from './test-helpers.ts';
 
 const LOGINS: LoginCommands = {
@@ -38,7 +39,7 @@ beforeEach(async () => {
         home
     );
     dispatcher = new Dispatcher();
-    registerSessionHandlers(dispatcher, harness.manager, undefined, LOGINS);
+    sessionArea(sessionDepsWith(harness.manager, { logins: LOGINS })).handlers?.(dispatcher);
 });
 
 afterEach(async () => {

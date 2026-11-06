@@ -3,12 +3,14 @@ import { mkdir, mkdtemp, readFile, realpath, rm, stat, writeFile } from 'node:fs
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { GitBundleResult, GitFetchBundleResult, ServerFrame } from '@ruimte/contracts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { BundleStore } from '../git/bundles.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { gitIn, initRepo, NO_WORKTREE_AGENTS } from '../git/test-repo.ts';
 import { Worktrees } from '../git/worktrees.ts';
-import { registerGitHandlers } from './git.ts';
+import { gitArea } from './git.ts';
+import { gitDepsWith } from './test-helpers.ts';
 
 /*
  * The trust of a checkout a person hands to another machine, through the requests the client sends:
@@ -40,16 +42,19 @@ async function machine(name: string): Promise<Machine> {
     const repo = join(root, name);
     const dispatcher = new Dispatcher();
     const result: Machine = { repo, bundles, dispatcher, untrusted };
-    registerGitHandlers(dispatcher, worktrees, {} as never, {} as never, {} as never, undefined, undefined, undefined, {
-        bundles,
-        checkpoints: new Checkpoints(home),
-        folderOf: async () => repo,
-        untrusted: (path) => untrusted.some((record) => path === record.path || path.startsWith(`${record.path}/`)),
-        untrustFolder: async (path, branch) => {
-            untrusted.push({ path, branch });
-            await result.onUntrust?.(path);
-        }
-    });
+    gitArea(
+        gitDepsWith({
+            worktrees,
+            bundles,
+            checkpoints: new Checkpoints(home, new MachineHome(home)),
+            folderOf: async () => repo,
+            untrusted: (path) => untrusted.some((record) => path === record.path || path.startsWith(`${record.path}/`)),
+            untrustFolder: async (path, branch) => {
+                untrusted.push({ path, branch });
+                await result.onUntrust?.(path);
+            }
+        })
+    ).handlers?.(dispatcher);
     return result;
 }
 

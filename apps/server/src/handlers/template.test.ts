@@ -7,7 +7,7 @@ import { Dispatcher } from '../dispatcher.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { TemplateStore } from '../templates/template-store.ts';
 import type { ClientAccess } from '../wire.ts';
-import { registerTemplateHandlers } from './template.ts';
+import { templateArea } from './template.ts';
 import { askOnce } from './test-helpers.ts';
 
 const homes = tempHomes('ruimte-template-handlers-');
@@ -33,7 +33,7 @@ beforeEach(async () => {
     });
 
     dispatcher = new Dispatcher();
-    registerTemplateHandlers(dispatcher, store);
+    templateArea({ store }).handlers?.(dispatcher);
 });
 
 describe('template handlers', () => {

@@ -1,15 +1,25 @@
 import { CodedError } from '@adecore/agents';
+import type { Area } from '../area.ts';
 import { type Dispatcher } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import type { CliVersions } from '../providers/cli-versions.ts';
 import type { RegistryAgents } from '../providers/registry-agents.ts';
+
+export interface AgentRegistryDeps {
+    agents: RegistryAgents;
+    versions: CliVersions;
+}
 
 /*
  * The agents of the ACP registry and the versions of the CLIs. Installing an agent or updating a CLI downloads a program
  * and makes it runnable on this machine, so only the local secret may press either; any client the machine let in may
  * see the catalog and the versions.
  */
-export function registerAgentRegistryHandlers(dispatcher: Dispatcher, agents: RegistryAgents, versions: CliVersions): void {
+export function agentRegistryArea(deps: AgentRegistryDeps): Area {
+    return { name: 'agent registry', handlers: (dispatcher) => registerRequests(dispatcher, deps) };
+}
+
+function registerRequests(dispatcher: Dispatcher, { agents, versions }: AgentRegistryDeps): void {
     dispatcher.register('provider.registry', async (payload) => ({ catalog: await agents.catalog(payload.refresh === true) }));
 
     dispatcher.register('provider.installAgent', async (payload) => ({ agent: await refusing('agent-install-failed', () => agents.install(payload.id)) }), {

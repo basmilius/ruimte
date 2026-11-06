@@ -12,8 +12,8 @@ import { createWorkspaceStores } from './workspace';
 // Runtime fixtures keep the daemon's dependency graph out of the browser typecheck.
 const serverSource = '../../../server/src/';
 const { Dispatcher } = await import(`${serverSource}dispatcher.ts`);
-const { registerDrawingHandlers } = await import(`${serverSource}handlers/drawing.ts`);
-const { registerDiagramHandlers } = await import(`${serverSource}handlers/diagram.ts`);
+const { drawingArea } = await import(`${serverSource}handlers/drawing.ts`);
+const { diagramArea } = await import(`${serverSource}handlers/diagram.ts`);
 const { ProjectStore } = await import(`${serverSource}projects/project-store.ts`);
 const { DrawingStore } = await import(`${serverSource}projects/drawing-store.ts`);
 const { DiagramStore } = await import(`${serverSource}projects/diagram-store.ts`);
@@ -100,8 +100,8 @@ for (const kind of ['drawing', 'diagram'] as const) {
                 const projectId = opened.summary.projectId;
                 await projects.save(projectId, 0, { name: 'repo', color: '#353e53', views: [{ kind, id: 'view', name: 'View' }] });
                 const dispatcher = new Dispatcher();
-                registerDrawingHandlers(dispatcher, drawings);
-                registerDiagramHandlers(dispatcher, diagrams);
+                drawingArea({ store: drawings }).handlers?.(dispatcher);
+                diagramArea({ store: diagrams }).handlers?.(dispatcher);
                 const store = kind === 'drawing' ? drawings : diagrams;
                 const first = new StoreTransport(dispatcher, 'first');
                 const second = new StoreTransport(dispatcher, 'second');

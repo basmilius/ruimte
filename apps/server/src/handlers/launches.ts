@@ -1,9 +1,29 @@
+import type { Area } from '../area.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import type { LaunchRunner } from '../launches/runner.ts';
 import type { LaunchStore } from '../launches/store.ts';
 
+export interface LaunchesDeps {
+    store: LaunchStore;
+    runner: LaunchRunner;
+}
+
 /* Every request here comes from a client, so it speaks for a person: a start may approve, a stop may force. */
-export function registerLaunchHandlers(dispatcher: Dispatcher, store: LaunchStore, runner: LaunchRunner): void {
+export function launchesArea(deps: LaunchesDeps): Area {
+    const { store, runner } = deps;
+
+    return {
+        name: 'launches',
+        sources: [store, runner],
+        handlers: (dispatcher) => registerRequests(dispatcher, deps),
+        stop: [
+            { phase: 'end', label: 'Closing launches', run: () => runner.close() },
+            { phase: 'end', label: 'Closing launch files', run: () => store.closeAll() }
+        ]
+    };
+}
+
+function registerRequests(dispatcher: Dispatcher, { store, runner }: LaunchesDeps): void {
     dispatcher.register('launches.read', (payload) => store.read(payload.projectId));
 
     dispatcher.register('launches.save', async (payload) => ({

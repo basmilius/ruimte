@@ -1,4 +1,5 @@
 import { FS_WRITE_MAX_BYTES, type FsCreateResult } from '@ruimte/contracts';
+import type { Area } from '../area.ts';
 import type { MachineHome } from '../disk/machine-home.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import { browseDirectories, browseTarget } from '../fs/browse.ts';
@@ -39,13 +40,20 @@ function editsOf(boundary: WriteBoundary): Omit<FileMove, 'move'> {
     };
 }
 
-export function registerFsHandlers(
-    dispatcher: Dispatcher,
-    watcher: FolderWatcher,
-    boundaryOf: (clientId: string) => Promise<WriteBoundary>,
-    machineHome: MachineHome,
-    language?: Pick<LanguageHost, 'renameFiles' | 'createFiles' | 'deleteFiles' | 'saved'>
-): void {
+export interface FsDeps {
+    watcher: FolderWatcher;
+    boundaryOf(clientId: string): Promise<WriteBoundary>;
+    machineHome: Pick<MachineHome, 'refuse' | 'policy'>;
+    language: Pick<LanguageHost, 'renameFiles' | 'createFiles' | 'deleteFiles' | 'saved'>;
+}
+
+export function fsArea(deps: FsDeps): Area {
+    const { watcher } = deps;
+
+    return { name: 'fs', sources: [watcher], holders: [watcher], handlers: (dispatcher) => registerRequests(dispatcher, deps) };
+}
+
+function registerRequests(dispatcher: Dispatcher, { watcher, boundaryOf, machineHome, language }: FsDeps): void {
     dispatcher.register('fs.browse', async (payload) => {
         if (payload.cwd) {
             await machineHome.refuse(payload.cwd);
@@ -88,22 +96,30 @@ export function registerFsHandlers(
         return listDirectory(payload.path, { depth: payload.depth, hidden: payload.hidden, policy: await machineHome.policy() });
     });
 
-    dispatcher.register('fs.read', async (payload) => {
-        await machineHome.refuse(payload.path);
-        await refuseOutside(payload.path, payload.within);
-        return readFile(payload.path);
-    });
+    dispatcher.register(
+        'fs.read',
+        async (payload) => {
+            await machineHome.refuse(payload.path);
+            await refuseOutside(payload.path, payload.within);
+            return readFile(payload.path);
+        },
+        { count: (payload) => [{ counter: 'files.opened', once: payload.path }] }
+    );
 
-    dispatcher.register('fs.write', async (payload, client) => {
-        await machineHome.refuse(payload.path);
-        const boundary = await narrowTo(await boundaryOf(client.id), payload.within);
-        const written = await writeTextFile(payload.path, payload.text, payload.expectedMtime, boundary);
+    dispatcher.register(
+        'fs.write',
+        async (payload, client) => {
+            await machineHome.refuse(payload.path);
+            const boundary = await narrowTo(await boundaryOf(client.id), payload.within);
+            const written = await writeTextFile(payload.path, payload.text, payload.expectedMtime, boundary);
 
-        // The reply never waits on the servers.
-        void language?.saved(payload.path, payload.text).catch(() => undefined);
+            // The reply never waits on the servers.
+            void language.saved(payload.path, payload.text).catch(() => undefined);
 
-        return written;
-    });
+            return written;
+        },
+        { count: ['files.saved'] }
+    );
 
     const uploads = new TextUploads();
 
@@ -119,17 +135,21 @@ export function registerFsHandlers(
         return {};
     });
 
-    dispatcher.register('fs.writeCommit', async (payload, client) => {
-        const { path, text, expectedMtime } = uploads.finish(client.id, payload.uploadId);
+    dispatcher.register(
+        'fs.writeCommit',
+        async (payload, client) => {
+            const { path, text, expectedMtime } = uploads.finish(client.id, payload.uploadId);
 
-        await machineHome.refuse(path);
+            await machineHome.refuse(path);
 
-        const written = await writeTextFile(path, text, expectedMtime, await boundaryOf(client.id), FS_WRITE_MAX_BYTES);
+            const written = await writeTextFile(path, text, expectedMtime, await boundaryOf(client.id), FS_WRITE_MAX_BYTES);
 
-        void language?.saved(path, text).catch(() => undefined);
+            void language.saved(path, text).catch(() => undefined);
 
-        return written;
-    });
+            return written;
+        },
+        { count: ['files.saved'] }
+    );
 
     dispatcher.register('fs.writeAbort', (payload, client) => {
         uploads.abort(client.id, payload.uploadId);
@@ -141,7 +161,7 @@ export function registerFsHandlers(
         await machineHome.refuse(payload.path);
         const boundary = await narrowTo(await boundaryOf(client.id), payload.within);
         const plan = await planCreate(payload, boundary);
-        if (payload.projectId === undefined || language === undefined) {
+        if (payload.projectId === undefined) {
             return plan.run();
         }
         let made: FsCreateResult | undefined;
@@ -158,7 +178,7 @@ export function registerFsHandlers(
         await machineHome.refuse(payload.path);
         const boundary = await boundaryOf(client.id);
         const plan = await planDelete(payload.path, boundary);
-        if (payload.projectId === undefined || language === undefined) {
+        if (payload.projectId === undefined) {
             await plan.run();
             return {};
         }
@@ -173,7 +193,7 @@ export function registerFsHandlers(
         await Promise.all([machineHome.refuse(payload.path), machineHome.refuse(payload.to)]);
         const boundary = await boundaryOf(client.id);
         const plan = await planRename(payload.path, payload.to, boundary, { overwrite: payload.overwrite });
-        if (payload.projectId === undefined || language === undefined) {
+        if (payload.projectId === undefined) {
             await plan.run();
             return {};
         }

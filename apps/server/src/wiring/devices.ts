@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import type { Area } from '../area.ts';
 import { BrowserDriver } from '../browser/drive.ts';
 import { BrowserManager } from '../browser/manager.ts';
 import { BrowserPages } from '../browser/pages.ts';
@@ -17,15 +18,15 @@ import { ScrcpyServerFile, scrcpyServerDirectory } from '../devices/scrcpy-serve
 import { adbScrcpyHost, ScrcpySource } from '../devices/scrcpy-source.ts';
 import { realCameraHost, SimulatorCamera, simctlWithEnv } from '../devices/simulator-camera.ts';
 import { createTreeLauncher, SimulatorTreeReader } from '../devices/simulator-tree.ts';
-import { MachineHome } from '../disk/machine-home.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import { LiveStreamHub } from '../streams/live-stream.ts';
 import { childLauncher, renderCommand, VisualRenderer } from '../visuals/renderer.ts';
-import type { AgentsBundle } from './agents.ts';
-import type { ProjectsBundle } from './projects.ts';
+import type { DaemonBundles } from './bundles.ts';
+import type { Later } from './later.ts';
 import type { DaemonRuntime } from './runtime.ts';
 
 /* What lets agents operate this machine's apps; made before the providers, since its helper starts beside their files. */
-export function createComputer(runtime: DaemonRuntime, store: ComputerUseStore, later: { agents(): AgentsBundle; projects(): ProjectsBundle }): ComputerUse {
+export function createComputer(runtime: DaemonRuntime, store: ComputerUseStore, later: Later<Pick<DaemonBundles, 'agents' | 'projects'>>): ComputerUse {
     const { config } = runtime;
     return new ComputerUse({
         home: config.home,
@@ -72,13 +73,12 @@ export interface DevicesBundle {
     deviceDriver: DeviceDriver;
 }
 
-export function wireDevices(runtime: DaemonRuntime, computer: ComputerUse): DevicesBundle {
+export function wireDevices(runtime: DaemonRuntime, computer: ComputerUse, machineHome: MachineHome): DevicesBundle {
     const { config, compiled, sourceDir } = runtime;
     const liveStreams = new LiveStreamHub();
     const browsers = BrowserManager.withBun(config.home, liveStreams);
     const browserPages = new BrowserPages();
     const browserDriver = new BrowserDriver(config.home, browsers, browserPages);
-    const machineHome = new MachineHome(config.home);
     const deviceHelperCommand = compiled ? [process.execPath, 'device-helper'] : [process.execPath, resolve(sourceDir, 'main.ts'), 'device-helper'];
     const visualRenderer = new VisualRenderer(childLauncher(renderCommand(compiled, process.execPath, process.execArgv, sourceDir)));
     const deviceBridge = physicalStreamHelperPath(compiled, process.execPath, resolve(sourceDir, '../..'));
@@ -113,4 +113,15 @@ export function wireDevices(runtime: DaemonRuntime, computer: ComputerUse): Devi
     const deviceControl = new DeviceControl();
     const deviceDriver = new DeviceDriver({ home: config.home, manager: devices, gate: deviceControl });
     return { computer, liveStreams, browsers, browserPages, browserDriver, visualRenderer, devices, deviceControl, deviceDriver };
+}
+
+/* What an agent claims of a device and the renderer of visuals belong to no request; they go between the browsers and the devices. */
+export function devicesLifecycle({ visualRenderer, deviceDriver }: DevicesBundle): Area {
+    return {
+        name: 'device claims',
+        stop: [
+            { phase: 'end', label: 'Stopping visual previews', run: () => visualRenderer.stop() },
+            { phase: 'end', label: 'Releasing devices', run: () => deviceDriver.releaseAll() }
+        ]
+    };
 }

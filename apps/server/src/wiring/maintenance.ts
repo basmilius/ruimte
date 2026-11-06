@@ -1,18 +1,16 @@
 import { join } from 'node:path';
+import type { Area } from '../area.ts';
 import { sweepStaleChatWrites } from '../chat/stale-writes.ts';
 import { sweepComputerScreenshots } from '../computer/screenshots.ts';
 import { sweepPhpCache, type PhpCacheSweepOptions } from '../language/php-cache.ts';
 import { Maintenance, type Sweeper } from '../maintenance/maintenance.ts';
 import { sweepDeviceCaptures, sweepScreenshots } from '../shots.ts';
-import type { LanguageBundle } from './language.ts';
+import type { DaemonBundles } from './bundles.ts';
+import type { Later } from './later.ts';
 import type { ProcessesBundle } from './processes.ts';
-import type { ProjectsBundle } from './projects.ts';
 
 /* Bundles wired after maintenance, reached when a pass runs. */
-interface MaintenanceLater {
-    language(): LanguageBundle;
-    projects(): ProjectsBundle;
-}
+type MaintenanceLater = Later<Pick<DaemonBundles, 'language' | 'projects'>>;
 
 /* The disposable files of this machine, each on the rule of the code that writes it. */
 function sweepersOf(home: string, later: MaintenanceLater): Sweeper[] {
@@ -42,4 +40,8 @@ export function wireMaintenance(home: string, processes: ProcessesBundle, later:
         now: Date.now,
         log: (line) => console.log(line)
     });
+}
+
+export function maintenanceLifecycle(maintenance: Pick<Maintenance, 'stop'>): Area {
+    return { name: 'maintenance', stop: [{ phase: 'drain', label: 'Stopping maintenance', run: () => maintenance.stop() }] };
 }

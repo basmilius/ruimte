@@ -1,3 +1,4 @@
+import type { Area } from '../area.ts';
 import { newScratchChat, type ScratchChatOptions } from '../chat/scratch-project.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import { newInlineChat, removeInlineChat, showInlineChat, type InlineChatHost } from '../projects/inline-chat.ts';
@@ -5,13 +6,26 @@ import { setProjectAccounts } from '../projects/project-accounts.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { countProjectOpened, countViewShown } from '../stats/usage-stats.ts';
 
-export function registerProjectHandlers(
-    dispatcher: Dispatcher,
-    store: ProjectStore,
-    scratch: ScratchChatOptions = {},
-    inline?: InlineChatHost,
-    reachOpenProjects: () => boolean = () => false
-): void {
+export interface ProjectDeps {
+    store: ProjectStore;
+    /* How a chat of the scratch project is made: whether a person wrote in it, and whether the home lies in a checkout. */
+    scratch: ScratchChatOptions;
+    inline: InlineChatHost;
+    reachOpenProjects(): boolean;
+}
+
+export function projectArea(deps: ProjectDeps): Area {
+    const { store } = deps;
+
+    return {
+        name: 'project',
+        sources: [store],
+        handlers: (dispatcher) => registerRequests(dispatcher, deps),
+        stop: [{ phase: 'end', label: 'Closing projects', run: () => store.closeAll() }]
+    };
+}
+
+function registerRequests(dispatcher: Dispatcher, { store, scratch, inline, reachOpenProjects }: ProjectDeps): void {
     dispatcher.register('project.sidebar', () => store.sidebar());
     dispatcher.register('project.list', async () => ({ projects: await store.list() }));
 
@@ -63,17 +77,15 @@ export function registerProjectHandlers(
 
     dispatcher.register('project.newChat', (payload) => newScratchChat(store, payload, scratch));
 
-    if (inline !== undefined) {
-        dispatcher.register('project.newInlineChat', (payload) => newInlineChat(store, payload, inline));
-        dispatcher.register('project.showInlineChat', async (payload) => {
-            await showInlineChat(store, payload);
-            return {};
-        });
-        dispatcher.register('project.removeInlineChat', async (payload) => {
-            await removeInlineChat(store, payload, inline);
-            return {};
-        });
-    }
+    dispatcher.register('project.newInlineChat', (payload) => newInlineChat(store, payload, inline));
+    dispatcher.register('project.showInlineChat', async (payload) => {
+        await showInlineChat(store, payload);
+        return {};
+    });
+    dispatcher.register('project.removeInlineChat', async (payload) => {
+        await removeInlineChat(store, payload, inline);
+        return {};
+    });
 
     dispatcher.register('project.delete', async (payload) => {
         await store.delete(payload.projectId, payload.removeFiles);

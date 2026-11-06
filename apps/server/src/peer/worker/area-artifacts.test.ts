@@ -5,7 +5,7 @@ import { Artifacts } from '../../artifacts/artifacts.ts';
 import { MemoryArtifactFs } from '../../artifacts/memory-artifact-fs.ts';
 import { Dispatcher } from '../../dispatcher.ts';
 import type { ClientConnection } from '../../wire.ts';
-import { registerPeerArtifactHandlers } from './area-artifacts.ts';
+import { peerArtifactsArea } from './area-artifacts.ts';
 
 class PeerSocket implements ClientConnection {
     readonly id = 'peer-client';
@@ -57,11 +57,13 @@ async function setup(linked: readonly string[]) {
         createdAt: 0
     }));
     const dispatcher = new Dispatcher();
-    registerPeerArtifactHandlers(
-        dispatcher,
-        { list: () => links, linkOf: (machineId, projectId) => links.find((link) => link.machineId === machineId && link.projectId === projectId) ?? null },
+    peerArtifactsArea({
+        links: {
+            list: () => links,
+            linkOf: (machineId, projectId) => links.find((link) => link.machineId === machineId && link.projectId === projectId) ?? null
+        },
         artifacts
-    );
+    }).handlers?.(dispatcher);
     const socket = new PeerSocket();
     const ask = async (type: string, payload: unknown): Promise<Reply> => {
         await dispatcher.handle(socket, JSON.stringify({ id: `r${socket.frames.length}`, type, payload }));

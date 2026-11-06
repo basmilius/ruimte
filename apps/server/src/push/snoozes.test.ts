@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
-import { registerSnoozeHandlers } from '../handlers/snooze.ts';
+import { snoozeArea } from '../handlers/snooze.ts';
 import { MAX_WAIT_MS } from '../timers.ts';
 import type { SessionEvent, ClientConnection } from '../wire.ts';
 import { SnoozeStore, type SnoozeChange } from './snoozes.ts';
@@ -148,7 +148,7 @@ describe('the snooze requests', () => {
 
     test('set one against the project its node is in, list them and clear one', async () => {
         const dispatcher = new Dispatcher();
-        registerSnoozeHandlers(dispatcher, store, (nodeId) => (nodeId === 'node-1' ? { projectId: 'project-1' } : null));
+        snoozeArea({ snoozes: store, locate: (nodeId) => (nodeId === 'node-1' ? { projectId: 'project-1' } : null) }).handlers?.(dispatcher);
         const frames: ServerFrame[] = [];
         const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
         const until = clock.now() + 60_000;

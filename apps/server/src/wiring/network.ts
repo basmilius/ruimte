@@ -1,9 +1,7 @@
+import type { Area } from '../area.ts';
 import { reachabilityOf } from '../auth/access.ts';
 import type { ServerConfig } from '../config.ts';
-import type { Dispatcher } from '../dispatcher.ts';
 import type { IdentityLanDoor } from '../endpoint-id.ts';
-import { registerDirectHandlers } from '../handlers/direct.ts';
-import { registerReachHandlers } from '../handlers/reach.ts';
 import { BrokerRelay } from '../pulsar/broker-relay.ts';
 import { BrokerSwitch } from '../pulsar/broker-switch.ts';
 import { authenticateChannel } from '../pulsar/channel-auth.ts';
@@ -17,7 +15,8 @@ import { SignalGate } from '../pulsar/signal-gate.ts';
 import { StatementGate, TEST_STATEMENT_KEY_VARIABLE, trustedStatementKeys } from '../pulsar/statement.ts';
 import { guardWeriftTurn } from '../pulsar/turn-guard.ts';
 import { reportFatal } from '../telemetry/reporter.ts';
-import type { ClientsBundle } from './clients.ts';
+import type { DaemonBundles } from './bundles.ts';
+import type { Later } from './later.ts';
 import type { MachineBundle } from './machine.ts';
 
 /* How a client away from this machine reaches it: a direct channel, signaled over the broker or the door on the local network. */
@@ -33,13 +32,7 @@ export interface NetworkBundle {
     reach: ReachChecker;
 }
 
-export function wireNetwork(
-    config: ServerConfig,
-    compiled: boolean,
-    machine: MachineBundle,
-    dispatcher: Dispatcher,
-    later: { clients(): ClientsBundle }
-): NetworkBundle {
+export function wireNetwork(config: ServerConfig, compiled: boolean, machine: MachineBundle, later: Later<Pick<DaemonBundles, 'clients'>>): NetworkBundle {
     const { identity, auth, handshake, access } = machine;
     // A TURN server that restarts under an allocation must not take the daemon with it; any other crash is reported on the way out.
     guardWeriftTurn(process, console, (code, error) => void reportFatal(error).finally(() => process.exit(code)));
@@ -65,7 +58,6 @@ export function wireNetwork(
             }
         }
     });
-    registerDirectHandlers(dispatcher, peers);
     const statementKeys = trustedStatementKeys(process.env, compiled);
     if (statementKeys.length === 1 && statementKeys[0] === process.env[TEST_STATEMENT_KEY_VARIABLE]?.trim()) {
         console.warn(`Believing statements signed by the test key in ${TEST_STATEMENT_KEY_VARIABLE} instead of the address book`);
@@ -133,6 +125,16 @@ export function wireNetwork(
         }),
         tunnel: () => readTunnel()
     });
-    registerReachHandlers(dispatcher, reach);
     return { peers, brokerSwitch, lanDoor, lanDoorWanted, describeLanDoor, reach };
+}
+
+/* The direct channels close with `handlers/direct.ts`; the door and the broker are left after them. */
+export function networkLifecycle({ lanDoor, brokerSwitch }: NetworkBundle): Area {
+    return {
+        name: 'door and broker',
+        stop: [
+            { phase: 'last', label: 'Stopping the local network door', run: () => lanDoor.stop() },
+            { phase: 'last', label: 'Leaving the broker', run: () => brokerSwitch.stop() }
+        ]
+    };
 }

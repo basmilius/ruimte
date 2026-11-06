@@ -1,7 +1,18 @@
 import type { TaskStore } from '@adecore/agents/coordination';
-import type { Dispatcher } from '../dispatcher.ts';
+import type { Area } from '../area.ts';
 
-export function registerTaskHandlers(dispatcher: Dispatcher, tasks: TaskStore, children: (nodeId: string) => string[] = () => []): void {
-    dispatcher.register('task.list', ({ projectId }) => ({ tasks: tasks.ofProject(projectId) }));
-    dispatcher.register('agent.children', ({ nodeId }) => ({ nodeIds: children(nodeId) }));
+export interface TasksDeps {
+    tasks: TaskStore;
+    children(nodeId: string): string[];
+}
+
+export function tasksArea({ tasks, children }: TasksDeps): Area {
+    return {
+        name: 'tasks',
+        sources: [tasks],
+        handlers: (dispatcher) => {
+            dispatcher.register('task.list', ({ projectId }) => ({ tasks: tasks.ofProject(projectId) }));
+            dispatcher.register('agent.children', ({ nodeId }) => ({ nodeIds: children(nodeId) }));
+        }
+    };
 }

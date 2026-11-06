@@ -10,7 +10,7 @@ import type { CanvasHost } from '../canvas/host.ts';
 import { connectionHostOf } from '../connection-test-helpers.ts';
 import { connectionOpener, socketChannel, type SocketChannel, type OpenConnection } from '../connection.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { registerVoiceHandlers } from '../handlers/voice.ts';
+import { voiceArea } from '../handlers/voice.ts';
 import type { ClientAccess } from '../wire.ts';
 import { SYSTEM_CLOCK } from './clock.ts';
 import { VoiceKeyStore } from './key-store.ts';
@@ -124,7 +124,7 @@ function daemon(home: string, openAiUrl: string, threads: Map<string, ChatItem[]
         machine: { id: 'machine-1', label: 'Studio' }
     });
     const dispatcher = new Dispatcher();
-    registerVoiceHandlers(dispatcher, { keys: new VoiceKeyStore(home), preferences, sessions });
+    voiceArea({ keys: new VoiceKeyStore(home), preferences, sessions }).handlers?.(dispatcher);
     const open = connectionOpener(
         connectionHostOf(dispatcher, [
             { name: 'voice', sources: [preferences], closed: (clientId, access) => (access.peer === undefined ? sessions.channelClosed(clientId) : undefined) }

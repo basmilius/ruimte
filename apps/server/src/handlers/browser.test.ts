@@ -4,7 +4,7 @@ import type { BrowserManager } from '../browser/manager.ts';
 import { BrowserPages } from '../browser/pages.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import type { ClientConnection } from '../wire.ts';
-import { registerBrowserHandlers } from './browser.ts';
+import { browserArea } from './browser.ts';
 
 const openRequest = JSON.stringify({
     id: 'open',
@@ -32,7 +32,7 @@ describe('browser handlers', () => {
             }
         } as unknown as BrowserManager;
         const dispatcher = new Dispatcher();
-        registerBrowserHandlers(dispatcher, browsers, new BrowserPages(), () => allowed);
+        browserArea({ browsers, pages: new BrowserPages(), streamingAllowed: () => allowed }).handlers?.(dispatcher);
         const frames: ServerFrame[] = [];
         const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
 
@@ -67,7 +67,7 @@ describe('browser handlers', () => {
             }
         } as unknown as BrowserManager;
         const dispatcher = new Dispatcher();
-        registerBrowserHandlers(dispatcher, browsers, new BrowserPages(), () => false);
+        browserArea({ browsers, pages: new BrowserPages(), streamingAllowed: () => false }).handlers?.(dispatcher);
         const frames: ServerFrame[] = [];
         const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
 

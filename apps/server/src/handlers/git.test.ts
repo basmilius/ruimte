@@ -1,14 +1,15 @@
 import { expect, test } from 'bun:test';
 import type { ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
-import { registerGitHandlers } from './git.ts';
+import { gitArea } from './git.ts';
+import { gitDepsWith } from './test-helpers.ts';
 
 test('git.pr-watch refuses a chat the project does not place', async () => {
     const started: string[] = [];
     const watches = { start: (projectId: string, chatId: string) => (started.push(`${projectId}/${chatId}`), Promise.resolve({ chatId })) };
     const dispatcher = new Dispatcher();
     const placeOf = (id: string) => (id === 'chat-in' ? { projectId: 'p' } : null);
-    registerGitHandlers(dispatcher, {} as never, {} as never, {} as never, {} as never, watches as never, placeOf);
+    gitArea(gitDepsWith({ prWatches: watches as never, placeOf })).handlers?.(dispatcher);
     const replies: ServerFrame[] = [];
     const client = { id: 'phone', closed: false, send: (frame: ServerFrame) => replies.push(frame) };
     const ask = (id: string, chatId: string, projectId: string) =>

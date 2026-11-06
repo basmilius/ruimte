@@ -7,11 +7,12 @@ import type { ServerFrame } from '@ruimte/contracts';
 import { connectionHostOf } from '../connection-test-helpers.ts';
 import { connectionOpener, socketChannel, type OpenConnection, type SocketChannel } from '../connection.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { registerDiagramHandlers } from '../handlers/diagram.ts';
-import { registerDrawingHandlers } from '../handlers/drawing.ts';
+import { diagramArea } from '../handlers/diagram.ts';
+import { drawingArea } from '../handlers/drawing.ts';
 import type { ClientAccess } from '../wire.ts';
 import { DiagramStore } from './diagram-store.ts';
 import { DrawingStore } from './drawing-store.ts';
+import { projectOverlays } from './overlays.ts';
 import { projectLinks } from './project-file-test-helpers.ts';
 import { ProjectStore } from './project-store.ts';
 
@@ -61,14 +62,19 @@ for (const kind of ['drawing', 'diagram'] as const) {
             const folder = join(root, 'repo');
             await mkdir(folder);
             const watch = new FakeWatch();
-            projects = new ProjectStore(join(root, 'home'), projectLinks({ viewFiles: () => [drawings, diagrams] }), watch);
+            projects = new ProjectStore(
+                join(root, 'home'),
+                projectLinks({ viewFiles: () => [drawings, diagrams] }),
+                projectOverlays(join(root, 'home')),
+                watch
+            );
             const drawings = new DrawingStore(projects, watch);
             const diagrams = new DiagramStore(projects, watch);
             const projectId = (await projects.openProject({ folder })).summary.projectId;
             await projects.save(projectId, 0, { name: 'repo', color: '#353e53', views: [{ kind, id: 'view', name: 'View' }] });
             const dispatcher = new Dispatcher();
-            registerDrawingHandlers(dispatcher, drawings);
-            registerDiagramHandlers(dispatcher, diagrams);
+            drawingArea({ store: drawings }).handlers?.(dispatcher);
+            diagramArea({ store: diagrams }).handlers?.(dispatcher);
             dispatcher.register('server.hello', () => ({ version: 'test', platform: 'test', home: root }));
             const connect = connectionOpener(connectionHostOf(dispatcher, [{ name: 'projects', sources: [projects, drawings, diagrams] }]));
             server = Bun.serve<ClientAccess>({

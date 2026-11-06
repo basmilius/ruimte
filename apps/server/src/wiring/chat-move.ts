@@ -30,12 +30,10 @@ export interface ChatMoveWiring {
     notices: NoticeStore;
     prWatches: PrWatchStore;
     machineHome: Pick<MachineHome, 'refuse'>;
-    /* Absent in a test that stops nowhere in the middle. */
-    journal?: MoveJournal;
-    /* Absent in a test with no snoozes. */
-    snoozes?: SnoozeStore;
-    /* The suggestions that hold a chat at `needs-you`, and that a move settles; absent in a test with none. */
-    proposals?: Pick<ProjectProposals, 'stands' | 'moved' | 'pauseHold'>;
+    journal: MoveJournal;
+    snoozes: SnoozeStore;
+    /* The suggestions that hold a chat at `needs-you`, and that a move settles. */
+    proposals: Pick<ProjectProposals, 'stands' | 'moved' | 'pauseHold'>;
 }
 
 /* Whether the chat is a chat view of the Chats project. */
@@ -79,7 +77,7 @@ function chatMoveRefusalDeps(wiring: ChatMoveWiring): MoveRefusalDeps {
                 return false;
             }
             // The card of its own suggestion holds the chat at needs-you, and the move it asks for must not refuse for that.
-            return session.busy || chatIsWorking(session.info, wiring.proposals?.stands(chatId) === true);
+            return session.busy || chatIsWorking(session.info, wiring.proposals.stands(chatId));
         },
         lineage,
         tasks,
@@ -111,28 +109,30 @@ function sharedChatSteps(chats: ChatManager) {
     };
 }
 
-/* Finishes the chat moves the machine stopped in the middle of; once at start, before the outbox runs. */
-export function repairChatMoves(wiring: ChatMoveWiring & { journal: MoveJournal }): Promise<string[]> {
+/* What the move dialog asks the machine, the move itself, and the repair of a move a restart cut short. */
+export interface ChatMover extends ChatMoveHandlers {
+    /* Finishes the chat moves the machine stopped in the middle of; once at start, before the outbox runs. */
+    repair(): Promise<string[]>;
+}
+
+export function chatMover(wiring: ChatMoveWiring): ChatMover {
+    const deps = chatMoveDeps(wiring);
     const { chats, store } = wiring;
-    const deps: MoveRepairDeps = {
+    const repairDeps: MoveRepairDeps = {
         scratchFolder: store.scratchFolder,
         journal: wiring.journal,
         projects: { known: () => store.known(), mutate: (projectId, apply) => store.mutate(projectId, apply) },
         index: store.index,
         lineage: wiring.lineage,
-        ...(wiring.snoozes ? { snoozes: wiring.snoozes } : {}),
+        snoozes: wiring.snoozes,
         ownFolder: (chatId) => ownFolderOf(store.scratchFolder, chatId),
         chats: sharedChatSteps(chats)
     };
-    return repairInterruptedMoves(deps);
-}
 
-/* What the move dialog asks the machine, and the move itself. */
-export function chatMoveHandlers(wiring: ChatMoveWiring): ChatMoveHandlers {
-    const deps = chatMoveDeps(wiring);
     return {
         info: (payload) => chatMoveInfo(payload, deps.info),
-        move: (payload) => moveChat(payload, deps.move)
+        move: (payload) => moveChat(payload, deps.move),
+        repair: () => repairInterruptedMoves(repairDeps)
     };
 }
 
@@ -200,7 +200,7 @@ export function chatMoveDeps(wiring: ChatMoveWiring): { info: MoveInfoDeps; move
             ...sharedChatSteps(chats),
             claim: (chatId) => {
                 // The card holds the chat, and a held chat does not relocate: the move it asks for lets go of the hold and puts it back if the move fails.
-                const putBack = wiring.proposals?.pauseHold(chatId) ?? (() => undefined);
+                const putBack = wiring.proposals.pauseHold(chatId) ?? (() => undefined);
                 if (chats.get(chatId)?.relocatable === false) {
                     putBack();
                     return null;
@@ -209,9 +209,9 @@ export function chatMoveDeps(wiring: ChatMoveWiring): { info: MoveInfoDeps; move
             }
         },
         lineage: wiring.lineage,
-        moved: (chatId) => wiring.proposals?.moved(chatId),
-        ...(wiring.journal ? { journal: wiring.journal } : {}),
-        ...(wiring.snoozes ? { snoozes: wiring.snoozes } : {})
+        moved: (chatId) => wiring.proposals.moved(chatId),
+        journal: wiring.journal,
+        snoozes: wiring.snoozes
     };
     return { info: infoDeps, move: moveDeps };
 }

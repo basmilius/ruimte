@@ -11,9 +11,11 @@ import {
 } from '@ruimte/contracts';
 import { peerAccessRequestMessage } from '@ruimte/pulsar';
 import { INTEGRATION_KINDS, IntegrationsFixed, isIntegrationKind } from '../agents/integrations.ts';
+import type { Area } from '../area.ts';
 import { isOwner } from '../auth/access.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import { signForAccount } from '../auth/registration.ts';
+import type { LiveSink } from '../client-sinks.ts';
 import { type Dispatcher } from '../dispatcher.ts';
 import type { EndpointIdentity, IdentityFlags } from '../endpoint-id.ts';
 import { checkWorktreeRoot } from '../git/worktree-root.ts';
@@ -25,7 +27,8 @@ import type { BrokerDescription } from '../pulsar/broker-switch.ts';
 import { countClient, countUsage, recordStartup, recordTiming } from '../stats/usage-stats.ts';
 import type { ClientAccess } from '../wire.ts';
 
-interface EndpointHost {
+export interface AuthDeps {
+    store: AuthStore;
     identity: EndpointIdentity;
     // The key another machine lets this one in under, signed with next to the machine key.
     peerKey: Pick<PeerKey, 'publicKey' | 'sign'>;
@@ -41,25 +44,26 @@ interface EndpointHost {
     // A disabled policy stops streams already in flight as well as refusing the next one.
     streamingChanged(allowed: boolean): void;
     // Chats take up a limited turn on a clock only while this is on; turning it off drops what was owed.
-    resumeChanged?(on: boolean): void;
+    resumeChanged(on: boolean): void;
     // Off drops the days not sent yet, so nothing counted before goes out later.
-    usageStatsChanged?(on: boolean): Promise<void>;
+    usageStatsChanged(on: boolean): Promise<void>;
     // Whether this machine can hold a block on sleep, and the call that follows a changed setting.
-    keepAwake?: { available: boolean; changed(): void };
+    keepAwake: { available: boolean; changed(): void };
     // The closed-lid mode of a Mac: whether it is offered, whether its rule is installed, and installing or removing that.
-    closedLid?: {
+    closedLid: {
         available: boolean;
         rule(): Promise<boolean>;
         setRule(install: boolean, prompt: string): Promise<void>;
     };
     // What a person allowed in the CLIs' global settings, and the calls that read and change it.
-    agentIntegrations?: {
+    agentIntegrations: {
         summary(): AgentIntegrationsResult['summary'];
         files(): Promise<AgentIntegrationsResult['files']>;
         set(kind: (typeof INTEGRATION_KINDS)[number], on: boolean): Promise<AgentIntegrationReport[]>;
     };
     // The update of the desktop app on this machine, and what installing it would end right now.
-    updates?: {
+    updates: {
+        subscribe(clientId: string, sink: LiveSink): () => void;
         state(): MachineUpdate;
         report(clientId: string, report: MachineUpdateReport): void;
         requestInstall(): InstallVerdict;
@@ -69,8 +73,16 @@ interface EndpointHost {
 
 export const PAIRING_REMOVED = 'Pairing links are gone. Put this machine on your account with `ruimte login`, or from the Ruimte app on it.';
 
-export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, host: EndpointHost): void {
-    const { identity } = host;
+export function authArea(deps: AuthDeps): Area {
+    return {
+        name: 'auth',
+        sources: [deps.identity, deps.updates],
+        handlers: (dispatcher) => registerRequests(dispatcher, deps)
+    };
+}
+
+function registerRequests(dispatcher: Dispatcher, host: AuthDeps): void {
+    const { identity, store } = host;
 
     // Built per client, so what the machine is called travels alongside what this connection is allowed.
     const info = async (access: ClientAccess | undefined) => ({
@@ -85,11 +97,11 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         resumeAtReset: identity.resumeAtReset,
         visualReplies: identity.visualReplies,
         ...identity.keepAwakeFields(),
-        keepAwakeAvailable: host.keepAwake?.available === true,
-        keepAwakeLidAvailable: host.closedLid?.available === true,
-        keepAwakeLidRule: host.closedLid?.available === true ? await host.closedLid.rule() : false,
-        ...(host.agentIntegrations ? { agentIntegrations: host.agentIntegrations.summary() } : {}),
-        ...(host.updates ? { update: host.updates.state() } : {}),
+        keepAwakeAvailable: host.keepAwake.available,
+        keepAwakeLidAvailable: host.closedLid.available,
+        keepAwakeLidRule: host.closedLid.available ? await host.closedLid.rule() : false,
+        agentIntegrations: host.agentIntegrations.summary(),
+        update: host.updates.state(),
         platform: process.platform,
         version: host.version,
         protocol: PROTOCOL_VERSION,
@@ -147,7 +159,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
     ): Promise<void> => {
         // Off always goes through, and a switch already on stays on; only turning it on needs the rule.
         if (settings.keepAwakeLidClosed === true && !identity.keepAwake.lidClosed) {
-            if (host.closedLid?.available !== true) {
+            if (!host.closedLid.available) {
                 throw new CodedError('closed-lid-unavailable', 'Only a Mac can stay awake with its lid closed');
             }
             if (!(await host.closedLid.rule())) {
@@ -201,16 +213,16 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
             settings.keepAwakeDisplay !== undefined ||
             settings.keepAwakeLidClosed !== undefined
         ) {
-            host.keepAwake?.changed();
+            host.keepAwake.changed();
         }
         if (settings.streamingAllowed !== undefined) {
             host.streamingChanged(identity.streamingAllowed);
         }
         if (settings.resumeAtReset !== undefined) {
-            host.resumeChanged?.(identity.resumeAtReset);
+            host.resumeChanged(identity.resumeAtReset);
         }
         if (settings.usageStats !== undefined) {
-            await host.usageStatsChanged?.(identity.usageStats);
+            await host.usageStatsChanged(identity.usageStats);
         }
     };
 
@@ -246,7 +258,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         'endpoint.closedLidRule',
         async (payload, client) => {
             const closedLid = host.closedLid;
-            if (closedLid?.available !== true) {
+            if (!closedLid.available) {
                 throw new CodedError('closed-lid-unavailable', 'Only a Mac can stay awake with its lid closed');
             }
             await closedLid.setRule(payload.install, payload.prompt ?? DEFAULT_ADMIN_PROMPT[payload.install ? 'install' : 'remove']);
@@ -259,17 +271,10 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
      * What Ruimte writes into the CLIs' own settings is a person's call on this machine, so only the local
      * secret reads the files and changes the choice. A client the machine let in is not its owner.
      */
-    const integrations = () => {
-        if (host.agentIntegrations === undefined) {
-            throw new CodedError('unavailable', 'This machine does not manage the CLIs’ settings');
-        }
-        return host.agentIntegrations;
-    };
-
     dispatcher.register(
         'endpoint.agentIntegrations',
         async () => {
-            const current = integrations();
+            const current = host.agentIntegrations;
             return { summary: current.summary(), files: await current.files() };
         },
         { owner: true }
@@ -278,7 +283,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
     dispatcher.register(
         'endpoint.setAgentIntegration',
         async (payload) => {
-            const current = integrations();
+            const current = host.agentIntegrations;
             if (!isIntegrationKind(payload.provider)) {
                 throw new CodedError('unknown-provider', `Ruimte writes no settings for ${payload.provider}`);
             }
@@ -326,7 +331,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
     dispatcher.register(
         'endpoint.reportUpdate',
         (payload, client) => {
-            host.updates?.report(client.id, payload);
+            host.updates.report(client.id, payload);
             return {};
         },
         { owner: true }
@@ -339,9 +344,6 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
      */
     dispatcher.register('endpoint.installUpdate', (payload) => {
         const updates = host.updates;
-        if (!updates) {
-            throw new CodedError('update-no-app', 'This machine cannot install an update from here');
-        }
         const ending = updates.ending();
         if (!payload.confirm) {
             return { started: false, ending };

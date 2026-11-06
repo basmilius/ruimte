@@ -2,6 +2,7 @@ import { AttachmentStore, BookmarkStore, ChatStore, ClaudeTitleReader, VisualSto
 import { AgentLineageStore, NoticeNotes, NoticeStore, TaskStore, restartBackgroundLimits, unshownNotes } from '@adecore/agents/coordination';
 import { AgentStore } from '../agents/agent-store.ts';
 import { CodexTitleReader } from '../agents/codex-title.ts';
+import type { Area } from '../area.ts';
 import { artifactReport } from '../artifacts/artifact-report.ts';
 import { PendingPromptStore } from '../canvas/pending-prompts.ts';
 import { ChatManager } from '../chat/chat-manager.ts';
@@ -14,6 +15,7 @@ import { withForkOrigin } from '../context/fork-origin.ts';
 import { MESSAGE_WORDS, renderNotice } from '../context/notices.ts';
 import { openedChildSource } from '../context/opened-child.ts';
 import { hasDatabaseConnections } from '../database/connection-store.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { readLog } from '../git/log.ts';
@@ -118,6 +120,7 @@ interface AgentsInput {
     stores: AgentStores;
     providers: ProvidersBundle;
     computer: ComputerUse;
+    machineHome: MachineHome;
     /* Runs beside boot; only Codex terminal commands need its result. */
     codexProbe: Promise<void>;
     later: AgentsLater;
@@ -149,7 +152,7 @@ export interface AgentsBundle {
     messagesFor(targetId: string): string[];
 }
 
-export async function wireAgents({ runtime, identity, stores, providers, computer, codexProbe, later }: AgentsInput): Promise<AgentsBundle> {
+export async function wireAgents({ runtime, identity, stores, providers, computer, machineHome, codexProbe, later }: AgentsInput): Promise<AgentsBundle> {
     const { config } = runtime;
     const { snapshots, prompts, lineage, notices, outbox, tasks, commandApprovals, modeApprovals } = stores;
     const index = () => later.projects().store.index;
@@ -249,7 +252,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
     });
     const outboxLink = new OutboxLink({ outbox, projectOf: (id) => index().locate(id)?.projectId ?? null });
     const attachments = new AttachmentStore(config.home);
-    const checkpoints = new Checkpoints(config.home);
+    const checkpoints = new Checkpoints(config.home, machineHome);
     const plans = new PlanStore(config.home);
     const bookmarks = new BookmarkStore(config.home);
     const visuals = new VisualStore(config.home, attachments);
@@ -357,5 +360,16 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         startCwd: bounds.checkCwd,
         targetForToken,
         messagesFor
+    };
+}
+
+/* The terminal snapshots are written before the chats are, and neither belongs to a request. */
+export function agentsLifecycle({ snapshotSchedule }: AgentsBundle): Area {
+    return {
+        name: 'terminal snapshots',
+        stop: [
+            { phase: 'halt', label: 'Stopping the terminal snapshots', run: () => snapshotSchedule.stop() },
+            { phase: 'drain', label: 'Writing terminal snapshots', run: () => snapshotSchedule.flush() }
+        ]
     };
 }

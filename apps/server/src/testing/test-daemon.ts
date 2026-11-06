@@ -25,17 +25,18 @@ import { checkoutHost, worktreeHost } from '../git/worktree-host.ts';
 import { WorktreeMerge } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import { PrWatchStore } from '../github/pr-watch.ts';
-import { registerChatHandlers } from '../handlers/chat.ts';
-import { registerPlanHandlers } from '../handlers/plan.ts';
-import { registerSessionHandlers } from '../handlers/session.ts';
-import { registerTaskHandlers } from '../handlers/tasks.ts';
+import { chatArea } from '../handlers/chat.ts';
+import { planArea } from '../handlers/plan.ts';
+import { sessionArea } from '../handlers/session.ts';
+import { tasksArea } from '../handlers/tasks.ts';
 import type { EndChildrenWiring } from '../outbox/end-children.ts';
 import { OutboxStore, type OutboxWork } from '../outbox/outbox.ts';
 import { agentChatOpening, agentStartHost } from '../outbox/start-agent.ts';
 import { RemoteTasks, type RemoteTasksDeps } from '../peer/giver/remote-tasks.ts';
-import { registerPeerTaskHandlers } from '../peer/worker/area-tasks.ts';
+import { peerTasksArea } from '../peer/worker/area-tasks.ts';
 import { PeerTasks, type PeerTasksDeps } from '../peer/worker/peer-tasks.ts';
 import { isPlanFileName, PlanStore } from '../plans/plan-store.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import type { PeerLinks } from '../projects/peer-links.ts';
 import { projectAccountChooser } from '../projects/project-accounts.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
@@ -456,9 +457,14 @@ export async function bootTestDaemon({
             notify: peer.notify
         });
         tasks.onChange((task) => peerTasks!.changed(task));
-        registerPeerTaskHandlers(dispatcher, peer.links, peerTasks);
+        peerTasksArea({ links: peer.links, tasks: peerTasks }).handlers?.(dispatcher);
     }
-    registerSessionHandlers(dispatcher, sessions, endChildren.owe);
+    sessionArea({
+        manager: sessions,
+        beforeKill: endChildren.owe,
+        logins: { commandOf: () => undefined, nameOf: (kind) => kind },
+        machineOf: () => null
+    }).handlers?.(dispatcher);
     const forkDeps = chatForkDeps({
         chats,
         host,
@@ -469,26 +475,26 @@ export async function bootTestDaemon({
         ...(checkpoints instanceof Checkpoints ? { checkpoints } : {})
     });
     host.forks = { fork: (input, opener) => forkForAgent(forkDeps, input, opener) };
-    registerChatHandlers(
-        dispatcher,
-        chats,
+    const noMoves = (): Promise<never> => Promise.reject(new Error('This daemon does not move chats'));
+    chatArea({
+        manager: chats,
         providers,
-        endChildren.owe,
-        endChildren.stopNode,
-        {
+        beforeKill: endChildren.owe,
+        stopNode: endChildren.stopNode,
+        forks: {
             fork: (payload) => forkChat(forkDeps, payload),
             info: (payload) => readForkInfo(forkDeps, payload),
             handoff: (payload) => readHandoff(forkDeps, payload),
             summarize: (chatId) => summaries.summarize(chatId),
             continueOn: (payload) => continueOn({ chats, fork: (fork) => forkChat(forkDeps, fork) }, payload)
         },
-        undefined,
-        undefined,
-        undefined,
-        (chatId) => lineage.peerOf(chatId) !== null && outbox.list().some((entry) => entry.kind === 'start-agent' && entry.target === chatId)
-    );
-    registerTaskHandlers(dispatcher, tasks, endChildren.children);
-    registerPlanHandlers(dispatcher, plans);
+        killed: async () => undefined,
+        moves: { info: noMoves, move: noMoves },
+        machineOf: () => null,
+        starting: (chatId) => lineage.peerOf(chatId) !== null && outbox.list().some((entry) => entry.kind === 'start-agent' && entry.target === chatId)
+    }).handlers?.(dispatcher);
+    tasksArea({ tasks, children: endChildren.children }).handlers?.(dispatcher);
+    planArea({ plans }).handlers?.(dispatcher);
     if (!dispatcher.has('server.ping')) {
         dispatcher.register('server.ping', () => ({ time: Date.now() }));
     }
@@ -555,7 +561,7 @@ export async function releasedProject(
     const home = join(root, 'home');
     const folder = join(root, 'repo');
     await mkdir(folder, { recursive: true });
-    const store = new ProjectStore(home, projectLinks());
+    const store = new ProjectStore(home, projectLinks(), projectOverlays(home));
     const opened = await store.openProject({ folder });
     const projectId = opened.summary.projectId;
     await store.save(projectId, opened.document.rev, content);

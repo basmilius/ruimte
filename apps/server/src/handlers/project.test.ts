@@ -8,10 +8,11 @@ import { connectionHostOf } from '../connection-test-helpers.ts';
 import { connectionOpener, type OpenConnection } from '../connection.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import type { InlineChatHost } from '../projects/inline-chat.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { OUTSIDE_CHECKOUT, projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import type { ClientChannel } from '../wire.ts';
-import { registerProjectHandlers } from './project.ts';
+import { projectArea } from './project.ts';
 
 class FakeChannel implements ClientChannel {
     readonly frames: ServerFrame[] = [];
@@ -42,6 +43,13 @@ class FakeChannel implements ClientChannel {
     onDrain(): void {}
 }
 
+/* A machine where no inline chat is started or ended, so a test that never asks for one fails when it does. */
+const NO_INLINE_CHATS: InlineChatHost = {
+    start: () => Promise.reject(new Error('No inline chat starts here')),
+    end: () => Promise.reject(new Error('No inline chat ends here')),
+    worktreePaths: async () => []
+};
+
 let root: string;
 let folder: string;
 let store: ProjectStore;
@@ -50,7 +58,7 @@ beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-project-handlers-'));
     folder = join(root, 'repo');
     await mkdir(folder);
-    store = new ProjectStore(join(root, 'home'), projectLinks(), new FakeWatch());
+    store = new ProjectStore(join(root, 'home'), projectLinks(), projectOverlays(join(root, 'home')), new FakeWatch());
 });
 
 afterEach(async () => {
@@ -59,10 +67,11 @@ afterEach(async () => {
 });
 
 /* Two clients of one daemon. A socket and, beside it, a channel that got in the way a direct connection does. */
-function twoClients(inline?: InlineChatHost) {
+function twoClients(inline: InlineChatHost = NO_INLINE_CHATS) {
     const dispatcher = new Dispatcher();
-    registerProjectHandlers(dispatcher, store, OUTSIDE_CHECKOUT, inline);
-    const open = connectionOpener(connectionHostOf(dispatcher, [{ name: 'projects', sources: [store] }]));
+    const area = projectArea({ store, scratch: OUTSIDE_CHECKOUT, inline, reachOpenProjects: () => false });
+    area.handlers?.(dispatcher);
+    const open = connectionOpener(connectionHostOf(dispatcher, [{ name: 'projects', sources: area.sources }]));
     const socket = new FakeChannel();
     const direct = new FakeChannel();
     return {

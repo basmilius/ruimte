@@ -1,15 +1,11 @@
+import { nodeSessionFs } from '@adecore/agents/chat';
 import { createServerActions } from './actions/server-actions.ts';
-import { stopSteps, type Area, type StopPhase } from './area.ts';
+import { stopSteps, type StopPhase } from './area.ts';
 import { dropEmptyMark } from './chat/scratch-project.ts';
 import { greetingLines } from './cli/greeting.ts';
 import type { ServerConfig } from './config.ts';
 import { Dispatcher } from './dispatcher.ts';
 import { errorText } from './error-text.ts';
-import { registerExtensionChatRead } from './handlers/extension-chat-read.ts';
-import { registerExtensionHandlers } from './handlers/extensions.ts';
-import { registerRoutineHandlers } from './handlers/routine.ts';
-import { registerTemplateHandlers } from './handlers/template.ts';
-import { registerVoiceHandlers } from './handlers/voice.ts';
 import { readMachineModel } from './machine-model.ts';
 import { probeCodexNoDaemon } from './providers/launch.ts';
 import { armShutdownDeadline } from './shutdown-deadline.ts';
@@ -23,13 +19,12 @@ import { daemonAreas } from './wiring/areas.ts';
 import { wireArtifacts } from './wiring/artifacts.ts';
 import type { DaemonBundles } from './wiring/bundles.ts';
 import { wireCanvasHost } from './wiring/canvas-host.ts';
-import { repairChatMoves } from './wiring/chat-move.ts';
+import { chatMover } from './wiring/chat-move.ts';
 import { wireClients } from './wiring/clients.ts';
 import { wireDatabases } from './wiring/databases.ts';
 import { createComputer, wireDevices } from './wiring/devices.ts';
 import { wireExtensions } from './wiring/extensions.ts';
 import { wireGit } from './wiring/git.ts';
-import { registerEditorHandlers, registerHandlers } from './wiring/handlers.ts';
 import { listenFirst } from './wiring/http.ts';
 import { wireLanguage } from './wiring/language.ts';
 import { lateness } from './wiring/later.ts';
@@ -77,8 +72,11 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     const computer = provide('computer', createComputer(runtime, stores.computerStore, later));
     const stats = provide('stats', await wireUsageStats(home, identity, machine.auth, launcher));
     const providers = provide('providers', await wireProviders(config, identity, () => computer.start(), stats.flush));
-    const agents = provide('agents', await wireAgents({ runtime, identity, stores, providers, computer, codexProbe, later }));
-    const projects = provide('projects', await wireProjects({ home, machineId: identity.id, stores, agents, computer, later }));
+    const agents = provide('agents', await wireAgents({ runtime, identity, stores, providers, computer, machineHome: machine.machineHome, codexProbe, later }));
+    const projects = provide(
+        'projects',
+        await wireProjects({ home, machineId: identity.id, machineHome: machine.machineHome, stores, agents, computer, later })
+    );
     const templates = provide('templates', wireTemplates(home, projects));
     watchProjects(projects.store);
     const artifacts = provide(
@@ -92,8 +90,8 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     const routines = provide('routines', await wireRoutines({ home, machineId: identity.id, stores, agents, projects, launches, artifacts }));
     // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.
     await projects.store.warmIndex();
-    const git = provide('git', wireGit(home, identity, agents, work, projects.store.peers));
-    const devices = provide('devices', wireDevices(runtime, computer));
+    const git = provide('git', wireGit(home, identity, machine.machineHome, agents, work, projects.store.peers));
+    const devices = provide('devices', wireDevices(runtime, computer, machine.machineHome));
     const usage = provide('usage', wireUsage(config, providers, agents, projects.store));
     const processes = provide(
         'processes',
@@ -108,7 +106,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
             shutdown: (reason) => shutdown(reason)
         })
     );
-    const maintenance = wireMaintenance(home, processes, later);
+    const maintenance = provide('maintenance', wireMaintenance(home, processes, later));
     const canvasHost = provide(
         'canvasHost',
         wireCanvasHost({
@@ -153,38 +151,6 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         }
     });
 
-    const dispatcher = new Dispatcher();
-    dispatcher.observe({
-        started: (type) => noteActivity(`request ${type}`),
-        answered: (type, ms, counts) => {
-            recordRequestDuration(type, ms);
-            countUsages(counts);
-        }
-    });
-    await registerHandlers(dispatcher, {
-        machineModel,
-        runtime,
-        machine,
-        stores,
-        providers,
-        agents,
-        projects,
-        work,
-        launches,
-        git,
-        devices,
-        processes,
-        power,
-        push,
-        canvasHost,
-        remote,
-        stats,
-        artifacts,
-        later
-    });
-    registerVoiceHandlers(dispatcher, voice);
-    registerRoutineHandlers(dispatcher, routines);
-    registerTemplateHandlers(dispatcher, templates.store);
     const language = provide(
         'language',
         await wireLanguage({
@@ -198,54 +164,71 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
             providers
         })
     );
-    registerExtensionChatRead(dispatcher, extensions.readChat);
-    registerExtensionHandlers(dispatcher, extensions.host, extensions.handlerDeps());
-    registerEditorHandlers(dispatcher, {
-        machine,
-        providers,
-        projects,
-        work,
-        launches,
-        git,
-        devices,
-        databases,
-        usage,
-        processes,
-        language,
-        agents,
-        artifacts
-    });
-    const network = provide('network', wireNetwork(config, compiled, machine, dispatcher, later));
+    const network = provide('network', wireNetwork(config, compiled, machine, later));
+    const mover = provide(
+        'chatMover',
+        chatMover({
+            chats,
+            store: projects.store,
+            lineage: stores.lineage,
+            tasks: stores.tasks,
+            outbox: stores.outbox,
+            notices: stores.notices,
+            prWatches: work.prWatches,
+            machineHome: machine.machineHome,
+            journal: stores.chatMoves,
+            snoozes: work.snoozes,
+            proposals: agents.proposals
+        })
+    );
 
-    const areas: Area[] = daemonAreas({
-        machine,
-        stores,
-        stats,
-        providers,
-        computer,
-        agents,
-        projects,
-        templates,
-        artifacts,
-        databases,
-        remote,
-        work,
-        launches,
-        routines,
-        git,
-        devices,
-        usage,
-        processes,
-        language,
-        push,
-        voice,
-        power,
-        network,
-        actions: later.actions(),
-        canvasHost,
-        extensions,
-        maintenance
+    const areas = daemonAreas(
+        {
+            runtime,
+            machineModel: await machineModel,
+            sessionFs: await nodeSessionFs(),
+            machine,
+            stores,
+            stats,
+            providers,
+            computer,
+            agents,
+            projects,
+            templates,
+            artifacts,
+            databases,
+            remote,
+            work,
+            launches,
+            routines,
+            git,
+            devices,
+            usage,
+            processes,
+            maintenance,
+            chatMover: mover,
+            language,
+            push,
+            voice,
+            power,
+            network,
+            actions: later.actions(),
+            canvasHost,
+            extensions
+        },
+        later
+    );
+    const dispatcher = new Dispatcher();
+    dispatcher.observe({
+        started: (type) => noteActivity(`request ${type}`),
+        answered: (type, ms, counts) => {
+            recordRequestDuration(type, ms);
+            countUsages(counts);
+        }
     });
+    for (const area of areas) {
+        area.handlers?.(dispatcher);
+    }
 
     noteMoment('daemon.boot', 'wired');
     void extensions.host.startAutostarted();
@@ -271,18 +254,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         })
     );
     // Before the socket answers, so no client attaches to or writes in a chat that is half moved; the outbox starts after.
-    await repairChatMoves({
-        chats,
-        store: projects.store,
-        lineage: stores.lineage,
-        tasks: stores.tasks,
-        outbox: stores.outbox,
-        notices: stores.notices,
-        prWatches: work.prWatches,
-        machineHome: machine.machineHome,
-        journal: stores.chatMoves,
-        snoozes: work.snoozes
-    }).catch((e) => console.error('Finishing interrupted chat moves failed:', errorText(e)));
+    await mover.repair().catch((e) => console.error('Finishing interrupted chat moves failed:', errorText(e)));
     // Once per start, before the outbox runs and never on a clock.
     await pruneHiddenChats({
         hiddenAgents: projects.store.hiddenAgents,

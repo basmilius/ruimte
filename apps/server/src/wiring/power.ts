@@ -1,4 +1,5 @@
 import { userInfo } from 'node:os';
+import type { Area } from '../area.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { errorText } from '../error-text.ts';
 import { macClosedLidSystem } from '../power/closed-lid-system.ts';
@@ -73,4 +74,15 @@ export function wirePower(home: string, identity: EndpointIdentity, agents: Agen
         }
     });
     return { keepAwake, closedLid, updates: new MachineUpdates(), checkAwake };
+}
+
+/* What holds the machine awake belongs to no request; the update of the app is a source of `handlers/auth.ts`. */
+export function powerLifecycle({ keepAwake, closedLid }: PowerBundle): Area {
+    return {
+        name: 'power',
+        stop: [
+            { phase: 'halt', label: 'Stopping keep awake', run: () => keepAwake.stop() },
+            { phase: 'halt', label: 'Stopping the closed-lid rule', run: () => closedLid.stop() }
+        ]
+    };
 }

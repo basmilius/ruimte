@@ -11,7 +11,8 @@ import { SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
 import { connectionHostOf } from '../connection-test-helpers.ts';
 import { connectionOpener, socketChannel, type OpenConnection, type SocketChannel } from '../connection.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { registerSessionHandlers } from '../handlers/session.ts';
+import { sessionArea } from '../handlers/session.ts';
+import { sessionDepsWith } from '../handlers/test-helpers.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
 import type { ClientAccess } from '../wire.ts';
 import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
@@ -428,7 +429,7 @@ beforeAll(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-stream-'));
     manager = new SessionManager({ ...OPEN_BOUNDS, adapter: new BunPtyAdapter(), env: { PATH: testPath, HOME: home } });
     const dispatcher = new Dispatcher();
-    registerSessionHandlers(dispatcher, manager);
+    sessionArea(sessionDepsWith(manager)).handlers?.(dispatcher);
     const openConnection = connectionOpener(
         connectionHostOf(dispatcher, [{ name: 'sessions', sources: [manager], holders: [manager] }], {
             screenOf: (clientId, sessionId, deliver) => {

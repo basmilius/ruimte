@@ -1,5 +1,6 @@
 import { CodedError } from '@adecore/agents';
 import type { PeerStatement } from '@ruimte/pulsar';
+import type { Area, EventSource } from '../../area.ts';
 import { statementAccountRefusal, type AccountBinding } from '../../auth/auth-store.ts';
 import { type Dispatcher } from '../../dispatcher.ts';
 import type { ProjectStore } from '../../projects/project-store.ts';
@@ -10,7 +11,11 @@ import type { PendingAdmissions } from './pending-admissions.ts';
 import type { RemoteConnections } from './remote-connections.ts';
 
 /* What the link to other machines needs from this one. */
-interface PeerLinkHost {
+export interface RemoteDeps {
+    remote: RemoteStore;
+    projects: Pick<ProjectStore, 'known'>;
+    /* Tells every client how the links to other machines stand. */
+    status: EventSource;
     machineId: string;
     machinePublicKey: string;
     peerPublicKey(): Promise<string>;
@@ -39,7 +44,7 @@ function acceptableBrokerUrl(value: string): boolean {
 }
 
 /* Why a statement cannot be used by this machine to work in `machineId`, or null when it can. */
-async function statementRefusal(statement: PeerStatement, machineId: string, peers: PeerLinkHost): Promise<string | null> {
+async function statementRefusal(statement: PeerStatement, machineId: string, peers: RemoteDeps): Promise<string | null> {
     if (
         statement.machineId !== machineId ||
         statement.peerMachineId !== peers.machineId ||
@@ -64,7 +69,12 @@ async function statementRefusal(statement: PeerStatement, machineId: string, pee
  * client may ask, since it is a person who works on another machine; the window's own connection to
  * it is separate from this one.
  */
-export function registerRemoteHandlers(dispatcher: Dispatcher, remote: RemoteStore, projects: Pick<ProjectStore, 'known'>, peers: PeerLinkHost): void {
+export function remoteArea(deps: RemoteDeps): Area {
+    return { name: 'remote', sources: [deps.status], handlers: (dispatcher) => registerRequests(dispatcher, deps) };
+}
+
+function registerRequests(dispatcher: Dispatcher, peers: RemoteDeps): void {
+    const { remote, projects } = peers;
     const requireProject = async (projectId: string): Promise<void> => {
         if (!(await projects.known()).some((project) => project.projectId === projectId)) {
             throw new CodedError('project-not-found', `No project ${projectId} is on this machine`);

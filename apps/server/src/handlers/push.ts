@@ -1,9 +1,10 @@
 import { CodedError } from '@adecore/agents';
 import { PUSH_NOTIFY_DEFAULT } from '@ruimte/contracts';
+import type { Area } from '../area.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import { type Dispatcher } from '../dispatcher.ts';
 import type { PushService } from '../push/service.ts';
-import type { ClientConnection } from '../wire.ts';
+import { sendEvent, type ClientConnection } from '../wire.ts';
 
 function provenSession(client: ClientConnection): string {
     const sessionId = client.access?.sessionId;
@@ -13,14 +14,36 @@ function provenSession(client: ClientConnection): string {
     return sessionId;
 }
 
-export function registerPushHandlers(dispatcher: Dispatcher, auth: AuthStore, changed: () => void = () => undefined, push?: PushService): void {
-    dispatcher.register('push.attention', () => ({ entries: push?.marks() ?? [], ...(push ? { marksFrom: push.attention.marksFrom } : {}) }));
+export interface PushDeps {
+    auth: AuthStore;
+    push: PushService;
+    /* A subscription was added or removed, so the activities the machine keeps for phones follow. */
+    changed(): void;
+}
+
+export function pushArea(deps: PushDeps): Area {
+    const { push } = deps;
+
+    return {
+        name: 'push',
+        handlers: (dispatcher) => registerRequests(dispatcher, deps),
+        connect: ({ client, access }) => [
+            push.connected(access.sessionId),
+            () => push.reportPresence(client.id, false),
+            push.observeAttention((entry) => sendEvent(client, 'push.attention', entry)),
+            push.observeNotification((alert) => sendEvent(client, 'push.notification', alert))
+        ]
+    };
+}
+
+function registerRequests(dispatcher: Dispatcher, { auth, push, changed }: PushDeps): void {
+    dispatcher.register('push.attention', () => ({ entries: push.marks(), marksFrom: push.attention.marksFrom }));
     dispatcher.register('push.read', ({ nodeId, issuedAt }) => {
-        push?.read(nodeId, issuedAt);
+        push.read(nodeId, issuedAt);
         return {};
     });
     dispatcher.register('presence.report', ({ present }, client) => {
-        push?.reportPresence(client.id, present);
+        push.reportPresence(client.id, present);
         return {};
     });
     dispatcher.register('push.subscribe', async (payload, client) => {

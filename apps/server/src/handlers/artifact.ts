@@ -1,9 +1,19 @@
+import type { Area } from '../area.ts';
 import type { ArtifactImporter } from '../artifacts/artifact-import.ts';
 import type { Artifacts } from '../artifacts/artifacts.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 
+export interface ArtifactDeps {
+    artifacts: Artifacts;
+    importer: Pick<ArtifactImporter, 'importFrom'>;
+}
+
 /* A client connection is always a person. None of these is on a peer's list; what another machine reads is `peer/worker/area-artifacts.ts`. */
-export function registerArtifactHandlers(dispatcher: Dispatcher, artifacts: Artifacts, importer: ArtifactImporter): void {
+export function artifactArea(deps: ArtifactDeps): Area {
+    return { name: 'artifact', sources: [deps.artifacts], handlers: (dispatcher) => registerRequests(dispatcher, deps) };
+}
+
+function registerRequests(dispatcher: Dispatcher, { artifacts, importer }: ArtifactDeps): void {
     dispatcher.register('artifact.importFrom', (payload) => importer.importFrom(payload));
 
     dispatcher.register('artifact.list', async (payload) => ({ artifacts: await artifacts.list(payload) }));

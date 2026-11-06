@@ -16,7 +16,7 @@ import { PeerKey } from '../peer/giver/peer-key.ts';
 import { ClosedLidError, DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
 import { MachineUpdates } from '../power/machine-update.ts';
 import type { ClientAccess, ClientConnection } from '../wire.ts';
-import { registerAuthHandlers } from './auth.ts';
+import { authArea } from './auth.ts';
 
 let home: string;
 let store: AuthStore;
@@ -89,7 +89,8 @@ beforeEach(async () => {
     await integrations.load();
     await integrations.refreshInstalled();
     peerKey = new PeerKey(home);
-    registerAuthHandlers(dispatcher, store, {
+    authArea({
+        store,
         identity,
         peerKey,
         home,
@@ -116,13 +117,16 @@ beforeEach(async () => {
         },
         agentIntegrations: { summary: () => integrations.summary(), files: () => integrations.files(), set: (kind, on) => integrations.set(kind, on) },
         updates: {
+            subscribe: (clientId, sink) => updates.subscribe(clientId, sink),
             state: () => updates.state(),
             report: (clientId, report) => updates.report(clientId, report),
             requestInstall: () => updates.requestInstall(),
             ending: () => ({ terminals: 1, agents: 2 })
         },
+        resumeChanged: () => undefined,
+        usageStatsChanged: async () => undefined,
         disconnect: (sessionId) => disconnected.push(sessionId)
-    });
+    }).handlers?.(dispatcher);
 });
 
 afterEach(async () => {

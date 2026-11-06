@@ -1,8 +1,21 @@
 import { usageHandlers } from '@adecore/agents/host';
 import type { UsageMonitor, UsageService } from '@adecore/agents/usage';
-import type { Dispatcher } from '../dispatcher.ts';
+import type { Area } from '../area.ts';
 import { registerAgentHandlers } from './agent.ts';
 
-export function registerUsageHandlers(dispatcher: Dispatcher, usage: UsageService, limits: UsageMonitor): void {
-    registerAgentHandlers(dispatcher, usageHandlers(usage, limits));
+export interface UsageDeps {
+    usage: UsageService;
+    limits: UsageMonitor;
+}
+
+export function usageArea({ usage, limits }: UsageDeps): Area {
+    return {
+        name: 'usage',
+        sources: [usage, limits],
+        handlers: (dispatcher) => registerAgentHandlers(dispatcher, usageHandlers(usage, limits)),
+        stop: [
+            { phase: 'halt', label: 'Stopping usage', run: () => usage.stop() },
+            { phase: 'halt', label: 'Stopping limits', run: () => limits.stop() }
+        ]
+    };
 }

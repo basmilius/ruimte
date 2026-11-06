@@ -3,7 +3,7 @@ import type { ProviderInfo, ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import type { ClientAccess } from '../wire.ts';
-import { PROVIDER_DETECT_INTERVAL_MS, registerProviderDetectHandler } from './provider-detect.ts';
+import { PROVIDER_DETECT_INTERVAL_MS, providerDetectArea } from './provider-detect.ts';
 
 const GUEST: ClientAccess = { reachability: 'lan', sessionId: 'session-1' };
 
@@ -30,7 +30,7 @@ beforeEach(() => {
             accountChecks += 1;
         }
     };
-    registerProviderDetectHandler(dispatcher, providers, accounts, () => clock);
+    providerDetectArea({ providers, accounts, feed: { subscribe: () => () => undefined }, now: () => clock }).handlers?.(dispatcher);
 });
 
 async function detect(): Promise<ProviderInfo[]> {

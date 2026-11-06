@@ -1,10 +1,12 @@
 import type { ServerActions } from '../actions/server-actions.ts';
 import type { CanvasHost } from '../canvas/host.ts';
 import type { ComputerUse } from '../computer/computer-use.ts';
+import type { Maintenance } from '../maintenance/maintenance.ts';
 import type { PushService } from '../push/service.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { ArtifactsBundle } from './artifacts.ts';
+import type { ChatMover } from './chat-move.ts';
 import type { ClientsBundle } from './clients.ts';
 import type { DatabasesBundle } from './databases.ts';
 import type { DevicesBundle } from './devices.ts';
@@ -45,6 +47,8 @@ export interface DaemonBundles {
     devices: DevicesBundle;
     usage: UsageBundle;
     processes: ProcessesBundle;
+    maintenance: Maintenance;
+    chatMover: ChatMover;
     language: LanguageBundle;
     push: PushService;
     voice: VoiceBundle;

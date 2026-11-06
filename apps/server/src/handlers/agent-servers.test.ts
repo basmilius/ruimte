@@ -6,7 +6,7 @@ import { Dispatcher } from '../dispatcher.ts';
 import { AcpServerInstall, parseAcpServerRelease } from '../providers/acp-server.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import type { ClientAccess } from '../wire.ts';
-import { registerAgentServerHandlers } from './agent-servers.ts';
+import { agentServersArea } from './agent-servers.ts';
 import { askOnce } from './test-helpers.ts';
 
 const ARCHIVE = zip([{ path: 'agy_acp_server.par', text: 'server' }]);
@@ -37,7 +37,9 @@ beforeEach(async () => {
         }
     });
     dispatcher = new Dispatcher();
-    registerAgentServerHandlers(dispatcher, { of: (kind) => (kind === 'antigravity' ? server : undefined), installed: (kind) => invalidated.push(kind) });
+    agentServersArea({
+        servers: { of: (kind) => (kind === 'antigravity' ? server : undefined), installed: (kind) => invalidated.push(kind) }
+    }).handlers?.(dispatcher);
 });
 
 const OWNER: ClientAccess = { reachability: 'loopback', sessionId: null };

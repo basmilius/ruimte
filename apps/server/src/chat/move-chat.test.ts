@@ -7,12 +7,14 @@ import { ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
 import { FakeWatch, ManualClock } from '@adecore/agents/testing';
 import type { ChatMovePayload } from '@ruimte/contracts';
 import { MachineHome } from '../disk/machine-home.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { OUTSIDE_CHECKOUT, privateFileOnDisk, projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { claudeApiConfigDir, createAnthropicClaudeApiProvider } from '../providers/anthropic-claude-api-provider.ts';
 import { AnthropicClaudeApiService } from '../providers/anthropic-claude-api-service.ts';
 import { SnoozeStore } from '../push/snoozes.ts';
 import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
+import { emptySnoozes, NO_PROPOSALS } from '../wiring/chat-move-test-helpers.ts';
 import { chatMoveDeps, type ChatMoveWiring } from '../wiring/chat-move.ts';
 import { moveChat, type MoveChatDeps } from './move-chat.ts';
 import { MoveJournal } from './move-journal.ts';
@@ -39,7 +41,9 @@ describe('moving a chat from Chats into a project', () => {
         prWatches: daemon.prWatches,
         outbox: daemon.outbox,
         machineHome: new MachineHome(store.home),
-        journal
+        journal,
+        snoozes: emptySnoozes(),
+        proposals: NO_PROPOSALS
     });
 
     /* The deps as the daemon wires them, with one piece replaced by a test. */
@@ -74,7 +78,7 @@ describe('moving a chat from Chats into a project', () => {
     beforeEach(async () => {
         root = await mkdtemp(join(tmpdir(), 'ruimte-move-chat-'));
         const home = join(root, 'home');
-        store = new ProjectStore(home, projectLinks(), new FakeWatch());
+        store = new ProjectStore(home, projectLinks(), projectOverlays(home), new FakeWatch());
         journal = new MoveJournal(home);
         claudeApi = new AnthropicClaudeApiService(async () => Response.json({ data: [{ id: 'claude-sonnet-example', line: 'sonnet' }] }));
         await claudeApi.load(home);

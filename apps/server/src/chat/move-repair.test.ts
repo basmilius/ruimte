@@ -5,11 +5,13 @@ import { join } from 'node:path';
 import { claudeProjectSlug } from '@adecore/agents/chat';
 import { ManualClock } from '@adecore/agents/testing';
 import { MachineHome } from '../disk/machine-home.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { OUTSIDE_CHECKOUT, projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { SnoozeStore } from '../push/snoozes.ts';
 import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
-import { repairChatMoves } from '../wiring/chat-move.ts';
+import { NO_PROPOSALS } from '../wiring/chat-move-test-helpers.ts';
+import { chatMover } from '../wiring/chat-move.ts';
 import { moveClaudeTranscript } from './claude-move.ts';
 import { MoveJournal } from './move-journal.ts';
 import { newScratchChat } from './scratch-project.ts';
@@ -28,7 +30,7 @@ describe('finishing a chat move the machine stopped in the middle of', () => {
     let sessionId: string;
 
     const repair = (): Promise<string[]> =>
-        repairChatMoves({
+        chatMover({
             ...daemon,
             store,
             lineage: daemon.lineage,
@@ -36,8 +38,9 @@ describe('finishing a chat move the machine stopped in the middle of', () => {
             outbox: daemon.outbox,
             machineHome: new MachineHome(store.home),
             journal,
-            snoozes
-        });
+            snoozes,
+            proposals: NO_PROPOSALS
+        }).repair();
 
     const viewIds = async (projectId: string): Promise<string[]> => (await store.read(projectId)).views.map((view) => view.id);
 
@@ -63,7 +66,7 @@ describe('finishing a chat move the machine stopped in the middle of', () => {
     beforeEach(async () => {
         root = await mkdtemp(join(tmpdir(), 'ruimte-move-repair-'));
         const home = join(root, 'home');
-        store = new ProjectStore(home, projectLinks());
+        store = new ProjectStore(home, projectLinks(), projectOverlays(home));
         journal = new MoveJournal(home);
         snoozes = new SnoozeStore({ clock: new ManualClock() });
         daemon = await bootTestDaemon({ home, store, clock: new ManualClock() });

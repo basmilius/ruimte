@@ -8,9 +8,10 @@ import { peerStatementMessage } from '@ruimte/pulsar';
 import { generateKeyPair, signMessage } from '../../auth/keys.ts';
 import { Dispatcher } from '../../dispatcher.ts';
 import { askOnce } from '../../handlers/test-helpers.ts';
+import { projectOverlays } from '../../projects/overlays.ts';
 import { projectLinks } from '../../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../../projects/project-store.ts';
-import { registerRemoteHandlers } from './area.ts';
+import { remoteArea } from './area.ts';
 import { PeerMachines } from './peer-machines.ts';
 import { PendingAdmissions } from './pending-admissions.ts';
 
@@ -82,7 +83,7 @@ beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-remote-handlers-'));
     const folder = join(root, 'repo');
     await mkdir(folder);
-    store = new ProjectStore(join(root, 'home'), projectLinks(), new FakeWatch());
+    store = new ProjectStore(join(root, 'home'), projectLinks(), projectOverlays(join(root, 'home')), new FakeWatch());
     dispatcher = new Dispatcher();
     pending = new PendingAdmissions();
     machines = new PeerMachines(join(root, 'home'));
@@ -91,7 +92,10 @@ beforeEach(async () => {
     lapsed = [];
     connectFails = false;
     binding = undefined;
-    registerRemoteHandlers(dispatcher, store.remote, store, {
+    remoteArea({
+        remote: store.remote,
+        projects: store,
+        status: { subscribe: () => () => undefined },
         machineId: 'machine-a',
         machinePublicKey: MACHINE_KEY,
         peerPublicKey: async () => PEER_KEY,
@@ -112,7 +116,7 @@ beforeEach(async () => {
             lapsed.push(machineId);
         },
         now: () => NOW
-    });
+    }).handlers?.(dispatcher);
     projectId = (await store.openProject({ folder })).summary.projectId;
 });
 
@@ -139,7 +143,7 @@ describe('the checkout a project is linked to on another machine', () => {
 
     test('survives a restart', async () => {
         await ask('remote.link', { projectId, ...LINK });
-        const fresh = new ProjectStore(join(root, 'home'), projectLinks(), new FakeWatch());
+        const fresh = new ProjectStore(join(root, 'home'), projectLinks(), projectOverlays(join(root, 'home')), new FakeWatch());
         await fresh.remote.load();
         expect(fresh.remote.linksOf(projectId)).toEqual([LINK]);
     });

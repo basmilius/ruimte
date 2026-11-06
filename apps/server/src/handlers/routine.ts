@@ -1,16 +1,21 @@
 import type { RoutineSkillsPayload, RoutineSkillsResult } from '@ruimte/contracts';
+import type { Area, EventSource } from '../area.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import type { Routines } from '../routines/routines.ts';
 
-interface RoutineHandlerDeps {
+export interface RoutineDeps {
     routines: Routines;
     /* The clients that asked with `routine.watch`. */
-    watchers: { watch(clientId: string): void; unwatch(clientId: string): void };
+    watchers: EventSource & { watch(clientId: string): void; unwatch(clientId: string): void };
     skills(payload: RoutineSkillsPayload): Promise<RoutineSkillsResult>;
 }
 
 /* A client connection is always a person, so a save here counts as approval. None of these is on a peer's list; an agent has its tools. */
-export function registerRoutineHandlers(dispatcher: Dispatcher, { routines, watchers, skills }: RoutineHandlerDeps): void {
+export function routineArea(deps: RoutineDeps): Area {
+    return { name: 'routine', sources: [deps.watchers], handlers: (dispatcher) => registerRequests(dispatcher, deps) };
+}
+
+function registerRequests(dispatcher: Dispatcher, { routines, watchers, skills }: RoutineDeps): void {
     dispatcher.register('routine.skills', (payload) => skills(payload));
 
     dispatcher.register('routine.list', ({ projectId }) => routines.list(projectId));

@@ -1,5 +1,6 @@
 import { isIdle, type MachineWork } from '@ruimte/contracts';
 import { HOOK_EVENTS } from '../agents/hooks.ts';
+import type { Area } from '../area.ts';
 import type { ServerConfig } from '../config.ts';
 import type { DeviceDriver } from '../devices/agent-driver.ts';
 import { holdsForeground } from '../processes/foreground.ts';
@@ -105,4 +106,9 @@ export async function wireProcesses({ config, machineId, agents, work, launches,
     sessions.isAgentGone = (sessionId) => processes.isAgentGone(sessionId);
     sessions.holdsForeground = holdsForeground;
     return { sessionPorts, processes, selfUpdate, machineWork };
+}
+
+/* The self update belongs to no request; its monitors are the areas of `handlers/processes.ts` and `handlers/session-ports.ts`. */
+export function processesLifecycle({ selfUpdate }: ProcessesBundle): Area {
+    return { name: 'self update', stop: [{ phase: 'halt', label: 'Stopping the self update', run: () => selfUpdate.stop() }] };
 }

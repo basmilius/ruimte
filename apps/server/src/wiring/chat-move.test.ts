@@ -4,16 +4,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import { moveChat } from '../chat/move-chat.ts';
+import { MoveJournal } from '../chat/move-journal.ts';
 import { newScratchChat } from '../chat/scratch-project.ts';
 import { MachineHome } from '../disk/machine-home.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { registerChatHandlers } from '../handlers/chat.ts';
+import { chatArea } from '../handlers/chat.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { OUTSIDE_CHECKOUT, projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectProposals } from '../projects/project-proposals.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
-import { chatMoveDeps, chatMoveHandlers, type ChatMoveWiring } from './chat-move.ts';
+import { emptySnoozes, NO_PROPOSALS } from './chat-move-test-helpers.ts';
+import { chatMoveDeps, chatMover, type ChatMoveWiring } from './chat-move.ts';
 
 describe('what the machine says about moving a chat', () => {
     let root: string;
@@ -21,20 +24,23 @@ describe('what the machine says about moving a chat', () => {
     let daemon: TestDaemon;
     let chatId: string;
 
-    const moves = () =>
-        chatMoveHandlers({
-            ...daemon,
-            store,
-            lineage: daemon.lineage,
-            prWatches: daemon.prWatches,
-            outbox: daemon.outbox,
-            machineHome: new MachineHome(store.home)
-        });
+    const wiring = (proposals: ChatMoveWiring['proposals'] = NO_PROPOSALS): ChatMoveWiring => ({
+        ...daemon,
+        store,
+        lineage: daemon.lineage,
+        prWatches: daemon.prWatches,
+        outbox: daemon.outbox,
+        machineHome: new MachineHome(store.home),
+        journal: new MoveJournal(store.home),
+        snoozes: emptySnoozes(),
+        proposals
+    });
+    const moves = () => chatMover(wiring());
 
     beforeEach(async () => {
         root = await mkdtemp(join(tmpdir(), 'ruimte-move-info-'));
         const home = join(root, 'home');
-        store = new ProjectStore(home, projectLinks());
+        store = new ProjectStore(home, projectLinks(), projectOverlays(home));
         daemon = await bootTestDaemon({ home, store, clock: new ManualClock() });
         chatId = (await newScratchChat(store, {}, OUTSIDE_CHECKOUT)).viewId;
         await daemon.chats.create({ chatId, provider: 'claude', cwd: join(store.scratchFolder, chatId) });
@@ -48,18 +54,24 @@ describe('what the machine says about moving a chat', () => {
     });
 
     test('answers both requests, which is what makes `features` name them', () => {
-        expect(daemon.dispatcher.has('chat.moveInfo')).toBe(false);
         const dispatcher = new Dispatcher();
-        registerChatHandlers(
-            dispatcher,
-            daemon.chats,
-            new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) }),
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            moves()
-        );
+        chatArea({
+            manager: daemon.chats,
+            providers: new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) }),
+            beforeKill: async () => undefined,
+            stopNode: async () => undefined,
+            forks: {
+                fork: async () => ({}) as never,
+                info: async () => ({}) as never,
+                handoff: async () => ({}) as never,
+                summarize: async () => ({}) as never,
+                continueOn: async () => ({}) as never
+            },
+            killed: async () => undefined,
+            moves: moves(),
+            machineOf: () => null,
+            starting: () => false
+        }).handlers?.(dispatcher);
         expect(dispatcher.has('chat.moveInfo')).toBe(true);
         expect(dispatcher.has('chat.move')).toBe(true);
     });
@@ -139,16 +151,6 @@ describe('what the machine says about moving a chat', () => {
     describe('moving the chat that holds a card of its own suggestion', () => {
         let proposals: ProjectProposals;
 
-        const wiring = (): ChatMoveWiring => ({
-            ...daemon,
-            store,
-            lineage: daemon.lineage,
-            prWatches: daemon.prWatches,
-            outbox: daemon.outbox,
-            machineHome: new MachineHome(store.home),
-            proposals
-        });
-
         beforeEach(() => {
             proposals = new ProjectProposals({
                 chats: { hold: (id, key) => void daemon.chats.holdForPerson(id, key), release: (id, key) => daemon.chats.releaseHold(id, key) }
@@ -158,10 +160,10 @@ describe('what the machine says about moving a chat', () => {
 
         test('makes the project, settles the card as moved and frees the chat', async () => {
             expect(daemon.chats.get(chatId)?.info.status).toBe('needs-you');
-            expect((await chatMoveHandlers(wiring()).info({ chatId })).refusal).toBeNull();
+            expect((await chatMover(wiring(proposals)).info({ chatId })).refusal).toBeNull();
             expect((await moves().info({ chatId })).refusal).toEqual({ reason: 'working' });
             const folder = join(root, 'vinyl');
-            const result = await chatMoveHandlers(wiring()).move({
+            const result = await chatMover(wiring(proposals)).move({
                 chatId,
                 to: { folder, name: 'Vinyl', createFolder: true, initGit: false },
                 ownFiles: 'leave'
@@ -175,7 +177,7 @@ describe('what the machine says about moving a chat', () => {
 
         test('a move that is whole but could not save the folder settles the card, since nothing holds the chat any more', async () => {
             const folder = join(root, 'vinyl');
-            const base = chatMoveDeps(wiring()).move;
+            const base = chatMoveDeps(wiring(proposals)).move;
             await expect(
                 moveChat(
                     { chatId, to: { folder, name: 'Vinyl', createFolder: true, initGit: false }, ownFiles: 'leave' },
@@ -197,7 +199,7 @@ describe('what the machine says about moving a chat', () => {
 
         test('a move that fails after the hold was let go puts the hold back', async () => {
             const folder = join(root, 'vinyl');
-            const failing = chatMoveDeps(wiring()).move;
+            const failing = chatMoveDeps(wiring(proposals)).move;
             await expect(
                 moveChat(
                     { chatId, to: { folder, name: 'Vinyl', createFolder: true, initGit: false }, ownFiles: 'move' },

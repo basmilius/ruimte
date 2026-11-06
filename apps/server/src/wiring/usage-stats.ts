@@ -1,9 +1,10 @@
+import type { Area } from '../area.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { fileUsageStore, usageStatePath, UsageCounter } from '../stats/usage-counter.ts';
 import { UsageReporter } from '../stats/usage-reporter.ts';
 import { installUsageCounter } from '../stats/usage-stats.ts';
-import { telemetryBuild, type Launcher } from '../telemetry/reporter.ts';
+import { stopTelemetry, telemetryBuild, type Launcher } from '../telemetry/reporter.ts';
 import { VERSION } from '../version.ts';
 
 /* The anonymous usage counts of this machine: what sends them, and what follows the switch. */
@@ -43,5 +44,16 @@ export async function wireUsageStats(home: string, identity: EndpointIdentity, a
             }
         },
         stop: () => counter.persist()
+    };
+}
+
+/* Last of the areas that hold something, so what they counted and failed on while stopping is still written and sent. */
+export function statsLifecycle({ stop }: UsageStatsBundle): Area {
+    return {
+        name: 'usage counts and error reports',
+        stop: [
+            { phase: 'last', label: 'Writing the usage counts', run: () => stop() },
+            { phase: 'last', label: 'Sending error reports', run: () => stopTelemetry() }
+        ]
     };
 }

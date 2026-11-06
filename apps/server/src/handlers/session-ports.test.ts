@@ -3,12 +3,12 @@ import type { ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
 import { SessionPorts } from '../sessions/ports.ts';
 import type { ClientAccess } from '../wire.ts';
-import { registerSessionPortHandlers } from './session-ports.ts';
+import { sessionPortsArea } from './session-ports.ts';
 
 test('remote or unproven clients cannot turn a session listener into a local browser URL', async () => {
     const dispatcher = new Dispatcher();
     const ports = new SessionPorts({ machineId: 'owner-machine', sampler: null, probe: null, uid: 501, sessions: () => [], current: () => undefined });
-    registerSessionPortHandlers(dispatcher, ports);
+    sessionPortsArea({ ports }).handlers?.(dispatcher);
     const payload = { sessionId: 'one', listener: { pid: 12, startTime: 1234, port: 3000, bindAddress: '127.0.0.1', host: '127.0.0.1' } };
     for (const access of [undefined, { reachability: 'loopback', sessionId: 'remote-owner' }, { reachability: 'lan', sessionId: 'remote-owner' }] as (
         | ClientAccess

@@ -2,6 +2,7 @@ import { homedir } from 'node:os';
 import type { ChatProvider } from '@adecore/agents/providers';
 import { isCanvasView, sourceOf, type ContextSource, type ExtensionDatabaseValue, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import { contextSelection } from '@ruimte/contracts/extension-context';
+import type { Area } from '../area.ts';
 import { type Dispatcher } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import type { ExtensionHost } from '../extensions/extension-host.ts';
@@ -19,6 +20,11 @@ export interface ExtensionHandlerDeps {
     readSource(source: ContextSource, projectId: string): Promise<string>;
     providers: ProviderRegistry;
     databaseQuery(projectId: string, connection: string, sql: string): Promise<{ columns: string[]; rows: ExtensionDatabaseValue[][]; hasMore: boolean }>;
+}
+
+export interface ExtensionsDeps extends ExtensionHandlerDeps {
+    host: ExtensionHost;
+    readChat(chatId: string): Promise<string>;
 }
 
 function nodesIn(views: readonly ProjectView[], of: { nodeIds?: readonly string[] | undefined; viewId?: string | undefined }): ProjectNode[] {
@@ -117,11 +123,22 @@ export async function runExtensionPrompt(
  * A list and a call are for any client let in. What changes what runs on this machine takes its owner. A request an
  * extension makes fails under an `ExtensionErrorCode`, which its client hands it as a Result.
  */
-export function registerExtensionHandlers(dispatcher: Dispatcher, host: ExtensionHost, deps: ExtensionHandlerDeps): void {
-    const extensionDispatcher = forExtension(dispatcher);
+export function extensionsArea(deps: ExtensionsDeps): Area {
+    const { host } = deps;
 
-    registerExtensionCalls(extensionDispatcher, host, deps);
-    registerExtensionAdmin(dispatcher, host);
+    return {
+        name: 'extensions',
+        sources: [host],
+        handlers: (dispatcher) => {
+            const extensionDispatcher = forExtension(dispatcher);
+
+            registerExtensionCalls(extensionDispatcher, host, deps);
+            registerExtensionAdmin(dispatcher, host);
+            // The text of one chat as `chats.read` gives it, so a chat in a view of its own reads as well.
+            dispatcher.register('extension.chatRead', async ({ chatId }) => ({ text: await deps.readChat(chatId) }));
+        },
+        stop: [{ phase: 'drain', label: 'Stopping extensions', run: () => host.stopAll() }]
+    };
 }
 
 /* Registers on `dispatcher` with every failure turned into an `ExtensionRefusal`. */

@@ -1,14 +1,25 @@
-import type { Dispatcher } from '../dispatcher.ts';
+import type { Area } from '../area.ts';
 import type { DrawingStore } from '../projects/drawing-store.ts';
 import { renderDrawing } from '../render/scenes.ts';
 import { viewFileHandlers } from './view-files.ts';
 
-export function registerDrawingHandlers(dispatcher: Dispatcher, store: DrawingStore): void {
-    const handlers = viewFileHandlers(store);
+export interface DrawingDeps {
+    store: DrawingStore;
+}
 
-    dispatcher.register('drawing.paths', (payload) => handlers.scene(payload, renderDrawing));
-    dispatcher.register('drawing.open', handlers.open);
-    dispatcher.register('drawing.save', handlers.save);
-    dispatcher.register('drawing.close', handlers.close);
-    dispatcher.register('drawing.copy', handlers.copy);
+export function drawingArea({ store }: DrawingDeps): Area {
+    return {
+        name: 'drawing',
+        sources: [store],
+        handlers: (dispatcher) => {
+            const handlers = viewFileHandlers(store);
+
+            dispatcher.register('drawing.paths', (payload) => handlers.scene(payload, renderDrawing));
+            dispatcher.register('drawing.open', handlers.open);
+            dispatcher.register('drawing.save', handlers.save);
+            dispatcher.register('drawing.close', handlers.close);
+            dispatcher.register('drawing.copy', handlers.copy);
+        },
+        stop: [{ phase: 'end', label: 'Closing drawings', run: () => store.closeAll() }]
+    };
 }

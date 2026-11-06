@@ -12,7 +12,7 @@ import type { OutboxEntry, OutboxWork } from '../../outbox/outbox.ts';
 import { PeerLinks, peerCanvasId } from '../../projects/peer-links.ts';
 import { tempHomes } from '../../temp-home-test-helpers.ts';
 import type { ClientConnection } from '../../wire.ts';
-import { registerPeerTaskHandlers } from './area-tasks.ts';
+import { peerTasksArea } from './area-tasks.ts';
 import { PEER_MAX_BRANCH_LENGTH, PEER_MAX_WORKTREES, PeerTasks, type PeerTasksDeps } from './peer-tasks.ts';
 
 const MACHINE = 'machine-a';
@@ -517,11 +517,10 @@ describe('the requests a peer may ask', () => {
 
     async function ask(client: ClientConnection, type: string, payload: unknown): Promise<{ ok: boolean; error?: { code: string } }> {
         const dispatcher = new Dispatcher();
-        registerPeerTaskHandlers(
-            dispatcher,
-            { list: () => (linked ? [{ machineId: MACHINE, label: 'Studio', projectId: PROJECT, ceiling, createdAt: 0 }] : []) },
-            new PeerTasks(deps())
-        );
+        peerTasksArea({
+            links: { list: () => (linked ? [{ machineId: MACHINE, label: 'Studio', projectId: PROJECT, ceiling, createdAt: 0 }] : []) },
+            tasks: new PeerTasks(deps())
+        }).handlers?.(dispatcher);
         const frames: Array<{ ok: boolean; error?: { code: string } }> = [];
         await dispatcher.handle({ ...client, send: (frame) => void frames.push(frame as never) }, JSON.stringify({ id: 'r', type, payload }));
         return frames[0]!;

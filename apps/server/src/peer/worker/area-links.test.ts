@@ -7,10 +7,11 @@ import { FakeWatch } from '@adecore/agents/testing';
 import type { ProjectContent, ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../../dispatcher.ts';
 import { askOnce } from '../../handlers/test-helpers.ts';
+import { projectOverlays } from '../../projects/overlays.ts';
 import { peerCanvasId } from '../../projects/peer-links.ts';
 import { projectLinks } from '../../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../../projects/project-store.ts';
-import { registerPeerHandlers } from './area-links.ts';
+import { peerLinksArea } from './area-links.ts';
 import { PeerTasks } from './peer-tasks.ts';
 
 let root: string;
@@ -62,6 +63,7 @@ beforeEach(async () => {
             endSession: async (kind, nodeId) => void ended.push(`${kind}:${nodeId}`),
             launches: { opened: (id) => void launched.push(id), running: () => 0, end: async () => 0 }
         }),
+        projectOverlays(join(root, 'home')),
         new FakeWatch()
     );
     attested = {};
@@ -71,7 +73,7 @@ beforeEach(async () => {
     told = [];
     store.peers.subscribe('c1', (event) => void heard.push(event.event));
     dispatcher = new Dispatcher();
-    registerPeerHandlers(dispatcher, {
+    peerLinksArea({
         links: store.peers,
         lineage,
         tasks: {
@@ -83,7 +85,7 @@ beforeEach(async () => {
         endSession: async (kind, nodeId) => void ended.push(`${kind}:${nodeId}`),
         worktreePaths: async () => [],
         attestedUntil: async (machineId) => attested[machineId] ?? null
-    });
+    }).handlers?.(dispatcher);
     projectId = (await store.openProject({ folder })).summary.projectId;
     peerTasks = makePeerTasks();
 });
@@ -174,7 +176,7 @@ describe('linking a project to another machine', () => {
         await ask('peer.bind', { machineId: 'machine-a', label: 'MacBook Pro', projectId });
         expect(store.peers.canvasIdsOf(projectId)).toEqual(new Set([peerCanvasId('machine-a')]));
 
-        const fresh = new ProjectStore(join(root, 'home'), projectLinks(), new FakeWatch());
+        const fresh = new ProjectStore(join(root, 'home'), projectLinks(), projectOverlays(join(root, 'home')), new FakeWatch());
         await fresh.peers.load();
         const document = (await fresh.openProject({ projectId })).document;
         expect(document.views.map((view) => [view.id, 'hidden' in view ? view.hidden : undefined])).toEqual([

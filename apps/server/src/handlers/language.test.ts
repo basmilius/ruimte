@@ -10,7 +10,7 @@ import { LanguageHost } from '../language/host.ts';
 import { KIND_PROFILES } from '../language/profiles.ts';
 import { fakeSpawner } from '../language/test-fakes.ts';
 import type { ClientAccess } from '../wire.ts';
-import { registerLanguageHandlers } from './language.ts';
+import { languageArea } from './language.ts';
 import { askOnce } from './test-helpers.ts';
 
 let root: string;
@@ -37,7 +37,7 @@ beforeEach(async () => {
         })
     });
     host.subscribe('client-1', () => undefined);
-    registerLanguageHandlers(dispatcher, host);
+    languageArea({ host }).handlers?.(dispatcher);
 });
 
 afterEach(async () => {
