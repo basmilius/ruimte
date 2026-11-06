@@ -132,7 +132,7 @@ export function chatImageDeps({ projects, agents, machine }: AreaInput): ChatIma
         images: new ChatImageFiles({
             project: async (chatId, clientId) => {
                 const place = store.index.locate(chatId);
-                if (place === null || place.folder === store.scratchFolder || !(await store.heldFolders(clientId)).includes(place.folder)) {
+                if (place === null || !(await store.holdsFolder(clientId, place.folder, { refuseScratch: true }))) {
                     return null;
                 }
                 const project = (await store.known()).find((entry) => entry.projectId === place.projectId);
@@ -149,7 +149,7 @@ export function chatSearchDeps({ projects, agents, providers, sessionFs }: AreaI
     const { chats } = agents;
     const holds = async (clientId: string, projectId: string): Promise<boolean> => {
         const folder = store.index.folderOf(projectId);
-        return folder !== null && (await store.heldFolders(clientId)).includes(folder);
+        return folder !== null && store.holdsFolder(clientId, folder);
     };
 
     return {

@@ -428,6 +428,18 @@ export class ProjectStore {
         return (await this.registry.load()).filter((entry) => held.has(entry.projectId)).map((entry) => entry.folder);
     }
 
+    /*
+     * Whether this client has the project at `folder` on screen. The scratch project holds the folders of
+     * the chats that belong to no project, so a caller that writes into a project's files turns `refuseScratch` on.
+     */
+    async holdsFolder(clientId: string, folder: string, options: { refuseScratch?: boolean } = {}): Promise<boolean> {
+        if (options.refuseScratch === true && folder === this.scratchFolder) {
+            return false;
+        }
+
+        return (await this.heldFolders(clientId)).includes(folder);
+    }
+
     /* What closing would do, for the confirmation that asks before it. */
     closing(clientId: string, projectId: string): ProjectClosingResult {
         const otherClients = this.holds.others(clientId, projectId);

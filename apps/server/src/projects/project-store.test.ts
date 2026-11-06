@@ -585,6 +585,20 @@ describe('ProjectStore', () => {
         expect((await restarted.list())[0]?.closedAt).toBeNumber();
     });
 
+    test('a client holds the folder of a project it has on screen, and the scratch folder only for a caller that does not write into it', async () => {
+        const { summary } = await store.openProject({ folder });
+        const scratch = await store.ensureProject(store.scratchFolder, { name: 'Chats', icon: { kind: 'lucide', value: 'messages-square' } });
+        store.hold('c1', summary.projectId);
+        store.hold('c1', scratch.projectId);
+
+        expect(await store.holdsFolder('c1', folder)).toBe(true);
+        expect(await store.holdsFolder('c2', folder)).toBe(false);
+        expect(await store.holdsFolder('c1', join(folder, 'elsewhere'))).toBe(false);
+        expect(await store.holdsFolder('c1', store.scratchFolder)).toBe(true);
+        expect(await store.holdsFolder('c1', store.scratchFolder, { refuseScratch: true })).toBe(false);
+        expect(await store.holdsFolder('c1', folder, { refuseScratch: true })).toBe(true);
+    });
+
     test('a project another client still holds keeps its place, its watcher and its sessions', async () => {
         const ended: string[] = [];
         links.endSession = async (kind, nodeId) => {

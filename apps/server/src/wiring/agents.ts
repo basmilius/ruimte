@@ -340,7 +340,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             checkCwd: bounds.checkCwd,
             holdsProject: async (chatId, clientId) => {
                 const place = index().locate(chatId);
-                return place !== null && (await later.projects().store.heldFolders(clientId)).includes(place.folder);
+                return place !== null && later.projects().store.holdsFolder(clientId, place.folder);
             },
             contextSources: (chatId) => context.list(chatId),
             reference: (chatId, id) => index().referenceBeside(chatId, id) ?? (identity.reachOpenProjects ? index().referenceElsewhere(chatId, id) : null),
