@@ -59,9 +59,8 @@ struct CanvasPage: View {
                     CanvasViewport(
                         canvas: canvas, statuses: workspace.session.attention.statuses,
                         tasks: workspace.session.tasks.tasks.values.reduce(into: [:]) { marks, task in
-                            let child = task.text("childId")
-                            if marks[child].map({ $0.number("createdAt") <= task.number("createdAt") }) ?? true {
-                                marks[child] = task
+                            if marks[task.childId].map({ $0.createdAt <= task.createdAt }) ?? true {
+                                marks[task.childId] = task
                             }
                         },
                         unseen: workspace.session.attention.unseen,
@@ -519,7 +518,7 @@ func canvasWithoutNode(_ canvas: JSONValue, id: String) -> JSONValue {
 private struct CanvasViewport: UIViewRepresentable {
     let canvas: JSONValue
     let statuses: [String: AgentStatus]
-    let tasks: [String: JSONValue]
+    let tasks: [String: AgentTask]
     let unseen: Set<String>
     let needingYou: Set<String>
     let camera: JSONValue?
@@ -598,7 +597,7 @@ final class CanvasScrollView: UIScrollView, UIScrollViewDelegate {
         updateVisible()
     }
     func setAttention(
-        statuses: [String: AgentStatus], unseen: Set<String>, needingYou: Set<String>, tasks: [String: JSONValue] = [:]
+        statuses: [String: AgentStatus], unseen: Set<String>, needingYou: Set<String>, tasks: [String: AgentTask] = [:]
     ) {
         guard
             surface.statuses != statuses || surface.tasks != tasks || surface.unseen != unseen
@@ -696,7 +695,7 @@ private final class CanvasSurface: UIView {
     private let drawing = CanvasDrawing()
     var open: (String) -> Void = { _ in }
     var statuses: [String: AgentStatus] = [:]
-    var tasks: [String: JSONValue] = [:]
+    var tasks: [String: AgentTask] = [:]
     var unseen = Set<String>()
     var needingYou = Set<String>()
     private var nodes: [JSONValue] = []
@@ -826,7 +825,7 @@ private final class CanvasSurface: UIView {
                 font: .preferredFont(forTextStyle: .headline), color: .label)
             if let task = tasks[id] {
                 // The line into a task's node says so on the desktop; here the node carries the word itself.
-                let status = TaskMark.status(task)
+                let status = task.status
                 drawText(
                     String(localized: "Task: \(TaskMark.word(status))", comment: "%@ is the status of the task"),
                     rect: CGRect(x: frame.minX + 20, y: frame.minY + 50, width: frame.width - 40, height: 24),
@@ -925,7 +924,7 @@ private final class CanvasSurface: UIView {
             let title = node.text("title")
             let kind = NewViewFactory.kindTitle(node.text("kind"))
             if let task = tasks[node.stableID] {
-                let word = TaskMark.word(TaskMark.status(task))
+                let word = TaskMark.word(task.status)
                 element.accessibilityLabel = String(
                     localized: "\(title), \(kind), task \(word)",
                     comment: "A node on a canvas: its title, its kind and the status of its task")

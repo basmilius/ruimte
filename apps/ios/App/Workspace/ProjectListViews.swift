@@ -184,7 +184,7 @@ private struct ProjectListCell: View {
 /// the shared mark and the draft dot, then the status.
 struct ProjectRowMarksView: View {
     let marks: ProjectRowMarks
-    var task: JSONValue?
+    var task: AgentTask?
 
     var body: some View {
         HStack(spacing: 8) {

@@ -58,20 +58,13 @@ final class TaskPresentationTests: XCTestCase {
 
     @MainActor func testAChildShowsItsNewestTaskAndAProjectAnswerReplacesItsOwn() {
         let store = TaskStore(client: TaskListMachine())
-        store.put(task("old", project: "p", child: "c", created: 1, status: "done"))
-        store.put(task("new", project: "p", child: "c", created: 2, status: "open"))
-        store.put(task("other", project: "q", child: "d", created: 1, status: "failed"))
-        XCTAssertEqual(store.childTask("c")?.text("id"), "new")
-        store.setProjectTasks("p", [task("only", project: "p", child: "c", created: 3, status: "cancelled")])
+        store.put(TaskWire.task("old", project: "p", child: "c", created: 1, status: "done"))
+        store.put(TaskWire.task("new", project: "p", child: "c", created: 2, status: "open"))
+        store.put(TaskWire.task("other", project: "q", child: "d", created: 1, status: "failed"))
+        XCTAssertEqual(store.childTask("c")?.id, "new")
+        store.setProjectTasks("p", [TaskWire.task("only", project: "p", child: "c", created: 3, status: "cancelled")])
         XCTAssertEqual(Set(store.tasks.keys), ["only", "other"])
-        XCTAssertEqual(store.childTask("c")?.text("status"), "cancelled")
-    }
-
-    private func task(_ id: String, project: String, child: String, created: Double, status: String) -> JSONValue {
-        .object([
-            "id": .string(id), "projectId": .string(project), "childId": .string(child),
-            "createdAt": .number(created), "status": .string(status),
-        ])
+        XCTAssertEqual(store.childTask("c")?.status, .cancelled)
     }
 }
 

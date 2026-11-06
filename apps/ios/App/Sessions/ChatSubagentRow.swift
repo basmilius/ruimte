@@ -200,7 +200,7 @@ private struct ChatTaskLine: View {
         .accessibilityElement(children: .combine)
     }
 
-    @ViewBuilder private func stateLine(_ state: TaskRowState, task: JSONValue?) -> some View {
+    @ViewBuilder private func stateLine(_ state: TaskRowState, task: AgentTask?) -> some View {
         switch state {
         case .running:
             ChatLiveLabel(text: ChatSubagents.taskStateText(state, task: task, now: .now))

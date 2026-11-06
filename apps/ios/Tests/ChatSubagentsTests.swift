@@ -106,7 +106,7 @@ final class ChatSubagentsTests: XCTestCase {
         let row = agent("task-7", status: "failed", extra: ["origin": .string("ruimte")])
         XCTAssertEqual(ChatSubagents.taskID(row), "7")
         XCTAssertEqual(ChatSubagents.statusWord(row, task: nil), .failed)
-        XCTAssertEqual(ChatSubagents.statusWord(row, task: .object(["status": .string("cancelled")])), .cancelled)
+        XCTAssertEqual(ChatSubagents.statusWord(row, task: TaskWire.task(status: "cancelled")), .cancelled)
         XCTAssertNil(ChatSubagents.taskID(agent("task-7")))
     }
 

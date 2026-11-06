@@ -249,9 +249,9 @@ final class ChatTaskRowTests: XCTestCase {
     func testTheStateIsTheTasksOwnOrThatItsAgentWaitsOnAPerson() {
         XCTAssertEqual(ChatSubagents.taskRowState(task(), task: nil, childWaiting: false), .running)
         XCTAssertEqual(ChatSubagents.taskRowState(task(), task: nil, childWaiting: true), .waiting)
-        let paused: JSONValue = .object(["status": .string("open"), "paused": .object(["kind": .string("usage")])])
+        let paused = TaskWire.task(paused: .object(["kind": .string("usage")]))
         XCTAssertEqual(ChatSubagents.taskRowState(task(), task: paused, childWaiting: true), .paused)
-        let cancelled: JSONValue = .object(["status": .string("cancelled")])
+        let cancelled = TaskWire.task(status: "cancelled")
         XCTAssertEqual(ChatSubagents.taskRowState(task("failed"), task: cancelled, childWaiting: false), .cancelled)
         XCTAssertEqual(ChatSubagents.taskRowState(task("failed"), task: nil, childWaiting: true), .failed)
         XCTAssertEqual(ChatSubagents.taskRowState(task("done"), task: nil, childWaiting: false), .done)
@@ -263,7 +263,7 @@ final class ChatTaskRowTests: XCTestCase {
             timeZone: TimeZone(identifier: "UTC")!)
         let now = Date(timeIntervalSince1970: 2 * 86_400 + 12 * 3600)
         let until = (now.timeIntervalSince1970 + 3600) * 1000
-        let paused: JSONValue = .object(["paused": .object(["kind": .string("usage"), "until": .number(until)])])
+        let paused = TaskWire.task(paused: .object(["kind": .string("usage"), "until": .number(until)]))
         XCTAssertEqual(
             ChatSubagents.taskStateText(.paused, task: paused, now: now, locale: locale), "Paused until 01:00 PM")
         XCTAssertEqual(ChatSubagents.taskStateText(.paused, task: nil, now: now, locale: locale), "Paused")
@@ -280,7 +280,7 @@ final class ChatTaskRowTests: XCTestCase {
     func testASettledTaskSaysHowLongItTookFromItsOwnRecord() {
         let done = task("done", started: 1000, finished: 4000)
         XCTAssertEqual(ChatSubagents.taskDuration(done, task: nil, state: .done), "3s")
-        let record: JSONValue = .object(["createdAt": .number(1000), "settledAt": .number(66_000)])
+        let record = TaskWire.task(created: 1000, status: "done", settled: 66_000)
         XCTAssertEqual(ChatSubagents.taskDuration(done, task: record, state: .done), "1m 5s")
         XCTAssertNil(ChatSubagents.taskDuration(task(), task: nil, state: .running))
         XCTAssertNil(ChatSubagents.taskDuration(task("done", started: 0, finished: 4000), task: nil, state: .done))

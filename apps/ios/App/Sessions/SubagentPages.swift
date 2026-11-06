@@ -177,7 +177,7 @@ extension ChatModel {
 
 private struct SubagentEntryRow: View {
     let item: ChatSubagentItem
-    let task: JSONValue?
+    let task: AgentTask?
     let work: [ChatItem]
     let client: any MachineRequesting
     let chatID: String
@@ -262,7 +262,7 @@ struct SubagentStatusIcon: View {
 /// How long a running entry has run, ticking each second while it is on screen, or when a settled one ended.
 struct SubagentEntryTime: View {
     let item: ChatSubagentItem
-    let task: JSONValue?
+    let task: AgentTask?
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {

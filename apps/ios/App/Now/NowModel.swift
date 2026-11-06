@@ -119,7 +119,7 @@ final class NowModel {
     }
 
     /// The task another agent opened a node with, if any.
-    func task(for target: ProjectViewTarget) -> JSONValue? {
+    func task(for target: ProjectViewTarget) -> AgentTask? {
         feeds[target.machineID]?.session.tasks.childTask(target.itemID)
     }
 

@@ -6,7 +6,7 @@ import SwiftUI
 /// Tracks task updates for projects open on this device and reloads each project on open.
 @MainActor @Observable
 final class TaskStore {
-    private(set) var tasks: [String: JSONValue] = [:]
+    private(set) var tasks: [String: AgentTask] = [:]
     @ObservationIgnored private var projects: [String: Int] = [:]
     @ObservationIgnored private var subscriptions: [() -> Void] = []
     @ObservationIgnored private let client: any MachineRequesting
@@ -16,9 +16,9 @@ final class TaskStore {
     func start() {
         guard subscriptions.isEmpty else { return }
         subscriptions = [
-            client.subscribe(.taskChanged) { [weak self] event in
-                guard let task = event["task"] else { return }
-                self?.put(task)
+            client.subscribe(.taskChanged) { [weak self] payload in
+                guard let event = try? payload.decoded(as: TaskChangedEvent.self) else { return }
+                self?.put(event.task)
             },
             client.observeConnection { [weak self] connected in
                 guard let self, connected else { return }
@@ -49,37 +49,37 @@ final class TaskStore {
     }
 
     /// What one project answered; a task of that project it no longer lists is gone.
-    func setProjectTasks(_ projectID: String, _ list: [JSONValue]) {
-        var next = tasks.filter { $0.value.text("projectId") != projectID }
-        for task in list where !task.text("id").isEmpty { next[task.text("id")] = task }
+    func setProjectTasks(_ projectID: String, _ list: [AgentTask]) {
+        var next = tasks.filter { $0.value.projectId != projectID }
+        for task in list { next[task.id] = task }
         if next != tasks { tasks = next }
     }
 
-    func put(_ task: JSONValue) {
-        let id = task.text("id")
-        guard !id.isEmpty, tasks[id] != task else { return }
-        tasks[id] = task
+    func put(_ task: AgentTask) {
+        guard tasks[task.id] != task else { return }
+        tasks[task.id] = task
     }
 
-    func task(_ id: String) -> JSONValue? { tasks[id] }
+    func task(_ id: String) -> AgentTask? { tasks[id] }
 
     /// The newest task a node was opened with, since a node given a task twice shows the one it works on now.
-    func childTask(_ childID: String) -> JSONValue? {
-        tasks.values.filter { $0.text("childId") == childID }.max { $0.number("createdAt") < $1.number("createdAt") }
+    func childTask(_ childID: String) -> AgentTask? {
+        tasks.values.filter { $0.childId == childID }.max { $0.createdAt < $1.createdAt }
     }
 
     /// The nodes that gave another agent a task that has not settled yet.
     var parentsWithOpenTasks: Set<String> {
-        Set(tasks.values.filter { $0.text("status") == TaskStatus.open.rawValue }.map { $0.text("parentId") })
+        Set(tasks.values.filter { $0.status == .open }.map(\.parentId))
     }
 
     private func ask(_ projectID: String) {
         Task { [weak self, client] in
             guard
                 let result = try? await client.request(.taskList, payload: .object(["projectId": .string(projectID)]))
+                    .decoded(as: TaskListResult.self)
             else { return }
             guard let self, projects[projectID] != nil else { return }
-            setProjectTasks(projectID, result.list("tasks"))
+            setProjectTasks(projectID, result.tasks)
         }
     }
 }
@@ -113,7 +113,7 @@ enum AgentWorkLook {
 /// The mark a node wears when another agent opened it with a task. Nothing to press; the thread of the chat that gave
 /// the task is where its result is read.
 struct TaskMark: View {
-    let task: JSONValue
+    let task: AgentTask
 
     static func word(_ status: TaskStatus) -> String {
         switch status {
@@ -124,11 +124,8 @@ struct TaskMark: View {
         }
     }
 
-    /// A record from a machine that knows a status this app does not is read as still open.
-    static func status(_ task: JSONValue) -> TaskStatus { TaskStatus(rawValue: task.text("status")) ?? .open }
-
     var body: some View {
-        let status = Self.status(task)
+        let status = task.status
         let icon =
             switch status {
             case .open: "circle-dashed"
@@ -139,6 +136,6 @@ struct TaskMark: View {
         Image(lucide: icon, size: 14)
             .foregroundStyle(AgentWorkLook(taskStatus: status).color)
             .accessibilityElement()
-            .accessibilityLabel("Task: \(task.text("title")), \(Self.word(status))")
+            .accessibilityLabel("Task: \(task.title), \(Self.word(status))")
     }
 }

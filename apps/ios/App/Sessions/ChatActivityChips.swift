@@ -96,7 +96,7 @@ struct ChatActivityChips: View {
         }
     }
 
-    private func task(of item: ChatSubagentItem) -> JSONValue? {
+    private func task(of item: ChatSubagentItem) -> AgentTask? {
         ChatSubagents.taskID(item).flatMap { tasks?.task($0) }
     }
 

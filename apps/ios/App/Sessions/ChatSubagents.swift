@@ -153,16 +153,14 @@ enum ChatSubagents {
     }
 
     /// A cancelled task is a failed row on the wire, and only the task itself still says which it was.
-    static func statusWord(_ agent: ChatSubagentItem, task: JSONValue?) -> SubagentStatusWord {
-        if agent.status == .failed, TaskStatus(rawValue: task?.text("status") ?? "") == .cancelled { return .cancelled }
+    static func statusWord(_ agent: ChatSubagentItem, task: AgentTask?) -> SubagentStatusWord {
+        if agent.status == .failed, task?.status == .cancelled { return .cancelled }
         return SubagentStatusWord(agent.status)
     }
 
     /// A paused task is still a running row on the wire, and only the task itself says it waits on a limit.
-    static func taskRowState(_ agent: ChatSubagentItem, task: JSONValue?, childWaiting: Bool) -> TaskRowState {
-        if agent.status == .running, TaskStatus(rawValue: task?.text("status") ?? "") == .open,
-            let paused = task?["paused"], paused != .null
-        {
+    static func taskRowState(_ agent: ChatSubagentItem, task: AgentTask?, childWaiting: Bool) -> TaskRowState {
+        if agent.status == .running, task?.status == .open, task?.paused != nil {
             return .paused
         }
         switch statusWord(agent, task: task) {
@@ -173,14 +171,14 @@ enum ChatSubagents {
         }
     }
 
-    static func taskStateText(_ state: TaskRowState, task: JSONValue?, now: Date, locale: FormatLocale = .current)
+    static func taskStateText(_ state: TaskRowState, task: AgentTask?, now: Date, locale: FormatLocale = .current)
         -> String
     {
         switch state {
         case .running: return String(localized: "Running")
         case .waiting: return String(localized: "Waiting for you")
         case .paused:
-            guard let until = task?["paused"]?["until"]?.numberValue else { return String(localized: "Paused") }
+            guard let until = task?.paused?.until else { return String(localized: "Paused") }
             let time = Format.moment(Date(timeIntervalSince1970: until / 1000), now: now, in: locale)
             return String(localized: "Paused until \(time)", comment: "%@ is a time, or a day and a time")
         case .done: return String(localized: "Done")
@@ -197,12 +195,12 @@ enum ChatSubagents {
     }
 
     /// When a task was given and settled. Its own record says so first; the row copies those, but may lag behind it.
-    static func taskSpan(_ agent: ChatSubagentItem, task: JSONValue?) -> (startedAt: Double, finishedAt: Double?) {
-        (task?["createdAt"]?.numberValue ?? agent.startedAt, task?["settledAt"]?.numberValue ?? agent.finishedAt)
+    static func taskSpan(_ agent: ChatSubagentItem, task: AgentTask?) -> (startedAt: Double, finishedAt: Double?) {
+        (task?.createdAt ?? agent.startedAt, task?.settledAt ?? agent.finishedAt)
     }
 
     /// How long a settled task took; nil while it runs and for one that knows no start or end.
-    static func taskDuration(_ agent: ChatSubagentItem, task: JSONValue?, state: TaskRowState) -> String? {
+    static func taskDuration(_ agent: ChatSubagentItem, task: AgentTask?, state: TaskRowState) -> String? {
         let span = taskSpan(agent, task: task)
         guard state.settled, span.startedAt > 0, let finishedAt = span.finishedAt, finishedAt >= span.startedAt
         else { return nil }
@@ -374,7 +372,7 @@ enum ChatSubagents {
 
     /// The time on the right of an entry: how long it has run so far, or when it ended, with the date once that was
     /// not today.
-    static func entryTime(_ agent: ChatSubagentItem, task: JSONValue?, now: Date, locale: FormatLocale = .current)
+    static func entryTime(_ agent: ChatSubagentItem, task: AgentTask?, now: Date, locale: FormatLocale = .current)
         -> String?
     {
         let (startedAt, finishedAt) = taskSpan(agent, task: task)

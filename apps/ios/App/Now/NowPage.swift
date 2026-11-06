@@ -215,7 +215,7 @@ struct NowNothingWaits: View {
 struct NowWorkingRow: View {
     let entry: ProjectViewEntry
     let namesMachine: Bool
-    let task: JSONValue?
+    let task: AgentTask?
     let date: Date
 
     var body: some View {
@@ -236,7 +236,7 @@ struct NowWorkingRow: View {
 struct NowFinishedRow: View {
     let entry: ProjectViewEntry
     let namesMachine: Bool
-    let task: JSONValue?
+    let task: AgentTask?
     let date: Date
 
     var body: some View {

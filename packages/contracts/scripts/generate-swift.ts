@@ -444,7 +444,13 @@ const typedRoots: [name: string, source: string, path: (string | number)[]][] = 
     ['PlanApplyResult', 'request.plan.apply.result', []],
     ['PlanChangedEvent', 'event.plan.changed', []],
     ['PlanRemovedEvent', 'event.plan.removed', []],
-    ['PlanCreatedEvent', 'event.plan.created', []]
+    ['PlanCreatedEvent', 'event.plan.created', []],
+    ['TaskListResult', 'request.task.list.result', []],
+    ['AgentTask', 'request.task.list.result', ['properties', 'tasks', 'items']],
+    ['AgentTaskResult', 'request.task.list.result', ['properties', 'tasks', 'items', 'properties', 'result', 'anyOf', 0]],
+    ['AgentTaskPaused', 'request.task.list.result', ['properties', 'tasks', 'items', 'properties', 'paused']],
+    ['AgentTaskBackground', 'request.task.list.result', ['properties', 'tasks', 'items', 'properties', 'background']],
+    ['TaskChangedEvent', 'event.task.changed', []]
 ];
 const typed = typedRoots.map(([name, source, path]) => {
     const schema = path.reduce((node: any, key) => node?.[key], typedSource(source));

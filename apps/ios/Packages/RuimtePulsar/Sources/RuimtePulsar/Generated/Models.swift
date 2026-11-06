@@ -11791,6 +11791,255 @@ public struct PlanCreatedEvent: Codable, Sendable, Equatable {
 
 public typealias PlanRemovedEvent = PlanCreatedEvent
 
+public struct TaskListResult: Codable, Sendable, Equatable {
+    public let `tasks`: [AgentTask]
+
+    public init(`tasks`: [AgentTask]) {
+        self.`tasks` = `tasks`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `tasks` = try container.decode([AgentTask].self, forKey: .`tasks`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`tasks`, forKey: .`tasks`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `tasks` = "tasks"
+    }
+}
+
+public struct AgentTask: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `projectId`: String
+    public let `parentId`: String
+    public let `childId`: String
+    public let `title`: String
+    public let `prompt`: String
+    public let `batchId`: String?
+    public let `requiresTaskTurn`: Bool?
+    public let `background`: AgentTaskBackground?
+    public let `status`: TaskStatus
+    public let `result`: AgentTaskResult?
+    public let `createdAt`: Double
+    public let `settledAt`: Double?
+    public let `wake`: AgentTaskWake
+    public let `paused`: AgentTaskPaused?
+    public let `machine`: String?
+
+    public init(`id`: String, `projectId`: String, `parentId`: String, `childId`: String, `title`: String, `prompt`: String, `batchId`: String? = nil, `requiresTaskTurn`: Bool? = nil, `background`: AgentTaskBackground? = nil, `status`: TaskStatus, `result`: AgentTaskResult?, `createdAt`: Double, `settledAt`: Double?, `wake`: AgentTaskWake, `paused`: AgentTaskPaused? = nil, `machine`: String? = nil) {
+        self.`id` = `id`
+        self.`projectId` = `projectId`
+        self.`parentId` = `parentId`
+        self.`childId` = `childId`
+        self.`title` = `title`
+        self.`prompt` = `prompt`
+        self.`batchId` = `batchId`
+        self.`requiresTaskTurn` = `requiresTaskTurn`
+        self.`background` = `background`
+        self.`status` = `status`
+        self.`result` = `result`
+        self.`createdAt` = `createdAt`
+        self.`settledAt` = `settledAt`
+        self.`wake` = `wake`
+        self.`paused` = `paused`
+        self.`machine` = `machine`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `projectId` = try container.decode(String.self, forKey: .`projectId`)
+        `parentId` = try container.decode(String.self, forKey: .`parentId`)
+        `childId` = try container.decode(String.self, forKey: .`childId`)
+        `title` = try container.decode(String.self, forKey: .`title`)
+        `prompt` = try container.decode(String.self, forKey: .`prompt`)
+        `batchId` = try container.decodeIfPresent(String.self, forKey: .`batchId`)
+        `requiresTaskTurn` = try container.decodeIfPresent(Bool.self, forKey: .`requiresTaskTurn`)
+        `background` = try container.decodeIfPresent(AgentTaskBackground.self, forKey: .`background`)
+        `status` = try container.decode(TaskStatus.self, forKey: .`status`)
+        `result` = try container.decode(AgentTaskResult?.self, forKey: .`result`)
+        `createdAt` = try container.decode(Double.self, forKey: .`createdAt`)
+        `settledAt` = try container.decode(Double?.self, forKey: .`settledAt`)
+        `wake` = try container.decode(AgentTaskWake.self, forKey: .`wake`)
+        `paused` = try container.decodeIfPresent(AgentTaskPaused.self, forKey: .`paused`)
+        `machine` = try container.decodeIfPresent(String.self, forKey: .`machine`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`projectId`, forKey: .`projectId`)
+        try container.encode(`parentId`, forKey: .`parentId`)
+        try container.encode(`childId`, forKey: .`childId`)
+        try container.encode(`title`, forKey: .`title`)
+        try container.encode(`prompt`, forKey: .`prompt`)
+        try container.encodeIfPresent(`batchId`, forKey: .`batchId`)
+        try container.encodeIfPresent(`requiresTaskTurn`, forKey: .`requiresTaskTurn`)
+        try container.encodeIfPresent(`background`, forKey: .`background`)
+        try container.encode(`status`, forKey: .`status`)
+        try container.encode(`result`, forKey: .`result`)
+        try container.encode(`createdAt`, forKey: .`createdAt`)
+        try container.encode(`settledAt`, forKey: .`settledAt`)
+        try container.encode(`wake`, forKey: .`wake`)
+        try container.encodeIfPresent(`paused`, forKey: .`paused`)
+        try container.encodeIfPresent(`machine`, forKey: .`machine`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `projectId` = "projectId"
+        case `parentId` = "parentId"
+        case `childId` = "childId"
+        case `title` = "title"
+        case `prompt` = "prompt"
+        case `batchId` = "batchId"
+        case `requiresTaskTurn` = "requiresTaskTurn"
+        case `background` = "background"
+        case `status` = "status"
+        case `result` = "result"
+        case `createdAt` = "createdAt"
+        case `settledAt` = "settledAt"
+        case `wake` = "wake"
+        case `paused` = "paused"
+        case `machine` = "machine"
+    }
+}
+
+public struct AgentTaskBackground: Codable, Sendable, Equatable {
+    public let `turnId`: String
+    public let `itemIds`: [String]
+    public let `commands`: [String]
+
+    public init(`turnId`: String, `itemIds`: [String], `commands`: [String]) {
+        self.`turnId` = `turnId`
+        self.`itemIds` = `itemIds`
+        self.`commands` = `commands`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `turnId` = try container.decode(String.self, forKey: .`turnId`)
+        `itemIds` = try container.decode([String].self, forKey: .`itemIds`)
+        `commands` = try container.decode([String].self, forKey: .`commands`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`turnId`, forKey: .`turnId`)
+        try container.encode(`itemIds`, forKey: .`itemIds`)
+        try container.encode(`commands`, forKey: .`commands`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `turnId` = "turnId"
+        case `itemIds` = "itemIds"
+        case `commands` = "commands"
+    }
+}
+
+public struct AgentTaskResult: Codable, Sendable, Equatable {
+    public let `text`: String
+    public let `source`: AgentTaskResultSource
+    public let `at`: Double
+
+    public init(`text`: String, `source`: AgentTaskResultSource, `at`: Double) {
+        self.`text` = `text`
+        self.`source` = `source`
+        self.`at` = `at`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `text` = try container.decode(String.self, forKey: .`text`)
+        `source` = try container.decode(AgentTaskResultSource.self, forKey: .`source`)
+        `at` = try container.decode(Double.self, forKey: .`at`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`text`, forKey: .`text`)
+        try container.encode(`source`, forKey: .`source`)
+        try container.encode(`at`, forKey: .`at`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `text` = "text"
+        case `source` = "source"
+        case `at` = "at"
+    }
+}
+
+public enum AgentTaskResultSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `done` = "done"
+    case `turn` = "turn"
+    case `exit` = "exit"
+}
+
+public enum AgentTaskWake: String, CaseIterable, Codable, Sendable, Equatable {
+    case `pending` = "pending"
+    case `sent` = "sent"
+    case `none` = "none"
+}
+
+public struct AgentTaskPaused: Codable, Sendable, Equatable {
+    public let `kind`: AgentTaskPausedKind
+    public let `until`: Double?
+
+    public init(`kind`: AgentTaskPausedKind, `until`: Double? = nil) {
+        self.`kind` = `kind`
+        self.`until` = `until`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(AgentTaskPausedKind.self, forKey: .`kind`)
+        `until` = try container.decodeIfPresent(Double.self, forKey: .`until`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encodeIfPresent(`until`, forKey: .`until`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `until` = "until"
+    }
+}
+
+public enum AgentTaskPausedKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `usage` = "usage"
+    case `overload` = "overload"
+}
+
+public struct TaskChangedEvent: Codable, Sendable, Equatable {
+    public let `task`: AgentTask
+
+    public init(`task`: AgentTask) {
+        self.`task` = `task`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `task` = try container.decode(AgentTask.self, forKey: .`task`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`task`, forKey: .`task`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `task` = "task"
+    }
+}
+
 public extension PlanStepState {
     /// The marker of this state, as `PLAN_STATE_MARKERS` in `@adecore/plan` writes it.
     var marker: String {

@@ -419,3 +419,21 @@ extension JSONValue {
     var outputItem: OutputItem { try! decoded(as: ArtifactSummary.self) }
     var outputProvenance: OutputProvenance { try! decoded(as: ArtifactProvenance.self) }
 }
+
+/// `task.*` records as a machine writes them, with the fields the schema requires.
+enum TaskWire {
+    static func task(
+        _ id: String = "t1", project: String = "p", child: String = "c", created: Double = 0, status: String = "open",
+        settled: Double? = nil, paused: JSONValue? = nil
+    ) -> AgentTask {
+        var fields: [String: JSONValue] = [
+            "id": .string(id), "projectId": .string(project), "parentId": .string("parent"),
+            "childId": .string(child), "title": .string("Task \(id)"), "prompt": .string("Do it."),
+            "status": .string(status), "result": .null, "createdAt": .number(created),
+            "settledAt": settled.map(JSONValue.number) ?? .null, "wake": .string("none"),
+        ]
+        if let paused { fields["paused"] = paused }
+        // A fixture that does not decode is a broken test, not a case to cover.
+        return try! JSONValue.object(fields).decoded(as: AgentTask.self)
+    }
+}
