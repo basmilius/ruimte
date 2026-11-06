@@ -700,6 +700,25 @@
                 "label": "Canvas map",
                 "description": "A map of every node in the bottom right. Click to jump, drag the frame to pan. Hidden on a narrow canvas."
             },
+            "sidebarSort": {
+                "label": "Order in the sidebar",
+                "description": "How the sidebar lists the nodes under an open canvas. The canvas itself stays as it is.",
+                "options": {
+                    "canvas": "Canvas order",
+                    "name": "Name",
+                    "kind": "Kind",
+                    "status": "Status"
+                }
+            },
+            "sidebarSortThen": {
+                "label": "Within a kind or status",
+                "description": "Which node comes first when several have the same kind or status.",
+                "options": {
+                    "newest": "Newest first",
+                    "oldest": "Oldest first",
+                    "name": "Name"
+                }
+            },
             "renderDistance": {
                 "label": "Render distance",
                 "description": "How far out pages, files, diagrams and devices stay live. Further out they show a still picture or their name. Far and Unlimited ask more of this computer.",

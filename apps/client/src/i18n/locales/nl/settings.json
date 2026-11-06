@@ -700,6 +700,25 @@
                 "label": "Canvaskaart",
                 "description": "Een kaart van elke node rechtsonder. Klik om erheen te gaan, sleep het kader om te schuiven. Verborgen op een smal canvas."
             },
+            "sidebarSort": {
+                "label": "Volgorde in de zijbalk",
+                "description": "Hoe de zijbalk de nodes onder een open canvas toont. Het canvas zelf blijft zoals het is.",
+                "options": {
+                    "canvas": "Canvasvolgorde",
+                    "name": "Naam",
+                    "kind": "Soort",
+                    "status": "Status"
+                }
+            },
+            "sidebarSortThen": {
+                "label": "Binnen een soort of status",
+                "description": "Welke node eerst komt als er meer dezelfde soort of status hebben.",
+                "options": {
+                    "newest": "Nieuwste eerst",
+                    "oldest": "Oudste eerst",
+                    "name": "Naam"
+                }
+            },
             "renderDistance": {
                 "label": "Tekenafstand",
                 "description": "Hoe ver pagina's, bestanden, diagrammen en apparaten live blijven. Verder weg tonen ze een stilstaand beeld of hun naam. Ver en Onbeperkt vragen meer van deze computer.",
