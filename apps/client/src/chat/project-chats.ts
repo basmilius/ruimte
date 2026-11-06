@@ -1,7 +1,7 @@
 import type { ProjectChat } from '@adecore/agents-react/chat';
 import { designNodeChats, isChatHostView, isHiddenChatView, viewChats, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import { useProjectSource } from '@/project/project-source';
 import type { NodesOfView } from '@/state/view-nodes';
-import { useSidebarSource } from '@/surface/sidebar-source';
 
 /* Every chat of the project under the name it has right now, node or view, in sidebar order. */
 export function projectChats(views: readonly ProjectView[], nodesOf: NodesOfView<Pick<ProjectNode, 'id' | 'kind' | 'title' | 'chats'>>): ProjectChat[] {
@@ -20,6 +20,6 @@ export function projectChats(views: readonly ProjectView[], nodesOf: NodesOfView
 
 /* The chats of the open project, renamed the moment a node on a live canvas is. */
 export function useProjectChats(): ProjectChat[] {
-    const source = useSidebarSource();
+    const source = useProjectSource();
     return projectChats(source.views, source.nodesOf);
 }

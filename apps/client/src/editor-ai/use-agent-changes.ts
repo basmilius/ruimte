@@ -6,11 +6,11 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useGitSignal } from '@/controllers/git-watch';
 import { chooserChats } from '@/language/chat-chooser';
 import { focusChat } from '@/plan/plan-actions';
+import { useProjectSource } from '@/project/project-source';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useGitRoot } from '@/surface/panels/use-git-root';
-import { useSidebarSource } from '@/surface/sidebar-source';
 import { useTransport } from '@/workspace/context';
 import type { AgentChanges, AgentChangesState } from './agent-changes';
 import { mountAgentChanges } from './agent-changes-wiring';
@@ -43,7 +43,7 @@ export function useAgentChanges(editor: Editor | null, path: string, language: s
     const commits = useGitSignal(root ?? null);
     const [holder] = useState(() => createHolder<AgentChanges>());
     const [reviews] = useState(() => createHolder<AgentReview>());
-    const source = useSidebarSource();
+    const source = useProjectSource();
     // What the review reads when it is asked, not when it is mounted: chats come and go and the folder may change.
     const folder = useProject((s) => s.current?.folder ?? null);
     const app = useRef({ chats: new Set<string>(), folder, language: language ?? null });

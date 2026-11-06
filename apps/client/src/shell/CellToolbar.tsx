@@ -162,7 +162,6 @@ export function CellToolbar({
                         event.dataTransfer.effectAllowed = 'move';
                         setDragging(view.id, hosted);
                     }}
-                    onDragEnd={() => setDragging(null)}
                     menu={
                         <>
                             {tabs?.length === 1 && (

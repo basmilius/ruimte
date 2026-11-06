@@ -25,7 +25,6 @@ import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
 import { basenameOf } from '@/paths/file-path';
 import { useProject } from '@/state/project';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/surface/PanelHeaderSlot';
-import { setDragging } from '@/surface/view-drag';
 
 /*
  * The connections of the project, with their schemas, tables and columns, and the consoles of each. A table
@@ -102,7 +101,6 @@ function PanelBodyFor({ status, error, connections }: { status: ConnectionsStatu
                 onValueChange={(next) => useDatabasePanel.getState().setSelection(next)}
                 openOnClick
                 onTableDragStart={(ref, event, kind) => startDatabaseDrag(event.dataTransfer, ref, kind)}
-                onTableDragEnd={() => setDragging(null)}
                 folders={consoles.folders}
                 className="min-h-0 grow"
             />

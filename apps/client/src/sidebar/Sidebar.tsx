@@ -15,6 +15,7 @@ import { SlotRow } from '@/extensions/SlotSurfaces';
 import { addArtifactToSidebar, carriesArtifact, droppedArtifact } from '@/output/artifact-drag';
 import { newChat } from '@/project/new-chat';
 import { useProjectMenu } from '@/project/project-menu-model';
+import { useProjectSource } from '@/project/project-source';
 import { openSidebarTarget } from '@/project/sidebar-navigation';
 import { foldedProjects, movableKeys, separatorKey, useSidebarProjects, type SeparatorPlaces, type SidebarSeparator } from '@/project/sidebar-projects';
 import { askDeleteView, newFileViewsAfter, promoteLooseDatabase, promoteLooseFile, revealNode } from '@/project/views';
@@ -65,7 +66,6 @@ import {
     type SidebarRow,
     type SidebarSection
 } from '@/surface/sidebar-rows';
-import { useSidebarSource } from '@/surface/sidebar-source';
 import { StatusDot } from '@/surface/StatusDot';
 import { useInstantWidth } from '@/surface/useInstantWidth';
 import {
@@ -125,7 +125,7 @@ function sidebarRowOrder(sections: readonly SidebarSection[], separators: Separa
 export function Sidebar({ brandMenu }: { brandMenu?: ReactNode }) {
     const gap = usePanelGap();
     const { t } = useTranslation('shell');
-    const source = useSidebarSource();
+    const source = useProjectSource();
     const draws = useChatDrawers();
     const combined = useSettings((s) => s.sidebarScope === 'all-open');
     const everywhere = useSettings((s) => s.needsYouAllProjects);

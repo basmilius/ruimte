@@ -61,6 +61,7 @@ export function draggingWholeCell(): boolean {
  * Embedded pages absorb drag events before the cell sees them, so browser views, HTML previews and chat
  * visuals step out of the pointer's way for the whole drag (`body[data-dragging]` in `styles.css`). An
  * attribute because the pages are not all in one tree; watched on the window so no source can forget it.
+ * The same listener ends the drag's own state, which `setDragging` holds from the source's `dragstart`.
  */
 export function watchDrags(): () => void {
     const mark = (dragging: boolean) => (): void => {
@@ -68,6 +69,8 @@ export function watchDrags(): () => void {
     };
     const begin = mark(true);
     const end = mark(false);
+    // The drag ends wherever it was dropped or called off, so a source never has to say so.
+    const forget = (): void => setDragging(null);
     // `dragenter` as well as `dragstart`: a drag out of the file manager begins outside this page.
     const starts = ['dragstart', 'dragenter'];
     const ends = ['dragend', 'drop'];
@@ -77,7 +80,9 @@ export function watchDrags(): () => void {
     for (const type of ends) {
         window.addEventListener(type, end, true);
     }
+    window.addEventListener('dragend', forget);
     return () => {
+        window.removeEventListener('dragend', forget);
         for (const type of starts) {
             window.removeEventListener(type, begin, true);
         }

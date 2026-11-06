@@ -2,7 +2,7 @@ import { Tooltip } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
 import { chooserChats } from '@/language/chat-chooser';
 import { focusChat } from '@/plan/plan-actions';
-import { useSidebarSource } from '@/surface/sidebar-source';
+import { useProjectSource } from '@/project/project-source';
 import type { LiveWriter } from './agent-changes';
 import { colorOfChat } from './agent-runs';
 import { ChatMark } from './ChatMark';
@@ -11,7 +11,7 @@ import { useProviderName } from './use-chat-identity';
 /* The toolbar's word that an agent is writing in this file: its mark in its color, who, and the chat it is, a press away. */
 export function AgentEditingChip({ writer }: { writer: LiveWriter }) {
     const { t } = useTranslation('panels');
-    const source = useSidebarSource();
+    const source = useProjectSource();
     const chat = chooserChats(source.views, source.nodesOf).find((candidate) => candidate.id === writer.chatId);
     const provider = chat?.provider ?? null;
     const name = useProviderName(provider ?? undefined);

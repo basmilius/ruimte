@@ -64,7 +64,6 @@ import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/surface/PanelHeaderSlot';
 import { FILE_TOOLBAR } from '@/surface/panels/classes';
-import { setDragging } from '@/surface/view-drag';
 import { useMachineAnswers } from '@/transport/features';
 
 const CopyToProjectDialog = lazyNamed(() => import('@/output/CopyToProjectDialog'), 'CopyToProjectDialog');
@@ -381,7 +380,6 @@ function ArtifactRow({
                         onClick={() => openArtifact(artifact.artifactId, artifact.title, null, machineId)}
                         draggable={machineId === undefined}
                         onDragStart={(event) => machineId === undefined && startArtifactDrag(event.dataTransfer, artifact)}
-                        onDragEnd={() => setDragging(null)}
                     />
                 }
             >

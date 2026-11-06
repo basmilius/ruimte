@@ -7,7 +7,6 @@ import { OutputShownBesideContext } from '@/output/chat-scope';
 import { KindTile } from '@/output/look';
 import { savedPreviewOf } from '@/output/saved-preview';
 import { SavedPreview } from '@/output/SavedPreview';
-import { setDragging } from '@/surface/view-drag';
 
 export interface Saved {
     artifact: Pick<ArtifactSummary, 'artifactId' | 'title' | 'kind'>;
@@ -51,7 +50,6 @@ function SavedRow({ artifact, version, latest }: Saved) {
             onClick={() => open(artifact.artifactId, artifact.title, latest ? null : version.versionId, version.versionId)}
             draggable
             onDragStart={(event) => startArtifactDrag(event.dataTransfer, artifact)}
-            onDragEnd={() => setDragging(null)}
         >
             <KindTile kind={artifact.kind} size="sm" />
             <span className="min-w-0 shrink truncate font-medium text-text">{artifact.title}</span>

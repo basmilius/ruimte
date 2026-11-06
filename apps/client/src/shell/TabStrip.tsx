@@ -75,7 +75,6 @@ function TabShell({ id, label, hint, glyph, detail, unsavedLabel, pinned = false
                         closeShortcut={CANVAS_SHORTCUTS.closeCell}
                         onDoubleClick={onDoubleClick}
                         onDragStart={(_, event) => onDragStart(event)}
-                        onDragEnd={() => setDragging(null)}
                     />
                 }
                 onContextMenu={(event) => event.stopPropagation()}

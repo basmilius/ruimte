@@ -6,56 +6,40 @@ import { useDocument } from '@/state/document';
 import { memoByIdentity } from '@/state/identity-memo';
 import { nodesOfView, type NodesOfView } from '@/state/view-nodes';
 
-/* What a sidebar row reads of a node. A drag or a resize changes none of it. */
-export type SidebarCanvasNode = Pick<CanvasNode, 'id' | 'kind' | 'title' | 'titleSource' | 'provider' | 'status' | 'machine' | 'chats'>;
+/* What a reader of the project's rows takes of a node: its chrome and who it talks to. A drag or a resize changes none of it. */
+const ROW_FIELDS = ['id', 'kind', 'title', 'titleSource', 'provider', 'status', 'machine', 'chats'] as const satisfies readonly (keyof CanvasNode)[];
 
-export interface SidebarSource {
+export type ProjectSourceNode = Pick<CanvasNode, (typeof ROW_FIELDS)[number]>;
+
+export interface ProjectSource {
     views: ProjectView[];
     activeViewId: string | null;
     openViewIds: string[];
     /* The nodes of every canvas view by its id, in its order, live where the canvas is on screen. */
-    nodes: Record<string, readonly SidebarCanvasNode[]>;
-    nodesOf: NodesOfView<SidebarCanvasNode>;
+    nodes: Record<string, readonly ProjectSourceNode[]>;
+    nodesOf: NodesOfView<ProjectSourceNode>;
 }
 
-let cached: SidebarSource | null = null;
+let cached: ProjectSource | null = null;
 
-function project(node: CanvasNode): SidebarCanvasNode {
-    return {
-        id: node.id,
-        kind: node.kind,
-        title: node.title,
-        titleSource: node.titleSource,
-        provider: node.provider,
-        status: node.status,
-        machine: node.machine,
-        chats: node.chats
-    };
+function project(node: CanvasNode): ProjectSourceNode {
+    // The type is the list's own, so a field added to `ROW_FIELDS` is copied here and compared below.
+    return Object.fromEntries(ROW_FIELDS.map((field) => [field, node[field]])) as ProjectSourceNode;
 }
 
 /* Every change of a canvas store asks again, a pan included; `nodesOfView` hands back the same list then. */
-const rowNodes = memoByIdentity((nodes: readonly CanvasNode[]): readonly SidebarCanvasNode[] => nodes.map(project));
+const rowNodes = memoByIdentity((nodes: readonly CanvasNode[]): readonly ProjectSourceNode[] => nodes.map(project));
 
-function sameNode(before: SidebarCanvasNode | undefined, next: SidebarCanvasNode): boolean {
-    return (
-        before !== undefined &&
-        before.id === next.id &&
-        before.kind === next.kind &&
-        before.title === next.title &&
-        before.titleSource === next.titleSource &&
-        before.provider === next.provider &&
-        before.status === next.status &&
-        before.machine === next.machine &&
-        before.chats === next.chats
-    );
+function sameNode(before: ProjectSourceNode | undefined, next: ProjectSourceNode): boolean {
+    return before !== undefined && ROW_FIELDS.every((field) => before[field] === next[field]);
 }
 
-function sameNodes(before: readonly SidebarCanvasNode[] | undefined, next: readonly SidebarCanvasNode[]): boolean {
+function sameNodes(before: readonly ProjectSourceNode[] | undefined, next: readonly ProjectSourceNode[]): boolean {
     return before === next || (before !== undefined && before.length === next.length && next.every((node, at) => sameNode(before[at], node)));
 }
 
 /* The camera, the selection, geometry and the save state change no sidebar row. */
-export function sameSidebarSource(before: SidebarSource, next: SidebarSource): boolean {
+export function sameProjectSource(before: ProjectSource, next: ProjectSource): boolean {
     return (
         before.views === next.views &&
         before.activeViewId === next.activeViewId &&
@@ -66,17 +50,17 @@ export function sameSidebarSource(before: SidebarSource, next: SidebarSource): b
     );
 }
 
-function build(): SidebarSource {
+function build(): ProjectSource {
     const document = useDocument.getState();
     const nodes = Object.fromEntries(document.views.flatMap((view) => (isCanvasView(view) ? [[view.id, rowNodes(nodesOfView(view))]] : [])));
-    const next: SidebarSource = {
+    const next: ProjectSource = {
         views: document.views,
         activeViewId: document.activeViewId,
         openViewIds: document.layout === null ? [] : viewIdsIn(document.layout),
         nodes,
         nodesOf: (view) => nodes[view.id] ?? []
     };
-    if (cached === null || !sameSidebarSource(cached, next)) {
+    if (cached === null || !sameProjectSource(cached, next)) {
         cached = next;
     }
     return cached;
@@ -93,6 +77,6 @@ function subscribe(listener: () => void): () => void {
     };
 }
 
-export function useSidebarSource(): SidebarSource {
+export function useProjectSource(): ProjectSource {
     return useSyncExternalStore(subscribe, build);
 }

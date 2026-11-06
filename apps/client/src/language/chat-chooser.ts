@@ -13,9 +13,9 @@ import { create } from 'zustand';
 import { useChatDrawers } from '@/extensions/drawn-chats';
 import type { SelectionOffer } from '@/language/selection-to-chat';
 import { viewIdsIn } from '@/layout/split';
+import { useProjectSource } from '@/project/project-source';
 import { useDocument } from '@/state/document';
 import type { NodesOfView } from '@/state/view-nodes';
-import { useSidebarSource } from '@/surface/sidebar-source';
 
 export interface ChooserChat {
     readonly id: string;
@@ -98,7 +98,7 @@ export function chooserSections(chats: readonly ChooserChat[], linkedIds: readon
 }
 
 export function useChooserSections(linkedIds: readonly string[]): ChooserSections {
-    const source = useSidebarSource();
+    const source = useProjectSource();
     const layout = useDocument((s) => s.layout);
     const draws = useChatDrawers();
     return chooserSections(chooserChats(source.views, source.nodesOf, draws), linkedIds, chatsOpenHere(source.views, source.nodesOf, layout));

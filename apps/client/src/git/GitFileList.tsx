@@ -50,7 +50,6 @@ import { useGit } from '@/state/git';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { revealableInFiles } from '@/surface/panels/files-tree';
-import { setDragging } from '@/surface/view-drag';
 import { useTransport } from '@/workspace/context';
 
 const { applyExpansion, directoryHandle, menuTargetsOf, mergeCollapsedPaths, rebuildPaths, rowPathOf, selectOnly, visibleRows } = FileTree;
@@ -422,7 +421,6 @@ function GitTree({
                         }
                     }}
                     onRowDragStart={onDragStart}
-                    onDragEnd={() => setDragging(null)}
                     renderControl={renderControl}
                     renderDecoration={decorate}
                     rowIcon={(row) => (nodeOf(layout, row.path)?.kind === 'repo' ? FolderGit2 : undefined)}

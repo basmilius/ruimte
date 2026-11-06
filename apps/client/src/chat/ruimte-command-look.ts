@@ -11,9 +11,9 @@ import type {
 import { unescapeText } from '@ruimte/actions/text-escapes';
 import type { ContextVerb } from '@ruimte/contracts';
 import i18next from 'i18next';
+import { useProjectSource, type ProjectSource } from '@/project/project-source';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { memoByIdentity } from '@/state/identity-memo';
-import { useSidebarSource, type SidebarSource } from '@/surface/sidebar-source';
 import { RuimteMark } from '@/ui/RuimteMark';
 
 /* What a verb reads as: the name after "Ruimte", and the word the detail starts at, the verb itself being 0. */
@@ -136,7 +136,7 @@ interface ProjectName {
 }
 
 /* Every view and node of the project by id, under the title it has now; one map per state of the sidebar. */
-const projectNames = memoByIdentity((source: SidebarSource): ReadonlyMap<string, ProjectName> => {
+const projectNames = memoByIdentity((source: ProjectSource): ReadonlyMap<string, ProjectName> => {
     const names = new Map<string, ProjectName>();
     for (const view of source.views) {
         names.set(view.id, { name: view.name ?? '', view: true });
@@ -153,7 +153,7 @@ const projectNames = memoByIdentity((source: SidebarSource): ReadonlyMap<string,
  * each as the `#` chip a message draws for it.
  */
 export function useContextNames(endpointId: string, chatId: string): (word: string, option: string | null) => CommandName | null {
-    const names = projectNames(useSidebarSource());
+    const names = projectNames(useProjectSource());
     const here = endpointId === currentEndpointId() && names.has(chatId);
     return (word: string, option: string | null): CommandName | null => {
         const named = here ? names.get(word) : undefined;
