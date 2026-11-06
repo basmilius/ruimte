@@ -1,6 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { createCanvasStore } from '../../../apps/client/src/state/canvas.ts';
 import { launchCwdOf, launchGap } from '../src/launch-rules.ts';
 import { groupFrame } from '../src/node-defaults.ts';
 import { deriveNodeTitle } from '../src/node-title.ts';
@@ -15,6 +14,20 @@ import { freeSlug, slugOf } from '../src/slug.ts';
  * `check:swift` until the fixture is regenerated and the Swift test reads the new answer.
  */
 const destination = resolve(import.meta.dir, '../../../apps/ios/Tests/Fixtures/ports.json');
+
+/*
+ * The client's canvas store holds the rule for a line between two nodes. It is loaded by path, since the client's `@/`
+ * imports resolve in its own tsconfig and this package's type check must not read the client; only what is used here
+ * is typed.
+ */
+interface CanvasStoreLike {
+    setState(state: Record<string, unknown>): void;
+    getState(): { addEdge(from: string, to: string): string | null; edges: { from: string; to: string; label?: string }[] };
+}
+
+const { createCanvasStore } = (await import(resolve(import.meta.dir, '../../../apps/client/src/state/canvas.ts'))) as {
+    createCanvasStore(): CanvasStoreLike;
+};
 
 const SPACE_NINES = '12345678 '.repeat(5).trim();
 
@@ -254,7 +267,7 @@ function edgesDrawn(testCase: EdgeCase): { from: string; to: string; label: stri
                 node.id,
                 { id: node.id, kind: node.kind, title: node.id, x: index * 400, y: 0, w: 200, h: 100, ...(node.collapsed ? { collapsed: true } : {}) }
             ])
-        ) as never,
+        ),
         texts: {},
         order: testCase.nodes.map((node) => node.id),
         edges: testCase.edges.map((edge, index) => ({ id: `known-${index}`, ...edge })),
@@ -397,6 +410,4 @@ if (process.argv.includes('--check')) {
     await writeFile(destination, contents);
 }
 
-console.log(
-    `${process.argv.includes('--check') ? 'Checked' : 'Generated'} ${Object.values(ports).reduce((sum, group) => sum + (Array.isArray(group) ? group.length : 1), 0)} port cases.`
-);
+console.log(`${process.argv.includes('--check') ? 'Checked' : 'Generated'} ${Object.keys(ports).length} groups of port cases.`);
