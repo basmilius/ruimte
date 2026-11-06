@@ -58,9 +58,12 @@ export interface ServiceController {
     enableLinger(): ShellServiceState;
     /* "Restart now": the service moves onto the binary in this bundle, ending what runs on it. */
     restartNow(): Promise<ShellServiceState>;
-    /* "When idle": the old daemon stays for this session and restarts itself once nothing runs. */
+    /* "When idle": the old daemon stays until a `refresh` finds nothing running on it. */
     restartWhenIdle(): ShellServiceState;
-    /* Asks the port again: drops a pending restart once the new build answers, and restarts onto a changed definition once nothing runs. */
+    /*
+     * Asks the port again: drops a pending restart once the new build answers, and restarts onto the
+     * new build or a changed definition once nothing runs, the build only after "When idle".
+     */
     refresh(): Promise<ShellServiceState>;
     /* Whether `refresh` still has something to settle. */
     unsettled(): boolean;
@@ -380,6 +383,13 @@ export function createServiceController(deps: ServiceControllerDeps): ServiceCon
             const health = await deps.probe();
             if (health !== null && sameBuild(health, deps.expected)) {
                 pendingRestart = null;
+                return state();
+            }
+            if (manager && pendingRestart.answered && decideRestart(await deps.work()) === 'restart') {
+                // Cleared before the restart, so a pass that comes while it runs does not restart again.
+                pendingRestart = null;
+                failure = null;
+                await runService(manager, 'restart', () => manager.restart());
             }
             return state();
         },
