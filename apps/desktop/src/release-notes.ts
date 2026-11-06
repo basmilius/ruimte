@@ -1,4 +1,5 @@
-import { readFile, rename, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
+import { writeAtomic } from '@adecore/utils/fs';
 import { compareVersions, isVersion, type Release, type ReleaseNotesState } from '@ruimte/desktop-bridge';
 
 export const RELEASES_URL = 'https://api.github.com/repos/basmilius/ruimte/releases?per_page=20';
@@ -94,10 +95,8 @@ export function createReleaseNotes(options: ReleaseNotesOptions): ReleaseNotes {
     const stateOf = (current: CacheFile): ReleaseNotesState => ({ releases: current.releases, fetchedAt: current.fetchedAt, error });
 
     const save = async (next: CacheFile): Promise<void> => {
-        const temp = `${options.cacheFile}.tmp`;
         try {
-            await writeFile(temp, JSON.stringify(next));
-            await rename(temp, options.cacheFile);
+            await writeAtomic(options.cacheFile, JSON.stringify(next));
         } catch (e) {
             // The list in memory still serves this session; only the offline copy is missing.
             console.error('Could not write the release notes cache', e);

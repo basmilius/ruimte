@@ -1,3 +1,4 @@
+import { Serializer } from '@adecore/utils/async';
 import { ACTION_DEFINITIONS, VOICE_CONTROL_TOOL, type ActionCall, type ActionName, type ActionResult, type VoiceToolDefinition } from '@ruimte/actions';
 import {
     actionInput,
@@ -129,7 +130,7 @@ export class VoiceToolExecutor<Context> {
     readonly #calls = new Map<string, Promise<VoiceToolOutput>>();
     readonly #confirmations = new Map<string, PendingConfirmation>();
     readonly #reads = new Gate(PARALLEL_READS);
-    #changes: Promise<unknown> = Promise.resolve();
+    readonly #changes = new Serializer();
     #count = 0;
 
     constructor(options: VoiceToolExecutorOptions<Context>) {
@@ -260,9 +261,7 @@ export class VoiceToolExecutor<Context> {
         if (ACTION_DEFINITIONS[name].effect === 'read') {
             return this.#reads.run(run);
         }
-        const next = this.#changes.then(run, run);
-        this.#changes = next.catch(() => undefined);
-        return next;
+        return this.#changes.run(run);
     }
 
     async #runner(name: ActionName, run: () => Promise<ActionResult>): Promise<VoiceToolOutput> {

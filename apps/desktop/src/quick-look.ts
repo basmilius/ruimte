@@ -1,4 +1,5 @@
-import { isAbsolute, relative, sep } from 'node:path';
+import { isAbsolute } from 'node:path';
+import { isBelow } from '@adecore/utils/path';
 
 /* What the shell reads to decide on a path, injected so the decision is tested without a disk. */
 export interface QuickLookFiles {
@@ -45,8 +46,7 @@ export async function quickLookPath(windowKey: string | null, requested: unknown
     if (realFolder === null || realFile === null) {
         return null;
     }
-    const inside = relative(realFolder, realFile);
-    if (inside === '' || inside === '..' || inside.startsWith(`..${sep}`) || isAbsolute(inside)) {
+    if (!isBelow(realFolder, realFile)) {
         return null;
     }
     return (await files.isFile(realFile)) ? realFile : null;

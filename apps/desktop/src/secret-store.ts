@@ -1,5 +1,7 @@
-import { mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { KeyedSerializer } from '@adecore/utils/async';
+import { syncDirectory, writeAtomic } from '@adecore/utils/fs';
 
 /* The part of Electron's `safeStorage` the stores need, so a test can hand in its own. */
 export interface StringCipher {
@@ -23,47 +25,13 @@ function isMissing(error: unknown): boolean {
     return (error as NodeJS.ErrnoException | null)?.code === 'ENOENT';
 }
 
-// One queue per path, shared by every store on it: the desktop does not depend on `@adecore/agents` for its KeyedSerializer.
-const chains = new Map<string, Promise<unknown>>();
-let temporaryCounter = 0;
+// One queue per path, shared by every store on it.
+const queues = new KeyedSerializer();
 
-function inOrder<T>(path: string, work: () => Promise<T>): Promise<T> {
-    const previous = chains.get(path) ?? Promise.resolve();
-    const next = previous.then(work, work);
-    const settled = next.catch(() => undefined);
-    chains.set(path, settled);
-    void settled.then(() => {
-        if (chains.get(path) === settled) {
-            chains.delete(path);
-        }
-    });
-    return next;
-}
-
-/* Makes the removal itself survive a restart. */
-async function syncFolder(path: string): Promise<void> {
-    if (process.platform === 'win32') {
-        return;
-    }
-    const folder = await open(dirname(path), 'r');
-    try {
-        await folder.sync();
-    } finally {
-        await folder.close();
-    }
-}
-
-/* Through a temporary file beside `path`, readable by this user only, so a failed write never leaves half a file under its name. */
+/* Readable by this user only, and a failed write never leaves half a file under its name. */
 export async function writeEncrypted(path: string, cipher: StringCipher, plain: string): Promise<void> {
     await mkdir(dirname(path), { recursive: true });
-    const temporary = `${path}.${process.pid}-${temporaryCounter++}.tmp`;
-    try {
-        await writeFile(temporary, cipher.encryptString(plain), { mode: 0o600 });
-        await rename(temporary, path);
-    } catch (error: unknown) {
-        await rm(temporary, { force: true });
-        throw error;
-    }
+    await writeAtomic(path, cipher.encryptString(plain));
 }
 
 /* A secret is only persisted when Electron can encrypt it through the operating system's keychain. */
@@ -73,7 +41,7 @@ export function fileSecretStore(path: string, cipher: StringCipher, { reportUnre
     return {
         persistent: () => cipher.isEncryptionAvailable(),
         read() {
-            return inOrder(path, async () => {
+            return queues.run(path, async () => {
                 if (!cipher.isEncryptionAvailable()) {
                     return memory;
                 }
@@ -88,14 +56,15 @@ export function fileSecretStore(path: string, cipher: StringCipher, { reportUnre
             });
         },
         write(secret) {
-            return inOrder(path, async () => {
+            return queues.run(path, async () => {
                 memory = secret;
                 if (!cipher.isEncryptionAvailable()) {
                     return;
                 }
                 if (secret === null) {
                     await rm(path, { force: true });
-                    await syncFolder(path).catch((error: unknown) => {
+                    // Makes the removal itself survive a restart.
+                    await syncDirectory(dirname(path)).catch((error: unknown) => {
                         if (!isMissing(error)) {
                             throw error;
                         }

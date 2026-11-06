@@ -1,3 +1,4 @@
+import { SingleFlight } from '@adecore/utils/async';
 import { markPeerLapsed } from '@/clients/project/peer-lapse';
 import type { Transport } from '@/transport-api/transport';
 
@@ -12,20 +13,14 @@ async function throughAccount(machineId: string, self: Requester): Promise<void>
 let linker: PeerLinker = throughAccount;
 
 // One attempt per machine at a time: a second caller (the mirror's renewal, a pill clicked meanwhile) joins it, so one failure costs one round trip to the address book.
-const running = new Map<string, Promise<void>>();
+const running = new SingleFlight<void>();
 
 // Machines whose link just failed at the place a person made it; the renewal that follows would only ask the address book the same thing again.
 const failed = new Set<string>();
 
 /* Lets this machine work in `machineId`, with the account of this window vouching for it. */
 export function linkToPeer(machineId: string, self: Requester): Promise<void> {
-    const joined = running.get(machineId);
-    if (joined !== undefined) {
-        return joined;
-    }
-    const attempt = linker(machineId, self).finally(() => running.delete(machineId));
-    running.set(machineId, attempt);
-    return attempt;
+    return running.run(machineId, () => linker(machineId, self));
 }
 
 /*

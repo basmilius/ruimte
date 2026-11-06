@@ -3,6 +3,7 @@ import { copyFile, lstat, mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import type { AttachmentStore } from '@adecore/agents/chat';
+import { KeyedSerializer } from '@adecore/utils/async';
 import type { ChatAttachment } from '@ruimte/contracts';
 import { withoutControlCharacters } from '../bytes/byte-route.ts';
 import { AGENT_ATTACHMENT_TYPES } from './attachment-type.ts';
@@ -50,8 +51,8 @@ function parsed(file: string): { id: string; name: string | null; extension: str
  */
 export class AgentImages {
     private readonly attachments: Pick<AttachmentStore, 'folderOf'>;
-    // The last save of each chat, so parallel attaches count the folder one after the other and cannot pass the limit together.
-    private readonly saves = new Map<string, Promise<unknown>>();
+    // One save of a chat at a time, so parallel attaches count the folder one after the other and cannot pass the limit together.
+    private readonly saves = new KeyedSerializer();
 
     constructor(attachments: Pick<AttachmentStore, 'folderOf'>) {
         this.attachments = attachments;
@@ -59,15 +60,7 @@ export class AgentImages {
 
     /* Stores bytes whose type and size the caller already checked against `agentAttachmentType`; refuses past the per-chat limit. */
     save(chatId: string, upload: { name: string; mime: string; bytes: Uint8Array }): Promise<ChatAttachment> {
-        const turn = (this.saves.get(chatId) ?? Promise.resolve()).then(() => this.store(chatId, upload));
-        const settled = turn.catch(() => undefined);
-        this.saves.set(chatId, settled);
-        void settled.then(() => {
-            if (this.saves.get(chatId) === settled) {
-                this.saves.delete(chatId);
-            }
-        });
-        return turn;
+        return this.saves.run(chatId, () => this.store(chatId, upload));
     }
 
     private async store(chatId: string, upload: { name: string; mime: string; bytes: Uint8Array }): Promise<ChatAttachment> {

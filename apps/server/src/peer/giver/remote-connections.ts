@@ -1,4 +1,5 @@
 import { CodedError } from '@adecore/agents';
+import { SingleFlight } from '@adecore/utils/async';
 import { DIRECT_ATTEMPT_TIMEOUT_MS, type RemoteStatusEvent } from '@ruimte/contracts';
 import type { PeerStatement } from '@ruimte/pulsar';
 import { openBrokerLine, openPeerLink, type PeerLink, type PeerSigner } from './peer-connection.ts';
@@ -82,7 +83,7 @@ interface RemoteConnectionsOptions {
 export class RemoteConnections {
     private readonly options: RemoteConnectionsOptions;
     private readonly links = new Map<string, PeerLink>();
-    private readonly attempts = new Map<string, Promise<PeerLink>>();
+    private readonly attempts = new SingleFlight<PeerLink>();
     // Raised by every close, so an attempt that was running then keeps nothing it opens after.
     private readonly generations = new Map<string, number>();
     private readonly lostListeners = new Set<(machineId: string) => void>();
@@ -121,17 +122,7 @@ export class RemoteConnections {
         if (open !== undefined) {
             return open;
         }
-        const running = this.attempts.get(machineId);
-        if (running !== undefined) {
-            return running;
-        }
-        const attempt = this.dial(machineId).finally(() => {
-            if (this.attempts.get(machineId) === attempt) {
-                this.attempts.delete(machineId);
-            }
-        });
-        this.attempts.set(machineId, attempt);
-        return attempt;
+        return this.attempts.run(machineId, () => this.dial(machineId));
     }
 
     /*
@@ -154,7 +145,7 @@ export class RemoteConnections {
     /* Closes the link on purpose, such as when the machine is unlinked; nobody is told it was lost, and an attempt still running keeps nothing. */
     close(machineId: string): void {
         this.generations.set(machineId, this.generationOf(machineId) + 1);
-        this.attempts.delete(machineId);
+        this.attempts.forget(machineId);
         this.links.get(machineId)?.close();
         this.links.delete(machineId);
         this.options.status.forget(machineId);

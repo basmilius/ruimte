@@ -3,7 +3,9 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
+import { Serializer } from '@adecore/utils/async';
 import { isNotFound } from '@adecore/utils/errors';
+import { writeAtomic } from '@adecore/utils/fs';
 import { ExtensionManifestSchema, extensionManifestProblem, readExtensionPack, type ExtensionManifest } from '@ruimte/contracts';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';
@@ -87,10 +89,8 @@ async function readJson<T>(path: string, schema: z.ZodType<T>, fallback: T): Pro
     return parsed.data;
 }
 
-/* How the store writes its JSON files, handed in so a test can fail one as a full disk would. */
+/* How the store writes a JSON file whole, handed in so a test can fail one as a full disk would. */
 export type ExtensionStoreWrite = (file: string, text: string) => Promise<void>;
-
-const NODE_WRITE: ExtensionStoreWrite = (file, text) => writeFile(file, text);
 
 /*
  * What a machine has installed, under `$RUIMTE_HOME/extensions`: every version of an extension in a
@@ -101,38 +101,20 @@ export class ExtensionStore {
     private readonly root: string;
     private readonly revisions = new Map<string, number>();
     private readonly write: ExtensionStoreWrite;
-    private changes: Promise<unknown> = Promise.resolve();
+    /*
+     * One change at a time, from read to rename: two windows that install at once would otherwise both read the old
+     * `installed.json` and keep only one of them.
+     */
+    private readonly changes = new Serializer();
 
-    constructor(home: string, write: ExtensionStoreWrite = NODE_WRITE) {
+    constructor(home: string, write: ExtensionStoreWrite = (file, text) => writeAtomic(file, text)) {
         this.root = join(home, 'extensions');
         this.write = write;
     }
 
     private async writeJson(path: string, value: unknown): Promise<void> {
         await mkdir(dirname(path), { recursive: true });
-
-        const temporary = `${path}.${randomUUID()}.tmp`;
-
-        try {
-            await this.write(temporary, JSON.stringify(value, null, 2));
-            await rename(temporary, path);
-        } catch (e) {
-            await rm(temporary, { force: true });
-
-            throw e;
-        }
-    }
-
-    /*
-     * One change at a time, from read to rename: two windows that install at once would otherwise both read the old
-     * `installed.json` and keep only one of them.
-     */
-    private change<Value>(work: () => Promise<Value>): Promise<Value> {
-        const next = this.changes.then(work, work);
-
-        this.changes = next.catch(() => undefined);
-
-        return next;
+        await this.write(path, JSON.stringify(value, null, 2));
     }
 
     dataFolder(id: string): string {
@@ -246,7 +228,7 @@ export class ExtensionStore {
         const hash = createHash('sha256').update(bytes).digest('hex');
         const folder = this.versionFolder(manifest.id, hash);
 
-        return this.change(async () => {
+        return this.changes.run(async () => {
             // A folder of this hash holds exactly this pack, so one that cannot be read is unpacked again rather than refused.
             if ((await this.manifestIn(folder).catch(() => null)) === null) {
                 const unpacking = `${folder}.${randomUUID()}.tmp`;
@@ -278,7 +260,7 @@ export class ExtensionStore {
 
     /* `data/` and a dev link go with it: a person who removes an extension means all of it. */
     remove(id: string): Promise<void> {
-        return this.change(async () => {
+        return this.changes.run(async () => {
             const ids = await this.installedIds();
             const { [id]: _gone, ...links } = await this.links();
 
@@ -295,7 +277,7 @@ export class ExtensionStore {
 
     /* Of what runs: the dev link while there is one, and the installed version beside it, so neither turns on when the other ends. */
     setEnabled(id: string, enabled: boolean): Promise<void> {
-        return this.change(async () => {
+        return this.changes.run(async () => {
             const linked = (await this.links())[id] !== undefined;
             const current = await this.current(id);
 
@@ -327,7 +309,7 @@ export class ExtensionStore {
             throw new ExtensionPackError(problem.code, problem.message);
         }
 
-        return this.change(async () => {
+        return this.changes.run(async () => {
             const { id } = manifest;
             const links = await this.links();
             const { [id]: previous = {}, ...owners } = await this.linkOwners();
@@ -356,7 +338,7 @@ export class ExtensionStore {
      * before or after it.
      */
     unlink(id: string, owner?: string): Promise<boolean> {
-        return this.change(async () => {
+        return this.changes.run(async () => {
             if (owner !== undefined && (await this.linkOwner(id)) !== owner) {
                 return false;
             }

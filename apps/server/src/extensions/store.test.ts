@@ -213,7 +213,7 @@ describe('ExtensionStore', () => {
             const home = join(root, `failed-${from}-${file}-${failing}`);
             let writes: number | null = null;
             const store = new ExtensionStore(home, async (path, text) => {
-                if (writes !== null && basename(path).startsWith(`${file}.`) && ++writes === failing) {
+                if (writes !== null && basename(path) === file && ++writes === failing) {
                     throw Object.assign(new Error('ENOSPC: no space left on device'), { code: 'ENOSPC' });
                 }
 

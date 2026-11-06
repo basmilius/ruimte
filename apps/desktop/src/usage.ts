@@ -1,5 +1,6 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { writeAtomicSync } from '@adecore/utils/fs';
 import type { MachineMode } from '@ruimte/desktop-bridge';
 import {
     isoWeekOf,
@@ -64,9 +65,7 @@ export function fileDesktopUsageStore(path: string): DesktopUsageStore {
         },
         write: (text) => {
             mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-            const temp = `${path}.tmp`;
-            writeFileSync(temp, text, { mode: 0o600 });
-            renameSync(temp, path);
+            writeAtomicSync(path, text);
         }
     };
 }
