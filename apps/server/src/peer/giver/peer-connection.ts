@@ -1,4 +1,5 @@
 import { withTimeout } from '@adecore/utils/async';
+import { DIRECT_ATTEMPT_TIMEOUT_MS } from '@ruimte/contracts';
 import { BrokerPeer, brokerHostOf, signalMessage, type IceServer, type PeerStatement, type SignalEnvelope } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { weriftIceServers } from '../../pulsar/broker-relay.ts';
@@ -31,9 +32,6 @@ export interface PeerLink {
     close(): void;
 }
 
-/* How long a broker may take to sign in, and a machine to answer the offer and finish the handshake. */
-export const PEER_ATTEMPT_TIMEOUT_MS = 30_000;
-
 interface BrokerLineOptions {
     url: string;
     signer: PeerSigner;
@@ -49,7 +47,7 @@ interface BrokerLineOptions {
  * its mouth.
  */
 export async function openBrokerLine(options: BrokerLineOptions): Promise<SignalLine> {
-    const timeoutMs = options.timeoutMs ?? PEER_ATTEMPT_TIMEOUT_MS;
+    const timeoutMs = options.timeoutMs ?? DIRECT_ATTEMPT_TIMEOUT_MS;
     const publicKey = await options.signer.publicKey();
     const socket = options.socket?.(options.url) ?? new WebSocket(options.url);
     const listeners = new Set<(envelope: SignalEnvelope) => void>();
@@ -158,7 +156,7 @@ export async function openPeerLink(options: PeerLinkOptions): Promise<PeerLink> 
             daemonPublicKey: machine.publicKey
         },
         ...(options.statement === null ? {} : { access: { peer: options.statement, label: options.label } }),
-        timeoutMs: options.timeoutMs ?? PEER_ATTEMPT_TIMEOUT_MS,
+        timeoutMs: options.timeoutMs ?? DIRECT_ATTEMPT_TIMEOUT_MS,
         ping: options.ping ?? {},
         signal: (envelope) => line.send(envelope)
     });

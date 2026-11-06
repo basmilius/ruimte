@@ -1,7 +1,7 @@
 import { CodedError } from '@adecore/agents';
-import type { RemoteStatusEvent } from '@ruimte/contracts';
+import { DIRECT_ATTEMPT_TIMEOUT_MS, type RemoteStatusEvent } from '@ruimte/contracts';
 import type { PeerStatement } from '@ruimte/pulsar';
-import { PEER_ATTEMPT_TIMEOUT_MS, openBrokerLine, openPeerLink, type PeerLink, type PeerSigner } from './peer-connection.ts';
+import { openBrokerLine, openPeerLink, type PeerLink, type PeerSigner } from './peer-connection.ts';
 import type { PeerMachine, PeerMachines } from './peer-machines.ts';
 import type { PendingAdmissions } from './pending-admissions.ts';
 import type { RemoteStatus } from './remote-status.ts';
@@ -51,7 +51,7 @@ export function brokerDialer(options: BrokerDialerOptions): PeerDialer {
             if (url === null || url === undefined) {
                 throw new RemoteLinkError('no-broker', 'These machines cannot reach each other through your account');
             }
-            const timeoutMs = options.timeoutMs ?? PEER_ATTEMPT_TIMEOUT_MS;
+            const timeoutMs = options.timeoutMs ?? DIRECT_ATTEMPT_TIMEOUT_MS;
             const line = await openBrokerLine({ url, signer: options.signer, machinePublicKey: machine.publicKey, timeoutMs });
             try {
                 return await openPeerLink({ line, signer: options.signer, machine, label: options.label(), statement, timeoutMs });

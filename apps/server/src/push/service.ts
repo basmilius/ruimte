@@ -18,6 +18,7 @@ import {
 import {
     ADDRESS_BOOK_URL,
     MACHINE_ACTIVITY_NODE,
+    PUSH_APPROVAL_MAX_AGE_MS,
     PUSH_MAX_AGE_MS,
     pushMessage,
     pushCollapseIdMessage,
@@ -77,14 +78,13 @@ interface NodeState {
     ask: WaitAsk | null;
 }
 
-const APPROVAL_MAX_AGE_MS = 110_000;
 const TITLE_MAX = 160;
 const NEEDS_YOU_BODY = 'The agent needs your attention.';
 const BODY_MAX = 500;
 /* How long a client's report of a person at it holds; the client renews it well within that. */
 const PRESENCE_LEASE_MS = 60_000;
 const HOLD_MS = 60_000;
-// Short, since an approval card on the phone expires after `APPROVAL_MAX_AGE_MS`.
+// Short, since an approval card on the phone expires after `PUSH_APPROVAL_MAX_AGE_MS`.
 const APPROVAL_HOLD_MS = 10_000;
 
 /* What a subscription hears of for a node: the list its project has, else its own, else what every device heard before it could choose. */
@@ -275,7 +275,7 @@ export class PushService {
                 { id: 'deny', kind: 'deny', label: 'Deny' },
                 ...(item.canAllowAlways ? [{ id: 'allow-always', kind: 'remember' as const, label: 'Always allow' }] : [])
             ],
-            expiresAt: this.now() + APPROVAL_MAX_AGE_MS
+            expiresAt: this.now() + PUSH_APPROVAL_MAX_AGE_MS
         };
         waiting.set(item.requestId, card);
         if (!this.snoozed(chatId)) {
@@ -367,7 +367,7 @@ export class PushService {
         if (kind === 'woke' && node?.status === 'needs-you') {
             const cards = [...(this.approvals.get(nodeId)?.values() ?? [])];
             for (const card of cards) {
-                this.enqueue({ ...card, expiresAt: this.now() + APPROVAL_MAX_AGE_MS });
+                this.enqueue({ ...card, expiresAt: this.now() + PUSH_APPROVAL_MAX_AGE_MS });
             }
             if (cards.length === 0) {
                 this.waitAlert(node.target, nodeId, this.titleOf(nodeId, node.title));

@@ -1,10 +1,7 @@
-import type { BrowserDriveAction, BrowserDriveResult, BrowserPageState } from '@ruimte/contracts';
+import { BROWSER_ASK_TIMEOUT_MS, type BrowserDriveAction, type BrowserDriveResult, type BrowserPageState } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import type { SessionEvent, SessionSink } from '../wire.ts';
 import type { DriveOutcome } from './drive.ts';
-
-/* What one ask may take before the agent hears that nobody answered; a load has its own, shorter, wait in the client. */
-const ASK_TIMEOUT_MS = 15_000;
 
 /*
  * The pages this machine does not run itself. In the desktop shell a browser node is a <webview>
@@ -23,7 +20,7 @@ export class BrowserPages {
     private readonly timeoutMs: number;
     private asked = 0;
 
-    constructor(timeoutMs: number = ASK_TIMEOUT_MS) {
+    constructor(timeoutMs: number = BROWSER_ASK_TIMEOUT_MS) {
         this.timeoutMs = timeoutMs;
     }
 

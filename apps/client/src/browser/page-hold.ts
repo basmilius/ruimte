@@ -1,4 +1,4 @@
-import type { BrowserDriveEvent, BrowserDriveResult, BrowserPageState } from '@ruimte/contracts';
+import { BROWSER_LOAD_TIMEOUT_MS, BROWSER_START_TIMEOUT_MS, type BrowserDriveEvent, type BrowserDriveResult, type BrowserPageState } from '@ruimte/contracts';
 import { base64Of } from '@/base64';
 import { reportPageAsk } from '@/browser/page-asks';
 import { pageSnapshots } from '@/browser/page-snapshots';
@@ -6,13 +6,6 @@ import { browserRegistry, useBrowser, type BrowserState } from '@/clients/browse
 import { endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
 import type { Transport } from '@/transport-api/transport';
 import { watchPool } from '@/transport/pool-watch';
-
-/* How long a page is given to come to rest before this client answers with wherever it got to. Under
-   the daemon's own wait, so an agent hears the page and not a timer. */
-const LOAD_TIMEOUT_MS = 10_000;
-
-/* A navigation that never starts (an anchor on the page it is already on) is over by doing nothing. */
-const START_TIMEOUT_MS = 1_500;
 
 /* What the daemon is told about a page this client holds; the icon and the stream are the client's own. */
 export function pageStateOf(browserId: string, row: BrowserState): BrowserPageState {
@@ -57,8 +50,8 @@ function settled(key: string): Promise<void> {
                 if (!started) {
                     done();
                 }
-            }, START_TIMEOUT_MS),
-            setTimeout(done, LOAD_TIMEOUT_MS)
+            }, BROWSER_START_TIMEOUT_MS),
+            setTimeout(done, BROWSER_LOAD_TIMEOUT_MS)
         );
     });
 }

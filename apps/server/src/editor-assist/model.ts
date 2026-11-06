@@ -4,6 +4,7 @@ import { CodedError } from '@adecore/agents';
 import { ChatChild, type SpawnChatProcess } from '@adecore/agents/chat';
 import { cliExecutable } from '@adecore/agents/providers';
 import {
+    ANSWER_TIMEOUT_MS,
     EDITOR_ASSIST_INSTRUCTIONS,
     type EditorAssistAgent,
     type EditorAssistGenerateResult,
@@ -27,7 +28,6 @@ export interface EditorAssistRequest {
 }
 
 const MAX_PENDING = 4;
-const TIMEOUT_MS = 60_000;
 const MAX_ANSWER_LENGTH = 64_000;
 
 /* One print-mode CLI per request, in an empty folder with no project configuration or chat context. */
@@ -72,7 +72,7 @@ export class EditorAssistModel {
         const timer = setTimeout(() => {
             timedOut = true;
             controller.abort();
-        }, TIMEOUT_MS);
+        }, ANSWER_TIMEOUT_MS);
 
         try {
             const { provider, model, account } = await selectAssistAgent(this.options, request.agent);
@@ -153,7 +153,7 @@ export class EditorAssistModel {
 
     private aborted(timedOut: boolean): EditorAssistGenerateResult {
         if (timedOut) {
-            throw new CodedError('failed', 'The editor model did not answer within 60 seconds.');
+            throw new CodedError('failed', `The editor model did not answer within ${ANSWER_TIMEOUT_MS / 1000} seconds.`);
         }
 
         return { state: 'aborted', text: '' };

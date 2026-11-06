@@ -1,15 +1,9 @@
-import { channelBinding, DIRECT_CHANNEL_LABEL } from '@ruimte/contracts';
+import { channelBinding, DIRECT_ATTEMPT_TIMEOUT_MS, DIRECT_CHANNEL_LABEL, ICE_GATHER_TIMEOUT_MS } from '@ruimte/contracts';
 import type { IceServer, SignalEnvelope } from '@ruimte/pulsar';
 import type { RTCPeerConnection } from 'werift';
 import { errorText } from '../error-text.ts';
 import type { ClientAccess } from '../wire.ts';
 import { directChannel, fromWerift, type DirectChannel } from './data-channel.ts';
-
-// Offer to open channel, handshake included; a peer that has not got that far by then is not coming.
-const ATTEMPT_TIMEOUT_MS = 30_000;
-
-// ICE is gathered whole before the answer goes out; a STUN server that does not answer costs this much, not the attempt.
-const GATHER_TIMEOUT_MS = 5_000;
 
 // Attempts that have not opened their channel yet, over every caller together.
 const MAX_OPEN_ATTEMPTS = 32;
@@ -116,7 +110,7 @@ export class DirectPeers {
             icePortRange: this.options.portRange ?? undefined,
             iceAdditionalHostAddresses: this.options.hostAddresses.length > 0 ? this.options.hostAddresses : undefined
         });
-        const timeoutMs = this.options.attemptTimeoutMs ?? ATTEMPT_TIMEOUT_MS;
+        const timeoutMs = this.options.attemptTimeoutMs ?? DIRECT_ATTEMPT_TIMEOUT_MS;
         const attempt: Attempt = {
             peer,
             channel: null,
@@ -231,7 +225,7 @@ function gathered(peer: RTCPeerConnection): Promise<void> {
         const timer = setTimeout(() => {
             subscription.unSubscribe();
             resolve();
-        }, GATHER_TIMEOUT_MS);
+        }, ICE_GATHER_TIMEOUT_MS);
         const subscription = peer.iceGatheringStateChange.subscribe((state) => {
             if (state === 'complete') {
                 clearTimeout(timer);

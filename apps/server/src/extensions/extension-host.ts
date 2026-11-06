@@ -4,7 +4,7 @@ import { appendFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises
 import { dirname, join } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
 import { isNotFound } from '@adecore/utils/errors';
-import { EXTENSION_API_VERSION, type ExtensionActionName, type ExtensionInfo, type ExtensionStatus } from '@ruimte/contracts';
+import { ANSWER_TIMEOUT_MS, EXTENSION_API_VERSION, type ExtensionActionName, type ExtensionInfo, type ExtensionStatus } from '@ruimte/contracts';
 import { z } from 'zod';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
@@ -28,8 +28,6 @@ import { ExtensionRefusal, extensionFailureOf } from './refusal.ts';
 import { ownValue, parseKeyValues } from './server-api.ts';
 import { isDamaged, manifestOfPack, type DamagedExtension, type ExtensionStore, type StoredExtension } from './store.ts';
 
-// Under the client's 60 seconds, so a person reads this answer rather than a dropped request.
-const CALL_TIMEOUT_MS = 50_000;
 const MAX_CRASHES = 3;
 const KILL_AFTER_MS = 5_000;
 const RUNTIME_FILE = 'runtime.js';
@@ -758,7 +756,7 @@ export class ExtensionHost {
         const { promise: ready, resolve: resolveReady, reject: rejectReady } = Promise.withResolvers<void>();
         const { promise: ended, resolve: end } = Promise.withResolvers<void>();
         // One that hangs while it loads would otherwise hold every call to it for good.
-        const startTimer = setTimeout(() => this.stop(id), CALL_TIMEOUT_MS);
+        const startTimer = setTimeout(() => this.stop(id), ANSWER_TIMEOUT_MS);
         const markReady = (): void => {
             clearTimeout(startTimer);
             resolveReady();
@@ -1024,7 +1022,7 @@ export class ExtensionHost {
             const timer = setTimeout(() => {
                 running.pending.delete(id);
                 reject(new ExtensionRefusal('timeout', `${label} did not answer in time`));
-            }, CALL_TIMEOUT_MS);
+            }, ANSWER_TIMEOUT_MS);
 
             running.pending.set(id, { resolve, reject, timer });
             running.child.stdin.write(`${JSON.stringify({ ...message, id })}\n`);

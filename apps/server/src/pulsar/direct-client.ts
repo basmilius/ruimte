@@ -3,7 +3,9 @@ import { wait, withTimeout } from '@adecore/utils/async';
 import {
     ChannelLiveness,
     channelBinding,
+    DIRECT_ATTEMPT_TIMEOUT_MS,
     DIRECT_PING_TICK_MS,
+    ICE_GATHER_TIMEOUT_MS,
     directPingFrame,
     clientChannelMessage,
     daemonChannelMessage,
@@ -105,14 +107,14 @@ export class DirectClient {
             this.refused = (reason) => reject(new Error(`The machine closed the attempt: ${reason}`));
         });
         await this.peer.setLocalDescription(await this.peer.createOffer());
-        await waitFor(() => this.peer.iceGatheringState === 'complete', 5_000).catch(() => undefined);
+        await waitFor(() => this.peer.iceGatheringState === 'complete', ICE_GATHER_TIMEOUT_MS).catch(() => undefined);
         this.offerSdp = this.peer.localDescription!.sdp;
         const offer = this.options.access
             ? { kind: 'offer' as const, sdp: this.offerSdp, access: this.options.access }
             : { kind: 'offer' as const, sdp: this.offerSdp };
         this.options.signal({ connectionId: this.connectionId, signal: offer });
 
-        const timeoutMs = this.options.timeoutMs ?? 30_000;
+        const timeoutMs = this.options.timeoutMs ?? DIRECT_ATTEMPT_TIMEOUT_MS;
         const answerSdp = await withTimeout(answer, timeoutMs, 'The machine did not answer the offer');
         await this.peer.setRemoteDescription({ type: 'answer', sdp: answerSdp });
         const binding = channelBinding(this.offerSdp, answerSdp);

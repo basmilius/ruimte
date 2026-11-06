@@ -13,6 +13,7 @@ import {
     DirectVerdictFrameSchema,
     FrameAssembler,
     isBinaryPiece,
+    ICE_GATHER_TIMEOUT_MS,
     isDeflatedPiece,
     LIVE_FRAME_MAX_BYTES,
     protocolMismatch,
@@ -29,9 +30,6 @@ import { socketSignaling, type Signal, type Signaling, type SignalingOpener } fr
 
 // Offer to handshake; ICE with a STUN server that answers slowly still fits, a path that does not exist does not.
 const CONNECT_TIMEOUT_MS = 20_000;
-
-// How long ICE may gather before the offer goes out with the candidates it has.
-const GATHER_TIMEOUT_MS = 5_000;
 
 // The same ceiling the daemon holds a channel to once it is in; the handshake frames are a few hundred bytes.
 const FRAME_CHARS = 16 * 1024 * 1024;
@@ -361,7 +359,7 @@ export function webRtcLink(options: WebRtcLinkOptions): LinkOpener {
                 }
             };
             await created.setLocalDescription(await created.createOffer());
-            await gathered(created, options.gatherMs ?? GATHER_TIMEOUT_MS);
+            await gathered(created, options.gatherMs ?? ICE_GATHER_TIMEOUT_MS);
             if (ended) {
                 return;
             }

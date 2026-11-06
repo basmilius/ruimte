@@ -72,6 +72,20 @@ export const PushRoutingSchema = z.object({
 });
 export type PushRouting = z.infer<typeof PushRoutingSchema>;
 
+/* What the ciphertext of one push may be in base64url characters; the worker and the device both read it whole. */
+export const PUSH_CIPHERTEXT_MAX_CHARS = 3200;
+
+// AES-GCM appends its tag to the ciphertext.
+const PUSH_TAG_BYTES = 16;
+
+/* How many base64url characters a plaintext of that many bytes comes to once encrypted. */
+export function pushCiphertextChars(plaintextBytes: number): number {
+    return Math.ceil(((plaintextBytes + PUSH_TAG_BYTES) * 4) / 3);
+}
+
+/* The most plaintext an alert is given: APNs counts UTF-8 bytes, and the ciphertext of this has to stay within `PUSH_CIPHERTEXT_MAX_CHARS`. */
+export const PUSH_PLAINTEXT_MAX_BYTES = 2200;
+
 const signature = z.string().regex(/^[A-Za-z0-9_-]{86}$/);
 const encrypted = {
     ephemeralKey: key,
@@ -81,7 +95,7 @@ const encrypted = {
         .string()
         .regex(/^[A-Za-z0-9_-]+$/)
         .min(22)
-        .max(3200),
+        .max(PUSH_CIPHERTEXT_MAX_CHARS),
     signature
 };
 
@@ -94,6 +108,8 @@ export type PushEnvelope = z.infer<typeof PushEnvelopeSchema>;
 
 export const MACHINE_ACTIVITY_NODE = '__ruimte_machine_activity__';
 export const PUSH_MAX_AGE_MS = 120_000;
+/* An approval card on the phone expires a little before the push that carried it. */
+export const PUSH_APPROVAL_MAX_AGE_MS = PUSH_MAX_AGE_MS - 10_000;
 export const PUSH_MAX_CLOCK_SKEW_MS = 30_000;
 export const PUSH_HKDF_SALT = 'pulsar-push-encryption-v1';
 /* A lane keeps a node's alerts of one kind from replacing those of another on the device. */

@@ -2,6 +2,7 @@ import { createCipheriv, createPublicKey, diffieHellman, generateKeyPairSync, hk
 import { clipText } from '@ruimte/contracts';
 import {
     PUSH_HKDF_SALT,
+    PUSH_PLAINTEXT_MAX_BYTES,
     PushAlertContentSchema,
     PushReadContentSchema,
     type PushReadContent,
@@ -29,7 +30,7 @@ export function encryptPush(
     const fitted = 'through' in content ? PushReadContentSchema.parse(content) : PushAlertContentSchema.parse(content);
     let bytes = Buffer.from(JSON.stringify(fitted));
     // APNs counts UTF-8 bytes, so a short emoji-rich command can exceed the envelope budget.
-    while (bytes.length > 2200 && 'body' in fitted && fitted.body.length > 0) {
+    while (bytes.length > PUSH_PLAINTEXT_MAX_BYTES && 'body' in fitted && fitted.body.length > 0) {
         fitted.body = clipText(fitted.body, Math.floor(fitted.body.length / 2));
         bytes = Buffer.from(JSON.stringify(fitted));
     }

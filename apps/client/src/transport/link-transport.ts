@@ -11,6 +11,7 @@ import {
     type EventType,
     type LiveFrameEvent,
     type RequestMap,
+    REQUEST_TIMEOUT_MS,
     type RequestType
 } from '@ruimte/contracts';
 import i18next from 'i18next';
@@ -30,8 +31,6 @@ const ADDRESS_TIMEOUT_MS = 20_000;
 // A machine that accepted the link but has not answered the protocol check by then is an attempt that failed.
 const GATE_TIMEOUT_MS = 20_000;
 
-// A request with no answer by then fails, so a handler that hangs is an error and not a spinner forever.
-const REQUEST_TIMEOUT_MS = 60_000;
 // A drop the reconnect mends within this time (a daemon restart, a Mac waking) is only a metric, not a report.
 const DROP_GRACE_MS = 30_000;
 

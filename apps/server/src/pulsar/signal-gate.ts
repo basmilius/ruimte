@@ -1,9 +1,7 @@
+import { SIGNAL_OWNER_TTL_MS } from '@ruimte/contracts';
 import { signalMessage, type SignalOfferAccess, type SignalEnvelope } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import type { StatementVerdict } from './statement.ts';
-
-// How long a connection id stays tied to the key that offered it; well past the attempt timeout in `DirectPeers`.
-const OWNER_TTL_MS = 60_000;
 
 // What became of one signal: passed on, answered with a refusal, or dropped for a signature that does not hold.
 type GateOutcome = 'passed' | 'refused' | 'dropped';
@@ -72,7 +70,7 @@ export class SignalGate {
             return 'refused';
         }
         if (!owner && signal.kind === 'offer') {
-            this.owners.set(envelope.connectionId, { publicKey: from, expiresAt: now + OWNER_TTL_MS });
+            this.owners.set(envelope.connectionId, { publicKey: from, expiresAt: now + SIGNAL_OWNER_TTL_MS });
         }
         this.options.receive(envelope, reply);
         return 'passed';

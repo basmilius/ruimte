@@ -92,6 +92,7 @@ export { explainPrompt, type ExplainInput } from './editor-assist-explain.ts';
 export { cleanGhost, ghostPrompt, type GhostInput } from './editor-assist-ghost.ts';
 export { NAMES_ASKED, namesPrompt, parseNames, type NamesInput } from './editor-assist-names.ts';
 export { EDITOR_ASSIST_INSTRUCTIONS } from './editor-assist-purposes.ts';
+export * from './timeouts.ts';
 export * from './launches.ts';
 export * from './launch-rules.ts';
 export * from './secrets.ts';
