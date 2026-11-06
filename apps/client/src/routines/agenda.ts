@@ -1,4 +1,4 @@
-import { dueTimesBetween, wallTimeOf, zonedTime, type RoutineEntry, type RoutineRun, type RoutineSchedule } from '@ruimte/contracts';
+import { dueTimesBetween, freeSlug, wallTimeOf, zonedTime, type RoutineEntry, type RoutineRun, type RoutineSchedule } from '@ruimte/contracts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -222,16 +222,5 @@ export function runsWaiting(entries: readonly RoutineEntry[]): Array<{ entry: Ro
 
 /* A short id a routine is named by in its files, out of its title, that none of the project's others has. */
 export function freshRoutineId(title: string, taken: ReadonlySet<string>): string {
-    const base =
-        title
-            .toLowerCase()
-            .normalize('NFKD')
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '')
-            .slice(0, 48) || 'routine';
-    let candidate = base;
-    for (let count = 2; taken.has(candidate); count++) {
-        candidate = `${base}-${count}`;
-    }
-    return candidate;
+    return freeSlug(title, 'routine', taken);
 }

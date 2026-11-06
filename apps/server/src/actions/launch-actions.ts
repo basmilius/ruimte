@@ -1,11 +1,10 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers, ActionInput } from '@ruimte/actions';
-import { isSecretReference, type LaunchConfig, type LaunchConfigKind, type LaunchConfigOverlay } from '@ruimte/contracts';
+import { freeSlug, isSecretReference, type LaunchConfig, type LaunchConfigKind, type LaunchConfigOverlay } from '@ruimte/contracts';
 import { field, orNote } from '../canvas/host.ts';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
 import type { LaunchHost, LaunchReading } from '../launches/agent-host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
-import { freeSlug } from './slug.ts';
 
 export function launchHostOf(context: ServerActionContext): LaunchHost {
     return hostService(context, 'launches', 'no-launches', 'This machine runs no launches');

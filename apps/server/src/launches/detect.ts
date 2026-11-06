@@ -4,7 +4,7 @@ import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { fileExists } from '@adecore/utils/fs';
 import { isWithin } from '@adecore/utils/path';
 import { isRecord } from '@adecore/utils/record';
-import type { LaunchConfig, LaunchConfigEnv, LaunchConfigKind, LaunchSuggestion } from '@ruimte/contracts';
+import { freeSlug, type LaunchConfig, type LaunchConfigEnv, type LaunchConfigKind, type LaunchSuggestion } from '@ruimte/contracts';
 import { readVscodeLaunch } from './vscode.ts';
 
 /*
@@ -110,15 +110,6 @@ function optionOf(element: XmlElement, name: string): string | undefined {
 
 export function shellQuote(value: string): string {
     return /^[\w@%+=:,./-]+$/.test(value) ? value : `'${value.replace(/'/g, `'\\''`)}'`;
-}
-
-function slugOf(name: string): string {
-    return (
-        name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '') || 'launch'
-    );
 }
 
 function filled(value: string | undefined): value is string {
@@ -527,11 +518,7 @@ export async function detectLaunches(folder: string, checkouts: readonly string[
     }
     const taken = new Set<string>();
     return found.slice(0, MAX_SUGGESTIONS).map(({ built, source, path }) => {
-        const base = slugOf(built.launch.name);
-        let id = base;
-        for (let i = 2; taken.has(id); i++) {
-            id = `${base}-${i}`;
-        }
+        const id = freeSlug(built.launch.name, 'launch', taken);
         taken.add(id);
         const cwd = built.launch.cwd === undefined ? undefined : portable(relative(folder, built.launch.cwd));
         const launch: LaunchConfig = { ...built.launch, id };

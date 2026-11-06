@@ -1,29 +1,14 @@
-import { isAbsolutePath, type GitRepo, type LaunchConfigEntry, type LaunchConfigKind, type LaunchesDocument, type LaunchSuggestion } from '@ruimte/contracts';
+import {
+    freeSlug,
+    isAbsolutePath,
+    type GitRepo,
+    type LaunchConfigEntry,
+    type LaunchConfigKind,
+    type LaunchesDocument,
+    type LaunchSuggestion
+} from '@ruimte/contracts';
 import i18next from 'i18next';
 import { basenameOf } from '@/paths/file-path';
-
-/* The daemon's import writes ids the same way, so an imported launch and a typed one read alike. */
-export function slugOf(name: string): string {
-    return (
-        name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '') || 'launch'
-    );
-}
-
-export function uniqueId(name: string, taken: ReadonlySet<string>): string {
-    const base = slugOf(name);
-    if (!taken.has(base)) {
-        return base;
-    }
-    for (let i = 2; ; i += 1) {
-        const candidate = `${base}-${i}`;
-        if (!taken.has(candidate)) {
-            return candidate;
-        }
-    }
-}
 
 export interface EnvRow {
     /* Holds a row in place while its key is typed and a row above it goes. */
@@ -97,7 +82,7 @@ export function savedLaunches(drafts: readonly LaunchDraft[]): LaunchConfigEntry
     const rename = new Map<string, string>();
     for (const draft of drafts) {
         if (draft.fresh) {
-            const id = uniqueId(draft.entry.name, taken);
+            const id = freeSlug(draft.entry.name, 'launch', taken);
             taken.add(id);
             rename.set(draft.entry.id, id);
         }
@@ -209,7 +194,7 @@ export function driftOf(launch: LaunchConfigEntry, suggestions: readonly LaunchS
 export function importedLaunches(suggestions: readonly LaunchSuggestion[], share: boolean, document: Pick<LaunchesDocument, 'launches'>): LaunchConfigEntry[] {
     const taken = new Set(document.launches.map((launch) => launch.id));
     return suggestions.map((suggestion) => {
-        const id = uniqueId(suggestion.launch.id, taken);
+        const id = freeSlug(suggestion.launch.id, 'launch', taken);
         taken.add(id);
         return { ...suggestion.launch, id, shared: share && !suggestion.private, origin: originOf(suggestion) };
     });

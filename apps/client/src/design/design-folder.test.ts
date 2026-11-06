@@ -1,17 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectView } from '@ruimte/contracts';
-import { designSlug, freeDesignFolder } from './design-folder';
+import { freeDesignFolder } from './design-folder';
 
 function design(id: string, path: string): ProjectView {
     return { kind: 'design', id, name: id, node: {}, path };
 }
 
 describe('the folder of a new design', () => {
-    test('is the name in lowercase words joined by dashes, without accents', () => {
-        expect(designSlug('Onboarding')).toBe('onboarding');
-        expect(designSlug('Pitch deck: Q4!')).toBe('pitch-deck-q4');
-        expect(designSlug('Café crème')).toBe('cafe-creme');
-        expect(designSlug('  --  ')).toBe('design');
+    test('is the name in lowercase words, and design for a name with none', () => {
+        expect(freeDesignFolder([], 'Pitch deck: Q4!')).toBe('pitch-deck-q4');
+        expect(freeDesignFolder([], '  --  ')).toBe('design');
     });
 
     test('is a name with a number when another design of the project has that folder', () => {

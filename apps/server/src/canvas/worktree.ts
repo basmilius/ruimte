@@ -1,18 +1,12 @@
 import { ToolRefusal } from '@adecore/agents/context';
-import type { Worktree } from '@ruimte/contracts';
+import { slugOf, type Worktree } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 import type { WorktreeWant } from '../git/worktree-host.ts';
 import { type AgentCall } from './host.ts';
 
 /* A branch name out of a title: lower case, only what every ref takes, and never empty. */
 export function branchSlug(title: string): string {
-    const slug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .slice(0, 48)
-        .replace(/-+$/, '');
-    return slug === '' ? 'agent' : slug;
+    return slugOf(title, 'agent');
 }
 
 /* Refuses a project that is not in a git repository, before anything is made for it. */

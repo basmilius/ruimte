@@ -1,4 +1,4 @@
-import { isAbsolutePath, type ChatMoveInfoResult, type ChatMoveTarget } from '@ruimte/contracts';
+import { isAbsolutePath, slugOf, type ChatMoveInfoResult, type ChatMoveTarget } from '@ruimte/contracts';
 
 /* The value of the project select that stands for a project to make. */
 export const NEW_PROJECT = '__new__';
@@ -22,13 +22,7 @@ export const MAX_WORKED_CARDS = 3;
 
 /* A folder name out of a project name: lower case words joined with hyphens. */
 export function folderSlug(name: string): string {
-    return name
-        .trim()
-        .toLowerCase()
-        .normalize('NFKD')
-        .replace(/[̀-ͯ]/g, '')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
+    return slugOf(name, '');
 }
 
 /* Joins in the style of the parent: a machine with backslashes in its paths gets them back. */

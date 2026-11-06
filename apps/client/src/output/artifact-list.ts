@@ -1,4 +1,12 @@
-import { ARTIFACT_KINDS, isKnownArtifactKind, type Artifact, type ArtifactSummary, type ArtifactVersion, type KnownArtifactKind } from '@ruimte/contracts';
+import {
+    ARTIFACT_KINDS,
+    isKnownArtifactKind,
+    slugOf,
+    type Artifact,
+    type ArtifactSummary,
+    type ArtifactVersion,
+    type KnownArtifactKind
+} from '@ruimte/contracts';
 
 export type ArtifactSource = 'agent' | 'person' | 'routine';
 type DateFilter = 'all' | 'today' | 'week' | 'month' | 'older';
@@ -121,9 +129,5 @@ export function suggestedCopyName(artifact: Artifact, version: ArtifactVersion):
         const name = version.files[0]!.name;
         return name.slice(name.lastIndexOf('/') + 1);
     }
-    const slug = artifact.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-    return slug === '' ? 'output' : slug;
+    return slugOf(artifact.title, 'output');
 }

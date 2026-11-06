@@ -1,15 +1,10 @@
-import { isCanvasView, isChatHostView, type GitIssue, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import { isCanvasView, isChatHostView, slugOf, type GitIssue, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import { fenceOf } from '@/language/selection-to-chat';
 import type { NodesOfView } from '@/state/view-nodes';
 
 /* The branch an issue starts on: `issue-12-` and what its title leaves of a ref. */
 export function issueBranch(issue: Pick<GitIssue, 'number' | 'title'>): string {
-    const slug = issue.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .slice(0, 40)
-        .replace(/-+$/, '');
+    const slug = slugOf(issue.title, '', 40);
     return slug === '' ? `issue-${issue.number}` : `issue-${issue.number}-${slug}`;
 }
 

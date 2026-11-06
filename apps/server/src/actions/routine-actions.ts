@@ -2,14 +2,13 @@ import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
 import { isWithin } from '@adecore/utils/path';
 import type { ActionHandlers, ActionInput } from '@ruimte/actions';
-import { ROUTINE_LIMITS, RoutineSchema, type Routine, type RoutineEntry, type RoutineKind } from '@ruimte/contracts';
+import { freeSlug, ROUTINE_LIMITS, RoutineSchema, slugOf, type Routine, type RoutineEntry, type RoutineKind } from '@ruimte/contracts';
 import { requireInstalled } from '../canvas/agents.ts';
 import { field, orNote } from '../canvas/host.ts';
 import { selectionForOpening } from '../canvas/model.ts';
 import type { RoutineAgentHost } from '../routines/agent-host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 import { launchHostOf, named } from './launch-actions.ts';
-import { freeSlug, slugOf } from './slug.ts';
 
 type RoutineFields = Omit<ActionInput<'routine.edit'>, 'routineId'>;
 
