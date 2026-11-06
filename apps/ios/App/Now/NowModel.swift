@@ -74,13 +74,13 @@ final class NowModel {
     /// A routine run that waits on a person as an entry a card answers, from what its machine's attention store holds
     /// of the run's chat. The chat is on no canvas, so the entry names the routine's project and the chat alone.
     func entry(for wait: ScheduledWait) -> ProjectViewEntry? {
-        guard let chatID = wait.run.chatID else { return nil }
+        guard let chatID = wait.run.chatId else { return nil }
         let machineID = wait.item.machineID
         let chat = feeds[machineID]?.session.attention.waits[chatID]
         let requests = unanswered(chat?.requests ?? [], machineID: machineID)
         return ProjectViewEntry(
             target: ProjectViewTarget(
-                machineID: machineID, projectID: wait.item.entry.projectID, viewID: chatID, itemID: chatID),
+                machineID: machineID, projectID: wait.item.entry.projectId, viewID: chatID, itemID: chatID),
             machineName: wait.item.machineName, projectName: wait.item.entry.projectName,
             title: wait.item.entry.title, kind: "chat", iconName: "workflow", status: .needsYou, requests: requests,
             repliesWithMessage: chat.map { feeds[machineID]?.denyReason.contains($0.provider) == true } ?? false)

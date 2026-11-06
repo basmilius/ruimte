@@ -10213,6 +10213,779 @@ public enum GitProgressEventPhase: String, CaseIterable, Codable, Sendable, Equa
     case `failed` = "failed"
 }
 
+public struct RoutineListResult: Codable, Sendable, Equatable {
+    public let `routines`: [RoutineEntry]
+    public let `revs`: [String: Int64]
+    public let `timeZone`: String
+
+    public init(`routines`: [RoutineEntry], `revs`: [String: Int64], `timeZone`: String) {
+        self.`routines` = `routines`
+        self.`revs` = `revs`
+        self.`timeZone` = `timeZone`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `routines` = try container.decode([RoutineEntry].self, forKey: .`routines`)
+        `revs` = try container.decode([String: Int64].self, forKey: .`revs`)
+        `timeZone` = try container.decode(String.self, forKey: .`timeZone`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`routines`, forKey: .`routines`)
+        try container.encode(`revs`, forKey: .`revs`)
+        try container.encode(`timeZone`, forKey: .`timeZone`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `routines` = "routines"
+        case `revs` = "revs"
+        case `timeZone` = "timeZone"
+    }
+}
+
+public struct RoutineEntry: Codable, Sendable, Equatable {
+    public let `routine`: Routine
+    public let `projectId`: String
+    public let `projectName`: String
+    public let `shared`: Bool
+    public let `local`: RoutineLocal
+    public let `digest`: String
+    public let `approved`: Bool
+    public let `held`: RoutineHeld?
+    public let `madeBy`: RoutineMadeBy?
+    public let `next`: Int64?
+    public let `runs`: [RoutineRun]
+    public let `artifactId`: String?
+
+    public init(`routine`: Routine, `projectId`: String, `projectName`: String, `shared`: Bool, `local`: RoutineLocal, `digest`: String, `approved`: Bool, `held`: RoutineHeld? = nil, `madeBy`: RoutineMadeBy? = nil, `next`: Int64?, `runs`: [RoutineRun], `artifactId`: String? = nil) {
+        self.`routine` = `routine`
+        self.`projectId` = `projectId`
+        self.`projectName` = `projectName`
+        self.`shared` = `shared`
+        self.`local` = `local`
+        self.`digest` = `digest`
+        self.`approved` = `approved`
+        self.`held` = `held`
+        self.`madeBy` = `madeBy`
+        self.`next` = `next`
+        self.`runs` = `runs`
+        self.`artifactId` = `artifactId`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `routine` = try container.decode(Routine.self, forKey: .`routine`)
+        `projectId` = try container.decode(String.self, forKey: .`projectId`)
+        `projectName` = try container.decode(String.self, forKey: .`projectName`)
+        `shared` = try container.decode(Bool.self, forKey: .`shared`)
+        `local` = try container.decode(RoutineLocal.self, forKey: .`local`)
+        `digest` = try container.decode(String.self, forKey: .`digest`)
+        `approved` = try container.decode(Bool.self, forKey: .`approved`)
+        `held` = try container.decodeIfPresent(RoutineHeld.self, forKey: .`held`)
+        `madeBy` = try container.decodeIfPresent(RoutineMadeBy.self, forKey: .`madeBy`)
+        `next` = try container.decode(Int64?.self, forKey: .`next`)
+        `runs` = try container.decode([RoutineRun].self, forKey: .`runs`)
+        `artifactId` = try container.decodeIfPresent(String.self, forKey: .`artifactId`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`routine`, forKey: .`routine`)
+        try container.encode(`projectId`, forKey: .`projectId`)
+        try container.encode(`projectName`, forKey: .`projectName`)
+        try container.encode(`shared`, forKey: .`shared`)
+        try container.encode(`local`, forKey: .`local`)
+        try container.encode(`digest`, forKey: .`digest`)
+        try container.encode(`approved`, forKey: .`approved`)
+        try container.encodeIfPresent(`held`, forKey: .`held`)
+        try container.encodeIfPresent(`madeBy`, forKey: .`madeBy`)
+        try container.encode(`next`, forKey: .`next`)
+        try container.encode(`runs`, forKey: .`runs`)
+        try container.encodeIfPresent(`artifactId`, forKey: .`artifactId`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `routine` = "routine"
+        case `projectId` = "projectId"
+        case `projectName` = "projectName"
+        case `shared` = "shared"
+        case `local` = "local"
+        case `digest` = "digest"
+        case `approved` = "approved"
+        case `held` = "held"
+        case `madeBy` = "madeBy"
+        case `next` = "next"
+        case `runs` = "runs"
+        case `artifactId` = "artifactId"
+    }
+}
+
+public enum Routine: Codable, Sendable, Equatable {
+    case `agent`(AgentRoutine)
+    case `command`(CommandRoutine)
+    case `launch`(LaunchRoutine)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Tag.self)
+        switch try container.decode(String.self, forKey: .value) {
+        case "agent": self = .`agent`(try AgentRoutine(from: decoder))
+        case "command": self = .`command`(try CommandRoutine(from: decoder))
+        case "launch": self = .`launch`(try LaunchRoutine(from: decoder))
+        default: throw WireValidationError.invalid("Unknown Routine tag")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case .`agent`(let value): try value.encode(to: encoder)
+        case .`command`(let value): try value.encode(to: encoder)
+        case .`launch`(let value): try value.encode(to: encoder)
+        }
+    }
+
+    private enum Tag: String, CodingKey { case value = "kind" }
+}
+
+public struct AgentRoutine: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `title`: String
+    public let `schedule`: RoutineSchedule
+    public let `outputKey`: String
+    public let `kind`: String
+    public let `prompt`: String
+    public let `provider`: String
+    public let `selection`: AgentRoutineSelection?
+    public let `mode`: String
+    public let `perRun`: AgentRoutinePerRun
+    public let `picked`: AgentRoutinePicked?
+
+    public init(`id`: String, `title`: String, `schedule`: RoutineSchedule, `outputKey`: String, `kind`: String = "agent", `prompt`: String, `provider`: String, `selection`: AgentRoutineSelection? = nil, `mode`: String, `perRun`: AgentRoutinePerRun, `picked`: AgentRoutinePicked? = nil) {
+        self.`id` = `id`
+        self.`title` = `title`
+        self.`schedule` = `schedule`
+        self.`outputKey` = `outputKey`
+        self.`kind` = `kind`
+        self.`prompt` = `prompt`
+        self.`provider` = `provider`
+        self.`selection` = `selection`
+        self.`mode` = `mode`
+        self.`perRun` = `perRun`
+        self.`picked` = `picked`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `title` = try container.decode(String.self, forKey: .`title`)
+        `schedule` = try container.decode(RoutineSchedule.self, forKey: .`schedule`)
+        `outputKey` = try container.decode(String.self, forKey: .`outputKey`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `prompt` = try container.decode(String.self, forKey: .`prompt`)
+        `provider` = try container.decode(String.self, forKey: .`provider`)
+        `selection` = try container.decodeIfPresent(AgentRoutineSelection.self, forKey: .`selection`)
+        `mode` = try container.decode(String.self, forKey: .`mode`)
+        `perRun` = try container.decode(AgentRoutinePerRun.self, forKey: .`perRun`)
+        `picked` = try container.decodeIfPresent(AgentRoutinePicked.self, forKey: .`picked`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`title`, forKey: .`title`)
+        try container.encode(`schedule`, forKey: .`schedule`)
+        try container.encode(`outputKey`, forKey: .`outputKey`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`prompt`, forKey: .`prompt`)
+        try container.encode(`provider`, forKey: .`provider`)
+        try container.encodeIfPresent(`selection`, forKey: .`selection`)
+        try container.encode(`mode`, forKey: .`mode`)
+        try container.encode(`perRun`, forKey: .`perRun`)
+        try container.encodeIfPresent(`picked`, forKey: .`picked`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `title` = "title"
+        case `schedule` = "schedule"
+        case `outputKey` = "outputKey"
+        case `kind` = "kind"
+        case `prompt` = "prompt"
+        case `provider` = "provider"
+        case `selection` = "selection"
+        case `mode` = "mode"
+        case `perRun` = "perRun"
+        case `picked` = "picked"
+    }
+}
+
+public enum RoutineSchedule: Codable, Sendable, Equatable {
+    case `once`(RoutineOnceSchedule)
+    case `weekly`(RoutineWeeklySchedule)
+    case `interval`(RoutineIntervalSchedule)
+    case `cron`(RoutineCronSchedule)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Tag.self)
+        switch try container.decode(String.self, forKey: .value) {
+        case "once": self = .`once`(try RoutineOnceSchedule(from: decoder))
+        case "weekly": self = .`weekly`(try RoutineWeeklySchedule(from: decoder))
+        case "interval": self = .`interval`(try RoutineIntervalSchedule(from: decoder))
+        case "cron": self = .`cron`(try RoutineCronSchedule(from: decoder))
+        default: throw WireValidationError.invalid("Unknown RoutineSchedule tag")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case .`once`(let value): try value.encode(to: encoder)
+        case .`weekly`(let value): try value.encode(to: encoder)
+        case .`interval`(let value): try value.encode(to: encoder)
+        case .`cron`(let value): try value.encode(to: encoder)
+        }
+    }
+
+    private enum Tag: String, CodingKey { case value = "kind" }
+}
+
+public struct RoutineOnceSchedule: Codable, Sendable, Equatable {
+    public let `kind`: String
+    public let `date`: String
+    public let `time`: String
+
+    public init(`kind`: String = "once", `date`: String, `time`: String) {
+        self.`kind` = `kind`
+        self.`date` = `date`
+        self.`time` = `time`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `date` = try container.decode(String.self, forKey: .`date`)
+        `time` = try container.decode(String.self, forKey: .`time`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`date`, forKey: .`date`)
+        try container.encode(`time`, forKey: .`time`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `date` = "date"
+        case `time` = "time"
+    }
+}
+
+public struct RoutineWeeklySchedule: Codable, Sendable, Equatable {
+    public let `kind`: String
+    public let `days`: [Int64]
+    public let `time`: String
+
+    public init(`kind`: String = "weekly", `days`: [Int64], `time`: String) {
+        self.`kind` = `kind`
+        self.`days` = `days`
+        self.`time` = `time`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `days` = try container.decode([Int64].self, forKey: .`days`)
+        `time` = try container.decode(String.self, forKey: .`time`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`days`, forKey: .`days`)
+        try container.encode(`time`, forKey: .`time`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `days` = "days"
+        case `time` = "time"
+    }
+}
+
+public struct RoutineIntervalSchedule: Codable, Sendable, Equatable {
+    public let `kind`: String
+    public let `days`: [Int64]
+    public let `every`: Int64
+    public let `from`: String
+    public let `to`: String
+
+    public init(`kind`: String = "interval", `days`: [Int64], `every`: Int64, `from`: String, `to`: String) {
+        self.`kind` = `kind`
+        self.`days` = `days`
+        self.`every` = `every`
+        self.`from` = `from`
+        self.`to` = `to`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `days` = try container.decode([Int64].self, forKey: .`days`)
+        `every` = try container.decode(Int64.self, forKey: .`every`)
+        `from` = try container.decode(String.self, forKey: .`from`)
+        `to` = try container.decode(String.self, forKey: .`to`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`days`, forKey: .`days`)
+        try container.encode(`every`, forKey: .`every`)
+        try container.encode(`from`, forKey: .`from`)
+        try container.encode(`to`, forKey: .`to`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `days` = "days"
+        case `every` = "every"
+        case `from` = "from"
+        case `to` = "to"
+    }
+}
+
+public struct RoutineCronSchedule: Codable, Sendable, Equatable {
+    public let `kind`: String
+    public let `expression`: String
+
+    public init(`kind`: String = "cron", `expression`: String) {
+        self.`kind` = `kind`
+        self.`expression` = `expression`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `expression` = try container.decode(String.self, forKey: .`expression`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`expression`, forKey: .`expression`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `expression` = "expression"
+    }
+}
+
+public struct AgentRoutineSelection: Codable, Sendable, Equatable {
+    public let `model`: String
+    public let `options`: [String: JSONValue]
+
+    public init(`model`: String, `options`: [String: JSONValue]) {
+        self.`model` = `model`
+        self.`options` = `options`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `model` = try container.decode(String.self, forKey: .`model`)
+        `options` = try container.decode([String: JSONValue].self, forKey: .`options`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`model`, forKey: .`model`)
+        try container.encode(`options`, forKey: .`options`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `model` = "model"
+        case `options` = "options"
+    }
+}
+
+public enum AgentRoutinePerRun: String, CaseIterable, Codable, Sendable, Equatable {
+    case `new` = "new"
+    case `continue` = "continue"
+}
+
+public struct AgentRoutinePicked: Codable, Sendable, Equatable {
+    public let `mentions`: [String]?
+    public let `skills`: [String]?
+    public let `chats`: [String]?
+    public let `references`: [String]?
+
+    public init(`mentions`: [String]? = nil, `skills`: [String]? = nil, `chats`: [String]? = nil, `references`: [String]? = nil) {
+        self.`mentions` = `mentions`
+        self.`skills` = `skills`
+        self.`chats` = `chats`
+        self.`references` = `references`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `mentions` = try container.decodeIfPresent([String].self, forKey: .`mentions`)
+        `skills` = try container.decodeIfPresent([String].self, forKey: .`skills`)
+        `chats` = try container.decodeIfPresent([String].self, forKey: .`chats`)
+        `references` = try container.decodeIfPresent([String].self, forKey: .`references`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(`mentions`, forKey: .`mentions`)
+        try container.encodeIfPresent(`skills`, forKey: .`skills`)
+        try container.encodeIfPresent(`chats`, forKey: .`chats`)
+        try container.encodeIfPresent(`references`, forKey: .`references`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `mentions` = "mentions"
+        case `skills` = "skills"
+        case `chats` = "chats"
+        case `references` = "references"
+    }
+}
+
+public struct CommandRoutine: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `title`: String
+    public let `schedule`: RoutineSchedule
+    public let `outputKey`: String
+    public let `kind`: String
+    public let `command`: String
+    public let `cwd`: String?
+
+    public init(`id`: String, `title`: String, `schedule`: RoutineSchedule, `outputKey`: String, `kind`: String = "command", `command`: String, `cwd`: String? = nil) {
+        self.`id` = `id`
+        self.`title` = `title`
+        self.`schedule` = `schedule`
+        self.`outputKey` = `outputKey`
+        self.`kind` = `kind`
+        self.`command` = `command`
+        self.`cwd` = `cwd`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `title` = try container.decode(String.self, forKey: .`title`)
+        `schedule` = try container.decode(RoutineSchedule.self, forKey: .`schedule`)
+        `outputKey` = try container.decode(String.self, forKey: .`outputKey`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `command` = try container.decode(String.self, forKey: .`command`)
+        `cwd` = try container.decodeIfPresent(String.self, forKey: .`cwd`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`title`, forKey: .`title`)
+        try container.encode(`schedule`, forKey: .`schedule`)
+        try container.encode(`outputKey`, forKey: .`outputKey`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`command`, forKey: .`command`)
+        try container.encodeIfPresent(`cwd`, forKey: .`cwd`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `title` = "title"
+        case `schedule` = "schedule"
+        case `outputKey` = "outputKey"
+        case `kind` = "kind"
+        case `command` = "command"
+        case `cwd` = "cwd"
+    }
+}
+
+public struct LaunchRoutine: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `title`: String
+    public let `schedule`: RoutineSchedule
+    public let `outputKey`: String
+    public let `kind`: String
+    public let `launchId`: String
+
+    public init(`id`: String, `title`: String, `schedule`: RoutineSchedule, `outputKey`: String, `kind`: String = "launch", `launchId`: String) {
+        self.`id` = `id`
+        self.`title` = `title`
+        self.`schedule` = `schedule`
+        self.`outputKey` = `outputKey`
+        self.`kind` = `kind`
+        self.`launchId` = `launchId`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `title` = try container.decode(String.self, forKey: .`title`)
+        `schedule` = try container.decode(RoutineSchedule.self, forKey: .`schedule`)
+        `outputKey` = try container.decode(String.self, forKey: .`outputKey`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `launchId` = try container.decode(String.self, forKey: .`launchId`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`title`, forKey: .`title`)
+        try container.encode(`schedule`, forKey: .`schedule`)
+        try container.encode(`outputKey`, forKey: .`outputKey`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`launchId`, forKey: .`launchId`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `title` = "title"
+        case `schedule` = "schedule"
+        case `outputKey` = "outputKey"
+        case `kind` = "kind"
+        case `launchId` = "launchId"
+    }
+}
+
+public struct RoutineLocal: Codable, Sendable, Equatable {
+    public let `account`: String?
+    public let `pausedAt`: Int64?
+    public let `declined`: String?
+
+    public init(`account`: String? = nil, `pausedAt`: Int64? = nil, `declined`: String? = nil) {
+        self.`account` = `account`
+        self.`pausedAt` = `pausedAt`
+        self.`declined` = `declined`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `account` = try container.decodeIfPresent(String.self, forKey: .`account`)
+        `pausedAt` = try container.decodeIfPresent(Int64.self, forKey: .`pausedAt`)
+        `declined` = try container.decodeIfPresent(String.self, forKey: .`declined`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(`account`, forKey: .`account`)
+        try container.encodeIfPresent(`pausedAt`, forKey: .`pausedAt`)
+        try container.encodeIfPresent(`declined`, forKey: .`declined`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `account` = "account"
+        case `pausedAt` = "pausedAt"
+        case `declined` = "declined"
+    }
+}
+
+public enum RoutineHeld: String, CaseIterable, Codable, Sendable, Equatable {
+    case `agent` = "agent"
+    case `outside` = "outside"
+}
+
+public struct RoutineMadeBy: Codable, Sendable, Equatable {
+    public let `chatId`: String
+    public let `title`: String
+    public let `at`: Int64
+
+    public init(`chatId`: String, `title`: String, `at`: Int64) {
+        self.`chatId` = `chatId`
+        self.`title` = `title`
+        self.`at` = `at`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `chatId` = try container.decode(String.self, forKey: .`chatId`)
+        `title` = try container.decode(String.self, forKey: .`title`)
+        `at` = try container.decode(Int64.self, forKey: .`at`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`chatId`, forKey: .`chatId`)
+        try container.encode(`title`, forKey: .`title`)
+        try container.encode(`at`, forKey: .`at`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `chatId` = "chatId"
+        case `title` = "title"
+        case `at` = "at"
+    }
+}
+
+public struct RoutineRun: Codable, Sendable, Equatable {
+    public let `runId`: String
+    public let `routineId`: String
+    public let `projectId`: String
+    public let `kind`: RoutineRunKind
+    public let `due`: Int64
+    public let `at`: Int64
+    public let `missed`: [Int64]?
+    public let `state`: RoutineRunState
+    public let `skipped`: RoutineSkip?
+    public let `chatId`: String?
+    public let `exitCode`: Int64?
+    public let `waited`: Bool?
+    public let `limitUntil`: Int64?
+    public let `endedAt`: Int64?
+    public let `error`: String?
+    public let `artifactId`: String?
+    public let `versionId`: String?
+    public let `versionNumber`: Int64?
+    public let `turnsBefore`: Int64?
+
+    public init(`runId`: String, `routineId`: String, `projectId`: String, `kind`: RoutineRunKind, `due`: Int64, `at`: Int64, `missed`: [Int64]? = nil, `state`: RoutineRunState, `skipped`: RoutineSkip? = nil, `chatId`: String? = nil, `exitCode`: Int64? = nil, `waited`: Bool? = nil, `limitUntil`: Int64? = nil, `endedAt`: Int64? = nil, `error`: String? = nil, `artifactId`: String? = nil, `versionId`: String? = nil, `versionNumber`: Int64? = nil, `turnsBefore`: Int64? = nil) {
+        self.`runId` = `runId`
+        self.`routineId` = `routineId`
+        self.`projectId` = `projectId`
+        self.`kind` = `kind`
+        self.`due` = `due`
+        self.`at` = `at`
+        self.`missed` = `missed`
+        self.`state` = `state`
+        self.`skipped` = `skipped`
+        self.`chatId` = `chatId`
+        self.`exitCode` = `exitCode`
+        self.`waited` = `waited`
+        self.`limitUntil` = `limitUntil`
+        self.`endedAt` = `endedAt`
+        self.`error` = `error`
+        self.`artifactId` = `artifactId`
+        self.`versionId` = `versionId`
+        self.`versionNumber` = `versionNumber`
+        self.`turnsBefore` = `turnsBefore`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `runId` = try container.decode(String.self, forKey: .`runId`)
+        `routineId` = try container.decode(String.self, forKey: .`routineId`)
+        `projectId` = try container.decode(String.self, forKey: .`projectId`)
+        `kind` = try container.decode(RoutineRunKind.self, forKey: .`kind`)
+        `due` = try container.decode(Int64.self, forKey: .`due`)
+        `at` = try container.decode(Int64.self, forKey: .`at`)
+        `missed` = try container.decodeIfPresent([Int64].self, forKey: .`missed`)
+        `state` = try container.decode(RoutineRunState.self, forKey: .`state`)
+        `skipped` = try container.decodeIfPresent(RoutineSkip.self, forKey: .`skipped`)
+        `chatId` = try container.decodeIfPresent(String.self, forKey: .`chatId`)
+        `exitCode` = try container.decodeIfPresent(Int64.self, forKey: .`exitCode`)
+        `waited` = try container.decodeIfPresent(Bool.self, forKey: .`waited`)
+        `limitUntil` = try container.decodeIfPresent(Int64.self, forKey: .`limitUntil`)
+        `endedAt` = try container.decodeIfPresent(Int64.self, forKey: .`endedAt`)
+        `error` = try container.decodeIfPresent(String.self, forKey: .`error`)
+        `artifactId` = try container.decodeIfPresent(String.self, forKey: .`artifactId`)
+        `versionId` = try container.decodeIfPresent(String.self, forKey: .`versionId`)
+        `versionNumber` = try container.decodeIfPresent(Int64.self, forKey: .`versionNumber`)
+        `turnsBefore` = try container.decodeIfPresent(Int64.self, forKey: .`turnsBefore`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`runId`, forKey: .`runId`)
+        try container.encode(`routineId`, forKey: .`routineId`)
+        try container.encode(`projectId`, forKey: .`projectId`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`due`, forKey: .`due`)
+        try container.encode(`at`, forKey: .`at`)
+        try container.encodeIfPresent(`missed`, forKey: .`missed`)
+        try container.encode(`state`, forKey: .`state`)
+        try container.encodeIfPresent(`skipped`, forKey: .`skipped`)
+        try container.encodeIfPresent(`chatId`, forKey: .`chatId`)
+        try container.encodeIfPresent(`exitCode`, forKey: .`exitCode`)
+        try container.encodeIfPresent(`waited`, forKey: .`waited`)
+        try container.encodeIfPresent(`limitUntil`, forKey: .`limitUntil`)
+        try container.encodeIfPresent(`endedAt`, forKey: .`endedAt`)
+        try container.encodeIfPresent(`error`, forKey: .`error`)
+        try container.encodeIfPresent(`artifactId`, forKey: .`artifactId`)
+        try container.encodeIfPresent(`versionId`, forKey: .`versionId`)
+        try container.encodeIfPresent(`versionNumber`, forKey: .`versionNumber`)
+        try container.encodeIfPresent(`turnsBefore`, forKey: .`turnsBefore`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `runId` = "runId"
+        case `routineId` = "routineId"
+        case `projectId` = "projectId"
+        case `kind` = "kind"
+        case `due` = "due"
+        case `at` = "at"
+        case `missed` = "missed"
+        case `state` = "state"
+        case `skipped` = "skipped"
+        case `chatId` = "chatId"
+        case `exitCode` = "exitCode"
+        case `waited` = "waited"
+        case `limitUntil` = "limitUntil"
+        case `endedAt` = "endedAt"
+        case `error` = "error"
+        case `artifactId` = "artifactId"
+        case `versionId` = "versionId"
+        case `versionNumber` = "versionNumber"
+        case `turnsBefore` = "turnsBefore"
+    }
+}
+
+public enum RoutineRunKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `scheduled` = "scheduled"
+    case `caughtUp` = "caught-up"
+    case `manual` = "manual"
+}
+
+public enum RoutineRunState: String, CaseIterable, Codable, Sendable, Equatable {
+    case `skipped` = "skipped"
+    case `starting` = "starting"
+    case `running` = "running"
+    case `needsYou` = "needs-you"
+    case `limit` = "limit"
+    case `done` = "done"
+    case `failed` = "failed"
+}
+
+public enum RoutineSkip: String, CaseIterable, Codable, Sendable, Equatable {
+    case `overlap` = "overlap"
+    case `held` = "held"
+    case `paused` = "paused"
+}
+
+public struct RoutineRunNowResult: Codable, Sendable, Equatable {
+    public let `outcome`: RoutineRunNowResultOutcome
+    public let `runId`: String?
+
+    public init(`outcome`: RoutineRunNowResultOutcome, `runId`: String? = nil) {
+        self.`outcome` = `outcome`
+        self.`runId` = `runId`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `outcome` = try container.decode(RoutineRunNowResultOutcome.self, forKey: .`outcome`)
+        `runId` = try container.decodeIfPresent(String.self, forKey: .`runId`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`outcome`, forKey: .`outcome`)
+        try container.encodeIfPresent(`runId`, forKey: .`runId`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `outcome` = "outcome"
+        case `runId` = "runId"
+    }
+}
+
+public enum RoutineRunNowResultOutcome: String, CaseIterable, Codable, Sendable, Equatable {
+    case `started` = "started"
+    case `held` = "held"
+    case `busy` = "busy"
+}
+
 public extension PlanStepState {
     /// The marker of this state, as `PLAN_STATE_MARKERS` in `@adecore/plan` writes it.
     var marker: String {

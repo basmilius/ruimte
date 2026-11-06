@@ -81,10 +81,8 @@ import UIKit
         let waiting = Self.routine(
             "Dependency check", hours: 22.6,
             runs: [
-                .object([
-                    "runId": .string("run"), "state": .string("needs-you"), "chatId": .string("run-chat"),
-                    "due": .number(Self.milliseconds - 84 * 60_000),
-                ])
+                RoutineWire.run(
+                    "run", state: "needs-you", due: Self.milliseconds - 84 * 60_000, chat: "run-chat")
             ])
         let board = ScheduledBoard.build(
             [
@@ -218,22 +216,11 @@ import UIKit
     private static func routine(
         _ title: String, hours: Double = 3.6, paused: Bool = false, runs: [JSONValue] = []
     ) -> RoutineEntry {
-        var local: [String: JSONValue] = [:]
-        if paused { local["pausedAt"] = .number(milliseconds - 86_400_000) }
-        return RoutineEntry(
-            json: .object([
-                "routine": .object([
-                    "id": .string(title), "kind": .string("agent"), "title": .string(title),
-                    "schedule": .object([
-                        "kind": .string("weekly"), "days": .array((1...5).map { JSONValue.number(Double($0)) }),
-                        "time": .string("17:30"),
-                    ]),
-                ]),
-                "projectId": .string("p"), "projectName": .string("score-engine"), "approved": .bool(true),
-                "local": .object(local),
-                "next": paused ? .null : .number(milliseconds + hours * 3_600_000),
-                "runs": .array(runs),
-            ]))
+        RoutineWire.entry(
+            title, project: "p", projectName: "score-engine", schedule: RoutineWire.weekly(Array(1...5), time: "17:30"),
+            pausedAt: paused ? milliseconds - 86_400_000 : nil, next: paused ? nil : milliseconds + hours * 3_600_000,
+            runs: runs
+        ).routineEntry
     }
 }
 

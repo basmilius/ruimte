@@ -129,7 +129,7 @@ struct NowComingUp: Identifiable, Equatable {
             entry.snoozedUntil.map { NowComingUp(subject: .snoozed(entry), at: $0) }
         }
         let runs = (scheduled.today + scheduled.overnight).prefix(routines).compactMap { item in
-            item.entry.next.map { NowComingUp(subject: .routine(item), at: $0) }
+            item.entry.nextDate.map { NowComingUp(subject: .routine(item), at: $0) }
         }
         return (wakes + runs).sorted { $0.at < $1.at }
     }

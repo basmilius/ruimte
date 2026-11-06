@@ -391,7 +391,19 @@ const typedRoots: [name: string, source: string, path: (string | number)[]][] = 
     ['WorktreeAddResult', 'request.git.worktree-add.result', []],
     ['WorktreeRemoveResult', 'request.git.worktree-remove.result', []],
     ['WorktreeMergeResult', 'request.git.worktree-merge.result', []],
-    ['GitProgressEvent', 'event.git.progress', []]
+    ['GitProgressEvent', 'event.git.progress', []],
+    ['RoutineListResult', 'request.routine.list.result', []],
+    ['RoutineEntry', 'request.routine.list.result', ['properties', 'routines', 'items']],
+    ['Routine', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'routine']],
+    ['RoutineSchedule', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'routine', 'oneOf', 0, 'properties', 'schedule']],
+    ['RoutineLocal', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'local']],
+    ['RoutineHeld', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'held']],
+    ['RoutineMadeBy', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'madeBy']],
+    ['RoutineRun', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'runs', 'items']],
+    ['RoutineRunKind', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'runs', 'items', 'properties', 'kind']],
+    ['RoutineRunState', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'runs', 'items', 'properties', 'state']],
+    ['RoutineSkip', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'runs', 'items', 'properties', 'skipped']],
+    ['RoutineRunNowResult', 'request.routine.runNow.result', []]
 ];
 const typed = typedRoots.map(([name, source, path]) => {
     const schema = path.reduce((node: any, key) => node?.[key], typedSchema(schemas[source]));
@@ -413,6 +425,13 @@ for (const [union, tag, suffix] of [
     for (const [value, member] of typedMembers(union, tag)) {
         names.set(canonical(member), `Chat${pascal(value)}${suffix}`);
     }
+}
+// `AgentRoutine`, `RoutineWeeklySchedule`.
+for (const [value, member] of typedMembers('Routine', 'kind')) {
+    names.set(canonical(member), `${pascal(value)}Routine`);
+}
+for (const [value, member] of typedMembers('RoutineSchedule', 'kind')) {
+    names.set(canonical(member), `Routine${pascal(value)}Schedule`);
 }
 // Named once, so an assistant message and a delta share the shapes of an intelligent UI reply.
 const assistant = typedMembers('ChatItem', 'kind').get('assistant')!.properties;

@@ -327,11 +327,7 @@ final class NowBoardTests: XCTestCase {
             let next = start.addingTimeInterval(hours * 3_600).timeIntervalSince1970 * 1000
             return ScheduledItem(
                 machineID: "mac", machineName: "MacBook Pro",
-                entry: RoutineEntry(
-                    json: .object([
-                        "routine": .object(["id": .string(id), "title": .string(id)]), "projectId": .string("p"),
-                        "approved": .bool(true), "next": .number(next),
-                    ])))
+                entry: RoutineWire.entry(id, project: "p", next: next).routineEntry)
         }
         var scheduled = ScheduledBoard()
         scheduled.today = [routine("render", in: 1), routine("changelog", in: 3)]

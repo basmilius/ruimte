@@ -33,7 +33,7 @@ import Testing
         ]
         let board = ScheduledBoard.build([input(entries)], now: Self.now, calendar: Self.calendar)
         #expect(board.needsYou.map(\.item.entry.id) == ["waiting"])
-        #expect(board.needsYou.first?.run.chatID == "chat-1")
+        #expect(board.needsYou.first?.run.chatId == "chat-1")
         #expect(board.today.map(\.entry.id) == ["evening", "tonight"])
         #expect(board.overnight.map(\.entry.id) == ["morning", "waiting"])
         #expect(board.later.map(\.entry.id) == ["friday"])
@@ -53,7 +53,7 @@ import Testing
     }
 
     @Test func aScheduleReadsInWords() {
-        func words(_ json: JSONValue) -> String { RoutineSchedule(json: json).words(timeZone: nil, in: Self.english) }
+        func words(_ json: JSONValue) -> String { json.routineSchedule.words(timeZone: nil, in: Self.english) }
         let clock = "08:30"
         #expect(words(weekly([1, 2, 3, 4, 5, 6, 7])) == String(localized: "Daily at \(clock)"))
         #expect(words(weekly([1, 2, 3, 4, 5])) == String(localized: "Weekdays at \(clock)"))
@@ -62,29 +62,20 @@ import Testing
         #expect(words(weekly([4, 1])) == String(localized: "\(days) at \(clock)"))
         let day = "Mon 26 Oct"
         let time = "22:00"
-        #expect(
-            words(.object(["kind": .string("once"), "date": .string("2026-10-26"), "time": .string("22:00")]))
-                == String(localized: "Once, \(day) \(time)"))
-        #expect(
-            words(.object(["kind": .string("monthly")])) == String(localized: "On a schedule this app does not know"))
+        #expect(words(RoutineWire.once(date: "2026-10-26", time: "22:00")) == String(localized: "Once, \(day) \(time)"))
     }
 
     @Test func aCronShowsItsExpression() {
         let expression = "0 9 * * 1-5"
-        let schedule = RoutineSchedule(json: .object(["kind": .string("cron"), "expression": .string(expression)]))
-        #expect(schedule == .cron(expression: expression))
+        let schedule = RoutineWire.cron(expression).routineSchedule
+        #expect(schedule == .cron(RoutineCronSchedule(expression: expression)))
         #expect(schedule.words(timeZone: nil, in: Self.english) == String(localized: "Cron \(expression)"))
         #expect(schedule.words(timeZone: nil, in: Self.english) == "Cron 0 9 * * 1-5")
     }
 
     @Test func anIntervalReadsItsDaysStepAndWindow() {
         func words(_ days: [Int], _ every: Int) -> String {
-            RoutineSchedule(
-                json: .object([
-                    "kind": .string("interval"), "days": .array(days.map { .number(Double($0)) }),
-                    "every": .number(Double(every)), "from": .string("09:00"), "to": .string("17:00"),
-                ])
-            ).words(timeZone: nil, in: Self.english)
+            RoutineWire.interval(days, every: every).routineSchedule.words(timeZone: nil, in: Self.english)
         }
         let start = "09:00"
         let end = "17:00"
@@ -101,59 +92,33 @@ import Testing
     }
 
     @Test func anEntryReadsWhatTheMachineKeepsOfIt() {
-        let entry = RoutineEntry(
-            json: .object([
-                "routine": .object([
-                    "id": .string("deps"), "kind": .string("agent"), "title": .string("Dependency check"),
-                    "schedule": weekly([1]),
-                ]),
-                "projectId": .string("p1"), "projectName": .string("adecore"), "approved": .bool(true),
-                "local": .object(["pausedAt": .number(1_792_000_000_000)]), "next": .null,
-                "runs": .array([
-                    .object([
-                        "runId": .string("r1"), "state": .string("done"), "due": .number(1_792_000_000_000),
-                        "versionNumber": .number(3),
-                    ])
-                ]),
-            ]))
-        #expect(entry.held)
-        #expect(entry.next == nil)
+        let entry = RoutineWire.entry(
+            "deps", title: "Dependency check", projectName: "adecore", pausedAt: 1_792_000_000_000,
+            runs: [RoutineWire.run("r1", state: "done", due: 1_792_000_000_000, version: 3)]
+        ).routineEntry
+        #expect(entry.isHeld)
+        #expect(entry.nextDate == nil)
         #expect(entry.runs.first?.versionNumber == 3)
-        #expect(entry.runs.first?.chatID == nil)
+        #expect(entry.runs.first?.chatId == nil)
         #expect(entry.waitingRun == nil)
     }
 
-    private func weekly(_ days: [Int]) -> JSONValue {
-        .object([
-            "kind": .string("weekly"), "days": .array(days.map { .number(Double($0)) }), "time": .string("08:30"),
-        ])
-    }
+    private func weekly(_ days: [Int]) -> JSONValue { RoutineWire.weekly(days) }
 
     private func input(_ entries: [RoutineEntry]) -> ScheduledMachineInput {
         ScheduledMachineInput(machineID: "mac", machineName: "Mac", answers: true, entries: entries)
     }
 
     private func run(_ id: String, state: String, chat: String? = nil) -> JSONValue {
-        var run: [String: JSONValue] = [
-            "runId": .string(id), "state": .string(state), "due": .number(Self.now.timeIntervalSince1970 * 1000),
-        ]
-        if let chat { run["chatId"] = .string(chat) }
-        return .object(run)
+        RoutineWire.run(id, state: state, due: Self.now.timeIntervalSince1970 * 1000, chat: chat)
     }
 
     private func entry(
         _ id: String, next: Date?, paused: Bool = false, approved: Bool = true, runs: [JSONValue] = []
     ) -> RoutineEntry {
-        var local: [String: JSONValue] = [:]
-        if paused { local["pausedAt"] = .number(Self.now.timeIntervalSince1970 * 1000) }
-        return RoutineEntry(
-            json: .object([
-                "routine": .object([
-                    "id": .string(id), "kind": .string("agent"), "title": .string(id), "schedule": weekly([1]),
-                ]),
-                "projectId": .string("p1"), "projectName": .string("ruimte"), "approved": .bool(approved),
-                "local": .object(local), "next": next.map { .number($0.timeIntervalSince1970 * 1000) } ?? .null,
-                "runs": .array(runs),
-            ]))
+        RoutineWire.entry(
+            id, approved: approved, pausedAt: paused ? Self.now.timeIntervalSince1970 * 1000 : nil,
+            next: next.map { $0.timeIntervalSince1970 * 1000 }, runs: runs
+        ).routineEntry
     }
 }

@@ -2,44 +2,25 @@ import Foundation
 import RuimtePulsar
 
 /// When a routine starts, as `RoutineScheduleSchema` writes it: a day and a time, weekdays and a time,
-/// weekdays and a repeat within a day, or a crontab expression, on the machine's clock.
-enum RoutineSchedule: Equatable {
-    case once(date: String, time: String)
-    /// ISO weekdays: 1 is Monday, 7 is Sunday.
-    case weekly(days: [Int], time: String)
-    /// On those days every `every` minutes from `from` up to and including `to`.
-    case interval(days: [Int], every: Int, from: String, to: String)
-    /// Five crontab fields, such as `0 9 * * 1-5`.
-    case cron(expression: String)
-    /// A kind a newer machine knows and this app does not.
-    case unknown
-
-    init(json: JSONValue?) {
-        let days = (json?.list("days") ?? []).compactMap { $0.numberValue.map(Int.init) }.sorted()
-        switch json?.text("kind") {
-        case "once": self = .once(date: json?.text("date") ?? "", time: json?.text("time") ?? "")
-        case "weekly": self = .weekly(days: days, time: json?.text("time") ?? "")
-        case "interval":
-            self = .interval(
-                days: days, every: Int(json?.number("every", fallback: 60) ?? 60), from: json?.text("from") ?? "",
-                to: json?.text("to") ?? "")
-        case "cron": self = .cron(expression: json?.text("expression") ?? "")
-        default: self = .unknown
-        }
-    }
-
+/// weekdays and a repeat within a day, or a crontab expression, on the machine's clock. Its weekdays are ISO
+/// ones, 1 for Monday up to 7 for Sunday, and an interval runs every `every` minutes from `from` up to and including
+/// `to`.
+extension RoutineSchedule {
     /// "Daily at 08:00", "Mon, Thu at 08:00" or "Once, Mon 19 Oct 22:00", read in the machine's time zone.
     func words(timeZone: TimeZone?, in locale: FormatLocale = .current) -> String {
         var locale = locale
         if let timeZone { locale.timeZone = timeZone }
         switch self {
-        case .once(let date, let time):
-            guard let moment = Self.moment(date: date, time: time, timeZone: locale.timeZone) else { return time }
+        case .once(let schedule):
+            guard let moment = Self.moment(date: schedule.date, time: schedule.time, timeZone: locale.timeZone) else {
+                return schedule.time
+            }
             return String(
                 localized: "Once, \(Format.weekdayDay(moment, in: locale)) \(Format.clock(moment, in: locale))",
                 comment: "A routine that runs one time: its day, then its time")
-        case .weekly(let days, let time):
-            let clock = Self.clock(time, in: locale)
+        case .weekly(let schedule):
+            let days = schedule.days.map { Int($0) }.sorted()
+            let clock = Self.clock(schedule.time, in: locale)
             switch Set(days) {
             case Set(1...7): return String(localized: "Daily at \(clock)")
             case Set(1...5): return String(localized: "Weekdays at \(clock)")
@@ -50,17 +31,18 @@ enum RoutineSchedule: Equatable {
                     localized: "\(names) at \(clock)",
                     comment: "Weekdays a routine runs on, such as Mon, Thu, then a time")
             }
-        case .interval(let days, let every, let from, let to):
-            let start = Self.clock(from, in: locale)
-            let end = Self.clock(to, in: locale)
+        case .interval(let schedule):
+            let days = schedule.days.map { Int($0) }.sorted()
+            let start = Self.clock(schedule.from, in: locale)
+            let end = Self.clock(schedule.to, in: locale)
+            let step = Self.stepWords(Int(schedule.every))
             return String(
-                localized: "\(Self.dayWords(days, in: locale)), \(Self.stepWords(every)) from \(start) to \(end)",
+                localized: "\(Self.dayWords(days, in: locale)), \(step) from \(start) to \(end)",
                 comment: "A routine that repeats within a day: its days, how often, then the first and last time")
-        case .cron(let expression):
+        case .cron(let schedule):
+            let expression = schedule.expression
             return String(
                 localized: "Cron \(expression)", comment: "A routine on a crontab expression, such as 0 9 * * 1-5")
-        case .unknown:
-            return String(localized: "On a schedule this app does not know")
         }
     }
 
@@ -107,105 +89,99 @@ enum RoutineSchedule: Equatable {
     }
 }
 
-/// One run of a routine, as `RoutineRunSchema` writes it.
-struct RoutineRun: Equatable, Identifiable {
-    let id: String
-    /// `skipped`, `starting`, `running`, `needs-you`, `limit`, `done` or `failed`.
-    let state: String
-    /// Why a skipped run did not start: `overlap`, `held` or `paused`.
-    let skipped: String?
-    let due: Date
-    /// The chat of an agent run; a command or a launch has none.
-    let chatID: String?
-    let limitUntil: Date?
-    let error: String?
-    let versionNumber: Int?
+/// One run of a routine, as `RoutineRunSchema` writes it. `chatId` is the chat of an agent run; a command or a launch
+/// has none.
+extension RoutineRun: Identifiable {
+    public var id: String { runId }
+    var dueDate: Date { Date(timeIntervalSince1970: Double(due) / 1000) }
+    var limitUntilDate: Date? { limitUntil.map { Date(timeIntervalSince1970: Double($0) / 1000) } }
+    /// Why it failed, when the machine said.
+    var failure: String? { error.flatMap { $0.isEmpty ? nil : $0 } }
+    var version: Int? { versionNumber.map { Int($0) } }
 
-    init(json: JSONValue) {
-        id = json.text("runId")
-        state = json.text("state")
-        skipped = json["skipped"]?.stringValue
-        due = Date(timeIntervalSince1970: json.number("due") / 1000)
-        chatID = json["chatId"]?.stringValue.flatMap { $0.isEmpty ? nil : $0 }
-        limitUntil = json["limitUntil"]?.numberValue.map { Date(timeIntervalSince1970: $0 / 1000) }
-        error = json["error"]?.stringValue.flatMap { $0.isEmpty ? nil : $0 }
-        versionNumber = json["versionNumber"]?.numberValue.map(Int.init)
+    var active: Bool {
+        switch state {
+        case .starting, .running, .needsYou, .limit: true
+        case .skipped, .done, .failed: false
+        }
     }
-
-    var active: Bool { ["starting", "running", "needs-you", "limit"].contains(state) }
 
     var icon: String {
         switch state {
-        case "skipped": "skip-forward"
-        case "starting", "running": "circle-dot"
-        case "needs-you": "hand"
-        case "limit": "gauge"
-        case "done": "circle-check"
-        case "failed": "circle-x"
-        default: "circle"
+        case .skipped: "skip-forward"
+        case .starting, .running: "circle-dot"
+        case .needsYou: "hand"
+        case .limit: "gauge"
+        case .done: "circle-check"
+        case .failed: "circle-x"
         }
     }
 
     func words(now: Date = .now) -> String {
         switch state {
-        case "skipped":
+        case .skipped:
             switch skipped {
-            case "overlap": return String(localized: "Skipped while the run before it went on")
-            case "held": return String(localized: "Skipped, it was not approved")
-            case "paused": return String(localized: "Skipped while paused")
-            default: return String(localized: "Skipped")
+            case .overlap: return String(localized: "Skipped while the run before it went on")
+            case .held: return String(localized: "Skipped, it was not approved")
+            case .paused: return String(localized: "Skipped while paused")
+            case nil: return String(localized: "Skipped")
             }
-        case "starting": return String(localized: "Starting")
-        case "running": return String(localized: "Running")
-        case "needs-you": return String(localized: "Needs you")
-        case "limit":
-            if let limitUntil {
+        case .starting: return String(localized: "Starting")
+        case .running: return String(localized: "Running")
+        case .needsYou: return String(localized: "Needs you")
+        case .limit:
+            if let limitUntil = limitUntilDate {
                 return String(localized: "Waits on a usage limit until \(Format.moment(limitUntil, now: now))")
             }
             return String(localized: "Waits on a usage limit")
-        case "done":
-            if let versionNumber {
-                return String(localized: "Done, v\(versionNumber)", comment: "A run that delivered a version to Output")
+        case .done:
+            if let version {
+                return String(localized: "Done, v\(version)", comment: "A run that delivered a version to Output")
             }
             return String(localized: "Done")
-        case "failed": return String(localized: "Failed")
-        default: return state
+        case .failed: return String(localized: "Failed")
         }
     }
 }
 
-/// A routine as `RoutineEntrySchema` writes it, with what its machine knows of it.
-struct RoutineEntry: Equatable {
-    let id: String
-    let projectID: String
-    let projectName: String
-    let kind: String
-    let title: String
-    let schedule: RoutineSchedule
-    let approved: Bool
-    let pausedAt: Date?
-    /// The next time it is due; nil while paused, held, declined or past its once.
-    let next: Date?
-    /// Newest first.
-    let runs: [RoutineRun]
-
-    init(json: JSONValue) {
-        let routine = json["routine"] ?? .object([:])
-        id = routine.text("id")
-        projectID = json.text("projectId")
-        projectName = json.text("projectName")
-        kind = routine.text("kind")
-        title = routine.text("title")
-        schedule = RoutineSchedule(json: routine["schedule"])
-        approved = json["approved"]?.boolValue == true
-        pausedAt = json["local"]?["pausedAt"]?.numberValue.map { Date(timeIntervalSince1970: $0 / 1000) }
-        next = json["next"]?.numberValue.map { Date(timeIntervalSince1970: $0 / 1000) }
-        runs = json.list("runs").map(RoutineRun.init(json:))
+extension Routine {
+    var id: String {
+        switch self {
+        case .agent(let routine): routine.id
+        case .command(let routine): routine.id
+        case .launch(let routine): routine.id
+        }
     }
 
+    var title: String {
+        switch self {
+        case .agent(let routine): routine.title
+        case .command(let routine): routine.title
+        case .launch(let routine): routine.title
+        }
+    }
+
+    var schedule: RoutineSchedule {
+        switch self {
+        case .agent(let routine): routine.schedule
+        case .command(let routine): routine.schedule
+        case .launch(let routine): routine.schedule
+        }
+    }
+}
+
+/// A routine as `RoutineEntrySchema` writes it, with what its machine knows of it. Its runs are newest first, and
+/// `next` is the next time it is due, nil while paused, held, declined or past its once.
+extension RoutineEntry {
+    var id: String { routine.id }
+    var title: String { routine.title }
+    var schedule: RoutineSchedule { routine.schedule }
+    var pausedAt: Date? { local.pausedAt.map { Date(timeIntervalSince1970: Double($0) / 1000) } }
+    var nextDate: Date? { next.map { Date(timeIntervalSince1970: Double($0) / 1000) } }
+
     /// The run that waits on a person, which keeps every next time from starting until it is answered.
-    var waitingRun: RoutineRun? { runs.first { $0.state == "needs-you" } }
-    var held: Bool { pausedAt != nil || !approved }
+    var waitingRun: RoutineRun? { runs.first { $0.state == .needsYou } }
+    var isHeld: Bool { pausedAt != nil || !approved }
 }
 
 /// A routine on one machine.
@@ -241,8 +217,8 @@ struct ScheduledItem: Equatable, Identifiable {
     let machineID: String
     let machineName: String
     let entry: RoutineEntry
-    var target: RoutineTarget { RoutineTarget(machineID: machineID, projectID: entry.projectID, routineID: entry.id) }
-    var id: String { "\(machineID):\(entry.projectID):\(entry.id)" }
+    var target: RoutineTarget { RoutineTarget(machineID: machineID, projectID: entry.projectId, routineID: entry.id) }
+    var id: String { "\(machineID):\(entry.projectId):\(entry.id)" }
 
     func place(namesMachine: Bool) -> String {
         namesMachine ? "\(entry.projectName) · \(machineName)" : entry.projectName
@@ -284,9 +260,9 @@ struct ScheduledBoard: Equatable {
                 if let run = entry.waitingRun {
                     board.needsYou.append(ScheduledWait(item: item, run: run))
                 }
-                if entry.held {
+                if entry.isHeld {
                     board.held.append(item)
-                } else if let next = entry.next {
+                } else if let next = entry.nextDate {
                     if next < tomorrow {
                         board.today.append(item)
                     } else if next < noon {
@@ -299,7 +275,7 @@ struct ScheduledBoard: Equatable {
         }
         board.needsYou.sort { $0.run.due < $1.run.due }
         for keyPath in [\ScheduledBoard.today, \.overnight, \.later] {
-            board[keyPath: keyPath].sort { ($0.entry.next ?? now) < ($1.entry.next ?? now) }
+            board[keyPath: keyPath].sort { ($0.entry.nextDate ?? now) < ($1.entry.nextDate ?? now) }
         }
         board.held.sort { $0.entry.title.localizedStandardCompare($1.entry.title) == .orderedAscending }
         return board

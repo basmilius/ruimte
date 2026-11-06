@@ -308,3 +308,65 @@ extension JSONValue {
     var worktree: GitWorktree { try! decoded(as: Worktree.self) }
     var worktreeRemoved: WorktreeRemoveResult { try! decoded(as: WorktreeRemoveResult.self) }
 }
+
+/// `routine.list` entries as a machine writes them, an agent routine with what the schema requires for whatever a
+/// test leaves out.
+enum RoutineWire {
+    static func weekly(_ days: [Int], time: String = "08:30") -> JSONValue {
+        .object(["kind": .string("weekly"), "days": .array(days.map { .number(Double($0)) }), "time": .string(time)])
+    }
+
+    static func once(date: String, time: String) -> JSONValue {
+        .object(["kind": .string("once"), "date": .string(date), "time": .string(time)])
+    }
+
+    static func cron(_ expression: String) -> JSONValue {
+        .object(["kind": .string("cron"), "expression": .string(expression)])
+    }
+
+    static func interval(_ days: [Int], every: Int, from: String = "09:00", to: String = "17:00") -> JSONValue {
+        .object([
+            "kind": .string("interval"), "days": .array(days.map { .number(Double($0)) }),
+            "every": .number(Double(every)), "from": .string(from), "to": .string(to),
+        ])
+    }
+
+    /// `due` is in milliseconds, as the machine writes it.
+    static func run(
+        _ id: String, state: String, due: Double = 0, chat: String? = nil, version: Int? = nil
+    ) -> JSONValue {
+        var fields: [String: JSONValue] = [
+            "runId": .string(id), "routineId": .string("deps"), "projectId": .string("p1"),
+            "kind": .string("scheduled"), "due": .number(due), "at": .number(due), "state": .string(state),
+        ]
+        if let chat { fields["chatId"] = .string(chat) }
+        if let version { fields["versionNumber"] = .number(Double(version)) }
+        return .object(fields)
+    }
+
+    /// `pausedAt` and `next` are in milliseconds.
+    static func entry(
+        _ id: String, title: String? = nil, project: String = "p1", projectName: String = "ruimte",
+        schedule: JSONValue? = nil, approved: Bool = true, pausedAt: Double? = nil, next: Double? = nil,
+        runs: [JSONValue] = []
+    ) -> JSONValue {
+        var local: [String: JSONValue] = [:]
+        if let pausedAt { local["pausedAt"] = .number(pausedAt) }
+        return .object([
+            "routine": .object([
+                "id": .string(id), "title": .string(title ?? id), "schedule": schedule ?? weekly([1]),
+                "outputKey": .string(id), "kind": .string("agent"), "prompt": .string("Check."),
+                "provider": .string("claude"), "mode": .string("supervised"), "perRun": .string("new"),
+            ]),
+            "projectId": .string(project), "projectName": .string(projectName), "shared": .bool(false),
+            "local": .object(local), "digest": .string("digest"), "approved": .bool(approved),
+            "next": next.map(JSONValue.number) ?? .null, "runs": .array(runs),
+        ])
+    }
+}
+
+extension JSONValue {
+    // A fixture that does not decode is a broken test, not a case to cover.
+    var routineEntry: RoutineEntry { try! decoded(as: RoutineEntry.self) }
+    var routineSchedule: RoutineSchedule { try! decoded(as: RoutineSchedule.self) }
+}

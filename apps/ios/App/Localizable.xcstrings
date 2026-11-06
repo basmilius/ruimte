@@ -1230,16 +1230,6 @@
         }
       }
     },
-    "On a schedule this app does not know" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Volgens een planning die deze app niet kent"
-          }
-        }
-      }
-    },
     "On this canvas" : {
       "localizations" : {
         "nl" : {

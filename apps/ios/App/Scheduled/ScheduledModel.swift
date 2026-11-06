@@ -57,7 +57,7 @@ final class ScheduledModel {
     var connecting: Bool { feeds.values.contains { $0.answers == nil && $0.session.failedAttempts < 3 } }
 
     func entry(_ target: RoutineTarget) -> RoutineEntry? {
-        feeds[target.machineID]?.entries.first { $0.projectID == target.projectID && $0.id == target.routineID }
+        feeds[target.machineID]?.entries.first { $0.projectId == target.projectID && $0.id == target.routineID }
     }
 
     func feed(_ machineID: String) -> ScheduledFeed? { feeds[machineID] }
@@ -116,11 +116,11 @@ final class ScheduledFeed: MachineFeed {
         try await send(.routineResume, entry)
     }
 
-    /// `started`, `held` or `busy`, as the machine answers it.
-    func runNow(_ entry: RoutineEntry) async throws -> String {
+    func runNow(_ entry: RoutineEntry) async throws -> RoutineRunNowResultOutcome {
         let answer = try await session.rpc.request(.routineRunNow, payload: payload(entry))
+            .decoded(as: RoutineRunNowResult.self)
         await refresh()
-        return answer.text("outcome")
+        return answer.outcome
     }
 
     private func send(_ request: WireRequest, _ entry: RoutineEntry) async throws {
@@ -129,7 +129,7 @@ final class ScheduledFeed: MachineFeed {
     }
 
     private func payload(_ entry: RoutineEntry) -> JSONValue {
-        .object(["projectId": .string(entry.projectID), "routineId": .string(entry.id)])
+        .object(["projectId": .string(entry.projectId), "routineId": .string(entry.id)])
     }
 
     private func linked() async {
@@ -156,9 +156,10 @@ final class ScheduledFeed: MachineFeed {
         let generation = session.generation
         do {
             let result = try await session.rpc.request(.routineList, payload: .object([:]))
+                .decoded(as: RoutineListResult.self)
             guard !Task.isCancelled, generation == session.generation, !stops.isEmpty else { return }
-            entries = result.list("routines").map(RoutineEntry.init(json:))
-            timeZone = TimeZone(identifier: result.text("timeZone"))
+            entries = result.routines
+            timeZone = TimeZone(identifier: result.timeZone)
             problem = nil
         } catch {
             guard !Task.isCancelled, generation == session.generation else { return }
