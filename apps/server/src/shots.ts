@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { computerUseScreenshots, homeFolder } from '@ruimte/service/home';
+import { homeFolder } from '@ruimte/service/home';
 import type { Reclaimed } from './maintenance/maintenance.ts';
 import { sweepFolder } from './maintenance/sweep-folder.ts';
 
@@ -32,11 +32,6 @@ function sweep(folder: string, now: number, maxAgeMs: number, signal?: AbortSign
         },
         signal
     });
-}
-
-/* The folders a picture the machine took for an agent or a person is in, under the machine's own folder. */
-export function shotFolders(home: string): string[] {
-    return [homeFolder(home, 'screenshots'), computerUseScreenshots(home), homeFolder(home, 'deviceCaptures')];
 }
 
 export function sweepScreenshots(home: string, now: number, signal?: AbortSignal): Promise<Reclaimed> {

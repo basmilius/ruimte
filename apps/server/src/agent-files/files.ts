@@ -1,9 +1,9 @@
 import { constants, open, stat, type FileHandle } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
 import { isWithin } from '@adecore/utils/path';
 import { outsidePath } from '../canvas/project-paths.ts';
+import { tempFolders } from '../disk/agent-folders.ts';
 import { realOrNull } from '../disk/real-path.ts';
 import type { ImageFiles } from './visual-images.ts';
 
@@ -72,7 +72,7 @@ export class AgentFiles {
     }
 
     static async of(folder: string, worktrees: readonly string[], callerFolders: readonly string[], shotFolders: readonly string[] = []): Promise<AgentFiles> {
-        const named = [folder, ...worktrees, ...callerFolders, tmpdir(), '/tmp'];
+        const named = [folder, ...worktrees, ...callerFolders, ...tempFolders()];
         const real = async (paths: readonly string[]) => [
             ...new Set((await Promise.all(paths.map(realOrNull))).filter((root): root is string => root !== null))
         ];

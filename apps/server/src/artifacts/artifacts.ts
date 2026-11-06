@@ -27,10 +27,10 @@ import {
     type ArtifactVersionRef,
     type ChatAttachment
 } from '@ruimte/contracts';
+import { shotFolders } from '../disk/agent-folders.ts';
 import type { MachineHome } from '../disk/machine-home.ts';
 import { realOrNull } from '../disk/real-path.ts';
 import { sniffMime } from '../disk/sniff.ts';
-import { shotFolders } from '../shots.ts';
 import type { SessionEvent, SessionSink } from '../wire.ts';
 import { cleanupProposals, NO_PINS, removable, type PinnedVersions } from './artifact-cleanup.ts';
 import { copyVersionInto } from './artifact-copy.ts';

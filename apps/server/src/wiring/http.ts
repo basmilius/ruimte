@@ -1,5 +1,4 @@
 import type { Server, WebSocketHandler } from 'bun';
-import { join } from 'node:path';
 import {
     EXTENSION_LINK_PATH,
     EXTENSION_UNLINK_PATH,
@@ -33,6 +32,7 @@ import { ATTACHMENTS_PATH, handleAttachmentRequest } from '../chat/attachment-ro
 import type { ServerConfig } from '../config.ts';
 import { socketChannel } from '../connection.ts';
 import { hookContext } from '../context/context-note.ts';
+import { chatFolders, shotFolders } from '../disk/agent-folders.ts';
 import { errorText } from '../error-text.ts';
 import type { ExtensionHost } from '../extensions/extension-host.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from '../fs/file-route.ts';
@@ -45,7 +45,6 @@ import { noteOnLine } from '../providers/launch.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import { handleMachineNotify } from '../push/notify-route.ts';
 import { HOOKS_PATH, handleHookRequest } from '../sessions/hook-receiver.ts';
-import { shotFolders } from '../shots.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from '../streams/http-stream.ts';
 import { BUILD, VERSION } from '../version.ts';
 import { handleVoiceKeyRequest } from '../voice/key-route.ts';
@@ -307,7 +306,7 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     actions: input.actions,
                     tools: input.tools,
                     uploads: input.artifacts.artifacts,
-                    callerFolders: (caller) => [join(config.home, 'attachments', caller), agents.visuals.workspacePath(caller)],
+                    callerFolders: (caller) => chatFolders(config.home, caller),
                     shotFolders: shotFolders(config.home)
                 });
             }
