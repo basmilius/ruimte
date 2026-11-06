@@ -37,6 +37,7 @@ import { useFiles } from '@/state/files';
 import { folderWatches } from '@/state/fs-watch';
 import { startKeepAwake, startKeepAwakeMove } from '@/state/keep-awake';
 import { startLastSeen } from '@/state/last-seen-watch';
+import { startNodeActivityTouches } from '@/state/node-activity';
 import { usePalette } from '@/state/palette';
 import { defaultProjectStore } from '@/state/project';
 import { startRemoteStatusWatch } from '@/state/remote-status';
@@ -87,6 +88,7 @@ if (!desktop()) {
 startSharedStorage();
 startSessionLifecycle();
 startSnoozeClock();
+startNodeActivityTouches();
 startWaitingSinceWatch();
 startAgentNotifications();
 startAttentionWatch();

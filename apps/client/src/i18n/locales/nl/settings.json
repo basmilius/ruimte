@@ -700,6 +700,26 @@
                 "label": "Canvaskaart",
                 "description": "Een kaart van elke node rechtsonder. Klik om erheen te gaan, sleep het kader om te schuiven. Verborgen op een smal canvas."
             },
+            "sidebarSort": {
+                "label": "Volgorde in de zijbalk",
+                "description": "Hoe de zijbalk de nodes onder een open canvas toont. Een node is bijgewerkt als zijn agent begint, wacht, stopt of klaar is, en als je hem opent. Het canvas zelf blijft zoals het is.",
+                "options": {
+                    "canvas": "Canvasvolgorde",
+                    "recent": "Recent bijgewerkt",
+                    "name": "Naam",
+                    "kind": "Soort",
+                    "status": "Status"
+                }
+            },
+            "sidebarSortThen": {
+                "label": "Binnen dezelfde soort of status",
+                "description": "Welke node eerst komt als er meer dezelfde soort of status hebben.",
+                "options": {
+                    "recent": "Recent bijgewerkt",
+                    "least-recent": "Langst niet bijgewerkt",
+                    "name": "Naam"
+                }
+            },
             "renderDistance": {
                 "label": "Tekenafstand",
                 "description": "Hoe ver pagina's, bestanden, diagrammen en apparaten live blijven. Verder weg tonen ze een stilstaand beeld of hun naam. Ver en Onbeperkt vragen meer van deze computer.",

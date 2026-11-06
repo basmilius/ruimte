@@ -42,6 +42,17 @@ describe('the terminal font', () => {
     });
 });
 
+describe('the order of the nodes in the sidebar', () => {
+    test('starts on the canvas order with the newest first, and keeps what a person picked', () => {
+        expect(settingsFrom({}).sidebarNodeSort).toBe('canvas');
+        expect(settingsFrom({}).sidebarNodeSortThen).toBe('recent');
+        const picked = settingsFrom({ sidebarNodeSort: 'status', sidebarNodeSortThen: 'name' });
+        expect(picked.sidebarNodeSort).toBe('status');
+        expect(picked.sidebarNodeSortThen).toBe('name');
+        expect(settingsFrom({ sidebarNodeSort: 'size' as Settings['sidebarNodeSort'] }).sidebarNodeSort).toBe('canvas');
+    });
+});
+
 describe('the render distance of a canvas', () => {
     test('starts on standard, keeps a stored distance and reads anything else as standard', () => {
         expect(settingsFrom({}).canvasRenderDistance).toBe('standard');

@@ -12,6 +12,7 @@ import { errorText } from '../error-text.ts';
 import { readServedFile } from '../fs/read.ts';
 import type { WriteBoundary } from '../fs/write.ts';
 import { registerProviderAccountHandlers } from '../handlers/accounts.ts';
+import { registerActivityHandlers } from '../handlers/activity.ts';
 import { registerAgentRegistryHandlers } from '../handlers/agent-registry.ts';
 import { registerAgentServerHandlers } from '../handlers/agent-servers.ts';
 import { registerArchiveHandlers } from '../handlers/archive.ts';
@@ -149,6 +150,7 @@ export async function registerHandlers(dispatcher: Dispatcher, input: HandlersIn
     const store = projects.store;
     registerPushHandlers(dispatcher, machine.auth, () => push.synchronizeActivities(), push);
     registerSnoozeHandlers(dispatcher, work.snoozes, (nodeId) => store.index.locate(nodeId));
+    registerActivityHandlers(dispatcher, work.activity);
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await input.machineModel });
     registerSessionHandlers(
         dispatcher,

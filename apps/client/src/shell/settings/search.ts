@@ -6,11 +6,13 @@ import { RENDERED_DOC_COMMENTS } from '@/features';
 import { FOLDING_GROUPS } from '@/shell/settings/folding-rows';
 import { allSettingsSections, sectionDescription, sectionLabel } from '@/shell/settings/sections';
 import { shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
+import { sortHasGroups } from '@/shell/sidebar-node-sort';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { closedLidOffered, keepAwakeAvailable } from '@/state/keep-awake';
 import { hasLocalMachine } from '@/state/local-machine';
 import { serverInfoOf } from '@/state/server';
 import { useServers } from '@/state/server';
+import { useSettings } from '@/state/settings';
 import type { SettingsSectionId } from '@/state/ui';
 
 interface SearchEntry {
@@ -109,6 +111,8 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         available: () => Object.keys(useServers.getState().byEndpoint).length > 0
     },
     row('views.canvas.minimap'),
+    row('views.canvas.sidebarSort'),
+    row('views.canvas.sidebarSortThen', () => sortHasGroups(useSettings.getState().sidebarNodeSort)),
     row('views.canvas.renderDistance'),
     row('views.drawing.snap'),
     row('views.browser.swipe', canSwipeBetweenPages),
