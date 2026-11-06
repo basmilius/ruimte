@@ -18,7 +18,8 @@ struct MachineUsagePage: View {
     @State private var machineName: String?
     let machines: [UsageMachine]
     @State private var state = RemotePageState()
-    @State private var limits: JSONValue?
+    @State private var summary: UsageSummary?
+    @State private var limits: UsageLimits?
     @State private var accounts: ProviderAccountList?
     /// Per CLI, what the machine types to log in under an account; a CLI without one has no login to offer.
     @State private var loginCommands: [String: String] = [:]
@@ -37,9 +38,9 @@ struct MachineUsagePage: View {
     }
 
     private var metric: UsageMetric { UsageMetric(rawValue: chosenMetric) ?? .preferred(locale) }
-    private var report: UsageReport? { state.value.map { UsageReport($0) } }
+    private var report: UsageReport? { summary.map { UsageReport($0) } }
     private var money: UsageMoneyFormatter {
-        UsageMoneyFormatter(locale: locale, rate: state.value?["rate"], currency: metric.currency ?? "USD")
+        UsageMoneyFormatter(locale: locale, rate: summary?.rate, currency: metric.currency ?? "USD")
     }
 
     var body: some View {
@@ -94,6 +95,7 @@ struct MachineUsagePage: View {
         client = machine.client
         machineName = machine.name
         state = RemotePageState()
+        summary = nil
         limits = nil
         accounts = nil
         selected = nil
@@ -289,7 +291,7 @@ struct MachineUsagePage: View {
                     )
                     .font(.callout.weight(.semibold))
                     Spacer()
-                    if let plan = section.entry?["plan"]?.stringValue {
+                    if let plan = section.entry?.plan {
                         Text(plan.capitalized).font(.caption).foregroundStyle(MobileStyle.muted)
                     }
                 }
@@ -317,26 +319,26 @@ struct MachineUsagePage: View {
                 .font(.callout).foregroundStyle(MobileStyle.muted)
         case nil:
             if let provider = section.entry {
-                if let unavailable = provider["unavailable"], unavailable != .null {
-                    Text(unavailable.text("message", fallback: unavailable.text("reason"))).font(.callout)
+                if let unavailable = provider.unavailable {
+                    Text(unavailable.message ?? unavailable.reason.rawValue).font(.callout)
                         .foregroundStyle(MobileStyle.muted)
                 }
-                ForEach(provider.list("windows"), id: \.stableID) { window in
+                ForEach(provider.windows, id: \.id) { window in
                     LimitBar(
-                        label: window.text("label"), used: window.number("used"),
-                        resetsAt: window["resetsAt"]?.numberValue.map { Date(timeIntervalSince1970: $0 / 1000) })
+                        label: window.label, used: window.used,
+                        resetsAt: window.resetsAt.map { Date(timeIntervalSince1970: Double($0) / 1000) })
                 }
             }
         }
     }
 
     @ViewBuilder private var provenance: some View {
-        if let summary = state.value {
-            let scan = summary["scan"]
-            let scanned = Date(timeIntervalSince1970: (scan?.number("at") ?? 0) / 1000)
-            let files = Int(scan?.number("files") ?? 0)
+        if let summary {
+            let scan = summary.scan
+            let scanned = Date(timeIntervalSince1970: scan.at / 1000)
+            let files = Int(scan.files)
             let prices =
-                summary["pricing"]?["fetchedAt"]?.numberValue.map {
+                summary.pricing.fetchedAt.map {
                     String(localized: "Prices of \(Format.day(Date(timeIntervalSince1970: $0 / 1000)))")
                 } ?? String(localized: "Bundled prices")
             let rate =
@@ -347,7 +349,7 @@ struct MachineUsagePage: View {
                         comment: "Appended to the usage provenance line; %@ is a date")
                 } ?? "" : ""
             VStack(spacing: 6) {
-                if scan?["failed"]?.boolValue == true {
+                if scan.failed {
                     Text("The latest scan failed. These are the last totals.").foregroundStyle(
                         MobileStyle.statusNeedsYou)
                 }
@@ -380,13 +382,15 @@ struct MachineUsagePage: View {
     private func load() async {
         let client = client
         let period = period
-        await state.load {
+        await state.read(loaded: summary != nil) { stillTheLatest in
             let result = try await client.request(.usageSummary, payload: period.payload())
-            limits = try? await client.request(.usageLimits)
-            let list = try? await client.request(.accountsList)
+                .decoded(as: UsageSummary.self)
+            limits = try? await client.request(.usageLimits).decoded(as: UsageLimits.self)
+            let list = try? await client.request(.accountsList).decoded(as: AccountsSnapshot.self)
             accounts = list.map(ProviderAccountList.init)
-            loginCommands = (list?["loginCommands"]?.objectValue ?? [:]).compactMapValues(\.stringValue)
-            return result
+            loginCommands = list?.loginCommands ?? [:]
+            try stillTheLatest()
+            summary = result
         }
     }
 }

@@ -5,11 +5,8 @@ import XCTest
 @testable import Ruimte
 
 @MainActor final class AccountLoginTests: XCTestCase {
-    private func status(_ state: String, email: String? = nil, checkedAt: Double = 1) -> JSONValue {
-        .object([
-            "id": .string("work"), "state": .string(state), "email": email.map(JSONValue.string) ?? .null,
-            "checkedAt": .number(checkedAt),
-        ])
+    private func status(_ state: String, email: String? = nil, checkedAt: Double = 1) -> AccountStatus {
+        AccountsWire.status("work", state: state, email: email, checkedAt: checkedAt).accountStatus
     }
 
     func testALoginLandsOnlyOnceTheAccountReadsDifferentlyLoggedIn() {
@@ -31,7 +28,10 @@ import XCTest
         XCTAssertEqual(login?["kind"], .string("claude"))
         XCTAssertEqual(login?["account"], .string("work"))
         XCTAssertTrue(machine.sent.contains { $0.0 == .accountsWatchLogin })
-        machine.emit(.accountsChanged, .object(["statuses": .array([status("ready", email: "me@example.com")])]))
+        machine.emit(
+            .accountsChanged,
+            AccountsWire.snapshot(
+                accounts: [:], statuses: [AccountsWire.status("work", state: "ready", email: "me@example.com")]))
         XCTAssertEqual(model.phase, .landed(email: "me@example.com"))
         await model.end()
         XCTAssertEqual(machine.sent.last?.0, .sessionKill)
@@ -156,12 +156,7 @@ import XCTest
         sent.append((type, payload))
         switch type {
         case .accountsList:
-            return .object([
-                "accounts": .object([:]),
-                "statuses": .array([
-                    .object(["id": .string("work"), "state": .string("signed-out"), "checkedAt": .number(1)])
-                ]),
-            ])
+            return AccountsWire.snapshot(accounts: [:], statuses: [AccountsWire.status("work", state: "signed-out")])
         case .sessionLogin:
             if let refusal { throw MachineClientError.server(code: refusal, message: refusal) }
             return .object(["sessionId": payload["sessionId"] ?? .null])

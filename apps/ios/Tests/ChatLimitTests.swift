@@ -191,7 +191,7 @@ import XCTest
                 "providers": .array(
                     ["work", "spare"].map { id in
                         .object([
-                            "kind": .string("claude"), "account": .object(["id": .string(id)]), "plan": .null,
+                            "kind": .string("claude"), "account": .object(["id": .string(id), "label": .string(id)]), "plan": .null,
                             "checkedAt": .number(workRead ? 1 : 0), "source": .string("probe"),
                             "windows": .array([window.setting("used", .number(id == "work" ? 0.2 : 0.4))]),
                             "cost": .null, "unavailable": .null,

@@ -5,7 +5,17 @@ import Testing
 @testable import RuimteShared
 
 private func list(_ json: String) throws -> ProviderAccountList {
-    ProviderAccountList(try JSONValue.decode(Data(json.utf8)))
+    let value = try JSONValue.decode(Data(json.utf8))
+    var object = try #require(value.objectValue)
+    let defaults: [String: JSONValue] = [
+        "email": .null, "plan": .null, "organization": .null, "home": .string("/home"), "message": .null,
+        "checkedAt": .number(0),
+    ]
+    object["statuses"] = .array(
+        (object["statuses"]?.arrayValue ?? []).map { status in
+            .object(defaults.merging(status.objectValue ?? [:]) { _, given in given })
+        })
+    return ProviderAccountList(try JSONValue.object(object).decoded(as: AccountsSnapshot.self))
 }
 
 private let twoClaudes = """
@@ -44,7 +54,8 @@ private let twoClaudes = """
                       "source": "probe", "windows": [], "cost": null, "unavailable": null }
                 ]
             }
-            """.utf8))
+            """.utf8)
+    ).decoded(as: UsageLimits.self)
     let sections = UsageLimitSection.sections(limits: limits, accounts: try list(twoClaudes))
     #expect(sections.map(\.id) == ["claude", "work", "codex"])
     #expect(sections.map(\.title) == ["Claude limits · Claude", "Claude limits · Work", "Codex limits"])
@@ -54,10 +65,10 @@ private let twoClaudes = """
 }
 
 @Test func limitsFromAMachineBeforeAccountsKeepOneSectionPerCLI() throws {
-    let limits = JSONValue.object([
-        "providers": .array([
-            .object(["kind": .string("claude"), "checkedAt": .number(1), "windows": .array([]), "unavailable": .null])
-        ])
+    let limits = UsageLimits(providers: [
+        UsageLimitsProvider(
+            kind: "claude", account: nil, plan: nil, checkedAt: 1, source: .probe, windows: [], cost: nil,
+            unavailable: nil)
     ])
     let sections = UsageLimitSection.sections(limits: limits, accounts: nil)
     #expect(sections.map(\.title) == ["Claude limits"])

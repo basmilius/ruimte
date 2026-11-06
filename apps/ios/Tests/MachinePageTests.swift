@@ -371,28 +371,28 @@ final class MachinePageTests: XCTestCase {
         return .object(value)
     }
 
-    private func limits(_ readings: [JSONValue]) -> JSONValue { .object(["providers": .array(readings)]) }
+    private func wire<Value: Encodable>(_ value: Value) -> JSONValue { try! JSONValue(encoding: value) }
+
+    private func limitsWire(_ readings: [JSONValue]) -> JSONValue { .object(["providers": .array(readings)]) }
+
+    private func limits(_ readings: [JSONValue]) -> UsageLimits { limitsWire(readings).usageLimits }
 
     /// An `accounts.list` answer: every account with its kind, label, whether it is on and its state.
     private func accountList(_ accounts: [(id: String, kind: String, label: String?, enabled: Bool, state: String)])
-        -> JSONValue
+        -> AccountsSnapshot
     {
-        .object([
-            "accounts": .object(
-                Dictionary(
-                    uniqueKeysWithValues: accounts.map { account in
-                        var value: [String: JSONValue] = [
-                            "kind": .string(account.kind), "enabled": .bool(account.enabled),
-                        ]
-                        if let label = account.label { value["label"] = .string(label) }
-                        return (account.id, JSONValue.object(value))
-                    })),
-            "statuses": .array(
-                accounts.map { .object(["id": .string($0.id), "state": .string($0.state)]) }),
-        ])
+        AccountsWire.snapshot(
+            accounts: Dictionary(
+                uniqueKeysWithValues: accounts.map { account in
+                    var value: [String: JSONValue] = ["kind": .string(account.kind), "enabled": .bool(account.enabled)]
+                    if let label = account.label { value["label"] = .string(label) }
+                    return (account.id, JSONValue.object(value))
+                }),
+            statuses: accounts.map { AccountsWire.status($0.id, kind: $0.kind, state: $0.state) }
+        ).accountsSnapshot
     }
 
-    private func loaded(_ value: JSONValue) -> UsageAccounts { .loaded(ProviderAccountList(value)) }
+    private func loaded(_ value: AccountsSnapshot) -> UsageAccounts { .loaded(ProviderAccountList(value)) }
 
     @MainActor func testEveryAccountOfACLIGetsARowWithBothWindowsInTheOrderOfItsAccounts() {
         let card = MachineLimits.of(
@@ -541,18 +541,18 @@ final class MachinePageTests: XCTestCase {
 
     @MainActor func testTheRecorderListsTheAccountsOncePerConnectionAndFollowsThem() async {
         let machine = FakeMachine()
-        machine.answers[.usageLimits] = { _ in self.limits([]) }
-        machine.answers[.accountsList] = { _ in self.accountList([("claude", "claude", nil, true, "ready")]) }
+        machine.answers[.usageLimits] = { _ in self.wire(self.limits([])) }
+        machine.answers[.accountsList] = { _ in self.wire(self.accountList([("claude", "claude", nil, true, "ready")])) }
         let recorder = UsageWidgetRecorder(machineID: "recorder-\(UUID().uuidString)", client: machine)
         let initial = NativeTaskDrain { recorder.start() }
         await initial.finish()
         XCTAssertEqual(recorder.accounts, loaded(accountList([("claude", "claude", nil, true, "ready")])))
         let changedLimits = NativeTaskDrain {
             machine.emit(
-                .usageLimitsChanged, limits([reading("claude", windows: [window("session", "Session", 0.4)])]))
+                .usageLimitsChanged, limitsWire([reading("claude", windows: [window("session", "Session", 0.4)])]))
         }
         let changed = accountList([("claude", "claude", nil, true, "ready"), ("work", "claude", "Work", true, "ready")])
-        machine.emit(.accountsChanged, changed)
+        machine.emit(.accountsChanged, wire(changed))
         await changedLimits.finish()
         XCTAssertEqual(recorder.accounts, loaded(changed))
         XCTAssertEqual(machine.sent.filter { $0.0 == .accountsList }.count, 1)
@@ -578,16 +578,16 @@ final class MachinePageTests: XCTestCase {
 
     @MainActor func testLimitsThatChangeWhileALoadWaitsAreNotLostOrOverwritten() async {
         let machine = FakeMachine()
-        let old = limits([reading("claude", windows: [window("session", "Session", 0.1)])])
-        let newer = limits([reading("claude", windows: [window("session", "Session", 0.7)])])
+        let old = limitsWire([reading("claude", windows: [window("session", "Session", 0.1)])])
+        let newer = limitsWire([reading("claude", windows: [window("session", "Session", 0.7)])])
         machine.answers[.usageLimits] = { _ in old }
         machine.hold(.usageLimits)
         let recorder = UsageWidgetRecorder(machineID: "recorder-\(UUID().uuidString)", client: machine)
         let initial = NativeTaskDrain { recorder.start() }
         await machine.waitForRequest(.usageLimits)
         machine.emit(.usageLimitsChanged, newer)
-        XCTAssertEqual(recorder.limits, newer)
-        var applied: [JSONValue?] = []
+        XCTAssertEqual(recorder.limits, newer.usageLimits)
+        var applied: [UsageLimits?] = []
         let observation = withContinuousObservation(options: .didSet) { event in
             let value = recorder.limits
             if event.kind == .didSet { applied.append(value) }
@@ -595,9 +595,9 @@ final class MachinePageTests: XCTestCase {
         machine.release(.usageLimits)
         await initial.finish()
         withExtendedLifetime(observation) {
-            XCTAssertFalse(applied.contains(old), "A stale answer must never replace the event, even briefly")
+            XCTAssertFalse(applied.contains(old.usageLimits), "A stale answer must never replace the event, even briefly")
         }
-        XCTAssertEqual(recorder.limits, newer)
+        XCTAssertEqual(recorder.limits, newer.usageLimits)
         XCTAssertEqual(recorder.providers.first?.windows.first?.used, 0.7)
         recorder.stop()
     }
@@ -743,30 +743,38 @@ final class MachinePageTests: XCTestCase {
         }
         let summary = JSONValue.object([
             "from": .string("2026-10-01"), "to": .string("2026-10-03"), "resolution": .string("day"),
-            "sessions": .number(3),
+            "timeZone": .string("Europe/Amsterdam"), "sessions": .number(3),
+            "scan": .object([
+                "at": .number(0), "files": .number(0), "changedFiles": .number(0), "durationMs": .number(0),
+                "running": .bool(false), "failed": .bool(false),
+            ]),
+            "pricing": .object(["source": .string("none"), "fetchedAt": .null, "models": .number(0)]), "rate": .null,
+            "roots": .array([]),
             "buckets": .array([
                 .object([
                     "slot": .string("2026-10-01"), "provider": .string("claude"), "model": .string("claude-sonnet-4-5"),
                     "totals": totals(100), "costUsd": .number(3), "cacheSavingsUsd": .number(1),
+                    "sessions": .number(1),
                 ]),
                 .object([
                     "slot": .string("2026-10-03"), "provider": .string("codex"), "model": .string("gpt-5-codex"),
                     "totals": totals(300), "costUsd": .number(1), "cacheSavingsUsd": .number(0),
+                    "sessions": .number(1),
                 ]),
             ]),
             "models": .array([
                 .object([
                     "provider": .string("claude"), "model": .string("claude-sonnet-4-5"), "totals": totals(100),
-                    "costUsd": .number(3),
+                    "costUsd": .number(3), "priceBasis": .string("exact"), "pricedAs": .null,
                 ]),
                 .object([
                     "provider": .string("codex"), "model": .string("gpt-5-codex"), "totals": totals(300),
-                    "costUsd": .null,
+                    "costUsd": .null, "priceBasis": .string("unknown"), "pricedAs": .null,
                 ]),
             ]),
             "projects": .array([]),
         ])
-        let report = UsageReport(summary, calendar: calendar)
+        let report = UsageReport(summary.usageSummary, calendar: calendar)
         XCTAssertEqual(report.slots.map(\.id), ["2026-10-01", "2026-10-02", "2026-10-03"])
         XCTAssertEqual(report.slots[1].value(.dollar), 0, "A quiet day keeps its place")
         XCTAssertEqual(report.total.costUsd, 4)

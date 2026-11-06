@@ -237,7 +237,7 @@ struct UsageWidgetView: View {
                         HStack(alignment: .firstTextBaseline) {
                             Text("Today").font(.caption).foregroundStyle(.secondary)
                             Spacer(minLength: 4)
-                            Text(UsageMoneyFormatter(locale: locale, rate: snapshot.cost?.rate).string(usd: cost))
+                            Text(UsageMoneyFormatter(locale: locale, storedRate: snapshot.cost?.rate).string(usd: cost))
                                 .font(.headline).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
                         }
                     }

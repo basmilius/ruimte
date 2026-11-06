@@ -44,7 +44,8 @@ final class NewChatModel {
         } catch {
             problem = error.localizedDescription
         }
-        accounts = (try? await client.request(.accountsList)).map(ProviderAccountList.init)
+        accounts = (try? await client.request(.accountsList).decoded(as: AccountsSnapshot.self))
+            .map(ProviderAccountList.init)
     }
 
     /// The account a new chat of this CLI names, as remembered for this machine; nil leaves it to the machine.

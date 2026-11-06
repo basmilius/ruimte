@@ -275,7 +275,7 @@ private actor FakeAccountAPI: AccountAPI {
                 .object(["id": .string("work"), "state": .string("signed-out")]),
             ]),
         ])
-        let agents = MachineAgentsModel.agents(providers: providers, accounts: accounts)
+        let agents = MachineAgentsModel.agents(providers: providers, accounts: accounts.accountsSnapshot)
         XCTAssertEqual(agents.map(\.kind), ["claude"])
         XCTAssertEqual(agents[0].models.map { $0.text("slug") }, ["opus"])
         XCTAssertEqual(agents[0].accounts.map(\.detail), ["Max · bas@example.com", "Not logged in"])
@@ -294,7 +294,7 @@ private actor FakeAccountAPI: AccountAPI {
             ]),
             "statuses": .array([]),
         ])
-        let agents = MachineAgentsModel.agents(providers: providers, accounts: accounts)
+        let agents = MachineAgentsModel.agents(providers: providers, accounts: accounts.accountsSnapshot)
         XCTAssertEqual(agents[0].accounts.map(\.id), ["off", "work", "claude"])
         XCTAssertEqual(agents[0].defaultAccount, "work")
         XCTAssertEqual(
@@ -302,7 +302,7 @@ private actor FakeAccountAPI: AccountAPI {
             .object(["kind": .string("claude"), "ids": .array([.string("work"), .string("claude")])]))
         let single = MachineAgentsModel.agents(
             providers: providers,
-            accounts: .object(["accounts": .object(["claude": .object(["kind": .string("claude")])])]))
+            accounts: AccountsWire.snapshot(accounts: ["claude": .object(["kind": .string("claude")])]).accountsSnapshot)
         XCTAssertNil(single[0].defaultAccount)
     }
 }

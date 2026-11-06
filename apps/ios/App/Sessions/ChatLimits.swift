@@ -88,14 +88,14 @@ extension ChatModel {
     /// while it is in use, so `unread` asks for the other accounts too, at most every five minutes per machine.
     func readLimits(unread: Bool = false, now: Date = .now) async {
         guard connected else { return }
-        if let snapshot = try? await client.request(.usageLimits) {
+        if let snapshot = try? await client.request(.usageLimits).decoded(as: UsageLimits.self) {
             limits = snapshot
         }
         guard unread, let accounts, accounts.hasChoice(provider),
             accounts.hasUnreadAccount(provider, current: info?.account, limits: limits),
             ChatLimitRefreshes.shared.allow(machineID, now: now)
         else { return }
-        if let snapshot = try? await client.request(.usageRefreshLimits) {
+        if let snapshot = try? await client.request(.usageRefreshLimits).decoded(as: UsageLimits.self) {
             limits = snapshot
         }
     }

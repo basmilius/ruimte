@@ -13683,6 +13683,981 @@ public enum DeviceFrameEventFormat: String, CaseIterable, Codable, Sendable, Equ
     case `h264` = "h264"
 }
 
+public struct UsageSummary: Codable, Sendable, Equatable {
+    public let `from`: String
+    public let `to`: String
+    public let `resolution`: UsageResolution
+    public let `timeZone`: String
+    public let `buckets`: [UsageBucket]
+    public let `models`: [UsageModel]
+    public let `projects`: [UsageProject]
+    public let `sessions`: Int64
+    public let `scan`: UsageScan
+    public let `pricing`: UsagePricing
+    public let `rate`: UsageRate?
+    public let `roots`: [UsageSummaryRootsItem]
+    public let `accounts`: [UsageSummaryAccountsItem]?
+
+    public init(`from`: String, `to`: String, `resolution`: UsageResolution, `timeZone`: String, `buckets`: [UsageBucket], `models`: [UsageModel], `projects`: [UsageProject], `sessions`: Int64, `scan`: UsageScan, `pricing`: UsagePricing, `rate`: UsageRate?, `roots`: [UsageSummaryRootsItem], `accounts`: [UsageSummaryAccountsItem]? = nil) {
+        self.`from` = `from`
+        self.`to` = `to`
+        self.`resolution` = `resolution`
+        self.`timeZone` = `timeZone`
+        self.`buckets` = `buckets`
+        self.`models` = `models`
+        self.`projects` = `projects`
+        self.`sessions` = `sessions`
+        self.`scan` = `scan`
+        self.`pricing` = `pricing`
+        self.`rate` = `rate`
+        self.`roots` = `roots`
+        self.`accounts` = `accounts`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `from` = try container.decode(String.self, forKey: .`from`)
+        `to` = try container.decode(String.self, forKey: .`to`)
+        `resolution` = try container.decode(UsageResolution.self, forKey: .`resolution`)
+        `timeZone` = try container.decode(String.self, forKey: .`timeZone`)
+        `buckets` = try container.decode([UsageBucket].self, forKey: .`buckets`)
+        `models` = try container.decode([UsageModel].self, forKey: .`models`)
+        `projects` = try container.decode([UsageProject].self, forKey: .`projects`)
+        `sessions` = try container.decode(Int64.self, forKey: .`sessions`)
+        `scan` = try container.decode(UsageScan.self, forKey: .`scan`)
+        `pricing` = try container.decode(UsagePricing.self, forKey: .`pricing`)
+        `rate` = try container.decode(UsageRate?.self, forKey: .`rate`)
+        `roots` = try container.decode([UsageSummaryRootsItem].self, forKey: .`roots`)
+        `accounts` = try container.decodeIfPresent([UsageSummaryAccountsItem].self, forKey: .`accounts`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`from`, forKey: .`from`)
+        try container.encode(`to`, forKey: .`to`)
+        try container.encode(`resolution`, forKey: .`resolution`)
+        try container.encode(`timeZone`, forKey: .`timeZone`)
+        try container.encode(`buckets`, forKey: .`buckets`)
+        try container.encode(`models`, forKey: .`models`)
+        try container.encode(`projects`, forKey: .`projects`)
+        try container.encode(`sessions`, forKey: .`sessions`)
+        try container.encode(`scan`, forKey: .`scan`)
+        try container.encode(`pricing`, forKey: .`pricing`)
+        try container.encode(`rate`, forKey: .`rate`)
+        try container.encode(`roots`, forKey: .`roots`)
+        try container.encodeIfPresent(`accounts`, forKey: .`accounts`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `from` = "from"
+        case `to` = "to"
+        case `resolution` = "resolution"
+        case `timeZone` = "timeZone"
+        case `buckets` = "buckets"
+        case `models` = "models"
+        case `projects` = "projects"
+        case `sessions` = "sessions"
+        case `scan` = "scan"
+        case `pricing` = "pricing"
+        case `rate` = "rate"
+        case `roots` = "roots"
+        case `accounts` = "accounts"
+    }
+}
+
+public enum UsageResolution: String, CaseIterable, Codable, Sendable, Equatable {
+    case `hour` = "hour"
+    case `day` = "day"
+}
+
+public struct UsageBucket: Codable, Sendable, Equatable {
+    public let `slot`: String
+    public let `provider`: String
+    public let `model`: String
+    public let `account`: String?
+    public let `totals`: UsageTotals
+    public let `costUsd`: Double?
+    public let `cacheSavingsUsd`: Double
+    public let `sessions`: Int64
+
+    public init(`slot`: String, `provider`: String, `model`: String, `account`: String? = nil, `totals`: UsageTotals, `costUsd`: Double?, `cacheSavingsUsd`: Double, `sessions`: Int64) {
+        self.`slot` = `slot`
+        self.`provider` = `provider`
+        self.`model` = `model`
+        self.`account` = `account`
+        self.`totals` = `totals`
+        self.`costUsd` = `costUsd`
+        self.`cacheSavingsUsd` = `cacheSavingsUsd`
+        self.`sessions` = `sessions`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `slot` = try container.decode(String.self, forKey: .`slot`)
+        `provider` = try container.decode(String.self, forKey: .`provider`)
+        `model` = try container.decode(String.self, forKey: .`model`)
+        `account` = try container.decodeIfPresent(String.self, forKey: .`account`)
+        `totals` = try container.decode(UsageTotals.self, forKey: .`totals`)
+        `costUsd` = try container.decode(Double?.self, forKey: .`costUsd`)
+        `cacheSavingsUsd` = try container.decode(Double.self, forKey: .`cacheSavingsUsd`)
+        `sessions` = try container.decode(Int64.self, forKey: .`sessions`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`slot`, forKey: .`slot`)
+        try container.encode(`provider`, forKey: .`provider`)
+        try container.encode(`model`, forKey: .`model`)
+        try container.encodeIfPresent(`account`, forKey: .`account`)
+        try container.encode(`totals`, forKey: .`totals`)
+        try container.encode(`costUsd`, forKey: .`costUsd`)
+        try container.encode(`cacheSavingsUsd`, forKey: .`cacheSavingsUsd`)
+        try container.encode(`sessions`, forKey: .`sessions`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `slot` = "slot"
+        case `provider` = "provider"
+        case `model` = "model"
+        case `account` = "account"
+        case `totals` = "totals"
+        case `costUsd` = "costUsd"
+        case `cacheSavingsUsd` = "cacheSavingsUsd"
+        case `sessions` = "sessions"
+    }
+}
+
+public struct UsageTotals: Codable, Sendable, Equatable {
+    public let `calls`: Int64
+    public let `input`: Int64
+    public let `cacheRead`: Int64
+    public let `cacheWrite`: Int64
+    public let `cacheWrite1h`: Int64
+    public let `output`: Int64
+    public let `reasoning`: Int64
+
+    public init(`calls`: Int64, `input`: Int64, `cacheRead`: Int64, `cacheWrite`: Int64, `cacheWrite1h`: Int64, `output`: Int64, `reasoning`: Int64) {
+        self.`calls` = `calls`
+        self.`input` = `input`
+        self.`cacheRead` = `cacheRead`
+        self.`cacheWrite` = `cacheWrite`
+        self.`cacheWrite1h` = `cacheWrite1h`
+        self.`output` = `output`
+        self.`reasoning` = `reasoning`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `calls` = try container.decode(Int64.self, forKey: .`calls`)
+        `input` = try container.decode(Int64.self, forKey: .`input`)
+        `cacheRead` = try container.decode(Int64.self, forKey: .`cacheRead`)
+        `cacheWrite` = try container.decode(Int64.self, forKey: .`cacheWrite`)
+        `cacheWrite1h` = try container.decode(Int64.self, forKey: .`cacheWrite1h`)
+        `output` = try container.decode(Int64.self, forKey: .`output`)
+        `reasoning` = try container.decode(Int64.self, forKey: .`reasoning`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`calls`, forKey: .`calls`)
+        try container.encode(`input`, forKey: .`input`)
+        try container.encode(`cacheRead`, forKey: .`cacheRead`)
+        try container.encode(`cacheWrite`, forKey: .`cacheWrite`)
+        try container.encode(`cacheWrite1h`, forKey: .`cacheWrite1h`)
+        try container.encode(`output`, forKey: .`output`)
+        try container.encode(`reasoning`, forKey: .`reasoning`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `calls` = "calls"
+        case `input` = "input"
+        case `cacheRead` = "cacheRead"
+        case `cacheWrite` = "cacheWrite"
+        case `cacheWrite1h` = "cacheWrite1h"
+        case `output` = "output"
+        case `reasoning` = "reasoning"
+    }
+}
+
+public struct UsageModel: Codable, Sendable, Equatable {
+    public let `provider`: String
+    public let `model`: String
+    public let `account`: String?
+    public let `totals`: UsageTotals
+    public let `costUsd`: Double?
+    public let `priceBasis`: UsagePriceBasis
+    public let `pricedAs`: String?
+
+    public init(`provider`: String, `model`: String, `account`: String? = nil, `totals`: UsageTotals, `costUsd`: Double?, `priceBasis`: UsagePriceBasis, `pricedAs`: String?) {
+        self.`provider` = `provider`
+        self.`model` = `model`
+        self.`account` = `account`
+        self.`totals` = `totals`
+        self.`costUsd` = `costUsd`
+        self.`priceBasis` = `priceBasis`
+        self.`pricedAs` = `pricedAs`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `provider` = try container.decode(String.self, forKey: .`provider`)
+        `model` = try container.decode(String.self, forKey: .`model`)
+        `account` = try container.decodeIfPresent(String.self, forKey: .`account`)
+        `totals` = try container.decode(UsageTotals.self, forKey: .`totals`)
+        `costUsd` = try container.decode(Double?.self, forKey: .`costUsd`)
+        `priceBasis` = try container.decode(UsagePriceBasis.self, forKey: .`priceBasis`)
+        `pricedAs` = try container.decode(String?.self, forKey: .`pricedAs`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`provider`, forKey: .`provider`)
+        try container.encode(`model`, forKey: .`model`)
+        try container.encodeIfPresent(`account`, forKey: .`account`)
+        try container.encode(`totals`, forKey: .`totals`)
+        try container.encode(`costUsd`, forKey: .`costUsd`)
+        try container.encode(`priceBasis`, forKey: .`priceBasis`)
+        try container.encode(`pricedAs`, forKey: .`pricedAs`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `provider` = "provider"
+        case `model` = "model"
+        case `account` = "account"
+        case `totals` = "totals"
+        case `costUsd` = "costUsd"
+        case `priceBasis` = "priceBasis"
+        case `pricedAs` = "pricedAs"
+    }
+}
+
+public enum UsagePriceBasis: String, CaseIterable, Codable, Sendable, Equatable {
+    case `exact` = "exact"
+    case `family` = "family"
+    case `override` = "override"
+    case `unknown` = "unknown"
+}
+
+public struct UsageProject: Codable, Sendable, Equatable {
+    public let `folder`: String
+    public let `name`: String
+    public let `projectId`: String?
+    public let `byProvider`: [String: UsageProjectProvider]
+    public let `totals`: UsageTotals
+    public let `costUsd`: Double
+
+    public init(`folder`: String, `name`: String, `projectId`: String?, `byProvider`: [String: UsageProjectProvider], `totals`: UsageTotals, `costUsd`: Double) {
+        self.`folder` = `folder`
+        self.`name` = `name`
+        self.`projectId` = `projectId`
+        self.`byProvider` = `byProvider`
+        self.`totals` = `totals`
+        self.`costUsd` = `costUsd`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `folder` = try container.decode(String.self, forKey: .`folder`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `projectId` = try container.decode(String?.self, forKey: .`projectId`)
+        `byProvider` = try container.decode([String: UsageProjectProvider].self, forKey: .`byProvider`)
+        `totals` = try container.decode(UsageTotals.self, forKey: .`totals`)
+        `costUsd` = try container.decode(Double.self, forKey: .`costUsd`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`folder`, forKey: .`folder`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`projectId`, forKey: .`projectId`)
+        try container.encode(`byProvider`, forKey: .`byProvider`)
+        try container.encode(`totals`, forKey: .`totals`)
+        try container.encode(`costUsd`, forKey: .`costUsd`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `folder` = "folder"
+        case `name` = "name"
+        case `projectId` = "projectId"
+        case `byProvider` = "byProvider"
+        case `totals` = "totals"
+        case `costUsd` = "costUsd"
+    }
+}
+
+public struct UsageProjectProvider: Codable, Sendable, Equatable {
+    public let `costUsd`: Double
+    public let `tokens`: Int64
+
+    public init(`costUsd`: Double, `tokens`: Int64) {
+        self.`costUsd` = `costUsd`
+        self.`tokens` = `tokens`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `costUsd` = try container.decode(Double.self, forKey: .`costUsd`)
+        `tokens` = try container.decode(Int64.self, forKey: .`tokens`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`costUsd`, forKey: .`costUsd`)
+        try container.encode(`tokens`, forKey: .`tokens`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `costUsd` = "costUsd"
+        case `tokens` = "tokens"
+    }
+}
+
+public struct UsageScan: Codable, Sendable, Equatable {
+    public let `at`: Double
+    public let `files`: Int64
+    public let `changedFiles`: Int64
+    public let `durationMs`: Int64
+    public let `running`: Bool
+    public let `failed`: Bool
+
+    public init(`at`: Double, `files`: Int64, `changedFiles`: Int64, `durationMs`: Int64, `running`: Bool, `failed`: Bool) {
+        self.`at` = `at`
+        self.`files` = `files`
+        self.`changedFiles` = `changedFiles`
+        self.`durationMs` = `durationMs`
+        self.`running` = `running`
+        self.`failed` = `failed`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `at` = try container.decode(Double.self, forKey: .`at`)
+        `files` = try container.decode(Int64.self, forKey: .`files`)
+        `changedFiles` = try container.decode(Int64.self, forKey: .`changedFiles`)
+        `durationMs` = try container.decode(Int64.self, forKey: .`durationMs`)
+        `running` = try container.decode(Bool.self, forKey: .`running`)
+        `failed` = try container.decode(Bool.self, forKey: .`failed`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`at`, forKey: .`at`)
+        try container.encode(`files`, forKey: .`files`)
+        try container.encode(`changedFiles`, forKey: .`changedFiles`)
+        try container.encode(`durationMs`, forKey: .`durationMs`)
+        try container.encode(`running`, forKey: .`running`)
+        try container.encode(`failed`, forKey: .`failed`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `at` = "at"
+        case `files` = "files"
+        case `changedFiles` = "changedFiles"
+        case `durationMs` = "durationMs"
+        case `running` = "running"
+        case `failed` = "failed"
+    }
+}
+
+public struct UsagePricing: Codable, Sendable, Equatable {
+    public let `source`: UsagePricingSource
+    public let `fetchedAt`: Double?
+    public let `models`: Int64
+
+    public init(`source`: UsagePricingSource, `fetchedAt`: Double?, `models`: Int64) {
+        self.`source` = `source`
+        self.`fetchedAt` = `fetchedAt`
+        self.`models` = `models`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `source` = try container.decode(UsagePricingSource.self, forKey: .`source`)
+        `fetchedAt` = try container.decode(Double?.self, forKey: .`fetchedAt`)
+        `models` = try container.decode(Int64.self, forKey: .`models`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`source`, forKey: .`source`)
+        try container.encode(`fetchedAt`, forKey: .`fetchedAt`)
+        try container.encode(`models`, forKey: .`models`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `source` = "source"
+        case `fetchedAt` = "fetchedAt"
+        case `models` = "models"
+    }
+}
+
+public enum UsagePricingSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `litellm` = "litellm"
+    case `snapshot` = "snapshot"
+    case `none` = "none"
+}
+
+public struct UsageRate: Codable, Sendable, Equatable {
+    public let `currency`: String
+    public let `rate`: Double
+    public let `date`: String
+    public let `fetchedAt`: Double
+
+    public init(`currency`: String, `rate`: Double, `date`: String, `fetchedAt`: Double) {
+        self.`currency` = `currency`
+        self.`rate` = `rate`
+        self.`date` = `date`
+        self.`fetchedAt` = `fetchedAt`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `currency` = try container.decode(String.self, forKey: .`currency`)
+        `rate` = try container.decode(Double.self, forKey: .`rate`)
+        `date` = try container.decode(String.self, forKey: .`date`)
+        `fetchedAt` = try container.decode(Double.self, forKey: .`fetchedAt`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`currency`, forKey: .`currency`)
+        try container.encode(`rate`, forKey: .`rate`)
+        try container.encode(`date`, forKey: .`date`)
+        try container.encode(`fetchedAt`, forKey: .`fetchedAt`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `currency` = "currency"
+        case `rate` = "rate"
+        case `date` = "date"
+        case `fetchedAt` = "fetchedAt"
+    }
+}
+
+public struct UsageSummaryRootsItem: Codable, Sendable, Equatable {
+    public let `provider`: String
+    public let `path`: String
+    public let `status`: UsageSummaryRootsItemStatus
+    public let `message`: String?
+
+    public init(`provider`: String, `path`: String, `status`: UsageSummaryRootsItemStatus, `message`: String?) {
+        self.`provider` = `provider`
+        self.`path` = `path`
+        self.`status` = `status`
+        self.`message` = `message`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `provider` = try container.decode(String.self, forKey: .`provider`)
+        `path` = try container.decode(String.self, forKey: .`path`)
+        `status` = try container.decode(UsageSummaryRootsItemStatus.self, forKey: .`status`)
+        `message` = try container.decode(String?.self, forKey: .`message`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`provider`, forKey: .`provider`)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`status`, forKey: .`status`)
+        try container.encode(`message`, forKey: .`message`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `provider` = "provider"
+        case `path` = "path"
+        case `status` = "status"
+        case `message` = "message"
+    }
+}
+
+public enum UsageSummaryRootsItemStatus: String, CaseIterable, Codable, Sendable, Equatable {
+    case `ok` = "ok"
+    case `missing` = "missing"
+    case `failed` = "failed"
+}
+
+public struct UsageSummaryAccountsItem: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `kind`: String
+    public let `label`: String
+    public let `color`: String?
+
+    public init(`id`: String, `kind`: String, `label`: String, `color`: String? = nil) {
+        self.`id` = `id`
+        self.`kind` = `kind`
+        self.`label` = `label`
+        self.`color` = `color`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `label` = try container.decode(String.self, forKey: .`label`)
+        `color` = try container.decodeIfPresent(String.self, forKey: .`color`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`label`, forKey: .`label`)
+        try container.encodeIfPresent(`color`, forKey: .`color`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `kind` = "kind"
+        case `label` = "label"
+        case `color` = "color"
+    }
+}
+
+public struct UsageLimits: Codable, Sendable, Equatable {
+    public let `providers`: [UsageLimitsProvider]
+
+    public init(`providers`: [UsageLimitsProvider]) {
+        self.`providers` = `providers`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `providers` = try container.decode([UsageLimitsProvider].self, forKey: .`providers`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`providers`, forKey: .`providers`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `providers` = "providers"
+    }
+}
+
+public struct UsageLimitsProvider: Codable, Sendable, Equatable {
+    public let `kind`: String
+    public let `account`: UsageLimitsAccount?
+    public let `plan`: String?
+    public let `checkedAt`: Int64
+    public let `source`: UsageLimitsProviderSource
+    public let `windows`: [UsageLimitsWindow]
+    public let `cost`: UsageLimitsProviderCost?
+    public let `unavailable`: UsageLimitsUnavailable?
+
+    public init(`kind`: String, `account`: UsageLimitsAccount? = nil, `plan`: String?, `checkedAt`: Int64, `source`: UsageLimitsProviderSource, `windows`: [UsageLimitsWindow], `cost`: UsageLimitsProviderCost?, `unavailable`: UsageLimitsUnavailable?) {
+        self.`kind` = `kind`
+        self.`account` = `account`
+        self.`plan` = `plan`
+        self.`checkedAt` = `checkedAt`
+        self.`source` = `source`
+        self.`windows` = `windows`
+        self.`cost` = `cost`
+        self.`unavailable` = `unavailable`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `account` = try container.decodeIfPresent(UsageLimitsAccount.self, forKey: .`account`)
+        `plan` = try container.decode(String?.self, forKey: .`plan`)
+        `checkedAt` = try container.decode(Int64.self, forKey: .`checkedAt`)
+        `source` = try container.decode(UsageLimitsProviderSource.self, forKey: .`source`)
+        `windows` = try container.decode([UsageLimitsWindow].self, forKey: .`windows`)
+        `cost` = try container.decode(UsageLimitsProviderCost?.self, forKey: .`cost`)
+        `unavailable` = try container.decode(UsageLimitsUnavailable?.self, forKey: .`unavailable`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encodeIfPresent(`account`, forKey: .`account`)
+        try container.encode(`plan`, forKey: .`plan`)
+        try container.encode(`checkedAt`, forKey: .`checkedAt`)
+        try container.encode(`source`, forKey: .`source`)
+        try container.encode(`windows`, forKey: .`windows`)
+        try container.encode(`cost`, forKey: .`cost`)
+        try container.encode(`unavailable`, forKey: .`unavailable`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `account` = "account"
+        case `plan` = "plan"
+        case `checkedAt` = "checkedAt"
+        case `source` = "source"
+        case `windows` = "windows"
+        case `cost` = "cost"
+        case `unavailable` = "unavailable"
+    }
+}
+
+public struct UsageLimitsAccount: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `label`: String
+    public let `color`: String?
+
+    public init(`id`: String, `label`: String, `color`: String? = nil) {
+        self.`id` = `id`
+        self.`label` = `label`
+        self.`color` = `color`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `label` = try container.decode(String.self, forKey: .`label`)
+        `color` = try container.decodeIfPresent(String.self, forKey: .`color`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`label`, forKey: .`label`)
+        try container.encodeIfPresent(`color`, forKey: .`color`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `label` = "label"
+        case `color` = "color"
+    }
+}
+
+public enum UsageLimitsProviderSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `probe` = "probe"
+    case `event` = "event"
+}
+
+public struct UsageLimitsWindow: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `kind`: UsageLimitsWindowKind
+    public let `label`: String
+    public let `used`: Double
+    public let `resetsAt`: Int64?
+    public let `durationMs`: Int64?
+
+    public init(`id`: String, `kind`: UsageLimitsWindowKind, `label`: String, `used`: Double, `resetsAt`: Int64?, `durationMs`: Int64?) {
+        self.`id` = `id`
+        self.`kind` = `kind`
+        self.`label` = `label`
+        self.`used` = `used`
+        self.`resetsAt` = `resetsAt`
+        self.`durationMs` = `durationMs`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `kind` = try container.decode(UsageLimitsWindowKind.self, forKey: .`kind`)
+        `label` = try container.decode(String.self, forKey: .`label`)
+        `used` = try container.decode(Double.self, forKey: .`used`)
+        `resetsAt` = try container.decode(Int64?.self, forKey: .`resetsAt`)
+        `durationMs` = try container.decode(Int64?.self, forKey: .`durationMs`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`label`, forKey: .`label`)
+        try container.encode(`used`, forKey: .`used`)
+        try container.encode(`resetsAt`, forKey: .`resetsAt`)
+        try container.encode(`durationMs`, forKey: .`durationMs`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `kind` = "kind"
+        case `label` = "label"
+        case `used` = "used"
+        case `resetsAt` = "resetsAt"
+        case `durationMs` = "durationMs"
+    }
+}
+
+public enum UsageLimitsWindowKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `session` = "session"
+    case `weekly` = "weekly"
+    case `monthly` = "monthly"
+    case `other` = "other"
+}
+
+public struct UsageLimitsProviderCost: Codable, Sendable, Equatable {
+    public let `sessionUsd`: Double
+
+    public init(`sessionUsd`: Double) {
+        self.`sessionUsd` = `sessionUsd`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `sessionUsd` = try container.decode(Double.self, forKey: .`sessionUsd`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`sessionUsd`, forKey: .`sessionUsd`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `sessionUsd` = "sessionUsd"
+    }
+}
+
+public struct UsageLimitsUnavailable: Codable, Sendable, Equatable {
+    public let `reason`: UsageLimitsUnavailableReason
+    public let `message`: String?
+
+    public init(`reason`: UsageLimitsUnavailableReason, `message`: String?) {
+        self.`reason` = `reason`
+        self.`message` = `message`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `reason` = try container.decode(UsageLimitsUnavailableReason.self, forKey: .`reason`)
+        `message` = try container.decode(String?.self, forKey: .`message`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`reason`, forKey: .`reason`)
+        try container.encode(`message`, forKey: .`message`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `reason` = "reason"
+        case `message` = "message"
+    }
+}
+
+public enum UsageLimitsUnavailableReason: String, CaseIterable, Codable, Sendable, Equatable {
+    case `notInstalled` = "not-installed"
+    case `noSubscription` = "no-subscription"
+    case `failed` = "failed"
+}
+
+public struct AccountsSnapshot: Codable, Sendable, Equatable {
+    public let `accounts`: [String: AccountConfig]
+    public let `statuses`: [AccountStatus]
+    public let `secretsAvailable`: Bool?
+    public let `loginCommands`: [String: String]?
+    public let `chatLogins`: [String]?
+    public let `silentLogins`: [String]?
+
+    public init(`accounts`: [String: AccountConfig], `statuses`: [AccountStatus], `secretsAvailable`: Bool? = nil, `loginCommands`: [String: String]? = nil, `chatLogins`: [String]? = nil, `silentLogins`: [String]? = nil) {
+        self.`accounts` = `accounts`
+        self.`statuses` = `statuses`
+        self.`secretsAvailable` = `secretsAvailable`
+        self.`loginCommands` = `loginCommands`
+        self.`chatLogins` = `chatLogins`
+        self.`silentLogins` = `silentLogins`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `accounts` = try container.decode([String: AccountConfig].self, forKey: .`accounts`)
+        `statuses` = try container.decode([AccountStatus].self, forKey: .`statuses`)
+        `secretsAvailable` = try container.decodeIfPresent(Bool.self, forKey: .`secretsAvailable`)
+        `loginCommands` = try container.decodeIfPresent([String: String].self, forKey: .`loginCommands`)
+        `chatLogins` = try container.decodeIfPresent([String].self, forKey: .`chatLogins`)
+        `silentLogins` = try container.decodeIfPresent([String].self, forKey: .`silentLogins`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`accounts`, forKey: .`accounts`)
+        try container.encode(`statuses`, forKey: .`statuses`)
+        try container.encodeIfPresent(`secretsAvailable`, forKey: .`secretsAvailable`)
+        try container.encodeIfPresent(`loginCommands`, forKey: .`loginCommands`)
+        try container.encodeIfPresent(`chatLogins`, forKey: .`chatLogins`)
+        try container.encodeIfPresent(`silentLogins`, forKey: .`silentLogins`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `accounts` = "accounts"
+        case `statuses` = "statuses"
+        case `secretsAvailable` = "secretsAvailable"
+        case `loginCommands` = "loginCommands"
+        case `chatLogins` = "chatLogins"
+        case `silentLogins` = "silentLogins"
+    }
+}
+
+public struct AccountConfig: Codable, Sendable, Equatable {
+    public let `kind`: String
+    public let `label`: String?
+    public let `color`: String?
+    public let `enabled`: Bool?
+    public let `home`: String?
+    public let `shadowHome`: String?
+    public let `env`: [AccountConfigEnvItem]?
+    public let `order`: Int64?
+
+    public init(`kind`: String, `label`: String? = nil, `color`: String? = nil, `enabled`: Bool? = nil, `home`: String? = nil, `shadowHome`: String? = nil, `env`: [AccountConfigEnvItem]? = nil, `order`: Int64? = nil) {
+        self.`kind` = `kind`
+        self.`label` = `label`
+        self.`color` = `color`
+        self.`enabled` = `enabled`
+        self.`home` = `home`
+        self.`shadowHome` = `shadowHome`
+        self.`env` = `env`
+        self.`order` = `order`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `label` = try container.decodeIfPresent(String.self, forKey: .`label`)
+        `color` = try container.decodeIfPresent(String.self, forKey: .`color`)
+        `enabled` = try container.decodeIfPresent(Bool.self, forKey: .`enabled`)
+        `home` = try container.decodeIfPresent(String.self, forKey: .`home`)
+        `shadowHome` = try container.decodeIfPresent(String.self, forKey: .`shadowHome`)
+        `env` = try container.decodeIfPresent([AccountConfigEnvItem].self, forKey: .`env`)
+        `order` = try container.decodeIfPresent(Int64.self, forKey: .`order`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encodeIfPresent(`label`, forKey: .`label`)
+        try container.encodeIfPresent(`color`, forKey: .`color`)
+        try container.encodeIfPresent(`enabled`, forKey: .`enabled`)
+        try container.encodeIfPresent(`home`, forKey: .`home`)
+        try container.encodeIfPresent(`shadowHome`, forKey: .`shadowHome`)
+        try container.encodeIfPresent(`env`, forKey: .`env`)
+        try container.encodeIfPresent(`order`, forKey: .`order`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `label` = "label"
+        case `color` = "color"
+        case `enabled` = "enabled"
+        case `home` = "home"
+        case `shadowHome` = "shadowHome"
+        case `env` = "env"
+        case `order` = "order"
+    }
+}
+
+public struct AccountConfigEnvItem: Codable, Sendable, Equatable {
+    public let `name`: String
+    public let `value`: String
+    public let `sensitive`: Bool
+    public let `valueRedacted`: Bool?
+
+    public init(`name`: String, `value`: String, `sensitive`: Bool, `valueRedacted`: Bool? = nil) {
+        self.`name` = `name`
+        self.`value` = `value`
+        self.`sensitive` = `sensitive`
+        self.`valueRedacted` = `valueRedacted`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `value` = try container.decode(String.self, forKey: .`value`)
+        `sensitive` = try container.decode(Bool.self, forKey: .`sensitive`)
+        `valueRedacted` = try container.decodeIfPresent(Bool.self, forKey: .`valueRedacted`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`value`, forKey: .`value`)
+        try container.encode(`sensitive`, forKey: .`sensitive`)
+        try container.encodeIfPresent(`valueRedacted`, forKey: .`valueRedacted`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `name` = "name"
+        case `value` = "value"
+        case `sensitive` = "sensitive"
+        case `valueRedacted` = "valueRedacted"
+    }
+}
+
+public struct AccountStatus: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `kind`: String
+    public let `state`: AccountState
+    public let `email`: String?
+    public let `plan`: String?
+    public let `organization`: String?
+    public let `home`: String
+    public let `transcripts`: String?
+    public let `message`: String?
+    public let `checkedAt`: Double
+
+    public init(`id`: String, `kind`: String, `state`: AccountState, `email`: String?, `plan`: String?, `organization`: String?, `home`: String, `transcripts`: String? = nil, `message`: String?, `checkedAt`: Double) {
+        self.`id` = `id`
+        self.`kind` = `kind`
+        self.`state` = `state`
+        self.`email` = `email`
+        self.`plan` = `plan`
+        self.`organization` = `organization`
+        self.`home` = `home`
+        self.`transcripts` = `transcripts`
+        self.`message` = `message`
+        self.`checkedAt` = `checkedAt`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `state` = try container.decode(AccountState.self, forKey: .`state`)
+        `email` = try container.decode(String?.self, forKey: .`email`)
+        `plan` = try container.decode(String?.self, forKey: .`plan`)
+        `organization` = try container.decode(String?.self, forKey: .`organization`)
+        `home` = try container.decode(String.self, forKey: .`home`)
+        `transcripts` = try container.decodeIfPresent(String.self, forKey: .`transcripts`)
+        `message` = try container.decode(String?.self, forKey: .`message`)
+        `checkedAt` = try container.decode(Double.self, forKey: .`checkedAt`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`state`, forKey: .`state`)
+        try container.encode(`email`, forKey: .`email`)
+        try container.encode(`plan`, forKey: .`plan`)
+        try container.encode(`organization`, forKey: .`organization`)
+        try container.encode(`home`, forKey: .`home`)
+        try container.encodeIfPresent(`transcripts`, forKey: .`transcripts`)
+        try container.encode(`message`, forKey: .`message`)
+        try container.encode(`checkedAt`, forKey: .`checkedAt`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `kind` = "kind"
+        case `state` = "state"
+        case `email` = "email"
+        case `plan` = "plan"
+        case `organization` = "organization"
+        case `home` = "home"
+        case `transcripts` = "transcripts"
+        case `message` = "message"
+        case `checkedAt` = "checkedAt"
+    }
+}
+
+public enum AccountState: String, CaseIterable, Codable, Sendable, Equatable {
+    case `checking` = "checking"
+    case `disabled` = "disabled"
+    case `notFound` = "not-found"
+    case `signedOut` = "signed-out"
+    case `ready` = "ready"
+    case `folderMissing` = "folder-missing"
+    case `unavailable` = "unavailable"
+    case `failed` = "failed"
+}
+
 public struct ProjectOpenResult: Codable, Sendable, Equatable {
     public let `summary`: JSONValue
     public let `document`: JSONValue

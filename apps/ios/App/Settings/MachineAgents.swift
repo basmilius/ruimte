@@ -65,7 +65,7 @@ enum EndpointSwitch: String {
     func load() async {
         await state.read(loaded: !agents.isEmpty) { stillTheLatest in
             let providers = try await AgentCatalog.load(client)
-            let accounts = try? await client.request(.accountsList)
+            let accounts = try? await client.request(.accountsList).decoded(as: AccountsSnapshot.self)
             let endpoint = try? await client.request(.endpointInfo).decoded(as: EndpointInfo.self)
             let computer = try? await client.request(.computerStatus)
             try stillTheLatest()
@@ -85,7 +85,9 @@ enum EndpointSwitch: String {
         let payload = Self.reorderPayload(kind: agent.kind, ids: agents[index].accounts.map(\.id))
         await state.perform {
             do {
-                apply(accounts: try await client.request(.accountsReorder, payload: payload))
+                apply(
+                    accounts: try await client.request(.accountsReorder, payload: payload)
+                        .decoded(as: AccountsSnapshot.self))
             } catch {
                 await load()
                 throw error
@@ -97,9 +99,9 @@ enum EndpointSwitch: String {
         .object(["kind": .string(kind), "ids": .array(ids.map(JSONValue.string))])
     }
 
-    private func apply(accounts: JSONValue?) {
+    private func apply(accounts: AccountsSnapshot?) {
         agents = Self.agents(providers: providers, accounts: accounts)
-        loginCommands = (accounts?["loginCommands"]?.objectValue ?? [:]).compactMapValues(\.stringValue)
+        loginCommands = accounts?.loginCommands ?? [:]
     }
 
     /// Turns a switch the machine keeps in `endpoint.json`, leaving its name and icon as they stand.
@@ -123,10 +125,10 @@ enum EndpointSwitch: String {
     }
 
     /// The installed CLIs, each with its accounts in the machine's order and what they read as now.
-    static func agents(providers: [JSONValue], accounts: JSONValue?) -> [Agent] {
+    static func agents(providers: [JSONValue], accounts: AccountsSnapshot?) -> [Agent] {
         let list = accounts.map(ProviderAccountList.init)
         let statuses = Dictionary(
-            (accounts?.list("statuses") ?? []).map { ($0.text("id"), $0) }, uniquingKeysWith: { first, _ in first })
+            (accounts?.statuses ?? []).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         return providers.filter { $0["installed"] == .bool(true) }.map { provider in
             let kind = provider.text("kind")
             let entries = list?.accounts(of: kind) ?? []
@@ -146,10 +148,14 @@ enum EndpointSwitch: String {
     }
 
     /// What an account reads as in one line: its plan and email once signed in, else why it cannot run.
-    static func detail(state: String?, status: JSONValue?) -> String {
+    static func detail(state: String?, status: AccountStatus?) -> String {
+        detail(state: state, plan: status?.plan, email: status?.email, message: status?.message)
+    }
+
+    static func detail(state: String?, plan: String? = nil, email: String? = nil, message: String? = nil) -> String {
         switch state {
         case "ready":
-            let parts = [status?["plan"]?.stringValue, status?["email"]?.stringValue].compactMap { $0 }
+            let parts = [plan, email].compactMap { $0 }
                 .filter { !$0.isEmpty }
             return parts.isEmpty ? String(localized: "Logged in") : parts.joined(separator: " · ")
         case "signed-out": return String(localized: "Not logged in")
@@ -157,7 +163,7 @@ enum EndpointSwitch: String {
         case "checking", nil: return String(localized: "Checking")
         case "folder-missing": return String(localized: "Its folder is missing")
         case "not-found": return String(localized: "Not installed")
-        default: return status?["message"]?.stringValue ?? String(localized: "Unavailable")
+        default: return message ?? String(localized: "Unavailable")
         }
     }
 }

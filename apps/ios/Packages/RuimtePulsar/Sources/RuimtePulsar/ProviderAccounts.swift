@@ -48,15 +48,12 @@ public struct ProviderAccountList: Sendable, Equatable {
 
     /// Reads a `accounts.list` result or a `accounts.changed` payload. The account map arrives as an object, which
     /// keeps no order, so the CLIs follow the machine's list of statuses and the accounts of each CLI `ordered`.
-    public init(_ value: JSONValue) {
-        let statuses = value["statuses"]?.arrayValue ?? []
+    public init(_ snapshot: AccountsSnapshot) {
+        let statuses = snapshot.statuses
         let order = Dictionary(
-            statuses.enumerated().compactMap { index, status in status["id"]?.stringValue.map { ($0, index) } },
-            uniquingKeysWith: { first, _ in first })
-        let statusByID = Dictionary(
-            statuses.compactMap { status in status["id"]?.stringValue.map { ($0, status) } },
-            uniquingKeysWith: { first, _ in first })
-        let accounts = (value["accounts"]?.objectValue ?? [:]).sorted { first, second in
+            statuses.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let statusByID = Dictionary(statuses.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let accounts = snapshot.accounts.sorted { first, second in
             switch (order[first.key], order[second.key]) {
             case (let one?, let other?): return one < other
             case (.some, nil): return true
@@ -64,14 +61,12 @@ public struct ProviderAccountList: Sendable, Equatable {
             case (nil, nil): return first.key < second.key
             }
         }
-        let parsed = accounts.compactMap { id, account -> ProviderAccountEntry? in
-            guard let kind = account["kind"]?.stringValue else { return nil }
+        let parsed = accounts.map { id, account -> ProviderAccountEntry in
             let status = statusByID[id]
             return ProviderAccountEntry(
-                id: id, kind: kind, label: account["label"]?.stringValue, color: account["color"]?.stringValue,
-                enabled: account["enabled"]?.boolValue ?? true, order: account["order"]?.numberValue.map { Int($0) },
-                state: status?["state"]?.stringValue, transcripts: status?["transcripts"]?.stringValue,
-                message: status?["message"]?.stringValue)
+                id: id, kind: account.kind, label: account.label, color: account.color,
+                enabled: account.enabled ?? true, order: account.order.map { Int($0) },
+                state: status?.state.rawValue, transcripts: status?.transcripts, message: status?.message)
         }
         var kinds: [String] = []
         for entry in parsed where !kinds.contains(entry.kind) {

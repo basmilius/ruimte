@@ -465,12 +465,10 @@ struct MachineLimits: Equatable {
     /// Every account the machine reads and every one that is on, per CLI in the machine's order, the default account
     /// first and the rest as the account list has them. An account that is off, not installed or without a
     /// subscription has no row, as on the usage page.
-    @MainActor static func of(limits: JSONValue, accounts: UsageAccounts, now: Date = .now) -> MachineLimits {
-        let entries = limits.list("providers")
-        let readings = zip(UsageWidgetRecorder.providers(limits), entries).map { provider, entry in
+    @MainActor static func of(limits: UsageLimits, accounts: UsageAccounts, now: Date = .now) -> MachineLimits {
+        let readings = zip(UsageWidgetRecorder.providers(limits), limits.providers).map { provider, entry in
             Reading(
-                provider: provider, checkedAt: entry["checkedAt"]?.numberValue,
-                unavailable: entry["unavailable"]?["reason"]?.stringValue)
+                provider: provider, checkedAt: Double(entry.checkedAt), unavailable: entry.unavailable?.reason.rawValue)
         }
         return of(readings, accounts: accounts, now: now)
     }
@@ -539,8 +537,7 @@ struct MachineLimits: Equatable {
         account: ProviderAccountEntry?, reading: Reading?, now: Date
     ) -> MachineLimitLine.Content? {
         if let state = account?.state, quiet.contains(state) {
-            let status = account?.message.map { JSONValue.object(["message": .string($0)]) }
-            return .status(MachineAgentsModel.detail(state: state, status: status))
+            return .status(MachineAgentsModel.detail(state: state, message: account?.message))
         }
         let windows = reading?.provider.windows ?? []
         let session = windows.first { $0.kind == "session" }

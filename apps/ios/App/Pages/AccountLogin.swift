@@ -24,7 +24,7 @@ import SwiftUI
     private(set) var sessionID = AccountLoginModel.newSessionID()
     private(set) var phase = Phase.starting
     /// The account as it read until this login started, which is what a landing has to differ from.
-    private var before: JSONValue?
+    private var before: AccountStatus?
     private var started = false
     @ObservationIgnored private var live: LiveResource?
 
@@ -42,17 +42,22 @@ import SwiftUI
     private static func newSessionID() -> String { "login-\(UUID().uuidString.lowercased())" }
 
     /// What the CLI said, without the moment it said it, which a recheck moves without anything changing.
-    private static func reading(_ status: JSONValue) -> JSONValue { status.setting("checkedAt", .number(0)) }
+    private static func reading(_ status: AccountStatus) -> AccountStatus {
+        AccountStatus(
+            id: status.id, kind: status.kind, state: status.state, email: status.email, plan: status.plan,
+            organization: status.organization, home: status.home, transcripts: status.transcripts,
+            message: status.message, checkedAt: 0)
+    }
 
     /// Whether a login landed: the account reads logged in, and not the way it read before the login started.
-    static func landed(before: JSONValue?, now: JSONValue?) -> Bool {
-        guard let now, now.text("state") == "ready" else { return false }
+    static func landed(before: AccountStatus?, now: AccountStatus?) -> Bool {
+        guard let now, now.state == .ready else { return false }
         guard let before else { return true }
         return reading(before) != reading(now)
     }
 
-    private func status(in accounts: JSONValue) -> JSONValue? {
-        accounts.list("statuses").first { $0.text("id") == accountID }
+    private func status(in accounts: AccountsSnapshot) -> AccountStatus? {
+        accounts.statuses.first { $0.id == accountID }
     }
 
     func begin() async {
@@ -61,11 +66,11 @@ import SwiftUI
         let live = LiveResource(
             client: client,
             events: [
-                .apply(.accountsChanged, raw: { [weak self] payload in
+                .apply(.accountsChanged, as: AccountsSnapshot.self) { [weak self] snapshot in
                     guard let self, phase == .running else { return }
-                    let now = status(in: payload)
-                    if Self.landed(before: before, now: now) { phase = .landed(email: now?["email"]?.stringValue) }
-                }),
+                    let now = status(in: snapshot)
+                    if Self.landed(before: before, now: now) { phase = .landed(email: now?.email) }
+                },
                 .apply(.sessionExit, raw: { [weak self] payload in
                     guard let self, payload.text("sessionId") == sessionID, phase == .running else { return }
                     phase = .ended(dropped: false)
@@ -77,7 +82,8 @@ import SwiftUI
             })
         self.live = live
         live.start()
-        before = (try? await client.request(.accountsList)).flatMap { status(in: $0) }
+        before = (try? await client.request(.accountsList).decoded(as: AccountsSnapshot.self))
+            .flatMap { status(in: $0) }
         do {
             started = true
             _ = try await client.request(

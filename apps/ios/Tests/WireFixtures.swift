@@ -445,6 +445,34 @@ extension JSONValue {
     var deviceReference: StoredDeviceViewDevice { try! decoded(as: StoredDeviceViewDevice.self) }
 }
 
+/// `accounts.list` answers and `usage.*` readings as a machine writes them. A test names the fields it is about, and the
+/// rest takes defaults, so the reading decodes into the generated types as a real one does.
+enum AccountsWire {
+    static func status(
+        _ id: String, kind: String = "claude", state: String = "ready", email: String? = nil, plan: String? = nil,
+        message: String? = nil, checkedAt: Double = 1
+    ) -> JSONValue {
+        .object([
+            "id": .string(id), "kind": .string(kind), "state": .string(state),
+            "email": email.map(JSONValue.string) ?? .null, "plan": plan.map(JSONValue.string) ?? .null,
+            "organization": .null, "home": .string("/home"), "message": message.map(JSONValue.string) ?? .null,
+            "checkedAt": .number(checkedAt),
+        ])
+    }
+
+    static func snapshot(accounts: [String: JSONValue], statuses: [JSONValue] = []) -> JSONValue {
+        .object(["accounts": .object(accounts), "statuses": .array(statuses)])
+    }
+}
+
+extension JSONValue {
+    /// A fixture that does not decode is a broken test, not a case to cover.
+    var accountsSnapshot: AccountsSnapshot { try! decoded(as: AccountsSnapshot.self) }
+    var accountStatus: AccountStatus { try! decoded(as: AccountStatus.self) }
+    var usageLimits: UsageLimits { try! decoded(as: UsageLimits.self) }
+    var usageSummary: UsageSummary { try! decoded(as: UsageSummary.self) }
+}
+
 /// Views and nodes of a project document as a machine writes them. A test names the fields it is about, and the rest
 /// takes the defaults of the kind, so the view decodes into the generated types as a real one does.
 enum ProjectWire {

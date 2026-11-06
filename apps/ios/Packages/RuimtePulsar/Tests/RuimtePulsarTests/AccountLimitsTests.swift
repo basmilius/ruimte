@@ -32,7 +32,7 @@ private func window(_ kind: String, _ used: Double, resetsAt: Double? = nil) -> 
 }
 
 private func entry(_ id: String?, checkedAt: Double = 1, windows: [String], unavailable: Bool = false) -> String {
-    let account = id.map { #""account": { "id": "\#($0)" },"# } ?? ""
+    let account = id.map { #""account": { "id": "\#($0)", "label": "\#($0)" },"# } ?? ""
     let missing = unavailable ? #"{ "reason": "failed", "message": null }"# : "null"
     return """
         { "kind": "claude", \(account) "plan": null, "checkedAt": \(checkedAt), "source": "probe",
@@ -40,12 +40,12 @@ private func entry(_ id: String?, checkedAt: Double = 1, windows: [String], unav
         """
 }
 
-private func limits(_ entries: [String]) throws -> JSONValue {
-    try decode(#"{ "providers": [\#(entries.joined(separator: ","))] }"#)
+private func limits(_ entries: [String]) throws -> UsageLimits {
+    try decode(#"{ "providers": [\#(entries.joined(separator: ","))] }"#).decoded(as: UsageLimits.self)
 }
 
 @Test func aChatGoesOnUnderTheAccountWithTheLeastOfItsSessionSpent() throws {
-    let accounts = ProviderAccountList(try decode(threeClaudes))
+    let accounts = ProviderAccountList(try accountsSnapshot(decode(threeClaudes)))
     let snapshot = try limits([
         entry(nil, windows: [window("session", 1)]),
         entry("work", windows: [window("session", 0.6), window("weekly", 0.1)]),
@@ -57,7 +57,7 @@ private func limits(_ entries: [String]) throws -> JSONValue {
 }
 
 @Test func anAccountWithASpentWindowOrNoNumbersIsNoTarget() throws {
-    let accounts = ProviderAccountList(try decode(threeClaudes))
+    let accounts = ProviderAccountList(try accountsSnapshot(decode(threeClaudes)))
     let snapshot = try limits([
         entry("work", windows: [window("session", 0.1), window("weekly", 1)]),
         entry("spare", checkedAt: 0, windows: [window("session", 0.1)]),
@@ -72,7 +72,7 @@ private func limits(_ entries: [String]) throws -> JSONValue {
 }
 
 @Test func anAccountNotReadYetIsAskedFor() throws {
-    let accounts = ProviderAccountList(try decode(threeClaudes))
+    let accounts = ProviderAccountList(try accountsSnapshot(decode(threeClaudes)))
     let snapshot = try limits([entry("work", windows: [window("session", 0.1)])])
     #expect(accounts.hasUnreadAccount("claude", current: nil, limits: snapshot))
     let both = try limits([

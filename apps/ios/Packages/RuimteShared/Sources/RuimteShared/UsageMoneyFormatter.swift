@@ -9,21 +9,24 @@ public struct UsageMoneyFormatter: Sendable {
     private let factor: Double
 
     /// `currency` is the one a person picked, else the region's: euros in a euro region, dollars anywhere else.
-    public init(locale: Locale, rate: JSONValue?, currency: String? = nil) {
+    public init(locale: Locale, rate: UsageRate?, currency: String? = nil) {
         self.locale = locale
         preferredCurrency = currency ?? (locale.currency?.identifier == "EUR" ? "EUR" : "USD")
         // usage.summary prices are USD; an absent or invalid rate must never relabel those amounts as euros.
-        if preferredCurrency == "EUR", rate?["currency"]?.stringValue == "EUR",
-            let value = rate?["rate"]?.numberValue, value.isFinite, value > 0
-        {
+        if preferredCurrency == "EUR", let rate, rate.currency == "EUR", rate.rate.isFinite, rate.rate > 0 {
             currencyCode = "EUR"
-            factor = value
-            rateDate = rate?["date"]?.stringValue
+            factor = rate.rate
+            rateDate = rate.date
         } else {
             currencyCode = "USD"
             factor = 1
             rateDate = nil
         }
+    }
+
+    /// The rate the widget snapshot kept, which is stored as it came.
+    public init(locale: Locale, storedRate: JSONValue?, currency: String? = nil) {
+        self.init(locale: locale, rate: try? storedRate?.decoded(as: UsageRate.self), currency: currency)
     }
 
     public var explanation: String? {

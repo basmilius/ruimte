@@ -22,7 +22,7 @@ final class UsageWidgetRecorder {
     private(set) var providers: [UsageWidgetSnapshot.Provider]
     /// The `usage.limits` reading as it came, newest first: an event is taken at once, also while a load still waits on
     /// the day's cost. Held for this connection only; the widgets keep their snapshot.
-    private(set) var limits: JSONValue?
+    private(set) var limits: UsageLimits?
     private(set) var accounts: UsageAccounts = .unknown
     @ObservationIgnored private let machineID: String
     @ObservationIgnored private let client: any MachineRequesting
@@ -30,16 +30,16 @@ final class UsageWidgetRecorder {
     @ObservationIgnored private lazy var live = LiveResource(
         client: client,
         events: [
-            .apply(.usageLimitsChanged, raw: { [weak self] value in
-                guard let self, let limits = try? WireEvent.usageLimitsChanged.validatePayload(value) else { return }
+            .apply(.usageLimitsChanged, as: UsageLimits.self) { [weak self] limits in
+                guard let self else { return }
                 take(limits)
                 if running == nil { begin(limits: limits) } else { pending = limits }
-            }),
-            .apply(.accountsChanged, raw: { [weak self] value in
+            },
+            .apply(.accountsChanged, as: AccountsSnapshot.self) { [weak self] snapshot in
                 guard let self else { return }
                 accountsRevision += 1
-                accounts = .loaded(ProviderAccountList(value))
-            }),
+                accounts = .loaded(ProviderAccountList(snapshot))
+            },
         ],
         connection: { [weak self] connected in
             guard let self else { return }
@@ -53,7 +53,7 @@ final class UsageWidgetRecorder {
     @ObservationIgnored private var running: Task<Void, Never>?
     @ObservationIgnored private var revision = 0
     /// Limits that came while a load ran, which the snapshot takes once that load is done.
-    @ObservationIgnored private var pending: JSONValue?
+    @ObservationIgnored private var pending: UsageLimits?
     /// Counts every reading of the limits and of the accounts taken, so an answer asked for before a newer event leaves
     /// that event standing.
     @ObservationIgnored private var limitsRevision = 0
@@ -77,7 +77,7 @@ final class UsageWidgetRecorder {
 
     func refresh() async { await begin().value }
 
-    @discardableResult private func begin(limits: JSONValue? = nil) -> Task<Void, Never> {
+    @discardableResult private func begin(limits: UsageLimits? = nil) -> Task<Void, Never> {
         if let running { return running }
         revision += 1
         let operation = revision
@@ -103,7 +103,7 @@ final class UsageWidgetRecorder {
         listing = nil
     }
 
-    private func take(_ limits: JSONValue) {
+    private func take(_ limits: UsageLimits) {
         limitsRevision += 1
         self.limits = limits
     }
@@ -117,7 +117,8 @@ final class UsageWidgetRecorder {
             guard let client = self?.client else { return }
             let next: UsageAccounts
             do {
-                next = .loaded(ProviderAccountList(try await client.request(.accountsList)))
+                next = .loaded(
+                    ProviderAccountList(try await client.request(.accountsList).decoded(as: AccountsSnapshot.self)))
             } catch {
                 next = .failed
             }
@@ -126,14 +127,14 @@ final class UsageWidgetRecorder {
         }
     }
 
-    private func load(limits known: JSONValue?) async {
-        var limits: JSONValue
+    private func load(limits known: UsageLimits?) async {
+        var limits: UsageLimits
         if let known {
             limits = known
         } else {
             let seen = limitsRevision
             do {
-                limits = try await client.request(.usageLimits)
+                limits = try await client.request(.usageLimits).decoded(as: UsageLimits.self)
             } catch {
                 // An unreachable machine leaves its last snapshot standing; that is what the widget shows offline.
                 return
@@ -152,14 +153,15 @@ final class UsageWidgetRecorder {
                 "from": .string(day), "to": .string(day), "resolution": .string("day"),
                 "timeZone": .string(TimeZone.current.identifier),
             ])
-            if let summary = try? await client.request(.usageSummary, payload: payload) {
-                let models = summary.list("models")
+            if let summary = try? await client.request(.usageSummary, payload: payload)
+                .decoded(as: UsageSummary.self)
+            {
                 let byProvider = Dictionary(
-                    models.map { ($0.text("provider"), $0.number("costUsd")) }, uniquingKeysWith: +)
+                    summary.models.map { ($0.provider, $0.costUsd ?? 0) }, uniquingKeysWith: +)
                 snapshot.cost = UsageWidgetSnapshot.Cost(
-                    day: day, usd: models.reduce(0) { $0 + $1.number("costUsd") }, usdByProvider: byProvider,
-                    usdByAccount: await costByAccount(snapshot, payload: payload), rate: summary["rate"],
-                    fetchedAt: now)
+                    day: day, usd: summary.models.reduce(0) { $0 + ($1.costUsd ?? 0) }, usdByProvider: byProvider,
+                    usdByAccount: await costByAccount(snapshot, payload: payload),
+                    rate: summary.rate.flatMap { try? JSONValue(encoding: $0) }, fetchedAt: now)
             }
         }
         guard !Task.isCancelled else { return }
@@ -173,27 +175,26 @@ final class UsageWidgetRecorder {
         guard snapshot.providers.contains(where: { snapshot.accountCount($0.kind) > 1 }) else { return nil }
         let ids = snapshot.providers.compactMap(\.account?.id)
         let split = payload.setting("accounts", .array(ids.map(JSONValue.string)))
-        guard let summary = try? await client.request(.usageSummary, payload: split) else { return nil }
-        let models = summary.list("models").filter { $0["account"]?.stringValue != nil }
+        guard
+            let summary = try? await client.request(.usageSummary, payload: split).decoded(as: UsageSummary.self)
+        else { return nil }
+        let models = summary.models.filter { $0.account != nil }
         // A machine that ignores the filter folds every account into one, which says nothing per account.
-        guard !models.isEmpty || summary.list("models").isEmpty else { return nil }
-        return Dictionary(models.map { ($0.text("account"), $0.number("costUsd")) }, uniquingKeysWith: +)
+        guard !models.isEmpty || summary.models.isEmpty else { return nil }
+        return Dictionary(models.map { ($0.account ?? "", $0.costUsd ?? 0) }, uniquingKeysWith: +)
     }
 
-    static func providers(_ limits: JSONValue) -> [UsageWidgetSnapshot.Provider] {
-        limits.list("providers").map { provider in
+    static func providers(_ limits: UsageLimits) -> [UsageWidgetSnapshot.Provider] {
+        limits.providers.map { provider in
             UsageWidgetSnapshot.Provider(
-                kind: provider.text("kind"),
-                account: provider["account"].flatMap { account in
-                    account["id"]?.stringValue.map {
-                        UsageWidgetSnapshot.Account(
-                            id: $0, label: account.text("label", fallback: $0), color: account["color"]?.stringValue)
-                    }
+                kind: provider.kind,
+                account: provider.account.map {
+                    UsageWidgetSnapshot.Account(id: $0.id, label: $0.label, color: $0.color)
                 },
-                windows: provider.list("windows").map { window in
+                windows: provider.windows.map { window in
                     UsageWidgetSnapshot.Window(
-                        kind: window["kind"]?.stringValue, label: window.text("label"), used: window.number("used"),
-                        resetsAt: window["resetsAt"]?.numberValue.map { Date(timeIntervalSince1970: $0 / 1000) })
+                        kind: window.kind.rawValue, label: window.label, used: window.used,
+                        resetsAt: window.resetsAt.map { Date(timeIntervalSince1970: Double($0) / 1000) })
                 })
         }
     }

@@ -109,7 +109,7 @@ final class ChatPreferences {
             // Only asked when there is a pick to check against what the machine has.
             let list =
                 picked
-                ? (try? await client.request(.accountsList)).map(
+                ? (try? await client.request(.accountsList).decoded(as: AccountsSnapshot.self)).map(
                     ProviderAccountList.init) : nil
             _ = try? await client.request(
                 .chatSetPreferences, payload: payload(machineID: machineID, accounts: list))

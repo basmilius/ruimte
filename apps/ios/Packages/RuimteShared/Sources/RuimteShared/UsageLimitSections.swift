@@ -15,7 +15,7 @@ public struct UsageLimitSection: Sendable, Equatable, Identifiable {
     public let name: String
     public let color: String?
     /// The `usage.limits` entry; nil for an account the machine does not read, which is one that is not signed in.
-    public let entry: JSONValue?
+    public let entry: UsageLimitsProvider?
     public let quiet: Quiet?
     /// Whether the CLI has more than one account here, which is when a title names the account.
     public let named: Bool
@@ -27,25 +27,25 @@ public struct UsageLimitSection: Sendable, Equatable, Identifiable {
 
     /// Per CLI, in the order the machine lists them, one section per account it reads, then the accounts that are on
     /// but not read, which come from the account list since only it can say why they have no numbers.
-    public static func sections(limits: JSONValue?, accounts: ProviderAccountList?) -> [UsageLimitSection] {
-        let entries = limits?["providers"]?.arrayValue ?? []
+    public static func sections(limits: UsageLimits?, accounts: ProviderAccountList?) -> [UsageLimitSection] {
+        let entries = limits?.providers ?? []
         var kinds: [String] = []
-        for entry in entries {
-            if let kind = entry["kind"]?.stringValue, !kinds.contains(kind) { kinds.append(kind) }
+        for entry in entries where !kinds.contains(entry.kind) {
+            kinds.append(entry.kind)
         }
         return kinds.flatMap { kind in
             let provider = usageProviderName(kind)
             let known = accounts?.accounts(of: kind) ?? []
-            let read = entries.filter { $0["kind"]?.stringValue == kind }
-            let readIDs = read.map { $0["account"]?["id"]?.stringValue ?? kind }
+            let read = entries.filter { $0.kind == kind }
+            let readIDs = read.map { $0.account?.id ?? kind }
             let unread = known.filter { $0.enabled && !readIDs.contains($0.id) }
             let named = read.count + unread.count > 1
             let shown = zip(readIDs, read).map { id, entry in
                 let account = known.first { $0.id == id }
                 return UsageLimitSection(
                     id: id, kind: kind,
-                    name: account?.name(provider: provider) ?? entry["account"]?["label"]?.stringValue ?? provider,
-                    color: account?.color ?? entry["account"]?["color"]?.stringValue, entry: entry,
+                    name: account?.name(provider: provider) ?? entry.account?.label ?? provider,
+                    color: account?.color ?? entry.account?.color, entry: entry,
                     quiet: quiet(entry: entry, account: account), named: named)
             }
             return shown
@@ -57,12 +57,12 @@ public struct UsageLimitSection: Sendable, Equatable, Identifiable {
         }
     }
 
-    private static func quiet(entry: JSONValue?, account: ProviderAccountEntry?) -> Quiet? {
+    private static func quiet(entry: UsageLimitsProvider?, account: ProviderAccountEntry?) -> Quiet? {
         let signedOut = account?.state == "signed-out"
         guard let entry else { return signedOut ? .signedOut : .notRead(message: account?.message) }
-        if !(entry["windows"]?.arrayValue ?? []).isEmpty { return nil }
+        if !entry.windows.isEmpty { return nil }
         if signedOut { return .signedOut }
-        if (entry["checkedAt"]?.numberValue ?? 0) <= 0 && !ProviderAccountList.isUnavailable(entry) {
+        if entry.checkedAt <= 0 && !ProviderAccountList.isUnavailable(entry) {
             return .notRead(message: nil)
         }
         return nil

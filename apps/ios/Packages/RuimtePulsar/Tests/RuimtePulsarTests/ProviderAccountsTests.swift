@@ -4,7 +4,7 @@ import Testing
 @testable import RuimtePulsar
 
 private func list(_ json: String) throws -> ProviderAccountList {
-    ProviderAccountList(try JSONValue.decode(Data(json.utf8)))
+    ProviderAccountList(try accountsSnapshot(JSONValue.decode(Data(json.utf8))))
 }
 
 private let twoClaudes = """
@@ -28,7 +28,7 @@ private let twoClaudes = """
     var value = try #require(JSONValue.decode(Data(twoClaudes.utf8)).objectValue)
     let statuses = try #require(value["statuses"]?.arrayValue)
     value["statuses"] = .array([statuses[3], statuses[2], statuses[1], statuses[0]])
-    let accounts = ProviderAccountList(.object(value))
+    let accounts = ProviderAccountList(try accountsSnapshot(.object(value)))
     #expect(accounts.entries.map(\.id) == ["codex", "claude", "old", "work"])
     #expect(accounts.accounts(of: "claude").map(\.id) == ["claude", "old", "work"])
     #expect(accounts.accounts(of: "codex").map(\.id) == ["codex"])

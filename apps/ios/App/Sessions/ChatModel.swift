@@ -46,7 +46,7 @@ final class ChatModel {
     /// Nil from a machine before accounts.
     var accounts: ProviderAccountList?
     /// The machine's plan windows per account, `usage.limits`; nil until something on screen asked for them.
-    var limits: JSONValue?
+    var limits: UsageLimits?
     var continuing = false
     /// When the chat's snooze runs out, epoch ms; nil while it has none.
     var snoozedUntil: Double?
@@ -105,9 +105,9 @@ final class ChatModel {
                 self.apply(envelope.event)
                 if let seq = envelope.seq { self.lastSeq = Int(seq) }
             }),
-            .apply(.accountsChanged, raw: { [weak self] payload in
-                self?.accounts = ProviderAccountList(payload)
-            }),
+            .apply(.accountsChanged, as: AccountsSnapshot.self) { [weak self] snapshot in
+                self?.accounts = ProviderAccountList(snapshot)
+            },
             .apply(.chatBookmarks, raw: { [weak self] payload in
                 guard let self, payload["chatId"]?.stringValue == self.chatID else { return }
                 self.presentation.setBookmarks(ChatBookmarks.parse(payload["bookmarks"]?.arrayValue ?? []))
@@ -120,10 +120,10 @@ final class ChatModel {
                 guard let self else { return }
                 self.snoozedUntil = ChatSnooze.until(of: self.chatID, in: payload)
             }),
-            .apply(.usageLimitsChanged, raw: { [weak self] payload in
+            .apply(.usageLimitsChanged, as: UsageLimits.self) { [weak self] limits in
                 guard let self, self.limits != nil else { return }
-                self.limits = payload
-            }),
+                self.limits = limits
+            },
             .rejected(.chatEvent) { [weak self] payload in
                 guard let self, payload["chatId"]?.stringValue == self.chatID, !self.loading,
                     !self.reattachedOverRejectedEvent
@@ -327,8 +327,8 @@ final class ChatModel {
     }
 
     /// Nil from a machine before accounts, which does not know the request.
-    private func loadAccounts() async -> JSONValue? {
-        try? await client.request(.accountsList)
+    private func loadAccounts() async -> AccountsSnapshot? {
+        try? await client.request(.accountsList).decoded(as: AccountsSnapshot.self)
     }
 
     /// Applies what came after `since` when the machine still held all of it, and its snapshot otherwise.

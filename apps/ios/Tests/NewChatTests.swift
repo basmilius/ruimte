@@ -94,12 +94,9 @@ import XCTest
                 ])
             ])
         case .accountsList:
-            return .object([
-                "accounts": .object([
-                    "claude": .object(["kind": .string("claude")]),
-                    "work": .object(["kind": .string("claude"), "enabled": .bool(workEnabled)]),
-                ]),
-                "statuses": .array([]),
+            return AccountsWire.snapshot(accounts: [
+                "claude": .object(["kind": .string("claude")]),
+                "work": .object(["kind": .string("claude"), "enabled": .bool(workEnabled)]),
             ])
         case .projectNewChat:
             return .object([
