@@ -22,14 +22,17 @@ public struct FormatLocale: Sendable {
 }
 
 /// Every number, date, time and duration a person reads, written as `@adecore/ui/format` writes it on the desktop.
-/// The function names follow that module without its `format` prefix, and its tests are mirrored in `FormatTests`.
+/// The function names follow that module without its `format` prefix, and `FormatPortTests` holds each of them to what
+/// the module writes.
 public enum Format {
     // MARK: Numbers
 
     /// A count as a region groups one: `1,234,567` there, `1.234.567` here.
     public static func number(_ value: Double, in locale: FormatLocale = .current) -> String {
-        // `Math.round`, which rounds a half up, also below zero.
-        (value + 0.5).rounded(.down).formatted(.number.precision(.fractionLength(0)).locale(locale.region))
+        // `Math.round`, which rounds a half up, also below zero, and leaves a negative zero where a small negative lands.
+        var whole = (value + 0.5).rounded(.down)
+        if whole == 0, value < 0 { whole = -0.0 }
+        return whole.formatted(.number.precision(.fractionLength(0)).locale(locale.region))
     }
 
     /// The same, to one decimal, where the fraction is the part that means something.
@@ -63,9 +66,18 @@ public enum Format {
         var style = FloatingPointFormatStyle<Double>.Currency(code: currency, locale: locale.region)
             .presentation(.narrow).rounded(rule: .toNearestOrAwayFromZero)
         if let maximumFractionDigits, maximumFractionDigits > 0 {
-            style = style.precision(.fractionLength(min(2, maximumFractionDigits)...maximumFractionDigits))
+            style = style.precision(
+                .fractionLength(min(defaultFractionDigits(currency), maximumFractionDigits)...maximumFractionDigits))
         }
         return value.formatted(style)
+    }
+
+    /// The places a currency is written with unless asked otherwise: two for a dollar, none for a yen.
+    private static func defaultFractionDigits(_ currency: String) -> Int {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currency
+        return formatter.minimumFractionDigits
     }
 
     /// Dollars to three significant digits, for amounts from a fraction of a cent to tens of dollars in one list.
@@ -217,13 +229,15 @@ public enum Format {
 
     /// `19 Sep, 08:05`: a moment that is not today, to the minute.
     public static func dayClock(_ date: Date, in locale: FormatLocale = .current) -> String {
-        // Foundation joins a day and a time with "at" in English, where the desktop's engine writes a comma.
-        "\(day(date, in: locale)), \(clock(date, in: locale))"
+        dateTime(date, Date.FormatStyle().day().month(.abbreviated).hour(.twoDigits(amPM: .abbreviated)).minute(.twoDigits), in: locale)
     }
 
     /// `19 Sep 2025, 08:05`: a moment of another year.
     public static func dayClockWithYear(_ date: Date, in locale: FormatLocale = .current) -> String {
-        "\(dayWithYear(date, in: locale)), \(clock(date, in: locale))"
+        dateTime(
+            date,
+            Date.FormatStyle().day().month(.abbreviated).year().hour(.twoDigits(amPM: .abbreviated)).minute(.twoDigits),
+            in: locale)
     }
 
     /// All numbers, as a form would print it: `19-9-2026` here, `9/19/2026` in the United States.
