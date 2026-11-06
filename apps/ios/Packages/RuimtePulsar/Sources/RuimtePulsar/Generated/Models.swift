@@ -6832,6 +6832,7 @@ public struct ChatInfo: Codable, Sendable, Equatable {
     public let `provider`: String
     public let `account`: String?
     public let `cwd`: String
+    public let `workdir`: String?
     public let `agentSessionId`: String?
     public let `model`: String?
     public let `selection`: ChatInfoSelection
@@ -6858,11 +6859,12 @@ public struct ChatInfo: Codable, Sendable, Equatable {
     public let `goal`: ChatInfoGoal?
     public let `createdAt`: Double
 
-    public init(`chatId`: String, `provider`: String, `account`: String? = nil, `cwd`: String, `agentSessionId`: String?, `model`: String?, `selection`: ChatInfoSelection, `runtimeMode`: String, `effectiveRuntimeMode`: String? = nil, `permissionMode`: String? = nil, `status`: String, `running`: Bool, `activeTurnId`: String?, `slashCommands`: [String], `skills`: [String]? = nil, `queue`: [ChatInfoQueueItem]? = nil, `queuePaused`: Bool? = nil, `background`: [ChatInfoBackgroundItem]? = nil, `delegating`: Bool? = nil, `usage`: ChatInfoUsage, `suggestedTitle`: String? = nil, `hidden`: Bool? = nil, `forkOf`: ChatInfoForkOf? = nil, `resumeAtReset`: Bool? = nil, `limit`: ChatInfoLimit? = nil, `resumeAt`: Double? = nil, `requests`: [ChatInfoRequestsItem]? = nil, `goal`: ChatInfoGoal? = nil, `createdAt`: Double) {
+    public init(`chatId`: String, `provider`: String, `account`: String? = nil, `cwd`: String, `workdir`: String? = nil, `agentSessionId`: String?, `model`: String?, `selection`: ChatInfoSelection, `runtimeMode`: String, `effectiveRuntimeMode`: String? = nil, `permissionMode`: String? = nil, `status`: String, `running`: Bool, `activeTurnId`: String?, `slashCommands`: [String], `skills`: [String]? = nil, `queue`: [ChatInfoQueueItem]? = nil, `queuePaused`: Bool? = nil, `background`: [ChatInfoBackgroundItem]? = nil, `delegating`: Bool? = nil, `usage`: ChatInfoUsage, `suggestedTitle`: String? = nil, `hidden`: Bool? = nil, `forkOf`: ChatInfoForkOf? = nil, `resumeAtReset`: Bool? = nil, `limit`: ChatInfoLimit? = nil, `resumeAt`: Double? = nil, `requests`: [ChatInfoRequestsItem]? = nil, `goal`: ChatInfoGoal? = nil, `createdAt`: Double) {
         self.`chatId` = `chatId`
         self.`provider` = `provider`
         self.`account` = `account`
         self.`cwd` = `cwd`
+        self.`workdir` = `workdir`
         self.`agentSessionId` = `agentSessionId`
         self.`model` = `model`
         self.`selection` = `selection`
@@ -6896,6 +6898,7 @@ public struct ChatInfo: Codable, Sendable, Equatable {
         `provider` = try container.decode(String.self, forKey: .`provider`)
         `account` = try container.decodeIfPresent(String.self, forKey: .`account`)
         `cwd` = try container.decode(String.self, forKey: .`cwd`)
+        `workdir` = try container.decodeIfPresent(String.self, forKey: .`workdir`)
         `agentSessionId` = try container.decode(String?.self, forKey: .`agentSessionId`)
         `model` = try container.decode(String?.self, forKey: .`model`)
         `selection` = try container.decode(ChatInfoSelection.self, forKey: .`selection`)
@@ -6929,6 +6932,7 @@ public struct ChatInfo: Codable, Sendable, Equatable {
         try container.encode(`provider`, forKey: .`provider`)
         try container.encodeIfPresent(`account`, forKey: .`account`)
         try container.encode(`cwd`, forKey: .`cwd`)
+        try container.encodeIfPresent(`workdir`, forKey: .`workdir`)
         try container.encode(`agentSessionId`, forKey: .`agentSessionId`)
         try container.encode(`model`, forKey: .`model`)
         try container.encode(`selection`, forKey: .`selection`)
@@ -6961,6 +6965,7 @@ public struct ChatInfo: Codable, Sendable, Equatable {
         case `provider` = "provider"
         case `account` = "account"
         case `cwd` = "cwd"
+        case `workdir` = "workdir"
         case `agentSessionId` = "agentSessionId"
         case `model` = "model"
         case `selection` = "selection"
@@ -8336,6 +8341,7 @@ public struct GitStatus: Codable, Sendable, Equatable {
     public let `repo`: Bool
     public let `operation`: GitStatusOperation?
     public let `root`: String?
+    public let `worktree`: Bool?
     public let `branch`: String?
     public let `detached`: Bool
     public let `upstream`: String?
@@ -8347,10 +8353,11 @@ public struct GitStatus: Codable, Sendable, Equatable {
     public let `truncated`: Bool
     public let `live`: Bool
 
-    public init(`repo`: Bool, `operation`: GitStatusOperation? = nil, `root`: String?, `branch`: String?, `detached`: Bool, `upstream`: String?, `ahead`: Int64, `behind`: Int64, `base`: String?, `mergeBase`: String?, `files`: [GitStatusFile], `truncated`: Bool, `live`: Bool) {
+    public init(`repo`: Bool, `operation`: GitStatusOperation? = nil, `root`: String?, `worktree`: Bool? = nil, `branch`: String?, `detached`: Bool, `upstream`: String?, `ahead`: Int64, `behind`: Int64, `base`: String?, `mergeBase`: String?, `files`: [GitStatusFile], `truncated`: Bool, `live`: Bool) {
         self.`repo` = `repo`
         self.`operation` = `operation`
         self.`root` = `root`
+        self.`worktree` = `worktree`
         self.`branch` = `branch`
         self.`detached` = `detached`
         self.`upstream` = `upstream`
@@ -8368,6 +8375,7 @@ public struct GitStatus: Codable, Sendable, Equatable {
         `repo` = try container.decode(Bool.self, forKey: .`repo`)
         `operation` = try container.decodeIfPresent(GitStatusOperation.self, forKey: .`operation`)
         `root` = try container.decode(String?.self, forKey: .`root`)
+        `worktree` = try container.decodeIfPresent(Bool.self, forKey: .`worktree`)
         `branch` = try container.decode(String?.self, forKey: .`branch`)
         `detached` = try container.decode(Bool.self, forKey: .`detached`)
         `upstream` = try container.decode(String?.self, forKey: .`upstream`)
@@ -8385,6 +8393,7 @@ public struct GitStatus: Codable, Sendable, Equatable {
         try container.encode(`repo`, forKey: .`repo`)
         try container.encodeIfPresent(`operation`, forKey: .`operation`)
         try container.encode(`root`, forKey: .`root`)
+        try container.encodeIfPresent(`worktree`, forKey: .`worktree`)
         try container.encode(`branch`, forKey: .`branch`)
         try container.encode(`detached`, forKey: .`detached`)
         try container.encode(`upstream`, forKey: .`upstream`)
@@ -8401,6 +8410,7 @@ public struct GitStatus: Codable, Sendable, Equatable {
         case `repo` = "repo"
         case `operation` = "operation"
         case `root` = "root"
+        case `worktree` = "worktree"
         case `branch` = "branch"
         case `detached` = "detached"
         case `upstream` = "upstream"

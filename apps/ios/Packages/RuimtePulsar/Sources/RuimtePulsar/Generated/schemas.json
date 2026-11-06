@@ -14484,6 +14484,9 @@
       "cwd": {
         "type": "string"
       },
+      "workdir": {
+        "type": "string"
+      },
       "agentSessionId": {
         "type": [
           "string",
@@ -16965,6 +16968,9 @@
             "pattern": "^[a-z][a-z0-9_-]{0,63}$"
           },
           "cwd": {
+            "type": "string"
+          },
+          "workdir": {
             "type": "string"
           },
           "agentSessionId": {
@@ -23077,6 +23083,9 @@
                     "cwd": {
                       "type": "string"
                     },
+                    "workdir": {
+                      "type": "string"
+                    },
                     "agentSessionId": {
                       "type": [
                         "string",
@@ -23748,6 +23757,9 @@
                       "pattern": "^[a-z][a-z0-9_-]{0,63}$"
                     },
                     "cwd": {
+                      "type": "string"
+                    },
+                    "workdir": {
                       "type": "string"
                     },
                     "agentSessionId": {
@@ -29200,6 +29212,9 @@
       "cwd": {
         "type": "string"
       },
+      "workdir": {
+        "type": "string"
+      },
       "agentSessionId": {
         "type": [
           "string",
@@ -30207,6 +30222,9 @@
           "cwd": {
             "type": "string"
           },
+          "workdir": {
+            "type": "string"
+          },
           "agentSessionId": {
             "type": [
               "string",
@@ -30991,6 +31009,9 @@
                 "pattern": "^[a-z][a-z0-9_-]{0,63}$"
               },
               "cwd": {
+                "type": "string"
+              },
+              "workdir": {
                 "type": "string"
               },
               "agentSessionId": {
@@ -57846,6 +57867,9 @@
           "null"
         ]
       },
+      "worktree": {
+        "type": "boolean"
+      },
       "branch": {
         "type": [
           "string",
@@ -57993,6 +58017,9 @@
               "string",
               "null"
             ]
+          },
+          "worktree": {
+            "type": "boolean"
           },
           "branch": {
             "type": [
@@ -67687,6 +67714,9 @@
             "cwd": {
               "type": "string"
             },
+            "workdir": {
+              "type": "string"
+            },
             "agentSessionId": {
               "type": [
                 "string",
@@ -77096,6 +77126,9 @@
                   "cwd": {
                     "type": "string"
                   },
+                  "workdir": {
+                    "type": "string"
+                  },
                   "agentSessionId": {
                     "type": [
                       "string",
@@ -77767,6 +77800,9 @@
                     "pattern": "^[a-z][a-z0-9_-]{0,63}$"
                   },
                   "cwd": {
+                    "type": "string"
+                  },
+                  "workdir": {
                     "type": "string"
                   },
                   "agentSessionId": {
@@ -80197,6 +80233,9 @@
             "pattern": "^[a-z][a-z0-9_-]{0,63}$"
           },
           "cwd": {
+            "type": "string"
+          },
+          "workdir": {
             "type": "string"
           },
           "agentSessionId": {
@@ -88710,6 +88749,9 @@
               "string",
               "null"
             ]
+          },
+          "worktree": {
+            "type": "boolean"
           },
           "branch": {
             "type": [

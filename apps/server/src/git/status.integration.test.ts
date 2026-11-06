@@ -87,6 +87,14 @@ describe('readStatus', () => {
         expect(status.mergeBase).toBe(main.trim());
         expect(await mergeBaseOf(repo)).toBe(main.trim());
     });
+
+    test('a linked worktree says so, and the main checkout does not', async () => {
+        const linked = join(root, 'linked');
+        await git(['worktree', 'add', '-q', '-b', 'side', linked]);
+
+        expect((await readStatus(repo)).worktree).toBeUndefined();
+        expect(await readStatus(linked)).toMatchObject({ branch: 'side', worktree: true });
+    });
 });
 
 describe('diffFile', () => {

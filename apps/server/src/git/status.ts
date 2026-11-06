@@ -145,6 +145,27 @@ const BASE_CANDIDATES: ReadonlyArray<{ ref: string; name: string }> = [
     { ref: 'refs/heads/master', name: 'master' }
 ];
 
+const linkedCache = new Map<string, boolean>();
+
+/*
+ * Whether the checkout is a linked worktree rather than the repository's main one: its own git folder
+ * differs from the shared one. A submodule's do not, where a `.git` file alone would say yes. A root
+ * stays what it is, so the answer is kept.
+ */
+export async function isLinkedWorktree(root: string): Promise<boolean> {
+    const cached = linkedCache.get(root);
+    if (cached !== undefined) {
+        return cached;
+    }
+    const printed = await git(['rev-parse', '--path-format=absolute', '--git-dir', '--git-common-dir'], root);
+    const [own, common] = (printed ?? '').trim().split('\n');
+    const linked = own !== undefined && common !== undefined && own !== '' && own !== common;
+    if (printed !== null) {
+        linkedCache.set(root, linked);
+    }
+    return linked;
+}
+
 /* The branch this repository's work is measured against, remembered per repository for a while. */
 export async function resolveBase(root: string, now: number = Date.now()): Promise<string | null> {
     const cached = baseCache.get(root);
@@ -231,11 +252,12 @@ export async function readStatusAt(root: string, leftOut: LeftOut = LEAVE_NOTHIN
     }
     const parsed = parsePorcelain(porcelain);
     const entries = parsed.entries.slice(0, GIT_STATUS_MAX_FILES);
-    const [staged, unstaged, base, operation] = await Promise.all([
+    const [staged, unstaged, base, operation, linked] = await Promise.all([
         readGit(['diff', '--cached', '--numstat', '-z'], root).then(byPath),
         readGit(['diff', '--numstat', '-z'], root).then(byPath),
         resolveBase(root),
-        operationOf(root)
+        operationOf(root),
+        isLinkedWorktree(root)
     ]);
     const untrackedPaths = entries
         .filter((entry) => entry.untracked)
@@ -262,6 +284,7 @@ export async function readStatusAt(root: string, leftOut: LeftOut = LEAVE_NOTHIN
         repo: true,
         ...(operation === null ? {} : { operation }),
         root,
+        ...(linked ? { worktree: true } : {}),
         branch: parsed.branch,
         detached: parsed.detached,
         upstream: parsed.upstream,

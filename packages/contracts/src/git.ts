@@ -83,6 +83,8 @@ export const GitStatusSchema = z.object({
     // Set while the checkout is in the middle of one, conflicts or not.
     operation: GitOperationSchema.optional(),
     root: z.string().nullable(),
+    // True when `root` is a linked worktree rather than the repository's main checkout. An older machine leaves it out.
+    worktree: z.boolean().optional(),
     // Null on a detached HEAD, which `detached` says apart from a repository without commits.
     branch: z.string().nullable(),
     detached: z.boolean(),
