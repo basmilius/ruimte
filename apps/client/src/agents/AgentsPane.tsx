@@ -6,6 +6,7 @@ import { CLOSED_LID_BATTERY_FLOOR, type RuntimeMode } from '@ruimte/contracts';
 import { BatteryCharging } from 'lucide-react';
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
+import { ComputerSections } from '@/computer/ComputerSections';
 import {
     setClosedLidRule,
     setKeepAwake,
@@ -17,7 +18,6 @@ import {
 } from '@/controllers/keep-awake';
 import { MachineSwitchSection } from '@/machine-ui/MachineSwitchSection';
 import { SettingsSection } from '@/machines/SettingsSection';
-import { ComputerSections } from '@/computer/ComputerSections';
 import { SettingSwitchRow } from '@/settings/SettingSwitchRow';
 import { useUi } from '@/state/ui';
 

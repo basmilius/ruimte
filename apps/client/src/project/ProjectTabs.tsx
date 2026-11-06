@@ -7,7 +7,9 @@ import { desktop } from '@/desktop/bridge';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { MachineGlyph } from '@/machines/MachineGlyph';
 import { openProjectAction } from '@/project/open-actions';
+import { useProjectMenu } from '@/project/project-menu-model';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
+import { ProjectAddMenu } from '@/project/ProjectMenu';
 import {
     dragsWindow,
     landingOf,
@@ -20,8 +22,6 @@ import {
     useWindowTabs
 } from '@/project/window-tabs';
 import { canDragTabs, canOpenWindows, endTabDrag, openInNewWindow, startWindowDrag, tearOffTab, tearOutTab, wantsNewWindow } from '@/project/windows';
-import { useProjectMenu } from '@/project/project-menu-model';
-import { ProjectAddMenu } from '@/project/ProjectMenu';
 import { sidebarWaitingCount, useWaitingCount } from '@/state/attention';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { splitKey } from '@/state/keys';

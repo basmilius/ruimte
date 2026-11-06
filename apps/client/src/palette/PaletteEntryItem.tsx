@@ -1,6 +1,6 @@
 import { CommandPalette, type CommandPaletteVirtualItemProps } from '@adecore/ui';
-import { wantsNewWindow } from '@/project/windows';
 import type { Entry } from '@/palette/palette-entries';
+import { wantsNewWindow } from '@/project/windows';
 
 /* A row of a list mode. Base UI clicks it for Enter without a modifier, so only a pointer brings one here. */
 export function PaletteEntryItem({

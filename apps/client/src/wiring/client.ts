@@ -1,5 +1,6 @@
 import { onLazyOpenError as onChatLazyOpenError } from '@adecore/agents-react';
 import { onLazyOpenError, prefetcher, syncAnimations } from '@adecore/ui';
+import { startAgentNotifications } from '@/attention/notifications';
 import { startPageHolds } from '@/browser/page-hold';
 import { startProjectList } from '@/clients/project/list';
 import { exposeTerminalTestHooks } from '@/clients/terminal/registry';
@@ -23,7 +24,6 @@ import { startLinkRequest } from '@/pulsar/link-request';
 import { startSecretWatch } from '@/secrets/watch';
 import { startSharedStorage } from '@/shared-storage';
 import { watchDesktopUsage } from '@/shell/command-usage';
-import { startAgentNotifications } from '@/attention/notifications';
 import { reloadOnStaleChunk } from '@/stale-chunks';
 import { startAttentionWatch } from '@/state/attention';
 import { usePalette } from '@/state/palette';

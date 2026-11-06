@@ -4,12 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { closeTabAction, closeTabsAction } from '@/action-port/person-actions';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { canSplit, cellAt, locateView } from '@/layout/split';
-import { SplitItems } from '@/views/ViewMenuItems';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { setTabPinned, tabsToClose } from '@/state/tab-close';
 import { useCurrentProjectKey, useViewPins } from '@/state/view-pins';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { SplitItems } from '@/views/ViewMenuItems';
 
 /* Whether a tab of a host is pinned, for a loose tab in the pool and for a view of the project in this client's pins. */
 function usePinnedOf(): (id: string) => boolean {

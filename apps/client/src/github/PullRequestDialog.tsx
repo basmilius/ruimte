@@ -23,16 +23,16 @@ import { CircleCheck, CircleDashed, CircleX, ExternalLink, Eye, EyeOff, GitPullR
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { openInSystemBrowser } from '@/desktop/bridge';
-import { useChooserSections } from '@/language/chat-chooser';
-import { sendToChat } from '@/language/selection-to-chat';
 import { splitRows } from '@/files/change-size';
 import { groupChecks, mergeStateKey, threadBlock, visibleThreads } from '@/github/pr-view';
+import { stopPrWatch } from '@/github/pr-watch-actions';
+import { usePrWatches } from '@/github/pr-watches';
+import { useChooserSections } from '@/language/chat-chooser';
+import { sendToChat } from '@/language/selection-to-chat';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey, isOfEndpoint } from '@/state/keys';
-import { usePrWatches } from '@/github/pr-watches';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { stopPrWatch } from '@/github/pr-watch-actions';
 import { useMachineAnswers } from '@/transport/features';
 import { useTransport } from '@/workspace/context';
 

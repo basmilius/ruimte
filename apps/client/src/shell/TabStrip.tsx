@@ -8,15 +8,14 @@ import { closeTabAction } from '@/action-port/person-actions';
 import { WaitingCount } from '@/attention/WaitingCount';
 import { useBrowserDisplayTitle } from '@/browser/title';
 import { useDatabaseConnectionList } from '@/database/connections';
+import { splitSentence } from '@/files/change-size';
 import { FileMenuItems } from '@/files/FileMenuItems';
+import { LooseGlyph } from '@/files/LooseGlyph';
 import { isSameCell, type CellAt } from '@/layout/split';
 import { basenameOf } from '@/paths/file-path';
 import { ViewGlyph } from '@/project/ViewGlyph';
-import { splitSentence } from '@/files/change-size';
-import { LooseGlyph } from '@/files/LooseGlyph';
 import { TabMenuItems } from '@/shell/TabMenuItems';
 import { useCellView } from '@/shell/use-cell-view';
-import { ViewMenuItems } from '@/views/ViewMenuItems';
 import { useWaitingCount } from '@/state/attention';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
@@ -33,6 +32,7 @@ import { isLooseView, viewGlyphOf, type LooseCellView } from '@/surface/cell-vie
 import { StatusDot } from '@/surface/StatusDot';
 import { databaseTabTitle } from '@/surface/tab-look';
 import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
+import { ViewMenuItems } from '@/views/ViewMenuItems';
 
 interface TabShellProps {
     id: string;

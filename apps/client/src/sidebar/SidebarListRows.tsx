@@ -24,10 +24,8 @@ import { newChatOn } from '@/project/new-chat';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { askViewSettings, revealNode, showView } from '@/project/views';
-import { NewViewItems } from '@/views/NewViewMenu';
 import { openSidebarTarget, showSidebarProject } from '@/sidebar/sidebar-navigation';
 import { separatorKey, useSidebarProjects, type SidebarSeparator } from '@/sidebar/sidebar-projects';
-import { ViewMenuItems } from '@/views/ViewMenuItems';
 import type { AgentWork } from '@/state/agent-work';
 import { useCanvas } from '@/state/canvas';
 import { useEndpointId } from '@/state/current-endpoint';
@@ -43,6 +41,8 @@ import { SnoozeButton, SnoozedMark, SnoozeMenuItems } from '@/surface/Snooze';
 import { StatusDot } from '@/surface/StatusDot';
 import { showsTaskMark } from '@/tasks/task-mark';
 import { TaskMark } from '@/tasks/TaskMark';
+import { NewViewItems } from '@/views/NewViewMenu';
+import { ViewMenuItems } from '@/views/ViewMenuItems';
 
 const ROW = 'w-full gap-2 text-left text-sm';
 

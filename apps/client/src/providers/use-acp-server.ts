@@ -3,8 +3,8 @@ import type { AgentKind, AgentServerStatus } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { listProvidersAgain } from '@/providers/use-provider-installs';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
-import { transportFor } from '@/transport/index';
 import { useMachineAnswers } from '@/transport/features';
+import { transportFor } from '@/transport/index';
 
 export interface AcpServer {
     /* Null while the machine has not answered, or answers no `provider.server`. */

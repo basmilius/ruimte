@@ -11,12 +11,14 @@ import {
     type SplitLayout
 } from '@ruimte/contracts';
 import i18next from 'i18next';
+import { nextWaitingTitle } from '@/attention/next-waiting';
 import { focusedChatId } from '@/chat/focused-chat';
 import { keepAwakeAvailable, keepAwakeChoice } from '@/controllers/keep-awake';
-import { prReposOfCurrent } from '@/github/pr-repos';
 import { databaseViewShareRefusal } from '@/database/view-sharing';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
 import { diffInFront } from '@/files/diff-caret';
+import { prReposOfCurrent } from '@/github/pr-repos';
+import { hasPrWatch } from '@/github/pr-watch-actions';
 import { availableLanguageForCommand } from '@/language/focused-language';
 import { afterSettleCandidates, chosenLaunchId } from '@/launches/actions';
 import { launchViews } from '@/launches/model';
@@ -27,8 +29,6 @@ import { newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
 import { canOpenAsView, viewStepTarget, type SessionHandoff } from '@/project/views';
 import { canOpenWindows } from '@/project/windows';
 import type { MenuContext, MenuHost, MenuLaunch } from '@/shell/menu/model';
-import { nextWaitingTitle } from '@/attention/next-waiting';
-import { sessionHandoffs, viewOffers, type ViewOffers } from '@/views/view-offers';
 import { inPickerOrder } from '@/state/agent-availability';
 import { groupArrangeable } from '@/state/arrange-group';
 import { focusedCanvas, maximizedNodeOf, maximizeTargetOf, zoomNodeTargetOf } from '@/state/canvas';
@@ -48,10 +48,10 @@ import { useSessions } from '@/state/sessions';
 import { useUi } from '@/state/ui';
 import { usePromptStacks } from '@/surface/canvas/prompt-stack';
 import { availableEditorForCommand } from '@/surface/panels/focused-editor';
-import { hasPrWatch } from '@/github/pr-watch-actions';
 import { terminalHasFind, terminalHasKeyboard } from '@/terminal/xterm';
 import { pool } from '@/transport';
 import { machineAnswers } from '@/transport/features';
+import { sessionHandoffs, viewOffers, type ViewOffers } from '@/views/view-offers';
 import { windowWorkspace } from '@/workspace/window';
 
 interface ActiveViewFacts {

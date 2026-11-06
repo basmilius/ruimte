@@ -9,20 +9,20 @@ import { ViewAccessories } from '@/extensions/ContributedSlots';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { FileMenuItems } from '@/files/FileMenuItems';
+import { LooseGlyph } from '@/files/LooseGlyph';
 import { cellAt, type CellAt } from '@/layout/split';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { MaximizedIndicator } from '@/shell/MaximizedIndicator';
-import { LooseGlyph } from '@/files/LooseGlyph';
 import { TabStrip } from '@/shell/TabStrip';
 import { useCellBarSlot } from '@/shell/top-row-slot';
 import { useHasViewToolbar, useViewToolbarLeads } from '@/shell/view-toolbar';
-import { SplitItems, ViewMenuItems } from '@/views/ViewMenuItems';
 import { ViewToolbar } from '@/shell/ViewToolbar';
 import { useDocument } from '@/state/document';
 import { isDatabaseTab } from '@/state/files';
 import { isLooseView, viewGlyphOf, type CellView } from '@/surface/cell-view';
 import { FileToolbarSlotProvider } from '@/surface/panels/file-toolbar-slot';
 import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
+import { SplitItems, ViewMenuItems } from '@/views/ViewMenuItems';
 
 /* What a cell is: its tabs when it hosts them, or the glyph and the name of the view. */
 function CellTitle({ at, view, tabs, title }: { at: CellAt; view: CellView; tabs: readonly string[] | undefined; title: string | undefined }) {

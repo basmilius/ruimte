@@ -4,6 +4,7 @@ import type { ComputerGrant } from '@ruimte/contracts';
 import { MousePointer2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ComputerAppGrants } from '@/computer/ComputerAppGrants';
 import { GrantRows, SetupLine } from '@/computer/ComputerSetupRows';
 import { canSwitch, showsGrants, type ComputerSetup } from '@/computer/setup';
 import { useComputerMachine } from '@/computer/use-computer-machine';
@@ -12,7 +13,6 @@ import { WithReason } from '@/machine-ui/MachineSettings';
 import { SetUpMachineDialog } from '@/machine-ui/SetUpMachineDialog';
 import { useListedMachines } from '@/machines/machine-list';
 import { SettingsSection } from '@/machines/SettingsSection';
-import { ComputerAppGrants } from '@/computer/ComputerAppGrants';
 import type { Endpoint } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 

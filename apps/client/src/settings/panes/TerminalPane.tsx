@@ -1,9 +1,9 @@
 import { ScrollArea, Segmented, Select, Stepper } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
+import { IntegrationsSection } from '@/agents/IntegrationsSection';
 import { TerminalShellRow } from '@/machine-ui/MachineSettings';
 import { SettingsSection } from '@/machines/SettingsSection';
-import { IntegrationsSection } from '@/agents/IntegrationsSection';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useServers } from '@/state/server';

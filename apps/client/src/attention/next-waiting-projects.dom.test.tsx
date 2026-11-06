@@ -20,8 +20,8 @@ import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 import { emptyCanvas, projectSummary } from '../../testing/project-fixtures';
 import { menuContext } from '../shell/menu/context';
-import { nextWaitingTitle } from './next-waiting';
 import { sidebarMachineSnapshot } from '../sidebar/sidebar-projects';
+import { nextWaitingTitle } from './next-waiting';
 
 const ENDPOINT = 'fake-machine';
 const REMOTE = 'wait-remote-machine';

@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { USAGE_DESKTOP_COMMANDS, USAGE_DESKTOP_PANELS, USAGE_DESKTOP_SETTINGS_SECTIONS } from '@ruimte/pulsar';
+import { allSettingsSections } from '@/settings/sections';
 import { COMMAND_IDS } from '@/shell/command-table';
 import { commandUsageName, openedBy, usageSectionOf } from '@/shell/command-usage';
 import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, LAUNCH_CHOOSE_PREFIX, PR_SHOW_IN_PREFIX } from '@/shell/menu/ids';
 import { PANELS } from '@/shell/panels';
-import { allSettingsSections } from '@/settings/sections';
 import type { PanelState } from '@/state/ui';
 
 const CLOSED: PanelState = { open: false, kind: 'files' };

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
-import { useInstalledExtensions } from '@/extensions/loader';
 import { ExtensionsPane } from '@/extensions/ExtensionsPane';
+import { useInstalledExtensions } from '@/extensions/loader';
 import { mount, until, type Mounted } from '../../testing/dom';
 
 function installed(id: string, name: string, dev: boolean): InstalledClientExtension {

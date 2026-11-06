@@ -6,8 +6,8 @@ import type { ProjectMenuRow } from '@/clients/project/list';
 import { MachineGlyph } from '@/machines/MachineGlyph';
 import { newChat } from '@/project/new-chat';
 import { openProjectClickAction } from '@/project/open-actions';
-import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { useProjectMenu, type ProjectMenuModel } from '@/project/project-menu-model';
+import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { useUi } from '@/state/ui';
 
 /*

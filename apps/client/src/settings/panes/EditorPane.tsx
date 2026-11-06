@@ -2,13 +2,13 @@ import { ErrorBoundary, Segmented } from '@adecore/ui';
 import { useSettingsTarget } from '@adecore/ui/settings';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CodeSection } from '@/settings/panes/CodeSection';
 import { EditorAiTab } from '@/editor-ai/EditorAiTab';
+import { LanguageServersTab } from '@/language/LanguageServersTab';
+import { TemplatesTab } from '@/language/TemplatesTab';
+import { CodeSection } from '@/settings/panes/CodeSection';
 import { EditorFoldingTab } from '@/settings/panes/EditorFoldingTab';
 import { EditorGeneralTab } from '@/settings/panes/EditorGeneralTab';
-import { LanguageServersTab } from '@/language/LanguageServersTab';
 import { SmartKeysSection } from '@/settings/panes/SmartKeysSection';
-import { TemplatesTab } from '@/language/TemplatesTab';
 
 type EditorTab = 'general' | 'colors' | 'folding' | 'smartKeys' | 'templates' | 'ai' | 'languageServers';
 

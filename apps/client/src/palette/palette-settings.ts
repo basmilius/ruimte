@@ -1,7 +1,7 @@
 import { matchScore } from '@adecore/ui';
-import type { Command } from '@/shell/commands';
 import type { SearchResult } from '@/settings/search';
 import { sectionLabel } from '@/settings/sections';
+import type { Command } from '@/shell/commands';
 import { useUi } from '@/state/ui';
 
 /* Enough to find a setting by a loose word without burying the commands under the rows of one pane. */

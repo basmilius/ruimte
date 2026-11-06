@@ -15,10 +15,8 @@ import { SidebarCards } from '@/extensions/SidebarCards';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { addArtifactToSidebar, carriesArtifact, droppedArtifact } from '@/output/artifact-drag';
 import { newChat } from '@/project/new-chat';
-import { askDeleteView, newFileViewsAfter, promoteLooseDatabase, promoteLooseFile, revealNode } from '@/project/views';
-import { StationMenu } from '@/sidebar/StationMenu';
-import { NewViewItems } from '@/views/NewViewMenu';
 import { useProjectMenu } from '@/project/project-menu-model';
+import { askDeleteView, newFileViewsAfter, promoteLooseDatabase, promoteLooseFile, revealNode } from '@/project/views';
 import { foldedProjects, movableKeys, separatorKey, useSidebarProjects, type SeparatorPlaces, type SidebarSeparator } from '@/sidebar/sidebar-projects';
 import { SIDEBAR_WIDTH_PX, SidebarGlow } from '@/sidebar/SidebarGlow';
 import {
@@ -33,6 +31,7 @@ import {
     ViewRow
 } from '@/sidebar/SidebarListRows';
 import { SidebarToggle } from '@/sidebar/SidebarToggle';
+import { StationMenu } from '@/sidebar/StationMenu';
 import { nodeWork } from '@/state/agent-work';
 import { isUnseen, useAttention } from '@/state/attention';
 import { useEndpointId } from '@/state/current-endpoint';
@@ -80,6 +79,7 @@ import {
     VIEW_DRAG_TYPE
 } from '@/surface/view-drag';
 import { Brand } from '@/ui/Brand';
+import { NewViewItems } from '@/views/NewViewMenu';
 import { NeedsYouCard } from '../attention/NeedsYouCard';
 import { useSidebarGroups } from './sidebar-groups';
 import { openSidebarTarget } from './sidebar-navigation';

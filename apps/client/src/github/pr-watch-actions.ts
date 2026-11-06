@@ -1,5 +1,5 @@
-import { endpointKey } from '@/state/keys';
 import { usePrWatches } from '@/github/pr-watches';
+import { endpointKey } from '@/state/keys';
 import { machineTransport } from '@/transport/index';
 
 /* The watch a chat has on a machine, read now, for a command that is only offered while there is one. */

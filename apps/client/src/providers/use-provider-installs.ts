@@ -3,8 +3,8 @@ import { messageOf } from '@adecore/ui';
 import type { AgentKind, CliVersion, RegistryAgent, RegistryCatalog } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
-import { transportFor } from '@/transport/index';
 import { useMachineAnswers } from '@/transport/features';
+import { transportFor } from '@/transport/index';
 
 /* The provider list again, so a provider a person just installed, updated, removed or keyed shows at once. */
 export async function listProvidersAgain(endpointId: string): Promise<void> {

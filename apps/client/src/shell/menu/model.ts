@@ -14,12 +14,12 @@ import {
     type MenuPlace
 } from '@/shell/command-table';
 import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, LAUNCH_CHOOSE_PREFIX, PR_SHOW_IN_PREFIX } from '@/shell/menu/ids';
-import type { ViewOffers } from '@/views/view-offers';
 import { separatesGroups } from '@/state/agent-availability';
 import type { KeepAwakeMode } from '@/state/settings';
 import type { PanelKind } from '@/state/ui';
 import { viewShortcut } from '@/surface/canvas/shortcuts';
 import { BROWSER_KEEPS } from '@/surface/shortcuts';
+import type { ViewOffers } from '@/views/view-offers';
 
 export type MenuHost = 'desktop' | 'station';
 

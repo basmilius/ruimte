@@ -1,6 +1,6 @@
-import type { Command } from '@/shell/commands';
 import { commandArea, editorShortcutRows, isEditorCommand } from '@/settings/editor-shortcuts';
 import { areaTitle, KEYBOARD_AREAS, shortcutGroups, type KeyboardArea, type ShortcutGroup, type ShortcutRow } from '@/settings/shortcuts';
+import type { Command } from '@/shell/commands';
 
 /*
  * Every category of the Keyboard pane: the shortcuts the handlers bind, the commands that carry one in the

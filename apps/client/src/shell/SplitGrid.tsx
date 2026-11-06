@@ -5,13 +5,13 @@ import { placeFilesAction, placeViewAction } from '@/action-port/person-actions'
 import { PromptStack } from '@/canvas/PromptStack';
 import { carriesDatabase, droppedDatabase } from '@/database/drag';
 import { dropDatabaseTab } from '@/database/open';
+import { carriesDiff, droppedDiff } from '@/git/diff-drag';
 import { cellsMoved, registerCell } from '@/layout/cell-rects';
 import { canDropAsTab, canMoveCell, canSplit, cellAt, cellViewIds, locateView, MIN_SHARE, type CellAt, type SplitZone } from '@/layout/split';
 import { clampTabLeft, DEFAULT_TAB_WIDTH, gapLeft, positionAfterLifting } from '@/layout/tab-drop';
 import { carriesArtifact, dropArtifactTab, droppedArtifact } from '@/output/artifact-drag';
 import { CellToolbar } from '@/shell/CellToolbar';
 import { cellForPane, columnForSplit, coreLayout } from '@/shell/core-layout';
-import { carriesDiff, droppedDiff } from '@/git/diff-drag';
 import { Dock } from '@/shell/Dock';
 import { useCellView } from '@/shell/use-cell-view';
 import { ViewSurface } from '@/shell/ViewHost';

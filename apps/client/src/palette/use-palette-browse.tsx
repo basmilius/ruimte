@@ -9,9 +9,6 @@ import { desktop, isApplePlatform } from '@/desktop/bridge';
 import { iconOfEntry } from '@/machines/machine-icon';
 import { mergeMachines } from '@/machines/machine-list';
 import { MachineGlyph } from '@/machines/MachineGlyph';
-import { newChatOn } from '@/project/new-chat';
-import { openFolderAction } from '@/project/open-actions';
-import { usePulsarAccount } from '@/pulsar/account';
 import {
     browseBack,
     browseMachines,
@@ -33,6 +30,9 @@ import {
 } from '@/palette/palette-browse';
 import { groupBySection, matches, type Entry, type PaletteContext, type PaletteModeView } from '@/palette/palette-entries';
 import { PaletteEntryItem } from '@/palette/PaletteEntryItem';
+import { newChatOn } from '@/project/new-chat';
+import { openFolderAction } from '@/project/open-actions';
+import { usePulsarAccount } from '@/pulsar/account';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine, isRealMachine } from '@/state/local-machine';
 import { shownFolderOf, useProject } from '@/state/project';
@@ -40,8 +40,8 @@ import { usePulsarMachines } from '@/state/pulsar-machines';
 import { fileManagerName, serverInfoOf, useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
-import { pool, transportFor, type ConnectionState } from '@/transport/index';
 import type { Transport } from '@/transport-api/transport';
+import { pool, transportFor, type ConnectionState } from '@/transport/index';
 import { useConnections } from '@/transport/status';
 import { refreshAccountMachines } from '@/workspace/account-machines';
 import { useFocusedMachine } from '@/workspace/connections';

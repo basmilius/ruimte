@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { shortcut, shortcutParts, type Shortcut } from '@adecore/ui';
 import { isApplePlatform } from '@/desktop/bridge';
-import { COMMAND_IDS, COMMANDS } from '@/shell/command-table';
 import { arrangeShortcuts } from '@/settings/arrange-shortcuts';
 import { commandArea, editorShortcutRows, isEditorCommand } from '@/settings/editor-shortcuts';
 import { searchSettings, shortcutSearchRows } from '@/settings/search';
 import { KEYBOARD_AREAS, shortcutGroups, type ShortcutGroup } from '@/settings/shortcuts';
+import { COMMAND_IDS, COMMANDS } from '@/shell/command-table';
 
 const EDITOR_AREAS = ['editor', 'navigation', 'code'];
 

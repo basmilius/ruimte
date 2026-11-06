@@ -1,10 +1,10 @@
 import type { ActionRegistry } from '@ruimte/actions';
 import { provideClientActions } from '@/action-port/perform';
 import { createClientActionRegistry } from '@/actions/client-actions';
+import { watchPrWatches } from '@/github/pr-watches';
 import { provideExtensionChat } from '@/nodes/extension-chat';
 import { useDocument } from '@/state/document';
 import { PlanSync } from '@/state/plans';
-import { watchPrWatches } from '@/github/pr-watches';
 import { watchPushAttention } from '@/state/push-attention';
 import { watchSnoozes } from '@/state/snooze';
 import { textDrafts } from '@/state/text-drafts';

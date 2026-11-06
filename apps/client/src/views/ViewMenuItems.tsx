@@ -40,7 +40,6 @@ import { canSplit, cellAt, cellCount, cellsRightOf, freeViewFor, isTabHost, maxi
 import { FlagSubmenu } from '@/project/FlagSubmenu';
 import { MoveChatItems } from '@/project/MoveChatItems';
 import { askDeleteView, askViewSettings, openSessionInKind, setViewShared } from '@/project/views';
-import { sessionHandoffs, viewOffers } from '@/views/view-offers';
 import { cellViewOf, hasActiveCanvas, useDocument } from '@/state/document';
 import { isScratchProject, useProject } from '@/state/project';
 import { useNodeProposals } from '@/state/proposals';
@@ -48,6 +47,7 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useSessionRow } from '@/state/sessions';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { useMachineAnswers } from '@/transport/features';
+import { sessionHandoffs, viewOffers } from '@/views/view-offers';
 import { useTransport } from '@/workspace/context';
 
 interface ViewMenuItemsProps {

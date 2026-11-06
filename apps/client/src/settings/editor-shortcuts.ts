@@ -1,8 +1,8 @@
 import { KEYMAP_IDS, type KeymapId } from '@adecore/editor/keymap';
 import i18next from 'i18next';
 import { RENDERED_DOC_COMMENTS } from '@/features';
-import { COMMANDS, isCommandId, menuPlacesOf } from '@/shell/command-table';
 import type { KeyboardArea, ShortcutRow } from '@/settings/shortcuts';
+import { COMMANDS, isCommandId, menuPlacesOf } from '@/shell/command-table';
 import { shortcutFor } from '@/surface/editor-keymap';
 
 type EditorArea = Extract<KeyboardArea, 'editor' | 'navigation' | 'code'>;

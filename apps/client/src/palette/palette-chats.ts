@@ -4,8 +4,8 @@ import type { ChatExternalResult, ChatExternalSession, ChatSearchHit, ChatSearch
 import i18next from 'i18next';
 import { useEffect, useRef, useState } from 'react';
 import { perform } from '@/action-port/perform';
-import { focusChat } from '@/plan/plan-actions';
 import { matches } from '@/palette/palette-entries';
+import { focusChat } from '@/plan/plan-actions';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';

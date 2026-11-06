@@ -15,6 +15,7 @@ import {
     splitAction,
     toggleFlagAction
 } from '@/action-port/person-actions';
+import { revealNextWaiting } from '@/attention/next-waiting';
 import { openAttentionQueue } from '@/attention/queue';
 import { answerCanvasPaste } from '@/canvas/canvas-paste';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
@@ -31,7 +32,6 @@ import { undoLatestDeletion } from '@/project/view-trash';
 import { showView, stepView, viewAtIndex, viewStepTarget } from '@/project/views';
 import { commandForKey, type WorkspaceCommandId } from '@/shell/command-table';
 import { countCommand } from '@/shell/command-usage';
-import { revealNextWaiting } from '@/attention/next-waiting';
 import { focusViewRow } from '@/sidebar/sidebar-focus';
 import { focusedCanvas, maximizeTargetOf, zoomNodeTargetOf, type CanvasState } from '@/state/canvas';
 import { cameraHistoryStep } from '@/state/canvas-camera-history';

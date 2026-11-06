@@ -1,8 +1,8 @@
 import { ScrollArea } from '@adecore/ui';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
-import { NewViewTiles } from '@/views/NewViewMenu';
 import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
+import { NewViewTiles } from '@/views/NewViewMenu';
 
 export function ProjectStartScreen() {
     const project = useProject((s) => s.current);

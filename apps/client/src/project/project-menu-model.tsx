@@ -8,8 +8,8 @@ import { chatsProjects, menuProjects, openableRows, type ProjectMenuRow } from '
 import { closeWarning, sessionNodesOf } from '@/clients/project/project-sessions';
 import { useOffersNewChat } from '@/project/new-chat';
 import { closingProject } from '@/project/open';
-import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ProjectActions, ProjectPlaceActions } from '@/project/ProjectActions';
+import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ProjectSettingsDialog, type ProjectSettingsSubject } from '@/project/ProjectSettingsDialog';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
