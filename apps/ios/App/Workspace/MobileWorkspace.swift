@@ -336,7 +336,7 @@ final class MobileWorkspace {
             let info = try await client.request(
                 kind == "chat" ? .chatCreate : .sessionCreate, payload: .object(payload))
             if kind == "terminal" { heldCommands[item.stableID] = info["heldCommand"]?.stringValue }
-        } catch MachineClientError.server(let code, _) where kind == "terminal" && code == "session-exists" {
+        } catch let error as MachineClientError where kind == "terminal" && error.code == .sessionExists {
             // The existing shell is shared with the desktop and keeps its current dimensions.
             await refreshHeldCommands(including: item.stableID)
         }

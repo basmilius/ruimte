@@ -102,9 +102,4 @@ final class GitPanelTests: XCTestCase {
         XCTAssertEqual(merged.rows.map(\.at), [500, 450, 400])
         XCTAssertTrue(merged.more)
     }
-
-    func testOnlyGitsOwnRefusalToDeleteAnUnmergedBranchEarnsASecondAsk() {
-        XCTAssertTrue(gitIsUnmergedRefusal("error: the branch 'x' is not fully merged"))
-        XCTAssertFalse(gitIsUnmergedRefusal("error: branch 'x' not found"))
-    }
 }

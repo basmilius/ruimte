@@ -82,7 +82,7 @@ enum NewChat {
 
     /// The refusal a machine gives that a person can do something about, in their own words.
     static func message(for error: Error) -> String {
-        if case MachineClientError.server(code: "scratch-unavailable", message: _) = error {
+        if error.machineCode == .scratchUnavailable {
             return String(
                 localized:
                     "This machine keeps its Ruimte folder inside a git checkout, so it cannot hold chats outside a project."

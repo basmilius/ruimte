@@ -104,7 +104,7 @@ final class StatementPairingsTests: XCTestCase {
         var failures = 0
         let events = LinkEvents(opened: {}, message: { _ in }, closed: { _ in failures += 1 })
         let first = try open(pairings, identity, events: events)
-        first.events.closed(TransportFailure.invalid("statements-refused"))
+        first.events.closed(TransportFailure.refused(code: .statementsRefused, reason: "It takes no statement."))
         XCTAssertFalse(store.contains(identity))
         XCTAssertEqual(failures, 1)
         first.events.accepted()
@@ -116,7 +116,7 @@ final class StatementPairingsTests: XCTestCase {
         accepted.events.opened()
         let second = try open(pairings, identity, events: events)
         XCTAssertNil(second.access)
-        second.events.closed(TransportFailure.invalid("not-paired"))
+        second.events.closed(TransportFailure.refused(code: .notPaired, reason: "It does not know this device."))
         let retry = try open(pairings, identity, events: events)
         XCTAssertNil(retry.access)
         XCTAssertEqual(failures, 2)

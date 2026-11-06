@@ -468,7 +468,7 @@ final class ChatModel {
             }
         } catch {
             guard generation == current, historyRevision == currentHistory else { return }
-            if case MachineClientError.server(code: "history-expired", message: _) = error {
+            if error.machineCode == .historyExpired {
                 lastSeq = nil
                 attach()
             } else {

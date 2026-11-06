@@ -62,7 +62,8 @@ import SwiftUI
         case .deleteBranch(let cwd, let ref, let force):
             let extra: [String: JSONValue] = force ? ["ref": .string(ref), "force": .bool(true)] : ["ref": .string(ref)]
             await repositories.act(client: client, cwd: cwd, kind: "delete-branch", extra: extra)
-            if !force, let problem = repositories.problem, gitIsUnmergedRefusal(problem) {
+            // Only git refusing to delete a branch it has not merged anywhere earns a second ask.
+            if !force, repositories.refusal == .branchNotMerged {
                 confirmation = .deleteBranch(cwd: cwd, ref: ref, force: true)
                 return
             }

@@ -71,13 +71,10 @@ final class GitWorktreeTests: XCTestCase {
         XCTAssertEqual(payload["remove"], .bool(true))
     }
 
-    func testARefusalOverATargetCheckedOutNowhereNamesTheBranchToMergeInto() {
-        XCTAssertEqual(
-            GitWorktreeText.checkedOutBranch("main is not checked out anywhere; /work/app is on develop."), "develop")
-        XCTAssertNil(
-            GitWorktreeText.checkedOutBranch("main is not checked out anywhere; /work/app is on a detached HEAD."))
-        XCTAssertNil(GitWorktreeText.checkedOutBranch("lexer cannot be merged into itself."))
-        XCTAssertNotNil(GitWorktreeText.refusalHint("target-not-checked-out"))
+    func testARefusalOverATargetCheckedOutNowhereHasAHint() {
+        XCTAssertNotNil(GitWorktreeText.refusalHint(.targetNotCheckedOut))
+        XCTAssertNil(GitWorktreeText.refusalHint(.mergeWouldOverwrite))
+        XCTAssertNil(GitWorktreeText.refusalHint(nil))
     }
 
     func testWhatARemovalLeftBehindIsSaid() {
@@ -92,16 +89,17 @@ final class GitWorktreeTests: XCTestCase {
             "Removed worktree lexer and its branch. \"git branch lexer 0123456789ab\" brings it back.")
     }
 
-    func testOnlyGitRefusingToOverwriteOffersAStash() {
-        let message = "error: Your local changes to the following files would be overwritten by merge:\n\ta.ts"
-        XCTAssertTrue(GitWorktreeText.isOverwriteRefusal(code: "git-failed", message: message))
-        XCTAssertTrue(
-            GitWorktreeText.isOverwriteRefusal(
-                code: "git-failed", message: "Please commit your changes or stash them before you merge."))
-        XCTAssertFalse(GitWorktreeText.isOverwriteRefusal(code: "target-dirty", message: message))
-        XCTAssertFalse(
-            GitWorktreeText.isOverwriteRefusal(
-                code: "git-failed", message: "fatal: refusing to merge unrelated histories"))
+    @MainActor func testARefusalKeepsTheCodeThatOffersAStash() async {
+        let machine = WorktreeMachine()
+        machine.refusal = ("merge-would-overwrite", "error: Your local changes would be overwritten by merge")
+        let state = GitWorktreesState(repo: "/repo")
+        let request = GitWorktreeMergeRequest(worktree: worktree(), strategy: .merge)
+        await state.merge(client: machine, request: request)
+        XCTAssertEqual(
+            state.outcome,
+            .refused(
+                code: .mergeWouldOverwrite, message: "error: Your local changes would be overwritten by merge",
+                request: request))
     }
 
     func testTheStashGoesToTheCheckoutThatHasTheTargetOut() {
@@ -158,14 +156,15 @@ final class GitWorktreeTests: XCTestCase {
     @MainActor func testATargetCheckedOutNowhereIsRefusedAndKeptToTryAgain() async {
         let machine = WorktreeMachine()
         machine.refusal = ("target-not-checked-out", "main is not checked out anywhere; /repo is on develop.")
+        machine.branch = "develop"
         let state = GitWorktreesState(repo: "/repo")
         let request = GitWorktreeMergeRequest(worktree: worktree(), strategy: .merge)
         await state.merge(client: machine, request: request)
         XCTAssertEqual(
             state.outcome,
             .refused(
-                code: "target-not-checked-out", message: "main is not checked out anywhere; /repo is on develop.",
-                request: request))
+                code: .targetNotCheckedOut, message: "main is not checked out anywhere; /repo is on develop.",
+                request: request, folderBranch: "develop"))
     }
 }
 

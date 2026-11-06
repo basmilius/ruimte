@@ -76,7 +76,13 @@ extension GitRepositories {
             progress = nil
         }
         let outcome = await perform(client: client, cwd: cwd, kind: kind, extra: extra)
-        if case .failure(let error) = outcome { problem = error.localizedDescription } else { problem = nil }
+        if case .failure(let error) = outcome {
+            problem = error.localizedDescription
+            refusal = error.machineCode
+        } else {
+            problem = nil
+            refusal = nil
+        }
         await refresh(client: client, cwd: cwd)
         return try? outcome.get()
     }
@@ -187,6 +193,3 @@ extension GitRepositories {
         }
     }
 }
-
-/// Git refuses to delete a branch it has not merged anywhere; only that refusal earns a second ask.
-func gitIsUnmergedRefusal(_ message: String) -> Bool { message.contains("not fully merged") }

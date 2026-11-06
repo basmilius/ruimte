@@ -378,13 +378,10 @@ final class MachineEndpoint {
     }
 
     static func installProblem(_ error: Error) -> String {
-        guard case .server(let code, let message) = error as? MachineClientError else {
-            return error.localizedDescription
-        }
-        switch code {
-        case "update-no-app": return String(localized: "Ruimte is not open on this machine. Install the update there.")
-        case "update-none": return String(localized: "There is no update to install on this machine.")
-        default: return message
+        switch error.machineCode {
+        case .updateNoApp: String(localized: "Ruimte is not open on this machine. Install the update there.")
+        case .updateNone: String(localized: "There is no update to install on this machine.")
+        default: error.localizedDescription
         }
     }
 }

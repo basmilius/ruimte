@@ -571,7 +571,7 @@ final class SubagentConversation {
                 self.cursor = page["history"]?["cursor"]?.stringValue
                 self.live = page["live"]?.boolValue == true
                 self.onChange(.prepended(older))
-            } catch MachineClientError.server(code: "history-expired", message: _) {
+            } catch let error as MachineClientError where error.code == .historyExpired {
                 // The record was written again under this page; what it holds now is the only truth.
                 self.items = []
                 self.cursor = nil

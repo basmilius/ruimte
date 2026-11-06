@@ -233,11 +233,6 @@ enum GitConflictModel {
     }
 }
 
-func gitRefusalCode(_ error: any Error) -> String? {
-    if case MachineClientError.server(let code, _) = error { return code }
-    return nil
-}
-
 /// Every file a checkout waiting halfway holds, and what a person made of each so far. It outlives the
 /// pages that draw it, so walking from one file to the next and back lands on the same half-finished work.
 @MainActor @Observable final class GitConflictSession {

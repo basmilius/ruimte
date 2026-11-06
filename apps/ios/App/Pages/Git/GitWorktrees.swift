@@ -79,7 +79,10 @@ struct GitWorktreeMergeRequest: Equatable {
 enum GitWorktreeMergeOutcome: Equatable {
     /// The merge waits in `cwd`, the checkout that has the target branch out, for a person to resolve or abort it.
     case conflict(cwd: String, files: [String], summary: String)
-    case refused(code: String, message: String, request: GitWorktreeMergeRequest)
+    /// `folderBranch` is the branch the project folder is on, read when the target is checked out nowhere, to offer
+    /// merging into that one.
+    case refused(
+        code: MachineErrorCode?, message: String, request: GitWorktreeMergeRequest, folderBranch: String? = nil)
 }
 
 /// The question before a worktree goes. With work in it the numbers are the question, since they are
@@ -215,22 +218,6 @@ enum GitWorktreeText {
         return summary
     }
 
-    /// The branch a `target-not-checked-out` refusal says the project folder is on, to offer merging into that one.
-    static func checkedOutBranch(_ message: String) -> String? {
-        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.hasSuffix("."), let range = trimmed.range(of: " is on ", options: .backwards) else { return nil }
-        let branch = String(trimmed[range.upperBound..<trimmed.index(before: trimmed.endIndex)])
-        guard !branch.isEmpty, !branch.contains(" ") else { return nil }
-        return branch
-    }
-
-    /// Git refusing a merge over a changed file of the person's, which a stash would move out of the way.
-    static func isOverwriteRefusal(code: String, message: String) -> Bool {
-        code == "git-failed"
-            && (message.range(of: "would be overwritten by merge", options: .caseInsensitive) != nil
-                || message.range(of: "commit your changes or stash them", options: .caseInsensitive) != nil)
-    }
-
     /// What the stash before a retried merge is called, so it is found again.
     static func stashMessage(_ branch: String) -> String { "Before merging \(branch)" }
 
@@ -245,14 +232,14 @@ enum GitWorktreeText {
     }
 
     /// The one thing a person can do about a refusal, in words, for the codes that have one.
-    static func refusalHint(_ code: String) -> String? {
+    static func refusalHint(_ code: MachineErrorCode?) -> String? {
         switch code {
-        case "target-not-checked-out":
+        case .targetNotCheckedOut:
             String(localized: "Check out the target branch in the project folder or a worktree first.")
-        case "target-busy": String(localized: "Finish or abort what waits in the target checkout first.")
-        case "target-dirty": String(localized: "Commit or stash the changes in the target checkout first.")
-        case "worktree-busy": String(localized: "Finish or abort what waits in the worktree first.")
-        case "agent-working": String(localized: "An agent is still working in the worktree.")
+        case .targetBusy: String(localized: "Finish or abort what waits in the target checkout first.")
+        case .targetDirty: String(localized: "Commit or stash the changes in the target checkout first.")
+        case .worktreeBusy: String(localized: "Finish or abort what waits in the worktree first.")
+        case .agentWorking: String(localized: "An agent is still working in the worktree.")
         default: nil
         }
     }
@@ -367,8 +354,15 @@ enum GitWorktreeText {
             }
         } catch is CancellationError {
         } catch {
+            let code = error.machineCode
+            // A target checked out nowhere names no branch; the folder's own is what to offer instead.
+            let folderBranch =
+                code == .targetNotCheckedOut
+                ? try? await client.request(.gitStatus, payload: .object(["cwd": .string(repo)]))
+                    .decoded(as: GitStatus.self).branch
+                : nil
             outcome = .refused(
-                code: gitRefusalCode(error) ?? "failed", message: error.localizedDescription, request: request)
+                code: code, message: error.localizedDescription, request: request, folderBranch: folderBranch)
         }
         await load(client: client)
     }
@@ -453,8 +447,8 @@ enum GitWorktreeText {
             problem = nil
             note = GitWorktreeText.removed(branch: worktree.branch, result: result)
         } catch {
-            let code = gitRefusalCode(error)
-            if !removal.force, code == "worktree-has-work" || code == "worktree-locked",
+            let code = error.machineCode
+            if !removal.force, code == .worktreeHasWork || code == .worktreeLocked,
                 let again = await fresh(client: client, path: worktree.path), GitWorktreeText.removal(again).force
             {
                 return GitWorktreeText.removal(again)

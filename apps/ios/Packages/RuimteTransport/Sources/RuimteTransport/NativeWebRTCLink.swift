@@ -242,8 +242,9 @@ import RuimtePulsar
                 }
             case "close":
                 let reason = try string(signal, "reason")
-                throw TransportFailure.invalid(
-                    String(localized: "The machine ended this connection: \(reason).", bundle: .module))
+                throw TransportFailure.refused(
+                    code: MachineErrorCode(rawValue: reason),
+                    reason: String(localized: "The machine ended this connection: \(reason).", bundle: .module))
             default: break
             }
         } catch { end(error) }
@@ -373,9 +374,7 @@ import RuimtePulsar
         }
         let verdict = try WireSchema.validate("DirectVerdictFrameSchema", frame)
         guard verdict["type"]?.stringValue == "direct.accepted" else {
-            throw TransportFailure.invalid(
-                verdict["reason"]?.stringValue
-                    ?? String(localized: "The machine refused this connection.", bundle: .module))
+            throw DirectIdentity.refusal(verdict)
         }
         authenticated = true
         trace("authenticated")

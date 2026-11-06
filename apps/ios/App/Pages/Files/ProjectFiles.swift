@@ -295,8 +295,8 @@ enum FileLineChanges {
             problem = nil
             return true
         } catch {
-            switch gitRefusalCode(error) {
-            case "stale":
+            switch error.machineCode {
+            case .stale:
                 stale = true
                 problem = String(
                     localized: "This file changed on the machine since you opened it. Your edits are still here.")

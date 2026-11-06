@@ -168,7 +168,7 @@ final class MachineDevices {
             loaded = true
         } catch {
             guard attempt == reads, !(error is CancellationError) else { return }
-            if case .server(let code, _) = error as? MachineClientError, code == "streaming-disabled" {
+            if error.machineCode == .streamingDisabled {
                 streamingOff = true
                 devices = []
                 problem = nil

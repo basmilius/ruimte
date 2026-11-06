@@ -89,6 +89,20 @@ final class GitSheetTests: XCTestCase {
         XCTAssertNil(actions.confirmation)
     }
 
+    func testOnlyGitsOwnRefusalToDeleteAnUnmergedBranchEarnsASecondAsk() async {
+        let machine = ScriptedMachine()
+        let actions = GitBranchActions(repositories: GitRepositories(), path: "/work/api")
+        let pending = GitConfirmation.deleteBranch(cwd: "/work/api", ref: "old", force: false)
+        machine.refusals[.gitAction] = "git-failed"
+        await actions.confirm(client: machine, pending)
+        XCTAssertNil(actions.confirmation)
+        machine.refusals[.gitAction] = "branch-not-merged"
+        await actions.confirm(client: machine, pending)
+        guard case .deleteBranch(_, "old", true)? = actions.confirmation else {
+            return XCTFail("The forced delete was not asked")
+        }
+    }
+
     private func host<Content: View>(_ content: Content) throws -> UIWindow {
         try NativePresentationProbe.enableAccessibility()
         return UIWindow.showing(UIHostingController(rootView: content), size: CGSize(width: 402, height: 874))

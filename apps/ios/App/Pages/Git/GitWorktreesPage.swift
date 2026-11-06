@@ -184,22 +184,20 @@ struct GitWorktreeOutcomeSection: View {
             } header: {
                 Text("The merge waits for you")
             }
-        case .refused(let code, let message, let request):
+        case .refused(let code, let message, let request, let folderBranch):
             Section {
                 Label(message, lucideIcon: "triangle-alert").foregroundStyle(MobileStyle.statusError)
                 if let hint = GitWorktreeText.refusalHint(code) {
                     Text(hint).font(.caption).foregroundStyle(MobileStyle.muted)
                 }
-                if code == "target-not-checked-out", let branch = GitWorktreeText.checkedOutBranch(message),
-                    branch != request.worktree.branch
-                {
+                if let branch = folderBranch, branch != request.worktree.branch {
                     Button(String(localized: "Merge into \(branch) instead"), lucideIcon: "git-merge") {
                         var retry = request
                         retry.into = branch
                         Task { await state.merge(client: client, request: retry) }
                     }.disabled(state.busy)
                 }
-                if GitWorktreeText.isOverwriteRefusal(code: code, message: message) {
+                if code == .mergeWouldOverwrite {
                     Text(
                         "Stash and retry moves your own changes in the target checkout into a stash named \"\(GitWorktreeText.stashMessage(request.worktree.branch))\" and runs the merge again."
                     ).font(.caption).foregroundStyle(MobileStyle.muted)
@@ -207,7 +205,7 @@ struct GitWorktreeOutcomeSection: View {
                         Task { await state.stashAndRetry(client: client, request: request) }
                     }.disabled(state.busy)
                 }
-                if code == "agent-working" {
+                if code == .agentWorking {
                     Button(String(localized: "Stop the agents and merge"), lucideIcon: "git-merge") {
                         var retry = request
                         retry.stopAgent = true

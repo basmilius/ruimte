@@ -143,14 +143,10 @@ struct ChatPreparePreview: Identifiable, Equatable {
             prepared = target.title
             close()
             return true
-        } catch MachineClientError.server(let code, let message)
-            where ["terminal-prepare-refused", "terminal-editor-refused", "terminal-prepare-unconfirmed"].contains(code)
-        {
-            failure = Self.failure(code: code, message: message)
-            return false
         } catch {
             // Once sent, a broken reply cannot tell whether the editor took the line.
-            failure = Self.failure(code: "terminal-prepare-unconfirmed", message: error.localizedDescription)
+            let code = error.machineCode.flatMap { Self.refusals.contains($0) ? $0 : nil } ?? .terminalPrepareUnconfirmed
+            failure = Self.failure(code: code, message: error.localizedDescription)
             return false
         }
     }
@@ -160,13 +156,17 @@ struct ChatPreparePreview: Identifiable, Equatable {
         release()
     }
 
-    static func failure(code: String, message: String) -> String {
+    private static let refusals: Set<MachineErrorCode> = [
+        .terminalPrepareRefused, .terminalEditorRefused, .terminalPrepareUnconfirmed,
+    ]
+
+    static func failure(code: MachineErrorCode, message: String) -> String {
         switch code {
-        case "terminal-prepare-unconfirmed":
+        case .terminalPrepareUnconfirmed:
             String(
                 localized:
                     "Not confirmed. The command may already be in the terminal, so check its input first.")
-        case "terminal-editor-refused":
+        case .terminalEditorRefused:
             String(localized: "The terminal did not accept the command. Open the preview again.")
         default: message
         }
@@ -179,7 +179,9 @@ struct ChatPreparePreview: Identifiable, Equatable {
     }
 
     private static var wrongMachine: MachineClientError {
-        .server(code: "wrong-machine", message: String(localized: "This chat's machine is not connected."))
+        .server(
+            code: MachineErrorCode.wrongMachine.rawValue,
+            message: String(localized: "This chat's machine is not connected."))
     }
 
     private func attach(_ terminals: Set<String>) async {

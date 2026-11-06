@@ -40,7 +40,7 @@ final class MachineDevicePreview {
                 payload: device.target.setting("stream", .string("events")).setting("formats", .array([.string("jpeg")])))
             opened = true
         } catch {
-            if case .server(let code, _) = error as? MachineClientError, code == "device-format-unsupported" {
+            if error.machineCode == .deviceFormatUnsupported {
                 unavailable = String(localized: "Open it as a view to see its screen.")
             } else {
                 unavailable = error.localizedDescription

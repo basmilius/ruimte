@@ -72,12 +72,12 @@ enum DeviceView {
 
     /// What a refusal of `device.open` means for the page.
     static func phase(forOpenError error: Error) -> DeviceViewPhase {
-        if case MachineClientError.server(let code, let message) = error {
-            switch code {
-            case "device-format-unsupported": return .unsupportedFormat
-            case "device-not-booted": return .stopped
-            case "device-not-found": return .notOnMachine
-            case "device-capture-unavailable", "platform-unavailable": return .noStream(message)
+        if case MachineClientError.server(_, let message) = error {
+            switch error.machineCode {
+            case .deviceFormatUnsupported: return .unsupportedFormat
+            case .deviceNotBooted: return .stopped
+            case .deviceNotFound: return .notOnMachine
+            case .deviceCaptureUnavailable, .platformUnavailable: return .noStream(message)
             default: return .failed(message)
             }
         }

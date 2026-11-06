@@ -81,7 +81,7 @@ import SwiftUI
             repositories.problem = nil
         } catch is CancellationError {
         } catch {
-            if gitRefusalCode(error) != "cancelled" {
+            if error.machineCode != .cancelled {
                 repositories.problem = error.localizedDescription
             }
         }

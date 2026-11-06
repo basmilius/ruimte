@@ -13,6 +13,8 @@ import SwiftUI
     /// True until the first list of repositories has landed, which is the only spinner this page shows.
     private(set) var loading = true
     var problem: String?
+    /// The code the machine gave `problem` with, when the last action was refused.
+    var refusal: MachineErrorCode?
     /// An action a person started; what it came from stays disabled until it settles.
     var busy = false
     /// The last line git wrote while an action runs, which is where a slow push says where it is.

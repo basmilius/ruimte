@@ -262,7 +262,7 @@ enum OutputMachine {
             problem = nil
         } catch is CancellationError {
             return
-        } catch MachineClientError.server(let code, _) where code == "not-found" {
+        } catch let error as MachineClientError where error.code == .notFound {
             gone = true
             return
         } catch {

@@ -3,9 +3,12 @@ import RuimtePulsar
 
 public enum TransportFailure: Error, LocalizedError, Equatable {
     case invalid(String)
+    /// A machine that turned the connection away. `code` is the machine's own and nil for one this app does not
+    /// know.
+    case refused(code: MachineErrorCode?, reason: String)
     public var errorDescription: String? {
         switch self {
-        case .invalid(let reason): return reason
+        case .invalid(let reason), .refused(_, let reason): return reason
         }
     }
 }
@@ -51,6 +54,18 @@ func wireText(_ value: JSONValue) throws -> String {
 }
 
 public enum DirectIdentity {
+    /// What a `direct.refused` frame says. A machine older than its `code` sends none, and its words are then the
+    /// only sign of a device it does not know.
+    public static func refusal(_ frame: JSONValue) -> TransportFailure {
+        let reason =
+            frame["reason"]?.stringValue ?? String(localized: "The machine refused this connection.", bundle: .module)
+        if let sent = frame["code"]?.stringValue {
+            return .refused(code: MachineErrorCode(rawValue: sent), reason: reason)
+        }
+        let unpaired = reason.contains("does not know this device")
+        return .refused(code: unpaired ? MachineErrorCode.notPaired : nil, reason: reason)
+    }
+
     public static func fingerprints(_ sdp: String) -> [String] {
         let regex = try! NSRegularExpression(
             pattern: "^a=fingerprint:(\\S+)\\s+([0-9A-Fa-f:]+)\\s*$", options: .anchorsMatchLines)
