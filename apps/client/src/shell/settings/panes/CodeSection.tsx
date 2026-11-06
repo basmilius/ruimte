@@ -2,9 +2,9 @@ import { ScrollArea, Select } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { SettingsSection } from '@/machines/SettingsSection';
 import { codeThemesOf, useSettings } from '@/state/settings';
 import { highlightCode } from '@/surface/panels/highlight';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 const PREVIEW_CODE = [
     '// Greets a visitor by name.',

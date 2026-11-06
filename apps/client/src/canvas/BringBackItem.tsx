@@ -3,13 +3,13 @@ import type { ProjectNode } from '@ruimte/contracts';
 import { GitPullRequestArrow } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { nameOf } from '@/machines/machine-list';
+import { useMachineEntry } from '@/machines/use-machine-entry';
 import { bringBack } from '@/project/bring-back';
 import { endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { nameOf } from '@/surface/settings/machine-list';
-import { useMachineEntry } from '@/surface/use-machine-entry';
 import { useWorkspace } from '@/workspace/connections';
 import { useTransport } from '@/workspace/context';
 

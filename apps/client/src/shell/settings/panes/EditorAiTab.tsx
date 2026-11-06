@@ -5,11 +5,11 @@ import { useTranslation } from 'react-i18next';
 import { isApplePlatform } from '@/desktop/bridge';
 import { InlineAgentPicker } from '@/editor-ai/InlineAgentPicker';
 import { useEditorAssistAvailability } from '@/editor-assist/use-availability';
+import { SettingsSection } from '@/machines/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { AGENT_CHANGES_MODES, GHOST_TEXT_MODES, type AgentChangesMode, type GhostTextMode } from '@/state/ai-settings';
 import { useSettings } from '@/state/settings';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 /* What AI does in the editor: which agent edits inline, how an agent's changes show in open files and whether the gutter says who wrote a line. */
 export function EditorAiTab() {

@@ -1,8 +1,8 @@
 import { Select, Stepper } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
+import { SettingsSection } from '@/machines/SettingsSection';
 import { INTERFACE_FONT_SIZE_RANGE, INTERFACE_FONTS, useSettings } from '@/state/settings';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 /* The font and the size of the interface. */
 export function FontSection() {

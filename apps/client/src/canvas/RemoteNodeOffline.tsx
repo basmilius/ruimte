@@ -1,9 +1,9 @@
 import { Button } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
 import type { RemoteNodeState } from '@/canvas/remote-node-state';
-import { MachineCard } from '@/surface/MachineCard';
-import { nameOf } from '@/surface/settings/machine-list';
-import { useMachineEntry } from '@/surface/use-machine-entry';
+import { nameOf } from '@/machines/machine-list';
+import { MachineCard } from '@/machines/MachineCard';
+import { useMachineEntry } from '@/machines/use-machine-entry';
 import { pool } from '@/transport';
 
 /*

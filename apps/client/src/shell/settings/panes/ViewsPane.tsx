@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RENDER_DISTANCES, type RenderDistance } from '@/canvas-model/render-distance';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
+import { SettingsSection } from '@/machines/SettingsSection';
 import { NodeSizeSection } from '@/shell/settings/NodeSizeSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { useSettings } from '@/state/settings';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 type ViewTab = 'canvas' | 'drawing' | 'browser';
 

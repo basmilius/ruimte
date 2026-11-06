@@ -11,7 +11,6 @@ import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { focusNodeAction, PERSON_PROMPT_CLIENTS } from '@/action-port/person-actions';
 import { stackFront, type CanvasPrompt } from '@/attention/canvas-prompts';
-import { StatusDot } from '@/canvas/NodeFrame';
 import { useCanvasPrompts } from '@/canvas/use-canvas-prompts';
 import { isApplePlatform } from '@/desktop/bridge';
 import { agentName } from '@/processes/format';
@@ -33,6 +32,7 @@ import {
 } from '@/surface/canvas/prompt-stack';
 import { isTypingTarget } from '@/surface/canvas/typing-target';
 import { SnoozeButton } from '@/surface/Snooze';
+import { StatusDot } from '@/surface/StatusDot';
 import { useTransportStatus } from '@/transport/status';
 
 /* Marks the chevron that folds or opens the stack, which keeps the keyboard across the change. */

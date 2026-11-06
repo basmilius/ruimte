@@ -1,0 +1,188 @@
+import { allSteps, effectiveChecks } from '@adecore/plan';
+import {
+    clampColumnSize,
+    ErrorBoundary,
+    CloseButton,
+    Icon,
+    Menu,
+    Tooltip,
+    SlidingColumn,
+    ButtonGroup,
+    IconButton,
+    PanelHeader,
+    SectionLabel
+} from '@adecore/ui';
+import type { Plan } from '@ruimte/contracts';
+import clsx from 'clsx';
+import { ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, LockOpen, MoreHorizontal, Send } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { hasOverlayControls } from '@/desktop/bridge';
+import { ActiveStepButton } from '@/plan/ActiveStepButton';
+import {
+    collapseAll,
+    copyPlanMarkdown,
+    expandAll,
+    focusChat,
+    planViewKey,
+    sendResultsToChat,
+    unlockPlanStepsAction,
+    usePlanViewPrefs
+} from '@/plan/plan-actions';
+import { closePlanPanel, pickPlan, PLAN_DEFAULT_WIDTH, PLAN_MIN_WIDTH } from '@/plan/plan-panel-watch';
+import { resultsText, type PlanFilter } from '@/plan/plan-view';
+import { PlanList } from '@/plan/PlanList';
+import { useEndpointId } from '@/state/current-endpoint';
+import { forkOriginIn } from '@/state/fork-origin';
+import { useChatPlans } from '@/state/plans';
+import { useShownPanel, useUi } from '@/state/ui';
+import { useViewNodes } from '@/state/view-nodes';
+import { usePanelGap } from '@/surface/panel-layout';
+import { useInstantWidth } from '@/surface/useInstantWidth';
+
+// The grid beside the panel keeps at least this much, whatever the drag asks for.
+const MIN_GRID_WIDTH = 360;
+
+/* Only the ids; the words a person reads are `planPanel.filters.<id>`, read inside the menu. */
+const FILTERS: readonly PlanFilter[] = ['all', 'open', 'issues'];
+
+function hasLockedStep(plan: Plan): boolean {
+    return allSteps(plan.items).some((step) => effectiveChecks(plan, step) === 'agent');
+}
+
+/*
+ * The plan of one chat, between the grid and the panels: a column of width 0 and inert while closed,
+ * its contents mounted until the slide ends. `plan/panel-rules.ts` decides whether it is open.
+ */
+export function PlanPanel() {
+    const gap = usePanelGap();
+    const { t } = useTranslation('shell');
+    const anchor = useUi((s) => s.planAnchor);
+    const open = useUi((s) => s.planOpen);
+    const rightOfIt = useShownPanel().open;
+    const stored = useUi((s) => s.planWidth);
+    const endpointId = useEndpointId();
+    const plans = useChatPlans(anchor?.chatId ?? '');
+    const found = plans.find((entry) => entry.id === anchor?.planId) ?? null;
+    /* The plan it showed last, so a panel closing because its plan went away still has something to slide out with. */
+    const [shown, setShown] = useState<{ chatId: string; plan: Plan } | null>(null);
+    if (anchor !== null && found !== null && (shown?.plan !== found || shown.chatId !== anchor.chatId)) {
+        setShown({ chatId: anchor.chatId, plan: found });
+    }
+    const ref = useRef<HTMLElement>(null);
+    const bounds = {
+        min: PLAN_MIN_WIDTH,
+        // Measured at drag time: the files panel beside it takes its share of the window too.
+        max: (): number => {
+            const column = ref.current;
+            const grid = column?.closest('.ade-workspace')?.querySelector('.ade-workspace-center');
+            return grid instanceof HTMLElement && column ? grid.clientWidth + column.clientWidth - gap - MIN_GRID_WIDTH : window.innerWidth - MIN_GRID_WIDTH;
+        }
+    };
+    // The project may have been on a wider window than this one, so its width is clamped on the way in.
+    const width = clampColumnSize({ min: PLAN_MIN_WIDTH, max: () => window.innerWidth - MIN_GRID_WIDTH }, stored ?? PLAN_DEFAULT_WIDTH);
+    const instant = useInstantWidth();
+
+    return (
+        <SlidingColumn
+            open={open}
+            gap={gap}
+            edge={false}
+            width={width}
+            bounds={bounds}
+            instant={instant}
+            ref={ref}
+            onWidthChange={(next) => useUi.getState().setPlanWidth(next)}
+        >
+            {shown !== null && (
+                <>
+                    <PlanHeader
+                        endpointId={endpointId}
+                        chatId={shown.chatId}
+                        plans={plans}
+                        plan={shown.plan}
+                        inset={open && !rightOfIt && hasOverlayControls()}
+                    />
+                    {/* The header stays, so the panel can still be closed when a plan fails to draw. */}
+                    <ErrorBoundary label={t('planPanel.failed')} resetKeys={[shown.plan.id]} className="min-h-0 grow">
+                        <PlanList key={shown.plan.id} endpointId={endpointId} chatId={shown.chatId} plan={shown.plan} />
+                    </ErrorBoundary>
+                </>
+            )}
+        </SlidingColumn>
+    );
+}
+
+function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: string; chatId: string; plans: readonly Plan[]; plan: Plan; inset: boolean }) {
+    const { t } = useTranslation('shell');
+    const title = useViewNodes((views, nodesOf) => forkOriginIn(views, nodesOf, chatId)?.title ?? null);
+    const index = plans.findIndex((entry) => entry.id === plan.id);
+    const results = resultsText(plan);
+    const filter = usePlanViewPrefs((s) => s.filter);
+    const collapseDone = usePlanViewPrefs((s) => s.collapseDone);
+    const planKey = planViewKey(endpointId, chatId, plan.id);
+
+    return (
+        <PanelHeader className={clsx('app-drag', inset && 'toolbar-overlay-inset')}>
+            <Tooltip label={t('planPanel.showChat')}>
+                <SectionLabel render={<button type="button" onClick={() => focusChat(chatId)} />} className="min-w-0 truncate rounded-md hover:text-text">
+                    {title ?? t('planPanel.chat')}
+                </SectionLabel>
+            </Tooltip>
+            {plans.length > 1 && index >= 0 && (
+                <Menu.Root>
+                    <Menu.Trigger className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-text-muted tabular-nums hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active">
+                        {t('planPanel.planOf', { number: plans.length - index, total: plans.length })}
+                        <Icon icon={ChevronDown} size={12} />
+                    </Menu.Trigger>
+                    <Menu.Popup className="min-w-56">
+                        {plans.map((entry) => (
+                            <Menu.Item key={entry.id} onClick={() => pickPlan(entry.id)}>
+                                <Menu.Check kind="radio" checked={entry.id === plan.id} />
+                                <span className="min-w-0 truncate">{entry.meta.title}</span>
+                            </Menu.Item>
+                        ))}
+                    </Menu.Popup>
+                </Menu.Root>
+            )}
+            <ButtonGroup className="ml-auto shrink-0">
+                <ActiveStepButton chatId={chatId} plan={plan} planKey={planKey} />
+                <Menu.Root>
+                    <IconButton icon={MoreHorizontal} label={t('planPanel.actions')} render={<Menu.Trigger />} />
+                    <Menu.Popup align="end" className="min-w-56">
+                        <Menu.Label>{t('planPanel.show')}</Menu.Label>
+                        <Menu.RadioGroup value={filter} onValueChange={(value: PlanFilter) => usePlanViewPrefs.getState().setFilter(value)}>
+                            {FILTERS.map((id) => (
+                                <Menu.RadioItem key={id} value={id}>
+                                    {t(`planPanel.filters.${id}`)}
+                                </Menu.RadioItem>
+                            ))}
+                        </Menu.RadioGroup>
+                        <Menu.Separator />
+                        <Menu.CheckboxItem checked={collapseDone} onCheckedChange={(checked) => usePlanViewPrefs.getState().setCollapseDone(checked)}>
+                            {t('planPanel.collapseDone')}
+                        </Menu.CheckboxItem>
+                        <Menu.Item onClick={() => expandAll(planKey)}>
+                            <Icon icon={ChevronsUpDown} size={14} /> {t('planPanel.expandAll')}
+                        </Menu.Item>
+                        <Menu.Item onClick={() => collapseAll(planKey, plan)}>
+                            <Icon icon={ChevronsDownUp} size={14} /> {t('planPanel.collapseAll')}
+                        </Menu.Item>
+                        <Menu.Separator />
+                        <Menu.Item onClick={() => copyPlanMarkdown(plan)}>
+                            <Icon icon={Copy} size={14} /> {t('planPanel.copyMarkdown')}
+                        </Menu.Item>
+                        <Menu.Item disabled={results === null} onClick={() => sendResultsToChat(chatId, plan)}>
+                            <Icon icon={Send} size={14} /> {t('planPanel.sendResults')}
+                        </Menu.Item>
+                        <Menu.Separator />
+                        <Menu.Item disabled={!hasLockedStep(plan)} onClick={() => unlockPlanStepsAction(chatId, plan.id, null)}>
+                            <Icon icon={LockOpen} size={14} /> {t('planPanel.unlockAll')}
+                        </Menu.Item>
+                    </Menu.Popup>
+                </Menu.Root>
+                <CloseButton label={t('planPanel.close')} onClick={closePlanPanel} />
+            </ButtonGroup>
+        </PanelHeader>
+    );
+}

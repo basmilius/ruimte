@@ -4,8 +4,8 @@ import { VOICE_LANGUAGES } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_MICROPHONE_ID, listMicrophones, type MicrophoneDevice } from '@/audio/microphone';
+import { SettingsSection } from '@/machines/SettingsSection';
 import { useSettings } from '@/state/settings';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 export function VoiceInputSection() {
     const { t } = useTranslation('settings');

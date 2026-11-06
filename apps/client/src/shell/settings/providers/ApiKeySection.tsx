@@ -4,10 +4,10 @@ import { SettingsRow } from '@adecore/ui/settings';
 import type { ClaudeApiSettings, ClaudeApiStatus, NanoGptSettings, NanoGptStatus } from '@ruimte/contracts';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { SettingsSection } from '@/machines/SettingsSection';
 import { CountField } from '@/shell/settings/providers/CountField';
 import { listProvidersAgain } from '@/shell/settings/providers/use-provider-installs';
 import { useUi } from '@/state/ui';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
 import { transportFor, type Transport } from '@/transport';
 
 type ClaudeApiWindow = NonNullable<ClaudeApiSettings['contextWindow']>;

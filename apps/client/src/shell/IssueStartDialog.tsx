@@ -8,17 +8,17 @@ import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
 import { focusChat } from '@/plan/plan-actions';
 import { findIssueNode, issueBranch, issuePrompt } from '@/shell/issue-start';
-import { submitOnEnter } from '@/shell/submit-on-enter';
-import { createStartWorktree, useWorktreeStart } from '@/shell/use-worktree-start';
-import { createWorktreeChat } from '@/shell/worktree-chat';
-import { WorktreeStartFields } from '@/shell/WorktreeStartFields';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { nodesOfView, useViewNodes } from '@/state/view-nodes';
+import { submitOnEnter } from '@/surface/submit-on-enter';
 import { useTransport } from '@/workspace/context';
+import { createStartWorktree, useWorktreeStart } from '@/worktrees/use-worktree-start';
+import { createWorktreeChat } from '@/worktrees/worktree-chat';
+import { WorktreeStartFields } from '@/worktrees/WorktreeStartFields';
 
 // How long a new chat node gets to register its chat with the machine before the prompt is left as a draft.
 const CHAT_OPEN_TIMEOUT_MS = 10_000;

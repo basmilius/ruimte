@@ -2,8 +2,8 @@ import type { EditorSmartKeys } from '@adecore/editor';
 import { Switch } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
+import { SettingsSection } from '@/machines/SettingsSection';
 import { useSettings } from '@/state/settings';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 /* The switch of each key and the words under `editor.smartKeys.<words>`. Camel humps move the caret and sit under General. */
 const KEYS = [

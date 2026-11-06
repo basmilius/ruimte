@@ -21,8 +21,6 @@ import { GitChoice, GitDiverged, type Choice } from '@/shell/panels/GitDialogs';
 import { GitFileList, type GitWork } from '@/shell/panels/GitFileList';
 import { PushMenu } from '@/shell/panels/PushMenu';
 import { useGitActions, type ActionOutcome, type ManyJob } from '@/shell/panels/use-git-actions';
-import { useWorktreeInspection } from '@/shell/panels/use-worktree-inspection';
-import { WorktreeBar, WorktreeInspectDialog, type WorktreeActions } from '@/shell/panels/WorktreeMenu';
 import { useCanvas } from '@/state/canvas';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
@@ -38,6 +36,8 @@ import { PanelHeaderActions, PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeade
 import { useTransport } from '@/workspace/context';
 import { isUnmergedRefusal, popStashStep, pushButton, pushable, pushEntries, type CommitCandidate } from '@/worktree-rules/git-actions';
 import { nodeNames, nodesInWorktree, worktreeBase, worktreeDiffTab } from '@/worktree-rules/worktree-rows';
+import { useWorktreeInspection } from '@/worktrees/use-worktree-inspection';
+import { WorktreeBar, WorktreeInspectDialog, type WorktreeActions } from '@/worktrees/WorktreeMenu';
 
 // What the log may be squeezed to, and what has to be left for the list above it.
 const MIN_LOG_HEIGHT = 80;

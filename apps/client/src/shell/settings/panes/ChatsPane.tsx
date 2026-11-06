@@ -13,12 +13,12 @@ import { Select, Switch } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
 import { isApplePlatform } from '@/desktop/bridge';
-import { saveMachineSetting } from '@/shell/settings/machine-setting';
-import { MachineSwitchSection } from '@/shell/settings/MachineSwitchSection';
+import { saveMachineSetting } from '@/machine-ui/machine-setting';
+import { MachineSwitchSection } from '@/machine-ui/MachineSwitchSection';
+import { SettingsSection } from '@/machines/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { useEndpoints } from '@/state/endpoints';
 import { useSettings } from '@/state/settings';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 const STREAMING_MODES = ['words', 'blocks', 'whole'] as const;
 

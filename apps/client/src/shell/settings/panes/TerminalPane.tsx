@@ -1,13 +1,13 @@
 import { ScrollArea, Segmented, Select, Stepper } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
-import { TerminalShellRow } from '@/shell/settings/MachineSettings';
+import { TerminalShellRow } from '@/machine-ui/MachineSettings';
+import { SettingsSection } from '@/machines/SettingsSection';
 import { IntegrationsSection } from '@/shell/settings/panes/IntegrationsSection';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useServers } from '@/state/server';
 import { FONT_SIZE_RANGE, MONO_FONTS, monoFontStack, TERMINAL_LINE_HEIGHT_RANGE, terminalFontOf, useSettings } from '@/state/settings';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
 import { useEndpointConnection } from '@/transport/status';
 
 function TerminalPreview({ fontSize, fontFamily }: { fontSize: number; fontFamily: string }) {

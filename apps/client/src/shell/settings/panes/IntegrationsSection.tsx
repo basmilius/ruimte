@@ -4,10 +4,10 @@ import { SettingsRow } from '@adecore/ui/settings';
 import type { AgentIntegrationFile } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { IntegrationDetails, IntegrationReports } from '@/agents/AgentIntegrationsDialog';
 import { INTEGRATION_NAMES, loadIntegrationFiles, useAgentIntegrations, useIntegrationChoice } from '@/controllers/agent-integrations';
-import { IntegrationDetails, IntegrationReports } from '@/shell/AgentIntegrationsDialog';
+import { SettingsSection } from '@/machines/SettingsSection';
 import { hasLocalMachine } from '@/state/local-machine';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 /* What Ruimte may write into the CLIs' global settings, per CLI, so a terminal shows its agent's status. Only this computer's own machine has it. */
 export function IntegrationsSection() {

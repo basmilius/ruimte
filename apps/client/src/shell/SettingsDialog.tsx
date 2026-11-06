@@ -3,7 +3,7 @@ import { SettingsDialog as Dialog, type SettingsSectionEntry } from '@adecore/ui
 import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isApplePlatform } from '@/desktop/bridge';
-import { AccountTab } from '@/shell/settings/AccountTab';
+import { AccountTab } from '@/machine-ui/AccountTab';
 import { findSettings } from '@/shell/settings/find-settings';
 import {
     ABOUT_SECTION,
@@ -32,7 +32,7 @@ const PANES: Record<CoreSettingsSectionId, ComponentType> = {
     voice: lazyNamed(() => import('@/shell/settings/panes/VoicePane'), 'VoicePane'),
     usage: lazyNamed(() => import('@/shell/settings/panes/UsagePane'), 'UsagePane'),
     agents: lazyNamed(() => import('@/shell/settings/panes/AgentsPane'), 'AgentsPane'),
-    machines: lazyNamed(() => import('@/shell/settings/panes/MachinesPane'), 'MachinesPane'),
+    machines: lazyNamed(() => import('@/machine-ui/MachinesPane'), 'MachinesPane'),
     keyboard: lazyNamed(() => import('@/shell/settings/panes/KeyboardPane'), 'KeyboardPane'),
     about: lazyNamed(() => import('@/shell/settings/panes/AboutPane'), 'AboutPane')
 };
@@ -77,7 +77,7 @@ export function SettingsDialog() {
                 sections: group.sections.map((meta) => entryOf(meta, contributed))
             }))}
             footer={[entryOf(ABOUT_SECTION, contributed)]}
-            account={{ section: entryOf(ACCOUNT_SECTION, contributed), tab: <AccountTab /> }}
+            account={{ section: entryOf(ACCOUNT_SECTION, contributed), tab: <AccountTab sectionId={ACCOUNT_SECTION.id} /> }}
             search={{
                 find: (query) => findSettings(query, isApplePlatform()),
                 hint: formatShortcut(APP_SHORTCUTS.settingsSearch, isApplePlatform()),

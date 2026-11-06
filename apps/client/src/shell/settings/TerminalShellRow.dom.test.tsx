@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { mount, type Mounted } from '../../../testing/dom';
-import { TerminalShellRow } from './MachineSettings';
+import { TerminalShellRow } from '../../machine-ui/MachineSettings';
 
 let page: Mounted;
 

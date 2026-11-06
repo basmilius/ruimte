@@ -6,8 +6,8 @@ import { useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { WorktreeNode } from '@/controllers/worktrees';
 import { basenameOf } from '@/paths/file-path';
-import { WorktreeRows, type WorktreeActions } from '@/shell/panels/WorktreeMenu';
 import type { GitTarget } from '@/state/git-target';
+import { WorktreeRows, type WorktreeActions } from '@/worktrees/WorktreeMenu';
 
 // The keys the menu itself owns while the field has focus; every other key is the field's.
 const MENU_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Escape', 'Tab', 'Enter']);

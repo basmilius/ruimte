@@ -54,6 +54,10 @@ import { DeviceOperatedStrip } from '@/devices/DeviceOperatedStrip';
 import { ExtensionNodeBody } from '@/extensions/ExtensionNodeBody';
 import { nodeInfoOf } from '@/extensions/slots';
 import { NodeHeaderSlot, SlotRow } from '@/extensions/SlotSurfaces';
+import { useMachineIcon } from '@/machines/machine-icon';
+import { nameOf } from '@/machines/machine-list';
+import { MachineGlyph } from '@/machines/MachineGlyph';
+import { useMachineEntry } from '@/machines/use-machine-entry';
 import { BrowserBody } from '@/nodes/BrowserBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
@@ -78,14 +82,11 @@ import { useUi } from '@/state/ui';
 import { KindIcon } from '@/surface/canvas/KindIcon';
 import { NODE_KIND_ICONS } from '@/surface/canvas/node-icons';
 import { Favicon } from '@/surface/Favicon';
-import { MachineGlyph } from '@/surface/MachineGlyph';
 import { resetTitle } from '@/surface/nodes/node-host';
 import { fixedSlot, FileToolbarSlotProvider } from '@/surface/panels/file-toolbar-slot';
 import { useUnsavedStoredPath } from '@/surface/panels/use-unsaved';
-import { useMachineIcon } from '@/surface/settings/machine-icon';
-import { nameOf } from '@/surface/settings/machine-list';
 import { SnoozeMenuItems } from '@/surface/Snooze';
-import { useMachineEntry } from '@/surface/use-machine-entry';
+import { StatusDot } from '@/surface/StatusDot';
 import { showsTaskMark } from '@/tasks/task-mark';
 import { TaskMark } from '@/tasks/TaskMark';
 import { SessionPorts } from '@/terminal/SessionPorts';
@@ -98,15 +99,6 @@ const ArtifactNodeBody = lazyNamed(() => import('@/output/ArtifactNode'), 'Artif
 const RoutineNodeBody = lazyNamed(() => import('@/routines/RoutineNode'), 'RoutineNodeBody');
 const DesignNodeBody = lazyNamed(() => import('@/design/DesignNode'), 'DesignNodeBody');
 
-const STATUS_CLASS: Record<AgentStatus, string> = {
-    running: 'bg-status-running',
-    'needs-you': 'bg-status-needs-you',
-    idle: 'bg-status-idle',
-    error: 'bg-status-error',
-    // A CLI that is gone is not a failure; it is a session waiting to be picked up again.
-    exited: 'bg-text-faint'
-};
-
 /* A node at rest carries no mark. Work is `WorkingMark`, and only while an agent works, since an attached shell reads running too. */
 const STATUS_MARK: Partial<Record<AgentStatus, { icon: LucideIcon; className: string }>> = {
     'needs-you': { icon: Hand, className: 'text-status-needs-you' },
@@ -118,23 +110,6 @@ const STATUS_MARK: Partial<Record<AgentStatus, { icon: LucideIcon; className: st
    from `hoverGroupId` and not from `:hover`, since a node in the group is its sibling in the DOM. */
 const GROUP_FRAME = 'border-dashed bg-[color-mix(in_srgb,var(--group-accent,var(--text-faint))_7%,transparent)]';
 const GROUP_FRAME_HOVER = 'border-dashed bg-[color-mix(in_srgb,var(--group-accent,var(--text-faint))_10%,transparent)]';
-
-/* `plain` drops the tooltip, for a control that already has one of its own; a screen reader still hears the status. */
-export function StatusDot({ status, className, plain = false }: { status: AgentStatus; className?: string; plain?: boolean }) {
-    const { t } = useTranslation('canvas');
-    const label = t(`status.${status}`);
-    const dot = (
-        <span
-            role="img"
-            aria-label={label}
-            className={clsx('inline-block h-2 w-2 shrink-0 rounded-full', STATUS_CLASS[status], status === 'running' && 'status-pulse', className)}
-        />
-    );
-    if (plain) {
-        return dot;
-    }
-    return <Tooltip label={label}>{dot}</Tooltip>;
-}
 
 function StatusMark({ status, work }: { status: AgentStatus; work: AgentWork | null }) {
     const { t } = useTranslation('canvas');

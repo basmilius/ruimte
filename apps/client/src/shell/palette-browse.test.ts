@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { Machine } from '@ruimte/pulsar';
+import { mergeMachines } from '@/machines/machine-list';
 import type { Endpoint } from '@/state/endpoints';
-import { mergeMachines } from '@/surface/settings/machine-list';
 import type { ConnectionState } from '@/transport-api/transport';
 import {
     browseBack,

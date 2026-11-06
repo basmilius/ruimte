@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { closeTabAction } from '@/action-port/person-actions';
 import { WaitingCount } from '@/attention/WaitingCount';
 import { useBrowserDisplayTitle } from '@/browser/title';
-import { StatusDot } from '@/canvas/NodeFrame';
 import { useDatabaseConnectionList } from '@/database/connections';
 import { FileMenuItems } from '@/files/FileMenuItems';
 import { isSameCell, type CellAt } from '@/layout/split';
@@ -31,6 +30,7 @@ import { useViewPinned } from '@/state/view-pins';
 import { PATHS_DRAG_TYPE } from '@/surface/canvas/drop';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { isLooseView, viewGlyphOf, type LooseCellView } from '@/surface/cell-view';
+import { StatusDot } from '@/surface/StatusDot';
 import { databaseTabTitle } from '@/surface/tab-look';
 import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
 

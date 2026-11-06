@@ -3,7 +3,7 @@ import { AddressBookClient, type ModelBenchmarksResult } from '@ruimte/pulsar';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { formatSource } from '@/format/source';
-import { ModelsBenchmarks } from '@/shell/models/ModelsBenchmarks';
+import { ModelsBenchmarks } from '@/models/ModelsBenchmarks';
 import { RuimteMark } from '@/ui/RuimteMark';
 
 const HOME_URL = 'https://ruimte.app';

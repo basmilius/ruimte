@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { WaitingCount } from '@/attention/WaitingCount';
 import { desktop } from '@/desktop/bridge';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
+import { MachineGlyph } from '@/machines/MachineGlyph';
 import { openProjectAction } from '@/project/open-actions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import {
@@ -28,7 +29,6 @@ import { useProject } from '@/state/project';
 import { useProjectList, type ProjectRow } from '@/state/project-list';
 import { useServers } from '@/state/server';
 import { useSnoozes } from '@/state/snooze';
-import { MachineGlyph } from '@/surface/MachineGlyph';
 import { useSidebarMachines } from './sidebar-projects';
 
 function CurrentProjectAttention() {

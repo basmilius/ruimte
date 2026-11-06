@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useInstalledExtensions } from '@/extensions/loader';
 import { chooseExtensionTheme, listExtensionThemes, type ThemeChoice } from '@/extensions/themes';
+import { SettingsSection } from '@/machines/SettingsSection';
 import { AccentRow, PaletteRow } from '@/shell/settings/panes/ColorRows';
 import { FontSection } from '@/shell/settings/panes/FontSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
@@ -12,7 +13,6 @@ import { useContributions } from '@/state/extension-registry';
 import { useExtensionTheme } from '@/state/extension-theme';
 import { useSettings } from '@/state/settings';
 import { useTheme, type Theme } from '@/state/theme';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
 

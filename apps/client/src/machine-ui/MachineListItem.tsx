@@ -1,0 +1,105 @@
+import { Tooltip, useNow } from '@adecore/ui';
+import { MasterItem } from '@adecore/ui/settings';
+import clsx from 'clsx';
+import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useMachineIcon } from '@/machines/machine-icon';
+import { nameOf, reachLabel, type MachineEntry } from '@/machines/machine-list';
+import { MachineGlyph } from '@/machines/MachineGlyph';
+import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { useServers } from '@/state/server';
+import { describeConnection, describeLastSeen, describePing, describeRoute, reachabilityLabel } from '@/surface/connection-info';
+import type { TransportStatus } from '@/transport/index';
+import { useLatency } from '@/transport/ping';
+import { useEndpointConnection, useLastSeenAt } from '@/transport/status';
+
+const MINUTE_MS = 60_000;
+
+const DOT: Record<TransportStatus, string> = {
+    open: 'bg-status-idle',
+    connecting: 'bg-status-needs-you',
+    closed: 'bg-status-error'
+};
+
+// A hollow dot is a machine with no link here, which says nothing about whether it runs.
+const HOLLOW = 'border border-border-strong bg-surface-raised';
+
+/* The icon tile of a row with its connection as a dot in the corner; the tooltip carries how it is reached and what matters when it does not answer. */
+function Tile({ entry, dot, tooltip }: { entry: MachineEntry; dot: string; tooltip: ReactNode }) {
+    const icon = useMachineIcon(entry);
+    return (
+        <Tooltip label={tooltip}>
+            <span className="relative grid size-7.5 shrink-0 place-items-center rounded-lg bg-surface-hover">
+                <MachineGlyph icon={icon} size={16} className="text-text-muted" />
+                <span className={clsx('absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full ring-2 ring-surface-raised', dot)} />
+            </span>
+        </Tooltip>
+    );
+}
+
+function ConnectedTile({ entry, endpoint }: { entry: MachineEntry; endpoint: Endpoint }) {
+    const { t } = useTranslation('settings');
+    const connection = useEndpointConnection(endpoint.id);
+    const latency = useLatency(endpoint.id);
+    const lastSeenAt = useLastSeenAt(endpoint.id);
+    const reachability = useServers((s) => s.byEndpoint[endpoint.id]?.reachability ?? endpoint.reachability);
+    const now = useNow(MINUTE_MS);
+    const lastSeen = connection.noLink === true ? describeLastSeen(lastSeenAt, now) : null;
+
+    const tooltip = (
+        <span className="flex flex-col items-start gap-0.5">
+            <span>{describeConnection(connection, null)}</span>
+            {lastSeen !== null && <span className="text-text-muted">{lastSeen}</span>}
+            <span className="text-text-muted">{reachabilityLabel(reachability)}</span>
+            {endpoint.id === LOCAL_ENDPOINT_ID && endpoint.direct === true && <span className="text-text-muted">{t('machines.dot.direct')}</span>}
+            <span className="text-text-muted">{describePing(latency)}</span>
+        </span>
+    );
+
+    return <Tile entry={entry} dot={connection.noLink === true ? HOLLOW : DOT[connection.status]} tooltip={tooltip} />;
+}
+
+/* Why this client cannot reach the machine the way it should, for the line under the name. */
+function useRowFailure(endpoint: Endpoint | null): string | null {
+    const { t } = useTranslation('settings');
+    const mismatch = useEndpoints((s) => (endpoint ? s.mismatched[endpoint.id] : undefined));
+    const connection = useEndpointConnection(endpoint?.id ?? '');
+    if (endpoint === null) {
+        return null;
+    }
+    if (mismatch !== undefined) {
+        return t('machines.mismatch');
+    }
+    // A socket reports a failure only for a refusal (another wire version), so any failure is worth the line.
+    return connection.status !== 'open' ? (connection.failure ?? null) : null;
+}
+
+/* One machine in the list of the Account pane: its icon with how it answers, its name, and how this client reaches it. */
+export function MachineListItem({ entry, selected, onSelect }: { entry: MachineEntry; selected: boolean; onSelect(): void }) {
+    const { t } = useTranslation('settings');
+    const failure = useRowFailure(entry.endpoint);
+    const connection = useEndpointConnection(entry.endpoint?.id ?? '');
+    const reach = reachLabel(entry);
+    const route = entry.endpoint === null ? null : describeRoute(connection);
+    const status = entry.endpoint === null ? t('machines.notOpened') : describeConnection(connection, null);
+
+    return (
+        <MasterItem selected={selected} onSelect={onSelect}>
+            {entry.endpoint === null ? (
+                <Tile entry={entry} dot={HOLLOW} tooltip={t('machines.notOpened')} />
+            ) : (
+                <ConnectedTile entry={entry} endpoint={entry.endpoint} />
+            )}
+            <span className="flex min-w-0 grow flex-col">
+                <span className="truncate text-sm text-text">{nameOf(entry)}</span>
+                <span className="text-xs break-words text-text-muted">{route === null ? reach : t('machines.withRoute', { reach, route })}</span>
+                {failure !== null && (
+                    <span className="text-xs break-words text-status-error" role="alert">
+                        {failure}
+                    </span>
+                )}
+                <span className="sr-only">{status}</span>
+            </span>
+        </MasterItem>
+    );
+}

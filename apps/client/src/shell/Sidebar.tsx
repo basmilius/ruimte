@@ -8,7 +8,6 @@ import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { moveViewAction } from '@/action-port/person-actions';
-import { StatusDot } from '@/canvas/NodeFrame';
 import { hasLogoMenu } from '@/desktop/bridge';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { useChatDrawers } from '@/extensions/drawn-chats';
@@ -19,7 +18,6 @@ import { newChat } from '@/project/new-chat';
 import { askDeleteView, newFileViewsAfter, promoteLooseDatabase, promoteLooseFile, revealNode } from '@/project/views';
 import { StationMenu } from '@/shell/menu/StationMenu';
 import { NewViewItems } from '@/shell/NewViewMenu';
-import { usePanelGap } from '@/shell/panel-layout';
 import { useProjectMenu } from '@/shell/project-menu-model';
 import { foldedProjects, movableKeys, separatorKey, useSidebarProjects, type SeparatorPlaces, type SidebarSeparator } from '@/shell/sidebar-projects';
 import { SIDEBAR_WIDTH_PX, SidebarGlow } from '@/shell/SidebarGlow';
@@ -35,7 +33,6 @@ import {
     ViewRow
 } from '@/shell/SidebarListRows';
 import { SidebarToggle } from '@/shell/SidebarToggle';
-import { useInstantWidth } from '@/shell/useInstantWidth';
 import { nodeWork } from '@/state/agent-work';
 import { isUnseen, useAttention } from '@/state/attention';
 import { useEndpointId } from '@/state/current-endpoint';
@@ -55,6 +52,7 @@ import { IS_STATION } from '@/station';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/surface/canvas/drop';
 import { finderPaths } from '@/surface/canvas/finder-drop';
 import { viewGlyphOf } from '@/surface/cell-view';
+import { usePanelGap } from '@/surface/panel-layout';
 import {
     buildCombinedSidebar,
     buildSidebar,
@@ -71,6 +69,8 @@ import {
     type SidebarSection
 } from '@/surface/sidebar-rows';
 import { useSidebarSource } from '@/surface/sidebar-source';
+import { StatusDot } from '@/surface/StatusDot';
+import { useInstantWidth } from '@/surface/useInstantWidth';
 import {
     draggedViewId,
     dragging as draggedView,

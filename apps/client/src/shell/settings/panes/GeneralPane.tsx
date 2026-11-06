@@ -3,10 +3,10 @@ import { formatDayClock, useFormatLocale, formatMoney, FORMAT_LANGUAGE, FORMAT_R
 import { SettingsRow } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
 import { chooseLanguage, chooseRegion } from '@/i18n';
+import { SettingsSection } from '@/machines/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/state/languages';
 import { useSettings } from '@/state/settings';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 /* A date with a weekday, a month and a clock, so every part a region writes differently is in it. */
 const EXAMPLE_MOMENT = new Date(2026, 8, 19, 14, 30);

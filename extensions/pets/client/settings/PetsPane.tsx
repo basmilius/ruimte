@@ -15,7 +15,7 @@ import { lookOf, usePetPool } from '@extensions/pets/client/use-pet-look';
 import { Activity, Bot, ImageUp, MapPin, PawPrint, Pencil, Shapes, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
+import { SettingsSection } from '@/machines/SettingsSection';
 
 const PETS_PLACES: readonly PetsPlace[] = ['nodes', 'screen'];
 

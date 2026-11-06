@@ -3,8 +3,8 @@ import { SettingsRow } from '@adecore/ui/settings';
 import type { CliVersion, ProviderInfo } from '@ruimte/contracts';
 import { RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { SettingsSection } from '@/machines/SettingsSection';
 import type { CliVersionsState } from '@/shell/settings/providers/use-provider-installs';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 function useVersionWords(version: CliVersion) {
     const { t } = useTranslation('settings');

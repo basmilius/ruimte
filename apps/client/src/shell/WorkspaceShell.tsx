@@ -6,37 +6,34 @@ import { useStore } from 'zustand';
 import { EndChildrenDialog } from '@/agents/EndChildrenDialog';
 import { useAttentionQueue } from '@/attention/queue';
 import { WebviewParking } from '@/browser/WebviewParking';
+import { LayoutDialog } from '@/canvas/LayoutDialog';
 import { ChatChooserMenu } from '@/chat/ChatChooserMenu';
+import { ForkDialog } from '@/chat/ForkDialog';
 import { WORKSPACE_CHAT_HOST } from '@/chat/workspace-host';
 import { useDatabasePanel } from '@/clients/database/state';
 import { useDevices } from '@/clients/devices/state';
+import { LeaveConflictDialog } from '@/conflicts/LeaveConflictDialog';
 import { refreshPrRepos } from '@/controllers/pr-repos';
 import { ensureDatabaseConnections } from '@/database/connections';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { useServerPrompts } from '@/language/use-server-prompts';
 import { useLaunches } from '@/launches/state';
 import { startLaunchWatch } from '@/launches/watch';
+import { MachineLostScreen } from '@/machine-ui/MachineLostScreen';
+import { useMachineLost } from '@/machine-ui/use-machine-lost';
+import { PlanPanel } from '@/plan/PlanPanel';
 import { useRoutineForm } from '@/routines/form-state';
 import { useCanvasShortcuts } from '@/shell/canvas-shortcuts';
-import { ForkDialog } from '@/shell/ForkDialog';
-import { LayoutDialog } from '@/shell/LayoutDialog';
-import { LeaveConflictDialog } from '@/shell/LeaveConflictDialog';
-import { MachineLostScreen } from '@/shell/MachineLostScreen';
-import { MergeWorktreeDialog } from '@/shell/MergeWorktreeDialog';
 import { Panel } from '@/shell/Panel';
 import { DiscardEditsDialog } from '@/shell/panels/DiscardEditsDialog';
 import { UnsavedCloseDialog } from '@/shell/panels/UnsavedCloseDialog';
-import { PlanPanel } from '@/shell/PlanPanel';
 import { ProjectBanner } from '@/shell/ProjectBanner';
 import { ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
-import { RemoveWorktreeDialog } from '@/shell/RemoveWorktreeDialog';
 import { ShellRail } from '@/shell/ShellRail';
 import { Sidebar } from '@/shell/Sidebar';
 import { TopRow } from '@/shell/TopRow';
-import { useMachineLost } from '@/shell/use-machine-lost';
 import { ViewDialogs } from '@/shell/ViewDialogs';
 import { ViewHost } from '@/shell/ViewHost';
-import { WorktreeDialog } from '@/shell/WorktreeDialog';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useRoutinesStage } from '@/state/routines-stage';
 import { useSettings } from '@/state/settings';
@@ -53,6 +50,9 @@ import { stopVoice } from '@/voice/controller';
 import { VoiceOverlay } from '@/voice/VoiceOverlay';
 import { ConnectionProvider } from '@/workspace/ConnectionProvider';
 import type { Workspace } from '@/workspace/connections';
+import { MergeWorktreeDialog } from '@/worktrees/MergeWorktreeDialog';
+import { RemoveWorktreeDialog } from '@/worktrees/RemoveWorktreeDialog';
+import { WorktreeDialog } from '@/worktrees/WorktreeDialog';
 
 startBytesWorker();
 startLaunchWatch();
@@ -79,7 +79,7 @@ const ImageSaveHost = lazyDialog(
 );
 
 const NewWorktreeChatDialog = lazyDialog(
-    () => import('@/shell/NewWorktreeChatDialog'),
+    () => import('@/worktrees/NewWorktreeChatDialog'),
     'NewWorktreeChatDialog',
     useUi,
     (s) => s.newWorktreeChatOpen
@@ -100,21 +100,21 @@ const PullRequestDialog = lazyDialog(
 );
 
 const FileChoiceDialog = lazyDialog(
-    () => import('@/shell/FileChoiceDialog'),
+    () => import('@/files/FileChoiceDialog'),
     'FileChoiceDialog',
     useFileChoice,
     (s) => s.choice !== null
 );
 
 const RemoteNodeDialog = lazyDialog(
-    () => import('@/shell/RemoteNodeDialog'),
+    () => import('@/machine-ui/RemoteNodeDialog'),
     'RemoteNodeDialog',
     useUi,
     (s) => s.remoteNodeDialog !== null
 );
 
 const AddToMachineDialog = lazyDialog(
-    () => import('@/shell/AddToMachineDialog'),
+    () => import('@/machine-ui/AddToMachineDialog'),
     'AddToMachineDialog',
     useUi,
     (s) => s.addToMachineDialog !== null

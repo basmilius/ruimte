@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { desktop } from '@/desktop/bridge';
 import { cancelDictation, observeSpeech, useDictation } from '@/dictation/controller';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
+import { SettingsSection } from '@/machines/SettingsSection';
 
 export function DictationSection() {
     const { t } = useTranslation('voice');

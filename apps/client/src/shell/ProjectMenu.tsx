@@ -3,12 +3,12 @@ import { FolderOpen, MessageSquarePlus, Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ProjectMenuRow } from '@/clients/project/list';
+import { MachineGlyph } from '@/machines/MachineGlyph';
 import { newChat } from '@/project/new-chat';
 import { openProjectClickAction } from '@/project/open-actions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { useProjectMenu, type ProjectMenuModel } from '@/shell/project-menu-model';
 import { useUi } from '@/state/ui';
-import { MachineGlyph } from '@/surface/MachineGlyph';
 
 /*
  * The Chats project of this machine, with a new chat on the edge where a project row has its actions.

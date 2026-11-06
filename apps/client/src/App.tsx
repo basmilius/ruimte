@@ -8,11 +8,11 @@ import '@/extensions/built-in';
 import { startExtensions } from '@/extensions/watch';
 import { formatSource } from '@/format/source';
 import { useTemplateRequest } from '@/language/template-request';
+import { LinkMachineDialog } from '@/machine-ui/LinkMachineDialog';
+import { MachineUpdateDialog } from '@/machine-ui/MachineUpdateDialog';
 import { useProjectSwitch } from '@/project/open';
 import { closeLinkRequest, useLinkRequest } from '@/pulsar/link-request';
 import { useAppShortcuts } from '@/shell/app-shortcuts';
-import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
-import { MachineUpdateDialog } from '@/shell/MachineUpdateDialog';
 import { useNativeMenu } from '@/shell/menu/native-menu';
 import { DormantScreen, ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
 import { allSettingsSections } from '@/shell/settings/sections';
@@ -48,13 +48,13 @@ const SettingsDialog = lazyDialog(
     (s) => s.settings.open
 );
 const UsageDialog = lazyDialog(
-    () => import('@/shell/usage/UsageDialog'),
+    () => import('@/usage/UsageDialog'),
     'UsageDialog',
     useUi,
     (s) => s.usageOpen
 );
 const ModelsDialog = lazyDialog(
-    () => import('@/shell/models/ModelsDialog'),
+    () => import('@/models/ModelsDialog'),
     'ModelsDialog',
     useUi,
     (s) => s.modelsOpen
@@ -84,13 +84,13 @@ const OnboardingDialog = lazyDialog(
     (s) => s.onboarding !== null
 );
 const AgentIntegrationsDialog = lazyDialog(
-    () => import('@/shell/AgentIntegrationsDialog'),
+    () => import('@/agents/AgentIntegrationsDialog'),
     'AgentIntegrationsDialog',
     useUi,
     (s) => s.agentIntegrations
 );
 const ReleaseNotesDialog = lazyDialog(
-    () => import('@/shell/ReleaseNotesDialog'),
+    () => import('@/release-notes/ReleaseNotesDialog'),
     'ReleaseNotesDialog',
     useReleaseNotes,
     (s) => s.open

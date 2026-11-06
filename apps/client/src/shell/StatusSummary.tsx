@@ -5,7 +5,6 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { openAttentionQueue } from '@/attention/queue';
 import { WaitLabel } from '@/attention/WaitLabel';
-import { StatusDot } from '@/canvas/NodeFrame';
 import { revealNode } from '@/project/views';
 import { groupAttention, useAttention } from '@/state/attention';
 import { useCanvasStore } from '@/state/canvas';
@@ -15,6 +14,7 @@ import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { useProjectNodes, type ProjectNodeRef } from '@/state/view-nodes';
 import { oldestWaitingFirst, useWaitingSince, waitDetailsOf } from '@/state/waiting';
+import { StatusDot } from '@/surface/StatusDot';
 import { waitAskLine } from './wait-ask';
 
 /* A count that walks through the nodes behind it, across views, one per click. */

@@ -4,8 +4,8 @@ import { ArrowDownToLine, ChartNoAxesColumn, Search, Settings } from 'lucide-rea
 import { useTranslation } from 'react-i18next';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { LaunchChip } from '@/launches/LaunchChip';
-import { useConnectionDotShown } from '@/shell/connection-dot';
-import { ConnectionDot } from '@/shell/ConnectionDot';
+import { useConnectionDotShown } from '@/machines/connection-dot';
+import { ConnectionDot } from '@/machines/ConnectionDot';
 import { PanelControls } from '@/shell/PanelControls';
 import { useToolbarPanels } from '@/shell/panels';
 import { isScratchProject, useProject } from '@/state/project';

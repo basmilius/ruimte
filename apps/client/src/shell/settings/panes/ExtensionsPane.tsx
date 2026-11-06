@@ -24,10 +24,10 @@ import {
     type PackPreview,
     type StoreAnswer
 } from '@/extensions/store';
+import { SettingsSection } from '@/machines/SettingsSection';
 import { useContributions } from '@/state/extension-registry';
 import { useToasts } from '@/state/toasts';
 import { IS_STATION } from '@/station';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 const BROWSE = 'browse';
 const DISK = 'disk';

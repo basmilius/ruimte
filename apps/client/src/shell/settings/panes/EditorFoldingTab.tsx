@@ -2,9 +2,9 @@ import type { EditorFoldOutline } from '@adecore/editor';
 import { Segmented, Switch } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
+import { SettingsSection } from '@/machines/SettingsSection';
 import { FOLDING_GROUPS } from '@/shell/settings/folding-rows';
 import { FOLD_OUTLINES, useSettings } from '@/state/settings';
-import { SettingsSection } from '@/surface/settings/SettingsSection';
 
 /* When the arrow that folds shows in the gutter, and what folds by itself the first time a file opens. */
 export function EditorFoldingTab() {

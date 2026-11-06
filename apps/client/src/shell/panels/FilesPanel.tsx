@@ -44,7 +44,6 @@ import { dropMovesOf } from '@/shell/panels/file-rename';
 import { FileSearch as FileSearchFlow, type FileSearchResult } from '@/shell/panels/file-search';
 import { NewEntryRow } from '@/shell/panels/NewEntryRow';
 import { isQuickLookKey, useQuickLook } from '@/shell/panels/quick-look';
-import { WorktreeBar } from '@/shell/panels/WorktreeMenu';
 import { useCanvas } from '@/state/canvas';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useFiles } from '@/state/files';
@@ -90,6 +89,7 @@ import {
 import { APP_SHORTCUTS } from '@/surface/shortcuts';
 import { useTransport } from '@/workspace/context';
 import { nodeNames, nodesInWorktree, worktreeBase } from '@/worktree-rules/worktree-rows';
+import { WorktreeBar } from '@/worktrees/WorktreeMenu';
 
 const { directoryHandle, menuTargetsOf, resetExpandedPaths, rowPathOf } = FileTree;
 
