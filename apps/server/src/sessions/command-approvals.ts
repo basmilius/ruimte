@@ -47,8 +47,16 @@ export class CommandApprovals {
     private readonly ledger = new Serializer();
     private readonly writeDocument: (path: string, text: string) => Promise<void>;
 
-    constructor(home: string, options: { writeDocument?: (path: string, text: string) => Promise<void> } = {}) {
-        this.approvals = new RecordDirectory({ dir: join(home, 'command-approvals'), schema: ApprovalSchema, idOf: (approval) => approval.hash });
+    constructor(
+        home: string,
+        options: { writeDocument?: (path: string, text: string) => Promise<void>; writeRecord?: (path: string, text: string) => Promise<void> } = {}
+    ) {
+        this.approvals = new RecordDirectory({
+            dir: join(home, 'command-approvals'),
+            schema: ApprovalSchema,
+            idOf: (approval) => approval.hash,
+            ...(options.writeRecord ? { write: options.writeRecord } : {})
+        });
         this.unboundPath = join(home, 'command-approvals-unbound.json');
         this.writeDocument = options.writeDocument ?? ((path, text) => writeJsonDocument(path, text, (same) => same).then(() => undefined));
     }
@@ -106,11 +114,18 @@ export class CommandApprovals {
                 return this.approvals.has(hash);
             }
 
+            const had = this.approvals.has(hash);
+
             try {
                 await this.approvals.remove(unbound);
 
                 return await this.approvals.write({ hash, approvedAt: Date.now() });
             } catch {
+                // The directory holds a record in memory before its file lands; a write that failed must not leave a yes there.
+                if (!had) {
+                    await this.approvals.remove(hash).catch(() => undefined);
+                }
+
                 return false;
             }
         });

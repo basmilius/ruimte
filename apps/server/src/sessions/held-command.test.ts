@@ -193,6 +193,32 @@ describe('a command from a project file', () => {
         }
     });
 
+    test('a carried approval whose new record fails to write is asked for again, before and after a restart', async () => {
+        const home = await mkdtemp(join(tmpdir(), 'ruimte-unbound-'));
+        const web = join(FOLDER, 'web');
+
+        try {
+            await new CommandApprovals(home).approve(FOLDER, 'term-web', 'bun dev');
+            await new CommandApprovals(home).load();
+            const updated = new CommandApprovals(home, {
+                writeRecord: async () => {
+                    throw new Error('disk full');
+                }
+            });
+            await updated.load();
+
+            expect(await updated.admit(FOLDER, 'term-web', 'bun dev', web)).toBe(false);
+            expect(await updated.admit(FOLDER, 'term-web', 'bun dev', web)).toBe(false);
+
+            const restarted = new CommandApprovals(home);
+            await restarted.load();
+
+            expect(await restarted.admit(FOLDER, 'term-web', 'bun dev', web)).toBe(false);
+        } finally {
+            await rm(home, { recursive: true, force: true });
+        }
+    });
+
     test('two first starts at once write the ledger one after the other, so a spent approval never comes back', async () => {
         const home = await mkdtemp(join(tmpdir(), 'ruimte-unbound-'));
         const written: string[] = [];
