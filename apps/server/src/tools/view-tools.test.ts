@@ -16,7 +16,7 @@ import {
 import { MAX_PROJECT_VIEWS, VIEW_KINDS } from '../canvas/views.ts';
 import { peerCanvasId } from '../projects/peer-links.ts';
 import { rawPrivateViews, setPrivateViews } from '../projects/project-file-test-helpers.ts';
-import { canvasFixture, type CanvasFixture, content, madeId } from './canvas-test-fixture.ts';
+import { canvasFixture, type CanvasFixture, content, madeId } from './canvas-fixture-test-helpers.ts';
 import { DIAGRAM_EXAMPLE, viewToolkit } from './view-tools.ts';
 
 let fx: CanvasFixture;

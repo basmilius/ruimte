@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
 import { MAX_TASK_PROMPT_LENGTH, taskBrief, taskFirstPrompt } from '../canvas/tasks.ts';
 import { ROLES_SHAPE } from './agent-tools.ts';
-import { canvasFixture, type CanvasFixture, TOKENS } from './canvas-test-fixture.ts';
+import { canvasFixture, type CanvasFixture, TOKENS } from './canvas-fixture-test-helpers.ts';
 import { nextLine, taskToolkit } from './task-tools.ts';
 
 let fx: CanvasFixture;

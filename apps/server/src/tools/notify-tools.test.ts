@@ -3,7 +3,7 @@ import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { type CanvasHost } from '../canvas/host.ts';
 import { projectReach } from '../canvas/reach.ts';
-import { canvasFixture, type CanvasFixture, madeId } from './canvas-test-fixture.ts';
+import { canvasFixture, type CanvasFixture, madeId } from './canvas-fixture-test-helpers.ts';
 
 let fx: CanvasFixture;
 

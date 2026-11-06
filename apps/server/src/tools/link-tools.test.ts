@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { EDGE_ROLES } from '@ruimte/contracts';
 import { MAX_LINKS } from '../canvas/links.ts';
-import { canvasFixture, type CanvasFixture, madeId } from './canvas-test-fixture.ts';
+import { canvasFixture, type CanvasFixture, madeId } from './canvas-fixture-test-helpers.ts';
 
 let fx: CanvasFixture;
 

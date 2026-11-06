@@ -6,7 +6,7 @@ import { serverActionCall } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import { type CanvasHost } from '../canvas/host.ts';
 import { projectReach, reachedPlace } from '../canvas/reach.ts';
-import { canvasFixture, type CanvasFixture } from './canvas-test-fixture.ts';
+import { canvasFixture, type CanvasFixture } from './canvas-fixture-test-helpers.ts';
 
 let fx: CanvasFixture;
 

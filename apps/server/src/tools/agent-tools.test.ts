@@ -13,7 +13,7 @@ import { MAX_LINKS } from '../canvas/links.ts';
 import { PLACEMENT_GAP, TEAM_COLUMNS } from '../canvas/placement.ts';
 import { projectReach } from '../canvas/reach.ts';
 import { MAX_ROLES, ROLES_SHAPE } from './agent-tools.ts';
-import { canvasFixture, type CanvasFixture, content, madeId, TOKENS } from './canvas-test-fixture.ts';
+import { canvasFixture, type CanvasFixture, content, madeId, TOKENS } from './canvas-fixture-test-helpers.ts';
 
 let fx: CanvasFixture;
 

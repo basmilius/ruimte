@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { canvasFixture, type CanvasFixture, madeId } from './canvas-test-fixture.ts';
+import { canvasFixture, type CanvasFixture, madeId } from './canvas-fixture-test-helpers.ts';
 
 let fx: CanvasFixture;
 

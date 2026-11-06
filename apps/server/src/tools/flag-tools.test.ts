@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { canvasFixture, type CanvasFixture, content } from './canvas-test-fixture.ts';
+import { canvasFixture, type CanvasFixture, content } from './canvas-fixture-test-helpers.ts';
 
 let fx: CanvasFixture;
 

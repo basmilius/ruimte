@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { withViewAsNode, type ProjectCanvasView } from '@ruimte/contracts';
 import { NEW_NODE, type CanvasHost } from '../canvas/host.ts';
 import { projectReach } from '../canvas/reach.ts';
-import { CANVAS_LINES, canvasFixture, type CanvasFixture, content, madeId, revisionOf } from './canvas-test-fixture.ts';
+import { CANVAS_LINES, canvasFixture, type CanvasFixture, content, madeId, revisionOf } from './canvas-fixture-test-helpers.ts';
 
 let fx: CanvasFixture;
 

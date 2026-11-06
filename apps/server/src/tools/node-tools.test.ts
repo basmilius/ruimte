@@ -7,7 +7,7 @@ import { MAX_CANVAS_NODES } from '../canvas/nodes.ts';
 import { PLACEMENT_GAP } from '../canvas/placement.ts';
 import { SIMULATOR } from '../devices/device-test-helpers.ts';
 import { rawPrivateViews, setPrivateViews } from '../projects/project-file-test-helpers.ts';
-import { box, canvasFixture, type CanvasFixture, content, madeId } from './canvas-test-fixture.ts';
+import { box, canvasFixture, type CanvasFixture, content, madeId } from './canvas-fixture-test-helpers.ts';
 import { nodeToolkit } from './node-tools.ts';
 
 let fx: CanvasFixture;

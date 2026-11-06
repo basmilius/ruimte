@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { groupMemberIds } from '@ruimte/contracts/node-defaults';
-import { box, canvasFixture, type CanvasFixture, madeId } from './canvas-test-fixture.ts';
+import { box, canvasFixture, type CanvasFixture, madeId } from './canvas-fixture-test-helpers.ts';
 
 let fx: CanvasFixture;
 
