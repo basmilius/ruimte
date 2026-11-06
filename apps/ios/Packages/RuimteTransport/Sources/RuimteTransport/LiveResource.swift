@@ -97,7 +97,8 @@ public struct LiveEvent {
 @MainActor public final class LiveResource {
     fileprivate let client: any MachineRequesting
     private let events: [LiveEvent]
-    private let watch: LiveWatch?
+    private let watch: @MainActor () -> LiveWatch?
+    private let prepare: (@MainActor () async -> Void)?
     private let connection: (@MainActor (Bool) -> Void)?
     private let read: (@MainActor () async -> Void)?
     private let scheduler: any TransportScheduling
@@ -106,6 +107,7 @@ public struct LiveEvent {
 
     private var stops: [() -> Void] = []
     private var lease: MachineSubscription?
+    private var spec: LiveWatch?
     private var running: Task<Void, Never>?
     private var cancelSettle: (() -> Void)?
     private var cancelPoll: (() -> Void)?
@@ -120,13 +122,17 @@ public struct LiveEvent {
     public private(set) var isWatching = false
 
     /// - Parameters:
+    ///   - watch: Taken when the first link renews it, so it can name what an earlier read found out.
+    ///   - prepare: Runs on every new link, before the watch is renewed.
     ///   - connection: Told each change of the link before anything is read.
     ///   - read: Brings the state up to date. Cancelled when the link drops or the resource stops.
     ///   - settleMilliseconds: How long a burst of events is gathered into one read. A new link reads at once.
     ///   - poll: The clock of a machine that does not take the watch: its interval, read again after every read. A
     ///     resource without a watch never polls.
     public init(
-        client: any MachineRequesting, events: [LiveEvent] = [], watch: LiveWatch? = nil,
+        client: any MachineRequesting, events: [LiveEvent] = [],
+        watch: @autoclosure @escaping @MainActor () -> LiveWatch? = nil,
+        prepare: (@MainActor () async -> Void)? = nil,
         scheduler: any TransportScheduling = TaskTransportScheduler(), settleMilliseconds: Double = 0,
         poll: (@MainActor () -> Double)? = nil, connection: (@MainActor (Bool) -> Void)? = nil,
         read: (@MainActor () async -> Void)? = nil
@@ -134,6 +140,7 @@ public struct LiveEvent {
         self.client = client
         self.events = events
         self.watch = watch
+        self.prepare = prepare
         self.scheduler = scheduler
         self.settleMilliseconds = settleMilliseconds
         pollMilliseconds = poll
@@ -157,6 +164,20 @@ public struct LiveEvent {
     /// Ends the resource and waits for the machine to be told the watch is let go.
     public func stopAndRelease() async {
         await end()?.release()
+    }
+
+    /// Holds the resource for as long as the calling task runs, then lets go of it even though the task was
+    /// cancelled. For a page that lives in a `.task`.
+    public func run() async {
+        start()
+        let (stream, continuation) = AsyncStream<Void>.makeStream()
+        await withTaskCancellationHandler {
+            for await _ in stream {}
+        } onCancel: {
+            continuation.finish()
+        }
+        // A new task does not inherit the cancellation, so the machine is still told.
+        await Task { await stopAndRelease() }.value
     }
 
     /// Reads now: the read in flight when there is one, or a new one. Does nothing while the link is down.
@@ -193,6 +214,7 @@ public struct LiveEvent {
         isWatching = false
         for stop in stops { stop() }
         stops.removeAll()
+        spec = nil
         let held = lease
         lease = nil
         return held
@@ -229,7 +251,11 @@ public struct LiveEvent {
                 let renew = renewPending
                 renewPending = false
                 readPending = false
-                if renew { await renewWatch() }
+                if renew {
+                    await prepare?()
+                    guard !Task.isCancelled, epoch == current else { break }
+                    await renewWatch()
+                }
                 guard !Task.isCancelled, epoch == current else { break }
                 await read?()
                 guard !Task.isCancelled, epoch == current else { break }
@@ -240,12 +266,13 @@ public struct LiveEvent {
     }
 
     private func renewWatch() async {
-        guard let watch else { return }
-        if let needs = watch.needs, (client as? MachineFeatures)?.answers(needs) != true { return }
+        guard let spec = spec ?? watch() else { return }
+        self.spec = spec
+        if let needs = spec.needs, (client as? MachineFeatures)?.answers(needs) != true { return }
         let held =
             lease
             ?? client.acquireSubscription(
-                start: watch.start, stop: watch.stop, payload: watch.payload, stopPayload: watch.stopPayload)
+                start: spec.start, stop: spec.stop, payload: spec.payload, stopPayload: spec.stopPayload)
         lease = held
         let current = epoch
         let taken = (try? await held.refresh()) != nil
@@ -253,7 +280,7 @@ public struct LiveEvent {
     }
 
     private func armPoll() {
-        guard watch != nil, !isWatching, cancelPoll == nil, let pollMilliseconds else { return }
+        guard spec != nil, !isWatching, cancelPoll == nil, let pollMilliseconds else { return }
         cancelPoll = scheduler.after(milliseconds: pollMilliseconds()) { [weak self] in
             guard let self else { return }
             cancelPoll = nil

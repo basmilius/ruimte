@@ -7,6 +7,7 @@ import Testing
 /// A machine that records what it is asked and lets a test say when the link goes and which events arrive.
 @MainActor private final class LiveMachine: MachineRequesting, MachineFeatures {
     var requests: [WireRequest] = []
+    var payloads: [JSONValue] = []
     var named: Set<WireRequest> = []
     var refused: Set<WireRequest> = []
     private(set) var isConnected: Bool
@@ -20,6 +21,7 @@ import Testing
 
     func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append(type)
+        payloads.append(payload)
         if refused.contains(type) { throw MachineClientError.server(code: "unknown-request", message: "No") }
         return .object([:])
     }
@@ -345,6 +347,37 @@ private struct Changed: Decodable, Equatable {
         await live.refresh()
         #expect(machine.requests == [.deviceWatch, .deviceUnwatch, .deviceWatch])
         #expect(reads.count == 2)
+    }
+
+    @Test func theWatchIsNamedAfterWhatPrepareFoundOut() async {
+        let machine = LiveMachine()
+        let reads = Reads()
+        var path = "~"
+        let live = LiveResource(
+            client: machine,
+            watch: LiveWatch(start: .fsWatch, stop: .fsUnwatch, payload: .object(["path": .string(path)])),
+            prepare: {
+                reads.log.append("prepare")
+                path = "/home"
+            }, read: { await reads.read() })
+        live.start()
+        await live.refresh()
+        #expect(reads.log == ["prepare", "read"])
+        #expect(machine.requests == [.fsWatch])
+        #expect(machine.payloads == [.object(["path": .string("/home")])])
+    }
+
+    @Test func aTaskThatRunsTheResourceLetsTheWatchGoWhenItIsCancelled() async {
+        let machine = LiveMachine()
+        let reads = Reads()
+        let live = resource(machine, reads, events: [.reread(.deviceChanged)], watch: .area(.deviceWatch))
+        let task = Task { await live.run() }
+        while reads.count == 0 { await Task.yield() }
+        task.cancel()
+        await task.value
+        #expect(machine.requests == [.deviceWatch, .deviceUnwatch])
+        #expect(machine.listeners == 0)
+        #expect(!live.isStarted)
     }
 
     @Test func theUnwatchIsDerivedFromTheWatch() {
