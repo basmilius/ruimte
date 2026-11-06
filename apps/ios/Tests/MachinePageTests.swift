@@ -644,6 +644,29 @@ final class MachinePageTests: XCTestCase {
         XCTAssertEqual(devices.devices.first { $0.deviceID == "iphone" }?.stateText, "Running")
     }
 
+    @MainActor func testTheListFollowsDeviceChangedOnAMachineThatTakesTheWatchAndLetsItGoAfter() async {
+        let machine = WatchedDevicesMachine(named: [.deviceWatch])
+        let devices = MachineDevices(client: machine)
+        let page = Task { await devices.watch() }
+        await machine.lists.wait()
+        XCTAssertEqual(machine.requests, [.deviceWatch, .deviceList])
+        machine.emit(.deviceChanged)
+        await machine.lists.wait(for: 2)
+        page.cancel()
+        await page.value
+        XCTAssertEqual(machine.requests, [.deviceWatch, .deviceList, .deviceList, .deviceUnwatch])
+    }
+
+    @MainActor func testAMachineFromBeforeTheWatchIsNotAskedForIt() async {
+        let machine = WatchedDevicesMachine(named: [])
+        let devices = MachineDevices(client: machine)
+        let page = Task { await devices.watch() }
+        await machine.lists.wait()
+        page.cancel()
+        await page.value
+        XCTAssertEqual(machine.requests, [.deviceList])
+    }
+
     @MainActor func testStreamingTurnedOffClosesTheListAndSaysSo() async {
         let machine = FakeMachine()
         machine.refusals[.deviceList] = "streaming-disabled"
@@ -832,5 +855,36 @@ final class MachinePageTests: XCTestCase {
     func setConnected(_ value: Bool) {
         connected = value
         for handler in connections.values { handler(value) }
+    }
+}
+
+/// A machine that lists no devices, says which requests it names and tells its event handlers what a test emits.
+@MainActor private final class WatchedDevicesMachine: MachineRequesting, MachineFeatures {
+    private let named: Set<WireRequest>
+    private(set) var requests: [WireRequest] = []
+    let lists = NativeArrival()
+    private var handlers: [WireEvent: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
+
+    init(named: Set<WireRequest>) { self.named = named }
+
+    func answers(_ type: WireRequest) -> Bool { named.contains(type) }
+
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
+        requests.append(type)
+        if type == .deviceList {
+            lists.record()
+            return .object(["devices": .array([])])
+        }
+        return .object([:])
+    }
+
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+        let id = UUID()
+        handlers[event, default: [:]][id] = handler
+        return { [weak self] in self?.handlers[event]?[id] = nil }
+    }
+
+    func emit(_ event: WireEvent) {
+        for handler in (handlers[event] ?? [:]).values { handler(.object([:])) }
     }
 }

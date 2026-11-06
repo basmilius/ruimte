@@ -122,8 +122,25 @@ final class DeviceViewModel {
     private(set) var device: JSONValue?
     private(set) var frame: UIImage?
     private(set) var booting = false
-    @ObservationIgnored private var subscriptions: [() -> Void] = []
-    @ObservationIgnored private var poll: Task<Void, Never>?
+    // A machine that takes `device.watch` says when the list changed; one from before it is read every two seconds
+    // while the view waits and every five while it shows.
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.deviceFrame, raw: { [weak self] payload in self?.receive(payload) }),
+            .reread(.deviceChanged),
+        ],
+        watch: .area(.deviceWatch, gated: true),
+        poll: { [weak self] in self?.phase == .streaming ? 5_000 : 2_000 },
+        connection: { [weak self] connected in
+            guard let self else { return }
+            if connected {
+                if phase == .offline { phase = .finding }
+            } else {
+                opened = nil
+                if frame != nil || phase == .streaming { phase = .offline }
+            }
+        }, read: { [weak self] in await self?.refresh() })
     @ObservationIgnored private var opened: [String: JSONValue]?
     @ObservationIgnored private var lastSequence = -1
     @ObservationIgnored private var decoding = false
@@ -154,27 +171,12 @@ final class DeviceViewModel {
     private(set) var erasing = false
 
     func start() {
-        guard reference != nil, subscriptions.isEmpty else { return }
-        subscriptions.append(client.subscribe(.deviceFrame) { [weak self] payload in self?.receive(payload) })
-        subscriptions.append(
-            client.observeConnection { [weak self] connected in
-                guard let self else { return }
-                if connected {
-                    if phase == .offline { phase = .finding }
-                    startPolling()
-                } else {
-                    opened = nil
-                    poll?.cancel()
-                    if frame != nil || phase == .streaming { phase = .offline }
-                }
-            })
+        guard reference != nil else { return }
+        live.start()
     }
 
     func stop() {
-        poll?.cancel()
-        poll = nil
-        subscriptions.forEach { $0() }
-        subscriptions.removeAll()
+        live.stop()
         detach()
     }
 
@@ -206,7 +208,7 @@ final class DeviceViewModel {
     func retry() {
         opened = nil
         phase = .finding
-        startPolling()
+        Task { await live.refresh() }
     }
 
     func press(_ button: String) { send(.object(["kind": .string("button"), "button": .string(button)])) }
@@ -277,18 +279,6 @@ final class DeviceViewModel {
         var payload = DeviceView.target(device)
         payload["input"] = input
         Task { _ = try? await client.request(.deviceInput, payload: .object(payload)) }
-    }
-
-    private func startPolling() {
-        poll?.cancel()
-        poll = Task { [weak self] in
-            while !Task.isCancelled {
-                guard let self else { return }
-                await refresh()
-                let streaming = phase == .streaming
-                do { try await Task.sleep(for: .seconds(streaming ? 5 : 2)) } catch { return }
-            }
-        }
     }
 
     func refresh() async {

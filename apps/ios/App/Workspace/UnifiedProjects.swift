@@ -118,29 +118,41 @@ final class UnifiedProjects {
             let connection = connect(machine)
             entry.connection = connection
             let binding = entry.binding
-            entry.unsubscribe = connection.client.subscribe(.projectSummary) {
-                [weak self, weak entry] event in
-                guard let self, let entry, entry.binding == binding, current(entry), entry.connected
-                else { return }
-                if let valid = try? WireEvent.projectSummary.validatePayload(event)["summary"] {
-                    entry.summaries.removeAll { $0.text("projectId") == valid.text("projectId") }
-                    entry.summaries.append(valid)
-                    if entry.task != nil { entry.changedSummaries[valid.text("projectId")] = valid }
-                    writeCache(entry)
-                    return
-                }
-                _ = beginLoad(entry)
-            }
-            entry.unobserve = connection.client.observeConnection {
-                [weak self, weak entry] connected in
-                guard let self, let entry, entry.binding == binding, current(entry) else { return }
-                entry.operation += 1
-                entry.task?.cancel()
-                entry.task = nil
-                entry.loading = false
-                entry.connected = connected
-                if connected { _ = beginLoad(entry) }
-            }
+            // A machine that takes `project.watch` also says when a project nobody holds changed on disk.
+            let live = LiveResource(
+                client: connection.client,
+                events: [
+                    .apply(
+                        .projectSummary,
+                        raw: { [weak self, weak entry] event in
+                            guard let self, let entry, entry.binding == binding, current(entry), entry.connected
+                            else { return }
+                            if let valid = try? WireEvent.projectSummary.validatePayload(event)["summary"] {
+                                entry.summaries.removeAll { $0.text("projectId") == valid.text("projectId") }
+                                entry.summaries.append(valid)
+                                if entry.task != nil { entry.changedSummaries[valid.text("projectId")] = valid }
+                                writeCache(entry)
+                                return
+                            }
+                            _ = beginLoad(entry)
+                        }),
+                    .reread(.projectListChanged),
+                ],
+                watch: .area(.projectWatch, gated: true),
+                connection: { [weak self, weak entry] connected in
+                    guard let self, let entry, entry.binding == binding, current(entry) else { return }
+                    entry.operation += 1
+                    entry.task?.cancel()
+                    entry.task = nil
+                    entry.loading = false
+                    entry.connected = connected
+                },
+                read: { [weak self, weak entry] in
+                    guard let self, let entry, entry.binding == binding, current(entry), entry.connected else { return }
+                    await beginLoad(entry).value
+                })
+            entry.live = live
+            live.start()
             connection.retain()
         }
         self.contextID = contextID
@@ -280,8 +292,7 @@ private final class UnifiedProjectMachine {
     @ObservationIgnored var changedSummaries: [String: JSONValue] = [:]
     @ObservationIgnored var operation = 0
     @ObservationIgnored var task: Task<Void, Never>?
-    @ObservationIgnored var unsubscribe: (() -> Void)?
-    @ObservationIgnored var unobserve: (() -> Void)?
+    @ObservationIgnored var live: LiveResource?
 
     init(machine: Machine, summaries: [JSONValue]) {
         self.machine = machine
@@ -293,10 +304,8 @@ private final class UnifiedProjectMachine {
         operation += 1
         task?.cancel()
         task = nil
-        unsubscribe?()
-        unobserve?()
-        unsubscribe = nil
-        unobserve = nil
+        live?.stop()
+        live = nil
         connection?.release()
         connection = nil
         connected = false

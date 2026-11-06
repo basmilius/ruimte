@@ -7,13 +7,14 @@ A native remote client for Ruimte machines, for iOS and iPadOS 27 (`project.yml`
 The app follows the desktop wherever a phone can. These are the deliberate differences and the rules a phone adds.
 
 - Project saves are three-way merges with explicit conflict resolution. An unknown view or node kind survives a save.
+- Live state is a `LiveResource` (`RuimteTransport`): the events a store listens to, one read on every new link and when an event says the state changed, the watch asked again on every link (`LiveWatch`, shared by its holders), and a clock only for a machine that does not answer the watch. A page that must outlive a push holds it through `LiveHolds`. Chat and terminal attach keep their own reads and take only the events and the link.
 - A visual reply is a `WKWebView` per card, loaded from memory under `ruimte-visual://` with the desktop sandbox host page's policy (`ChatVisualContract.swift`, generated from `packages/csp` by `Scripts/generate-visual.ts`). It runs on an opaque origin without files or storage, and its main frame never navigates away. Tapped links open in Safari.
 - New chat outside a project asks `project.newChat`, which hands back the agent's unused chat instead of making another.
 - Deleting a chat, terminal or a canvas holding one ends its session and the agents it opened (`chat.kill`, `session.kill`). The confirmation counts them.
 - A terminal attaches with `follow: true`, so a phone never resizes the desktop's PTY. An unapproved project command waits above the keys until someone taps Run (`session.runHeld`).
 - A file edit is written against the mtime it was read at (`fs.write` with `expectedMtime`). A file that changed on the machine refuses and keeps the edit. Mention adds `@path` to the chat's draft (`ChatDraftInbox` when the chat is open).
 - Update on a machine's page asks `endpoint.installUpdate` with `confirm: false` first, shows what a restart would end, and installs only after confirmation. Keep awake with the lid closed shows as unavailable until the sudoers rule is installed on the Mac.
-- A device on a machine's page is a read-only preview: `device.list` every three seconds while the page shows, `device.open` with JPEG frames only.
+- A device on a machine's page is a read-only preview: `device.list` again on `device.changed` while the page shows (`device.watch`), every three seconds on a machine from before it, `device.open` with JPEG frames only.
 - The phone is a person to the machine. An unapproved launch shows its command, folder and environment, and only Launch on that sheet sends `approve`. Saving launches writes the whole list against its rev.
 - Output is read-only and shows only while the machine names `artifact.list`. A saved page runs in the visual reply's sandbox, images open in Quick Look, and Share reads a file only once a person picks a destination. Without a link the page says the machine is unreachable and shows nothing kept.
 - Force quit asks first, and the machine refuses a pid that now names another process.
@@ -26,7 +27,7 @@ The app follows the desktop wherever a phone can. These are the deliberate diffe
 
 Five tabs (Now, Projects, Routines, Machines, Search) are the root of one stack (`PhoneHome`, `PhoneRouter`). Settings is a sheet from the avatar.
 
-Now reads each machine's open projects with `project.sidebar`, again on `project.changed`, `project.summary` and `session.list-changed` and every 15 seconds while it shows. `NowBoard` groups them into Needs you, Working, Finished and Coming up. A needs-you card answers the chat's oldest request in place; `request-not-found` counts as answered.
+Now reads each machine's open projects with `project.sidebar`, again on `project.changed`, `project.summary`, `project.listChanged` (`project.watch`) and `session.list-changed`, and every 15 seconds while it shows on a machine from before `project.watch`. `NowBoard` groups them into Needs you, Working, Finished and Coming up. A needs-you card answers the chat's oldest request in place; `request-not-found` counts as answered.
 
 Routines (`ScheduledPage`, `ScheduledBoard`) lists every machine's routines with `routine.list`, again on `routine.changed` (`routine.watch`, renewed after every reconnect). Making, changing and approving a routine happen on the machine.
 
@@ -42,7 +43,7 @@ The iPad keeps the iPhone's pages without tabs (`PadHome`, `PadRouter`): a sideb
 - A canvas only pans and zooms on a phone. Its move and resize locks are this phone's, in the project's local state.
 - A drawing lets only the Pencil draw once a Pencil touched the page, or with Only Draw with Apple Pencil on. Tool options are per phone.
 - Change with an agent on a diagram sends the question to a chat with `chat.send`, naming the `view_diagram` tool and the file (`DiagramAgentPrompt`).
-- A device view polls `device.list` every two seconds while it waits and every five while it shows. A booted simulator streams `device.frame` events in JPEG. A phone or Android emulator streams video, which the machine refuses for this format, so the page says it shows on the computer only.
+- A device view reads `device.list` again on `device.changed` (`device.watch`); on a machine from before it, it polls every two seconds while it waits and every five while it shows. A booted simulator streams `device.frame` events in JPEG. A phone or Android emulator streams video, which the machine refuses for this format, so the page says it shows on the computer only.
 - A device's tools sheet shows each tool the device announces (`DeviceTools`). Capture and clipboard also need `device.capture` and `device.clipboard` on the machine. Erase asks first; a phone is never erased.
 - With a hardware keyboard, a device that announces `keyboard` takes the keys (`DeviceKeyView`). ⌘V pastes this phone's clipboard into the device; other ⌘ chords stay the app's.
 

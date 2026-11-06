@@ -37,7 +37,8 @@ struct NowPage: View {
     }
 }
 
-/// What a page of Now keeps up while it shows: answers that settled, a pull to refresh and a read every 15 seconds.
+/// What a page of Now keeps up while it shows: answers that settled, a pull to refresh and, for a machine that cannot
+/// say when a project changed, a read every 15 seconds.
 struct NowWatch: ViewModifier {
     let now: NowModel
 
@@ -46,10 +47,11 @@ struct NowWatch: ViewModifier {
             .onChange(of: now.liveRequests) { _, live in now.answers.keep(live) }
             .refreshable { await now.refresh() }
             .task {
-                // Released projects have no watcher on the machine, so new chats there only show on a read.
+                // Released projects have no watcher on the machine, so new chats there show on `project.listChanged`
+                // where the machine takes `project.watch` and only on a read where it does not.
                 while !Task.isCancelled {
                     do { try await Task.sleep(for: .seconds(15)) } catch { return }
-                    await now.refresh()
+                    await now.refreshUnwatched()
                 }
             }
     }

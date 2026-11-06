@@ -26,6 +26,13 @@ final class NowModel {
         }
     }
 
+    /// Reads again only the machines that cannot say when a project changed, which is what a clock is for.
+    func refreshUnwatched() async {
+        await withTaskGroup(of: Void.self) { group in
+            for feed in feeds.values where !feed.watching { group.addTask { await feed.refresh() } }
+        }
+    }
+
     var inputs: [NowMachineInput] {
         feeds.values.map { feed in
             let attention = feed.session.attention
@@ -181,10 +188,15 @@ final class NowFeed: MachineFeed {
     /// The CLIs on this machine whose denial carries a message, from `provider.list`.
     private(set) var denyReason: Set<String> = []
     @ObservationIgnored private var providersGeneration: Int?
+    // A project no client holds has no watcher on the machine, so a new chat there shows on `project.listChanged`
+    // from a machine that takes `project.watch`, and on a read every few seconds from one that does not.
     @ObservationIgnored private lazy var live = LiveResource(
         client: session.rpc,
-        events: [.reread(.projectChanged), .reread(.projectSummary), .reread(.sessionListChanged)],
-        settleMilliseconds: feedSettleMilliseconds, read: { [weak self] in await self?.load() })
+        events: [
+            .reread(.projectChanged), .reread(.projectSummary), .reread(.projectListChanged),
+            .reread(.sessionListChanged),
+        ], watch: .area(.projectWatch, gated: true), settleMilliseconds: feedSettleMilliseconds,
+        read: { [weak self] in await self?.load() })
     @ObservationIgnored private var watched = Set<String>()
 
     init(session: SharedMachineSession) { self.session = session }
@@ -204,6 +216,9 @@ final class NowFeed: MachineFeed {
     }
 
     func refresh() async { await live.refresh() }
+
+    /// Whether the machine took `project.watch` on this link, so it says by itself when a project changed.
+    var watching: Bool { live.isWatching }
 
     private func load() async {
         guard session.connected else { return }

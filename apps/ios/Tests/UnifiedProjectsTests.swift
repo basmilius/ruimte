@@ -66,12 +66,28 @@ final class UnifiedProjectsTests: XCTestCase {
         fixture.model.stop()
         fixture.model.stop()
         XCTAssertEqual(client.holds, 0)
-        XCTAssertTrue(client.eventHandlers.isEmpty)
+        XCTAssertTrue(client.eventHandlers.values.allSatisfy(\.isEmpty))
         XCTAssertTrue(client.connectionHandlers.isEmpty)
         let offline = UnifiedProjects(defaults: fixture.defaults)
         offline.reconcile(machines: [machine], connect: nil)
         XCTAssertEqual(offline.open[0].summary.number("lastOpenedAt"), 42)
         XCTAssertFalse(offline.open[0].connected)
+    }
+
+    @MainActor func testAProjectChangedOnDiskReadsTheListAgain() async throws {
+        let fixture = try ProjectListFixture()
+        defer { fixture.clean() }
+        let client = ProjectListClient()
+        client.response = .object(["projects": .array([fixture.summary(opened: 1)])])
+        fixture.model.reconcile(machines: [fixture.machine("machine")], connect: { _ in client.connection })
+        client.setConnected(true)
+        await fixture.model.refresh()
+        let before = client.requests
+        client.response = .object(["projects": .array([fixture.summary(opened: 1), fixture.summary(opened: 2)])])
+        client.emit(.object(["projectId": .string("x")]), as: .projectListChanged)
+        for _ in 0..<20 where fixture.model.open.count < 2 { await Task.yield() }
+        XCTAssertEqual(client.requests, before + 1)
+        XCTAssertEqual(fixture.model.open.count, 2)
     }
 
     @MainActor func testReconcileUpdatesLabelsWithoutAcquiringAnotherLease() throws {
@@ -242,7 +258,7 @@ final class UnifiedProjectsTests: XCTestCase {
 
 @MainActor private final class ProjectListClient: MachineRequesting {
     var response: JSONValue = .object(["projects": .array([])])
-    var eventHandlers: [UUID: @MainActor @Sendable (JSONValue) -> Void] = [:]
+    var eventHandlers: [WireEvent: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
     var connectionHandlers: [UUID: @MainActor @Sendable (Bool) -> Void] = [:]
     var connected = false
     var current = true
@@ -269,10 +285,9 @@ final class UnifiedProjectsTests: XCTestCase {
     func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
         -> () -> Void
     {
-        XCTAssertEqual(event, .projectSummary)
         let id = UUID()
-        eventHandlers[id] = handler
-        return { self.eventHandlers.removeValue(forKey: id) }
+        eventHandlers[event, default: [:]][id] = handler
+        return { self.eventHandlers[event]?.removeValue(forKey: id) }
     }
     func observeConnection(_ handler: @escaping @MainActor @Sendable (Bool) -> Void) -> () -> Void {
         let id = UUID()
@@ -284,7 +299,9 @@ final class UnifiedProjectsTests: XCTestCase {
         connected = value
         for handler in connectionHandlers.values { handler(value) }
     }
-    func emit(_ value: JSONValue) { for handler in eventHandlers.values { handler(value) } }
+    func emit(_ value: JSONValue, as event: WireEvent = .projectSummary) {
+        for handler in (eventHandlers[event] ?? [:]).values { handler(value) }
+    }
     func waitForHeldRequest() async {
         if held != nil { return }
         await withCheckedContinuation { waiting = $0 }

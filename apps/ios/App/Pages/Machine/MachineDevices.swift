@@ -120,8 +120,9 @@ struct MachineDeviceGroup: Identifiable, Equatable, Sendable {
     }
 }
 
-/// The devices of one machine while a page shows them: read with `device.list` and again every few seconds, since a
-/// machine announces no change, and started or shut down with `device.boot` and `device.shutdown`.
+/// The devices of one machine while a page shows them: read with `device.list` and again when the machine says with
+/// `device.changed`, or every three seconds on a machine from before `device.watch`, and started or shut down with
+/// `device.boot` and `device.shutdown`.
 @MainActor @Observable
 final class MachineDevices {
     private(set) var devices: [MachineDevice] = []
@@ -137,6 +138,9 @@ final class MachineDevices {
     @ObservationIgnored let client: any MachineRequesting
     @ObservationIgnored private let platform: () -> String?
     @ObservationIgnored private var reads = 0
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client, events: [.reread(.deviceChanged)], watch: .area(.deviceWatch, gated: true), poll: { 3_000 },
+        read: { [weak self] in await self?.load() })
 
     /// `platform` is the machine's own, for the line that says iOS needs a Mac instead of asking for Xcode.
     init(client: any MachineRequesting, platform: @escaping () -> String? = { nil }) {
@@ -175,13 +179,8 @@ final class MachineDevices {
         }
     }
 
-    /// Reads the list again every interval for as long as the calling task runs.
-    func watch(every interval: Duration = .seconds(3)) async {
-        while !Task.isCancelled {
-            await load()
-            try? await Task.sleep(for: interval)
-        }
-    }
+    /// Keeps the list current for as long as the calling task runs.
+    func watch() async { await live.run() }
 
     func boot(_ device: MachineDevice) async { await control(device, action: .deviceBoot) }
     func shutdown(_ device: MachineDevice) async { await control(device, action: .deviceShutdown) }

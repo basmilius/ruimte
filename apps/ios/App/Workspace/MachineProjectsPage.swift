@@ -9,7 +9,11 @@ final class MachineProjectList {
     private(set) var projects: [JSONValue] = []
     let work = RemotePageState()
     @ObservationIgnored private let session: SharedMachineSession
-    @ObservationIgnored private var unsubscribe: (() -> Void)?
+    // A machine that takes `project.watch` says when a project it does not hold changed on disk; the summary events
+    // only cover the projects some client holds.
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: session.rpc, events: [.reread(.projectSummary), .reread(.projectListChanged)],
+        watch: .area(.projectWatch, gated: true), read: { [weak self] in await self?.load() })
 
     init(session: SharedMachineSession) {
         self.session = session
@@ -24,17 +28,10 @@ final class MachineProjectList {
     var listed: [JSONValue] { projects.filter { !NewChat.isChats($0) } }
     var chats: JSONValue? { projects.first(where: NewChat.isChats) }
 
-    func follow() {
-        guard unsubscribe == nil else { return }
-        unsubscribe = session.rpc.subscribe(.projectSummary) { [weak self] _ in
-            Task { await self?.load() }
-        }
-    }
+    /// Reads the list on every link and again whenever the machine says it changed.
+    func follow() { live.start() }
 
-    func unfollow() {
-        unsubscribe?()
-        unsubscribe = nil
-    }
+    func unfollow() { live.stop() }
 
     func load() async {
         guard session.connected else { return }

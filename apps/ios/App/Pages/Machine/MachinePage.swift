@@ -96,7 +96,6 @@ struct MachinePage: View {
         }
         .task(id: session.generation) {
             guard session.connected else { return }
-            await projects.load()
             if endpoint.streamingAllowed { await devices.load() }
         }
         .task(id: session.connected) {
