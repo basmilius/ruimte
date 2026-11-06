@@ -124,7 +124,8 @@ function textOf(base64: string): string {
 /* The stream as text, refused once it grows past what a pack may unpack to. */
 async function unpackedText(stream: ReadableStream<Uint8Array>): Promise<string> {
     const reader = stream.getReader();
-    const chunks: Uint8Array[] = [];
+    const decoder = new TextDecoder();
+    let text = '';
     let size = 0;
 
     for (let read = await reader.read(); !read.done; read = await reader.read()) {
@@ -136,10 +137,10 @@ async function unpackedText(stream: ReadableStream<Uint8Array>): Promise<string>
             throw new Error('This pack unpacks to more than an extension may hold');
         }
 
-        chunks.push(read.value);
+        text += decoder.decode(read.value, { stream: true });
     }
 
-    return new Blob(chunks).text();
+    return text + decoder.decode();
 }
 
 /* What a `.rex` from a file says it is, so a person sees its name and permissions before it runs anywhere. */

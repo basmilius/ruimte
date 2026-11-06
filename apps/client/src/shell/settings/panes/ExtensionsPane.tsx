@@ -104,14 +104,13 @@ function FileDetail({ preview, onShown, onBack }: { preview: PackPreview; onShow
     const otherPublisher = replaces !== undefined && replaces.manifest.publisher !== manifest.publisher;
     const unknownPublisher = t('extensions.unknownPublisher');
 
-    const install = () => {
-        void installPack(preview.bytes).then(
-            (result) => {
-                showMachineInstall(result, manifest.name);
-                onShown(manifest.id);
-            },
-            (e: unknown) => useToasts.getState().show({ kind: 'error', title: t('extensions.installFailed', { name: manifest.name }), description: String(e) })
-        );
+    const install = async (): Promise<void> => {
+        try {
+            showMachineInstall(await installPack(preview.bytes), manifest.name);
+            onShown(manifest.id);
+        } catch (e) {
+            useToasts.getState().show({ kind: 'error', title: t('extensions.installFailed', { name: manifest.name }), description: String(e) });
+        }
     };
 
     return (
@@ -129,7 +128,7 @@ function FileDetail({ preview, onShown, onBack }: { preview: PackPreview; onShow
             <PermissionsSection permissions={manifest.permissions} />
             <p className="text-sm text-text-muted">{t('extensions.fromFileTrust')}</p>
             <div className="flex gap-2">
-                <Button variant="primary" onClick={() => (otherPublisher ? setConfirming(true) : install())}>
+                <Button variant="primary" onClick={() => (otherPublisher ? setConfirming(true) : void install())}>
                     {t('extensions.install')}
                 </Button>
                 <Button onClick={onBack}>{t('extensions.back')}</Button>
