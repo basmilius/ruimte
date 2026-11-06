@@ -372,6 +372,23 @@ describe('a pull request watch', () => {
         expect(polls).toBe(before + 1);
     });
 
+    test('ends seven days after it began while its project stays closed, without asking GitHub', async () => {
+        const closed = new Set<string>();
+        const store = open(closed);
+        await store.start('p', 'chat-1', '/repo');
+        closed.add('p');
+        await tick(store, MAX_INTERVAL_MS);
+        const before = polls;
+
+        for (let elapsed = 0; store.list().length > 0 && elapsed <= WATCH_LIFETIME_MS + 3_600_000; elapsed += 1_800_000) {
+            await tick(store, 1_800_000);
+        }
+
+        expect(store.list()).toEqual([]);
+        expect(events.at(-1)).toMatchObject({ payload: { ended: { reason: 'expired' } } });
+        expect(polls).toBe(before);
+    });
+
     test('keeps polling when the project opens again between the answer that it is closed and the hold', async () => {
         let closed = false;
         let store: PrWatchStore | null = null;
