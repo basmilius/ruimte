@@ -505,6 +505,25 @@ export const AddressBookErrorCodeSchema = z.enum([
 ]);
 export type AddressBookErrorCode = z.infer<typeof AddressBookErrorCodeSchema>;
 
+export const ADDRESS_BOOK_ERROR_STATUS: Readonly<Record<AddressBookErrorCode, number>> = {
+    'bad-request': 400,
+    unauthorized: 401,
+    'bad-signature': 403,
+    'not-found': 404,
+    removed: 409,
+    'machine-on-other-account': 409,
+    'identity-taken': 409,
+    'provider-linked': 409,
+    'last-identity': 409,
+    'confirmation-mismatch': 400,
+    'apple-revocation-failed': 502,
+    'rate-limited': 429,
+    'clock-skew': 400,
+    'not-configured': 503,
+    'no-benchmarks': 503,
+    internal: 500
+};
+
 export const AddressBookErrorSchema = z.object({
     error: z.object({
         code: AddressBookErrorCodeSchema,

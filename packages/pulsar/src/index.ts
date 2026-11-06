@@ -18,3 +18,4 @@ export * from './push.ts';
 export * from './usage.ts';
 export * from './usage-report.ts';
 export * from './usage-desktop.ts';
+export * from './worker-http.ts';

@@ -126,4 +126,14 @@ export const MapsErrorCodeSchema = z.enum([
 ]);
 export type MapsErrorCode = z.infer<typeof MapsErrorCodeSchema>;
 
+export const MAPS_ERROR_STATUS: Readonly<Record<MapsErrorCode, number>> = {
+    'maps-unconfigured': 503,
+    'bad-ticket': 401,
+    'rate-limited': 429,
+    'not-found': 404,
+    'bad-request': 400,
+    upstream: 502,
+    internal: 500
+};
+
 export const MapsErrorSchema = z.object({ error: z.object({ code: MapsErrorCodeSchema, message: z.string().max(512) }) });

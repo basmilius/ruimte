@@ -11,13 +11,9 @@ import { ReachCheckSchema } from './reach.ts';
 
 export const MACHINE_HEALTH_PATH = '/health';
 
-/*
- * Where the desktop app's own page lives: the shell serves the built client under this scheme, so the
- * page never depends on a daemon to exist. The daemon takes this origin beside loopback; a page on the
- * web cannot carry it.
- */
-export const DESKTOP_APP_SCHEME = 'app';
-export const DESKTOP_APP_ORIGIN = `${DESKTOP_APP_SCHEME}://ruimte`;
+// The desktop app's own origin is the pulsar package's, since the Workers allow it too.
+export { DESKTOP_APP_ORIGIN, DESKTOP_APP_SCHEME } from '@ruimte/pulsar';
+
 export const MACHINE_WORK_PATH = '/machine/work';
 /* Where the desktop app hands the OpenAI key from its settings to the daemon's Voice, local secret only. */
 export const MACHINE_VOICE_KEY_PATH = '/machine/voice-key';
