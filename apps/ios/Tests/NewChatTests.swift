@@ -70,18 +70,18 @@ import XCTest
 }
 
 @MainActor private final class NewChatMachine: MachineRequesting, MachineFeatures {
-    var requests: [(String, JSONValue)] = []
+    var requests: [(WireRequest, JSONValue)] = []
     var refusal: String?
     var workEnabled = true
     var features: Set<String> = []
 
     func answers(_ type: WireRequest) -> Bool { features.contains(type.rawValue) }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
         if let refusal { throw MachineClientError.server(code: refusal, message: refusal) }
         switch type {
-        case "provider.list":
+        case .providerList:
             let chat = JSONValue.object(["chat": .bool(true)])
             return .object([
                 "providers": .array([
@@ -93,7 +93,7 @@ import XCTest
                     ]),
                 ])
             ])
-        case "accounts.list":
+        case .accountsList:
             return .object([
                 "accounts": .object([
                     "claude": .object(["kind": .string("claude")]),
@@ -101,17 +101,17 @@ import XCTest
                 ]),
                 "statuses": .array([]),
             ])
-        case "project.newChat":
+        case .projectNewChat:
             return .object([
                 "summary": .object(["projectId": .string("chats"), "scratch": .bool(true)]),
                 "viewId": .string("chat-1"),
             ])
-        case "agent.children":
+        case .agentChildren:
             return .object(["nodeIds": .array([.string("c1"), .string("child")])])
         default:
             return .object([:])
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

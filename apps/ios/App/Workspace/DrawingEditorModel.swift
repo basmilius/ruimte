@@ -61,7 +61,7 @@ final class DrawingEditorModel {
         if document != nil { render() }
         if lease == nil {
             lease = client.acquireSubscription(
-                start: "drawing.open", stop: "drawing.close", payload: target, stopPayload: target)
+                start: .drawingOpen, stop: .drawingClose, payload: target, stopPayload: target)
         }
         if subscription == nil {
             subscription = client.subscribe(.drawingChanged) { [weak self] event in

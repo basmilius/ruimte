@@ -116,11 +116,11 @@ struct GitPage: View {
         }
         .task(id: folder) {
             await RemotePageLifecycle.run(
-                client: client, events: ["git.worktrees"], load: { await projectWorktrees.load(client: client) })
+                client: client, events: [.gitWorktrees], load: { await projectWorktrees.load(client: client) })
         }
         .task(id: checkouts.first?.path) {
             guard let probe = checkouts.first?.path else { return }
-            let answer = try? await client.request("git.capabilities", payload: .object(["cwd": .string(probe)]))
+            let answer = try? await client.request(.gitCapabilities, payload: .object(["cwd": .string(probe)]))
             canPullRequest = answer?["gh"] == .bool(true)
         }
         .presentationDetents([.medium, .large], selection: $detent)
@@ -180,7 +180,9 @@ struct GitPage: View {
                 Button(String(localized: "Pull all"), lucideIcon: "arrow-down") {
                     Task { await repositories.actAll(client: client, kind: "pull") }
                 }
-                Button(String(localized: "Push all"), lucideIcon: "arrow-up") { Task { await repositories.pushAll(client: client) } }
+                Button(String(localized: "Push all"), lucideIcon: "arrow-up") {
+                    Task { await repositories.pushAll(client: client) }
+                }
                 Button(String(localized: "Sync all"), lucideIcon: "refresh-cw") {
                     Task { await repositories.actAll(client: client, kind: "sync") }
                 }
@@ -194,7 +196,9 @@ struct GitPage: View {
                 Button(String(localized: "Fetch"), lucideIcon: "cloud-download") { act(only, "fetch") }
                 if canPullRequest && only.branch != nil {
                     Divider()
-                    Button(String(localized: "Create pull request"), lucideIcon: "git-pull-request") { pullRequest = only.path }
+                    Button(String(localized: "Create pull request"), lucideIcon: "git-pull-request") {
+                        pullRequest = only.path
+                    }
                 }
                 Divider()
                 Button(String(localized: "Repository"), lucideIcon: "folder-git-2") { repositoryPage = only.path }
@@ -342,7 +346,10 @@ struct GitHaltedRows: View {
                 Spacer(minLength: 0)
             }
             .buttonStyle(.mobileCapsuleSmall)
-            .modifier(GitAbortConfirmation(operation: operation, isPresented: $confirmAbort) { Task { await finish("abort") } })
+            .modifier(
+                GitAbortConfirmation(operation: operation, isPresented: $confirmAbort) {
+                    Task { await finish("abort") }
+                })
         }
         if session.busy {
             GitBusyRow(text: session.progress ?? String(localized: "Working"))

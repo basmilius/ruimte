@@ -133,7 +133,7 @@ final class MachineDevices {
     private(set) var streamingOff = false
     private(set) var problem: String?
     /// Per device id, the action on its way.
-    private(set) var changing: [String: String] = [:]
+    private(set) var changing: [String: WireRequest] = [:]
     @ObservationIgnored let client: any MachineRequesting
     @ObservationIgnored private let platform: () -> String?
     @ObservationIgnored private var reads = 0
@@ -183,22 +183,22 @@ final class MachineDevices {
         }
     }
 
-    func boot(_ device: MachineDevice) async { await control(device, action: "boot") }
-    func shutdown(_ device: MachineDevice) async { await control(device, action: "shutdown") }
+    func boot(_ device: MachineDevice) async { await control(device, action: .deviceBoot) }
+    func shutdown(_ device: MachineDevice) async { await control(device, action: .deviceShutdown) }
 
-    private func control(_ device: MachineDevice, action: String) async {
+    private func control(_ device: MachineDevice, action: WireRequest) async {
         guard changing[device.id] == nil else { return }
         changing[device.id] = action
         defer { changing[device.id] = nil }
         do {
-            let answer = try await client.request("device.\(action)", payload: device.target)
+            let answer = try await client.request(action, payload: device.target)
             if let updated = MachineDevice(answer), let index = devices.firstIndex(where: { $0.id == updated.id }) {
                 devices[index] = updated
             }
             problem = nil
         } catch {
             problem =
-                action == "boot"
+                action == .deviceBoot
                 ? String(localized: "Could not start \(device.name). \(error.localizedDescription)")
                 : String(localized: "Could not shut down \(device.name). \(error.localizedDescription)")
         }

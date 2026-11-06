@@ -51,7 +51,8 @@ enum ProjectSettingsLogic {
         if sessions == 0 {
             return String(localized: "Nothing is running. It moves to Recent as you left it.")
         }
-        return String(localized: "Closing ends its \(sessions) running sessions. Terminals lose scrollback and agents stop.")
+        return String(
+            localized: "Closing ends its \(sessions) running sessions. Terminals lose scrollback and agents stop.")
     }
 
     /// A picked picture as a PNG the daemon takes, scaled down until it fits under the limit; nil when it cannot be
@@ -252,7 +253,7 @@ struct ProjectSettingsPage: View {
         var payload: [String: JSONValue] = ["projectId": .string(workspace.projectID)]
         if let name { payload["name"] = .string(name) }
         if let icon { payload["icon"] = icon }
-        return await perform("project.setIdentity", payload)
+        return await perform(.projectSetIdentity, payload)
     }
 
     private func upload(_ item: PhotosPickerItem) async {
@@ -267,10 +268,10 @@ struct ProjectSettingsPage: View {
     }
 
     private func uploadImage(_ image: JSONValue?) async {
-        await perform("project.setIcon", ["projectId": .string(workspace.projectID), "image": image ?? .null])
+        await perform(.projectSetIcon, ["projectId": .string(workspace.projectID), "image": image ?? .null])
     }
 
-    @discardableResult private func perform(_ request: String, _ payload: [String: JSONValue]) async -> Bool {
+    @discardableResult private func perform(_ request: WireRequest, _ payload: [String: JSONValue]) async -> Bool {
         busy = true
         defer { busy = false }
         do {
@@ -290,7 +291,7 @@ struct ProjectSettingsPage: View {
     private func askClose() async {
         do {
             let answer = try await workspace.client.request(
-                "project.closing", payload: .object(["projectId": .string(workspace.projectID)]))
+                .projectClosing, payload: .object(["projectId": .string(workspace.projectID)]))
             closing = ProjectSettingsLogic.closing(
                 sessions: Int(answer.number("sessions")), otherClients: Int(answer.number("otherClients")))
         } catch {
@@ -299,6 +300,6 @@ struct ProjectSettingsPage: View {
     }
 
     private func close() async {
-        if await perform("project.close", ["projectId": .string(workspace.projectID)]) { closed() }
+        if await perform(.projectClose, ["projectId": .string(workspace.projectID)]) { closed() }
     }
 }

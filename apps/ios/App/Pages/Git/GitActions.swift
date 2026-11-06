@@ -34,7 +34,11 @@ enum GitConfirmation: Identifiable {
     var detail: String {
         switch self {
         case .discard: String(localized: "The file goes back to what it was, and git keeps a stash to undo it with.")
-        case .forcePush: String(localized: "Overwrites the remote branch, so commits only the remote has are lost. Stops if someone pushed since the last fetch.")
+        case .forcePush:
+            String(
+                localized:
+                    "Overwrites the remote branch, so commits only the remote has are lost. Stops if someone pushed since the last fetch."
+            )
         case .deleteBranch(_, _, let force):
             force
                 ? String(localized: "This branch has not been merged anywhere. Its commits are only reachable by hash.")
@@ -132,7 +136,7 @@ extension GitRepositories {
         defer { busy = false }
         do {
             _ = try await client.request(
-                "git.stage",
+                .gitStage,
                 payload: .object([
                     "cwd": .string(cwd), "paths": .array(paths.map { .string($0) }), "staged": .bool(staged),
                 ]))
@@ -151,7 +155,7 @@ extension GitRepositories {
         var stash: String?
         do {
             let answer = try await client.request(
-                "git.discard", payload: .object(["cwd": .string(cwd), "paths": .array([.string(path)])]))
+                .gitDiscard, payload: .object(["cwd": .string(cwd), "paths": .array([.string(path)])]))
             stash = answer["stash"]?.stringValue
             problem = nil
         } catch {
@@ -165,7 +169,7 @@ extension GitRepositories {
         client: any MachineRequesting, cwd: String, kind: String, extra: [String: JSONValue]
     ) async -> Result<JSONValue, any Error> {
         let actionId = UUID().uuidString
-        let cancel = client.subscribe("git.progress") { [weak self] payload in
+        let cancel = client.subscribe(.gitProgress) { [weak self] payload in
             guard payload.text("actionId") == actionId else { return }
             let line = payload.text("line")
             self?.progress = line.isEmpty ? payload.text("phase") : line
@@ -177,7 +181,7 @@ extension GitRepositories {
         let fields: [String: JSONValue] = ["cwd": .string(cwd), "actionId": .string(actionId), "kind": .string(kind)]
             .merging(extra) { $1 }
         do {
-            return .success(try await client.request("git.action", payload: .object(fields)))
+            return .success(try await client.request(.gitAction, payload: .object(fields)))
         } catch {
             return .failure(error)
         }

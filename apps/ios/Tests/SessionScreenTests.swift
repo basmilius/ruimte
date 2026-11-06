@@ -79,44 +79,44 @@ final class SessionScreenTests: XCTestCase {
         let model = TerminalModel(client: client, sessionID: "terminal")
         model.connected = true
         model.write("a")
-        await client.waitForRequest("session.write", count: 1)
+        await client.waitForRequest(.sessionWrite, count: 1)
         model.write("b")
         model.write("c")
-        XCTAssertEqual(client.requests.filter { $0.0 == "session.write" }.count, 1)
+        XCTAssertEqual(client.requests.filter { $0.0 == .sessionWrite }.count, 1)
         client.finishWrite()
-        await client.waitForRequest("session.write", count: 2)
+        await client.waitForRequest(.sessionWrite, count: 2)
         XCTAssertEqual(
-            client.requests.filter { $0.0 == "session.write" }.map { $0.1["data"]?.stringValue }, ["a", "bc"])
-        XCTAssertFalse(client.requests.contains { $0.0 == "session.resize" })
+            client.requests.filter { $0.0 == .sessionWrite }.map { $0.1["data"]?.stringValue }, ["a", "bc"])
+        XCTAssertFalse(client.requests.contains { $0.0 == .sessionResize })
         client.finishWrite()
     }
 
     @MainActor func testTerminalFollowAttachAndResyncReplaceBufferedOutput() async {
         let client = SessionClientFake()
-        client.responses["session.attach"] = .object([
+        client.responses[.sessionAttach] = .object([
             "screen": .string("snapshot"), "cols": .number(132), "rows": .number(48), "exited": .bool(false),
         ])
-        client.responses["session.list"] = .object(["sessions": .array([])])
+        client.responses[.sessionList] = .object(["sessions": .array([])])
         let model = TerminalModel(client: client, sessionID: "terminal")
         var displayed: [(String, Bool)] = []
         model.render = { text, reset in
             displayed.append((text, reset))
         }
         model.start()
-        await client.waitForRequest("session.list", count: 1)
-        let attach = client.requests.first { $0.0 == "session.attach" }!.1
+        await client.waitForRequest(.sessionList, count: 1)
+        let attach = client.requests.first { $0.0 == .sessionAttach }!.1
         XCTAssertEqual(attach["follow"], .bool(true))
         XCTAssertNil(attach["cols"])
         XCTAssertEqual(model.cols, 132)
-        client.emit("session.output", .object(["sessionId": .string("terminal"), "data": .string("live")]))
-        client.emit("session.resync", .object(["sessionId": .string("terminal"), "screen": .string("replacement")]))
+        client.emit(.sessionOutput, .object(["sessionId": .string("terminal"), "data": .string("live")]))
+        client.emit(.sessionResync, .object(["sessionId": .string("terminal"), "screen": .string("replacement")]))
         XCTAssertEqual(displayed.map(\.0), ["snapshot", "live", "replacement"])
         XCTAssertEqual(displayed.map(\.1), [true, false, true])
         var resized: [Int] = []
         model.resizeDisplay = { cols, rows in resized += [cols, rows] }
-        client.emit("session.size", .object(["sessionId": .string("other"), "cols": .number(90), "rows": .number(20)]))
+        client.emit(.sessionSize, .object(["sessionId": .string("other"), "cols": .number(90), "rows": .number(20)]))
         client.emit(
-            "session.size", .object(["sessionId": .string("terminal"), "cols": .number(100), "rows": .number(30)]))
+            .sessionSize, .object(["sessionId": .string("terminal"), "cols": .number(100), "rows": .number(30)]))
         XCTAssertEqual(resized, [100, 30])
         XCTAssertEqual(model.cols, 100)
         model.stop()
@@ -178,31 +178,31 @@ private final class InvalidationFlag: Sendable {
 }
 
 @MainActor private final class SessionClientFake: MachineRequesting {
-    var requests: [(String, JSONValue)] = []
-    var responses: [String: JSONValue] = [:]
-    var handlers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
+    var requests: [(WireRequest, JSONValue)] = []
+    var responses: [WireRequest: JSONValue] = [:]
+    var handlers: [WireEvent: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
     var failure = false
     var holdWrites = false
     private var writeContinuation: CheckedContinuation<JSONValue, any Error>?
-    private var waiters: [(String, Int, CheckedContinuation<Void, Never>)] = []
+    private var waiters: [(WireRequest, Int, CheckedContinuation<Void, Never>)] = []
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
         let ready = waiters.filter { target, count, _ in requests.filter { $0.0 == target }.count >= count }
         waiters.removeAll { target, count, _ in requests.filter { $0.0 == target }.count >= count }
         ready.forEach { $0.2.resume() }
         if failure { throw MachineClientError.disconnected }
-        if holdWrites && type == "session.write" {
+        if holdWrites && type == .sessionWrite {
             return try await withCheckedThrowingContinuation { writeContinuation = $0 }
         }
         return responses[type] ?? .object([:])
     }
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
         let id = UUID()
         handlers[event, default: [:]][id] = handler
         return { [weak self] in self?.handlers[event]?[id] = nil }
     }
-    func emit(_ event: String, _ value: JSONValue) {
+    func emit(_ event: WireEvent, _ value: JSONValue) {
         for handler in handlers[event, default: [:]].values { handler(value) }
     }
     func finishWrite() {
@@ -210,7 +210,7 @@ private final class InvalidationFlag: Sendable {
         writeContinuation = nil
         continuation?.resume(returning: .object([:]))
     }
-    func waitForRequest(_ type: String, count: Int) async {
+    func waitForRequest(_ type: WireRequest, count: Int) async {
         if requests.filter({ $0.0 == type }).count >= count { return }
         await withCheckedContinuation { waiters.append((type, count, $0)) }
     }

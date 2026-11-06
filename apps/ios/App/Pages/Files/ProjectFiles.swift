@@ -218,7 +218,7 @@ enum FileLineChanges {
     func load(client: any MachineRequesting, path: String) async {
         let parent = (path as NSString).deletingLastPathComponent
         guard
-            let answer = try? await client.request("git.status", payload: .object(["cwd": .string(parent)])),
+            let answer = try? await client.request(.gitStatus, payload: .object(["cwd": .string(parent)])),
             let status = try? answer.decoded(as: GitStatus.self), status.repo, let root = status.root,
             let relative = FilesMention.relative(folder: root, path: path)
         else {
@@ -243,7 +243,7 @@ enum FileLineChanges {
             "cwd": .string(root), "scope": .string("base"), "staged": .bool(false), "path": .string(relative),
             "base": .string("HEAD"),
         ])
-        guard let answer = try? await client.request("git.diff", payload: payload) else { return }
+        guard let answer = try? await client.request(.gitDiff, payload: payload) else { return }
         marks = FileLineChanges.parse(answer.text("diff"))
     }
 
@@ -292,7 +292,7 @@ enum FileLineChanges {
         let sent = text
         do {
             let result = try await client.request(
-                "fs.write",
+                .fsWrite,
                 payload: .object(["path": .string(path), "text": .string(sent), "expectedMtime": .number(mtime)]))
             mtime = result.number("mtime")
             // Only what went out is saved; text typed while the write was under way stays an open edit.

@@ -72,7 +72,7 @@ final class WorkspaceVisualTests: XCTestCase {
             workspace.start()
             await workspace.open()
             XCTAssertTrue(workspace.ready, workspace.problem ?? "The fixture did not open")
-            XCTAssertTrue(wire.requests.contains("project.open"))
+            XCTAssertTrue(wire.requests.contains(.projectOpen))
             XCTAssertEqual(WorkspaceViewSections.split(workspace.views).map(\.title), [nil, "Build & run", nil])
             XCTAssertEqual(WorkspaceViewSections.split(workspace.views).map { $0.items.count }, [1, 2, 2])
             XCTAssertFalse(session.connected)
@@ -172,7 +172,7 @@ final class WorkspaceVisualTests: XCTestCase {
 
 @MainActor private final class WorkspaceVisualWire {
     let snapshot: JSONValue
-    private(set) var requests: [String] = []
+    private(set) var requests: [WireRequest] = []
     lazy var client = MachineClient(send: { [weak self] text in try self?.receive(text) }, connected: true)
 
     init(snapshot: JSONValue) throws {
@@ -181,13 +181,16 @@ final class WorkspaceVisualTests: XCTestCase {
 
     private func receive(_ text: String) throws {
         let frame = try JSONValue.decode(Data(text.utf8))
-        let type = frame.text("type")
+        let name = frame.text("type")
+        guard let type = WireRequest(rawValue: name) else {
+            throw MachineClientError.invalid("Unexpected visual-fixture request: \(name)")
+        }
         requests.append(type)
         let result: JSONValue
         switch type {
-        case "project.open": result = snapshot
-        case "project.release", "project.save-local": result = .object([:])
-        default: throw MachineClientError.invalid("Unexpected visual-fixture request: \(type)")
+        case .projectOpen: result = snapshot
+        case .projectRelease, .projectSaveLocal: result = .object([:])
+        default: throw MachineClientError.invalid("Unexpected visual-fixture request: \(name)")
         }
         let answer = JSONValue.object(["id": frame["id"]!, "ok": .bool(true), "result": result])
         client.receive(String(decoding: try answer.encoded(), as: UTF8.self))

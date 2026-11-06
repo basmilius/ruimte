@@ -270,7 +270,10 @@ enum ProcessesText {
             return String(localized: "Working, but silent for \(duration)", comment: "%@ is a duration")
         case "busy-after-turn":
             return String(localized: "\(name) still uses \(percent(alert.value)) of a core after its turn")
-        case "memory": return String(localized: "\(name) uses \(bytes(alert.value))", comment: "%@ is a process name, then an amount of memory")
+        case "memory":
+            return String(
+                localized: "\(name) uses \(bytes(alert.value))",
+                comment: "%@ is a process name, then an amount of memory")
         case "agent-gone":
             let agent = agentName(alert.name ?? String(localized: "The agent"))
             return String(localized: "\(agent) exited but shows as running")
@@ -329,7 +332,9 @@ enum ProcessesText {
             if let index = sections.firstIndex(where: { $0.id == id }) {
                 sections[index].groups.append(group)
             } else {
-                let title = group.projectID.map { projectNames[$0] ?? String(localized: "Another project") } ?? String(localized: "Machine tasks")
+                let title =
+                    group.projectID.map { projectNames[$0] ?? String(localized: "Another project") }
+                    ?? String(localized: "Machine tasks")
                 sections.append(ProcessSection(id: id, title: title, groups: [group]))
             }
         }
@@ -407,9 +412,9 @@ enum ProcessesText {
     func start() {
         guard subscriptions.isEmpty else { return }
         subscriptions.append(
-            client.subscribe("processes.sample") { [weak self] payload in self?.apply(ProcessSample(json: payload)) })
+            client.subscribe(.processesSample) { [weak self] payload in self?.apply(ProcessSample(json: payload)) })
         subscriptions.append(
-            client.subscribe("processes.alerts") { [weak self] payload in
+            client.subscribe(.processesAlerts) { [weak self] payload in
                 self?.alerts = payload.list("alerts").map(ProcessAlert.init(json:))
             })
         subscriptions.append(
@@ -466,7 +471,9 @@ enum ProcessesText {
     }
 
     /// The `other` group starts open and every node's group closed, as on the desktop.
-    func isOpen(_ group: ProcessGroup) -> Bool { group.kind == "other" ? !opened.contains(group.id) : opened.contains(group.id) }
+    func isOpen(_ group: ProcessGroup) -> Bool {
+        group.kind == "other" ? !opened.contains(group.id) : opened.contains(group.id)
+    }
 
     func toggle(_ group: ProcessGroup) {
         if opened.contains(group.id) { opened.remove(group.id) } else { opened.insert(group.id) }
@@ -495,11 +502,14 @@ enum ProcessesText {
     func act(_ alert: ProcessAlert, _ action: ProcessAlertAction) async {
         let groups = sample?.groups ?? []
         let target = alert.pid.flatMap { pid in
-            alert.startTime.map { ProcessTarget(pid: pid, startTime: $0, name: alert.name ?? String(localized: "The process")) }
+            alert.startTime.map {
+                ProcessTarget(pid: pid, startTime: $0, name: alert.name ?? String(localized: "The process"))
+            }
         }
         switch action {
         case .show:
-            if let place = ProcessesText.placement(alert, groups: groups), let group = groups.first(where: { $0.id == place }),
+            if let place = ProcessesText.placement(alert, groups: groups),
+                let group = groups.first(where: { $0.id == place }),
                 !isOpen(group)
             {
                 toggle(group)

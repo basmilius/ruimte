@@ -231,12 +231,12 @@ final class LaunchEditingTests: XCTestCase {
         let store = ProjectLaunches(client: machine, projectID: "p1", folder: "/p")
         try await store.save(imported, baseRev: 3, imported: LaunchEditing.importedIDs(imported, existing: []))
         XCTAssertEqual(
-            machine.last("launches.save"),
+            machine.last(.launchesSave),
             .object([
                 "projectId": .string("p1"), "baseRev": .number(3), "launches": .array(imported),
                 "imported": .array([.string("api")]),
             ]))
-        XCTAssertFalse(machine.sent.contains { $0.0 == "launch.start" || $0.0 == "launch.restart" })
+        XCTAssertFalse(machine.sent.contains { $0.0 == .launchStart || $0.0 == .launchRestart })
     }
 }
 
@@ -256,10 +256,10 @@ final class LaunchEditingTests: XCTestCase {
         let store = ProjectLaunches(client: machine, projectID: "p1", folder: "/p")
         store.start()
         machine.emit(
-            "launches.changed",
+            .launchesChanged,
             .object(["projectId": .string("p1"), "document": document([launch("x")], approved: ["x"])]))
-        machine.emit("launch.status", status("x", state: "running"))
-        machine.emit("launch.status", status("x", project: "other", state: "exited", exit: 1))
+        machine.emit(.launchStatus, status("x", state: "running"))
+        machine.emit(.launchStatus, status("x", project: "other", state: "exited", exit: 1))
         XCTAssertEqual(store.views["x"]?.phase, .running)
         store.stop()
         XCTAssertTrue(machine.handlers.values.allSatisfy(\.isEmpty))
@@ -279,7 +279,7 @@ final class LaunchEditingTests: XCTestCase {
             ]),
         ])
         await store.press(store.document!.launch("api")!)
-        XCTAssertNil(machine.last("launch.start")?["approve"])
+        XCTAssertNil(machine.last(.launchStart)?["approve"])
         guard case .held(let launchID, let restart, let held, _) = store.ask else { return XCTFail("No question") }
         XCTAssertEqual(launchID, "api")
         XCTAssertFalse(restart)
@@ -291,16 +291,16 @@ final class LaunchEditingTests: XCTestCase {
             ]),
         ])
         await store.run("api", approve: true)
-        XCTAssertEqual(machine.last("launch.start")?["approve"], .bool(true))
+        XCTAssertEqual(machine.last(.launchStart)?["approve"], .bool(true))
         XCTAssertEqual(store.ask, .busy(launchID: "api", restart: false, holder: "web", port: 3000, approve: true))
         machine.outcome = .object(["outcome": .string("started")])
         await store.run("api", approve: true, replace: true)
-        XCTAssertEqual(machine.last("launch.start")?["replace"], .bool(true))
+        XCTAssertEqual(machine.last(.launchStart)?["replace"], .bool(true))
         XCTAssertNil(store.ask)
         await store.press(store.document!.launch("web")!)
-        XCTAssertNotNil(machine.last("launch.restart"))
+        XCTAssertNotNil(machine.last(.launchRestart))
         await store.stop("web", force: true)
-        XCTAssertEqual(machine.last("launch.stop")?["force"], .bool(true))
+        XCTAssertEqual(machine.last(.launchStop)?["force"], .bool(true))
     }
 
     func testARefusedReadShowsTheMachinesMessage() async {
@@ -337,7 +337,7 @@ final class LaunchEditingTests: XCTestCase {
         XCTAssertEqual(editor.draft.name, "Docs")
         let landed = await editor.save()
         XCTAssertTrue(landed)
-        let sent = machine.last("launches.save")
+        let sent = machine.last(.launchesSave)
         XCTAssertEqual(sent?["baseRev"], .number(9))
         XCTAssertEqual(sent?["launches"]?.arrayValue?.map { $0.text("id") }, ["web", "docs"])
         XCTAssertEqual(sent?["launches"]?.arrayValue?.last?.text("cwd"), "docs")
@@ -348,47 +348,47 @@ final class LaunchEditingTests: XCTestCase {
         let store = ProjectLaunches(client: machine, projectID: "p1", folder: "/p")
         await store.load()
         await store.delete("web")
-        XCTAssertEqual(machine.last("launches.save")?["launches"]?.arrayValue?.map { $0.text("id") }, ["api"])
-        XCTAssertEqual(machine.last("launches.save")?["baseRev"], .number(3))
+        XCTAssertEqual(machine.last(.launchesSave)?["launches"]?.arrayValue?.map { $0.text("id") }, ["api"])
+        XCTAssertEqual(machine.last(.launchesSave)?["baseRev"], .number(3))
     }
 }
 
 @MainActor private final class LaunchMachine: MachineRequesting {
-    var sent: [(String, JSONValue)] = []
+    var sent: [(WireRequest, JSONValue)] = []
     var refusal: String?
     var outcome: JSONValue = .object(["outcome": .string("started")])
     var read: JSONValue?
-    var handlers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
+    var handlers: [WireEvent: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
         if let refusal { throw MachineClientError.server(code: refusal, message: refusal) }
         switch type {
-        case "launches.read":
+        case .launchesRead:
             return read
                 ?? document([launch("web"), launch("api", command: "bun api", shared: true)], approved: ["web"])
-        case "launch.list":
+        case .launchList:
             return .object([
                 "launches": .array([status("web", state: "running"), status("dev", project: "p2", state: "running")])
             ])
-        case "git.repos":
+        case .gitRepos:
             return .object(["repos": .array([])])
-        case "launch.start", "launch.restart":
+        case .launchStart, .launchRestart:
             return outcome
-        case "launches.save":
+        case .launchesSave:
             return .object(["rev": .number(4)])
         default:
             return .object([:])
         }
     }
 
-    func last(_ type: String) -> JSONValue? { sent.last { $0.0 == type }?.1 }
+    func last(_ type: WireRequest) -> JSONValue? { sent.last { $0.0 == type }?.1 }
 
-    func emit(_ event: String, _ payload: JSONValue) {
+    func emit(_ event: WireEvent, _ payload: JSONValue) {
         for handler in (handlers[event] ?? [:]).values { handler(payload) }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
         let id = UUID()
         handlers[event, default: [:]][id] = handler
         return { [weak self] in self?.handlers[event]?[id] = nil }

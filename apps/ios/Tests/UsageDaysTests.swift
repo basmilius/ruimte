@@ -235,8 +235,8 @@ private final class MemoryUsageStore: UsageStore {
     }
 
     func testOnlyARequestThatAnswersACardCountsAsAnAnswer() {
-        XCTAssertEqual(UsageCounter.answering("chat.approve"), .approvalAnswered)
-        XCTAssertEqual(UsageCounter.answering("chat.answer"), .questionAnswered)
-        XCTAssertNil(UsageCounter.answering("chat.send"))
+        XCTAssertEqual(UsageCounter.answering(.chatApprove), .approvalAnswered)
+        XCTAssertEqual(UsageCounter.answering(.chatAnswer), .questionAnswered)
+        XCTAssertNil(UsageCounter.answering(.chatSend))
     }
 }

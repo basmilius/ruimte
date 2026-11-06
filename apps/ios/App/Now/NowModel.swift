@@ -231,7 +231,7 @@ final class NowFeed: MachineFeed {
         guard stops.isEmpty else { return }
         session.retain()
         let client = session.rpc
-        stops = ["project.changed", "project.summary", "session.list-changed"].map { event in
+        stops = [.projectChanged, .projectSummary, .sessionListChanged].map { event in
             client.subscribe(event) { [weak self] _ in self?.reads.schedule() }
         }
         stops.append(
@@ -262,7 +262,7 @@ final class NowFeed: MachineFeed {
         guard session.connected else { return }
         let generation = session.generation
         do {
-            let result = try await session.rpc.request("project.sidebar", payload: .object([:]))
+            let result = try await session.rpc.request(.projectSidebar, payload: .object([:]))
             guard !Task.isCancelled, generation == session.generation, !stops.isEmpty else { return }
             projects = result.list("projects")
             loaded = true

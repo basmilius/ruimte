@@ -29,7 +29,7 @@ import RuimtePulsar
     /// anonymous usage counts; a machine from before it ignores the field.
     public func start() {
         let frame = JSONValue.object([
-            "id": .string(Self.requestID), "type": .string("endpoint.info"),
+            "id": .string(Self.requestID), "type": .string(WireRequest.endpointInfo.rawValue),
             "payload": .object(["client": .string("ios")]),
         ])
         do { try send(String(decoding: try frame.encoded(), as: UTF8.self)) } catch { refuse(error) }

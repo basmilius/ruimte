@@ -31,7 +31,7 @@ final class ProjectArtworkTests: XCTestCase {
             context.fill(CGRect(x: 0, y: 0, width: 512, height: 256))
         }
         let client = ScriptedMachine([
-            "bytes.read": { _ in
+            .bytesRead: { _ in
                 .object([
                     "mime": .string("image/png"), "size": .number(Double(data.count)), "version": .string("v1"),
                     "offset": .number(0), "data": .string(data.base64EncodedString()),
@@ -43,7 +43,7 @@ final class ProjectArtworkTests: XCTestCase {
         let first = try await loader.load(descriptor, client: client)
         let second = try await loader.load(descriptor, client: client)
         XCTAssertTrue(first === second)
-        XCTAssertEqual(client.requests, ["bytes.read"])
+        XCTAssertEqual(client.requests, [.bytesRead])
         XCTAssertEqual(client.sent.first?.payload["resource"], descriptor.resource)
         XCTAssertEqual(first.cgImage?.width, 128)
         XCTAssertEqual(first.cgImage?.height, 64)

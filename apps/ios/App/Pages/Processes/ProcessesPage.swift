@@ -334,8 +334,12 @@ struct ProcessesPage: View {
 
     @ViewBuilder private func signalMenu(_ target: ProcessTarget) -> some View {
         Section("\(target.name) (\(target.pid))") {
-            Button(String(localized: "Interrupt"), lucideIcon: "pause") { Task { await model.signal(target, .interrupt) } }
-            Button(String(localized: "Terminate"), lucideIcon: "circle-stop") { Task { await model.signal(target, .terminate) } }
+            Button(String(localized: "Interrupt"), lucideIcon: "pause") {
+                Task { await model.signal(target, .interrupt) }
+            }
+            Button(String(localized: "Terminate"), lucideIcon: "circle-stop") {
+                Task { await model.signal(target, .terminate) }
+            }
             Button(String(localized: "Force quit…"), lucideIcon: "octagon-x", role: .destructive) { forcing = target }
         }
     }
@@ -386,9 +390,10 @@ struct ProcessesPage: View {
 
     /// A group of another project names that project, which the project list knows.
     private func readProjectNames() async {
-        guard let result = try? await model.client.request("project.list", payload: .object([:])) else { return }
+        guard let result = try? await model.client.request(.projectList, payload: .object([:])) else { return }
         projectNames = Dictionary(
-            result.list("projects").map { ($0.text("projectId"), $0.text("name")) }, uniquingKeysWith: { first, _ in first })
+            result.list("projects").map { ($0.text("projectId"), $0.text("name")) },
+            uniquingKeysWith: { first, _ in first })
     }
 }
 
@@ -430,7 +435,8 @@ private struct ProcessChart: View {
                 }
             }
             .chartXScale(
-                domain: Date(timeIntervalSince1970: (end - window) / 1000)...Date(timeIntervalSince1970: end / 1000))
+                domain: Date(timeIntervalSince1970: (end - window) / 1000)...Date(timeIntervalSince1970: end / 1000)
+            )
             .chartYScale(domain: 0...max(maximum, 1))
             .chartXAxis(.hidden)
             .chartYAxis(.hidden)

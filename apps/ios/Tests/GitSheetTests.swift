@@ -67,7 +67,7 @@ final class GitSheetTests: XCTestCase {
         let activated = await activate("Rebase", in: window)
         XCTAssertTrue(activated)
         await fulfillment(of: [sent], timeout: 2)
-        let pull = machine.sent.first { $0.type == "git.action" }
+        let pull = machine.sent.first { $0.type == .gitAction }
         XCTAssertEqual(pull?.payload["kind"], .string("pull"))
         XCTAssertEqual(pull?.payload["strategy"], .string("rebase"))
         XCTAssertEqual(pull?.payload["cwd"], .string("/work/api"))
@@ -82,7 +82,7 @@ final class GitSheetTests: XCTestCase {
         actions.confirmation = pending
         XCTAssertTrue(machine.sent.isEmpty)
         await actions.confirm(client: machine, pending)
-        let rebase = machine.sent.first { $0.type == "git.action" }
+        let rebase = machine.sent.first { $0.type == .gitAction }
         XCTAssertEqual(rebase?.payload["kind"], .string("rebase"))
         XCTAssertEqual(rebase?.payload["ref"], .string("main"))
         XCTAssertEqual(rebase?.payload["cwd"], .string("/work/api"))
@@ -130,7 +130,7 @@ final class GitSheetTests: XCTestCase {
         await ready.write(client: machine)
         XCTAssertEqual(ready.subject, "Share one backoff")
         XCTAssertEqual(ready.body, "Caps retries at 5.")
-        let asked = machine.sent.first { $0.type == "git.suggestMessage" }
+        let asked = machine.sent.first { $0.type == .gitSuggestMessage }
         XCTAssertEqual(asked?.payload["cwd"], .string("/work/app"))
         XCTAssertEqual(asked?.payload["provider"], .string("claude"))
     }
@@ -144,7 +144,7 @@ final class GitSheetTests: XCTestCase {
         model.subject = "Share one backoff"
         let line = await model.commit(client: machine, push: true)
         XCTAssertEqual(line, "Committed and pushed in 2 repositories.")
-        let commits = machine.sent.filter { $0.type == "git.action" }
+        let commits = machine.sent.filter { $0.type == .gitAction }
         XCTAssertEqual(commits.map { $0.payload["cwd"] }, [.string("/work/one"), .string("/work/two")])
         XCTAssertTrue(commits.allSatisfy { $0.payload["kind"] == .string("commit-push") })
         XCTAssertTrue(commits.allSatisfy { $0.payload["subject"] == .string("Share one backoff") })
@@ -165,7 +165,7 @@ final class GitSheetTests: XCTestCase {
         let line = await model.create(client: machine)
         XCTAssertEqual(line, "Pull request ready: https://example.test/pull/7")
         XCTAssertEqual(model.url?.absoluteString, "https://example.test/pull/7")
-        let created = machine.sent.last { $0.type == "git.action" }
+        let created = machine.sent.last { $0.type == .gitAction }
         XCTAssertEqual(created?.payload["kind"], .string("create-pr"))
         XCTAssertEqual(created?.payload["subject"], .string("Share one backoff across transport endpoints"))
     }
@@ -269,7 +269,7 @@ final class GitSheetTests: XCTestCase {
         let machine = GitSheetMachine()
         let bound = await model.bind(client: machine)
         XCTAssertTrue(bound)
-        let added = machine.sent.first { $0.type == "git.worktree-add" }
+        let added = machine.sent.first { $0.type == .gitWorktreeAdd }
         XCTAssertEqual(added?.payload["branch"], .string("shopping-list"))
         XCTAssertEqual(added?.payload["projectId"], .string("project"))
         XCTAssertEqual(added?.payload["repo"], .string("/work/project"))
@@ -293,7 +293,7 @@ final class GitSheetTests: XCTestCase {
 
     private func receive(_ text: String) throws {
         let frame = try JSONValue.decode(Data(text.utf8))
-        guard frame["type"] == .string("project.save"), let payload = frame["payload"] else {
+        guard frame["type"] == .string(WireRequest.projectSave.rawValue), let payload = frame["payload"] else {
             throw MachineClientError.invalid("Unexpected worktree binding request")
         }
         saves.append(payload)
@@ -319,67 +319,67 @@ final class GitSheetTests: XCTestCase {
             self.checkouts = checkouts
         }
 
-        func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+        func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
             switch type {
-            case "git.repos":
+            case .gitRepos:
                 return .object([
                     "repos": .array(
                         checkouts.map {
                             .object(["path": .string($0.path), "label": .string($0.label), "kind": .string($0.kind)])
                         })
                 ])
-            case "git.status":
+            case .gitStatus:
                 return GitWire.json(checkouts.first { $0.path == payload.text("cwd") }?.status)
             default:
                 return .object([:])
             }
         }
 
-        func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+        func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
             {}
         }
     }
 }
 
 @MainActor private final class GitSheetMachine: MachineRequesting {
-    var sent: [(type: String, payload: JSONValue)] = []
+    var sent: [(type: WireRequest, payload: JSONValue)] = []
     var onAction: (() -> Void)?
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
-        if type == "git.action" { onAction?() }
+        if type == .gitAction { onAction?() }
         switch type {
-        case "git.capabilities":
+        case .gitCapabilities:
             return .object(["gh": .bool(true), "messageProvider": .string("claude")])
-        case "git.suggestMessage":
+        case .gitSuggestMessage:
             return .object(["subject": .string("Share one backoff"), "body": .string("Caps retries at 5.")])
-        case "git.log":
+        case .gitLog:
             return .object([
                 "commits": .array([.object(["subject": .string("Share one backoff across transport endpoints")])])
             ])
-        case "git.diff":
+        case .gitDiff:
             return .object([
                 "files": .array([
                     .object(["path": .string("a.ts"), "added": .number(24), "deleted": .number(9)]),
                     .object(["path": .string("b.ts"), "added": .number(3), "deleted": .number(1)]),
                 ])
             ])
-        case "git.action" where payload["kind"] == .string("create-pr"):
+        case .gitAction where payload["kind"] == .string("create-pr"):
             return .object([
                 "summary": .string("Pull request ready: https://example.test/pull/7"),
                 "url": .string("https://example.test/pull/7"),
             ])
-        case "git.worktree-add":
+        case .gitWorktreeAdd:
             return .object([
                 "worktree": .object(["path": .string("/wt/shopping-list"), "branch": .string("shopping-list")]),
                 "created": .bool(true),
             ])
-        case "git.status":
+        case .gitStatus:
             return GitWire.json(GitWire.status([:]))
         default:
             return .object(["summary": .string("Done.")])
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

@@ -145,7 +145,7 @@ enum GitWorktreeBinding {
         let name = branch.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
             let result = try await client.request(
-                "git.worktree-add",
+                .gitWorktreeAdd,
                 payload: .object([
                     "repo": .string(workspace.folder), "branch": .string(name),
                     "projectId": .string(workspace.projectID),

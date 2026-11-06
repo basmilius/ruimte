@@ -122,7 +122,8 @@ struct ChatCompactionDock: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityElement(children: .combine)
-                    Button(String(localized: "Keep", comment: "Keeps the chat's full history instead of compacting it")) {
+                    Button(String(localized: "Keep", comment: "Keeps the chat's full history instead of compacting it"))
+                    {
                         model.keepFullHistory(offer.turnID)
                     }
                     .buttonStyle(.mobileCapsuleSmall)
@@ -140,7 +141,7 @@ struct ChatCompactionDock: View {
     private func compact() {
         Task {
             do {
-                _ = try await model.client.request("chat.compact", payload: model.target())
+                _ = try await model.client.request(.chatCompact, payload: model.target())
             } catch {
                 failure = error.localizedDescription
             }

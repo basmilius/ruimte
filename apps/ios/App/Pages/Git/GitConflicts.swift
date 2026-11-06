@@ -120,7 +120,8 @@ struct GitConflictDraft: Equatable {
         for index in file.blocks.indices.dropLast() {
             at += before[index].count
             let toEarlier = file.blocks[index].kind == .conflict || file.blocks[index + 1].kind != .conflict
-            bounds.append(min(max(Self.map(at, through: changes, toEarlier: toEarlier), bounds[bounds.count - 1]), edited.count))
+            bounds.append(
+                min(max(Self.map(at, through: changes, toEarlier: toEarlier), bounds[bounds.count - 1]), edited.count))
         }
         bounds.append(edited.count)
         var next = GitConflictDraft()
@@ -285,7 +286,7 @@ func gitRefusalCode(_ error: any Error) -> String? {
 
     func load(client: any MachineRequesting) async {
         do {
-            let answer = try await client.request("git.conflicts", payload: .object(["cwd": .string(cwd)]))
+            let answer = try await client.request(.gitConflicts, payload: .object(["cwd": .string(cwd)]))
             operation = answer["operation"]?.stringValue
             ours = answer.text("ours", fallback: "ours")
             theirs = answer.text("theirs", fallback: "theirs")
@@ -347,7 +348,7 @@ func gitRefusalCode(_ error: any Error) -> String? {
             let content = draft(path).content(of: file)
             do {
                 _ = try await client.request(
-                    "git.resolve",
+                    .gitResolve,
                     payload: .object([
                         "cwd": .string(cwd), "path": .string(path), "content": .string(content),
                         "hash": .string(file.hash),
@@ -378,7 +379,7 @@ func gitRefusalCode(_ error: any Error) -> String? {
         var payload: [String: JSONValue] = ["cwd": .string(cwd), "path": .string(path), "take": .string(side)]
         if let hash = files[path]?.hash { payload["hash"] = .string(hash) }
         do {
-            _ = try await client.request("git.resolve", payload: .object(payload))
+            _ = try await client.request(.gitResolve, payload: .object(payload))
             files[path] = nil
             drafts[path] = nil
             problem = nil
@@ -409,7 +410,7 @@ func gitRefusalCode(_ error: any Error) -> String? {
                 if files[path] == nil { files[path] = try await read(client: client, path: path) }
                 guard let file = files[path], !file.whole else { continue }
                 let result = try await client.request(
-                    "git.resolveAi",
+                    .gitResolveAi,
                     payload: .object(["cwd": .string(cwd), "path": .string(path), "actionId": .string(actionId)]))
                 let usable = GitConflictModel.usable(file, answers: result.list("blocks"))
                 drafts[path, default: GitConflictDraft()].propose(usable)
@@ -430,7 +431,7 @@ func gitRefusalCode(_ error: any Error) -> String? {
 
     func cancelAgent(client: any MachineRequesting) async {
         guard let run = agentRun else { return }
-        _ = try? await client.request("git.cancel", payload: .object(["actionId": .string(run.actionId)]))
+        _ = try? await client.request(.gitCancel, payload: .object(["actionId": .string(run.actionId)]))
     }
 
     /// Finishing or taking back the operation that waits. True once nothing waits in the checkout any more.
@@ -443,7 +444,7 @@ func gitRefusalCode(_ error: any Error) -> String? {
         }
         if !loaded { await load(client: client) }
         let actionId = UUID().uuidString
-        let cancel = client.subscribe("git.progress") { [weak self] payload in
+        let cancel = client.subscribe(.gitProgress) { [weak self] payload in
             guard payload.text("actionId") == actionId else { return }
             let line = payload.text("line")
             self?.progress = line.isEmpty ? nil : line
@@ -452,7 +453,7 @@ func gitRefusalCode(_ error: any Error) -> String? {
         let waiting = operation ?? "merge"
         do {
             let result = try await client.request(
-                "git.operation",
+                .gitOperation,
                 payload: .object(["cwd": .string(cwd), "actionId": .string(actionId), "action": .string(action)]))
             let left = result.list("conflicts").count
             files = [:]
@@ -495,7 +496,8 @@ func gitRefusalCode(_ error: any Error) -> String? {
 
     /// The split runs off the main actor: a long file with many changes takes a moment to walk.
     private func read(client: any MachineRequesting, path: String) async throws -> GitConflictFile {
-        let answer = try await client.request("git.conflict", payload: .object(["cwd": .string(cwd), "path": .string(path)]))
+        let answer = try await client.request(
+            .gitConflict, payload: .object(["cwd": .string(cwd), "path": .string(path)]))
         return await Task.detached { GitConflictFile(answer: answer) }.value
     }
 
@@ -507,7 +509,8 @@ func gitRefusalCode(_ error: any Error) -> String? {
         } else {
             files[path] = after
             drafts[path] = draft(path).carried(from: before, to: after)
-            note = String(localized: "The file changed on the machine. Ruimte read it again and kept the answers that still fit.")
+            note = String(
+                localized: "The file changed on the machine. Ruimte read it again and kept the answers that still fit.")
         }
     }
 }

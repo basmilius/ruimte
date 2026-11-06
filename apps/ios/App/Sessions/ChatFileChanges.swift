@@ -112,13 +112,16 @@ struct ChatDiffView: View {
                             .font(.system(.caption, design: .monospaced)).textSelection(.enabled)
                             .fixedSize(horizontal: true, vertical: false)
                             .foregroundStyle(
-                                line.hasPrefix("+") ? MobileStyle.positive : line.hasPrefix("-") ? MobileStyle.statusError : MobileStyle.muted
+                                line.hasPrefix("+")
+                                    ? MobileStyle.positive
+                                    : line.hasPrefix("-") ? MobileStyle.statusError : MobileStyle.muted
                             )
                             .padding(.horizontal, 12).padding(.vertical, 2)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(
                                 line.hasPrefix("+")
-                                    ? MobileStyle.positive.opacity(0.08) : line.hasPrefix("-") ? MobileStyle.statusError.opacity(0.08) : .clear
+                                    ? MobileStyle.positive.opacity(0.08)
+                                    : line.hasPrefix("-") ? MobileStyle.statusError.opacity(0.08) : .clear
                             )
                     }
                 }.fixedSize(horizontal: true, vertical: false)
@@ -301,7 +304,7 @@ struct ChatChangedFilesRow: View {
         guard stored == nil, !fetchedOnce, let item, item.checkpoint != nil, !work.loading else { return }
         await work.read { stillTheLatest in
             let result = try await client.request(
-                "chat.turnDiff",
+                .chatTurnDiff,
                 payload: .object(["chatId": .string(chatID), "turnId": .string(item.turnId ?? item.id)]))
             try stillTheLatest()
             // A turn whose diff is empty still counts as read: a second attempt would answer the same.

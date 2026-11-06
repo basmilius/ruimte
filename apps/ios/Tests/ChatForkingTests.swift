@@ -201,8 +201,8 @@ final class ChatForkingTests: XCTestCase {
 @MainActor private final class ForkListMachine: MachineRequesting {
     var fails = false
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
-        XCTAssertEqual(type, "chat.list")
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
+        XCTAssertEqual(type, .chatList)
         if fails { throw MachineClientError.server(code: "internal", message: "Failed") }
         return .object([
             "chats": .array([
@@ -214,5 +214,5 @@ final class ChatForkingTests: XCTestCase {
         ])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

@@ -156,7 +156,7 @@ enum OutputMachine {
     /// The hold on `artifact.watch` that `artifact.changed` comes under.
     @MainActor static func watch(_ client: any MachineRequesting) -> MachineSubscription {
         client.acquireSubscription(
-            start: WireRequest.artifactWatch.rawValue, stop: WireRequest.artifactUnwatch.rawValue,
+            start: .artifactWatch, stop: .artifactUnwatch,
             payload: .object([:]), stopPayload: .object([:]))
     }
 

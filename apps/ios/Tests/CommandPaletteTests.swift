@@ -104,10 +104,10 @@ final class CommandPaletteTests: XCTestCase {
 @MainActor private final class PaletteMachine: MachineRequesting {
     var fail = false
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         if fail { throw MachineClientError.server(code: "offline", message: "Offline") }
         return .object(["files": .array([.string("src/pool.ts")])])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

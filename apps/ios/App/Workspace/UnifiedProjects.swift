@@ -118,7 +118,7 @@ final class UnifiedProjects {
             let connection = connect(machine)
             entry.connection = connection
             let binding = entry.binding
-            entry.unsubscribe = connection.client.subscribe("project.summary") {
+            entry.unsubscribe = connection.client.subscribe(.projectSummary) {
                 [weak self, weak entry] event in
                 guard let self, let entry, entry.binding == binding, current(entry), entry.connected
                 else { return }

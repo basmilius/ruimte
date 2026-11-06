@@ -81,7 +81,7 @@ struct RenderDocumentPage: View {
         .task {
             if agentModel == nil, let agent { agentModel = DiagramAgentModel(target: agent) }
             if subscription == nil {
-                subscription = client.subscribe(kind + ".changed") { event in
+                subscription = client.subscribe(kind == "drawing" ? .drawingChanged : .diagramChanged) { event in
                     if event.text("projectId") == projectID && event.text("viewId") == viewID { generation += 1 }
                 }
                 connection = client.observeConnection { if $0 { generation += 1 } }

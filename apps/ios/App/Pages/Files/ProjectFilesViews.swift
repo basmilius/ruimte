@@ -164,7 +164,7 @@ struct FileDeleteConfirmation: ViewModifier {
                 Button("Move to Trash", role: .destructive) {
                     Task {
                         do {
-                            _ = try await client.request("fs.delete", payload: .object(["path": .string(pending)]))
+                            _ = try await client.request(.fsDelete, payload: .object(["path": .string(pending)]))
                             onDeleted()
                         } catch {
                             problem = error.localizedDescription

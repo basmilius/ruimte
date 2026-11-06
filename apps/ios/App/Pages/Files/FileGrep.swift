@@ -89,7 +89,7 @@ struct FileGrepGroup: Identifiable, Equatable {
         if wholeWord { payload["wholeWord"] = .bool(true) }
         if regex { payload["regex"] = .bool(true) }
         do {
-            let answer = try await client.request("fs.grep", payload: .object(payload))
+            let answer = try await client.request(.fsGrep, payload: .object(payload))
             guard mine == generation else { return }
             groups = Self.group(answer.list("matches"))
             fileCount = Int(answer.number("files"))

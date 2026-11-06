@@ -104,9 +104,9 @@ private final class Measured: Sendable {
                 stopwatch.milliseconds += 35
                 client?.receive(#"{"id":"\#(id)","ok":false,"error":{"code":"x","message":"No."}}"#)
             }, connected: true, now: { stopwatch.milliseconds })
-        let direct = await measuresAwaiting { _ = try? await client?.request("server.ping") }
+        let direct = await measuresAwaiting { _ = try? await client?.request(.serverPing) }
         client?.setRoute(.localNetwork)
-        let lan = await measuresAwaiting { _ = try? await client?.request("server.ping") }
+        let lan = await measuresAwaiting { _ = try? await client?.request(.serverPing) }
 
         #expect(direct == [.answered(path: .direct, milliseconds: 35)])
         #expect(lan == [.answered(path: .lan, milliseconds: 35)])
@@ -120,8 +120,8 @@ private final class Measured: Sendable {
                 client?.receive(#"{"id":"\#(id)","ok":false,"error":{"code":"x","message":"No."}}"#)
             }, connected: true)
         let measured = await measuresAwaiting {
-            _ = try? await client?.request("fs.write")
-            _ = try? await client?.request("bytes.read")
+            _ = try? await client?.request(.fsWrite)
+            _ = try? await client?.request(.bytesRead)
         }
 
         #expect(measured.isEmpty)
@@ -130,7 +130,7 @@ private final class Measured: Sendable {
     @Test func aRequestWithoutAReplyIsNotMeasured() async {
         let clock = FakeScheduler()
         let client = MachineClient(send: { _ in clock.advance() }, scheduler: clock, connected: true)
-        let measured = await measuresAwaiting { _ = try? await client.request("server.ping") }
+        let measured = await measuresAwaiting { _ = try? await client.request(.serverPing) }
         #expect(measured.isEmpty)
     }
 }

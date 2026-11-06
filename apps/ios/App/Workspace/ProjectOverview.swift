@@ -37,7 +37,8 @@ struct ProjectActivity: Equatable {
     /// The state in words, as in "2 waiting · 1 working"; nil while nothing waits or works.
     var words: String? {
         let parts = [
-            needsYou > 0 ? String(localized: "\(needsYou) waiting", comment: "Views of a project that wait on you") : nil,
+            needsYou > 0
+                ? String(localized: "\(needsYou) waiting", comment: "Views of a project that wait on you") : nil,
             working > 0 ? String(localized: "\(working) working", comment: "Views of a project that work") : nil,
         ]
         let line = parts.compactMap { $0 }.joined(separator: " · ")
@@ -175,7 +176,7 @@ final class ProjectGitLines {
         guard !folder.isEmpty, !asking.contains(id) else { return }
         asking.insert(id)
         defer { asking.remove(id) }
-        guard let answer = try? await client.request("git.status", payload: .object(["cwd": .string(folder)])),
+        guard let answer = try? await client.request(.gitStatus, payload: .object(["cwd": .string(folder)])),
             let status = try? answer.decoded(as: GitStatus.self)
         else { return }
         lines[id] = ProjectGitLine(status: status)

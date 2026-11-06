@@ -112,10 +112,10 @@ import Testing
         await model.erase()
 
         let steps = machine.requests.map(\.0).filter {
-            ["device.shutdown", "device.action", "device.boot"].contains($0)
+            [.deviceShutdown, .deviceAction, .deviceBoot].contains($0)
         }
-        #expect(steps == ["device.shutdown", "device.action", "device.boot"])
-        #expect(machine.requests.first { $0.0 == "device.action" }?.1["action"] == .string("erase"))
+        #expect(steps == [.deviceShutdown, .deviceAction, .deviceBoot])
+        #expect(machine.requests.first { $0.0 == .deviceAction }?.1["action"] == .string("erase"))
     }
 
     @Test func keysGoOutOnlyToADeviceThatAnnouncesTheKeyboard() async {
@@ -126,7 +126,7 @@ import Testing
         model.key("down", usage: 0x04)
         await machine.waitForInput()
         #expect(
-            machine.requests.first { $0.0 == "device.input" }?.1["input"]
+            machine.requests.first { $0.0 == .deviceInput }?.1["input"]
                 == .object(["kind": .string("key"), "phase": .string("down"), "usage": .number(4)]))
 
         let unsupported = ToolsMachine(devices: [Self.device()])
@@ -137,14 +137,14 @@ import Testing
         await unsupportedInput.finish()
         model.key("up", usage: 0x04)
         await machine.waitForInput(count: 2)
-        #expect(!unsupported.requests.contains { $0.0 == "device.input" })
+        #expect(!unsupported.requests.contains { $0.0 == .deviceInput })
     }
 }
 
 @MainActor private final class ToolsMachine: MachineRequesting {
     var devices: [JSONValue]
     var refusal: String?
-    var requests: [(String, JSONValue)] = []
+    var requests: [(WireRequest, JSONValue)] = []
     private var settings: [String: JSONValue] = ["appearance": .string("light")]
     private let inputArrival = NativeArrival()
 
@@ -154,21 +154,21 @@ import Testing
 
     init(devices: [JSONValue]) { self.devices = devices }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
-        if type == "device.input" { inputArrival.record() }
-        if let refusal, type == "device.action" { throw MachineClientError.server(code: refusal, message: refusal) }
+        if type == .deviceInput { inputArrival.record() }
+        if let refusal, type == .deviceAction { throw MachineClientError.server(code: refusal, message: refusal) }
         switch type {
-        case "device.list": return .object(["devices": .array(devices)])
-        case "device.open": return (devices.first ?? .object([:])).setting("streamId", .string("device:1"))
-        case "device.detail": return .object(["settings": .object(settings)])
-        case "device.action":
+        case .deviceList: return .object(["devices": .array(devices)])
+        case .deviceOpen: return (devices.first ?? .object([:])).setting("streamId", .string("device:1"))
+        case .deviceDetail: return .object(["settings": .object(settings)])
+        case .deviceAction:
             if payload.text("action") == "setAppearance" { settings["appearance"] = payload["value"] }
             return .object(["settings": .object(settings)])
-        case "device.shutdown", "device.boot": return devices.first ?? .object([:])
+        case .deviceShutdown, .deviceBoot: return devices.first ?? .object([:])
         default: return .object([:])
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

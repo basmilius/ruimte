@@ -93,25 +93,25 @@ extension XCTestCase {
 /// A machine that answers from a table per request type and records what it was asked. A request type can be held
 /// until the test releases it, and events and link changes reach whoever subscribed.
 @MainActor final class ScriptedMachine: MachineRequesting {
-    var answers: [String: (JSONValue) throws -> JSONValue] = [:]
+    var answers: [WireRequest: (JSONValue) throws -> JSONValue] = [:]
     /// Request types the machine refuses, with the error code it refuses them with.
-    var refusals: [String: String] = [:]
-    private(set) var sent: [(type: String, payload: JSONValue)] = []
-    private var held = Set<String>()
-    private var pending: [String: CheckedContinuation<Void, Never>] = [:]
-    private var arrivals: [String: NativeArrival] = [:]
-    private var handlers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
+    var refusals: [WireRequest: String] = [:]
+    private(set) var sent: [(type: WireRequest, payload: JSONValue)] = []
+    private var held = Set<WireRequest>()
+    private var pending: [WireRequest: CheckedContinuation<Void, Never>] = [:]
+    private var arrivals: [WireRequest: NativeArrival] = [:]
+    private var handlers: [WireEvent: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
     private var connections: [UUID: @MainActor @Sendable (Bool) -> Void] = [:]
     private var connected = true
 
-    init(_ answers: [String: (JSONValue) throws -> JSONValue] = [:]) {
+    init(_ answers: [WireRequest: (JSONValue) throws -> JSONValue] = [:]) {
         self.answers = answers
     }
 
     /// The types of the requests sent so far, in order.
-    var requests: [String] { sent.map(\.type) }
+    var requests: [WireRequest] { sent.map(\.type) }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
         if held.contains(type) {
             await withCheckedContinuation {
@@ -125,23 +125,23 @@ extension XCTestCase {
         return try answers[type]?(payload) ?? .object([:])
     }
 
-    func hold(_ type: String) { held.insert(type) }
+    func hold(_ type: WireRequest) { held.insert(type) }
 
-    func release(_ type: String) {
+    func release(_ type: WireRequest) {
         held.remove(type)
         pending.removeValue(forKey: type)?.resume()
     }
 
-    func waitForRequest(_ type: String) async { await arrival(type).wait() }
+    func waitForRequest(_ type: WireRequest) async { await arrival(type).wait() }
 
-    private func arrival(_ type: String) -> NativeArrival {
+    private func arrival(_ type: WireRequest) -> NativeArrival {
         if let arrival = arrivals[type] { return arrival }
         let arrival = NativeArrival()
         arrivals[type] = arrival
         return arrival
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
         let id = UUID()
         handlers[event, default: [:]][id] = handler
         return { [weak self] in self?.handlers[event]?[id] = nil }
@@ -154,7 +154,7 @@ extension XCTestCase {
         return { [weak self] in self?.connections[id] = nil }
     }
 
-    func emit(_ event: String, _ payload: JSONValue = .object([:])) {
+    func emit(_ event: WireEvent, _ payload: JSONValue = .object([:])) {
         for handler in (handlers[event] ?? [:]).values { handler(payload) }
     }
 

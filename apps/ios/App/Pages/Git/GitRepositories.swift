@@ -44,7 +44,7 @@ import SwiftUI
     func run(client: any MachineRequesting, folder: String) async {
         let (stream, continuation) = AsyncStream<Signal>.makeStream(bufferingPolicy: .unbounded)
         let cancelConnection = client.observeConnection { if $0 { continuation.yield(.connected) } }
-        let cancelStatus = client.subscribe("git.status") { continuation.yield(.status($0)) }
+        let cancelStatus = client.subscribe(.gitStatus) { continuation.yield(.status($0)) }
         defer {
             cancelConnection()
             cancelStatus()
@@ -67,7 +67,7 @@ import SwiftUI
     /// Reads which repositories the folder holds, then takes a watch and a first status on each.
     func reload(client: any MachineRequesting, folder: String) async {
         do {
-            let answer = try await client.request("git.repos", payload: .object(["folder": .string(folder)]))
+            let answer = try await client.request(.gitRepos, payload: .object(["folder": .string(folder)]))
             let repos = answer.list("repos")
             truncated = answer["truncated"] == .bool(true)
             checkouts = repos.map { repo in
@@ -111,7 +111,7 @@ import SwiftUI
 
     func refresh(client: any MachineRequesting, cwd: String) async {
         do {
-            let status = try await client.request("git.status", payload: .object(["cwd": .string(cwd)]))
+            let status = try await client.request(.gitStatus, payload: .object(["cwd": .string(cwd)]))
             store(path: cwd, result: .success(try status.decoded(as: GitStatus.self)))
         } catch {
             store(path: cwd, result: .failure(error))

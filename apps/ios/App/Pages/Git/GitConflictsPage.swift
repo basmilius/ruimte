@@ -39,8 +39,9 @@ struct GitConflictsPage: View {
         }
         .task(id: session.cwd) {
             await RemotePageLifecycle.run(
-                client: client, events: ["git.status"], matches: { $0.text("cwd") == session.cwd },
-                subscription: { GitPanel.watch(client, cwd: session.cwd) }, load: { await session.load(client: client) })
+                client: client, events: [.gitStatus], matches: { $0.text("cwd") == session.cwd },
+                subscription: { GitPanel.watch(client, cwd: session.cwd) }, load: { await session.load(client: client) }
+            )
         }
         .refreshable { await session.load(client: client) }
         .modifier(
@@ -56,7 +57,9 @@ struct GitConflictsPage: View {
                     String(localized: "No conflicts left"), lucideIcon: "circle-check",
                     description: Text(
                         session.operation.map {
-                            String(localized: "All resolved. Finish the \($0) below.", comment: "%@ is a git operation: merge, rebase, cherry-pick or revert")
+                            String(
+                                localized: "All resolved. Finish the \($0) below.",
+                                comment: "%@ is a git operation: merge, rebase, cherry-pick or revert")
                         } ?? String(localized: "Nothing to resolve.")))
             }
             ForEach(session.entries) { entry in
@@ -105,7 +108,8 @@ struct GitConflictStatusRows: View {
         if let run = session.agentRun {
             GitBusyRow(
                 text: String(
-                    localized: "Asking an agent: \((run.path as NSString).lastPathComponent), \(run.done + 1) of \(run.total)"),
+                    localized:
+                        "Asking an agent: \((run.path as NSString).lastPathComponent), \(run.done + 1) of \(run.total)"),
                 cancel: { Task { await session.cancelAgent(client: client) } })
         } else if session.busy {
             GitBusyRow(text: session.progress ?? String(localized: "Working"))
@@ -193,18 +197,23 @@ struct GitConflictFilePage: View {
                     ForEach(file.blocks.indices, id: \.self) { index in
                         if file.blocks[index].kind == .conflict {
                             GitConflictBlockView(
-                                block: file.blocks[index], number: (file.conflictIndexes.firstIndex(of: index) ?? 0) + 1,
+                                block: file.blocks[index],
+                                number: (file.conflictIndexes.firstIndex(of: index) ?? 0) + 1,
                                 total: file.conflictIndexes.count, answer: draft.answers[index], ours: session.ours,
                                 theirs: session.theirs, busy: session.busy,
                                 onAnswer: { session.answer(path, block: index, lines: $0) },
                                 onClear: { session.clear(path, block: index) },
-                                onEdit: { editing = GitBlockEdit(block: index, text: draft.lines(of: index, in: file).joined(separator: "\n")) })
+                                onEdit: {
+                                    editing = GitBlockEdit(
+                                        block: index, text: draft.lines(of: index, in: file).joined(separator: "\n"))
+                                })
                         } else {
                             GitMergedBlockView(
                                 kind: file.blocks[index].kind, lines: draft.lines(of: index, in: file),
                                 edited: draft.answers[index] != nil
                             ) {
-                                editing = GitBlockEdit(block: index, text: draft.lines(of: index, in: file).joined(separator: "\n"))
+                                editing = GitBlockEdit(
+                                    block: index, text: draft.lines(of: index, in: file).joined(separator: "\n"))
                             }
                         }
                     }
@@ -223,7 +232,9 @@ struct GitConflictFilePage: View {
                         Button(
                             wandable == 0
                                 ? String(localized: "Nothing to auto-resolve")
-                                : String(localized: "Resolve the \(wandable) that need no choice", comment: "%lld counts conflicts"),
+                                : String(
+                                    localized: "Resolve the \(wandable) that need no choice",
+                                    comment: "%lld counts conflicts"),
                             lucideIcon: "wand-sparkles"
                         ) { session.wand(path) }.disabled(wandable == 0)
                         Button(String(localized: "Ask an agent about this file"), lucideIcon: "sparkles") {
@@ -268,7 +279,9 @@ struct GitConflictFilePage: View {
             Button("Drop file", role: .destructive) { Task { await take("delete") } }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Removes the file from the checkout on both sides of the \(session.operation ?? "merge").", comment: "%@ is a git operation: merge, rebase, cherry-pick or revert")
+            Text(
+                "Removes the file from the checkout on both sides of the \(session.operation ?? "merge").",
+                comment: "%@ is a git operation: merge, rebase, cherry-pick or revert")
         }
     }
 
@@ -278,7 +291,8 @@ struct GitConflictFilePage: View {
         return VStack(alignment: .leading, spacing: 4) {
             Text(path).font(.caption.monospaced()).foregroundStyle(MobileStyle.muted).lineLimit(2).truncationMode(.head)
             Text(total == 0 ? "Nothing in this file needs a choice." : "\(open) of \(total) open")
-                .font(.caption.monospacedDigit()).foregroundStyle(open == 0 ? MobileStyle.statusIdle : MobileStyle.statusNeedsYou)
+                .font(.caption.monospacedDigit()).foregroundStyle(
+                    open == 0 ? MobileStyle.statusIdle : MobileStyle.statusNeedsYou)
         }
     }
 
@@ -369,10 +383,13 @@ private struct GitConflictBlockView: View {
                     Button("Both, \(ours) first") { onAnswer(ThreeWayMerge.bothLines(block, oursFirst: true)) }
                     Button("Both, \(theirs) first") { onAnswer(ThreeWayMerge.bothLines(block, oursFirst: false)) }
                     Button(
-                        answer?.byAgent == true ? String(localized: "Edit the proposal") : String(localized: "Edit by hand"),
+                        answer?.byAgent == true
+                            ? String(localized: "Edit the proposal") : String(localized: "Edit by hand"),
                         lucideIcon: "pencil", action: onEdit)
                     if answer != nil {
-                        Button(String(localized: "Clear the answer"), lucideIcon: "rotate-ccw", role: .destructive, action: onClear)
+                        Button(
+                            String(localized: "Clear the answer"), lucideIcon: "rotate-ccw", role: .destructive,
+                            action: onClear)
                     }
                 } label: {
                     Label(String(localized: "More answers"), lucideIcon: "ellipsis")

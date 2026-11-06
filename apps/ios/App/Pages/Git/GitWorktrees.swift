@@ -168,7 +168,9 @@ enum GitWorktreeText {
     static func rowDetail(_ worktree: GitWorktree) -> String {
         if worktree.missing { return String(localized: "Folder missing") }
         var parts: [String] = []
-        if let from = worktree.fromBranch { parts.append(String(localized: "from \(from)", comment: "%@ is a git branch")) }
+        if let from = worktree.fromBranch {
+            parts.append(String(localized: "from \(from)", comment: "%@ is a git branch"))
+        }
         let held = workSentence(worktree)
         if !held.isEmpty { parts.append(held) }
         if let behind = worktree.work?.behind, behind > 0 {
@@ -242,8 +244,11 @@ enum GitWorktreeText {
         }
         if result["removed"] == .bool(true) {
             return result["branchDeleted"] == .bool(false)
-                ? String(localized: "\(summary) Removed the worktree. Its branch stays.", comment: "%@ is what the merge did")
-                : String(localized: "\(summary) Removed the worktree and its branch.", comment: "%@ is what the merge did")
+                ? String(
+                    localized: "\(summary) Removed the worktree. Its branch stays.", comment: "%@ is what the merge did"
+                )
+                : String(
+                    localized: "\(summary) Removed the worktree and its branch.", comment: "%@ is what the merge did")
         }
         return summary
     }
@@ -269,7 +274,9 @@ enum GitWorktreeText {
 
     /// The checkout a worktree's branch is merged into: the folder when that is on the target, or the
     /// worktree that has it out. Nil when nothing has it out, which the daemon refuses too.
-    static func targetCheckout(folder: String, folderBranch: String?, worktrees: [GitWorktree], into: String?) -> String? {
+    static func targetCheckout(folder: String, folderBranch: String?, worktrees: [GitWorktree], into: String?)
+        -> String?
+    {
         guard let into else { return nil }
         if folderBranch == into { return folder }
         return worktrees.first { $0.branch == into && !$0.missing }?.path
@@ -330,7 +337,7 @@ enum GitWorktreeText {
     func load(client: any MachineRequesting) async {
         do {
             let answer = try await client.request(
-                "git.worktree-list", payload: .object(["repo": .string(repo), "inspect": .bool(true)]))
+                .gitWorktreeList, payload: .object(["repo": .string(repo), "inspect": .bool(true)]))
             worktrees = answer.list("worktrees").map(GitWorktree.init(json:))
         } catch is CancellationError {
             return
@@ -353,11 +360,12 @@ enum GitWorktreeText {
         let name = branch.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
             let result = try await client.request(
-                "git.worktree-add", payload: .object(["repo": .string(repo), "branch": .string(name)]))
+                .gitWorktreeAdd, payload: .object(["repo": .string(repo), "branch": .string(name)]))
             problem = nil
             note =
                 result["created"] == .bool(false)
-                ? String(localized: "\(name) already had a worktree.") : String(localized: "Made a worktree for \(name).")
+                ? String(localized: "\(name) already had a worktree.")
+                : String(localized: "Made a worktree for \(name).")
         } catch {
             problem = error.localizedDescription
         }
@@ -370,7 +378,7 @@ enum GitWorktreeText {
         outcome = nil
         let actionId = UUID().uuidString
         mergeAction = actionId
-        let cancel = client.subscribe("git.progress") { [weak self] payload in
+        let cancel = client.subscribe(.gitProgress) { [weak self] payload in
             guard payload.text("actionId") == actionId else { return }
             let line = payload.text("line")
             self?.progress = line.isEmpty ? nil : line
@@ -382,7 +390,8 @@ enum GitWorktreeText {
             mergeAction = nil
         }
         do {
-            let result = try await client.request("git.worktree-merge", payload: request.payload(repo: repo, actionId: actionId))
+            let result = try await client.request(
+                .gitWorktreeMerge, payload: request.payload(repo: repo, actionId: actionId))
             problem = nil
             if let conflicts = result["conflicts"]?.arrayValue {
                 outcome = .conflict(
@@ -394,7 +403,8 @@ enum GitWorktreeText {
             }
         } catch is CancellationError {
         } catch {
-            outcome = .refused(code: gitRefusalCode(error) ?? "failed", message: error.localizedDescription, request: request)
+            outcome = .refused(
+                code: gitRefusalCode(error) ?? "failed", message: error.localizedDescription, request: request)
         }
         await load(client: client)
     }
@@ -408,15 +418,15 @@ enum GitWorktreeText {
         let message = GitWorktreeText.stashMessage(request.worktree.branch)
         var target: String?
         do {
-            let status = try await client.request("git.status", payload: .object(["cwd": .string(repo)]))
+            let status = try await client.request(.gitStatus, payload: .object(["cwd": .string(repo)]))
                 .decoded(as: GitStatus.self)
-            let list = try await client.request("git.worktree-list", payload: .object(["repo": .string(repo)]))
+            let list = try await client.request(.gitWorktreeList, payload: .object(["repo": .string(repo)]))
             target = GitWorktreeText.targetCheckout(
                 folder: repo, folderBranch: status.branch,
                 worktrees: list.list("worktrees").map(GitWorktree.init(json:)), into: into)
             if let target {
                 _ = try await client.request(
-                    "git.action",
+                    .gitAction,
                     payload: .object([
                         "cwd": .string(target), "actionId": .string(UUID().uuidString), "kind": .string("stash"),
                         "subject": .string(message),
@@ -445,7 +455,7 @@ enum GitWorktreeText {
 
     func cancelMerge(client: any MachineRequesting) async {
         guard let mergeAction else { return }
-        _ = try? await client.request("git.cancel", payload: .object(["actionId": .string(mergeAction)]))
+        _ = try? await client.request(.gitCancel, payload: .object(["actionId": .string(mergeAction)]))
     }
 
     /// Takes back a merge that stopped on a conflict, in the checkout it waits in.
@@ -454,7 +464,7 @@ enum GitWorktreeText {
         busy = true
         defer { busy = false }
         do {
-            _ = try await client.request("git.worktree-abort", payload: .object(["cwd": .string(cwd)]))
+            _ = try await client.request(.gitWorktreeAbort, payload: .object(["cwd": .string(cwd)]))
             outcome = nil
             problem = nil
             note = String(localized: "Merge aborted.")
@@ -474,7 +484,7 @@ enum GitWorktreeText {
         var payload: [String: JSONValue] = ["repo": .string(repo), "path": .string(worktree.path)]
         if removal.force { payload["force"] = .bool(true) }
         do {
-            let result = try await client.request("git.worktree-remove", payload: .object(payload))
+            let result = try await client.request(.gitWorktreeRemove, payload: .object(payload))
             problem = nil
             note = GitWorktreeText.removed(branch: worktree.branch, result: result)
         } catch {

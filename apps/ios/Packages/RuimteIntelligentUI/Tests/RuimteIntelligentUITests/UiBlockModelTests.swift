@@ -5,16 +5,16 @@ import Testing
 @testable import RuimteIntelligentUI
 
 private actor UiRequestRecorder {
-    private(set) var calls: [(String, JSONValue)] = []
+    private(set) var calls: [(WireRequest, JSONValue)] = []
     var queued = false
     func setQueued() { queued = true }
-    func request(_ name: String, _ payload: JSONValue) async throws -> JSONValue {
+    func request(_ name: WireRequest, _ payload: JSONValue) async throws -> JSONValue {
         calls.append((name, payload))
-        if name == "chat.uiChoice" {
+        if name == .chatUiChoice {
             try await Task.sleep(for: .milliseconds(20))
             return .object(["queued": .bool(queued)])
         }
-        if name == "ui.query" {
+        if name == .uiQuery {
             return .object([
                 "state": .string("fresh"), "readId": .string("read-ticket"), "readAt": .number(1),
                 "value": .object(["files": .array([.string("a")])]),
@@ -44,7 +44,7 @@ private actor UiRequestRecorder {
         _ = await (first, second)
         let calls = await recorder.calls
         #expect(calls.count == 1)
-        #expect(calls.first?.0 == "chat.uiChoice")
+        #expect(calls.first?.0 == .chatUiChoice)
         #expect(calls.first?.1["choiceId"] == .string(choiceID))
         #expect(calls.first?.1["itemId"] == .string("item"))
         #expect(model.answer?["state"] == .string("queued"))
@@ -83,7 +83,7 @@ private actor UiRequestRecorder {
         let result = try await model.link(nodeID: nodeID)
         #expect(result["state"] == .string("plain"))
         let call = try #require(await recorder.calls.first)
-        #expect(call.0 == "ui.link")
+        #expect(call.0 == .uiLink)
         #expect(call.1["nodeId"] == .string(nodeID))
         #expect(call.1["target"] == nil)
         #expect(call.1["path"] == nil)

@@ -294,9 +294,9 @@ final class FilePreviewTests: XCTestCase {
         self.language = language
     }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         switch type {
-        case "fs.read":
+        case .fsRead:
             reads += 1
             if let language {
                 return .object([
@@ -309,7 +309,7 @@ final class FilePreviewTests: XCTestCase {
                 "kind": .string("binary"), "mime": .string(mime), "size": .number(Double(data.count)),
                 "mtime": .number(1),
             ])
-        case "bytes.read":
+        case .bytesRead:
             let offset = Int(payload["offset"]?.numberValue ?? 0)
             let length = Int(payload["length"]?.numberValue ?? 0)
             if offset == 0 { pieces += 1 }
@@ -323,5 +323,5 @@ final class FilePreviewTests: XCTestCase {
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

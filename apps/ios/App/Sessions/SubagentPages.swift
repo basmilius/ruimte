@@ -138,7 +138,7 @@ struct SubagentListPage: View {
 extension ChatModel {
     func stopSubagent(_ item: ChatSubagentItem) async throws {
         _ = try await client.request(
-            "chat.stopSubagent", payload: target(["toolUseId": .string(item.toolUseId)]))
+            .chatStopSubagent, payload: target(["toolUseId": .string(item.toolUseId)]))
     }
 
     /// The question before a task stops, since that ends the agent working on it and every agent that one opened.

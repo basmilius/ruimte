@@ -59,14 +59,16 @@ enum LaunchesText {
     func start() {
         guard subscriptions.isEmpty else { return }
         subscriptions.append(
-            client.subscribe("launch.status") { [weak self] payload in
+            client.subscribe(.launchStatus) { [weak self] payload in
                 guard let self, payload.text("projectId") == projectID else { return }
                 let status = LaunchStatus(json: payload)
                 statuses[status.launchID] = status
             })
         subscriptions.append(
-            client.subscribe("launches.changed") { [weak self] payload in
-                guard let self, payload.text("projectId") == projectID, let document = payload["document"] else { return }
+            client.subscribe(.launchesChanged) { [weak self] payload in
+                guard let self, payload.text("projectId") == projectID, let document = payload["document"] else {
+                    return
+                }
                 self.document = LaunchesDocument(json: document)
             })
         subscriptions.append(
@@ -98,7 +100,7 @@ enum LaunchesText {
             statuses = Dictionary(own.map { ($0.launchID, $0) }, uniquingKeysWith: { _, last in last })
         }
         // Without the repositories the launches list without headings.
-        if let answer = try? await client.request("git.repos", payload: .object(["folder": .string(folder)])) {
+        if let answer = try? await client.request(.gitRepos, payload: .object(["folder": .string(folder)])) {
             repos = answer.list("repos").map(LaunchRepo.init(json:))
         }
     }

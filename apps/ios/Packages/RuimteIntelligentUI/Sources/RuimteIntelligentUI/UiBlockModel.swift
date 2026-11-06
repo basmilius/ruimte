@@ -4,7 +4,7 @@ import RuimtePulsar
 
 @MainActor @Observable
 public final class UiBlockModel {
-    public typealias Request = @MainActor @Sendable (String, JSONValue) async throws -> JSONValue
+    public typealias Request = @MainActor @Sendable (WireRequest, JSONValue) async throws -> JSONValue
     public private(set) var block: JSONValue
     public private(set) var result: JSONValue = .object([:])
     public private(set) var values: JSONValue = .object([:])
@@ -147,7 +147,7 @@ public final class UiBlockModel {
         let blockID = block["id"]
         defer { sending = false }
         do {
-            let response = try await request("chat.uiChoice", payload(["choiceId": .string(nodeID)]))
+            let response = try await request(.chatUiChoice, payload(["choiceId": .string(nodeID)]))
             guard revision == block["revision"], blockID == block["id"] else { return }
             answer = .object([
                 "choiceId": .string(nodeID),
@@ -165,7 +165,7 @@ public final class UiBlockModel {
         guard complete, connected else { throw UiInterpreterError.invalid("UI link unavailable") }
         // The daemon derives the target from its stored node and rechecks project access on every open.
         let current = generation
-        let response = try await request("ui.link", payload(["nodeId": .string(nodeID)]))
+        let response = try await request(.uiLink, payload(["nodeId": .string(nodeID)]))
         guard current == generation else { throw CancellationError() }
         resolvedLinks[nodeID] = response
         return response
@@ -186,7 +186,7 @@ public final class UiBlockModel {
         for name in queryNames.prefix(8) {
             guard live() else { return }
             do {
-                let response = try await request("ui.query", payload(["query": .string(name)]))
+                let response = try await request(.uiQuery, payload(["query": .string(name)]))
                 guard live() else { return }
                 readings[name] = response
                 if response["state"] == .string("fresh"), let ticket = response["readId"], let value = response["value"]

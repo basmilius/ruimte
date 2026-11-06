@@ -178,7 +178,7 @@ final class ChatModel {
         defer { sending = false }
         do {
             _ = try await client.request(
-                "chat.send",
+                .chatSend,
                 payload: target([
                     "text": .string(ChatResume.continuePrompt), "mentions": .array([]), "skills": .array([]),
                     "chats": .array([]), "attachments": .array([]),
@@ -212,10 +212,10 @@ final class ChatModel {
 
     func start() {
         guard unsubscribe.isEmpty else { return }
-        attachment = client.acquireAttachment("chat", id: chatID)
+        attachment = client.acquireAttachment(.chat, id: chatID)
         output.start()
         unsubscribe.append(
-            client.subscribe("chat.event") { [weak self] payload in
+            client.subscribe(.chatEvent) { [weak self] payload in
                 guard let self, !self.loading, let envelope = try? payload.decoded(as: ChatEventEnvelope.self),
                     envelope.chatId == self.chatID
                 else { return }
@@ -247,7 +247,7 @@ final class ChatModel {
                 self.limits = payload
             })
         unsubscribe.append(
-            client.subscribeRejected("chat.event") { [weak self] payload in
+            client.subscribeRejected(.chatEvent) { [weak self] payload in
                 guard let self, payload["chatId"]?.stringValue == self.chatID, !self.loading,
                     !self.reattachedOverRejectedEvent
                 else { return }
@@ -324,7 +324,7 @@ final class ChatModel {
     }
 
     private func loadProviders() async throws -> JSONValue {
-        try await client.request("provider.list", payload: .object([:]))
+        try await client.request(.providerList, payload: .object([:]))
     }
 
     /// Nil from a machine before accounts, which does not know the request.
@@ -427,7 +427,7 @@ final class ChatModel {
     /// Finds the forks after each turn among the chats the machine has loaded; a machine that cannot say leaves
     /// the turns unmarked.
     func refreshForks() async {
-        guard let chats = try? await client.request("chat.list", payload: .object([:])) else { return }
+        guard let chats = try? await client.request(.chatList, payload: .object([:])) else { return }
         presentation.setForks(ChatForking.forks(chats: chats.list("chats"), chatID: chatID))
     }
 
@@ -455,7 +455,7 @@ final class ChatModel {
         defer { if currentHistory == historyRevision { loadingHistory = false } }
         do {
             _ = try await client.request(
-                "chat.history", payload: target(["cursor": .string(cursor), "limit": .number(60)])
+                .chatHistory, payload: target(["cursor": .string(cursor), "limit": .number(60)])
             ) { [weak self] page in
                 guard let self, self.generation == current, self.historyRevision == currentHistory,
                     let page = try? page.decoded(as: ChatHistoryResult.self)
@@ -500,7 +500,7 @@ final class ChatModel {
     }
 
     @discardableResult
-    func perform(_ name: String, _ values: [String: JSONValue] = [:]) async -> Bool {
+    func perform(_ name: WireRequest, _ values: [String: JSONValue] = [:]) async -> Bool {
         do {
             _ = try await client.request(name, payload: target(values))
             error = nil
@@ -573,7 +573,7 @@ final class ChatModel {
                 "attachments": .array(payloads),
             ]
             if !references.isEmpty { values["references"] = .array(references.map(JSONValue.string)) }
-            _ = try await client.request("chat.send", payload: target(values))
+            _ = try await client.request(.chatSend, payload: target(values))
             AppUsage.count(.messageSent)
             sendUncertain = false
             if draft == snapshot.text && mentions == snapshot.mentions && skills == snapshot.skills
@@ -625,7 +625,7 @@ final class ChatModel {
         configuring = true
         defer { configuring = false }
         do {
-            _ = try await client.request("chat.configure", payload: target(values))
+            _ = try await client.request(.chatConfigure, payload: target(values))
             settingsProblem = nil
             return true
         } catch {
@@ -667,7 +667,7 @@ final class ChatModel {
             }
             requestedRemoval = !sendNow
             _ = try await client.request(
-                sendNow ? "chat.sendNow" : "chat.unqueue", payload: target(["messageId": .string(message.id)]))
+                sendNow ? .chatSendNow : .chatUnqueue, payload: target(["messageId": .string(message.id)]))
             if !sendNow, let info {
                 self.info = info.with(queue: queue.filter { $0.id != message.id })
             }
@@ -696,7 +696,7 @@ final class ChatModel {
     /// What the machine offers of its other open projects; none when it cannot tell or does not answer.
     func refreshReachedProjects() async {
         guard (client as? MachineFeatures)?.answers(.projectReferables) == true else { return }
-        reachedProjects = (try? await client.request("project.referables"))?.list("projects") ?? []
+        reachedProjects = (try? await client.request(.projectReferables))?.list("projects") ?? []
     }
 
     func search(_ kind: String, query: String) async {
@@ -714,7 +714,8 @@ final class ChatModel {
             case "#":
                 await refreshReachedProjects()
                 // Only what is still in the text: a pick a person deleted would stay out of the list for good.
-                let exclude = [chatID] + ChatDraftSyntax.presentReferences(in: composition.text, references: composition.picked)
+                let exclude =
+                    [chatID] + ChatDraftSyntax.presentReferences(in: composition.text, references: composition.picked)
                 found = ChatReferables.suggestions(referables, chatsOnly: chatsOnly, query: query, exclude: exclude)
                     .map {
                         ChatSuggestion(
@@ -724,7 +725,7 @@ final class ChatModel {
             case "@":
                 if canMention {
                     let result = try await client.request(
-                        "fs.search",
+                        .fsSearch,
                         payload: .object([
                             "cwd": .string(info?.cwd ?? ""), "query": .string(String(query.prefix(256))),
                             "limit": .number(20),
@@ -734,7 +735,7 @@ final class ChatModel {
                     }
                 }
             case "$":
-                let result = try await client.request("skills.list", payload: target())
+                let result = try await client.request(.skillsList, payload: target())
                 found = result.list("skills").filter {
                     query.isEmpty || $0.text("name").localizedCaseInsensitiveContains(query)
                 }

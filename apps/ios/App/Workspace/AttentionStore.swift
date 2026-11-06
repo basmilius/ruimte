@@ -108,23 +108,23 @@ final class AttentionStore {
 
     func start() {
         guard subscriptions.isEmpty else { return }
-        subscriptions.append(client.subscribe("push.attention") { [weak self] entry in self?.receivePush(entry) })
+        subscriptions.append(client.subscribe(.pushAttention) { [weak self] entry in self?.receivePush(entry) })
         subscriptions.append(
-            client.subscribe("session.status") { [weak self] payload in
+            client.subscribe(.sessionStatus) { [weak self] payload in
                 guard let event = try? payload.decoded(as: SessionStatusEvent.self) else { return }
                 self?.read(event.sessionId) { $0.agent = event.agent }
             })
         subscriptions.append(
-            client.subscribe("session.exit") { [weak self] event in
+            client.subscribe(.sessionExit) { [weak self] event in
                 self?.read(event.text("sessionId")) { $0.shellExited = true }
             })
         subscriptions.append(
-            client.subscribe("chat.status") { [weak self] payload in
+            client.subscribe(.chatStatus) { [weak self] payload in
                 guard let info = payload["info"] else { return }
                 self?.receive(chat: payload.text("chatId"), info: info)
             })
         subscriptions.append(
-            client.subscribe("chat.event") { [weak self] payload in
+            client.subscribe(.chatEvent) { [weak self] payload in
                 guard let event = payload["event"], let info = event["info"] else { return }
                 self?.receive(chat: payload.text("chatId"), info: info)
             })
@@ -209,7 +209,7 @@ final class AttentionStore {
             defer { pendingReads.remove(key) }
             do {
                 _ = try await client.request(
-                    "push.read", payload: .object(["nodeId": .string(id), "issuedAt": .number(issuedAt)]))
+                    .pushRead, payload: .object(["nodeId": .string(id), "issuedAt": .number(issuedAt)]))
                 receivePush(
                     .object(["nodeId": .string(id), "issuedAt": .number(issuedAt), "readThrough": .number(issuedAt)]))
             } catch {}
@@ -247,7 +247,7 @@ final class AttentionStore {
     }
 
     private func refresh() async {
-        if let snapshot = try? await client.request("push.attention", payload: .object([:])) {
+        if let snapshot = try? await client.request(.pushAttention, payload: .object([:])) {
             guard !Task.isCancelled else { return }
             marksFrom = snapshot["marksFrom"]?.numberValue
             for entry in snapshot.list("entries") { receivePush(entry) }
@@ -256,7 +256,7 @@ final class AttentionStore {
             await onUnread?(Set(unread))
         }
         do {
-            let sessions = try await client.request("session.list", payload: .object([:]))
+            let sessions = try await client.request(.sessionList, payload: .object([:]))
             guard !Task.isCancelled else { return }
             for session in sessions.list("sessions") {
                 let id = session.text("sessionId")
@@ -265,7 +265,7 @@ final class AttentionStore {
                     $0.shellExited = session["exited"] == .bool(true)
                 }
             }
-            let chats = try await client.request("chat.list", payload: .object([:]))
+            let chats = try await client.request(.chatList, payload: .object([:]))
             guard !Task.isCancelled else { return }
             let ids = Set(
                 sessions.list("sessions").map { $0.text("sessionId") } + chats.list("chats").map { $0.text("chatId") })

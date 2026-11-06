@@ -115,7 +115,7 @@ import XCTest
         let counts = LifecycleCounts()
         let page = Task {
             await RemotePageLifecycle.run(
-                client: machine, events: ["fs.changed"], start: { counts.starts += 1 },
+                client: machine, events: [.fsChanged], start: { counts.starts += 1 },
                 load: {
                     counts.loads += 1
                     counts.arrivals.record()
@@ -124,7 +124,7 @@ import XCTest
         }
         await counts.arrivals.wait()
         machine.connection(true)
-        machine.emit("fs.changed")
+        machine.emit(.fsChanged)
         gate.open()
         await counts.arrivals.wait(for: 2)
         XCTAssertEqual(counts.starts, 2)
@@ -141,13 +141,13 @@ import XCTest
 
 @MainActor private final class LifecycleMachine: MachineRequesting {
     private var observers: [@MainActor @Sendable (Bool) -> Void] = []
-    private var handlers: [String: [@MainActor @Sendable (JSONValue) -> Void]] = [:]
+    private var handlers: [WireEvent: [@MainActor @Sendable (JSONValue) -> Void]] = [:]
 
     func connection(_ connected: Bool) { for observer in observers { observer(connected) } }
-    func emit(_ event: String) { for handler in handlers[event] ?? [] { handler(.object([:])) } }
+    func emit(_ event: WireEvent) { for handler in handlers[event] ?? [] { handler(.object([:])) } }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue { .object([:]) }
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue { .object([:]) }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
         handlers[event, default: []].append(handler)
         return {}
     }

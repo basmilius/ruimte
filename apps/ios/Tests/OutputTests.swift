@@ -26,7 +26,8 @@ import Testing
         ]
         let groups = OutputGroup.groups(items, now: Self.now, calendar: Self.calendar)
         #expect(groups.map(\.period) == [.today, .week, .earlier])
-        #expect(groups.map { $0.items.map(\.id) } == [["evening", "morning"], ["monday", "edge"], ["before", "old"]])
+        #expect(
+            groups.map { $0.items.map(\.id) } == [["evening", "morning"], ["monday", "edge"], ["before", "old"]])
     }
 
     @Test func aKindThisVersionDoesNotKnowDrawsAsAnExport() {
@@ -40,7 +41,7 @@ import Testing
         let store = ProjectOutput(client: machine, projectID: "p1")
         store.start()
         await waitForNativeState { store.items?.count == 1 }
-        #expect(machine.requests.first == "artifact.watch")
+        #expect(machine.requests.first == .artifactWatch)
         #expect(machine.listed == 1)
 
         machine.items.append(Self.summary("b", title: "E2E report"))
@@ -62,7 +63,7 @@ import Testing
         #expect(!store.reachable)
         machine.connection(true)
         await machine.lists.wait(for: 2)
-        #expect(machine.requests.filter { $0 == "artifact.watch" }.count == 2)
+        #expect(machine.requests.filter { $0 == .artifactWatch }.count == 2)
         await waitForNativeState { store.reachable }
         store.stop()
     }
@@ -177,26 +178,26 @@ import Testing
 @MainActor private final class OutputMachineFake: MachineRequesting {
     var items: [JSONValue]
     var failure: MachineClientError?
-    private(set) var requests: [String] = []
+    private(set) var requests: [WireRequest] = []
     private(set) var listed = 0
     let lists = NativeArrival()
     private var observers: [@MainActor @Sendable (Bool) -> Void] = []
-    private var handlers: [String: [@MainActor @Sendable (JSONValue) -> Void]] = [:]
+    private var handlers: [WireEvent: [@MainActor @Sendable (JSONValue) -> Void]] = [:]
 
     init(items: [JSONValue]) { self.items = items }
 
     func connection(_ connected: Bool) { for observer in observers { observer(connected) } }
-    func emit(_ payload: JSONValue) { for handler in handlers["artifact.changed"] ?? [] { handler(payload) } }
+    func emit(_ payload: JSONValue) { for handler in handlers[.artifactChanged] ?? [] { handler(payload) } }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append(type)
         switch type {
-        case "artifact.list":
+        case .artifactList:
             listed += 1
             lists.record()
             if let failure { throw failure }
             return .object(["artifacts": .array(items)])
-        case "artifact.get":
+        case .artifactGet:
             if let failure { throw failure }
             return .object([
                 "artifact": .object([
@@ -209,7 +210,7 @@ import Testing
                 ]),
                 "chatPresent": .bool(true),
             ])
-        case "provider.list":
+        case .providerList:
             return .object([
                 "providers": .array([
                     .object([
@@ -224,7 +225,7 @@ import Testing
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
         handlers[event, default: []].append(handler)
         return {}
     }

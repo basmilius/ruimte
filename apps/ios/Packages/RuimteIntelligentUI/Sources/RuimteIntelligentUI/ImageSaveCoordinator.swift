@@ -25,7 +25,7 @@ public final class ImageSaveCoordinator {
         let root: JSONValue
         do {
             root = try await request(
-                "chat.imageTarget", .object(["chatId": .string(chatID), "attachmentId": .string(attachmentID)]))
+                .chatImageTarget, .object(["chatId": .string(chatID), "attachmentId": .string(attachmentID)]))
         } catch {
             guard generation == id else { return nil }
             throw error

@@ -88,7 +88,8 @@ final class SharedMachineSession {
                 problem = error?.localizedDescription
                 discardIdleChats()
                 rpc.disconnected(error: error)
-            }, route: { [weak self] in
+            },
+            route: { [weak self] in
                 self?.route = $0
                 self?.rpc.setRoute($0)
             }, features: { [weak self] in self?.rpc.setFeatures($0) },
@@ -287,11 +288,11 @@ final class MachineNavigationLease {
 
 @MainActor
 final class ProjectSubscriptions {
-    private let request: (String, JSONValue) async throws -> JSONValue
+    private let request: (WireRequest, JSONValue) async throws -> JSONValue
     private var references: [String: Int] = [:]
     private var operations: [String: Task<JSONValue, Error>] = [:]
 
-    init(request: @escaping (String, JSONValue) async throws -> JSONValue) { self.request = request }
+    init(request: @escaping (WireRequest, JSONValue) async throws -> JSONValue) { self.request = request }
 
     func retain(_ id: String) { references[id, default: 0] += 1 }
 
@@ -302,7 +303,7 @@ final class ProjectSubscriptions {
         let task = Task {
             _ = try? await previous?.value
             guard references[id, default: 0] > 0 else { throw CancellationError() }
-            return try await request("project.open", .object(["projectId": .string(id)]))
+            return try await request(.projectOpen, .object(["projectId": .string(id)]))
         }
         operations[id] = task
         return try await task.value
@@ -316,7 +317,7 @@ final class ProjectSubscriptions {
             // The daemon registers a viewer only after its asynchronous open completes.
             _ = try? await previous?.value
             guard connected, references[id, default: 0] == 0 else { return JSONValue.object([:]) }
-            return try await request("project.release", .object(["projectId": .string(id)]))
+            return try await request(.projectRelease, .object(["projectId": .string(id)]))
         }
         operations[id] = task
         return Task { _ = try? await task.value }

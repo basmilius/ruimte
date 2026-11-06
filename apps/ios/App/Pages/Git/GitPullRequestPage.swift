@@ -32,7 +32,7 @@ import SwiftUI
     func load(client: any MachineRequesting) async {
         if title.isEmpty,
             let log = try? await client.request(
-                "git.log", payload: .object(["cwd": .string(path), "limit": .number(1)]))
+                .gitLog, payload: .object(["cwd": .string(path), "limit": .number(1)]))
         {
             title = log.list("commits").first?.text("subject") ?? ""
         }
@@ -40,7 +40,7 @@ import SwiftUI
             "cwd": .string(path), "scope": .string("base"), "staged": .bool(false),
         ]
         if let base = checkout?.status?.base { payload["base"] = .string(base) }
-        guard let diff = try? await client.request("git.diff", payload: .object(payload)) else { return }
+        guard let diff = try? await client.request(.gitDiff, payload: .object(payload)) else { return }
         let files = diff.list("files")
         stats = (
             files.count, files.reduce(0) { $0 + Int($1.number("added")) },

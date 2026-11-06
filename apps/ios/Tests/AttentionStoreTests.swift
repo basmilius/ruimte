@@ -40,10 +40,10 @@ final class AttentionStoreTests: XCTestCase {
         defer { store.stop() }
         await refresh.finish()
         machine.emit(
-            "chat.status", .object(["chatId": .string("chat-1"), "info": .object(["status": .string("running")])]))
+            .chatStatus, .object(["chatId": .string("chat-1"), "info": .object(["status": .string("running")])]))
         XCTAssertEqual(store.statuses["chat-1"], .running)
         machine.emit(
-            "chat.status", .object(["chatId": .string("chat-1"), "info": .object(["status": .string("idle")])]))
+            .chatStatus, .object(["chatId": .string("chat-1"), "info": .object(["status": .string("idle")])]))
         XCTAssertEqual(store.statuses["chat-1"], .idle)
         XCTAssertTrue(store.unseen.contains("chat-1"))
         XCTAssertEqual(machine.chatLists, 1)
@@ -58,28 +58,28 @@ final class AttentionStoreTests: XCTestCase {
     let snapshot: JSONValue
     var push: (@MainActor @Sendable (JSONValue) -> Void)?
     private(set) var chatLists = 0
-    private var handlers: [String: @MainActor @Sendable (JSONValue) -> Void] = [:]
+    private var handlers: [WireEvent: @MainActor @Sendable (JSONValue) -> Void] = [:]
 
     init(snapshot: JSONValue) { self.snapshot = snapshot }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         switch type {
-        case "push.attention": return snapshot
-        case "session.list": return .object(["sessions": .array([])])
-        case "chat.list":
+        case .pushAttention: return snapshot
+        case .sessionList: return .object(["sessions": .array([])])
+        case .chatList:
             chatLists += 1
             return .object(["chats": .array([])])
         default: return .object([:])
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
-        if event == "push.attention" { push = handler }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+        if event == .pushAttention { push = handler }
         handlers[event] = handler
         return {}
     }
 
-    func emit(_ event: String, _ payload: JSONValue) { handlers[event]?(payload) }
+    func emit(_ event: WireEvent, _ payload: JSONValue) { handlers[event]?(payload) }
 
 }
 

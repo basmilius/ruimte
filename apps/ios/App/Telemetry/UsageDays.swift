@@ -1,4 +1,5 @@
 import Foundation
+import RuimtePulsar
 
 /// Every name the app counts in its anonymous daily usage, and nothing else: a fixed word for a screen it showed or a
 /// thing a person did from the phone, never an id, a name, a path or text. Only what a machine cannot see itself, since
@@ -24,10 +25,10 @@ enum UsageCounter: String, CaseIterable, Sendable {
     case attachmentAdded = "actions.attachmentAdded"
 
     /// The counter of a request that answers a card, wherever on the phone it was answered.
-    static func answering(_ request: String) -> UsageCounter? {
+    static func answering(_ request: WireRequest) -> UsageCounter? {
         switch request {
-        case "chat.approve": .approvalAnswered
-        case "chat.answer": .questionAnswered
+        case .chatApprove: .approvalAnswered
+        case .chatAnswer: .questionAnswered
         default: nil
         }
     }

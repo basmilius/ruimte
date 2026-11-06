@@ -143,7 +143,7 @@ final class ScheduledFeed: MachineFeed {
         if client.answers(.routineWatch) {
             if lease == nil {
                 lease = client.acquireSubscription(
-                    start: WireRequest.routineWatch.rawValue, stop: WireRequest.routineUnwatch.rawValue,
+                    start: .routineWatch, stop: .routineUnwatch,
                     payload: .object([:]), stopPayload: .object([:]))
             }
             _ = try? await lease?.refresh()

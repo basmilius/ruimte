@@ -310,19 +310,19 @@ final class PlanOutlineTests: XCTestCase {
         let machine = PlanMachine()
         let store = PlanStore(client: machine)
         store.start()
-        machine.emit("plan.changed", .object(["chatId": .string("chat"), "plan": plan("p", rev: 3, items: [])]))
-        machine.emit("plan.changed", .object(["chatId": .string("chat"), "plan": plan("p", rev: 2, items: [])]))
+        machine.emit(.planChanged, .object(["chatId": .string("chat"), "plan": plan("p", rev: 3, items: [])]))
+        machine.emit(.planChanged, .object(["chatId": .string("chat"), "plan": plan("p", rev: 2, items: [])]))
         XCTAssertEqual(store.plans(for: "chat").map(\.rev), [3])
 
         store.setListed([.object(["chatId": .string("chat"), "plan": plan("p", rev: 1, items: [])])])
         XCTAssertEqual(store.plans(for: "chat").map(\.rev), [3], "a list answer older than an event does not win")
 
-        machine.emit("plan.created", .object(["chatId": .string("chat"), "planId": .string("q")]))
+        machine.emit(.planCreated, .object(["chatId": .string("chat"), "planId": .string("q")]))
         XCTAssertTrue(store.unseen.contains("chat"))
         store.markSeen("chat")
         XCTAssertFalse(store.unseen.contains("chat"))
 
-        machine.emit("plan.removed", .object(["chatId": .string("chat"), "planId": .string("p")]))
+        machine.emit(.planRemoved, .object(["chatId": .string("chat"), "planId": .string("p")]))
         XCTAssertTrue(store.plans(for: "chat").isEmpty)
     }
 
@@ -339,7 +339,7 @@ final class PlanOutlineTests: XCTestCase {
         store.start()
         defer { store.stop() }
         await fulfillment(of: [listed], timeout: 1)
-        XCTAssertEqual(machine.sent.filter { $0.0 == "plan.list" }.map(\.1), [.object([:])])
+        XCTAssertEqual(machine.sent.filter { $0.0 == .planList }.map(\.1), [.object([:])])
         XCTAssertEqual(store.plans(for: "chat").map(\.rev), [6])
     }
 
@@ -365,7 +365,7 @@ final class PlanOutlineTests: XCTestCase {
         machine.answer = .object(["plan": plan("p", rev: 5, items: [step("a", state: "done", by: "person")])])
         let store = PlanStore(client: machine)
         try await store.apply(chatID: "chat", planID: "p", ops: [PlanOps.set(["a"], .done)])
-        XCTAssertEqual(machine.sent.last?.0, "plan.apply")
+        XCTAssertEqual(machine.sent.last?.0, .planApply)
         XCTAssertEqual(machine.sent.last?.1["planId"], .string("p"))
         XCTAssertEqual(
             machine.sent.last?.1,
@@ -381,19 +381,19 @@ final class PlanOutlineTests: XCTestCase {
 }
 
 @MainActor private final class PlanMachine: MachineRequesting {
-    var handlers: [String: @MainActor @Sendable (JSONValue) -> Void] = [:]
-    var sent: [(String, JSONValue)] = []
+    var handlers: [WireEvent: @MainActor @Sendable (JSONValue) -> Void] = [:]
+    var sent: [(WireRequest, JSONValue)] = []
     var answer: JSONValue = .object(["plans": .array([])])
     var listed: [JSONValue] = []
 
-    func emit(_ event: String, _ payload: JSONValue) { handlers[event]?(payload) }
+    func emit(_ event: WireEvent, _ payload: JSONValue) { handlers[event]?(payload) }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
-        return type == "plan.list" ? .object(["plans": .array(listed)]) : answer
+        return type == .planList ? .object(["plans": .array(listed)]) : answer
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
         handlers[event] = handler
         return {}
     }

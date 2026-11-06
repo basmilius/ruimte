@@ -426,7 +426,7 @@ enum ChatSubagents {
     @MainActor static func agentsEnded(with nodeIDs: [String], client: any MachineRequesting) async -> Int {
         var ended = Set<String>()
         for nodeID in nodeIDs {
-            let result = try? await client.request("agent.children", payload: .object(["nodeId": .string(nodeID)]))
+            let result = try? await client.request(.agentChildren, payload: .object(["nodeId": .string(nodeID)]))
             for id in result?.list("nodeIds").compactMap(\.stringValue) ?? [] { ended.insert(id) }
         }
         return ended.subtracting(nodeIDs).count
@@ -517,7 +517,7 @@ final class SubagentConversation {
         holding = true
         SubagentWatches.acquire(watchKey)
         subscriptions = [
-            client.subscribe("chat.subagentChanged") { [weak self] event in
+            client.subscribe(.chatSubagentChanged) { [weak self] event in
                 guard let self, event.text("chatId") == chatID, event.text("toolUseId") == toolUseID else { return }
                 refresh()
             },
@@ -539,7 +539,7 @@ final class SubagentConversation {
         let payload = JSONValue.object([
             "chatId": .string(chatID), "toolUseId": .string(toolUseID), "limit": .number(1), "watch": .bool(false),
         ])
-        Task { [client] in _ = try? await client.request("chat.subagent", payload: payload) }
+        Task { [client] in _ = try? await client.request(.chatSubagent, payload: payload) }
     }
 
     /// The newest page again; calls that arrive while one waits become that one.
@@ -617,7 +617,7 @@ final class SubagentConversation {
         ]
         if let cursor { payload["cursor"] = .string(cursor) }
         if let watch { payload["watch"] = .bool(watch) }
-        return try await client.request("chat.subagent", payload: .object(payload))
+        return try await client.request(.chatSubagent, payload: .object(payload))
     }
 
     /// Only a delegated chat answers its own requests; a request still waiting stays answerable after it left the

@@ -65,17 +65,17 @@ enum ChatBookmarks {
 
     /// The request a name field settles on, or nil when the name did not change. A name goes through `addBookmark`,
     /// which also names a bookmark that already stands; an empty one takes the name away.
-    static func naming(_ name: String, previous: String?) -> (request: String, name: String)? {
+    static func naming(_ name: String, previous: String?) -> (request: WireRequest, name: String)? {
         let next = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(nameMax))
         guard next != (previous ?? "") else { return nil }
-        return next.isEmpty ? ("chat.renameBookmark", "") : ("chat.addBookmark", next)
+        return next.isEmpty ? (.chatRenameBookmark, "") : (.chatAddBookmark, next)
     }
 }
 
 extension ChatModel {
     /// Marks a message; true once the machine holds the bookmark.
     func addBookmark(_ itemID: String) async -> Bool {
-        await changeBookmarks("chat.addBookmark", ["itemId": .string(itemID)])
+        await changeBookmarks(.chatAddBookmark, ["itemId": .string(itemID)])
     }
 
     func nameBookmark(_ itemID: String, name: String) async {
@@ -84,7 +84,7 @@ extension ChatModel {
     }
 
     func removeBookmark(_ itemID: String) async {
-        _ = await changeBookmarks("chat.removeBookmark", ["itemId": .string(itemID)])
+        _ = await changeBookmarks(.chatRemoveBookmark, ["itemId": .string(itemID)])
     }
 
     /// Scrolls to a bookmarked message, reading earlier pages of the thread until it is there.
@@ -125,7 +125,7 @@ extension ChatModel {
         return true
     }
 
-    private func changeBookmarks(_ request: String, _ values: [String: JSONValue]) async -> Bool {
+    private func changeBookmarks(_ request: WireRequest, _ values: [String: JSONValue]) async -> Bool {
         do {
             let result = try await client.request(request, payload: target(values))
             presentation.setBookmarks(ChatBookmarks.parse(result.list("bookmarks")))

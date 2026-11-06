@@ -323,7 +323,7 @@ struct ChatWorkflowRow: View {
         Task {
             do {
                 _ = try await context.client.request(
-                    "chat.stopTask",
+                    .chatStopTask,
                     payload: .object(["chatId": .string(context.chatID), "taskId": .string(taskID)]))
             } catch {
                 failure = error.localizedDescription

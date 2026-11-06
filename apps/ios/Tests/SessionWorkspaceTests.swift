@@ -56,11 +56,11 @@ final class SessionWorkspaceTests: XCTestCase {
         let opening = Task { try await subscriptions.open("project") }
         await gate.waitForOpen()
         let closing = subscriptions.release("project", connected: true)
-        XCTAssertEqual(gate.requests, ["project.open"])
+        XCTAssertEqual(gate.requests, [.projectOpen])
         gate.completeOpen()
         _ = try await opening.value
         await closing.value
-        XCTAssertEqual(gate.requests, ["project.open", "project.release"])
+        XCTAssertEqual(gate.requests, [.projectOpen, .projectRelease])
     }
 
     @MainActor func testAnotherWindowRetainsProjectSubscription() async throws {
@@ -71,11 +71,11 @@ final class SessionWorkspaceTests: XCTestCase {
         let opening = Task { try await subscriptions.open("project") }
         await gate.waitForOpen()
         await subscriptions.release("project", connected: true).value
-        XCTAssertEqual(gate.requests, ["project.open"])
+        XCTAssertEqual(gate.requests, [.projectOpen])
         gate.completeOpen()
         _ = try await opening.value
         await subscriptions.release("project", connected: true).value
-        XCTAssertEqual(gate.requests, ["project.open", "project.release"])
+        XCTAssertEqual(gate.requests, [.projectOpen, .projectRelease])
     }
 
     @MainActor func testASaveThatConflictedGoesOutAgainOnceMerged() async throws {
@@ -344,8 +344,8 @@ final class SessionWorkspaceTests: XCTestCase {
         let frame = try JSONValue.decode(Data(text.utf8))
         let id = frame["id"] ?? .null
         let reply: JSONValue
-        switch frame.text("type") {
-        case "project.open":
+        switch WireRequest(rawValue: frame.text("type")) {
+        case .projectOpen:
             reply = .object([
                 "id": id, "ok": .bool(true),
                 "result": .object([
@@ -353,19 +353,19 @@ final class SessionWorkspaceTests: XCTestCase {
                     "local": .object(["activeViewId": .null, "views": .object([:])]),
                 ]),
             ])
-        case "project.save" where conflicts > 0:
+        case .projectSave where conflicts > 0:
             conflicts -= 1
             saves.append(frame["payload"] ?? .null)
             reply = .object([
                 "id": id, "ok": .bool(false),
                 "error": .object(["code": .string("rev-conflict"), "message": .string("The project changed.")]),
             ])
-        case "project.save":
+        case .projectSave:
             saves.append(frame["payload"] ?? .null)
             let rev = remote.number("rev") + 1
             remote = (frame["payload"]?["content"] ?? remote).setting("rev", .number(rev))
             reply = .object(["id": id, "ok": .bool(true), "result": .object(["rev": .number(rev)])])
-        case "project.save-local":
+        case .projectSaveLocal:
             localSaves.append(frame["payload"] ?? .null)
             reply = .object(["id": id, "ok": .bool(true), "result": .object([:])])
         default:
@@ -384,12 +384,12 @@ final class SessionWorkspaceTests: XCTestCase {
 }
 
 @MainActor private final class WorkspaceRequestGate {
-    var requests: [String] = []
+    var requests: [WireRequest] = []
     private var openContinuation: CheckedContinuation<JSONValue, Error>?
     private var waiting: CheckedContinuation<Void, Never>?
-    func request(_ type: String, _ payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, _ payload: JSONValue) async throws -> JSONValue {
         requests.append(type)
-        if type == "project.open" {
+        if type == .projectOpen {
             return try await withCheckedThrowingContinuation { continuation in
                 openContinuation = continuation
                 waiting?.resume()

@@ -39,21 +39,21 @@ final class TerminalModel {
 
     func start() {
         guard unsubscribe.isEmpty else { return }
-        attachment = client.acquireAttachment("session", id: sessionID)
-        for eventName in ["session.output", "session.resync", "session.size", "session.exit"] {
+        attachment = client.acquireAttachment(.session, id: sessionID)
+        for eventName in [WireEvent]([.sessionOutput, .sessionResync, .sessionSize, .sessionExit]) {
             unsubscribe.append(
                 client.subscribe(eventName) { [weak self] payload in
                     guard let self, payload["sessionId"]?.stringValue == sessionID else { return }
                     switch eventName {
-                    case "session.output": deliver(payload["data"]?.stringValue ?? "", reset: false)
-                    case "session.resync": deliver(payload["screen"]?.stringValue ?? "", reset: true)
-                    case "session.size": follow(payload)
+                    case .sessionOutput: deliver(payload["data"]?.stringValue ?? "", reset: false)
+                    case .sessionResync: deliver(payload["screen"]?.stringValue ?? "", reset: true)
+                    case .sessionSize: follow(payload)
                     default: exited = true
                     }
                 })
         }
         unsubscribe.append(
-            client.subscribe("session.list-changed") { [weak self] _ in Task { await self?.refreshInfo() } })
+            client.subscribe(.sessionListChanged) { [weak self] _ in Task { await self?.refreshInfo() } })
         unsubscribe.append(
             client.observeConnection { [weak self] available in
                 guard let self else { return }
@@ -126,7 +126,7 @@ final class TerminalModel {
 
     func refreshInfo() async {
         do {
-            let result = try await client.request("session.list", payload: .object([:]))
+            let result = try await client.request(.sessionList, payload: .object([:]))
             guard !Task.isCancelled, connected else { return }
             if let info = result["sessions"]?.arrayValue?.first(where: { $0["sessionId"]?.stringValue == sessionID }) {
                 exited = info["exited"]?.boolValue ?? exited
@@ -165,7 +165,7 @@ final class TerminalModel {
             while !queuedInput.isEmpty, !Task.isCancelled {
                 let text = queuedInput.joined()
                 queuedInput.removeAll()
-                do { _ = try await client.request("session.write", payload: target(["data": .string(text)])) } catch {
+                do { _ = try await client.request(.sessionWrite, payload: target(["data": .string(text)])) } catch {
                     self.error = error.localizedDescription
                     queuedInput.removeAll()
                     return
@@ -189,7 +189,7 @@ final class TerminalModel {
     }
 
     func clear() async {
-        do { _ = try await client.request("session.clear", payload: target()) } catch {
+        do { _ = try await client.request(.sessionClear, payload: target()) } catch {
             self.error = error.localizedDescription
         }
     }

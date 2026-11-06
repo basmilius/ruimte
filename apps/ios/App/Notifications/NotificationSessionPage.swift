@@ -69,13 +69,13 @@ struct NotificationSessionPage: View {
             guard let session, session.connected, target == "unknown" else { return }
             // Nothing here is on screen yet, so the page draws its own spinner and this read shows none.
             await work.read(loaded: true) { stillTheLatest in
-                let chats = try await session.rpc.request("chat.list").list("chats")
+                let chats = try await session.rpc.request(.chatList).list("chats")
                 try stillTheLatest()
                 if chats.contains(where: { $0.text("chatId", fallback: $0.stableID) == destination.nodeID }) {
                     target = "chat"
                     return
                 }
-                let terminals = try await session.rpc.request("session.list").list("sessions")
+                let terminals = try await session.rpc.request(.sessionList).list("sessions")
                 try stillTheLatest()
                 guard terminals.contains(where: { $0.text("sessionId") == destination.nodeID }) else {
                     // A node that is in neither list is why this read found nothing, so it reads as the failure.
@@ -110,9 +110,9 @@ private struct MachineActivityPage: View {
         .navigationTitle(session.machine.name)
         .task(id: session.generation) {
             subscriptions.forEach { $0() }
-            subscriptions = ["session.status", "session.list-changed", "chat.event"].map { event in
+            subscriptions = [.sessionStatus, .sessionListChanged, .chatEvent].map { event in
                 session.rpc.subscribe(event) { payload in
-                    if event == "chat.event", payload["event"]?.text("type") != "info" { return }
+                    if event == .chatEvent, payload["event"]?.text("type") != "info" { return }
                     Task { await load() }
                 }
             }
@@ -148,8 +148,8 @@ private struct MachineActivityPage: View {
 
     private func load() async {
         await work.read(loaded: true) { stillTheLatest in
-            async let terminalResult = session.rpc.request("session.list")
-            async let chatResult = session.rpc.request("chat.list")
+            async let terminalResult = session.rpc.request(.sessionList)
+            async let chatResult = session.rpc.request(.chatList)
             let terminals = try await terminalResult.list("sessions")
             let listed = try await chatResult.list("chats")
             try stillTheLatest()

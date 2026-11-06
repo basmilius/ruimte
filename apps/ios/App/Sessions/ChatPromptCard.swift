@@ -10,7 +10,7 @@ struct ChatPromptCard: View {
     let availableHeight: CGFloat
     /// The agent a request of a chat this one opened comes from; nil for the chat's own.
     var source: ChatPromptSource?
-    let perform: @MainActor (String, [String: JSONValue]) async throws -> Void
+    let perform: @MainActor (WireRequest, [String: JSONValue]) async throws -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @FocusState private var answerFocused: Bool
     @FocusState private var reasonFocused: Bool
@@ -296,7 +296,7 @@ struct ChatPromptCard: View {
                 if prompts.draft.index > 0 {
                     Button("Previous") { prompts.draft.index -= 1 }.frame(minHeight: 44).disabled(sending)
                 } else if asked?.async == true {
-                    Button("Dismiss") { submit("chat.dismiss", ["itemId": .string(item.id)]) }
+                    Button("Dismiss") { submit(.chatDismiss, ["itemId": .string(item.id)]) }
                         .frame(minHeight: 44).disabled(sending || !connected)
                 }
                 if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
@@ -318,7 +318,7 @@ struct ChatPromptCard: View {
                             answers[question.id] = .string(value)
                         }
                         submit(
-                            "chat.answer", ["requestId": .string(item.requestId ?? ""), "answers": .object(answers)])
+                            .chatAnswer, ["requestId": .string(item.requestId ?? ""), "answers": .object(answers)])
                     }
                 }
             }
@@ -364,9 +364,9 @@ struct ChatPromptCard: View {
         if decision == "deny", !prompts.draft.denialReason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             values["message"] = .string(prompts.draft.denialReason)
         }
-        submit("chat.approve", values)
+        submit(.chatApprove, values)
     }
-    private func submit(_ action: String, _ values: [String: JSONValue]) {
+    private func submit(_ action: WireRequest, _ values: [String: JSONValue]) {
         Task {
             await prompts.submit(item, connected: connected) {
                 try await perform(action, values)

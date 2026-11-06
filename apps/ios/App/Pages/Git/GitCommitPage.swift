@@ -52,7 +52,7 @@ import SwiftUI
 
     func loadProvider(client: any MachineRequesting) async {
         guard let probe = repositories.checkouts.first?.path else { return }
-        let answer = try? await client.request("git.capabilities", payload: .object(["cwd": .string(probe)]))
+        let answer = try? await client.request(.gitCapabilities, payload: .object(["cwd": .string(probe)]))
         provider = answer?["messageProvider"]?.stringValue
     }
 
@@ -61,7 +61,7 @@ import SwiftUI
         guard let cwd = writeFrom else { return }
         if writing {
             if let running = writingID {
-                _ = try? await client.request("git.cancel", payload: .object(["actionId": .string(running)]))
+                _ = try? await client.request(.gitCancel, payload: .object(["actionId": .string(running)]))
             }
             return
         }
@@ -75,7 +75,7 @@ import SwiftUI
         var payload: [String: JSONValue] = ["cwd": .string(cwd), "actionId": .string(actionID)]
         if let provider { payload["provider"] = .string(provider) }
         do {
-            let suggestion = try await client.request("git.suggestMessage", payload: .object(payload))
+            let suggestion = try await client.request(.gitSuggestMessage, payload: .object(payload))
             subject = suggestion.text("subject")
             body = suggestion.text("body")
             repositories.problem = nil

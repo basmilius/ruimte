@@ -41,7 +41,8 @@ struct MachineFilesPage: View {
                 Button {
                     finding = true
                 } label: {
-                    Label(String(localized: "Find in files"), lucideIcon: "file-search").modifier(MobileSidebarLabel(disclosure: true))
+                    Label(String(localized: "Find in files"), lucideIcon: "file-search").modifier(
+                        MobileSidebarLabel(disclosure: true))
                 }
                 .modifier(MobileSidebarRow())
             }
@@ -82,7 +83,8 @@ struct MachineFilesPage: View {
                     lucideIcon: "folder")
             }
             if state.value?["truncated"] == .bool(true) {
-                Text("This folder has more entries than the machine can list at once.").font(.footnote).foregroundStyle(MobileStyle.muted)
+                Text("This folder has more entries than the machine can list at once.").font(.footnote).foregroundStyle(
+                    MobileStyle.muted)
             }
         }
         .navigationTitle(path == "~" ? String(localized: "Files") : URL(fileURLWithPath: path).lastPathComponent)
@@ -109,7 +111,7 @@ struct MachineFilesPage: View {
         }
         .task(id: "\(path):\(hidden)") {
             await RemotePageLifecycle.run(
-                client: client, events: ["fs.changed"],
+                client: client, events: [.fsChanged],
                 matches: { event in
                     let resolved = state.value?.text("path") ?? path
                     let root = event.text("root")
@@ -123,7 +125,9 @@ struct MachineFilesPage: View {
     @ViewBuilder private func entryMenu(_ entry: JSONValue, directory: Bool, project: FilesProject) -> some View {
         let entryPath = entry.text("path")
         if !directory {
-            Button(String(localized: "Open as view"), lucideIcon: "columns-2") { Task { await project.openAsView(entryPath) } }
+            Button(String(localized: "Open as view"), lucideIcon: "columns-2") {
+                Task { await project.openAsView(entryPath) }
+            }
         }
         FileMentionMenu(project: project, path: entryPath, onMentioned: { note = $0 }) {
             Label(String(localized: "Mention in chat"), lucideIcon: "at-sign")
@@ -135,9 +139,9 @@ struct MachineFilesPage: View {
 
     private func load() async {
         await state.load {
-            let resolved = path == "~" ? try await client.request("server.hello").text("home") : path
+            let resolved = path == "~" ? try await client.request(.serverHello).text("home") : path
             return try await client.request(
-                "fs.list", payload: .object(["path": .string(resolved), "depth": .number(1), "hidden": .bool(hidden)]))
+                .fsList, payload: .object(["path": .string(resolved), "depth": .number(1), "hidden": .bool(hidden)]))
         }
     }
 }
@@ -198,7 +202,9 @@ struct FileContentPage: View {
                     underStatus {
                         FilePDFView(document: pdf, page: $pdfPage)
                         FileFooter(items: [
-                            String(localized: "Page \(Format.number(Double(pdfPage))) of \(Format.number(Double(pdf.pageCount)))"),
+                            String(
+                                localized:
+                                    "Page \(Format.number(Double(pdfPage))) of \(Format.number(Double(pdf.pageCount)))"),
                             mobileByteCount(value["size"]?.numberValue), value.text("mime"),
                         ])
                     }
@@ -259,7 +265,7 @@ struct FileContentPage: View {
             .task(id: path) {
                 let parent = URL(fileURLWithPath: path).deletingLastPathComponent().path
                 await RemotePageLifecycle.run(
-                    client: client, events: ["fs.changed"],
+                    client: client, events: [.fsChanged],
                     matches: { parent == $0.text("root") || parent.hasPrefix($0.text("root") + "/") },
                     subscription: { fsWatch(client, path: parent) }, load: load)
             }
@@ -316,7 +322,8 @@ struct FileContentPage: View {
     private var editor: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let problem = edit.problem, !edit.stale {
-                Label(problem, lucideIcon: "triangle-alert").font(.caption).foregroundStyle(MobileStyle.statusError).padding()
+                Label(problem, lucideIcon: "triangle-alert").font(.caption).foregroundStyle(MobileStyle.statusError)
+                    .padding()
             }
             if edit.saving {
                 HStack(spacing: 10) {
@@ -346,7 +353,9 @@ struct FileContentPage: View {
                 }
             }
             if !isView {
-                Button(String(localized: "Open as view"), lucideIcon: "columns-2") { Task { await project.openAsView(path) } }
+                Button(String(localized: "Open as view"), lucideIcon: "columns-2") {
+                    Task { await project.openAsView(path) }
+                }
             }
             FileMentionMenu(project: project, path: path, onMentioned: { note = $0 }) {
                 Label(String(localized: "Mention in chat"), lucideIcon: "at-sign")
@@ -478,7 +487,7 @@ struct FileContentPage: View {
 
     private func load() async {
         await state.load {
-            var result = try await client.request("fs.read", payload: .object(["path": .string(path)]))
+            var result = try await client.request(.fsRead, payload: .object(["path": .string(path)]))
             // Text past one frame comes as bytes, up to what a phone draws; bytes that are not UTF-8 stay too large.
             if result.text("kind") == "too-large", (result["size"]?.numberValue ?? .infinity) <= largeTextMaxBytes {
                 let resource = try await client.readResource(.object(["kind": .string("file"), "path": .string(path)]))
@@ -510,7 +519,9 @@ struct FileContentPage: View {
                 } else {
                     let data = resource.data
                     next.image = await Task.detached(priority: .userInitiated) { FileImage.decode(data) }.value
-                    if next.image == nil { next.unreadable = String(localized: "This device cannot show this picture.") }
+                    if next.image == nil {
+                        next.unreadable = String(localized: "This device cannot show this picture.")
+                    }
                 }
                 try Task.checkCancellation()
             }
@@ -528,7 +539,7 @@ private let largeTextMaxBytes: Double = 8 * 1024 * 1024
 /// The hold on `fs.watch` that a folder's `fs.changed` events come under.
 @MainActor private func fsWatch(_ client: any MachineRequesting, path: String) -> MachineSubscription {
     let payload: JSONValue = .object(["path": .string(path)])
-    return client.acquireSubscription(start: "fs.watch", stop: "fs.unwatch", payload: payload, stopPayload: payload)
+    return client.acquireSubscription(start: .fsWatch, stop: .fsUnwatch, payload: payload, stopPayload: payload)
 }
 
 /// What a file page shows beside the read itself. Observable like `RemotePageState`, so a read and the picture it
@@ -578,7 +589,8 @@ private struct FilePlayerView: UIViewControllerRepresentable {
 
         func playerViewController(
             _ controller: AVPlayerViewController,
-            willBeginFullScreenPresentationWithAnimationCoordinator coordinator: any UIViewControllerTransitionCoordinator
+            willBeginFullScreenPresentationWithAnimationCoordinator coordinator:
+                any UIViewControllerTransitionCoordinator
         ) {
             fullScreen.wrappedValue = true
         }

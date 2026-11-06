@@ -17,14 +17,14 @@ final class PlanStore {
     func start() {
         guard subscriptions.isEmpty else { return }
         subscriptions = [
-            client.subscribe("plan.changed") { [weak self] event in
+            client.subscribe(.planChanged) { [weak self] event in
                 guard let plan = event["plan"].flatMap(PlanDocument.init) else { return }
                 self?.put(chatID: event.text("chatId"), plan)
             },
-            client.subscribe("plan.removed") { [weak self] event in
+            client.subscribe(.planRemoved) { [weak self] event in
                 self?.remove(chatID: event.text("chatId"), planID: event.text("planId"))
             },
-            client.subscribe("plan.created") { [weak self] event in
+            client.subscribe(.planCreated) { [weak self] event in
                 self?.unseen.insert(event.text("chatId"))
             },
             client.observeConnection { [weak self] connected in
@@ -80,14 +80,14 @@ final class PlanStore {
     /// Sends a person's operations; a refusal is thrown with the machine's message.
     func apply(chatID: String, planID: String, ops: [JSONValue]) async throws {
         let result = try await client.request(
-            "plan.apply",
+            .planApply,
             payload: .object(["chatId": .string(chatID), "planId": .string(planID), "ops": .array(ops)]))
         if let plan = result["plan"].flatMap(PlanDocument.init) { put(chatID: chatID, plan) }
     }
 
     private func list() {
         Task { [weak self, client] in
-            guard let result = try? await client.request("plan.list", payload: .object([:])) else { return }
+            guard let result = try? await client.request(.planList, payload: .object([:])) else { return }
             guard let self, !subscriptions.isEmpty else { return }
             setListed(result.list("plans"))
         }

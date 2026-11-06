@@ -99,16 +99,16 @@ import XCTest
 @MainActor private final class ResumeMachine: MachineRequesting {
     var attachResults: [JSONValue] = []
     private(set) var attaches: [JSONValue] = []
-    private var handlers: [String: [@MainActor @Sendable (JSONValue) -> Void]] = [:]
+    private var handlers: [WireEvent: [@MainActor @Sendable (JSONValue) -> Void]] = [:]
     private var rejected: [@MainActor @Sendable (JSONValue) -> Void] = []
     private var connection: [@MainActor @Sendable (Bool) -> Void] = []
     private var running = 0
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         running += 1
         defer { running -= 1 }
         await Task.yield()
-        if type == "chat.attach" {
+        if type == .chatAttach {
             attaches.append(payload)
             return attachResults.isEmpty
                 ? .object(["info": ChatWire.info(), "items": .array([])]) : attachResults.removeFirst()
@@ -116,12 +116,12 @@ import XCTest
         return .object([:])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
         handlers[event, default: []].append(handler)
         return {}
     }
 
-    func subscribeRejected(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
+    func subscribeRejected(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
         -> () -> Void
     {
         rejected.append(handler)
@@ -136,7 +136,7 @@ import XCTest
 
     func emit(_ event: JSONValue, seq: Int) {
         let payload = JSONValue.object(["chatId": .string("chat"), "event": event, "seq": .number(Double(seq))])
-        for handler in handlers["chat.event"] ?? [] { handler(payload) }
+        for handler in handlers[.chatEvent] ?? [] { handler(payload) }
     }
 
     func reject(_ payload: JSONValue) {

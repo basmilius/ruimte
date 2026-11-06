@@ -348,7 +348,7 @@ struct NotificationDestination: Identifiable, Hashable {
         let payload = Self.subscription(
             handle: context.handle, publicKey: key.publicKey, approvals: approvals,
             activities: activities && supportsActivities, preferences: preferences, machineID: machine.id)
-        _ = try await session.rpc.request("push.subscribe", payload: payload)
+        _ = try await session.rpc.request(.pushSubscribe, payload: payload)
     }
 
     /// What this phone sends a machine. It follows every node with `followAll`, so no node ids ride along.
@@ -376,7 +376,7 @@ struct NotificationDestination: Identifiable, Hashable {
         for machine in runtime.machines {
             let session = runtime.session(for: machine)
             guard session.connected else { continue }
-            guard !chosen, let result = try? await session.rpc.request("push.preferences") else { continue }
+            guard !chosen, let result = try? await session.rpc.request(.pushPreferences) else { continue }
             next.adopt(result, machineID: machine.id, kinds: adoptKinds)
             if result["subscribed"] == .bool(true) { adoptKinds = false }
         }
@@ -403,7 +403,7 @@ struct NotificationDestination: Identifiable, Hashable {
                     if session.connected {
                         Task {
                             _ = try? await session.rpc.request(
-                                "push.unsubscribe", payload: .object(["handle": .string(context.handle)]))
+                                .pushUnsubscribe, payload: .object(["handle": .string(context.handle)]))
                         }
                     }
                 }
@@ -751,7 +751,7 @@ struct NotificationDestination: Identifiable, Hashable {
         defer { session.release() }
         try await session.waitForConnection()
         guard Double(alert.expiresAt) > Date().timeIntervalSince1970 * 1000 else { throw PushCryptoError.expired }
-        let lease = session.rpc.acquireAttachment("chat", id: alert.nodeId)
+        let lease = session.rpc.acquireAttachment(.chat, id: alert.nodeId)
         defer {
             await withTaskCancellationShield {
                 await lease.release()
@@ -761,7 +761,7 @@ struct NotificationDestination: Identifiable, Hashable {
             payload: .object(["chatId": .string(alert.nodeId), "historyLimit": .number(1)]))
         try Task.checkCancellation()
         let payload = try NotificationApproval.chatPayload(alert: alert, snapshot: snapshot, decision: decision)
-        _ = try await session.rpc.request("chat.approve", payload: payload)
+        _ = try await session.rpc.request(.chatApprove, payload: payload)
         AppUsage.count(.approvalAnswered)
     }
 

@@ -111,7 +111,8 @@ struct ChatScreen: View {
         .tint(MobileStyle.accent)
         .navigationTitle(title)
         .modifier(
-            ChatForkTitle(subtitle: forkSubtitle, plain: subtitle) { Section(forkLine ?? "") { forkBackItems } })
+            ChatForkTitle(subtitle: forkSubtitle, plain: subtitle) { Section(forkLine ?? "") { forkBackItems } }
+        )
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityAction(.escape) { composerFocused = false }
         .toolbar {
@@ -290,8 +291,7 @@ struct ChatScreen: View {
                 let snapshot = clearDraft
                 clearDraft = nil
                 Task {
-                    if await model.perform("chat.clear", ["force": .bool(true)]), let snapshot, model.draft == snapshot
-                    {
+                    if await model.perform(.chatClear, ["force": .bool(true)]), let snapshot, model.draft == snapshot {
                         model.draft = ""
                     }
                 }
@@ -496,7 +496,7 @@ struct ChatScreen: View {
             let refusal = ChatForking.summaryRefusal(
                 info: model.info, originalPresent: workspace == nil || originalTitle != nil)
             Button {
-                Task { await model.perform("chat.summarize") }
+                Task { await model.perform(.chatSummarize) }
             } label: {
                 Label(String(localized: "Summarize for the original"), lucideIcon: "message-square-share")
                 Text(refusal ?? originalTitle ?? "")
@@ -637,7 +637,7 @@ struct ChatScreen: View {
 
     private var stopButton: some View {
         Menu {
-            Button(String(localized: "Stop turn"), lucideIcon: "square") { Task { await model.perform("chat.cancel") } }
+            Button(String(localized: "Stop turn"), lucideIcon: "square") { Task { await model.perform(.chatCancel) } }
             Button(
                 String(localized: "Stop with sub-agents"), lucideIcon: "square", role: .destructive,
                 action: stopWithSubagents)
@@ -657,7 +657,7 @@ struct ChatScreen: View {
         let model = model
         Task {
             let agents = await ChatSubagents.agentsEnded(with: [model.chatID], client: model.client)
-            let run = { _ = await model.perform("chat.cancel", ["subagents": .bool(true)]) }
+            let run = { _ = await model.perform(.chatCancel, ["subagents": .bool(true)]) }
             if agents == 0 {
                 await run()
             } else {
@@ -685,7 +685,7 @@ struct ChatScreen: View {
             Task {
                 model.sending = true
                 defer { model.sending = false }
-                let action = command == "/stop" ? "chat.cancel" : "chat.compact"
+                let action: WireRequest = command == "/stop" ? .chatCancel : .chatCompact
                 if await model.perform(action), model.draft == snapshot { model.draft = "" }
             }
         default: Task { await model.send() }

@@ -26,7 +26,7 @@ final class MachineProjectList {
 
     func follow() {
         guard unsubscribe == nil else { return }
-        unsubscribe = session.rpc.subscribe("project.summary") { [weak self] _ in
+        unsubscribe = session.rpc.subscribe(.projectSummary) { [weak self] _ in
             Task { await self?.load() }
         }
     }
@@ -189,7 +189,7 @@ struct OpenFolderSheet: View {
             payload["name"] = .string(projectName)
         }
         await work.perform {
-            let result = try await session.rpc.request("project.open", payload: .object(payload))
+            let result = try await session.rpc.request(.projectOpen, payload: .object(payload))
             if let id = result["summary"]?["projectId"]?.stringValue {
                 session.retainProject(id)
                 await session.releaseProject(id)

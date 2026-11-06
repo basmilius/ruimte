@@ -181,7 +181,7 @@ enum ChatWholeReads {
         -> String?
     {
         let result = try await client.request(
-            WireRequest.chatToolOutput.rawValue,
+            .chatToolOutput,
             payload: .object(["chatId": .string(chatID), "itemId": .string(itemID)]))
         return result["output"]?.stringValue
     }
@@ -190,7 +190,7 @@ enum ChatWholeReads {
         -> ChatTurnItemCheckpointDiff?
     {
         let result = try await client.request(
-            WireRequest.chatTurnDiff.rawValue,
+            .chatTurnDiff,
             payload: .object(["chatId": .string(chatID), "turnId": .string(turnID)]))
         guard let diff = result["diff"], diff != .null else { return nil }
         return try diff.decoded(as: ChatTurnItemCheckpointDiff.self)

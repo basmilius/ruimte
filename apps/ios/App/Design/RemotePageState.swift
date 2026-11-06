@@ -71,7 +71,7 @@ import SwiftUI
 
 @MainActor enum RemotePageLifecycle {
     static func run(
-        client: any MachineRequesting, events: [String] = [],
+        client: any MachineRequesting, events: [WireEvent] = [],
         matches: @escaping @MainActor @Sendable (JSONValue) -> Bool = { _ in true },
         subscription: (() -> MachineSubscription)? = nil, start: @escaping () async throws -> Void = {},
         stop: @escaping () async -> Void = {}, load: @escaping () async -> Void

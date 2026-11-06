@@ -37,7 +37,7 @@ import UIKit
         let stage = stage()
         await stage.voice.start(scene: "A", target: place, client: stage.machine)
         stage.machine.emit(
-            "voice.status",
+            .voiceStatus,
             .object([
                 "sessionId": .string("session-1"), "sceneId": .string("A"), "seq": .number(1),
                 "phase": .string("active"),
@@ -51,7 +51,7 @@ import UIKit
         }
         let did: (String, Int, String, String, String) -> Void = { id, seq, status, label, detail in
             stage.machine.emit(
-                "voice.activity",
+                .voiceActivity,
                 .object([
                     "sessionId": .string("session-1"), "sceneId": .string("A"), "seq": .number(Double(seq)),
                     "entry": .object([

@@ -51,8 +51,8 @@ import SwiftUI
         await state.read(loaded: !agents.isEmpty) { stillTheLatest in
             let providers = try await AgentCatalog.load(client)
             let accounts = try? await client.request(.accountsList)
-            let endpoint = try? await client.request("endpoint.info")
-            let computer = try? await client.request("computer.status")
+            let endpoint = try? await client.request(.endpointInfo)
+            let computer = try? await client.request(.computerStatus)
             try stillTheLatest()
             self.providers = providers
             reorders = (client as? MachineFeatures)?.answers(.accountsReorder) == true
@@ -92,7 +92,7 @@ import SwiftUI
         guard let endpoint else { return }
         await state.perform {
             self.endpoint = try await client.request(
-                "endpoint.setIdentity", payload: Self.identityPayload(endpoint: endpoint, key: key, value: value))
+                .endpointSetIdentity, payload: Self.identityPayload(endpoint: endpoint, key: key, value: value))
         }
     }
 
@@ -181,7 +181,7 @@ struct MachineAgentsPage: View {
         .environment(\.editMode, $editMode)
         .task {
             await RemotePageLifecycle.run(
-                client: session.rpc, events: ["endpoint.changed", "accounts.changed"], load: model.load)
+                client: session.rpc, events: [.endpointChanged, .accountsChanged], load: model.load)
         }
         .mobileSheet(item: $login) { login in
             AccountLoginSheet(

@@ -96,7 +96,7 @@ import XCTest
             model.chooseSuggestion(suggestion)
         }
         await model.send()
-        let payload = try XCTUnwrap(client.requests.first { $0.0 == "chat.send" }?.1)
+        let payload = try XCTUnwrap(client.requests.first { $0.0 == .chatSend }?.1)
         XCTAssertEqual(payload.text("text").trimmingCharacters(in: .whitespaces), fixture.send.text)
         XCTAssertEqual(payload.list("chats").compactMap(\.stringValue), fixture.send.chats)
         XCTAssertEqual(payload.list("references").compactMap(\.stringValue), fixture.send.references)
@@ -116,7 +116,7 @@ import XCTest
         model.composition.chats = [ChatDraftReference(id: "standalone", title: "Release notes")]
         model.composition.references = [ChatDraftReference(id: "research", title: "Research")]
         await model.send()
-        let payload = try XCTUnwrap(client.requests.first { $0.0 == "chat.send" }?.1)
+        let payload = try XCTUnwrap(client.requests.first { $0.0 == .chatSend }?.1)
         XCTAssertEqual(payload.list("chats").compactMap(\.stringValue), ["standalone"])
         XCTAssertNil(payload["references"])
         await model.composition.flush()
@@ -162,14 +162,14 @@ import XCTest
 }
 
 @MainActor private final class ReferenceClientFake: MachineRequesting {
-    var requests: [(String, JSONValue)] = []
+    var requests: [(WireRequest, JSONValue)] = []
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
         return .object([:])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }
 
 final class ChatReferenceTrailTests: XCTestCase {

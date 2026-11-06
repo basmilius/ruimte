@@ -6,7 +6,7 @@ import SwiftUI
 @MainActor
 enum AgentCatalog {
     static func load(_ client: any MachineRequesting) async throws -> [JSONValue] {
-        try await client.request("provider.list", payload: .object([:]))["providers"]?.arrayValue ?? []
+        try await client.request(.providerList, payload: .object([:]))["providers"]?.arrayValue ?? []
     }
 
     /// Installed CLIs that open as `target`, a chat or a terminal.
@@ -69,7 +69,9 @@ struct CanvasStartGrid: View {
                         tile(
                             String(localized: "Group"), detail: String(localized: "Holds nodes"), icon: "layout-grid"
                         ) {
-                            insert(kind: "group", title: "Group", extra: ["memberIds": .array([]), "membersListed": .bool(true)])
+                            insert(
+                                kind: "group", title: "Group",
+                                extra: ["memberIds": .array([]), "membersListed": .bool(true)])
                         }
                     }
                 }

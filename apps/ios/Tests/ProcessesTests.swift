@@ -13,7 +13,8 @@ final class ProcessesTests: XCTestCase {
         ])
     }
 
-    private func group(_ id: String, kind: String, node: String?, rows: [JSONValue], label: String? = nil) -> JSONValue {
+    private func group(_ id: String, kind: String, node: String?, rows: [JSONValue], label: String? = nil) -> JSONValue
+    {
         var fields: [String: JSONValue] = [
             "id": .string(id), "kind": .string(kind), "nodeId": node.map(JSONValue.string) ?? .null,
             "cpu": .number(3), "memory": .number(2048), "diskRead": .null, "diskWrite": .null,
@@ -28,7 +29,9 @@ final class ProcessesTests: XCTestCase {
     {
         .object([
             "at": .number(at), "scope": .string(scope),
-            "machine": .object(["cores": .number(8), "cpu": .number(12), "memoryUsed": .number(1), "memoryTotal": .number(2)]),
+            "machine": .object([
+                "cores": .number(8), "cpu": .number(12), "memoryUsed": .number(1), "memoryTotal": .number(2),
+            ]),
             "groups": .array(groups), "fine": point ? .object(["at": .number(at), "cpu": .number(12)]) : .null,
             "coarse": .null, "reset": .bool(reset),
         ])
@@ -114,15 +117,16 @@ final class ProcessesTests: XCTestCase {
         model.receive(
             .object([
                 "supported": .bool(true), "fine": .array([]), "coarse": .array([]),
-                "sample": sample(scope: "ruimte", at: 1, groups: [group("g1", kind: "chat", node: "c1", rows: [row(10)])]),
+                "sample": sample(
+                    scope: "ruimte", at: 1, groups: [group("g1", kind: "chat", node: "c1", rows: [row(10)])]),
             ]))
         await model.signal(ProcessTarget(pid: 10, startTime: 100, name: "bun"), .kill)
-        XCTAssertEqual(machine.sent.last?.0, "processes.signal")
+        XCTAssertEqual(machine.sent.last?.0, .processesSignal)
         XCTAssertEqual(
             machine.sent.last?.1,
             .object(["pid": .number(10), "startTime": .number(100), "signal": .string("SIGKILL")]))
         await model.act(alert("silent", node: "c1", pid: 10), .interrupt)
-        XCTAssertEqual(machine.sent.last?.0, "chat.cancel")
+        XCTAssertEqual(machine.sent.last?.0, .chatCancel)
         await model.act(alert("orphan", pid: 10), .terminate)
         XCTAssertEqual(machine.sent.last?.1["signal"], .string("SIGTERM"))
         await model.act(alert("busy-after-turn", node: "c1", pid: 10), .show)
@@ -137,19 +141,19 @@ final class ProcessesTests: XCTestCase {
 }
 
 @MainActor private final class ProcessesMachine: MachineRequesting {
-    var sent: [(String, JSONValue)] = []
+    var sent: [(WireRequest, JSONValue)] = []
     var refusal: String?
     var subscribeResult: JSONValue = .object(["supported": .bool(false), "fine": .array([]), "coarse": .array([])])
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
         if let refusal { throw MachineClientError.server(code: refusal, message: refusal) }
         switch type {
-        case "processes.subscribe": return subscribeResult
-        case "processes.listAlerts": return .object(["alerts": .array([])])
+        case .processesSubscribe: return subscribeResult
+        case .processesListAlerts: return .object(["alerts": .array([])])
         default: return .object([:])
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

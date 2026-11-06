@@ -13,7 +13,8 @@ struct GitRepositoryPage: View {
     @State private var pullRequest = false
     @State private var note: String?
 
-    init(client: any MachineRequesting, repositories: GitRepositories, path: String, workspace: MobileWorkspace? = nil) {
+    init(client: any MachineRequesting, repositories: GitRepositories, path: String, workspace: MobileWorkspace? = nil)
+    {
         self.client = client
         self.repositories = repositories
         self.path = path
@@ -52,8 +53,11 @@ struct GitRepositoryPage: View {
                         LabeledContent("Base", value: base)
                     }
                     if checkout.status?.live == false {
-                        Label(String(localized: "Too large to watch. Pull to refresh it."), lucideIcon: "refresh-cw", iconSize: 14)
-                            .font(.caption).foregroundStyle(MobileStyle.muted)
+                        Label(
+                            String(localized: "Too large to watch. Pull to refresh it."), lucideIcon: "refresh-cw",
+                            iconSize: 14
+                        )
+                        .font(.caption).foregroundStyle(MobileStyle.muted)
                     }
                 }
                 if GitPanel.diverged(checkout) {
@@ -69,8 +73,10 @@ struct GitRepositoryPage: View {
                     }.disabled(repositories.busy)
                 }
                 Section("Working tree") {
-                    Button(String(localized: "Stash changes"), lucideIcon: "archive") { actions.prompt = .stash(cwd: path) }
-                        .disabled(repositories.busy || checkout.files.isEmpty)
+                    Button(String(localized: "Stash changes"), lucideIcon: "archive") {
+                        actions.prompt = .stash(cwd: path)
+                    }
+                    .disabled(repositories.busy || checkout.files.isEmpty)
                     Button(String(localized: "Pop stash"), lucideIcon: "archive-restore") {
                         if refs.stashes.count > 1 {
                             actions.popping = true
@@ -79,8 +85,10 @@ struct GitRepositoryPage: View {
                         }
                     }.disabled(repositories.busy || refs.stashes.isEmpty)
                     if refs.capabilities {
-                        Button(String(localized: "Create pull request"), lucideIcon: "git-pull-request") { pullRequest = true }
-                            .disabled(repositories.busy || checkout.branch == nil)
+                        Button(String(localized: "Create pull request"), lucideIcon: "git-pull-request") {
+                            pullRequest = true
+                        }
+                        .disabled(repositories.busy || checkout.branch == nil)
                     }
                 }
                 Section {
@@ -151,8 +159,12 @@ struct GitDivergedRow: View {
     var body: some View {
         let branch = checkout.branch ?? String(localized: "This branch")
         VStack(alignment: .leading, spacing: 8) {
-            Text(named ? "How do you want to update \(branch) in \(checkout.label)?" : "How do you want to update \(branch)?")
-                .font(.callout)
+            Text(
+                named
+                    ? "How do you want to update \(branch) in \(checkout.label)?"
+                    : "How do you want to update \(branch)?"
+            )
+            .font(.callout)
             Text(
                 "It has \(checkout.ahead) commits of its own and \(checkout.behind) from \(checkout.status?.upstream ?? String(localized: "the remote")). A pull only fast-forwards until you choose."
             ).font(.caption).foregroundStyle(MobileStyle.muted)
@@ -195,15 +207,15 @@ struct GitDivergedRow: View {
     func load(client: any MachineRequesting, cwd: String) async {
         loading = refs.isEmpty
         defer { loading = false }
-        if let answer = try? await client.request("git.refs", payload: .object(["cwd": .string(cwd)])) {
+        if let answer = try? await client.request(.gitRefs, payload: .object(["cwd": .string(cwd)])) {
             refs = answer.list("refs")
             stashes = answer.list("stashes")
         }
-        if let answer = try? await client.request("git.capabilities", payload: .object(["cwd": .string(cwd)])) {
+        if let answer = try? await client.request(.gitCapabilities, payload: .object(["cwd": .string(cwd)])) {
             capabilities = answer["gh"] == .bool(true)
         }
         if let answer = try? await client.request(
-            "git.log", payload: .object(["cwd": .string(cwd), "limit": .number(1)]))
+            .gitLog, payload: .object(["cwd": .string(cwd), "limit": .number(1)]))
         {
             lastSubject = answer.list("commits").first?.text("subject") ?? ""
         }

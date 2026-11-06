@@ -29,25 +29,31 @@ final class ConnectionProbe {
         }
         status = String(localized: "Connecting")
         startedAt = .now
-        let events = LinkEvents(opened: { [weak self] in
-            self?.opened()
-        }, message: { [weak self] text in
-            self?.receive(text)
-        }, closed: { [weak self] error in
-            guard let self else { return }
-            timeout?.cancel()
-            helloID = nil
-            hello = nil
-            route = nil
-            status = error?.localizedDescription ?? String(localized: "Waiting to reconnect")
-            record(status)
-            startedAt = .now
-        }, route: { [weak self] route in
-            self?.route = route
-        })
-        lease = runtime.connections.hold(machineID: Self.connectionKey(machine.id), open: { events in
-            try runtime.openLink(to: machine, key: key, relayOnly: runtime.relayOnly, events: events)
-        }, events: events)
+        let events = LinkEvents(
+            opened: { [weak self] in
+                self?.opened()
+            },
+            message: { [weak self] text in
+                self?.receive(text)
+            },
+            closed: { [weak self] error in
+                guard let self else { return }
+                timeout?.cancel()
+                helloID = nil
+                hello = nil
+                route = nil
+                status = error?.localizedDescription ?? String(localized: "Waiting to reconnect")
+                record(status)
+                startedAt = .now
+            },
+            route: { [weak self] route in
+                self?.route = route
+            })
+        lease = runtime.connections.hold(
+            machineID: Self.connectionKey(machine.id),
+            open: { events in
+                try runtime.openLink(to: machine, key: key, relayOnly: runtime.relayOnly, events: events)
+            }, events: events)
     }
 
     func reconnect(runtime: AppRuntime) {
@@ -80,7 +86,7 @@ final class ConnectionProbe {
         Task { @MainActor [weak self] in
             guard let self, helloID == identifier else { return }
             do {
-                let frame = Request(id: identifier, type: "server.hello", payload: .object([:]))
+                let frame = Request(id: identifier, type: WireRequest.serverHello.rawValue, payload: .object([:]))
                 try lease?.send(String(decoding: JSONEncoder().encode(frame), as: UTF8.self))
                 timeout = Task { @MainActor [weak self] in
                     do { try await Task.sleep(for: .seconds(30)) } catch { return }

@@ -44,7 +44,8 @@ struct GitBranchesSegment: View {
                 GitBusyRow(text: repositories.progress ?? String(localized: "Working"))
             }
             if let problem = repositories.problem {
-                Label(problem, lucideIcon: "triangle-alert").foregroundStyle(MobileStyle.statusError).textSelection(.enabled)
+                Label(problem, lucideIcon: "triangle-alert").foregroundStyle(MobileStyle.statusError).textSelection(
+                    .enabled)
             }
             Section {
                 if actions.refs.loading && branches.isEmpty {
@@ -110,7 +111,7 @@ struct GitBranchesSegment: View {
         .task(id: actions.path) {
             let path = actions.path
             await RemotePageLifecycle.run(
-                client: client, events: ["git.worktrees"],
+                client: client, events: [.gitWorktrees],
                 load: {
                     await actions.load(client: client)
                     await repositories.worktrees[path: path].load(client: client)

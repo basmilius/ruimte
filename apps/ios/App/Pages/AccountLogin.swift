@@ -58,13 +58,13 @@ import SwiftUI
     func begin() async {
         stopWatching()
         subscriptions.append(
-            client.subscribe("accounts.changed") { [weak self] payload in
+            client.subscribe(.accountsChanged) { [weak self] payload in
                 guard let self, phase == .running else { return }
                 let now = status(in: payload)
                 if Self.landed(before: before, now: now) { phase = .landed(email: now?["email"]?.stringValue) }
             })
         subscriptions.append(
-            client.subscribe("session.exit") { [weak self] payload in
+            client.subscribe(.sessionExit) { [weak self] payload in
                 guard let self, payload.text("sessionId") == sessionID, phase == .running else { return }
                 phase = .ended(dropped: false)
             })
@@ -160,8 +160,11 @@ struct AccountLoginSheet: View {
                 case .failed:
                     Spacer()
                 default:
-                    TerminalScreen(client: model.client, sessionID: model.sessionID, title: String(localized: "Log in to \(model.name)"))
-                        .id(model.sessionID)
+                    TerminalScreen(
+                        client: model.client, sessionID: model.sessionID,
+                        title: String(localized: "Log in to \(model.name)")
+                    )
+                    .id(model.sessionID)
                 }
             }
             .modifier(MobilePageSurface())

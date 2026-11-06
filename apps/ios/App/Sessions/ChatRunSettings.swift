@@ -260,7 +260,7 @@ struct ChatRunSettings: View {
                 Button {
                     Task {
                         do {
-                            _ = try await model.client.request("chat.compact", payload: model.target())
+                            _ = try await model.client.request(.chatCompact, payload: model.target())
                             model.settingsProblem = nil
                         } catch { model.settingsProblem = error.localizedDescription }
                     }

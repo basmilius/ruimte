@@ -112,7 +112,7 @@ final class ChatPreferences {
                 ? (try? await client.request(.accountsList)).map(
                     ProviderAccountList.init) : nil
             _ = try? await client.request(
-                "chat.setPreferences", payload: payload(machineID: machineID, accounts: list))
+                .chatSetPreferences, payload: payload(machineID: machineID, accounts: list))
         }
     }
 

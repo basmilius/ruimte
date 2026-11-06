@@ -10,7 +10,8 @@ enum DeviceTools {
     /// What a simulator from before the list was announced has, which is what `deviceTools` assumes for one.
     static let simulatorFallback = [
         "openUrl", "launchApp", "terminateApp", "appearance", "textSize", "liquidGlass", "colorFilter", "reduceMotion",
-        "increaseContrast", "reduceTransparency", "showBorders", "voiceOver", "location", "clearLocation", "permissions",
+        "increaseContrast", "reduceTransparency", "showBorders", "voiceOver", "location", "clearLocation",
+        "permissions",
         "push",
     ]
     static let toggles = ["reduceMotion", "increaseContrast", "reduceTransparency", "showBorders", "voiceOver"]
@@ -106,7 +107,7 @@ final class DeviceToolsModel {
 
     func load() async {
         do {
-            let detail = try await client.request("device.detail", payload: .object(DeviceView.target(device)))
+            let detail = try await client.request(.deviceDetail, payload: .object(DeviceView.target(device)))
             settings = detail["settings"] ?? .object([:])
         } catch {
             problem = error.localizedDescription
@@ -118,7 +119,7 @@ final class DeviceToolsModel {
         problem = nil
         defer { pending = false }
         do {
-            let detail = try await client.request("device.action", payload: DeviceTools.action(device, name, fields))
+            let detail = try await client.request(.deviceAction, payload: DeviceTools.action(device, name, fields))
             settings = detail["settings"] ?? settings
             return true
         } catch {
@@ -133,7 +134,7 @@ final class DeviceToolsModel {
         problem = nil
         defer { pending = false }
         do {
-            let result = try await client.request("device.capture", payload: .object(DeviceView.target(device)))
+            let result = try await client.request(.deviceCapture, payload: .object(DeviceView.target(device)))
             let data = try await read(result.text("path"))
             let url = FileManager.default.temporaryDirectory.appendingPathComponent(
                 DeviceTools.captureName(device.text("name"), at: Date()))
@@ -159,7 +160,7 @@ final class DeviceToolsModel {
         var payload = DeviceView.target(device)
         payload.merge(fields) { _, new in new }
         do {
-            return try await client.request("device.clipboard", payload: .object(payload))
+            return try await client.request(.deviceClipboard, payload: .object(payload))
         } catch {
             problem = error.localizedDescription
             return nil

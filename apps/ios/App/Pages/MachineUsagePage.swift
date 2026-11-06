@@ -83,10 +83,10 @@ struct MachineUsagePage: View {
         .task(id: "\(period.rawValue) \(machineName ?? "")") {
             let client = client
             await RemotePageLifecycle.run(
-                client: client, events: ["usage.changed", "usage.limitsChanged", "accounts.changed"],
+                client: client, events: [.usageChanged, .usageLimitsChanged, .accountsChanged],
                 subscription: {
                     client.acquireSubscription(
-                        start: "usage.subscribe", stop: "usage.unsubscribe", payload: .object([:]),
+                        start: .usageSubscribe, stop: .usageUnsubscribe, payload: .object([:]),
                         stopPayload: .object([:]))
                 }, load: load)
         }
@@ -154,7 +154,8 @@ struct MachineUsagePage: View {
                 }
             }
             .chartForegroundStyleScale(
-                domain: report.stacked.map(usageProviderName), range: report.stacked.map(Self.color))
+                domain: report.stacked.map(usageProviderName), range: report.stacked.map(Self.color)
+            )
             .chartLegend(.hidden)
             .chartXSelection(value: $selected)
             .chartYAxis {
@@ -166,7 +167,8 @@ struct MachineUsagePage: View {
                 }
             }
             .frame(height: 170)
-            .accessibilityLabel(metric == .tokens ? (unit == .hour ? "Tokens per hour" : "Tokens per day") : "Cost per day")
+            .accessibilityLabel(
+                metric == .tokens ? (unit == .hour ? "Tokens per hour" : "Tokens per day") : "Cost per day")
             HStack(spacing: 16) {
                 ForEach(report.providers) { provider in
                     HStack(spacing: 6) {
@@ -250,9 +252,12 @@ struct MachineUsagePage: View {
     }
 
     private func breakdownRow(_ row: UsageReport.Row, report: UsageReport, top: Double) -> some View {
-        let amount = metric == .tokens ? Format.tokens(row.tokens) : row.costUsd.map { money.string(usd: $0) } ?? String(localized: "No price")
+        let amount =
+            metric == .tokens
+            ? Format.tokens(row.tokens) : row.costUsd.map { money.string(usd: $0) } ?? String(localized: "No price")
         let share = report.share(row, metric: metric)
-        let title = breakdown == .day ? (UsageReport.date(row.title).map { Format.weekdayDay($0) } ?? row.title) : row.title
+        let title =
+            breakdown == .day ? (UsageReport.date(row.title).map { Format.weekdayDay($0) } ?? row.title) : row.title
         var detail = breakdown == .projects ? row.detail : String(localized: "\(Format.number(row.calls)) calls")
         if let share { detail += " · \(Format.percent((share * 100).rounded()))" }
         return VStack(alignment: .leading, spacing: 5) {
@@ -265,7 +270,9 @@ struct MachineUsagePage: View {
                 Text(amount).font(.callout).monospacedDigit()
             }
             Text(detail).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1).truncationMode(.middle)
-            ShareBar(fraction: top > 0 ? row.value(metric) / top : 0, color: row.provider.map(Self.color) ?? MobileStyle.accent)
+            ShareBar(
+                fraction: top > 0 ? row.value(metric) / top : 0,
+                color: row.provider.map(Self.color) ?? MobileStyle.accent)
         }
         .accessibilityElement(children: .combine)
     }
@@ -279,8 +286,11 @@ struct MachineUsagePage: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
                     if section.named { AccountDot(color: section.color) }
-                    Text(section.named ? "\(usageProviderName(section.kind)) · \(section.name)" : usageProviderName(section.kind))
-                        .font(.callout.weight(.semibold))
+                    Text(
+                        section.named
+                            ? "\(usageProviderName(section.kind)) · \(section.name)" : usageProviderName(section.kind)
+                    )
+                    .font(.callout.weight(.semibold))
                     Spacer()
                     if let plan = section.entry?["plan"]?.stringValue {
                         Text(plan.capitalized).font(.caption).foregroundStyle(MobileStyle.muted)
@@ -328,17 +338,21 @@ struct MachineUsagePage: View {
             let scan = summary["scan"]
             let scanned = Date(timeIntervalSince1970: (scan?.number("at") ?? 0) / 1000)
             let files = Int(scan?.number("files") ?? 0)
-            let prices = summary["pricing"]?["fetchedAt"]?.numberValue.map {
-                String(localized: "Prices of \(Format.day(Date(timeIntervalSince1970: $0 / 1000)))")
-            } ?? String(localized: "Bundled prices")
+            let prices =
+                summary["pricing"]?["fetchedAt"]?.numberValue.map {
+                    String(localized: "Prices of \(Format.day(Date(timeIntervalSince1970: $0 / 1000)))")
+                } ?? String(localized: "Bundled prices")
             let rate =
                 money.currencyCode == "EUR"
                 ? money.rateDate.flatMap { UsageReport.date($0) }.map {
-                    String(localized: " · EUR at the ECB rate of \(Format.day($0))", comment: "Appended to the usage provenance line; %@ is a date")
+                    String(
+                        localized: " · EUR at the ECB rate of \(Format.day($0))",
+                        comment: "Appended to the usage provenance line; %@ is a date")
                 } ?? "" : ""
             VStack(spacing: 6) {
                 if scan?["failed"]?.boolValue == true {
-                    Text("The latest scan failed. These are the last totals.").foregroundStyle(MobileStyle.statusNeedsYou)
+                    Text("The latest scan failed. These are the last totals.").foregroundStyle(
+                        MobileStyle.statusNeedsYou)
                 }
                 if metric == .euro, let explanation = money.explanation, money.currencyCode == "USD" {
                     Text(explanation)

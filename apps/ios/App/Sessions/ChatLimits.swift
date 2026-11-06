@@ -119,7 +119,7 @@ extension ChatModel {
 
     func setResumeAtReset(_ on: Bool) async {
         do {
-            _ = try await client.request("chat.configure", payload: target(["resumeAtReset": .bool(on)]))
+            _ = try await client.request(.chatConfigure, payload: target(["resumeAtReset": .bool(on)]))
             error = nil
         } catch {
             self.error = error.localizedDescription

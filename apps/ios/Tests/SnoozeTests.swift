@@ -105,7 +105,7 @@ import XCTest
 
         machine.connect()
         await waitForNativeState { snoozes.book.outbox.isEmpty }
-        XCTAssertEqual(machine.sent.map(\.0), ["snooze.list", "snooze.set"])
+        XCTAssertEqual(machine.sent.map(\.0), [.snoozeList, .snoozeSet])
         XCTAssertEqual(machine.sent.last?.1["until"], .number(milliseconds(until)))
         XCTAssertTrue(snoozes.book.outbox.isEmpty)
         XCTAssertEqual(snoozes.until("chat-a"), until)
@@ -125,7 +125,7 @@ import XCTest
         machine.listed = [("expired-on-machine", milliseconds(now) - 1)]
         machine.connect()
         await waitForNativeState { snoozes.book.listed["expired-on-machine"] != nil }
-        XCTAssertEqual(machine.sent.map(\.0), ["snooze.list"])
+        XCTAssertEqual(machine.sent.map(\.0), [.snoozeList])
         snoozes.stop()
     }
 
@@ -141,28 +141,28 @@ import XCTest
         XCTAssertEqual(snoozes.standing.keys.sorted(), ["b"])
         snoozes.clear("b")
         await waitForNativeState { snoozes.book.outbox.isEmpty }
-        XCTAssertEqual(machine.sent.last?.0, "snooze.clear")
+        XCTAssertEqual(machine.sent.last?.0, .snoozeClear)
         XCTAssertTrue(snoozes.standing.isEmpty)
         snoozes.stop()
     }
 }
 
 @MainActor private final class SnoozeMachine: MachineRequesting {
-    var sent: [(String, JSONValue)] = []
+    var sent: [(WireRequest, JSONValue)] = []
     var listed: [(String, Double)] = []
     private var connected = false
     private var observers: [UUID: @MainActor @Sendable (Bool) -> Void] = [:]
     private var changed: (@MainActor @Sendable (JSONValue) -> Void)?
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
         guard connected else { throw MachineClientError.disconnected }
-        if type == "snooze.list" { return Self.list(listed) }
+        if type == .snoozeList { return Self.list(listed) }
         return .object([:])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
-        if event == "snooze.changed" { changed = handler }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+        if event == .snoozeChanged { changed = handler }
         return { [weak self] in self?.changed = nil }
     }
 

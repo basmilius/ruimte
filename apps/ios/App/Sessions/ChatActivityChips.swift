@@ -196,7 +196,7 @@ struct ChatActivityChips: View {
         Task {
             do {
                 _ = try await model.client.request(
-                    "chat.stopTask", payload: model.target(["taskId": .string(task.id)]))
+                    .chatStopTask, payload: model.target(["taskId": .string(task.id)]))
             } catch {
                 failure = ChatActivityFailure(
                     title: String(localized: "Could not stop the task"), message: error.localizedDescription)

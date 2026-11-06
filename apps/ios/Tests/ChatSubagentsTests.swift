@@ -282,23 +282,23 @@ final class ChatSubagentsTests: XCTestCase {
 
         session.releaseChat(model)
         await displayFrames(10)
-        XCTAssertFalse(machine.requests.contains("chat.detach"))
+        XCTAssertFalse(machine.requests.contains(.chatDetach))
 
         window.close()
         await displayFrames(10)
-        XCTAssertTrue(machine.requests.contains("chat.detach"))
+        XCTAssertTrue(machine.requests.contains(.chatDetach))
     }
 }
 
 @MainActor private final class HeldChatMachine: MachineRequesting {
-    var requests: [String] = []
+    var requests: [WireRequest] = []
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append(type)
         throw MachineClientError.disconnected
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }
 
 @MainActor private final class SubagentMachine: MachineRequesting {
@@ -306,8 +306,8 @@ final class ChatSubagentsTests: XCTestCase {
     var handlers: [@MainActor @Sendable (JSONValue) -> Void] = []
     private var waiters: [(Int, CheckedContinuation<Void, Never>)] = []
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
-        XCTAssertEqual(type, "chat.subagent")
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
+        XCTAssertEqual(type, .chatSubagent)
         payloads.append(payload)
         let reached = waiters.filter { payloads.count >= $0.0 }
         waiters.removeAll { payloads.count >= $0.0 }
@@ -318,8 +318,8 @@ final class ChatSubagentsTests: XCTestCase {
         ])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
-        if event == "chat.subagentChanged" { handlers.append(handler) }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+        if event == .chatSubagentChanged { handlers.append(handler) }
         return {}
     }
 

@@ -16,7 +16,7 @@ final class TaskStore {
     func start() {
         guard subscriptions.isEmpty else { return }
         subscriptions = [
-            client.subscribe("task.changed") { [weak self] event in
+            client.subscribe(.taskChanged) { [weak self] event in
                 guard let task = event["task"] else { return }
                 self?.put(task)
             },
@@ -76,7 +76,7 @@ final class TaskStore {
     private func ask(_ projectID: String) {
         Task { [weak self, client] in
             guard
-                let result = try? await client.request("task.list", payload: .object(["projectId": .string(projectID)]))
+                let result = try? await client.request(.taskList, payload: .object(["projectId": .string(projectID)]))
             else { return }
             guard let self, projects[projectID] != nil else { return }
             setProjectTasks(projectID, result.list("tasks"))

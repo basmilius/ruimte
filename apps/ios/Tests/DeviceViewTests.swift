@@ -77,13 +77,13 @@ import Testing
         let model = DeviceViewModel(client: machine, reference: Self.reference)
         await model.refresh()
         #expect(model.phase == .streaming)
-        let open = machine.requests.first { $0.0 == "device.open" }?.1
+        let open = machine.requests.first { $0.0 == .deviceOpen }?.1
         #expect(open?["stream"] == .string("events"))
         #expect(open?["formats"] == .array([.string("jpeg")]))
 
         model.touch("down", at: CGPoint(x: 0.5, y: 0.96))
         await machine.waitForInput()
-        let input = machine.requests.first { $0.0 == "device.input" }?.1
+        let input = machine.requests.first { $0.0 == .deviceInput }?.1
         #expect(input?["deviceId"] == .string("UDID-1"))
         #expect(input?["input"]?["edge"] == .string("bottom"))
         #expect(input?["input"]?["phase"] == .string("down"))
@@ -98,7 +98,7 @@ import Testing
         await model.refresh()
         #expect(model.phase == .unsupportedFormat)
         await model.refresh()
-        #expect(machine.requests.filter { $0.0 == "device.open" }.count == 1)
+        #expect(machine.requests.filter { $0.0 == .deviceOpen }.count == 1)
 
         machine.devices = []
         await model.refresh()
@@ -122,7 +122,7 @@ import Testing
 @MainActor private final class DeviceMachine: MachineRequesting {
     var devices: [JSONValue]
     var openRefusal: String?
-    var requests: [(String, JSONValue)] = []
+    var requests: [(WireRequest, JSONValue)] = []
     private let inputArrival = NativeArrival()
 
     func waitForInput() async {
@@ -131,17 +131,17 @@ import Testing
 
     init(devices: [JSONValue]) { self.devices = devices }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
-        if type == "device.input" { inputArrival.record() }
+        if type == .deviceInput { inputArrival.record() }
         switch type {
-        case "device.list": return .object(["devices": .array(devices)])
-        case "device.open":
+        case .deviceList: return .object(["devices": .array(devices)])
+        case .deviceOpen:
             if let openRefusal { throw MachineClientError.server(code: openRefusal, message: openRefusal) }
             return (devices.first ?? .object([:])).setting("streamId", .string("device:1"))
         default: return .object([:])
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

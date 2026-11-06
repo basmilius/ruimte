@@ -203,7 +203,7 @@ final class PaletteFiles {
             return Task { () -> ([PaletteFile], PaletteFileFailure?) in
                 do {
                     let answer = try await machineClient.request(
-                        "fs.search",
+                        .fsSearch,
                         payload: .object([
                             "cwd": .string(folder), "query": .string(typed),
                             "limit": .number(Double(Self.perProject)),

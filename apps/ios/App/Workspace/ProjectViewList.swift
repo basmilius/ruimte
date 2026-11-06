@@ -131,7 +131,7 @@ final class ProjectListState {
     func watchWarnings(_ client: any MachineRequesting) {
         guard stops.isEmpty else { return }
         self.client = client
-        stops.append(client.subscribe("processes.alerts") { [weak self] payload in self?.receive(payload) })
+        stops.append(client.subscribe(.processesAlerts) { [weak self] payload in self?.receive(payload) })
         stops.append(
             client.observeConnection { [weak self] connected in
                 guard connected else { return }

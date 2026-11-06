@@ -191,7 +191,7 @@ struct ChatPreparePreview: Identifiable, Equatable {
             guard terminals.contains(id), info["exited"]?.boolValue != true, info["agent"]?.objectValue == nil,
                 info["heldCommand"]?.objectValue == nil
             else { continue }
-            let attachment = context.client.acquireAttachment("session", id: id)
+            let attachment = context.client.acquireAttachment(.session, id: id)
             if (try? await TerminalSnapshot.load(attachment: attachment, sessionID: id) { _ in }) != nil {
                 attachments.append(attachment)
             } else {

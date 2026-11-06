@@ -3,19 +3,46 @@ import RuimtePulsar
 import os
 
 @MainActor public protocol MachineRequesting: AnyObject {
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue
-    func request(_ type: String, payload: JSONValue, onResult: @escaping @MainActor @Sendable (JSONValue) -> Void)
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue
+    func request(_ type: WireRequest, payload: JSONValue, onResult: @escaping @MainActor @Sendable (JSONValue) -> Void)
         async throws -> JSONValue
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void
     /// Hands over the raw payload of an event that failed validation, which a newer machine may send. A subscriber
     /// can then read its state again instead of waiting on an event that never arrives.
-    func subscribeRejected(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void
-    func acquireSubscription(start: String, stop: String, payload: JSONValue, stopPayload: JSONValue)
+    func subscribeRejected(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
+        -> () -> Void
+    func acquireSubscription(start: WireRequest, stop: WireRequest, payload: JSONValue, stopPayload: JSONValue)
         -> MachineSubscription
-    func acquireAttachment(_ type: String, id: String) -> MachineAttachment
+    func acquireAttachment(_ area: AttachmentArea, id: String) -> MachineAttachment
     func observeConnection(_ handler: @escaping @MainActor @Sendable (Bool) -> Void) -> () -> Void
     /// One piece of `bytes.read`, as a binary reply where the machine sends those.
     func readBytes(_ payload: JSONValue) async throws -> BytesPiece
+}
+
+/// The two areas whose nodes a client attaches to and detaches from, each with its own requests and the payload key
+/// that names the node.
+public enum AttachmentArea: String, Sendable {
+    case chat
+    case session
+
+    var attach: WireRequest {
+        switch self {
+        case .chat: .chatAttach
+        case .session: .sessionAttach
+        }
+    }
+    var detach: WireRequest {
+        switch self {
+        case .chat: .chatDetach
+        case .session: .sessionDetach
+        }
+    }
+    var idKey: String {
+        switch self {
+        case .chat: "chatId"
+        case .session: "sessionId"
+        }
+    }
 }
 
 @MainActor public final class MachineSubscription {
@@ -64,14 +91,14 @@ import os
 
 @MainActor extension MachineRequesting {
     public func request(
-        _ type: String, payload: JSONValue, onResult: @escaping @MainActor @Sendable (JSONValue) -> Void
+        _ type: WireRequest, payload: JSONValue, onResult: @escaping @MainActor @Sendable (JSONValue) -> Void
     ) async throws -> JSONValue {
         let result = try await request(type, payload: payload)
         onResult(result)
         return result
     }
 
-    public func acquireSubscription(start: String, stop: String, payload: JSONValue, stopPayload: JSONValue)
+    public func acquireSubscription(start: WireRequest, stop: WireRequest, payload: JSONValue, stopPayload: JSONValue)
         -> MachineSubscription
     {
         MachineSubscription(
@@ -80,31 +107,26 @@ import os
                 return try await self.request(start, payload: payload)
             }, release: { [weak self] in _ = try? await self?.request(stop, payload: stopPayload) })
     }
-    public func acquireAttachment(_ type: String, id: String) -> MachineAttachment {
+    public func acquireAttachment(_ area: AttachmentArea, id: String) -> MachineAttachment {
         MachineAttachment(
             snapshot: { [weak self] payload, onSnapshot in
                 guard let self else { throw MachineClientError.disconnected }
-                let result = try await self.request("\(type).attach", payload: payload)
+                let result = try await self.request(area.attach, payload: payload)
                 onSnapshot(result)
                 return result
             },
             release: { [weak self] in
-                _ = try? await self?.request("\(type).detach", payload: .object(["\(type)Id": .string(id)]))
+                _ = try? await self?.request(area.detach, payload: .object([area.idKey: .string(id)]))
             })
     }
-    public func request(_ type: String) async throws -> JSONValue { try await request(type, payload: .object([:])) }
-    public func request(_ type: WireRequest, payload: JSONValue = .object([:])) async throws -> JSONValue {
-        try await request(type.rawValue, payload: payload)
-    }
-    public func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void
-    {
-        subscribe(event.rawValue, handler: handler)
+    public func request(_ type: WireRequest) async throws -> JSONValue {
+        try await request(type, payload: .object([:]))
     }
     public func observeConnection(_ handler: @escaping @MainActor @Sendable (Bool) -> Void) -> () -> Void {
         handler(true)
         return {}
     }
-    public func subscribeRejected(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
+    public func subscribeRejected(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
         -> () -> Void
     { {} }
     public func readBytes(_ payload: JSONValue) async throws -> BytesPiece {
@@ -161,8 +183,8 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     static let maxTimeoutRenewals = 8
     private struct Subscription {
         var owners: Set<UUID>
-        let start: String
-        let stop: String
+        let start: WireRequest
+        let stop: WireRequest
         let payload: JSONValue
         let stopPayload: JSONValue
     }
@@ -175,8 +197,8 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     // The bytes of a binary reply, held from its arrival until `readBytes` resumes and takes them.
     private var binaryBodies: [String: Data] = [:]
     private var attachments: [String: Set<UUID>] = [:]
-    private var subscribers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
-    private var rejectedSubscribers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
+    private var subscribers: [WireEvent: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
+    private var rejectedSubscribers: [WireEvent: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
     private var observers: [UUID: @MainActor @Sendable (Bool) -> Void] = [:]
     private var incoming: Task<Void, Never>?
     private var connectionGeneration = 0
@@ -258,12 +280,12 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         observers.removeAll()
     }
 
-    public func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    public func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         try await routedRequest(type, payload: payload, onResult: nil)
     }
 
     public func request(
-        _ type: String, payload: JSONValue, onResult: @escaping @MainActor @Sendable (JSONValue) -> Void
+        _ type: WireRequest, payload: JSONValue, onResult: @escaping @MainActor @Sendable (JSONValue) -> Void
     ) async throws -> JSONValue {
         try await routedRequest(type, payload: payload, onResult: onResult)
     }
@@ -273,7 +295,7 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         fields["binary"] = .bool(true)
         let id = UUID().uuidString
         let result = try await routedRequest(
-            WireRequest.bytesRead.rawValue, payload: .object(fields), onResult: nil, id: id, binary: true)
+            .bytesRead, payload: .object(fields), onResult: nil, id: id, binary: true)
         guard let data = binaryBodies.removeValue(forKey: id) else {
             throw MachineClientError.invalid(TransportWords.unreadablePiece)
         }
@@ -281,16 +303,13 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     }
 
     private func routedRequest(
-        _ type: String, payload: JSONValue, onResult: (@MainActor @Sendable (JSONValue) -> Void)?,
+        _ type: WireRequest, payload: JSONValue, onResult: (@MainActor @Sendable (JSONValue) -> Void)?,
         id: String = UUID().uuidString, binary: Bool = false
     ) async throws -> JSONValue {
         try Task.checkCancellation()
         guard isConnected else { throw MachineClientError.disconnected }
-        guard let requestType = WireRequest(rawValue: type) else {
-            throw MachineClientError.invalid("Unknown request: \(type)")
-        }
-        let checked = try requestType.validatePayload(payload)
-        let frame = JSONValue.object(["id": .string(id), "type": .string(type), "payload": checked])
+        let checked = try type.validatePayload(payload)
+        let frame = JSONValue.object(["id": .string(id), "type": .string(type.rawValue), "payload": checked])
         let text = String(decoding: try frame.encoded(), as: UTF8.self)
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
@@ -299,8 +318,8 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
                     return
                 }
                 pending[id] = Pending(
-                    type: requestType, continuation: continuation, onResult: onResult, sentAt: now(), binary: binary)
-                if Self.timedRequests.contains(requestType) {
+                    type: type, continuation: continuation, onResult: onResult, sentAt: now(), binary: binary)
+                if Self.timedRequests.contains(type) {
                     armTimeout(id, type: type)
                     guard pending[id] != nil else { return }
                 }
@@ -317,14 +336,14 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         heardCount += 1
     }
 
-    private func armTimeout(_ id: String, type: String) {
+    private func armTimeout(_ id: String, type: WireRequest) {
         pending[id]?.cancelTimeout()
         pending[id]?.heardAt = heardCount
         let cancel = scheduler.after(milliseconds: timeoutMilliseconds) { [weak self] in
             guard let self, let request = pending[id] else { return }
             if request.heardAt == heardCount || request.renewals >= Self.maxTimeoutRenewals {
-                LinkProblems.report(.timeout(request: type))
-                finish(id, result: .failure(MachineClientError.timeout(type)))
+                LinkProblems.report(.timeout(request: type.rawValue))
+                finish(id, result: .failure(MachineClientError.timeout(type.rawValue)))
             } else {
                 pending[id]?.renewals += 1
                 armTimeout(id, type: type)
@@ -337,10 +356,10 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         }
     }
 
-    public func acquireSubscription(start: String, stop: String, payload: JSONValue, stopPayload: JSONValue)
+    public func acquireSubscription(start: WireRequest, stop: WireRequest, payload: JSONValue, stopPayload: JSONValue)
         -> MachineSubscription
     {
-        let key = stop + ":" + String(decoding: (try? stopPayload.encoded()) ?? Data(), as: UTF8.self)
+        let key = stop.rawValue + ":" + String(decoding: (try? stopPayload.encoded()) ?? Data(), as: UTF8.self)
         let owner = UUID()
         if remoteSubscriptions[key] == nil {
             remoteSubscriptions[key] = Subscription(
@@ -367,8 +386,8 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
             })
     }
 
-    public func acquireAttachment(_ type: String, id: String) -> MachineAttachment {
-        let key = "\(type):\(id)"
+    public func acquireAttachment(_ area: AttachmentArea, id: String) -> MachineAttachment {
+        let key = "\(area.rawValue):\(id)"
         let owner = UUID()
         attachments[key, default: []].insert(owner)
         return MachineAttachment(
@@ -376,18 +395,19 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
                 guard let self, self.attachments[key]?.contains(owner) == true else {
                     throw MachineClientError.disconnected
                 }
-                return try await self.routedRequest("\(type).attach", payload: payload, onResult: onSnapshot)
+                return try await self.routedRequest(area.attach, payload: payload, onResult: onSnapshot)
             },
             release: { [weak self] in
                 guard let self, self.attachments[key]?.remove(owner) != nil else { return }
                 if self.attachments[key]?.isEmpty == true {
                     self.attachments.removeValue(forKey: key)
-                    _ = try? await self.request("\(type).detach", payload: .object(["\(type)Id": .string(id)]))
+                    _ = try? await self.request(area.detach, payload: .object([area.idKey: .string(id)]))
                 }
             })
     }
 
-    public func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+    public func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void
+    {
         let id = UUID()
         subscribers[event, default: [:]][id] = handler
         return { [weak self] in
@@ -396,7 +416,7 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         }
     }
 
-    public func subscribeRejected(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
+    public func subscribeRejected(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
         -> () -> Void
     {
         let id = UUID()
@@ -526,10 +546,10 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         } catch {
             let reason = String(describing: error)
             Self.log.error("Dropped an invalid \(name, privacy: .public) event: \(reason, privacy: .public)")
-            for handler in Array(rejectedSubscribers[name]?.values ?? [:].values) { handler(input) }
+            for handler in Array(rejectedSubscribers[event]?.values ?? [:].values) { handler(input) }
             return
         }
-        for handler in Array(subscribers[name]?.values ?? [:].values) { handler(payload) }
+        for handler in Array(subscribers[event]?.values ?? [:].values) { handler(payload) }
     }
 
     /// Only a reply comes here; a request that timed out or lost its link is never measured. Only a read says how

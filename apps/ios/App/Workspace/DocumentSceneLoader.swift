@@ -12,7 +12,7 @@ enum DocumentSceneLoader {
             throw MachineClientError.invalid(String(localized: "Unsupported document kind."))
         }
         let payload: JSONValue = .object(["projectId": .string(projectID), "viewId": .string(viewID)])
-        return try await client.request(kind == "drawing" ? "drawing.paths" : "diagram.layout", payload: payload)
+        return try await client.request(kind == "drawing" ? .drawingPaths : .diagramLayout, payload: payload)
     }
 }
 

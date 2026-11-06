@@ -22,7 +22,7 @@ import SwiftUI
         for checkout in sources {
             do {
                 let answer = try await client.request(
-                    "git.log", payload: .object(["cwd": .string(checkout.path), "limit": .number(Double(Self.page))]))
+                    .gitLog, payload: .object(["cwd": .string(checkout.path), "limit": .number(Double(Self.page))]))
                 loaded.append(
                     GitLoadedLog(
                         cwd: checkout.path, repo: checkout.label, commits: answer.list("commits"),
@@ -51,7 +51,7 @@ import SwiftUI
             }
             var updated = log
             if let answer = try? await client.request(
-                "git.log",
+                .gitLog,
                 payload: .object([
                     "cwd": .string(log.cwd), "limit": .number(Double(Self.page)), "cursor": .string(cursor),
                 ]))
@@ -102,20 +102,26 @@ struct GitHistoryRows: View {
                         Text(row.commit.text("author")).font(.caption).foregroundStyle(MobileStyle.muted)
                         Text(gitRelativeTime(row.at)).font(.caption).foregroundStyle(MobileStyle.muted)
                         Spacer(minLength: 0)
-                        Text(row.commit.text("shortHash")).font(.caption.monospaced()).foregroundStyle(MobileStyle.faint)
+                        Text(row.commit.text("shortHash")).font(.caption.monospaced()).foregroundStyle(
+                            MobileStyle.faint)
                     }
                 }.modifier(MobileSidebarLabel(disclosure: true))
             }
             .modifier(MobileSidebarRow())
             .contextMenu {
-                Button(String(localized: "Copy hash"), lucideIcon: "copy") { UIPasteboard.general.string = row.commit.text("hash") }
-                Button(String(localized: "Copy subject"), lucideIcon: "copy") { UIPasteboard.general.string = row.commit.text("subject") }
+                Button(String(localized: "Copy hash"), lucideIcon: "copy") {
+                    UIPasteboard.general.string = row.commit.text("hash")
+                }
+                Button(String(localized: "Copy subject"), lucideIcon: "copy") {
+                    UIPasteboard.general.string = row.commit.text("subject")
+                }
             }
         }
         if merged.more {
             HStack {
                 if history.paging {
-                    Spinner(size: 14, label: String(localized: "Loading more commits")).foregroundStyle(MobileStyle.muted)
+                    Spinner(size: 14, label: String(localized: "Loading more commits")).foregroundStyle(
+                        MobileStyle.muted)
                 } else {
                     Button("Load more") { Task { await history.loadMore(client: client) } }
                 }

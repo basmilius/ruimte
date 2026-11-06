@@ -13,11 +13,11 @@ private func imageTarget(exists: Bool = false, revision: String? = nil, folder: 
 private let imageRoot = imageTarget()
 
 @MainActor private final class ImageSaveRequests {
-    var calls: [(String, JSONValue)] = []
-    var handler: @MainActor (String, JSONValue) async throws -> JSONValue = { name, payload in
-        name == "chat.imageTarget" ? imageRoot : .object(["path": payload["path"] ?? .null])
+    var calls: [(WireRequest, JSONValue)] = []
+    var handler: @MainActor (WireRequest, JSONValue) async throws -> JSONValue = { name, payload in
+        name == .chatImageTarget ? imageRoot : .object(["path": payload["path"] ?? .null])
     }
-    func request(_ name: String, _ payload: JSONValue) async throws -> JSONValue {
+    func request(_ name: WireRequest, _ payload: JSONValue) async throws -> JSONValue {
         calls.append((name, payload))
         return try await handler(name, payload)
     }
@@ -30,7 +30,7 @@ private let imageRoot = imageTarget()
         let finish = Gate<JSONValue>()
         var results: [String?] = []
         requests.handler = { name, payload in
-            if name == "chat.saveImage" {
+            if name == .chatSaveImage {
                 await started.release(true)
                 return await finish.wait()
             }
@@ -72,7 +72,7 @@ private let imageRoot = imageTarget()
     @Test func replacingRequiresAnExplicitActionAndTheCheckedRevision() async throws {
         let requests = ImageSaveRequests()
         requests.handler = { name, payload in
-            name == "chat.imageTarget"
+            name == .chatImageTarget
                 ? imageTarget(exists: true, revision: "checked-version")
                 : .object(["path": payload["path"] ?? .null])
         }
@@ -149,7 +149,7 @@ private let imageRoot = imageTarget()
         let requests = ImageSaveRequests()
         var checks = 0
         requests.handler = { name, _ in
-            if name == "chat.saveImage" { throw Appeared() }
+            if name == .chatSaveImage { throw Appeared() }
             checks += 1
             return checks == 1
                 ? imageRoot : imageTarget(exists: true, revision: "new-file")
@@ -164,7 +164,7 @@ private let imageRoot = imageTarget()
         #expect(model.error == "A file appeared")
         #expect(!model.canSave)
         #expect(model.canReplace)
-        #expect(requests.calls.map(\.0) == ["chat.imageTarget", "chat.saveImage", "chat.imageTarget"])
+        #expect(requests.calls.map(\.0) == [.chatImageTarget, .chatSaveImage, .chatImageTarget])
     }
 
     @Test func folderReadsStayUnderTheRootAndExcludeFilesLinksAndState() async throws {

@@ -256,8 +256,8 @@ final class UnifiedProjectsTests: XCTestCase {
             client: self, retain: { self.holds += 1 }, release: { self.holds -= 1 },
             isCurrent: { self.current })
     }
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
-        XCTAssertEqual(type, "project.list")
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
+        XCTAssertEqual(type, .projectList)
         requests += 1
         guard holdResponses else { return response }
         return try await withCheckedThrowingContinuation {
@@ -266,10 +266,10 @@ final class UnifiedProjectsTests: XCTestCase {
             waiting = nil
         }
     }
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
         -> () -> Void
     {
-        XCTAssertEqual(event, "project.summary")
+        XCTAssertEqual(event, .projectSummary)
         let id = UUID()
         eventHandlers[id] = handler
         return { self.eventHandlers.removeValue(forKey: id) }

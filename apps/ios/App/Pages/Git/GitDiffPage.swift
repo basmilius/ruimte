@@ -69,7 +69,7 @@ struct GitDiffPage: View {
                 return
             }
             await RemotePageLifecycle.run(
-                client: client, events: ["git.status"], matches: { $0.text("cwd") == target.cwd },
+                client: client, events: [.gitStatus], matches: { $0.text("cwd") == target.cwd },
                 subscription: { GitPanel.watch(client, cwd: target.cwd) }, load: load)
         }
     }
@@ -99,7 +99,7 @@ struct GitDiffPage: View {
             if let path = target.path { fields["path"] = .string(path) }
             if let commit = target.commit { fields["commit"] = .string(commit) }
             if let base = target.base { fields["base"] = .string(base) }
-            return try await client.request("git.diff", payload: .object(fields))
+            return try await client.request(.gitDiff, payload: .object(fields))
         }
     }
 }

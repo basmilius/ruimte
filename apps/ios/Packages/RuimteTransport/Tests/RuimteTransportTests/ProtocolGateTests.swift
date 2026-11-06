@@ -28,7 +28,7 @@ private func event(_ name: String) -> String {
         probe.gate.start()
         let frame = try JSONValue.decode(Data(try #require(probe.sent.first).utf8))
         #expect(frame["id"]?.stringValue == "protocol")
-        #expect(frame["type"]?.stringValue == "endpoint.info")
+        #expect(frame["type"]?.stringValue == WireRequest.endpointInfo.rawValue)
         #expect(frame["payload"]?["client"]?.stringValue == "ios")
     }
 

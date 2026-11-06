@@ -56,7 +56,7 @@ enum GitPanel {
     /// The hold on `git.watch` that a checkout's `git.status` events come under.
     @MainActor static func watch(_ client: any MachineRequesting, cwd: String) -> MachineSubscription {
         let payload: JSONValue = .object(["cwd": .string(cwd)])
-        return client.acquireSubscription(start: "git.watch", stop: "git.unwatch", payload: payload, stopPayload: payload)
+        return client.acquireSubscription(start: .gitWatch, stop: .gitUnwatch, payload: payload, stopPayload: payload)
     }
 
     /// The label a repository is listed under, for a page that only has its path.

@@ -190,7 +190,9 @@ struct ChatForkSheet: View {
                         Text("The files stay as they are now. The agent knows they changed after this turn.")
                     }
                 } else if !canRestoreFiles {
-                    Text("The files of this turn are no longer in the repository, so the worktree starts from the latest commit.")
+                    Text(
+                        "The files of this turn are no longer in the repository, so the worktree starts from the latest commit."
+                    )
                 } else if filesAfterTurn {
                     Text("The worktree starts from the files as they were after this turn. The original keeps its own.")
                 } else {
@@ -225,7 +227,7 @@ struct ChatForkSheet: View {
     private func askFolder() async {
         do {
             folder = try await model.client.request(
-                "chat.forkInfo", payload: .object(["chatId": .string(model.chatID), "turnId": .string(turnID)]))
+                .chatForkInfo, payload: .object(["chatId": .string(model.chatID), "turnId": .string(turnID)]))
         } catch is CancellationError {
         } catch {
             folder = .object(["repository": .bool(false), "branches": .array([]), "filesAfterTurn": .bool(false)])
@@ -247,7 +249,7 @@ struct ChatForkSheet: View {
             worktree: worktree ? (branchName, filesAfterTurn && canRestoreFiles) : nil,
             original: original, chosen: chosen)
         do {
-            let result = try await model.client.request("chat.fork", payload: payload)
+            let result = try await model.client.request(.chatFork, payload: payload)
             dismiss()
             forked(result.text("nodeId"))
         } catch {

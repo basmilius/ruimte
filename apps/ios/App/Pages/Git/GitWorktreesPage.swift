@@ -12,7 +12,8 @@ struct GitWorktreesPage: View {
     @State private var state: GitWorktreesState
     @State private var diff: GitDiffTarget?
 
-    init(client: any MachineRequesting, repositories: GitRepositories, repo: String, workspace: MobileWorkspace? = nil) {
+    init(client: any MachineRequesting, repositories: GitRepositories, repo: String, workspace: MobileWorkspace? = nil)
+    {
         self.client = client
         self.repositories = repositories
         self.repo = repo
@@ -37,7 +38,9 @@ struct GitWorktreesPage: View {
                     ForEach(state.worktrees) { worktree in
                         GitWorktreeRow(
                             client: client, state: state, worktree: worktree,
-                            occupants: workspace.flatMap { GitWorktreeOccupants.line(in: $0.views, path: worktree.path) }
+                            occupants: workspace.flatMap {
+                                GitWorktreeOccupants.line(in: $0.views, path: worktree.path)
+                            }
                         ) { diff = $0 }
                     }
                 }
@@ -55,7 +58,8 @@ struct GitWorktreesPage: View {
             }
         }
         .task(id: repo) {
-            await RemotePageLifecycle.run(client: client, events: ["git.worktrees"], load: { await state.load(client: client) })
+            await RemotePageLifecycle.run(
+                client: client, events: [.gitWorktrees], load: { await state.load(client: client) })
         }
         .refreshable { await state.load(client: client) }
         .modifier(GitWorktreeDialogs(client: client, state: state))
@@ -117,7 +121,9 @@ struct GitWorktreeRow: View {
                     let detail = GitWorktreeText.rowDetail(worktree)
                     if !detail.isEmpty {
                         Text(detail).font(.caption)
-                            .foregroundStyle(worktree.work?.operation != nil ? MobileStyle.statusNeedsYou : MobileStyle.muted)
+                            .foregroundStyle(
+                                worktree.work?.operation != nil ? MobileStyle.statusNeedsYou : MobileStyle.muted
+                            )
                             .lineLimit(2)
                     }
                 }
@@ -171,8 +177,10 @@ struct GitWorktreeOutcomeSection: View {
                 } label: {
                     Label(String(localized: "Resolve"), lucideIcon: "file-exclamation-point")
                 }
-                Button(String(localized: "Abort merge"), lucideIcon: "ban", role: .destructive) { state.confirmAbort = cwd }
-                    .disabled(state.busy)
+                Button(String(localized: "Abort merge"), lucideIcon: "ban", role: .destructive) {
+                    state.confirmAbort = cwd
+                }
+                .disabled(state.busy)
             } header: {
                 Text("The merge waits for you")
             }
@@ -279,7 +287,8 @@ struct GitWorktreeMergeSheet: View {
     private var chosen: GitMergeStrategy { GitMergeStrategy(rawValue: strategy) ?? .squash }
     private var needsMessage: Bool { (worktree.hasLooseWork && commitFirst) || chosen == .squash }
     private var blocked: Bool {
-        (worktree.hasLooseWork && !commitFirst) || (needsMessage && subject.trimmingCharacters(in: .whitespaces).isEmpty)
+        (worktree.hasLooseWork && !commitFirst)
+            || (needsMessage && subject.trimmingCharacters(in: .whitespaces).isEmpty)
     }
 
     var body: some View {
@@ -324,7 +333,8 @@ struct GitWorktreeMergeSheet: View {
             }
             .navigationTitle(
                 worktree.fromBranch.map { String(localized: "Merge \(worktree.branch) into \($0)") }
-                    ?? String(localized: "Merge \(worktree.branch)"))
+                    ?? String(localized: "Merge \(worktree.branch)")
+            )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel", action: onCancel) }

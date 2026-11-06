@@ -478,7 +478,7 @@ import RuimtePulsar
             do {
                 let request = try WireSchema.validate(
                     "RequestSchema",
-                    .object(["id": .string(id), "type": .string("server.ping"), "payload": .object([:])]))
+                    .object(["id": .string(id), "type": .string(WireRequest.serverPing.rawValue), "payload": .object([:])]))
                 try sendFrame(wireText(request))
             } catch { end(error) }
         case .dead:
