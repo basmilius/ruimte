@@ -5,20 +5,17 @@ import i18next from 'i18next';
 import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { App } from '@/App';
-import { CHAT_HOST, configureChat } from '@/chat/host';
-import { folderWatches } from '@/controllers/fs-watch';
-import { provideExtensionChat } from '@/nodes/extension-chat';
-import { startFileReadPreparation } from '@/project/file-read-preparation';
-import { defaultDocumentStore } from '@/state/document';
-import { useFiles } from '@/state/files';
-import { defaultProjectStore } from '@/state/project';
+import { CHAT_HOST } from '@/chat/host';
+import { configureClient } from '@/wiring/client-config';
+import { installClientHooks } from '@/wiring/client-hooks';
+import { installWorkspace } from '@/wiring/workspace';
 import { ChatScopeProvider } from '@/workspace/ChatScopeProvider';
 import { closedAfterTest, currentTest, waitTurn } from './test-scope';
 
-// Once for the process, before any chat store is read, as `main.tsx` does it.
-configureChat();
-provideExtensionChat();
-startFileReadPreparation(defaultProjectStore, defaultDocumentStore, folderWatches, useFiles);
+// Once for the process, before any chat store is read: the wiring `main.tsx` runs.
+installClientHooks();
+configureClient();
+installWorkspace();
 
 /*
  * Lets what a fake machine answered and what React drew from it land. Bounded by turns of the event

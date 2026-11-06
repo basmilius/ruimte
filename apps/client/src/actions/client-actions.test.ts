@@ -12,10 +12,13 @@ import { useDocument } from '@/state/document';
 import { defaultDrawings } from '@/state/drawing';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
+import { installClientHooks } from '@/wiring/client-hooks';
 import { fakeProvider } from '../../testing/fake-provider';
 import { emptyCanvas } from '../../testing/project-fixtures';
 import { completed, confirmed, expectQuestion, expectUndoable } from './action-support';
-import { clientActions, createClientActionRegistry } from './client-actions';
+import { createClientActionRegistry } from './client-actions';
+
+const clientActions = installClientHooks().actions;
 
 const PROJECT: ProjectSummary = {
     projectId: 'atlas',

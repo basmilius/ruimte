@@ -18,22 +18,15 @@ import { chatSinkFor } from '@/state/chats';
 import { activeEndpoint, endpointById, endpointIdOfMachine, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { isOfEndpoint } from '@/state/keys';
 import { isRealMachine } from '@/state/local-machine';
-import { PlanSync } from '@/state/plans';
-import { watchPrWatches } from '@/state/pr-watches';
 import { useProjectList } from '@/state/project-list';
-import { watchPushAttention } from '@/state/push-attention';
 import { sessionSinkFor, useSessions } from '@/state/sessions';
-import { watchSnoozes } from '@/state/snooze';
-import { textDrafts } from '@/state/text-drafts';
 import { nodesOfView, subscribeViewNodes } from '@/state/view-nodes';
 import { defaultWorkspaceStores } from '@/state/workspace';
 import { workspaceOpening } from '@/telemetry/workspace-load';
 import type { Transport } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { machineTransport, pool } from '@/transport/index';
-import { reportPresence } from '@/transport/presence';
 import { useOptionalConnection } from '@/workspace/context';
-import { liveDraftLink } from '@/workspace/draft-link';
 import { forgetProjectSessions } from '@/workspace/session-lifecycle';
 import { workspaceOf, useWindow, windowWorkspace } from '@/workspace/window';
 
@@ -77,8 +70,6 @@ export interface Workspace {
 
 /* What one payload of `project.open` asks for: a project by id, a folder, or a new project by name. */
 export type OpenRequest = { projectId: string } | { folder: string; createFolder: boolean };
-
-textDrafts.provideLinks(liveDraftLink);
 
 const stores = defaultWorkspaceStores;
 const machines = new Map<string, Machine>();
@@ -131,10 +122,6 @@ function buildMachine(endpoint: Endpoint): Machine {
     const transport = machineTransport(endpoint.id);
     const stops = [
         ...[...machineWatches].map((watch) => watch(endpoint.id, transport)),
-        watchPushAttention(endpoint.id, transport),
-        reportPresence(transport, () => machineAnswers(pool.statusOf(endpoint.id), 'presence.report')),
-        watchSnoozes(endpoint.id, transport),
-        watchPrWatches(endpoint.id, transport),
         watchProviderAccounts(endpoint.id, transport),
         transport.on('provider.changed', ({ providers }) => providerSinkFor(endpoint.id).setProviders(providers)),
         transport.subscribeStatus((status) => {
@@ -143,7 +130,6 @@ function buildMachine(endpoint: Endpoint): Machine {
             }
         })
     ];
-    const plans = new PlanSync(endpoint.id, transport);
     const sessions = new SessionClient(transport, sessionSinkFor(endpoint.id));
     const chats = new ChatClient(transport, chatSinkFor(endpoint.id), providerSinkFor(endpoint.id));
     const browsers = new BrowserClient(endpoint.id, transport);
@@ -161,7 +147,6 @@ function buildMachine(endpoint: Endpoint): Machine {
                 stop();
             }
             clearedRows.delete(endpoint.id);
-            plans.dispose();
             sessions.dispose();
             chats.dispose();
             browsers.dispose();

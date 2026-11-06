@@ -17,7 +17,7 @@ import { storedPathOf, type AgentKind } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
 import type { HostLanguage as EditorLanguage } from '@/language/host-language';
-import { provideInlineEdit, type InlineEdit } from '@/language/ruimte-editor-language';
+import type { InlineEdit } from '@/language/ruimte-editor-language';
 import { isShortcut } from '@/language/shortcut-keys';
 import { inlineEditAccountOn, inlineEditAgentOn } from '@/state/ai-settings';
 import { currentEndpointId } from '@/state/current-endpoint';
@@ -398,5 +398,3 @@ export class InlineEditFeature implements InlineEdit {
 function tintOf(span: LineSpan) {
     return { startLine: span.startLine, endLine: span.endLine, color: '--accent', fill: '--editor-selection' };
 }
-
-provideInlineEdit((language) => new InlineEditFeature(language));

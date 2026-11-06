@@ -28,7 +28,12 @@ import { watchDrags } from '@/surface/view-drag';
 import { ChatScopeProvider } from '@/workspace/ChatScopeProvider';
 import { useWindow } from '@/workspace/window';
 
-const WorkspaceShell = lazyNamed(() => import('@/shell/WorkspaceShell'), 'WorkspaceShell');
+const WorkspaceShell = lazyNamed(async () => {
+    const { installWorkspace } = await import('@/wiring/workspace');
+    installWorkspace();
+
+    return import('@/shell/WorkspaceShell');
+}, 'WorkspaceShell');
 const FirstRunScreen = lazyNamed(() => import('@/onboarding/FirstRunScreen'), 'FirstRunScreen');
 const CommandPalette = lazyDialog(
     () => import('@/shell/CommandPalette'),

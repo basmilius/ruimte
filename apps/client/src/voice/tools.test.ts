@@ -4,7 +4,6 @@ import { VOICE_TOOL_ACTIONS, voiceToolDefinitions } from '@ruimte/actions';
 import type { ProjectSummary } from '@ruimte/contracts';
 import type { ProjectDocument, ProjectNode } from '@ruimte/contracts';
 import { VOICE_ACTION_CALL } from '@/action-port/perform';
-import { clientActions } from '@/actions/client-actions';
 import { defaultCanvases } from '@/state/canvas';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
@@ -13,7 +12,10 @@ import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useSettings } from '@/state/settings';
 import { bypassesQueue, executeVoiceTool } from '@/voice/tools';
+import { installClientHooks } from '@/wiring/client-hooks';
 import { emptyCanvas } from '../../testing/project-fixtures';
+
+const clientActions = installClientHooks().actions;
 
 const main = emptyCanvas();
 

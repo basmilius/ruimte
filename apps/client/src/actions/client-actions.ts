@@ -4,7 +4,6 @@ import { useChats, providersOf } from '@adecore/agents-react/state';
 import { ActionRefusal, ActionRegistry, type ActionHandlers } from '@ruimte/actions';
 import type { ChatItem, ProviderInfo } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
-import { provideClientActions } from '@/action-port/perform';
 import { canvasActions } from '@/actions/canvas-actions';
 import { chatSearchActions, type ChatSearchMachine } from '@/actions/chat-search-actions';
 import { contentActions, type ContentMachine } from '@/actions/content-actions';
@@ -28,7 +27,7 @@ import { viewActions } from '@/actions/view-actions';
 import { designFoldersOnDisk } from '@/design/design-read';
 import { liveViewDeletion, type ViewDeletionMachine } from '@/project/view-deletion';
 import { currentEndpointId } from '@/state/current-endpoint';
-import { useDocument, type DocumentState } from '@/state/document';
+import type { DocumentState } from '@/state/document';
 import { endpointKey } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { shownFolderOf, useProject } from '@/state/project';
@@ -207,6 +206,3 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
     };
     return new ActionRegistry<void>(handlers, { checkRevision: checkClientRevision });
 }
-
-export const clientActions = createClientActionRegistry(useDocument);
-provideClientActions(clientActions);

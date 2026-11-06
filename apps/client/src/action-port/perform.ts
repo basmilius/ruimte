@@ -12,7 +12,7 @@ export interface PerformOptions {
 
 let registry: ActionRegistry<void> | null = null;
 
-/* Handed over by `actions/client-actions.ts`, which builds the registry out of every feature. */
+/* Handed over by `wiring/client-hooks.ts`, which builds the registry out of every feature. */
 export function provideClientActions(clientActions: ActionRegistry<void>): void {
     registry = clientActions;
 }
@@ -27,7 +27,7 @@ export async function perform<Name extends ActionName>(name: Name, input: Action
 
 export function clientRegistry(): ActionRegistry<void> {
     if (registry === null) {
-        throw new Error('No action registry is provided yet.');
+        throw new Error('No action registry is installed: run installClientHooks (wiring/client-hooks.ts) before the first action.');
     }
     return registry;
 }

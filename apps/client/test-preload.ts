@@ -7,17 +7,17 @@ import { CHARTS_NAMESPACE, CHARTS_RESOURCES } from '@adecore/charts';
 import editorWords from '@adecore/editor-react/locales/en.json' with { type: 'json' };
 import { UI_NAMESPACE, UI_RESOURCES } from '@adecore/ui';
 import i18next from 'i18next';
-import './src/actions/client-actions';
-import './src/editor-ai/inline-edit';
-import './src/extensions/built-in';
 import { connectFormat } from './src/format/source';
 import { defaultCanvases, focusedCanvas } from './src/state/canvas';
+import './src/extensions/built-in';
 import { defaultDiagrams } from './src/state/diagram';
 import { useDocument } from './src/state/document';
 import { defaultDrawings } from './src/state/drawing';
 import { useEndpoints } from './src/state/endpoints';
 import { FALLBACK_LANGUAGE } from './src/state/languages';
 import { useToasts } from './src/state/toasts';
+import { installClientHooks } from './src/wiring/client-hooks';
+import { installWorkspace } from './src/wiring/workspace';
 
 /*
  * The English words, in memory, before the first test runs, so a pure function that builds a label
@@ -64,6 +64,9 @@ await i18next.init({
         }
     }
 });
+
+installClientHooks();
+installWorkspace();
 
 // The formatters of @adecore/ui read the client's settings, which the tests set.
 connectFormat();
