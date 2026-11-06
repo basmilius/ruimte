@@ -1,4 +1,4 @@
-import type { ChatInfo } from '@adecore/agent-contracts';
+import { chatActivity, type ChatInfo } from '@adecore/agent-contracts';
 import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { ProjectSummarySchema } from './project.ts';
@@ -120,15 +120,8 @@ export function chatIsWorking(
         return false;
     }
     const heldByCard = ownCard && info.status === 'needs-you' && (info.activeTurnId ?? null) === null;
-    return (
-        info.status === 'running' ||
-        (info.status === 'needs-you' && !heldByCard) ||
-        info.delegating === true ||
-        (info.background?.length ?? 0) > 0 ||
-        info.goal?.status === 'active' ||
-        (info.requests?.length ?? 0) > 0 ||
-        (info.queue?.length ?? 0) > 0
-    );
+    // The card holds the chat with nobody asked, so the rest (a subagent, a goal, a queue) is judged as if it were idle.
+    return chatActivity({ ...info, status: heldByCard ? 'idle' : info.status }) !== 'settled';
 }
 
 export const CHAT_MOVE_REQUEST_SCHEMAS = {

@@ -3,6 +3,7 @@ import { isAbsolute, resolve } from 'node:path';
 import { narrowerMode } from '@adecore/agents/providers';
 import { isWithin } from '@adecore/utils/path';
 import {
+    chatActivity,
     dueTimesBetween,
     nextDue,
     ROUTINE_LIMITS,
@@ -144,10 +145,11 @@ const RESTARTED = 'The machine restarted during the run';
 
 /* The state of an agent run as its chat says it now; idle before the run's turn ended is still the start. */
 function chatState(info: ChatInfo, run: Pick<RoutineRun, 'state' | 'turnsBefore'>): { state: RoutineRunState; limitUntil?: number; error?: string } {
-    if (info.status === 'needs-you') {
+    const activity = chatActivity(info);
+    if (activity === 'waiting') {
         return { state: 'needs-you' };
     }
-    if (info.status === 'running' || info.delegating === true || (info.background?.length ?? 0) > 0) {
+    if (activity === 'working' || activity === 'delegating' || activity === 'background') {
         return { state: 'running' };
     }
     if (info.limit !== undefined) {

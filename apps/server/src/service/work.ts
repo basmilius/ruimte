@@ -1,9 +1,9 @@
-import type { AgentInfo, AgentStatus, MachineWork } from '@ruimte/contracts';
+import { chatActivity, type AgentInfo, type AgentStatus, type ChatInfo, type MachineWork } from '@ruimte/contracts';
 
 interface WorkFacts {
     /* `launch` is a session a launch runs in, whose shell execs the command and so has no child to count. */
     sessions: readonly { pid: number; exited: boolean; agent?: AgentInfo | null; launch?: boolean }[];
-    chats: readonly { activeTurnId: string | null }[];
+    chats: readonly Pick<ChatInfo, 'status' | 'activeTurnId' | 'delegating' | 'background' | 'requests' | 'goal' | 'queue'>[];
     /* How many processes have this pid as their parent; null where the process table cannot be read. */
     children: ((pid: number) => number) | null;
 }
@@ -27,7 +27,8 @@ export function workOf(facts: WorkFacts): MachineWork {
         }
     }
     for (const chat of facts.chats) {
-        if (chat.activeTurnId !== null) {
+        // A chat waiting on a person or on its subagents is mid-work too: an update would cut it off.
+        if (['working', 'waiting', 'delegating'].includes(chatActivity(chat))) {
             agents += 1;
         }
     }

@@ -1,4 +1,5 @@
 import type { ChatState, ChatStatuses } from '@adecore/agents-react/state';
+import { chatActivity } from '@ruimte/contracts';
 import { endpointKey, endpointOfNode } from '@/state/keys';
 import type { SessionState, SessionsByKey, StatusOf } from '@/state/sessions';
 
@@ -13,12 +14,12 @@ export function sessionWorking(session: SessionState | undefined): boolean {
 
 /* The same question of a chat, which carries the status on its thread rather than on a session. */
 export function chatWorking(chat: Pick<ChatState, 'info'> | undefined): boolean {
-    return chat?.info.status === 'running';
+    return chat !== undefined && chatActivity(chat.info) === 'working';
 }
 
 /* A chat between turns whose CLI still runs subagents or a workflow in the background. Waiting on a person outranks it. */
 function chatDelegating(chat: Pick<ChatState, 'info'> | undefined): boolean {
-    return chat?.info.status === 'idle' && chat.info.delegating === true;
+    return chat !== undefined && chatActivity(chat.info) === 'delegating';
 }
 
 /* Whether any agent is working, over every machine this window is watching. */

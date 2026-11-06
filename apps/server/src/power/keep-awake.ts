@@ -1,4 +1,4 @@
-import type { AgentInfo, ChatInfo, KeepAwakeMode } from '@ruimte/contracts';
+import { chatActivity, type AgentInfo, type ChatInfo, type KeepAwakeMode } from '@ruimte/contracts';
 
 export interface KeepAwakeSetting {
     mode: KeepAwakeMode;
@@ -8,18 +8,18 @@ export interface KeepAwakeSetting {
 
 export interface KeepAwakeWork {
     sessions: readonly { exited: boolean; agent?: AgentInfo | null }[];
-    chats: readonly Pick<ChatInfo, 'status' | 'delegating'>[];
+    chats: readonly Pick<ChatInfo, 'status' | 'activeTurnId' | 'delegating' | 'background' | 'requests' | 'goal' | 'queue'>[];
 }
 
 /*
  * Whether an agent is in the middle of a turn, the way the client's `agentsWorking` counts it: a
  * terminal agent only while its hooks say `running` and its CLI is live, a chat in a turn or between
- * turns with subagents still at work. Waiting on a person is not work.
+ * turns with subagents still at work (`chatActivity`). Waiting on a person is not work.
  */
 export function agentsWorking(work: KeepAwakeWork): boolean {
     return (
         work.sessions.some((session) => !session.exited && session.agent?.live === true && session.agent.status === 'running') ||
-        work.chats.some((chat) => chat.status === 'running' || (chat.status === 'idle' && chat.delegating === true))
+        work.chats.some((chat) => ['working', 'delegating'].includes(chatActivity(chat)))
     );
 }
 

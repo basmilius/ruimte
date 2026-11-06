@@ -2,7 +2,7 @@ import { join, relative } from 'node:path';
 import { type ChatCore, runningInBackground } from '@adecore/agents/chat';
 import type { AgentEvent } from '@adecore/agents/host';
 import { isWithin } from '@adecore/utils/path';
-import type { ChatItem, ChatTurnItem, LaunchStatus } from '@ruimte/contracts';
+import { chatActivity, type ChatItem, type ChatTurnItem, type LaunchStatus } from '@ruimte/contracts';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';
 import { JsonFileStore } from '../json-file-store.ts';
@@ -217,15 +217,7 @@ export class AfterSettleLaunches {
             return null;
         }
         const { info } = chat;
-        const held =
-            info.activeTurnId !== null ||
-            info.status === 'needs-you' ||
-            (info.requests ?? []).length > 0 ||
-            info.goal?.status === 'active' ||
-            (info.background ?? []).length > 0 ||
-            (info.queue ?? []).length > 0 ||
-            info.delegating === true;
-        if (held) {
+        if (chatActivity(info) !== 'settled') {
             return null;
         }
         const items = chat.thread.list();

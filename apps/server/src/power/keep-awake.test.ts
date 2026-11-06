@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentInfo } from '@ruimte/contracts';
+import type { AgentInfo, ChatInfo } from '@ruimte/contracts';
 import {
     KeepAwake,
     agentsWorking,
@@ -13,6 +13,11 @@ import {
 
 function setting(patch: Partial<KeepAwakeSetting> = {}): KeepAwakeSetting {
     return { mode: 'always', onBattery: false, display: false, ...patch };
+}
+
+/* A chat at rest, with what a test says about it laid over. */
+function chat(patch: Partial<ChatInfo> = {}): KeepAwakeWork['chats'][number] {
+    return { status: 'idle', activeTurnId: null, ...patch };
 }
 
 function agent(status: AgentInfo['status'], live = true): AgentInfo {
@@ -30,9 +35,11 @@ describe('agentsWorking', () => {
     });
 
     test('a chat counts in a turn and between turns while its subagents work', () => {
-        expect(agentsWorking({ sessions: [], chats: [{ status: 'running' }] })).toBe(true);
-        expect(agentsWorking({ sessions: [], chats: [{ status: 'idle', delegating: true }] })).toBe(true);
-        expect(agentsWorking({ sessions: [], chats: [{ status: 'needs-you', delegating: true }] })).toBe(false);
+        expect(agentsWorking({ sessions: [], chats: [chat({ status: 'running' })] })).toBe(true);
+        expect(agentsWorking({ sessions: [], chats: [chat({ delegating: true })] })).toBe(true);
+        expect(agentsWorking({ sessions: [], chats: [chat({ status: 'needs-you', delegating: true })] })).toBe(false);
+        // A chat that stopped on an error still holds the subagents it started.
+        expect(agentsWorking({ sessions: [], chats: [chat({ status: 'error', delegating: true })] })).toBe(true);
         expect(agentsWorking(idle)).toBe(false);
     });
 });
@@ -106,7 +113,7 @@ describe('KeepAwake', () => {
         const keepAwake = holder(state, fake.spawn);
         keepAwake.check();
         expect(fake.started).toHaveLength(0);
-        state.work = { sessions: [], chats: [{ status: 'running' }] };
+        state.work = { sessions: [], chats: [chat({ status: 'running' })] };
         keepAwake.check();
         keepAwake.check();
         expect(fake.started.map((entry) => entry.command)).toEqual([['caffeinate', '-w', '7', '-s']]);
