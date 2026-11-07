@@ -70,6 +70,23 @@ import XCTest
         XCTAssertEqual(DesignFiles.assetReferences(#"<img src="../logo.svg">"#, from: "flows"), ["../logo.svg"])
     }
 
+    /// The cases of `design-page.test.ts`: a backslash separates like a slash, and a path that the machine holding the
+    /// folder could read as leaving it, by a separator, a drive or an escape, names nothing.
+    func testABackslashSeparatesLikeASlashAndEveryShapeThatLeavesTheFolderNamesNothing() {
+        XCTAssertEqual(DesignFiles.assetPath("assets\\logo.svg"), "assets/logo.svg")
+        XCTAssertEqual(DesignFiles.assetPath("..\\assets\\logo.svg", from: "flows"), "assets/logo.svg")
+        XCTAssertEqual(DesignFiles.assetPath("assets/a%20b.png"), "assets/a b.png")
+        let leaving = [
+            "..\\private.txt", "a\\..\\..\\x", "C:\\x", "\\\\server\\share\\x", "\\x", "%2e%2e/x", "%2e%2e%2fx",
+            "a%2f..%2f..%2fx", "%5c..%5cx", "%5c%5cserver%5cshare", "%2fetc/x", "%43:/x", "/etc/x", "a%00b.png",
+            "a/.../x", "a/.. /x",
+        ]
+        for reference in leaving {
+            XCTAssertNil(DesignFiles.assetPath(reference), reference)
+        }
+        XCTAssertNil(DesignFiles.assetPath("..\\..\\x", from: "flows"))
+    }
+
     func testAPageInAFolderTakesItsFilesFromBesideItself() async throws {
         let folder = Folder(
             pages: ["flows/index.html": #"<img src="../assets/logo.svg"><img src="pic.png"><img src="../../outside.png">"#],
@@ -234,6 +251,25 @@ import XCTest
             XCTAssertNil(bytes, path)
         }
         XCTAssertEqual(folder.reads, ["d/assets/work/apple.png": 1])
+    }
+
+    func testARuntimePathThatLeavesTheFolderOnWindowsIsNeverRead() async {
+        var requested: [String] = []
+        let assets = DesignFiles.RuntimeAssets(folder: "C:\\work\\design") { path, _ in
+            requested.append(path)
+            return MachineResource(data: Data("outside".utf8), mime: "text/plain")
+        }
+        for path in [
+            "..\\private.txt", "a\\..\\..\\x", "C:\\x", "\\\\server\\share\\x", "%2e%2e/x", "/etc/x", "assets\\logo.svg",
+            "a/..\\..\\x",
+        ] {
+            let bytes = await assets.bytes(path)
+            XCTAssertNil(bytes, path)
+        }
+        XCTAssertEqual(requested, [])
+        let logo = await assets.bytes("assets/logo.svg")
+        XCTAssertNotNil(logo)
+        XCTAssertEqual(requested, ["C:\\work\\design/assets/logo.svg"])
     }
 
     // MARK: In the web view

@@ -90,6 +90,15 @@ const cases: Case[] = [
         }
     },
     {
+        name: 'a backslash separates like a slash, and a path that leaves the folder by any spelling stays the path it was',
+        file: 'still.html',
+        pages: {
+            'still.html':
+                '<head></head><img src="assets\\me.png"><img src="..\\outside.png"><img src="%2e%2e/outside.png"><img src="C:\\outside.png"><img src="\\\\server\\share\\outside.png">'
+        },
+        assets: { 'assets/me.png': PNG, 'outside.png': PNG }
+    },
+    {
         name: 'a page with neither a script nor a frame stays as it is',
         file: 'still.html',
         pages: { 'still.html': '<head></head><p>still</p><img src="me.png">' },

@@ -208,13 +208,28 @@ enum DesignFiles {
 
     /// The file a relative reference of a page names, relative to the design folder, or nil when it leaves the folder
     /// or loads on its own. `from` is the folder of the page that makes the reference, inside the design folder.
+    ///
+    /// The rule of `assetPathOf` on the desktop, the same on every machine the path reaches: a backslash separates
+    /// like a slash (a Windows machine reads `..\x` as a parent), and a drive, a UNC prefix, a NUL, or a separator or
+    /// `..` that only a percent escape spells out are refused after one decoding. A segment of nothing but dots and
+    /// spaces is refused too, which Windows reads as another name. Symlinks are out of scope: a page can read only
+    /// what the client may read anyway, so this keeps a page in its folder and is no sandbox against the person who
+    /// opened it.
     static func assetPath(_ reference: String, from: String = "") -> String? {
         let cut = reference.firstIndex { $0 == "?" || $0 == "#" } ?? reference.endIndex
         let path = String(reference[..<cut])
         let range = NSRange(reference.startIndex..., in: reference)
         guard !path.isEmpty, loadsAsItIs.firstMatch(in: reference, range: range) == nil else { return nil }
+        let decoded = (path.removingPercentEncoding ?? path).unicodeScalars
+        guard let first = decoded.first, !decoded.contains("\0"), first != "/", first != "\\" else { return nil }
+        if first.isASCII, first.properties.isAlphabetic, decoded.dropFirst().first == ":" {
+            return nil
+        }
         var parts = from.split(separator: "/").map(String.init)
-        for part in (path.removingPercentEncoding ?? path).split(separator: "/", omittingEmptySubsequences: false) {
+        // Split by scalar, as the page's script splits by UTF-16 unit: a separator before a combining mark is one
+        // `Character`, which a split by `Character` would not see.
+        for scalars in decoded.split(omittingEmptySubsequences: false, whereSeparator: { $0 == "/" || $0 == "\\" }) {
+            let part = String(String.UnicodeScalarView(scalars))
             if part.isEmpty || part == "." {
                 continue
             }
@@ -223,7 +238,10 @@ enum DesignFiles {
                 parts.removeLast()
                 continue
             }
-            parts.append(String(part))
+            if scalars.allSatisfy({ $0 == "." || $0 == " " }) {
+                return nil
+            }
+            parts.append(part)
         }
         return parts.isEmpty ? nil : parts.joined(separator: "/")
     }

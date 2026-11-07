@@ -67,6 +67,12 @@ describe('what a design page may say', () => {
             'assets/../../secret.png',
             'assets/./a.png',
             '/etc/hosts',
+            '..\\private.txt',
+            'assets\\logo.svg',
+            'a\\..\\..\\x',
+            'C:\\x',
+            '\\\\server\\share\\x',
+            '%2e%2e/x',
             'https://example.com/a.png',
             'a.png?v=1',
             'next.html',
@@ -246,6 +252,28 @@ describe('a file a design page names while it runs', () => {
             { jsonrpc: '2.0', method: DESIGN_METHODS.asset, params: { path: 'assets/logo.svg', bytes } },
             { jsonrpc: '2.0', method: DESIGN_METHODS.asset, params: { path: 'assets/logo.svg', bytes } }
         ]);
+    });
+
+    test('is not asked for when a backslash or an escape takes it out of the folder, and a backslash between folders is a slash', async () => {
+        const page = running('flows');
+        const image = new StandInElement('img');
+
+        for (const src of [
+            '..\\..\\private.txt',
+            'a\\..\\..\\..\\x',
+            'C:\\x',
+            '\\\\server\\share\\x',
+            '%2e%2e/%2e%2e/x',
+            '..%2f..%2fx',
+            '%5c..%5cx',
+            'a%00.png'
+        ]) {
+            await page.set(image, 'src', src);
+        }
+        expect(page.asked).toEqual([]);
+
+        await page.set(image, 'src', '..\\assets\\logo.svg');
+        expect(page.asked).toEqual([asset('assets/logo.svg')]);
     });
 
     test('is left alone in a page on its own, as Export hands it out', () => {

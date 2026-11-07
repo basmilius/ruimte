@@ -16,10 +16,13 @@ enum DesignScripts {
         var path = cut === -1 ? text : text.slice(0, cut);
         if (path === '' || /^(?:[a-z][a-z0-9+.-]*:|\/\/|\/|#)/i.test(text)) { return null; }
         try { path = decodeURIComponent(path); } catch (e) {}
+        if (/\0|^[\\\/]|^[a-z]:/i.test(path)) { return null; }
         var parts = from === '' ? [] : from.split('/');
-        var inside = path.split('/').every(function (part) {
+        var inside = path.split(/[\\\/]/).every(function (part) {
+            if (part === '' || part === '.') { return true; }
             if (part === '..') { return parts.pop() !== undefined; }
-            if (part !== '' && part !== '.') { parts.push(part); }
+            if (/^[. ]+$/.test(part)) { return false; }
+            parts.push(part);
             return true;
         });
         return inside && parts.length > 0 ? parts.join('/') : null;
@@ -51,10 +54,13 @@ enum DesignScripts {
         var path = cut === -1 ? text : text.slice(0, cut);
         if (path === '' || /^(?:[a-z][a-z0-9+.-]*:|\/\/|\/|#)/i.test(text)) { return null; }
         try { path = decodeURIComponent(path); } catch (e) {}
+        if (/\0|^[\\\/]|^[a-z]:/i.test(path)) { return null; }
         var parts = from === '' ? [] : from.split('/');
-        var inside = path.split('/').every(function (part) {
+        var inside = path.split(/[\\\/]/).every(function (part) {
+            if (part === '' || part === '.') { return true; }
             if (part === '..') { return parts.pop() !== undefined; }
-            if (part !== '' && part !== '.') { parts.push(part); }
+            if (/^[. ]+$/.test(part)) { return false; }
+            parts.push(part);
             return true;
         });
         return inside && parts.length > 0 ? parts.join('/') : null;

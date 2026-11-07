@@ -158,6 +158,13 @@ function decodedPath(path: string): string {
  * The file a relative reference of a page names, relative to the design folder, or null when it leaves
  * the folder. The frame writes the page from a string, so a relative path loads nothing on its own.
  * `from` is the folder of the page that makes the reference, inside the design folder.
+ *
+ * The rule is the same on every machine the path reaches, so a backslash separates like a slash (a
+ * Windows machine reads `..\x` as a parent) and a drive, a UNC prefix, a NUL, or a separator or `..` that
+ * only a percent escape spells out are refused after one decoding. A segment of nothing but dots and
+ * spaces is refused too, which Windows reads as another name. The iPhone app and `RESOLVE_SCRIPT` hold
+ * the same rule. Symlinks are out of scope: a page can read only what the client may read anyway, so
+ * this keeps a page in its folder and is no sandbox against the person who opened it.
  */
 export function assetPathOf(reference: string, from = ''): string | null {
     const path = reference.split(/[?#]/)[0]!;
@@ -166,9 +173,15 @@ export function assetPathOf(reference: string, from = ''): string | null {
         return null;
     }
 
+    const decoded = decodedPath(path);
+
+    if (/\0|^[\\/]|^[a-z]:/i.test(decoded)) {
+        return null;
+    }
+
     const parts = from === '' ? [] : from.split('/');
 
-    for (const part of decodedPath(path).split('/')) {
+    for (const part of decoded.split(/[\\/]/)) {
         if (part === '' || part === '.') {
             continue;
         }
@@ -180,6 +193,10 @@ export function assetPathOf(reference: string, from = ''): string | null {
 
             parts.pop();
             continue;
+        }
+
+        if (/^[. ]+$/.test(part)) {
+            return null;
         }
 
         parts.push(part);
@@ -264,10 +281,13 @@ export const RESOLVE_SCRIPT = String.raw`function resolved(text, from) {
         var path = cut === -1 ? text : text.slice(0, cut);
         if (path === '' || /^(?:[a-z][a-z0-9+.-]*:|\/\/|\/|#)/i.test(text)) { return null; }
         try { path = decodeURIComponent(path); } catch (e) {}
+        if (/\0|^[\\\/]|^[a-z]:/i.test(path)) { return null; }
         var parts = from === '' ? [] : from.split('/');
-        var inside = path.split('/').every(function (part) {
+        var inside = path.split(/[\\\/]/).every(function (part) {
+            if (part === '' || part === '.') { return true; }
             if (part === '..') { return parts.pop() !== undefined; }
-            if (part !== '' && part !== '.') { parts.push(part); }
+            if (/^[. ]+$/.test(part)) { return false; }
+            parts.push(part);
             return true;
         });
         return inside && parts.length > 0 ? parts.join('/') : null;

@@ -119,6 +119,35 @@ describe('a reference a page makes to its folder', () => {
         expect(assetReferences('<img src="img/100%.png">')).toEqual(['img/100%.png']);
     });
 
+    test('takes a backslash for a separator and refuses every shape that leaves the folder on a machine that does the same', () => {
+        // The same cases run on the iPhone (`DesignInliningTests`), which hands the path to a machine that may be Windows.
+        expect(assetPathOf('assets\\logo.svg')).toBe('assets/logo.svg');
+        expect(assetPathOf('..\\assets\\logo.svg', 'flows')).toBe('assets/logo.svg');
+        expect(assetPathOf('assets/a%20b.png')).toBe('assets/a b.png');
+
+        for (const reference of [
+            '..\\private.txt',
+            'a\\..\\..\\x',
+            'C:\\x',
+            '\\\\server\\share\\x',
+            '\\x',
+            '%2e%2e/x',
+            '%2e%2e%2fx',
+            'a%2f..%2f..%2fx',
+            '%5c..%5cx',
+            '%5c%5cserver%5cshare',
+            '%2fetc/x',
+            '%43:/x',
+            '/etc/x',
+            'a%00b.png',
+            'a/.../x',
+            'a/.. /x'
+        ]) {
+            expect(assetPathOf(reference)).toBeNull();
+        }
+        expect(assetPathOf('..\\..\\x', 'flows')).toBeNull();
+    });
+
     test('is found in an attribute and in CSS, once each, and replaced by its bytes where it has them', () => {
         const html = [
             '<link rel="stylesheet" href="styles.css">',
