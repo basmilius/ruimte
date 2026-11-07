@@ -56,6 +56,7 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     row('appearance.theme'),
     row('appearance.palette'),
     row('appearance.accent'),
+    row('appearance.accentFollowsProject'),
     row('appearance.interface.layout'),
     row('appearance.projectGlow'),
     row('appearance.scrollBounce'),

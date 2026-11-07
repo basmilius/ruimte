@@ -46,6 +46,10 @@
             "label": "Accentkleur",
             "description": "Selectieranden, focus en de cursor in een terminal."
         },
+        "accentFollowsProject": {
+            "label": "Kleur van het project volgen",
+            "description": "Elk venster gebruikt de kleur van zijn project als accent. Een project in de standaardkleur houdt je eigen accent."
+        },
         "interface": {
             "title": "Venster",
             "layout": {

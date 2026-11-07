@@ -46,7 +46,7 @@ import { ViewHost } from '@/shell/ViewHost';
 import { WorktreeDialog } from '@/shell/WorktreeDialog';
 import { refreshPrRepos } from '@/state/pr-repos';
 import { shownFolderOf, useProject } from '@/state/project';
-import { useSettings } from '@/state/settings';
+import { setProjectAccent, useSettings } from '@/state/settings';
 import { useShownPanel, useUi } from '@/state/ui';
 import { workspaceShown } from '@/telemetry/workspace-load';
 import { startBytesWorker } from '@/transport/bytes-worker-host';
@@ -226,6 +226,12 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
     useEffect(() => {
         void refreshPrRepos();
     }, [folder]);
+    /* The accent follows the project on screen while the setting is on. The start screen has no workspace, so it keeps the chosen accent without asking. */
+    const projectColor = useProject((state) => state.current?.color ?? null);
+    useEffect(() => {
+        setProjectAccent(projectColor);
+    }, [projectColor]);
+    useEffect(() => () => setProjectAccent(null), []);
     /* The project's agents open its databases with the passwords this window holds, so they are read with the project rather than with the panel. */
     useEffect(() => {
         ensureDatabaseConnections();

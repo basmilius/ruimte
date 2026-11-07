@@ -369,11 +369,11 @@
        of surfaces. `--selection` stays what it is for a run of selected text. The frame's own focus
        ring has to lose to a selected node, which is a `:not()` and not a variant. */
     .node-selected {
-        outline: 2px solid var(--accent);
+        outline: 2px solid var(--accent-on-surface);
         outline-offset: 0;
     }
     [data-node-id]:focus-visible:not(.node-selected) {
-        outline: 2px solid var(--accent);
+        outline: 2px solid var(--accent-on-surface);
         outline-offset: 2px;
     }
 

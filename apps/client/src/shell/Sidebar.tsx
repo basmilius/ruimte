@@ -81,7 +81,7 @@ import { openSidebarTarget } from './sidebar-navigation';
 const NO_SEPARATORS: SeparatorPlaces = { before: {}, trailing: [] };
 
 const FOOTER_BUTTON =
-    'flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:outline-accent';
+    'flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:outline-accent-on-surface';
 
 /* Where a dragged row would land. It sits in the gap, so the rows around it do not move while
    the pointer travels. */

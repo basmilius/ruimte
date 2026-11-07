@@ -14,6 +14,13 @@ import {
     type Settings
 } from './settings';
 
+test('the accent follows the project only after a stored true', () => {
+    expect(settingsFrom({}).accentFollowsProject).toBe(false);
+    expect(settingsFrom({ accentFollowsProject: true }).accentFollowsProject).toBe(true);
+    expect(settingsFrom({ accentFollowsProject: 'yes' as unknown as boolean }).accentFollowsProject).toBe(false);
+    expect(settingsFrom({ accentFollowsProject: 1 as unknown as boolean }).accentFollowsProject).toBe(false);
+});
+
 test('project glow defaults to on while preserving an explicit opt-out', () => {
     expect(settingsFrom({}).projectGlow).toBe(true);
     expect(settingsFrom({ projectGlow: false }).projectGlow).toBe(false);

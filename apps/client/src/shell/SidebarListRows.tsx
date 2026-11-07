@@ -576,7 +576,7 @@ export function ProjectHeading({
                             collapse(event.key === 'ArrowLeft');
                         }
                     }}
-                    className={clsx(ROW, 'group font-medium text-text hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-accent')}
+                    className={clsx(ROW, 'group font-medium text-text hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-accent-on-surface')}
                 >
                     <span className={ICON_SLOT}>
                         <ProjectGlyph
@@ -716,7 +716,7 @@ export function NewViewRow({ group, rowId, tabbable }: RowProps & { group: Sideb
         variant: 'inset' as const,
         'data-sidebar-row': rowId,
         tabIndex: tabbable ? 0 : -1,
-        className: clsx(ROW, ROW_PLAIN, 'focus-visible:outline-2 focus-visible:outline-accent')
+        className: clsx(ROW, ROW_PLAIN, 'focus-visible:outline-2 focus-visible:outline-accent-on-surface')
     };
     const label = (text: string): ReactNode => (
         <>
@@ -839,7 +839,7 @@ export function BackgroundRow({
                 }}
                 className={clsx(
                     ROW,
-                    'focus-visible:outline-2 focus-visible:outline-accent',
+                    'focus-visible:outline-2 focus-visible:outline-accent-on-surface',
                     inert ? 'cursor-default text-text-faint' : ROW_PLAIN,
                     unindented && 'pl-6'
                 )}

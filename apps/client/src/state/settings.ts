@@ -1,6 +1,7 @@
 import type { EditorFoldOutline, EditorSmartKeys } from '@adecore/editor';
 import { FORMAT_LANGUAGE, formatRegionFrom } from '@adecore/ui/format';
 import {
+    DEFAULT_PROJECT_COLOR,
     EditorAssistAgentSchema,
     type EditorAssistAgent,
     isLiveVoice,
@@ -20,6 +21,7 @@ import { renderDistanceFrom, type RenderDistance } from '@/canvas/render-distanc
 import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
 import { CODE_THEMES } from '@/shell/panels/code-themes';
 import { nodeSortFrom, nodeSortThenFrom, type NodeSort, type NodeSortThen } from '@/shell/sidebar-node-sort';
+import { accentContrast, THEME_SURFACE } from '@/state/accent-contrast';
 import {
     agentChangesModeFrom,
     DEFAULT_AGENT_CHANGES_MODE,
@@ -33,7 +35,7 @@ import {
 } from '@/state/ai-settings';
 import { type CodeFolding, codeFoldingFrom, DEFAULT_CODE_FOLDING } from '@/state/code-folding';
 import { useExtensionTheme } from '@/state/extension-theme';
-import { applyPalette } from '@/state/palette';
+import { applyPalette, isHexColor, type PaletteSide, type PaletteSideInput } from '@/state/palette';
 import { palettePresetFrom, presetTokens, type PalettePreset } from '@/state/palette-presets';
 import { storedJson, switchesFrom } from '@/state/stored-json';
 
@@ -163,6 +165,8 @@ export interface Settings {
     needsYouAllProjects: boolean;
     /* One of the node accents. Blue is the brand's own and the one a fresh client starts on. */
     accent: AccentId;
+    /* Each workspace window wears the color of its project as the accent, with the chosen accent for a project on the default color and for the start screen. */
+    accentFollowsProject: boolean;
     /* The tint of the grounds, surfaces and text on both sides; the default keeps the theme's own grays. */
     palette: PalettePreset;
     /* The glow at the top of the sidebar, and of the toolbar while the sidebar is closed, in the color of the project. */
@@ -322,6 +326,7 @@ const DEFAULT_SETTINGS: Settings = {
     projectNavigation: 'switcher',
     needsYouAllProjects: true,
     accent: 'blue',
+    accentFollowsProject: false,
     palette: 'default',
     projectGlow: true,
     scrollBounce: true,
@@ -466,6 +471,8 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         codeTrailingWhitespace: TRAILING_WHITESPACE_MODES.find((mode) => mode === stored.codeTrailingWhitespace) ?? DEFAULT_SETTINGS.codeTrailingWhitespace,
         // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
         accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent,
+        // A window changes color only when a person said so, so only a stored `true` turns it on.
+        accentFollowsProject: stored.accentFollowsProject === true,
         palette: palettePresetFrom(stored.palette),
         projectGlow: stored.projectGlow !== false,
         scrollBounce: stored.scrollBounce !== false,
@@ -533,17 +540,43 @@ function read(): Settings {
     }
 }
 
-function applyColors(chosen: PalettePreset, accentId: AccentId, preview = false): void {
-    const accent = accentColor(accentId);
+/* The color of the project this window shows, kept in memory: windows share the settings but each shows its own project. */
+let projectAccent: string | null = null;
+
+/* The project's color as an accent, or null when this window keeps the chosen one: a project on the default color has not picked one, and a hand-edited file may hold a value that is no color. */
+function accentOfProject(color: string | null): string | null {
+    if (color === null || !isHexColor(color) || color.toLowerCase() === DEFAULT_PROJECT_COLOR) {
+        return null;
+    }
+
+    return color.toLowerCase();
+}
+
+interface ColorChoice {
+    palette: PalettePreset;
+    accent: AccentId;
+    /* Whether the accent is the project's. A preview of an accent leaves it out, since it shows the chosen one. */
+    followsProject: boolean;
+}
+
+function sideColors(palette: PalettePreset, side: PaletteSide, choice: ColorChoice): PaletteSideInput {
+    const tokens = presetTokens(palette, side);
+
+    if (!choice.followsProject || projectAccent === null) {
+        return { ...tokens, accent: accentColor(choice.accent) };
+    }
+
+    // The project's exact color is the accent. Only here do the text on it and the accent as text get a value of their own.
+    const contrast = accentContrast(projectAccent, tokens.surface ?? THEME_SURFACE[side], side);
+
+    return { ...tokens, accent: projectAccent, 'accent-text': contrast.text, 'accent-on-surface': contrast.onSurface };
+}
+
+function applyColors(choice: ColorChoice, preview = false): void {
     // A theme of an extension sets its own colors, which a palette would only paint over. The choice stays for Ruimte's own.
-    const palette = useExtensionTheme.getState().key === null ? chosen : 'default';
-    applyPalette(
-        {
-            light: { ...presetTokens(palette, 'light'), accent },
-            dark: { ...presetTokens(palette, 'dark'), accent }
-        },
-        { preview }
-    );
+    const palette = useExtensionTheme.getState().key === null ? choice.palette : 'default';
+
+    applyPalette({ light: sideColors(palette, 'light', choice), dark: sideColors(palette, 'dark', choice) }, { preview });
 }
 
 /* Shows the app in a palette or an accent a person is looking at before picking it, or with none back in
@@ -552,8 +585,39 @@ export function previewColors(preview: { palette?: PalettePreset; accent?: Accen
     if (typeof document === 'undefined') {
         return;
     }
+
     const settings = useSettings.getState();
-    applyColors(preview?.palette ?? settings.palette, preview?.accent ?? settings.accent, preview !== null);
+
+    applyColors(
+        {
+            palette: preview?.palette ?? settings.palette,
+            accent: preview?.accent ?? settings.accent,
+            followsProject: settings.accentFollowsProject && preview?.accent === undefined
+        },
+        preview !== null
+    );
+}
+
+/* Hands this window the color of the project it shows, or null for none (the start screen). It takes effect
+   only while the setting is on; a window that shows no project, or one on the default color, keeps the chosen accent. */
+export function setProjectAccent(color: string | null): void {
+    const next = accentOfProject(color);
+
+    if (next === projectAccent) {
+        return;
+    }
+
+    projectAccent = next;
+
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    const settings = useSettings.getState();
+
+    if (settings.accentFollowsProject) {
+        applyColors({ palette: settings.palette, accent: settings.accent, followsProject: true });
+    }
 }
 
 /* The few tokens a person may change are set over the theme's own values: the type on the root, the
@@ -605,7 +669,7 @@ function apply(settings: Settings): void {
     root.setProperty('font-size', `${settings.interfaceFontSize}px`);
     root.setProperty('--code-font-size', `${settings.codeFontSize}px`);
     root.setProperty('--code-line-height', `${codeLineHeight(settings.codeFontSize, settings.codeLineHeight)}px`);
-    applyColors(settings.palette, settings.accent);
+    applyColors({ palette: settings.palette, accent: settings.accent, followsProject: settings.accentFollowsProject });
     const interfaceFont = INTERFACE_FONTS.find((entry) => entry.id === settings.interfaceFont);
     setFontStack('--font-sans', interfaceFont && interfaceFont.id !== 'system' ? interfaceFont.stack : null);
     const font = MONO_FONTS.find((entry) => entry.id === settings.font);

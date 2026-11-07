@@ -58,7 +58,7 @@ export function GapHandles({
                                 value
                             })}
                             className={clsx(
-                                'pointer-events-auto absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md focus-visible:outline-2 focus-visible:outline-accent',
+                                'pointer-events-auto absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md focus-visible:outline-2 focus-visible:outline-accent-on-surface',
                                 horizontal ? 'cursor-ew-resize' : 'cursor-ns-resize'
                             )}
                             style={{

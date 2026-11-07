@@ -435,7 +435,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
                 // With a keyboard the ring says where the keys go, however the screen got the focus.
                 className={clsx(
                     'block h-auto max-h-full w-auto max-w-full touch-none outline-none',
-                    keyboard && 'focus:outline-2 focus:-outline-offset-2 focus:outline-accent'
+                    keyboard && 'focus:outline-2 focus:-outline-offset-2 focus:outline-accent-on-surface'
                 )}
                 aria-label={t('device.stream.screen', { name: device.name })}
                 tabIndex={0}

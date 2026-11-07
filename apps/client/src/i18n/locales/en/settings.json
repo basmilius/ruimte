@@ -46,6 +46,10 @@
             "label": "Accent",
             "description": "Selection rings, focus and the terminal cursor."
         },
+        "accentFollowsProject": {
+            "label": "Follow the project's color",
+            "description": "Each window takes its project's color as the accent. A project on the default color keeps your accent."
+        },
         "interface": {
             "title": "Window",
             "layout": {
