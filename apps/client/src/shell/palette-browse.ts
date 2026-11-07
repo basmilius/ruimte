@@ -12,9 +12,18 @@ export function endsWithSeparator(path: string): boolean {
     return path.endsWith('/') || path.endsWith('\\');
 }
 
+/* A Windows machine takes a forward slash as a separator too, so a path typed that way splits like one the machine wrote. */
+function isSeparator(char: string, sep: string): boolean {
+    return char === sep || (sep === '\\' && char === '/');
+}
+
+function lastSeparator(path: string, sep: string): number {
+    return sep === '\\' ? Math.max(path.lastIndexOf('\\'), path.lastIndexOf('/')) : path.lastIndexOf(sep);
+}
+
 function withoutTrailing(path: string, sep: string): string {
     let end = path.length;
-    while (end > 0 && path.slice(end - 1, end) === sep) {
+    while (end > 0 && isSeparator(path.slice(end - 1, end), sep)) {
         end -= 1;
     }
     return path.slice(0, end);
@@ -26,7 +35,7 @@ function withoutTrailing(path: string, sep: string): string {
  */
 export function parentOf(path: string, sep: string): string | null {
     const trimmed = withoutTrailing(path, sep);
-    const cut = trimmed.lastIndexOf(sep);
+    const cut = lastSeparator(trimmed, sep);
     if (cut < 0) {
         return null;
     }
@@ -35,7 +44,7 @@ export function parentOf(path: string, sep: string): string | null {
 
 export function lastSegment(path: string, sep: string): string {
     const trimmed = withoutTrailing(path, sep);
-    const cut = trimmed.lastIndexOf(sep);
+    const cut = lastSeparator(trimmed, sep);
     return cut === -1 ? trimmed : trimmed.slice(cut + 1);
 }
 

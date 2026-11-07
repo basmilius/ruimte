@@ -362,6 +362,55 @@ describe('browsing the folders of a Windows machine', () => {
     });
 });
 
+describe('a Windows path typed with forward slashes', () => {
+    let disconnect: () => void;
+
+    beforeEach(() => {
+        const machine = new FakeMachine();
+        machine.answer('fs.browse', ({ partialPath }) => {
+            const folder = partialPath === 'C:/' || partialPath === 'C:/Projects';
+
+            return {
+                parentPath: 'C:\\',
+                exists: folder,
+                entries: [{ name: 'Projects', fullPath: 'C:\\Projects', hasCanvas: false }]
+            };
+        });
+        addMachine('machine-w', 'Office PC');
+        useServers.getState().setInfo('machine-w', { platform: 'win32', home: 'C:\\ProgramData\\Ruimte', version: '1.0.0', model: null });
+        disconnect = connectFakeMachine(machine, 'machine-w');
+        useEndpoints.getState().setActive('machine-w');
+    });
+
+    afterEach(() => {
+        disconnect();
+        useEndpoints.getState().setActive(LOCAL_ENDPOINT_ID);
+        useEndpoints.getState().remove('machine-w');
+        useServers.getState().forget('machine-w');
+    });
+
+    test('an existing folder is opened and not offered for creation', async () => {
+        await openPalette(
+            () => useUi.getState().setPaletteOpen(true),
+            () => field() !== null
+        );
+        await type('C:/Projects');
+        await until(() => labels().includes('Projects'));
+
+        expect(page.host.ownerDocument.body.textContent).not.toContain('Create and open');
+        expect(page.host.ownerDocument.body.textContent).not.toContain('Enter creates the folder');
+    });
+
+    test('a folder that is not there is still offered for creation', async () => {
+        await openPalette(
+            () => useUi.getState().setPaletteOpen(true),
+            () => field() !== null
+        );
+        await type('C:/Projectz');
+        await until(() => document.body.textContent?.includes('Create and open') === true);
+    });
+});
+
 describe('choosing a machine to browse', () => {
     beforeEach(async () => {
         addMachine('machine-b', 'MacBook Pro');

@@ -47,6 +47,13 @@ describe('parentOf', () => {
         expect(parentOf('C:\\a', '\\')).toBe('C:\\');
     });
 
+    test('one level up a Windows path typed with forward slashes', () => {
+        expect(parentOf('C:/a/b', '\\')).toBe('C:/a/');
+        expect(parentOf('C:/a/b/', '\\')).toBe('C:/a/');
+        expect(parentOf('C:/a', '\\')).toBe('C:/');
+        expect(parentOf('C:/', '\\')).toBeNull();
+    });
+
     test('a root has nowhere to go', () => {
         expect(parentOf('/', '/')).toBeNull();
         expect(parentOf('C:\\', '\\')).toBeNull();
@@ -67,6 +74,19 @@ describe('folderPresence', () => {
         expect(folderPresence('~/projects', listing, '/')).toBe('there');
         expect(folderPresence('~/pro', listing, '/')).toBe('missing');
         expect(folderPresence('~/pictures', listing, '/')).toBe('missing');
+    });
+
+    test('a Windows path takes either separator for the last segment', () => {
+        const drive = { entries: [{ name: 'Projects' }], exists: true };
+
+        expect(folderPresence('C:/Projects', drive, '\\')).toBe('there');
+        expect(folderPresence('C:\\Projects', drive, '\\')).toBe('there');
+        expect(folderPresence('C:/Proj', drive, '\\')).toBe('missing');
+        expect(folderPresence('C:/Projects/', drive, '\\')).toBe('there');
+    });
+
+    test('a path on a machine with forward slashes keeps a backslash inside a name', () => {
+        expect(folderPresence('/srv/a\\b', { entries: [{ name: 'a\\b' }], exists: true }, '/')).toBe('there');
     });
 
     test('a daemon that does not know the field leaves the question open', () => {
