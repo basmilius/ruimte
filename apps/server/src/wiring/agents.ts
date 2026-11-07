@@ -320,7 +320,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         // A turn reports what is left of its plan in passing; that belongs to the machine's numbers.
         onLimits: (update) => later.usage().limits.applyLive(update),
         claudeTitles,
-        // One one-shot call per Codex chat, on whichever CLI here answers a single prompt.
+        // One one-shot call per chat of a CLI that names nothing itself (Codex, Grok, ...), on that CLI first.
         nameChat: async (provider, input) => suggestChatTitle(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) }),
         onInterruptedRun: outboxLink.onInterruptedRun,
         taskRows: (chatId) => tasks.ofParent(chatId),
