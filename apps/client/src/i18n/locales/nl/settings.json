@@ -113,13 +113,6 @@
             "description": "De balk onder een canvas of tekening.",
             "always": "Altijd",
             "edge": "Bij de onderrand"
-        },
-        "commandPalette": {
-            "title": "Opdrachtenpalet"
-        },
-        "browseStart": {
-            "label": "Bladeren beginnen in",
-            "description": "Waar bladeren naar een map in het opdrachtenpalet begint, op elke machine. Leeg is je thuismap."
         }
     },
     "editor": {
@@ -1496,6 +1489,13 @@
             "refusedRoot": "Gebruik een absoluut pad buiten de schijfroot, je thuismap of de datamap van Ruimte.",
             "notAFolder": "Dat is geen map, of Ruimte kan hem niet aanmaken of er niet in schrijven."
         },
+        "startFolder": {
+            "label": "Bladeren beginnen in",
+            "description": "Waar bladeren naar een map op deze machine begint, voor elke app die haar gebruikt. Leeg is haar thuismap.",
+            "search": "De map waarin de mappenbrowser op een machine opent",
+            "placeholder": "~/projects",
+            "placeholderWindows": "C:\\Projects"
+        },
         "streaming": {
             "label": "Streamen van browser en apparaten",
             "description": "Laat deze machine browserpagina's en schermen van apparaten tonen in apps die dat zelf niet kunnen.",
@@ -1582,6 +1582,7 @@
         },
         "worktrees": "Worktrees",
         "privacy": "Privacy",
+        "folders": "Mappen",
         "streaming": "Streaming",
         "account": {
             "title": "Account",

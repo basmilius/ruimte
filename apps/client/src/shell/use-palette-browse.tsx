@@ -41,7 +41,6 @@ import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine, isRealMachine } from '@/state/local-machine';
 import { shownFolderOf, useProject } from '@/state/project';
 import { fileManagerName, serverInfoOf, useServers } from '@/state/server';
-import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { pool, transportFor, type ConnectionState } from '@/transport';
 import { useFocusedMachine } from '@/transport/connections';
@@ -122,7 +121,6 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
     /* The machine the switcher asked the browser to open on, for a machine it lists nothing of. */
     const browseTarget = useUi((s) => s.paletteBrowseMachine);
     const browseFor = useUi((s) => s.paletteBrowseFor);
-    const browseStartFolder = useSettings((s) => s.browseStartFolder);
     const accountStatus = usePulsarAccount((s) => s.status);
     const accountMachines = usePulsarMachines((s) => s.machines);
     const connections = useConnections();
@@ -245,10 +243,11 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
         [transport, commitBrowse, cwdFor]
     );
 
-    /* The start folder is one setting for every machine, so it may not exist on this one; home always does. Kept by hand: an effect depends on it. */
+    /* The start folder is the machine's own, but the folder may be gone since; home always exists. Kept by hand: an effect depends on it. */
     const startBrowsing = useCallback(
         async (endpointId: string): Promise<void> => {
-            const { start: from, home } = browseStart(browseStartFolder, separatorFor(serverInfoOf(endpointId).platform));
+            const { platform: machinePlatform, startFolder } = serverInfoOf(endpointId);
+            const { start: from, home } = browseStart(startFolder, separatorFor(machinePlatform));
             const mine = ++generation.current;
             const answer = await requestBrowse(endpointId, from, cwdFor(endpointId), transport);
             if (mine !== generation.current) {
@@ -260,7 +259,7 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
             }
             commitBrowse(endpointId, from, answer);
         },
-        [transport, browseStartFolder, commitBrowse, cwdFor, navigateTo]
+        [transport, commitBrowse, cwdFor, navigateTo]
     );
 
     useEffect(() => {

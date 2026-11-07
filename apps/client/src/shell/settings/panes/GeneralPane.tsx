@@ -1,4 +1,4 @@
-import { Input, Select } from '@adecore/ui';
+import { Select } from '@adecore/ui';
 import { formatDayClock, useFormatLocale, formatMoney, FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM, regionName } from '@adecore/ui/format';
 import { SettingsRow } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
@@ -78,13 +78,12 @@ function RegionRow() {
     );
 }
 
-/* What the whole app does whatever it looks like: its language, how projects sit in a window, and where browsing starts. */
+/* What the whole app does whatever it looks like: its language, how projects sit in a window, and how the sidebar and dock behave. */
 export function GeneralPane() {
     const { t } = useTranslation('settings');
     const projectNavigation = useSettings((s) => s.projectNavigation);
     const sidebarScope = useSettings((s) => s.sidebarScope);
     const dockAutoHide = useSettings((s) => s.dockAutoHide);
-    const browseStartFolder = useSettings((s) => s.browseStartFolder);
     const update = useSettings((s) => s.update);
 
     return (
@@ -137,19 +136,6 @@ export function GeneralPane() {
                         />
                     }
                 />
-            </SettingsSection>
-            <SettingsSection title={t('general.commandPalette.title')}>
-                <SettingsRow searchId="general.browseStart" label={t('general.browseStart.label')} description={t('general.browseStart.description')}>
-                    <Input
-                        mono
-                        aria-label={t('general.browseStart.label')}
-                        placeholder="~/projects"
-                        value={browseStartFolder}
-                        spellCheck={false}
-                        onChange={(e) => update({ browseStartFolder: e.target.value })}
-                        onKeyDown={(e) => e.stopPropagation()}
-                    />
-                </SettingsRow>
             </SettingsSection>
         </>
     );

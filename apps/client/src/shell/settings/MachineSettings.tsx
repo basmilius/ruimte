@@ -15,6 +15,7 @@ import { reachText } from '@/shell/settings/reach-text';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
+import { useToasts } from '@/state/toasts';
 import { pool, transportFor, type Transport } from '@/transport';
 import { useMachineAnswers } from '@/transport/features';
 import { useEndpointConnection } from '@/transport/status';
@@ -764,6 +765,73 @@ export function WorktreeFolderRow({ endpoint, reason }: { endpoint: Endpoint; re
                 />
                 {problem !== null && <FormError className="break-words">{problem}</FormError>}
             </div>
+        </SettingsRow>
+    );
+}
+
+/*
+ * Where browsing for a folder starts on this machine, in the style of its paths. Every app that uses the
+ * machine starts there, so it is the machine's to keep; empty is its home folder.
+ */
+export function StartFolderRow({ endpoint, reason }: { endpoint: Endpoint; reason: string | null }) {
+    const { t } = useTranslation('settings');
+    const kept = useServers((s) => s.byEndpoint[endpoint.id]?.startFolder ?? '');
+    const platform = useServers((s) => s.byEndpoint[endpoint.id]?.platform ?? null);
+    const [draft, setDraft] = useState<string | null>(null);
+    const [busy, setBusy] = useState(false);
+    // Enter saves and the field then loses focus: the blur must not save the same value again.
+    const saving = useRef(false);
+    const shown = draft ?? kept;
+
+    const save = async (value: string): Promise<void> => {
+        if (saving.current) {
+            return;
+        }
+        if (value.trim() === kept) {
+            setDraft(null);
+            return;
+        }
+        saving.current = true;
+        setBusy(true);
+        try {
+            await perform('machine.setStartFolder', { endpointId: endpoint.id, folder: value.trim() });
+            setDraft(null);
+        } catch (e) {
+            useToasts.getState().show({
+                id: `endpoint-setting-${endpoint.id}`,
+                kind: 'error',
+                title: t('machine.toast.saveFailed', { machine: endpoint.label }),
+                description: messageOf(e, t('machine.toast.unchanged'))
+            });
+        } finally {
+            saving.current = false;
+            setBusy(false);
+        }
+    };
+
+    return (
+        <SettingsRow
+            searchId="machines.machine.startFolder"
+            label={t('machine.startFolder.label')}
+            description={reason !== null ? t('machine.notAnswering') : t('machine.startFolder.description')}
+        >
+            <Input
+                mono
+                className="w-full min-w-0"
+                value={shown}
+                placeholder={platform === 'win32' ? t('machine.startFolder.placeholderWindows') : t('machine.startFolder.placeholder')}
+                aria-label={t('machine.startFolder.label')}
+                spellCheck={false}
+                disabled={busy || reason !== null}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={() => void save(shown)}
+                onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') {
+                        void save(shown);
+                    }
+                }}
+            />
         </SettingsRow>
     );
 }

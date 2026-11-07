@@ -8,6 +8,7 @@ import {
     DrawingElementSchema,
     EndpointSetIdentityPayloadSchema,
     EndpointSetNodeSizePayloadSchema,
+    EndpointSetStartFolderPayloadSchema,
     FS_GREP_MAX_RESULTS,
     FS_SEARCH_MAX_RESULTS,
     FileLocationSchema,
@@ -477,6 +478,16 @@ export const CONTENT_ACTIONS = {
         actors: PERSON,
         input: EndpointSetNodeSizePayloadSchema.extend({ endpointId: givenMachine }),
         output: EndpointSetNodeSizePayloadSchema.extend({ endpointId: z.string() })
+    },
+    'machine.setStartFolder': {
+        title: 'Set where browsing starts on a machine',
+        description: 'Sets the folder browsing for a folder starts in on a machine, for every client of it; empty puts it back to the home folder.',
+        effect: 'external',
+        domain: 'machine',
+        // Where a person starts browsing is theirs to set; an agent names its paths outright.
+        actors: PERSON,
+        input: EndpointSetStartFolderPayloadSchema.extend({ endpointId: givenMachine }),
+        output: EndpointSetStartFolderPayloadSchema.extend({ endpointId: z.string() })
     },
     'machine.revokeAccess': {
         title: 'Revoke access to a machine',

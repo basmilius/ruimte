@@ -53,7 +53,6 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     row('general.sidebar'),
     row('general.needsYou'),
     row('general.dock'),
-    row('general.browseStart'),
     row('appearance.theme'),
     row('appearance.palette'),
     row('appearance.accent'),
@@ -302,6 +301,13 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         section: 'machines',
         label: 'settings:storage.projects.title',
         description: 'settings:storage.projects.footer',
+        available: hasOpenedMachine
+    },
+    {
+        id: 'machines.machine.startFolder',
+        section: 'machines',
+        label: 'settings:machine.startFolder.label',
+        description: 'settings:machine.startFolder.search',
         available: hasOpenedMachine
     },
     {

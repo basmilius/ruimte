@@ -187,8 +187,9 @@ export interface Settings {
     filesTabLimit: number;
     /* Whether the files tree shows dotfiles; the panel's eye button writes the same value. */
     filesShowHidden: boolean;
-    /* Where the palette starts browsing for a folder; empty is the machine's home. One for every machine,
-       since work folders have the same name everywhere; a path a machine lacks falls back to its home. */
+    /* Where the palette used to start browsing, one value for every machine. A machine keeps its own start
+       folder now; this is read only to hand an old value to the local machine once (`start-folder-migration.ts`),
+       and stays until a later release drops it. */
     browseStartFolder: string;
     /* The Shiki theme id code is drawn in while the app is light, in the viewer, the editor and a chat. */
     codeThemeLight: string;

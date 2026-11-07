@@ -20,6 +20,7 @@ import {
     MachineAccess,
     MachineLinks,
     ReachRow,
+    StartFolderRow,
     StreamingRow,
     UsageStatsRow,
     WithReason
@@ -29,6 +30,7 @@ import { SettingsSection } from '@/shell/settings/SettingsSection';
 import type { Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
+import { machineAnswers } from '@/transport/features';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
 
 const ACTION_DEPS: MachineActionDeps = {
@@ -143,6 +145,11 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
                             <SettingsSection title={t('machineDialog.streaming')}>
                                 <StreamingRow endpoint={entry.endpoint} reason={reason} />
                             </SettingsSection>
+                            {machineAnswers(connection, 'endpoint.setStartFolder') && (
+                                <SettingsSection title={t('machineDialog.folders')}>
+                                    <StartFolderRow endpoint={entry.endpoint} reason={reason} />
+                                </SettingsSection>
+                            )}
                             {entry.local && <BackgroundServiceSection />}
                             {entry.local && info?.usageStats !== undefined && (
                                 <SettingsSection title={t('machineDialog.privacy')}>

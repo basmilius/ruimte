@@ -274,7 +274,8 @@ describe('browsing the folders of a Windows machine', () => {
     const FOLDERS: Record<string, string[]> = {
         '~\\': ['Documents', 'Projects'],
         'C:\\Users\\bas\\': ['Documents', 'Projects'],
-        'C:\\': ['Users', 'Windows']
+        'C:\\': ['Users', 'Windows'],
+        'D:\\Work\\': ['alpha', 'beta']
     };
     const asked: string[] = [];
     let disconnect: () => void;
@@ -288,7 +289,7 @@ describe('browsing the folders of a Windows machine', () => {
             const parentPath = home ? HOME : partialPath.replace(/\\$/, '') || partialPath;
             return {
                 parentPath: parentPath.endsWith(':') ? `${parentPath}\\` : parentPath,
-                exists: true,
+                exists: partialPath !== 'Z:\\Gone\\',
                 entries: (FOLDERS[partialPath] ?? []).map((name) => ({
                     name,
                     fullPath: `${home ? HOME : partialPath.replace(/\\$/, '')}\\${name}`,
@@ -327,6 +328,27 @@ describe('browsing the folders of a Windows machine', () => {
         await type('C:\\');
         await until(() => labels().join() === 'Users,Windows');
         expect(asked).toContain('C:\\');
+    });
+
+    const keepStartFolder = (startFolder: string): void =>
+        useServers.getState().setIdentity('machine-w', { label: 'Office PC', nameSource: 'default', icon: null, agentsDeleteAnyView: false, startFolder });
+
+    test('browsing opens in the start folder of the machine', async () => {
+        keepStartFolder('D:\\Work');
+        await openPalette(
+            () => useUi.getState().openFolderBrowser(),
+            () => labels().join() === '..,alpha,beta'
+        );
+        expect(field()!.value).toBe('D:\\Work\\');
+    });
+
+    test('browsing opens in the home folder when the start folder is gone', async () => {
+        keepStartFolder('Z:\\Gone');
+        await openPalette(
+            () => useUi.getState().openFolderBrowser(),
+            () => labels().join() === '..,Documents,Projects'
+        );
+        expect(field()!.value).toBe('C:\\Users\\bas\\');
     });
 
     test('browsing opens at the absolute home folder rather than a tilde', async () => {

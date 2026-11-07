@@ -31,7 +31,8 @@ export function startEndpointWatch(): () => void {
                     ...(payload.lanDoor === undefined ? {} : { lanDoor: payload.lanDoor, lanDoorFixed: payload.lanDoorFixed === true }),
                     ...(payload.agentIntegrations === undefined ? {} : { agentIntegrations: payload.agentIntegrations }),
                     ...(payload.nodeSizes === undefined ? {} : { nodeSizes: knownNodeSizes(payload.nodeSizes) }),
-                    ...(payload.usageStats === undefined ? {} : { usageStats: payload.usageStats })
+                    ...(payload.usageStats === undefined ? {} : { usageStats: payload.usageStats }),
+                    ...(payload.startFolder === undefined ? {} : { startFolder: payload.startFolder })
                 });
                 // An event without a URL says nothing about the broker; the same for the door.
                 if (payload.brokerUrl !== undefined) {

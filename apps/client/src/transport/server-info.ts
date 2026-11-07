@@ -1,6 +1,7 @@
 import { useProvidersStore } from '@adecore/agents-react/state';
 import { knownNodeSizes, type EndpointInfo, type EndpointNameSource } from '@ruimte/contracts';
 import { noteDaemonIdentity } from '@/endpoint/identity';
+import { moveBrowseStartFolder } from '@/endpoint/start-folder-migration';
 import { LOCAL_ENDPOINT_ID, localMachineLabel, useEndpoints } from '@/state/endpoints';
 import { serverInfoOf, useServers } from '@/state/server';
 import { pool, transportFor } from '@/transport';
@@ -21,6 +22,7 @@ function load(endpointId: string): void {
         .then(async (info) => {
             const settled = noteDaemonIdentity(endpointId, info);
             adoptEndpointInfo(settled, info);
+            void moveBrowseStartFolder(settled, info, async (folder) => adoptEndpointInfo(settled, await link.request('endpoint.setStartFolder', { folder })));
             void link
                 .request('provider.list', {})
                 .then(({ providers }) => useProvidersStore.getState().setProviders(settled, providers))
@@ -67,6 +69,7 @@ export function adoptEndpointInfo(endpointId: string, info: EndpointInfo): void 
         gitBashMissing: info.gitBashMissing === true,
         nodeSizes: knownNodeSizes(info.nodeSizes),
         usageStats: info.usageStats,
+        startFolder: info.startFolder ?? '',
         viewReferences: info.viewReferences === true
     });
     adoptMachineName(endpointId, info.label, info.nameSource ?? 'default');

@@ -188,6 +188,14 @@ export const cases: WriteCases = {
             'no machine': { kind: 'terminal', size: null }
         }
     },
+    'machine.setStartFolder': {
+        actors: ['person'],
+        input: { endpointId: 'endpoint-1', folder: 'D:\\Work' },
+        refused: {
+            'a folder past the longest path': { endpointId: 'endpoint-1', folder: 'x'.repeat(4097) },
+            'no machine': { folder: '' }
+        }
+    },
     'machine.revokeAccess': {
         actors: ['person'],
         input: { endpointId: 'endpoint-1', sessionId: 'session-1' },

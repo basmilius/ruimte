@@ -74,6 +74,8 @@ export interface ServerInfo {
     nodeSizes: NodeSizes;
     /* Whether the machine sends its anonymous usage counts; undefined from a machine without the switch. */
     usageStats: boolean | undefined;
+    /* Where browsing starts on the machine, for every client of it; empty means its home folder, and so does a machine that has no such setting. */
+    startFolder: string;
     /* Whether the machine resolves `references` on `chat.send`; without it a `#` reaches only chats. */
     viewReferences: boolean;
 }
@@ -113,6 +115,7 @@ const UNKNOWN: ServerInfo = {
     gitBashMissing: false,
     nodeSizes: {},
     usageStats: undefined,
+    startFolder: '',
     viewReferences: false
 };
 
@@ -152,6 +155,7 @@ interface ServersStore {
             | 'gitBashMissing'
             | 'nodeSizes'
             | 'usageStats'
+            | 'startFolder'
             | 'viewReferences'
         >
     ): void;
@@ -184,6 +188,7 @@ interface ServersStore {
                     | 'terminalShell'
                     | 'nodeSizes'
                     | 'usageStats'
+                    | 'startFolder'
                 >
             >
     ): void;

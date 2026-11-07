@@ -269,6 +269,25 @@ describe('machine actions', () => {
                 error: { code: 'forbidden-action' }
             });
         });
+
+        test('sets and clears where browsing starts, takes the whole answer, and is only a person’s', async () => {
+            const { registry, sent, adopted } = onMachine();
+            expect(await registry.execute('machine.setStartFolder', { endpointId: 'mac', folder: 'D:\\Work' }, PERSON_ACTION_CALL)).toMatchObject({
+                output: { endpointId: 'mac', folder: 'D:\\Work' }
+            });
+            await registry.execute('machine.setStartFolder', { endpointId: 'mac', folder: '' }, PERSON_ACTION_CALL);
+            expect(sent).toEqual([
+                { type: 'endpoint.setStartFolder', payload: { folder: 'D:\\Work' } },
+                { type: 'endpoint.setStartFolder', payload: { folder: '' } }
+            ]);
+            expect(adopted).toEqual([
+                { endpointId: 'mac', info: answer },
+                { endpointId: 'mac', info: answer }
+            ]);
+            expect(await registry.execute('machine.setStartFolder', { endpointId: 'mac', folder: '' }, VOICE_ACTION_CALL)).toMatchObject({
+                error: { code: 'forbidden-action' }
+            });
+        });
     });
 
     describe("a person's hand on a machine", () => {

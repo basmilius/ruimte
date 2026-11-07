@@ -113,13 +113,6 @@
             "description": "The bar under a canvas or drawing.",
             "always": "Always",
             "edge": "Near the bottom edge"
-        },
-        "commandPalette": {
-            "title": "Command palette"
-        },
-        "browseStart": {
-            "label": "Start browsing in",
-            "description": "Where browsing for a folder in the command palette starts, on every machine. Empty means your home folder."
         }
     },
     "editor": {
@@ -1496,6 +1489,13 @@
             "refusedRoot": "Use an absolute path other than the disk root, your home folder or Ruimte's data folder.",
             "notAFolder": "That is not a folder, or Ruimte cannot create it or write to it."
         },
+        "startFolder": {
+            "label": "Start browsing in",
+            "description": "Where browsing for a folder starts on this machine, for every app that uses it. Empty means its home folder.",
+            "search": "The folder the folder browser opens in on a machine",
+            "placeholder": "~/projects",
+            "placeholderWindows": "C:\\Projects"
+        },
         "streaming": {
             "label": "Browser and device streaming",
             "description": "Lets this machine show browser pages and device screens in apps that cannot show them themselves.",
@@ -1582,6 +1582,7 @@
         },
         "worktrees": "Worktrees",
         "privacy": "Privacy",
+        "folders": "Folders",
         "streaming": "Streaming",
         "account": {
             "title": "Account",
