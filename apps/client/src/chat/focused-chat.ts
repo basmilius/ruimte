@@ -1,3 +1,4 @@
+import { isInFloatingLayer } from '@adecore/ui';
 import { isCanvasView, isChatHostView, isDesignView, type ProjectView } from '@ruimte/contracts';
 import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
 import { focusedCanvas } from '@/state/canvas';
@@ -40,6 +41,22 @@ export function focusedChatComposerKey(): string | null {
 }
 
 /*
+ * A press on the canvas's toolbar leaves `bodyFocusId` as it was, so a key asks the page whether the
+ * focus went to an element outside that node. Text without a focusable element leaves it on the body,
+ * and a palette or menu above the canvas gives the focus back to the node once it closes.
+ */
+function focusLeftNode(nodeId: string): boolean {
+    if (typeof document === 'undefined') {
+        return false;
+    }
+    const active = document.activeElement;
+    if (active === null || active === document.body || isInFloatingLayer(active)) {
+        return false;
+    }
+    return active.closest(`[data-node-id="${CSS.escape(nodeId)}"]`) === null;
+}
+
+/*
  * The chat the keyboard is in, keyed on the machine it runs on: a chat view whose body has it, or the
  * chat node with it. Narrower than `focusedChatId`, since a chat that is only selected leaves the arrow
  * keys and Escape to the canvas.
@@ -55,7 +72,7 @@ export function keyboardChatKey(): string | null {
         return chat === null ? null : endpointKey(endpointOfNodeId(chat), chat);
     }
     const { bodyFocusId, nodes } = focusedCanvas().getState();
-    const node = bodyFocusId === null ? undefined : nodes[bodyFocusId];
+    const node = bodyFocusId === null || focusLeftNode(bodyFocusId) ? undefined : nodes[bodyFocusId];
     const chat = node === undefined ? null : shownChatOfNode(node);
     // A later chat of a design node runs where its node does.
     return chat === null ? null : endpointKey(endpointOfNodeId(bodyFocusId!), chat);

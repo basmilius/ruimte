@@ -116,6 +116,16 @@ describe('focused chat text', () => {
         expect(machine.requests('chat.send')).toEqual([]);
     });
 
+    test('a chat that had the keyboard is no target once the focus went to a control outside it', async () => {
+        await focus(REVIEW.id);
+        const control = document.createElement('button');
+        page.host.append(control);
+        await act(async () => control.focus());
+        await key('=', control);
+        expect(reading(REVIEW.id)!.dataset.chatTextSize).toBe('1');
+        control.remove();
+    });
+
     test('a selected chat alone is skipped, but a maximized chat on its frame is a target', async () => {
         await act(async () => {
             focusedCanvas().getState().select([REVIEW.id]);
