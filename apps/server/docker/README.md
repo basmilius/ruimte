@@ -31,7 +31,7 @@ The first start seeds two repositories:
 | `/work/atlas` | Three commits, a `lighthouse` branch beside `main`, `README.md` changed and an untracked `notes.txt`. |
 | `/work/beacon` | One commit, nothing outstanding. |
 
-The image installs only `apps/server` and `packages/*` (`workspace-package.json`), so a daemon change rebuilds only the last layers.
+The image installs only `apps/server` and `packages/*` (`workspace-package.json`), so a daemon change rebuilds only the last layers. It carries a copy of the root's ADE CORE catalog, which `adecore:bump` keeps equal.
 
 ## State that stays
 

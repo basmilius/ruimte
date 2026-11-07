@@ -3,8 +3,30 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "workspaces": [
-    "apps/server",
-    "packages/*"
-  ]
+  "workspaces": {
+    "packages": [
+      "apps/server",
+      "packages/*"
+    ],
+    "catalog": {
+      "@adecore/agent-contracts": "0.56.2",
+      "@adecore/agents": "0.56.2",
+      "@adecore/agents-react": "0.56.2",
+      "@adecore/charts": "0.56.2",
+      "@adecore/database": "0.56.2",
+      "@adecore/diagram": "0.56.2",
+      "@adecore/drawing": "0.56.2",
+      "@adecore/editor": "0.56.2",
+      "@adecore/editor-react": "0.56.2",
+      "@adecore/intelligent-ui": "0.56.2",
+      "@adecore/lsp": "0.56.2",
+      "@adecore/merge": "0.56.2",
+      "@adecore/plan": "0.56.2",
+      "@adecore/service": "0.56.2",
+      "@adecore/shell": "0.56.2",
+      "@adecore/terminal": "0.56.2",
+      "@adecore/ui": "0.56.2",
+      "@adecore/utils": "0.56.2"
+    }
+  }
 }

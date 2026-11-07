@@ -4,17 +4,40 @@
   "version": "0.0.0",
   "type": "module",
   "packageManager": "bun@1.4.4",
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "extensions/*",
-    "extensions/poc/*"
-  ],
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*",
+      "extensions/*",
+      "extensions/poc/*"
+    ],
+    "catalog": {
+      "@adecore/agent-contracts": "0.56.2",
+      "@adecore/agents": "0.56.2",
+      "@adecore/agents-react": "0.56.2",
+      "@adecore/charts": "0.56.2",
+      "@adecore/database": "0.56.2",
+      "@adecore/diagram": "0.56.2",
+      "@adecore/drawing": "0.56.2",
+      "@adecore/editor": "0.56.2",
+      "@adecore/editor-react": "0.56.2",
+      "@adecore/intelligent-ui": "0.56.2",
+      "@adecore/lsp": "0.56.2",
+      "@adecore/merge": "0.56.2",
+      "@adecore/plan": "0.56.2",
+      "@adecore/service": "0.56.2",
+      "@adecore/shell": "0.56.2",
+      "@adecore/terminal": "0.56.2",
+      "@adecore/ui": "0.56.2",
+      "@adecore/utils": "0.56.2"
+    }
+  },
   "scripts": {
     "adecore:link": "bun scripts/adecore.ts link",
     "adecore:npm": "bun scripts/adecore.ts npm",
     "adecore:status": "bun scripts/adecore.ts status",
     "adecore:bump": "bun scripts/adecore.ts bump",
+    "adecore:check": "bun scripts/adecore.ts check",
     "dev": "bun scripts/adecore.ts status --brief && bun run --filter './apps/*' --filter '!./apps/site' dev",
     "dev:built": "bun scripts/adecore.ts status --brief && bun run --cwd apps/client build && bun run --parallel dev:client:built dev:server dev:desktop:built",
     "dev:client": "bun run --cwd apps/client dev",
@@ -25,7 +48,7 @@
     "check:types": "bun check --no-script -p tsconfig.scripts.json && bun run --filter '*' typecheck",
     "check:generated": "bun run --cwd packages/contracts check:swift && bun apps/server/scripts/generate-extension-runtimes.ts --check",
     "generate:extension-runtimes": "bun apps/server/scripts/generate-extension-runtimes.ts",
-    "lint": "oxlint --deny-warnings && oxlint --type-aware --deny-warnings -c apps/server/oxlint.promises.json apps/server/src && bun scripts/check-client-conventions.ts && bun scripts/check-test-clock.ts && bun scripts/check-built-ins.ts",
+    "lint": "oxlint --deny-warnings && oxlint --type-aware --deny-warnings -c apps/server/oxlint.promises.json apps/server/src && bun scripts/check-client-conventions.ts && bun scripts/check-test-clock.ts && bun scripts/check-built-ins.ts && bun scripts/adecore.ts check",
     "symbolicate:electron": "bun scripts/symbolicate-electron.ts",
     "test": "bun test --conditions=source --parallel --no-isolate --only-failures --timings=test-timings.json",
     "test:windows": "bun test --conditions=source --parallel=8 --no-isolate --only-failures",

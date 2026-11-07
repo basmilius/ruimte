@@ -34,10 +34,50 @@ export function platformManifest(target: Target, version: string): Manifest {
 
 export const EXTENSION_DIR = 'extension';
 
+const DEPENDENCY_SECTIONS = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'];
+
+/* The default catalog of the root `package.json`, which a published package cannot read. */
+export function catalogOf(root: Manifest): Record<string, string> {
+    const workspaces = root.workspaces as string[] | { catalog?: Record<string, string> } | undefined;
+
+    return Array.isArray(workspaces) ? {} : (workspaces?.catalog ?? {});
+}
+
+/* `npm publish` does not know the `catalog:` protocol, so each reference becomes the version the catalog holds. */
+export function resolveCatalog(source: Manifest, catalog: Record<string, string>): Manifest {
+    const resolved: Manifest = { ...source };
+
+    for (const section of DEPENDENCY_SECTIONS) {
+        const dependencies = source[section] as Record<string, string> | undefined;
+
+        if (!dependencies) {
+            continue;
+        }
+
+        resolved[section] = Object.fromEntries(
+            Object.entries(dependencies).map(([name, range]) => {
+                if (!range.startsWith('catalog:')) {
+                    return [name, range];
+                }
+
+                const version = range === 'catalog:' ? catalog[name] : undefined;
+
+                if (version === undefined) {
+                    throw new Error(`${name} in ${section} is "${range}", which the default catalog of the root package.json cannot resolve.`);
+                }
+
+                return [name, version];
+            })
+        );
+    }
+
+    return resolved;
+}
+
 /* Its own `package.json` at this version, under its own license: the types are MIT, the app is not. */
-export function extensionManifest(source: Manifest, version: string): Manifest {
+export function extensionManifest(source: Manifest, version: string, catalog: Record<string, string>): Manifest {
     return {
-        ...source,
+        ...resolveCatalog(source, catalog),
         version,
         author: COMMON.author,
         homepage: COMMON.homepage,
