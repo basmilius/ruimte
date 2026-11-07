@@ -127,9 +127,8 @@ struct ChatComposerPills: View {
                         ChatProviderMark(provider: model.provider, size: 14)
                     }
                 }
-                .foregroundStyle(MobileStyle.muted)
+                .foregroundStyle(model.accountTint ?? MobileStyle.muted)
                 Text(ModelName.short(name, in: model.models)).lineLimit(1)
-                if let account = model.accountChoice { AccountDot(color: account.color, size: 6) }
                 Image(lucide: "chevron-down", size: 12).foregroundStyle(MobileStyle.muted)
             }
             .modifier(ChatComposerPill())
