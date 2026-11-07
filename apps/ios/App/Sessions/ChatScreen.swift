@@ -82,6 +82,7 @@ struct ChatScreen: View {
                     scrollToLatest: scrollToLatest, onMessagesBelowChanged: { messagesBelow = $0 },
                     onNearTop: { model.loadOlderIfIdle() }
                 )
+                .modifier(ChatToolCallsSetting(presentation: model.presentation))
             }
             .overlay(alignment: .top) {
                 if model.loadingHistory {

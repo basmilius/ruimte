@@ -54,18 +54,19 @@ private struct ChatSubagentOwnRow: View {
                     .accessibilityValue(expanded ? "Expanded" : "Collapsed")
             }
             if expanded {
+                let shown = shownChildren
                 VStack(alignment: .leading, spacing: 8) {
-                    if item.itemsTruncated {
-                        Text("Only the start is kept.").font(.caption).foregroundStyle(
-                            MobileStyle.muted)
-                    }
                     if children.isEmpty {
                         Text("Nothing to show yet.").font(.caption).foregroundStyle(MobileStyle.muted)
-                    } else {
+                    } else if !shown.isEmpty {
+                        // It did work and only none that shows; "nothing yet" would say it did none.
+                        if item.itemsTruncated {
+                            Text("Only the start is kept.").font(.caption).foregroundStyle(MobileStyle.muted)
+                        }
                         ScrollViewReader { reader in
                             ScrollView {
                                 LazyVStack(alignment: .leading, spacing: 4) {
-                                    ForEach(children) { child in
+                                    ForEach(shown) { child in
                                         ChatSubagentStep(record: child).id(child.id)
                                     }
                                 }
@@ -78,8 +79,8 @@ private struct ChatSubagentOwnRow: View {
                             .defaultScrollAnchor(.bottom)
                             // The work of a long-running agent scrolls inside its row instead of pushing the thread away.
                             .frame(height: min(320, max(28, stepsHeight)))
-                            .onChange(of: children.count) { _, _ in
-                                if running, let last = children.last { reader.scrollTo(last.id, anchor: .bottom) }
+                            .onChange(of: shown.count) { _, _ in
+                                if running, let last = shown.last { reader.scrollTo(last.id, anchor: .bottom) }
                             }
                         }
                     }
@@ -93,6 +94,12 @@ private struct ChatSubagentOwnRow: View {
                 .overlay(alignment: .leading) { Rectangle().fill(MobileStyle.border).frame(width: 1) }
             }
         }
+    }
+
+    /// The work the row shows: without its tool lines while they are hidden, a generated image kept as a result.
+    private var shownChildren: [ChatItemState] {
+        guard presentation.hidesToolCalls else { return children }
+        return children.filter { $0.item.toolItem.map(UiGeneratedImage.isGeneration) ?? true }
     }
 
     @ViewBuilder private var header: some View {
