@@ -455,9 +455,14 @@ export function runtimeAssetsScript(fromJson: string): string {
 })();`;
 }
 
+/* The script that shows the files a page's script names while it runs, as it stands in the page. */
+export function runtimeAssetsElement(from: string): string {
+    return `<script data-ruimte-assets>${runtimeAssetsScript(inlineJson(from))}</script>`;
+}
+
 /* The page with what shows the files its script names while it runs, first in its head. */
 export function withRuntimeAssets(html: string, from: string): string {
-    return atHeadStart(html, `<script data-ruimte-assets>${runtimeAssetsScript(inlineJson(from))}</script>`);
+    return atHeadStart(html, runtimeAssetsElement(from));
 }
 
 /* The page with the design runtime at the end of its body, so it runs once the page's own markup is there. */

@@ -292,9 +292,32 @@ enum DesignFiles {
         return pageURLPrefix + escaped.joined()
     }
 
+    /// How many bytes a page being built may still grow by: what it weighs counts every place a file or page stands in
+    /// it, however often.
+    final class Room {
+        var left: Int
+
+        init(left: Int) {
+            self.left = left
+        }
+
+        /// Takes `bytes` from the room, or none when they do not fit.
+        func take(_ bytes: Int) -> Bool {
+            guard bytes <= left else { return false }
+            left -= bytes
+            return true
+        }
+    }
+
     /// The page with each reference it pulled in replaced by the bytes it names; one without bytes stays as it was. A
     /// link to another page keeps its path: no browser opens an inline page from a link, so the copy would only weigh.
-    static func withAssets(_ html: String, inline: [String: String]) -> String {
+    /// A file named in many places is in every one of them, so each place takes what it adds from `room`, and one that
+    /// does not fit stays the path it was.
+    static func withAssets(_ html: String, inline: [String: String], room: Room? = nil) -> String {
+        func grows(_ reference: String, _ url: String) -> Bool {
+            guard let room else { return true }
+            return room.take(max(0, url.utf8.count - reference.utf8.count))
+        }
         var page = replacing(attributeReference, in: html) { match, text in
             guard let reference = Range(match.range(at: 3), in: text).map({ String(text[$0]) }),
                 let url = inline[reference],
@@ -304,14 +327,14 @@ enum DesignFiles {
             if name.lowercased() == "href", url.hasPrefix(pageURLPrefix) {
                 return nil
             }
-            return "\(name)=\(quote)\(url)\(quote)"
+            return grows(reference, url) ? "\(name)=\(quote)\(url)\(quote)" : nil
         }
         page = replacing(cssReference, in: page) { match, text in
             guard let reference = Range(match.range(at: 2), in: text).map({ String(text[$0]) }),
                 let url = inline[reference],
                 let quote = Range(match.range(at: 1), in: text).map({ text[$0] })
             else { return nil }
-            return "url(\(quote)\(url)\(quote))"
+            return grows(reference, url) ? "url(\(quote)\(url)\(quote))" : nil
         }
         return page
     }
@@ -360,21 +383,42 @@ enum DesignFiles {
         return html[..<end] + element + html[end...]
     }
 
+    /// The script that frames pages of its folder, as it stands in a page; `pagesJSON` is the pages it frames by their
+    /// path.
+    private static func framedPagesElement(_ pagesJSON: String, from: String) -> String {
+        let script = DesignScripts.framedPages
+            .replacingOccurrences(of: DesignScripts.pagesToken, with: pagesJSON)
+            .replacingOccurrences(of: DesignScripts.fromToken, with: inlineJSON(from))
+        return "<script data-ruimte-pages>\(script)</script>"
+    }
+
     /// The page with the script that frames pages of its folder at the start of its head. `pages` goes by the path of
     /// each page, in the order it was found.
     private static func withFramedPages(_ html: String, from: String, pages: [(path: String, url: String)]) -> String {
         guard !pages.isEmpty else { return html }
         let entries = pages.map { "\(inlineJSON($0.path)):\(inlineJSON($0.url))" }.joined(separator: ",")
-        let script = DesignScripts.framedPages
-            .replacingOccurrences(of: DesignScripts.pagesToken, with: "{\(entries)}")
-            .replacingOccurrences(of: DesignScripts.fromToken, with: inlineJSON(from))
-        return atHeadStart(html, "<script data-ruimte-pages>\(script)</script>")
+        return atHeadStart(html, framedPagesElement("{\(entries)}", from: from))
+    }
+
+    /// The script that shows the files a page's script names while it runs, as it stands in the page.
+    private static func runtimeAssetsElement(from: String) -> String {
+        let script = DesignScripts.runtimeAssets.replacingOccurrences(of: DesignScripts.fromToken, with: inlineJSON(from))
+        return "<script data-ruimte-assets>\(script)</script>"
     }
 
     /// The page with what shows the files its script names while it runs, first in its head.
     private static func withRuntimeAssets(_ html: String, from: String) -> String {
-        let script = DesignScripts.runtimeAssets.replacingOccurrences(of: DesignScripts.fromToken, with: inlineJSON(from))
-        return atHeadStart(html, "<script data-ruimte-assets>\(script)</script>")
+        atHeadStart(html, runtimeAssetsElement(from: from))
+    }
+
+    /// What the scripts a page may carry weigh, which a page keeps room for whether it ends up with them or not.
+    private static func scriptsWeight(from: String) -> Int {
+        framedPagesElement("{}", from: from).utf8.count + runtimeAssetsElement(from: from).utf8.count
+    }
+
+    /// What one page adds to the script that frames pages when it names `url` as `path`.
+    private static func framedEntryWeight(_ path: String, _ url: String) -> Int {
+        inlineJSON(path).utf8.count + inlineJSON(url).utf8.count + 2
     }
 
     private static func folderOf(_ path: String) -> String {
@@ -386,9 +430,13 @@ enum DesignFiles {
     }
 
     /// One page standing on its own: every file of the folder it pulls in rides along as its bytes, up to the bounds
-    /// of a visual. A page it frames rides along standing on its own too, once however often it is named, and never a
-    /// page it is framed in itself. A file that cannot be read stays a reference that loads nothing, as a broken path
-    /// does in a browser.
+    /// of a visual. A page it frames rides along standing on its own too, read once however often it is named, and
+    /// never a page it is framed in itself. A file that cannot be read stays a reference that loads nothing, as a
+    /// broken path does in a browser.
+    ///
+    /// The bounds hold for what is built, not for what is read: a file or page named in many places is in every one of
+    /// them, a framed page is in its parent as the address that holds it, and one that does not fit stays the path it
+    /// was. Reading stops at the same bounds, so a folder is not read past them either.
     @MainActor static func standalonePage(
         _ file: String, folder: String, read: @escaping (String, Int) async throws -> MachineResource
     ) async throws -> Data {
@@ -414,6 +462,7 @@ enum DesignFiles {
         func inline(_ file: String, text: String, chain: [String]) async throws -> String {
             let from = DesignFiles.folderOf(file)
             var inline: [String: String] = [:]
+            let room = Room(left: DesignFiles.pageMaxBytes - text.utf8.count - DesignFiles.scriptsWeight(from: from))
             for reference in DesignFiles.assetReferences(text, from: from) {
                 try Task.checkCancellation()
                 guard let path = DesignFiles.assetPath(reference, from: from) else { continue }
@@ -442,7 +491,9 @@ enum DesignFiles {
                     framed.append((path, url))
                 }
             }
-            let page = DesignFiles.withFramedPages(DesignFiles.withAssets(text, inline: inline), from: from, pages: framed)
+            let withBytes = DesignFiles.withAssets(text, inline: inline, room: room)
+            let fitting = framed.filter { room.take(DesignFiles.framedEntryWeight($0.path, $0.url)) }
+            let page = DesignFiles.withFramedPages(withBytes, from: from, pages: fitting)
             // A page without a script names no file while it runs, but one that frames pages answers for them.
             let scripted = text.range(of: #"<script\b"#, options: [.regularExpression, .caseInsensitive]) != nil
             return scripted || !framed.isEmpty ? DesignFiles.withRuntimeAssets(page, from: from) : page

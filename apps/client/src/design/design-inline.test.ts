@@ -65,6 +65,66 @@ describe('a page that frames another page of its folder', () => {
     });
 });
 
+/* What a page weighs once the frame has it: its bytes as the frame writes them. */
+const weight = (html: string): number => new TextEncoder().encode(html).length;
+
+describe('what a standing page builds', () => {
+    test('stays within the bounds of a visual however often one page is framed, the rest staying the path they were', async () => {
+        const child = 'A '.repeat(450_000);
+        const { files, reads } = folder({ 'index.html': '<iframe src="child.html"></iframe>'.repeat(20), 'child.html': child });
+
+        const html = await inlineDesignPage(files, 'index.html');
+
+        expect(weight(html)).toBeLessThanOrEqual(DESIGN_PAGE_MAX_BYTES);
+        expect(reads.get('child.html')).toBe(1);
+        expect(html).toContain(`<iframe src="${pageDataUrl(child)}"></iframe>`);
+        expect(html).toContain('<iframe src="child.html"></iframe>');
+    });
+
+    test('stays within the bounds of a visual however often one file is named, the rest staying the path they were', async () => {
+        const url = `data:image/png;base64,${'A'.repeat(1_000_000)}`;
+        const files: DesignFiles = {
+            readPage: async () => {
+                const text = '<img src="a.png">'.repeat(40);
+
+                return { text, size: weight(text) };
+            },
+            readAsset: async () => ({ url, size: 750_000 })
+        };
+
+        const html = await inlineDesignPage(files, 'index.html');
+
+        expect(weight(html)).toBeLessThanOrEqual(DESIGN_PAGE_MAX_BYTES);
+        expect(html).toContain(`<img src="${url}">`);
+        expect(html).toContain('<img src="a.png">');
+    });
+
+    test('counts a page again each time it stands in another, however deep the pages are framed', async () => {
+        const { files, reads } = folder({
+            'index.html': '<iframe src="middle.html"></iframe>'.repeat(20),
+            'middle.html': '<iframe src="leaf.html"></iframe>'.repeat(20),
+            'leaf.html': 'A '.repeat(50_000)
+        });
+
+        const html = await inlineDesignPage(files, 'index.html');
+
+        expect(weight(html)).toBeLessThanOrEqual(DESIGN_PAGE_MAX_BYTES);
+        expect(reads.get('middle.html')).toBe(1);
+        expect(reads.get('leaf.html')).toBe(1);
+        expect(html).toContain('<iframe src="data:text/html;charset=utf-8,');
+        expect(html).toContain('<iframe src="middle.html"></iframe>');
+    });
+
+    test('puts every page that fits where it was named, with the page that frames it and nothing left over', async () => {
+        const { files } = folder({ 'index.html': '<iframe src="one.html"></iframe><iframe src="one.html"></iframe>', 'one.html': '<p>one</p>' });
+
+        const html = await inlineDesignPage(files, 'index.html');
+
+        expect(html.split(pageDataUrl('<p>one</p>')).length - 1).toBe(3);
+        expect(html).not.toContain('one.html"></iframe>');
+    });
+});
+
 describe('a file a page names only while it runs', () => {
     test('is shown by a page with a script and answered by a page that frames one, and a page with neither carries nothing for it', async () => {
         const { files } = folder({

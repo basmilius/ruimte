@@ -1,5 +1,18 @@
-import { assetPathOf, assetReferences, DESIGN_PAGE_MAX_BYTES, isPagePath, pageDataUrl, pageMentions, withAssets, withFramedPages } from '@/design/design-page';
-import { withRuntimeAssets } from '@/design/design-runtime';
+import {
+    assetPathOf,
+    assetReferences,
+    byteLength,
+    DESIGN_PAGE_MAX_BYTES,
+    framedPagesElement,
+    inlineJson,
+    isPagePath,
+    pageDataUrl,
+    pageMentions,
+    takeRoom,
+    withAssets,
+    withFramedPages
+} from '@/design/design-page';
+import { runtimeAssetsElement, withRuntimeAssets } from '@/design/design-runtime';
 
 /* The files of a design folder by their path inside it. Either read throws when the file cannot be read. */
 export type DesignFiles = {
@@ -16,14 +29,28 @@ type Inlining = {
 /*
  * One page as a file that stands on its own: the frame writes a page from a string, so every file of the
  * folder it pulls in rides along as its bytes, up to the bounds of a visual. A page it frames rides along
- * standing on its own too, once however often it is named, and never a page it is framed in itself. A
- * file that cannot be read stays a reference that loads nothing, the way a broken path does in a browser.
+ * standing on its own too, read once however often it is named, and never a page it is framed in itself.
+ * A file that cannot be read stays a reference that loads nothing, the way a broken path does in a browser.
+ *
+ * The bounds hold for what is built, not for what is read: a file or page named in many places is in
+ * every one of them, a framed page is in its parent as the address that holds it, and one that does not
+ * fit stays the path it was. Reading stops at the same bounds, so a folder is not read past them either.
  */
 export async function inlineDesignPage(files: DesignFiles, file: string): Promise<string> {
     const page = await files.readPage(file);
     const inlining: Inlining = { files, total: page.size, pages: new Map() };
 
     return inlinePage(inlining, file, page.text, [file]);
+}
+
+/* What the scripts a page may carry weigh, which a page keeps room for whether it ends up with them or not. */
+function scriptsWeight(from: string): number {
+    return byteLength(framedPagesElement('{}', from)) + byteLength(runtimeAssetsElement(from));
+}
+
+/* What one page adds to the script that frames pages when it names `url` as `path`. */
+function framedEntryWeight(path: string, url: string): number {
+    return byteLength(inlineJson(path)) + byteLength(inlineJson(url)) + 2;
 }
 
 function folderOf(path: string): string {
@@ -41,6 +68,7 @@ function suffixOf(reference: string): string {
 async function inlinePage(inlining: Inlining, file: string, text: string, chain: readonly string[]): Promise<string> {
     const from = folderOf(file);
     const inline = new Map<string, string>();
+    const room = { left: DESIGN_PAGE_MAX_BYTES - byteLength(text) - scriptsWeight(from) };
 
     for (const reference of assetReferences(text, from)) {
         const path = assetPathOf(reference, from);
@@ -73,21 +101,23 @@ async function inlinePage(inlining: Inlining, file: string, text: string, chain:
         }
     }
 
-    const framed = new Map<string, string>();
+    const named = new Map<string, string>();
 
     for (const mention of pageMentions(text)) {
         const path = assetPathOf(mention, from);
         const url = path === null ? null : await pageUrl(inlining, path, chain);
 
         if (path !== null && url !== null) {
-            framed.set(path, url);
+            named.set(path, url);
         }
     }
 
-    const page = withFramedPages(withAssets(text, inline), from, framed);
+    const withBytes = withAssets(text, inline, room);
+    const framed = new Map([...named].filter(([path, url]) => takeRoom(room, framedEntryWeight(path, url))));
+    const page = withFramedPages(withBytes, from, framed);
 
     // A page without a script names no file while it runs, but one that frames pages answers for them.
-    return /<script\b/i.test(text) || framed.size > 0 ? withRuntimeAssets(page, from) : page;
+    return /<script\b/i.test(text) || named.size > 0 ? withRuntimeAssets(page, from) : page;
 }
 
 function pageUrl(inlining: Inlining, path: string, chain: readonly string[]): Promise<string | null> {

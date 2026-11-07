@@ -228,16 +228,56 @@ export function assetReferences(html: string, from = ''): string[] {
     return [...found];
 }
 
+/* How many bytes a page being built may still grow by: what it weighs counts every place a file or page stands in it, however often. */
+export interface Room {
+    left: number;
+}
+
+/* Takes `bytes` from the room, or none when they do not fit. */
+export function takeRoom(room: Room, bytes: number): boolean {
+    if (bytes > room.left) {
+        return false;
+    }
+
+    room.left -= bytes;
+
+    return true;
+}
+
+const ENCODER = new TextEncoder();
+
+/* What text weighs as the bytes of a page. */
+export function byteLength(text: string): number {
+    return ENCODER.encode(text).length;
+}
+
 /*
  * The page with each reference it pulled in replaced by the bytes it names; a reference without bytes stays as it was.
  * A link to another page keeps its path: no browser opens an inline page from a link, so the copy would only weigh.
+ * A file named in many places is in every one of them, so each place takes what it adds from `room`, and one that
+ * does not fit stays the path it was.
  */
-export function withAssets(html: string, inline: ReadonlyMap<string, string>): string {
+export function withAssets(html: string, inline: ReadonlyMap<string, string>, room?: Room): string {
+    const weights = new Map<string, number>();
+    const grows = (reference: string, url: string): boolean => {
+        if (room === undefined) {
+            return true;
+        }
+
+        for (const text of [reference, url]) {
+            if (!weights.has(text)) {
+                weights.set(text, byteLength(text));
+            }
+        }
+
+        return takeRoom(room, Math.max(0, weights.get(url)! - weights.get(reference)!));
+    };
+
     return html
         .replace(ATTRIBUTE_REFERENCE, (whole, name: string, quote: string, reference: string) => {
             const url = inline.get(reference);
 
-            if (url === undefined || (name.toLowerCase() === 'href' && url.startsWith(PAGE_URL_PREFIX))) {
+            if (url === undefined || (name.toLowerCase() === 'href' && url.startsWith(PAGE_URL_PREFIX)) || !grows(reference, url)) {
                 return whole;
             }
 
@@ -246,7 +286,7 @@ export function withAssets(html: string, inline: ReadonlyMap<string, string>): s
         .replace(CSS_REFERENCE, (whole, quote: string, reference: string) => {
             const url = inline.get(reference);
 
-            return url === undefined ? whole : `url(${quote}${url}${quote})`;
+            return url === undefined || !grows(reference, url) ? whole : `url(${quote}${url}${quote})`;
         });
 }
 
@@ -323,13 +363,18 @@ export function inlineJson(value: unknown): string {
     return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
+/* The script that frames pages of its folder, as it stands in a page; `pagesJson` is the pages it frames by their path. */
+export function framedPagesElement(pagesJson: string, from: string): string {
+    return `<script data-ruimte-pages>${framedPagesScript(pagesJson, inlineJson(from))}</script>`;
+}
+
 /* The page with the script that frames pages of its folder at the start of its head, before any script of its own runs. */
 export function withFramedPages(html: string, from: string, pages: ReadonlyMap<string, string>): string {
     if (pages.size === 0) {
         return html;
     }
 
-    return atHeadStart(html, `<script data-ruimte-pages>${framedPagesScript(inlineJson(Object.fromEntries(pages)), inlineJson(from))}</script>`);
+    return atHeadStart(html, framedPagesElement(inlineJson(Object.fromEntries(pages)), from));
 }
 
 /* The page with `element` first in its head, before any script of its own runs. */

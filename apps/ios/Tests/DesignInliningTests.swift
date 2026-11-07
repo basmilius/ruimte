@@ -165,6 +165,53 @@ import XCTest
         XCTAssertTrue(page.contains(DesignFiles.pageDataURL("<p>2</p>")))
     }
 
+    // MARK: What a standing page builds (design-inline.test.ts)
+
+    func testAPageFramedManyTimesBuildsNoMoreThanTheBoundsOfAVisualAndTheRestStayThePathTheyWere() async throws {
+        let child = String(repeating: "A ", count: 450_000)
+        let folder = Folder(pages: [
+            "index.html": String(repeating: #"<iframe src="child.html"></iframe>"#, count: 20), "child.html": child,
+        ])
+        let page = try await folder.page("index.html")
+        XCTAssertLessThanOrEqual(page.utf8.count, DesignFiles.pageMaxBytes)
+        XCTAssertEqual(folder.reads["d/child.html"], 1)
+        XCTAssertTrue(page.contains(#"<iframe src="\#(DesignFiles.pageDataURL(child))"></iframe>"#))
+        XCTAssertTrue(page.contains(#"<iframe src="child.html"></iframe>"#))
+    }
+
+    func testAFileNamedManyTimesBuildsNoMoreThanTheBoundsOfAVisualAndTheRestStayThePathTheyWere() async throws {
+        let image = MachineResource(data: Data(count: 750_000), mime: "image/png")
+        let folder = Folder(
+            pages: ["index.html": String(repeating: #"<img src="a.png">"#, count: 40)], assets: ["a.png": image])
+        let page = try await folder.page("index.html")
+        XCTAssertLessThanOrEqual(page.utf8.count, DesignFiles.pageMaxBytes)
+        XCTAssertTrue(page.contains(#"<img src="data:image/png;base64,AAAA"#))
+        XCTAssertTrue(page.contains(#"<img src="a.png">"#))
+    }
+
+    func testAPageCountsAgainEachTimeItStandsInAnotherHoweverDeepThePagesAreFramed() async throws {
+        let folder = Folder(pages: [
+            "index.html": String(repeating: #"<iframe src="middle.html"></iframe>"#, count: 20),
+            "middle.html": String(repeating: #"<iframe src="leaf.html"></iframe>"#, count: 20),
+            "leaf.html": String(repeating: "A ", count: 50_000),
+        ])
+        let page = try await folder.page("index.html")
+        XCTAssertLessThanOrEqual(page.utf8.count, DesignFiles.pageMaxBytes)
+        XCTAssertEqual(folder.reads["d/middle.html"], 1)
+        XCTAssertEqual(folder.reads["d/leaf.html"], 1)
+        XCTAssertTrue(page.contains(#"<iframe src="data:text/html;charset=utf-8,"#))
+        XCTAssertTrue(page.contains(#"<iframe src="middle.html"></iframe>"#))
+    }
+
+    func testEveryPageThatFitsStandsWhereItWasNamedWithThePageThatFramesIt() async throws {
+        let folder = Folder(pages: [
+            "index.html": #"<iframe src="one.html"></iframe><iframe src="one.html"></iframe>"#, "one.html": "<p>one</p>",
+        ])
+        let page = try await folder.page("index.html")
+        XCTAssertEqual(page.components(separatedBy: DesignFiles.pageDataURL("<p>one</p>")).count - 1, 3)
+        XCTAssertFalse(page.contains(#"one.html"></iframe>"#))
+    }
+
     func testALinkKeepsItsPathAndWhatAStylesheetNamesStaysUnresolved() async throws {
         let css = MachineResource(data: Data("a{background:url(x.png)}@import 'y.css';".utf8), mime: "text/css")
         let folder = Folder(
