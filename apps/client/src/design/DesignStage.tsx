@@ -11,7 +11,17 @@ import { designCameraKey, useDesignChat } from '@/design/design-chat';
 import { editsCss, editsOf, withEdits, withTweakValues, type DesignEdits } from '@/design/design-file';
 import { runtimeAssets } from '@/design/design-inline';
 import { bakePrompt, commentsPrompt, drawPrompt, textEditPrompt, type DesignComment } from '@/design/design-messages';
-import { changeReaches, designFiles, listingAfter, pageMtime, pageName, pagesByChange, type DesignListing } from '@/design/design-page';
+import {
+    changeReaches,
+    designFiles,
+    designScope,
+    listingOf,
+    pageMtime,
+    pageName,
+    pagesByChange,
+    scopedListingAfter,
+    type ScopedListing
+} from '@/design/design-page';
 import {
     DESIGN_METHODS,
     designMessage,
@@ -95,8 +105,12 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     const endpointId = useEndpointId();
     const transport = useTransport();
     const cellView = useContext(CellViewContext);
-    const [listing, setListing] = useState<DesignListing>({ entries: null, problem: null });
-    const [listed, setListed] = useState(false);
+    const [scoped, setScoped] = useState<ScopedListing | null>(null);
+    const scope = designScope(endpointId, folder);
+    // The listing of another folder is none: the pages kept through a failed read are those of this folder only.
+    const readListing = listingOf(scoped, scope);
+    const listing = readListing ?? { entries: null, problem: null };
+    const listed = readListing !== null;
     const shownPage = useDesignChat((state) => state.pages[designId] ?? null);
     const chosen = pinned ?? shownPage;
     const showPage = useDesignChat((state) => state.showPage);
@@ -155,8 +169,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
 
         void listDesignFolder(endpointId, folder).then((read) => {
             if (current) {
-                setListing((before) => listingAfter(before, read));
-                setListed(true);
+                setScoped((before) => scopedListingAfter(before, scope, read));
                 onListed(read.kind === 'listed' ? read.entries : null);
             }
         });
@@ -164,7 +177,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
         return () => {
             current = false;
         };
-    }, [endpointId, folder, version]);
+    }, [endpointId, folder, scope, version]);
 
     useEffect(
         () =>

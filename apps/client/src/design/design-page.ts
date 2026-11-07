@@ -35,6 +35,26 @@ export function listingAfter(before: DesignListing, read: DesignRead): DesignLis
     }
 }
 
+/* A listing and the machine and folder it was read from, so the pages kept through a failed read are only ever pages of the same folder. */
+export interface ScopedListing {
+    scope: string;
+    listing: DesignListing;
+}
+
+export function designScope(endpointId: string, folder: string): string {
+    return JSON.stringify([endpointId, folder]);
+}
+
+/* The listing of `scope`, none for a listing of another folder. */
+export function listingOf(scoped: ScopedListing | null, scope: string): DesignListing | null {
+    return scoped !== null && scoped.scope === scope ? scoped.listing : null;
+}
+
+/* The listing after a read of `scope`, which starts empty when the one before belongs to another folder. */
+export function scopedListingAfter(before: ScopedListing | null, scope: string, read: DesignRead): ScopedListing {
+    return { scope, listing: listingAfter(listingOf(before, scope) ?? { entries: null, problem: null }, read) };
+}
+
 /* What one page of a design may pull in from its folder, the bounds a visual's page keeps too. */
 export const DESIGN_ASSET_MAX_BYTES = 10 * 1024 * 1024;
 export const DESIGN_PAGE_MAX_BYTES = 16 * 1024 * 1024;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { changeReaches, listingAfter, pagesByChange, type DesignListing } from '@/design/design-page';
+import { changeReaches, designScope, listingOf, pagesByChange, scopedListingAfter, type ScopedListing } from '@/design/design-page';
 import { listDesignFolder } from '@/design/design-read';
 import { useFolderWatch } from '@/state/fs-watch';
 import { useTransport } from '@/transport/context';
@@ -20,8 +20,11 @@ export interface DesignPages {
  */
 export function useDesignPages(endpointId: string, folder: string | null, watched: string | null): DesignPages {
     const transport = useTransport();
-    const [listing, setListing] = useState<DesignListing | null>(null);
+    const [scoped, setScoped] = useState<ScopedListing | null>(null);
     const [version, setVersion] = useState(0);
+    const scope = designScope(endpointId, folder ?? '');
+    // The listing of another folder is none: the pages kept through a failed read are those of this folder only.
+    const listing = listingOf(scoped, scope);
 
     useFolderWatch(endpointId, watched ?? folder);
 
@@ -34,14 +37,14 @@ export function useDesignPages(endpointId: string, folder: string | null, watche
 
         void listDesignFolder(endpointId, folder).then((read) => {
             if (current) {
-                setListing((before) => listingAfter(before ?? { entries: null, problem: null }, read));
+                setScoped((before) => scopedListingAfter(before, scope, read));
             }
         });
 
         return () => {
             current = false;
         };
-    }, [endpointId, folder, version]);
+    }, [endpointId, folder, scope, version]);
 
     const found = listing !== null && listing.entries !== null;
 

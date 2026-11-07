@@ -8,13 +8,16 @@ import {
     changeReaches,
     designFiles,
     designReadFailed,
+    designScope,
     isPagePath,
     layoutPoint,
     listingAfter,
+    listingOf,
     pageDataUrl,
     pageMentions,
     pageName,
     pagesByChange,
+    scopedListingAfter,
     strokesBox,
     withAssets,
     withFramedPages
@@ -268,5 +271,28 @@ describe('the listing of a design folder', () => {
     test('keeps the entries it had when a read fails, and says why', () => {
         expect(listingAfter({ entries: pages, problem: null }, { kind: 'failed', reason: 'Broke' })).toEqual({ entries: pages, problem: 'Broke' });
         expect(listingAfter({ entries: null, problem: null }, { kind: 'failed', reason: 'Broke' })).toEqual({ entries: null, problem: 'Broke' });
+    });
+
+    test('keeps the entries of a failed read only for the folder it read before', () => {
+        const scope = designScope('machine', '/work/a');
+        const before = scopedListingAfter(null, scope, { kind: 'listed', entries: pages });
+
+        expect(scopedListingAfter(before, scope, { kind: 'failed', reason: 'Broke' }).listing).toEqual({ entries: pages, problem: 'Broke' });
+        expect(scopedListingAfter(before, designScope('machine', '/work/b'), { kind: 'failed', reason: 'Broke' }).listing).toEqual({
+            entries: null,
+            problem: 'Broke'
+        });
+        expect(scopedListingAfter(before, designScope('other', '/work/a'), { kind: 'failed', reason: 'Broke' }).listing).toEqual({
+            entries: null,
+            problem: 'Broke'
+        });
+    });
+
+    test('has no listing for another folder than the one it was read from', () => {
+        const before = scopedListingAfter(null, designScope('machine', '/work/a'), { kind: 'listed', entries: pages });
+
+        expect(listingOf(before, designScope('machine', '/work/a'))).toEqual({ entries: pages, problem: null });
+        expect(listingOf(before, designScope('machine', '/work/b'))).toBeNull();
+        expect(listingOf(null, designScope('machine', '/work/a'))).toBeNull();
     });
 });
