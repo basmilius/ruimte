@@ -619,11 +619,13 @@ final class ChatPresentation {
         return nil
     }
 
-    /// Images and sub-agents stay a turn's visible result, and a workflow may still run after its turn ended.
+    /// Images and sub-agents stay a turn's visible result, and a workflow may still run after its turn ended. A
+    /// compaction is never folded away, so a turn that only compacted shows its divider and no fold.
     private static func stands(_ row: ChatTimelineEntry) -> Bool {
         switch row.items.first?.item {
         case .tool(let tool)? where row.kind == .message:
             UiGeneratedImage.isGeneration(tool) || tool.workflow != nil && tool.state == .running
+        case .compaction? where row.kind == .message: true
         case .subagent? where row.kind == .subagent: true
         default: false
         }

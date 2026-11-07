@@ -89,6 +89,18 @@ final class ChatThoughtTests: XCTestCase {
         XCTAssertEqual(presentation.entries.map(\.id), ["fold-turn", "flow", "answer"])
     }
 
+    @MainActor func testACompactionStaysInSightBesideTheFoldOfItsTurn() {
+        let presentation = ChatPresentation()
+        presentation.replace(
+            [
+                item("turn", "turn").setting("state", .string("done")),
+                item("read", "tool"),
+                item("compacted", "compaction").setting("preTokens", .number(180_000)),
+                item("answer", "assistant").setting("text", .string("Done.")),
+            ].map { $0.setting("turnId", .string("turn")).chatItem }, info: nil)
+        XCTAssertEqual(presentation.entries.map(\.id), ["fold-turn", "compacted", "answer"])
+    }
+
     @MainActor func testWorkLinesSitTightAndProseKeepsABlockGap() {
         let presentation = ChatPresentation()
         presentation.replace(
