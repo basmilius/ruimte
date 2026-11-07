@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteTransport
 import SwiftUI
 
 /// What New view made, for the project's page to take up once the sheet is gone.
@@ -42,6 +43,7 @@ enum NewViewFactory {
         case "separator": String(localized: "Separator")
         case "subheader": String(localized: "Subheader")
         case "artifact": String(localized: "Output")
+        case "design": String(localized: "Design")
         default: kind.capitalized
         }
     }
@@ -98,6 +100,15 @@ struct NewViewSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var agents: [(kind: String, name: String)]?
     @State private var saving = false
+    @State private var designing = false
+
+    /// A design keeps its pages in the project folder, and a machine before designs would not know its folder.
+    private var designOffered: Bool {
+        !workspace.isScratch && (workspace.client as? MachineClient)?.answers(.artifactSaveFolder) == true
+            && agents?.isEmpty == false
+    }
+
+    private var kinds: [String] { NewViewFactory.kinds + (designOffered ? ["design"] : []) }
 
     var body: some View {
         NavigationStack {
@@ -108,9 +119,13 @@ struct NewViewSheet: View {
                     heading(String(localized: "View", comment: "Heading over the kinds of view to make"))
                         .padding(.top, 10)
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                        ForEach(NewViewFactory.kinds, id: \.self) { kind in
+                        ForEach(kinds, id: \.self) { kind in
                             Button {
-                                kind == "file" ? pickFile() : create(kind)
+                                switch kind {
+                                case "file": pickFile()
+                                case "design": designing = true
+                                default: create(kind)
+                                }
                             } label: {
                                 VStack(spacing: 6) {
                                     LucideIcon(name: WorkspaceViewIcon.name(for: .object(["kind": .string(kind)])), size: 18)
@@ -140,6 +155,11 @@ struct NewViewSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
+            }
+        }
+        .confirmationDialog(String(localized: "Design with"), isPresented: $designing, titleVisibility: .visible) {
+            ForEach(agents ?? [], id: \.kind) { agent in
+                Button(agent.name) { createDesign(agent) }
             }
         }
         .presentationDetents([.medium, .large])
@@ -211,6 +231,35 @@ struct NewViewSheet: View {
             guard workspace.problem == nil else { return }
             if kind == "chat" { AppUsage.count(.chatStarted) }
             if let result = NewViewFactory.result(for: item) { made(result) }
+            dismiss()
+        }
+    }
+
+    /// A design named "Design" until that is taken, keeping its pages in a folder no other design has, on disk or in
+    /// the project, so a new design never opens on another's files.
+    private func createDesign(_ agent: (kind: String, name: String)) {
+        saving = true
+        Task {
+            defer { saving = false }
+            // Read before the document, since the list may change while the disk answers.
+            var onDisk: [String] = []
+            for folder in DesignFiles.folders {
+                let listed = try? await workspace.client.request(
+                    "fs.list",
+                    payload: .object([
+                        "path": .string(workspace.folder + "/" + folder), "depth": .number(1), "hidden": .bool(true),
+                    ]))
+                onDisk += (listed?.list("entries") ?? []).filter { $0.text("kind") == "directory" }.map {
+                    $0.text("name")
+                }
+            }
+            let name = DesignFiles.freeName(workspace.views)
+            let item = DesignFiles.view(
+                agent: agent.kind, name: name, path: DesignFiles.freeFolder(workspace.views, name: name, onDisk: onDisk))
+            await workspace.edit { $0.setting("views", .array($0.list("views") + [item])) }
+            guard workspace.problem == nil else { return }
+            AppUsage.count(.chatStarted)
+            made(.view(item.stableID))
             dismiss()
         }
     }

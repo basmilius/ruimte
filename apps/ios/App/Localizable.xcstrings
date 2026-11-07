@@ -1,6 +1,116 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Design" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Design"
+          }
+        }
+      }
+    },
+    "Pages" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pagina's"
+          }
+        }
+      }
+    },
+    "Read again" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opnieuw lezen"
+          }
+        }
+      }
+    },
+    "Chats of this design" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chats van dit design"
+          }
+        }
+      }
+    },
+    "Design with" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Design met"
+          }
+        }
+      }
+    },
+    "No pages yet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nog geen pagina's"
+          }
+        }
+      }
+    },
+    "Ask the chat to make a page. It shows here as soon as it is written." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vraag de chat om een pagina te maken. Die verschijnt hier zodra hij geschreven is."
+          }
+        }
+      }
+    },
+    "Reading the pages" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pagina's lezen"
+          }
+        }
+      }
+    },
+    "No folder for this design" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geen map voor dit design"
+          }
+        }
+      }
+    },
+    "Open this design in Ruimte on the machine to give it a folder." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open dit design in Ruimte op de machine om het een map te geven."
+          }
+        }
+      }
+    },
     "Could not read limits. Try again." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3196,22 +3306,6 @@
         }
       },
       "shouldTranslate" : false
-    },
-    "%@ · %@ per task" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · %2$@ per task"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · %2$@ per taak"
-          }
-        }
-      }
     },
     "%@ · %lld ms" : {
       "comment" : "How the machine is connected, then the round trip in milliseconds",
@@ -9716,16 +9810,6 @@
         }
       }
     },
-    "Compare models" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Modellen vergelijken"
-          }
-        }
-      }
-    },
     "Completed" : {
       "localizations" : {
         "nl" : {
@@ -10303,32 +10387,12 @@
         }
       }
     },
-    "Cost axis" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kostenas"
-          }
-        }
-      }
-    },
     "Cost per day" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kosten per dag"
-          }
-        }
-      }
-    },
-    "Cost per task" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kosten per taak"
           }
         }
       }
@@ -12080,17 +12144,6 @@
         }
       }
     },
-    "Extra high" : {
-      "comment" : "Reasoning effort of a model",
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Extra hoog"
-          }
-        }
-      }
-    },
     "failed" : {
       "comment" : "Status of a task an agent gave",
       "localizations" : {
@@ -13143,27 +13196,6 @@
         }
       }
     },
-    "Hides this model in the chart" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verbergt dit model in de grafiek"
-          }
-        }
-      }
-    },
-    "High" : {
-      "comment" : "Reasoning effort of a model",
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hoog"
-          }
-        }
-      }
-    },
     "History" : {
       "localizations" : {
         "nl" : {
@@ -13402,52 +13434,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wordt geïnstalleerd. De machine is zo terug op de nieuwe versie."
-          }
-        }
-      }
-    },
-    "Intelligence" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intelligence"
-          }
-        }
-      }
-    },
-    "Intelligence against cost" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intelligence tegen kosten"
-          }
-        }
-      }
-    },
-    "Intelligence Index %@, %@ per task" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Intelligence Index %1$@, %2$@ per task"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intelligence Index %@, %@ per taak"
-          }
-        }
-      }
-    },
-    "Intelligence Index against cost per task in USD" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intelligence Index tegen kosten per taak in USD"
           }
         }
       }
@@ -14046,16 +14032,6 @@
         }
       }
     },
-    "Legacy" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Legacy"
-          }
-        }
-      }
-    },
     "Legacy models" : {
       "localizations" : {
         "nl" : {
@@ -14114,17 +14090,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lijn"
-          }
-        }
-      }
-    },
-    "Linear" : {
-      "comment" : "A linear scale",
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lineair"
           }
         }
       }
@@ -14225,16 +14190,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Laden"
-          }
-        }
-      }
-    },
-    "Loading benchmarks" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Benchmarks laden"
           }
         }
       }
@@ -14390,17 +14345,6 @@
         }
       }
     },
-    "Log" : {
-      "comment" : "A logarithmic scale",
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Log"
-          }
-        }
-      }
-    },
     "Log in" : {
       "localizations" : {
         "nl" : {
@@ -14477,17 +14421,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Run-configuraties en scripts zoeken"
-          }
-        }
-      }
-    },
-    "Low" : {
-      "comment" : "Reasoning effort of a model",
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Laag"
           }
         }
       }
@@ -14728,17 +14661,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vergelijk deze publieke sleutel met de lijst Apps met toegang op de machine."
-          }
-        }
-      }
-    },
-    "Max" : {
-      "comment" : "Reasoning effort of a model",
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Max"
           }
         }
       }
@@ -15522,16 +15444,6 @@
         }
       }
     },
-    "No comparison" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Geen vergelijking"
-          }
-        }
-      }
-    },
     "No device" : {
       "localizations" : {
         "nl" : {
@@ -15762,17 +15674,6 @@
         }
       }
     },
-    "No thinking" : {
-      "comment" : "Reasoning effort of a model",
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zonder denken"
-          }
-        }
-      }
-    },
     "No usage in this period." : {
       "localizations" : {
         "nl" : {
@@ -15849,16 +15750,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Niet beschikbaar"
-          }
-        }
-      }
-    },
-    "Not beaten on both axes" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Niet verslagen op beide assen"
           }
         }
       }
@@ -19592,16 +19483,6 @@
         }
       }
     },
-    "Shows this model in the chart" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Toont dit model in de grafiek"
-          }
-        }
-      }
-    },
     "Shows working agents and agents that need you, per machine. Turn on notifications to keep it updated while Ruimte is closed." : {
       "localizations" : {
         "nl" : {
@@ -20028,16 +19909,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Broncode op GitHub"
-          }
-        }
-      }
-    },
-    "Source: Artificial Analysis" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bron: Artificial Analysis"
           }
         }
       }
@@ -21058,16 +20929,6 @@
         }
       }
     },
-    "Could not load benchmarks. Check the connection and try again." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kon benchmarks niet laden. Controleer de verbinding en probeer het opnieuw."
-          }
-        }
-      }
-    },
     "Removes the branch here. The remote keeps its own." : {
       "localizations" : {
         "nl" : {
@@ -21850,16 +21711,6 @@
         }
       }
     },
-    "No benchmarks yet." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nog geen benchmarks."
-          }
-        }
-      }
-    },
     "There is no update to install on this machine." : {
       "localizations" : {
         "nl" : {
@@ -21896,17 +21747,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dun"
-          }
-        }
-      }
-    },
-    "Thinking" : {
-      "comment" : "Reasoning effort of a model",
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Denken"
           }
         }
       }
@@ -22754,16 +22594,6 @@
         }
       }
     },
-    "Turn on a model in the list to draw it." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zet een model in de lijst aan om het te tekenen."
-          }
-        }
-      }
-    },
     "Turn on notifications" : {
       "localizations" : {
         "nl" : {
@@ -23040,126 +22870,6 @@
         }
       }
     },
-    "Updated %lld days ago" : {
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Updated 1 day ago"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Updated %lld days ago"
-                }
-              }
-            }
-          }
-        },
-        "nl" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 dag geleden bijgewerkt"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld dagen geleden bijgewerkt"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "Updated %lld hours ago" : {
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Updated 1 hour ago"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Updated %lld hours ago"
-                }
-              }
-            }
-          }
-        },
-        "nl" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 uur geleden bijgewerkt"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld uur geleden bijgewerkt"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "Updated %lld minutes ago" : {
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Updated 1 minute ago"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Updated %lld minutes ago"
-                }
-              }
-            }
-          }
-        },
-        "nl" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 minuut geleden bijgewerkt"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld minuten geleden bijgewerkt"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "Updated %lld plans" : {
       "localizations" : {
         "en" : {
@@ -23196,16 +22906,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "Updated just now" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zojuist bijgewerkt"
           }
         }
       }

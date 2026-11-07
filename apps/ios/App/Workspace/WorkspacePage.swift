@@ -699,6 +699,7 @@ struct ProjectItemPage: View {
     private var current: JSONValue {
         workspace.item(item.stableID) ?? item
     }
+    private var isView: Bool { workspace.views.contains { $0.stableID == item.stableID } }
     var body: some View {
         Group {
             if !isPresent {
@@ -713,6 +714,14 @@ struct ProjectItemPage: View {
                     ChatScreen(
                         client: workspace.client, chatID: current.stableID, title: title, isPrepared: ready,
                         workspace: workspace)
+                }
+            } else if current.text("kind") == "design" {
+                if let design = DesignPlace(current, canvasID: isView ? nil : canvasHolding.stableID) {
+                    DesignPage(workspace: workspace, design: design, title: title)
+                } else {
+                    ContentUnavailableView(
+                        String(localized: "No folder for this design"), lucideIcon: "swatch-book",
+                        description: Text("Open this design in Ruimte on the machine to give it a folder."))
                 }
             } else if let problem {
                 ContentUnavailableView {
@@ -781,7 +790,7 @@ struct ProjectItemPage: View {
             FileContentPage(
                 client: workspace.client, path: absolutePath(current.text("path")),
                 project: FilesProject(workspace: workspace),
-                isView: workspace.views.contains { $0.stableID == current.stableID })
+                isView: isView)
         case "note": NotePage(workspace: workspace, nodeID: current.stableID, bodyText: current.text("body"))
         case "drawing":
             DrawingEditorPage(

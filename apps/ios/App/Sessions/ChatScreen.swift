@@ -220,7 +220,6 @@ struct ChatScreen: View {
                 .frame(minWidth: 380, idealWidth: 420, minHeight: 520)
                 .modifier(MobileSheetSurface())
         }
-        .mobileSheet(isPresented: $composerSheets.compare) { ModelComparisonSheet() }
         // From the screen, like Run settings: the pill sits in the composer's own hosting controller, inside the
         // timeline's UIKit container.
         .mobileSheet(isPresented: $composerSheets.queue) {

@@ -526,7 +526,7 @@ struct FileContentPage: View {
 private let largeTextMaxBytes: Double = 8 * 1024 * 1024
 
 /// The hold on `fs.watch` that a folder's `fs.changed` events come under.
-@MainActor private func fsWatch(_ client: any MachineRequesting, path: String) -> MachineSubscription {
+@MainActor func fsWatch(_ client: any MachineRequesting, path: String) -> MachineSubscription {
     let payload: JSONValue = .object(["path": .string(path)])
     return client.acquireSubscription(start: "fs.watch", stop: "fs.unwatch", payload: payload, stopPayload: payload)
 }

@@ -62,7 +62,7 @@ History loads in pages of 60 items, the earlier page once the reader is within o
 
 A reconnect offers the last applied `seq` as `since`. When the machine's log no longer holds those events, or an event is unreadable, the whole thread reloads.
 
-Compare models reads `GET /v1/models/benchmarks` on every opening. The data's terms allow a chart, so there is no table and no copy.
+A design view or node shows its chat and the pages of its folder one at a time. A page opens in the sandbox a visual runs in, with the files of its folder inlined; comments, drawing, tweaks and export stay on the desktop.
 
 `@` offers files and `#` the project's views, as `ChatReferables` mirrors the desktop's `referables.ts`. `references` is sent only to a machine with `viewReferences` in `endpoint.info`. `Tests/Fixtures/view-references.json` holds iPhone, desktop and daemon to one payload.
 

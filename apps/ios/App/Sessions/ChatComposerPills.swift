@@ -11,7 +11,6 @@ import UIKit
     var picker: String?
     var expanded = false
     var settings = false
-    var compare = false
     var queue = false
 }
 
@@ -111,9 +110,6 @@ struct ChatComposerPills: View {
                 }
             }
             Section {
-                Button(String(localized: "Compare models"), lucideIcon: "chart-spline") {
-                    open { sheets.compare = true }
-                }
                 Button(String(localized: "Run settings"), lucideIcon: "settings") {
                     open { sheets.settings = true }
                 }
