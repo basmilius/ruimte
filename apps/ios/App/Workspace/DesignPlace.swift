@@ -202,15 +202,18 @@ enum DesignFiles {
     private static let attributeReference = try! NSRegularExpression(
         pattern: #"\b(src|href|poster)\s*=\s*(["'])([^"']*)\2"#, options: .caseInsensitive)
     private static let cssReference = try! NSRegularExpression(pattern: #"url\(\s*(["']?)([^"')]+)\1\s*\)"#, options: .caseInsensitive)
+    private static let pageMention = try! NSRegularExpression(
+        pattern: #"[A-Za-z0-9_%./-]+\.html?(?![A-Za-z0-9_-]|\.[A-Za-z0-9_])"#, options: .caseInsensitive)
+    private static let pageURLPrefix = "data:text/html;charset=utf-8,"
 
-    /// The file a relative reference names inside the design folder, or nil when it leaves the folder or loads on
-    /// its own.
-    static func assetPath(_ reference: String) -> String? {
-        let path = String(reference.split(whereSeparator: { $0 == "?" || $0 == "#" }).first ?? "")
+    /// The file a relative reference of a page names, relative to the design folder, or nil when it leaves the folder
+    /// or loads on its own. `from` is the folder of the page that makes the reference, inside the design folder.
+    static func assetPath(_ reference: String, from: String = "") -> String? {
+        let cut = reference.firstIndex { $0 == "?" || $0 == "#" } ?? reference.endIndex
+        let path = String(reference[..<cut])
         let range = NSRange(reference.startIndex..., in: reference)
-        guard !path.isEmpty, reference.first != "?", loadsAsItIs.firstMatch(in: reference, range: range) == nil
-        else { return nil }
-        var parts: [Substring] = []
+        guard !path.isEmpty, loadsAsItIs.firstMatch(in: reference, range: range) == nil else { return nil }
+        var parts = from.split(separator: "/").map(String.init)
         for part in (path.removingPercentEncoding ?? path).split(separator: "/", omittingEmptySubsequences: false) {
             if part.isEmpty || part == "." {
                 continue
@@ -220,14 +223,14 @@ enum DesignFiles {
                 parts.removeLast()
                 continue
             }
-            parts.append(part)
+            parts.append(String(part))
         }
         return parts.isEmpty ? nil : parts.joined(separator: "/")
     }
 
-    /// Every file of the folder a page pulls in through an attribute or a CSS `url()`, once each, leaving out other
-    /// pages: a page that links to another keeps its path.
-    static func assetReferences(_ html: String) -> [String] {
+    /// Every file of the folder a page in `from` pulls in through an attribute or a CSS `url()`, once each, other
+    /// pages included: a page it frames rides along as a page.
+    static func assetReferences(_ html: String, from: String = "") -> [String] {
         let range = NSRange(html.startIndex..., in: html)
         var found: [String] = []
         let references =
@@ -235,17 +238,44 @@ enum DesignFiles {
             + cssReference.matches(in: html, range: range).compactMap { Range($0.range(at: 2), in: html) }
         for match in references {
             let reference = String(html[match])
-            guard let path = assetPath(reference), !isPage(path), !found.contains(reference) else { continue }
+            guard assetPath(reference, from: from) != nil, !found.contains(reference) else { continue }
             found.append(reference)
         }
         return found
     }
 
+    /// Whether a file of the folder is a page, which a page frames as a page of its own rather than as bytes.
     static func isPage(_ path: String) -> Bool {
         path.range(of: #"\.html?$"#, options: [.regularExpression, .caseInsensitive]) != nil
     }
 
-    /// The page with each reference replaced by the bytes it names; one without bytes stays as it was.
+    /// Every page a page names anywhere, in an attribute or inside its own script, once each: a script that builds
+    /// `page.html?theme=dark` to frame it names the page only as text.
+    static func pageMentions(_ html: String) -> [String] {
+        var found: [String] = []
+        for match in pageMention.matches(in: html, range: NSRange(html.startIndex..., in: html)) {
+            guard let range = Range(match.range, in: html) else { continue }
+            let mention = String(html[range])
+            if !found.contains(mention) {
+                found.append(mention)
+            }
+        }
+        return found
+    }
+
+    /// A page standing on its own as an address a frame loads. Percent-encoded rather than base64, so a query after it
+    /// reaches the page's `location.search`, and closed by an open comment, since the browser reads that query as the
+    /// end of the page too. Only what the address would otherwise cut, drop or end is escaped.
+    static func pageDataURL(_ html: String) -> String {
+        let escaped = (html + "<!--").unicodeScalars.map { scalar -> String in
+            guard "%#?\t\n\r \"'&<>()\\".unicodeScalars.contains(scalar) else { return String(scalar) }
+            return "%" + String(format: "%02X", scalar.value)
+        }
+        return pageURLPrefix + escaped.joined()
+    }
+
+    /// The page with each reference it pulled in replaced by the bytes it names; one without bytes stays as it was. A
+    /// link to another page keeps its path: no browser opens an inline page from a link, so the copy would only weigh.
     static func withAssets(_ html: String, inline: [String: String]) -> String {
         var page = replacing(attributeReference, in: html) { match, text in
             guard let reference = Range(match.range(at: 3), in: text).map({ String(text[$0]) }),
@@ -253,6 +283,9 @@ enum DesignFiles {
                 let name = Range(match.range(at: 1), in: text).map({ text[$0] }),
                 let quote = Range(match.range(at: 2), in: text).map({ text[$0] })
             else { return nil }
+            if name.lowercased() == "href", url.hasPrefix(pageURLPrefix) {
+                return nil
+            }
             return "\(name)=\(quote)\(url)\(quote)"
         }
         page = replacing(cssReference, in: page) { match, text in
@@ -279,25 +312,193 @@ enum DesignFiles {
         return result + text[last...]
     }
 
-    /// One page standing on its own, every file it pulls in riding along as a data URL up to the bounds of a visual.
-    /// A file that cannot be read stays a reference that loads nothing, as a broken path does in a browser.
+    /// A string as `JSON.stringify` writes it, with nothing in it that ends a `<script>` or opens a comment in it.
+    private static func inlineJSON(_ value: String) -> String {
+        var json = "\""
+        for scalar in value.unicodeScalars {
+            switch scalar {
+            case "\"": json += "\\\""
+            case "\\": json += "\\\\"
+            case "\n": json += "\\n"
+            case "\r": json += "\\r"
+            case "\t": json += "\\t"
+            case "\u{08}": json += "\\b"
+            case "\u{0C}": json += "\\f"
+            case "<": json += "\\u003c"
+            case _ where scalar.value < 0x20: json += String(format: "\\u%04x", scalar.value)
+            default: json.unicodeScalars.append(scalar)
+            }
+        }
+        return json + "\""
+    }
+
+    /// The page with `element` first in its head, before any script of its own runs.
+    private static func atHeadStart(_ html: String, _ element: String) -> String {
+        let range = NSRange(html.startIndex..., in: html)
+        let opening = [#"<head(?:\s[^>]*)?>"#, #"<html(?:\s[^>]*)?>"#, #"<!doctype[^>]*>"#].lazy
+            .compactMap { try? NSRegularExpression(pattern: $0, options: .caseInsensitive).firstMatch(in: html, range: range) }
+            .first
+        guard let opening, let end = Range(opening.range, in: html)?.upperBound else { return element + html }
+        return html[..<end] + element + html[end...]
+    }
+
+    /// The page with the script that frames pages of its folder at the start of its head. `pages` goes by the path of
+    /// each page, in the order it was found.
+    private static func withFramedPages(_ html: String, from: String, pages: [(path: String, url: String)]) -> String {
+        guard !pages.isEmpty else { return html }
+        let entries = pages.map { "\(inlineJSON($0.path)):\(inlineJSON($0.url))" }.joined(separator: ",")
+        let script = DesignScripts.framedPages
+            .replacingOccurrences(of: DesignScripts.pagesToken, with: "{\(entries)}")
+            .replacingOccurrences(of: DesignScripts.fromToken, with: inlineJSON(from))
+        return atHeadStart(html, "<script data-ruimte-pages>\(script)</script>")
+    }
+
+    /// The page with what shows the files its script names while it runs, first in its head.
+    private static func withRuntimeAssets(_ html: String, from: String) -> String {
+        let script = DesignScripts.runtimeAssets.replacingOccurrences(of: DesignScripts.fromToken, with: inlineJSON(from))
+        return atHeadStart(html, "<script data-ruimte-assets>\(script)</script>")
+    }
+
+    private static func folderOf(_ path: String) -> String {
+        path.lastIndex(of: "/").map { String(path[..<$0]) } ?? ""
+    }
+
+    private static func suffixOf(_ reference: String) -> String {
+        reference.firstIndex { $0 == "?" || $0 == "#" }.map { String(reference[$0...]) } ?? ""
+    }
+
+    /// One page standing on its own: every file of the folder it pulls in rides along as its bytes, up to the bounds
+    /// of a visual. A page it frames rides along standing on its own too, once however often it is named, and never a
+    /// page it is framed in itself. A file that cannot be read stays a reference that loads nothing, as a broken path
+    /// does in a browser.
     @MainActor static func standalonePage(
-        _ file: String, folder: String, read: (String, Int) async throws -> MachineResource
+        _ file: String, folder: String, read: @escaping (String, Int) async throws -> MachineResource
     ) async throws -> Data {
         let page = try await read("\(folder)/\(file)", pageMaxBytes)
-        let html = String(decoding: page.data, as: UTF8.self)
-        var total = page.data.count
-        var inline: [String: String] = [:]
-        for reference in assetReferences(html) {
-            guard let path = assetPath(reference),
-                let asset = try? await read("\(folder)/\(path)", assetMaxBytes)
-            else { continue }
-            if total + asset.data.count > pageMaxBytes {
-                break
-            }
-            total += asset.data.count
-            inline[reference] = "data:\(asset.mime);base64,\(asset.data.base64EncodedString())"
+        let inlining = Inlining(folder: folder, read: read, total: page.data.count)
+        let html = try await inlining.inline(file, text: String(decoding: page.data, as: UTF8.self), chain: [file])
+        return Data(html.utf8)
+    }
+
+    @MainActor private final class Inlining {
+        let folder: String
+        let read: (String, Int) async throws -> MachineResource
+        var total: Int
+        /// The address of each page framed so far, or nil for one that could not ride along.
+        var pages: [String: String?] = [:]
+
+        init(folder: String, read: @escaping (String, Int) async throws -> MachineResource, total: Int) {
+            self.folder = folder
+            self.read = read
+            self.total = total
         }
-        return Data(withAssets(html, inline: inline).utf8)
+
+        func inline(_ file: String, text: String, chain: [String]) async throws -> String {
+            let from = DesignFiles.folderOf(file)
+            var inline: [String: String] = [:]
+            for reference in DesignFiles.assetReferences(text, from: from) {
+                try Task.checkCancellation()
+                guard let path = DesignFiles.assetPath(reference, from: from) else { continue }
+                if DesignFiles.isPage(path) {
+                    if let url = try await pageURL(path, chain: chain) {
+                        inline[reference] = url + DesignFiles.suffixOf(reference)
+                    }
+                    continue
+                }
+                guard let asset = try? await read("\(folder)/\(path)", assetMaxBytes) else { continue }
+                if total + asset.data.count > pageMaxBytes {
+                    break
+                }
+                total += asset.data.count
+                inline[reference] = "data:\(asset.mime);base64,\(asset.data.base64EncodedString())"
+            }
+            var framed: [(path: String, url: String)] = []
+            for mention in DesignFiles.pageMentions(text) {
+                try Task.checkCancellation()
+                guard let path = DesignFiles.assetPath(mention, from: from),
+                    let url = try await pageURL(path, chain: chain)
+                else { continue }
+                if let at = framed.firstIndex(where: { $0.path == path }) {
+                    framed[at].url = url
+                } else {
+                    framed.append((path, url))
+                }
+            }
+            let page = DesignFiles.withFramedPages(DesignFiles.withAssets(text, inline: inline), from: from, pages: framed)
+            // A page without a script names no file while it runs, but one that frames pages answers for them.
+            let scripted = text.range(of: #"<script\b"#, options: [.regularExpression, .caseInsensitive]) != nil
+            return scripted || !framed.isEmpty ? DesignFiles.withRuntimeAssets(page, from: from) : page
+        }
+
+        private func pageURL(_ path: String, chain: [String]) async throws -> String? {
+            if chain.contains(path) {
+                return nil
+            }
+            if let known = pages[path] {
+                return known
+            }
+            let url = try await framedPageURL(path, chain: chain + [path])
+            pages[path] = .some(url)
+            return url
+        }
+
+        private func framedPageURL(_ path: String, chain: [String]) async throws -> String? {
+            do {
+                let page = try await read("\(folder)/\(path)", pageMaxBytes)
+                if total + page.data.count > pageMaxBytes {
+                    return nil
+                }
+                total += page.data.count
+                return DesignFiles.pageDataURL(
+                    try await inline(path, text: String(decoding: page.data, as: UTF8.self), chain: chain))
+            } catch {
+                try Task.checkCancellation()
+                return nil
+            }
+        }
+    }
+
+    /// What the page shown reads for the files its script names while it runs: each once however often it is asked,
+    /// by the page or the pages it frames, and up to the bounds of a visual all together. Nil for a file it cannot or
+    /// may not read, which the page shows as a broken path.
+    @MainActor final class RuntimeAssets {
+        private let folder: String
+        private let read: (String, Int) async throws -> MachineResource
+        private var asked: [String: Task<MachineResource?, Never>] = [:]
+        private var total = 0
+        private var opened = 0
+
+        init(folder: String, read: @escaping (String, Int) async throws -> MachineResource) {
+            self.folder = folder
+            self.read = read
+        }
+
+        /// The file at `path`, which is only a file inside the folder by the path the folder holds it at, and never a
+        /// page, which frames as a page of its own.
+        func bytes(_ path: String) async -> MachineResource? {
+            guard path.utf16.count <= 1024, DesignFiles.assetPath(path) == path, !DesignFiles.isPage(path) else {
+                return nil
+            }
+            if let known = asked[path] {
+                return await known.value
+            }
+            let opening = opened
+            let task = Task { [self] () -> MachineResource? in
+                guard let resource = try? await read("\(folder)/\(path)", DesignFiles.assetMaxBytes),
+                    opened == opening, total + resource.data.count <= DesignFiles.pageMaxBytes
+                else { return nil }
+                total += resource.data.count
+                return resource
+            }
+            asked[path] = task
+            return await task.value
+        }
+
+        /// The page opened again, which may ask for as much as a page that was never opened.
+        func reopen() {
+            opened += 1
+            asked = [:]
+            total = 0
+        }
     }
 }

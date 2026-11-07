@@ -105,7 +105,7 @@ class StandInElement {
 }
 
 /* The script that shows what a page's script names while it runs, run against a stand-in window framed in `parent`. */
-function running(from: string, framedIn: 'stage' | 'nothing' = 'stage') {
+function running(from: string, framedIn: 'stage' | 'nothing' | 'host' = 'stage', hostBytes: Record<string, Blob> = {}) {
     const script = /<script data-ruimte-assets>([\s\S]*?)<\/script>/.exec(withRuntimeAssets('<head></head>', from))![1]!;
     const asked: unknown[] = [];
     const frames: { posted: unknown[]; postMessage(message: unknown): void }[] = [];
@@ -113,10 +113,24 @@ function running(from: string, framedIn: 'stage' | 'nothing' = 'stage') {
     let observed: ((records: object[]) => void) | null = null;
     let made = 0;
     const parent = { postMessage: (message: unknown) => asked.push(message) };
-    const window = { frames, parent: framedIn === 'stage' ? parent : null };
+    const hostAsked: string[] = [];
+    const window: { frames: typeof frames; parent: unknown; ruimteHost?: { asset(path: string): Promise<Blob | null> } } = {
+        frames,
+        parent: framedIn === 'stage' ? parent : null
+    };
 
-    if (framedIn === 'nothing') {
-        window.parent = window as never;
+    if (framedIn !== 'stage') {
+        window.parent = window;
+    }
+
+    if (framedIn === 'host') {
+        window.ruimteHost = {
+            asset: (path) => {
+                hostAsked.push(path);
+
+                return Promise.resolve(hostBytes[path] ?? null);
+            }
+        };
     }
 
     class StandInObserver {
@@ -144,6 +158,7 @@ function running(from: string, framedIn: 'stage' | 'nothing' = 'stage') {
 
     return {
         asked,
+        hostAsked,
         observing: () => observed !== null,
         frame: () => {
             const frame = { posted: [] as unknown[], postMessage: (message: unknown) => frame.posted.push(message) };
@@ -235,5 +250,21 @@ describe('a file a design page names while it runs', () => {
 
     test('is left alone in a page on its own, as Export hands it out', () => {
         expect(running('', 'nothing').observing()).toBe(false);
+    });
+
+    test('is asked of the host of a page that has no window above it, as the iPhone app shows it, and handed down to the pages it frames', async () => {
+        const bytes = new Blob(['png'], { type: 'image/png' });
+        const page = running('', 'host', { 'assets/work/apple.png': bytes });
+        const image = new StandInElement('img');
+        const framed = page.frame();
+
+        await page.set(image, 'src', 'assets/work/apple.png');
+        expect(page.hostAsked).toEqual(['assets/work/apple.png']);
+        expect(page.asked).toEqual([]);
+        expect(image.getAttribute('src')).toBe('blob:null/1');
+
+        await page.hear(framed, 'null', asset('assets/work/apple.png'));
+        expect(page.hostAsked).toEqual(['assets/work/apple.png']);
+        expect(framed.posted).toEqual([{ jsonrpc: '2.0', method: DESIGN_METHODS.asset, params: { path: 'assets/work/apple.png', bytes } }]);
     });
 });

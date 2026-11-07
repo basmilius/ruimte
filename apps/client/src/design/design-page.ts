@@ -276,11 +276,12 @@ export const RESOLVE_SCRIPT = String.raw`function resolved(text, from) {
 /*
  * What runs first in a page that frames pages of its folder: a frame whose script sets its address to one
  * of them gets that page standing on its own, with the query and fragment it was given. Otherwise the
- * address would stand beside the sandbox's host page, which the frame may not load.
+ * address would stand beside the sandbox's host page, which the frame may not load. It takes its two
+ * values as the JSON they stand in, so the iPhone app can carry the text of the script and fill them in.
  */
-function framedPagesScript(from: string, pages: ReadonlyMap<string, string>): string {
+export function framedPagesScript(pagesJson: string, fromJson: string): string {
     return String.raw`(function () {
-    var pages = ${inlineJson(Object.fromEntries(pages))}, from = ${inlineJson(from)};
+    var pages = ${pagesJson}, from = ${fromJson};
     ${RESOLVE_SCRIPT}
     function framed(value) {
         var text = String(value), cut = text.search(/[?#]/);
@@ -308,7 +309,7 @@ export function withFramedPages(html: string, from: string, pages: ReadonlyMap<s
         return html;
     }
 
-    return atHeadStart(html, `<script data-ruimte-pages>${framedPagesScript(from, pages)}</script>`);
+    return atHeadStart(html, `<script data-ruimte-pages>${framedPagesScript(inlineJson(Object.fromEntries(pages)), inlineJson(from))}</script>`);
 }
 
 /* The page with `element` first in its head, before any script of its own runs. */

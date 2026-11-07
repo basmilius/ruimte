@@ -341,12 +341,16 @@ export const DESIGN_RUNTIME = RUNTIME;
  * since the page is written from a string and a relative path loads nothing. The stage answers the page
  * it shows; a page answers the pages it frames from what it was answered itself, so a page framed in a
  * page reaches the stage without carrying the folder along. A page on its own, as Export hands it out,
- * asks nobody and leaves its paths as they are.
+ * asks nobody and leaves its paths as they are. The iPhone app shows a page as the document of its web
+ * view, with no window above it, so its page asks `window.ruimteHost.asset(path)`, which answers with the
+ * bytes or null, in the stage's place. It takes `from` as the JSON it stands in, so the app can carry the
+ * text of the script and fill it in.
  */
-function runtimeAssetsScript(from: string): string {
+export function runtimeAssetsScript(fromJson: string): string {
     return String.raw`(function () {
-    if (window.parent === window) { return; }
-    var method = ${inlineJson(DESIGN_METHODS.asset)}, from = ${inlineJson(from)};
+    var host = window.ruimteHost;
+    if (window.parent === window && !host) { return; }
+    var method = ${inlineJson(DESIGN_METHODS.asset)}, from = ${fromJson};
     var waiting = {}, asked = {}, urls = {};
     ${RESOLVE_SCRIPT}
     function pathOf(reference) {
@@ -355,8 +359,12 @@ function runtimeAssetsScript(from: string): string {
     }
     function bytesOf(path) {
         if (!asked[path]) {
-            asked[path] = new Promise(function (resolve) { waiting[path] = resolve; });
-            window.parent.postMessage({ jsonrpc: '2.0', method: method, params: { path: path } }, '*');
+            if (host) {
+                asked[path] = host.asset(path);
+            } else {
+                asked[path] = new Promise(function (resolve) { waiting[path] = resolve; });
+                window.parent.postMessage({ jsonrpc: '2.0', method: method, params: { path: path } }, '*');
+            }
         }
         return asked[path];
     }
@@ -373,7 +381,7 @@ function runtimeAssetsScript(from: string): string {
     addEventListener('message', function (event) {
         var data = event.data, params = data && data.params;
         if (!data || data.jsonrpc !== '2.0' || data.method !== method || !params || typeof params.path !== 'string') { return; }
-        if (event.source === window.parent) {
+        if (window.parent !== window && event.source === window.parent) {
             if (waiting[params.path]) { waiting[params.path](params.bytes instanceof Blob ? params.bytes : null); delete waiting[params.path]; }
             return;
         }
@@ -449,7 +457,7 @@ function runtimeAssetsScript(from: string): string {
 
 /* The page with what shows the files its script names while it runs, first in its head. */
 export function withRuntimeAssets(html: string, from: string): string {
-    return atHeadStart(html, `<script data-ruimte-assets>${runtimeAssetsScript(from)}</script>`);
+    return atHeadStart(html, `<script data-ruimte-assets>${runtimeAssetsScript(inlineJson(from))}</script>`);
 }
 
 /* The page with the design runtime at the end of its body, so it runs once the page's own markup is there. */

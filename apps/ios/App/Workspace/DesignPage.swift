@@ -205,18 +205,33 @@ private struct DesignPageView: View {
     let file: String
     @State private var failed = false
     @State private var attempt = 0
+    /// What the page reads while it runs, bounded per time the page is opened.
+    @State private var assets: DesignFiles.RuntimeAssets
+
+    init(client: any MachineRequesting, folder: String, file: String) {
+        self.client = client
+        self.folder = folder
+        self.file = file
+        _assets = State(initialValue: Self.assets(client, folder: folder))
+    }
+
+    private static func read(_ client: any MachineRequesting) -> (String, Int) async throws -> MachineResource {
+        { path, maxBytes in
+            try await client.readResource(.object(["kind": .string("file"), "path": .string(path)]), maxBytes: maxBytes)
+        }
+    }
+
+    private static func assets(_ client: any MachineRequesting, folder: String) -> DesignFiles.RuntimeAssets {
+        DesignFiles.RuntimeAssets(folder: folder, read: read(client))
+    }
 
     var body: some View {
         ChatVisualContent(
             visual: ChatVisual(id: "\(folder)/\(file)", title: DesignFiles.pageName(file), at: 0),
             failed: $failed,
-            read: {
-                try await DesignFiles.standalonePage(file, folder: folder) { path, maxBytes in
-                    try await client.readResource(
-                        .object(["kind": .string("file"), "path": .string(path)]), maxBytes: maxBytes)
-                }
-            },
-            fill: true
+            read: { try await DesignFiles.standalonePage(file, folder: folder, read: Self.read(client)) },
+            fill: true,
+            assets: assets
         )
         .id(attempt)
         .modifier(MobilePageSurface())
@@ -227,6 +242,7 @@ private struct DesignPageView: View {
                 Button {
                     failed = false
                     attempt += 1
+                    assets = Self.assets(client, folder: folder)
                 } label: {
                     Label(String(localized: "Read again"), lucideIcon: "refresh-cw")
                 }

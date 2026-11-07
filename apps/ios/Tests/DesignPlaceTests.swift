@@ -76,7 +76,7 @@ final class DesignPlaceTests: XCTestCase {
             <img src="img/logo.png"><a href="other.html">x</a><link href='https://x.dev/a.css'>\
             <div style="background: url(./bg%20one.jpg)"></div><img src="../outside.png">
             """
-        XCTAssertEqual(DesignFiles.assetReferences(html), ["img/logo.png", "./bg%20one.jpg"])
+        XCTAssertEqual(DesignFiles.assetReferences(html), ["img/logo.png", "other.html", "./bg%20one.jpg"])
         XCTAssertEqual(DesignFiles.assetPath("./bg%20one.jpg"), "bg one.jpg")
         XCTAssertNil(DesignFiles.assetPath("../outside.png"))
         let page = DesignFiles.withAssets(
