@@ -131,6 +131,30 @@ import Testing
         inbox.close()
     }
 
+    @Test func piecesThatWaitTogetherAfterTheHandshakeTakeOneTurn() async {
+        var reads = 0
+        var received: [DirectFrameResult] = []
+        let inbox = DirectFrameInbox(
+            policy: {
+                reads += 1
+                return accepted
+            },
+            received: { received.append($0) })
+        let first = inbox.push(Data("=one".utf8), isBinary: false)
+        let second = inbox.push(Data("=two".utf8), isBinary: false)
+        let last = inbox.push(Data("=three".utf8), isBinary: false)
+        await first.value
+        await second.value
+        await last.value
+        #expect(reads == 1)
+        #expect(
+            received == [
+                .text("one", units: 3, deflated: false), .text("two", units: 3, deflated: false),
+                .text("three", units: 5, deflated: false),
+            ])
+        inbox.close()
+    }
+
     @Test func partialPiecesStayInsideTheInboxUntilTheFrameIsComplete() async {
         var received: [DirectFrameResult] = []
         let inbox = DirectFrameInbox(policy: { accepted }, received: { received.append($0) })

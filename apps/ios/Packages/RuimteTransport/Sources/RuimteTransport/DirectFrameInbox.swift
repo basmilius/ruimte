@@ -12,6 +12,11 @@ enum DirectFrameFailure: Sendable, Equatable {
     case unexpectedBinary
 }
 
+struct DirectPiece: Sendable {
+    let data: Data
+    let isBinary: Bool
+}
+
 enum DirectFrameResult: Sendable, Equatable {
     case partial
     case text(String, units: Int, deflated: Bool)
@@ -64,6 +69,15 @@ actor DirectFrameDecoder {
         }
     }
 
+    /// Every complete frame of these pieces in order, read under one policy.
+    func push(_ pieces: [DirectPiece], policy: DirectReceivePolicy) -> [DirectFrameResult] {
+        pieces.compactMap { piece in
+            let result = push(piece.data, isBinary: piece.isBinary, policy: policy)
+            if case .partial = result { return nil }
+            return result
+        }
+    }
+
     func close() {
         closed = true
         reset()
@@ -80,7 +94,8 @@ actor DirectFrameDecoder {
     private let decoder = DirectFrameDecoder()
     private let policy: () -> DirectReceivePolicy?
     private let received: (DirectFrameResult) -> Void
-    private var incoming: Task<Void, Never>?
+    private var waiting: [DirectPiece] = []
+    private var draining: Task<Void, Never>?
     private var closed = false
 
     init(policy: @escaping () -> DirectReceivePolicy?, received: @escaping (DirectFrameResult) -> Void) {
@@ -88,30 +103,51 @@ actor DirectFrameDecoder {
         self.received = received
     }
 
+    /// The task ends once this piece is decoded and its frame, if it completed one, delivered.
     @discardableResult func push(_ data: Data, isBinary: Bool) -> Task<Void, Never> {
-        let previous = incoming
-        let decoder = decoder
-        let task = Task.detached { [weak self] in
-            await previous?.value
-            // Delivery can accept the handshake, so policy must be read after the preceding delivery.
-            guard !Task.isCancelled, let policy = await self?.currentPolicy() else { return }
-            guard !Task.isCancelled else { return }
-            let result = await decoder.push(data, isBinary: isBinary, policy: policy)
-            guard !Task.isCancelled else { return }
-            if case .partial = result { return }
-            await self?.deliver(result)
+        guard !closed else { return Task {} }
+        waiting.append(DirectPiece(data: data, isBinary: isBinary))
+        if let draining { return draining }
+        let task = Task<Void, Never> { [weak self] in
+            await self?.drain()
         }
-        incoming = task
+        draining = task
         return task
     }
 
     func close() {
         guard !closed else { return }
         closed = true
-        incoming?.cancel()
-        incoming = nil
+        waiting.removeAll()
+        draining?.cancel()
+        draining = nil
         let decoder = decoder
         Task { await decoder.close() }
+    }
+
+    /*
+     * Takes every piece that waits in one turn of the main actor, so a busy main actor makes the batches
+     * larger instead of the queue longer. A piece per turn would wait behind the chat's drawing twice and
+     * fall further behind for as long as a reply streams.
+     */
+    private func drain() async {
+        defer { draining = nil }
+        while !closed, !waiting.isEmpty {
+            guard let policy = currentPolicy() else { return }
+            // Before the handshake a delivered frame can change the policy, so those pieces go one at a time.
+            let batch: [DirectPiece]
+            if policy.authenticated {
+                batch = waiting
+                waiting.removeAll()
+            } else {
+                batch = [waiting.removeFirst()]
+            }
+            let results = await decoder.push(batch, policy: policy)
+            for result in results {
+                guard !closed, !Task.isCancelled else { return }
+                received(result)
+            }
+        }
     }
 
     private func currentPolicy() -> DirectReceivePolicy? {
@@ -119,10 +155,5 @@ actor DirectFrameDecoder {
         let current = policy()
         // Reporting progress while taking policy can end the link.
         return closed ? nil : current
-    }
-
-    private func deliver(_ result: DirectFrameResult) {
-        guard !closed else { return }
-        received(result)
     }
 }
