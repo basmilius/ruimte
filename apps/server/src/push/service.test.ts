@@ -1111,6 +1111,34 @@ describe('a chat stopped on a usage limit', () => {
         }
     };
 
+    const resume = (chatId: string, account = 'blis'): void => {
+        limited.consume({
+            event: 'chat.event',
+            payload: {
+                chatId,
+                event: {
+                    type: 'info',
+                    info: {
+                        chatId,
+                        provider: 'codex',
+                        account,
+                        cwd: home,
+                        agentSessionId: 'cli',
+                        model: null,
+                        selection: { model: 'default', options: {} },
+                        runtimeMode: 'supervised',
+                        status: 'running',
+                        running: true,
+                        activeTurnId: 'resumed',
+                        slashCommands: [],
+                        usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+                        createdAt: NOW
+                    }
+                }
+            }
+        });
+    };
+
     const alerts = (): Record<string, unknown>[] => pushes.filter((push) => push.pushType === 'alert').map((push) => decrypt(push) as Record<string, unknown>);
 
     beforeEach(async () => {
@@ -1234,5 +1262,45 @@ describe('a chat stopped on a usage limit', () => {
         limited.reportPresence('desktop', true);
         await advance(30_000);
         expect(alerts()).toEqual([]);
+    });
+
+    describe('while a chat waits on the alert of its limit', () => {
+        beforeEach(async () => {
+            await auth.setPush(sessionId, { ...subscription, follow: ['followed'], notify: ['needs-you'] });
+            limited.reportPresence('desktop', true);
+            stop('unfollowed', { kind: 'usage', resetsAt: RESET });
+            stop('followed', { kind: 'usage', resetsAt: RESET });
+        });
+
+        test('a chat that resumed is not alerted for the stop it left behind', async () => {
+            resume('followed');
+            limited.reportPresence('desktop', false);
+            await limited.settled();
+            expect(alerts()).toEqual([]);
+            expect(limited.attention.snapshot().map((entry) => entry.nodeId)).not.toContain('followed');
+        });
+
+        test('a chat that is still stopped gets the alert once the first one reached nobody', async () => {
+            limited.reportPresence('desktop', false);
+            await limited.settled();
+            expect(alerts()).toMatchObject([{ kind: 'attention', nodeId: 'followed', resetsAt: RESET }]);
+        });
+
+        test('a chat whose attention was read meanwhile gets none', async () => {
+            limited.alert('chat', 'followed', 'Agent', 'Look at this');
+            await limited.settled();
+            const entry = limited.attention.snapshot().find((candidate) => candidate.nodeId === 'followed')!;
+            limited.read('followed', entry.issuedAt);
+            limited.reportPresence('desktop', false);
+            await limited.settled();
+            expect(alerts().filter((alert) => alert.resetsAt !== undefined)).toEqual([]);
+        });
+
+        test('a chat snoozed meanwhile gets none', async () => {
+            snoozed.add('followed');
+            limited.reportPresence('desktop', false);
+            await limited.settled();
+            expect(alerts()).toEqual([]);
+        });
     });
 });

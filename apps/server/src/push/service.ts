@@ -93,6 +93,9 @@ interface NodeState {
     title: string;
     startedAt: number;
     ask: WaitAsk | null;
+
+    /* The limit the chat's latest state reports, so a chat that waits on a limit alert can be checked against it. */
+    limit: ChatLimit | null;
 }
 
 const APPROVAL_MAX_AGE_MS = 110_000;
@@ -142,8 +145,12 @@ export class PushService {
     private readonly processAlertIds = new Set<string>();
     /* The usage limits already pushed, by `limitKey`, with the time each lifts; a restart forgets them and costs one push more at most. */
     private readonly limitAlerts = new Map<string, number>();
-    /* The limits whose alert is on its way, with the chats that stopped on the same limit meanwhile and wait to see whether it reaches a phone. */
-    private readonly limitPending = new Map<string, (() => void)[]>();
+    /*
+     * The limits whose alert is on its way, with the chats that stopped on the same limit meanwhile and wait to
+     * see whether it reaches a phone, each with the time it stopped. A chat waits as a node id and is looked at
+     * again as it is then, since a stop that is over must not come back as a new one.
+     */
+    private readonly limitPending = new Map<string, Map<string, number>>();
     private machineActivityQueue = Promise.resolve();
     private machineStartedAt = 0;
     private readonly machineActivityStates = new Map<string, string>();
@@ -322,11 +329,12 @@ export class PushService {
         const previous = this.nodes.get(nodeId);
         const startedAt =
             status === 'running' && previous?.status !== 'running' && previous?.status !== 'needs-you' ? this.now() : (previous?.startedAt ?? this.now());
-        this.nodes.set(nodeId, { target, status, title, startedAt, ask });
+        this.nodes.set(nodeId, { target, status, title, startedAt, ask, limit });
         this.synchronizeActivities();
         if (status === previous?.status) {
             return;
         }
+        this.leaveStandby(nodeId);
         if (status === 'running' || status === 'exited') {
             const entry = this.attention.snapshot().find((entry) => entry.nodeId === nodeId);
             if (entry) {
@@ -447,12 +455,12 @@ export class PushService {
         const standby = this.limitPending.get(key);
 
         if (standby) {
-            standby.push(() => this.limitAlert(target, nodeId, title, chatLimit));
+            standby.set(nodeId, now);
 
             return;
         }
 
-        this.limitPending.set(key, []);
+        this.limitPending.set(key, new Map());
 
         const context = this.options.limitContext?.(nodeId) ?? null;
         const body = limitBody(context, limitWindow(context?.windows ?? [], limit.resetsAt));
@@ -471,7 +479,7 @@ export class PushService {
 
     /* Counts the limit as raised when a phone got its alert, and otherwise lets the chats that waited on it try again. */
     private settleLimit({ key, until }: LimitReservation, sent: boolean): void {
-        const standby = this.limitPending.get(key) ?? [];
+        const standby = this.limitPending.get(key) ?? new Map<string, number>();
 
         this.limitPending.delete(key);
 
@@ -481,8 +489,38 @@ export class PushService {
             return;
         }
 
-        for (const retry of standby) {
-            retry();
+        for (const [nodeId, stoppedAt] of standby) {
+            this.retryLimit(nodeId, key, stoppedAt);
+        }
+    }
+
+    /* Alerts a waiting chat the way a fresh stop would, if it is still stopped on that same limit and nothing has dealt with it since. */
+    private retryLimit(nodeId: string, key: string, stoppedAt: number): void {
+        const node = this.nodes.get(nodeId);
+        const chatLimit = node?.limit;
+
+        if (!node || !chatLimit || (node.status !== 'idle' && node.status !== 'error') || chatLimit.limit.kind !== 'usage') {
+            return;
+        }
+
+        const { limit, provider, account } = chatLimit;
+
+        if (limitKey(provider, account, limit.resetsAt) !== key || (limit.resetsAt !== undefined && limit.resetsAt <= this.now()) || this.snoozed(nodeId)) {
+            return;
+        }
+
+        const entry = this.attention.snapshot().find((candidate) => candidate.nodeId === nodeId);
+
+        if (entry && entry.issuedAt >= stoppedAt && entry.readThrough >= entry.issuedAt) {
+            return;
+        }
+
+        this.limitAlert(node.target, nodeId, node.title, chatLimit);
+    }
+
+    private leaveStandby(nodeId: string): void {
+        for (const standby of this.limitPending.values()) {
+            standby.delete(nodeId);
         }
     }
 
