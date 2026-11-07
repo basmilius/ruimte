@@ -5,17 +5,18 @@ import Testing
 @testable import Ruimte
 
 @Suite struct DiagramAgentTests {
-    private let views: [JSONValue] = [
-        .object(["id": .string("chat-a"), "kind": .string("chat"), "name": .string("Plan")]),
-        .object([
-            "id": .string("canvas"), "kind": .string("canvas"),
-            "nodes": .array([
-                .object(["id": .string("chat-b"), "kind": .string("chat")]),
-                .object(["id": .string("diagram-node"), "kind": .string("diagram")]),
-            ]),
-        ]),
-        .object(["id": .string("diagram-view"), "kind": .string("diagram")]),
-        .object(["id": .string("notes"), "kind": .string("file")]),
+    private let views: [ProjectItem] = [
+        ProjectWire.item(.object(["id": .string("chat-a"), "kind": .string("chat"), "name": .string("Plan")])),
+        ProjectWire.item(
+            .object([
+                "id": .string("canvas"), "kind": .string("canvas"),
+                "nodes": .array([
+                    .object(["id": .string("chat-b"), "kind": .string("chat")]),
+                    .object(["id": .string("diagram-node"), "kind": .string("diagram")]),
+                ]),
+            ])),
+        ProjectWire.item(.object(["id": .string("diagram-view"), "kind": .string("diagram")])),
+        ProjectWire.item(.object(["id": .string("notes"), "kind": .string("file")])),
     ]
 
     @Test func anEmptyDiagramAsksForWhatItShouldShow() {
@@ -35,14 +36,14 @@ import Testing
     }
 
     @Test func theChatsOfAProjectAreItsChatViewsThenItsChatNodes() {
-        #expect(DiagramAgentPrompt.chats(in: views).map(\.stableID) == ["chat-a", "chat-b"])
+        #expect(DiagramAgentPrompt.chats(in: views).map(\.id) == ["chat-a", "chat-b"])
     }
 
     @Test func aNewChatGoesRightAfterTheDiagramOrTheCanvasThatHoldsIt() {
         let view = views[2]
         #expect(DiagramAgentPrompt.insertion(after: view, in: views) == 3)
-        let node = views[1].list("nodes")[1]
+        let node = views[1].nodes[1]
         #expect(DiagramAgentPrompt.insertion(after: node, in: views) == 2)
-        #expect(DiagramAgentPrompt.insertion(after: .object(["id": .string("gone")]), in: views) == 4)
+        #expect(DiagramAgentPrompt.insertion(after: ProjectWire.item(.object(["id": .string("gone"), "kind": .string("chat")])), in: views) == 4)
     }
 }

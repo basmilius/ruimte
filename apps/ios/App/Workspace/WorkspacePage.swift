@@ -14,9 +14,9 @@ struct WorkspacePage: View {
     private var workspace: MobileWorkspace { navigation.workspace }
     @State private var showDiagnostics = false
     @Environment(\.dismiss) private var dismiss
-    @State private var iconView: JSONValue?
-    @State private var settingsView: JSONValue?
-    @State private var renamed: JSONValue?
+    @State private var iconView: ProjectItem?
+    @State private var settingsView: ProjectItem?
+    @State private var renamed: ProjectItem?
     @State private var renameText = ""
     @State private var deleteView: ViewDeletion?
     @State private var showProcesses = false
@@ -245,12 +245,12 @@ struct WorkspacePage: View {
             }
         }
         .alert(
-            renamed?.text("kind") == "subheader" ? "Name the heading" : "Rename view",
+            renamed?.kind == "subheader" ? "Name the heading" : "Rename view",
             isPresented: $renamed.isPresent()
         ) {
             TextField("Name", text: $renameText)
             Button("Save") {
-                guard let id = renamed?.stableID, !renameText.isEmpty else { return }
+                guard let id = renamed?.id, !renameText.isEmpty else { return }
                 Task {
                     await workspace.updateView(id) {
                         $0.setting("name", .string(renameText)).setting("titleSource", .string("user"))
@@ -261,15 +261,15 @@ struct WorkspacePage: View {
             Button("Cancel", role: .cancel) { renamed = nil }
         }
         .alert(
-            deleteView?.item.text("kind") == "chat" ? "Delete this chat?" : "Delete this view?",
+            deleteView?.item.kind == "chat" ? "Delete this chat?" : "Delete this view?",
             isPresented: $deleteView.isPresent(),
             presenting: deleteView
         ) { pending in
-            Button(pending.item.text("kind") == "chat" ? "Delete chat" : "Delete view", role: .destructive) {
+            Button(pending.item.kind == "chat" ? "Delete chat" : "Delete view", role: .destructive) {
                 deleteView = nil
                 Task {
                     await workspace.edit { document in
-                        var views = document.list("views").filter { $0.stableID != pending.item.stableID }
+                        var views = document.list("views").filter { $0.stableID != pending.item.id }
                         if views.isEmpty && !workspace.isScratch { views = [newCanvas()] }
                         return document.setting("views", .array(views))
                     }
@@ -398,10 +398,10 @@ struct WorkspacePage: View {
             problem: workspace.session.problem)
     }
 
-    private func act(_ action: ProjectRowAction, on item: JSONValue) {
+    private func act(_ action: ProjectRowAction, on item: ProjectItem) {
         switch action {
         case .rename:
-            renameText = item.text("name")
+            renameText = item.name
             renamed = item
         case .icon: iconView = item
         case .settings: settingsView = item
@@ -411,7 +411,7 @@ struct WorkspacePage: View {
             Task {
                 do {
                     _ = try await workspace.client.request(
-                        .chatCancel, payload: .object(["chatId": .string(item.stableID)]))
+                        .chatCancel, payload: .object(["chatId": .string(item.id)]))
                 } catch {
                     workspace.problem = error.localizedDescription
                 }
@@ -426,8 +426,8 @@ struct WorkspacePage: View {
 
     /// Opens the chat with the fork sheet up for its last turn that ended, as the desktop's Fork in a row's menu does.
     /// The chat's own screen takes the shared model over, sheet and all.
-    private func fork(_ item: JSONValue) async {
-        let id = item.stableID
+    private func fork(_ item: ProjectItem) async {
+        let id = item.id
         do {
             try await workspace.ensureSession(item)
         } catch {
@@ -456,10 +456,10 @@ struct WorkspacePage: View {
         case .view(let id): openView(id)
         case .ask(let item):
             openAfterSettings = item.stableID
-            settingsView = item
+            settingsView = item.projectItem
         case .heading(let item):
             renameText = ""
-            renamed = item
+            renamed = item.projectItem
         case .file: navigator.present(.files, in: navigation)
         }
     }
@@ -473,8 +473,8 @@ struct WorkspacePage: View {
         if workspace.problem == nil { openView(item.stableID) }
     }
 
-    private var listedViews: [JSONValue] {
-        workspace.views.filter { WorkspaceViewSections.isListed($0, selectedID: navigation.selectedViewID) }
+    private var listedViews: [ProjectItem] {
+        workspace.items.filter { WorkspaceViewSections.isListed($0, selectedID: navigation.selectedViewID) }
     }
 
     /// Opens the view a project was opened for, once the machine's copy of the project holds it.
@@ -587,7 +587,7 @@ private enum AfterProjectSettings {
 }
 
 private struct ViewDeletion {
-    let item: JSONValue
+    let item: ProjectItem
     let question: SessionEnding.Question
 }
 
@@ -643,7 +643,7 @@ struct WorkspaceOpeningStatus: View {
 
 struct ProjectItemPage: View {
     let workspace: MobileWorkspace
-    let item: JSONValue
+    let item: ProjectItem
     /// Opened outside the project's list, from Now, Search or a notification, so the title names the project.
     var showsProject = false
     /// The project's name until the project behind a view opened outside its list has opened.
@@ -651,28 +651,21 @@ struct ProjectItemPage: View {
     @State private var ready = false
     @State private var problem: String?
     @State private var selectedMember: String?
-    private var isPresent: Bool {
-        !workspace.ready
-            || workspace.views.contains {
-                $0.stableID == item.stableID || $0.list("nodes").contains { $0.stableID == item.stableID }
-            }
-    }
-    private var current: JSONValue {
-        workspace.item(item.stableID) ?? item
-    }
+    private var isPresent: Bool { !workspace.ready || workspace.item(item.id) != nil }
+    private var current: ProjectItem { workspace.item(item.id) ?? item }
     var body: some View {
         Group {
             if !isPresent {
                 ContentUnavailableView(
                     String(localized: "This view was removed"), lucideIcon: "square-x",
                     description: Text("Return to the project to choose another view."))
-            } else if current.text("kind") == "chat" {
+            } else if current.kind == "chat" {
                 VStack(spacing: 0) {
                     if let problem {
                         SessionErrorBanner(message: problem) { Task { await prepare() } }
                     }
                     ChatScreen(
-                        client: workspace.client, chatID: current.stableID, title: title, isPrepared: ready,
+                        client: workspace.client, chatID: current.id, title: title, isPrepared: ready,
                         workspace: workspace)
                 }
             } else if let problem {
@@ -687,14 +680,14 @@ struct ProjectItemPage: View {
                 // The page stands with its content, and so its bar, from the first frame of the push. Swapping a
                 // spinner for it once the session is there made the bar drop its items as the push settled.
                 content.overlay {
-                    if !ready && ProjectKinds.waitsForSession(current.text("kind")) {
+                    if !ready && ProjectKinds.waitsForSession(current.kind) {
                         MobileLoadingRow(String(localized: "Opening"))
                     }
                 }
             }
         }
         .modifier(MobilePageSurface())
-        .accessibilityIdentifier("workspace.destination.\(item.stableID)")
+        .accessibilityIdentifier("workspace.destination.\(item.id)")
         .navigationDestination(item: $selectedMember) { id in
             if let node = workspace.item(id) {
                 ProjectItemPage(workspace: workspace, item: node)
@@ -703,26 +696,26 @@ struct ProjectItemPage: View {
         .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
         .modifier(PhoneSubtitle(text: showsProject ? subtitle : nil))
         .onAppear {
-            workspace.session.attention.focus(item.stableID)
-            Task { await workspace.session.markSeen(item.stableID) }
+            workspace.session.attention.focus(item.id)
+            Task { await workspace.session.markSeen(item.id) }
         }
-        .onDisappear { workspace.session.attention.blur(item.stableID) }
+        .onDisappear { workspace.session.attention.blur(item.id) }
         .task(id: "\(workspace.session.generation):\(workspace.ready)") { await prepare() }
     }
 
     @ViewBuilder private var content: some View {
-        switch current.text("kind") {
-        case "canvas": CanvasPage(workspace: workspace, viewID: current.stableID)
+        switch current.kind {
+        case "canvas": CanvasPage(workspace: workspace, viewID: current.id)
         case "terminal":
             TerminalScreen(
-                client: workspace.client, sessionID: current.stableID, title: title, isPrepared: ready,
-                held: workspace.heldCommands[current.stableID].map { command in
+                client: workspace.client, sessionID: current.id, title: title, isPrepared: ready,
+                held: workspace.heldCommands[current.id].map { command in
                     TerminalHeldCommand(command: command, enabled: workspace.session.connected) {
-                        Task { await workspace.runHeldCommand(current.stableID) }
+                        Task { await workspace.runHeldCommand(current.id) }
                     }
                 })
         case "browser":
-            if current["browserOwner"] != nil {
+            if current.browserOwner != nil {
                 ContentUnavailableView {
                     Label {
                         Text("Could not reach the project's machine")
@@ -733,29 +726,29 @@ struct ProjectItemPage: View {
                     Text("Open this browser in Ruimte on the machine running the session.")
                 }
             } else {
-                BrowserPage(url: current.text("url"))
+                BrowserPage(url: current.url ?? "")
             }
-        case "device": DeviceViewPage(client: workspace.client, reference: current.storedView?.deviceReference)
+        case "device": DeviceViewPage(client: workspace.client, reference: workspace.storedView(current.id)?.deviceReference)
         case "file":
             FileContentPage(
-                client: workspace.client, path: absolutePath(current.text("path")),
+                client: workspace.client, path: absolutePath(current.path ?? ""),
                 project: FilesProject(workspace: workspace),
-                isView: workspace.views.contains { $0.stableID == current.stableID })
-        case "note": NotePage(workspace: workspace, nodeID: current.stableID, bodyText: current.text("body"))
+                isView: current.isView)
+        case "note": NotePage(workspace: workspace, nodeID: current.id, bodyText: current.body ?? "")
         case "drawing":
             DrawingEditorPage(
                 client: workspace.client, machineID: workspace.session.machine.id,
-                projectID: workspace.projectID, viewID: current.text("viewId", fallback: current.stableID))
+                projectID: workspace.projectID, viewID: current.viewId ?? current.id)
         case "diagram":
             RenderDocumentPage(
                 client: workspace.client, projectID: workspace.projectID,
-                viewID: current.text("viewId", fallback: current.stableID), kind: current.text("kind"),
+                viewID: current.viewId ?? current.id, kind: current.kind,
                 agent: workspace.isScratch
                     ? nil : DiagramAgentTarget(workspace: workspace, item: current, title: title),
                 openChat: { selectedMember = $0 })
         case "group":
             MobileList {
-                ForEach(CanvasEditing.members(of: current, in: canvasHolding), id: \.stableID) { node in
+                ForEach(members, id: \.stableID) { node in
                     Button {
                         selectedMember = node.stableID
                     } label: {
@@ -770,7 +763,7 @@ struct ProjectItemPage: View {
                 }
             }
             .overlay {
-                if ready && CanvasEditing.members(of: current, in: canvasHolding).isEmpty {
+                if ready && members.isEmpty {
                     ContentUnavailableView(
                         String(localized: "Nothing in this group"), lucideIcon: "layout-grid",
                         description: Text("Nodes inside its frame on the canvas are listed here."))
@@ -778,12 +771,10 @@ struct ProjectItemPage: View {
             }
         case "artifact" where OutputMachine.answers(workspace.client):
             // The reference is one person's on one machine, so a teammate's copy of the view has none.
-            if let reference = current["artifact"] ?? current["node"]?["artifact"],
-                let artifactID = reference["id"]?.stringValue
-            {
+            if let reference = current.artifact {
                 OutputItemPage(
-                    context: OutputContext(workspace: workspace), artifactID: artifactID, title: title,
-                    pinned: reference["version"]?.stringValue)
+                    context: OutputContext(workspace: workspace), artifactID: reference.id, title: title,
+                    pinned: reference.version)
             } else {
                 ContentUnavailableView(
                     String(localized: "Not on this machine"), lucideIcon: "package",
@@ -797,21 +788,20 @@ struct ProjectItemPage: View {
         }
     }
 
-    /// The canvas a node stands on, for a group that holds what lies inside its frame.
-    private var canvasHolding: JSONValue {
-        workspace.views.first { $0.list("nodes").contains { $0.stableID == item.stableID } } ?? .object([:])
+    /// The nodes inside a group's frame, which the document alone can say.
+    private var members: [JSONValue] {
+        let canvas = workspace.views.first { $0.list("nodes").contains { $0.stableID == item.id } } ?? .object([:])
+        return CanvasEditing.members(of: workspace.rawItem(current.id) ?? .null, in: canvas)
     }
 
     private var subtitle: String { workspace.ready ? workspace.title : projectName ?? workspace.title }
-    private var title: String {
-        current.text("name", fallback: current.text("title", fallback: ProjectKinds.label(current.text("kind"))))
-    }
+    private var title: String { current.name }
     private func absolutePath(_ path: String) -> String {
         path.hasPrefix("/") || path.hasPrefix("~") ? path : workspace.folder + "/" + path
     }
     private func prepare() async {
         guard workspace.ready, isPresent else { return }
-        let needsSession = ["chat", "terminal"].contains(current.text("kind"))
+        let needsSession = ["chat", "terminal"].contains(current.kind)
         guard !needsSession || workspace.session.connected else { return }
         do {
             try await workspace.ensureSession(current)
@@ -916,7 +906,7 @@ struct AddProjectItem: View {
         } else {
             await workspace.edit { $0.setting("views", .array($0.list("views") + [value])) }
             // A line and a heading divide the list rather than standing in it, so neither opens.
-            if !WorkspaceViewSections.isDivider(value) { workspace.select(id) }
+            if !ProjectKinds.isDivider(kind) { workspace.select(id) }
         }
         if workspace.problem == nil { dismiss() }
     }

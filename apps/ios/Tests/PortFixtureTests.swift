@@ -142,8 +142,9 @@ final class PortFixtureTests: XCTestCase {
         let entries = try XCTUnwrap(sidebar["views"]?.arrayValue)
         XCTAssertGreaterThan(entries.count, 10)
         for entry in entries {
-            let view = try XCTUnwrap(entry["view"])
-            let id = view.stableID
+            let wire = try XCTUnwrap(entry["view"])
+            let view = try XCTUnwrap(wire.projectItem, "\(wire)")
+            let id = view.id
             let listed = entry["listed"]?.boolValue == true
             XCTAssertEqual(WorkspaceViewSections.isListed(view, selectedID: nil), listed, id)
             XCTAssertEqual(ProjectListLogic.isUnlisted(view), !listed, id)
@@ -152,14 +153,14 @@ final class PortFixtureTests: XCTestCase {
                 ProjectListLogic.marks(view: view, sources: sources).shared, row["shared"]?.boolValue, id)
             XCTAssertEqual(ProjectListLogic.provider(of: view), row["provider"]?.stringValue ?? "", id)
             // The phone opens no design on a canvas, so a design node stays out of its list.
-            let stored = view.list("nodes")
+            let stored = view.nodes
             let phoneNodes = ProjectListLogic.nodes(of: view)
             let expected = try XCTUnwrap(row["nodes"]?.arrayValue).filter { node in
-                stored.first { $0.stableID == node.text("id") }?.text("kind") != "design"
+                stored.first { $0.id == node.text("id") }?.kind != "design"
             }
-            XCTAssertEqual(phoneNodes.map(\.stableID), expected.map(\.stableID), id)
+            XCTAssertEqual(phoneNodes.map(\.id), expected.map(\.stableID), id)
             for (phone, node) in zip(phoneNodes, expected) {
-                XCTAssertEqual(phone.text("kind"), node.text("kind"), id)
+                XCTAssertEqual(phone.kind, node.text("kind"), id)
                 XCTAssertEqual(ProjectListLogic.provider(of: phone), node["provider"]?.stringValue ?? "", id)
             }
         }

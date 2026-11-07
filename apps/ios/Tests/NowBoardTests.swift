@@ -112,11 +112,11 @@ final class NowBoardTests: XCTestCase {
         ]
         let chat = NowBoard.preview(
             ProjectViewTarget(machineID: "mac", projectID: "a", viewID: "chat", itemID: "chat"), in: projects)
-        XCTAssertEqual(chat?.item.text("name"), "Plan")
+        XCTAssertEqual(chat?.item.name, "Plan")
         XCTAssertEqual(chat?.projectName, "A")
         let term = NowBoard.preview(
             ProjectViewTarget(machineID: "mac", projectID: "b", viewID: "canvas", itemID: "term"), in: projects)
-        XCTAssertEqual(term?.item.text("kind"), "terminal")
+        XCTAssertEqual(term?.item.kind, "terminal")
         XCTAssertEqual(term?.projectName, "B")
         XCTAssertNil(
             NowBoard.preview(

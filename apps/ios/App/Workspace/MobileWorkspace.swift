@@ -129,7 +129,7 @@ final class MobileWorkspace {
                     ?? result.local
                 selectedID =
                     local["activeViewId"]?.stringValue
-                    ?? views.first(where: { !WorkspaceViewSections.isDivider($0) })?.stableID
+                    ?? items.first(where: { !$0.isDivider })?.id
                 ready = true
                 reconcileSelection()
             }
@@ -237,10 +237,8 @@ final class MobileWorkspace {
     }
 
     private func reconcileSelection() {
-        guard !views.contains(where: { $0.stableID == selectedID && !WorkspaceViewSections.isDivider($0) }) else {
-            return
-        }
-        select(views.first(where: { !WorkspaceViewSections.isDivider($0) })?.stableID)
+        guard !items.contains(where: { $0.id == selectedID && !$0.isDivider }) else { return }
+        select(items.first(where: { !$0.isDivider })?.id)
     }
 
     func select(_ id: String?) {
@@ -298,14 +296,23 @@ final class MobileWorkspace {
         await edit { $0.setting("views", .array(self.views.map { $0.stableID == id ? change($0) : $0 })) }
     }
 
+    /// The views in the project's order, as the lists read them.
+    var items: [ProjectItem] { storedViews.map(ProjectItem.init) }
+
     /// A view, or a node on any canvas, by id.
-    func item(_ id: String) -> JSONValue? {
+    func item(_ id: String) -> ProjectItem? {
+        let items = items
+        return items.first { $0.id == id } ?? items.lazy.flatMap(\.nodes).first { $0.id == id }
+    }
+
+    /// The same, as the document holds it, for what an edit or a request starts from.
+    func rawItem(_ id: String) -> JSONValue? {
         views.first { $0.stableID == id } ?? views.lazy.flatMap { $0.list("nodes") }.first { $0.stableID == id }
     }
 
     /// Whether a router can show the item: a view or node the project holds, and not a divider of its list.
     func canOpen(_ id: String) -> Bool {
-        item(id).map { !WorkspaceViewSections.isDivider($0) } ?? false
+        item(id).map { !$0.isDivider } ?? false
     }
 
     /// The view the project remembers as open while `id` shows. A node opens on its own, and the project remembers the
@@ -320,15 +327,15 @@ final class MobileWorkspace {
         await waitUntil(timeout: .seconds(5)) { [self] in item(id) != nil }
     }
 
-    func ensureSession(_ item: JSONValue) async throws {
-        let kind = item.text("kind")
-        guard kind == "chat" || kind == "terminal" else { return }
-        if kind == "chat", session.hasLiveChat(item.stableID) { return }
-        let metadata = item["node"] ?? item
+    func ensureSession(_ item: ProjectItem) async throws {
+        let kind = item.kind
+        guard kind == "chat" || kind == "terminal", let raw = rawItem(item.id) else { return }
+        if kind == "chat", session.hasLiveChat(item.id) { return }
+        let metadata = raw["node"] ?? raw
         let cwd = metadata.text("cwd")
         let resolved = cwd.hasPrefix("/") || cwd.hasPrefix("~") ? cwd : (cwd.isEmpty ? folder : folder + "/" + cwd)
         var payload: [String: JSONValue] = [
-            kind == "chat" ? "chatId" : "sessionId": .string(item.stableID), "cwd": .string(resolved),
+            kind == "chat" ? "chatId" : "sessionId": .string(item.id), "cwd": .string(resolved),
         ]
         if kind == "terminal" {
             payload["cols"] = .number(100)
@@ -346,10 +353,10 @@ final class MobileWorkspace {
         do {
             let info = try await client.request(
                 kind == "chat" ? .chatCreate : .sessionCreate, payload: .object(payload))
-            if kind == "terminal" { heldCommands[item.stableID] = info["heldCommand"]?.stringValue }
+            if kind == "terminal" { heldCommands[item.id] = info["heldCommand"]?.stringValue }
         } catch let error as MachineClientError where kind == "terminal" && error.code == .sessionExists {
             // The existing shell is shared with the desktop and keeps its current dimensions.
-            await refreshHeldCommands(including: item.stableID)
+            await refreshHeldCommands(including: item.id)
         }
     }
 

@@ -47,7 +47,7 @@ struct ProjectViewPage: View {
     }
 
     /// One expression for the preview and the opened row, so the page under them stays the same view.
-    private func shownItem(_ workspace: MobileWorkspace) -> JSONValue? {
+    private func shownItem(_ workspace: MobileWorkspace) -> ProjectItem? {
         if workspace.ready { return workspace.item(target.itemID) }
         return workspace.problem == nil ? preview?.item : nil
     }

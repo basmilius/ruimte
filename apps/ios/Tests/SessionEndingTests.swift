@@ -5,18 +5,19 @@ import XCTest
 @testable import Ruimte
 
 final class SessionEndingTests: XCTestCase {
-    private let canvas = JSONValue.object([
-        "id": .string("v1"), "kind": .string("canvas"),
-        "nodes": .array([
-            .object(["id": .string("n1"), "kind": .string("chat")]),
-            .object(["id": .string("n2"), "kind": .string("terminal")]),
-            .object(["id": .string("n3"), "kind": .string("note")]),
-        ]),
-    ])
+    private let canvas = ProjectWire.item(
+        .object([
+            "id": .string("v1"), "kind": .string("canvas"),
+            "nodes": .array([
+                .object(["id": .string("n1"), "kind": .string("chat")]),
+                .object(["id": .string("n2"), "kind": .string("terminal")]),
+                .object(["id": .string("n3"), "kind": .string("note")]),
+            ]),
+        ]))
 
     func testAViewOrACanvasTakesItsChatsAndTerminalsAlongWhenItGoes() {
-        let chat = JSONValue.object(["id": .string("c1"), "kind": .string("chat")])
-        let terminal = JSONValue.object(["id": .string("t1"), "kind": .string("terminal")])
+        let chat = ProjectWire.item(.object(["id": .string("c1"), "kind": .string("chat")]))
+        let terminal = ProjectWire.item(.object(["id": .string("t1"), "kind": .string("terminal")]))
         XCTAssertEqual(SessionEnding.chats(in: chat), ["c1"])
         XCTAssertEqual(SessionEnding.terminals(in: chat), [])
         XCTAssertEqual(SessionEnding.terminals(in: terminal), ["t1"])
@@ -54,7 +55,7 @@ final class SessionEndingTests: XCTestCase {
     @MainActor func testAViewWithoutSessionsAsksNothingOfTheMachine() async {
         let machine = ScriptedMachine.ending()
         let question = await SessionEnding.question(
-            for: .object(["id": .string("d1"), "kind": .string("drawing")]), client: machine)
+            for: ProjectWire.item(.object(["id": .string("d1"), "kind": .string("drawing")])), client: machine)
         XCTAssertEqual(question, SessionEnding.Question())
         XCTAssertTrue(machine.sent.isEmpty)
     }

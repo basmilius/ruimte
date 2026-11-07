@@ -120,7 +120,7 @@ struct CanvasPage: View {
             }
         }
         .navigationDestination(item: $selectedID) { id in
-            if let node = nodes.first(where: { $0.stableID == id }) {
+            if let node = workspace.item(id), nodes.contains(where: { $0.stableID == id }) {
                 ProjectItemPage(workspace: workspace, item: node)
             }
         }
@@ -239,7 +239,8 @@ struct CanvasPage: View {
             case .delete:
                 Button(String(localized: "Delete"), lucideIcon: "trash", role: .destructive) {
                     Task {
-                        let question = await SessionEnding.question(for: node, client: workspace.client)
+                        guard let item = workspace.item(node.stableID) else { return }
+                        let question = await SessionEnding.question(for: item, client: workspace.client)
                         removal = NodeRemoval(id: node.stableID, question: question)
                     }
                 }

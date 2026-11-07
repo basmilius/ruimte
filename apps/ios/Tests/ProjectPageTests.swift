@@ -4,22 +4,23 @@ import XCTest
 @testable import Ruimte
 
 final class ProjectListLogicTests: XCTestCase {
-    private func node(_ id: String, kind: String = "chat") -> JSONValue {
-        .object(["id": .string(id), "kind": .string(kind), "title": .string(id)])
+    private func node(_ id: String, kind: String = "chat") -> ProjectItem {
+        ProjectWire.nodeItem(.object(["id": .string(id), "kind": .string(kind), "title": .string(id)]))
     }
 
-    private let canvas = JSONValue.object([
-        "id": .string("canvas"), "kind": .string("canvas"), "name": .string("Main canvas"),
-        "nodes": .array([
-            .object(["id": .string("api"), "kind": .string("chat"), "title": .string("API design")]),
-            .object(["id": .string("logs"), "kind": .string("terminal"), "title": .string("logs")]),
-            .object(["id": .string("note"), "kind": .string("note"), "title": .string("Note")]),
-        ]),
-    ])
+    private let canvas = ProjectWire.item(
+        .object([
+            "id": .string("canvas"), "kind": .string("canvas"), "name": .string("Main canvas"),
+            "nodes": .array([
+                .object(["id": .string("api"), "kind": .string("chat"), "title": .string("API design")]),
+                .object(["id": .string("logs"), "kind": .string("terminal"), "title": .string("logs")]),
+                .object(["id": .string("note"), "kind": .string("note"), "title": .string("Note")]),
+            ]),
+        ]))
 
     func testACanvasListsOnlyTheNodesThatRun() {
-        XCTAssertEqual(ProjectListLogic.nodes(of: canvas).map(\.stableID), ["api", "logs"])
-        XCTAssertTrue(ProjectListLogic.nodes(of: node("chat")).isEmpty)
+        XCTAssertEqual(ProjectListLogic.nodes(of: canvas).map(\.id), ["api", "logs"])
+        XCTAssertTrue(ProjectListLogic.nodes(of: ProjectWire.item(.object(["id": .string("chat"), "kind": .string("chat")]))).isEmpty)
     }
 
     func testACanvasSpeaksForItsNodesAndKeepsTheirDraftsAndSnoozesOnTheirOwnRows() {
@@ -41,7 +42,7 @@ final class ProjectListLogicTests: XCTestCase {
     }
 
     func testAStandaloneChatCarriesItsOwnMarks() {
-        let chat = JSONValue.object(["id": .string("chat"), "kind": .string("chat"), "node": .object([:])])
+        let chat = ProjectWire.item(.object(["id": .string("chat"), "kind": .string("chat")]))
         let marks = ProjectListLogic.marks(
             view: chat, sources: ProjectMarkSources(statuses: ["chat": .needsYou], drafts: ["chat"], shared: ["chat"]))
         XCTAssertTrue(marks.needsYou)
@@ -52,16 +53,16 @@ final class ProjectListLogicTests: XCTestCase {
     }
 
     func testALongPressOffersWhatAppliesToTheRow() {
-        let claude = JSONValue.object([
-            "id": .string("c"), "kind": .string("chat"), "node": .object(["provider": .string("claude")]),
-        ])
+        let claude = ProjectWire.item(
+            .object(["id": .string("c"), "kind": .string("chat"), "node": .object(["provider": .string("claude")])]))
         XCTAssertEqual(
             ProjectListLogic.actions(for: claude, isView: true, status: .running, canFork: true),
             [.rename, .icon, .settings, .fork, .snooze, .stopTurn, .delete])
         XCTAssertEqual(
             ProjectListLogic.actions(for: claude, isView: true, status: .idle, canFork: true),
             [.rename, .icon, .settings, .fork, .snooze, .delete])
-        let gemini = JSONValue.object(["id": .string("g"), "kind": .string("chat"), "provider": .string("gemini")])
+        let gemini = ProjectWire.nodeItem(
+            .object(["id": .string("g"), "kind": .string("chat"), "provider": .string("gemini")]))
         XCTAssertEqual(
             ProjectListLogic.actions(for: gemini, isView: false, status: .running, canFork: false),
             [.snooze, .stopTurn])
@@ -70,8 +71,8 @@ final class ProjectListLogicTests: XCTestCase {
             [.rename, .icon, .settings, .delete])
         XCTAssertEqual(
             ProjectListLogic.actions(
-                for: .object(["id": .string("u"), "kind": .string("unknown")]), isView: true, status: nil,
-                canFork: false),
+                for: ProjectWire.item(.object(["id": .string("u"), "kind": .string("unknown"), "raw": .object([:])])), isView: true,
+                status: nil, canFork: false),
             [.delete])
     }
 

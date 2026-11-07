@@ -215,8 +215,8 @@ struct ChatLinkRouting: ViewModifier {
             GitDiffPage(client: context.client, target: GitDiffTarget(cwd: cwd, path: nil, staged: false, commit: sha))
         case .node(let viewID, let nodeID):
             if let workspace = context.workspace,
-                let view = workspace.views.first(where: { $0.stableID == viewID }),
-                let item = view.stableID == nodeID ? view : view.list("nodes").first(where: { $0.stableID == nodeID })
+                let view = workspace.items.first(where: { $0.id == viewID }),
+                let item = view.id == nodeID ? view : view.nodes.first(where: { $0.id == nodeID })
             {
                 ProjectItemPage(workspace: workspace, item: item, showsProject: true, projectName: workspace.title)
             } else {

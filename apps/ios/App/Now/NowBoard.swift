@@ -15,7 +15,7 @@ struct ProjectViewTarget: Hashable, Identifiable {
 
 /// What a view's page draws while its project opens: its row for the title and the bar, and the project's name.
 struct ProjectViewPreview {
-    let item: JSONValue
+    let item: ProjectItem
     let projectName: String
 }
 
@@ -244,7 +244,7 @@ struct NowBoard: Equatable {
         else { return nil }
         let item =
             view.id == target.itemID
-            ? view.previewItem : view.nodes.first(where: { $0.id == target.itemID })?.previewItem
+            ? ProjectItem(view) : view.nodes.first(where: { $0.id == target.itemID }).map(ProjectItem.init)
         guard let item else { return nil }
         return ProjectViewPreview(item: item, projectName: projectName(project.summary))
     }
@@ -271,28 +271,10 @@ extension ProjectSidebarView {
     var row: ProjectSidebarRow {
         ProjectSidebarRow(id: id, kind: kind.rawValue, title: name, icon: icon?.value)
     }
-
-    /// The row as the project page reads a view before the project's own document has opened.
-    var previewItem: JSONValue {
-        var item: [String: JSONValue] = [
-            "id": .string(id), "name": .string(name), "kind": .string(kind.rawValue), "shared": .bool(shared),
-            "nodes": .array(nodes.map(\.previewItem)),
-        ]
-        if let icon { item["icon"] = .object(["kind": .string("lucide"), "value": .string(icon.value)]) }
-        if let provider { item["provider"] = .string(provider) }
-        if let path { item["path"] = .string(path) }
-        return .object(item)
-    }
 }
 
 extension ProjectSidebarNode {
     var row: ProjectSidebarRow {
         ProjectSidebarRow(id: id, kind: kind.rawValue, title: title, icon: nil)
-    }
-
-    var previewItem: JSONValue {
-        var item: [String: JSONValue] = ["id": .string(id), "title": .string(title), "kind": .string(kind.rawValue)]
-        if let provider { item["provider"] = .string(provider) }
-        return .object(item)
     }
 }

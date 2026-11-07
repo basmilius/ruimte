@@ -622,3 +622,13 @@ extension JSONValue {
     var projectSummary: ProjectSummary { try! decoded(as: ProjectSummary.self) }
     var sidebarEntry: ProjectSidebarEntry { try! decoded(as: ProjectSidebarEntry.self) }
 }
+
+extension ProjectWire {
+    /// A view as the lists read it. A fixture that does not decode is a broken test, not a case to cover.
+    static func item(_ fields: JSONValue) -> ProjectItem { ProjectItem(try! view(fields).decoded(as: StoredView.self)) }
+
+    /// A node on a canvas as the lists read it.
+    static func nodeItem(_ fields: JSONValue) -> ProjectItem {
+        ProjectItem(try! node(fields).decoded(as: StoredNode.self))
+    }
+}

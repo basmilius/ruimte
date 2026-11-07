@@ -116,3 +116,189 @@ extension [JSONValue] {
     /// The views a screen reads; a view that does not read leaves the others in place.
     var storedViews: [StoredView] { compactMap(\.storedView) }
 }
+
+/// A view of a project, or a node on one of its canvases, as the lists and pages read it. Reading only: an edit goes
+/// through the JSON document, so a kind or a key this app has no word for survives a save.
+struct ProjectItem: Identifiable, Hashable {
+    struct ArtifactReference: Hashable {
+        let id: String
+        let version: String?
+    }
+
+    let id: String
+    /// The word the wire uses for its kind.
+    let kind: String
+    let isView: Bool
+    /// What a person called it: a view's name, a node's title.
+    let name: String
+    /// The symbol a person picked for a view.
+    let icon: String?
+    /// The CLI of a chat or terminal.
+    let provider: String?
+    let url: String?
+    let path: String?
+    /// The text of a note.
+    let body: String?
+    /// The drawing or diagram a node stands for, when it is not the node itself.
+    let viewId: String?
+    let browserOwner: String?
+    let artifact: ArtifactReference?
+    let hidden: Bool
+    let drawnBy: String?
+    let empty: Bool
+    /// The nodes of a canvas.
+    let nodes: [ProjectItem]
+
+    init(_ view: StoredView) {
+        id = view.id
+        kind = view.kind
+        isView = true
+        name = view.name
+        icon = view.icon.flatMap { $0.kind == "lucide" ? $0.value : nil }
+        nodes = view.nodes.map(ProjectItem.init)
+        viewId = nil
+        body = nil
+        switch view {
+        case .chat(let view):
+            provider = view.node.provider
+            artifact = view.node.artifact.map { ArtifactReference(id: $0.id, version: $0.version) }
+            url = nil
+            path = nil
+            browserOwner = nil
+            hidden = view.hidden == true
+            drawnBy = view.drawnBy
+            empty = view.empty == true
+        case .terminal(let view):
+            provider = view.node.provider
+            artifact = view.node.artifact.map { ArtifactReference(id: $0.id, version: $0.version) }
+            url = nil
+            path = nil
+            browserOwner = nil
+            hidden = false
+            drawnBy = nil
+            empty = false
+        case .artifact(let view):
+            provider = view.node.provider
+            artifact = view.node.artifact.map { ArtifactReference(id: $0.id, version: $0.version) }
+            url = nil
+            path = nil
+            browserOwner = nil
+            hidden = false
+            drawnBy = nil
+            empty = false
+        case .design(let view):
+            provider = view.node.provider
+            artifact = view.node.artifact.map { ArtifactReference(id: $0.id, version: $0.version) }
+            url = nil
+            path = view.path
+            browserOwner = nil
+            hidden = false
+            drawnBy = nil
+            empty = false
+        case .browser(let view):
+            provider = nil
+            artifact = nil
+            url = view.url
+            path = nil
+            browserOwner = view.browserOwner
+            hidden = false
+            drawnBy = nil
+            empty = false
+        case .file(let view):
+            provider = nil
+            artifact = nil
+            url = nil
+            path = view.path
+            browserOwner = nil
+            hidden = false
+            drawnBy = nil
+            empty = false
+        case .canvas(let view):
+            provider = nil
+            artifact = nil
+            url = nil
+            path = nil
+            browserOwner = nil
+            hidden = view.hidden == true
+            drawnBy = nil
+            empty = false
+        default:
+            provider = nil
+            artifact = nil
+            url = nil
+            path = nil
+            browserOwner = nil
+            hidden = false
+            drawnBy = nil
+            empty = false
+        }
+    }
+
+    init(_ node: StoredNode) {
+        id = node.id
+        kind = node.kind.rawValue
+        isView = false
+        name = node.title
+        icon = nil
+        provider = node.provider
+        url = node.url
+        path = node.path
+        body = node.body
+        viewId = node.viewId
+        browserOwner = node.browserOwner
+        artifact = node.artifact.map { ArtifactReference(id: $0.id, version: $0.version) }
+        hidden = false
+        drawnBy = nil
+        empty = false
+        nodes = []
+    }
+
+    /// A view as the machine's sidebar lists it, which is all a page knows of it before the project opens.
+    init(_ view: ProjectSidebarView) {
+        id = view.id
+        kind = view.kind.rawValue
+        isView = true
+        name = view.name
+        icon = view.icon?.value
+        provider = view.provider
+        url = nil
+        path = view.path
+        body = nil
+        viewId = nil
+        browserOwner = nil
+        artifact = nil
+        hidden = false
+        drawnBy = nil
+        empty = false
+        nodes = view.nodes.map(ProjectItem.init)
+    }
+
+    init(_ node: ProjectSidebarNode) {
+        id = node.id
+        kind = node.kind.rawValue
+        isView = false
+        name = node.title
+        icon = nil
+        provider = node.provider
+        url = nil
+        path = nil
+        body = nil
+        viewId = nil
+        browserOwner = nil
+        artifact = nil
+        hidden = false
+        drawnBy = nil
+        empty = false
+        nodes = []
+    }
+
+    var isDivider: Bool { ProjectKinds.isDivider(kind) }
+
+    /// What the row is called, or its kind when nothing was.
+    var title: String { name.isEmpty ? ProjectKinds.label(kind) : name }
+}
+
+extension JSONValue {
+    /// A view of the document as the lists read it, or nil for a shape the generated types do not read.
+    var projectItem: ProjectItem? { storedView.map(ProjectItem.init) }
+}

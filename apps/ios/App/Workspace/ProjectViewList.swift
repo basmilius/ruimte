@@ -42,24 +42,24 @@ enum ProjectListLogic {
     private static let weight: [AgentStatus: Int] = [.needsYou: 3, .error: 2, .exited: 2, .running: 1, .idle: 0]
 
     /// The nodes a canvas lists under it. Groups, notes and drawings are frames and paper; the list is about what runs.
-    static func nodes(of view: JSONValue) -> [JSONValue] {
-        guard view.text("kind") == "canvas" else { return [] }
-        return view.list("nodes").filter { ProjectKinds.runs($0.text("kind")) }
+    static func nodes(of view: ProjectItem) -> [ProjectItem] {
+        guard view.kind == "canvas" else { return [] }
+        return view.nodes.filter { ProjectKinds.runs($0.kind) }
     }
 
     static func heaviest(_ statuses: [AgentStatus?]) -> AgentStatus? {
         statuses.compactMap { $0 }.max { weight[$0, default: 0] < weight[$1, default: 0] }
     }
 
-    static func marks(view: JSONValue, sources: ProjectMarkSources) -> ProjectRowMarks {
-        let id = view.stableID
+    static func marks(view: ProjectItem, sources: ProjectMarkSources) -> ProjectRowMarks {
+        let id = view.id
         let nodes = nodes(of: view)
         guard !nodes.isEmpty else {
             var marks = marks(node: view, sources: sources)
             marks.shared = sources.shared.contains(id)
             return marks
         }
-        let ids = nodes.map(\.stableID)
+        let ids = nodes.map(\.id)
         // A canvas keeps the draft dot and the snooze on the row of the node itself.
         let waking = ids.filter { sources.snoozes[$0] == nil }
         return ProjectRowMarks(
@@ -70,18 +70,18 @@ enum ProjectListLogic {
             shared: sources.shared.contains(id))
     }
 
-    static func marks(node: JSONValue, sources: ProjectMarkSources) -> ProjectRowMarks {
-        let id = node.stableID
+    static func marks(node: ProjectItem, sources: ProjectMarkSources) -> ProjectRowMarks {
+        let id = node.id
         return ProjectRowMarks(
             status: sources.statuses[id], delegating: sources.delegating.contains(id),
             unseen: sources.unseen.contains(id),
-            draft: node.text("kind") == "chat" && sources.drafts.contains(id),
+            draft: node.kind == "chat" && sources.drafts.contains(id),
             warning: sources.warnings.contains(id), snoozedUntil: sources.snoozes[id])
     }
 
     /// The actions a view offers; a node of a canvas only offers what acts on its session.
-    static func actions(for item: JSONValue, isView: Bool, status: AgentStatus?, canFork: Bool) -> [ProjectRowAction] {
-        let kind = item.text("kind")
+    static func actions(for item: ProjectItem, isView: Bool, status: AgentStatus?, canFork: Bool) -> [ProjectRowAction] {
+        let kind = item.kind
         var actions: [ProjectRowAction] = []
         if isView && kind != "unknown" { actions += [.rename, .icon, .settings] }
         if kind == "chat" && canFork { actions.append(.fork) }
@@ -94,22 +94,20 @@ enum ProjectListLogic {
     /// A view the list leaves out, as `isUnlistedView` in `packages/contracts` has it: a chat an extension draws or
     /// nobody wrote in yet, and a hidden chat or canvas (an inline edit, or the canvas another machine draws its nodes
     /// on). `emptyChatStays` keeps the empty chat that is open.
-    static func isUnlisted(_ view: JSONValue, emptyChatStays: Bool = false) -> Bool {
-        let kind = view.text("kind")
+    static func isUnlisted(_ view: ProjectItem, emptyChatStays: Bool = false) -> Bool {
+        let kind = view.kind
         guard kind == "chat" || kind == "canvas" else { return false }
-        if view["hidden"]?.boolValue == true { return true }
+        if view.hidden { return true }
         guard kind == "chat" else { return false }
-        return view["drawnBy"]?.stringValue != nil || (view["empty"]?.boolValue == true && !emptyChatStays)
+        return view.drawnBy != nil || (view.empty && !emptyChatStays)
     }
 
     /// The CLI a chat runs: on a view it sits in its node, on a canvas node on the node itself.
-    static func provider(of item: JSONValue) -> String {
-        item["node"]?["provider"]?.stringValue ?? item["provider"]?.stringValue ?? ""
-    }
+    static func provider(of item: ProjectItem) -> String { item.provider ?? "" }
 
     /// The chats of the project, views and nodes, which are the rows that can carry a draft.
-    static func chatIDs(_ views: [JSONValue]) -> [String] {
-        views.flatMap { [$0] + nodes(of: $0) }.filter { $0.text("kind") == "chat" }.map(\.stableID)
+    static func chatIDs(_ views: [ProjectItem]) -> [String] {
+        views.flatMap { [$0] + nodes(of: $0) }.filter { $0.kind == "chat" }.map(\.id)
     }
 }
 

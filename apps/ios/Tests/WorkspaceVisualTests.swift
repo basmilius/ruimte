@@ -73,8 +73,8 @@ final class WorkspaceVisualTests: XCTestCase {
             await workspace.open()
             XCTAssertTrue(workspace.ready, workspace.problem ?? "The fixture did not open")
             XCTAssertTrue(wire.requests.contains(.projectOpen))
-            XCTAssertEqual(WorkspaceViewSections.split(workspace.views).map(\.title), [nil, "Build & run", nil])
-            XCTAssertEqual(WorkspaceViewSections.split(workspace.views).map { $0.items.count }, [1, 2, 2])
+            XCTAssertEqual(WorkspaceViewSections.split(workspace.items).map(\.title), [nil, "Build & run", nil])
+            XCTAssertEqual(WorkspaceViewSections.split(workspace.items).map { $0.items.count }, [1, 2, 2])
             XCTAssertFalse(session.connected)
             if horizontalClass == .regular { workspace.selectedID = nil }
 

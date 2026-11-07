@@ -283,12 +283,13 @@ final class PadRouterTests: XCTestCase {
             .object([
                 "version": .number(3), "rev": .number(1), "name": .string("App"), "color": .string("#155dfc"),
                 "views": .array([
-                    .object([
-                        "id": .string("canvas"), "kind": .string("canvas"), "name": .string("Main"),
-                        "nodes": .array([.object(["id": .string("chat"), "kind": .string("chat")])]),
-                    ]),
-                    .object(["id": .string("notes"), "kind": .string("chat"), "name": .string("Notes")]),
-                    .object(["id": .string("rule"), "kind": .string("separator")]),
+                    ProjectWire.view(
+                        .object([
+                            "id": .string("canvas"), "kind": .string("canvas"), "name": .string("Main"),
+                            "nodes": .array([.object(["id": .string("chat"), "kind": .string("chat")])]),
+                        ])),
+                    ProjectWire.view(.object(["id": .string("notes"), "kind": .string("chat"), "name": .string("Notes")])),
+                    ProjectWire.view(.object(["id": .string("rule"), "kind": .string("separator")])),
                 ]),
             ]))
     }

@@ -85,11 +85,21 @@ extension ContentUnavailableView where Label == SwiftUI.Label<Text, Image>, Desc
 }
 
 struct WorkspaceViewIcon: View {
-    let item: JSONValue
+    let name: String
     var size: CGFloat = 20
 
+    init(item: JSONValue, size: CGFloat = 20) {
+        name = Self.name(for: item)
+        self.size = size
+    }
+
+    init(item: ProjectItem, size: CGFloat = 20) {
+        name = Self.name(kind: item.kind, chosen: item.icon)
+        self.size = size
+    }
+
     var body: some View {
-        LucideIcon(name: Self.name(for: item), size: size).accessibilityHidden(true)
+        LucideIcon(name: name, size: size).accessibilityHidden(true)
     }
 
     nonisolated static func name(for item: JSONValue) -> String {

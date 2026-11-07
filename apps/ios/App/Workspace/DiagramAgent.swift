@@ -8,7 +8,7 @@ import SwiftUI
 struct DiagramAgentTarget {
     let workspace: MobileWorkspace
     /// The diagram's view, or its node on a canvas.
-    let item: JSONValue
+    let item: ProjectItem
     let title: String
 }
 
@@ -32,15 +32,14 @@ enum DiagramAgentPrompt {
     }
 
     /// Chats of the project an agent could take the question in: chat views first, then chat nodes on its canvases.
-    static func chats(in views: [JSONValue]) -> [JSONValue] {
-        views.filter { $0.text("kind") == "chat" }
-            + views.flatMap { $0.list("nodes") }.filter { $0.text("kind") == "chat" }
+    static func chats(in views: [ProjectItem]) -> [ProjectItem] {
+        views.filter { $0.kind == "chat" } + views.flatMap(\.nodes).filter { $0.kind == "chat" }
     }
 
     /// Where a new chat view goes: right after the diagram's own view, or after the canvas that holds its node.
-    static func insertion(after item: JSONValue, in views: [JSONValue]) -> Int {
+    static func insertion(after item: ProjectItem, in views: [ProjectItem]) -> Int {
         let index = views.firstIndex { view in
-            view.stableID == item.stableID || view.list("nodes").contains { $0.stableID == item.stableID }
+            view.id == item.id || view.nodes.contains { $0.id == item.id }
         }
         return index.map { $0 + 1 } ?? views.count
     }
@@ -62,10 +61,10 @@ final class DiagramAgentModel {
         catalog = NewChatModel(client: target.workspace.client, machineID: target.workspace.session.machine.id)
     }
 
-    var diagramID: String { target.item.text("viewId", fallback: target.item.stableID) }
+    var diagramID: String { target.item.viewId ?? target.item.id }
     var agents: [ProviderInfo] { catalog.agents ?? [] }
     var loaded: Bool { catalog.agents != nil }
-    var chats: [JSONValue] { DiagramAgentPrompt.chats(in: target.workspace.views) }
+    var chats: [ProjectItem] { DiagramAgentPrompt.chats(in: target.workspace.items) }
     var canSend: Bool {
         !sending && choice != nil && target.workspace.session.connected
             && !request.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -78,8 +77,7 @@ final class DiagramAgentModel {
             return String(localized: "New \(name) chat", comment: "%@ is the name of an agent, such as Claude Code")
         case .chat(let id):
             let fallback = String(localized: "Chat")
-            return target.workspace.item(id).map { $0.text("name", fallback: $0.text("title", fallback: fallback)) }
-                ?? fallback
+            return target.workspace.item(id)?.name ?? fallback
         }
     }
 
@@ -98,18 +96,23 @@ final class DiagramAgentModel {
         let workspace = target.workspace
         let text = DiagramAgentPrompt.text(name: target.title, diagramID: diagramID, request: request, empty: empty)
         do {
-            let chat: JSONValue
+            let chat: ProjectItem
             switch choice {
             case .new(let provider):
                 let id = "chat-" + UUID().uuidString
-                chat = NewChat.projectView(id: id, provider: provider, account: catalog.account(for: provider))
+                let view = NewChat.projectView(id: id, provider: provider, account: catalog.account(for: provider))
                 let item = target.item
                 await workspace.edit { document in
                     var views = document.list("views")
-                    views.insert(chat, at: DiagramAgentPrompt.insertion(after: item, in: views))
+                    let items = views.compactMap(\.projectItem)
+                    views.insert(view, at: DiagramAgentPrompt.insertion(after: item, in: items))
                     return document.setting("views", .array(views))
                 }
                 if let failure = workspace.problem { throw MachineClientError.invalid(failure) }
+                guard let created = workspace.item(id) else {
+                    throw MachineClientError.invalid(String(localized: "That chat is no longer in this project."))
+                }
+                chat = created
             case .chat(let id):
                 guard let existing = workspace.item(id) else {
                     throw MachineClientError.invalid(String(localized: "That chat is no longer in this project."))
@@ -118,9 +121,9 @@ final class DiagramAgentModel {
             }
             try await workspace.ensureSession(chat)
             _ = try await workspace.client.request(
-                .chatSend, payload: .object(["chatId": .string(chat.stableID), "text": .string(text)]))
+                .chatSend, payload: .object(["chatId": .string(chat.id), "text": .string(text)]))
             request = ""
-            return chat.stableID
+            return chat.id
         } catch {
             problem = error.localizedDescription
             return nil
@@ -141,8 +144,8 @@ struct DiagramAgentPicker: View {
             }
             if !model.chats.isEmpty {
                 Section("Chats in this project") {
-                    ForEach(model.chats, id: \.stableID) { chat in
-                        choiceButton(.chat(id: chat.stableID), icon: "message-square")
+                    ForEach(model.chats) { chat in
+                        choiceButton(.chat(id: chat.id), icon: "message-square")
                     }
                 }
             }

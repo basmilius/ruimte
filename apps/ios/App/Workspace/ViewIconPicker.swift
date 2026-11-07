@@ -3,13 +3,13 @@ import SwiftUI
 
 struct ViewIconPicker: View {
     let workspace: MobileWorkspace
-    let item: JSONValue
+    let item: ProjectItem
     @Environment(\.dismiss) private var dismiss
     @State private var saving = false
 
     var body: some View {
         NavigationStack {
-            IconChoiceGrid(selected: item["icon"]?.text("value"), resetTitle: String(localized: "Use default icon")) {
+            IconChoiceGrid(selected: item.icon, resetTitle: String(localized: "Use default icon")) {
                 save($0)
             }
             .disabled(saving)
@@ -24,7 +24,7 @@ struct ViewIconPicker: View {
         saving = true
         let icon = name.map { JSONValue.object(["kind": .string("lucide"), "value": .string($0)]) }
         Task {
-            await workspace.updateView(item.stableID) { $0.setting("icon", icon) }
+            await workspace.updateView(item.id) { $0.setting("icon", icon) }
             dismiss()
         }
     }
