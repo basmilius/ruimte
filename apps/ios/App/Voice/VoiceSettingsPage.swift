@@ -13,13 +13,8 @@ struct VoicePreferences: Equatable {
     // No switch for asking before a deletion: Voice on a machine deletes nothing yet. When it does, the choice rides on
     // `voice.start` and the machine's policy holds it, not this phone.
 
-    static var languages: [String] { options("language") }
-    static var voices: [String] { options("voice") }
-
-    private static func options(_ field: String) -> [String] {
-        WireSchema.schema("request.voice.setPreferences.payload")?["properties"]?[field]?["enum"]?.arrayValue?
-            .compactMap(\.stringValue) ?? []
-    }
+    static var languages: [String] { VoiceMachinePreferencesLanguage.allCases.map(\.rawValue) }
+    static var voices: [String] { VoiceMachinePreferencesVoice.allCases.map(\.rawValue) }
 
     /// The first language of the device Voice speaks, else English: what a machine that stores none starts with.
     static func defaultLanguage(preferred: [String] = Locale.preferredLanguages, offered: [String] = languages)

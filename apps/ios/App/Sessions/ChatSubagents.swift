@@ -512,10 +512,10 @@ final class SubagentConversation {
     @ObservationIgnored private lazy var feed = LiveResource(
         client: client,
         events: [
-            .apply(.chatSubagentChanged, raw: { [weak self] event in
-                guard let self, event.text("chatId") == chatID, event.text("toolUseId") == toolUseID else { return }
+            .apply(.chatSubagentChanged, as: ChatSubagentChangedEvent.self) { [weak self] event in
+                guard let self, event.chatId == chatID, event.toolUseId == toolUseID else { return }
                 refresh()
-            })
+            }
         ],
         connection: { [weak self] connected in
             guard let self, connected else { return }
@@ -579,11 +579,11 @@ final class SubagentConversation {
             do {
                 let page = try await self.ask(cursor: cursor, limit: Self.pageSize, watch: nil)
                 guard !Task.isCancelled else { return }
-                let older = Self.items(of: page)
+                let older = page.items
                 self.items = older + self.items
                 self.readPending(page)
-                self.cursor = page["history"]?["cursor"]?.stringValue
-                self.live = page["live"]?.boolValue == true
+                self.cursor = page.history.cursor
+                self.live = page.live
                 self.onChange(.prepended(older))
             } catch let error as MachineClientError where error.code == .historyExpired {
                 // The record was written again under this page; what it holds now is the only truth.
@@ -602,14 +602,14 @@ final class SubagentConversation {
         do {
             let page = try await ask(cursor: nil, limit: limit, watch: watch ? true : nil)
             guard !Task.isCancelled, holding else { return }
-            let incoming = Self.items(of: page)
+            let incoming = page.items
             let previous = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { $1 })
             let merged = ChatSubagents.mergeNewest(
-                current: items, cursor: cursor, page: incoming, pageCursor: page["history"]?["cursor"]?.stringValue)
+                current: items, cursor: cursor, page: incoming, pageCursor: page.history.cursor)
             items = merged.items
             cursor = merged.cursor
             readPending(page)
-            live = page["live"]?.boolValue == true
+            live = page.live
             status = .ready
             error = nil
             failedCursor = nil
@@ -626,29 +626,25 @@ final class SubagentConversation {
         }
     }
 
-    private func ask(cursor: String?, limit: Int, watch: Bool?) async throws -> JSONValue {
+    private func ask(cursor: String?, limit: Int, watch: Bool?) async throws -> ChatSubagentPage {
         var payload: [String: JSONValue] = [
             "chatId": .string(chatID), "toolUseId": .string(toolUseID), "limit": .number(Double(limit)),
         ]
         if let cursor { payload["cursor"] = .string(cursor) }
         if let watch { payload["watch"] = .bool(watch) }
         return try await client.request(.chatSubagent, payload: .object(payload))
+            .decoded(as: ChatSubagentPage.self)
     }
 
     /// Only a delegated chat answers its own requests; a request still waiting stays answerable after it left the
     /// newest page, which is why the machine names them apart.
-    private func readPending(_ page: JSONValue) {
-        let chatID = page["context"]?["chatId"]?.stringValue
-        let next = chatID.map { (chatID: $0, provider: page["context"]?.text("provider") ?? "") }
+    private func readPending(_ page: ChatSubagentPage) {
+        let chatID = page.context?.chatId
+        let next = chatID.map { (chatID: $0, provider: page.context?.provider ?? "") }
         if next?.chatID != delegatedChat?.chatID || next?.provider != delegatedChat?.provider { delegatedChat = next }
-        let listed = page["pending"]?.arrayValue.map { $0.compactMap { try? $0.decoded(as: ChatItem.self) } }
+        let listed = page.pending?.arrayValue.map { $0.compactMap { try? $0.decoded(as: ChatItem.self) } }
         let waiting = chatID == nil ? [] : listed ?? items.filter(\.isPending)
         if waiting != pending { pending = waiting }
-    }
-
-    /// The page's items are chat items like the thread's, which the machine validated with the rest of its answer.
-    private static func items(of page: JSONValue) -> [ChatItem] {
-        page.list("items").compactMap { try? $0.decoded(as: ChatItem.self) }
     }
 
     private func enqueue(_ work: @escaping @MainActor () async -> Void) {
