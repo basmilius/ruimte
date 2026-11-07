@@ -143,6 +143,19 @@ describe('provider_info', () => {
         ]);
     });
 
+    test('limits keeps the last known windows, failure and update time together for an agent', async () => {
+        host.planLimits = {
+            now: () => NOW,
+            snapshot: () => ({ providers: [{ ...LIMITS.providers[0]!, unavailable: { reason: 'failed', message: 'CLI offline' } }] })
+        };
+        expect(await info({ action: 'limits' })).toEqual([
+            'plan\tclaude\tPersonal\tmax\t2026-10-22T11:59:00.000Z',
+            'window\tSession\tsession\t60%\t2026-10-22T15:00:00.000Z\t40%\tahead',
+            'window\tWeekly\tweekly\t10%\t-\t-\t-',
+            'unavailable\tCLI offline'
+        ]);
+    });
+
     test('limits with json answers the same as one object', async () => {
         expect(JSON.parse((await info({ action: 'limits', json: true })).join('\n'))).toEqual({
             provider: 'claude',

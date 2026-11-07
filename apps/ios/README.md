@@ -70,6 +70,8 @@ A lost send acknowledgement keeps the draft and asks the person to check the con
 
 A machine without a request the app uses (forks, bookmarks, snoozes, plans) says it needs an update.
 
+The usage page reads plan snapshots when shown. Read limits again explicitly asks the selected machine to read eligible accounts, including idle ones; it is separate from Scan again for transcript totals. Per-account provenance names the last row update or turn event, with a warning past ten minutes and last-known values beside a failed read. Small machine-clock skew is tolerated; unknown or implausible times make no freshness claim. Widgets keep their existing snapshot behavior. This adds no periodic probe and does not change the machine's recent-account policy.
+
 ## Build locally
 
 From the repository root, with Xcode 27, XcodeGen and Bun installed:
