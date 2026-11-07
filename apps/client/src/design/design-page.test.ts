@@ -220,6 +220,50 @@ describe('a page a design page frames', () => {
         expect(pageMentions('a backup in notes.html.bak')).toEqual([]);
     });
 
+    test('is found in a run of name characters as long as a page without trying again from every character of it', () => {
+        // A scan that retries from every character of the run takes minutes here.
+        const run = 'A'.repeat(900_000);
+
+        expect(pageMentions(run)).toEqual([]);
+        expect(pageMentions(`${run}.html`)).toEqual([`${run}.html`]);
+        expect(pageMentions(`<p>${run}</p> a.html`)).toEqual(['a.html']);
+    });
+
+    test('is found as it always was: the longest name a run holds that ends in .htm or .html on its own', () => {
+        const mentions = /[\w%./-]+\.html?(?![\w-]|\.\w)/gi;
+        const alphabet = ['a', 'B', '1', '.', 'h', 't', 'm', 'l', 'H', 'T', 'M', 'L', '/', '-', '_', '%', '"', ' ', '\n', 'é'];
+        let seed = 7;
+        const next = (): number => {
+            seed = (seed * 48271) % 2147483647;
+
+            return seed;
+        };
+
+        for (const text of [
+            'a.html/b.html',
+            '.html',
+            'a.html-',
+            'a.htmlx',
+            'a.htm.html',
+            'a.html.b',
+            'a.html..',
+            'a.html.-b',
+            'x/.html',
+            'a.HTM b.Html',
+            'a.html%',
+            'é.html',
+            'a.ht'
+        ]) {
+            expect(pageMentions(text)).toEqual([...new Set(text.match(mentions) ?? [])]);
+        }
+
+        for (let i = 0; i < 3000; i++) {
+            const text = Array.from({ length: 1 + (next() % 16) }, () => alphabet[next() % alphabet.length]!).join('');
+
+            expect(pageMentions(text)).toEqual([...new Set(text.match(mentions) ?? [])]);
+        }
+    });
+
     test('stands on its own in an address that keeps every character, and hands its query to the page', () => {
         const html = '<!doctype html>\n<p class="a">100% & more? #1 (yes)\t\\</p>';
         const url = new URL(`${pageDataUrl(html)}?theme=dark#/work`);

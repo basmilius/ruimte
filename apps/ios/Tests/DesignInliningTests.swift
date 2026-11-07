@@ -106,6 +106,44 @@ import XCTest
         XCTAssertEqual(DesignFiles.pageMentions("a backup in notes.html.bak"), [])
     }
 
+    /// A scan that retries from every character of a run takes minutes here (`design-page.test.ts`).
+    func testAPageIsFoundInARunOfNameCharactersAsLongAsAPageWithoutTryingAgainFromEveryCharacterOfIt() {
+        let run = String(repeating: "A", count: 900_000)
+        XCTAssertEqual(DesignFiles.pageMentions(run), [])
+        XCTAssertEqual(DesignFiles.pageMentions(run + ".html"), [run + ".html"])
+        XCTAssertEqual(DesignFiles.pageMentions("<p>" + run + "</p> a.html"), ["a.html"])
+    }
+
+    func testAPageIsFoundAsItAlwaysWasTheLongestNameARunHoldsThatEndsInHtmOrHtmlOnItsOwn() {
+        let legacy = try! NSRegularExpression(
+            pattern: #"[A-Za-z0-9_%./-]+\.html?(?![A-Za-z0-9_-]|\.[A-Za-z0-9_])"#, options: .caseInsensitive)
+        func expected(_ text: String) -> [String] {
+            var found: [String] = []
+            for match in legacy.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+                let mention = String(text[Range(match.range, in: text)!])
+                if !found.contains(mention) { found.append(mention) }
+            }
+            return found
+        }
+        let alphabet = Array("aB1.htmlHTML/-_%\" \né")
+        var seed = 7
+        func next() -> Int {
+            seed = (seed * 48271) % 2_147_483_647
+            return seed
+        }
+        let cases = [
+            "a.html/b.html", ".html", "a.html-", "a.htmlx", "a.htm.html", "a.html.b", "a.html..", "a.html.-b", "x/.html",
+            "a.HTM b.Html", "a.html%", "é.html", "a.ht",
+        ]
+        for text in cases {
+            XCTAssertEqual(DesignFiles.pageMentions(text), expected(text), text)
+        }
+        for _ in 0..<3000 {
+            let text = String((0..<(1 + next() % 16)).map { _ in alphabet[next() % alphabet.count] })
+            XCTAssertEqual(DesignFiles.pageMentions(text), expected(text), text)
+        }
+    }
+
     // MARK: A page that frames another page
 
     func testAFramedPageStandsOnItsOwnWithItsFilesAndTheQueryAndFragmentItWasGiven() async throws {
@@ -210,6 +248,25 @@ import XCTest
         let page = try await folder.page("index.html")
         XCTAssertEqual(page.components(separatedBy: DesignFiles.pageDataURL("<p>one</p>")).count - 1, 3)
         XCTAssertFalse(page.contains(#"one.html"></iframe>"#))
+    }
+
+    /// Holds the main thread, which a page built on the main actor could not get past.
+    nonisolated private static func holdMainThread(until signal: DispatchSemaphore) -> Bool {
+        signal.wait(timeout: .now() + 20) == .success
+    }
+
+    func testAPageIsBuiltOffTheMainActorSoALongPageNeverStallsTheScreen() async throws {
+        let signal = DispatchSemaphore(value: 0)
+        let work = Task.detached {
+            try await DesignFiles.standalonePage("index.html", folder: "d") { path, _ in
+                if path == "d/a.png" { signal.signal() }
+                let text = path == "d/index.html" ? #"<img src="a.png">"# : ""
+                return MachineResource(data: path == "d/a.png" ? Data([1, 2, 3, 4]) : Data(text.utf8), mime: "image/png")
+            }
+        }
+        XCTAssertTrue(Self.holdMainThread(until: signal))
+        let page = try await work.value
+        XCTAssertEqual(String(decoding: page, as: UTF8.self), #"<img src="\#(pngURL)">"#)
     }
 
     func testALinkKeepsItsPathAndWhatAStylesheetNamesStaysUnresolved() async throws {

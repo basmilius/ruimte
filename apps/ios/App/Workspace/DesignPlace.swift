@@ -202,8 +202,6 @@ enum DesignFiles {
     private static let attributeReference = try! NSRegularExpression(
         pattern: #"\b(src|href|poster)\s*=\s*(["'])([^"']*)\2"#, options: .caseInsensitive)
     private static let cssReference = try! NSRegularExpression(pattern: #"url\(\s*(["']?)([^"')]+)\1\s*\)"#, options: .caseInsensitive)
-    private static let pageMention = try! NSRegularExpression(
-        pattern: #"[A-Za-z0-9_%./-]+\.html?(?![A-Za-z0-9_-]|\.[A-Za-z0-9_])"#, options: .caseInsensitive)
     private static let pageURLPrefix = "data:text/html;charset=utf-8,"
 
     /// The file a relative reference of a page names, relative to the design folder, or nil when it leaves the folder
@@ -269,16 +267,69 @@ enum DesignFiles {
 
     /// Every page a page names anywhere, in an attribute or inside its own script, once each: a script that builds
     /// `page.html?theme=dark` to frame it names the page only as text.
+    /// Found by walking each run of name characters once, back from its end; a pattern that retries from every
+    /// character of a long run takes time in the square of its length.
     static func pageMentions(_ html: String) -> [String] {
+        let bytes = Array(html.utf8)
         var found: [String] = []
-        for match in pageMention.matches(in: html, range: NSRange(html.startIndex..., in: html)) {
-            guard let range = Range(match.range, in: html) else { continue }
-            let mention = String(html[range])
-            if !found.contains(mention) {
-                found.append(mention)
+        var seen: Set<String> = []
+        var at = 0
+        while at < bytes.count {
+            guard isNameByte(bytes[at]) else {
+                at += 1
+                continue
             }
+            var end = at + 1
+            while end < bytes.count, isNameByte(bytes[end]) {
+                end += 1
+            }
+            if let page = pageNamed(in: bytes, start: at, end: end), seen.insert(page).inserted {
+                found.append(page)
+            }
+            at = end
         }
         return found
+    }
+
+    /// A byte of `\w`.
+    private static func isWordByte(_ byte: UInt8) -> Bool {
+        (byte >= 48 && byte <= 57) || (byte >= 65 && byte <= 90) || (byte >= 97 && byte <= 122) || byte == 95
+    }
+
+    /// A byte a file name may hold in a page's text: one of `[\w%./-]`.
+    private static func isNameByte(_ byte: UInt8) -> Bool {
+        isWordByte(byte) || byte == 37 || byte == 46 || byte == 47 || byte == 45
+    }
+
+    /// Whether the bytes at `at` spell `letters` (lowercase) in either case.
+    private static func spells(_ bytes: [UInt8], at: Int, _ letters: StaticString) -> Bool {
+        let wanted = UnsafeBufferPointer(start: letters.utf8Start, count: letters.utf8CodeUnitCount)
+        return wanted.indices.allSatisfy { bytes[at + $0] | 0x20 == wanted[$0] }
+    }
+
+    /// Whether a name may end at `end`: what follows goes on neither as a word, a dash, nor a dot and a word.
+    private static func endsName(_ bytes: [UInt8], at end: Int) -> Bool {
+        guard end < bytes.count else { return true }
+        let next = bytes[end]
+        if isWordByte(next) || next == 45 {
+            return false
+        }
+        return !(next == 46 && end + 1 < bytes.count && isWordByte(bytes[end + 1]))
+    }
+
+    /// The page a run of name characters, `bytes[start..<end]`, names: the run up to its last `.htm` or `.html` that
+    /// ends on its own, after at least one character. No other can follow it in the run, since that one would have
+    /// been the last.
+    private static func pageNamed(in bytes: [UInt8], start: Int, end: Int) -> String? {
+        for at in stride(from: end, through: start + 5, by: -1) {
+            let dot =
+                bytes[at - 5] == 46 && spells(bytes, at: at - 4, "html")
+                ? at - 5 : bytes[at - 4] == 46 && spells(bytes, at: at - 3, "htm") ? at - 4 : -1
+            if dot > start, endsName(bytes, at: at) {
+                return String(decoding: bytes[start..<at], as: UTF8.self)
+            }
+        }
+        return nil
     }
 
     /// A page standing on its own as an address a frame loads. Percent-encoded rather than base64, so a query after it
@@ -437,8 +488,10 @@ enum DesignFiles {
     /// The bounds hold for what is built, not for what is read: a file or page named in many places is in every one of
     /// them, a framed page is in its parent as the address that holds it, and one that does not fit stays the path it
     /// was. Reading stops at the same bounds, so a folder is not read past them either.
-    @MainActor static func standalonePage(
-        _ file: String, folder: String, read: @escaping (String, Int) async throws -> MachineResource
+    ///
+    /// It runs off the main actor: scanning and rewriting a page of megabytes takes long enough to stall the screen.
+    @concurrent static func standalonePage(
+        _ file: String, folder: String, read: @escaping @Sendable (String, Int) async throws -> MachineResource
     ) async throws -> Data {
         let page = try await read("\(folder)/\(file)", pageMaxBytes)
         let inlining = Inlining(folder: folder, read: read, total: page.data.count)
@@ -446,14 +499,14 @@ enum DesignFiles {
         return Data(html.utf8)
     }
 
-    @MainActor private final class Inlining {
+    private final class Inlining {
         let folder: String
-        let read: (String, Int) async throws -> MachineResource
+        let read: @Sendable (String, Int) async throws -> MachineResource
         var total: Int
         /// The address of each page framed so far, or nil for one that could not ride along.
         var pages: [String: String?] = [:]
 
-        init(folder: String, read: @escaping (String, Int) async throws -> MachineResource, total: Int) {
+        init(folder: String, read: @escaping @Sendable (String, Int) async throws -> MachineResource, total: Int) {
             self.folder = folder
             self.read = read
             self.total = total

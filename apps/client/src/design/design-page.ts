@@ -295,12 +295,96 @@ export function isPagePath(path: string): boolean {
     return /\.html?$/i.test(path);
 }
 
+/* A character a file name may hold in a page's text: one of `[\w%./-]`. */
+function isNameChar(code: number): boolean {
+    return isWordChar(code) || code === 37 || code === 46 || code === 47 || code === 45;
+}
+
+/* A character of `\w`. */
+function isWordChar(code: number): boolean {
+    return (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code === 95;
+}
+
+/* Whether the characters at `at` spell `letters` (lowercase) in either case. */
+function spells(html: string, at: number, letters: string): boolean {
+    for (let i = 0; i < letters.length; i++) {
+        if ((html.charCodeAt(at + i) | 0x20) !== letters.charCodeAt(i)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/* Whether a name may end at `end`: what follows goes on neither as a word, a dash, nor a dot and a word. */
+function endsName(html: string, end: number): boolean {
+    const next = html.charCodeAt(end);
+
+    if (Number.isNaN(next)) {
+        return true;
+    }
+
+    if (isWordChar(next) || next === 45) {
+        return false;
+    }
+
+    return !(next === 46 && isWordChar(html.charCodeAt(end + 1)));
+}
+
+/*
+ * The page a run of name characters, `html[start..end]`, names: the run up to its last `.htm` or `.html`
+ * that ends on its own, after at least one character. No other can follow it in the run, since that one
+ * would have been the last.
+ */
+function pageNamedIn(html: string, start: number, end: number): string | null {
+    for (let at = end; at >= start + 5; at--) {
+        const dot =
+            html.charCodeAt(at - 5) === 46 && spells(html, at - 4, 'html')
+                ? at - 5
+                : html.charCodeAt(at - 4) === 46 && spells(html, at - 3, 'htm')
+                  ? at - 4
+                  : -1;
+
+        if (dot > start && endsName(html, at)) {
+            return html.slice(start, at);
+        }
+    }
+
+    return null;
+}
+
 /*
  * Every page a page names anywhere, in an attribute or inside its own script, once each: a script that
- * builds `page.html?theme=dark` to frame it names the page only as text.
+ * builds `page.html?theme=dark` to frame it names the page only as text. Found by walking each run of
+ * name characters once, back from its end; a pattern that retries from every character of a long run
+ * takes time in the square of its length.
  */
 export function pageMentions(html: string): string[] {
-    return [...new Set(html.match(/[\w%./-]+\.html?(?![\w-]|\.\w)/gi) ?? [])];
+    const found = new Set<string>();
+    let at = 0;
+
+    while (at < html.length) {
+        if (!isNameChar(html.charCodeAt(at))) {
+            at++;
+            continue;
+        }
+
+        let end = at + 1;
+
+        while (end < html.length && isNameChar(html.charCodeAt(end))) {
+            end++;
+        }
+
+        const page = pageNamedIn(html, at, end);
+
+        if (page !== null) {
+            found.add(page);
+        }
+
+        at = end;
+    }
+
+    return [...found];
 }
 
 /*

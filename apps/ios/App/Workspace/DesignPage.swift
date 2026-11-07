@@ -215,9 +215,17 @@ private struct DesignPageView: View {
         _assets = State(initialValue: Self.assets(client, folder: folder))
     }
 
-    private static func read(_ client: any MachineRequesting) -> (String, Int) async throws -> MachineResource {
-        { path, maxBytes in
-            try await client.readResource(.object(["kind": .string("file"), "path": .string(path)]), maxBytes: maxBytes)
+    /// The client, for the code that builds the page off the main actor. Every call on it is made on the main actor, so
+    /// the page is only ever read through it from there.
+    private struct ReadingClient: @unchecked Sendable {
+        let client: any MachineRequesting
+    }
+
+    private static func read(_ client: any MachineRequesting) -> @Sendable (String, Int) async throws -> MachineResource {
+        let reading = ReadingClient(client: client)
+        return { path, maxBytes in
+            try await reading.client.readResource(
+                .object(["kind": .string("file"), "path": .string(path)]), maxBytes: maxBytes)
         }
     }
 
