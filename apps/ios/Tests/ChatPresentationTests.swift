@@ -101,7 +101,8 @@ final class ChatPresentationTests: XCTestCase {
         let presentation = ChatPresentation()
         presentation.setConnected(true)
         presentation.setInfo(ChatWire.info(["activeTurnId": .string("turn")]).chatInfo)
-        XCTAssertEqual(presentation.entries.map(\.kind), [.activity])
+        // A turn without items yet has no row to close, as on the desktop.
+        XCTAssertTrue(presentation.entries.isEmpty)
         XCTAssertTrue(presentation.isAnimating)
         presentation.setInfo(ChatWire.info(["activeTurnId": .null, "running": .bool(true)]).chatInfo)
         XCTAssertTrue(presentation.entries.isEmpty)
@@ -140,6 +141,7 @@ final class ChatPresentationTests: XCTestCase {
         presentation.replace(
             [
                 item("question", "question").setting("state", .string("pending")).setting("async", .bool(true))
+                    .setting("turnId", .string("turn"))
             ].map(\.chatItem), info: ChatWire.info(["activeTurnId": .string("turn")]).chatInfo)
         XCTAssertTrue(presentation.isAnimating)
         presentation.upsert(item("permission", "approval").setting("decision", .string("pending")).chatItem)
@@ -156,6 +158,7 @@ final class ChatPresentationTests: XCTestCase {
         presentation.replace(
             [
                 item("turn", "turn").setting("createdAt", .number(42)).setting("state", .string("running"))
+                    .setting("turnId", .string("turn"))
             ].map(\.chatItem), info: ChatWire.info(["activeTurnId": .string("turn")]).chatInfo)
         XCTAssertEqual(presentation.startedAt, 42)
         XCTAssertEqual(presentation.entries.map(\.id), ["working-turn"])
@@ -272,12 +275,12 @@ final class ChatPresentationTests: XCTestCase {
         let second = item("second", "turn").setting("turnId", .string("second")).setting("state", .string("running"))
             .setting("origin", .string("agent"))
         presentation.replace([first, agent, second].map(\.chatItem), info: nil)
-        XCTAssertEqual(presentation.entries.map(\.id), ["fold-first", "start-second"])
+        // A settled sub-agent stands beside its turn's fold, and the running turn closes on its working row.
+        XCTAssertEqual(presentation.entries.map(\.id), ["agent", "start-second", "working-second"])
         presentation.openSubagent(toolUseID: "spawn")
         XCTAssertTrue(presentation.expandedSubagents.contains("agent"))
         XCTAssertEqual(presentation.requestedItemID, "agent")
         XCTAssertEqual(presentation.scrollRequest, 1)
-        XCTAssertEqual(presentation.entries.map(\.id), ["fold-first", "agent", "start-second"])
     }
 
     func testProviderReplacementDiffsPreserveMultipleEditsToOneFile() {
@@ -360,7 +363,7 @@ final class ChatPresentationTests: XCTestCase {
         XCTAssertEqual(rows.map(\.id), ["u1", "fold-t1", "a1", "image"])
     }
 
-    func testABackgroundSubagentStaysOutOfTheFoldOfItsSettledTurnUntilItEnds() {
+    func testASubagentStaysOutOfTheFoldOfItsSettledTurnAlsoOnceItEnds() {
         let agent = { (status: String) in
             self.item("sa1", "subagent").setting("background", .bool(true)).setting("status", .string(status))
         }
@@ -368,7 +371,7 @@ final class ChatPresentationTests: XCTestCase {
             self.entries([self.settled, self.item("u1", "user"), self.tool("r1"), agent(status), self.reply("a1")])
         }
         XCTAssertEqual(rows("running").map(\.id), ["u1", "fold-t1", "sa1", "a1"])
-        XCTAssertEqual(rows("done").map(\.id), ["u1", "fold-t1", "a1"])
+        XCTAssertEqual(rows("done").map(\.id), ["u1", "fold-t1", "sa1", "a1"])
     }
 
     func testAnUnfoldedTurnShowsItsWorkInPlaceThenTheChangedFilesThenTheAnswerAndWhatFollowsIt() {
@@ -455,6 +458,121 @@ final class ChatPresentationTests: XCTestCase {
             "Read 3 files")
     }
 
+    func testATurnTheMachineCutShortKeepsWhatItLastSaidInSight() {
+        let note = item("n1", "note").setting("level", .string("warning"))
+            .setting("text", .string("This turn could not be resumed after the machine restarted: the CLI is gone."))
+        let values = [
+            item("t1", "turn").setting("state", .string("aborted")), item("u1", "user"), tool("r1"), reply("a1"),
+            tool("r2"),
+        ]
+        XCTAssertEqual(entries(values + [note]).map(\.id), ["u1", "fold-t1", "a1", "tools-r2", "n1"])
+        // A person who stopped the turn stopped its answer too.
+        XCTAssertEqual(entries(values).map(\.id), ["u1", "fold-t1"])
+    }
+
+    func testAMessageFromAnotherNodeAfterTheAnswerFoldsTheTurnWhereAPlainNoteDoesNot() {
+        let message = item("m1", "note").setting(
+            "message", .object(["from": .string("chat-2"), "title": .string("Lexer"), "text": .string("Done here.")]))
+        let values = [settled, item("u1", "user"), tool("r1"), reply("a1")]
+        XCTAssertEqual(entries(values + [item("n1", "note")]).map(\.id), ["u1", "fold-t1", "a1", "n1"])
+        XCTAssertEqual(entries(values + [message]).map(\.id), ["u1", "fold-t1"])
+    }
+
+    func testEachRunningTurnEndsOnAWorkingRowOfItsOwnUnderTheCallItRunsLast() {
+        let rows = entries([
+            running, item("u1", "user"), tool("b1", "Bash", state: "running"), tool("g1", "Grep", state: "running"),
+            tool("r1"), item("t2", "turn", turn: "t2"), item("u2", "user", turn: "t2"), reply("a2", turn: "t2"),
+        ])
+        XCTAssertEqual(rows.map(\.id), ["u1", "tools-b1", "working-t1", "u2", "a2"])
+        XCTAssertEqual(rows[2].items.map(\.id), ["t1", "g1"])
+        let answered = [settled, item("u1", "user"), reply("a1")]
+        XCTAssertEqual(entries(answered, active: "t1").map(\.id), ["u1", "a1", "working-t1"])
+        // An active turn without items yet has nothing to close.
+        XCTAssertFalse(entries(answered, active: "t9").contains { $0.kind == .activity })
+    }
+
+    func testAnEarlierPageFoldsTheTurnItStartsAndJoinsTheRunItContinues() {
+        let presentation = ChatPresentation()
+        presentation.replace([tool("b2", "Bash"), reply("a1")].map(\.chatItem), info: nil)
+        XCTAssertEqual(presentation.entries.map(\.id), ["tools-b2", "a1"])
+        presentation.prepend([settled, item("u1", "user"), tool("b1", "Bash")].map(\.chatItem))
+        XCTAssertEqual(presentation.entries.map(\.id), ["u1", "fold-t1", "a1"])
+        XCTAssertEqual(presentation.expandedTurns, [])
+        presentation.toggleTurn("t1")
+        XCTAssertEqual(presentation.entries.map(\.id), ["u1", "fold-t1", "tools-b1", "a1"])
+        XCTAssertEqual(presentation.entries[2].items.map(\.id), ["b1", "b2"])
+    }
+
+    func testTheChangedFilesCardCountsOnlyFileChangesAndNeedsSomethingToShow() {
+        let patch: JSONValue = .array([
+            .object(["path": .string("a.ts"), "kind": .string("update"), "diff": .string("@@ -1 +1 @@\n-x\n+y")])
+        ])
+        let ids = { (values: [JSONValue]) in
+            self.entries(
+                [self.settled.setting("checkpoint", .string("abc")), self.item("u1", "user")] + values
+                    + [self.reply("a1")]
+            ).map(\.id)
+        }
+        XCTAssertFalse(ids([tool("r1")]).contains("files-t1"))
+        XCTAssertFalse(ids([tool("b1", "Bash").setting("changes", patch)]).contains("files-t1"))
+        XCTAssertTrue(ids([tool("p1", "ApplyPatch").setting("changes", patch)]).contains("files-t1"))
+    }
+
+    func testAnOpenRunOfCallsStaysOpenWithItsThread() {
+        let presentation = ChatPresentation()
+        presentation.replace([item("u1", "user"), tool("r1"), tool("r2")].map(\.chatItem), info: nil)
+        presentation.toggleGroup("tools-r1")
+        XCTAssertEqual(presentation.expandedGroups, ["tools-r1"])
+        presentation.upsert(tool("r3").chatItem)
+        XCTAssertEqual(presentation.expandedGroups, ["tools-r1"])
+        presentation.replace([item("u1", "user")].map(\.chatItem), info: nil)
+        XCTAssertEqual(presentation.expandedGroups, [])
+    }
+
+    func testHiddenToolCallsLeaveTheTurnItsFoldAndImagesAndOpenOnlyWhatShows() {
+        let presentation = ChatPresentation()
+        presentation.setHidesToolCalls(true)
+        let ids = { (values: [JSONValue], active: String?) in
+            presentation.replace(
+                values.map(\.chatItem), info: active.map { ChatWire.info(["activeTurnId": .string($0)]).chatInfo })
+            return presentation.entries.map(\.id)
+        }
+        let onlyCalls = [settled, item("u1", "user"), tool("r1"), tool("image", "ImageGeneration"), reply("a1")]
+        XCTAssertEqual(ids(onlyCalls, nil), ["u1", "fold-t1", "image", "a1"])
+        XCTAssertFalse(presentation.entries[1].expandable)
+        presentation.toggleTurn("t1")
+        XCTAssertEqual(presentation.entries.map(\.id), ["u1", "fold-t1", "image", "a1"])
+        let thought = item("k1", "thinking").setting("text", .string("Which file first?"))
+        _ = ids([settled, item("u1", "user"), thought, tool("r1"), reply("a1")], nil)
+        presentation.toggleTurn("t1")
+        XCTAssertEqual(presentation.entries.map(\.id), ["u1", "fold-t1", "k1", "a1"])
+        presentation.setHidesToolCalls(false)
+        XCTAssertEqual(presentation.entries.map(\.id), ["u1", "fold-t1", "k1", "tools-r1", "a1"])
+        presentation.setHidesToolCalls(true)
+        XCTAssertEqual(
+            ids([running, item("u1", "user"), tool("r1", state: "running")], "t1"), ["u1", "working-t1"])
+    }
+
+    func testRuimteRunAsACommandAndAsAToolIsTwoLooks() {
+        let command = tool("c1", "Bash", ["command": .string("ruimte-context read note-1")]).chatTool
+        let call = tool("m1", "mcp__ruimte__context_read", ["id": .string("note-1")]).chatTool
+        XCTAssertEqual(ChatToolPresentation.groupLabel([command, command]).text, "Used Ruimte Context 2 times")
+        XCTAssertEqual(ChatToolPresentation.groupLabel([call, call]).text, "Used Ruimte Context 2 times")
+        XCTAssertEqual(ChatToolPresentation.groupLabel([command, call]).text, "2 tool calls")
+        XCTAssertEqual(ChatToolPresentation.groupMark([command, call]), .lucide("terminal"))
+        XCTAssertEqual(ChatToolPresentation.groupMark([call, call]), .ruimte)
+        XCTAssertEqual(ChatToolPresentation.turnSummary([command, call, command]).count, 2)
+    }
+
+    func testARunningRunWearsTheMarkOfItsLatestCall() {
+        let read = tool("r1").chatTool
+        let grep = tool("g1", "Grep", state: "running").chatTool
+        let bash = tool("b1", "Bash", state: "running").chatTool
+        XCTAssertEqual(ChatToolPresentation.groupMark([read, grep, bash]), .lucide("terminal"))
+        XCTAssertEqual(ChatToolPresentation.groupMark([read, grep]), .lucide("search"))
+        XCTAssertEqual(ChatToolPresentation.groupMark([read, tool("g2", "Grep").chatTool]), .lucide("eye"))
+    }
+
     func testACallThatWaitsOnAnApprovalIsKnownByItsToolUse() {
         let presentation = ChatPresentation()
         let approval = item("p", "approval").setting("toolUseId", .string("call"))
@@ -538,6 +656,16 @@ final class ChatToolPresentationTests: XCTestCase {
         XCTAssertEqual(ChatToolPresentation.lineDetail(call("running", [:])), "Still going")
         XCTAssertEqual(ChatToolPresentation.lineDetail(call("running", ["target": .string("a.ts")])), "a.ts")
         XCTAssertEqual(ChatToolPresentation.lineDetail(call("done", [:])), "")
+    }
+
+    func testThePatchANotebookReadAPlanAndAWorkflowSayWhatTheDesktopsCatalogDoes() {
+        XCTAssertEqual(summary("ApplyPatch", ["summary": .string("a.ts, b.ts"), "patch": .string("***")]), "a.ts, b.ts")
+        XCTAssertEqual(summary("NotebookRead", ["notebook_path": .string("a.ipynb")]), "a.ipynb")
+        XCTAssertEqual(summary("Workflow", ["script": .string("run()")]), "")
+        XCTAssertEqual(summary("TodoWrite", ["title": .string("Plan")]), "")
+        XCTAssertTrue(
+            ChatToolPresentation.summaryIsPath(name: "NotebookRead", input: .object(["notebook_path": .string("a")])))
+        XCTAssertFalse(ChatToolPresentation.summaryIsPath(name: "ApplyPatch", input: .object(["summary": .string("a")])))
     }
 
     func testAnApprovalSaysWhatItsCallIsAbout() {

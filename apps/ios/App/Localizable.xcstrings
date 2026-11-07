@@ -4256,6 +4256,46 @@
         }
       }
     },
+    "%lld edits" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 edit"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld edits"
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 bewerking"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld bewerkingen"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld chats" : {
       "localizations" : {
         "en" : {
@@ -11278,12 +11318,12 @@
         }
       }
     },
-    "Dismissed" : {
+    "(dismissed)" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Weggeklikt"
+            "value" : "(weggeklikt)"
           }
         }
       }
@@ -13049,6 +13089,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Samenvatting verbergen"
+          }
+        }
+      }
+    },
+    "Hide the call" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aanroep verbergen"
+          }
+        }
+      }
+    },
+    "Show the call" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aanroep tonen"
+          }
+        }
+      }
+    },
+    "Show what an agent reads and runs" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laten zien wat een agent leest en draait"
+          }
+        }
+      }
+    },
+    "The files an agent read and the commands it ran." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De bestanden die een agent las en de commando's die hij draaide."
           }
         }
       }
@@ -15753,12 +15833,12 @@
         }
       }
     },
-    "Not answered" : {
+    "(not answered)" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Niet beantwoord"
+            "value" : "(niet beantwoord)"
           }
         }
       }
@@ -20561,6 +20641,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sub-agent klaar: %@"
+          }
+        }
+      }
+    },
+    "Background task finished: %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Achtergrondtaak klaar: %@"
           }
         }
       }

@@ -161,13 +161,20 @@ final class ChatScrollTests: XCTestCase {
     func testPrependingAndChangingTopInsetPreserveTheSameMessageAtTheSameVisiblePosition() {
         var state = ChatViewportState()
         state.readHere()
-        let anchor = ChatReadingAnchor(id: "message", distanceFromTop: -35)
-        let before = anchor.offset(itemTop: 600, inset: 20)
+        let anchor = ChatReadingAnchor(rows: [.init(id: "message", distanceFromTop: -35)])
+        let before = anchor.offset(inset: 20) { _ in 600 }
         XCTAssertEqual(before, 615)
-        let after = anchor.offset(itemTop: 840, inset: 40)
+        let after = anchor.offset(inset: 40) { _ in 840 }
         XCTAssertEqual(
             state.offset(geometry: .init(contentHeight: 2000, height: 600, topInset: 40), readingAnchor: after), 835)
         XCTAssertEqual(840 - 835 - 40, -35)
+    }
+
+    func testAReaderWhoseFirstRowFoldedAwayKeepsTheirPlaceByTheNextRowOnScreen() {
+        let anchor = ChatReadingAnchor(
+            rows: [.init(id: "folded", distanceFromTop: -10), .init(id: "answer", distanceFromTop: 120)])
+        XCTAssertEqual(anchor.offset(inset: 0) { $0 == "answer" ? 900 : nil }, 780)
+        XCTAssertNil(anchor.offset(inset: 0) { _ in nil })
     }
 
     func testExpansionStopsFollowingAndShortContentStaysWithinItsInsets() {
@@ -342,7 +349,8 @@ private final class ChatLayoutFixture: NSObject, UICollectionViewDataSource {
                 guard self.ids.indices.contains(index.item),
                     let attributes = self.layout.layoutAttributesForItem(at: index), attributes.frame.maxY > top
                 else { continue }
-                return ChatReadingAnchor(id: self.ids[index.item], distanceFromTop: attributes.frame.minY - top)
+                return ChatReadingAnchor(
+                    rows: [.init(id: self.ids[index.item], distanceFromTop: attributes.frame.minY - top)])
             }
             return nil
         }

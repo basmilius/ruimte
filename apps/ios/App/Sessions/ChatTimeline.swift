@@ -60,6 +60,19 @@ struct ChatTimeline: UIViewControllerRepresentable {
     }
 }
 
+/// Hands this device's "Show what an agent reads and runs" to a thread; like the desktop's, the setting is the
+/// client's own and never the machine's.
+struct ChatToolCallsSetting: ViewModifier {
+    static let key = "ruimte.chat.hideToolCalls"
+
+    let presentation: ChatPresentation
+    @AppStorage(Self.key) private var hides = false
+
+    func body(content: Content) -> some View {
+        content.onChange(of: hides, initial: true) { _, hides in presentation.setHidesToolCalls(hides) }
+    }
+}
+
 /// How far below the composer's top the timeline starts to fade, so it keeps showing behind what stands above the
 /// field. It goes straight to the controller: as view state it re-rendered the screen from the composer's own layout
 /// pass, and the app hung in that loop.
@@ -139,11 +152,22 @@ struct ChatViewportState {
     }
 }
 
+/// Where the reader is, by the rows on screen from the top down. An earlier page can fold the turn the first of them
+/// stood in, so a later one that is still there holds the place instead.
 struct ChatReadingAnchor {
-    let id: String
-    let distanceFromTop: CGFloat
+    struct Row {
+        let id: String
+        let distanceFromTop: CGFloat
+    }
 
-    func offset(itemTop: CGFloat, inset: CGFloat) -> CGFloat { itemTop - distanceFromTop - inset }
+    let rows: [Row]
+
+    func offset(inset: CGFloat, itemTop: (String) -> CGFloat?) -> CGFloat? {
+        for row in rows {
+            if let top = itemTop(row.id) { return top - row.distanceFromTop - inset }
+        }
+        return nil
+    }
 }
 
 struct ChatExpansionAnchor {
@@ -271,10 +295,10 @@ final class ChatTimelineCollection: UICollectionView {
     }
 
     func targetOffset(_ proposed: CGPoint) -> CGPoint {
-        guard !userIsScrolling, !scrollingToTarget, !viewport.followsLatest,
-            let anchor = readingAnchor, let top = itemTop?(anchor.id)
+        guard !userIsScrolling, !scrollingToTarget, !viewport.followsLatest, let itemTop,
+            let offset = readingAnchor?.offset(inset: adjustedContentInset.top, itemTop: itemTop)
         else { return proposed }
-        return CGPoint(x: proposed.x, y: geometry.clamped(anchor.offset(itemTop: top, inset: adjustedContentInset.top)))
+        return CGPoint(x: proposed.x, y: geometry.clamped(offset))
     }
 
     override func layoutSubviews() {
@@ -303,9 +327,7 @@ final class ChatTimelineCollection: UICollectionView {
         contentChangePending = false
         if revealExpansion() { return }
         guard needsRestoration else { return }
-        let anchorOffset = readingAnchor.flatMap { anchor in
-            itemTop?(anchor.id).map { anchor.offset(itemTop: $0, inset: adjustedContentInset.top) }
-        }
+        let anchorOffset = itemTop.flatMap { readingAnchor?.offset(inset: adjustedContentInset.top, itemTop: $0) }
         if let offset = viewport.offset(geometry: geometry, readingAnchor: anchorOffset),
             abs(contentOffset.y - offset) >= 1
         {
@@ -836,7 +858,9 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
 
     private func visibleAnchor() -> ChatReadingAnchor? {
         let visible = visibleRows()
-        return visible.rows.first.map { ChatReadingAnchor(id: $0.id, distanceFromTop: $0.frame.minY - visible.top) }
+        guard !visible.rows.isEmpty else { return nil }
+        return ChatReadingAnchor(
+            rows: visible.rows.map { ChatReadingAnchor.Row(id: $0.id, distanceFromTop: $0.frame.minY - visible.top) })
     }
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) { collection.beginUserScroll() }
@@ -1079,40 +1103,44 @@ struct ChatEntryView: View {
     let chatID: String
     var workspace: MobileWorkspace?
     @Environment(\.chatUiModels) private var uiModels
-    @State private var expanded = false
 
     var body: some View {
         Group {
             switch entry.kind {
-            case .activity: ChatWorkingRow(presentation: presentation)
+            case .activity: ChatWorkingRow(entry: entry, presentation: presentation)
             case .turnFold:
                 if let record = entry.items.first, let turn = record.item.turnItem {
                     let turnID = turn.turnId ?? turn.id
-                    HStack(spacing: 10) {
-                        ChatExpansionButton(expanding: !presentation.expandedTurns.contains(turnID)) {
-                            presentation.toggleTurn(turnID)
-                        } label: {
-                            // A line and not a button, like the tool lines it hides; the work reads fainter than the time.
-                            HStack(spacing: 8) {
-                                Image(
-                                    lucide: presentation.expandedTurns.contains(turnID)
-                                        ? "chevron-down" : "chevron-right",
-                                    size: 12)
-                                Text(ChatPresentation.turnLabel(turn, items: entry.items.map(\.item)))
-                                    .layoutPriority(1)
-                                let work = ChatToolPresentation.turnSummary(entry.items.compactMap(\.item.toolItem))
-                                if !work.isEmpty {
-                                    Text(ChatToolPresentation.turnLine(work)).foregroundStyle(MobileStyle.faint)
-                                }
-                            }
-                            .font(.footnote).lineLimit(1).foregroundStyle(
-                                turn.state == .error ? MobileStyle.statusError : MobileStyle.muted
-                            )
-                            .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading).contentShape(Rectangle())
-                        }.buttonStyle(.plain)
-                            .accessibilityValue(presentation.expandedTurns.contains(turnID) ? "Expanded" : "Collapsed")
-                            .modifier(ChatForkMenu(presentation: presentation, turnID: record.id))
+                    let expanded = entry.expandable && presentation.expandedTurns.contains(turnID)
+                    // A line and not a button, like the tool lines it hides; the work reads fainter than the time.
+                    let line = HStack(spacing: 8) {
+                        if entry.expandable {
+                            Image(lucide: expanded ? "chevron-down" : "chevron-right", size: 12)
+                        }
+                        Text(ChatPresentation.turnLabel(turn, items: entry.items.map(\.item)))
+                            .layoutPriority(1)
+                        let work = ChatToolPresentation.turnSummary(entry.items.compactMap(\.item.toolItem))
+                        if !work.isEmpty {
+                            Text(ChatToolPresentation.turnLine(work)).foregroundStyle(MobileStyle.faint)
+                        }
                     }
+                    .font(.footnote).lineLimit(1).foregroundStyle(
+                        turn.state == .error ? MobileStyle.statusError : MobileStyle.muted
+                    )
+                    .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading).contentShape(Rectangle())
+                    Group {
+                        if entry.expandable {
+                            ChatExpansionButton(expanding: !expanded) {
+                                presentation.toggleTurn(turnID)
+                            } label: {
+                                line
+                            }.buttonStyle(.plain)
+                                .accessibilityValue(expanded ? "Expanded" : "Collapsed")
+                        } else {
+                            line.accessibilityElement(children: .combine)
+                        }
+                    }
+                    .modifier(ChatForkMenu(presentation: presentation, turnID: record.id))
                 }
             case .forks:
                 if let turn = entry.items.first {
@@ -1159,7 +1187,12 @@ struct ChatEntryView: View {
                     ChatOutputCardView(card: card, presentation: presentation, client: client)
                 }
             case .tools:
-                DisclosureGroup(isExpanded: $expanded) {
+                DisclosureGroup(
+                    isExpanded: Binding(
+                        get: { presentation.expandedGroups.contains(entry.id) },
+                        set: { if $0 != presentation.expandedGroups.contains(entry.id) { presentation.toggleGroup(entry.id) } }
+                    )
+                ) {
                     ForEach(entry.items) { item in
                         ChatObservedRow(record: item, client: client, chatID: chatID, presentation: presentation)
                     }
@@ -1168,11 +1201,9 @@ struct ChatEntryView: View {
                     let running = tools.filter { $0.state == .running }.count
                     let failures = ChatToolPresentation.groupFailures(tools)
                     HStack(spacing: 8) {
-                        if running > 0 {
-                            Spinner(size: 12).foregroundStyle(MobileStyle.statusRunning)
-                        } else {
-                            ChatToolMarkView(mark: tools.first.map(ChatToolPresentation.mark) ?? .lucide("wrench"))
-                        }
+                        // The call running last wears the live tone, as a running call's own line does.
+                        ChatToolMarkView(mark: ChatToolPresentation.groupMark(tools))
+                            .foregroundStyle(running > 0 ? MobileStyle.accent : MobileStyle.muted)
                         if running > 0 {
                             Text("\(tools.count) tool calls").lineLimit(1)
                             Text("\(running) running").foregroundStyle(MobileStyle.faint).fixedSize()
@@ -1342,11 +1373,12 @@ private struct ChatTimelineRow: View {
                 ForEach(Array(asked.questions.enumerated()), id: \.offset) { _, question in
                     Label(question.question, lucideIcon: "message-circle-question-mark", iconSize: 14).font(
                         .subheadline)
-                    if let answer = asked.answers?[question.id] {
+                    if asked.state == .answered, let answer = asked.answers?[question.id] {
                         Text(answer).font(.subheadline)
-                    } else {
-                        Text(asked.state == .dismissed ? "Dismissed" : "Not answered").font(.caption)
-                            .foregroundStyle(MobileStyle.muted)
+                    } else if asked.state == .cancelled {
+                        Text("(not answered)").font(.caption).foregroundStyle(MobileStyle.muted)
+                    } else if asked.state == .dismissed {
+                        Text("(dismissed)").font(.caption).foregroundStyle(MobileStyle.muted)
                     }
                 }
             case .note(let note):
