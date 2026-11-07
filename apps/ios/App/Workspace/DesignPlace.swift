@@ -104,6 +104,26 @@ enum DesignFiles {
             }
     }
 
+    /// What the pages list shows. Only a missing folder is a design without pages; any other failed read keeps what
+    /// the list had and says so, so a dropped connection never reads as an empty design.
+    struct Listing: Equatable {
+        var pages: [JSONValue]?
+        var found = false
+        var problem: String?
+
+        /// The listing after a read of the design folder: the entries it listed, or the error that stopped it.
+        func after(_ outcome: Result<[JSONValue], Error>) -> Listing {
+            switch outcome {
+            case .success(let entries):
+                return Listing(pages: DesignFiles.pages(entries), found: true, problem: nil)
+            case .failure(MachineClientError.server(let code, _)) where code == "not-found":
+                return Listing(pages: [], found: false, problem: nil)
+            case .failure(let error):
+                return Listing(pages: pages, found: found, problem: error.localizedDescription)
+            }
+        }
+    }
+
     /// A page as a person names it: its file without the extension.
     static func pageName(_ file: String) -> String {
         file.replacingOccurrences(of: #"\.html?$"#, with: "", options: [.regularExpression, .caseInsensitive])

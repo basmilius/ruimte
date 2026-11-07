@@ -114,13 +114,37 @@ private struct DesignPagesList: View {
     let client: any MachineRequesting
     let folder: String
     let workspaceFolder: String
-    @State private var pages: [JSONValue]?
-    @State private var found = false
+    @State private var listing = DesignFiles.Listing()
     @State private var open: String?
 
+    private var found: Bool { listing.found }
+
     var body: some View {
+        VStack(spacing: 0) {
+            if let problem = listing.problem {
+                SessionErrorBanner(message: problem) { Task { await load() } }
+            }
+            content
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationDestination(item: $open) { file in
+            DesignPageView(client: client, folder: folder, file: file)
+        }
+        // Whether the folder is there decides which changes count, so the watch starts over once it comes or goes.
+        .task(id: "\(folder):\(found)") {
+            await RemotePageLifecycle.run(
+                client: client, events: ["fs.changed"],
+                matches: { [folder, found] event in
+                    return event.list("paths").compactMap(\.stringValue).contains { DesignFiles.changeReaches($0, folder: folder, found: found) }
+                },
+                subscription: { fsWatch(client, path: workspaceFolder) }, load: load)
+        }
+        .refreshable { await load() }
+    }
+
+    @ViewBuilder private var content: some View {
         Group {
-            if let pages, !pages.isEmpty {
+            if let pages = listing.pages, !pages.isEmpty {
                 MobileList {
                     ForEach(pages, id: \.stableName) { page in
                         let name = page.text("name")
@@ -142,7 +166,10 @@ private struct DesignPagesList: View {
                         .modifier(MobileSidebarRow())
                     }
                 }
-            } else if pages != nil {
+            } else if listing.problem != nil {
+                // The banner above says why; an empty state here would call a failed read a design without pages.
+                Color.clear
+            } else if listing.pages != nil {
                 ContentUnavailableView(
                     String(localized: "No pages yet"), lucideIcon: "swatch-book",
                     description: Text("Ask the chat to make a page. It shows here as soon as it is written."))
@@ -151,19 +178,6 @@ private struct DesignPagesList: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .navigationDestination(item: $open) { file in
-            DesignPageView(client: client, folder: folder, file: file)
-        }
-        // Whether the folder is there decides which changes count, so the watch starts over once it comes or goes.
-        .task(id: "\(folder):\(found)") {
-            await RemotePageLifecycle.run(
-                client: client, events: ["fs.changed"],
-                matches: { [folder, found] event in
-                    return event.list("paths").compactMap(\.stringValue).contains { DesignFiles.changeReaches($0, folder: folder, found: found) }
-                },
-                subscription: { fsWatch(client, path: workspaceFolder) }, load: load)
-        }
-        .refreshable { await load() }
     }
 
     private func load() async {
@@ -171,11 +185,11 @@ private struct DesignPagesList: View {
             // Hidden too: git ignores a private design's folder, and a listing leaves out what git ignores.
             let listed = try await client.request(
                 "fs.list", payload: .object(["path": .string(folder), "depth": .number(1), "hidden": .bool(true)]))
-            pages = DesignFiles.pages(listed.list("entries"))
-            found = true
+            listing = listing.after(.success(listed.list("entries")))
+        } catch is CancellationError {
+            return
         } catch {
-            pages = []
-            found = false
+            listing = listing.after(.failure(error))
         }
     }
 }

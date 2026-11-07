@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteTransport
 import XCTest
 
 @testable import Ruimte
@@ -83,5 +84,36 @@ final class DesignPlaceTests: XCTestCase {
         XCTAssertTrue(page.contains(#"<img src="data:image/png;base64,AA">"#))
         XCTAssertTrue(page.contains("url(data:image/jpeg;base64,BB)"))
         XCTAssertTrue(page.contains(#"href="other.html""#))
+    }
+
+    private let kept = DesignFiles.Listing(pages: [.object(["name": .string("a.html"), "kind": .string("file")])], found: true)
+    private let dropped = MachineClientError.disconnected
+
+    func testAMissingFolderIsADesignWithoutPages() {
+        let missing = MachineClientError.server(code: "not-found", message: "That folder is not there")
+        XCTAssertEqual(kept.after(.failure(missing)), DesignFiles.Listing(pages: [], found: false, problem: nil))
+    }
+
+    func testAnotherErrorKeepsTheEarlierPagesAndSaysWhy() {
+        let next = kept.after(.failure(dropped))
+        XCTAssertEqual(next.pages, kept.pages)
+        XCTAssertTrue(next.found)
+        XCTAssertEqual(next.problem, dropped.localizedDescription)
+    }
+
+    func testAnotherErrorWithoutPagesIsNotTheEmptyState() {
+        let denied = MachineClientError.server(code: "forbidden", message: "Not allowed")
+        let next = DesignFiles.Listing().after(.failure(denied))
+        XCTAssertNil(next.pages)
+        XCTAssertEqual(next.problem, "Not allowed")
+    }
+
+    func testAReadThatWorksClearsTheError() {
+        let failed = kept.after(.failure(dropped))
+        let entries: [JSONValue] = [.object(["name": .string("b.html"), "kind": .string("file")])]
+        let next = failed.after(.success(entries))
+        XCTAssertEqual(next.pages?.map { $0.text("name") }, ["b.html"])
+        XCTAssertTrue(next.found)
+        XCTAssertNil(next.problem)
     }
 }
