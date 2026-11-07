@@ -2585,6 +2585,36 @@
         }
       }
     },
+    "Start browsing in" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bladeren beginnen in"
+          }
+        }
+      }
+    },
+    "Where files and Open folder start on this machine. Empty means its home folder." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waar Bestanden en Map openen op deze machine beginnen. Leeg is de thuismap."
+          }
+        }
+      }
+    },
+    "Could not save the start folder. %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kon de beginmap niet opslaan. %@"
+          }
+        }
+      }
+    },
     "Reachable on the local network" : {
       "localizations" : {
         "nl" : {

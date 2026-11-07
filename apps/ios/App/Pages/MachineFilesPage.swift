@@ -85,7 +85,7 @@ struct MachineFilesPage: View {
                 Text("This folder has more entries than the machine can list at once.").font(.footnote).foregroundStyle(MobileStyle.muted)
             }
         }
-        .navigationTitle(path == "~" ? String(localized: "Files") : URL(fileURLWithPath: path).lastPathComponent)
+        .navigationTitle(path == "~" ? String(localized: "Files") : MachinePath(inferring: path).name(path))
         .navigationDestination(item: $selectedEntry) { entry in
             if entry.directory {
                 MachineFilesPage(client: client, path: entry.path, project: project, marks: marks)
@@ -112,8 +112,7 @@ struct MachineFilesPage: View {
                 client: client, events: ["fs.changed"],
                 matches: { event in
                     let resolved = state.value?.text("path") ?? path
-                    let root = event.text("root")
-                    return resolved == root || resolved.hasPrefix(root + "/")
+                    return MachinePath(inferring: resolved).isBelow(resolved, root: event.text("root"))
                 },
                 subscription: { fsWatch(client, path: state.value?.text("path") ?? path) },
                 start: { if path == "~" { await load() } }, load: load)
@@ -135,7 +134,7 @@ struct MachineFilesPage: View {
 
     private func load() async {
         await state.load {
-            let resolved = path == "~" ? try await client.request("server.hello").text("home") : path
+            let resolved = path == "~" ? try await MachinePath.startFolder(client: client) : path
             return try await client.request(
                 "fs.list", payload: .object(["path": .string(resolved), "depth": .number(1), "hidden": .bool(hidden)]))
         }
@@ -257,10 +256,11 @@ struct FileContentPage: View {
                 await changes.load(client: client, path: path)
             }
             .task(id: path) {
-                let parent = URL(fileURLWithPath: path).deletingLastPathComponent().path
+                let style = MachinePath(inferring: path)
+                let parent = style.parent(path)
                 await RemotePageLifecycle.run(
                     client: client, events: ["fs.changed"],
-                    matches: { parent == $0.text("root") || parent.hasPrefix($0.text("root") + "/") },
+                    matches: { style.isBelow(parent, root: $0.text("root")) },
                     subscription: { fsWatch(client, path: parent) }, load: load)
             }
             // Only a pause, and not on the way into full screen: the page comes back without reading the file again.
@@ -270,8 +270,8 @@ struct FileContentPage: View {
             }
         }
     }
-    private var name: String { URL(fileURLWithPath: path).lastPathComponent }
-    private var fileExtension: String { URL(fileURLWithPath: path).pathExtension.lowercased() }
+    private var name: String { MachinePath(inferring: path).name(path) }
+    private var fileExtension: String { MachinePath(inferring: path).fileExtension(path) }
     private var isHTML: Bool { ["html", "htm"].contains(fileExtension) }
     private var isMarkdown: Bool { ["md", "markdown"].contains(fileExtension) }
 

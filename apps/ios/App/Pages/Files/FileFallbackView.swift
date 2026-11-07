@@ -17,7 +17,7 @@ struct FileFallbackView: View {
     @State private var problem: String?
     @State private var preview: URL?
 
-    private var name: String { URL(fileURLWithPath: path).lastPathComponent }
+    private var name: String { MachinePath(inferring: path).name(path) }
     private var available: Bool { FileKinds.machineServes(mime: mime) && FileKinds.fitsInMemory(size: size) }
 
     var body: some View {
