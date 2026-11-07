@@ -94,6 +94,7 @@ const bridge = {
     browserContextAction: (action: BrowserContextAction): void => ipcRenderer.send('browser:context-action', action),
     onGuestFocus: subscribe<[webContentsId: number]>('guest:focus'),
     onOpenSettings: subscribe<[section: string | null]>('menu:settings'),
+    quit: (): void => ipcRenderer.send('app:quit'),
     setLanguage: (language: string): void => ipcRenderer.send('app:language', language),
     setMenu: (spec: MenuSpec): void => ipcRenderer.send('menu:set', spec),
     onMenuCommand: subscribe<[id: string]>('menu:run'),

@@ -97,6 +97,9 @@ export function installMenu(ipc: AppIpc, options: MenuOptions): AppMenu {
         }
     };
 
+    // The page has no quit of its own. `app.quit()` is what a native Quit does, so the quit question follows from it.
+    ipc.on('app:quit', () => app.quit());
+
     ipc.on('menu:set', (event, spec: MenuSpec) => {
         const window = ipc.senderWindow(event);
         if (window && settingsOnLoad.has(window.id)) {

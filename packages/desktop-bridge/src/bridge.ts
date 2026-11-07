@@ -151,6 +151,8 @@ export interface DesktopBridge {
        command's id. Without them the shell keeps its own fixed menu. */
     setMenu?(spec: MenuSpec): void;
     onMenuCommand?(listener: (id: string) => void): () => void;
+    /* Quits the app as a native Quit does, so the shell asks its quit question on the way out. Offered in every machine mode. */
+    quit?(): void;
     /* Retained by the shell after its last window closes, for the native quit question. */
     setLanguage?(language: string): void;
     isFullscreen(): Promise<boolean>;

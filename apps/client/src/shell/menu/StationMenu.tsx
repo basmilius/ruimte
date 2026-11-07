@@ -4,10 +4,12 @@ import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
 import { Menu as MenuGlyph } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { desktop } from '@/desktop/bridge';
 import { runMenuCommand } from '@/shell/menu/actions';
 import { menuContext } from '@/shell/menu/context';
 import { menuIconOf } from '@/shell/menu/icons';
 import { menuModel } from '@/shell/menu/model';
+import { useBackgroundServiceState } from '@/shell/use-background-service';
 import { IS_STATION } from '@/station';
 import { Brand } from '@/ui/Brand';
 
@@ -21,7 +23,19 @@ function RowIcon({ id }: { id: string }) {
     );
 }
 
-function Submenu({ id, label, items, disabled = false }: { id: string; label: string; items: MenuNode[]; disabled?: boolean }) {
+function Submenu({
+    id,
+    label,
+    items,
+    canStopMachine,
+    disabled = false
+}: {
+    id: string;
+    label: string;
+    items: MenuNode[];
+    canStopMachine: boolean;
+    disabled?: boolean;
+}) {
     return (
         <Menu.SubmenuRoot disabled={disabled}>
             <Menu.SubmenuTrigger>
@@ -29,19 +43,28 @@ function Submenu({ id, label, items, disabled = false }: { id: string; label: st
                 <span className="min-w-0 grow truncate">{label}</span>
             </Menu.SubmenuTrigger>
             <Menu.Popup className="min-w-56">
-                <MenuRows items={items} />
+                <MenuRows items={items} canStopMachine={canStopMachine} />
             </Menu.Popup>
         </Menu.SubmenuRoot>
     );
 }
 
-function MenuRows({ items }: { items: MenuNode[] }) {
+function MenuRows({ items, canStopMachine }: { items: MenuNode[]; canStopMachine: boolean }) {
     return items.map((node, index) => {
         switch (node.kind) {
             case 'separator':
                 return <Menu.Separator key={`separator-${index}`} />;
             case 'submenu':
-                return <Submenu key={node.id} id={node.id} label={node.label} items={node.items} disabled={node.enabled === false} />;
+                return (
+                    <Submenu
+                        key={node.id}
+                        id={node.id}
+                        label={node.label}
+                        items={node.items}
+                        canStopMachine={canStopMachine}
+                        disabled={node.enabled === false}
+                    />
+                );
             case 'command':
                 return (
                     <Menu.Item
@@ -55,9 +78,22 @@ function MenuRows({ items }: { items: MenuNode[] }) {
                         {node.keys && <Menu.Hint>{node.keys}</Menu.Hint>}
                     </Menu.Item>
                 );
-            default:
-                // Roles and shell actions are the desktop shell's, which keeps them on their keys under a hidden menu bar on Windows.
-                return null;
+            case 'role':
+                // The other roles have keys the shell keeps under a hidden menu bar, so only Quit needs a row here.
+                return node.role === 'quit' && desktop()?.quit ? (
+                    <Menu.Item key={node.role} onClick={() => desktop()?.quit?.()}>
+                        <RowIcon id="quit" />
+                        <span className="min-w-0 grow truncate">{node.label}</span>
+                    </Menu.Item>
+                ) : null;
+            case 'shell':
+                // The same test as the native menu's `canStopMachine`, and no confirmation, as there.
+                return node.action === 'stop-machine-and-quit' && canStopMachine ? (
+                    <Menu.Item key={node.action} onClick={() => desktop()?.backgroundService?.stopMachine()}>
+                        <RowIcon id="stop-machine-and-quit" />
+                        <span className="min-w-0 grow truncate">{node.label}</span>
+                    </Menu.Item>
+                ) : null;
         }
     });
 }
@@ -70,6 +106,8 @@ function MenuRows({ items }: { items: MenuNode[] }) {
 export function StationMenu({ variant }: { variant: 'wordmark' | 'symbol' }) {
     const { t } = useTranslation('shell');
     const [spec, setSpec] = useState<MenuSpec | null>(null);
+    // Read here rather than in the rows, so the answer is in before the menu opens and the row does not jump in.
+    const canStopMachine = useBackgroundServiceState()?.support === 'supported';
     return (
         <Menu.Root onOpenChange={(open) => open && setSpec(menuModel(menuContext(IS_STATION ? 'station' : 'desktop')))}>
             {variant === 'wordmark' ? (
@@ -87,7 +125,7 @@ export function StationMenu({ variant }: { variant: 'wordmark' | 'symbol' }) {
             )}
             <Menu.Popup className="min-w-48">
                 {spec?.menus.map((menu) => (
-                    <Submenu key={menu.id} id={menu.id} label={menu.label} items={menu.items} />
+                    <Submenu key={menu.id} id={menu.id} label={menu.label} items={menu.items} canStopMachine={canStopMachine} />
                 ))}
             </Menu.Popup>
         </Menu.Root>
