@@ -10,6 +10,7 @@ import {
     catalogProblems,
     dockerCatalogDrift,
     lockedOffVersion,
+    lockedPackages,
     type Registry,
     type RunCommand
 } from './adecore.ts';
@@ -114,6 +115,16 @@ describe('the catalog', () => {
         ].join('\n');
 
         expect(lockedOffVersion(lock, '0.24.0')).toEqual(['@adecore/plan@0.23.1']);
+    });
+
+    test('names every locked ADE CORE package once, also one no catalog names', () => {
+        const lock = [
+            '"@adecore/editor": ["@adecore/editor@0.24.0", "", { "dependencies": { "@adecore/editor-core": "0.24.0" } }, "sha512-a"],',
+            '"@adecore/editor-core": ["@adecore/editor-core@0.24.0", "", {}, "sha512-b"],',
+            '"@adecore/editor/@adecore/editor-core": ["@adecore/editor-core@0.23.1", "", {}, "sha512-c"],'
+        ].join('\n');
+
+        expect(lockedPackages(lock)).toEqual(['@adecore/editor', '@adecore/editor-core']);
     });
 });
 

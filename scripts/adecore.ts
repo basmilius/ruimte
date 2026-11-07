@@ -382,6 +382,11 @@ export function lockedOffVersion(lock: string, version: string): string[] {
     return [...locked].sort();
 }
 
+/* Every ADE CORE package the lockfile installs, the ones the catalog names and the ones they pull in. */
+export function lockedPackages(lock: string): string[] {
+    return [...new Set([...lock.matchAll(/"(@adecore\/[\w.-]+)@[^"]+"/g)].map((match) => match[1]!))].sort();
+}
+
 export async function bumpPackages(root: string, adecore: string, version: string, run: RunCommand = runBun, registry: Registry = npmRegistry): Promise<void> {
     if (!EXACT_VERSION.test(version)) {
         throw new Error(`${version} is not an exact version such as 0.24.0.`);
@@ -410,8 +415,10 @@ export async function bumpPackages(root: string, adecore: string, version: strin
     if (drift.length > 0) {
         throw new Error(`${relative(root, drift[0].file)} does not list the same ADE CORE packages as the root catalog. No file was changed.`);
     }
-    // Before any write: a release still propagating would otherwise leave a half-installed node_modules.
-    await awaitRelease(bumped[0].names, version, registry);
+    // Before any write: a release still propagating would otherwise leave a half-installed node_modules. A package
+    // the catalog does not name (editor-core under editor) is released with the rest and installed all the same.
+    const released = [...new Set([...bumped[0].names, ...lockedPackages(before.get(lockfile)!)])].sort();
+    await awaitRelease(released, version, registry);
     for (const entry of bumped) {
         if (entry.text !== before.get(entry.file)) {
             writeFileSync(entry.file, entry.text);
