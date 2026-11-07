@@ -30,9 +30,11 @@ const INTL_OUTSIDE_FORMAT = new Set(['apps/client/src/voice/controller.ts']);
 
 // The places a color is written down as paint rather than read from a token: the syntax palettes, the
 // accents a person and an agent pick from (xterm reads them as literals), and scenes drawn in WebGL or a
-// canvas that no theme reaches, the pets' pixel art among them.
+// canvas that no theme reaches, the pets' pixel art among them. The contrast math measures colors against
+// the theme's two grounds and the two texts it can print on an accent, which only exist as values here.
 const COLOR_LITERALS = new Set([
     'apps/client/src/shell/panels/code-themes.ts',
+    'apps/client/src/state/accent-contrast.ts',
     'apps/client/src/canvas/accents.ts',
     'apps/client/src/ui/EclipseStars.tsx',
     'apps/client/src/ui/galaxy/Galaxy.tsx',
