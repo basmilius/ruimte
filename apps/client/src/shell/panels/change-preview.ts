@@ -17,6 +17,31 @@ export interface ChangePreview {
 /* A card is allowed to cross the gap from its gutter mark before it closes. */
 const CARD_GRACE_MS = 200;
 
+const MAX_PREVIEW_LINES = 100;
+const MAX_LINE_LENGTH = 2000;
+const MAX_PREVIEW_LENGTH = 12_000;
+
+/* What a card draws of one side of a change; Revert still restores all of it. */
+export function boundedLines(lines: readonly string[]): { text: string; truncated: boolean } {
+    const selected: string[] = [];
+    let remaining = MAX_PREVIEW_LENGTH;
+    let truncated = false;
+
+    for (const line of lines.slice(0, MAX_PREVIEW_LINES)) {
+        const text = line.slice(0, Math.min(MAX_LINE_LENGTH, remaining));
+
+        selected.push(text);
+        truncated ||= text.length !== line.length;
+        remaining -= text.length;
+
+        if (remaining <= 0) {
+            break;
+        }
+    }
+
+    return { text: selected.join('\n'), truncated: truncated || selected.length !== lines.length };
+}
+
 export function createChangePreview(editor: Editor, base: string, timers: Timers = realTimers) {
     const state = createStore<{ preview: ChangePreview | null }>(() => ({ preview: null }));
     let key = 0;
@@ -25,11 +50,13 @@ export function createChangePreview(editor: Editor, base: string, timers: Timers
     let disposed = false;
     const old = splitLines(base);
     let frame: { source: string; fresh: string[]; changes: Change[]; lineCount: number } | null = null;
+
     const close = (): void => {
         timers.clear(hide);
         inside = false;
         state.setState({ preview: null });
     };
+
     const leave = (): void => {
         timers.clear(hide);
         hide = timers.set(() => {
@@ -38,6 +65,7 @@ export function createChangePreview(editor: Editor, base: string, timers: Timers
             }
         }, CARD_GRACE_MS);
     };
+
     const hovered = (hover: EditorChangeMarkHover | null): void => {
         if (hover === null) {
             leave();
@@ -68,12 +96,14 @@ export function createChangePreview(editor: Editor, base: string, timers: Timers
         }
 
         timers.clear(hide);
+
         const previous = state.getState().preview;
         const same =
             previous?.line === hover.line &&
             previous.source === source &&
             previous.change.baseStart === change.baseStart &&
             previous.change.otherStart === change.otherStart;
+
         state.setState({
             preview: {
                 key: same ? previous.key : ++key,
@@ -86,6 +116,7 @@ export function createChangePreview(editor: Editor, base: string, timers: Timers
             }
         });
     };
+
     const stopHover = editor.onChangeMarkHover?.(hovered);
     const stopChange = editor.onTextChange(() => {
         frame = null;
@@ -97,6 +128,7 @@ export function createChangePreview(editor: Editor, base: string, timers: Timers
         subscribe: state.subscribe,
         hold(held: boolean): void {
             inside = held;
+
             if (held) {
                 timers.clear(hide);
             } else {
@@ -105,6 +137,7 @@ export function createChangePreview(editor: Editor, base: string, timers: Timers
         },
         revert(): boolean {
             const preview = state.getState().preview;
+
             if (disposed || preview === null || editor.getText() !== preview.source) {
                 close();
                 return false;
@@ -117,7 +150,9 @@ export function createChangePreview(editor: Editor, base: string, timers: Timers
                     lines: preview.before
                 })
             ]);
+
             close();
+
             if (applied) {
                 editor.focus();
             }

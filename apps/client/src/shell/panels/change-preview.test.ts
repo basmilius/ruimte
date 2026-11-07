@@ -1,7 +1,7 @@
 import { describe, expect, spyOn, test } from 'bun:test';
 import { ManualTimers } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
-import { createChangePreview } from './change-preview';
+import { boundedLines, createChangePreview } from './change-preview';
 
 function setup(base: string, text: string) {
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text, theme: 'light' });
@@ -21,6 +21,8 @@ describe('a change preview against the commit', () => {
     for (const [name, base, text, line, kind, expected] of [
         ['replacement', 'a\nb\nc\n', 'a\nB\nc\n', 2, 'modified', 'a\nb\nc\n'],
         ['growing replacement from its added part', 'a\nb\nc\n', 'a\nX\nY\nZ\nc\n', 4, 'added', 'a\nb\nc\n'],
+        ['shrinking replacement', 'a\nb\nc\nd\ne\n', 'a\nX\ne\n', 2, 'modified', 'a\nb\nc\nd\ne\n'],
+        ['second row of a multi-line replacement', 'a\nb\nc\nd\n', 'a\nX\nY\nd\n', 3, 'modified', 'a\nb\nc\nd\n'],
         ['insertion at start', 'a\n', 'new\na\n', 1, 'added', 'a\n'],
         ['removal at start', 'old\na\n', 'a\n', 1, 'deleted', 'old\na\n'],
         ['removal at end without final newline', 'a\nb', 'a', 1, 'deleted', 'a\nb'],
@@ -117,5 +119,32 @@ describe('a change preview against the commit', () => {
         expect(run.preview.revert()).toBe(false);
         expect(run.editor.getText()).toBe('A\nb\n');
         run.preview.dispose();
+    });
+});
+
+describe('the lines a card draws', () => {
+    test('whole lines pass through untouched', () => {
+        expect(boundedLines(['a', 'b'])).toEqual({ text: 'a\nb', truncated: false });
+    });
+
+    test('a long line is cut and flagged', () => {
+        const shown = boundedLines(['x'.repeat(2500)]);
+
+        expect(shown.text).toHaveLength(2000);
+        expect(shown.truncated).toBe(true);
+    });
+
+    test('more than 100 lines are cut and flagged', () => {
+        const shown = boundedLines(Array.from({ length: 150 }, () => 'x'));
+
+        expect(shown.text.split('\n')).toHaveLength(100);
+        expect(shown.truncated).toBe(true);
+    });
+
+    test('the total length is capped across lines', () => {
+        const shown = boundedLines(Array.from({ length: 10 }, () => 'x'.repeat(1500)));
+
+        expect(shown.text.length).toBeLessThanOrEqual(12_000 + 10);
+        expect(shown.truncated).toBe(true);
     });
 });

@@ -8,24 +8,8 @@ import type { AgentHover } from '@/editor-ai/agent-changes';
 import { ProvenanceCard } from '@/editor-ai/ProvenanceCard';
 import { useChatIdentity, useProviderName } from '@/editor-ai/use-chat-identity';
 import { useCodeTheme } from '@/state/code-theme';
-import type { ChangePreview } from './change-preview';
+import { boundedLines, type ChangePreview } from './change-preview';
 import './change-preview.css';
-
-function bounded(lines: readonly string[]): { text: string; truncated: boolean } {
-    const selected: string[] = [];
-    let remaining = 12_000;
-    let truncated = false;
-    for (const line of lines.slice(0, 100)) {
-        const text = line.slice(0, Math.min(2000, remaining));
-        selected.push(text);
-        truncated ||= text.length !== line.length;
-        remaining -= text.length;
-        if (remaining <= 0) {
-            break;
-        }
-    }
-    return { text: selected.join('\n'), truncated: truncated || selected.length !== lines.length };
-}
 
 function PreviewCode({
     editor,
@@ -43,13 +27,15 @@ function PreviewCode({
     const { t } = useTranslation('panels');
     const element = useRef<HTMLDivElement>(null);
     const theme = useCodeTheme();
-    const shown = bounded(lines);
+    const shown = boundedLines(lines);
+
     useLayoutEffect(() => {
         const container = element.current;
+
         if (container === null) {
             return;
         }
-        container.replaceChildren();
+
         const options: EditorCodeBlockOptions = {
             firstLine,
             sign: removed ? '-' : '+',
@@ -57,8 +43,11 @@ function PreviewCode({
             faded: removed,
             ...(plain ? { tokens: null } : {})
         };
+
+        container.replaceChildren();
         editor.renderCode(container, shown.text, options);
     }, [editor, shown.text, firstLine, removed, plain, theme]);
+
     return (
         <>
             <div ref={element} />
