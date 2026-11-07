@@ -64,7 +64,7 @@ import { canMoveToNewWindow, canOpenWindows, moveToNewWindow, openNewWindow } fr
 import { openRoutineForm } from '@/routines/form-state';
 import { toggleRoutines } from '@/routines/stage';
 import { runAppShortcut } from '@/shell/app-shortcuts';
-import { COMMANDS, type PaletteCommandId } from '@/shell/command-table';
+import { COMMANDS, commandKey, type PaletteCommandId } from '@/shell/command-table';
 import { editorCommandRows } from '@/shell/editor-commands';
 import { activeViewFacts } from '@/shell/menu/context';
 import { nextWaitingTitle, revealNextWaiting } from '@/shell/next-waiting';
@@ -123,7 +123,7 @@ interface RowOptions {
 /* A row of the command table: its words and its key are the table's (`shell/command-table.ts`), what it does is here. */
 function row(id: PaletteCommandId, run: () => void, options: RowOptions = {}): Command {
     const spec = COMMANDS[id];
-    const shortcut = options.shortcut === undefined ? spec.shortcut : (options.shortcut ?? undefined);
+    const shortcut = options.shortcut === undefined ? commandKey(id) : (options.shortcut ?? undefined);
     return {
         id,
         label: options.label ?? i18next.t(`shell:palette.commands.${spec.key}`, options.values ?? {}),

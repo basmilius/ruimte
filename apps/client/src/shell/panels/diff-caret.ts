@@ -1,13 +1,12 @@
 import type { DiffSource } from '@adecore/editor-react';
 import type { DiffSourceLine } from '@adecore/merge';
-import { matchesShortcut } from '@adecore/ui';
 import { useRef, type RefObject } from 'react';
 import { create } from 'zustand';
 import { ignoreRefusal, perform } from '@/actions/client-actions';
 import { isApplePlatform } from '@/desktop/bridge';
 import { cellElement } from '@/shell/cell-rects';
-import { requiredShortcut } from '@/shell/editor-keymap';
 import { createFocusRegistry } from '@/shell/panels/focus-registry';
+import { matchesKeymapRow } from '@/shell/shortcut-overrides';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 
@@ -88,7 +87,7 @@ export function useDiffCaret(path: string, tabKey: string): { surface: RefObject
         element?.addEventListener('focusin', take);
         const offCaret = source.editor.onCaret(take);
         const offKey = source.editor.onKeyDown((event) => {
-            if (!matchesShortcut(requiredShortcut('jumpToSource'), event, apple)) {
+            if (!matchesKeymapRow('jumpToSource', event, apple)) {
                 return false;
             }
             return openAt(path, source);

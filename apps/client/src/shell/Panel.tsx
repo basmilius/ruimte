@@ -2,7 +2,6 @@ import { clampColumnSize, CloseButton, ErrorBoundary, SlidingColumn, lazyNamed, 
 import clsx from 'clsx';
 import { createElement, useState, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { usePanelGap } from '@/shell/panel-layout';
@@ -11,6 +10,7 @@ import { closesFromRail, usePanelEntries, type CorePanel, type PanelEntry } from
 import { DevicesPanel } from '@/shell/panels/DevicesPanel';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
+import { useKeyOf } from '@/shell/shortcut-overrides';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useShownPanel, useUi } from '@/state/ui';
 
@@ -50,6 +50,7 @@ export function Panel() {
     const gap = usePanelGap();
     const { t } = useTranslation('shell');
     const panel = useShownPanel();
+    const togglePanelKey = useKeyOf('panel-toggle');
     const open = panel.open;
     const [leadingHeaderSlot, setLeadingHeaderSlot] = useState<HTMLElement | null>(null);
     const [titleSignal, setTitleSignal] = useState<HTMLElement | null>(null);
@@ -94,7 +95,7 @@ export function Panel() {
                         <Separator className="peer-empty:hidden" />
                         <CloseButton
                             label={t('panel.close', { name: label })}
-                            kbd={CANVAS_SHORTCUTS.togglePanel}
+                            kbd={togglePanelKey}
                             onClick={() => useUi.getState().setPanel({ open: false })}
                         />
                     </>

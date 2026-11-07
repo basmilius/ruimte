@@ -838,7 +838,10 @@
         "split": {
             "right": "Split right",
             "down": "Split down",
-            "focusNeighbor": "Focus neighboring cell (arrow keys)",
+            "focusLeft": "Focus cell on the left",
+            "focusRight": "Focus cell on the right",
+            "focusUp": "Focus cell above",
+            "focusDown": "Focus cell below",
             "maximize": "Maximize or restore selected node or cell",
             "close": "Close focused cell"
         },

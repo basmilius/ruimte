@@ -1,4 +1,4 @@
-import { Button, ErrorBoundary, Icon, Kbd, ScrollArea, SectionLabel, Tile, ContextMenu } from '@adecore/ui';
+import { Button, ErrorBoundary, Icon, ScrollArea, SectionLabel, Tile, ContextMenu } from '@adecore/ui';
 import { isRecentProject } from '@ruimte/contracts';
 import clsx from 'clsx';
 import { FolderOpen, LogIn, MessageSquarePlus, MessagesSquare, MonitorSmartphone, RotateCw } from 'lucide-react';
@@ -18,10 +18,11 @@ import { runAppShortcut } from '@/shell/app-shortcuts';
 import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
 import { linkDot, linkHint, machineLink } from '@/shell/palette-browse';
 import { ProjectPlaceActions } from '@/shell/ProjectActions';
+import { RowKbd } from '@/shell/RowKbd';
 import { AddMachineDialog } from '@/shell/settings/AddMachineDialog';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { mergeMachines, nameOf, type MachineEntry } from '@/shell/settings/machine-list';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { useKeyOf } from '@/shell/shortcut-overrides';
 import { SignInButtons } from '@/shell/SignInButtons';
 import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine, startScreenMachine } from '@/state/local-machine';
@@ -182,10 +183,10 @@ function Footer() {
     return (
         <footer className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-linear-to-t from-bg from-40% to-transparent px-8 pt-10 pb-4 text-xs text-text-faint *:pointer-events-auto">
             <button className={FOOTER_BUTTON} onClick={() => runAppShortcut('palette')}>
-                <Kbd shortcut={APP_SHORTCUTS.palette} variant="inline" /> {t('start.commandPalette')}
+                <RowKbd row="palette" variant="inline" /> {t('start.commandPalette')}
             </button>
             <button className={FOOTER_BUTTON} onClick={() => runAppShortcut('settings')}>
-                <Kbd shortcut={APP_SHORTCUTS.settings} variant="inline" /> {t('settingsDialog.title')}
+                <RowKbd row="settings" variant="inline" /> {t('settingsDialog.title')}
             </button>
             {version && <span>{t('connection.version', { version })}</span>}
             {version && canShowReleaseNotes() && (
@@ -207,6 +208,7 @@ function StartContent() {
     const failure = useWindow((s) => s.bootFailure);
     const [dialog, setDialog] = useState<'add' | 'link' | null>(null);
     const offersChat = useOffersNewChat();
+    const newChatKey = useKeyOf('chat-new');
     useMachineHold(useEndpoints((s) => startScreenMachine(s.endpoints)));
 
     const boot = stationBoot({ withoutMachine: !hasLocalMachine(), accountStatus, machines: accountMachines });
@@ -236,7 +238,7 @@ function StartContent() {
                 icon={<Icon icon={MessageSquarePlus} size={16} />}
                 title={t('chats.newChat')}
                 description={t('chats.newChatHint')}
-                shortcut={APP_SHORTCUTS.newChat}
+                shortcut={newChatKey}
                 disabled={disabled}
                 onClick={newChat}
             />

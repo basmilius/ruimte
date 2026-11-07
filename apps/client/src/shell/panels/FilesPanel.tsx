@@ -1,6 +1,6 @@
 import { writeMentionDrag } from '@adecore/agents-react/chat';
 import { FileTree, useFileTree, messageOf } from '@adecore/ui';
-import { Button, ButtonGroup, EmptyState, Icon, IconButton, Input, Menu, Kbd, PanelEmpty, ContextMenu, PromptDialog } from '@adecore/ui';
+import { Button, ButtonGroup, EmptyState, Icon, IconButton, Input, Menu, PanelEmpty, ContextMenu, PromptDialog } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
 import type { FileTreeDropResult, FileTreeVisibleRow } from '@pierre/trees';
 import { ActionRefusal } from '@ruimte/actions';
@@ -75,7 +75,7 @@ import { isQuickLookKey, useQuickLook } from '@/shell/panels/quick-look';
 import { revealFile } from '@/shell/panels/reveal-file';
 import { nodeNames, nodesInWorktree, worktreeBase } from '@/shell/panels/worktree-rows';
 import { WorktreeBar } from '@/shell/panels/WorktreeMenu';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { RowKbd } from '@/shell/RowKbd';
 import { useCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';
 import { filesRootOf, useFilesRoot } from '@/state/files-root';
@@ -869,7 +869,7 @@ export function FilesPanel() {
                         <IconButton icon={MoreHorizontal} label={t('common:action.more')} render={<Menu.Trigger />} />
                         <Menu.Popup align="end">
                             <Menu.Item onClick={() => useUi.getState().openFindInFiles()}>
-                                <Icon icon={FileSearch} size={14} /> {t('file.empty.findInFiles')} <Kbd shortcut={APP_SHORTCUTS.findInFiles} />
+                                <Icon icon={FileSearch} size={14} /> {t('file.empty.findInFiles')} <RowKbd row="find-in-files" />
                             </Menu.Item>
                             <Menu.Separator />
                             <Menu.CheckboxItem
@@ -1082,7 +1082,7 @@ export function FilesPanel() {
                     <Button className="w-full justify-start" onClick={() => useUi.getState().openFindInFiles(query.trim())}>
                         <Icon icon={FileSearch} size={14} />
                         <span className="grow truncate text-left">{t('file.empty.findInFiles')}</span>
-                        <Kbd variant="inline" shortcut={APP_SHORTCUTS.findInFiles} />
+                        <RowKbd variant="inline" row="find-in-files" />
                     </Button>
                 </div>
             )}

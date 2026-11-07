@@ -5,10 +5,10 @@ import { messageOf } from '@adecore/ui';
 import i18next from 'i18next';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { editorAssistClientFor, type EditorAssistClient } from '@/editor-assist/client';
 import { cleanGhost, firstWord } from '@/editor-assist/ghost-model';
 import { ghostPrompt } from '@/editor-assist/prompts';
+import { keyOf } from '@/shell/shortcut-overrides';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { GhostHint } from './GhostHint';
@@ -91,7 +91,7 @@ export class GhostTextFeature {
     }
 
     handleKey(event: KeyboardEvent): boolean {
-        if (isShortcut(CANVAS_SHORTCUTS.suggestInline, event)) {
+        if (isShortcut(keyOf('suggestInline'), event)) {
             if (!this.enabled) {
                 return false;
             }
@@ -109,7 +109,7 @@ export class GhostTextFeature {
             this.accept();
             return true;
         }
-        if (isShortcut(CANVAS_SHORTCUTS.acceptGhostWord, event)) {
+        if (isShortcut(keyOf('acceptGhostWord'), event)) {
             this.acceptWord();
             return true;
         }

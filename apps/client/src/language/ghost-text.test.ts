@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { ManualTimers } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
+import { keyOf } from '@/shell/shortcut-overrides';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { FakeLanguageTransport } from './fake-daemon';
@@ -28,7 +28,7 @@ async function setup(options: { available?: boolean; text?: string; caret?: { li
     const language = new EditorLanguage(project, editor, uri, 'typescript', timers);
     await language.document.ready;
     editor.moveCaret(options.caret ?? at(1, 4));
-    const suggest = (): boolean => editor.press(eventOf(CANVAS_SHORTCUTS.suggestInline));
+    const suggest = (): boolean => editor.press(eventOf(keyOf('suggestInline')!));
     return { transport, model, editor, language, project, timers, suggest };
 }
 
@@ -92,10 +92,10 @@ describe('ghost text on request', () => {
     test('Option+] takes a word and keeps the rest as the suggestion after it', async () => {
         const { model, editor, language } = await setup();
         await suggested({ model, language }, 'return pool[0];');
-        expect(editor.press(eventOf(CANVAS_SHORTCUTS.acceptGhostWord))).toBe(true);
+        expect(editor.press(eventOf(keyOf('acceptGhostWord')!))).toBe(true);
         expect(editor.getText()).toContain('\n    return\n');
         expect(editor.ghost).toMatchObject({ position: at(1, 10), text: ' pool[0];' });
-        editor.press(eventOf(CANVAS_SHORTCUTS.acceptGhostWord));
+        editor.press(eventOf(keyOf('acceptGhostWord')!));
         expect(editor.getText()).toContain('\n    return pool\n');
         expect(editor.ghost?.text).toBe('[0];');
     });

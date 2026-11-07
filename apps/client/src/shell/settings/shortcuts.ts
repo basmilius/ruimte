@@ -2,12 +2,14 @@ import { SEND_AND_NEW_SHORTCUT } from '@adecore/agents-react/chat';
 import { PROMPT_SHORTCUTS } from '@adecore/agents-react/prompts';
 import { KEY_SHORTCUTS, shortcut, shortcutParts, type Shortcut } from '@adecore/ui';
 import i18next from 'i18next';
-import { CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
+import { CANVAS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { keyOf, type RowId } from '@/shell/shortcut-overrides';
 import { CLEAR_SHORTCUT, LEAVE_NODE_SHORTCUT, platformShortcut, TERMINAL_FIND_SHORTCUT } from '@/terminal/keymap';
 
 export interface ShortcutRow {
+    /* The row a person may give a key of their own; without one the row only shows its keys. */
+    id?: RowId;
     keys: Shortcut;
     /* The pointer gesture the keys go with, printed as a cap after them: "drag", "scroll", "click". */
     then?: string;
@@ -48,9 +50,9 @@ export function shortcutGroups(apple: boolean): ShortcutGroup[] {
             id: 'general',
             title: areaTitle('general'),
             shortcuts: [
-                { keys: APP_SHORTCUTS.palette, label: say('canvas.palette') },
+                { id: 'palette', keys: keyOf('palette'), label: say('canvas.palette') },
                 { keys: shortcut('Alt'), then: i18next.t('settings:gesture.hold'), label: say('canvas.usagePeek') },
-                { keys: CANVAS_SHORTCUTS.voiceControl, label: i18next.t('voice:shortcut') }
+                { id: 'voice-control', keys: keyOf('voice-control'), label: i18next.t('voice:shortcut') }
             ]
         },
         {
@@ -64,8 +66,8 @@ export function shortcutGroups(apple: boolean): ShortcutGroup[] {
                 { keys: MOD_HELD, then: i18next.t('settings:gesture.scroll'), label: say('canvas.zoomPointer') },
                 { keys: CANVAS_SHORTCUTS.zoomIn, label: say('canvas.zoomIn') },
                 { keys: CANVAS_SHORTCUTS.zoomOut, label: say('canvas.zoomOut') },
-                { keys: CANVAS_SHORTCUTS.undo, label: say('canvas.undo') },
-                { keys: CANVAS_SHORTCUTS.redo, label: say('canvas.redo') },
+                { id: 'edit-undo', keys: keyOf('edit-undo'), label: say('canvas.undo') },
+                { id: 'edit-redo', keys: keyOf('edit-redo'), label: say('canvas.redo') },
                 { keys: CANVAS_SHORTCUTS.selectAll, label: say('selection.selectAll') },
                 { keys: KEY_SHORTCUTS.shift, then: i18next.t('settings:gesture.click'), label: say('selection.add') },
                 { keys: CANVAS_SHORTCUTS.deleteSelection, label: say('selection.delete') },
@@ -81,16 +83,19 @@ export function shortcutGroups(apple: boolean): ShortcutGroup[] {
             title: areaTitle('views'),
             shortcuts: [
                 { keys: viewShortcut(0)!, label: say('views.goTo') },
-                { keys: CANVAS_SHORTCUTS.previousView, label: say('views.previous') },
-                { keys: CANVAS_SHORTCUTS.nextView, label: say('views.next') },
-                { keys: CANVAS_SHORTCUTS.newView, label: say('views.new') },
+                { id: 'view-previous', keys: keyOf('view-previous'), label: say('views.previous') },
+                { id: 'view-next', keys: keyOf('view-next'), label: say('views.next') },
+                { id: 'view-new', keys: keyOf('view-new'), label: say('views.new') },
                 { keys: shortcut('F2'), label: say('views.rename') },
-                { keys: CANVAS_SHORTCUTS.splitRight, label: say('split.right') },
-                { keys: CANVAS_SHORTCUTS.splitDown, label: say('split.down') },
-                { keys: FOCUS_SHORTCUTS.left, label: say('split.focusNeighbor') },
-                { keys: CANVAS_SHORTCUTS.maximizeCell, label: say('split.maximize') },
-                { keys: CANVAS_SHORTCUTS.closeCell, label: say('split.close') },
-                { keys: CANVAS_SHORTCUTS.togglePanel, label: say('panels.toggle') }
+                { id: 'split-right', keys: keyOf('split-right'), label: say('split.right') },
+                { id: 'split-down', keys: keyOf('split-down'), label: say('split.down') },
+                { id: 'focus-left', keys: keyOf('focus-left'), label: say('split.focusLeft') },
+                { id: 'focus-right', keys: keyOf('focus-right'), label: say('split.focusRight') },
+                { id: 'focus-up', keys: keyOf('focus-up'), label: say('split.focusUp') },
+                { id: 'focus-down', keys: keyOf('focus-down'), label: say('split.focusDown') },
+                { id: 'cell-maximize', keys: keyOf('cell-maximize'), label: say('split.maximize') },
+                { id: 'close-cell', keys: keyOf('close-cell'), label: say('split.close') },
+                { id: 'panel-toggle', keys: keyOf('panel-toggle'), label: say('panels.toggle') }
             ]
         },
         {
@@ -125,25 +130,25 @@ export function shortcutGroups(apple: boolean): ShortcutGroup[] {
             id: 'launches',
             title: areaTitle('launches'),
             shortcuts: [
-                { keys: CANVAS_SHORTCUTS.launchRun, label: say('launches.run') },
-                { keys: CANVAS_SHORTCUTS.launchStop, label: say('launches.stop') }
+                { id: 'launch-run', keys: keyOf('launch-run'), label: say('launches.run') },
+                { id: 'launch-stop', keys: keyOf('launch-stop'), label: say('launches.stop') }
             ]
         },
         {
             id: 'chat',
             title: areaTitle('chat'),
             shortcuts: [
-                { keys: CANVAS_SHORTCUTS.focusPrompts, label: say('prompts.answerFront') },
-                { keys: CANVAS_SHORTCUTS.nextNeedsYou, label: say('prompts.nextNeedsYou') },
-                { keys: CANVAS_SHORTCUTS.attentionQueue, label: say('prompts.attentionQueue') },
+                { id: 'prompts', keys: keyOf('prompts'), label: say('prompts.answerFront') },
+                { id: 'needs-you-next', keys: keyOf('needs-you-next'), label: say('prompts.nextNeedsYou') },
+                { id: 'attention-queue', keys: keyOf('attention-queue'), label: say('prompts.attentionQueue') },
                 { keys: PROMPT_SHORTCUTS.primary, label: say('prompts.primary') },
                 { keys: PROMPT_SHORTCUTS.previousPrompt, label: say('prompts.previous') },
                 { keys: PROMPT_SHORTCUTS.nextPrompt, label: say('prompts.next') },
                 { keys: KEY_SHORTCUTS.escape, label: say('prompts.escape') },
-                { keys: CANVAS_SHORTCUTS.dictation, label: say('chat.dictation') },
-                { keys: CANVAS_SHORTCUTS.chatTextLarger, label: say('chat.textLarger') },
-                { keys: CANVAS_SHORTCUTS.chatTextSmaller, label: say('chat.textSmaller') },
-                { keys: CANVAS_SHORTCUTS.zoomReset, label: say('chat.textReset') },
+                { id: 'dictation', keys: keyOf('dictation'), label: say('chat.dictation') },
+                { id: 'chat-text-larger', keys: keyOf('chat-text-larger'), label: say('chat.textLarger') },
+                { id: 'chat-text-smaller', keys: keyOf('chat-text-smaller'), label: say('chat.textSmaller') },
+                { id: 'zoom-reset', keys: keyOf('zoom-reset'), label: say('chat.textReset') },
                 { keys: CANVAS_SHORTCUTS.previousMessage, label: say('chat.previousMessage') },
                 { keys: CANVAS_SHORTCUTS.nextMessage, label: say('chat.nextMessage') },
                 { keys: SEND_AND_NEW_SHORTCUT, label: say('chat.sendAndNewChat') }

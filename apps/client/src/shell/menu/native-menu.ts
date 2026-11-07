@@ -10,6 +10,7 @@ import { runMenuCommand } from '@/shell/menu/actions';
 import { menuContext } from '@/shell/menu/context';
 import { menuModel } from '@/shell/menu/model';
 import { subscribeFocusedEditors } from '@/shell/panels/focused-editor';
+import { subscribeOverrides } from '@/shell/shortcut-overrides';
 import { subscribeCameraHistories } from '@/state/camera-history';
 import { subscribeCanvases } from '@/state/canvas';
 import { useChatTextSizes } from '@/state/chat-text-size';
@@ -69,6 +70,7 @@ export function useNativeMenu(): void {
             useNewChat.subscribe(schedule),
             usePromptStacks.subscribe(schedule),
             useSnoozes.subscribe(schedule),
+            subscribeOverrides(schedule),
             subscribeCameraHistories(schedule),
             subscribeFocusedEditors(schedule),
             subscribeFocusedLanguages(schedule),

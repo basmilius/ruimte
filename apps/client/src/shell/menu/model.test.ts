@@ -2,10 +2,10 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
-import { CANVAS_SHORTCUTS, ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
 import { LANGUAGE_COMMAND_IDS } from '@/language/command-table';
 import { languageCommandRows } from '@/language/language-commands';
-import { COMMAND_IDS, COMMANDS, isCommandId, menuPlacesOf } from '@/shell/command-table';
+import { COMMAND_IDS, COMMANDS, commandKey, isCommandId, menuPlacesOf } from '@/shell/command-table';
+import { DEFAULT_KEYS } from '@/shell/default-keys';
 import { EDITOR_COMMAND_IDS, editorCommandRows } from '@/shell/editor-commands';
 import { menuIconOf } from './icons';
 import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, isPaletteId, LAUNCH_CHOOSE_PREFIX } from './ids';
@@ -729,15 +729,15 @@ describe('the menu the web client draws', () => {
 
 describe('accelerators', () => {
     test('Mod is Cmd on macOS and Ctrl elsewhere, named keys the way Electron spells them', () => {
-        expect(toAccelerator(CANVAS_SHORTCUTS.previousView, true)).toBe('CommandOrControl+Shift+[');
-        expect(toAccelerator(CANVAS_SHORTCUTS.togglePanel, false)).toBe('CommandOrControl+Alt+B');
-        expect(toAccelerator(CANVAS_SHORTCUTS.splitRight, true)).toBe('CommandOrControl+\\');
+        expect(toAccelerator(DEFAULT_KEYS['view-previous'], true)).toBe('CommandOrControl+Shift+[');
+        expect(toAccelerator(DEFAULT_KEYS['panel-toggle'], false)).toBe('CommandOrControl+Alt+B');
+        expect(toAccelerator(DEFAULT_KEYS['split-right'], true)).toBe('CommandOrControl+\\');
     });
 
     test('on macOS a key without Cmd or Ctrl gets none, since the menu would take it from every text field', () => {
-        expect(toAccelerator(ADD_NODE_SHORTCUTS.terminal, true)).toBeUndefined();
-        expect(toAccelerator(CANVAS_SHORTCUTS.fitAll, true)).toBeUndefined();
-        expect(toAccelerator(ADD_NODE_SHORTCUTS.terminal, false)).toBe('Alt+T');
+        expect(toAccelerator(DEFAULT_KEYS['add-terminal'], true)).toBeUndefined();
+        expect(toAccelerator(DEFAULT_KEYS.fit, true)).toBeUndefined();
+        expect(toAccelerator(DEFAULT_KEYS['add-terminal'], false)).toBe('Alt+T');
     });
 
     test('every row of the command table with a chord yields a whole accelerator, ending in a key Electron knows', () => {
@@ -745,7 +745,7 @@ describe('accelerators', () => {
         const checked: string[] = [];
 
         for (const id of COMMAND_IDS) {
-            const chord = COMMANDS[id].shortcut;
+            const chord = commandKey(id);
 
             if (chord === undefined || menuPlacesOf(id).length === 0) {
                 continue;

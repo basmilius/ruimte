@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { USAGE_DESKTOP_COMMANDS, USAGE_DESKTOP_PANELS, USAGE_DESKTOP_SETTINGS_SECTIONS } from '@ruimte/pulsar';
 import { commandUsageName, openedBy, usageSectionOf } from '@/desktop/usage';
-import { COMMAND_IDS } from '@/shell/command-table';
+import { COMMAND_IDS, COMMANDS } from '@/shell/command-table';
 import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, LAUNCH_CHOOSE_PREFIX, PR_SHOW_IN_PREFIX } from '@/shell/menu/ids';
 import { PANELS } from '@/shell/panels';
 import { allSettingsSections } from '@/shell/settings/sections';
@@ -12,7 +12,8 @@ const SETTINGS_CLOSED = { open: false, section: 'appearance' as const, target: n
 
 describe('commandUsageName', () => {
     test('names every row of the command table, and the list holds no row the table lost', () => {
-        const names = COMMAND_IDS.map(commandUsageName);
+        // A row only its key reaches has no count: the list in Observatory would have to learn it first.
+        const names = COMMAND_IDS.filter((id) => COMMANDS[id].keyOnly !== true).map(commandUsageName);
 
         expect(names.filter((name) => name === null)).toEqual([]);
         expect(names.toSorted()).toEqual([...USAGE_DESKTOP_COMMANDS].toSorted());

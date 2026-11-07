@@ -22,7 +22,7 @@ import { useTranslation } from 'react-i18next';
 import { isApplePlatform } from '@/desktop/bridge';
 import { FIND_SHORTCUTS } from '@/find/shortcuts';
 import type { FindState } from '@/find/use-find';
-import { requiredShortcut } from '@/shell/editor-keymap';
+import { matchesKeymapRow, useKeyOf } from '@/shell/shortcut-overrides';
 
 const OPTIONS: readonly { key: keyof FindOptions; icon: LucideIcon; label: string }[] = [
     { key: 'caseSensitive', icon: CaseSensitive, label: 'find.caseSensitive' },
@@ -87,6 +87,7 @@ export function FindBar({
     const { t } = useTranslation('common');
     const input = useRef<HTMLInputElement>(null);
     const { query, setQuery, summons } = find;
+    const selectAllKey = useKeyOf('selectAllOccurrences');
     const disabled = disabledReason !== null;
     const replacing = replacement !== undefined && find.replaceOpen;
     const cannotReplace = disabled || searching || total === 0 || (replacement?.disabledReason ?? null) !== null;
@@ -102,7 +103,7 @@ export function FindBar({
             return null;
         }
         const apple = isApplePlatform();
-        const platform = (id: 'findNext' | 'findPrevious' | 'selectAllOccurrences'): boolean => matchesShortcut(requiredShortcut(id), event.nativeEvent, apple);
+        const platform = (id: 'findNext' | 'findPrevious' | 'selectAllOccurrences'): boolean => matchesKeymapRow(id, event.nativeEvent, apple);
         if (platform('findNext')) {
             return FIND_SHORTCUTS.next;
         }
@@ -286,7 +287,7 @@ export function FindBar({
                             icon={ListChecks}
                             size="sm"
                             label={t('find.selectAll')}
-                            kbd={requiredShortcut('selectAllOccurrences')}
+                            kbd={selectAllKey}
                             disabled={disabled || total === 0}
                             onClick={onSelectAll}
                         />

@@ -3,12 +3,12 @@ import { useProviderAccountsStore, useProvidersStore } from '@adecore/agents-rea
 import type { Editor } from '@adecore/editor';
 import { highlightLayers } from '@adecore/editor-react';
 import { FakeEditorEngine } from '@adecore/editor/fake';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { LANGUAGE_COMMANDS } from '@/language/command-table';
 import { FakeLanguageTransport } from '@/language/fake-daemon';
 import { eventOf } from '@/language/key-events';
 import { EditorLanguage } from '@/language/ruimte-editor-language';
 import { ProjectLanguage } from '@/language/ruimte-project-language';
+import { keyOf } from '@/shell/shortcut-overrides';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
@@ -84,7 +84,7 @@ describe('Mod+I in the editor', () => {
         });
         editor.setSelection(RANGE);
 
-        expect(editor.press(eventOf(CANVAS_SHORTCUTS.inlineEdit))).toBe(true);
+        expect(editor.press(eventOf(keyOf('inlineEdit')!))).toBe(true);
 
         const { prompt } = language.inlineEdit.store.getState();
         expect(prompt).toMatchObject({ range: RANGE, selectedText: SELECTED, span: { startLine: 2, endLine: 3 }, instruction: '' });
@@ -107,7 +107,7 @@ describe('Mod+I in the editor', () => {
     });
 
     test('is a command of the Code menu and the palette with the key of the editor table, beside Show Inline Edit', () => {
-        expect(LANGUAGE_COMMANDS['inline-edit']).toMatchObject({ menu: 'code', key: 'inlineEdit', shortcut: CANVAS_SHORTCUTS.inlineEdit });
+        expect(LANGUAGE_COMMANDS['inline-edit']).toMatchObject({ menu: 'code', key: 'inlineEdit', keymap: 'inlineEdit' });
         expect(LANGUAGE_COMMANDS['show-inline-edit']).toMatchObject({ menu: 'code', key: 'showInlineEdit' });
     });
 });

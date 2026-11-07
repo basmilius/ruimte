@@ -2,7 +2,7 @@ import { IconButton } from '@adecore/ui';
 import { Mic } from 'lucide-react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { useKeyOf } from '@/shell/shortcut-overrides';
 import { useUi } from '@/state/ui';
 import { refreshVoiceCredential, useVoice, useVoicePanelOpen } from '@/voice/state';
 
@@ -11,6 +11,7 @@ export function VoiceButton() {
     const configured = useVoice((state) => state.credential?.configured === true);
     const open = useVoicePanelOpen();
     const active = useVoice((state) => state.phase === 'connecting' || state.phase === 'listening');
+    const key = useKeyOf('voice-control');
 
     useEffect(() => {
         void refreshVoiceCredential().catch(() => undefined);
@@ -23,7 +24,7 @@ export function VoiceButton() {
         <IconButton
             icon={Mic}
             label={t('shortcut')}
-            kbd={CANVAS_SHORTCUTS.voiceControl}
+            kbd={key}
             tooltipSide="left"
             aria-pressed={open}
             active={active}

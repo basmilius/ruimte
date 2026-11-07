@@ -15,7 +15,7 @@ import {
     settingsGroupsWith,
     type SettingsSectionMeta
 } from '@/shell/settings/sections';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { useKeyOf } from '@/shell/shortcut-overrides';
 import { useUi, type CoreSettingsSectionId, type SettingsSectionId } from '@/state/ui';
 
 // Each pane is a chunk of its own, loaded when it is opened; the search index in `search.ts` never imports one.
@@ -62,6 +62,7 @@ export function SettingsDialog() {
     const target = useUi((s) => s.settings.target);
     const searchAt = useUi((s) => s.settings.searchAt);
     const setSettings = useUi((s) => s.setSettings);
+    const searchKey = useKeyOf('settings-search');
     const contributed = useContributions((state) => state.settingsSections);
     // The labels come from `i18next.t`, which no redraw follows: this one is what draws them again in a language picked here.
     useTranslation('settings');
@@ -80,7 +81,7 @@ export function SettingsDialog() {
             account={{ section: entryOf(ACCOUNT_SECTION, contributed), tab: <AccountTab /> }}
             search={{
                 find: (query) => findSettings(query, isApplePlatform()),
-                hint: formatShortcut(APP_SHORTCUTS.settingsSearch, isApplePlatform()),
+                hint: formatShortcut(searchKey, isApplePlatform()),
                 focusAt: searchAt
             }}
             target={target}

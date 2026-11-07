@@ -38,6 +38,7 @@ import { showView, stepView, viewAtIndex, viewStepTarget } from '@/project/views
 import { toggleRoutines, useRoutinesStage } from '@/routines/stage';
 import { commandForKey, type WorkspaceCommandId } from '@/shell/command-table';
 import { revealNextWaiting } from '@/shell/next-waiting';
+import { isShortcutRecording } from '@/shell/shortcut-overrides';
 import { focusViewRow } from '@/shell/sidebar-focus';
 import { cellAt, cellCount, focusDirection, isTabHost, type SplitDirection } from '@/shell/split';
 import { focusedCanvas, maximizeTargetOf, zoomNodeTargetOf, type CanvasState } from '@/state/canvas';
@@ -556,6 +557,10 @@ export function useCanvasShortcuts(): void {
         /* In the capture phase, because leaving the node and leaving a view of its own listen on the
            window too, and only stopping the key here keeps them from also acting on it. */
         const onKeyDownCapture = (e: KeyboardEvent): void => {
+            // A key pressed to record a shortcut is that shortcut's, and runs nothing.
+            if (isShortcutRecording()) {
+                return;
+            }
             setGapModifierDown(e.altKey);
             // The composer's editor has its own keymap; reading-size keys must reach their chat first.
             if (!e.defaultPrevented && !e.isComposing && !isInFloatingLayer(e.target) && !useUi.getState().settings.open && !useRoutinesStage.getState().open) {
@@ -574,14 +579,16 @@ export function useCanvasShortcuts(): void {
                 }
             }
 
-            if (!e.isComposing && !isInFloatingLayer(e.target) && matchesShortcut(CANVAS_SHORTCUTS.voiceControl, e, isApplePlatform())) {
+            const pressed = commandForKey('workspace', e, isApplePlatform());
+
+            if (!e.isComposing && !isInFloatingLayer(e.target) && pressed === 'voice-control') {
                 if (voiceShortcut.press(e.timeStamp, e.repeat)) {
                     e.preventDefault();
                     e.stopPropagation();
                 }
                 return;
             }
-            if (!e.isComposing && !isInFloatingLayer(e.target) && matchesShortcut(CANVAS_SHORTCUTS.dictation, e, isApplePlatform())) {
+            if (!e.isComposing && !isInFloatingLayer(e.target) && pressed === 'dictation') {
                 if (e.repeat) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -597,13 +604,7 @@ export function useCanvasShortcuts(): void {
             }
             /* A deleted view comes back before any history hears the key: the deletion is the newest
                step there is, and a drawing or a diagram in front would take the key for its own. */
-            if (
-                !e.isComposing &&
-                !isTypingTarget(e.target) &&
-                !isInFloatingLayer(e.target) &&
-                commandForKey('workspace', e, isApplePlatform()) === 'edit-undo' &&
-                undoLatestDeletion(useDocument)
-            ) {
+            if (!e.isComposing && !isTypingTarget(e.target) && !isInFloatingLayer(e.target) && pressed === 'edit-undo' && undoLatestDeletion(useDocument)) {
                 e.preventDefault();
                 e.stopPropagation();
                 return;

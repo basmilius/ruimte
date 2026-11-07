@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@adecore/editor/fake';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { keyOf } from '@/shell/shortcut-overrides';
 import { useToasts } from '@/state/toasts';
 import { FakeLanguageTransport, readOnlyFiles } from './fake-daemon';
 import { eventOf } from './key-events';
@@ -149,7 +149,7 @@ describe('peek definition', () => {
         const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'use();', theme: 'light' });
         const language = new EditorLanguage(project, editor, uri, 'typescript');
         await language.document.ready;
-        editor.press(eventOf(CANVAS_SHORTCUTS.peekDefinition));
+        editor.press(eventOf(keyOf('peekDefinition')!));
         await settleLanguage();
         const view = language.popups.getState().peek!;
         expect(view.kind).toBe('definitions');

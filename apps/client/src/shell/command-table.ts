@@ -1,4 +1,5 @@
 import { SEND_AND_NEW_SHORTCUT } from '@adecore/agents-react/chat';
+import type { KeymapId } from '@adecore/editor/keymap';
 import { matchesShortcut, shortcut, type KeyLike, type Shortcut } from '@adecore/ui';
 import {
     Activity,
@@ -65,6 +66,7 @@ import {
     MessageSquare,
     MessageSquarePlus,
     MessageSquareText,
+    Mic,
     Minus,
     Moon,
     MousePointer2,
@@ -109,12 +111,11 @@ import {
     ZoomOut,
     type LucideIcon
 } from 'lucide-react';
-import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, NODE_NAVIGATION_SHORTCUTS } from '@/canvas/shortcuts';
 import { LANGUAGE_COMMAND_IDS, LANGUAGE_COMMANDS, type LanguageCommandId } from '@/language/command-table';
+import { hasDefaultKey, type DefaultKeyId } from '@/shell/default-keys';
 import { EDITOR_COMMAND_IDS, EDITOR_COMMANDS, type EditorCommandGroup, type EditorCommandId } from '@/shell/editor-commands';
-import { editorShortcut } from '@/shell/editor-keymap';
 import type { MenuContext } from '@/shell/menu/model';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { isRebound, keyIn, keyOf, overridesSnapshot, type OverrideSnapshot } from '@/shell/shortcut-overrides';
 import { CLEAR_SHORTCUT, platformShortcut, TERMINAL_FIND_SHORTCUT } from '@/terminal/keymap';
 
 /* A menu of the bar or a submenu with a fixed place, whose groups `menu/model.ts` lays out. */
@@ -169,7 +170,16 @@ export interface MenuPlace {
 interface CommandSpec {
     readonly key: string;
     readonly icon: LucideIcon;
+    /*
+     * A key the row has for good, which no one rebinds: one a composer answers by itself. The keys a person may
+     * rebind are the row's default in `shell/default-keys.ts`, or the key of the editor's keymap named by `keymap`.
+     */
     readonly shortcut?: Shortcut;
+    /* Another row whose key this one shows, so the two move together. */
+    readonly keyOf?: DefaultKeyId;
+    /* The key of the editor's keymap that answers the row, which a person may rebind. */
+    readonly keymap?: KeymapId;
+    /* Keys the row answers besides its own, until a person rebinds it. */
     readonly aliases?: readonly Shortcut[];
     /*
      * The listener that binds the shortcut, once on `window`: `shell/app-shortcuts.ts` for the window, which
@@ -177,6 +187,8 @@ interface CommandSpec {
      * shows the key, and whatever has the focus answers it (the editor, a composer).
      */
     readonly binds?: 'window' | 'workspace';
+    /* Only its key reaches the row: no palette row, no menu row. */
+    readonly keyOnly?: true;
     /* The palette has a row for it (`appCommands()`); without one the menu runs it itself. */
     readonly palette: boolean;
     readonly menu?: MenuPlace | readonly MenuPlace[];
@@ -225,7 +237,6 @@ const TABLE = {
     settings: {
         key: 'settings',
         icon: Settings,
-        shortcut: APP_SHORTCUTS.settings,
         binds: 'window',
         palette: true,
         menu: [
@@ -254,7 +265,6 @@ const TABLE = {
     'window-new': {
         key: 'newWindow',
         icon: AppWindow,
-        shortcut: APP_SHORTCUTS.newWindow,
         binds: 'window',
         palette: true,
         menu: { menu: 'file', group: 'new', order: 10, when: (context) => context.windows }
@@ -262,7 +272,6 @@ const TABLE = {
     'chat-new': {
         key: 'newChat',
         icon: MessageSquarePlus,
-        shortcut: APP_SHORTCUTS.newChat,
         binds: 'window',
         palette: true,
         menu: { menu: 'file', group: 'new', order: 20, when: (context) => context.newChat }
@@ -277,7 +286,6 @@ const TABLE = {
     'view-new': {
         key: 'newCanvasView',
         icon: Frame,
-        shortcut: CANVAS_SHORTCUTS.newView,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'new-view', group: 'views', order: 10 }
@@ -353,7 +361,7 @@ const TABLE = {
     'tab-close': {
         key: 'closeTab',
         icon: X,
-        shortcut: CANVAS_SHORTCUTS.closeCell,
+        keyOf: 'close-cell',
         palette: true,
         menu: { menu: 'file', group: 'close', order: 20, when: (context) => context.workspace && hosted(context) }
     },
@@ -361,7 +369,6 @@ const TABLE = {
     'close-cell': {
         key: 'closeCell',
         icon: X,
-        shortcut: CANVAS_SHORTCUTS.closeCell,
         binds: 'workspace',
         palette: false,
         menu: {
@@ -389,7 +396,6 @@ const TABLE = {
     'edit-undo': {
         key: 'undo',
         icon: Undo2,
-        shortcut: CANVAS_SHORTCUTS.undo,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'edit', group: 'history', order: 30, when: (context) => !desktop(context) && context.workspace, enabled: zoomable }
@@ -397,7 +403,6 @@ const TABLE = {
     'edit-redo': {
         key: 'redo',
         icon: Redo2,
-        shortcut: CANVAS_SHORTCUTS.redo,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'edit', group: 'history', order: 40, when: (context) => !desktop(context) && context.workspace, enabled: zoomable }
@@ -405,7 +410,6 @@ const TABLE = {
     find: {
         key: 'find',
         icon: TextSearch,
-        shortcut: CANVAS_SHORTCUTS.find,
         binds: 'workspace',
         palette: true,
         // A focused terminal answers its own find key (`terminal/xterm.ts`), which is not the window's off macOS; one without a find bar answers none.
@@ -415,7 +419,7 @@ const TABLE = {
             order: 10,
             shortcut: (context) => {
                 if (!context.terminalKeys) {
-                    return CANVAS_SHORTCUTS.find;
+                    return keyOf('find');
                 }
                 return context.terminalFind ? platformShortcut(TERMINAL_FIND_SHORTCUT, context.apple) : undefined;
             }
@@ -424,7 +428,6 @@ const TABLE = {
     'find-replace': {
         key: 'findReplace',
         icon: Replace,
-        shortcut: CANVAS_SHORTCUTS.findReplace,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'edit', group: 'find', order: 20 }
@@ -433,14 +436,14 @@ const TABLE = {
     'find-next': {
         key: 'findNext',
         icon: ArrowDown,
-        shortcut: editorShortcut('findNext'),
+        keymap: 'findNext',
         palette: true,
         menu: { menu: 'edit', group: 'find', order: 30, showsShortcut: () => false }
     },
     'find-previous': {
         key: 'findPrevious',
         icon: ArrowUp,
-        shortcut: editorShortcut('findPrevious'),
+        keymap: 'findPrevious',
         palette: true,
         menu: { menu: 'edit', group: 'find', order: 40, showsShortcut: () => false }
     },
@@ -448,35 +451,35 @@ const TABLE = {
     'open-file-at-line': {
         key: 'jumpToSource',
         icon: FileText,
-        shortcut: editorShortcut('jumpToSource'),
+        keymap: 'jumpToSource',
         palette: true,
         menu: { menu: 'go', group: 'editor-navigation', order: 100, enabled: (context) => context.diff }
     },
     'next-problem': {
         key: 'nextProblem',
         icon: ArrowDown,
-        shortcut: CANVAS_SHORTCUTS.nextProblem,
+        keymap: 'nextProblem',
         palette: true,
         menu: { menu: 'edit', group: 'problems', order: 10 }
     },
     'previous-problem': {
         key: 'previousProblem',
         icon: ArrowUp,
-        shortcut: CANVAS_SHORTCUTS.previousProblem,
+        keymap: 'previousProblem',
         palette: true,
         menu: { menu: 'edit', group: 'problems', order: 20 }
     },
     'next-highlight': {
         key: 'nextHighlight',
         icon: ArrowDown,
-        shortcut: CANVAS_SHORTCUTS.nextHighlight,
+        keymap: 'nextHighlight',
         palette: true,
         menu: { menu: 'edit', group: 'problems', order: 30 }
     },
     'previous-highlight': {
         key: 'previousHighlight',
         icon: ArrowUp,
-        shortcut: CANVAS_SHORTCUTS.previousHighlight,
+        keymap: 'previousHighlight',
         palette: true,
         menu: { menu: 'edit', group: 'problems', order: 40 }
     },
@@ -484,7 +487,6 @@ const TABLE = {
     'settings-search': {
         key: 'searchSettings',
         icon: Search,
-        shortcut: APP_SHORTCUTS.settingsSearch,
         binds: 'window',
         palette: true,
         menu: { menu: 'edit', group: 'search', order: 10, when: (context) => context.settingsOpen }
@@ -492,7 +494,6 @@ const TABLE = {
     'find-in-files': {
         key: 'findInFiles',
         icon: Search,
-        shortcut: APP_SHORTCUTS.findInFiles,
         binds: 'window',
         palette: true,
         // Off macOS a focused terminal keeps Ctrl+Shift+F for its own find (`TERMINAL_FIND_SHORTCUT`).
@@ -525,7 +526,6 @@ const TABLE = {
     sidebar: {
         key: 'toggleSidebar',
         icon: PanelLeft,
-        shortcut: APP_SHORTCUTS.sidebar,
         binds: 'window',
         palette: true,
         menu: { menu: 'view', group: 'sidebar', order: 10, checked: (context) => context.sidebar }
@@ -563,7 +563,6 @@ const TABLE = {
     routines: {
         key: 'routines',
         icon: Clock,
-        shortcut: CANVAS_SHORTCUTS.routines,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'view', group: 'panels', order: 45, when: (context) => context.routines }
@@ -577,7 +576,6 @@ const TABLE = {
     'panel-toggle': {
         key: 'togglePanel',
         icon: PanelRightOpen,
-        shortcut: CANVAS_SHORTCUTS.togglePanel,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'view', group: 'panels', order: 50 }
@@ -585,7 +583,6 @@ const TABLE = {
     'split-right': {
         key: 'splitRight',
         icon: PanelRight,
-        shortcut: CANVAS_SHORTCUTS.splitRight,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'view', group: 'split', order: 10, enabled: (context) => context.split.right }
@@ -593,7 +590,6 @@ const TABLE = {
     'split-down': {
         key: 'splitDown',
         icon: PanelBottom,
-        shortcut: CANVAS_SHORTCUTS.splitDown,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'view', group: 'split', order: 20, enabled: (context) => context.split.down }
@@ -601,7 +597,6 @@ const TABLE = {
     'tab-move-left': {
         key: 'moveTabLeft',
         icon: ArrowLeft,
-        shortcut: CANVAS_SHORTCUTS.moveTabLeft,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'view', group: 'split', order: 30, when: hosted, enabled: (context) => context.tabs.index > 0 }
@@ -609,7 +604,6 @@ const TABLE = {
     'tab-move-right': {
         key: 'moveTabRight',
         icon: ArrowRight,
-        shortcut: CANVAS_SHORTCUTS.moveTabRight,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'view', group: 'split', order: 40, when: hosted, enabled: (context) => context.tabs.index < context.tabs.count - 1 }
@@ -632,7 +626,6 @@ const TABLE = {
     'cell-maximize': {
         key: 'maximizeCell',
         icon: Expand,
-        shortcut: CANVAS_SHORTCUTS.maximizeCell,
         binds: 'workspace',
         palette: true,
         menu: {
@@ -647,7 +640,7 @@ const TABLE = {
     'node-maximize': {
         key: 'maximizeNode',
         icon: Expand,
-        shortcut: CANVAS_SHORTCUTS.maximizeCell,
+        keyOf: 'cell-maximize',
         palette: true,
         menu: {
             menu: 'view',
@@ -666,7 +659,6 @@ const TABLE = {
     fit: {
         key: 'zoomToFit',
         icon: Maximize2,
-        shortcut: CANVAS_SHORTCUTS.fitAll,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'view', group: 'zoom', order: 10, enabled: zoomable }
@@ -674,7 +666,6 @@ const TABLE = {
     'zoom-selection': {
         key: 'zoomToSelection',
         icon: Focus,
-        shortcut: CANVAS_SHORTCUTS.zoomSelection,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'view', group: 'zoom', order: 20, enabled: zoomable }
@@ -682,7 +673,6 @@ const TABLE = {
     'zoom-node': {
         key: 'zoomToNode',
         icon: Crosshair,
-        shortcut: CANVAS_SHORTCUTS.zoomNode,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'view', group: 'zoom', order: 30, when: onCanvas, enabled: (context) => context.nodeZoomable && !context.nodeMaximized }
@@ -690,7 +680,6 @@ const TABLE = {
     'zoom-reset': {
         key: 'zoomReset',
         icon: Percent,
-        shortcut: CANVAS_SHORTCUTS.zoomReset,
         binds: 'workspace',
         palette: true,
         menu: {
@@ -704,7 +693,6 @@ const TABLE = {
     'chat-text-larger': {
         key: 'chatTextLarger',
         icon: ZoomIn,
-        shortcut: CANVAS_SHORTCUTS.chatTextLarger,
         aliases: [shortcut('Mod+='), shortcut('Mod+Shift++')],
         binds: 'workspace',
         palette: true,
@@ -719,7 +707,6 @@ const TABLE = {
     'chat-text-smaller': {
         key: 'chatTextSmaller',
         icon: ZoomOut,
-        shortcut: CANVAS_SHORTCUTS.chatTextSmaller,
         binds: 'workspace',
         palette: true,
         menu: {
@@ -742,7 +729,6 @@ const TABLE = {
     palette: {
         key: 'palette',
         icon: Command,
-        shortcut: APP_SHORTCUTS.palette,
         binds: 'window',
         palette: false,
         menu: { menu: 'go', group: 'palette', order: 10, showsShortcut: (context) => !context.terminalKeys }
@@ -750,7 +736,6 @@ const TABLE = {
     'view-previous': {
         key: 'previousView',
         icon: ChevronsLeft,
-        shortcut: CANVAS_SHORTCUTS.previousView,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'go', group: 'views', order: 10, enabled: (context) => context.navigation.views }
@@ -758,7 +743,6 @@ const TABLE = {
     'view-next': {
         key: 'nextView',
         icon: ChevronsRight,
-        shortcut: CANVAS_SHORTCUTS.nextView,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'go', group: 'views', order: 20, enabled: (context) => context.navigation.views }
@@ -766,7 +750,6 @@ const TABLE = {
     'camera-back': {
         key: 'cameraBack',
         icon: ArrowLeft,
-        shortcut: CANVAS_SHORTCUTS.cameraBack,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'views', order: 30, when: onCanvas, enabled: (context) => context.navigation.camera.back }
@@ -774,7 +757,6 @@ const TABLE = {
     'camera-forward': {
         key: 'cameraForward',
         icon: ArrowRight,
-        shortcut: CANVAS_SHORTCUTS.cameraForward,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'views', order: 40, when: onCanvas, enabled: (context) => context.navigation.camera.forward }
@@ -782,7 +764,6 @@ const TABLE = {
     'tab-previous': {
         key: 'previousTab',
         icon: ArrowLeft,
-        shortcut: CANVAS_SHORTCUTS.previousTab,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'views', order: 50, when: hosted, enabled: (context) => context.tabs.count > 1 }
@@ -790,7 +771,6 @@ const TABLE = {
     'tab-next': {
         key: 'nextTab',
         icon: ArrowRight,
-        shortcut: CANVAS_SHORTCUTS.nextTab,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'views', order: 60, when: hosted, enabled: (context) => context.tabs.count > 1 }
@@ -798,7 +778,6 @@ const TABLE = {
     'focus-left': {
         key: 'focusLeft',
         icon: ArrowLeft,
-        shortcut: FOCUS_SHORTCUTS.left,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'go', group: 'focus', order: 10, enabled: (context) => context.navigation.focus.left }
@@ -806,7 +785,6 @@ const TABLE = {
     'focus-right': {
         key: 'focusRight',
         icon: ArrowRight,
-        shortcut: FOCUS_SHORTCUTS.right,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'go', group: 'focus', order: 20, enabled: (context) => context.navigation.focus.right }
@@ -814,7 +792,6 @@ const TABLE = {
     'focus-up': {
         key: 'focusUp',
         icon: ArrowUp,
-        shortcut: FOCUS_SHORTCUTS.up,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'go', group: 'focus', order: 30, enabled: (context) => context.navigation.focus.up }
@@ -822,7 +799,6 @@ const TABLE = {
     'focus-down': {
         key: 'focusDown',
         icon: ArrowDown,
-        shortcut: FOCUS_SHORTCUTS.down,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'go', group: 'focus', order: 40, enabled: (context) => context.navigation.focus.down }
@@ -830,7 +806,6 @@ const TABLE = {
     'node-left': {
         key: 'nodeLeft',
         icon: ArrowLeft,
-        shortcut: NODE_NAVIGATION_SHORTCUTS.left,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'nodes', order: 10, enabled: (context) => context.navigation.nodes.left }
@@ -838,7 +813,6 @@ const TABLE = {
     'node-right': {
         key: 'nodeRight',
         icon: ArrowRight,
-        shortcut: NODE_NAVIGATION_SHORTCUTS.right,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'nodes', order: 20, enabled: (context) => context.navigation.nodes.right }
@@ -846,7 +820,6 @@ const TABLE = {
     'node-up': {
         key: 'nodeUp',
         icon: ArrowUp,
-        shortcut: NODE_NAVIGATION_SHORTCUTS.up,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'nodes', order: 30, enabled: (context) => context.navigation.nodes.up }
@@ -854,7 +827,6 @@ const TABLE = {
     'node-down': {
         key: 'nodeDown',
         icon: ArrowDown,
-        shortcut: NODE_NAVIGATION_SHORTCUTS.down,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'nodes', order: 40, enabled: (context) => context.navigation.nodes.down }
@@ -862,7 +834,6 @@ const TABLE = {
     prompts: {
         key: 'prompts',
         icon: Inbox,
-        shortcut: CANVAS_SHORTCUTS.focusPrompts,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'go', group: 'prompts', order: 10, when: onCanvas, enabled: (context) => context.navigation.prompts }
@@ -871,7 +842,6 @@ const TABLE = {
     'needs-you-next': {
         key: 'nextNeedsYou',
         icon: Hourglass,
-        shortcut: CANVAS_SHORTCUTS.nextNeedsYou,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'prompts', order: 20, enabled: (context) => context.navigation.waiting }
@@ -879,7 +849,6 @@ const TABLE = {
     'attention-queue': {
         key: 'attentionQueue',
         icon: ListChecks,
-        shortcut: CANVAS_SHORTCUTS.attentionQueue,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'prompts', order: 30 }
@@ -887,7 +856,6 @@ const TABLE = {
     'launch-run': {
         key: 'launch',
         icon: Play,
-        shortcut: CANVAS_SHORTCUTS.launchRun,
         binds: 'workspace',
         palette: false,
         menu: {
@@ -904,7 +872,6 @@ const TABLE = {
     'launch-stop': {
         key: 'launchStopNone',
         icon: Square,
-        shortcut: CANVAS_SHORTCUTS.launchStop,
         binds: 'workspace',
         palette: false,
         menu: {
@@ -990,7 +957,6 @@ const TABLE = {
     'add-terminal': {
         key: 'addTerminal',
         icon: Terminal,
-        shortcut: ADD_NODE_SHORTCUTS.terminal,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'canvas-add', order: 10 }
@@ -998,7 +964,6 @@ const TABLE = {
     'add-chat': {
         key: 'addChat',
         icon: MessageSquare,
-        shortcut: ADD_NODE_SHORTCUTS.chat,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'canvas-add', order: 20 }
@@ -1006,7 +971,6 @@ const TABLE = {
     'add-browser': {
         key: 'addBrowser',
         icon: Globe,
-        shortcut: ADD_NODE_SHORTCUTS.browser,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'canvas-add', order: 30 }
@@ -1014,7 +978,6 @@ const TABLE = {
     'add-note': {
         key: 'addNote',
         icon: StickyNote,
-        shortcut: ADD_NODE_SHORTCUTS.note,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'canvas-add', order: 40 }
@@ -1024,7 +987,6 @@ const TABLE = {
     'add-group': {
         key: 'addGroup',
         icon: Group,
-        shortcut: ADD_NODE_SHORTCUTS.group,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'canvas-add', order: 70 }
@@ -1032,7 +994,6 @@ const TABLE = {
     'group-selection': {
         key: 'groupSelection',
         icon: SquareDashed,
-        shortcut: CANVAS_SHORTCUTS.group,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'canvas-arrange', order: 10, enabled: (context) => context.selection > 0 }
@@ -1097,7 +1058,6 @@ const TABLE = {
     'chat-effort-up': {
         key: 'raiseEffort',
         icon: ChevronsUp,
-        shortcut: CANVAS_SHORTCUTS.raiseEffort,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'chat', order: 30 }
@@ -1105,7 +1065,6 @@ const TABLE = {
     'chat-effort-down': {
         key: 'lowerEffort',
         icon: ChevronsDown,
-        shortcut: CANVAS_SHORTCUTS.lowerEffort,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'chat', order: 40 }
@@ -1186,24 +1145,31 @@ const TABLE = {
     'flag-toggle': {
         key: 'toggleFlag',
         icon: Flag,
-        shortcut: CANVAS_SHORTCUTS.toggleFlag,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'settings', order: 20 }
     },
     'view-settings': { key: 'viewSettings', icon: Settings2, palette: true, menu: { menu: 'kind', group: 'settings', order: 30 } },
-    'view-delete': { key: 'deleteView', icon: Trash, palette: true, menu: { menu: 'kind', group: 'delete', order: 10 } }
+    'view-delete': { key: 'deleteView', icon: Trash, palette: true, menu: { menu: 'kind', group: 'delete', order: 10 } },
+    // The key presses and holds: the capture listener of the workspace runs it (`canvas/canvas-shortcuts.ts`).
+    'voice-control': { key: 'voiceControl', icon: Mic, binds: 'workspace', palette: false, keyOnly: true },
+    dictation: { key: 'dictation', icon: Mic, binds: 'workspace', palette: false, keyOnly: true }
 } satisfies Record<string, CommandSpec>;
 
 type OwnCommandId = keyof typeof TABLE;
 
 export type CommandId = OwnCommandId | LanguageCommandId | EditorCommandId;
 
+/* The rows only their key reaches. */
+type KeyOnlyCommandId = { [Id in OwnCommandId]: (typeof TABLE)[Id] extends { keyOnly: true } ? Id : never }[OwnCommandId];
+
 /* The rows the menu runs itself, since the palette has none for them (`menu/actions.ts`). */
-export type MenuOnlyCommandId = { [Id in OwnCommandId]: (typeof TABLE)[Id]['palette'] extends false ? Id : never }[OwnCommandId];
+export type MenuOnlyCommandId = {
+    [Id in Exclude<OwnCommandId, KeyOnlyCommandId>]: (typeof TABLE)[Id]['palette'] extends false ? Id : never;
+}[Exclude<OwnCommandId, KeyOnlyCommandId>];
 
 /* The rows the palette has with the table's words. The language and editing commands make their own (`languageCommandRows`, `editorCommandRows`). */
-export type PaletteCommandId = Exclude<OwnCommandId, MenuOnlyCommandId>;
+export type PaletteCommandId = Exclude<OwnCommandId, MenuOnlyCommandId | KeyOnlyCommandId>;
 
 /* The rows `shell/app-shortcuts.ts` binds. */
 export type WindowCommandId = { [Id in OwnCommandId]: (typeof TABLE)[Id] extends { binds: 'window' } ? Id : never }[OwnCommandId];
@@ -1216,7 +1182,7 @@ function languageCommand(id: LanguageCommandId): CommandSpec {
     return {
         key: spec.key,
         icon: spec.icon,
-        ...(spec.shortcut ? { shortcut: spec.shortcut } : {}),
+        ...(spec.keymap ? { keymap: spec.keymap } : {}),
         palette: true,
         menu: {
             menu: spec.menu,
@@ -1233,7 +1199,7 @@ function editorCommand(id: EditorCommandId): CommandSpec {
     return {
         key: spec.key,
         icon: spec.icon,
-        ...(spec.shortcut ? { shortcut: spec.shortcut } : {}),
+        keymap: spec.keymap,
         palette: true,
         menu: editorMenuPlace(spec.group, order)
     };
@@ -1280,24 +1246,60 @@ export function menuPlacesOf(id: CommandId): readonly MenuPlace[] {
     return 'menu' in places ? [places as MenuPlace] : (places as readonly MenuPlace[]);
 }
 
-/* The rows one listener binds, each with its key. */
+/*
+ * The key a row answers to now: the one of the row it shows, the key of the editor's keymap that answers it,
+ * a rebound or default key, or the fixed key it has for good. Read against a snapshot, a component that
+ * redraws with the overrides gets the key they give.
+ */
+export function commandKey(id: CommandId, snapshot: OverrideSnapshot = overridesSnapshot()): Shortcut | undefined {
+    const { shortcut, keyOf: other, keymap } = COMMANDS[id];
+
+    if (other !== undefined) {
+        return keyIn(snapshot, other);
+    }
+
+    if (keymap !== undefined) {
+        return keyIn(snapshot, keymap);
+    }
+
+    return hasDefaultKey(id) ? keyIn(snapshot, id) : shortcut;
+}
+
+const BOUND = new Map<'window' | 'workspace', { snapshot: OverrideSnapshot; keys: [CommandId, Shortcut][] }>();
+
+/* The rows one listener binds, each with its key, the rows a person rebound first so a default of a later release never takes their key. */
 export function boundCommands(listener: 'window'): [WindowCommandId, Shortcut][];
 export function boundCommands(listener: 'workspace'): [WorkspaceCommandId, Shortcut][];
 export function boundCommands(listener: 'window' | 'workspace'): [CommandId, Shortcut][];
 export function boundCommands(listener: 'window' | 'workspace'): [CommandId, Shortcut][] {
-    return COMMAND_IDS.flatMap((id): [CommandId, Shortcut][] => {
-        const { binds, shortcut, aliases } = COMMANDS[id];
-        return binds === listener && shortcut !== undefined ? [shortcut, ...(aliases ?? [])].map((key) => [id, key]) : [];
-    });
-}
+    const snapshot = overridesSnapshot();
+    const cached = BOUND.get(listener);
 
-const WINDOW_KEYS = boundCommands('window');
-const WORKSPACE_KEYS = boundCommands('workspace');
+    if (cached?.snapshot === snapshot) {
+        return cached.keys;
+    }
+
+    const keys = COMMAND_IDS.flatMap((id): [CommandId, Shortcut][] => {
+        const { binds, aliases } = COMMANDS[id];
+        const key = commandKey(id, snapshot);
+
+        if (binds !== listener || key === undefined) {
+            return [];
+        }
+
+        // An alias belongs to the key the row starts with.
+        return [key, ...(isRebound(snapshot, id) ? [] : (aliases ?? []))].map((own) => [id, own]);
+    });
+    const ordered = [...keys.filter(([id]) => isRebound(snapshot, id)), ...keys.filter(([id]) => !isRebound(snapshot, id))];
+
+    BOUND.set(listener, { snapshot, keys: ordered });
+
+    return ordered;
+}
 
 /* The command a keystroke is for one listener, or null for a key that is none of its. */
 export function commandForKey(listener: 'window', e: KeyLike, apple: boolean): WindowCommandId | null;
 export function commandForKey(listener: 'workspace', e: KeyLike, apple: boolean): WorkspaceCommandId | null;
 export function commandForKey(listener: 'window' | 'workspace', e: KeyLike, apple: boolean): CommandId | null {
-    const keys: [CommandId, Shortcut][] = listener === 'window' ? WINDOW_KEYS : WORKSPACE_KEYS;
-    return keys.find(([, shortcut]) => matchesShortcut(shortcut, e, apple))?.[0] ?? null;
+    return boundCommands(listener).find(([, shortcut]) => matchesShortcut(shortcut, e, apple))?.[0] ?? null;
 }

@@ -2,12 +2,12 @@ import { formatShortcut, Segmented, Switch } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { EDITOR_ASSIST_PROVIDERS, EditorAssistProviderSchema } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
 import { InlineAgentPicker } from '@/editor-ai/InlineAgentPicker';
 import { useEditorAssistAvailability } from '@/editor-assist/use-availability';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
+import { useKeyOf } from '@/shell/shortcut-overrides';
 import { AGENT_CHANGES_MODES, GHOST_TEXT_MODES, type AgentChangesMode, type GhostTextMode } from '@/state/ai-settings';
 import { useSettings } from '@/state/settings';
 
@@ -23,7 +23,8 @@ export function EditorAiTab() {
     const model = useEditorAssistAvailability();
     const unavailable = model !== null && !model.available;
     const whyNot = unavailable ? t('editor.ai.assist.unavailable', { reason: model.reason ?? '' }) : null;
-    const ghostKey = formatShortcut(CANVAS_SHORTCUTS.suggestInline, isApplePlatform());
+    const suggestKey = useKeyOf('suggestInline');
+    const ghostKey = suggestKey === undefined ? '' : formatShortcut(suggestKey, isApplePlatform());
 
     return (
         <>

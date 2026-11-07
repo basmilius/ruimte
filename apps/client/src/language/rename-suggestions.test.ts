@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@adecore/editor/fake';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
+import { keyOf } from '@/shell/shortcut-overrides';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { FakeLanguageTransport, readOnlyFiles } from './fake-daemon';
@@ -43,7 +43,7 @@ async function setup(options: { available?: boolean; fail?: boolean } = {}) {
     const language = new EditorLanguage(project, editor, uri, 'typescript');
     await language.document.ready;
     editor.moveCaret(at(0, 7));
-    editor.press(eventOf(CANVAS_SHORTCUTS.rename));
+    editor.press(eventOf(keyOf('renameSymbol')!));
     await settle();
     return { transport, model, editor, language };
 }

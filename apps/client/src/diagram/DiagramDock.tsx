@@ -1,9 +1,9 @@
 import { Separator, DockShell, ZoomControls } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
 import { fitAction } from '@/actions/client-actions';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { copyDiagram, exportDiagram } from '@/diagram/diagram-actions';
 import { DockExportHistory } from '@/drawing/DockExportHistory';
+import { useKeyOf } from '@/shell/shortcut-overrides';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
 import { useSettings } from '@/state/settings';
 
@@ -17,6 +17,8 @@ export function DiagramDock() {
     const canUndo = useDiagram((s) => s.past.length > 0);
     const canRedo = useDiagram((s) => s.future.length > 0);
     const dockAutoHide = useSettings((s) => s.dockAutoHide);
+    const zoomKeys = { zoomReset: useKeyOf('zoom-reset'), fitAll: useKeyOf('fit') };
+    const historyKeys = { undo: useKeyOf('edit-undo'), redo: useKeyOf('edit-redo') };
 
     return (
         <DockShell data-diagram-chrome autoHide={dockAutoHide} className="px-4">
@@ -28,7 +30,7 @@ export function DiagramDock() {
                     fit: t('zoom.fit'),
                     fitEverything: t('zoom.fitEverything')
                 }}
-                shortcuts={CANVAS_SHORTCUTS}
+                shortcuts={zoomKeys}
                 onZoomChange={(next) => store.getState().zoomTo(next)}
                 onFitAll={() => fitAction(viewId)}
             />
@@ -40,7 +42,7 @@ export function DiagramDock() {
                 empty={empty}
                 canUndo={canUndo}
                 canRedo={canRedo}
-                shortcuts={CANVAS_SHORTCUTS}
+                shortcuts={historyKeys}
                 onCopy={(format) => copyDiagram(store, format)}
                 onSave={(format) => exportDiagram(store, format)}
             />

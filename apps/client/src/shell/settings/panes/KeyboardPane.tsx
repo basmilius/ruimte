@@ -3,11 +3,11 @@ import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
 import { Search, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform, isDesktop } from '@/desktop/bridge';
 import { keyboardGroups } from '@/shell/settings/keyboard-groups';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { filterShortcuts, shortcutGroupOf, shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
+import { keyOf } from '@/shell/shortcut-overrides';
 import { useUi } from '@/state/ui';
 
 function GroupCard({ group, footer }: { group: ShortcutGroup; footer?: ReactNode }) {
@@ -53,8 +53,8 @@ export function KeyboardPane() {
     const note = isDesktop()
         ? undefined
         : t('keyboard.browserNote', {
-              newView: formatShortcut(CANVAS_SHORTCUTS.newView, apple),
-              closeCell: formatShortcut(CANVAS_SHORTCUTS.closeCell, apple)
+              newView: formatShortcut(keyOf('view-new'), apple),
+              closeCell: formatShortcut(keyOf('close-cell'), apple)
           });
 
     const countOf = (group: ShortcutGroup): number =>

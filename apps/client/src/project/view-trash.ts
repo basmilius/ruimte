@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { keyOf } from '@/shell/shortcut-overrides';
 import type { DocumentState } from '@/state/document';
 import { useToasts } from '@/state/toasts';
 
@@ -42,7 +42,7 @@ export function offerViewUndo(document: DocumentStore, viewId: string, name: str
         title: i18next.t('shell:toasts.deletedView', { name }),
         action: {
             label: i18next.t('common:action.undo'),
-            shortcut: CANVAS_SHORTCUTS.undo,
+            shortcut: keyOf('undo'),
             run: () => {
                 document.getState().restoreView(viewId);
             }

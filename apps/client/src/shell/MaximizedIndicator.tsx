@@ -1,7 +1,7 @@
-import { Button, Kbd, Tooltip } from '@adecore/ui';
+import { Button, Tooltip } from '@adecore/ui';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { RowKbd } from '@/shell/RowKbd';
 import { cellCount, cellViewIds, isSameCell, type CellAt } from '@/shell/split';
 import { useDocument } from '@/state/document';
 
@@ -36,7 +36,7 @@ export function MaximizedIndicator({ at }: { at: CellAt }) {
                 </span>
                 {t('cellToolbar.hidden', { count: cellCount(layout) - 1 })}
                 <span aria-hidden>·</span>
-                <Kbd shortcut={CANVAS_SHORTCUTS.maximizeCell} className="font-sans" />
+                <RowKbd row="cell-maximize" className="font-sans" />
             </Button>
         </Tooltip>
     );

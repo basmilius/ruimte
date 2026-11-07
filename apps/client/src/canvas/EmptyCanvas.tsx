@@ -1,7 +1,7 @@
 import { startingSelection, useChatPreferences } from '@adecore/agents-react/chat';
 import { AgentIcon, modelName } from '@adecore/agents-react/providers';
 import { useProviders } from '@adecore/agents-react/state';
-import { Icon, IconButton, Kbd } from '@adecore/ui';
+import { Icon, IconButton } from '@adecore/ui';
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import clsx from 'clsx';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -10,9 +10,9 @@ import { createNodeAction } from '@/actions/client-actions';
 import { availableAgents } from '@/agents/creation';
 import { GHOST_AREA, GHOST_FADE_MS, GHOST_FRAMES, ghostScale, type GhostKind } from '@/canvas/empty-canvas';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';
-import { ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
+import { ADD_NODE_ROWS } from '@/canvas/shortcuts';
 import { SlotRow } from '@/extensions/SlotSurfaces';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { RowKbd } from '@/shell/RowKbd';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useUi } from '@/state/ui';
 import { useDetectProviders } from '@/transport/provider-detection';
@@ -105,7 +105,7 @@ export function EmptyCanvas({ empty }: { empty: boolean }) {
                 wrap={(row) => <div className="pointer-events-auto flex shrink-0 flex-wrap justify-center gap-2">{row}</div>}
             />
             <p className="pointer-events-auto shrink-0 text-center text-xs text-text-muted">
-                <Trans t={t} i18nKey="empty.hint" components={{ palette: <Kbd shortcut={APP_SHORTCUTS.palette} variant="inline" /> }} />
+                <Trans t={t} i18nKey="empty.hint" components={{ palette: <RowKbd row="palette" variant="inline" /> }} />
             </p>
         </div>
     );
@@ -132,7 +132,7 @@ function Ghost({ kind, title, landed, onAdd, children }: { kind: GhostKind; titl
             <div className="pointer-events-none flex h-10 shrink-0 items-center gap-2 px-2.5">
                 <Icon icon={NODE_KIND_ICONS[kind]} size={16} />
                 <span className="truncate font-medium text-text">{title}</span>
-                <Kbd shortcut={ADD_NODE_SHORTCUTS[kind]} className="ml-auto text-text-faint" />
+                <RowKbd row={ADD_NODE_ROWS[kind]} className="ml-auto text-text-faint" />
             </div>
             <div className="pointer-events-none flex min-h-0 flex-1 flex-col gap-2.5 p-3">{children}</div>
         </div>

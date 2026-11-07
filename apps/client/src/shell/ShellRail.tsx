@@ -9,7 +9,7 @@ import { ConnectionDot } from '@/shell/ConnectionDot';
 import { askMachineUpdateAgain, showsPendingRestart } from '@/shell/machine-update';
 import { PanelControls } from '@/shell/PanelControls';
 import { useToolbarPanels } from '@/shell/panels';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { useKeyOf } from '@/shell/shortcut-overrides';
 import { useBackgroundServiceState } from '@/shell/use-background-service';
 import { isScratchProject, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
@@ -28,6 +28,8 @@ export function ShellRail() {
     const { t } = useTranslation('shell');
     const paletteOpen = useUi((s) => s.paletteOpen);
     const usagePeek = useUi((s) => s.usagePeek);
+    const paletteKey = useKeyOf('palette');
+    const settingsKey = useKeyOf('settings');
     // The Chats project has no folder to show, so no files, git, devices or launches either.
     const scratch = useProject((s) => isScratchProject(s.current));
     const hasPanelButtons = useToolbarPanels(scratch).length > 0;
@@ -44,7 +46,7 @@ export function ShellRail() {
             <IconButton
                 icon={Search}
                 label={t('toolbar.search')}
-                kbd={APP_SHORTCUTS.palette}
+                kbd={paletteKey}
                 tooltipSide="left"
                 active={paletteOpen}
                 onClick={() => useUi.getState().setPaletteOpen(true)}
@@ -73,7 +75,7 @@ export function ShellRail() {
             <IconButton
                 icon={Settings}
                 label={t('settingsDialog.title')}
-                kbd={APP_SHORTCUTS.settings}
+                kbd={settingsKey}
                 tooltipSide="left"
                 onClick={() => useUi.getState().setSettings({ open: true })}
             />

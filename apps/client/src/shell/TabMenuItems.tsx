@@ -1,9 +1,9 @@
-import { Icon, Kbd, Menu } from '@adecore/ui';
+import { Icon, Menu } from '@adecore/ui';
 import { ArrowLeft, ArrowRight, ArrowRightToLine, Columns3, ListX, PanelRight, Pin, PinOff, SquareX, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { closeTabAction, closeTabsAction } from '@/actions/client-actions';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
+import { RowKbd } from '@/shell/RowKbd';
 import { canSplit, cellAt, locateView } from '@/shell/split';
 import { SplitItems } from '@/shell/ViewMenuItems';
 import { useDocument } from '@/state/document';
@@ -44,7 +44,7 @@ export function TabMenuItems({ viewId }: { viewId: string }) {
                 <Icon icon={pinned ? PinOff : Pin} size={14} /> {pinned ? t('panels:file.tab.unpin') : t('panels:file.tab.pin')}
             </Menu.Item>
             <Menu.Item onClick={() => closeTabAction(viewId)}>
-                <Icon icon={X} size={14} /> {t('panels:file.tab.close')} <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />
+                <Icon icon={X} size={14} /> {t('panels:file.tab.close')} <RowKbd row="close-cell" />
             </Menu.Item>
             <Menu.Item disabled={tabsToClose(tabs, viewId, 'others', pinnedOf).length === 0} onClick={() => closeTabsAction(viewId, 'others')}>
                 <Icon icon={ListX} size={14} /> {t('panels:file.tab.closeOthers')}
@@ -62,10 +62,10 @@ export function TabMenuItems({ viewId }: { viewId: string }) {
                 </Menu.SubmenuTrigger>
                 <Menu.Popup>
                     <Menu.Item disabled={index < 1} onClick={() => useDocument.getState().moveTab(viewId, -1)}>
-                        <Icon icon={ArrowLeft} size={14} /> {t('viewMenu.moveTabLeft')} <Kbd shortcut={CANVAS_SHORTCUTS.moveTabLeft} />
+                        <Icon icon={ArrowLeft} size={14} /> {t('viewMenu.moveTabLeft')} <RowKbd row="tab-move-left" />
                     </Menu.Item>
                     <Menu.Item disabled={index === tabs.length - 1} onClick={() => useDocument.getState().moveTab(viewId, 1)}>
-                        <Icon icon={ArrowRight} size={14} /> {t('viewMenu.moveTabRight')} <Kbd shortcut={CANVAS_SHORTCUTS.moveTabRight} />
+                        <Icon icon={ArrowRight} size={14} /> {t('viewMenu.moveTabRight')} <RowKbd row="tab-move-right" />
                     </Menu.Item>
                     <Menu.Item disabled={tabs.length < 2 || !splittable} onClick={() => useDocument.getState().splitTabOff(viewId)}>
                         <Icon icon={PanelRight} size={14} /> {t('viewMenu.moveTabToNewCell')}

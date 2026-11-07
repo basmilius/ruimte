@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { COMMAND_IDS } from '@/shell/command-table';
 import { LANGUAGE_COMMANDS, LANGUAGE_COMMAND_IDS, offeredLanguageCommands } from './command-table';
 
@@ -8,7 +7,7 @@ describe('toggle rendered documentation command', () => {
         expect(LANGUAGE_COMMANDS['toggle-rendered-docs']).toMatchObject({
             menu: 'code',
             key: 'toggleRenderedDocs',
-            shortcut: CANVAS_SHORTCUTS.toggleRenderedDocs
+            keymap: 'toggleRenderedDocs'
         });
     });
 

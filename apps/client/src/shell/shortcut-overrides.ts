@@ -1,5 +1,5 @@
 import { KEYMAP_IDS, resolveKeymap, type Keymap, type KeymapId, type KeymapOverrides } from '@adecore/editor/keymap';
-import { shortcut, shortcutText, type Shortcut } from '@adecore/ui';
+import { matchesShortcut, shortcut, shortcutText, type KeyLike, type Shortcut } from '@adecore/ui';
 import { useSyncExternalStore } from 'react';
 import { z } from 'zod';
 import { isApplePlatform } from '@/desktop/bridge';
@@ -153,6 +153,18 @@ export function keyOf(id: RowId): Shortcut | undefined {
     return keyIn(overridesSnapshot(), id as DefaultKeyId);
 }
 
+/* Whether a key event is the key of a row of the editor's keymap now. */
+export function matchesKeymapRow(id: KeymapId, event: KeyLike, apple: boolean): boolean {
+    const key = keyOf(id);
+
+    return key !== undefined && matchesShortcut(key, event, apple);
+}
+
+/* For a row that may have no key of the editor's keymap. */
+export function keymapKeyOf(id: KeymapId | undefined): Shortcut | undefined {
+    return id === undefined ? undefined : keyOf(id);
+}
+
 export function useKeyOf(id: DefaultKeyId): Shortcut;
 export function useKeyOf(id: KeymapId): Shortcut | undefined;
 export function useKeyOf(id: RowId): Shortcut | undefined {
@@ -164,7 +176,7 @@ export function useOverrides(): OverrideSnapshot {
     return useSyncExternalStore(subscribeOverrides, overridesSnapshot);
 }
 
-export function isRebound(snapshot: OverrideSnapshot, id: RowId): boolean {
+export function isRebound(snapshot: OverrideSnapshot, id: string): boolean {
     return snapshot.keys.has(id);
 }
 

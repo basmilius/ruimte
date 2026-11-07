@@ -1,4 +1,4 @@
-import type { Shortcut } from '@adecore/ui';
+import type { KeymapId } from '@adecore/editor/keymap';
 import {
     AlignLeft,
     ArrowDown,
@@ -39,9 +39,7 @@ import {
     WandSparkles,
     type LucideIcon
 } from 'lucide-react';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { RENDERED_DOC_COMMENTS } from '@/features';
-import { editorShortcut } from '@/shell/editor-keymap';
 
 /*
  * The commands that act on the editor with the keyboard in it: the id the menu and the palette share, the
@@ -55,52 +53,53 @@ interface LanguageCommandSpec {
     readonly group?: string;
     readonly key: string;
     readonly icon: LucideIcon;
-    readonly shortcut?: Shortcut;
+    /* The key of the editor's keymap that answers it, which a person may rebind. */
+    readonly keymap?: KeymapId;
 }
 
 const TABLE = {
-    'trigger-completion': { icon: ListChecks, menu: 'code', key: 'triggerCompletion', shortcut: CANVAS_SHORTCUTS.triggerCompletion },
-    'parameter-info': { icon: Parentheses, menu: 'code', key: 'parameterInfo', shortcut: CANVAS_SHORTCUTS.parameterInfo },
-    'quick-info': { icon: Info, menu: 'code', key: 'quickInfo', shortcut: CANVAS_SHORTCUTS.quickInfo },
-    'code-actions': { icon: Lightbulb, menu: 'code', key: 'codeActions', shortcut: CANVAS_SHORTCUTS.codeActions },
-    'refactor-this': { icon: Wand2, menu: 'code', key: 'refactorThis', shortcut: CANVAS_SHORTCUTS.refactorThis },
-    'rename-symbol': { icon: TextCursorInput, menu: 'code', key: 'renameSymbol', shortcut: CANVAS_SHORTCUTS.rename },
-    'organize-imports': { icon: ListOrdered, menu: 'code', key: 'organizeImports', shortcut: CANVAS_SHORTCUTS.organizeImports },
-    'format-document': { icon: AlignLeft, menu: 'code', key: 'formatDocument', shortcut: CANVAS_SHORTCUTS.formatDocument },
+    'trigger-completion': { icon: ListChecks, menu: 'code', key: 'triggerCompletion', keymap: 'triggerCompletion' },
+    'parameter-info': { icon: Parentheses, menu: 'code', key: 'parameterInfo', keymap: 'parameterInfo' },
+    'quick-info': { icon: Info, menu: 'code', key: 'quickInfo', keymap: 'quickInfo' },
+    'code-actions': { icon: Lightbulb, menu: 'code', key: 'codeActions', keymap: 'codeActions' },
+    'refactor-this': { icon: Wand2, menu: 'code', key: 'refactorThis', keymap: 'refactorThis' },
+    'rename-symbol': { icon: TextCursorInput, menu: 'code', key: 'renameSymbol', keymap: 'renameSymbol' },
+    'organize-imports': { icon: ListOrdered, menu: 'code', key: 'organizeImports', keymap: 'organizeImports' },
+    'format-document': { icon: AlignLeft, menu: 'code', key: 'formatDocument', keymap: 'formatDocument' },
     'next-agent-change': { icon: ArrowDown, menu: 'code', key: 'nextAgentChange' },
     'previous-agent-change': { icon: ArrowUp, menu: 'code', key: 'previousAgentChange' },
-    'selection-to-chat': { icon: MessageSquarePlus, menu: 'code', key: 'selectionToChat', shortcut: CANVAS_SHORTCUTS.selectionToChat },
-    'inline-edit': { icon: Sparkles, menu: 'code', key: 'inlineEdit', shortcut: CANVAS_SHORTCUTS.inlineEdit },
+    'selection-to-chat': { icon: MessageSquarePlus, menu: 'code', key: 'selectionToChat', keymap: 'selectionToChat' },
+    'inline-edit': { icon: Sparkles, menu: 'code', key: 'inlineEdit', keymap: 'inlineEdit' },
     'show-inline-edit': { icon: ScanSearch, menu: 'code', key: 'showInlineEdit' },
     explain: { icon: Cpu, menu: 'code', key: 'explain' },
-    'toggle-rendered-docs': { icon: BookOpen, menu: 'code', key: 'toggleRenderedDocs', shortcut: CANVAS_SHORTCUTS.toggleRenderedDocs },
-    'suggest-inline': { icon: WandSparkles, menu: 'code', key: 'suggestInline', shortcut: CANVAS_SHORTCUTS.suggestInline },
-    'go-to-symbol': { icon: AtSign, menu: 'go', key: 'goToSymbol', shortcut: CANVAS_SHORTCUTS.goToSymbol },
-    'go-to-definition': { icon: LocateFixed, menu: 'go', key: 'goToDefinition', shortcut: CANVAS_SHORTCUTS.goToDefinition },
+    'toggle-rendered-docs': { icon: BookOpen, menu: 'code', key: 'toggleRenderedDocs', keymap: 'toggleRenderedDocs' },
+    'suggest-inline': { icon: WandSparkles, menu: 'code', key: 'suggestInline', keymap: 'suggestInline' },
+    'go-to-symbol': { icon: AtSign, menu: 'go', key: 'goToSymbol', keymap: 'goToSymbol' },
+    'go-to-definition': { icon: LocateFixed, menu: 'go', key: 'goToDefinition', keymap: 'goToDefinition' },
     'go-to-declaration': { icon: MapPin, menu: 'go', key: 'goToDeclaration' },
-    'go-to-type-definition': { icon: Type, menu: 'go', key: 'goToTypeDefinition', shortcut: CANVAS_SHORTCUTS.goToTypeDefinition },
-    'peek-definition': { icon: FileSearch, menu: 'go', key: 'peekDefinition', shortcut: CANVAS_SHORTCUTS.peekDefinition },
-    'peek-references': { icon: Rows3, menu: 'go', key: 'peekReferences', shortcut: CANVAS_SHORTCUTS.peekReferences },
-    'call-hierarchy': { icon: Network, menu: 'go', key: 'callHierarchy', shortcut: CANVAS_SHORTCUTS.callHierarchy },
-    'go-to-implementation': { icon: Blocks, menu: 'go', key: 'goToImplementation', shortcut: CANVAS_SHORTCUTS.goToImplementation },
-    'history-back': { icon: ArrowLeft, menu: 'go', key: 'historyBack', shortcut: CANVAS_SHORTCUTS.historyBack },
-    'history-forward': { icon: ArrowRight, menu: 'go', key: 'historyForward', shortcut: CANVAS_SHORTCUTS.historyForward },
-    'recent-locations': { icon: History, menu: 'go', key: 'recentLocations', shortcut: CANVAS_SHORTCUTS.recentLocations },
-    'type-hierarchy': { icon: GitFork, menu: 'go', key: 'typeHierarchy', shortcut: CANVAS_SHORTCUTS.typeHierarchy },
-    'last-edit-location': { icon: Undo2, menu: 'go', key: 'lastEditLocation', shortcut: CANVAS_SHORTCUTS.lastEditLocation },
-    'next-edit-location': { icon: Redo2, menu: 'go', key: 'nextEditLocation', shortcut: editorShortcut('nextEditLocation') },
-    'paste-from-history': { icon: ClipboardList, menu: 'edit', group: 'clipboard', key: 'pasteFromHistory', shortcut: CANVAS_SHORTCUTS.pasteFromHistory },
+    'go-to-type-definition': { icon: Type, menu: 'go', key: 'goToTypeDefinition', keymap: 'goToTypeDefinition' },
+    'peek-definition': { icon: FileSearch, menu: 'go', key: 'peekDefinition', keymap: 'peekDefinition' },
+    'peek-references': { icon: Rows3, menu: 'go', key: 'peekReferences', keymap: 'peekReferences' },
+    'call-hierarchy': { icon: Network, menu: 'go', key: 'callHierarchy', keymap: 'callHierarchy' },
+    'go-to-implementation': { icon: Blocks, menu: 'go', key: 'goToImplementation', keymap: 'goToImplementation' },
+    'history-back': { icon: ArrowLeft, menu: 'go', key: 'historyBack', keymap: 'historyBack' },
+    'history-forward': { icon: ArrowRight, menu: 'go', key: 'historyForward', keymap: 'historyForward' },
+    'recent-locations': { icon: History, menu: 'go', key: 'recentLocations', keymap: 'recentLocations' },
+    'type-hierarchy': { icon: GitFork, menu: 'go', key: 'typeHierarchy', keymap: 'typeHierarchy' },
+    'last-edit-location': { icon: Undo2, menu: 'go', key: 'lastEditLocation', keymap: 'lastEditLocation' },
+    'next-edit-location': { icon: Redo2, menu: 'go', key: 'nextEditLocation', keymap: 'nextEditLocation' },
+    'paste-from-history': { icon: ClipboardList, menu: 'edit', group: 'clipboard', key: 'pasteFromHistory', keymap: 'pasteFromHistory' },
     // Emmet keeps its row without a key: Surround with Live Template has Mod+Alt+J, as in IntelliJ.
     'wrap-with-abbreviation': { icon: CodeXml, menu: 'code', key: 'wrapWithAbbreviation' },
-    'insert-live-template': { icon: FilePlus, menu: 'code', key: 'insertLiveTemplate', shortcut: CANVAS_SHORTCUTS.insertLiveTemplate },
-    'surround-with': { icon: Brackets, menu: 'code', key: 'surroundWith', shortcut: CANVAS_SHORTCUTS.surroundWith },
+    'insert-live-template': { icon: FilePlus, menu: 'code', key: 'insertLiveTemplate', keymap: 'insertLiveTemplate' },
+    'surround-with': { icon: Brackets, menu: 'code', key: 'surroundWith', keymap: 'surroundWith' },
     'surround-with-live-template': {
         icon: Braces,
         menu: 'code',
         key: 'surroundWithLiveTemplate',
-        shortcut: CANVAS_SHORTCUTS.surroundWithLiveTemplate
+        keymap: 'surroundWithLiveTemplate'
     },
-    unwrap: { icon: PackageOpen, menu: 'code', key: 'unwrap', shortcut: CANVAS_SHORTCUTS.unwrap },
+    unwrap: { icon: PackageOpen, menu: 'code', key: 'unwrap', keymap: 'unwrap' },
     'save-as-live-template': { icon: BookmarkPlus, menu: 'code', key: 'saveAsLiveTemplate' }
 } satisfies Record<string, LanguageCommandSpec>;
 

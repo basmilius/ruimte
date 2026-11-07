@@ -838,7 +838,10 @@
         "split": {
             "right": "Rechts splitsen",
             "down": "Omlaag splitsen",
-            "focusNeighbor": "Cel ernaast focussen (pijltoetsen)",
+            "focusLeft": "Cel links focussen",
+            "focusRight": "Cel rechts focussen",
+            "focusUp": "Cel erboven focussen",
+            "focusDown": "Cel eronder focussen",
             "maximize": "Geselecteerde node of cel maximaliseren of herstellen",
             "close": "Gefocuste cel sluiten"
         },

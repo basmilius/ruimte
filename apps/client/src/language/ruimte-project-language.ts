@@ -17,9 +17,9 @@ import { isApplePlatform, openInSystemBrowser } from '@/desktop/bridge';
 import { editorAssistClientFor } from '@/editor-assist/client';
 import { parseNames } from '@/editor-assist/names-model';
 import { namesPrompt } from '@/editor-assist/prompts';
-import { RUIMTE_EDITOR_KEYMAP } from '@/shell/editor-keymap';
 import { openFileLink } from '@/shell/panels/file-links';
 import { isPathBelow } from '@/shell/panels/files-tree';
+import { currentEditorKeymap } from '@/shell/shortcut-overrides';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
@@ -77,7 +77,10 @@ export class ProjectLanguage extends SharedProjectLanguage {
             folder,
             ...(files === null ? {} : { files }),
             apple: isApplePlatform(),
-            keymap: RUIMTE_EDITOR_KEYMAP,
+            // Read when an editor opens, so a key a person rebinds holds for the editors opened after it.
+            get keymap() {
+                return currentEditorKeymap();
+            },
             // Per project and for this session only: what Paste from History lists is never written to disk.
             clipboard: new ClipboardHistory({ limit: 100 }),
             snippetTransformWorker: createSnippetTransformWorker,

@@ -1,12 +1,12 @@
 import { AgentIcon } from '@adecore/agents-react/providers';
 import { EditorRenderingProvider, LanguagePopups, type HoverView } from '@adecore/editor-react';
-import { Button, ContextMenu, Icon, Kbd, Tooltip } from '@adecore/ui';
+import { Button, ContextMenu, Icon, Tooltip } from '@adecore/ui';
 import { Bot, Cpu, MessageSquarePlus, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { InlineEditLayer } from '@/editor-ai/InlineEditLayer';
 import { highlightCode } from '@/shell/panels/highlight';
+import { RowKbd } from '@/shell/RowKbd';
 import { useCodeTheme } from '@/state/code-theme';
 import { useAskAgents } from './ask-agents';
 import type { EditorLanguage } from './ruimte-editor-language';
@@ -68,10 +68,10 @@ function MenuActions({ language }: { language: EditorLanguage }) {
     return (
         <>
             <ContextMenu.Item onClick={() => language.inlineEdit.start()}>
-                <Icon icon={Sparkles} size={14} /> {t('editorMenu.inlineEdit')} <Kbd shortcut={CANVAS_SHORTCUTS.inlineEdit} />
+                <Icon icon={Sparkles} size={14} /> {t('editorMenu.inlineEdit')} <RowKbd row="inlineEdit" />
             </ContextMenu.Item>
             <ContextMenu.Item onClick={() => language.selectionChat.choose()}>
-                <Icon icon={MessageSquarePlus} size={14} /> {t('editorMenu.selectionToChat')} <Kbd shortcut={CANVAS_SHORTCUTS.selectionToChat} />
+                <Icon icon={MessageSquarePlus} size={14} /> {t('editorMenu.selectionToChat')} <RowKbd row="selectionToChat" />
             </ContextMenu.Item>
             {agents.length === 1 &&
                 agents.map((agent) => (

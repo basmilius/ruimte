@@ -1,6 +1,5 @@
 import { chordOf, resolveKeymap, type KeymapId, type KeymapOverrides } from '@adecore/editor/keymap';
 import { shortcut, type Shortcut } from '@adecore/ui';
-import { isApplePlatform } from '@/desktop/bridge';
 
 /* What Ruimte changes in the editor's table of keys, before a person changes any. */
 export const RUIMTE_KEYMAP_OVERRIDES: KeymapOverrides = {
@@ -166,17 +165,4 @@ export const RUIMTE_EDITOR_KEYMAP = resolveKeymap(RUIMTE_KEYMAP_OVERRIDES);
 export function shortcutFor(id: KeymapId, apple: boolean): Shortcut | undefined {
     const chord = chordOf(id, apple, RUIMTE_EDITOR_KEYMAP);
     return chord === null ? undefined : shortcut(chord);
-}
-
-export function editorShortcut(id: KeymapId): Shortcut | undefined {
-    return shortcutFor(id, isApplePlatform());
-}
-
-/* For the commands that have a key on every platform. */
-export function requiredShortcut(id: KeymapId): Shortcut {
-    const found = editorShortcut(id);
-    if (found === undefined) {
-        throw new Error(`The editor key "${id}" has no chord on this platform`);
-    }
-    return found;
 }

@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { typeInto } from '@adecore/editor/testing';
 import type { Shortcut } from '@adecore/ui';
 import { act } from 'react';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
+import { keyOf } from '@/shell/shortcut-overrides';
 import { useUi } from '@/state/ui';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
@@ -95,7 +95,7 @@ describe('templates in an editor no language server serves', () => {
 
     test('Insert Live Template lists the templates and inserts the one picked', async () => {
         await openEditor();
-        await press(CANVAS_SHORTCUTS.insertLiveTemplate);
+        await press(keyOf('insertLiveTemplate')!);
         await until(() => rows().some((row) => row.textContent?.includes('hi')));
         expect(rows().some((row) => row.textContent?.includes('log'))).toBe(true);
 
@@ -112,7 +112,7 @@ describe('templates in an editor no language server serves', () => {
         text = 'run();';
         await openEditor();
         await pressKey(input()!, 'a', MOD);
-        await press(CANVAS_SHORTCUTS.surroundWith);
+        await press(keyOf('surroundWith')!);
         await until(() => rows().length > 0);
         expect(rows()[0]!.textContent).toContain('if');
 

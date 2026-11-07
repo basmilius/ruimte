@@ -11,6 +11,7 @@ import {
     menuPlacesOf,
     onCanvas,
     type CommandId as TableCommandId,
+    commandKey,
     type MenuContainer,
     type MenuPlace
 } from '@/shell/command-table';
@@ -563,7 +564,7 @@ function tableRow({ id, place }: PlacedCommand, context: MenuContext, command: M
     const words = place.words?.(context) ?? { key: spec.key };
     const enabled = place.enabled?.(context);
     return command(id, t(words.key, words.values), {
-        shortcut: shortcutOf(spec.shortcut, place, context),
+        shortcut: shortcutOf(commandKey(id), place, context),
         ...(enabled === undefined ? {} : { enabled }),
         checked: place.checked?.(context),
         radio: place.radio === true

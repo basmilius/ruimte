@@ -8,9 +8,9 @@ import { createViewAction } from '@/actions/client-actions';
 import { AgentSubmenu } from '@/agents/AgentMenus';
 import { agentTargetLabel, type AgentTarget } from '@/agents/nodes';
 import { ProviderRows } from '@/agents/ProviderRows';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useContributions } from '@/extensions/registry';
 import { newSubheaderView } from '@/project/views';
+import { useKeyOf } from '@/shell/shortcut-overrides';
 import { useEndpointId } from '@/state/keys';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
@@ -97,12 +97,13 @@ export function NewViewItems() {
     // A machine older than designs would keep the view and know nothing of its folder.
     const knowsDesigns = useMachineAnswers(useEndpointId(), 'artifact.saveFolder');
     const extensionViews = useContributions((state) => state.extensionViews);
+    const newViewKey = useKeyOf('view-new');
     const pickAgent = (target: AgentTarget, provider: ProviderInfo, account?: string): void =>
         void createViewAction(target, { provider: provider.kind, account });
     return (
         <>
             {inOrder([
-                itemEntry('canvas', Frame, t('viewKinds.canvas'), () => void createViewAction('canvas'), CANVAS_SHORTCUTS.newView),
+                itemEntry('canvas', Frame, t('viewKinds.canvas'), () => void createViewAction('canvas'), newViewKey),
                 itemEntry('drawing', PenTool, t('viewKinds.drawing'), () => void createViewAction('drawing')),
                 itemEntry('diagram', Workflow, t('viewKinds.diagram'), () => void createViewAction('diagram')),
                 itemEntry('terminal', Terminal, t('viewKinds.terminal'), () => void createViewAction('terminal')),

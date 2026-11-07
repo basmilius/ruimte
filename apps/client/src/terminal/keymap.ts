@@ -1,6 +1,7 @@
 import { shortcut, matchesShortcut, type Shortcut, type KeyLike } from '@adecore/ui';
-import { CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { VIEW_SHORTCUTS } from '@/canvas/shortcuts';
+import type { DefaultKeyId } from '@/shell/default-keys';
+import { isRebound, keyOf, overridesSnapshot } from '@/shell/shortcut-overrides';
 
 /* A shortcut that is a different key on macOS than everywhere else, on purpose. */
 interface PlatformShortcut {
@@ -49,59 +50,69 @@ export function isTerminalPaste(event: KeyLike, apple: boolean): boolean {
 }
 
 /*
- * The shortcuts a focused terminal hands back to the app, the ones that move between views, cells, panels
+ * The rows whose keys a focused terminal hands back to the app, the ones that move between views, cells, panels
  * and settings, so you never have to leave the terminal to reach another view. Every other shortcut is the
- * program's, which is why Cmd+K clears the screen here instead of opening the palette.
+ * program's, which is why Cmd+K clears the screen here instead of opening the palette. They are rows and not
+ * keys, so a key a person rebinds still reaches the app.
  */
-export const TERMINAL_HANDED_BACK: readonly Shortcut[] = [
-    ...VIEW_SHORTCUTS,
-    CANVAS_SHORTCUTS.dictation,
-    CANVAS_SHORTCUTS.voiceControl,
-    CANVAS_SHORTCUTS.newView,
-    CANVAS_SHORTCUTS.splitRight,
-    CANVAS_SHORTCUTS.splitDown,
-    CANVAS_SHORTCUTS.closeCell,
-    CANVAS_SHORTCUTS.maximizeCell,
-    CANVAS_SHORTCUTS.zoomNode,
-    CANVAS_SHORTCUTS.previousView,
-    CANVAS_SHORTCUTS.nextView,
-    CANVAS_SHORTCUTS.cameraBack,
-    CANVAS_SHORTCUTS.cameraForward,
-    CANVAS_SHORTCUTS.previousTab,
-    CANVAS_SHORTCUTS.nextTab,
-    CANVAS_SHORTCUTS.moveTabLeft,
-    CANVAS_SHORTCUTS.moveTabRight,
-    CANVAS_SHORTCUTS.togglePanel,
-    CANVAS_SHORTCUTS.toggleFlag,
-    CANVAS_SHORTCUTS.launchRun,
-    CANVAS_SHORTCUTS.launchStop,
-    CANVAS_SHORTCUTS.focusPrompts,
-    CANVAS_SHORTCUTS.nextNeedsYou,
-    CANVAS_SHORTCUTS.attentionQueue,
-    ...Object.values(FOCUS_SHORTCUTS),
-    APP_SHORTCUTS.settings,
-    APP_SHORTCUTS.sidebar,
-    APP_SHORTCUTS.newWindow,
-    APP_SHORTCUTS.newChat
+export const TERMINAL_HANDED_BACK_ROWS: readonly DefaultKeyId[] = [
+    'dictation',
+    'voice-control',
+    'view-new',
+    'split-right',
+    'split-down',
+    'close-cell',
+    'cell-maximize',
+    'zoom-node',
+    'view-previous',
+    'view-next',
+    'camera-back',
+    'camera-forward',
+    'tab-previous',
+    'tab-next',
+    'tab-move-left',
+    'tab-move-right',
+    'panel-toggle',
+    'flag-toggle',
+    'launch-run',
+    'launch-stop',
+    'prompts',
+    'needs-you-next',
+    'attention-queue',
+    'focus-left',
+    'focus-right',
+    'focus-up',
+    'focus-down',
+    'settings',
+    'sidebar',
+    'window-new',
+    'chat-new'
 ];
 
-/* Off macOS these are control characters a program reads (Ctrl+B the tmux prefix, Ctrl+W delete-word,
-   Ctrl+T transpose, Ctrl+\ SIGQUIT, Ctrl+Alt+[ Meta-Escape), so the terminal keeps them there. */
-const PTY_CONTROL_SHORTCUTS: readonly Shortcut[] = [
-    APP_SHORTCUTS.sidebar,
-    CANVAS_SHORTCUTS.newView,
-    CANVAS_SHORTCUTS.splitRight,
-    CANVAS_SHORTCUTS.closeCell,
-    CANVAS_SHORTCUTS.cameraBack,
-    CANVAS_SHORTCUTS.cameraForward
-];
+/*
+ * Off macOS these are control characters a program reads (Ctrl+B the tmux prefix, Ctrl+W delete-word,
+ * Ctrl+T transpose, Ctrl+\ SIGQUIT, Ctrl+Alt+[ Meta-Escape), so the terminal keeps them there. Only while the
+ * row holds its default: someone who chooses a Ctrl key for it means it.
+ */
+export const PTY_CONTROL_ROWS: readonly DefaultKeyId[] = ['sidebar', 'view-new', 'split-right', 'close-cell', 'camera-back', 'camera-forward'];
+
+function keptByProgram(row: DefaultKeyId): boolean {
+    return PTY_CONTROL_ROWS.includes(row) && !isRebound(overridesSnapshot(), row);
+}
+
+/* The keys a focused terminal hands back now, the views of a window included. */
+export function terminalHandedBack(): readonly Shortcut[] {
+    return [...VIEW_SHORTCUTS, ...TERMINAL_HANDED_BACK_ROWS.map((row) => keyOf(row))];
+}
 
 function matchesAny(shortcuts: readonly Shortcut[], event: KeyLike, apple: boolean): boolean {
     return shortcuts.some((candidate) => matchesShortcut(candidate, event, apple));
 }
 
 export function isAppShortcut(event: KeyLike, apple: boolean): boolean {
-    return TERMINAL_HANDED_BACK.some((candidate) => (apple || !PTY_CONTROL_SHORTCUTS.includes(candidate)) && matchesShortcut(candidate, event, apple));
+    const rows = TERMINAL_HANDED_BACK_ROWS.filter((row) => apple || !keptByProgram(row));
+
+    return matchesAny([...VIEW_SHORTCUTS, ...rows.map((row) => keyOf(row))], event, apple);
 }
 
 /*
@@ -110,12 +121,9 @@ export function isAppShortcut(event: KeyLike, apple: boolean): boolean {
  * it), the palette, find in files and the find bar. Ctrl+B stays out of it off macOS.
  */
 export function shellShortcuts(apple: boolean): readonly Shortcut[] {
-    return [
-        ...TERMINAL_HANDED_BACK.filter((candidate) => apple || candidate !== APP_SHORTCUTS.sidebar),
-        APP_SHORTCUTS.palette,
-        APP_SHORTCUTS.findInFiles,
-        CANVAS_SHORTCUTS.find
-    ];
+    const rows = TERMINAL_HANDED_BACK_ROWS.filter((row) => apple || row !== 'sidebar' || isRebound(overridesSnapshot(), row));
+
+    return [...VIEW_SHORTCUTS, ...rows.map((row) => keyOf(row)), keyOf('palette'), keyOf('find-in-files'), keyOf('find')];
 }
 
 export function isShellShortcut(event: KeyLike, apple: boolean): boolean {
@@ -124,10 +132,17 @@ export function isShellShortcut(event: KeyLike, apple: boolean): boolean {
 
 /* The chat's own keys, which the composer hands back besides those so a chat steps its reasoning effort while you type. */
 // Not Alt+Up or Alt+Down: in the composer they recall your earlier prompts, and stepping between messages is the thread's, the menu's and the palette's.
-const COMPOSER_HANDED_BACK: readonly Shortcut[] = [CANVAS_SHORTCUTS.raiseEffort, CANVAS_SHORTCUTS.lowerEffort];
+const COMPOSER_HANDED_BACK_ROWS: readonly DefaultKeyId[] = ['chat-effort-up', 'chat-effort-down'];
 
 export function isComposerShortcut(event: KeyLike, apple: boolean): boolean {
-    return isShellShortcut(event, apple) || matchesAny(COMPOSER_HANDED_BACK, event, apple);
+    return (
+        isShellShortcut(event, apple) ||
+        matchesAny(
+            COMPOSER_HANDED_BACK_ROWS.map((row) => keyOf(row)),
+            event,
+            apple
+        )
+    );
 }
 
 /* Home and End in both forms the application cursor keys mode (DECCKM) asks for. */

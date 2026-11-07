@@ -9,7 +9,6 @@ import { WaitingCount } from '@/attention/WaitingCount';
 import { useBrowserDisplayTitle } from '@/browser/title';
 import { PATHS_DRAG_TYPE } from '@/canvas/drop';
 import { StatusDot } from '@/canvas/NodeFrame';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useDatabaseConnectionList } from '@/database/connections';
 import { databaseTabTitle } from '@/database/tab-look';
 import { ViewGlyph } from '@/project/ViewGlyph';
@@ -18,6 +17,7 @@ import { splitSentence } from '@/shell/change-size';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { LooseGlyph } from '@/shell/panels/LooseGlyph';
+import { useKeyOf } from '@/shell/shortcut-overrides';
 import { isSameCell, type CellAt } from '@/shell/split';
 import { TabMenuItems } from '@/shell/TabMenuItems';
 import { useCellView } from '@/shell/use-cell-view';
@@ -54,6 +54,7 @@ interface TabShellProps {
 
 /* One tab of the strip, whatever it holds: the looks and the keys are the strip's, what it says and what its menu offers are the view's. */
 function TabShell({ id, label, hint, glyph, detail, unsavedLabel, pinned = false, onDragData, attention, onDoubleClick, onClose, menu }: TabShellProps) {
+    const closeKey = useKeyOf('close-cell');
     const onDragStart = (event: React.DragEvent<HTMLButtonElement>): void => {
         // The bar is a drag handle of its own, whose payload would take the place of this one.
         event.stopPropagation();
@@ -71,7 +72,7 @@ function TabShell({ id, label, hint, glyph, detail, unsavedLabel, pinned = false
                         item={{ id, label, hint, icon: glyph, detail, attention, unsaved: unsavedLabel, pinned }}
                         data-tab-id={id}
                         onClose={onClose}
-                        closeShortcut={CANVAS_SHORTCUTS.closeCell}
+                        closeShortcut={closeKey}
                         onDoubleClick={onDoubleClick}
                         onDragStart={(_, event) => onDragStart(event)}
                         onDragEnd={() => setDragging(null)}

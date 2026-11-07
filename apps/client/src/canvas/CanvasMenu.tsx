@@ -6,19 +6,20 @@ import { AgentSubmenus } from '@/agents/AgentMenus';
 import type { Point } from '@/canvas/math';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';
 import { RemoteMachineItems } from '@/canvas/RemoteMachineItems';
-import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { ADD_NODE_ROWS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { DesignAddItem } from '@/design/DesignAddItem';
 import { ExtensionNodesSubmenu, SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { RoutineAddItems } from '@/routines/RoutineAddItems';
+import { RowKbd } from '@/shell/RowKbd';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 
-function AddItem({ kind, at }: { kind: keyof typeof ADD_NODE_SHORTCUTS; at: () => Point }) {
+function AddItem({ kind, at }: { kind: keyof typeof ADD_NODE_ROWS; at: () => Point }) {
     const { t } = useTranslation('canvas');
     return (
         <ContextMenu.Item onClick={() => void createNodeAction(kind, { at: at() })}>
-            <Icon icon={NODE_KIND_ICONS[kind]} size={14} /> {t(`kinds.${kind}`)} <Kbd shortcut={ADD_NODE_SHORTCUTS[kind]} />
+            <Icon icon={NODE_KIND_ICONS[kind]} size={14} /> {t(`kinds.${kind}`)} <RowKbd row={ADD_NODE_ROWS[kind]} />
         </ContextMenu.Item>
     );
 }
@@ -39,10 +40,10 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                     <Icon icon={Scan} size={14} /> {t('common:action.selectAll')} <Kbd shortcut={CANVAS_SHORTCUTS.selectAll} />
                 </ContextMenu.Item>
                 <ContextMenu.Item disabled={!hasSelection} onClick={() => groupSelectionAction()}>
-                    <Icon icon={SquareDashedMousePointer} size={14} /> {t('canvasMenu.groupSelection')} <Kbd shortcut={CANVAS_SHORTCUTS.group} />
+                    <Icon icon={SquareDashedMousePointer} size={14} /> {t('canvasMenu.groupSelection')} <RowKbd row="group-selection" />
                 </ContextMenu.Item>
                 <ContextMenu.Item onClick={() => fitAction()}>
-                    <Icon icon={Maximize} size={14} /> {t('canvasMenu.zoomToFit')} <Kbd shortcut={CANVAS_SHORTCUTS.fitAll} />
+                    <Icon icon={Maximize} size={14} /> {t('canvasMenu.zoomToFit')} <RowKbd row="fit" />
                 </ContextMenu.Item>
             </ContextMenu.Group>
             <SlotMenuItems place="canvasMenu" context={{ at: at() }} />

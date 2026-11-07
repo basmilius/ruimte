@@ -48,8 +48,8 @@ import {
     ZoomOut,
     type LucideIcon
 } from 'lucide-react';
-import { editorShortcut } from '@/shell/editor-keymap';
 import { editorForCommand } from '@/shell/panels/focused-editor';
+import { keyOf } from '@/shell/shortcut-overrides';
 
 /*
  * The editing commands of a file editor that have a place in the menu and the palette, with their words
@@ -60,7 +60,8 @@ interface EditorCommandSpec {
     readonly key: string;
     readonly icon: LucideIcon;
     readonly command: EditorRunCommand;
-    readonly shortcut?: Shortcut;
+    /* The key of the editor's keymap that answers it, which a person may rebind. */
+    readonly keymap: KeymapId;
     /* A group the Code menu keeps its own submenu for, or the group of another menu the command sits in instead. */
     readonly group?: EditorCommandGroup;
 }
@@ -70,12 +71,12 @@ export type EditorCommandGroup = 'folding' | 'lines' | 'clipboard' | 'navigate' 
 
 /* A command named as its key in the editor's keymap. */
 function command(icon: LucideIcon, name: EditorRunCommand & KeymapId, group?: EditorCommandGroup): EditorCommandSpec {
-    return { icon, key: name, command: name, shortcut: editorShortcut(name), ...(group === undefined ? {} : { group }) };
+    return { icon, key: name, command: name, keymap: name, ...(group === undefined ? {} : { group }) };
 }
 
 /* A folding command whose key the keymap names otherwise. */
 function folding(icon: LucideIcon, name: EditorRunCommand, keymap: KeymapId): EditorCommandSpec {
-    return { icon, key: name, command: name, shortcut: editorShortcut(keymap), group: 'folding' };
+    return { icon, key: name, command: name, keymap, group: 'folding' };
 }
 
 const TABLE = {
@@ -150,7 +151,7 @@ export function editorCommandRows(): EditorCommandRow[] {
     return EDITOR_COMMAND_IDS.map((id) => ({
         id,
         label: i18next.t(`shell:palette.commands.${EDITOR_COMMANDS[id].key}`),
-        shortcut: EDITOR_COMMANDS[id].shortcut,
+        shortcut: keyOf(EDITOR_COMMANDS[id].keymap),
         run: () => {
             requestAnimationFrame(() => {
                 editorForCommand()?.runCommand(EDITOR_COMMANDS[id].command);

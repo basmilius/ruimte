@@ -31,7 +31,6 @@ import {
     showViewOnCanvasAction,
     splitAction
 } from '@/actions/client-actions';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { ForkMenuItem } from '@/chat/ForkMenuItem';
 import { useOffersFork } from '@/chat/use-offers-fork';
 import { useDatabaseViewShareRefusal } from '@/database/view-sharing';
@@ -41,6 +40,7 @@ import { MoveChatItems } from '@/project/MoveChatItems';
 import { askDeleteView, askViewSettings, openSessionInKind, setViewShared } from '@/project/views';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
+import { RowKbd } from '@/shell/RowKbd';
 import { canSplit, cellAt, cellCount, cellsRightOf, freeViewFor, isTabHost, maximizedCell, type CellAt } from '@/shell/split';
 import { sessionHandoffs, viewOffers } from '@/shell/view-offers';
 import { cellViewOf, hasActiveCanvas, useDocument } from '@/state/document';
@@ -254,25 +254,25 @@ export function SplitItems({ at, separated = false }: { at?: CellAt; separated?:
         <>
             {room('right') && (
                 <Menu.Item onClick={() => split('right')}>
-                    <Icon icon={PanelRight} size={14} /> {t('viewMenu.splitRight')} <Kbd shortcut={CANVAS_SHORTCUTS.splitRight} />
+                    <Icon icon={PanelRight} size={14} /> {t('viewMenu.splitRight')} <RowKbd row="split-right" />
                 </Menu.Item>
             )}
             {room('down') && (
                 <Menu.Item onClick={() => split('down')}>
-                    <Icon icon={PanelBottom} size={14} /> {t('viewMenu.splitDown')} <Kbd shortcut={CANVAS_SHORTCUTS.splitDown} />
+                    <Icon icon={PanelBottom} size={14} /> {t('viewMenu.splitDown')} <RowKbd row="split-down" />
                 </Menu.Item>
             )}
             {multiple && standing !== null && (
                 <Menu.Item onClick={toggleMaximized}>
                     <Icon icon={filling ? Shrink : Expand} size={14} /> {t(filling ? 'viewMenu.restoreSplit' : 'viewMenu.maximizeCell')}{' '}
-                    <Kbd shortcut={CANVAS_SHORTCUTS.maximizeCell} />
+                    <RowKbd row="cell-maximize" />
                 </Menu.Item>
             )}
             {(room('right') || room('down') || (multiple && standing !== null)) && closable && standing !== null && <Menu.Separator />}
             {closable && standing !== null && (
                 <Menu.Item onClick={() => closeCellAction(standing)}>
                     {/* In a host the key closes the tab in front, and the cell goes with its last one. */}
-                    <Icon icon={X} size={14} /> {t('viewMenu.closeThisCell')} {!hosted && <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />}
+                    <Icon icon={X} size={14} /> {t('viewMenu.closeThisCell')} {!hosted && <RowKbd row="close-cell" />}
                 </Menu.Item>
             )}
             {multiple && cell !== null && standing !== null && (

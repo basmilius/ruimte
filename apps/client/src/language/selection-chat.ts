@@ -4,9 +4,9 @@ import type { Problem } from '@adecore/editor-react/models';
 import { fileUriToPath } from '@adecore/lsp';
 import { storedPathOf, type AgentKind } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { lineRangeLabel, offerSelection, selectionBlock, startLinkedChatOrTell, type SelectionOffer } from '@/chat/selection-to-chat';
 import { basenameOf } from '@/shell/panels/files-tree';
+import { keyOf } from '@/shell/shortcut-overrides';
 import { useProject } from '@/state/project';
 import type { HostLanguage as EditorLanguage } from './host-language';
 import { isShortcut } from './shortcut-keys';
@@ -25,7 +25,7 @@ export class SelectionChatFeature {
     constructor(language: EditorLanguage) {
         this.language = language;
         const off = language.editor.onKeyDown((event) => {
-            if (!language.served || !isShortcut(CANVAS_SHORTCUTS.selectionToChat, event)) {
+            if (!language.served || !isShortcut(keyOf('selectionToChat'), event)) {
                 return false;
             }
             this.choose();
@@ -45,7 +45,7 @@ export class SelectionChatFeature {
         const range = this.range();
         const rect = editor.rectAt(range.end);
         const at = rect === null ? { x: window.innerWidth / 2, y: window.innerHeight / 3 } : { x: rect.left, y: rect.bottom };
-        offerSelection({ ...this.offerFor(range), shortcut: CANVAS_SHORTCUTS.selectionToChat, returnFocus: () => editor.focus() }, at);
+        offerSelection({ ...this.offerFor(range), shortcut: keyOf('selectionToChat'), returnFocus: () => editor.focus() }, at);
     }
 
     /* A new chat with this agent, linked to the file, with the selection in its prompt. */

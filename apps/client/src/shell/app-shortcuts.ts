@@ -7,6 +7,7 @@ import { runActionShortcut } from '@/extensions/action-shortcuts';
 import { newChat } from '@/project/new-chat';
 import { canOpenWindows, openNewWindow } from '@/project/windows';
 import { commandForKey, type WindowCommandId } from '@/shell/command-table';
+import { isShortcutRecording } from '@/shell/shortcut-overrides';
 import { createUsagePeek } from '@/shell/usage-peek';
 import { useUi } from '@/state/ui';
 
@@ -71,7 +72,12 @@ function useUsagePeek(): void {
             set: (run, ms) => window.setTimeout(run, ms),
             clear: (handle) => window.clearTimeout(handle)
         });
-        const onKeyDown = (e: KeyboardEvent): void => peek.keyDown(e);
+        const onKeyDown = (e: KeyboardEvent): void => {
+            // Option pressed to record a shortcut is no peek.
+            if (!isShortcutRecording()) {
+                peek.keyDown(e);
+            }
+        };
         const onKeyUp = (e: KeyboardEvent): void => peek.keyUp(e);
         const onPointerDown = (): void => peek.pointerDown();
         const onPointerUp = (): void => peek.pointerUp();

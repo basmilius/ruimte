@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { awaitingApproval, runsWaiting } from '@/routines/agenda';
 import { useRoutineList } from '@/routines/routine-list';
 import { toggleRoutines } from '@/routines/stage';
-import { COMMANDS } from '@/shell/command-table';
+import { useKeyOf } from '@/shell/shortcut-overrides';
 import { useEndpointId } from '@/state/keys';
 
 /* The clock in the rail, with a dot while a routine waits for approval or a run waits for a person. Absent on a machine without routines. */
@@ -12,6 +12,7 @@ export function RoutinesButton() {
     const { t } = useTranslation('routines');
     const endpointId = useEndpointId();
     const list = useRoutineList(endpointId);
+    const routinesKey = useKeyOf('routines');
     if (list === null) {
         return null;
     }
@@ -21,7 +22,7 @@ export function RoutinesButton() {
         <IconButton
             icon={Clock}
             label={attention > 0 ? t('toolbar.attention', { count: attention }) : t('toolbar.routines')}
-            kbd={COMMANDS.routines.shortcut}
+            kbd={routinesKey}
             tooltipSide="left"
             className={attention > 0 ? 'relative' : undefined}
             onClick={toggleRoutines}

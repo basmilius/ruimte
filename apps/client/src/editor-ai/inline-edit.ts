@@ -16,9 +16,9 @@ import { fileUriToPath } from '@adecore/lsp';
 import { storedPathOf, type AgentKind } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import type { HostLanguage as EditorLanguage } from '@/language/host-language';
 import { isShortcut } from '@/language/shortcut-keys';
+import { keyOf } from '@/shell/shortcut-overrides';
 import { inlineEditAccountOn, inlineEditAgentOn } from '@/state/ai-settings';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -92,7 +92,7 @@ export class InlineEditFeature {
         const { editor } = language;
         const offs = [
             editor.onKeyDown((event) => {
-                if (language.served && isShortcut(CANVAS_SHORTCUTS.inlineEdit, event)) {
+                if (language.served && isShortcut(keyOf('inlineEdit'), event)) {
                     this.start();
                     return true;
                 }

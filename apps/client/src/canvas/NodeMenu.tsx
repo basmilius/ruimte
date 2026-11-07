@@ -67,6 +67,7 @@ import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { workFolderOf, worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { stopPrWatch } from '@/shell/pr-watch-actions';
+import { RowKbd } from '@/shell/RowKbd';
 import { canvasOfNode, maximizedNodeOf, useCanvas, useCanvasStore, type CanvasNode } from '@/state/canvas';
 import { useFiles } from '@/state/files';
 import { useEndpointId } from '@/state/keys';
@@ -393,7 +394,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
                     {node.kind !== 'group' && (
                         <ContextMenu.Item onClick={() => canvas().getState().toggleMaximizedNode(id)}>
                             <Icon icon={maximized ? Shrink : Expand} size={14} /> {t(maximized ? 'node.restore' : 'node.maximize')}{' '}
-                            <Kbd shortcut={CANVAS_SHORTCUTS.maximizeCell} />
+                            <RowKbd row="cell-maximize" />
                         </ContextMenu.Item>
                     )}
                     {sizable && (
