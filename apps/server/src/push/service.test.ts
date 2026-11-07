@@ -1166,6 +1166,26 @@ describe('a chat stopped on a usage limit', () => {
         expect(alerts().map((alert) => alert.nodeId)).toEqual(['chat-0', 'elsewhere']);
     });
 
+    test('a chat nobody follows leaves the alert of its account for a chat that is followed', async () => {
+        await auth.setPush(sessionId, { ...subscription, follow: ['followed'], notify: ['needs-you'] });
+        stop('unfollowed', { kind: 'usage', resetsAt: RESET });
+        await limited.settled();
+        expect(alerts()).toEqual([]);
+
+        stop('followed', { kind: 'usage', resetsAt: RESET });
+        await limited.settled();
+        expect(alerts()).toMatchObject([{ kind: 'attention', nodeId: 'followed' }]);
+    });
+
+    test('a followed chat is not lost to an unfollowed one that stopped in the same moment', async () => {
+        await auth.setPush(sessionId, { ...subscription, follow: ['followed'], notify: ['needs-you'] });
+        stop('unfollowed', { kind: 'usage', resetsAt: RESET });
+        stop('followed', { kind: 'usage', resetsAt: RESET });
+        stop('also-followed', { kind: 'usage', resetsAt: RESET });
+        await limited.settled();
+        expect(alerts().map((alert) => alert.nodeId)).toEqual(['followed']);
+    });
+
     test('the same limit raises again once it lifted', async () => {
         stop('chat', { kind: 'usage' });
         await advance(3_600_000);

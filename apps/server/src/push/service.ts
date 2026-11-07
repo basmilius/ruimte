@@ -77,6 +77,14 @@ interface HeldAlert {
 
     /* A wait's alert, whose body says what the node asks when it goes out rather than when it was raised. */
     wait?: boolean;
+
+    /* The limit this alert raises, which counts as raised only once a phone got it. */
+    limit?: LimitReservation;
+}
+
+interface LimitReservation {
+    key: string;
+    until: number;
 }
 
 interface NodeState {
@@ -134,6 +142,8 @@ export class PushService {
     private readonly processAlertIds = new Set<string>();
     /* The usage limits already pushed, by `limitKey`, with the time each lifts; a restart forgets them and costs one push more at most. */
     private readonly limitAlerts = new Map<string, number>();
+    /* The limits whose alert is on its way, with the chats that stopped on the same limit meanwhile and wait to see whether it reaches a phone. */
+    private readonly limitPending = new Map<string, (() => void)[]>();
     private machineActivityQueue = Promise.resolve();
     private machineStartedAt = 0;
     private readonly machineActivityStates = new Map<string, string>();
@@ -415,9 +425,11 @@ export class PushService {
 
     /*
      * A chat stopped on its plan's usage limit: an attention alert, since the work stands still until someone
-     * acts. The first chat on one limit of one account raises it and the rest stay quiet until it lifts.
+     * acts. The first chat on one limit of one account that a phone hears about raises it and the rest stay
+     * quiet until it lifts. A chat nobody follows reaches no phone and so leaves the limit for the next one.
      */
-    private limitAlert(target: PushAlertContent['target'], nodeId: string, title: string, { limit, provider, account }: ChatLimit): void {
+    private limitAlert(target: PushAlertContent['target'], nodeId: string, title: string, chatLimit: ChatLimit): void {
+        const { limit, provider, account } = chatLimit;
         const now = this.now();
 
         for (const [key, until] of this.limitAlerts) {
@@ -432,14 +444,46 @@ export class PushService {
             return;
         }
 
-        this.limitAlerts.set(key, limit.resetsAt !== undefined && limit.resetsAt > now ? limit.resetsAt : now + LIMIT_QUIET_MS);
+        const standby = this.limitPending.get(key);
+
+        if (standby) {
+            standby.push(() => this.limitAlert(target, nodeId, title, chatLimit));
+
+            return;
+        }
+
+        this.limitPending.set(key, []);
+
         const context = this.options.limitContext?.(nodeId) ?? null;
         const body = limitBody(context, limitWindow(context?.windows ?? [], limit.resetsAt));
-        this.enqueue({
-            ...this.attentionContent(target, nodeId, title, body),
-            ...(context?.resumes ? {} : { timeSensitive: true }),
-            ...(limit.resetsAt === undefined ? {} : { resetsAt: Math.round(limit.resetsAt) })
-        });
+        const until = limit.resetsAt !== undefined && limit.resetsAt > now ? limit.resetsAt : now + LIMIT_QUIET_MS;
+        this.enqueue(
+            {
+                ...this.attentionContent(target, nodeId, title, body),
+                ...(context?.resumes ? {} : { timeSensitive: true }),
+                ...(limit.resetsAt === undefined ? {} : { resetsAt: Math.round(limit.resetsAt) })
+            },
+            false,
+            false,
+            { key, until }
+        );
+    }
+
+    /* Counts the limit as raised when a phone got its alert, and otherwise lets the chats that waited on it try again. */
+    private settleLimit({ key, until }: LimitReservation, sent: boolean): void {
+        const standby = this.limitPending.get(key) ?? [];
+
+        this.limitPending.delete(key);
+
+        if (sent) {
+            this.limitAlerts.set(key, until);
+
+            return;
+        }
+
+        for (const retry of standby) {
+            retry();
+        }
     }
 
     private waitAlert(target: PushAlertContent['target'], nodeId: string, title: string): void {
@@ -552,13 +596,13 @@ export class PushService {
         }
     }
 
-    private enqueue(content: PushAlertContent, immediate = false, wait = false): void {
+    private enqueue(content: PushAlertContent, immediate = false, wait = false, limit?: LimitReservation): void {
         const entry = this.attention.notify(content.nodeId);
         this.tell(entry);
         if (immediate) {
             this.queueAlert(() => this.deliverAlert(content, entry.issuedAt, 'needs-you', true));
         } else {
-            this.dispatch({ content, issuedAt: entry.issuedAt, preference: 'needs-you', ledger: true, ...(wait ? { wait } : {}) });
+            this.dispatch({ content, issuedAt: entry.issuedAt, preference: 'needs-you', ledger: true, ...(wait ? { wait } : {}), ...(limit ? { limit } : {}) });
         }
     }
 
@@ -572,7 +616,7 @@ export class PushService {
 
     private dispatch(alert: Omit<HeldAlert, 'dueAt'>): void {
         if (!this.present()) {
-            this.queueAlert(() => this.deliverAlert(alert.content, alert.issuedAt, alert.preference, alert.ledger));
+            this.queueAlert(() => this.deliverAlert(alert.content, alert.issuedAt, alert.preference, alert.ledger, alert.limit));
             return;
         }
         const dueAt = this.now() + (alert.content.kind === 'approval' ? APPROVAL_HOLD_MS : HOLD_MS);
@@ -609,9 +653,13 @@ export class PushService {
                 this.snoozed(content.nodeId) ||
                 (content.kind === 'approval' && !this.approvals.get(content.nodeId)?.has(content.requestId ?? ''))
             ) {
+                if (alert.limit) {
+                    this.settleLimit(alert.limit, false);
+                }
+
                 continue;
             }
-            this.queueAlert(() => this.deliverAlert(content, alert.issuedAt, alert.preference, alert.ledger));
+            this.queueAlert(() => this.deliverAlert(content, alert.issuedAt, alert.preference, alert.ledger, alert.limit));
         }
         if (this.held.length === 0) {
             return;
@@ -648,24 +696,40 @@ export class PushService {
         };
     }
 
-    private async deliverAlert(content: PushAlertContent, issuedAt: number, preference: PushNotifyKind, ledger: boolean): Promise<void> {
-        const projectId = this.options.projectOf?.(content.nodeId) ?? null;
-        for (const { sessionId, subscription } of await this.options.auth.pushSubscriptions()) {
-            if (
-                (ledger && this.attention.isRead(content.nodeId, issuedAt)) ||
-                this.connectedSessions.has(sessionId) ||
-                (content.kind === 'approval' ? !subscription.approvals : !subscription.followAll && !subscription.follow.includes(content.nodeId)) ||
-                !notifyKinds(subscription, projectId).includes(preference)
-            ) {
-                continue;
+    private async deliverAlert(
+        content: PushAlertContent,
+        issuedAt: number,
+        preference: PushNotifyKind,
+        ledger: boolean,
+        limit?: LimitReservation
+    ): Promise<void> {
+        let sent = false;
+
+        try {
+            const projectId = this.options.projectOf?.(content.nodeId) ?? null;
+            for (const { sessionId, subscription } of await this.options.auth.pushSubscriptions()) {
+                if (
+                    (ledger && this.attention.isRead(content.nodeId, issuedAt)) ||
+                    this.connectedSessions.has(sessionId) ||
+                    (content.kind === 'approval' ? !subscription.approvals : !subscription.followAll && !subscription.follow.includes(content.nodeId)) ||
+                    !notifyKinds(subscription, projectId).includes(preference)
+                ) {
+                    continue;
+                }
+                // A finished turn or a process warning must never replace a wait or an approval still open on the phone.
+                const lane = preference === 'needs-you' ? undefined : preference;
+                const routing = { ...this.routing(subscription, content.nodeId, content.expiresAt, lane), issuedAt };
+                if (routing.expiresAt <= this.now()) {
+                    continue;
+                }
+                if (await this.sendCurrent(sessionId, subscription, this.encrypt(routing, subscription, { ...content, expiresAt: routing.expiresAt }))) {
+                    sent = true;
+                }
             }
-            // A finished turn or a process warning must never replace a wait or an approval still open on the phone.
-            const lane = preference === 'needs-you' ? undefined : preference;
-            const routing = { ...this.routing(subscription, content.nodeId, content.expiresAt, lane), issuedAt };
-            if (routing.expiresAt <= this.now()) {
-                continue;
+        } finally {
+            if (limit) {
+                this.settleLimit(limit, sent);
             }
-            await this.sendCurrent(sessionId, subscription, this.encrypt(routing, subscription, { ...content, expiresAt: routing.expiresAt }));
         }
     }
 
