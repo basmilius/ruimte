@@ -8,7 +8,8 @@ const CATALOG_REFERENCE = 'catalog:';
 // The root manifest inside the daemon image; it keeps a catalog of its own because the image never sees the root's.
 const DOCKER_MANIFEST = 'apps/server/docker/workspace-package.json';
 const REGISTRY = 'https://registry.npmjs.org';
-const REGISTRY_TRIES = 30;
+// The registry's CDN can answer 404 for a new tarball for several minutes after the publish.
+const REGISTRY_TRIES = 60;
 const REGISTRY_PAUSE_MS = 10_000;
 
 export interface Manifest {
