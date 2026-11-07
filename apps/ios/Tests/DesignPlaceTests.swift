@@ -94,6 +94,15 @@ final class DesignPlaceTests: XCTestCase {
         XCTAssertEqual(kept.after(.failure(missing)), DesignFiles.Listing(pages: [], found: false, problem: nil))
     }
 
+    /// What `fs.list` answers for a folder that is there and refuses to be read (EACCES), pinned in `list.integration.test.ts`.
+    func testAnUnreadableFolderIsAnErrorThatKeepsTheEarlierPages() {
+        let unreadable = MachineClientError.server(code: "not-readable", message: "That folder cannot be read")
+        let next = kept.after(.failure(unreadable))
+        XCTAssertEqual(next.pages, kept.pages)
+        XCTAssertTrue(next.found)
+        XCTAssertEqual(next.problem, "That folder cannot be read")
+    }
+
     func testAnotherErrorKeepsTheEarlierPagesAndSaysWhy() {
         let next = kept.after(.failure(dropped))
         XCTAssertEqual(next.pages, kept.pages)
