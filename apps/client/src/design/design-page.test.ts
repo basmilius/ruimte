@@ -1,13 +1,16 @@
 import { describe, expect, test } from 'bun:test';
 import type { FsEntry } from '@ruimte/contracts';
+import { TransportError } from '@/transport/transport';
 import {
     arrangePages,
     assetPathOf,
     assetReferences,
     changeReaches,
     designFiles,
+    designReadFailed,
     isPagePath,
     layoutPoint,
+    listingAfter,
     pageDataUrl,
     pageMentions,
     pageName,
@@ -233,5 +236,37 @@ describe('a page a design page frames', () => {
 
         element.setAttribute('src', 'three.html');
         expect(element.attributes.get('src')).toBe('three.html');
+    });
+});
+
+describe('the listing of a design folder', () => {
+    const pages = [entry('Pricing.html')];
+
+    test('reads a folder that is not there as a design without pages, by the code of the error', () => {
+        expect(designReadFailed(new TransportError('not-found', 'Not here'))).toEqual({ kind: 'missing' });
+        expect(designReadFailed(new TransportError('not-found', 'Anything at all'))).toEqual({ kind: 'missing' });
+    });
+
+    test('reads any other error as a failed read, whatever its message says', () => {
+        expect(designReadFailed(new TransportError('not-readable', 'That folder cannot be read'))).toEqual({
+            kind: 'failed',
+            reason: 'That folder cannot be read'
+        });
+        expect(designReadFailed(new TransportError('timeout', 'That folder is not there'))).toEqual({ kind: 'failed', reason: 'That folder is not there' });
+        expect(designReadFailed(new Error('The line dropped'))).toEqual({ kind: 'failed', reason: 'The line dropped' });
+        expect(designReadFailed('odd')).toEqual({ kind: 'failed', reason: 'odd' });
+    });
+
+    test('takes the entries of a read that listed them and clears an earlier failure', () => {
+        expect(listingAfter({ entries: null, problem: 'Broke' }, { kind: 'listed', entries: pages })).toEqual({ entries: pages, problem: null });
+    });
+
+    test('drops its entries for a folder that is not there', () => {
+        expect(listingAfter({ entries: pages, problem: null }, { kind: 'missing' })).toEqual({ entries: null, problem: null });
+    });
+
+    test('keeps the entries it had when a read fails, and says why', () => {
+        expect(listingAfter({ entries: pages, problem: null }, { kind: 'failed', reason: 'Broke' })).toEqual({ entries: pages, problem: 'Broke' });
+        expect(listingAfter({ entries: null, problem: null }, { kind: 'failed', reason: 'Broke' })).toEqual({ entries: null, problem: 'Broke' });
     });
 });

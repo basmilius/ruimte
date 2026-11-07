@@ -1,7 +1,7 @@
-import { Icon } from '@adecore/ui';
+import { Icon, IconButton } from '@adecore/ui';
 import { nodeChats, nodeColorOf, type DesignPlace, type ProjectNode } from '@ruimte/contracts';
 import clsx from 'clsx';
-import { ChevronRight, FileCode2, SwatchBook } from 'lucide-react';
+import { ChevronRight, FileCode2, RotateCw, SwatchBook, TriangleAlert } from 'lucide-react';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
@@ -102,7 +102,7 @@ export function DesignBeside({ id, z }: { id: string; z: number }) {
     const viewId = useCanvas((s) => s.viewId);
     const design = useNodeDesign(id);
     const { folder, projectFolder } = useDesignFolder(design ?? { id, path: '', canvasId: null });
-    const pages = useDesignPages(endpointId, design === null ? null : folder, projectFolder);
+    const { pages, problem, retry } = useDesignPages(endpointId, design === null ? null : folder, projectFolder);
     const picked = useDesignChat((state) => state.picked);
     const showPage = useDesignChat((state) => state.showPage);
     // Undefined until the pages first arrive, then the newest of them; null opens none.
@@ -139,6 +139,8 @@ export function DesignBeside({ id, z }: { id: string; z: number }) {
     const accent = accentColor(nodeColorOf(node));
 
     if (pages.length === 0) {
+        const text = problem === null ? t('design.empty') : t('design.listFailed', { reason: problem });
+
         return (
             <DerivedSet
                 owner={id}
@@ -150,9 +152,9 @@ export function DesignBeside({ id, z }: { id: string; z: number }) {
                         key: 'empty',
                         rect: { x: node.x + node.w + GUTTER, y: node.y, w: size.w, h: LINE_H },
                         linkedFrom: 'node',
-                        label: t('design.empty'),
+                        label: text,
                         lineDown: HEADER_MIDDLE,
-                        content: <EmptyLine text={t('design.empty')} />
+                        content: <EmptyLine text={text} failed={problem !== null} onRetry={retry} />
                     }
                 ]}
             />
@@ -200,12 +202,15 @@ export function DesignBeside({ id, z }: { id: string; z: number }) {
     return <DerivedSet owner={id} z={z} cards={cards} lineDown={HEADER_MIDDLE} {...(accent === undefined ? {} : { stroke: accentShades(accent).line })} />;
 }
 
-/* Where the chat will write, as a line beside a design without pages yet; nothing opens from it. */
-function EmptyLine({ text }: { text: string }) {
+/* Where the chat will write, as a line beside a design without pages yet; nothing opens from it. A folder that could not be read says so, with a way to read it again. */
+function EmptyLine({ text, failed, onRetry }: { text: string; failed: boolean; onRetry(): void }) {
+    const { t } = useTranslation('common');
+
     return (
-        <div className={clsx(FRAME, 'flex-row items-center gap-2 bg-surface px-3 text-sm text-text-muted')}>
-            <Icon icon={SwatchBook} size={14} className="shrink-0" />
+        <div className={clsx(FRAME, 'flex-row items-center gap-2 bg-surface px-3 text-sm', failed ? 'text-status-error' : 'text-text-muted')}>
+            <Icon icon={failed ? TriangleAlert : SwatchBook} size={14} className="shrink-0" />
             <span className="min-w-0 grow truncate">{text}</span>
+            {failed && <IconButton icon={RotateCw} size="sm" label={t('action.retry')} onClick={onRetry} />}
         </div>
     );
 }

@@ -1,4 +1,39 @@
 import { isPathBelow, type FsEntry } from '@ruimte/contracts';
+import { TransportError } from '@/transport/transport';
+
+/* What one read of a design folder came to: its entries, a folder that is not there yet, or a read that failed. */
+export type DesignRead = { kind: 'listed'; entries: FsEntry[] } | { kind: 'missing' } | { kind: 'failed'; reason: string };
+
+/*
+ * What is known of a design folder: its entries, null while the folder is not there, and the reason the
+ * last read failed. A failed read leaves the entries as they were, so a refresh that failed never turns
+ * the pages shown into an empty design.
+ */
+export interface DesignListing {
+    entries: FsEntry[] | null;
+    problem: string | null;
+}
+
+/* The read a thrown error stands for. Only the code decides: `not-found` is a folder the chat has not made, anything else is a failure. */
+export function designReadFailed(error: unknown): DesignRead {
+    if (error instanceof TransportError && error.code === 'not-found') {
+        return { kind: 'missing' };
+    }
+
+    return { kind: 'failed', reason: error instanceof Error ? error.message : String(error) };
+}
+
+/* The listing after a read of the folder. */
+export function listingAfter(before: DesignListing, read: DesignRead): DesignListing {
+    switch (read.kind) {
+        case 'listed':
+            return { entries: read.entries, problem: null };
+        case 'missing':
+            return { entries: null, problem: null };
+        case 'failed':
+            return { entries: before.entries, problem: read.reason };
+    }
+}
 
 /* What one page of a design may pull in from its folder, the bounds a visual's page keeps too. */
 export const DESIGN_ASSET_MAX_BYTES = 10 * 1024 * 1024;

@@ -4,6 +4,7 @@ import { act } from 'react';
 import { useDesignChat } from '@/design/design-chat';
 import { DESIGN_METHODS } from '@/design/design-protocol';
 import { useDocument } from '@/state/document';
+import { TransportError } from '@/transport/transport';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, layOutChat, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
@@ -25,6 +26,8 @@ let mounted: Mounted;
 let restoreLayout: () => void;
 // What the design folder holds, which a test changes as a delete or the chat would.
 let listing: FsEntry[];
+// The error the machine answers the folder's listing with, as an unreadable or missing folder does.
+let listError: TransportError | null;
 
 beforeEach(async () => {
     localStorage.clear();
@@ -32,7 +35,14 @@ beforeEach(async () => {
     restoreLayout = layOutChat();
     listing = PAGES;
     machine = new FakeMachine();
-    machine.answer('fs.list', ({ path }) => ({ path, entries: path === FOLDER ? listing : [], truncated: false }));
+    listError = null;
+    machine.answer('fs.list', ({ path }) => {
+        if (path === FOLDER && listError !== null) {
+            throw listError;
+        }
+
+        return { path, entries: path === FOLDER ? listing : [], truncated: false };
+    });
     machine.answer('fs.delete', () => ({}) as never);
     machine.answer('chat.attach', ({ chatId }) => ({ info: chatInfoOf(chatId), items: [], seq: 0 }) as never);
     machine.answer('project.save', ({ baseRev }) => ({ rev: baseRev + 1 }) as never);
@@ -161,6 +171,52 @@ describe('a design view', () => {
         await until(() => reads === 2 && mounted.host.textContent?.includes('The line dropped') === false);
 
         expect(reads).toBe(2);
+    });
+
+    test('says a folder that cannot be read could not be read, not that the design has no pages', async () => {
+        listError = new TransportError('not-readable', 'That folder cannot be read');
+        await mounted.unmount();
+        mounted = mount();
+        await mounted.renderApp();
+
+        await until(() => mounted.host.textContent?.includes('The pages could not be read') === true);
+
+        expect(mounted.host.textContent).toContain('That folder cannot be read');
+        expect(mounted.host.textContent).not.toContain('No pages yet');
+
+        listError = null;
+        await clickOn(button('Read again'));
+        await until(() => shownPage() === '2a Dense');
+
+        expect(mounted.host.textContent).not.toContain('The pages could not be read');
+    });
+
+    test('keeps the pages shown when a refresh fails, with the failure and a way to try again', async () => {
+        await until(() => shownPage() === '2a Dense');
+
+        listError = new TransportError('not-readable', 'That folder cannot be read');
+        await act(async () => machine.emit('fs.changed', { root: '/work/atlas', paths: [FOLDER] }));
+        await until(() => mounted.host.textContent?.includes('The pages could not be read') === true);
+
+        expect(shownPage()).toBe('2a Dense');
+        expect(mounted.host.textContent).not.toContain('No pages yet');
+
+        listError = null;
+        await clickOn(button('Try again'));
+        await until(() => mounted.host.textContent?.includes('The pages could not be read') === false);
+
+        expect(shownPage()).toBe('2a Dense');
+    });
+
+    test('shows an empty design for a folder that is not there yet', async () => {
+        listError = new TransportError('not-found', 'That folder is not there');
+        await mounted.unmount();
+        mounted = mount();
+        await mounted.renderApp();
+
+        await until(() => mounted.host.textContent?.includes('No pages yet') === true);
+
+        expect(mounted.host.textContent).not.toContain('The pages could not be read');
     });
 
     test('opens the page last worked on', async () => {

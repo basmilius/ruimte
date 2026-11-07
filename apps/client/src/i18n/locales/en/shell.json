@@ -301,6 +301,7 @@
         "noFolder": "A design needs the project's folder on this machine.",
         "failed": "The design could not be shown.",
         "failedAction": "The design could not do that",
+        "listFailed": "The pages could not be read. {{reason}}",
         "pageFailed": "Could not show {{name}}. {{reason}}",
         "pageTooLarge": "It is {{size}}, and a page holds at most {{limit}}.",
         "pageNotText": "{{name}} is not a text file.",

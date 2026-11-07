@@ -301,6 +301,7 @@
         "noFolder": "Een design heeft de map van het project op deze machine nodig.",
         "failed": "Het design kon niet worden getoond.",
         "failedAction": "Het design kon dat niet doen",
+        "listFailed": "De pagina's konden niet worden gelezen. {{reason}}",
         "pageFailed": "{{name}} kan niet worden getoond. {{reason}}",
         "pageTooLarge": "Het bestand is {{size}}, en een pagina mag hooguit {{limit}} zijn.",
         "pageNotText": "{{name}} is geen tekstbestand.",

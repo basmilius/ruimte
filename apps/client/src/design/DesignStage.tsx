@@ -1,7 +1,7 @@
 import { Button, EmptyState, Icon, Menu, PromptDialog, Segmented, Separator, ZoomControls, useNow } from '@adecore/ui';
 import { formatAgo } from '@adecore/ui/format';
 import type { ChatAttachmentUpload, FsEntry } from '@ruimte/contracts';
-import { ChevronDown, FileCode2, MessageSquarePlus, MousePointer2, PenLine, Send, SquareMousePointer, Trash2 } from 'lucide-react';
+import { ChevronDown, FileCode2, MessageSquarePlus, MousePointer2, PenLine, Send, SquareMousePointer, Trash2, TriangleAlert } from 'lucide-react';
 import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +11,7 @@ import { designCameraKey, useDesignChat } from '@/design/design-chat';
 import { editsCss, editsOf, withEdits, withTweakValues, type DesignEdits } from '@/design/design-file';
 import { runtimeAssets } from '@/design/design-inline';
 import { bakePrompt, commentsPrompt, drawPrompt, textEditPrompt, type DesignComment } from '@/design/design-messages';
-import { changeReaches, designFiles, pageMtime, pageName, pagesByChange } from '@/design/design-page';
+import { changeReaches, designFiles, listingAfter, pageMtime, pageName, pagesByChange, type DesignListing } from '@/design/design-page';
 import {
     DESIGN_METHODS,
     designMessage,
@@ -29,6 +29,7 @@ import { DesignDrawLayer } from '@/design/DesignDrawLayer';
 import { DesignEditPanel } from '@/design/DesignEditPanel';
 import { DesignPageFrame } from '@/design/DesignPageFrame';
 import { DesignTweaks } from '@/design/DesignTweaks';
+import { NodeNotice } from '@/nodes/NodeNotice';
 import { useFolderWatch } from '@/state/fs-watch';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
@@ -94,7 +95,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     const endpointId = useEndpointId();
     const transport = useTransport();
     const cellView = useContext(CellViewContext);
-    const [entries, setEntries] = useState<FsEntry[] | null>(null);
+    const [listing, setListing] = useState<DesignListing>({ entries: null, problem: null });
     const [listed, setListed] = useState(false);
     const shownPage = useDesignChat((state) => state.pages[designId] ?? null);
     const chosen = pinned ?? shownPage;
@@ -118,6 +119,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     const assets = useRef<{ opened: string; read: (path: string) => Promise<Blob | null> } | null>(null);
     const known = useRef<{ folder: string; pages: Set<string> } | null>(null);
 
+    const { entries, problem } = listing;
     const files = entries === null ? null : designFiles(entries);
     const found = entries !== null;
 
@@ -126,7 +128,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
 
     // A page that came since the last listing is the one the chat just made, unless a person still has work queued on the page in front.
     const onListed = useEffectEvent((found: FsEntry[] | null): void => {
-        // No listing is a folder not made yet, or a call that failed: the pages known stay, or every one of them would
+        // No listing is a folder not made yet, or a read that failed: the pages known stay, or every one of them would
         // arrive at the next listing.
         if (found === null) {
             if (known.current?.folder !== folder) {
@@ -151,11 +153,11 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     useEffect(() => {
         let current = true;
 
-        void listDesignFolder(endpointId, folder).then((found) => {
+        void listDesignFolder(endpointId, folder).then((read) => {
             if (current) {
-                setEntries(found);
+                setListing((before) => listingAfter(before, read));
                 setListed(true);
-                onListed(found);
+                onListed(read.kind === 'listed' ? read.entries : null);
             }
         });
 
@@ -401,6 +403,8 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
         }
     };
 
+    const readAgain = (): void => setVersion((previous) => previous + 1);
+
     if (!listed) {
         return (
             <EmptyState busy className="grow">
@@ -410,6 +414,23 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     }
 
     if (files === null || files.length === 0 || active === null) {
+        // A folder that could not be read is not an empty design: it says so and offers another read.
+        if (problem !== null) {
+            return (
+                <EmptyState
+                    icon={TriangleAlert}
+                    className="grow select-text"
+                    action={
+                        <Button size="sm" variant="secondary" onClick={readAgain}>
+                            {t('design.readAgain')}
+                        </Button>
+                    }
+                >
+                    {t('design.listFailed', { reason: problem })}
+                </EmptyState>
+            );
+        }
+
         return (
             <EmptyState scene={<DesignScene />} title={t('design.emptyTitle')} className="grow">
                 {t('design.emptyHint')}
@@ -492,6 +513,11 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
             <div ref={frameBox} className="relative min-h-0 grow overflow-hidden">
                 {/* Keyed on the page and when it was written: the frame takes a page only as it opens, so another page or a write of this one opens it again, and nothing else in the folder does. */}
                 <DesignPageFrame key={opened} endpointId={endpointId} folder={folder} file={active} />
+                {problem !== null && (
+                    <NodeNotice tone="error" onRetry={readAgain}>
+                        {t('design.listFailed', { reason: problem })}
+                    </NodeNotice>
+                )}
                 {tool === 'comment' && picked !== null && (
                     <DesignCommentPopover
                         element={picked}

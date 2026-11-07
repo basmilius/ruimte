@@ -1,9 +1,9 @@
 import { formatBytes } from '@adecore/ui/format';
-import { injectVisualBootstrap, type FsEntry, type FsReadText } from '@ruimte/contracts';
+import { injectVisualBootstrap, type FsReadText } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { DESIGN_FOLDERS } from '@/design/design-folder';
 import { inlineDesignPage } from '@/design/design-inline';
-import { DESIGN_ASSET_MAX_BYTES, DESIGN_PAGE_MAX_BYTES } from '@/design/design-page';
+import { DESIGN_ASSET_MAX_BYTES, DESIGN_PAGE_MAX_BYTES, designReadFailed, type DesignRead } from '@/design/design-page';
 import { withDesignRuntime } from '@/design/design-runtime';
 import { readLargeText } from '@/shell/panels/large-text';
 import { machineTransport } from '@/transport';
@@ -11,15 +11,15 @@ import { readResource } from '@/transport/byte-transfer';
 import { readPiece } from '@/transport/piece';
 import { writeMachineText } from '@/transport/write-text';
 
-/* What the design folder holds, or null while the folder is not there yet: the chat makes it with its first file. */
-export async function listDesignFolder(endpointId: string, folder: string): Promise<FsEntry[] | null> {
+/* What the design folder holds. A folder that is not there yet is its own answer, since the chat makes it with its first file; any other error is a failed read. */
+export async function listDesignFolder(endpointId: string, folder: string): Promise<DesignRead> {
     try {
         // Hidden too: git ignores a private design's folder, and a listing leaves out what git ignores.
         const listed = await machineTransport(endpointId).request('fs.list', { path: folder, hidden: true });
 
-        return listed.entries;
-    } catch {
-        return null;
+        return { kind: 'listed', entries: listed.entries };
+    } catch (error) {
+        return designReadFailed(error);
     }
 }
 
