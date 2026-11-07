@@ -18,7 +18,7 @@ const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', node
 
 let machine: FakeMachine;
 let canvas: CanvasPage;
-const dimensions = ['offsetWidth', 'offsetHeight', 'clientWidth', 'clientHeight'] as const;
+const dimensions = ['offsetWidth', 'offsetHeight', 'clientWidth', 'clientHeight', 'scrollHeight'] as const;
 let dimensionDescriptors: Array<PropertyDescriptor | undefined>;
 
 function dimension(element: HTMLElement, name: (typeof dimensions)[number]): number {
@@ -26,11 +26,52 @@ function dimension(element: HTMLElement, name: (typeof dimensions)[number]): num
         return 0;
     }
 
+    // A thread taller than its window, so a reader can be away from the end.
+    if (name === 'scrollHeight') {
+        return element.classList.contains('chat-scroll') ? 1000 : 80;
+    }
+
     if (name.endsWith('Width')) {
         return 480;
     }
 
     return element.hasAttribute('data-file-cwd') || element.classList.contains('chat-scroll') ? 400 : 80;
+}
+
+// Every element a ResizeObserver watches right now: a hidden Activity tears its effects down, so a paused chat watches none.
+const watched = new Set<Element>();
+let nativeObserver: typeof ResizeObserver | undefined;
+
+class CountingObserver {
+    private readonly native: ResizeObserver | undefined;
+    private readonly targets = new Set<Element>();
+
+    constructor(callback: ResizeObserverCallback) {
+        this.native = nativeObserver ? new nativeObserver(callback) : undefined;
+    }
+
+    observe(target: Element, options?: ResizeObserverOptions): void {
+        this.targets.add(target);
+        watched.add(target);
+        this.native?.observe(target, options);
+    }
+
+    unobserve(target: Element): void {
+        this.targets.delete(target);
+        watched.delete(target);
+        this.native?.unobserve(target);
+    }
+
+    disconnect(): void {
+        this.targets.forEach((target) => watched.delete(target));
+        this.targets.clear();
+        this.native?.disconnect();
+    }
+}
+
+function chatObservers(): number {
+    const root = frame(CHAT.id);
+    return [...watched].filter((target) => root.contains(target)).length;
 }
 
 function frame(id: string): HTMLElement {
@@ -77,6 +118,9 @@ beforeEach(async () => {
         });
     }
 
+    nativeObserver = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = CountingObserver as unknown as typeof ResizeObserver;
+    watched.clear();
     machine = new FakeMachine();
     machine.answer('provider.list', () => ({ providers: [fakeProvider('claude', 'Claude Code')] }));
     machine.answer(
@@ -115,6 +159,8 @@ afterEach(async () => {
         jest.useRealTimers();
     }
     useSettings.setState({ canvasRenderDistance: 'standard' });
+    globalThis.ResizeObserver = nativeObserver as typeof ResizeObserver;
+    watched.clear();
 
     dimensions.forEach((name, index) => {
         const descriptor = dimensionDescriptors[index];
@@ -129,11 +175,21 @@ afterEach(async () => {
 
 test('a small chat pauses its surface after the grace period without detaching and restores the latest answer and draft', async () => {
     await act(async () => composer().dispatch(composer().state.replaceSelection('Unsent draft'), { userEvent: 'input.type' }));
+    const scroller = frame(CHAT.id).querySelector<HTMLElement>('.chat-scroll')!;
+    // A reader who scrolled up from the end, which stops the thread from following new text.
+    for (const top of [600, 120]) {
+        scroller.scrollTop = top;
+        await act(async () => scroller.dispatchEvent(new Event('scroll')));
+    }
+    const observing = chatObservers();
+    expect(observing).toBeGreaterThan(0);
     await camera(0.3);
     await advance(9900);
     expect(shown('.chat-scroll')).toBe(true);
+    expect(chatObservers()).toBe(observing);
     await advance(100);
     expect(shown('.chat-scroll')).toBe(false);
+    expect(chatObservers()).toBe(0);
     expect(machine.requests('chat.detach')).toHaveLength(0);
     await act(async () => machine.emit('chat.event', { chatId: CHAT.id, seq: 1, event: { type: 'delta', itemId: 'answer', text: ' with new text' } }));
     await camera(1);
@@ -141,6 +197,9 @@ test('a small chat pauses its surface after the grace period without detaching a
     expect(shown('.chat-scroll')).toBe(true);
     expect(frame(CHAT.id).textContent).toContain('Original answer with new text');
     expect(composer().state.doc.toString()).toBe('Unsent draft');
+    expect(frame(CHAT.id).querySelector<HTMLElement>('.chat-scroll')).toBe(scroller);
+    expect(scroller.scrollTop).toBe(120);
+    expect(chatObservers()).toBeGreaterThan(0);
     expect(machine.requests('chat.attach')).toHaveLength(1);
 });
 

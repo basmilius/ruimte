@@ -208,7 +208,7 @@ export function ChatBody({
                         </LazyBoundary>
                     </Activity>
                     {!visible && (
-                        <div className="flex h-full w-full items-center justify-center gap-2 px-4 text-text-faint" aria-hidden="true">
+                        <div className="flex min-h-0 w-full grow items-center justify-center gap-2 px-4 text-text-faint" aria-hidden="true">
                             <Icon icon={MessageSquare} size={20} />
                             <span className="truncate text-sm">{nodeHost?.title ?? id}</span>
                         </div>
