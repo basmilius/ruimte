@@ -414,7 +414,9 @@ export async function bumpPackages(root: string, adecore: string, version: strin
     // The image installs from its own manifest, so it has to end on the same catalog as the root.
     const drift = bumped.slice(1).filter((entry) => !Bun.deepEquals(catalogOf(JSON.parse(entry.text)), catalogOf(JSON.parse(bumped[0].text))));
     if (drift.length > 0) {
-        throw new Error(`${relative(root, drift[0].file).split(sep).join('/')} does not list the same ADE CORE packages as the root catalog. No file was changed.`);
+        throw new Error(
+            `${relative(root, drift[0].file).split(sep).join('/')} does not list the same ADE CORE packages as the root catalog. No file was changed.`
+        );
     }
     // Before any write: a release still propagating would otherwise leave a half-installed node_modules. A package
     // the catalog does not name (editor-core under editor) is released with the rest and installed all the same.
