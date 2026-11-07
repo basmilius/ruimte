@@ -82,6 +82,30 @@ export function isFullPath(path: string, platform: string | null): boolean {
     return trimmed.startsWith('/');
 }
 
+/*
+ * Whether what is typed turns the palette into a folder browser; anything else searches nodes and
+ * actions. A drive letter browses only on a machine that has drives, and a bare `C:` stays a search
+ * until the separator, since the machine reads it as relative to that drive's working folder.
+ */
+export function isPathQuery(query: string, platform: string | null): boolean {
+    if (query.startsWith('/') || query.startsWith('~') || query.startsWith('./') || query.startsWith('../')) {
+        return true;
+    }
+    return platform === 'win32' && isFullPath(query, platform);
+}
+
+/*
+ * The path to show once its first listing is in. A tilde means nothing to a person on Windows, so a
+ * listed home folder is written as the machine wrote it (`parentPath`, which the machine answers
+ * absolute); macOS and Linux keep the tilde.
+ */
+export function shownPath(path: string, parentPath: string | null, platform: string | null): string {
+    if (platform !== 'win32' || parentPath === null || !path.startsWith('~') || !(path === '~' || endsWithSeparator(path))) {
+        return path;
+    }
+    return endsWithSeparator(parentPath) ? parentPath : `${parentPath}${separatorFor(platform)}`;
+}
+
 /* What Enter does with the typed path; a relative one is refused at once rather than after the machine said no. */
 type TypedPathOffer = 'open' | 'create' | 'relative';
 
@@ -99,7 +123,10 @@ interface BrowseStart {
     home: string;
 }
 
-/* Home is the tilde the machine expands itself: what `server.hello` calls home is Ruimte's own folder there. */
+/*
+ * Home is the tilde the machine expands itself: what `server.hello` calls home is Ruimte's own folder
+ * there. `configured` is the machine's own start folder.
+ */
 export function browseStart(configured: string, sep: string): BrowseStart {
     const homePath = `~${sep}`;
     const trimmed = configured.trim();

@@ -3,6 +3,8 @@ import type { FsBrowseResult } from '@ruimte/contracts';
 import { ArrowLeft, CornerLeftUp, Folder, FolderCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { endsWithSeparator, parentOf, separatorFor, shownPath } from '@/shell/palette-browse';
+import { useServers } from '@/state/server';
 import { transportFor } from '@/transport';
 
 /*
@@ -22,7 +24,9 @@ export function RemoteFolderPicker({
     onBack(): void;
 }) {
     const { t } = useTranslation('shell');
-    const [path, setPath] = useState('~/');
+    const platform = useServers((s) => s.byEndpoint[endpointId]?.platform ?? null);
+    const sep = separatorFor(platform);
+    const [path, setPath] = useState(`~${sep}`);
     const [listing, setListing] = useState<FsBrowseResult | null>(null);
     const [failure, setFailure] = useState<string | null>(null);
 
@@ -35,6 +39,8 @@ export function RemoteFolderPicker({
                     if (current) {
                         setListing(answer);
                         setFailure(null);
+                        // The machine's own way of writing its home folder replaces the tilde once it has said which it is.
+                        setPath(shownPath(path, answer.parentPath, platform));
                     }
                 },
                 (e: unknown) => {
@@ -46,10 +52,10 @@ export function RemoteFolderPicker({
         return () => {
             current = false;
         };
-    }, [endpointId, path]);
+    }, [endpointId, path, platform]);
 
-    const enter = (folder: string): void => setPath(folder.endsWith('/') ? folder : `${folder}/`);
-    const parent = listing === null ? null : listing.parentPath.replace(/\/[^/]*\/?$/, '') || '/';
+    const enter = (folder: string): void => setPath(endsWithSeparator(folder) ? folder : `${folder}${sep}`);
+    const parent = listing === null ? null : parentOf(listing.parentPath, sep);
     return (
         <div className="mt-2 flex flex-col gap-2">
             <div className="flex items-center gap-2">

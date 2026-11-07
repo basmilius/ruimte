@@ -9,6 +9,7 @@ import {
     browseStart,
     folderPresence,
     isFullPath,
+    isPathQuery,
     linkDot,
     linkHint,
     machineLink,
@@ -20,6 +21,7 @@ import {
     retryLink,
     separatorFor,
     settleLink,
+    shownPath,
     typedPathOffer,
     type BrowseStep
 } from './palette-browse';
@@ -99,6 +101,62 @@ describe('isFullPath', () => {
 
     test('surrounding spaces do not count, as the machine trims them too', () => {
         expect(isFullPath('  /tmp ', 'linux')).toBe(true);
+    });
+});
+
+describe('isPathQuery', () => {
+    test('a slash, a tilde and a dot path browse on every machine', () => {
+        for (const platform of ['darwin', 'linux', 'win32', null]) {
+            expect(isPathQuery('/tmp', platform)).toBe(true);
+            expect(isPathQuery('~', platform)).toBe(true);
+            expect(isPathQuery('~/projects', platform)).toBe(true);
+            expect(isPathQuery('./app', platform)).toBe(true);
+            expect(isPathQuery('../app', platform)).toBe(true);
+            expect(isPathQuery('open file', platform)).toBe(false);
+        }
+    });
+
+    test('a drive letter browses on Windows once the separator is typed, with either slash', () => {
+        expect(isPathQuery('C:\\', 'win32')).toBe(true);
+        expect(isPathQuery('C:/', 'win32')).toBe(true);
+        expect(isPathQuery('d:\\Work\\app', 'win32')).toBe(true);
+        expect(isPathQuery('\\\\server\\share', 'win32')).toBe(true);
+    });
+
+    test('a bare drive letter stays a search, since the machine reads it as relative to the drive', () => {
+        expect(isPathQuery('C:', 'win32')).toBe(false);
+        expect(isPathQuery('C', 'win32')).toBe(false);
+    });
+
+    test('a drive letter is only a search on a machine without drives', () => {
+        expect(isPathQuery('C:\\', 'darwin')).toBe(false);
+        expect(isPathQuery('C:\\', 'linux')).toBe(false);
+        expect(isPathQuery('C:\\', null)).toBe(false);
+    });
+});
+
+describe('shownPath', () => {
+    test('a Windows machine shows its home folder as the machine wrote it', () => {
+        expect(shownPath('~\\', 'C:\\Users\\bas', 'win32')).toBe('C:\\Users\\bas\\');
+        expect(shownPath('~/', 'C:\\Users\\bas', 'win32')).toBe('C:\\Users\\bas\\');
+        expect(shownPath('~', 'C:\\Users\\bas', 'win32')).toBe('C:\\Users\\bas\\');
+        expect(shownPath('~\\Documents\\', 'C:\\Users\\bas\\Documents', 'win32')).toBe('C:\\Users\\bas\\Documents\\');
+    });
+
+    test('a root the machine answered keeps its single separator', () => {
+        expect(shownPath('~\\', 'C:\\', 'win32')).toBe('C:\\');
+    });
+
+    test('macOS and Linux keep the tilde', () => {
+        expect(shownPath('~/', '/Users/bas', 'darwin')).toBe('~/');
+        expect(shownPath('~/', '/home/bas', 'linux')).toBe('~/');
+        expect(shownPath('~/', '/home/bas', null)).toBe('~/');
+    });
+
+    test('a path that is not a whole tilde folder, or has no listing yet, stays as typed', () => {
+        expect(shownPath('~\\Doc', 'C:\\Users\\bas', 'win32')).toBe('~\\Doc');
+        expect(shownPath('D:\\Work\\', 'D:\\Work', 'win32')).toBe('D:\\Work\\');
+        expect(shownPath('~\\', null, 'win32')).toBe('~\\');
     });
 });
 

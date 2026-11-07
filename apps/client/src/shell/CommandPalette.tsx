@@ -8,6 +8,8 @@ import { usePaletteChats } from '@/shell/use-palette-chats';
 import { usePaletteCommands } from '@/shell/use-palette-commands';
 import { usePaletteFiles } from '@/shell/use-palette-files';
 import { usePaletteGrep } from '@/shell/use-palette-grep';
+import { useEndpoints } from '@/state/endpoints';
+import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 
 /*
@@ -46,6 +48,9 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
     const seed = useUi((s) => s.paletteSeed);
     const setOpen = useUi((s) => s.setPaletteOpen);
     const browseAt = useUi((s) => s.paletteBrowseAt);
+    /* A path typed here browses the machine the app is pointed at, so its style is the example. */
+    const activeId = useEndpoints((s) => s.activeId);
+    const activePlatform = useServers((s) => s.byEndpoint[activeId]?.platform ?? null);
     const mode = useUi((s) => s.paletteMode);
     const grepping = mode === 'grep';
     const chatting = mode === 'chats';
@@ -86,7 +91,8 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
     }
 
     const label = grepping ? t('palette.searchFiles') : chatting ? t('palette.searchChats') : picking ? t('palette.pickFile') : t('palette.inputLabel');
-    const placeholder = grepping || chatting || picking ? label : browsing ? browse.placeholder : t('palette.placeholder');
+    const palettePlaceholder = activePlatform === 'win32' ? t('palette.placeholderWindows') : t('palette.placeholder');
+    const placeholder = grepping || chatting || picking ? label : browsing ? browse.placeholder : palettePlaceholder;
 
     const keyDown = (event: PaletteKeyEvent): void => {
         if (event.key === 'Backspace' && query === '' && view.back !== undefined) {

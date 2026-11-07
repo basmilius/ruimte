@@ -18,6 +18,7 @@ import {
     browseStart,
     endsWithSeparator,
     folderPresence,
+    isPathQuery,
     typedPathOffer,
     linkDot,
     linkHint,
@@ -29,6 +30,7 @@ import {
     retryLink,
     separatorFor,
     settleLink,
+    shownPath,
     type BrowseStep
 } from '@/shell/palette-browse';
 import { groupBySection, matches, type Entry, type PaletteContext, type PaletteModeView } from '@/shell/palette-entries';
@@ -45,11 +47,6 @@ import { pool, transportFor, type ConnectionState } from '@/transport';
 import { useFocusedMachine } from '@/transport/connections';
 import { useConnections } from '@/transport/status';
 import type { Transport } from '@/transport/transport';
-
-// Typing a path turns the palette into a folder browser; anything else searches nodes and actions.
-function isPathQuery(query: string): boolean {
-    return query.startsWith('/') || query.startsWith('~') || query.startsWith('./') || query.startsWith('../');
-}
 
 const BROWSE_DEBOUNCE_MS = 60;
 
@@ -158,7 +155,7 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
 
     /* A typed path browses the machine the app is pointed at, which the idle row of the web client is not. */
     const pathStep = (next: string): BrowseStep | null =>
-        isPathQuery(next) && isRealMachine(activeId) ? { endpointId: activeId, machines: false, path: next } : null;
+        isPathQuery(next, serverInfoOf(activeId).platform) && isRealMachine(activeId) ? { endpointId: activeId, machines: false, path: next } : null;
 
     /* Typing never leaves browsing and never empties the list: the field says where you are, the
        step says what you are doing. A path typed in the ordinary palette is the second way in. */
@@ -224,10 +221,13 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
      */
     const commitBrowse = useCallback(
         (endpointId: string, path: string, answer: BrowseAnswer): void => {
-            setListing({ key: browseKey(endpointId, path), result: answer.result });
+            // A Windows machine's home is shown as the folder it is rather than a tilde, once the listing says which.
+            const shown = shownPath(path, answer.result?.parentPath ?? null, serverInfoOf(endpointId).platform);
+
+            setListing({ key: browseKey(endpointId, shown), result: answer.result });
             setFailure(answer.failure);
-            setBrowse({ endpointId, machines: false, path });
-            setQuery(path);
+            setBrowse({ endpointId, machines: false, path: shown });
+            setQuery(shown);
         },
         [setQuery]
     );
@@ -571,5 +571,7 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
         )
     };
 
-    return { browsing, typed, restart, placeholder: machineStep ? t('palette.searchMachines') : t('palette.pathPlaceholder'), view };
+    const pathPlaceholder = platform === 'win32' ? t('palette.pathPlaceholderWindows') : t('palette.pathPlaceholder');
+
+    return { browsing, typed, restart, placeholder: machineStep ? t('palette.searchMachines') : pathPlaceholder, view };
 }

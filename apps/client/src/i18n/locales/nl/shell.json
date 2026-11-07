@@ -920,6 +920,8 @@
         "inputLabel": "Ga naar een node, voer een commando uit of open een map",
         "placeholder": "Ga naar een node, voer een commando uit of typ een pad als ~/projects",
         "pathPlaceholder": "Pad naar map, zoals ~/projects/my-app",
+        "placeholderWindows": "Ga naar een node, voer een commando uit of typ een pad als C:\\Projects",
+        "pathPlaceholderWindows": "Pad naar map, zoals C:\\Projects\\my-app",
         "matchCase": "Hoofdlettergevoelig",
         "wholeWords": "Hele woorden",
         "regex": "Reguliere expressie",

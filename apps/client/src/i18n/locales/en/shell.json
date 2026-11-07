@@ -920,6 +920,8 @@
         "inputLabel": "Jump to a node, run a command, or open a folder",
         "placeholder": "Jump to a node, run a command, or type a path like ~/projects",
         "pathPlaceholder": "Folder path, like ~/projects/my-app",
+        "placeholderWindows": "Jump to a node, run a command, or type a path like C:\\Projects",
+        "pathPlaceholderWindows": "Folder path, like C:\\Projects\\my-app",
         "matchCase": "Match case",
         "wholeWords": "Whole words",
         "regex": "Regular expression",
