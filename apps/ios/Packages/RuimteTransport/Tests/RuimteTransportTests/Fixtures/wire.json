@@ -402,6 +402,7 @@
     "endpoint.setIdentity",
     "endpoint.settings",
     "endpoint.setNodeSize",
+    "endpoint.setStartFolder",
     "endpoint.agentIntegrations",
     "endpoint.setAgentIntegration",
     "endpoint.closedLidRule",

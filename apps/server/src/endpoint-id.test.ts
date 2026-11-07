@@ -150,7 +150,8 @@ describe('readOrCreateEndpointIdentity', () => {
                     broker: { mode: 'default' },
                     lanDoor: true,
                     nodeSizes: {},
-                    usageStats: true
+                    usageStats: true,
+                    startFolder: ''
                 }
             }
         ]);
@@ -236,6 +237,33 @@ describe('readOrCreateEndpointIdentity', () => {
         const again = await readOrCreateEndpointIdentity(home, 'the-hostname');
         expect(again.id).toBe(identity.id);
         expect(again.nodeSizes).toEqual({ terminal: { w: 640, h: 400 } });
+    });
+
+    test('a start folder is trimmed, survives a restart, and empty clears it from the file', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        expect(identity.startFolder).toBeNull();
+        const heard: unknown[] = [];
+        identity.subscribe('client', (event) => heard.push(event));
+
+        await identity.setStartFolder('  D:\\Work ');
+        expect(identity.startFolder).toBe('D:\\Work');
+        expect((await readWritten()).startFolder).toBe('D:\\Work');
+        expect(heard.at(-1)).toMatchObject({ event: 'endpoint.changed', payload: { startFolder: 'D:\\Work' } });
+        expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).startFolder).toBe('D:\\Work');
+
+        await identity.setStartFolder('');
+        expect(identity.startFolder).toBeNull();
+        expect((await readWritten()).startFolder).toBeUndefined();
+        expect(heard.at(-1)).toMatchObject({ payload: { startFolder: '' } });
+    });
+
+    test('a start folder that will not read costs only itself', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        const written = await readWritten();
+        await writeFile(join(home, 'endpoint.json'), JSON.stringify({ ...written, startFolder: 42 }));
+        const again = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        expect(again.id).toBe(identity.id);
+        expect(again.startFolder).toBeNull();
     });
 
     test('keep awake is off by default, each part set on its own survives a restart, and off writes nothing', async () => {

@@ -100,6 +100,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         ...host.lanDoor(),
         nodeSizes: identity.nodeSizes,
         usageStats: identity.usageStats,
+        startFolder: identity.startFolder ?? '',
         // Only the app on this machine is told which account it is on; it is the one that can take it off.
         ...(isOwner(access)
             ? {
@@ -232,6 +233,15 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
      */
     dispatcher.register('endpoint.setNodeSize', async (payload, client) => {
         await identity.setNodeSize(payload.kind, payload.size);
+        return info(client.access);
+    });
+
+    /*
+     * Any client the machine let in may set it, like a name: where browsing starts is a path on this
+     * machine, so every client of it starts in the same place. No tool reaches it.
+     */
+    dispatcher.register('endpoint.setStartFolder', async (payload, client) => {
+        await identity.setStartFolder(payload.folder);
         return info(client.access);
     });
 

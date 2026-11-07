@@ -6688,6 +6688,9 @@
               ]
             }
           },
+          "startFolder": {
+            "type": "string"
+          },
           "usageStats": {
             "type": "boolean"
           },
@@ -64025,6 +64028,9 @@
           ]
         }
       },
+      "startFolder": {
+        "type": "string"
+      },
       "usageStats": {
         "type": "boolean"
       },
@@ -64881,6 +64887,9 @@
           ]
         }
       },
+      "startFolder": {
+        "type": "string"
+      },
       "usageStats": {
         "type": "boolean"
       },
@@ -65524,6 +65533,9 @@
           ]
         }
       },
+      "startFolder": {
+        "type": "string"
+      },
       "usageStats": {
         "type": "boolean"
       },
@@ -66115,6 +66127,564 @@
             "h"
           ]
         }
+      },
+      "startFolder": {
+        "type": "string"
+      },
+      "usageStats": {
+        "type": "boolean"
+      },
+      "features": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "viewReferences": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "id",
+      "label",
+      "platform",
+      "version",
+      "reachability",
+      "authenticated"
+    ]
+  },
+  "request.endpoint.setStartFolder.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "folder": {
+        "type": "string",
+        "maxLength": 4096
+      }
+    },
+    "required": [
+      "folder"
+    ]
+  },
+  "request.endpoint.setStartFolder.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "label": {
+        "type": "string"
+      },
+      "nameSource": {
+        "type": "string",
+        "enum": [
+          "chosen",
+          "default"
+        ]
+      },
+      "icon": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "lucide"
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "x-open-enum": [
+                  "box",
+                  "boxes",
+                  "package",
+                  "layers",
+                  "code",
+                  "terminal",
+                  "cpu",
+                  "circuit-board",
+                  "memory-stick",
+                  "pc-case",
+                  "laptop",
+                  "monitor",
+                  "smartphone",
+                  "tablet",
+                  "webcam",
+                  "printer",
+                  "hard-drive",
+                  "usb",
+                  "database",
+                  "server",
+                  "container",
+                  "network",
+                  "router",
+                  "ethernet-port",
+                  "cable",
+                  "plug",
+                  "wifi",
+                  "radio-tower",
+                  "satellite-dish",
+                  "cloud",
+                  "globe",
+                  "rocket",
+                  "zap",
+                  "flame",
+                  "sparkles",
+                  "star",
+                  "heart",
+                  "flag",
+                  "bookmark",
+                  "folder",
+                  "file-text",
+                  "book",
+                  "puzzle",
+                  "palette",
+                  "brush",
+                  "camera",
+                  "music",
+                  "video",
+                  "gamepad-2",
+                  "bot",
+                  "brain",
+                  "beaker",
+                  "wrench",
+                  "hammer",
+                  "shield",
+                  "key",
+                  "compass",
+                  "map",
+                  "leaf",
+                  "coffee",
+                  "pin",
+                  "target",
+                  "lightbulb",
+                  "archive",
+                  "inbox",
+                  "house",
+                  "briefcase",
+                  "code-xml",
+                  "braces",
+                  "square-terminal",
+                  "file-code",
+                  "binary",
+                  "regex",
+                  "variable",
+                  "blocks",
+                  "component",
+                  "git-branch",
+                  "git-merge",
+                  "git-pull-request",
+                  "git-fork",
+                  "bug",
+                  "test-tube-diagonal",
+                  "flask-conical",
+                  "workflow",
+                  "webhook",
+                  "bot-message-square",
+                  "brain-circuit",
+                  "wand-sparkles",
+                  "messages-square",
+                  "scan-eye",
+                  "audio-waveform",
+                  "app-window",
+                  "layout-dashboard",
+                  "layout-template",
+                  "panels-top-left",
+                  "mouse-pointer-click",
+                  "shopping-cart",
+                  "store",
+                  "mail",
+                  "server-cog",
+                  "cloud-cog",
+                  "gauge",
+                  "activity",
+                  "scroll-text",
+                  "bell",
+                  "lock",
+                  "fingerprint-pattern",
+                  "chart-line",
+                  "chart-column",
+                  "chart-pie",
+                  "table",
+                  "sheet",
+                  "calculator",
+                  "sigma",
+                  "atom",
+                  "dna",
+                  "telescope",
+                  "orbit",
+                  "microchip",
+                  "keyboard",
+                  "mouse",
+                  "headphones",
+                  "watch",
+                  "battery",
+                  "bluetooth",
+                  "thermometer",
+                  "pen-tool",
+                  "pencil-ruler",
+                  "shapes",
+                  "frame",
+                  "swatch-book",
+                  "type",
+                  "image",
+                  "film",
+                  "clapperboard",
+                  "mic",
+                  "notebook",
+                  "notebook-pen",
+                  "library-big",
+                  "newspaper",
+                  "graduation-cap",
+                  "languages",
+                  "quote",
+                  "presentation",
+                  "megaphone",
+                  "list-todo",
+                  "square-kanban",
+                  "clipboard-list",
+                  "calendar",
+                  "milestone",
+                  "trophy",
+                  "hourglass",
+                  "timer",
+                  "users",
+                  "handshake",
+                  "wallet",
+                  "sprout",
+                  "trees",
+                  "mountain",
+                  "sun",
+                  "moon",
+                  "plane",
+                  "ship",
+                  "anchor",
+                  "life-buoy",
+                  "pizza",
+                  "gift",
+                  "dumbbell",
+                  "bike",
+                  "paw-print"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "value"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "agentsDeleteAnyView": {
+        "type": "boolean"
+      },
+      "reachOpenProjects": {
+        "type": "boolean"
+      },
+      "steerMessages": {
+        "type": "boolean"
+      },
+      "streamingAllowed": {
+        "type": "boolean"
+      },
+      "resumeAtReset": {
+        "type": "boolean"
+      },
+      "visualReplies": {
+        "type": "boolean"
+      },
+      "keepAwake": {
+        "type": "string",
+        "enum": [
+          "off",
+          "working",
+          "always"
+        ]
+      },
+      "keepAwakeOnBattery": {
+        "type": "boolean"
+      },
+      "keepAwakeDisplay": {
+        "type": "boolean"
+      },
+      "keepAwakeAvailable": {
+        "type": "boolean"
+      },
+      "keepAwakeLidClosed": {
+        "type": "boolean"
+      },
+      "keepAwakeLidAvailable": {
+        "type": "boolean"
+      },
+      "keepAwakeLidRule": {
+        "type": "boolean"
+      },
+      "update": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "x-open-enum": [
+              "unsupported",
+              "idle",
+              "checking",
+              "current",
+              "available",
+              "downloading",
+              "ready",
+              "error"
+            ]
+          },
+          "currentVersion": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "app": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "app"
+        ]
+      },
+      "platform": {
+        "type": "string"
+      },
+      "version": {
+        "type": "string"
+      },
+      "protocol": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "reachability": {
+        "type": "string",
+        "enum": [
+          "loopback",
+          "lan",
+          "tunnel",
+          "public"
+        ]
+      },
+      "authenticated": {
+        "type": "boolean"
+      },
+      "publicKey": {
+        "type": "string"
+      },
+      "brokerUrl": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "broker": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "default"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "off"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "custom"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode",
+              "url"
+            ]
+          }
+        ]
+      },
+      "brokerFixed": {
+        "type": "boolean"
+      },
+      "lan": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "port": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "addresses": {
+                "maxItems": 16,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              }
+            },
+            "required": [
+              "port",
+              "addresses"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "lanDoor": {
+        "type": "boolean"
+      },
+      "lanDoorFixed": {
+        "type": "boolean"
+      },
+      "accountId": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "agentIntegrations": {
+        "type": "object",
+        "properties": {
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32,
+                  "pattern": "^[a-z][a-z0-9-]*$",
+                  "x-open-enum": [
+                    "claude",
+                    "codex",
+                    "gemini",
+                    "copilot",
+                    "apple"
+                  ]
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "unset",
+                    "on",
+                    "off"
+                  ]
+                },
+                "reviewed": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "provider",
+                "state",
+                "reviewed"
+              ]
+            }
+          },
+          "fixed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "providers",
+          "fixed"
+        ]
+      },
+      "worktreeRoot": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "terminalShell": {
+        "type": "string",
+        "enum": [
+          "powershell",
+          "git-bash",
+          "cmd",
+          "wsl"
+        ]
+      },
+      "gitBashMissing": {
+        "type": "boolean"
+      },
+      "nodeSizes": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "w": {
+              "type": "number"
+            },
+            "h": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "w",
+            "h"
+          ]
+        }
+      },
+      "startFolder": {
+        "type": "string"
       },
       "usageStats": {
         "type": "boolean"
@@ -66904,6 +67474,9 @@
             "h"
           ]
         }
+      },
+      "startFolder": {
+        "type": "string"
       },
       "usageStats": {
         "type": "boolean"
@@ -81526,6 +82099,9 @@
       },
       "usageStats": {
         "type": "boolean"
+      },
+      "startFolder": {
+        "type": "string"
       }
     },
     "required": [

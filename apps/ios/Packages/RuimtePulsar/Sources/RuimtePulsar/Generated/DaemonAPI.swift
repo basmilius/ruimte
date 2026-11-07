@@ -310,6 +310,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `endpointSetIdentity` = "endpoint.setIdentity"
     case `endpointSettings` = "endpoint.settings"
     case `endpointSetNodeSize` = "endpoint.setNodeSize"
+    case `endpointSetStartFolder` = "endpoint.setStartFolder"
     case `endpointAgentIntegrations` = "endpoint.agentIntegrations"
     case `endpointSetAgentIntegration` = "endpoint.setAgentIntegration"
     case `endpointClosedLidRule` = "endpoint.closedLidRule"

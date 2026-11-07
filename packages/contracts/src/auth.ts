@@ -119,6 +119,8 @@ export const EndpointInfoSchema = z.object({
     gitBashMissing: z.boolean().optional(),
     // Kept in `endpoint.json`; empty while nobody set one.
     nodeSizes: EndpointNodeSizesSchema.optional(),
+    // Where browsing starts on this machine, kept in `endpoint.json`. Empty while unset, which is the home folder.
+    startFolder: z.string().optional(),
     // Anonymous daily usage counts sent from a release build. Absent reads as on, from a machine that has the switch.
     usageStats: z.boolean().optional(),
     // Every request this machine answers, so a client checks a request newer than 0.18.0 before it sends one
@@ -207,7 +209,8 @@ export const EndpointChangedEventSchema = z.object({
     lanDoorFixed: z.boolean().optional(),
     agentIntegrations: AgentIntegrationsSummarySchema.optional(),
     nodeSizes: EndpointNodeSizesSchema.optional(),
-    usageStats: z.boolean().optional()
+    usageStats: z.boolean().optional(),
+    startFolder: z.string().optional()
 });
 export type EndpointChangedEvent = z.infer<typeof EndpointChangedEventSchema>;
 
@@ -221,6 +224,16 @@ const NodeSideSchema = (min: number) => z.number().int().min(min).max(NODE_SIZE_
 export const EndpointSetNodeSizePayloadSchema = z.object({
     kind: NodeKindSchema,
     size: z.object({ w: NodeSideSchema(NODE_SIZE_MIN.w), h: NodeSideSchema(NODE_SIZE_MIN.h) }).nullable()
+});
+
+export const START_FOLDER_MAX = 4096;
+
+/*
+ * `endpoint.setStartFolder`: the folder browsing starts in on this machine, for every client of it. A path
+ * means something on one machine only, so it is the machine's. Empty puts it back to the home folder.
+ */
+export const EndpointSetStartFolderPayloadSchema = z.object({
+    folder: z.string().max(START_FOLDER_MAX)
 });
 
 /*

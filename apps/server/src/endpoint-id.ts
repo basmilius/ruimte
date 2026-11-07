@@ -7,6 +7,7 @@ import { writeAtomic } from '@adecore/utils/fs';
 import {
     KeepAwakeModeSchema,
     ProjectIconChoiceSchema,
+    START_FOLDER_MAX,
     knownNodeSizes,
     nodeSizeOf,
     type EndpointNameSource,
@@ -75,6 +76,8 @@ const FileSchema = z.object({
     /* Only the kinds a person changed, read one kind at a time (`knownNodeSizes`) so a size that will
        not read costs that kind alone. */
     nodeSizes: z.unknown().optional(),
+    /* Where browsing starts on this machine. Absent is the home folder. */
+    startFolder: z.string().max(START_FOLDER_MAX).optional().catch(undefined),
     /* Whether a release build sends its anonymous daily usage counts. Absent is on. */
     usageStats: z.boolean().optional().catch(undefined)
 });
@@ -101,6 +104,7 @@ interface IdentityOptions {
     terminalShell: TerminalShell | null;
     nodeSizes: NodeSizes;
     usageStats: boolean;
+    startFolder: string | null;
 }
 
 export interface KeepAwakeSetting {
@@ -180,6 +184,7 @@ export class EndpointIdentity {
     private shellChoice: TerminalShell | null;
     private sizes: NodeSizes;
     private stats: boolean;
+    private browseStart: string | null;
     private readonly door = new Binding<IdentityLanDoor>('The door on the local network of the machine identity');
     private readonly closedLid = new Binding<IdentityClosedLid>('The closed-lid rule of the machine identity');
     private readonly integrations = new Binding<IdentityAgentIntegrations>('The agent integrations of the machine identity');
@@ -205,6 +210,7 @@ export class EndpointIdentity {
         this.shellChoice = options.terminalShell;
         this.sizes = options.nodeSizes;
         this.stats = options.usageStats;
+        this.browseStart = options.startFolder;
     }
 
     /* What clients call this machine: the name a person gave it, or the one it started with. */
@@ -300,6 +306,11 @@ export class EndpointIdentity {
         return this.stats;
     }
 
+    /* Null while browsing starts in the home folder. A path means something on one machine only, so it lives here. */
+    get startFolder(): string | null {
+        return this.browseStart;
+    }
+
     /* Only the kinds a person changed; `nodeSize` answers for every kind. */
     get nodeSizes(): NodeSizes {
         return this.sizes;
@@ -313,6 +324,15 @@ export class EndpointIdentity {
     async setNodeSize(kind: NodeKind, size: NodeSize | null): Promise<void> {
         const { [kind]: _replaced, ...others } = this.sizes;
         this.sizes = size === null ? others : { ...others, [kind]: { w: size.w, h: size.h } };
+        await this.persist();
+        this.announce();
+    }
+
+    /* Empty puts browsing back in the home folder. Nothing is checked on disk: a folder that is gone already sends browsing home. */
+    async setStartFolder(folder: string): Promise<void> {
+        const trimmed = folder.trim();
+
+        this.browseStart = trimmed === '' ? null : trimmed;
         await this.persist();
         this.announce();
     }
@@ -394,7 +414,8 @@ export class EndpointIdentity {
                 lanDoor: this.lanDoorOpen,
                 ...this.door.get().describe(),
                 nodeSizes: this.sizes,
-                usageStats: this.stats
+                usageStats: this.stats,
+                startFolder: this.browseStart ?? ''
             }
         });
     }
@@ -423,7 +444,8 @@ export class EndpointIdentity {
             ...(this.checkoutRoot === null ? {} : { worktreeRoot: this.checkoutRoot }),
             ...(this.shellChoice === null ? {} : { terminalShell: this.shellChoice }),
             ...(Object.keys(this.sizes).length === 0 ? {} : { nodeSizes: this.sizes }),
-            ...(this.stats ? {} : { usageStats: false })
+            ...(this.stats ? {} : { usageStats: false }),
+            ...(this.browseStart === null ? {} : { startFolder: this.browseStart })
         };
         await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
         // Durable: a power cut right after a change must not leave an empty file where the key pair was.
@@ -493,7 +515,8 @@ export async function readOrCreateEndpointIdentity(home: string, defaultName: st
         worktreeRoot: file?.worktreeRoot ?? null,
         terminalShell: file?.terminalShell ?? null,
         nodeSizes: knownNodeSizes(file?.nodeSizes),
-        usageStats: file?.usageStats ?? true
+        usageStats: file?.usageStats ?? true,
+        startFolder: file?.startFolder ?? null
     });
     if (!keys) {
         await identity.persist();

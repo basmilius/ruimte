@@ -358,7 +358,8 @@ describe('auth handlers', () => {
                     broker: { mode: 'default' },
                     lanDoor: true,
                     nodeSizes: {},
-                    usageStats: true
+                    usageStats: true,
+                    startFolder: ''
                 }
             }
         ]);
@@ -449,6 +450,30 @@ describe('auth handlers', () => {
         }
         expect(await ask(paired, 'endpoint.setNodeSize', { kind: 'hologram', size: { w: 640, h: 400 } })).toMatchObject({ ok: false });
         expect(identity.nodeSizes).toEqual({});
+    });
+
+    test('any client the machine let in sets where browsing starts, empty clears it, and every client hears it', async () => {
+        const paired: ClientAccess = { reachability: 'lan', sessionId: 's1' };
+        expect(await ask(paired, 'endpoint.info')).toMatchObject({ ok: true, result: { startFolder: '' } });
+        const heard: unknown[] = [];
+        identity.subscribe('other-client', (event) => heard.push(event));
+
+        const set = await ask(paired, 'endpoint.setStartFolder', { folder: '  D:\\Work  ' });
+        expect(set).toMatchObject({ ok: true, result: { startFolder: 'D:\\Work' } });
+        expect(identity.startFolder).toBe('D:\\Work');
+        expect(heard).toEqual([expect.objectContaining({ event: 'endpoint.changed', payload: expect.objectContaining({ startFolder: 'D:\\Work' }) })]);
+
+        const cleared = await ask(paired, 'endpoint.setStartFolder', { folder: '   ' });
+        expect(cleared).toMatchObject({ ok: true, result: { startFolder: '' } });
+        expect(identity.startFolder).toBeNull();
+        expect(await ask(undefined, 'endpoint.info')).toMatchObject({ ok: true, result: { features: expect.arrayContaining(['endpoint.setStartFolder']) } });
+    });
+
+    test('a start folder past the longest path is refused', async () => {
+        const paired: ClientAccess = { reachability: 'lan', sessionId: 's1' };
+
+        expect(await ask(paired, 'endpoint.setStartFolder', { folder: 'a'.repeat(4097) })).toMatchObject({ ok: false });
+        expect(identity.startFolder).toBeNull();
     });
 
     test('a name nobody could read is refused before it reaches the file', async () => {
@@ -641,6 +666,7 @@ describe('auth handlers', () => {
             for (const type of [
                 'auth.sessions',
                 'auth.revoke',
+                'endpoint.setStartFolder',
                 'endpoint.signPeerAccess',
                 'endpoint.signRegistration',
                 'endpoint.leaveAccount',

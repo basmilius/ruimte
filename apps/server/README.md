@@ -127,6 +127,7 @@ A bare `ruimte` at a terminal prints its address and the commands; under the ser
 | `broker` | The broker this machine announces itself to, or off. |
 | `lanDoor` | Whether the door on the local network is open. |
 | `worktreeRoot` | The folder new worktrees go in; absent is `worktrees` in the data folder. Local secret only. |
+| `startFolder` | The folder browsing starts in on this machine, for every client of it. Absent is the home folder; written only when set. Set with `endpoint.setStartFolder` by any client the machine let in, and checked against nothing on disk; no tool sets it. |
 | `usageStats` | Sends the daily usage counts of a release build. On by default; written only as `false`. Local secret only. |
 | `nodeSizes` | The size a new node starts at, by kind, for people and agents alike. Missing kinds take `NODE_SIZE` in `packages/contracts`. Set one kind at a time with `endpoint.setNodeSize`; no tool changes it. |
 
