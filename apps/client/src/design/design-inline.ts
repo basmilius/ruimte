@@ -1,3 +1,5 @@
+import { formatBytes } from '@adecore/ui/format';
+import i18next from 'i18next';
 import {
     assetPathOf,
     assetReferences,
@@ -35,6 +37,8 @@ type Inlining = {
  * The bounds hold for what is built, not for what is read: a file or page named in many places is in
  * every one of them, a framed page is in its parent as the address that holds it, and one that does not
  * fit stays the path it was. Reading stops at the same bounds, so a folder is not read past them either.
+ * A page that does not fit beside the script that shows its files is refused with an error, a framed one by
+ * staying the path it was.
  */
 export async function inlineDesignPage(files: DesignFiles, file: string): Promise<string> {
     const page = await files.readPage(file);
@@ -68,6 +72,14 @@ function suffixOf(reference: string): string {
 async function inlinePage(inlining: Inlining, file: string, text: string, chain: readonly string[]): Promise<string> {
     const from = folderOf(file);
     const inline = new Map<string, string>();
+    const scripted = /<script\b/i.test(text);
+    const required = byteLength(text) + (scripted ? byteLength(runtimeAssetsElement(from)) : 0);
+
+    // The script that shows the files of a page is not optional, so a page it cannot fit beside is not built at all.
+    if (required > DESIGN_PAGE_MAX_BYTES) {
+        throw new Error(i18next.t('shell:design.pageTooLarge', { name: file, size: formatBytes(required), limit: formatBytes(DESIGN_PAGE_MAX_BYTES) }));
+    }
+
     const room = { left: DESIGN_PAGE_MAX_BYTES - byteLength(text) - scriptsWeight(from) };
 
     for (const reference of assetReferences(text, from)) {
@@ -117,7 +129,7 @@ async function inlinePage(inlining: Inlining, file: string, text: string, chain:
     const page = withFramedPages(withBytes, from, framed);
 
     // A page without a script names no file while it runs, but one that frames pages answers for them.
-    return /<script\b/i.test(text) || named.size > 0 ? withRuntimeAssets(page, from) : page;
+    return scripted || framed.size > 0 ? withRuntimeAssets(page, from) : page;
 }
 
 function pageUrl(inlining: Inlining, path: string, chain: readonly string[]): Promise<string | null> {

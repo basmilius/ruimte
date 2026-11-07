@@ -241,6 +241,45 @@ import XCTest
         XCTAssertTrue(page.contains(#"<iframe src="middle.html"></iframe>"#))
     }
 
+    // MARK: A page with a script at the bounds of a visual (design-inline.test.ts)
+
+    private static let script = "<script>void 0</script>"
+
+    /// A page of exactly `bytes` bytes (or one less when that is odd) that opens with a script.
+    private static func scripted(_ bytes: Int) -> String {
+        script + String(repeating: "x ", count: (bytes - script.utf8.count) / 2)
+    }
+
+    /// What the script that shows the files of a page weighs, taken from the page it is added to.
+    private func runtimeWeight() async throws -> Int {
+        let page = try await Folder(pages: ["index.html": Self.script]).page("index.html")
+        return page.utf8.count - Self.script.utf8.count
+    }
+
+    func testAPageAndTheScriptThatShowsItsFilesAreRefusedWhenTheyDoNotFitTogetherRatherThanBuiltPastTheBounds() async throws {
+        let folder = Folder(pages: ["index.html": Self.scripted(DesignFiles.pageMaxBytes - 1)])
+        do {
+            let page = try await folder.page("index.html")
+            XCTFail("Built a page of \(page.utf8.count) bytes")
+        } catch let error as MachineClientError {
+            guard case .invalid = error else { return XCTFail("\(error)") }
+        }
+    }
+
+    func testAPageThatFitsWithTheScriptThatShowsItsFilesIsBuiltWithinTheBounds() async throws {
+        let text = Self.scripted(DesignFiles.pageMaxBytes - (try await runtimeWeight()))
+        let page = try await Folder(pages: ["index.html": text]).page("index.html")
+        XCTAssertLessThanOrEqual(page.utf8.count, DesignFiles.pageMaxBytes)
+        XCTAssertTrue(page.hasPrefix("<script data-ruimte-assets>"))
+    }
+
+    func testAFramedPageThatDoesNotFitWithItsScriptStaysThePathItWas() async throws {
+        let child = Self.scripted(DesignFiles.pageMaxBytes - (try await runtimeWeight()) + 2)
+        let page = try await Folder(pages: ["index.html": #"<iframe src="child.html"></iframe>"#, "child.html": child])
+            .page("index.html")
+        XCTAssertEqual(page, #"<iframe src="child.html"></iframe>"#)
+    }
+
     func testEveryPageThatFitsStandsWhereItWasNamedWithThePageThatFramesIt() async throws {
         let folder = Folder(pages: [
             "index.html": #"<iframe src="one.html"></iframe><iframe src="one.html"></iframe>"#, "one.html": "<p>one</p>",

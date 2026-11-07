@@ -464,7 +464,12 @@ enum DesignFiles {
 
     /// What the scripts a page may carry weigh, which a page keeps room for whether it ends up with them or not.
     private static func scriptsWeight(from: String) -> Int {
-        framedPagesElement("{}", from: from).utf8.count + runtimeAssetsElement(from: from).utf8.count
+        framedPagesElement("{}", from: from).utf8.count + runtimeAssetsWeight(from: from)
+    }
+
+    /// What the script that shows the files a page's script names weighs, which a page with a script cannot do without.
+    private static func runtimeAssetsWeight(from: String) -> Int {
+        runtimeAssetsElement(from: from).utf8.count
     }
 
     /// What one page adds to the script that frames pages when it names `url` as `path`.
@@ -487,7 +492,8 @@ enum DesignFiles {
     ///
     /// The bounds hold for what is built, not for what is read: a file or page named in many places is in every one of
     /// them, a framed page is in its parent as the address that holds it, and one that does not fit stays the path it
-    /// was. Reading stops at the same bounds, so a folder is not read past them either.
+    /// was. Reading stops at the same bounds, so a folder is not read past them either. A page that does not fit beside
+    /// the script that shows its files is refused with an error, a framed one by staying the path it was.
     ///
     /// It runs off the main actor: scanning and rewriting a page of megabytes takes long enough to stall the screen.
     @concurrent static func standalonePage(
@@ -515,6 +521,11 @@ enum DesignFiles {
         func inline(_ file: String, text: String, chain: [String]) async throws -> String {
             let from = DesignFiles.folderOf(file)
             var inline: [String: String] = [:]
+            let scripted = text.range(of: #"<script\b"#, options: [.regularExpression, .caseInsensitive]) != nil
+            // The script that shows the files of a page is not optional, so a page it cannot fit beside is not built at all.
+            if text.utf8.count + (scripted ? DesignFiles.runtimeAssetsWeight(from: from) : 0) > pageMaxBytes {
+                throw MachineClientError.invalid(String(localized: "This page is too large to show."))
+            }
             let room = Room(left: DesignFiles.pageMaxBytes - text.utf8.count - DesignFiles.scriptsWeight(from: from))
             for reference in DesignFiles.assetReferences(text, from: from) {
                 try Task.checkCancellation()
@@ -548,8 +559,7 @@ enum DesignFiles {
             let fitting = framed.filter { room.take(DesignFiles.framedEntryWeight($0.path, $0.url)) }
             let page = DesignFiles.withFramedPages(withBytes, from: from, pages: fitting)
             // A page without a script names no file while it runs, but one that frames pages answers for them.
-            let scripted = text.range(of: #"<script\b"#, options: [.regularExpression, .caseInsensitive]) != nil
-            return scripted || !framed.isEmpty ? DesignFiles.withRuntimeAssets(page, from: from) : page
+            return scripted || !fitting.isEmpty ? DesignFiles.withRuntimeAssets(page, from: from) : page
         }
 
         private func pageURL(_ path: String, chain: [String]) async throws -> String? {

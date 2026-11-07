@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { inlineDesignPage, runtimeAssets, type DesignFiles } from './design-inline';
 import { DESIGN_PAGE_MAX_BYTES, pageDataUrl } from './design-page';
+import { runtimeAssetsElement } from './design-runtime';
 
 /* A design folder in memory that counts how often each page is read. */
 function folder(pages: Record<string, string>, assets: Record<string, number> = {}) {
@@ -122,6 +123,50 @@ describe('what a standing page builds', () => {
 
         expect(html.split(pageDataUrl('<p>one</p>')).length - 1).toBe(3);
         expect(html).not.toContain('one.html"></iframe>');
+    });
+});
+
+describe('a page with a script at the bounds of a visual', () => {
+    const script = '<script>void 0</script>';
+
+    /* A page of exactly `bytes` bytes that opens with a script. */
+    function scripted(bytes: number): string {
+        return script + 'x '.repeat((bytes - script.length) / 2);
+    }
+
+    async function build(text: string): Promise<string> {
+        const files: DesignFiles = {
+            readPage: async () => ({ text, size: weight(text) }),
+            readAsset: async () => {
+                throw new Error('not there');
+            }
+        };
+
+        return inlineDesignPage(files, 'index.html');
+    }
+
+    test('is refused when it and the script that shows its files do not fit together, rather than built past the bounds', async () => {
+        await expect(build(scripted(DESIGN_PAGE_MAX_BYTES - 1 - ((DESIGN_PAGE_MAX_BYTES - 1 - script.length) % 2)))).rejects.toThrow();
+    });
+
+    test('is built within the bounds when it fits with that script', async () => {
+        const runtime = weight(runtimeAssetsElement(''));
+        const text = scripted(DESIGN_PAGE_MAX_BYTES - runtime - ((DESIGN_PAGE_MAX_BYTES - runtime - script.length) % 2));
+
+        const html = await build(text);
+
+        expect(weight(html)).toBeLessThanOrEqual(DESIGN_PAGE_MAX_BYTES);
+        expect(html).toStartWith('<script data-ruimte-assets>');
+    });
+
+    test('leaves a page it frames as the path it was when that page does not fit with its script', async () => {
+        const runtime = weight(runtimeAssetsElement(''));
+        const child = scripted(DESIGN_PAGE_MAX_BYTES - runtime + 2);
+        const { files } = folder({ 'index.html': '<iframe src="child.html"></iframe>', 'child.html': child });
+
+        const html = await inlineDesignPage(files, 'index.html');
+
+        expect(html).toBe('<iframe src="child.html"></iframe>');
     });
 });
 
