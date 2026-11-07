@@ -10,6 +10,8 @@ struct ChatFileChange: Equatable, Identifiable {
     var added: Int
     var deleted: Int
     var omitted: String?
+    /// How many changes a call reported for the file, which a card built from them says instead of the lines.
+    var edits = 1
 }
 
 enum ChatFileChanges {
@@ -79,6 +81,7 @@ enum ChatFileChanges {
                 files[index].diff += "\n" + change.diff
                 files[index].added += change.added
                 files[index].deleted += change.deleted
+                files[index].edits += change.edits
             } else {
                 positions[change.path] = files.count
                 files.append(change)
@@ -146,6 +149,8 @@ struct ChatFileChangeView: View {
     var ruled = true
     /// Offered by a file whose diff the thread held back, which then reads the turn's whole diff.
     var whole: ChatFileChangeWhole? = nil
+    /// Built from what the calls reported rather than a checkpoint, whose line counts say nothing about the file.
+    var reported = false
     @State private var expanded = false
 
     var body: some View {
@@ -161,8 +166,12 @@ struct ChatFileChangeView: View {
                         .lineLimit(1).truncationMode(.middle)
                     Spacer(minLength: 0)
                     Group {
-                        Text("+\(change.added)").foregroundStyle(MobileStyle.positive)
-                        Text("-\(change.deleted)").foregroundStyle(MobileStyle.statusError)
+                        if reported {
+                            Text("\(change.edits) edits").foregroundStyle(MobileStyle.faint)
+                        } else {
+                            Text("+\(change.added)").foregroundStyle(MobileStyle.positive)
+                            Text("-\(change.deleted)").foregroundStyle(MobileStyle.statusError)
+                        }
                     }
                     .fixedSize()
                 }
@@ -213,22 +222,26 @@ struct ChatChangedFilesRow: View {
     @State private var whole = ChatWhole<ChatTurnItemCheckpointDiff>()
     private var item: ChatTurnItem? { turn.item.turnItem }
     private var stored: ChatTurnItemCheckpointDiff? { whole.value ?? item?.checkpointDiff }
+    /// The checkpoint's diff while it has files; a turn without one falls back to what its calls reported.
+    private var checkpointFiles: [ChatFileChange]? {
+        guard let diff = stored ?? fetched, !diff.files.isEmpty else { return nil }
+        return ChatFileChanges.grouped(diff.files.map(ChatFileChanges.fromFile))
+    }
     private var files: [ChatFileChange] {
-        if let diff = stored ?? fetched {
-            return ChatFileChanges.grouped(diff.files.map(ChatFileChanges.fromFile))
-        }
-        return ChatFileChanges.grouped(tools.compactMap(\.item.toolItem).flatMap(ChatFileChanges.fromTool))
+        checkpointFiles
+            ?? ChatFileChanges.grouped(tools.compactMap(\.item.toolItem).flatMap(ChatFileChanges.fromTool))
     }
 
     var body: some View {
         let files = files
+        let reported = checkpointFiles == nil
         let moved = item.flatMap(ChatFileChanges.baseMoved)
         VStack(alignment: .leading, spacing: 0) {
             if !files.isEmpty || work.loading || work.problem != nil {
                 VStack(alignment: .leading, spacing: 0) {
                     if !files.isEmpty {
-                        header(files, moved: moved)
-                        if let moved {
+                        header(files, moved: reported ? nil : moved, totals: !reported)
+                        if !reported, let moved {
                             Text(
                                 "Branch moved this turn (\(moved.from) to \(moved.to)). Includes its incoming changes."
                             )
@@ -237,7 +250,9 @@ struct ChatChangedFilesRow: View {
                         }
                         if expanded {
                             let whole = heldBack
-                            ForEach(files) { change in ChatFileChangeView(change: change, whole: whole) }
+                            ForEach(files) { change in
+                                ChatFileChangeView(change: change, whole: whole, reported: reported)
+                            }
                         }
                     }
                     if work.loading { ProgressView("Loading changes…").font(.caption).padding(12) }
@@ -255,7 +270,7 @@ struct ChatChangedFilesRow: View {
         }.task(id: turn.id) { await load() }
     }
 
-    private func header(_ files: [ChatFileChange], moved: (from: String, to: String)?) -> some View {
+    private func header(_ files: [ChatFileChange], moved: (from: String, to: String)?, totals: Bool) -> some View {
         ChatExpansionButton(expanding: !expanded) {
             expanded.toggle()
         } label: {
@@ -267,13 +282,15 @@ struct ChatChangedFilesRow: View {
                         : String(localized: "\(files.count) folder changes this turn")
                 )
                 .font(.footnote.weight(.medium)).foregroundStyle(MobileStyle.text).lineLimit(1).layoutPriority(1)
-                if (stored ?? fetched)?.truncated == true {
+                if totals, (stored ?? fetched)?.truncated == true {
                     Text("and more").foregroundStyle(MobileStyle.faint).lineLimit(1)
                 }
                 Spacer(minLength: 0)
                 Group {
-                    Text("+\(files.reduce(0) { $0 + $1.added })").foregroundStyle(MobileStyle.positive)
-                    Text("-\(files.reduce(0) { $0 + $1.deleted })").foregroundStyle(MobileStyle.statusError)
+                    if totals {
+                        Text("+\(files.reduce(0) { $0 + $1.added })").foregroundStyle(MobileStyle.positive)
+                        Text("-\(files.reduce(0) { $0 + $1.deleted })").foregroundStyle(MobileStyle.statusError)
+                    }
                     Image(lucide: expanded ? "chevron-down" : "chevron-right", size: 12)
                         .foregroundStyle(MobileStyle.faint)
                 }

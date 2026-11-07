@@ -188,14 +188,23 @@ struct ChatAgentSentMessage: View {
                 ChatReferenceChip(look: ChatReferenceChip.look(sent.to, chat: false, lookup: lookup, lastName: sent.title ?? ""))
             }
         }
-        ChatExpansionButton(expanding: !opened) {
-            opened.toggle()
-        } label: {
-            Text(status).font(.caption).foregroundStyle(MobileStyle.muted)
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        HStack(spacing: 6) {
+            Text(status)
+            if sent.state == .sending {
+                ChatElapsed(startedAt: item.progress?.startedAt ?? item.createdAt, runningFor: true)
+                    .foregroundStyle(MobileStyle.faint)
+            }
+            ChatExpansionButton(expanding: !opened) {
+                opened.toggle()
+            } label: {
+                Image(lucide: "square-terminal", size: 14).frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(opened ? String(localized: "Hide the call") : String(localized: "Show the call"))
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
-        .accessibilityValue(opened ? "Expanded" : "Collapsed")
+        .font(.caption).foregroundStyle(MobileStyle.muted)
         if opened {
             ChatToolBodyView(item: item)
         }
@@ -456,13 +465,13 @@ struct ChatCompactionRule: View {
     let preTokens: Double?
     var postTokens: Double? = nil
 
-    /// A size the CLI did not name is left out rather than guessed.
+    /// A size the CLI did not name, or named as zero, is left out rather than guessed.
     static func text(preTokens: Double?, postTokens: Double?) -> String {
-        switch (preTokens, postTokens) {
+        switch (preTokens.flatMap { $0 == 0 ? nil : $0 }, postTokens) {
         case let (pre?, post?):
-            String(localized: "Context compacted from \(Format.number(pre)) to \(Format.number(post)) tokens")
-        case let (pre?, nil): String(localized: "Context compacted from \(Format.number(pre)) tokens")
-        case let (nil, post?): String(localized: "Context compacted to \(Format.number(post)) tokens")
+            String(localized: "Context compacted from \(Format.tokens(pre)) to \(Format.tokens(post)) tokens")
+        case let (pre?, nil): String(localized: "Context compacted from \(Format.tokens(pre)) tokens")
+        case let (nil, post?): String(localized: "Context compacted to \(Format.tokens(post)) tokens")
         case (nil, nil): String(localized: "Context compacted")
         }
     }
