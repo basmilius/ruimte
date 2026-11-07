@@ -36803,6 +36803,9 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 9007199254740991
+            },
+            "shareConfig": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -36921,6 +36924,22 @@
         }
       },
       "silentLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      },
+      "sharedConfigKinds": {
         "type": "array",
         "items": {
           "type": "string",
@@ -37006,6 +37025,9 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 9007199254740991
+            },
+            "shareConfig": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -37082,6 +37104,9 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 9007199254740991
+            },
+            "shareConfig": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -37200,6 +37225,22 @@
         }
       },
       "silentLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      },
+      "sharedConfigKinds": {
         "type": "array",
         "items": {
           "type": "string",
@@ -37290,6 +37331,9 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 9007199254740991
+            },
+            "shareConfig": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -37408,6 +37452,22 @@
         }
       },
       "silentLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      },
+      "sharedConfigKinds": {
         "type": "array",
         "items": {
           "type": "string",
@@ -37524,6 +37584,9 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 9007199254740991
+            },
+            "shareConfig": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -37642,6 +37705,22 @@
         }
       },
       "silentLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      },
+      "sharedConfigKinds": {
         "type": "array",
         "items": {
           "type": "string",
@@ -37780,6 +37859,9 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 9007199254740991
+            },
+            "shareConfig": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -37898,6 +37980,261 @@
         }
       },
       "silentLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      },
+      "sharedConfigKinds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      }
+    },
+    "required": [
+      "accounts",
+      "statuses"
+    ]
+  },
+  "request.accounts.shareConfig.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+      },
+      "shared": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "id",
+      "shared"
+    ]
+  },
+  "request.accounts.shareConfig.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "accounts": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "minLength": 1
+            },
+            "label": {
+              "type": "string"
+            },
+            "color": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "home": {
+              "type": "string",
+              "minLength": 1
+            },
+            "shadowHome": {
+              "type": "string",
+              "minLength": 1
+            },
+            "env": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "sensitive": {
+                    "type": "boolean"
+                  },
+                  "valueRedacted": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value",
+                  "sensitive"
+                ]
+              }
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "shareConfig": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        }
+      },
+      "statuses": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "checking",
+                "disabled",
+                "not-found",
+                "signed-out",
+                "ready",
+                "folder-missing",
+                "unavailable",
+                "failed"
+              ]
+            },
+            "email": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "plan": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "organization": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "home": {
+              "type": "string"
+            },
+            "transcripts": {
+              "type": "string"
+            },
+            "message": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "checkedAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "state",
+            "email",
+            "plan",
+            "organization",
+            "home",
+            "message",
+            "checkedAt"
+          ]
+        }
+      },
+      "secretsAvailable": {
+        "type": "boolean"
+      },
+      "loginCommands": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        },
+        "additionalProperties": {
+          "type": "string"
+        }
+      },
+      "chatLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      },
+      "silentLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      },
+      "sharedConfigKinds": {
         "type": "array",
         "items": {
           "type": "string",
@@ -89904,6 +90241,9 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 9007199254740991
+            },
+            "shareConfig": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -90022,6 +90362,22 @@
         }
       },
       "silentLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      },
+      "sharedConfigKinds": {
         "type": "array",
         "items": {
           "type": "string",

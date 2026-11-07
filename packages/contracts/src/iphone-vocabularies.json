@@ -597,6 +597,16 @@
         "signed-out",
         "unavailable"
     ],
+    "request.accounts.shareConfig.result #/properties/statuses/items/properties/state": [
+        "checking",
+        "disabled",
+        "failed",
+        "folder-missing",
+        "not-found",
+        "ready",
+        "signed-out",
+        "unavailable"
+    ],
     "request.anthropic.configure.result #/properties/settings/properties/contextWindow": ["1m", "200k"],
     "request.anthropic.status.result #/properties/settings/properties/contextWindow": ["1m", "200k"],
     "request.archive.list.result #/properties/entries/items/properties/kind": ["directory", "file", "symlink"],

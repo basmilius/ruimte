@@ -1,5 +1,6 @@
 import { ProviderAccountsService } from '@adecore/agents/providers';
 import type { AgentKind } from '@ruimte/contracts';
+import { ownsSettings } from '../agents/install.ts';
 import { AgentIntegrations } from '../agents/integrations.ts';
 import type { ServerConfig } from '../config.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
@@ -89,7 +90,8 @@ export async function wireProviders(
         host: RUIMTE_ACCOUNTS_HOST,
         client: RUIMTE_CODEX_CLIENT,
         providers,
-        install: (kind, folder) => integrations.installFolder(kind, folder)
+        install: (kind, folder) => integrations.installFolder(kind, folder),
+        ownsSettings
     });
     await accounts.load();
     const servers: AgentServers = {

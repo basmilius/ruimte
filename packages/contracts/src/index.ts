@@ -735,6 +735,7 @@ export const REQUEST_SCHEMAS = {
     'accounts.create': AGENT_REQUEST_SCHEMAS['accounts.create'],
     'accounts.watchLogin': AGENT_REQUEST_SCHEMAS['accounts.watchLogin'],
     'accounts.reorder': AGENT_REQUEST_SCHEMAS['accounts.reorder'],
+    'accounts.shareConfig': AGENT_REQUEST_SCHEMAS['accounts.shareConfig'],
     'project.sidebar': { payload: EmptySchema, result: ProjectSidebarResultSchema },
     'project.list': { payload: EmptySchema, result: ProjectListResultSchema },
     'project.referables': { payload: EmptySchema, result: ProjectReferablesResultSchema },

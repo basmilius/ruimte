@@ -239,6 +239,7 @@
     "accounts.create",
     "accounts.watchLogin",
     "accounts.reorder",
+    "accounts.shareConfig",
     "project.sidebar",
     "project.list",
     "project.referables",
