@@ -1,5 +1,6 @@
 import { lineBounds } from '@/canvas/line-geometry';
 import { intersects } from '@/canvas/math';
+import { cameraToReveal } from '@/canvas/node-navigation';
 import type { CanvasState } from '@/state/canvas';
 import { maximizedNodeOf, type CanvasGet, type CanvasSet } from '@/state/canvas-model';
 import { announceActivation } from '@/state/node-activation';
@@ -9,7 +10,7 @@ import { mergeSelection } from '@/state/selection';
 export function createCanvasSelectionSlice(
     set: CanvasSet,
     get: CanvasGet
-): Pick<CanvasState, 'select' | 'clearSelection' | 'selectInRect' | 'activateNode' | 'setBodyFocus' | 'focusCard' | 'toggleMaximizedNode'> {
+): Pick<CanvasState, 'select' | 'clearSelection' | 'selectInRect' | 'activateNode' | 'setBodyFocus' | 'focusCard' | 'revealCard' | 'toggleMaximizedNode'> {
     return {
         select(ids, additive = false) {
             set((state) => {
@@ -52,6 +53,18 @@ export function createCanvasSelectionSlice(
             const card = get().derivedCards[id];
             if (card !== undefined) {
                 set({ bodyFocusId: card.owner, navigationId: id, editingTextId: null });
+            }
+        },
+        revealCard(id) {
+            const { derivedCards, camera, viewport } = get();
+            const card = derivedCards[id];
+            // A viewport of zero is a canvas not laid out yet, where there is nothing to reveal in.
+            if (card === undefined || viewport.w <= 0 || viewport.h <= 0) {
+                return;
+            }
+            const next = cameraToReveal(card.rect, camera, viewport);
+            if (next.x !== camera.x || next.y !== camera.y) {
+                set({ camera: next });
             }
         },
         toggleMaximizedNode(id) {

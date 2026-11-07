@@ -718,6 +718,51 @@ describe('fitting everything', () => {
     });
 });
 
+describe('revealing a card', () => {
+    const open = (viewport = { w: 1200, h: 800 }) => {
+        const store = createCanvasStore();
+        store.getState().setViewport(viewport);
+        store.getState().loadView({ kind: 'canvas', id: 'reveal-view', name: 'Canvas', nodes: [node('a', 0, 0)], texts: [], edges: [], layouts: [] }, null);
+        store.getState().setCamera({ x: 0, y: 0, zoom: 1 });
+        store.getState().setDerivedCard('a:far', { owner: 'a', rect: { x: 2000, y: 100, w: 400, h: 300 }, resize: null });
+        store.getState().setDerivedCard('a:near', { owner: 'a', rect: { x: 300, y: 100, w: 400, h: 300 }, resize: null });
+        return store;
+    };
+
+    test('moves the camera just far enough to bring a card out of view in', () => {
+        const store = open();
+
+        store.getState().revealCard('a:far');
+
+        const { camera } = store.getState();
+        expect(camera.zoom).toBe(1);
+        // The card's right edge ends one margin inside the viewport; the axis it already fits on stays.
+        expect(camera.x).toBe(1200 - 24 - 2400);
+        expect(camera.y).toBe(0);
+    });
+
+    test('leaves the camera for a card in view', () => {
+        const store = open();
+        const before = store.getState().camera;
+
+        store.getState().revealCard('a:near');
+
+        expect(store.getState().camera).toBe(before);
+    });
+
+    test('leaves the camera for a card that is not registered, and for a canvas not laid out', () => {
+        const store = open();
+        const before = store.getState().camera;
+        store.getState().revealCard('a:gone');
+        expect(store.getState().camera).toBe(before);
+
+        const unsized = open({ w: 0, h: 0 });
+        const unsizedBefore = unsized.getState().camera;
+        unsized.getState().revealCard('a:far');
+        expect(unsized.getState().camera).toBe(unsizedBefore);
+    });
+});
+
 describe('the camera history of a view', () => {
     let clock = 0;
     const open = (...nodes: CanvasNode[]) => {
