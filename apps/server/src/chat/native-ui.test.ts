@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { compileUiBlock } from '@adecore/intelligent-ui';
+import { z } from 'zod';
 import { evaluateNativeUi, nativeUiJson } from './native-ui';
 
 test('the native bridge refuses deeply nested wire data before schema recursion', () => {
@@ -32,6 +33,21 @@ test('the native bridge keeps the compiled fallback of a component beside a know
     expect(nodes[1].error).toBe('unknown_component');
     expect(nodes[1].fallback).toBe(block.nodes[1].fallback);
     expect(nodes[1].fallback).toContain('Future fallback');
+});
+
+test('the native bridge names the queries each written node reads, an Each passing its own to what stands in it', () => {
+    const source =
+        '$rows = @Query("rows", {})\n<Stats><Stat label="Open" value={$rows.open}/></Stats><Each items={$rows.items} as="row"><Tag>{row.name}</Tag></Each><Summary>Plain</Summary>';
+    const block = compileUiBlock(source, { id: 'a', final: true, now: () => 0, querySchemas: { rows: z.object({}) } });
+    expect(block.diagnostics).toEqual([]);
+    const result = evaluateNativeUi({ block, queries: { $rows: { open: 2, items: [{ name: 'x' }] } } });
+    const nodeQueries = result.nodeQueries as Record<string, string[]>;
+    const stat = block.nodes[0].children[0];
+    const each = block.nodes[1];
+    expect(nodeQueries[stat.id]).toEqual(['$rows']);
+    expect(nodeQueries[each.id]).toEqual(['$rows']);
+    expect(nodeQueries[each.children[0].id]).toEqual(['$rows']);
+    expect(nodeQueries).not.toHaveProperty(block.nodes[2].id);
 });
 
 test('the native bridge hands the phone the errors of a block and keeps the warnings for its agent', () => {

@@ -4,6 +4,114 @@ import Testing
 
 @testable import RuimteIntelligentUI
 
+/// Answers each `ui.query` with the next reading it was handed, the last one again once they run out.
+private actor UiQueryScript {
+    private var answers: [JSONValue] = []
+
+    func next(_ answer: JSONValue) { answers.append(answer) }
+
+    func request(_ name: String, _ payload: JSONValue) async throws -> JSONValue {
+        answers.count > 1 ? answers.removeFirst() : answers.first ?? .null
+    }
+}
+
+private func fresh(_ value: JSONValue, at: Double) -> JSONValue {
+    .object(["state": .string("fresh"), "value": value, "readId": .string("read-\(Int(at))"), "readAt": .number(at)])
+}
+
+private func failed(_ code: String, at: Double = 9_000) -> JSONValue {
+    .object(["state": .string("failed"), "code": .string(code), "readAt": .number(at)])
+}
+
+private func status(files: Int, rows: [(String, String)]) -> JSONValue {
+    .object([
+        "files": .array(Array(repeating: .string("f"), count: files)),
+        "rows": .array(rows.map { .object(["name": .string($0.0), "state": .string($0.1)]) }),
+    ])
+}
+
+@MainActor struct UiBlockLiveTests {
+    /// A visible block after its first read, which polling does at once and then not again for ten seconds, so every
+    /// later read is one the test asks for.
+    private func model(_ script: UiQueryScript) async throws -> UiBlockModel {
+        let block = try parityBlock("live table")
+        let model = UiBlockModel(
+            chatID: "chat", itemID: "item", block: block, readInterval: .zero, request: script.request)
+        await model.update(block: block)
+        model.setActive(visible: true, connected: true)
+        for _ in 0..<1_000 where model.readings["$status"]?["readAt"] != .number(1_000) || model.reading {
+            await Task.yield()
+        }
+        try #require(model.readings["$status"]?["readAt"] == .number(1_000))
+        return model
+    }
+
+    private func node(_ type: String, in model: UiBlockModel) throws -> JSONValue {
+        func find(_ nodes: [JSONValue]) -> JSONValue? {
+            for node in nodes {
+                if node["type"] == .string(type) { return node }
+                if let found = find(node["children"]?.arrayValue ?? []) { return found }
+            }
+            return nil
+        }
+        return try #require(find(model.nodes))
+    }
+
+    @Test func aFailedReadKeepsItsValueAndReadTimeAndDimsOnlyTheNodesThatReadIt() async throws {
+        let script = UiQueryScript()
+        await script.next(fresh(status(files: 2, rows: [("core", "ok")]), at: 1_000))
+        await script.next(failed("unreadable"))
+        let model = try await model(script)
+        let stat = try node("Stat", in: model)
+        let statID = try #require(stat["id"]?.stringValue)
+        #expect(model.liveState(sourceID: statID) == .live)
+        #expect(model.liveState(sourceID: try #require(node("Summary", in: model)["id"]?.stringValue)) == nil)
+
+        await model.refresh()
+        #expect(try node("Stat", in: model)["props"]?["value"] == .number(2))
+        #expect(model.liveState(sourceID: statID) == .stale)
+        #expect(model.readAt == 1_000)
+    }
+
+    @Test func aReadTheDaemonNeverTriedChangesNothingWhileAValueStands() async throws {
+        let script = UiQueryScript()
+        await script.next(fresh(status(files: 2, rows: []), at: 1_000))
+        await script.next(failed("busy"))
+        await script.next(failed("refresh-limit"))
+        let model = try await model(script)
+        await model.refresh()
+        let statID = try #require(node("Stat", in: model)["id"]?.stringValue)
+        #expect(model.liveState(sourceID: statID) == .live)
+        await model.refresh()
+        #expect(model.liveState(sourceID: statID) == .live)
+        #expect(model.readings["$status"]?["state"] == .string("fresh"))
+    }
+
+    @Test func aChangedValueLightsOnceAndAnAddedRowLightsNothing() async throws {
+        let script = UiQueryScript()
+        await script.next(fresh(status(files: 2, rows: [("core", "ok")]), at: 1_000))
+        await script.next(fresh(status(files: 2, rows: [("core", "bad")]), at: 2_000))
+        await script.next(failed("unreadable"))
+        await script.next(fresh(status(files: 3, rows: [("core", "bad")]), at: 4_000))
+        await script.next(fresh(status(files: 3, rows: [("new", "fine"), ("core", "bad")]), at: 5_000))
+        let model = try await model(script)
+        #expect(model.lit.isEmpty)
+        let statID = try #require(node("Stat", in: model)["id"]?.stringValue)
+        let tableID = try #require(node("Table", in: model)["id"]?.stringValue)
+
+        await model.refresh()
+        #expect(Set(model.lit.keys) == [UiBlockModel.litKey(nodeID: tableID, row: 0, column: "state")])
+        await model.refresh()
+        let dimmed = model.lit
+        await model.refresh()
+        let stat = UiBlockModel.litKey(nodeID: statID)
+        #expect(model.lit[stat] != nil && dimmed[stat] == nil)
+        let before = model.lit
+        await model.refresh()
+        #expect(model.lit == before)
+    }
+}
+
 private actor UiRequestRecorder {
     private(set) var calls: [(String, JSONValue)] = []
     var queued = false

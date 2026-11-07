@@ -1,3 +1,4 @@
+import RuimteIntelligentUI
 import RuimtePulsar
 import SwiftUI
 
@@ -17,6 +18,8 @@ struct UiStatsView: View {
 /// The arrow and the number say which way a value went; only a tone says whether that is good.
 struct UiStatView: View {
     let node: UiNode
+    /// The live read that last changed the value, which lights it once.
+    var lit: Int? = nil
 
     var body: some View {
         if let value = node.number("value") {
@@ -25,7 +28,7 @@ struct UiStatView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(node.string("label") ?? "").font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
                 Text(UiFormat.withUnit(UiFormat.number(value), unit))
-                    .font(.title3.weight(.semibold)).foregroundStyle(MobileStyle.text).monospacedDigit()
+                    .font(.title3.weight(.semibold)).modifier(UiLit(read: lit, base: MobileStyle.text)).monospacedDigit()
                     .lineLimit(1).minimumScaleFactor(0.7)
                 if let previous {
                     change(value: value, previous: previous, unit: unit)
@@ -147,7 +150,7 @@ struct UiTableView: View {
                     LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                         Section {
                             ForEach(shown.indices, id: \.self) { index in
-                                row(shown[index], columns: columns, first: index == 0)
+                                row(shown[index], at: index, columns: columns)
                             }
                         } header: {
                             header(columns)
@@ -185,13 +188,15 @@ struct UiTableView: View {
         .accessibilityAddTraits(.isHeader)
     }
 
-    private func row(_ row: [String: JSONValue], columns: [UiTableColumn], first: Bool) -> some View {
+    private func row(_ row: [String: JSONValue], at position: Int, columns: [UiTableColumn]) -> some View {
         let cells = columns.map { UiTableCell.of(row[$0.key], column: $0) }
+        let first = position == 0
         return HStack(alignment: .firstTextBaseline, spacing: 0) {
             ForEach(Array(columns.enumerated()), id: \.element.key) { index, column in
+                let lit = context.model.lit[UiBlockModel.litKey(nodeID: node.id, row: position, column: column.key)]
                 cell(content(cells[index], column: column), column: column).font(.footnote)
                     .fontWeight(index == 0 ? .medium : .regular)
-                    .foregroundStyle(MobileStyle.text)
+                    .modifier(UiLit(read: lit, base: MobileStyle.text))
             }
         }
         .frame(minHeight: 36)

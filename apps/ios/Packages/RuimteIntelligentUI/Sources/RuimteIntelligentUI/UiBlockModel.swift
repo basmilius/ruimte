@@ -2,6 +2,11 @@ import Foundation
 import Observation
 import RuimtePulsar
 
+/// Whether a node that reads live data shows its last reading, or one a failed read left behind.
+public enum UiLiveNodeState: Sendable, Equatable {
+    case live, stale
+}
+
 @MainActor @Observable
 public final class UiBlockModel {
     public typealias Request = @MainActor @Sendable (String, JSONValue) async throws -> JSONValue
@@ -17,6 +22,12 @@ public final class UiBlockModel {
     public private(set) var connected = false
     public private(set) var queryInputsDirty = false
     public private(set) var resolvedLinks: [String: JSONValue] = [:]
+    /// When each query last read successfully, in milliseconds since the epoch; a failed read leaves it as it was.
+    public private(set) var lastReadAt: [String: Double] = [:]
+    /// The values a live read changed, by `litKey`, each with the read that lit it, so a view lights up once per change.
+    public private(set) var lit: [String: Int] = [:]
+    @ObservationIgnored private var litGeneration = 0
+    @ObservationIgnored private let readInterval: Duration
     @ObservationIgnored private let chatID: String
     @ObservationIgnored private let itemID: String
     @ObservationIgnored private let request: Request
@@ -36,17 +47,45 @@ public final class UiBlockModel {
 
     public init(
         chatID: String, itemID: String, block: JSONValue, interpreter: UiInterpreter = .shared,
-        inputSettle: Duration = .milliseconds(300), request: @escaping Request
+        inputSettle: Duration = .milliseconds(300), readInterval: Duration = .seconds(10), request: @escaping Request
     ) {
         self.chatID = chatID
         self.itemID = itemID
         self.block = block
         self.interpreter = interpreter
         self.inputSettle = inputSettle
+        self.readInterval = readInterval
         self.request = request
     }
 
+    /// Answers for a read the daemon never tried; while a value stands they say nothing about it.
+    private static let notTried: Set<String> = ["busy", "refresh-limit"]
+
     public var nodes: [JSONValue] { result["nodes"]?.arrayValue ?? [] }
+
+    /// The queries each written node reads, by node id, as `uiNodeQueries` in `@adecore/intelligent-ui` names them.
+    public var nodeQueries: [String: [String]] {
+        (result["nodeQueries"]?.objectValue ?? [:]).mapValues { $0.arrayValue?.compactMap(\.stringValue) ?? [] }
+    }
+
+    /// The oldest of the last successful reads, which the footer says the value on screen is from.
+    public var readAt: Double? { queries.keys.compactMap { lastReadAt[$0] }.min() }
+
+    /// Nil for a node that reads no live data; `stale` while a failed or refused read left its last value.
+    public func liveState(sourceID: String) -> UiLiveNodeState? {
+        guard let related = nodeQueries[sourceID], !related.isEmpty else { return nil }
+        return related.contains { Self.stale(readings[$0]) } ? .stale : .live
+    }
+
+    /// The key of a live value in `lit`: a node's own value, or one cell of a table by row and column.
+    public static func litKey(nodeID: String, row: Int? = nil, column: String? = nil) -> String {
+        guard let row, let column else { return nodeID }
+        return "\(nodeID)\n\(row)\n\(column)"
+    }
+
+    private static func stale(_ reading: JSONValue?) -> Bool {
+        reading?["state"] == .string("failed") || reading?["state"] == .string("refused")
+    }
     private var queries: [String: JSONValue] { block["queries"]?.objectValue ?? [:] }
     public var diagnostics: [JSONValue] { result["diagnostics"]?.arrayValue ?? [] }
     /// The block's queries in the order its source declares them, as the desktop reads them. The compiled block
@@ -91,12 +130,15 @@ public final class UiBlockModel {
             lastRead = nil
             result = .object([:])
             resolvedLinks = [:]
+            lastReadAt = [:]
+            lit = [:]
         }
         if let frozen, frozen["revision"] == block["revision"] {
             for (name, reading) in frozen["readings"]?.objectValue ?? [:] where readings[name] == nil {
                 readings[name] = reading
                 if let value = reading["value"] { queryValues[name] = value }
                 if let ticket = reading["readId"] { readTickets[name] = ticket }
+                if reading["state"] == .string("fresh"), let at = reading["readAt"]?.numberValue { lastReadAt[name] = at }
             }
         }
         if let answered, answered["revision"] == block["revision"] {
@@ -174,12 +216,13 @@ public final class UiBlockModel {
     public func refresh() async {
         guard visible, connected, complete, !reading, !queries.isEmpty else { return }
         let now = ContinuousClock.now
-        if let lastRead, lastRead.duration(to: now) < .seconds(10) { return }
+        if let lastRead, lastRead.duration(to: now) < readInterval { return }
         lastRead = now
         reading = true
         let current = generation
         let queriedValues = values
         let previousQueryValues = queryValues
+        let before = liveProps()
         var allFresh = true
         defer { reading = false }
         let live = { self.visible && self.connected && current == self.generation && !Task.isCancelled }
@@ -188,11 +231,19 @@ public final class UiBlockModel {
             do {
                 let response = try await request("ui.query", payload(["query": .string(name)]))
                 guard live() else { return }
+                // The next refresh tries again; until then the value and any real reason it failed stay as they are.
+                if response["state"] == .string("failed"), let code = response["code"]?.stringValue,
+                    Self.notTried.contains(code), readTickets[name] != nil
+                {
+                    allFresh = false
+                    continue
+                }
                 readings[name] = response
                 if response["state"] == .string("fresh"), let ticket = response["readId"], let value = response["value"]
                 {
                     queryValues[name] = value
                     readTickets[name] = ticket
+                    if let at = response["readAt"]?.numberValue { lastReadAt[name] = at }
                 } else {
                     allFresh = false
                 }
@@ -206,8 +257,64 @@ public final class UiBlockModel {
             }
         }
         await evaluate()
+        light(since: before)
         if previousQueryValues != queryValues { resolvedLinks = [:] }
         if allFresh, queriedValues == values { queryInputsDirty = false }
+    }
+
+    /// The props of every evaluated node that reads live data, by node id.
+    private func liveProps() -> [String: (type: String, props: JSONValue)] {
+        let bound = nodeQueries
+        var props: [String: (type: String, props: JSONValue)] = [:]
+        func walk(_ nodes: [JSONValue]) {
+            for node in nodes {
+                if let id = node["id"]?.stringValue, node["error"] == nil,
+                    bound[node["sourceId"]?.stringValue ?? id] != nil
+                {
+                    props[id] = (node["type"]?.stringValue ?? "", node["props"] ?? .null)
+                }
+                walk(node["children"]?.arrayValue ?? [])
+            }
+        }
+        walk(nodes)
+        return props
+    }
+
+    /// Lights what a read changed: a Stat's value, and a table's cells while its rows are the ones it had, since an
+    /// added row moves every row under it. A value still dimmed by a failed read waits for the read that recovers.
+    private func light(since before: [String: (type: String, props: JSONValue)]) {
+        var changed: [String] = []
+        for (id, now) in liveProps() {
+            guard let was = before[id], liveState(sourceID: sourceID(of: id)) == .live else { continue }
+            switch now.type {
+            case "Stat":
+                if was.props["value"] != now.props["value"] { changed.append(Self.litKey(nodeID: id)) }
+            case "Table":
+                guard let old = was.props["rows"]?.arrayValue, let new = now.props["rows"]?.arrayValue,
+                    old.count == new.count
+                else { continue }
+                for (row, cells) in new.enumerated() {
+                    for (column, value) in cells.objectValue ?? [:] where old[row][column] != value {
+                        changed.append(Self.litKey(nodeID: id, row: row, column: column))
+                    }
+                }
+            default: continue
+            }
+        }
+        guard !changed.isEmpty else { return }
+        litGeneration += 1
+        for key in changed { lit[key] = litGeneration }
+    }
+
+    private func sourceID(of id: String) -> String {
+        func find(_ nodes: [JSONValue]) -> String? {
+            for node in nodes {
+                if node["id"]?.stringValue == id { return node["sourceId"]?.stringValue ?? id }
+                if let found = find(node["children"]?.arrayValue ?? []) { return found }
+            }
+            return nil
+        }
+        return find(nodes) ?? id
     }
 
     public func stop() {

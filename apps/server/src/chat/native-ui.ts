@@ -3,6 +3,7 @@ import {
     UiBlockSchema,
     uiInputValues,
     uiLinkTargets,
+    uiNodeQueries,
     UiState,
     UiFailure,
     UI_CATALOG_VERSION,
@@ -97,7 +98,9 @@ export function evaluateNativeUi(request: NativeUiRequest): Record<string, unkno
     }
     // A warning is for the agent that wrote the block; the phone shows what went wrong for the person.
     const diagnostics = evaluated.diagnostics.filter((diagnostic) => diagnostic.severity !== 'warning');
-    return { nodes: nodes(evaluated.nodes), diagnostics, values: uiInputValues(block, state), links };
+    // Which queries each written node reads, so the phone dims the same nodes the desktop does when a read fails.
+    const nodeQueries = supported ? uiNodeQueries(block) : {};
+    return { nodes: nodes(evaluated.nodes), diagnostics, values: uiInputValues(block, state), links, nodeQueries };
 }
 
 export function nativeUiJson(json: string): string {
