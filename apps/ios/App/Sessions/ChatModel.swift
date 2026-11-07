@@ -703,7 +703,8 @@ final class ChatModel {
         searchGeneration += 1
         let current = searchGeneration
         suggestionKind = kind
-        suggestions = []
+        // Models and accounts come from the catalog in hand, so they show at once, as on the desktop, and stay when the file search fails.
+        suggestions = kind == "@" ? namedMentions(query) : []
         searchProblem = nil
         searching = true
         defer { if current == searchGeneration { searching = false } }
@@ -722,20 +723,25 @@ final class ChatModel {
                             referable: $0)
                     }
             case "@":
-                let named = ChatTagSuggestions.models(providers: providers, accounts: accounts, query: query)
-                    + ChatTagSuggestions.accounts(providers: providers, accounts: accounts, query: query)
+                found = namedMentions(query)
                 if canMention {
-                    let result = try await client.request(
-                        "fs.search",
-                        payload: .object([
-                            "cwd": .string(info?.cwd ?? ""), "query": .string(String(query.prefix(256))),
-                            "limit": .number(20),
-                        ]))
-                    found = result.list("files").compactMap(\.stringValue).map {
-                        ChatSuggestion(kind: "@", value: $0, title: ($0 as NSString).lastPathComponent, detail: $0)
+                    do {
+                        let result = try await client.request(
+                            "fs.search",
+                            payload: .object([
+                                "cwd": .string(info?.cwd ?? ""), "query": .string(String(query.prefix(256))),
+                                "limit": .number(20),
+                            ]))
+                        found += result.list("files").compactMap(\.stringValue).map {
+                            ChatSuggestion(kind: "@", value: $0, title: ($0 as NSString).lastPathComponent, detail: $0)
+                        }
+                    } catch is CancellationError {
+                        throw CancellationError()
+                    } catch {
+                        // A failed search leaves out only the files; the models and accounts stay.
+                        if current == searchGeneration, !Task.isCancelled { searchProblem = error.localizedDescription }
                     }
                 }
-                found = named + found
             case "$":
                 let result = try await client.request("skills.list", payload: target())
                 found = result.list("skills").filter {
@@ -766,6 +772,11 @@ final class ChatModel {
             guard current == searchGeneration, !Task.isCancelled else { return }
             searchProblem = error.localizedDescription
         }
+    }
+
+    private func namedMentions(_ query: String) -> [ChatSuggestion] {
+        ChatTagSuggestions.models(providers: providers, accounts: accounts, query: query)
+            + ChatTagSuggestions.accounts(providers: providers, accounts: accounts, query: query)
     }
 
     /// A picked view, node or chat becomes a `#name` chip in the text; the draft keeps the name it was spelled with,

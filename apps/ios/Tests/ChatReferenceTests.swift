@@ -122,6 +122,30 @@ import XCTest
         await model.composition.flush()
     }
 
+    private let grok: JSONValue = .object([
+        "kind": .string("grok"), "name": .string("Grok"), "installed": .bool(true),
+        "capabilities": .object(["chat": .bool(true)]),
+        "models": .array([.object(["slug": .string("grok-4"), "name": .string("Grok 4")])]),
+    ])
+
+    func testModelSuggestionsStayWhenTheFileSearchFails() async throws {
+        let model = ChatModel(client: ReferenceClientFake(files: nil), chatID: "chat", draftRoot: root)
+        model.providers = [grok]
+        await model.search("@", query: "Grok")
+        XCTAssertEqual(model.suggestions.map(\.title), ["Grok 4"])
+        XCTAssertNotNil(model.searchProblem)
+        await model.composition.flush()
+    }
+
+    func testFilesFollowTheModelsWhenTheFileSearchAnswers() async throws {
+        let model = ChatModel(client: ReferenceClientFake(files: ["docs/grok.md"]), chatID: "chat", draftRoot: root)
+        model.providers = [grok]
+        await model.search("@", query: "Grok")
+        XCTAssertEqual(model.suggestions.map(\.title), ["Grok 4", "grok.md"])
+        XCTAssertNil(model.searchProblem)
+        await model.composition.flush()
+    }
+
     func testAHashOpensThePickerOnlyBeforeALetterAndNeverOverAChip() {
         func query(_ text: String) -> ChatDraftQuery? {
             ChatDraftSyntax.query(in: text, selection: NSRange(location: (text as NSString).length, length: 0))
@@ -163,9 +187,21 @@ import XCTest
 
 @MainActor private final class ReferenceClientFake: MachineRequesting {
     var requests: [(String, JSONValue)] = []
+    /// What `fs.search` finds; nil makes it fail the way a timed-out search does.
+    let files: [String]?
+
+    init(files: [String]? = []) {
+        self.files = files
+    }
 
     func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
+        if type == "fs.search" {
+            guard let files else {
+                throw MachineClientError.server(code: "not-readable", message: "Cannot search the working folder")
+            }
+            return .object(["files": .array(files.map { .string($0) })])
+        }
         return .object([:])
     }
 

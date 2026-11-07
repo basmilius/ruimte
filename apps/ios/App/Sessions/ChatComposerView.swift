@@ -394,15 +394,18 @@ struct ChatSuggestionRows: View {
     let choose: (ChatSuggestion) -> Void
 
     var body: some View {
-        if model.searching {
+        // The models and accounts of an `@` show while its files are still on the way, and stay beside a failed search.
+        if model.searching && model.suggestions.isEmpty {
             HStack(spacing: 10) {
                 ProgressView()
                 Text("Searching…")
             }.font(.subheadline).padding(12)
-        } else if let error = model.searchProblem {
-            Text(error).font(.subheadline).foregroundStyle(MobileStyle.statusError).padding(12)
         } else if model.suggestions.isEmpty {
-            Text("No matches").font(.subheadline).foregroundStyle(MobileStyle.muted).padding(12)
+            if let error = model.searchProblem {
+                Text(error).font(.subheadline).foregroundStyle(MobileStyle.statusError).padding(12)
+            } else {
+                Text("No matches").font(.subheadline).foregroundStyle(MobileStyle.muted).padding(12)
+            }
         } else {
             // The limit would keep every other project out of sight; the rows scroll.
             let sectioned = model.suggestions.contains { $0.referable?.section != nil }
@@ -466,6 +469,9 @@ struct ChatSuggestionRows: View {
                     }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
                     .padding(.leading, suggestion.referable?.trail.last?.kind == "canvas" ? 20 : 0)
                 }.buttonStyle(.plain)
+            }
+            if let error = model.searchProblem {
+                Text(error).font(.subheadline).foregroundStyle(MobileStyle.statusError).padding(12)
             }
         }
     }
