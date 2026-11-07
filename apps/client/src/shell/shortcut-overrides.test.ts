@@ -1,8 +1,18 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import { KEYMAP_IDS } from '@adecore/editor/keymap';
 import { shortcut, shortcutText, type Shortcut } from '@adecore/ui';
 import { DEFAULT_KEYS } from '@/shell/default-keys';
-import { createShortcutOverrides, currentEditorKeymap, keyIn, SHORTCUT_OVERRIDES_KEY } from '@/shell/shortcut-overrides';
+import {
+    createShortcutOverrides,
+    currentEditorKeymap,
+    isRebound,
+    keyIn,
+    keyOf,
+    overridesSnapshot,
+    rebind,
+    removeOverrideOf,
+    SHORTCUT_OVERRIDES_KEY
+} from '@/shell/shortcut-overrides';
 
 function memoryStorage(initial?: unknown) {
     const items = new Map<string, string>();
@@ -145,5 +155,31 @@ describe('the key of a row', () => {
         const keymapIds = new Set<string>(KEYMAP_IDS);
 
         expect(Object.keys(DEFAULT_KEYS).filter((id) => keymapIds.has(id))).toEqual([]);
+    });
+});
+
+describe('a rebind of the app', () => {
+    afterEach(() => {
+        removeOverrideOf(['palette', 'goToSymbol']);
+    });
+
+    test('is the key of its row at once, and the default again when the default is recorded', () => {
+        rebind('palette', shortcut('Mod+Alt+Y'));
+        expect(textOf(keyOf('palette'))).toBe('Mod+Alt+Y');
+        expect(isRebound(overridesSnapshot(), 'palette')).toBe(true);
+
+        rebind('palette', shortcut('Mod+K'));
+        expect(keyOf('palette')).toBe(DEFAULT_KEYS.palette);
+        expect(isRebound(overridesSnapshot(), 'palette')).toBe(false);
+    });
+
+    test('reaches the keymap an open editor reads on every key press', () => {
+        const before = currentEditorKeymap();
+
+        rebind('goToSymbol', shortcut('Mod+Alt+Y'));
+
+        expect(currentEditorKeymap().goToSymbol).toMatchObject({ mac: 'Mod+Alt+Y', other: 'Mod+Alt+Y' });
+        expect(currentEditorKeymap()).not.toBe(before);
+        expect(before.goToSymbol.mac).not.toBe('Mod+Alt+Y');
     });
 });

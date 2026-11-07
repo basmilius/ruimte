@@ -916,7 +916,20 @@
         "noMatch": "Nothing matches \"{{query}}\".",
         "browserNote": "In a browser tab, {{newView}} and {{closeCell}} belong to the browser.",
         "categories": "Shortcut categories",
-        "result": "{{category}} · {{keys}}"
+        "result": "{{category}} · {{keys}}",
+        "shortcutFor": "Shortcut for {{name}}",
+        "recordPrompt": "Press a shortcut",
+        "recordUnsupported": "That key cannot be a shortcut",
+        "needsModifierApple": "Hold Cmd, Control or Option too",
+        "needsModifier": "Hold Ctrl or Alt too",
+        "taken": "{{name}} already uses this key. Change that shortcut first, or press another.",
+        "browserKeeps": "Your browser keeps this key. Press another.",
+        "extensionUses": "An extension uses this key too. Ruimte's shortcut runs first.",
+        "reset": "Reset {{name}} to its default",
+        "restoreDefaults": "Restore defaults",
+        "restoreTitle": "Restore the default shortcuts?",
+        "restoreDescription": "Every shortcut you changed goes back to its default, on this device.",
+        "restoreConfirm": "Restore"
     },
     "backgroundService": {
         "title": "When Ruimte quits",

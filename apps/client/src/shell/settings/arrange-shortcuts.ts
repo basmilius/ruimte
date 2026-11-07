@@ -2,17 +2,22 @@ import type { Command } from '@/shell/commands';
 import { hasDefaultKey } from '@/shell/default-keys';
 import { commandArea, editorShortcutRows, isEditorCommand } from '@/shell/settings/editor-shortcuts';
 import { areaTitle, KEYBOARD_AREAS, shortcutGroups, type KeyboardArea, type ShortcutGroup, type ShortcutRow } from '@/shell/settings/shortcuts';
+import { overridesSnapshot, type OverrideSnapshot } from '@/shell/shortcut-overrides';
 
 /*
  * Every category of the Keyboard pane: the shortcuts the handlers bind, the commands that carry one in the
  * category of their menu, and the editor's keymap. A command whose key the editor's keymap lists is not a
  * command row here, so nothing shows twice. A command row of a key a hand row already lists is that row.
  */
-export function arrangeShortcuts(apple: boolean, commands: readonly Pick<Command, 'id' | 'label' | 'shortcut'>[]): ShortcutGroup[] {
+export function arrangeShortcuts(
+    apple: boolean,
+    commands: readonly Pick<Command, 'id' | 'label' | 'shortcut'>[],
+    snapshot: OverrideSnapshot = overridesSnapshot()
+): ShortcutGroup[] {
     const rows = new Map<KeyboardArea, ShortcutRow[]>(KEYBOARD_AREAS.map((area) => [area, []]));
     const listed = new Set<string>();
 
-    for (const group of shortcutGroups(apple)) {
+    for (const group of shortcutGroups(apple, snapshot)) {
         rows.get(group.id)!.push(...group.shortcuts);
 
         for (const row of group.shortcuts) {
@@ -34,7 +39,7 @@ export function arrangeShortcuts(apple: boolean, commands: readonly Pick<Command
         });
     }
 
-    for (const { area, row } of editorShortcutRows(apple)) {
+    for (const { area, row } of editorShortcutRows(apple, snapshot)) {
         rows.get(area)!.push(row);
     }
 

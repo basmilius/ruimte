@@ -916,7 +916,20 @@
         "noMatch": "Niets komt overeen met \"{{query}}\".",
         "browserNote": "In een browsertabblad horen {{newView}} en {{closeCell}} bij de browser.",
         "categories": "Categorieën van sneltoetsen",
-        "result": "{{category}} · {{keys}}"
+        "result": "{{category}} · {{keys}}",
+        "shortcutFor": "Sneltoets voor {{name}}",
+        "recordPrompt": "Druk op een sneltoets",
+        "recordUnsupported": "Die toets kan geen sneltoets zijn",
+        "needsModifierApple": "Houd ook Cmd, Control of Option ingedrukt",
+        "needsModifier": "Houd ook Ctrl of Alt ingedrukt",
+        "taken": "{{name}} gebruikt deze toets al. Wijzig eerst die sneltoets, of druk op een andere.",
+        "browserKeeps": "Je browser houdt deze toets voor zichzelf. Druk op een andere.",
+        "extensionUses": "Een extensie gebruikt deze toets ook. De sneltoets van Ruimte gaat voor.",
+        "reset": "Zet {{name}} terug naar de standaard",
+        "restoreDefaults": "Standaardwaarden herstellen",
+        "restoreTitle": "De standaard sneltoetsen herstellen?",
+        "restoreDescription": "Elke sneltoets die je hebt gewijzigd gaat terug naar de standaard, op dit apparaat.",
+        "restoreConfirm": "Herstellen"
     },
     "backgroundService": {
         "title": "Als Ruimte afsluit",

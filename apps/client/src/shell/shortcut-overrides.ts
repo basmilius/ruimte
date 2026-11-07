@@ -123,8 +123,20 @@ export function setOverride(id: RowId, key: Shortcut): void {
     overrides.set(id, key);
 }
 
+/* Puts a row back to its default key. */
 export function removeOverride(id: RowId): void {
     overrides.remove(id);
+}
+
+/* Gives a row a key; its own default is no override at all, so the row reads as unchanged. */
+export function rebind(id: RowId, key: Shortcut): void {
+    const own = defaultKeyOf(id as DefaultKeyId);
+
+    if (own !== undefined && shortcutText(own) === shortcutText(key)) {
+        overrides.remove(id);
+    } else {
+        overrides.set(id, key);
+    }
 }
 
 /* Restore defaults for these rows; an entry of another id stays. */

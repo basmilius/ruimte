@@ -4,7 +4,7 @@ import { RENDERED_DOC_COMMENTS } from '@/features';
 import { COMMANDS, isCommandId, menuPlacesOf } from '@/shell/command-table';
 import { shortcutFor } from '@/shell/editor-keymap';
 import type { KeyboardArea, ShortcutRow } from '@/shell/settings/shortcuts';
-import { keyIn, overridesSnapshot } from '@/shell/shortcut-overrides';
+import { keyIn, overridesSnapshot, type OverrideSnapshot } from '@/shell/shortcut-overrides';
 
 type EditorArea = Extract<KeyboardArea, 'editor' | 'navigation' | 'code'>;
 
@@ -161,10 +161,10 @@ function labelOf(id: KeymapId): string {
 const LISTED_WITH_CANVAS: readonly KeymapId[] = ['undo', 'redo'];
 
 /* The editor's keymap as this platform resolves it, with the category of each key; keys the platform leaves unbound are left out. */
-export function editorShortcutRows(apple: boolean): { area: EditorArea; row: ShortcutRow }[] {
+export function editorShortcutRows(apple: boolean, snapshot: OverrideSnapshot = overridesSnapshot()): { area: EditorArea; row: ShortcutRow }[] {
     return KEYMAP_IDS.flatMap((id) => {
         // A platform without a chord for the key has nothing to rebind either.
-        const keys = shortcutFor(id, apple) === undefined ? undefined : keyIn(overridesSnapshot(), id);
+        const keys = shortcutFor(id, apple) === undefined ? undefined : keyIn(snapshot, id);
         if (keys === undefined || LISTED_WITH_CANVAS.includes(id) || (id === 'toggleRenderedDocs' && !RENDERED_DOC_COMMENTS)) {
             return [];
         }
