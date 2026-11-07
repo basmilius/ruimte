@@ -10,11 +10,10 @@ final class CommandPaletteTests: XCTestCase {
     }
 
     private func row(_ machine: Machine, _ id: String, name: String, scratch: Bool = false) -> UnifiedProjectRow {
-        var summary: [String: JSONValue] = [
-            "projectId": .string(id), "name": .string(name), "folder": .string("/code/\(id)"),
-        ]
-        if scratch { summary["scratch"] = .bool(true) }
-        return UnifiedProjectRow(machine: machine, summary: .object(summary), connected: true)
+        UnifiedProjectRow(
+            machine: machine,
+            summary: ProjectRowWire.summary(id, name: name, scratch: scratch, folder: "/code/\(id)").projectSummary,
+            connected: true)
     }
 
     func testEveryTypedWordHasToAppearInAnyOrder() {

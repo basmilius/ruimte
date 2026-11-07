@@ -174,8 +174,8 @@ struct MachineDevicesPage: View {
 
     @ViewBuilder private func menu(_ device: MachineDevice) -> some View {
         Menu("Open as view") {
-            ForEach(projects.listed, id: \.stableID) { project in
-                Button(project.text("name", fallback: String(localized: "Untitled project"))) {
+            ForEach(projects.listed, id: \.projectId) { project in
+                Button(project.name) {
                     Task { await open(device, in: project) }
                 }
             }
@@ -190,11 +190,11 @@ struct MachineDevicesPage: View {
     }
 
     /// Puts the device in a project as a view, or finds the one it has, and opens it there.
-    private func open(_ device: MachineDevice, in project: JSONValue) async {
+    private func open(_ device: MachineDevice, in project: ProjectSummary) async {
         opening = device.id
         defer { opening = nil }
         let workspace = MobileWorkspace(
-            session: session, projectID: project.text("projectId"), summary: project)
+            session: session, projectID: project.projectId, summary: project)
         workspace.start()
         await workspace.open()
         guard workspace.ready else {
@@ -223,14 +223,14 @@ private struct RunningDeviceCard: View {
     let device: MachineDevice
     let busy: Bool
     let opening: Bool
-    let projects: [JSONValue]
-    let open: (JSONValue) -> Void
+    let projects: [ProjectSummary]
+    let open: (ProjectSummary) -> Void
     let shutdown: () -> Void
     @State private var preview: MachineDevicePreview
 
     init(
-        client: any MachineRequesting, device: MachineDevice, busy: Bool, opening: Bool, projects: [JSONValue],
-        open: @escaping (JSONValue) -> Void, shutdown: @escaping () -> Void
+        client: any MachineRequesting, device: MachineDevice, busy: Bool, opening: Bool, projects: [ProjectSummary],
+        open: @escaping (ProjectSummary) -> Void, shutdown: @escaping () -> Void
     ) {
         self.device = device
         self.busy = busy
@@ -253,8 +253,8 @@ private struct RunningDeviceCard: View {
                     .font(.caption).foregroundStyle(MobileStyle.muted)
                 HStack(spacing: 6) {
                     Menu {
-                        ForEach(projects, id: \.stableID) { project in
-                            Button(project.text("name", fallback: String(localized: "Untitled project"))) { open(project) }
+                        ForEach(projects, id: \.projectId) { project in
+                            Button(project.name) { open(project) }
                         }
                     } label: {
                         if opening {

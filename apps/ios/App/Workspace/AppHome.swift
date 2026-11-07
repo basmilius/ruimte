@@ -210,14 +210,14 @@ struct ProjectLinks: View {
 }
 
 struct ProjectHomeRow: View {
-    let summary: JSONValue
+    let summary: ProjectSummary
     let machine: String
     let connected: Bool
     var session: SharedMachineSession? = nil
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             Group {
-                if summary["icon"]?.text("kind") == "image", let session {
+                if case .image = summary.icon, let session {
                     ProjectArtwork(session: session, project: summary, size: 32)
                 } else {
                     ProjectHomeGlyph(summary: summary)
@@ -225,7 +225,7 @@ struct ProjectHomeRow: View {
             }
             .centeredOnFirstLine(of: .callout)
             VStack(alignment: .leading, spacing: 2) {
-                Text(summary.text("name", fallback: String(localized: "Untitled project")))
+                Text(summary.name)
                     .font(.callout).foregroundStyle(MobileStyle.text).lineLimit(1).truncationMode(.tail)
                 HStack(spacing: 5) {
                     ProjectMachineGlyph(icon: session?.icons.icon)
@@ -247,15 +247,15 @@ private struct ProjectMachineGlyph: View {
 }
 
 private struct ProjectHomeGlyph: View {
-    let summary: JSONValue
+    let summary: ProjectSummary
     private var initial: String {
-        if let icon = summary["icon"], icon.text("kind") == "initial" { return icon.text("value") }
-        return String(summary.text("name").prefix(1)).uppercased()
+        if case .initial(let icon) = summary.icon { return icon.value }
+        return String(summary.name.prefix(1)).uppercased()
     }
     var body: some View {
         Group {
-            if let icon = summary["icon"], icon.text("kind") == "lucide" {
-                LucideIcon(name: icon.text("value"), size: 20).foregroundStyle(MobileStyle.accent)
+            if case .lucide(let icon) = summary.icon {
+                LucideIcon(name: icon.value, size: 20).foregroundStyle(MobileStyle.accent)
             } else {
                 Text(initial).font(.title3.weight(.semibold)).foregroundStyle(MobileStyle.accent)
             }

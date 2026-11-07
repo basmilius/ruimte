@@ -27,7 +27,7 @@ final class UnifiedProjectsTests: XCTestCase {
         fixture.model.reconcile(machines: [second, first], connect: nil)
         XCTAssertEqual(fixture.model.open.map(\.machine.id), ["first"])
         XCTAssertEqual(fixture.model.open.map(\.id.projectID), [sharedID])
-        XCTAssertEqual(fixture.model.recent.map { $0.summary.number("closedAt") }, [50, 5, 0])
+        XCTAssertEqual(fixture.model.recent.map { $0.summary.closedAt.present }, [50, 5, 0])
         XCTAssertTrue((fixture.model.open + fixture.model.recent).allSatisfy { !$0.connected })
     }
 
@@ -70,7 +70,7 @@ final class UnifiedProjectsTests: XCTestCase {
         XCTAssertTrue(client.connectionHandlers.isEmpty)
         let offline = UnifiedProjects(defaults: fixture.defaults)
         offline.reconcile(machines: [machine], connect: nil)
-        XCTAssertEqual(offline.open[0].summary.number("lastOpenedAt"), 42)
+        XCTAssertEqual(offline.open[0].summary.lastOpenedAt, 42)
         XCTAssertFalse(offline.open[0].connected)
     }
 
@@ -168,7 +168,7 @@ final class UnifiedProjectsTests: XCTestCase {
         client.response = .object(["projects": .array([closed])])
         client.emit(.object(["summary": closed]))
         XCTAssertTrue(fixture.model.open.isEmpty)
-        XCTAssertEqual(fixture.model.recent.first?.summary.text("name"), "Renamed")
+        XCTAssertEqual(fixture.model.recent.first?.summary.name, "Renamed")
         XCTAssertEqual(client.requests, 1)
         XCTAssertEqual(fixture.model.recent.count, 1)
     }
@@ -191,7 +191,7 @@ final class UnifiedProjectsTests: XCTestCase {
         client.finishHeld(.object(["projects": .array([project])]))
         await refresh.value
         XCTAssertEqual(client.requests, 2)
-        XCTAssertEqual(fixture.model.open.first?.summary.text("name"), "New name")
+        XCTAssertEqual(fixture.model.open.first?.summary.name, "New name")
     }
 
     @MainActor func testInvalidCacheRowsAreDiscardedAndCacheIsBounded() async throws {

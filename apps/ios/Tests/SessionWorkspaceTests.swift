@@ -161,7 +161,7 @@ final class SessionWorkspaceTests: XCTestCase {
         defer { runtime.connections.shutdown() }
         let workspace = MobileWorkspace(
             session: runtime.session(for: machine), projectID: "chats",
-            summary: .object(["name": .string("Chats"), "scratch": .bool(true)]))
+            summary: ProjectRowWire.summary("chats", name: "Chats", scratch: true).projectSummary)
 
         XCTAssertFalse(workspace.ready)
         XCTAssertEqual(workspace.title, "Chats")

@@ -137,7 +137,7 @@ final class PadRouterTests: XCTestCase {
         router.openProject(
             MobileWorkspace(
                 session: runtime.session(for: machine), projectID: "chats",
-                summary: .object(["projectId": .string("chats"), "scratch": .bool(true)])))
+                summary: ProjectRowWire.summary("chats", scratch: true).projectSummary))
         router.toggle(.files)
         XCTAssertNil(router.inspector, "The Chats project has no folder of its own")
     }
@@ -182,7 +182,7 @@ final class PadRouterTests: XCTestCase {
         router.openProject(
             MobileWorkspace(
                 session: session, projectID: "chats",
-                summary: .object(["projectId": .string("chats"), "scratch": .bool(true)])))
+                summary: ProjectRowWire.summary("chats", scratch: true).projectSummary))
         router.show(view: "chat")
         let pane = PadSubagentPane(
             model: ChatModel(client: session.rpc, chatID: "chat"),

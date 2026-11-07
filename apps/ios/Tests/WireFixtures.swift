@@ -579,3 +579,46 @@ extension JSONValue {
     var providerInfo: ProviderInfo { try! decoded(as: ProviderInfo.self) }
     var providerModel: ProviderModel { try! decoded(as: ProviderModel.self) }
 }
+
+/// Project rows as `project.list`, `project.sidebar` and `project.summary` write them. A test names the fields it is
+/// about, and the rest takes defaults, so the row decodes into the generated types as a real one does.
+enum ProjectRowWire {
+    static func summary(
+        _ id: String = "project", name: String? = nil, opened: Double = 0, closed: Double? = nil,
+        available: Bool = true, scratch: Bool = false, color: String = "#c4573a", folder: String? = nil,
+        icon: JSONValue? = nil
+    ) -> JSONValue {
+        var values: [String: JSONValue] = [
+            "projectId": .string(id), "name": .string(name ?? id), "color": .string(color),
+            "folder": .string(folder ?? "/work/\(id)"), "lastOpenedAt": .number(opened),
+            "available": .bool(available),
+            "icon": icon ?? .object(["kind": .string("initial"), "value": .string("")]),
+            "nameSource": .string("chosen"),
+        ]
+        if let closed { values["closedAt"] = .number(closed) }
+        if scratch { values["scratch"] = .bool(true) }
+        return .object(values)
+    }
+
+    static func sidebarNode(_ id: String, kind: String, title: String) -> JSONValue {
+        .object(["id": .string(id), "title": .string(title), "kind": .string(kind), "provider": .null])
+    }
+
+    static func sidebarView(_ id: String, kind: String, name: String = "", nodes: [JSONValue] = []) -> JSONValue {
+        .object([
+            "id": .string(id), "name": .string(name), "kind": .string(kind), "icon": .null, "provider": .null,
+            "path": .null, "shared": .bool(false), "nodes": .array(nodes), "self": .null,
+        ])
+    }
+
+    /// A sidebar entry; without views the machine could not read the project's file.
+    static func sidebarEntry(_ summary: JSONValue, views: [JSONValue]?) -> JSONValue {
+        .object(["summary": summary, "views": views.map(JSONValue.array) ?? .null])
+    }
+}
+
+extension JSONValue {
+    /// A fixture that does not decode is a broken test, not a case to cover.
+    var projectSummary: ProjectSummary { try! decoded(as: ProjectSummary.self) }
+    var sidebarEntry: ProjectSidebarEntry { try! decoded(as: ProjectSidebarEntry.self) }
+}

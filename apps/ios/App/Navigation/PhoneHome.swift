@@ -151,7 +151,7 @@ struct PhoneHome: View {
         guard let session = runtime.session(machineID: target.machineID) else { return nil }
         let id = UnifiedProjectRow.ID(machineID: target.machineID, projectID: target.projectID)
         let row = (projects.open + projects.chats).first { $0.id == id }
-        return MobileWorkspace(session: session, projectID: target.projectID, summary: row?.summary ?? .object([:]))
+        return MobileWorkspace(session: session, projectID: target.projectID, summary: row?.summary)
     }
 }
 

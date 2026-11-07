@@ -150,11 +150,14 @@ final class ProjectSettingsTests: XCTestCase {
     }
 
     func testTheMarkFollowsTheIcon() {
-        XCTAssertEqual(ProjectSettingsLogic.mark(of: .object([:])), .initial)
+        func mark(_ icon: JSONValue?) -> ProjectSettingsLogic.Mark {
+            ProjectSettingsLogic.mark(of: ProjectRowWire.summary(icon: icon).projectSummary)
+        }
+        XCTAssertEqual(ProjectSettingsLogic.mark(of: nil), .initial)
+        XCTAssertEqual(mark(nil), .initial)
+        XCTAssertEqual(mark(.object(["kind": .string("lucide"), "value": .string("rocket")])), .icon)
         XCTAssertEqual(
-            ProjectSettingsLogic.mark(of: .object(["icon": .object(["kind": .string("lucide")])])), .icon)
-        XCTAssertEqual(
-            ProjectSettingsLogic.mark(of: .object(["icon": .object(["kind": .string("image")])])), .image)
+            mark(.object(["kind": .string("image"), "value": .string("icon.png"), "version": .string("1")])), .image)
         XCTAssertTrue(ProjectSettingsLogic.sameColor("#C4573A", "#c4573a"))
     }
 

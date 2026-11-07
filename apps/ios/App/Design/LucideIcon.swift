@@ -103,7 +103,7 @@ struct WorkspaceViewIcon: View {
 
     nonisolated static func name(for node: StoredNode) -> String { name(kind: node.kind.rawValue, chosen: nil) }
 
-    private nonisolated static func name(kind: String, chosen: String?) -> String {
+    nonisolated static func name(kind: String, chosen: String?) -> String {
         if kind != "unknown", let chosen { return chosen }
         return ProjectKinds.row(kind)?.icon ?? "circle-question-mark"
     }

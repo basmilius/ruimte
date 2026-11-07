@@ -61,12 +61,12 @@ final class NewChatModel {
         do {
             let result = try await client.request(
                 .projectNewChat, payload: NewChat.payload(provider: provider, account: account(for: provider)))
-            guard let projectID = result["summary"]?["projectId"]?.stringValue,
-                let viewID = result["viewId"]?.stringValue
-            else { throw MachineClientError.invalid(String(localized: "The machine did not say where the chat is.")) }
+            guard let placed = try? result.decoded(as: ProjectNewChatResult.self) else {
+                throw MachineClientError.invalid(String(localized: "The machine did not say where the chat is."))
+            }
             AppUsage.count(.chatStarted)
             problem = nil
-            return NewChatPlace(projectID: projectID, viewID: viewID)
+            return NewChatPlace(projectID: placed.summary.projectId, viewID: placed.viewId)
         } catch {
             problem = NewChat.message(for: error)
             return nil
@@ -93,7 +93,7 @@ enum NewChat {
     }
 
     /// The Chats project of a machine among its projects, which the lists show apart from the projects.
-    static func isChats(_ summary: JSONValue) -> Bool { summary["scratch"]?.boolValue == true }
+    static func isChats(_ summary: ProjectSummary) -> Bool { summary.isChats }
 }
 
 /// Picks the agent for a chat outside any project, the way an empty canvas offers its agents, and opens the chat.

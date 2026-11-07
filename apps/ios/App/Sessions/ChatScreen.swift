@@ -344,7 +344,7 @@ struct ChatScreen: View {
                     guard let workspace else { return [] }
                     return ChatReferables.withReached(
                         ChatReferables.project(views: workspace.storedViews, chatID: chatID),
-                        ownID: workspace.projectID, ownName: workspace.summary.text("name"),
+                        ownID: workspace.projectID, ownName: workspace.summary?.name ?? "",
                         reached: chat?.reachedProjects ?? [])
                 },
                 viewReferences: { [weak session] in session?.icons.viewReferences ?? false })

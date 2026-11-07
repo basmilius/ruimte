@@ -95,7 +95,8 @@ function camel(name: string): string {
     return name.replace(/[-. ]+(\w)/g, (_match, letter) => letter.toUpperCase());
 }
 function identifier(name: string): string {
-    return `\`${camel(name)}\``;
+    // `self` would assign to the instance itself.
+    return `\`${name === 'self' ? 'itself' : camel(name)}\``;
 }
 function nullable(schema: Schema): Schema | undefined {
     return Array.isArray(schema.type) && schema.type.includes('null')
@@ -592,9 +593,23 @@ const typedRoots: [name: string, source: string, path: (string | number)[], keep
     ['ChatSubagentChangedEvent', 'event.chat.subagentChanged', []],
     ['SkillsListResult', 'request.skills.list.result', []],
     ['SkillInfo', 'request.skills.list.result', ['properties', 'skills', 'items']],
+    ['ProjectListResult', 'request.project.list.result', []],
+    ['ProjectSidebarResult', 'request.project.sidebar.result', []],
+    ['ProjectSidebarEntry', 'request.project.sidebar.result', ['properties', 'projects', 'items']],
+    ['ProjectSidebarView', 'request.project.sidebar.result', ['properties', 'projects', 'items', 'properties', 'views', 'anyOf', 0, 'items']],
+    [
+        'ProjectSidebarNode',
+        'request.project.sidebar.result',
+        ['properties', 'projects', 'items', 'properties', 'views', 'anyOf', 0, 'items', 'properties', 'nodes', 'items']
+    ],
+    ['ProjectSummaryEvent', 'event.project.summary', []],
+    // `project.setIdentity` and `project.setIcon` answer with the row the project lists keep.
+    ['ProjectSummaryResult', 'request.project.setIdentity.result', []],
+    ['ProjectNewChatResult', 'request.project.newChat.result', []],
+    ['ProjectIcon', 'event.project.summary', ['properties', 'summary', 'properties', 'icon']],
     // The document stays JSON to merge and save, so a node or view this app has no word for survives a save. The
-    // summary is the row the project lists keep as JSON too.
-    ['ProjectOpenResult', 'request.project.open.result', [], ['summary', 'document', 'local']],
+    // summary is only ever read, so it has its types.
+    ['ProjectOpenResult', 'request.project.open.result', [], ['document', 'local']],
     ['ProjectChangedEvent', 'event.project.changed', [], ['document']],
     ['ProjectSaveResult', 'request.project.save.result', []],
     ['ProjectShowViewEvent', 'event.project.showView', []],
@@ -661,6 +676,12 @@ names.set(canonical(typed.find(([name]) => name === 'LaunchConfig')![1].properti
 // `ProviderSelectOption`, `ProviderBooleanOption`.
 for (const [value, member] of typedMembers('ProviderModelOption', 'type')) {
     names.set(canonical(member), `Provider${pascal(value)}Option`);
+}
+// `ProjectImageIcon`, `ProjectInitialIcon`; the lucide icon is the one every mark shares.
+for (const [value, member] of typedMembers('ProjectIcon', 'kind')) {
+    if (value !== 'lucide') {
+        names.set(canonical(member), `Project${pascal(value)}Icon`);
+    }
 }
 // A step holds its own sub-steps, and the section's items are the same union without a section.
 const storedStep = typed.find(([name]) => name === 'StoredPlanStep')![1];

@@ -6,7 +6,7 @@ import UIKit
 
 struct ProjectArtwork: View {
     let session: SharedMachineSession
-    let project: JSONValue
+    let project: ProjectSummary
     var size: CGFloat = 42
     var inset: CGFloat = 4
     @Environment(\.colorScheme) private var colorScheme
@@ -22,11 +22,11 @@ struct ProjectArtwork: View {
         Group {
             if let image {
                 Image(uiImage: image).renderingMode(.original).resizable().scaledToFit().padding(inset)
-            } else if project["icon"]?.text("kind") == "lucide" {
-                LucideIcon(name: project["icon"]?.text("value") ?? "folder", size: (size * 0.55).rounded())
+            } else if case .lucide(let icon) = project.icon {
+                LucideIcon(name: icon.value, size: (size * 0.55).rounded())
                     .foregroundStyle(MobileStyle.accent)
             } else {
-                Text(String(project.text("name", fallback: String(localized: "Project")).prefix(1)).uppercased())
+                Text(String(project.name.prefix(1)).uppercased())
                     .font(.system(size: (size * 0.48).rounded(), weight: .semibold)).foregroundStyle(MobileStyle.accent)
             }
         }
@@ -58,15 +58,14 @@ struct ProjectArtworkRequest: Hashable {
     let version: String
     let dark: Bool
 
-    init?(machineID: String, publicKey: String, project: JSONValue, dark: Bool) {
-        guard project["icon"]?.text("kind") == "image",
-            let version = project["icon"]?["version"]?.stringValue, !version.isEmpty,
-            let projectID = project["projectId"]?.stringValue, !projectID.isEmpty
-        else { return nil }
+    init?(machineID: String, publicKey: String, project: ProjectSummary, dark: Bool) {
+        guard case .image(let icon) = project.icon, !icon.version.isEmpty, !project.projectId.isEmpty else {
+            return nil
+        }
         self.machineID = machineID
         self.publicKey = publicKey
-        self.projectID = projectID
-        self.version = version
+        self.projectID = project.projectId
+        self.version = icon.version
         self.dark = dark
     }
 

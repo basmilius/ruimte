@@ -21,7 +21,7 @@ final class WorkspaceVisualTests: XCTestCase {
                         ForEach(["Ruimte", "A project with a very long name that must fit on one line"], id: \.self) {
                             name in
                             ProjectHomeRow(
-                                summary: .object(["name": .string(name)]), machine: machine.name,
+                                summary: ProjectRowWire.summary(name, name: name).projectSummary, machine: machine.name,
                                 connected: true, session: session
                             )
                             .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))

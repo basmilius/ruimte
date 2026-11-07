@@ -158,15 +158,12 @@ import UIKit
         }
     }
 
-    private func project(_ id: String, name: String, views: [JSONValue]) -> JSONValue {
-        .object([
-            "summary": .object(["projectId": .string(id), "name": .string(name), "lastOpenedAt": .number(1)]),
-            "views": .array(views),
-        ])
+    private func project(_ id: String, name: String, views: [JSONValue]) -> ProjectSidebarEntry {
+        ProjectRowWire.sidebarEntry(ProjectRowWire.summary(id, name: name, opened: 1), views: views).sidebarEntry
     }
 
     private func view(_ id: String, kind: String, name: String) -> JSONValue {
-        .object(["id": .string(id), "kind": .string(kind), "name": .string(name), "nodes": .array([])])
+        ProjectRowWire.sidebarView(id, kind: kind, name: name)
     }
 
     private static func command(at createdAt: Double) -> NowRequest {

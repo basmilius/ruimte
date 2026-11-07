@@ -38,7 +38,7 @@ struct SearchPage: View {
             } else {
                 let views = PaletteRanking.rank(now.entries, query: typed, text: \.title, extra: \.projectName)
                 let found = PaletteRanking.rank(
-                    projects.open + projects.recent, query: typed, text: { $0.summary.text("name") },
+                    projects.open + projects.recent, query: typed, text: { $0.summary.name },
                     extra: { $0.machine.name })
                 let matching = PaletteRanking.rank(commands, query: typed, text: \.title)
                 if !views.isEmpty {

@@ -14,7 +14,7 @@ final class MobileWorkspace {
     private(set) var document = JSONValue.object([:]) { didSet { readDocument() } }
     private(set) var header: StoredDocument?
     private(set) var storedViews: [StoredView] = []
-    private(set) var summary = JSONValue.object([:])
+    private(set) var summary: ProjectSummary?
     private(set) var local = JSONValue.object(["activeViewId": .null, "views": .object([:])])
     private(set) var ready = false
     private(set) var saving = false
@@ -53,12 +53,12 @@ final class MobileWorkspace {
     func storedView(_ id: String) -> StoredView? { storedViews.first { $0.id == id } }
     /// A view by id; an empty object when it is gone, so a page that outlives its view reads nothing.
     func view(_ id: String) -> JSONValue { views.first { $0.stableID == id } ?? .object([:]) }
-    var folder: String { summary.text("folder", fallback: "~") }
+    var folder: String { summary?.folder ?? "~" }
     var title: String {
-        header?.name ?? summary.text("name", fallback: String(localized: "Project"))
+        header?.name ?? summary?.name ?? String(localized: "Project")
     }
     /// The machine's Chats project, which holds the chats outside any project; its folder is the machine's own.
-    var isScratch: Bool { summary["scratch"]?.boolValue == true }
+    var isScratch: Bool { summary?.isChats == true }
     var client: any MachineRequesting { session.rpc }
     /// What a person calls each view and node, by id, for a list that names sessions by their node.
     var nodeTitles: [String: String] {
@@ -73,7 +73,7 @@ final class MobileWorkspace {
 
     /// `summary` is the project's row where it was picked, so its page has its title and kind before it opens.
     init(
-        session: SharedMachineSession, projectID: String, summary: JSONValue = .object([:]),
+        session: SharedMachineSession, projectID: String, summary: ProjectSummary? = nil,
         schedule: @escaping Schedule = { delay, action in
             Task {
                 do { try await Task.sleep(for: delay) } catch { return }

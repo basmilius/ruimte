@@ -77,7 +77,7 @@ extension NowModel {
     /// When a project of this machine was opened last, as its feed says; 0 for a machine without one.
     func lastOpened(on machineID: String) -> Double {
         (feeds[machineID]?.projects ?? []).compactMap { project in
-            project["summary"].flatMap { NewChat.isChats($0) ? nil : $0.number("lastOpenedAt") }
+            project.summary.isChats ? nil : project.summary.lastOpenedAt
         }.max() ?? 0
     }
 }

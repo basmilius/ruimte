@@ -109,7 +109,7 @@ struct NotificationsSettingsPage: View {
         } label: {
             Label {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(row.summary.text("name", fallback: String(localized: "Project"))).lineLimit(1)
+                    Text(row.summary.name).lineLimit(1)
                     if coordinator.machines.count > 1 {
                         Text(row.machine.name).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
                     }

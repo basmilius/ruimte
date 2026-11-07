@@ -390,9 +390,12 @@ struct ProcessesPage: View {
 
     /// A group of another project names that project, which the project list knows.
     private func readProjectNames() async {
-        guard let result = try? await model.client.request(.projectList, payload: .object([:])) else { return }
+        guard
+            let result = try? await model.client.request(.projectList, payload: .object([:]))
+                .decoded(as: ProjectListResult.self)
+        else { return }
         projectNames = Dictionary(
-            result.list("projects").map { ($0.text("projectId"), $0.text("name")) },
+            result.projects.map { ($0.projectId, $0.name) },
             uniquingKeysWith: { first, _ in first })
     }
 }

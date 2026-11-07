@@ -7859,11 +7859,11 @@ public struct ProjectSummary: Codable, Sendable, Equatable {
     public let `lastOpenedAt`: Double
     public let `closedAt`: Presence<Double>
     public let `available`: Bool
-    public let `icon`: ProjectSummaryIcon
+    public let `icon`: ProjectIcon
     public let `nameSource`: ProjectSummaryNameSource
     public let `scratch`: Bool?
 
-    public init(`projectId`: String, `name`: String, `color`: String, `folder`: String, `lastOpenedAt`: Double, `closedAt`: Presence<Double> = .missing, `available`: Bool, `icon`: ProjectSummaryIcon, `nameSource`: ProjectSummaryNameSource, `scratch`: Bool? = nil) {
+    public init(`projectId`: String, `name`: String, `color`: String, `folder`: String, `lastOpenedAt`: Double, `closedAt`: Presence<Double> = .missing, `available`: Bool, `icon`: ProjectIcon, `nameSource`: ProjectSummaryNameSource, `scratch`: Bool? = nil) {
         self.`projectId` = `projectId`
         self.`name` = `name`
         self.`color` = `color`
@@ -7885,7 +7885,7 @@ public struct ProjectSummary: Codable, Sendable, Equatable {
         `lastOpenedAt` = try container.decode(Double.self, forKey: .`lastOpenedAt`)
         `closedAt` = try container.contains(.`closedAt`) ? (container.decodeNil(forKey: .`closedAt`) ? .null : .value(container.decode(Double.self, forKey: .`closedAt`))) : .missing
         `available` = try container.decode(Bool.self, forKey: .`available`)
-        `icon` = try container.decode(ProjectSummaryIcon.self, forKey: .`icon`)
+        `icon` = try container.decode(ProjectIcon.self, forKey: .`icon`)
         `nameSource` = try container.decode(ProjectSummaryNameSource.self, forKey: .`nameSource`)
         `scratch` = try container.decodeIfPresent(Bool.self, forKey: .`scratch`)
     }
@@ -7922,18 +7922,18 @@ public struct ProjectSummary: Codable, Sendable, Equatable {
     }
 }
 
-public enum ProjectSummaryIcon: Codable, Sendable, Equatable {
+public enum ProjectIcon: Codable, Sendable, Equatable {
     case `lucide`(MachineIcon)
-    case `image`(ProjectSummaryIconVariant1)
-    case `initial`(ProjectSummaryIconVariant2)
+    case `image`(ProjectImageIcon)
+    case `initial`(ProjectInitialIcon)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: Tag.self)
         switch try container.decode(String.self, forKey: .value) {
         case "lucide": self = .`lucide`(try MachineIcon(from: decoder))
-        case "image": self = .`image`(try ProjectSummaryIconVariant1(from: decoder))
-        case "initial": self = .`initial`(try ProjectSummaryIconVariant2(from: decoder))
-        default: throw WireValidationError.invalid("Unknown ProjectSummaryIcon tag")
+        case "image": self = .`image`(try ProjectImageIcon(from: decoder))
+        case "initial": self = .`initial`(try ProjectInitialIcon(from: decoder))
+        default: throw WireValidationError.invalid("Unknown ProjectIcon tag")
         }
     }
 
@@ -7948,7 +7948,7 @@ public enum ProjectSummaryIcon: Codable, Sendable, Equatable {
     private enum Tag: String, CodingKey { case value = "kind" }
 }
 
-public struct ProjectSummaryIconVariant1: Codable, Sendable, Equatable {
+public struct ProjectImageIcon: Codable, Sendable, Equatable {
     public let `kind`: String
     public let `value`: String
     public let `version`: String
@@ -7980,7 +7980,7 @@ public struct ProjectSummaryIconVariant1: Codable, Sendable, Equatable {
     }
 }
 
-public struct ProjectSummaryIconVariant2: Codable, Sendable, Equatable {
+public struct ProjectInitialIcon: Codable, Sendable, Equatable {
     public let `kind`: String
     public let `value`: String
 
@@ -16105,12 +16105,320 @@ public struct SkillInfo: Codable, Sendable, Equatable {
     }
 }
 
+public struct ProjectListResult: Codable, Sendable, Equatable {
+    public let `projects`: [ProjectSummary]
+
+    public init(`projects`: [ProjectSummary]) {
+        self.`projects` = `projects`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `projects` = try container.decode([ProjectSummary].self, forKey: .`projects`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`projects`, forKey: .`projects`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `projects` = "projects"
+    }
+}
+
+public struct ProjectSidebarResult: Codable, Sendable, Equatable {
+    public let `projects`: [ProjectSidebarEntry]
+
+    public init(`projects`: [ProjectSidebarEntry]) {
+        self.`projects` = `projects`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `projects` = try container.decode([ProjectSidebarEntry].self, forKey: .`projects`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`projects`, forKey: .`projects`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `projects` = "projects"
+    }
+}
+
+public struct ProjectSidebarEntry: Codable, Sendable, Equatable {
+    public let `summary`: ProjectSummary
+    public let `views`: [ProjectSidebarView]?
+
+    public init(`summary`: ProjectSummary, `views`: [ProjectSidebarView]?) {
+        self.`summary` = `summary`
+        self.`views` = `views`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `summary` = try container.decode(ProjectSummary.self, forKey: .`summary`)
+        `views` = try container.decode([ProjectSidebarView]?.self, forKey: .`views`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`summary`, forKey: .`summary`)
+        try container.encode(`views`, forKey: .`views`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `summary` = "summary"
+        case `views` = "views"
+    }
+}
+
+public struct ProjectSidebarView: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `titleSource`: ProjectSidebarViewTitleSource?
+    public let `kind`: ProjectSidebarViewKind
+    public let `icon`: MachineIcon?
+    public let `provider`: String?
+    public let `path`: String?
+    public let `shared`: Bool
+    public let `flag`: String?
+    public let `nodes`: [ProjectSidebarNode]
+    public let `itself`: ProjectSidebarNode?
+    public let `design`: Bool?
+
+    public init(`id`: String, `name`: String, `titleSource`: ProjectSidebarViewTitleSource? = nil, `kind`: ProjectSidebarViewKind, `icon`: MachineIcon?, `provider`: String?, `path`: String?, `shared`: Bool, `flag`: String? = nil, `nodes`: [ProjectSidebarNode], `itself`: ProjectSidebarNode?, `design`: Bool? = nil) {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`titleSource` = `titleSource`
+        self.`kind` = `kind`
+        self.`icon` = `icon`
+        self.`provider` = `provider`
+        self.`path` = `path`
+        self.`shared` = `shared`
+        self.`flag` = `flag`
+        self.`nodes` = `nodes`
+        self.`itself` = `itself`
+        self.`design` = `design`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `titleSource` = try container.decodeIfPresent(ProjectSidebarViewTitleSource.self, forKey: .`titleSource`)
+        `kind` = try container.decode(ProjectSidebarViewKind.self, forKey: .`kind`)
+        `icon` = try container.decode(MachineIcon?.self, forKey: .`icon`)
+        `provider` = try container.decode(String?.self, forKey: .`provider`)
+        `path` = try container.decode(String?.self, forKey: .`path`)
+        `shared` = try container.decode(Bool.self, forKey: .`shared`)
+        `flag` = try container.decodeIfPresent(String.self, forKey: .`flag`)
+        `nodes` = try container.decode([ProjectSidebarNode].self, forKey: .`nodes`)
+        `itself` = try container.decode(ProjectSidebarNode?.self, forKey: .`itself`)
+        `design` = try container.decodeIfPresent(Bool.self, forKey: .`design`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`titleSource`, forKey: .`titleSource`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`icon`, forKey: .`icon`)
+        try container.encode(`provider`, forKey: .`provider`)
+        try container.encode(`path`, forKey: .`path`)
+        try container.encode(`shared`, forKey: .`shared`)
+        try container.encodeIfPresent(`flag`, forKey: .`flag`)
+        try container.encode(`nodes`, forKey: .`nodes`)
+        try container.encode(`itself`, forKey: .`itself`)
+        try container.encodeIfPresent(`design`, forKey: .`design`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `titleSource` = "titleSource"
+        case `kind` = "kind"
+        case `icon` = "icon"
+        case `provider` = "provider"
+        case `path` = "path"
+        case `shared` = "shared"
+        case `flag` = "flag"
+        case `nodes` = "nodes"
+        case `itself` = "self"
+        case `design` = "design"
+    }
+}
+
+public enum ProjectSidebarViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `auto` = "auto"
+    case `user` = "user"
+}
+
+public enum ProjectSidebarViewKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `canvas` = "canvas"
+    case `terminal` = "terminal"
+    case `chat` = "chat"
+    case `browser` = "browser"
+    case `device` = "device"
+    case `drawing` = "drawing"
+    case `diagram` = "diagram"
+    case `file` = "file"
+    case `database` = "database"
+    case `separator` = "separator"
+    case `subheader` = "subheader"
+    case `unknown` = "unknown"
+}
+
+public struct ProjectSidebarNode: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `title`: String
+    public let `titleSource`: ProjectSidebarNodeTitleSource?
+    public let `kind`: ProjectSidebarNodeKind
+    public let `provider`: String?
+    public let `status`: String?
+    public let `chats`: [String]?
+
+    public init(`id`: String, `title`: String, `titleSource`: ProjectSidebarNodeTitleSource? = nil, `kind`: ProjectSidebarNodeKind, `provider`: String?, `status`: String? = nil, `chats`: [String]? = nil) {
+        self.`id` = `id`
+        self.`title` = `title`
+        self.`titleSource` = `titleSource`
+        self.`kind` = `kind`
+        self.`provider` = `provider`
+        self.`status` = `status`
+        self.`chats` = `chats`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `title` = try container.decode(String.self, forKey: .`title`)
+        `titleSource` = try container.decodeIfPresent(ProjectSidebarNodeTitleSource.self, forKey: .`titleSource`)
+        `kind` = try container.decode(ProjectSidebarNodeKind.self, forKey: .`kind`)
+        `provider` = try container.decode(String?.self, forKey: .`provider`)
+        `status` = try container.decodeIfPresent(String.self, forKey: .`status`)
+        `chats` = try container.decodeIfPresent([String].self, forKey: .`chats`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`title`, forKey: .`title`)
+        try container.encodeIfPresent(`titleSource`, forKey: .`titleSource`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`provider`, forKey: .`provider`)
+        try container.encodeIfPresent(`status`, forKey: .`status`)
+        try container.encodeIfPresent(`chats`, forKey: .`chats`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `title` = "title"
+        case `titleSource` = "titleSource"
+        case `kind` = "kind"
+        case `provider` = "provider"
+        case `status` = "status"
+        case `chats` = "chats"
+    }
+}
+
+public enum ProjectSidebarNodeTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `auto` = "auto"
+    case `user` = "user"
+}
+
+public enum ProjectSidebarNodeKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `terminal` = "terminal"
+    case `chat` = "chat"
+    case `browser` = "browser"
+    case `device` = "device"
+}
+
+public struct ProjectSummaryEvent: Codable, Sendable, Equatable {
+    public let `summary`: ProjectSummary
+    public let `views`: [ProjectSidebarView]?
+
+    public init(`summary`: ProjectSummary, `views`: [ProjectSidebarView]? = nil) {
+        self.`summary` = `summary`
+        self.`views` = `views`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `summary` = try container.decode(ProjectSummary.self, forKey: .`summary`)
+        `views` = try container.decodeIfPresent([ProjectSidebarView].self, forKey: .`views`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`summary`, forKey: .`summary`)
+        try container.encodeIfPresent(`views`, forKey: .`views`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `summary` = "summary"
+        case `views` = "views"
+    }
+}
+
+public struct ProjectSummaryResult: Codable, Sendable, Equatable {
+    public let `summary`: ProjectSummary
+
+    public init(`summary`: ProjectSummary) {
+        self.`summary` = `summary`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `summary` = try container.decode(ProjectSummary.self, forKey: .`summary`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`summary`, forKey: .`summary`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `summary` = "summary"
+    }
+}
+
+public struct ProjectNewChatResult: Codable, Sendable, Equatable {
+    public let `summary`: ProjectSummary
+    public let `viewId`: String
+
+    public init(`summary`: ProjectSummary, `viewId`: String) {
+        self.`summary` = `summary`
+        self.`viewId` = `viewId`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `summary` = try container.decode(ProjectSummary.self, forKey: .`summary`)
+        `viewId` = try container.decode(String.self, forKey: .`viewId`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`summary`, forKey: .`summary`)
+        try container.encode(`viewId`, forKey: .`viewId`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `summary` = "summary"
+        case `viewId` = "viewId"
+    }
+}
+
 public struct ProjectOpenResult: Codable, Sendable, Equatable {
-    public let `summary`: JSONValue
+    public let `summary`: ProjectSummary
     public let `document`: JSONValue
     public let `local`: JSONValue
 
-    public init(`summary`: JSONValue, `document`: JSONValue, `local`: JSONValue) {
+    public init(`summary`: ProjectSummary, `document`: JSONValue, `local`: JSONValue) {
         self.`summary` = `summary`
         self.`document` = `document`
         self.`local` = `local`
@@ -16118,7 +16426,7 @@ public struct ProjectOpenResult: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        `summary` = try container.decode(JSONValue.self, forKey: .`summary`)
+        `summary` = try container.decode(ProjectSummary.self, forKey: .`summary`)
         `document` = try container.decode(JSONValue.self, forKey: .`document`)
         `local` = try container.decode(JSONValue.self, forKey: .`local`)
     }

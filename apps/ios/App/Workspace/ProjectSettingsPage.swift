@@ -24,10 +24,10 @@ enum ProjectSettingsLogic {
     /// The daemon refuses a larger image.
     static let imageLimit = 256 * 1024
 
-    static func mark(of summary: JSONValue) -> Mark {
-        switch summary["icon"]?.text("kind") {
-        case "lucide": .icon
-        case "image": .image
+    static func mark(of summary: ProjectSummary?) -> Mark {
+        switch summary?.icon {
+        case .lucide: .icon
+        case .image: .image
         default: .initial
         }
     }
@@ -81,7 +81,7 @@ struct ProjectSettingsPage: View {
     let showLaunches: () -> Void
     let closed: () -> Void
     @Environment(\.dismiss) private var dismiss
-    @State private var summary: JSONValue
+    @State private var summary: ProjectSummary?
     @State private var name: String
     @State private var mark: ProjectSettingsLogic.Mark
     @State private var photo: PhotosPickerItem?
@@ -100,10 +100,10 @@ struct ProjectSettingsPage: View {
         _mark = State(initialValue: ProjectSettingsLogic.mark(of: workspace.summary))
     }
 
-    private var shown: JSONValue {
-        summary.setting("name", .string(workspace.title)).setting("color", .string(color))
+    private var shown: ProjectSummary {
+        (summary ?? .placeholder(projectID: workspace.projectID)).naming(workspace.title, color: color)
     }
-    private var color: String { workspace.header?.color ?? summary.text("color") }
+    private var color: String { workspace.header?.color ?? summary?.color ?? "" }
 
     var body: some View {
         NavigationStack {
@@ -150,7 +150,7 @@ struct ProjectSettingsPage: View {
                             .onSubmit { Task { await rename() } }
                     }
                     LabeledContent("Folder") {
-                        Text(summary.text("folder")).font(.footnote.monospaced()).lineLimit(1).truncationMode(.head)
+                        Text(summary?.folder ?? "").font(.footnote.monospaced()).lineLimit(1).truncationMode(.head)
                     }
                     LabeledContent("Machine", value: workspace.session.machine.name)
                 }
@@ -176,7 +176,7 @@ struct ProjectSettingsPage: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: $pickingSymbol) {
                 IconChoiceGrid(
-                    selected: summary["icon"]?.text("value"), resetTitle: String(localized: "Use the initial")
+                    selected: summary?.icon.value, resetTitle: String(localized: "Use the initial")
                 ) { symbol in
                     pickingSymbol = false
                     let icon = symbol.map { JSONValue.object(["kind": .string("lucide"), "value": .string($0)]) }
@@ -276,7 +276,7 @@ struct ProjectSettingsPage: View {
         defer { busy = false }
         do {
             let result = try await workspace.client.request(request, payload: .object(payload))
-            if let updated = result["summary"] {
+            if let updated = try? result.decoded(as: ProjectSummaryResult.self).summary {
                 summary = updated
                 mark = ProjectSettingsLogic.mark(of: updated)
             }

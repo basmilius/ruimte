@@ -16,12 +16,9 @@ extension NowModel {
     /// The open projects of a machine, without its Chats, in the order Now reads them.
     func chatProjects(on machineID: String) -> [NowChatProject] {
         (feeds[machineID]?.projects ?? []).compactMap { project in
-            guard let summary = project["summary"], !NewChat.isChats(summary),
-                let projectID = summary["projectId"]?.stringValue
-            else { return nil }
-            return NowChatProject(
-                machineID: machineID, projectID: projectID,
-                name: summary.text("name", fallback: String(localized: "Untitled project")))
+            let summary = project.summary
+            guard !summary.isChats else { return nil }
+            return NowChatProject(machineID: machineID, projectID: summary.projectId, name: summary.name)
         }
     }
 }

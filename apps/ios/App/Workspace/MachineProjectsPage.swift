@@ -6,7 +6,7 @@ import SwiftUI
 /// The projects a machine knows, newest first, kept on the phone so a machine's page counts them before it answers.
 @MainActor @Observable
 final class MachineProjectList {
-    private(set) var projects: [JSONValue] = []
+    private(set) var projects: [ProjectSummary] = []
     let work = RemotePageState()
     @ObservationIgnored private let session: SharedMachineSession
     // A machine that takes `project.watch` says when a project it does not hold changed on disk; the summary events
@@ -18,15 +18,15 @@ final class MachineProjectList {
     init(session: SharedMachineSession) {
         self.session = session
         if let data = UserDefaults.standard.data(forKey: cacheKey), let cached = try? JSONValue.decode(data) {
-            projects = cached.arrayValue ?? []
+            projects = (cached.arrayValue ?? []).compactMap { try? $0.decoded(as: ProjectSummary.self) }
         }
     }
 
     private var cacheKey: String { ProjectsCache.key(machineID: session.machine.id) }
 
     /// The projects without the machine's Chats project, which has a row of its own.
-    var listed: [JSONValue] { projects.filter { !NewChat.isChats($0) } }
-    var chats: JSONValue? { projects.first(where: NewChat.isChats) }
+    var listed: [ProjectSummary] { projects.filter { !$0.isChats } }
+    var chats: ProjectSummary? { projects.first(where: \.isChats) }
 
     /// Reads the list on every link and again whenever the machine says it changed.
     func follow() { live.start() }
@@ -41,8 +41,10 @@ final class MachineProjectList {
             try stillTheLatest()
             // An answer for a link that has since been rebuilt says nothing about the one on screen now.
             guard connection == session.generation else { throw CancellationError() }
-            projects = result.list("projects").sorted { $0.number("lastOpenedAt") > $1.number("lastOpenedAt") }
-            if let data = try? JSONValue.array(projects).encoded() { UserDefaults.standard.set(data, forKey: cacheKey) }
+            projects = try result.decoded(as: ProjectListResult.self).projects.sorted {
+                $0.lastOpenedAt > $1.lastOpenedAt
+            }
+            if let data = try? JSONEncoder().encode(projects) { UserDefaults.standard.set(data, forKey: cacheKey) }
         }
     }
 }
@@ -67,7 +69,7 @@ struct MachineProjectsPage: View {
                     if let chats = list.chats {
                         Button {
                             openWorkspace(
-                                MobileWorkspace(session: session, projectID: chats.text("projectId"), summary: chats))
+                                MobileWorkspace(session: session, projectID: chats.projectId, summary: chats))
                         } label: {
                             ChatsRowLabel(
                                 title: String(localized: "Chats"), detail: String(localized: "Earlier chats"),
@@ -81,14 +83,13 @@ struct MachineProjectsPage: View {
                 MachineProjectsHeading(title: String(localized: "Projects"))
                 ForEach(
                     list.listed.filter {
-                        $0["available"] != .bool(false)
-                            && (search.isEmpty || $0.text("name").localizedCaseInsensitiveContains(search))
+                        $0.available && (search.isEmpty || $0.name.localizedCaseInsensitiveContains(search))
                     },
-                    id: \.stableID
+                    id: \.projectId
                 ) { project in
                     Button {
                         openWorkspace(
-                            MobileWorkspace(session: session, projectID: project.text("projectId"), summary: project))
+                            MobileWorkspace(session: session, projectID: project.projectId, summary: project))
                     } label: {
                         ProjectHomeRow(
                             summary: project, machine: session.machine.name, connected: session.connected,
@@ -187,7 +188,7 @@ struct OpenFolderSheet: View {
         }
         await work.perform {
             let result = try await session.rpc.request(.projectOpen, payload: .object(payload))
-            if let id = result["summary"]?["projectId"]?.stringValue {
+            if let id = try? result.decoded(as: ProjectOpenResult.self).summary.projectId {
                 session.retainProject(id)
                 await session.releaseProject(id)
                 openWorkspace(MobileWorkspace(session: session, projectID: id))

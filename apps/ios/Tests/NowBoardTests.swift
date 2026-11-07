@@ -7,20 +7,18 @@ import XCTest
 final class NowBoardTests: XCTestCase {
     private func project(
         _ id: String, name: String, opened: Double, scratch: Bool = false, views: [JSONValue]?
-    ) -> JSONValue {
-        var summary: [String: JSONValue] = [
-            "projectId": .string(id), "name": .string(name), "lastOpenedAt": .number(opened),
-        ]
-        if scratch { summary["scratch"] = .bool(true) }
-        return .object(["summary": .object(summary), "views": views.map(JSONValue.array) ?? .null])
+    ) -> ProjectSidebarEntry {
+        ProjectRowWire.sidebarEntry(
+            ProjectRowWire.summary(id, name: name, opened: opened, scratch: scratch), views: views
+        ).sidebarEntry
     }
 
     private func view(_ id: String, kind: String, name: String = "", nodes: [JSONValue] = []) -> JSONValue {
-        .object(["id": .string(id), "kind": .string(kind), "name": .string(name), "nodes": .array(nodes)])
+        ProjectRowWire.sidebarView(id, kind: kind, name: name, nodes: nodes)
     }
 
     private func node(_ id: String, kind: String, title: String) -> JSONValue {
-        .object(["id": .string(id), "kind": .string(kind), "title": .string(title)])
+        ProjectRowWire.sidebarNode(id, kind: kind, title: title)
     }
 
     func testSectionsFollowStatusAndUnseen() {

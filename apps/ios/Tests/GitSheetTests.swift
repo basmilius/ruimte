@@ -260,9 +260,7 @@ final class GitSheetTests: XCTestCase {
         defer { wire.client.shutdown() }
         let workspace = MobileWorkspace(
             session: session, projectID: "project",
-            summary: .object([
-                "folder": .string("/work/project")
-            ]))
+            summary: ProjectRowWire.summary("project", folder: "/work/project").projectSummary)
         await workspace.edit { _ in
             .object([
                 "name": .string("Project"), "color": .string("#155dfc"),

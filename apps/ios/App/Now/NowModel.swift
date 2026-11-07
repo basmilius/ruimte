@@ -115,8 +115,8 @@ final class NowModel {
         for input in inputs {
             let snoozed = Set(input.snoozes.keys)
             for project in input.projects {
-                guard let summary = project["summary"], let views = project["views"]?.arrayValue else { continue }
-                result[UnifiedProjectRow.ID(machineID: input.machineID, projectID: summary.text("projectId"))] =
+                guard let views = project.views else { continue }
+                result[UnifiedProjectRow.ID(machineID: input.machineID, projectID: project.summary.projectId)] =
                     ProjectOverview.activity(views: views, attention: input.attention, snoozed: snoozed)
             }
         }
@@ -180,7 +180,7 @@ let feedSettleMilliseconds: Double = 150
 @MainActor @Observable
 final class NowFeed: MachineFeed {
     let session: SharedMachineSession
-    private(set) var projects: [JSONValue] = []
+    private(set) var projects: [ProjectSidebarEntry] = []
     private(set) var loaded = false
     private(set) var problem: String?
     /// The CLIs on this machine whose denial carries a message, from `provider.list`.
@@ -223,8 +223,9 @@ final class NowFeed: MachineFeed {
         let generation = session.generation
         do {
             let result = try await session.rpc.request(.projectSidebar, payload: .object([:]))
+                .decoded(as: ProjectSidebarResult.self)
             guard !Task.isCancelled, generation == session.generation, live.isStarted else { return }
-            projects = result.list("projects")
+            projects = result.projects
             loaded = true
             problem = nil
             watchTasks()
@@ -246,7 +247,7 @@ final class NowFeed: MachineFeed {
 
     /// Asks for the tasks of every open project, so a row of a node another agent opened wears its task mark.
     private func watchTasks() {
-        let open = Set(projects.compactMap { $0["summary"]?.text("projectId") }.filter { !$0.isEmpty })
+        let open = Set(projects.map(\.summary.projectId).filter { !$0.isEmpty })
         for id in open.subtracting(watched) { session.tasks.watch(id) }
         for id in watched.subtracting(open) { session.tasks.unwatch(id) }
         watched = open

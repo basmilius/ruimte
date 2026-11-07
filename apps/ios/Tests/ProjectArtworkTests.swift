@@ -19,10 +19,9 @@ final class ProjectArtworkTests: XCTestCase {
         XCTAssertNil(
             ProjectArtworkRequest(
                 machineID: "machine", publicKey: "key",
-                project: .object([
-                    "projectId": .string("project"),
-                    "icon": .object(["kind": .string("lucide"), "value": .string("rocket")]),
-                ]), dark: false))
+                project: ProjectRowWire.summary(
+                    "project", icon: .object(["kind": .string("lucide"), "value": .string("rocket")])
+                ).projectSummary, dark: false))
     }
 
     @MainActor func testRasterLoadingUsesBoundedMachineResourceAndCachesImage() async throws {
@@ -97,13 +96,13 @@ final class ProjectArtworkTests: XCTestCase {
         try XCTUnwrap(
             ProjectArtworkRequest(
                 machineID: "machine", publicKey: key,
-                project: .object([
-                    "projectId": .string("project"),
-                    "icon": .object([
+                project: ProjectRowWire.summary(
+                    "project",
+                    icon: .object([
                         "kind": .string("image"), "value": .string("https://untrusted.invalid/../../secret.svg"),
                         "version": .string(version),
-                    ]),
-                ]), dark: dark))
+                    ])
+                ).projectSummary, dark: dark))
     }
 
     private func pixel(_ image: CGImage, x: Int, y: Int) throws -> [UInt8] {

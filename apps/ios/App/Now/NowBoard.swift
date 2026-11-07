@@ -42,7 +42,7 @@ struct NowMachineInput {
     let machineName: String
     /// The entries of `project.sidebar`, each a summary with its views, or with null views when the file could not
     /// be read.
-    let projects: [JSONValue]
+    let projects: [ProjectSidebarEntry]
     var attention = NowAttention()
     /// The snoozes that stand, by node id.
     var snoozes: [String: Date] = [:]
@@ -173,33 +173,34 @@ struct NowBoard: Equatable {
     static func entries(_ machines: [NowMachineInput]) -> [ProjectViewEntry] {
         let projects = machines.flatMap { machine in machine.projects.map { (machine, $0) } }
             .sorted { lhs, rhs in
-                let left = lhs.1["summary"]?.number("lastOpenedAt") ?? 0
-                let right = rhs.1["summary"]?.number("lastOpenedAt") ?? 0
+                let left = lhs.1.summary.lastOpenedAt
+                let right = rhs.1.summary.lastOpenedAt
                 if left != right { return left > right }
                 if lhs.0.machineName != rhs.0.machineName { return lhs.0.machineName < rhs.0.machineName }
-                return lhs.1["summary"]?.text("projectId") ?? "" < rhs.1["summary"]?.text("projectId") ?? ""
+                return lhs.1.summary.projectId < rhs.1.summary.projectId
             }
         var seen = Set<String>()
         var result: [ProjectViewEntry] = []
         for (machine, project) in projects {
-            guard let summary = project["summary"], let views = project["views"]?.arrayValue else { continue }
-            let projectID = summary.text("projectId")
+            guard let views = project.views else { continue }
+            let summary = project.summary
+            let projectID = summary.projectId
             let projectName = Self.projectName(summary)
-            for view in views where !WorkspaceViewSections.isDivider(view) {
-                let viewID = view.text("id")
-                let rows = [view] + view.list("nodes")
+            for view in views where !view.isDivider {
+                let viewID = view.id
+                let rows = [view.row] + view.nodes.map(\.row)
                 for row in rows {
-                    let itemID = row.text("id")
+                    let itemID = row.id
                     guard !itemID.isEmpty, seen.insert("\(machine.machineID):\(itemID)").inserted else { continue }
-                    let kind = row.text("kind")
-                    let title = row.text("name", fallback: row.text("title"))
+                    let kind = row.kind
+                    let title = row.title
                     result.append(
                         ProjectViewEntry(
                             target: ProjectViewTarget(
                                 machineID: machine.machineID, projectID: projectID, viewID: viewID, itemID: itemID),
                             machineName: machine.machineName, projectName: projectName,
                             title: title.isEmpty ? ProjectKinds.label(kind) : title, kind: kind,
-                            iconName: WorkspaceViewIcon.name(for: row),
+                            iconName: WorkspaceViewIcon.name(kind: kind, chosen: row.icon),
                             status: machine.attention.statuses[itemID],
                             unseen: machine.attention.unseen.contains(itemID),
                             requests: machine.attention.requests[itemID] ?? [],
@@ -223,35 +224,75 @@ struct NowBoard: Equatable {
     }
 
     /// The project and list row that hold a node, from a machine's `project.sidebar` entries.
-    static func locate(_ itemID: String, machineID: String, in projects: [JSONValue]) -> ProjectViewTarget? {
+    static func locate(_ itemID: String, machineID: String, in projects: [ProjectSidebarEntry]) -> ProjectViewTarget? {
         guard !itemID.isEmpty else { return nil }
         for project in projects {
-            guard let projectID = project["summary"]?.text("projectId"), let views = project["views"]?.arrayValue
-            else { continue }
-            for view in views where view.text("id") == itemID || view.list("nodes").contains(where: {
-                $0.text("id") == itemID
-            }) {
+            guard let views = project.views else { continue }
+            for view in views where view.id == itemID || view.nodes.contains(where: { $0.id == itemID }) {
                 return ProjectViewTarget(
-                    machineID: machineID, projectID: projectID, viewID: view.text("id"), itemID: itemID)
+                    machineID: machineID, projectID: project.summary.projectId, viewID: view.id, itemID: itemID)
             }
         }
         return nil
     }
 
     /// The row a target opens and its project's name, as the machine's `project.sidebar` entries last told them.
-    static func preview(_ target: ProjectViewTarget, in projects: [JSONValue]) -> ProjectViewPreview? {
+    static func preview(_ target: ProjectViewTarget, in projects: [ProjectSidebarEntry]) -> ProjectViewPreview? {
         guard
-            let project = projects.first(where: { $0["summary"]?.text("projectId") == target.projectID }),
-            let summary = project["summary"],
-            let view = project["views"]?.arrayValue?.first(where: { $0.text("id") == target.viewID }),
-            let item = ([view] + view.list("nodes")).first(where: { $0.text("id") == target.itemID })
+            let project = projects.first(where: { $0.summary.projectId == target.projectID }),
+            let view = project.views?.first(where: { $0.id == target.viewID })
         else { return nil }
-        return ProjectViewPreview(item: item, projectName: projectName(summary))
+        let item =
+            view.id == target.itemID
+            ? view.previewItem : view.nodes.first(where: { $0.id == target.itemID })?.previewItem
+        guard let item else { return nil }
+        return ProjectViewPreview(item: item, projectName: projectName(project.summary))
     }
 
-    private static func projectName(_ summary: JSONValue) -> String {
-        NewChat.isChats(summary)
+    private static func projectName(_ summary: ProjectSummary) -> String {
+        summary.isChats
             ? String(localized: "Chats", comment: "Name of the project that holds the chats outside any project")
-            : summary.text("name", fallback: String(localized: "Untitled project"))
+            : summary.name
+    }
+}
+
+/// What Now and Search show of a row in a project's list: a view, or a node on one of its canvases.
+struct ProjectSidebarRow {
+    let id: String
+    let kind: String
+    let title: String
+    /// The symbol a person picked for a view; a node has none.
+    let icon: String?
+}
+
+extension ProjectSidebarView {
+    var isDivider: Bool { ProjectKinds.isDivider(kind.rawValue) }
+
+    var row: ProjectSidebarRow {
+        ProjectSidebarRow(id: id, kind: kind.rawValue, title: name, icon: icon?.value)
+    }
+
+    /// The row as the project page reads a view before the project's own document has opened.
+    var previewItem: JSONValue {
+        var item: [String: JSONValue] = [
+            "id": .string(id), "name": .string(name), "kind": .string(kind.rawValue), "shared": .bool(shared),
+            "nodes": .array(nodes.map(\.previewItem)),
+        ]
+        if let icon { item["icon"] = .object(["kind": .string("lucide"), "value": .string(icon.value)]) }
+        if let provider { item["provider"] = .string(provider) }
+        if let path { item["path"] = .string(path) }
+        return .object(item)
+    }
+}
+
+extension ProjectSidebarNode {
+    var row: ProjectSidebarRow {
+        ProjectSidebarRow(id: id, kind: kind.rawValue, title: title, icon: nil)
+    }
+
+    var previewItem: JSONValue {
+        var item: [String: JSONValue] = ["id": .string(id), "title": .string(title), "kind": .string(kind.rawValue)]
+        if let provider { item["provider"] = .string(provider) }
+        return .object(item)
     }
 }

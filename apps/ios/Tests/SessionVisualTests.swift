@@ -166,7 +166,7 @@ final class SessionVisualTests: XCTestCase {
             let image = capture(window, name: name)
             if !signedIn { assertLogoVisible(image, name: name) }
             if signedIn {
-                XCTAssertEqual(model.open.map { $0.summary.text("name") }, ["Ruimte", "Flux", "Homey dashboard"])
+                XCTAssertEqual(model.open.map(\.summary.name), ["Ruimte", "Flux", "Homey dashboard"])
                 let recentHost = UIHostingController(
                     rootView: NavigationStack { RecentProjectsPage(runtime: runtime, projects: model) }
                         .tint(MobileStyle.accent)

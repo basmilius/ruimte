@@ -93,8 +93,7 @@ import XCTest
             ])
         case .projectNewChat:
             return .object([
-                "summary": .object(["projectId": .string("chats"), "scratch": .bool(true)]),
-                "viewId": .string("chat-1"),
+                "summary": ProjectRowWire.summary("chats", scratch: true), "viewId": .string("chat-1"),
             ])
         case .agentChildren:
             return .object(["nodeIds": .array([.string("c1"), .string("child")])])
