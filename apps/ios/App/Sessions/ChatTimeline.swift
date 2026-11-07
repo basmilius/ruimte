@@ -1374,7 +1374,8 @@ private struct ChatTimelineRow: View {
                     }
                 }
             case .compaction(let compaction):
-                ChatCompactionRule(preTokens: compaction.preTokens.map(Double.init))
+                ChatCompactionRule(
+                    preTokens: compaction.preTokens.map(Double.init), postTokens: compaction.postTokens.map(Double.init))
             }
         }.frame(maxWidth: .infinity, alignment: .leading)
     }

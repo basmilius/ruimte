@@ -6801,13 +6801,15 @@ public struct ChatCompactionItem: Codable, Sendable, Equatable {
     public let `turnId`: String?
     public let `kind`: String
     public let `preTokens`: Int64?
+    public let `postTokens`: Int64?
 
-    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "compaction", `preTokens`: Int64?) {
+    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "compaction", `preTokens`: Int64?, `postTokens`: Int64? = nil) {
         self.`id` = `id`
         self.`createdAt` = `createdAt`
         self.`turnId` = `turnId`
         self.`kind` = `kind`
         self.`preTokens` = `preTokens`
+        self.`postTokens` = `postTokens`
     }
 
     public init(from decoder: Decoder) throws {
@@ -6817,6 +6819,7 @@ public struct ChatCompactionItem: Codable, Sendable, Equatable {
         `turnId` = try container.decode(String?.self, forKey: .`turnId`)
         `kind` = try container.decode(String.self, forKey: .`kind`)
         `preTokens` = try container.decode(Int64?.self, forKey: .`preTokens`)
+        `postTokens` = try container.decodeIfPresent(Int64.self, forKey: .`postTokens`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -6826,6 +6829,7 @@ public struct ChatCompactionItem: Codable, Sendable, Equatable {
         try container.encode(`turnId`, forKey: .`turnId`)
         try container.encode(`kind`, forKey: .`kind`)
         try container.encode(`preTokens`, forKey: .`preTokens`)
+        try container.encodeIfPresent(`postTokens`, forKey: .`postTokens`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -6834,6 +6838,7 @@ public struct ChatCompactionItem: Codable, Sendable, Equatable {
         case `turnId` = "turnId"
         case `kind` = "kind"
         case `preTokens` = "preTokens"
+        case `postTokens` = "postTokens"
     }
 }
 
@@ -7294,8 +7299,9 @@ public struct ChatInfoUsage: Codable, Sendable, Equatable {
     public let `breakdown`: ChatInfoUsageBreakdown?
     public let `cacheTtlMs`: Int64?
     public let `cacheExpiresAt`: Double?
+    public let `contextPending`: Bool?
 
-    public init(`contextTokens`: Int64, `contextWindow`: Int64?, `costUsd`: Double, `turns`: Int64, `breakdown`: ChatInfoUsageBreakdown? = nil, `cacheTtlMs`: Int64? = nil, `cacheExpiresAt`: Double? = nil) {
+    public init(`contextTokens`: Int64, `contextWindow`: Int64?, `costUsd`: Double, `turns`: Int64, `breakdown`: ChatInfoUsageBreakdown? = nil, `cacheTtlMs`: Int64? = nil, `cacheExpiresAt`: Double? = nil, `contextPending`: Bool? = nil) {
         self.`contextTokens` = `contextTokens`
         self.`contextWindow` = `contextWindow`
         self.`costUsd` = `costUsd`
@@ -7303,6 +7309,7 @@ public struct ChatInfoUsage: Codable, Sendable, Equatable {
         self.`breakdown` = `breakdown`
         self.`cacheTtlMs` = `cacheTtlMs`
         self.`cacheExpiresAt` = `cacheExpiresAt`
+        self.`contextPending` = `contextPending`
     }
 
     public init(from decoder: Decoder) throws {
@@ -7314,6 +7321,7 @@ public struct ChatInfoUsage: Codable, Sendable, Equatable {
         `breakdown` = try container.decodeIfPresent(ChatInfoUsageBreakdown.self, forKey: .`breakdown`)
         `cacheTtlMs` = try container.decodeIfPresent(Int64.self, forKey: .`cacheTtlMs`)
         `cacheExpiresAt` = try container.decodeIfPresent(Double.self, forKey: .`cacheExpiresAt`)
+        `contextPending` = try container.decodeIfPresent(Bool.self, forKey: .`contextPending`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -7325,6 +7333,7 @@ public struct ChatInfoUsage: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`breakdown`, forKey: .`breakdown`)
         try container.encodeIfPresent(`cacheTtlMs`, forKey: .`cacheTtlMs`)
         try container.encodeIfPresent(`cacheExpiresAt`, forKey: .`cacheExpiresAt`)
+        try container.encodeIfPresent(`contextPending`, forKey: .`contextPending`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -7335,6 +7344,7 @@ public struct ChatInfoUsage: Codable, Sendable, Equatable {
         case `breakdown` = "breakdown"
         case `cacheTtlMs` = "cacheTtlMs"
         case `cacheExpiresAt` = "cacheExpiresAt"
+        case `contextPending` = "contextPending"
     }
 }
 

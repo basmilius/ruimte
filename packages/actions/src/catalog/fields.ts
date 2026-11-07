@@ -435,6 +435,7 @@ export const chatReadUsage = z.object({
     provider: AgentKindSchema,
     model: z.string().describe('The model the CLI reported, else the one picked for the chat'),
     contextTokens: z.number().int(),
+    contextPending: z.literal(true).optional().describe('Set after a compaction whose CLI named no size; contextTokens is 0 until the next reply'),
     contextWindow: z.number().int().nullable().describe('Null when the CLI named no window'),
     contextPercent: z.number().int().nullable().describe('How much of the window the context fills, in whole percent; null without a window'),
     cache: z

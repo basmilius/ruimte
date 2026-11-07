@@ -9783,6 +9783,26 @@
         }
       }
     },
+    "Context compacted from %@ to %@ tokens" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context gecomprimeerd van %1$@ tot %2$@ tokens"
+          }
+        }
+      }
+    },
+    "Context compacted to %@ tokens" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context gecomprimeerd tot %@ tokens"
+          }
+        }
+      }
+    },
     "Context used" : {
       "localizations" : {
         "nl" : {
@@ -19546,6 +19566,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bezig met uitloggen"
+          }
+        }
+      }
+    },
+    "Size known after the next reply" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grootte bekend na het volgende antwoord"
           }
         }
       }

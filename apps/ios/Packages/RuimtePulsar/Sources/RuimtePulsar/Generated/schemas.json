@@ -14856,6 +14856,10 @@
           },
           "cacheExpiresAt": {
             "type": "number"
+          },
+          "contextPending": {
+            "type": "boolean",
+            "const": true
           }
         },
         "required": [
@@ -16812,6 +16816,11 @@
                       "type": "null"
                     }
                   ]
+                },
+                "postTokens": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -17342,6 +17351,10 @@
               },
               "cacheExpiresAt": {
                 "type": "number"
+              },
+              "contextPending": {
+                "type": "boolean",
+                "const": true
               }
             },
             "required": [
@@ -19270,6 +19283,11 @@
                       "type": "null"
                     }
                   ]
+                },
+                "postTokens": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -20959,6 +20977,11 @@
                       "type": "null"
                     }
                   ]
+                },
+                "postTokens": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -22642,6 +22665,11 @@
                               "type": "null"
                             }
                           ]
+                        },
+                        "postTokens": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -23455,6 +23483,10 @@
                         },
                         "cacheExpiresAt": {
                           "type": "number"
+                        },
+                        "contextPending": {
+                          "type": "boolean",
+                          "const": true
                         }
                       },
                       "required": [
@@ -24131,6 +24163,10 @@
                         },
                         "cacheExpiresAt": {
                           "type": "number"
+                        },
+                        "contextPending": {
+                          "type": "boolean",
+                          "const": true
                         }
                       },
                       "required": [
@@ -26059,6 +26095,11 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "postTokens": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -28268,6 +28309,11 @@
                       "type": "null"
                     }
                   ]
+                },
+                "postTokens": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -29584,6 +29630,10 @@
           },
           "cacheExpiresAt": {
             "type": "number"
+          },
+          "contextPending": {
+            "type": "boolean",
+            "const": true
           }
         },
         "required": [
@@ -30594,6 +30644,10 @@
               },
               "cacheExpiresAt": {
                 "type": "number"
+              },
+              "contextPending": {
+                "type": "boolean",
+                "const": true
               }
             },
             "required": [
@@ -31383,6 +31437,10 @@
                   },
                   "cacheExpiresAt": {
                     "type": "number"
+                  },
+                  "contextPending": {
+                    "type": "boolean",
+                    "const": true
                   }
                 },
                 "required": [
@@ -33522,6 +33580,11 @@
                       "type": "null"
                     }
                   ]
+                },
+                "postTokens": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -68086,6 +68149,10 @@
                 },
                 "cacheExpiresAt": {
                   "type": "number"
+                },
+                "contextPending": {
+                  "type": "boolean",
+                  "const": true
                 }
               },
               "required": [
@@ -76685,6 +76752,11 @@
                             "type": "null"
                           }
                         ]
+                      },
+                      "postTokens": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [
@@ -77498,6 +77570,10 @@
                       },
                       "cacheExpiresAt": {
                         "type": "number"
+                      },
+                      "contextPending": {
+                        "type": "boolean",
+                        "const": true
                       }
                     },
                     "required": [
@@ -78174,6 +78250,10 @@
                       },
                       "cacheExpiresAt": {
                         "type": "number"
+                      },
+                      "contextPending": {
+                        "type": "boolean",
+                        "const": true
                       }
                     },
                     "required": [
@@ -80102,6 +80182,11 @@
                               "type": "null"
                             }
                           ]
+                        },
+                        "postTokens": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -80607,6 +80692,10 @@
               },
               "cacheExpiresAt": {
                 "type": "number"
+              },
+              "contextPending": {
+                "type": "boolean",
+                "const": true
               }
             },
             "required": [

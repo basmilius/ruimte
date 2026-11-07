@@ -6,13 +6,14 @@ export type ChatReadUsage = NonNullable<ActionOutput<'context.read'>['usage']>;
 export type ChatUsageInfo = Pick<ChatInfo, 'provider' | 'model' | 'selection' | 'usage'>;
 
 export function chatReadUsage(info: ChatUsageInfo, now: number): ChatReadUsage {
-    const { contextTokens, contextWindow, cacheExpiresAt, cacheTtlMs } = info.usage;
+    const { contextTokens, contextWindow, cacheExpiresAt, cacheTtlMs, contextPending } = info.usage;
     return {
         provider: info.provider,
         model: info.model ?? info.selection.model,
         contextTokens,
+        ...(contextPending === true ? { contextPending } : {}),
         contextWindow,
-        contextPercent: contextWindow === null ? null : Math.round((contextTokens / contextWindow) * 100),
+        contextPercent: contextWindow === null || contextPending === true ? null : Math.round((contextTokens / contextWindow) * 100),
         cache:
             cacheExpiresAt === undefined
                 ? null
@@ -49,9 +50,12 @@ function cacheText(cache: ChatReadUsage['cache']): string {
 
 /* The one line a chat read starts with, above the plans and the thread. */
 export function chatUsageLine(usage: ChatReadUsage): string {
+    // Right after a compaction without a size, 0 would read as an empty context.
     const context =
-        usage.contextWindow === null
-            ? `context ${usage.contextTokens} tokens`
-            : `context ${usage.contextTokens} of ${usage.contextWindow} tokens (${usage.contextPercent}%)`;
+        usage.contextPending === true
+            ? `context size unknown until the next reply after a compaction${usage.contextWindow === null ? '' : `, window ${usage.contextWindow} tokens`}`
+            : usage.contextWindow === null
+              ? `context ${usage.contextTokens} tokens`
+              : `context ${usage.contextTokens} of ${usage.contextWindow} tokens (${usage.contextPercent}%)`;
     return `> Usage: ${usage.provider} ${usage.model}, ${context}, ${cacheText(usage.cache)}`;
 }

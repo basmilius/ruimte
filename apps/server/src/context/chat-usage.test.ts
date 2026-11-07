@@ -21,6 +21,16 @@ describe('the usage line of a chat read', () => {
         );
     });
 
+    test('says the size is unknown right after a compaction that named none, rather than an empty context', () => {
+        const usage = chatReadUsage(info({ contextTokens: 0, contextWindow: 400_000, contextPending: true }), NOW);
+
+        expect(usage).toMatchObject({ contextTokens: 0, contextPending: true, contextPercent: null });
+        expect(chatUsageLine(usage)).toBe(
+            '> Usage: codex gpt-5.5, context size unknown until the next reply after a compaction, window 400000 tokens, prompt cache lifetime not reported'
+        );
+        expect(chatReadUsage(info(), NOW)).not.toHaveProperty('contextPending');
+    });
+
     test('names the picked model and leaves the window and the cache out when the CLI named neither', () => {
         expect(chatUsageLine(chatReadUsage(info({}, null), NOW))).toBe(
             '> Usage: codex gpt-5.5-picked, context 12345 tokens, prompt cache lifetime not reported'

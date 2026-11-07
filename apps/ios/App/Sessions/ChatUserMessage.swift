@@ -454,14 +454,23 @@ struct ChatForksRow: View {
 /// A compaction as a dashed rule: what stands above it is still there to read, but only a summary to the agent.
 struct ChatCompactionRule: View {
     let preTokens: Double?
+    var postTokens: Double? = nil
+
+    /// A size the CLI did not name is left out rather than guessed.
+    static func text(preTokens: Double?, postTokens: Double?) -> String {
+        switch (preTokens, postTokens) {
+        case let (pre?, post?):
+            String(localized: "Context compacted from \(Format.number(pre)) to \(Format.number(post)) tokens")
+        case let (pre?, nil): String(localized: "Context compacted from \(Format.number(pre)) tokens")
+        case let (nil, post?): String(localized: "Context compacted to \(Format.number(post)) tokens")
+        case (nil, nil): String(localized: "Context compacted")
+        }
+    }
 
     var body: some View {
         HStack(spacing: 12) {
             dash
-            Text(
-                preTokens.map { String(localized: "Context compacted from \(Format.number($0)) tokens") }
-                    ?? String(localized: "Context compacted")
-            )
+            Text(Self.text(preTokens: preTokens, postTokens: postTokens))
             .font(.caption).foregroundStyle(MobileStyle.faint).lineLimit(1).layoutPriority(1)
             dash
         }

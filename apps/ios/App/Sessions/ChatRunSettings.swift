@@ -77,6 +77,8 @@ struct ChatContextUsage: Equatable {
 
     let used: Double
     let window: Double?
+    /// After a compaction whose CLI named no size: `used` is 0 until the next reply, not an empty context.
+    let pending: Bool
 
     /// The id of the model option that sets the window's size.
     static let windowOption = "contextWindow"
@@ -85,6 +87,7 @@ struct ChatContextUsage: Equatable {
         used = Double(usage.contextTokens)
         window = usage.contextWindow.flatMap { $0 > 0 ? Double($0) : nil }
         breakdown = usage.breakdown
+        pending = usage.contextPending == true
     }
 
     private let breakdown: ChatInfoUsageBreakdown?
@@ -219,16 +222,20 @@ struct ChatRunSettings: View {
     private func contextSection(_ usage: ChatContextUsage) -> some View {
         Section("Context") {
             HStack {
-                HStack(spacing: 0) {
-                    Text(ChatContextUsage.tokens(usage.used)).fontWeight(.semibold)
-                    if let window = usage.window {
-                        Text(
-                            " of \(ChatContextUsage.tokens(window))",
-                            comment: "Follows the tokens used: the size of the context window"
-                        ).foregroundStyle(MobileStyle.muted)
+                if usage.pending {
+                    Text("Size known after the next reply").foregroundStyle(MobileStyle.muted)
+                } else {
+                    HStack(spacing: 0) {
+                        Text(ChatContextUsage.tokens(usage.used)).fontWeight(.semibold)
+                        if let window = usage.window {
+                            Text(
+                                " of \(ChatContextUsage.tokens(window))",
+                                comment: "Follows the tokens used: the size of the context window"
+                            ).foregroundStyle(MobileStyle.muted)
+                        }
                     }
+                    .monospacedDigit()
                 }
-                .monospacedDigit()
                 Spacer()
                 if let windowOption {
                     Picker(
@@ -247,7 +254,7 @@ struct ChatRunSettings: View {
                     .pickerStyle(.segmented).fixedSize()
                 }
             }
-            if usage.window != nil {
+            if usage.window != nil && !usage.pending {
                 ChatContextBar(usage: usage)
                     .accessibilityElement()
                     .accessibilityLabel("Context used")
