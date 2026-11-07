@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FS_LIST_MAX_ENTRIES } from '@ruimte/contracts';
-import { ListError, listDirectory } from './list.ts';
+import { ListError, listDirectory, listFailure } from './list.ts';
 
 let root: string;
 let outside: string;
@@ -106,5 +106,18 @@ describe('listDirectory', () => {
     test('answers with a code for what is not a folder', async () => {
         await expect(listDirectory(join(root, 'nowhere'))).rejects.toThrow(ListError);
         await expect(listDirectory(join(root, 'item2.txt'))).rejects.toThrow('not a folder');
+    });
+
+    test('only a folder that is not there is not-found; any other failure is not-readable', () => {
+        const failing = (code: string): NodeJS.ErrnoException => Object.assign(new Error(code), { code });
+
+        for (const code of ['ENOENT', 'ENOTDIR']) {
+            expect(listFailure(failing(code)).code).toBe('not-found');
+        }
+        for (const code of ['EACCES', 'EPERM', 'EIO', 'ELOOP']) {
+            expect(listFailure(failing(code)).code).toBe('not-readable');
+        }
+        expect(listFailure(new Error('no errno')).code).toBe('not-readable');
+        expect(listFailure(failing('EACCES')).message).toBe('That folder cannot be read');
     });
 });
