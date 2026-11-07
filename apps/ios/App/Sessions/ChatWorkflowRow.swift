@@ -360,7 +360,9 @@ private struct WorkflowAgentLine: View {
                 if failed {
                     Image(lucide: "x", size: 12).foregroundStyle(MobileStyle.statusError)
                 }
-                Image(lucide: "chevron-right", size: 12).opacity(opens ? 1 : 0)
+                if opens {
+                    Image(lucide: "chevron-right", size: 12)
+                }
             }
             .font(.caption).foregroundStyle(MobileStyle.faint).fixedSize()
             .frame(minHeight: 18)
