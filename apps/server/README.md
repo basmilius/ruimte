@@ -515,6 +515,8 @@ A browser upgrade is accepted from the daemon's own origin, `app://ruimte` and l
 
 A client with a key (the iPhone app) registers with `push.subscribe`, kept in `auth.json` so a revoke takes it along. The daemon decides every push (`src/push/service.ts`) and posts it signed and encrypted to the address book, which relays it to APNs (`apps/pulsar-worker/APNS.md`). Nothing goes to a client holding a socket, and a snoozed node raises nothing until its snooze ends. Each device picks the kinds it hears (`needs-you`, `turn`, `process`), per project if it likes; default is `needs-you`. A finished turn and a process warning have their own collapse ids, so they never replace an attention alert.
 
+A chat that stops on its plan's usage limit raises an attention alert instead of a finished turn, heard under `needs-you`: "Codex (Blis): weekly limit reached." The window comes from the plan reads (`usage.limits`), and the content carries `resetsAt` so the phone words when the limit lifts. It sets `timeSensitive` unless the machine takes the chat up again at the reset. One limit of one account (`src/push/limit-alert.ts`) pushes once until it lifts, or for an hour without a time, kept in memory only.
+
 Read state lives in `push-attention.json`; a client acknowledges what a focused window shows with `push.read`.
 
 ### One account per machine

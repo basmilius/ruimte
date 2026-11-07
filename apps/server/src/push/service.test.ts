@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
-import type { AgentRequest, AgentStatus, ChatRequestSummary, ProcessAlert, PushSubscribePayload, ServerFrame } from '@ruimte/contracts';
+import type { AgentRequest, AgentStatus, ChatRequestSummary, ChatTurnLimit, ProcessAlert, PushSubscribePayload, ServerFrame } from '@ruimte/contracts';
 import { PUSH_HKDF_SALT, pushEncryptionInfo, pushMessage, pushRoutingMessage, type PushEnvelope } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { AuthStore } from '../auth/auth-store.ts';
@@ -1061,5 +1061,158 @@ describe('a person at a desktop', () => {
         held.notify('chat', 'node', 'Agent', 'Look at this', { projectId: 'project', viewId: 'view' });
         await held.settled();
         expect(pushes.length).toBe(1);
+    });
+});
+
+describe('a chat stopped on a usage limit', () => {
+    const RESET = NOW + 3_600_000;
+    let now: number;
+    let timers: { at: number; run: () => void }[];
+    let resumes: boolean;
+    let snoozed: Set<string>;
+    let limited: PushService;
+
+    const advance = async (ms: number): Promise<void> => {
+        now += ms;
+        const due = timers.filter((timer) => timer.at <= now);
+        timers = timers.filter((timer) => timer.at > now);
+        due.forEach((timer) => timer.run());
+        await limited.settled();
+    };
+
+    const stop = (chatId: string, limit: ChatTurnLimit | undefined, account = 'blis'): void => {
+        for (const value of ['running', 'error'] as const) {
+            limited.consume({
+                event: 'chat.event',
+                payload: {
+                    chatId,
+                    event: {
+                        type: 'info',
+                        info: {
+                            chatId,
+                            provider: 'codex',
+                            account,
+                            cwd: home,
+                            agentSessionId: 'cli',
+                            model: null,
+                            selection: { model: 'default', options: {} },
+                            runtimeMode: 'supervised',
+                            status: value,
+                            running: true,
+                            activeTurnId: value === 'running' ? 'turn' : null,
+                            slashCommands: [],
+                            usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+                            ...(value === 'error' && limit ? { limit } : {}),
+                            createdAt: NOW
+                        }
+                    }
+                }
+            });
+        }
+    };
+
+    const alerts = (): Record<string, unknown>[] => pushes.filter((push) => push.pushType === 'alert').map((push) => decrypt(push) as Record<string, unknown>);
+
+    beforeEach(async () => {
+        now = NOW;
+        timers = [];
+        resumes = false;
+        snoozed = new Set();
+        await auth.setPush(sessionId, { ...subscription, followAll: true, notify: ['needs-you', 'turn'] });
+        limited = new PushService({
+            auth,
+            identity: { id: 'machine', sign: (text) => signMessage(machine.privateKey, text) },
+            now: () => now,
+            send: async (push) => {
+                pushes.push(push);
+                return 204;
+            },
+            schedule: (delayMs, run) => {
+                const timer = { at: now + delayMs, run };
+                timers.push(timer);
+                return () => {
+                    timers = timers.filter((entry) => entry !== timer);
+                };
+            },
+            snoozes: { isSnoozed: (nodeId) => snoozed.has(nodeId), noteStatus: () => undefined, observe: () => () => undefined },
+            limitContext: () => ({
+                providerName: 'Codex',
+                accountLabel: 'Blis',
+                windows: [{ id: 'weekly', kind: 'weekly', label: 'Weekly', used: 1, resetsAt: RESET, durationMs: null }],
+                resumes
+            })
+        });
+    });
+
+    afterEach(async () => {
+        await limited.settled();
+    });
+
+    test('raises one attention alert that names the limit and breaks through Focus, and no finished turn', async () => {
+        stop('chat', { kind: 'usage', resetsAt: RESET });
+        await limited.settled();
+        expect(alerts()).toEqual([
+            expect.objectContaining({ kind: 'attention', nodeId: 'chat', body: 'Codex (Blis): weekly limit reached.', timeSensitive: true, resetsAt: RESET })
+        ]);
+        expect(limited.attention.snapshot()).toMatchObject([{ nodeId: 'chat' }]);
+    });
+
+    test('ten chats on one account raise one alert, and another account its own', async () => {
+        for (let i = 0; i < 10; i++) {
+            stop(`chat-${i}`, { kind: 'usage', resetsAt: RESET + i * 1_000 });
+        }
+        stop('elsewhere', { kind: 'usage', resetsAt: RESET }, 'work');
+        await limited.settled();
+        expect(alerts().map((alert) => alert.nodeId)).toEqual(['chat-0', 'elsewhere']);
+    });
+
+    test('the same limit raises again once it lifted', async () => {
+        stop('chat', { kind: 'usage' });
+        await advance(3_600_000);
+        stop('chat', { kind: 'usage' });
+        await limited.settled();
+        expect(alerts().map((alert) => alert.resetsAt)).toEqual([undefined, undefined]);
+    });
+
+    test('an overload keeps the finished-turn push', async () => {
+        stop('chat', { kind: 'overload' });
+        await limited.settled();
+        expect(alerts()).toMatchObject([{ kind: 'turn', body: 'The agent stopped with an error.' }]);
+    });
+
+    test('a snoozed chat raises nothing', async () => {
+        snoozed.add('chat');
+        stop('chat', { kind: 'usage', resetsAt: RESET });
+        await limited.settled();
+        expect(alerts()).toEqual([]);
+    });
+
+    test('a chat that resumes on its own gets an ordinary push that still says when the limit lifts', async () => {
+        resumes = true;
+        stop('chat', { kind: 'usage', resetsAt: RESET });
+        await limited.settled();
+        expect(alerts()).toEqual([expect.not.objectContaining({ timeSensitive: true })]);
+        expect(alerts()[0]).toMatchObject({ resetsAt: RESET });
+    });
+
+    test('at a desk it waits a minute and goes out while unread', async () => {
+        limited.reportPresence('desktop', true);
+        stop('chat', { kind: 'usage', resetsAt: RESET });
+        await advance(59_000);
+        expect(alerts()).toEqual([]);
+        limited.reportPresence('desktop', true);
+        await advance(1_000);
+        expect(alerts()).toMatchObject([{ kind: 'attention', nodeId: 'chat' }]);
+    });
+
+    test('at a desk it stays back once the chat was read', async () => {
+        limited.reportPresence('desktop', true);
+        stop('chat', { kind: 'usage', resetsAt: RESET });
+        const entry = limited.attention.snapshot().find((candidate) => candidate.nodeId === 'chat')!;
+        limited.read('chat', entry.issuedAt);
+        await advance(30_000);
+        limited.reportPresence('desktop', true);
+        await advance(30_000);
+        expect(alerts()).toEqual([]);
     });
 });

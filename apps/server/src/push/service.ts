@@ -8,6 +8,7 @@ import {
     terminalWaitAsk,
     type WaitAsk,
     type ChatItem,
+    type ChatTurnLimit,
     type EventMap,
     type AgentStatus,
     type ProcessAlert,
@@ -30,6 +31,7 @@ import type { AuthStore } from '../auth/auth-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { PushAttention } from './attention.ts';
 import { encryptPush } from './encrypt.ts';
+import { limitBody, limitKey, limitWindow, type LimitContext } from './limit-alert.ts';
 import { processAlertBody } from './process-alert.ts';
 import type { SnoozeChange } from './snoozes.ts';
 
@@ -49,6 +51,14 @@ interface PushServiceOptions {
     onError?: (error: unknown) => void;
     snoozes?: Snoozes;
     schedule?: (delayMs: number, run: () => void) => () => void;
+    limitContext?: (chatId: string) => LimitContext | null;
+}
+
+/* The provider and account of a chat as it stopped, which `limitContext` names when it can. */
+interface ChatLimit {
+    limit: ChatTurnLimit;
+    provider: string;
+    account: string;
 }
 
 /* What the push side reads of `SnoozeStore`. */
@@ -86,6 +96,8 @@ const PRESENCE_LEASE_MS = 60_000;
 const HOLD_MS = 60_000;
 // Short, since an approval card on the phone expires after `APPROVAL_MAX_AGE_MS`.
 const APPROVAL_HOLD_MS = 10_000;
+// How long one limit without a reset time keeps its other chats quiet.
+const LIMIT_QUIET_MS = 3_600_000;
 
 /* What a subscription hears of for a node: the list its project has, else its own, else what every device heard before it could choose. */
 function notifyKinds(subscription: PushSubscribePayload, projectId: string | null): readonly PushNotifyKind[] {
@@ -120,6 +132,8 @@ export class PushService {
     private readonly activityTimes = new Map<string, { phase: string; at: number }>();
     /* The process warnings already pushed, so a warning that stays raised pushes once. */
     private readonly processAlertIds = new Set<string>();
+    /* The usage limits already pushed, by `limitKey`, with the time each lifts; a restart forgets them and costs one push more at most. */
+    private readonly limitAlerts = new Map<string, number>();
     private machineActivityQueue = Promise.resolve();
     private machineStartedAt = 0;
     private readonly machineActivityStates = new Map<string, string>();
@@ -235,7 +249,9 @@ export class PushService {
         } else if (event.event === 'chat.event') {
             const { chatId, event: chat } = event.payload;
             if (chat.type === 'info') {
-                this.status('chat', chatId, chat.info.status, chat.info.suggestedTitle ?? 'Agent', chatWaitAsk(chat.info.requests));
+                const { info } = chat;
+                const limit = info.limit ? { limit: info.limit, provider: info.provider, account: info.account ?? info.provider } : null;
+                this.status('chat', chatId, info.status, info.suggestedTitle ?? 'Agent', chatWaitAsk(info.requests), limit);
             } else if (chat.type === 'item' && chat.item.kind === 'tool' && chat.item.state === 'running') {
                 const node = this.nodes.get(chatId);
                 if (node) {
@@ -283,7 +299,14 @@ export class PushService {
         }
     }
 
-    private status(target: PushAlertContent['target'], nodeId: string, status: AgentStatus, title: string, ask: WaitAsk | null): void {
+    private status(
+        target: PushAlertContent['target'],
+        nodeId: string,
+        status: AgentStatus,
+        title: string,
+        ask: WaitAsk | null,
+        limit: ChatLimit | null = null
+    ): void {
         title = this.titleOf(nodeId, title);
         this.options.snoozes?.noteStatus(nodeId, status === 'needs-you');
         const previous = this.nodes.get(nodeId);
@@ -303,7 +326,11 @@ export class PushService {
         if (status === 'needs-you' && !this.snoozed(nodeId)) {
             this.waitAlert(target, nodeId, title);
         }
-        if (previous?.status === 'running' && (status === 'idle' || status === 'error') && !this.snoozed(nodeId)) {
+        const stopped = previous?.status === 'running' && (status === 'idle' || status === 'error') && !this.snoozed(nodeId);
+
+        if (stopped && limit?.limit.kind === 'usage') {
+            this.limitAlert(target, nodeId, title, limit);
+        } else if (stopped) {
             this.broadcast(
                 {
                     kind: 'turn',
@@ -384,6 +411,35 @@ export class PushService {
     /* Something a person has to step in on that no status says: a task that failed, a wake the daemon gave up on. */
     alert(target: PushAlertContent['target'], nodeId: string, title: string, body: string): void {
         this.enqueue(this.attentionContent(target, nodeId, title, body));
+    }
+
+    /*
+     * A chat stopped on its plan's usage limit: an attention alert, since the work stands still until someone
+     * acts. The first chat on one limit of one account raises it and the rest stay quiet until it lifts.
+     */
+    private limitAlert(target: PushAlertContent['target'], nodeId: string, title: string, { limit, provider, account }: ChatLimit): void {
+        const now = this.now();
+
+        for (const [key, until] of this.limitAlerts) {
+            if (until <= now) {
+                this.limitAlerts.delete(key);
+            }
+        }
+
+        const key = limitKey(provider, account, limit.resetsAt);
+
+        if (this.limitAlerts.has(key)) {
+            return;
+        }
+
+        this.limitAlerts.set(key, limit.resetsAt !== undefined && limit.resetsAt > now ? limit.resetsAt : now + LIMIT_QUIET_MS);
+        const context = this.options.limitContext?.(nodeId) ?? null;
+        const body = limitBody(context, limitWindow(context?.windows ?? [], limit.resetsAt));
+        this.enqueue({
+            ...this.attentionContent(target, nodeId, title, body),
+            ...(context?.resumes ? {} : { timeSensitive: true }),
+            ...(limit.resetsAt === undefined ? {} : { resetsAt: Math.round(limit.resetsAt) })
+        });
     }
 
     private waitAlert(target: PushAlertContent['target'], nodeId: string, title: string): void {

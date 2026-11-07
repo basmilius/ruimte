@@ -3167,8 +3167,10 @@ public struct PushAlertContent: Codable, Sendable, Equatable {
     public let `requestId`: String?
     public let `choices`: [PushAlertContentChoicesItem]?
     public let `expiresAt`: Int64
+    public let `timeSensitive`: Bool?
+    public let `resetsAt`: Int64?
 
-    public init(`kind`: PushAlertContentKind, `target`: PushAlertContentTarget, `nodeId`: String, `title`: String, `body`: String, `requestId`: String? = nil, `choices`: [PushAlertContentChoicesItem]? = nil, `expiresAt`: Int64) {
+    public init(`kind`: PushAlertContentKind, `target`: PushAlertContentTarget, `nodeId`: String, `title`: String, `body`: String, `requestId`: String? = nil, `choices`: [PushAlertContentChoicesItem]? = nil, `expiresAt`: Int64, `timeSensitive`: Bool? = nil, `resetsAt`: Int64? = nil) {
         self.`kind` = `kind`
         self.`target` = `target`
         self.`nodeId` = `nodeId`
@@ -3177,6 +3179,8 @@ public struct PushAlertContent: Codable, Sendable, Equatable {
         self.`requestId` = `requestId`
         self.`choices` = `choices`
         self.`expiresAt` = `expiresAt`
+        self.`timeSensitive` = `timeSensitive`
+        self.`resetsAt` = `resetsAt`
     }
 
     public init(from decoder: Decoder) throws {
@@ -3190,6 +3194,8 @@ public struct PushAlertContent: Codable, Sendable, Equatable {
         `requestId` = try container.decodeIfPresent(String.self, forKey: .`requestId`)
         `choices` = try container.decodeIfPresent([PushAlertContentChoicesItem].self, forKey: .`choices`)
         `expiresAt` = try container.decode(Int64.self, forKey: .`expiresAt`)
+        `timeSensitive` = try container.decodeIfPresent(Bool.self, forKey: .`timeSensitive`)
+        `resetsAt` = try container.decodeIfPresent(Int64.self, forKey: .`resetsAt`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -3202,6 +3208,8 @@ public struct PushAlertContent: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`requestId`, forKey: .`requestId`)
         try container.encodeIfPresent(`choices`, forKey: .`choices`)
         try container.encode(`expiresAt`, forKey: .`expiresAt`)
+        try container.encodeIfPresent(`timeSensitive`, forKey: .`timeSensitive`)
+        try container.encodeIfPresent(`resetsAt`, forKey: .`resetsAt`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -3213,6 +3221,8 @@ public struct PushAlertContent: Codable, Sendable, Equatable {
         case `requestId` = "requestId"
         case `choices` = "choices"
         case `expiresAt` = "expiresAt"
+        case `timeSensitive` = "timeSensitive"
+        case `resetsAt` = "resetsAt"
     }
 }
 

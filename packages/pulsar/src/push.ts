@@ -33,7 +33,11 @@ export const PushAlertContentSchema = z.object({
         .array(z.object({ id: z.string().max(256), kind: z.enum(['allow', 'remember', 'deny']), label: z.string().max(80) }))
         .max(8)
         .optional(),
-    expiresAt: z.number().int().nonnegative()
+    expiresAt: z.number().int().nonnegative(),
+    // Breaks through Focus, for a stop nothing but the person ends.
+    timeSensitive: z.boolean().optional(),
+    // When a usage limit lifts, in epoch milliseconds; the device words the time in its own language and region.
+    resetsAt: z.number().int().nonnegative().optional()
 });
 export type PushAlertContent = z.infer<typeof PushAlertContentSchema>;
 

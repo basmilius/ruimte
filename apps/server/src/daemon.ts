@@ -190,7 +190,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     });
 
     const { sessions, chats } = agents;
-    const push = wirePush(home, machine.auth, identity, agents, projects.store, work.snoozes);
+    const push = wirePush(home, machine.auth, identity, agents, projects.store, work.snoozes, usage);
     sessions.observe((event) => push.consume(event));
     sessions.observe((event) => work.tasks.terminals.sessionEvent(event));
     chats.observe((event) => push.consume(event));

@@ -11,3 +11,4 @@ Decisions the code cannot show. Do not reverse one without asking Bas.
 - A finished turn or a process warning that came due while the person stayed goes nowhere.
 - Once the person leaves, everything still held goes out at once.
 - An alert someone asked for (`alert`) never waits.
+- A chat that stops on a usage limit raises an attention alert, never a finished turn: it waits at a desk like any other and goes out under `needs-you`, once per limit of an account. It breaks through Focus (`timeSensitive`) unless the machine resumes the chat at the reset. An overload stays a finished turn, and a window a read sees at 100% or a terminal raises nothing of the kind. There is no second push when the limit lifts.
