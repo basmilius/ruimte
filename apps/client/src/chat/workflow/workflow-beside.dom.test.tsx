@@ -144,6 +144,7 @@ describe('a chat node that runs a workflow', () => {
         // One still waiting has no conversation to open.
         const waiting = verify.querySelector<HTMLButtonElement>('[data-workflow-agent="2"]')!;
         expect(waiting.disabled).toBe(true);
+        expect(waiting.querySelector('.lucide-chevron-right')).toBeNull();
         expect(verify.querySelector('[data-workflow-agent="1"] .lucide-chevron-right')).not.toBeNull();
         expect(machine.requests('chat.subagent')).toEqual([]);
     });
