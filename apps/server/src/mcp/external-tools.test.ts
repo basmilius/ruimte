@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { DEFAULT_EXTERNAL_CEILING, type ExternalGrant, type ExternalTier } from '@ruimte/contracts';
+import { ContextRefusal } from '../context/context-store.ts';
 import { canvasFixture, folder, host, lineage, onDisk, projectId, started } from '../tools/canvas-test-fixture.ts';
 import type { CanvasHost } from '../tools/host.ts';
 import { externalActorId, isExternalActor, type ExternalCaller } from './caller.ts';
@@ -35,6 +36,10 @@ function machine(): CanvasHost {
         },
         context: {
             ...base.context!,
+            // Nothing is linked to a client elsewhere, which is how the store answers an id it reads over no line.
+            answer: async (_targetId, sourceId) => {
+                throw new ContextRefusal('unknown-source', `${sourceId} is not linked to you`);
+            },
             answerSource: async () => ({ text: 'the body of the note' }) as never
         }
     };
@@ -183,6 +188,28 @@ describe('a client elsewhere reads', () => {
 
         expect(refused).toBe(false);
         expect(text).toContain('the body of the note');
+    });
+
+    test('reads a chat of the sidebar and a terminal of a canvas without naming a canvas', async () => {
+        const chat = await call(caller('read'), 'context_read', { project: projectId, id: 'chat-1' });
+        const terminal = await call(caller('read'), 'context_read', { project: projectId, id: 'term-1' });
+
+        expect(chat).toEqual({ refused: false, text: 'the body of the note' });
+        expect(terminal).toEqual({ refused: false, text: 'the body of the note' });
+    });
+
+    test('still names the canvas for any other node', async () => {
+        const { refused, text } = await call(caller('read'), 'context_read', { project: projectId, id: 'note-1' });
+
+        expect(refused).toBe(true);
+        expect(text).toContain('refused view-required');
+    });
+
+    test('reads no chat of a project outside the scope', async () => {
+        const { refused, text } = await call(caller('read', { projects: ['someone-else'] }), 'context_read', { project: projectId, id: 'chat-1' });
+
+        expect(refused).toBe(true);
+        expect(text).toContain('refused project-out-of-scope');
     });
 });
 

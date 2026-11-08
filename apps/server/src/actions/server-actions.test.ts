@@ -639,6 +639,8 @@ describe('a chat view', () => {
         withChatView();
         expect(await read('term-1', 'term-2', null)).toMatchObject({ status: 'failed', error: { code: 'unknown-source' } });
         expect(await read('term-1', 'term-2', 'main')).toMatchObject({ status: 'failed', error: { code: 'not-a-chat-view' } });
+        // Only a client elsewhere reads every chat and terminal of a project without a line.
+        expect(await read('term-1', 'chat-v', null)).toMatchObject({ status: 'failed', error: { code: 'unknown-source' } });
     });
 
     test('drives a page of the canvas it names, and is refused one without view or on another canvas', async () => {

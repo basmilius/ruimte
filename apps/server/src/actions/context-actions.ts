@@ -10,6 +10,9 @@ import { snoozedAt, type ContextHost } from '../tools/host.ts';
 import { refuseOtherMachine } from '../tools/remote-node.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
+/* What a client elsewhere reads in a project of its scope without naming a canvas. */
+const EXTERNAL_KINDS: ReadonlySet<string> = new Set(['chat', 'terminal']);
+
 function contextOf(context: ServerActionContext): ContextHost {
     return hostService(context, 'context', 'no-context', 'This machine keeps no linked context');
 }
@@ -50,9 +53,28 @@ async function reachedReference({ host, place }: ServerActionContext, sourceId: 
     return reference;
 }
 
+/*
+ * The chat or terminal an id names in the project of a client elsewhere, read without view or line: a person gave
+ * the credential every chat and terminal of the projects in its scope to read. Any other node still needs its canvas.
+ */
+async function externalSource({ host, place }: ServerActionContext, sourceId: string): Promise<ContextSource | null> {
+    const content = await host.projects.read(place.projectId);
+    const views = content.views.filter((view) => !isHiddenCanvasView(view));
+    const reference = resolveReference(views, sourceId, place.folder);
+
+    if (reference === null || !EXTERNAL_KINDS.has(reference.kind)) {
+        return null;
+    }
+
+    const source = reference.sources.find((candidate) => candidate.id === sourceId || candidate.nodeId === sourceId) ?? reference.sources[0];
+
+    return source !== undefined && EXTERNAL_KINDS.has(source.kind) ? source : null;
+}
+
 /* Why a chat view's read of a node found nothing: it named no canvas, which is what stands in for a line. */
-async function chatViewRefusal({ host }: ServerActionContext, caller: string, sourceId: string): Promise<ToolRefusal | null> {
-    const place = host.projects.locate(caller);
+async function chatViewRefusal({ host, place: reached, external }: ServerActionContext, caller: string, sourceId: string): Promise<ToolRefusal | null> {
+    // A client elsewhere stands in no project, so the one it named is where it looked.
+    const place = external === undefined ? host.projects.locate(caller) : reached;
     if (place === null) {
         return null;
     }
@@ -92,6 +114,13 @@ export const contextActions: ActionHandlers<ServerActionContext> = {
                 return { output: await readInForm(context, actor.id, source, form) };
             }
             return { output: await store.answerSource(actor.id, source, tail ?? null, subagent ?? null, context.place.projectId) };
+        }
+        const external = context.external !== undefined && viewId == null ? await externalSource(context, sourceId) : null;
+        if (external !== null) {
+            if (form != null) {
+                return { output: await readInForm(context, actor.id, external, form) };
+            }
+            return { output: await store.answerSource(actor.id, external, tail ?? null, subagent ?? null, context.place.projectId) };
         }
         const whole = store
             .referenced?.(actor.id)
