@@ -2,12 +2,19 @@ import { cancellableTimeout, Serializer } from '@adecore/utils/async';
 import type { TunnelNamed, TunnelRowKind, TunnelStage, TunnelState } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 import type { JsonFileStore } from '../json-file-store.ts';
-import { CloudflareApi, CloudflareError, type CloudflareFetch, type CloudflareRecord, type CloudflareZone } from './cloudflare-api.ts';
+import {
+    CloudflareApi,
+    CloudflareError,
+    type CloudflareFetch,
+    type CloudflareIngressRule,
+    type CloudflareRecord,
+    type CloudflareZone
+} from './cloudflare-api.ts';
 import type { CloudflareTokenStore } from './cloudflare-token-store.ts';
 import type { CloudflaredInstaller } from './cloudflared-installer.ts';
 import type { CloudflaredProcess, CloudflaredRunner } from './cloudflared-runner.ts';
 import { CATCH_ALL, deniedPortReason, hostnameInZone, ingressRules, isCatchAll, TunnelConfigError, tunnelNameOf } from './tunnel-config.ts';
-import { EMPTY_TUNNELS, type StoredTunnels } from './tunnel-store.ts';
+import { EMPTY_TUNNELS, type StoredRow, type StoredTunnels } from './tunnel-store.ts';
 
 const MAX_MESSAGE = 500;
 const STOP_WAIT_MS = 10_000;
@@ -421,15 +428,14 @@ export class TunnelService {
         }
 
         await this.jobs.run(async () => {
-            this.stored = {
-                ...this.stored,
-                rows: this.stored.rows.map((candidate) => (candidate.id === id ? { ...candidate, ...change } : candidate))
-            };
-            this.save();
+            const rows = this.stored.rows.map((candidate) => (candidate.id === id ? { ...candidate, ...change } : candidate));
 
             if (change.enabled !== undefined) {
-                await this.syncIngress();
+                await this.syncRows(rows);
             }
+
+            this.stored = { ...this.stored, rows };
+            this.save();
         });
 
         if (change.enabled !== undefined) {
@@ -456,10 +462,11 @@ export class TunnelService {
             }
 
             const api = this.api();
+            const released = this.stored.rows.map((candidate) => (candidate.id === id ? { ...candidate, enabled: false } : candidate));
 
-            this.stored = { ...this.stored, rows: this.stored.rows.map((candidate) => (candidate.id === id ? { ...candidate, enabled: false } : candidate)) };
+            await this.syncRows(released);
+            this.stored = { ...this.stored, rows: released };
             this.save();
-            await this.syncIngress([row.hostname]);
 
             const target = this.targetOf(tunnel.id);
             const live = (await api.recordsNamed(row.zoneId, row.hostname)).find((record) => record.id === row.recordId);
@@ -623,10 +630,33 @@ export class TunnelService {
     }
 
     /*
-     * Writes the hostnames of the rows that are on into the tunnel's ingress in Cloudflare. A rule for a hostname Ruimte
-     * does not manage stays as it was; `released` names hostnames of rows that just went, whose rules must go with them.
+     * Writes the ingress of rows that are not saved yet, so they are saved only once Cloudflare took them. On a refusal
+     * the saved rows stay, the screen says why, and a child with no hostname left to serve stops, since a route that
+     * may still be public is the unsafe side.
      */
-    private async syncIngress(released: readonly string[] = []): Promise<void> {
+    private async syncRows(rows: readonly StoredRow[]): Promise<void> {
+        try {
+            await this.syncIngress(rows);
+        } catch (e) {
+            this.failure = this.plain(e, 'Saving the hostnames did not work');
+            this.ports.log(`Tunnels: ${this.failure}`);
+
+            if (!this.isLive(rows)) {
+                await this.stopChild().catch(() => undefined);
+            }
+
+            this.announce();
+
+            throw e;
+        }
+    }
+
+    /*
+     * Writes the hostnames of the rows that are on into the tunnel's ingress in Cloudflare. Ruimte owns only the rule
+     * without a path for each hostname of a row, on or off; every other rule stays as it was, and so does a catch-all
+     * someone set in the dashboard.
+     */
+    private async syncIngress(rows: readonly StoredRow[] = this.stored.rows): Promise<void> {
         const tunnel = this.stored.tunnel;
 
         if (tunnel === null) {
@@ -635,21 +665,23 @@ export class TunnelService {
 
         const api = this.api();
         const current = await api.ingress(tunnel.account.id, tunnel.id);
-        const managed = new Set([...this.stored.rows.map((row) => row.hostname), ...released]);
-        const foreign = current.filter((rule) => !isCatchAll(rule) && !(typeof rule.hostname === 'string' && managed.has(rule.hostname)));
+        const managed = new Set(rows.map((row) => row.hostname));
+        const isOurs = (rule: CloudflareIngressRule): boolean => typeof rule.hostname === 'string' && rule.path === undefined && managed.has(rule.hostname);
+        const kept = current.filter((rule) => !isCatchAll(rule) && !isOurs(rule));
+        const catchAll = current.find((rule) => isCatchAll(rule)) ?? CATCH_ALL;
         const rules = ingressRules({
-            rows: this.stored.rows,
+            rows,
             listenerPort: this.stored.mcp.enabled ? this.ports.listenerPort() : null,
             denied: this.ports.deniedPorts()
         });
 
-        await api.putIngress(tunnel.account.id, tunnel.id, [...foreign, ...rules.map((rule) => ({ ...rule })), { ...CATCH_ALL }]);
+        await api.putIngress(tunnel.account.id, tunnel.id, [...kept, ...rules.map((rule) => ({ ...rule })), { ...catchAll }]);
     }
 
-    private isLive(): boolean {
+    private isLive(rows: readonly StoredRow[] = this.stored.rows): boolean {
         const listenerPort = this.stored.mcp.enabled ? this.ports.listenerPort() : null;
 
-        return this.stored.rows.some((row) => row.enabled && (row.kind === 'dev' || listenerPort !== null));
+        return rows.some((row) => row.enabled && (row.kind === 'dev' || listenerPort !== null));
     }
 
     /* A tunnel that Cloudflare keeps the hostnames of needs no restart for a change: the child runs while any hostname is on. */

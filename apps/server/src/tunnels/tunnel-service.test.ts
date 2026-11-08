@@ -479,6 +479,50 @@ describe('a row', () => {
         expect(hostnamesOf(f)).toEqual(['a.bmnw.nl', 'http_status:404']);
         expect(f.runner.running).toBe(1);
     });
+
+    test('keeps a hostname on that Cloudflare would not take off, says why and stops the child it was the last one of', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 });
+        await f.service.idle();
+
+        const row = (await f.state()).rows[0]!;
+
+        f.cloudflare.failing.set('PUT /accounts/acc-1/cfd_tunnel', 500);
+
+        await expect(f.service.update(row.id, { enabled: false })).rejects.toBeInstanceOf(CloudflareError);
+
+        await f.service.idle();
+
+        const state = await f.state();
+
+        expect(state.stage).toBe('failed');
+        expect(state.message).toContain("Saving the tunnel's hostnames failed");
+        expect(state.rows[0]!.enabled).toBe(true);
+        expect(hostnamesOf(f)).toEqual(['a.bmnw.nl', 'http_status:404']);
+        expect(f.runner.running).toBe(0);
+    });
+
+    test('leaves the rules of the dashboard on a hostname of its own with a path, and the catch-all it set', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        ourTunnel(f).ingress = [{ hostname: 'a.bmnw.nl', path: '/api', service: 'http://localhost:9000' }, { service: 'http_status:503' }];
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 });
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress).toEqual([
+            { hostname: 'a.bmnw.nl', path: '/api', service: 'http://localhost:9000' },
+            { hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' },
+            { service: 'http_status:503' }
+        ]);
+
+        await f.service.update((await f.state()).rows[0]!.id, { enabled: false });
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress).toEqual([{ hostname: 'a.bmnw.nl', path: '/api', service: 'http://localhost:9000' }, { service: 'http_status:503' }]);
+    });
 });
 
 describe('removal', () => {
@@ -514,6 +558,26 @@ describe('removal', () => {
 
         expect(f.runner.running).toBe(0);
         expect(f.cloudflare.called('DELETE', '/zones/')).toHaveLength(2);
+    });
+
+    test('keeps a row and its record that Cloudflare would not take off the tunnel, and says why', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 });
+        await f.service.idle();
+        f.cloudflare.failing.set('PUT /accounts/acc-1/cfd_tunnel', 500);
+
+        await expect(f.service.remove((await f.state()).rows[0]!.id)).rejects.toBeInstanceOf(CloudflareError);
+
+        await f.service.idle();
+
+        const state = await f.state();
+
+        expect(state.stage).toBe('failed');
+        expect(state.rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: true }]);
+        expect(f.cloudflare.records).toHaveLength(1);
+        expect(f.runner.running).toBe(0);
     });
 
     test('leaves a record alone that a person since pointed somewhere else', async () => {
