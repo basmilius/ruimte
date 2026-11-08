@@ -1,6 +1,6 @@
 import { deliverToChat, MAX_MESSAGE_HOPS, type ChatDelivery, type ChatNoticeTargets, type MessageWords } from '@adecore/agents/coordination';
 import type { Notice, NoticeStore } from '@adecore/agents/coordination';
-import type { AgentInfo } from '@ruimte/contracts';
+import { isExternalActor, type AgentInfo } from '@ruimte/contracts';
 import { takesHookContext } from '../agents/hooks.ts';
 
 /* What the receiving agent hears: the id to act on, the title to read, and the message itself. */
@@ -13,12 +13,28 @@ export function noticeNote(notice: Notice): string {
     return `${notice.fromTitle === '' ? `Node ${notice.from}` : notice.fromTitle} sent a message: ${notice.text}`;
 }
 
+/* Who sent the messages above: agents of this project, or the person's external MCP client by the name it signs with. */
+function senders(count: number, notices: readonly Notice[]): string {
+    const external = notices.filter((notice) => isExternalActor(notice.from));
+    const agents = count - external.length;
+    const above = count === 1 ? 'the message above' : 'the messages above';
+    const fromAgents = agents === 1 ? 'Another agent of this project' : `${agents} agents of this project`;
+
+    if (external.length === 0) {
+        return `${fromAgents} sent you ${above}`;
+    }
+
+    const clients = `external MCP client ${[...new Set(external.map((notice) => `"${notice.fromTitle}"`))].join(', ')}`;
+
+    return agents === 0 ? `The person's ${clients} sent you ${above}` : `${fromAgents} and the person's ${clients} sent you ${above}`;
+}
+
 /*
  * What the CLI is sent under the messages in the preamble. The last sentence is the rule the daemon
  * enforces; without it an agent answers and then waits for a reply that never comes on its own.
  */
-export function messageText(count: number): string {
-    return `${count === 1 ? 'Another agent of this project sent you the message above' : `${count} agents of this project sent you the messages above`}. Act on it, and answer with notify if you were asked something. Agents reading each other wake each other a few times; past that a message waits until its node takes a turn for another reason, and the answer to your notify says so.`;
+export function messageText(count: number, notices: readonly Notice[] = []): string {
+    return `${senders(count, notices)}. Act on it, and answer with notify if you were asked something. Agents reading each other wake each other a few times; past that a message waits until its node takes a turn for another reason, and the answer to your notify says so.`;
 }
 
 /* What a person reads above the turn in the thread: who it came from, by the name they see on the canvas. */
