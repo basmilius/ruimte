@@ -399,6 +399,7 @@ exports[`every reply and event field keeps its vocabulary 1`] = `
   "reply chat.subagent #/properties/source = ["claude-transcript", "codex-thread"]",
   "reply chat.turnDiff #/properties/diff/anyOf/0/properties/files/items/properties/kind = ["add", "delete", "update"]",
   "reply chat.turnDiff #/properties/diff/anyOf/0/properties/files/items/properties/omitted = ["binary", "too-large"]",
+  "reply client.list #/properties/clients/items/properties/reachability = ["lan", "loopback", "public", "tunnel"]",
   "reply computer.approvals #/properties/approvals/items/properties/surface = ["chat", "terminal"]",
   "reply computer.control #/properties/session/anyOf/0/properties/mode = ["paused", "running", "takenOver"]",
   "reply computer.requestGrant #/properties/session/anyOf/0/properties/mode = ["paused", "running", "takenOver"]",

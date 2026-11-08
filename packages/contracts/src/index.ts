@@ -37,6 +37,7 @@ import {
 import {
     AuthRevokePayloadSchema,
     AuthSessionsResultSchema,
+    ClientListResultSchema,
     EndpointChangedEventSchema,
     EndpointClosedLidRulePayloadSchema,
     EndpointInfoPayloadSchema,
@@ -1016,6 +1017,10 @@ export const REQUEST_SCHEMAS = {
     'consent.answer': { payload: ConsentAnswerPayloadSchema, result: ConsentAnswerResultSchema },
     'auth.sessions': { payload: EmptySchema, result: AuthSessionsResultSchema },
     'auth.revoke': { payload: AuthRevokePayloadSchema, result: EmptySchema },
+    // Who is connected now; a person's own, so none of these is on a peer's list.
+    'client.list': { payload: EmptySchema, result: ClientListResultSchema },
+    'client.watch': { payload: EmptySchema, result: EmptySchema },
+    'client.unwatch': { payload: EmptySchema, result: EmptySchema },
     'direct.signal': { payload: DirectSignalPayloadSchema, result: EmptySchema },
     'chat.kill': AGENT_REQUEST_SCHEMAS['chat.kill'],
     'chat.restart': AGENT_REQUEST_SCHEMAS['chat.restart'],
@@ -1082,6 +1087,8 @@ export const EVENT_SCHEMAS = {
     'peer.changed': EmptySchema,
     // Tunnels or the external MCP changed, or a credential was used after a minute of quiet; every client reloads what it shows.
     'tunnel.changed': EmptySchema,
+    // A client connected, left or told of itself, or an external MCP client became active; only to the clients that asked with `client.watch`.
+    'client.changed': EmptySchema,
     'consent.changed': EmptySchema,
     // A port was shared or revoked, to every client, which asks `port.list` again.
     'port.changed': EmptySchema,

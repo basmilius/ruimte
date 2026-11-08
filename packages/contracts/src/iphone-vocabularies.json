@@ -995,6 +995,7 @@
     "request.chat.subagent.result #/properties/source": ["claude-transcript", "codex-thread"],
     "request.chat.turnDiff.result #/properties/diff/anyOf/0/properties/files/items/properties/kind": ["add", "delete", "update"],
     "request.chat.turnDiff.result #/properties/diff/anyOf/0/properties/files/items/properties/omitted": ["binary", "too-large"],
+    "request.client.list.result #/properties/clients/items/properties/reachability": ["lan", "loopback", "public", "tunnel"],
     "request.computer.approvals.result #/properties/approvals/items/properties/surface": ["chat", "terminal"],
     "request.computer.control.result #/properties/session/anyOf/0/properties/mode": ["paused", "running", "takenOver"],
     "request.computer.requestGrant.result #/properties/session/anyOf/0/properties/mode": ["paused", "running", "takenOver"],

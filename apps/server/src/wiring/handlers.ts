@@ -7,6 +7,7 @@ import { ExternalChatSessions, ownSessionSources } from '../chat/external.ts';
 import { chatForkDeps, forkChat, readForkInfo, readHandoff } from '../chat/fork.ts';
 import { ChatImageFiles } from '../chat/image-files.ts';
 import { chatsLocatedIn, chatsOfViews, ProjectChatSearch } from '../chat/project-search.ts';
+import type { ConnectedClients } from '../clients/connected-clients.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import { readServedFile } from '../fs/read.ts';
@@ -98,6 +99,7 @@ interface HandlersInput {
     remote: RemoteBundle;
     stats: UsageStatsBundle;
     artifacts: ArtifactsBundle;
+    connected: ConnectedClients;
     later: {
         network(): NetworkBundle;
         clients(): ClientsBundle;
@@ -354,6 +356,7 @@ export async function registerHandlers(dispatcher: Dispatcher, input: HandlersIn
             requestInstall: () => power.updates.requestInstall(),
             ending: () => workEndedByInstall(config.underService, processes.machineWork())
         },
+        announce: (clientId, payload) => input.connected.announce(clientId, payload),
         validateTextModel: (choice) => agents.textModels.validate(choice),
         resumeChanged: (on) => {
             chats.resumeSettingChanged();

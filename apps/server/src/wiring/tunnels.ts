@@ -49,6 +49,8 @@ interface TunnelsInput {
     launches: Pick<LaunchesBundle, 'store' | 'agentHost'>;
     routines: Pick<RoutinesBundle, 'routines'>;
     machineId: string;
+    /* Called when an external client is used after a minute of quiet, so the list of connected clients reads again. */
+    externalUsed?(): void;
     /* The port the API answers on, which is not `config.port` when the system picked one. */
     later: { apiPort(): number };
 }
@@ -62,7 +64,10 @@ export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
         home: config.home,
         now: Date.now,
         random: (bytes) => randomBytes(bytes).toString('base64url'),
-        used: changed
+        used: () => {
+            changed();
+            input.externalUsed?.();
+        }
     });
     await credentials.load();
     const consent = new ConsentBook({

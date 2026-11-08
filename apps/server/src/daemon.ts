@@ -4,6 +4,7 @@ import { serverActions } from './actions/server-actions.ts';
 import { HOOKS_PATH } from './agents/hook-receiver.ts';
 import { pruneHiddenChats } from './agents/prune-hidden-chats.ts';
 import { greetingLines } from './cli/greeting.ts';
+import { ConnectedClients } from './clients/connected-clients.ts';
 import type { ServerConfig } from './config.ts';
 import { CONTEXT_PATH } from './context/context-store.ts';
 import { Dispatcher } from './dispatcher.ts';
@@ -14,6 +15,7 @@ import type { ExtensionAsks, ExtensionHostOptions } from './extensions/extension
 import { runMachineAction, outputOf } from './extensions/machine-actions.ts';
 import { ExtensionRefusal } from './extensions/refusal.ts';
 import { ExtensionStore } from './extensions/store.ts';
+import { registerClientHandlers } from './handlers/client.ts';
 import { registerExtensionChatRead } from './handlers/extension-chat-read.ts';
 import { registerExtensionHandlers, runExtensionPrompt } from './handlers/extensions.ts';
 import { registerPortHandlers } from './handlers/ports.ts';
@@ -193,6 +195,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         later: { language: () => language.host, push: () => push, ports: () => ports.grants }
     });
 
+    const connected = new ConnectedClients(Date.now);
     const tunnels = await wireTunnels({
         config,
         canvasHost,
@@ -204,6 +207,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         launches,
         routines,
         machineId: identity.id,
+        externalUsed: () => connected.changed(),
         later: { apiPort: () => server.port ?? config.port }
     });
     const ports = wirePorts(config, tunnels.deniedPorts);
@@ -251,8 +255,10 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         remote,
         stats,
         artifacts,
+        connected,
         later: { network: () => network, clients: () => clients }
     });
+    registerClientHandlers(dispatcher, { connected, auth: machine.auth, external: () => tunnels.credentials.active() });
     registerVoiceHandlers(dispatcher, voice);
     registerRoutineHandlers(dispatcher, routines);
     registerTemplateHandlers(dispatcher, templates.store);
@@ -260,7 +266,11 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         service: tunnels.service,
         credentials: tunnels.credentials,
         consent: tunnels.consent,
-        changed: () => tunnels.sinks.emit({ event: 'tunnel.changed', payload: {} })
+        changed: () => {
+            tunnels.sinks.emit({ event: 'tunnel.changed', payload: {} });
+            // A revoked credential leaves the list of connected clients at once.
+            connected.changed();
+        }
     });
     registerPortHandlers(dispatcher, ports.grants, ports.streams);
     const language = await wireLanguage({
@@ -423,7 +433,8 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         templates: templates.store,
         tunnels: tunnels.sinks,
         portGrants: ports.sinks,
-        ports: ports.streams
+        ports: ports.streams,
+        connected
     });
     // Before the socket answers, so no client attaches to or writes in a chat that is half moved; the outbox starts after.
     await repairChatMoves({

@@ -2,6 +2,7 @@ import {
     PROTOCOL_VERSION,
     type AgentIntegrationReport,
     type AgentIntegrationsResult,
+    type EndpointInfoPayload,
     type EndpointSettings,
     type LanDoor,
     type MachineUpdate,
@@ -59,6 +60,8 @@ interface EndpointHost {
         files(): Promise<AgentIntegrationsResult['files']>;
         set(kind: (typeof INTEGRATION_KINDS)[number], on: boolean): Promise<AgentIntegrationReport[]>;
     };
+    // What a client told of itself, for the list of connected clients.
+    announce?(clientId: string, payload: EndpointInfoPayload): void;
     // The update of the desktop app on this machine, and what installing it would end right now.
     updates?: {
         state(): MachineUpdate;
@@ -125,6 +128,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         'endpoint.info',
         async (payload, client) => {
             countClient(client.access, payload.client);
+            host.announce?.(client.id, payload);
             if (client.access?.peer !== undefined) {
                 return {
                     id: identity.id,

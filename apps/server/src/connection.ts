@@ -118,6 +118,11 @@ export interface ConnectionServices {
     tunnels?: Subscribable;
     /* The development ports a person shared, which every client hears change. */
     portGrants?: Subscribable;
+    /* The channels open now, which only a client that asked with `client.watch` hears change. */
+    connected?: Subscribable & {
+        opened(clientId: string, access: ClientAccess): void;
+        closed(clientId: string): void;
+    };
 }
 
 export interface OpenConnection {
@@ -170,7 +175,8 @@ function subscribeClient(services: ConnectionServices, client: ClientConnection,
         services.routines,
         services.templates,
         services.tunnels,
-        services.portGrants
+        services.portGrants,
+        services.connected
     ];
     const none = (): void => undefined;
 
@@ -241,6 +247,7 @@ export function connectionOpener(services: ConnectionServices): (channel: Client
 
         const kind = clientKindOf(access);
         clientOpened(kind);
+        services.connected?.opened(clientId, access);
         // Events carry what other clients are doing here; another machine asks for what it needs and hears nothing else.
         const unsubscribes = access.peer !== undefined ? [] : subscribeClient(services, client, access, sink, gate);
 
@@ -259,6 +266,7 @@ export function connectionOpener(services: ConnectionServices): (channel: Client
             }
             closed = true;
             clientClosed(kind);
+            services.connected?.closed(clientId);
             // The sessions keep running; only this client's view of them goes.
             for (const source of [
                 services.sessions,

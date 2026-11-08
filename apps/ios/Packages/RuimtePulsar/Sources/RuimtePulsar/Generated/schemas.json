@@ -64745,6 +64745,22 @@
       "client": {
         "type": "string",
         "maxLength": 32
+      },
+      "clientVersion": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "clientOs": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "clientOsVersion": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "clientDevice": {
+        "type": "string",
+        "maxLength": 64
       }
     }
   },
@@ -74890,6 +74906,100 @@
     "type": "object",
     "properties": {}
   },
+  "request.client.list.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.client.list.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "clients": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "access": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "machineId": {
+              "type": "string"
+            },
+            "client": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "os": {
+              "type": "string"
+            },
+            "osVersion": {
+              "type": "string"
+            },
+            "device": {
+              "type": "string"
+            },
+            "reachability": {
+              "type": "string",
+              "enum": [
+                "loopback",
+                "lan",
+                "tunnel",
+                "public"
+              ]
+            },
+            "connectedAt": {
+              "type": "number"
+            },
+            "lastRequestAt": {
+              "type": "number"
+            },
+            "current": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "access",
+            "connectedAt",
+            "current"
+          ]
+        }
+      }
+    },
+    "required": [
+      "clients"
+    ]
+  },
+  "request.client.watch.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.client.watch.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.client.unwatch.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.client.unwatch.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.direct.signal.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -81866,6 +81976,11 @@
     "properties": {}
   },
   "event.tunnel.changed": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "event.client.changed": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}

@@ -18,6 +18,8 @@ export const ACCESS_TOKEN_LIFETIME_MS = 60 * 60_000;
 const RETIRED_REFRESH_TOKENS = 8;
 // What the settings read as a client "connected lately".
 export const RECENT_USE_MS = 10 * 60_000;
+// What the list of connected clients reads as an external client that is here now.
+export const ACTIVE_USE_MS = 5 * 60_000;
 const LAST_USED_WRITE_MS = 60_000;
 // The settings show "used N minutes ago", so a use is news only after this long without one.
 const USE_NEWS_MS = 60_000;
@@ -61,6 +63,12 @@ export interface CredentialStoreOptions {
 
     /* Called when a credential is used for the first time, or again after a minute without use, so settings can refresh what they show. */
     used?(): void;
+}
+
+export interface ActiveClient {
+    credentialId: string;
+    client: string;
+    lastUsedAt: number;
 }
 
 export type CredentialRefusal = 'unknown' | 'expired' | 'wrong-door';
@@ -179,6 +187,15 @@ export class CredentialStore {
         const since = this.options.now() - RECENT_USE_MS;
 
         return this.records.filter((record) => (record.lastUsedAt ?? 0) >= since).length;
+    }
+
+    /* The clients that made a request within `ACTIVE_USE_MS`, by the name a person reads for each; read when asked, so no timer ends one. */
+    active(): ActiveClient[] {
+        const since = this.options.now() - ACTIVE_USE_MS;
+
+        return this.records
+            .filter((record) => (record.lastUsedAt ?? 0) >= since)
+            .map((record) => ({ credentialId: record.id, client: clientOf(record), lastUsedAt: record.lastUsedAt ?? 0 }));
     }
 
     private add(kind: CredentialKind, label: string, grant: ExternalGrant, extra: Partial<StoredCredential>): StoredCredential {
