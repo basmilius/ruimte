@@ -66,7 +66,7 @@ beforeEach(async () => {
         current: 'main',
         stashes: [],
         refs: [
-            { name: 'main', fullName: 'refs/heads/main', kind: 'local' as const, current: true, isDefault: true, at: 0 },
+            { name: 'main', fullName: 'refs/heads/main', kind: 'local' as const, current: true, isDefault: true, at: 0, worktree: CWD },
             { name: 'left', fullName: 'refs/heads/left', kind: 'local' as const, current: false, isDefault: false, at: 0 },
             { name: 'right', fullName: 'refs/heads/right', kind: 'local' as const, current: false, isDefault: false, at: 0, worktree: '/work/elsewhere' }
         ]
@@ -99,6 +99,9 @@ test('the dialog compares a branch another worktree has out without switching to
     await choose('Base branch', 'left');
     await clickOn(document.querySelector('[aria-label="Branch to compare"]'));
     await until(() => option('right (in another worktree)') !== null);
+    // The branch this checkout has out is in git's worktree list too, but it is not another worktree.
+    expect(option('main')).not.toBeNull();
+    expect(option('main (in another worktree)')).toBeNull();
     await clickOn(option('right (in another worktree)'));
     await clickOn(buttonWithText('Compare'));
     await until(() => machine.requests('git.compare').length === 1);

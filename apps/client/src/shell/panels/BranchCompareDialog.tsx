@@ -73,7 +73,8 @@ function Picker({ seed }: { seed: BranchCompareSeed }) {
 
     const items = (refs ?? []).map((ref) => ({
         value: fullRefName(ref),
-        label: ref.worktree === undefined ? ref.name : `${ref.name} (${t('git.branchMenu.inWorktree')})`
+        // The checkout the dialog reads is in a worktree list too, but it is not another worktree.
+        label: ref.worktree === undefined || ref.current ? ref.name : `${ref.name} (${t('git.branchMenu.inWorktree')})`
     }));
     const current = refs?.find((ref) => ref.current);
     const base = refs?.find((ref) => ref.isDefault) ?? refs?.[0];

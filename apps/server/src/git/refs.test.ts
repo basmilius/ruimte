@@ -10,6 +10,15 @@ test('a ref keeps its full name, which tells a remote branch from a local branch
     expect(parseRefs(remote, 'remote', new Map(), null)[0]?.fullName).toBe('refs/remotes/origin/main');
 });
 
+test("a remote's default-branch pointer is left out, also where git shortens it to the remote's name", () => {
+    const lines = [
+        ['origin', '1700000000', ' ', 'abc', 'refs/remotes/origin/HEAD'].join(FIELD),
+        ['origin/main', '1700000000', ' ', 'abc', 'refs/remotes/origin/main'].join(FIELD)
+    ].join('\n');
+
+    expect(parseRefs(lines, 'remote', new Map(), null).map((ref) => ref.name)).toEqual(['origin/main']);
+});
+
 test('a line from before the full name has none', () => {
     const line = ['main', '1700000000', '*', 'abc'].join(FIELD);
 

@@ -54,8 +54,8 @@ export function parseRefs(output: string, kind: GitRef['kind'], worktrees: Map<s
             continue;
         }
         const [name = '', at = '', head = '', commit = '', fullName = ''] = line.split(FIELD);
-        // Git's own pointer at the remote's default branch is a symbolic ref, not a branch to check out.
-        if (name === '' || name.endsWith('/HEAD')) {
+        // Git's own pointer at the remote's default branch is a symbolic ref, not a branch to check out. Newer git shortens it to the remote's bare name.
+        if (name === '' || name.endsWith('/HEAD') || (kind === 'remote' && fullName.endsWith('/HEAD'))) {
             continue;
         }
         const worktree = worktrees.get(name);
