@@ -594,35 +594,9 @@ export class TunnelService {
 
     /* A new port or new origin settings of a row that is on reach Cloudflare first, like a switch does. */
     async update(id: string, change: { enabled?: boolean; comeBack?: boolean; port?: number; origin?: TunnelOrigin }): Promise<TunnelState> {
-        const row = this.stored.rows.find((candidate) => candidate.id === id);
-
-        if (row === undefined) {
-            throw new TunnelConfigError('unknown-row', 'That hostname is not on this tunnel');
-        }
-
-        const retargets = change.port !== undefined || change.origin !== undefined;
-
-        if (retargets && row.kind === 'mcp') {
-            throw new TunnelConfigError('mcp-fixed', 'The MCP always points at Ruimte itself');
-        }
-
         const { origin: typedOrigin, ...flags } = change;
         const origin = normalizedOrigin(typedOrigin);
-        const port = change.port ?? row.port;
-
-        if (row.kind === 'dev' && (change.enabled === true || change.port !== undefined)) {
-            const reason = port === null ? 'A dev server needs a port' : deniedPortReason(port, this.ports.deniedPorts());
-
-            if (reason !== null) {
-                throw new TunnelConfigError('port-denied', reason);
-            }
-        }
-
-        const touchesIngress = change.enabled !== undefined || (retargets && (change.enabled ?? row.enabled));
-
-        if (touchesIngress) {
-            this.requireToken();
-        }
+        const retargets = change.port !== undefined || change.origin !== undefined;
 
         // An origin sent replaces the one the row had, so a setting left out goes back to Cloudflare's default.
         const apply = (candidate: StoredRow): StoredRow => {
@@ -635,15 +609,44 @@ export class TunnelService {
             return origin === undefined ? { ...rest, ...flags } : { ...rest, ...flags, origin };
         };
 
-        await this.jobs.run(async () => {
+        // Decided on the row as the job finds it, since a change queued before this one may have turned it on.
+        const touchesIngress = await this.jobs.run(async () => {
+            const row = this.stored.rows.find((candidate) => candidate.id === id);
+
+            if (row === undefined) {
+                throw new TunnelConfigError('unknown-row', 'That hostname is not on this tunnel');
+            }
+
+            if (retargets && row.kind === 'mcp') {
+                throw new TunnelConfigError('mcp-fixed', 'The MCP always points at Ruimte itself');
+            }
+
+            const port = change.port ?? row.port;
+
+            if (row.kind === 'dev' && (change.enabled === true || change.port !== undefined)) {
+                const reason = port === null ? 'A dev server needs a port' : deniedPortReason(port, this.ports.deniedPorts());
+
+                if (reason !== null) {
+                    throw new TunnelConfigError('port-denied', reason);
+                }
+            }
+
+            const touches = change.enabled !== undefined || (retargets && (change.enabled ?? row.enabled));
+
+            if (touches) {
+                this.requireToken();
+            }
+
             const rows = this.stored.rows.map((candidate) => (candidate.id === id ? apply(candidate) : candidate));
 
-            if (touchesIngress) {
+            if (touches) {
                 await this.syncRows(rows);
             }
 
             this.stored = { ...this.stored, rows };
             this.save();
+
+            return touches;
         });
 
         if (touchesIngress) {

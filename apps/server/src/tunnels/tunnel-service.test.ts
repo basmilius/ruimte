@@ -636,6 +636,23 @@ describe('the origin of a dev row', () => {
         await expect(f.service.update(row.id, { origin: { hostHeader: 'no host' } })).rejects.toMatchObject({ code: 'invalid-host-header' });
     });
 
+    test('sends a new port to Cloudflare when a switch that turns the row on is still on its way', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 });
+        await f.service.idle();
+
+        const row = (await f.state()).rows[0]!;
+
+        await f.service.update(row.id, { enabled: false });
+        await f.service.idle();
+        await Promise.all([f.service.update(row.id, { enabled: true }), f.service.update(row.id, { port: 4000 })]);
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:4000' });
+    });
+
     test('keeps the origin of a row that is off without asking Cloudflare, and refuses one on the MCP', async () => {
         const f = await fixture();
 
