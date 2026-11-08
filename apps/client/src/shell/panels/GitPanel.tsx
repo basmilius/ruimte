@@ -10,6 +10,7 @@ import { SlotRow } from '@/extensions/SlotSurfaces';
 import { revealNode } from '@/project/views';
 import { startDiffDrag, type DraggedDiff } from '@/shell/diff-drag';
 import { PanelHeaderActions, PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeaderTitleHidden } from '@/shell/PanelHeaderSlot';
+import { fullRefName, showBranchCompare } from '@/shell/panels/branch-compare';
 import { BranchMenu, type CheckoutRefs } from '@/shell/panels/BranchMenu';
 import { CommitBox } from '@/shell/panels/CommitBox';
 import { CommitLog, type LogSource } from '@/shell/panels/CommitLog';
@@ -519,6 +520,7 @@ export function GitPanel() {
                         renderActions: repoActions,
                         onOpen: loadRefs,
                         onCheckout: checkout,
+                        onCompare: (path, ref) => showBranchCompare({ cwd: path, ...(ref === undefined ? {} : { to: fullRefName(ref) }) }),
                         onCreate: (path) => setDialog({ kind: 'create-branch', cwd: path })
                     }}
                     onOpenMenu={openBranchMenu}

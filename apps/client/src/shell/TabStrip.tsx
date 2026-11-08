@@ -25,7 +25,17 @@ import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useWaitingCount } from '@/state/attention';
 import { useDocument } from '@/state/document';
-import { isArtifactTab, isCheckoutDiff, isDatabaseTab, useFiles, type ArtifactTab, type DatabaseTab, type FileTab } from '@/state/files';
+import {
+    isArtifactTab,
+    isCheckoutDiff,
+    isDatabaseTab,
+    isSessionTab,
+    useFiles,
+    type ArtifactTab,
+    type DatabaseTab,
+    type FileTab,
+    type SessionTab
+} from '@/state/files';
 import { useGit } from '@/state/git';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { sessionStatus, useSessionRow } from '@/state/sessions';
@@ -171,9 +181,17 @@ function ArtifactTabItem({ tab, label }: { tab: ArtifactTab; label: string }) {
     return <TabShell id={tab.key} label={label} hint={label} glyph={<LooseGlyph tab={tab} />} {...looseControls(tab.key, tab.pinned)} menu={null} />;
 }
 
+/* A comparison and a snapshot name no file of the working tree, so they offer no file menu and give no file to drag. */
+function SessionTabItem({ tab, label }: { tab: SessionTab; label: string }) {
+    return <TabShell id={tab.key} label={label} hint={label} glyph={<LooseGlyph tab={tab} />} {...looseControls(tab.key, tab.pinned)} menu={null} />;
+}
+
 function LooseTabItem({ view }: { view: LooseCellView }) {
     if (isArtifactTab(view.tab)) {
         return <ArtifactTabItem tab={view.tab} label={view.name} />;
+    }
+    if (isSessionTab(view.tab)) {
+        return <SessionTabItem tab={view.tab} label={view.name} />;
     }
     return isDatabaseTab(view.tab) ? <DatabaseTabItem tab={view.tab} /> : <FileTabItem tab={view.tab} tabKey={view.id} label={view.name} />;
 }

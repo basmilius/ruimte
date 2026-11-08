@@ -7,7 +7,7 @@ import { useDiffCarets } from '@/shell/panels/diff-caret';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { relativeTo } from '@/shell/panels/files-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
-import { isArtifactTab, isCheckoutDiff, isDatabaseTab, isPromotableTab, useFiles } from '@/state/files';
+import { isArtifactTab, isCheckoutDiff, isDatabaseTab, isPromotableTab, isSessionTab, useFiles } from '@/state/files';
 
 /*
  * What a loose tab holds can be asked, for the toolbar's overflow menu and the right click on a tab
@@ -18,7 +18,7 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
     const tab = useFiles((s) => s.tabs.find((entry) => entry.key === tabKey) ?? null);
     const unsubmitted = useFiles((s) => s.unsubmitted[tabKey] === true);
     const caret = useDiffCarets((s) => s.carets[tabKey]);
-    if (tab === null || isArtifactTab(tab)) {
+    if (tab === null || isArtifactTab(tab) || isSessionTab(tab)) {
         return null;
     }
 

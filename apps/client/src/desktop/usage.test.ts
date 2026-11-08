@@ -10,10 +10,13 @@ import type { PanelState } from '@/state/ui';
 const CLOSED: PanelState = { open: false, kind: 'files' };
 const SETTINGS_CLOSED = { open: false, section: 'appearance' as const, target: null, searchAt: 0 };
 
+// Rows the address book's ingest does not know yet: an older worker rejects a day that counts a name it lacks, so they count nothing until `USAGE_DESKTOP_COMMANDS` gains the name after the worker is deployed.
+const UNCOUNTED_ROWS = ['git-compare-branches'];
+
 describe('commandUsageName', () => {
     test('names every row of the command table, and the list holds no row the table lost', () => {
         // A row only its key reaches has no count: the list in Observatory would have to learn it first.
-        const names = COMMAND_IDS.filter((id) => COMMANDS[id].keyOnly !== true).map(commandUsageName);
+        const names = COMMAND_IDS.filter((id) => COMMANDS[id].keyOnly !== true && !UNCOUNTED_ROWS.includes(id)).map(commandUsageName);
 
         expect(names.filter((name) => name === null)).toEqual([]);
         expect(names.toSorted()).toEqual([...USAGE_DESKTOP_COMMANDS].toSorted());

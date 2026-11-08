@@ -459,3 +459,62 @@ describe('worktree actions for Voice', () => {
         });
     });
 });
+
+describe('branch comparison actions', () => {
+    const FROM = 'a'.repeat(40);
+    const TO = 'b'.repeat(40);
+
+    test('a person and Voice read a comparison from the repository they name, in merge-base mode unless told otherwise', async () => {
+        const { registry, of } = fake({
+            'git.compare': () => ({
+                from: 'main',
+                to: 'topic',
+                fromCommit: FROM,
+                toCommit: TO,
+                baseCommit: FROM,
+                mode: 'merge-base',
+                diff: { path: '', diff: '', added: 0, deleted: 0, binary: false, files: [] },
+                left: { commits: [], next: null },
+                right: { commits: [], next: null }
+            })
+        });
+
+        expect(await registry.execute('git.compare', { repository: `${FOLDER}/web`, from: 'main', to: 'topic', mode: null }, PERSON_ACTION_CALL)).toMatchObject(
+            {
+                status: 'completed'
+            }
+        );
+        expect(await registry.execute('git.compare', { repository: 'web', from: 'main', to: 'topic', mode: 'tips' }, VOICE_ACTION_CALL)).toMatchObject({
+            status: 'completed'
+        });
+        expect(of('git.compare')).toEqual([
+            { cwd: `${FOLDER}/web`, from: 'main', to: 'topic', mode: 'merge-base' },
+            { cwd: `${FOLDER}/web`, from: 'main', to: 'topic', mode: 'tips' }
+        ]);
+    });
+
+    test('later commit pages and committed files go to the pinned commits with their defaults filled in', async () => {
+        const { registry, of } = fake({
+            'git.compareCommits': () => ({ commits: [], next: null }),
+            'git.blob': (payload) => ({ commit: payload.commit, path: payload.path, text: 'text\n' })
+        });
+
+        await registry.execute(
+            'git.compareCommits',
+            { repository: FOLDER, fromCommit: FROM, toCommit: TO, side: 'left', skip: 30, pageSize: null },
+            PERSON_ACTION_CALL
+        );
+        await registry.execute('git.blob', { repository: FOLDER, commit: TO, path: 'src/a.ts' }, PERSON_ACTION_CALL);
+
+        expect(of('git.compareCommits')).toEqual([{ cwd: FOLDER, fromCommit: FROM, toCommit: TO, side: 'left', skip: 30, limit: 30 }]);
+        expect(of('git.blob')).toEqual([{ cwd: FOLDER, commit: TO, path: 'src/a.ts' }]);
+    });
+
+    test('a repository the project does not hold is refused before anything is asked', async () => {
+        const { registry, of } = fake({ 'git.compare': () => ({}) as never });
+        const result = await registry.execute('git.compare', { repository: 'nowhere', from: 'main', to: 'topic', mode: null }, VOICE_ACTION_CALL);
+
+        expect(result).toMatchObject({ error: { code: 'unknown-repository' } });
+        expect(of('git.compare')).toEqual([]);
+    });
+});

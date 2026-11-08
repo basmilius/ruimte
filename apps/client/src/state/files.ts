@@ -1,5 +1,5 @@
 import type { TableKind } from '@adecore/database/protocol';
-import { isPathBelow, type FileLocation, type GitDiffScope, type ProjectConsoleBinding, type ProjectFileTabView } from '@ruimte/contracts';
+import { isPathBelow, type FileLocation, type GitCompareMode, type GitDiffScope, type ProjectConsoleBinding, type ProjectFileTabView } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { canDropAsTab, canSplit, cellAt, cellViewIds, locateView, viewIdsIn, type CellAt, type SplitZone } from '@/shell/split';
@@ -53,8 +53,45 @@ export interface ArtifactTab {
     title: string;
 }
 
+/*
+ * A comparison of two refs of one repository. It lives in this window's session only: it is never
+ * stored, and the layout cell that holds it is left out of what the project remembers.
+ */
+export interface CompareTab {
+    /* `compareTabKey`: one tab per repository and pair of refs, whatever the mode. */
+    key: string;
+    kind: 'compare';
+    pinned: boolean;
+    /* The repository, as the panel names it. */
+    cwd: string;
+    /* The refs as the person chose them. */
+    from: string;
+    to: string;
+    mode: GitCompareMode;
+    /* The commits the refs resolved to, kept so a mode switch reads the same snapshot until Refresh clears them. */
+    resolved?: { fromCommit: string; toCommit: string };
+    /* Goes up on every Refresh, so a reading that started earlier cannot pin its commits. */
+    refresh: number;
+}
+
+/* One file of a commit, read-only and never read from the working tree. Session only, like the comparison it came from. */
+export interface SnapshotTab {
+    /* `snapshotTabKey`: the commit id and the path, so two reads of one branch at different moments are two tabs. */
+    key: string;
+    kind: 'snapshot';
+    pinned: boolean;
+    cwd: string;
+    commit: string;
+    /* The branch the person opened it from, for the tab to name. */
+    branch: string;
+    /* Relative to the repository root. */
+    path: string;
+}
+
+export type SessionTab = CompareTab | SnapshotTab;
+
 /* One loose view: a tab of a tab host that has no row in the sidebar. */
-export type Tab = FileTab | DatabaseTab | ArtifactTab;
+export type Tab = FileTab | DatabaseTab | ArtifactTab | SessionTab;
 
 /* The content of the loose views, in the order they were opened. Where they stand is the layout's. */
 export interface TabPool {
@@ -67,15 +104,56 @@ export interface TabState extends TabPool {
 }
 
 export function isDatabaseTab(tab: Tab): tab is DatabaseTab {
-    return 'kind' in tab && tab.kind !== 'artifact';
+    return 'kind' in tab && (tab.kind === 'table' || tab.kind === 'structure' || tab.kind === 'designer');
 }
 
 export function isArtifactTab(tab: Tab): tab is ArtifactTab {
     return 'kind' in tab && tab.kind === 'artifact';
 }
 
+export function isSessionTab(tab: Tab): tab is SessionTab {
+    return 'kind' in tab && (tab.kind === 'compare' || tab.kind === 'snapshot');
+}
+
 export function isFileTab(tab: Tab): tab is FileTab {
     return !('kind' in tab);
+}
+
+export function compareTabKey(cwd: string, from: string, to: string): string {
+    return `compare:${JSON.stringify([cwd, from, to])}`;
+}
+
+export function snapshotTabKey(cwd: string, commit: string, path: string): string {
+    return `snapshot:${JSON.stringify([cwd, commit, path])}`;
+}
+
+/* The comparison under a key, or undefined for another kind of tab. */
+export function compareTabOf(state: TabPool, key: string | null): CompareTab | undefined {
+    const tab = state.tabs.find((entry) => entry.key === key);
+    return tab !== undefined && isSessionTab(tab) && tab.kind === 'compare' ? tab : undefined;
+}
+
+/* A comparison that is open already comes to the front with the mode asked for; otherwise a new one is placed. */
+export function openCompareTab(state: TabPool, cwd: string, from: string, to: string, mode: GitCompareMode): TabState {
+    const key = compareTabKey(cwd, from, to);
+    const open = compareTabOf(state, key);
+
+    if (open !== undefined) {
+        return { tabs: state.tabs.map((tab) => (tab === open ? { ...open, mode } : tab)), active: key };
+    }
+
+    return placeTab(state, { key, kind: 'compare', pinned: false, cwd, from, to, mode, refresh: 0 });
+}
+
+/* A snapshot that is open already comes to the front. */
+export function openSnapshotTab(state: TabPool, cwd: string, commit: string, branch: string, path: string): TabState {
+    const key = snapshotTabKey(cwd, commit, path);
+
+    if (state.tabs.some((tab) => tab.key === key)) {
+        return { tabs: state.tabs, active: key };
+    }
+
+    return placeTab(state, { key, kind: 'snapshot', pinned: false, cwd, commit, branch, path });
 }
 
 const ARTIFACT_TAB_PREFIX = 'artifact:';
@@ -92,7 +170,7 @@ export function fileTabOf(state: TabPool, key: string | null): FileTab | undefin
 
 /* A tab that can become a row of the sidebar: a file and a table, not a diff, a commit, an artifact or the designer of a table that is not there yet. */
 export function isPromotableTab(tab: Tab | undefined): boolean {
-    if (tab === undefined || isArtifactTab(tab)) {
+    if (tab === undefined || isArtifactTab(tab) || isSessionTab(tab)) {
         return false;
     }
     return isDatabaseTab(tab) ? tab.kind !== 'designer' : tab.view === undefined;
@@ -278,7 +356,13 @@ function sameTarget(left: ClosedTab, right: ClosedTab): boolean {
  * the designer of a table nobody made yet has nothing to go back to either.
  */
 export function rememberClosed(recent: readonly ClosedTab[], tab: Tab | undefined): ClosedTab[] {
-    if (tab === undefined || isArtifactTab(tab) || (isFileTab(tab) && tab.view !== undefined) || (isDatabaseTab(tab) && tab.table === undefined)) {
+    if (
+        tab === undefined ||
+        isArtifactTab(tab) ||
+        isSessionTab(tab) ||
+        (isFileTab(tab) && tab.view !== undefined) ||
+        (isDatabaseTab(tab) && tab.table === undefined)
+    ) {
         return [...recent];
     }
     const closed: ClosedTab = isDatabaseTab(tab) ? { ...tab, pinned: false } : { kind: 'file', path: tab.path };
@@ -350,6 +434,11 @@ interface FilesStore extends TabPool {
     cancelDiscard(): void;
     setUnsubmitted(key: string, unsubmitted: boolean): void;
     setPinned(key: string, pinned: boolean): void;
+    setCompareMode(key: string, mode: GitCompareMode): void;
+    /* Keeps the commits a reading resolved, unless a Refresh came in since it started. */
+    resolveComparison(key: string, refresh: number, resolved: NonNullable<CompareTab['resolved']>): void;
+    /* Forgets the resolved commits, so the next reading resolves the refs again. */
+    refreshComparison(key: string): void;
     setScope(key: string, scope: GitDiffScope): void;
     setStaged(key: string, staged: boolean): void;
     setConsole(key: string, binding: ConsoleBinding | null): void;
@@ -440,6 +529,10 @@ export const useFiles = create<FilesStore>((set, get) => {
         zone === 'center' ? useDocument.getState().dropLooseAsTab(key, at, index) : useDocument.getState().dropLooseAt(key, at, zone);
     const patchFileView = (key: string, patch: Partial<FileTabView>): void => {
         set({ tabs: get().tabs.map((tab) => (isFileTab(tab) && tab.key === key && tab.view ? { ...tab, view: { ...tab.view, ...patch } } : tab)) });
+    };
+
+    const patchComparison = (key: string, change: (tab: CompareTab) => CompareTab): void => {
+        set({ tabs: get().tabs.map((tab) => (isSessionTab(tab) && tab.kind === 'compare' && tab.key === key ? change(tab) : tab)) });
     };
 
     return {
@@ -591,6 +684,15 @@ export const useFiles = create<FilesStore>((set, get) => {
         },
         setPinned(key, pinned) {
             set(pinTab(get(), key, pinned));
+        },
+        setCompareMode(key, mode) {
+            patchComparison(key, (tab) => ({ ...tab, mode }));
+        },
+        resolveComparison(key, refresh, resolved) {
+            patchComparison(key, (tab) => (tab.refresh === refresh ? { ...tab, resolved } : tab));
+        },
+        refreshComparison(key) {
+            patchComparison(key, ({ resolved: _forgotten, ...tab }) => ({ ...tab, refresh: tab.refresh + 1 }));
         },
         setScope(key, scope) {
             patchFileView(key, { scope });

@@ -6,9 +6,10 @@ import { fixedSlot, FileToolbarSlotProvider, useFileToolbarSlot } from '@/shell/
 import { FileBody } from '@/shell/panels/FileBody';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { keptTabs, shownAfter } from '@/shell/panels/kept-tabs';
-import { isArtifactTab, isDatabaseTab, useFiles, type Tab } from '@/state/files';
+import { isArtifactTab, isDatabaseTab, isSessionTab, useFiles, type Tab } from '@/state/files';
 
 const DatabaseTabBody = lazyNamed(() => import('@/database/DatabaseTabBody'), 'DatabaseTabBody');
+const SessionTabBody = lazyNamed(() => import('@/shell/panels/SessionTabBody'), 'SessionTabBody');
 const ArtifactView = lazyNamed(() => import('@/output/ArtifactView'), 'ArtifactView');
 
 /*
@@ -64,6 +65,12 @@ export function FileViewer({ active, ids }: { active: string | null; ids: readon
                         <ErrorBoundary label={to('view.failed')} resetKeys={[entry.key]} className="h-full">
                             <LazyBoundary>
                                 <ArtifactView artifactId={entry.artifactId} machineId={entry.machineId} />
+                            </LazyBoundary>
+                        </ErrorBoundary>
+                    ) : isSessionTab(entry) ? (
+                        <ErrorBoundary label={to('view.failed')} resetKeys={[entry.key]} className="h-full">
+                            <LazyBoundary>
+                                <SessionTabBody tab={entry} />
                             </LazyBoundary>
                         </ErrorBoundary>
                     ) : entry.view ? (

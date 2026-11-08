@@ -2,7 +2,7 @@ import type { DiffSourceLine } from '@adecore/merge';
 import { ContextMenu, FileTree, useFileTree } from '@adecore/ui';
 import type { FileTreeVisibleRow } from '@pierre/trees';
 import type { GitDiffFile } from '@ruimte/contracts';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { diffFileParts, firstFile, folderParts } from '@/shell/panels/commit-tree';
 import { DiffRowMenuItems } from '@/shell/panels/DiffRowMenuItems';
@@ -18,8 +18,8 @@ interface CommitFileTreeProps {
     onPick(path: string): void;
     /* The decoration after a file's name; the counts and letter of a commit's diff when absent. */
     marks?(file: GitDiffFile): DecorationPart[];
-    /* Where the paths count from, and the commit they are part of; without it a row has no menu. */
-    menu?: { cwd: string; commit?: string };
+    /* Where the paths count from, and the commit they are part of, or the rows of a menu of its own; without it a row has no menu. */
+    menu?: { cwd: string; commit?: string } | ((file: GitDiffFile) => ReactNode);
     /* Where the caret of the shown file's diff stands in the file, which its row's menu opens it at. */
     caret?: DiffSourceLine;
 }
@@ -139,16 +139,19 @@ export function CommitFileTree({ files, shown, onPick, marks = diffFileParts, me
                 {tree}
             </ContextMenu.Trigger>
             <ContextMenu.Popup>
-                {menuFile !== undefined && (
-                    <DiffRowMenuItems
-                        cwd={menu.cwd}
-                        path={menuFile.path}
-                        gone={menuFile.kind === 'delete'}
-                        commit={menu.commit}
-                        caret={menuFile.path === shown ? caret : undefined}
-                        onOpenChanges={() => selectOnly(model, menuFile.path)}
-                    />
-                )}
+                {menuFile !== undefined &&
+                    (typeof menu === 'function' ? (
+                        menu(menuFile)
+                    ) : (
+                        <DiffRowMenuItems
+                            cwd={menu.cwd}
+                            path={menuFile.path}
+                            gone={menuFile.kind === 'delete'}
+                            commit={menu.commit}
+                            caret={menuFile.path === shown ? caret : undefined}
+                            onOpenChanges={() => selectOnly(model, menuFile.path)}
+                        />
+                    ))}
             </ContextMenu.Popup>
         </ContextMenu.Root>
     );

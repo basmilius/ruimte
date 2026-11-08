@@ -12,7 +12,9 @@ import {
 } from '@ruimte/contracts';
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
+import { withoutSessionLayout } from '@/project/session-local';
 import type { LooseStrip } from '@/shell/legacy-files-cell';
+import { openableViewIds } from '@/shell/split';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { stripOf } from '@/state/panel-state';
 import { browserStorage } from '@/state/stored-json';
@@ -620,7 +622,7 @@ export class ProjectClient {
         if (!this.opened || !current) {
             return;
         }
-        const local = this.localOfScreen();
+        const local = withoutSessionLayout(this.localOfScreen(), this.panels.sessionIds(), openableViewIds(this.documents.getState().views));
         // This client's own copy first, so the machine only has to be where a client that never saw the project starts.
         writeClientLocal(this.storage, this.endpointId(), current.projectId, local);
         if (this.transport.status === 'open') {

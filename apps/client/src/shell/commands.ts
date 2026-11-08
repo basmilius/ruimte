@@ -68,6 +68,7 @@ import { COMMANDS, commandKey, type PaletteCommandId } from '@/shell/command-tab
 import { editorCommandRows } from '@/shell/editor-commands';
 import { activeViewFacts } from '@/shell/menu/context';
 import { nextWaitingTitle, revealNextWaiting } from '@/shell/next-waiting';
+import { showBranchCompare } from '@/shell/panels/branch-compare';
 import { diffInFront, openFileAtDiffCaret } from '@/shell/panels/diff-caret';
 import { stepFocusedEditorFind } from '@/shell/panels/use-editor-find';
 import { hasPrWatch, stopPrWatch } from '@/shell/pr-watch-actions';
@@ -678,6 +679,10 @@ function coreCommands(prRepos: readonly PrRepo[]): Command[] {
                             row('panel-files', () => useUi.getState().togglePanel('files')),
                             row('panel-databases', () => useUi.getState().togglePanel('databases')),
                             row('panel-git', () => useUi.getState().togglePanel('git')),
+                            row(
+                                'git-compare-branches',
+                                afterPaletteCloses(() => showBranchCompare())
+                            ),
                             row('database-console-new', () => void openNewConsole()),
                             row('database-connections', () => useDatabasePanel.getState().openConnections()),
                             row('database-schemas-refresh', () => void refreshSqlSchemas()),
