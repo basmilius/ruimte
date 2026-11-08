@@ -5,8 +5,8 @@ import { allowGuestPermission, TUNNEL_PARTITION_PREFIX } from '../web-guards';
 import { IpcRelay } from './ipc-relay';
 import { parseToShell, parseTunnelRequest } from './messages';
 import { PROXY_REALM, PROXY_USER } from './proxy-connection';
-import { RefusedBatch } from './refused-batch';
 import { startProxyListener, type ProxyListener } from './proxy-listener';
+import { RefusedBatch } from './refused-batch';
 import { tunnelDestinationAllowedFor } from './tunnel-policy';
 import { markTunnelSession } from './tunnel-sessions';
 

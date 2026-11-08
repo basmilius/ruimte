@@ -1,9 +1,9 @@
-import type { EventMap, EventType, RequestMap, RequestType } from '../../packages/contracts/src/index.ts';
-import type { PortTunnelOpened, PortTunnelRequest, PortTunnelToPage, PortTunnelToShell } from '../../packages/desktop-bridge/src/index.ts';
 import { base64Of } from '../../apps/client/src/base64.ts';
 import { PortStreamHub, type PortTransport } from '../../apps/client/src/port-tunnel/stream-client.ts';
 import { PortTunnelHost } from '../../apps/client/src/port-tunnel/tunnel-host.ts';
 import { decodeBase64 } from '../../apps/client/src/transport/piece.ts';
+import type { EventMap, EventType, RequestMap, RequestType } from '../../packages/contracts/src/index.ts';
+import type { PortTunnelOpened, PortTunnelRequest, PortTunnelToPage, PortTunnelToShell } from '../../packages/desktop-bridge/src/index.ts';
 
 /* What the preload of the measurement window gives the page, the same channels as the app's bridge. */
 interface Harness {
