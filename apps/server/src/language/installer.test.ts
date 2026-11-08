@@ -794,6 +794,31 @@ describe('the SQL server install', () => {
         await expect(installer.rollback('rust')).rejects.toThrow();
     });
 
+    it('finds sourcekit-lsp, which prints no version, by the `swift` beside it', async () => {
+        const executable = join(root, 'swift', 'bin', 'sourcekit-lsp');
+        await mkdir(dirname(executable), { recursive: true });
+        await writeFile(executable, '');
+        const calls: Array<{ command: string; args: string[] }> = [];
+        const run: RunCommand = async (spec, onLine) => {
+            calls.push({ command: spec.command, args: spec.args });
+            onLine('Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)');
+            return 0;
+        };
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run,
+            onChange: () => undefined,
+            findProgram: (program) => (program === 'sourcekit-lsp' ? [executable] : [])
+        });
+        await installer.load();
+
+        expect(await installer.state('swift')).toBe('installed');
+        expect(installer.versionOf('swift')).toBe('6.4');
+        expect(installer.launchOf('swift')).toEqual({ executable });
+        expect(calls).toEqual([{ command: join(dirname(executable), 'swift'), args: ['--version'] }]);
+    });
+
     it('finds gopls by its version command, with the folders of Go on the PATH it runs with', async () => {
         const executable = join(root, 'go', 'bin', 'gopls');
         await mkdir(dirname(executable), { recursive: true });

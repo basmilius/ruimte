@@ -472,6 +472,7 @@ The daemon looks up no addresses, holds no map ticket and never contacts the map
 | `sql-native` | the native server from `basmilius/language-server-sql`, shown as SQL | `.sql` files, against the project's schema snapshots |
 | `rust` | rust-analyzer from the Rust toolchain, never installed by Ruimte | Rust, in a project with a `Cargo.toml` in its folder or up to three folders down |
 | `go` | gopls from Go, never installed by Ruimte | Go, `go.mod` and `go.work`, in any project |
+| `swift` | sourcekit-lsp from the Swift toolchain, never installed by Ruimte | Swift, in any project |
 | `markdown` | marksman, a pinned release (`markdown-native-release.json`) | Markdown, in any project: links, headings and references across files |
 
 Intelephense (kind `php`) was removed, and nothing removes a `language-servers/php` install left on disk.
@@ -491,6 +492,8 @@ Native servers (`src/language/native.ts`, `installer.ts`):
 The `rust` kind runs the `rust-analyzer` on `PATH` or in `~/.cargo/bin` that answers `--version` (`src/language/toolchain.ts`), with `~/.cargo/bin` on its `PATH`. Without one it says to run `rustup component add rust-analyzer`; Install only looks again. It is told every `Cargo.toml` no other one holds (`linkedProjects`, `src/language/manifests.ts`).
 
 The `go` kind runs the `gopls` on `PATH` or in `GOBIN`, `$GOPATH/bin`, `~/go/bin`, `/usr/local/go/bin` or Homebrew's folder that answers `gopls version`, with those folders on its `PATH` so it finds `go`. It runs with `GOTOOLCHAIN=local`, so a `go.mod` asking for a newer Go downloads nothing, and with the `generate` code lenses off. Without one it says to run `go install golang.org/x/tools/gopls@latest`; Install only looks again. It runs project code (`go list` runs cgo tools), so it stays off work from another machine.
+
+The `swift` kind runs the `sourcekit-lsp` on `PATH`, in Xcode's or the command line tools' folder, or in `~/.swiftly/bin`. It prints no version, so the `swift` beside it is asked (`swift --version`). Loading a `Package.swift` runs it, so the kind builds code (`runsBuildCode`) and has no setting that turns that off: it does not start in the worktree of an agent. An Xcode project without a `Package.swift` shows less to sourcekit-lsp than a package does.
 
 A kind whose server is someone else's program installs from a descriptor of ours (`<kind>-native-release.json`, same shape as the PHP one) with a checksum per platform, and has no development build. A release that is one file has `format: "raw"`; `checksumOnly: true` marks a release whose program is not run at install, since the checksum already names its bytes.
 

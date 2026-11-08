@@ -53563,7 +53563,8 @@
           "sql-native",
           "rust",
           "markdown",
-          "go"
+          "go",
+          "swift"
         ]
       }
     },
@@ -53730,7 +53731,8 @@
           "sql-native",
           "rust",
           "markdown",
-          "go"
+          "go",
+          "swift"
         ]
       }
     },
@@ -53897,7 +53899,8 @@
           "sql-native",
           "rust",
           "markdown",
-          "go"
+          "go",
+          "swift"
         ]
       }
     },

@@ -129,6 +129,16 @@ describe('server profiles', () => {
         expect(component!.env).toMatchObject({ GOTOOLCHAIN: 'local' });
     });
 
+    it('serves Swift in any project, as a kind that builds and cannot do without', () => {
+        expect(kindForLanguage('swift')).toBe('swift');
+        expect(KIND_PROFILES.swift.activation).toBeUndefined();
+        expect(KIND_PROFILES.swift.runsProjectCode).toBe(true);
+        expect(KIND_PROFILES.swift.runsBuildCode).toEqual({});
+        const [component] = KIND_PROFILES.swift.components;
+        expect(component!.program!({ ...context, native: { executable: '/usr/bin/sourcekit-lsp' } })).toBe('/usr/bin/sourcekit-lsp');
+        expect(component!.args(context)).toEqual([]);
+    });
+
     it('turns the building of code off in the initialization options only for a project held back', () => {
         const rust = KIND_PROFILES.rust;
         const [component] = rust.components;

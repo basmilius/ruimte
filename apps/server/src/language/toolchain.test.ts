@@ -20,6 +20,18 @@ describe('toolchain kinds', () => {
         expect(toolchainCandidates('something-else')).not.toContain(join(cargoBin(), 'something-else'));
     });
 
+    it('asks `swift` beside sourcekit-lsp for the Swift version, since the server prints none', () => {
+        const { program, args, parse } = toolchainVersionSpecOf('swift');
+
+        expect([program, args]).toEqual(['swift', ['--version']]);
+        expect(
+            parse(['swift-driver version: 1.168.6 Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)', 'Target: arm64-apple-macosx27.3.0'])
+        ).toBe('6.4');
+        expect(parse(['Swift version 6.0.3 (swift-6.0.3-RELEASE)'])).toBe('6.0.3');
+        expect(parse(['error: no developer tools'])).toBeNull();
+        expect(isToolchainKind('swift')).toBe(true);
+    });
+
     it('reads the version gopls prints for its version command', () => {
         const { args, parse } = toolchainVersionSpecOf('go');
 

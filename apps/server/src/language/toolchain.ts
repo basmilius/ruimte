@@ -7,9 +7,9 @@ import type { LanguageServerKind } from '@ruimte/contracts';
  * is a component of rustup, and has to match the toolchain a project builds with, so Ruimte pins no
  * version of it and downloads nothing. Install looks for it again, and says how to get it when it is not there.
  */
-export type ToolchainKind = 'rust' | 'go';
+export type ToolchainKind = 'rust' | 'go' | 'swift';
 
-const TOOLCHAIN_KINDS: readonly ToolchainKind[] = ['rust', 'go'];
+const TOOLCHAIN_KINDS: readonly ToolchainKind[] = ['rust', 'go', 'swift'];
 
 export function isToolchainKind(kind: LanguageServerKind): kind is ToolchainKind {
     return (TOOLCHAIN_KINDS as readonly string[]).includes(kind);
@@ -69,6 +69,23 @@ const TOOLCHAINS: Record<ToolchainKind, ToolchainSpec> = {
                     .map((text) => text.trim())
                     .find((text) => text.startsWith('golang.org/x/tools/gopls '))
                     ?.split(' ')[1] ?? null
+        }
+    },
+    swift: {
+        program: 'sourcekit-lsp',
+        missing: 'sourcekit-lsp is not on this machine. It comes with the Swift toolchain: install Xcode, or Swift from swift.org',
+        // The server itself prints no version, so `swift` beside it is asked. On macOS the toolchain of Xcode and of the command line tools sit apart from the PATH of an app.
+        folders: () => [
+            '/usr/bin',
+            '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin',
+            '/Library/Developer/CommandLineTools/usr/bin',
+            join(homedir(), '.swiftly', 'bin')
+        ],
+        version: {
+            program: 'swift',
+            args: ['--version'],
+            // `Apple Swift version 6.0.3 (swiftlang-6.0.3.1.10 clang-1600.0.30.1)` or `Swift version 6.0.3 (swift-6.0.3-RELEASE)`.
+            parse: (lines) => lines.map((text) => /Swift version (\S+)/.exec(text)?.[1]).find((version) => version !== undefined) ?? null
         }
     }
 };

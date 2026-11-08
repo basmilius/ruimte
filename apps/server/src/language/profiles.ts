@@ -531,6 +531,28 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
             }
         ]
     },
+    /*
+     * sourcekit-lsp, found where the Swift toolchain put it (`toolchain.ts`). Loading a `Package.swift` runs
+     * it, and plugins and macros build and run code, so it has no setting that turns that off: in the worktree
+     * of an agent it does not start.
+     */
+    swift: {
+        kind: 'swift',
+        runsProjectCode: true,
+        runsBuildCode: {},
+        components: [
+            {
+                name: 'swift',
+                title: 'sourcekit-lsp',
+                languages: ['swift'],
+                entry: 'sourcekit-lsp',
+                program: (context) => context.native?.executable ?? '',
+                args: () => [],
+                initializationOptions: () => ({}),
+                env: { PATH: toolchainPath('swift') }
+            }
+        ]
+    },
     tailwind: {
         kind: 'tailwind',
         runsProjectCode: true,

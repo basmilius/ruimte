@@ -118,6 +118,10 @@ function rig(
                 await writeFile(join(spec.cwd, 'target', 'release', nativeProgramFile('php-native', process.platform)), '');
                 return 0;
             }
+            if (spec.command.endsWith('swift')) {
+                onLine('Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)');
+                return 0;
+            }
             if (spec.command.endsWith('gopls')) {
                 onLine('golang.org/x/tools/gopls v0.18.1');
                 return 0;
@@ -2542,6 +2546,73 @@ describe('Go', () => {
         const { host } = await withGo({ untrusted: [WORK] });
 
         expect((await openGo(host, 'cmd/main.go')).servers).toEqual([]);
+    });
+});
+
+/* Every kind that builds the code it reads, with a file it serves and what a project has to hold for it. */
+const BUILDING_KINDS: Array<{ kind: CatalogKind; languageId: string; path: string; program: string; manifest: string | null; works: boolean }> = [
+    { kind: 'rust', languageId: 'rust', path: 'src/main.rs', program: 'rust-analyzer', manifest: 'Cargo.toml', works: true },
+    { kind: 'swift', languageId: 'swift', path: 'Sources/App/main.swift', program: 'sourcekit-lsp', manifest: null, works: false }
+];
+
+describe('every kind that builds the code it reads', () => {
+    const MAIN = resolve('/main');
+    const WORKTREE = join(WORK, '.worktrees', 'agent');
+
+    it('is the table of kinds with `runsBuildCode`', () => {
+        expect(
+            Object.values(KIND_PROFILES)
+                .filter((profile) => profile.runsBuildCode !== undefined)
+                .map((profile) => profile.kind)
+                .sort()
+        ).toEqual(BUILDING_KINDS.map((entry) => entry.kind).sort());
+        for (const entry of BUILDING_KINDS) {
+            expect(KIND_PROFILES[entry.kind].runsBuildCode?.off !== undefined).toBe(entry.works);
+        }
+    });
+
+    describe.each(BUILDING_KINDS)('$kind', ({ kind, languageId, path, program, manifest, works }) => {
+        async function rigged(options: { folder?: string; agentWorktrees: { main: string; paths: string[] }; worktreeBuild?: WorktreeBuildChoices }) {
+            const executable = join(root, 'bin', program);
+            await mkdir(dirname(executable), { recursive: true });
+            await writeFile(executable, '');
+            const folder = options.folder ?? WORK;
+
+            return installed([kind], { files: manifest === null ? [] : [join(folder, manifest)], programs: [executable], ...options });
+        }
+
+        const openIn = (host: LanguageHost, file: string) => open(host, file, '', 'client-1', languageId);
+
+        it('stays off a file in the worktree of an agent and serves the same file in the checkout', async () => {
+            const { host } = await rigged({ agentWorktrees: { main: MAIN, paths: [WORKTREE] } });
+
+            expect((await openIn(host, path)).servers).toEqual([kind]);
+            expect((await openIn(host, `.worktrees/agent/${path}`)).servers).toEqual([]);
+        });
+
+        it('serves that file once a person allows building in the repository', async () => {
+            const choices = new WorktreeBuildChoices({ path: join(root, 'worktree-build.json') });
+            await choices.set(MAIN, true);
+            const { host } = await rigged({ agentWorktrees: { main: MAIN, paths: [WORKTREE] }, worktreeBuild: choices });
+
+            expect((await openIn(host, `.worktrees/agent/${path}`)).servers).toEqual([kind]);
+        });
+
+        it(
+            works
+                ? 'starts for a project that is such a worktree, with building off'
+                : 'does not start at all for a project that is such a worktree, since loading its project already builds',
+            async () => {
+                const { host, spawner } = await rigged({ agentWorktrees: { main: MAIN, paths: [WORK] } });
+
+                expect((await openIn(host, path)).servers).toEqual(works ? [kind] : []);
+                if (works) {
+                    await ready(host, kind);
+                }
+                await settle();
+                expect(spawner.of(kind).length > 0).toBe(works);
+            }
+        );
     });
 });
 
