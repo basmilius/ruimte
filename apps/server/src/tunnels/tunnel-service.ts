@@ -128,6 +128,8 @@ export class TunnelService {
     private token: string | null;
     private zones: CloudflareZone[] = [];
     private busy: Busy = null;
+    /* Jobs of `start` queued or running, so only the last one to end clears `busy`. */
+    private queued = 0;
     private failure: string | null = null;
     private installFailed = false;
     private child: { process: CloudflaredProcess; lines: string[]; stopping: boolean } | null = null;
@@ -273,12 +275,25 @@ export class TunnelService {
             return;
         }
 
-        this.busy = busy;
-        this.failure = null;
-        this.waitsForNetwork = false;
+        const begin = (): void => {
+            this.busy = busy;
+            this.failure = null;
+            this.waitsForNetwork = false;
+        };
+
+        // A job queued behind another one leaves the screen to that one until its own turn comes.
+        this.queued += 1;
+
+        if (this.queued === 1) {
+            begin();
+        }
+
         this.announce();
         this.pending = this.jobs
             .run(async () => {
+                begin();
+                this.announce();
+
                 try {
                     await work();
                 } catch (e) {
@@ -286,7 +301,12 @@ export class TunnelService {
                     this.failure = this.plain(e, 'That did not work');
                     this.ports.log(`Tunnels: ${this.failure}`);
                 } finally {
-                    this.busy = null;
+                    this.queued -= 1;
+
+                    if (this.queued === 0) {
+                        this.busy = null;
+                    }
+
                     this.announce();
                 }
             })

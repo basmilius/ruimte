@@ -1254,6 +1254,58 @@ describe('after a restart', () => {
         expect(again.runner.running).toBe(1);
     });
 
+    test('shows a job queued behind one that fails as busy until it ends, not the failure before it', async () => {
+        const cloudflare = new FakeCloudflare();
+        const held: Array<(fail: boolean) => void> = [];
+        const hold = { value: false };
+        let arrived: () => void = () => undefined;
+        const f = await fixture(
+            {
+                cloudflare: (url, init) => {
+                    if (!hold.value) {
+                        return cloudflare.fetch(url, init);
+                    }
+
+                    return new Promise((resolve, reject) => {
+                        held.push((fail) => (fail ? reject(new Error('offline')) : resolve(cloudflare.fetch(url, init))));
+                        arrived();
+                    });
+                }
+            },
+            '/usr/bin/cloudflared',
+            { cloudflare }
+        );
+
+        const heldCount = (count: number): Promise<void> =>
+            new Promise((resolve) => {
+                const check = (): void => {
+                    if (held.length >= count) {
+                        resolve();
+                    } else {
+                        arrived = check;
+                    }
+                };
+
+                check();
+            });
+
+        await readyTunnel(f);
+        hold.value = true;
+        await f.service.retry();
+        await f.service.retry();
+        await heldCount(1);
+        held[0]!(true);
+        await heldCount(2);
+
+        expect(await f.state()).toMatchObject({ stage: 'checking', message: null });
+
+        hold.value = false;
+        held[1]!(false);
+        await f.service.idle();
+
+        expect(await f.state()).toMatchObject({ stage: 'running', message: null });
+    });
+
     test('tries nothing again when the network comes back after a failure that was not about the network', async () => {
         const f = await fixture();
 
