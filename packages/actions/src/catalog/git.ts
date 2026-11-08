@@ -1,4 +1,8 @@
 import {
+    GitBlobResultSchema,
+    GitCompareModeSchema,
+    GitComparePageSchema,
+    GitCompareResultSchema,
     GitConflictResultSchema,
     GitConflictsResultSchema,
     GitDiffResultSchema,
@@ -69,6 +73,52 @@ export const GIT_ACTIONS = {
             base: z.string().min(1).nullable().describe('The base scope starts at this branch instead of the repository base')
         }),
         output: GitDiffResultSchema
+    },
+    'git.compare': {
+        title: 'Compare two branches',
+        description:
+            'Reads two refs of a repository without checking either out: the files that differ and the commits only each side has. Both refs are resolved to commits first, and the answer names them.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            repository,
+            from: z.string().min(1).describe('The left ref: a branch as git.refs lists it, a tag or a commit'),
+            to: z.string().min(1).describe('The right ref: a branch as git.refs lists it, a tag or a commit'),
+            mode: GitCompareModeSchema.nullable().describe(
+                'merge-base shows what the right ref adds since the two diverged, tips the plain difference of the two tips; merge-base without it'
+            )
+        }),
+        output: GitCompareResultSchema
+    },
+    'git.compareCommits': {
+        title: 'Read comparison commits',
+        description: 'Reads a later page of the commits only one side of a branch comparison has, between the commits that comparison resolved.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            repository,
+            fromCommit: z.string().min(1).describe('The fromCommit the comparison answered'),
+            toCommit: z.string().min(1).describe('The toCommit the comparison answered'),
+            side: z.enum(['left', 'right']).describe('left for the commits only fromCommit has, right for the commits only toCommit has'),
+            skip: z.number().int().min(0).nullable().describe('The next the previous page answered; null for the first page'),
+            pageSize: z.number().int().min(1).max(100).nullable().describe('Commits per page; 30 without it')
+        }),
+        output: GitComparePageSchema
+    },
+    'git.blob': {
+        title: 'Read a committed file',
+        description: 'Reads one file as a commit holds it, up to 512 KiB, or says why there is no text. A symlink answers the path it points at.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            repository,
+            commit: z.string().min(1).describe('A commit id a comparison answered, never a branch name'),
+            path: z.string().min(1).describe('One file relative to the repository root')
+        }),
+        output: GitBlobResultSchema
     },
     'git.log': {
         title: 'Read git history',
