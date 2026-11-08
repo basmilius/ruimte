@@ -1,6 +1,6 @@
 'use client';
 
-import { Input, Switch } from '@adecore/ui';
+import { Input, Segmented, Switch } from '@adecore/ui';
 import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -78,7 +78,7 @@ export function SettingsAgents() {
         <Stage
             width={960}
             height={760}
-            label="The Settings dialog on Agents. The navigation lists General, Appearance and Keyboard, then Workspace and AI sections. The pane shows What agents may do, with four switches."
+            label="The Settings dialog on Agents. The navigation lists General, Appearance and Keyboard, then Workspace and AI sections. The pane shows Short texts, with a Text model choice between Automatic and Choose, and What agents may do, with four switches."
         >
             <div className="absolute inset-0 flex overflow-hidden rounded-2xl border border-white/10 bg-surface-raised shadow-[0_40px_120px_-20px_rgb(0_0_0/0.8)]">
                 <div className="flex w-58 shrink-0 flex-col gap-3.5 border-r border-border bg-surface bg-clip-padding px-3 py-4">
@@ -117,6 +117,23 @@ export function SettingsAgents() {
                         <p className="mt-0.5 text-xs text-text-muted">What new agents start with and what they may do.</p>
                     </div>
                     <div className="px-8">
+                        <SettingsSection title="Short texts">
+                            <SettingsRow
+                                label="Text model"
+                                description="Writes new chat titles, commit messages and conflict proposals on this machine. Automatic leaves the choice to Ruimte. Editor AI has its own model."
+                                control={
+                                    <Segmented
+                                        value="automatic"
+                                        options={[
+                                            { id: 'automatic', label: 'Automatic' },
+                                            { id: 'custom', label: 'Choose' }
+                                        ]}
+                                        label="Text model"
+                                        onValueChange={() => undefined}
+                                    />
+                                }
+                            />
+                        </SettingsSection>
                         <SettingsSection title="What agents may do" description="Saved per machine. Applies to every device connected to it.">
                             {ROWS.map((row) => (
                                 <SettingsRow

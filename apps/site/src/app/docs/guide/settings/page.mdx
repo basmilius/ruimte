@@ -25,7 +25,7 @@ Press <Shortcut keys="Mod+," /> to open Settings, and <Shortcut keys="Mod+F" /> 
 | Extensions | What you added to Ruimte, and the store. See [Extensions](/docs/extensions). |
 | Providers | Each agent CLI with its accounts, login and default model. Add an account or a provider, install a CLI, enter API keys. |
 | Chats | How replies appear, reading width, the key that sends, what agents may show, map tiles |
-| Agents | Defaults for new agents, what agents may do per machine, agent status in terminals, notifications, keep awake, computer use |
+| Agents | Defaults for new agents, the text model of a machine, what agents may do per machine, agent status in terminals, notifications, keep awake, computer use |
 | Voice | Microphone, Speech to text, Voice Control |
 | Usage | Cost, tokens and plan limits |
 | About | Version, machine, data folder, updates, and **Set up Ruimte** |
@@ -38,6 +38,16 @@ Settings, Providers lists the accounts of each CLI. An extra Claude Code account
 Open the extra account and turn on **Use the setup of the default account**. Its chats and terminals then read `CLAUDE.md`, the rules, skills, agents and commands of the default account, and a change there shows in both. Your permissions, hooks, model, status line and output style are copied once. After that the extra account keeps its own.
 
 Sign-in and history stay apart. A file the extra account already holds stays as it is, and the page names what stayed. A chat that is already running picks the setup up when it starts again. Turning the switch off removes the links and leaves the copied settings in place.
+
+## Text model
+
+Ruimte asks a model for short texts: the title of a new chat, a commit message and a proposal for a merge conflict. **Text model** under Settings, Agents says which model writes them on a machine. It applies to every project on that machine and to every device connected to it.
+
+**Automatic** leaves the choice to Ruimte, as before. With **Choose** you pick a CLI, a model and, if you have more than one account for that CLI, an account. Without a model, Ruimte uses the cheapest one of that CLI at the CLI's default reasoning.
+
+Ruimte never switches to another CLI for you. If the CLI you chose is signed out, uninstalled or turned off, a request for a commit message fails and says why, and a new chat keeps the title Ruimte made from your first prompt. Pick Automatic to let Ruimte choose again.
+
+The editor's AI features have their own choice, under Settings, Editor, AI. A machine that has not been updated shows the setting as unavailable.
 
 ## Language and region
 
