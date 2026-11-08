@@ -546,21 +546,14 @@ export class TunnelService {
 
             await this.stopChild();
 
-            const target = this.targetOf(tunnel.id);
-            const hostnames = this.stored.rows.map((row) => row.hostname);
-
+            // The rows stay until their rules are off as well, so a retry still knows which 404s are Ruimte's.
             for (const row of this.stored.rows) {
-                const live = (await api.recordsNamed(row.zoneId, row.hostname)).find((record) => record.id === row.recordId);
-
-                if (live !== undefined && this.isOurs(live, target)) {
-                    await api.deleteRecord(row.zoneId, row.recordId, row.hostname);
-                }
-
-                this.stored = { ...this.stored, rows: this.stored.rows.filter((candidate) => candidate.id !== row.id) };
-                this.save();
+                await this.deleteRecordOf(api, row, tunnel.id);
             }
 
             if (found !== null) {
+                const hostnames = this.stored.rows.map((row) => row.hostname);
+
                 await this.syncRows([], hostnames);
             }
 
@@ -573,8 +566,8 @@ export class TunnelService {
     }
 
     /*
-     * Puts a hostname on the tunnel: the DNS record first, then the rule in Cloudflare. A name that has a record Ruimte did
-     * not make is refused before anything is written.
+     * Puts a hostname on the tunnel: a 404 rule first, then the DNS record, then the rule that serves it. A name that has a
+     * record Ruimte did not make is refused before anything is written.
      */
     async add(input: { kind: TunnelRowKind; zone: string; label: string; port?: number; comeBack?: boolean; origin?: TunnelOrigin }): Promise<TunnelState> {
         await this.jobs.run(async () => {
@@ -634,7 +627,7 @@ export class TunnelService {
                 throw new TunnelConfigError('hostname-on-tunnel', `${hostname} is on this tunnel already. Pick another name.`);
             }
 
-            const record = await this.routeHostname(api, zone, hostname, tunnel.id);
+            const earlier = await this.ourRecordNamed(api, zone, hostname, tunnel.id);
             const row: StoredRow = {
                 id: this.ports.random(6),
                 kind: input.kind,
@@ -645,15 +638,22 @@ export class TunnelService {
                 comeBack: input.comeBack ?? input.kind === 'mcp',
                 ...(origin === undefined ? {} : { origin }),
                 zoneId: zone.id,
-                recordId: record.id
+                recordId: earlier?.id ?? null
             };
 
-            // Saved off first, so Remove still finds the record, and on only once Cloudflare took the rule.
+            // A rule someone else set (a catch-all that serves) would answer the name the moment its record points at the
+            // tunnel, so Cloudflare takes the 404 first. Saved off once it did, so Remove still finds the rule and the record.
+            await this.syncRows([...this.stored.rows, row]);
             this.stored = { ...this.stored, rows: [...this.stored.rows, row] };
             this.save();
 
-            // The record is proxied already, so the name answers 404 before it tries to serve, and stays so if Cloudflare refuses that.
-            await this.syncRows(this.stored.rows);
+            const record = await this.routeHostname(api, zone, hostname, tunnel.id);
+
+            this.stored = {
+                ...this.stored,
+                rows: this.stored.rows.map((candidate) => (candidate.id === row.id ? { ...candidate, recordId: record.id } : candidate))
+            };
+            this.save();
 
             const rows = this.stored.rows.map((candidate) => (candidate.id === row.id ? { ...candidate, enabled: true } : candidate));
 
@@ -770,12 +770,7 @@ export class TunnelService {
             this.stored = { ...this.stored, rows: released };
             this.save();
 
-            const target = this.targetOf(tunnel.id);
-            const live = (await api.recordsNamed(row.zoneId, row.hostname)).find((record) => record.id === row.recordId);
-
-            if (live !== undefined && this.isOurs(live, target)) {
-                await api.deleteRecord(row.zoneId, row.recordId, row.hostname);
-            }
+            await this.deleteRecordOf(api, row, tunnel.id);
 
             const remaining = this.stored.rows.filter((candidate) => candidate.id !== id);
 
@@ -960,8 +955,16 @@ export class TunnelService {
         return record.type === 'CNAME' && record.content === target && record.comment === this.recordComment();
     }
 
-    /* Creates the proxied CNAME to the tunnel, or updates the one Ruimte made earlier. Any other record under the name stops it. */
+    /* Creates the proxied CNAME to the tunnel, or updates the one Ruimte made earlier. */
     private async routeHostname(api: CloudflareApi, zone: CloudflareZone, hostname: string, tunnelId: string): Promise<CloudflareRecord> {
+        const input = { name: hostname, content: this.targetOf(tunnelId), comment: this.recordComment() };
+        const ours = await this.ourRecordNamed(api, zone, hostname, tunnelId);
+
+        return ours === undefined ? api.createRecord(zone.id, input) : api.updateRecord(zone.id, ours.id, input);
+    }
+
+    /* The record Ruimte made under the name earlier, if any. Any other record under the name refuses it. */
+    private async ourRecordNamed(api: CloudflareApi, zone: CloudflareZone, hostname: string, tunnelId: string): Promise<CloudflareRecord | undefined> {
         const target = this.targetOf(tunnelId);
         const existing = await api.recordsNamed(zone.id, hostname);
         const foreign = existing.find((record) => !this.isOurs(record, target));
@@ -977,10 +980,22 @@ export class TunnelService {
             );
         }
 
-        const input = { name: hostname, content: target, comment: this.recordComment() };
-        const ours = existing[0];
+        return existing[0];
+    }
 
-        return ours === undefined ? api.createRecord(zone.id, input) : api.updateRecord(zone.id, ours.id, input);
+    /*
+     * Deletes the record of a row, only while it is still the one Ruimte made. A row whose record Cloudflare never
+     * confirmed takes the one under its name that carries this machine's mark, if a create landed after all.
+     */
+    private async deleteRecordOf(api: CloudflareApi, row: StoredRow, tunnelId: string): Promise<void> {
+        const target = this.targetOf(tunnelId);
+        const live = (await api.recordsNamed(row.zoneId, row.hostname)).find(
+            (record) => (row.recordId === null || record.id === row.recordId) && this.isOurs(record, target)
+        );
+
+        if (live !== undefined) {
+            await api.deleteRecord(row.zoneId, live.id, row.hostname);
+        }
     }
 
     /*

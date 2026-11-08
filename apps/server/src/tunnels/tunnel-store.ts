@@ -7,9 +7,10 @@ export const TUNNELS_DIR = 'tunnels';
 
 /*
  * A row of the screen with what Ruimte needs to undo it: the zone and the DNS record it made, which is the only record it
- * ever deletes. A key a newer Ruimte wrote survives this one.
+ * ever deletes. The record is null while Cloudflare has not made it yet, after its 404 rule was taken. A key a newer
+ * Ruimte wrote survives this one.
  */
-const StoredRowSchema = TunnelRowSchema.extend({ zoneId: z.string().min(1), recordId: z.string().min(1) }).loose();
+const StoredRowSchema = TunnelRowSchema.extend({ zoneId: z.string().min(1), recordId: z.string().min(1).nullable() }).loose();
 export type StoredRow = z.infer<typeof StoredRowSchema>;
 
 /*

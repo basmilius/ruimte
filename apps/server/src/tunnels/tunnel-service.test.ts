@@ -991,6 +991,32 @@ describe('an existing tunnel', () => {
         expect(f.cloudflare.records).toEqual([]);
     });
 
+    test('still knows its 404s when unlinking again after Cloudflare refused to take them off, so the hostname can come back', async () => {
+        const f = await fixture();
+        const picked = f.cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
+
+        await linked(f, picked);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+        await f.service.update((await f.state()).rows[0]!.id, { enabled: false });
+        await f.service.idle();
+        f.cloudflare.failing.set('PUT /accounts/acc-1/cfd_tunnel', 400);
+
+        await expect(f.service.unlink()).rejects.toBeInstanceOf(CloudflareError);
+
+        f.cloudflare.failing.clear();
+        await f.service.unlink();
+
+        expect(picked.ingress).toEqual([{ service: 'http://localhost:8080' }]);
+        expect(f.cloudflare.records).toEqual([]);
+
+        await linked(f, picked);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+
+        expect(picked.ingress).toEqual([{ hostname: 'shop.bmnw.nl', service: 'http://127.0.0.1:3000' }, { service: 'http://localhost:8080' }]);
+    });
+
     test('leaves the hostname of a refused add on a 404, so the catch-all never serves it', async () => {
         let writes = 0;
         const cloudflare = new FakeCloudflare();
@@ -1021,6 +1047,46 @@ describe('an existing tunnel', () => {
 
         expect((await f.state()).rows).toMatchObject([{ hostname: 'shop.bmnw.nl', enabled: false }]);
         expect(picked.ingress).toEqual([{ hostname: 'shop.bmnw.nl', service: 'http_status:404' }, { service: 'http://localhost:8080' }]);
+    });
+
+    test('makes no record for a new hostname until Cloudflare took its 404, so a catch-all that serves never answers it', async () => {
+        const f = await fixture();
+        const picked = f.cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
+
+        await linked(f, picked);
+        f.cloudflare.failing.set('PUT /accounts/acc-1/cfd_tunnel', 400);
+
+        await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 })).rejects.toBeInstanceOf(CloudflareError);
+
+        await f.service.idle();
+
+        expect(f.cloudflare.records).toEqual([]);
+        expect(picked.ingress).toEqual([{ service: 'http://localhost:8080' }]);
+        expect((await f.state()).rows).toEqual([]);
+    });
+
+    test('keeps a hostname whose record Cloudflare refused after its 404, and Remove takes the 404 off', async () => {
+        const f = await fixture();
+        const picked = f.cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
+
+        await linked(f, picked);
+        f.cloudflare.failing.set('POST /zones/zone-bmnw.nl/dns_records', 400);
+
+        await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 })).rejects.toBeInstanceOf(CloudflareError);
+
+        await f.service.idle();
+        f.cloudflare.failing.clear();
+
+        expect(f.cloudflare.records).toEqual([]);
+        expect(picked.ingress).toEqual([{ hostname: 'shop.bmnw.nl', service: 'http_status:404' }, { service: 'http://localhost:8080' }]);
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'shop.bmnw.nl', enabled: false }]);
+
+        await f.service.remove((await f.state()).rows[0]!.id);
+        await f.service.idle();
+
+        expect(picked.ingress).toEqual([{ service: 'http://localhost:8080' }]);
+        expect(f.cloudflare.records).toEqual([]);
+        expect((await f.state()).rows).toEqual([]);
     });
 
     test('writes the origin settings into its own rule only, and lists the host header of a rule of the dashboard', async () => {
