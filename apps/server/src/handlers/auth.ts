@@ -6,7 +6,8 @@ import {
     type LanDoor,
     type MachineUpdate,
     type MachineUpdateReport,
-    type MachineWork
+    type MachineWork,
+    type TextModelChoice
 } from '@ruimte/contracts';
 import { peerAccessRequestMessage } from '@ruimte/pulsar';
 import { INTEGRATION_KINDS, IntegrationsFixed, isIntegrationKind } from '../agents/integrations.ts';
@@ -40,6 +41,8 @@ interface EndpointHost {
     streamingChanged(allowed: boolean): void;
     // Chats take up a limited turn on a clock only while this is on; turning it off drops what was owed.
     resumeChanged?(on: boolean): void;
+    // Throws when the machine cannot write short texts with this pick: its CLI, model or account is not there.
+    validateTextModel?(choice: TextModelChoice): Promise<void>;
     // Off drops the days not sent yet, so nothing counted before goes out later.
     usageStatsChanged?(on: boolean): Promise<void>;
     // Whether this machine can hold a block on sleep, and the call that follows a changed setting.
@@ -82,6 +85,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         streamingAllowed: identity.streamingAllowed,
         resumeAtReset: identity.resumeAtReset,
         visualReplies: identity.visualReplies,
+        textModel: identity.textModel,
         ...identity.keepAwakeFields(),
         keepAwakeAvailable: host.keepAwake?.available === true,
         keepAwakeLidAvailable: host.closedLid?.available === true,
@@ -177,6 +181,10 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         if (settings.terminalShell !== undefined && !isOwner(access)) {
             throw new RequestError('owner-only', 'Only a person on this machine can choose the shell of its terminals');
         }
+        // A pick this machine cannot use now is refused here, so a person hears why while choosing and not on the first commit message.
+        if (settings.textModel != null) {
+            await host.validateTextModel?.(settings.textModel);
+        }
         await write({
             worktreeRoot,
             terminalShell: settings.terminalShell,
@@ -187,6 +195,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
             streamingAllowed: settings.streamingAllowed,
             resumeAtReset: settings.resumeAtReset,
             visualReplies: settings.visualReplies,
+            textModel: settings.textModel,
             keepAwake: settings.keepAwake,
             keepAwakeOnBattery: settings.keepAwakeOnBattery,
             keepAwakeDisplay: settings.keepAwakeDisplay,

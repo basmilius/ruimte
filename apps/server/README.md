@@ -121,6 +121,7 @@ A bare `ruimte` at a terminal prints its address and the commands; under the ser
 | `reachOpenProjects` | Lets an agent's `project` field read the other projects open on this machine, message their terminals and chats, and start agents there. Off by default. |
 | `resumeAtReset` | Resumes a chat that stopped on a limit, on a clock. Off by default; a chat's own switch can say no. |
 | `visualReplies` | Lets an agent in a chat show a page above its reply. On by default; written only as `false`. |
+| `textModel` | The CLI, model and account that write short texts: new chat titles, commit messages and conflict proposals. Picked and checked like the editor model (`editor-assist/selection.ts`); a null model is that CLI's cheapest. An explicit pick never falls back to another CLI. Absent is Automatic. |
 | `streamingAllowed` | Browser pages and device screens stream to clients. On by default. |
 | `keepAwake`, `keepAwakeOnBattery`, `keepAwakeDisplay` | Block sleep `off`, `working` (while an agent works) or `always`; on the adapter only unless battery is allowed; the display only under `always`. |
 | `keepAwakeLidClosed` | Also hold with the lid closed (below). |

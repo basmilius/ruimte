@@ -36,6 +36,7 @@ import { SessionManager } from '../sessions/manager.ts';
 import { ModeApprovals, personModeOf } from '../sessions/mode-approvals.ts';
 import { prepareShellIntegration, type ShellEnvironment } from '../sessions/shell-integration.ts';
 import { SnapshotStore, scheduleSnapshots, type SnapshotSchedule } from '../sessions/snapshot-store.ts';
+import { ShortTextModels } from '../short-text/model.ts';
 import { agentBounds } from './agent-bounds.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
 import type { ArtifactsBundle } from './artifacts.ts';
@@ -141,6 +142,8 @@ export interface AgentsBundle {
     proposals: ProjectProposals;
     /* Where a one-shot CLI run works, so a folder from another machine never lends it its configuration. */
     oneShot: OneShotPlace;
+    /* The model a person picked for the machine's short texts: chat titles, commit messages and conflict proposals. */
+    textModels: ShortTextModels;
     /* Refuses a directory an agent node may not start in, at every start. */
     startCwd(nodeId: string, cwd: string): Promise<void>;
     /* A bearer token speaks for a terminal session or a chat, for reading context and for agent commands alike. */
@@ -174,6 +177,12 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         cwdOf: (nodeId) => chats.get(nodeId)?.info.cwd ?? sessions.get(nodeId)?.cwd ?? null
     });
     const oneShot = new OneShotPlace(config.home, untrusted);
+    const textModels = new ShortTextModels({
+        choice: () => identity.textModel,
+        registry: providers.providers,
+        accounts: providers.accounts,
+        cwdFor: (folder) => oneShot.cwdFor(folder)
+    });
     const proposals = new ProjectProposals({
         chats: { hold: (chatId, key) => void chats.holdForPerson(chatId, key), release: (chatId, key) => chats.releaseHold(chatId, key) }
     });
@@ -321,7 +330,10 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         onLimits: (update) => later.usage().limits.applyLive(update),
         claudeTitles,
         // One one-shot call per chat of a CLI that names nothing itself (Codex, Grok, ...), on that CLI first.
-        nameChat: async (provider, input) => suggestChatTitle(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) }),
+        // The machine's text model, when a person picked one, names every new chat; else that CLI first.
+        titlePolicy: () => textModels.titlePolicy(),
+        nameChat: (provider, input) =>
+            textModels.title(input, async () => suggestChatTitle(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) })),
         onInterruptedRun: outboxLink.onInterruptedRun,
         taskRows: (chatId) => tasks.ofParent(chatId),
         dropWakes: (chatId) => tasks.dropWake(chatId),
@@ -352,6 +364,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         visuals,
         untrusted,
         oneShot,
+        textModels,
         proposals,
         startCwd: bounds.checkCwd,
         targetForToken,

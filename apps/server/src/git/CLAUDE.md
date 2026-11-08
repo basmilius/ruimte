@@ -12,4 +12,5 @@ Worktrees and an agent's merge are in the root `CLAUDE.md`; `apps/server/README.
 Decisions the code cannot show. Do not reverse one without asking Bas.
 
 - A pull only fast-forwards until a person says how a branch that moved on both sides comes together.
+- A machine's text model (`textModel` in `endpoint.json`, `short-text/model.ts`) writes commit messages, conflict proposals and chat titles. It is picked and checked like the editor model, and it wins over a request's provider hint. An explicit pick never falls back to another CLI: a pick that cannot write refuses the request, and a title keeps its derived name. Only Automatic keeps the old choice of CLI.
 - An agent CLI may propose a resolution, one stretch at a time or over every file at once. A proposal is an edit in the overlay: nothing is written, staged or committed on an agent's word alone.

@@ -354,6 +354,7 @@ export async function registerHandlers(dispatcher: Dispatcher, input: HandlersIn
             requestInstall: () => power.updates.requestInstall(),
             ending: () => workEndedByInstall(config.underService, processes.machineWork())
         },
+        validateTextModel: (choice) => agents.textModels.validate(choice),
         resumeChanged: (on) => {
             chats.resumeSettingChanged();
             // A chat nobody loaded owes a resume only on disk, so turning the switch off drops those there.
@@ -436,6 +437,7 @@ export function registerEditorHandlers(dispatcher: Dispatcher, input: EditorHand
             untrusted: (path) => agents.untrusted.inFolder(path),
             untrustFolder: (path, branch) => store.peers.untrustFolder(path, branch)
         },
-        agents.oneShot
+        agents.oneShot,
+        agents.textModels
     );
 }

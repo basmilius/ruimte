@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bu
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { PROTOCOL_VERSION, type ServerFrame } from '@ruimte/contracts';
+import { PROTOCOL_VERSION, type ServerFrame, type TextModelChoice } from '@ruimte/contracts';
 import { machineRegistrationMessage, peerAccessRequestMessage } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { AgentIntegrations } from '../agents/integrations.ts';
 import { AuthStore, type StatementAdmission } from '../auth/auth-store.ts';
 import { generateKeyPair } from '../auth/keys.ts';
 import { admitClient } from '../auth/test-admit.ts';
-import { Dispatcher, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
+import { Dispatcher, RequestError, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
 import { LENT_NOTHING, lendNothing } from '../endpoint-id-test-helpers.ts';
 import { readOrCreateEndpointIdentity, type EndpointIdentity } from '../endpoint-id.ts';
 import { ClosedLidError, DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
@@ -24,6 +24,8 @@ let dispatcher: Dispatcher;
 let lanDoorOpen: boolean;
 let disconnected: string[];
 let streamingChanges: boolean[];
+let validatedTextModels: TextModelChoice[];
+let refuseTextModel: boolean;
 let keepAwakeChanges: number;
 let lidRule: boolean;
 let lidCancels: boolean;
@@ -73,6 +75,8 @@ beforeEach(async () => {
     lanDoorOpen = true;
     disconnected = [];
     streamingChanges = [];
+    validatedTextModels = [];
+    refuseTextModel = false;
     keepAwakeChanges = 0;
     lidRule = false;
     lidCancels = false;
@@ -96,6 +100,13 @@ beforeEach(async () => {
         broker: () => ({ brokerUrl: identity.broker.mode === 'custom' ? identity.broker.url : null, brokerFixed: false }),
         lanDoor: () => ({ lan: lanDoorOpen ? { port: 4220, addresses: ['192.168.1.20'] } : null, lanDoorFixed: false }),
         streamingChanged: (allowed) => streamingChanges.push(allowed),
+        validateTextModel: async (choice) => {
+            validatedTextModels.push(choice);
+
+            if (refuseTextModel) {
+                throw new RequestError('unavailable', 'Text model unavailable');
+            }
+        },
         keepAwake: {
             available: true,
             changed: () => {
@@ -350,6 +361,7 @@ describe('auth handlers', () => {
                     streamingAllowed: true,
                     resumeAtReset: false,
                     visualReplies: true,
+                    textModel: null,
                     keepAwake: 'off',
                     keepAwakeOnBattery: false,
                     keepAwakeDisplay: false,
@@ -391,6 +403,25 @@ describe('auth handlers', () => {
         expect(off).toMatchObject({ ok: true, result: { visualReplies: false } });
         expect(identity.visualReplies).toBe(false);
         expect(await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.info')).toMatchObject({ ok: true, result: { visualReplies: false } });
+    });
+
+    test('a text model is checked before it is saved, and Automatic needs no check', async () => {
+        const choice = { provider: 'codex', model: null, account: 'work' };
+        const access: ClientAccess = { reachability: 'lan', sessionId: 's1' };
+        refuseTextModel = true;
+
+        expect(await ask(access, 'endpoint.settings', { textModel: choice })).toMatchObject({ ok: false, error: { code: 'unavailable' } });
+        expect(identity.textModel).toBeNull();
+
+        refuseTextModel = false;
+
+        expect(await ask(access, 'endpoint.settings', { textModel: choice })).toMatchObject({ ok: true, result: { textModel: choice } });
+        expect(validatedTextModels).toEqual([choice, choice]);
+
+        refuseTextModel = true;
+
+        expect(await ask(access, 'endpoint.setIdentity', { name: null, icon: null, textModel: null })).toMatchObject({ ok: true, result: { textModel: null } });
+        expect(validatedTextModels).toHaveLength(2);
     });
 
     test('usage statistics start on, and only a person on this machine turns them off', async () => {
