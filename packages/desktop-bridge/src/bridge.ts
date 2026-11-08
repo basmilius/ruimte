@@ -27,6 +27,8 @@ export interface BrowserContextParams {
     /* An HTML file's preview, which has no history and only reads. Missing from a shell older than
        the preview's menu. */
     guest?: 'browser' | 'preview';
+    /* False for a page shared through a port: its links and searches never leave for the system browser. Missing means they may. */
+    external?: boolean;
     /* Where the click landed, in the window's coordinates. Chromium maps a guest's point into the embedder before the event leaves. */
     x: number;
     y: number;

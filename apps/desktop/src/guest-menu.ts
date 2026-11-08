@@ -11,6 +11,18 @@ export interface BrowserContextAction {
 /* A sealed preview only reads: nothing it is asked to do may download, inspect or leave for the system browser. */
 export const PREVIEW_ACTIONS: ReadonlySet<string> = new Set(['copy', 'select-all', 'copy-image']);
 
+/*
+ * Whether the shell does `action` for a guest. A page shared through a port also never hands an address to
+ * the system browser: a link or a search there would send the person's click, and what they selected, out of
+ * the connection that page was shared through.
+ */
+export function guestActionAllowed(action: string, guest: GuestKind | 'tunnel'): boolean {
+    if (guest === 'preview') {
+        return PREVIEW_ACTIONS.has(action);
+    }
+    return !(guest === 'tunnel' && action === 'open-external');
+}
+
 /* So the menu cannot run off the screen. */
 const SPELLING_SUGGESTIONS = 5;
 
@@ -25,7 +37,8 @@ function menuLabel(text: string): string {
 export interface EditableMenuActions {
     replaceMisspelling: (word: string) => void;
     lookUp: () => void;
-    openExternal: (url: string) => void;
+    /* Absent where the guest may not hand an address to the system browser. */
+    openExternal?: (url: string) => void;
     /* Absent where the guest may not be inspected. */
     inspect?: () => void;
 }
@@ -63,11 +76,11 @@ export function editableMenuTemplate(
     template.push({ role: 'delete', enabled: flags.canDelete }, { role: 'selectAll', enabled: flags.canSelectAll });
     if (platform === 'darwin' && params.selectionText !== '') {
         // Electron has no dictionary or search roles; macOS adds Share and Services through the frame.
-        template.push(
-            { type: 'separator' },
-            { label: `Look Up "${menuLabel(params.selectionText)}"`, click: () => actions.lookUp() },
-            { label: 'Search with Google', click: () => actions.openExternal(`${SEARCH_URL}${encodeURIComponent(params.selectionText)}`) }
-        );
+        const openExternal = actions.openExternal;
+        template.push({ type: 'separator' }, { label: `Look Up "${menuLabel(params.selectionText)}"`, click: () => actions.lookUp() });
+        if (openExternal) {
+            template.push({ label: 'Search with Google', click: () => openExternal(`${SEARCH_URL}${encodeURIComponent(params.selectionText)}`) });
+        }
     }
     const inspect = actions.inspect;
     if (inspect) {
@@ -77,10 +90,12 @@ export function editableMenuTemplate(
 }
 
 /* What the client draws its own menu from: where the click landed and nothing more. */
-export function contextMenuPayload(webContentsId: number, guest: GuestKind, params: Electron.ContextMenuParams) {
+export function contextMenuPayload(webContentsId: number, guest: GuestKind, params: Electron.ContextMenuParams, external = true) {
     return {
         webContentsId,
         guest,
+        // Sent only when false, so a client that does not know the field draws what it always drew.
+        ...(external ? {} : { external }),
         x: params.x,
         y: params.y,
         linkURL: params.linkURL,

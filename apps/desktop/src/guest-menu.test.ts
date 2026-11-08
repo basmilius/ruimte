@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { contextMenuPayload, editableMenuTemplate } from './guest-menu';
+import { contextMenuPayload, editableMenuTemplate, guestActionAllowed } from './guest-menu';
 
 function params(overrides: Partial<Electron.ContextMenuParams> = {}): Electron.ContextMenuParams {
     return {
@@ -39,6 +39,34 @@ describe('editableMenuTemplate', () => {
         const template = editableMenuTemplate(params({ editFlags: { ...params().editFlags, canEditRichly: true } }), 'linux', actions);
         expect(template.some((item) => item.role === 'pasteAndMatchStyle')).toBe(true);
     });
+});
+
+describe('guestActionAllowed', () => {
+    test('a page shared through a port never opens the system browser, and its other rows work', () => {
+        expect(guestActionAllowed('open-external', 'browser')).toBe(true);
+        expect(guestActionAllowed('open-external', 'tunnel')).toBe(false);
+
+        for (const action of ['copy', 'select-all', 'copy-image', 'save-image', 'inspect']) {
+            expect(guestActionAllowed(action, 'tunnel')).toBe(true);
+        }
+    });
+
+    test('a preview only reads', () => {
+        expect(guestActionAllowed('copy', 'preview')).toBe(true);
+        expect(guestActionAllowed('open-external', 'preview')).toBe(false);
+        expect(guestActionAllowed('inspect', 'preview')).toBe(false);
+    });
+});
+
+test('an editable field of a shared page has no web search', () => {
+    const template = editableMenuTemplate(params({ selectionText: 'x' }), 'darwin', { replaceMisspelling: () => undefined, lookUp: () => undefined });
+
+    expect(template.map((item) => item.label).filter(Boolean)).toEqual(['Look Up "x"']);
+});
+
+test('the payload says only when a page may not open the system browser', () => {
+    expect(contextMenuPayload(7, 'browser', params())).not.toHaveProperty('external');
+    expect(contextMenuPayload(7, 'browser', params(), false)).toMatchObject({ external: false });
 });
 
 test('the payload carries where the click landed and the four flags the client draws', () => {
