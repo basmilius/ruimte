@@ -136,6 +136,8 @@ export class TunnelService {
     private stopped = false;
     /* The last job failed because Cloudflare could not be reached or asked Ruimte to wait, so the network coming back tries again. */
     private waitsForNetwork = false;
+    /* The network came back while a job ran, so that job failing on the network tries once more. */
+    private networkReturned = false;
     /* Something other than Ruimte ran the tunnel when Ruimte last looked, so it started no child of its own. */
     private runsElsewhere = false;
     /* The rules on the tunnel that are not Ruimte's, from the last time Ruimte read its configuration. */
@@ -147,9 +149,14 @@ export class TunnelService {
         this.token = ports.tokens.read();
     }
 
-    /* Resolves once the work a request started has ended. */
-    idle(): Promise<void> {
-        return this.pending;
+    /* Resolves once the work a request started has ended, with any work that work started in turn. */
+    async idle(): Promise<void> {
+        let seen: Promise<void>;
+
+        do {
+            seen = this.pending;
+            await seen;
+        } while (seen !== this.pending);
     }
 
     async state(): Promise<TunnelState> {
@@ -283,7 +290,16 @@ export class TunnelService {
                     this.announce();
                 }
             })
-            .catch(() => undefined);
+            .catch(() => undefined)
+            .then(() => {
+                const again = this.networkReturned && this.waitsForNetwork && this.token !== null;
+
+                this.networkReturned = false;
+
+                if (again) {
+                    this.start('checking', () => this.refresh());
+                }
+            });
     }
 
     private requireToken(): string {
@@ -769,10 +785,21 @@ export class TunnelService {
 
     /*
      * The network is back, which the daemon learns from the broker taking this machine again. A bring-up that failed
-     * because Cloudflare could not be reached tries once more, so the MCP row that comes back on needs no Try again.
+     * because Cloudflare could not be reached tries once more, so the MCP row that comes back on needs no Try again. One
+     * still running when the network comes back tries once more after it, if it then fails the same way.
      */
     networkBack(): void {
-        if (!this.waitsForNetwork || this.busy !== null || this.token === null) {
+        if (this.token === null) {
+            return;
+        }
+
+        if (this.busy !== null) {
+            this.networkReturned = true;
+
+            return;
+        }
+
+        if (!this.waitsForNetwork) {
             return;
         }
 

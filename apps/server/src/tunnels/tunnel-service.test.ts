@@ -1110,6 +1110,37 @@ describe('after a restart', () => {
         expect(again.runner.running).toBe(1);
     });
 
+    test('tries once more when the network came back while a bring-up was still waiting on Cloudflare', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000, comeBack: true });
+        await f.service.idle();
+        await f.service.stop();
+
+        let fail: () => void = () => undefined;
+        const offline = { value: true };
+        const stalled = new Promise<void>((resolve) => {
+            fail = resolve;
+        });
+        const again = await fixture(
+            {
+                cloudflare: (url, init) => (offline.value ? stalled.then(() => Promise.reject(new Error('offline'))) : f.cloudflare.fetch(url, init))
+            },
+            '/usr/bin/cloudflared',
+            { home: f.home, tokens: f.tokens, cloudflare: f.cloudflare }
+        );
+
+        await again.service.resume();
+        again.service.networkBack();
+        offline.value = false;
+        fail();
+        await again.service.idle();
+
+        expect(await again.state()).toMatchObject({ stage: 'running', message: null });
+        expect(again.runner.running).toBe(1);
+    });
+
     test('tries nothing again when the network comes back after a failure that was not about the network', async () => {
         const f = await fixture();
 
