@@ -190,7 +190,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         artifacts,
         routines,
         templates,
-        later: { language: () => language.host, push: () => push }
+        later: { language: () => language.host, push: () => push, ports: () => ports.grants }
     });
 
     const tunnels = await wireTunnels({

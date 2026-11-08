@@ -9,6 +9,7 @@ import { worktreeHost } from '../git/worktree-host.ts';
 import { AgentLanguage } from '../language/agent-language.ts';
 import type { LanguageHost } from '../language/host.ts';
 import { agentStartHost } from '../outbox/start-agent.ts';
+import type { PortGrants } from '../ports/port-grants.ts';
 import type { PushService } from '../push/service.ts';
 import { agentRoutines } from '../routines/agent-host.ts';
 import type { SessionManager } from '../sessions/manager.ts';
@@ -50,6 +51,7 @@ interface CanvasHostInput {
     later: {
         language(): LanguageHost;
         push(): PushService;
+        ports(): PortGrants;
     };
 }
 
@@ -128,6 +130,24 @@ export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
         agentImages: { attach: (chatId, upload) => chats.attachAgentImage(chatId, upload) },
         visuals: agentVisuals({ enabled: () => identity.visualReplies, visuals: agents.visuals, chats, renderer: devices.visualRenderer }),
         databases: databases.agents,
+        ports: {
+            allowed: () => identity.agentsSharePorts,
+            list: (projectId) =>
+                later
+                    .ports()
+                    .list()
+                    .filter((grant) => grant.projectId === projectId),
+            share: (projectId, port, portHost) => later.ports().share(projectId, port, portHost, 'agent'),
+            stop: (projectId, port, portHost) => {
+                const grants = later.ports();
+                // A share a person made is theirs to stop.
+                const mine = grants
+                    .list()
+                    .find((grant) => grant.projectId === projectId && grant.port === port && grant.host === portHost && grant.sharedBy === 'agent');
+
+                return mine !== undefined && grants.revoke(mine.id);
+            }
+        },
         extensions: input.extensions,
         language: new AgentLanguage({
             host: {

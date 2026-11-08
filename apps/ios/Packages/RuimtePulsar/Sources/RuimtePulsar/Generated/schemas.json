@@ -6399,6 +6399,9 @@
           "reachOpenProjects": {
             "type": "boolean"
           },
+          "agentsSharePorts": {
+            "type": "boolean"
+          },
           "steerMessages": {
             "type": "boolean"
           },
@@ -64966,6 +64969,9 @@
       "reachOpenProjects": {
         "type": "boolean"
       },
+      "agentsSharePorts": {
+        "type": "boolean"
+      },
       "steerMessages": {
         "type": "boolean"
       },
@@ -65552,6 +65558,9 @@
       "reachOpenProjects": {
         "type": "boolean"
       },
+      "agentsSharePorts": {
+        "type": "boolean"
+      },
       "steerMessages": {
         "type": "boolean"
       },
@@ -65915,6 +65924,9 @@
         "type": "boolean"
       },
       "reachOpenProjects": {
+        "type": "boolean"
+      },
+      "agentsSharePorts": {
         "type": "boolean"
       },
       "steerMessages": {
@@ -66294,6 +66306,9 @@
       "reachOpenProjects": {
         "type": "boolean"
       },
+      "agentsSharePorts": {
+        "type": "boolean"
+      },
       "steerMessages": {
         "type": "boolean"
       },
@@ -66653,6 +66668,9 @@
         "type": "boolean"
       },
       "reachOpenProjects": {
+        "type": "boolean"
+      },
+      "agentsSharePorts": {
         "type": "boolean"
       },
       "steerMessages": {
@@ -67296,6 +67314,9 @@
       "reachOpenProjects": {
         "type": "boolean"
       },
+      "agentsSharePorts": {
+        "type": "boolean"
+      },
       "steerMessages": {
         "type": "boolean"
       },
@@ -67895,6 +67916,9 @@
         "type": "boolean"
       },
       "reachOpenProjects": {
+        "type": "boolean"
+      },
+      "agentsSharePorts": {
         "type": "boolean"
       },
       "steerMessages": {
@@ -68733,6 +68757,9 @@
         "type": "boolean"
       },
       "reachOpenProjects": {
+        "type": "boolean"
+      },
+      "agentsSharePorts": {
         "type": "boolean"
       },
       "steerMessages": {
@@ -71105,7 +71132,7 @@
             },
             "host": {
               "type": "string",
-              "enum": [
+              "x-open-enum": [
                 "127.0.0.1",
                 "::1"
               ]
@@ -71117,7 +71144,7 @@
             },
             "sharedBy": {
               "type": "string",
-              "enum": [
+              "x-open-enum": [
                 "person",
                 "agent"
               ]
@@ -71159,7 +71186,7 @@
       },
       "host": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "127.0.0.1",
           "::1"
         ]
@@ -71189,7 +71216,7 @@
           },
           "host": {
             "type": "string",
-            "enum": [
+            "x-open-enum": [
               "127.0.0.1",
               "::1"
             ]
@@ -71201,7 +71228,7 @@
           },
           "sharedBy": {
             "type": "string",
-            "enum": [
+            "x-open-enum": [
               "person",
               "agent"
             ]
@@ -79311,7 +79338,7 @@
       },
       "reason": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "eof",
           "closed",
           "error",
@@ -86257,6 +86284,9 @@
         "type": "boolean"
       },
       "reachOpenProjects": {
+        "type": "boolean"
+      },
+      "agentsSharePorts": {
         "type": "boolean"
       },
       "steerMessages": {

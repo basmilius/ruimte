@@ -120,6 +120,7 @@ A bare `ruimte` at a terminal prints its address and the commands; under the ser
 | `name`, `icon` | The machine's name and Lucide icon. A null name falls back to `--label`, `RUIMTE_LABEL`, else the hostname. |
 | `agentsDeleteAnyView` | Lets an agent's `view_delete`, `node_delete` and `link_delete` remove what it did not make. Off by default. |
 | `reachOpenProjects` | Lets an agent's `project` field read the other projects open on this machine, message their terminals and chats, and start agents there. Off by default. |
+| `agentsSharePorts` | Lets an agent's `port_share` share a dev port of this machine with the person's other devices. Off by default. |
 | `resumeAtReset` | Resumes a chat that stopped on a limit, on a clock. Off by default; a chat's own switch can say no. |
 | `visualReplies` | Lets an agent in a chat show a page above its reply. On by default; written only as `false`. |
 | `textModel` | The CLI, model and account that write short texts: new chat titles, commit messages and conflict proposals. Picked and checked like the editor model (`editor-assist/selection.ts`); a null model is that CLI's cheapest. An explicit pick never falls back to another CLI. Absent is Automatic. |
@@ -199,6 +200,7 @@ $RUIMTE_HOME/
   database-access/<projectId>.json 0700, what agents may do with each connection (see "Databases")
   secrets/<hash>.json              0700 folder, 0600 files: the secrets of a project's launches (see "Launch secrets")
   voice/openai.json                0700 folder, 0600 file: the OpenAI key of Voice run by the daemon (`ruimte voice key`)
+  ports/grants.json                the dev ports a person (or, with `agentsSharePorts`, an agent) shared with the account's other devices, until someone stops sharing them
   tunnels/tunnels.json             0700 folder: the tunnel id, the path of its credentials file (never opened), the domain, the rows and whether the external MCP is on
   tunnels/config.yml               0600, the file `cloudflared` runs with; tunnels/bin/ holds a downloaded `cloudflared`
   tunnels/credentials.json         0600, hashes of the credentials of external MCP clients and nothing else (see "External MCP")
@@ -547,6 +549,12 @@ A browser upgrade is accepted from the daemon's own origin, `app://ruimte` and l
 The client acts as the person within the grant on its credential: a tier (`read`, `work`, `machine`), the projects it reaches, the widest mode of the agents it starts, and an approvals box that adds `approval_list` and `approval_answer`. A hosted client defaults to all projects, `work`, `supervised` and no expiry. It has a tool list of its own (`src/mcp/external-tiers.ts`), never types into a terminal, and is never the owner.
 
 Tunnels run `cloudflared` as a child of the daemon under the person's own Cloudflare account. Ruimte installs the official build when it finds none (checked against a sha256 pinned in the release, `scripts/cloudflared-pins.ts` recomputes it), signs in through `cloudflared tunnel login`, and writes `tunnels/config.yml` with a hostname per row and a closing 404. It reads no Cloudflare credential and relays no byte. Requests: `tunnel.state` (any client), `tunnel.install`, `tunnel.signIn`, `tunnel.setup`, `tunnel.add`, `tunnel.update`, `tunnel.remove`, `tunnel.retry`, `tunnel.discover`, `tunnel.setMcp`, `credential.list`, `credential.create`, `credential.update`, `credential.revoke`, `consent.list` and `consent.answer` (all the local secret's); the events `tunnel.changed` and `consent.changed` carry no data. `tunnel.changed` also fires when a credential is used for the first time or after a minute without use, so the settings follow the clients.
+
+### Shared dev ports
+
+A development port is reachable from another client of the account only after someone shared it on purpose. `port.share` and `port.revoke` are the local secret's; an agent shares with `port_share` while `agentsSharePorts` is on, and stops only what an agent shared. A grant names a project, a literal loopback address (`127.0.0.1` or `::1`, never a hostname and never the other family after a failure) and a port, and lasts under `ports/grants.json` until it is revoked, across restarts. Discovery (`browser.devServers`), a launch's port and a URL in a project file grant nothing, and a grant never names a port Ruimte listens on (the check runs again at every open).
+
+`port.list` and the stream requests are for any client of the account, the station included, and never for a peer machine. A client opens a stream with `port.open` (its own `streamId`), writes with `port.write` (16 KiB chunks at absolute offsets, answered once the service took them, at most 256 KiB unanswered), and hears the service as `port.data` events within the credit it gave with `port.credit` (an absolute count of consumed bytes), ending with `port.end`. A stream belongs to the client that opened it. Per client 16 streams and 1 MiB, per machine 64; a data chunk waits while the connection holds more than 64 KiB, and a service that ignores the pause is cut off, not buffered. Revoking a grant ends its streams with `port.end` (`revoked`). `src/ports` holds the grants, the streams and the real connection (`port-connect.ts`); `scripts/measure-port-bridge` measures the path through the desktop app.
 
 ### Push notifications
 

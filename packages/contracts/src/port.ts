@@ -31,13 +31,15 @@ const PortNumberSchema = z.number().int().min(1).max(65535);
 /* Chosen by the client, like a session id; long enough that a guess finds nobody else's. */
 export const PortStreamIdSchema = z.string().min(8).max(64);
 
+/* Who shared a port: a person, or an agent while the machine allows that. Open for the iPhone app, which validates a reply whole. */
+export const PortSharedBySchema = z.enum(['person', 'agent']);
+
 export const PortGrantSchema = z.object({
     id: z.string().min(1).max(64),
     projectId: z.string().min(1).max(256),
     host: PortHostSchema,
     port: PortNumberSchema,
-    /* Whether a person or an agent (while the machine allows that) shared it. */
-    sharedBy: z.enum(['person', 'agent']),
+    sharedBy: PortSharedBySchema,
     createdAt: z.number().int().nonnegative()
 });
 export type PortGrant = z.infer<typeof PortGrantSchema>;
@@ -91,12 +93,13 @@ export const PortDataEventSchema = z.object({
 });
 
 export const PORT_END_REASONS = ['eof', 'closed', 'error', 'revoked', 'overload'] as const;
+export const PortEndReasonSchema = z.enum(PORT_END_REASONS);
 
 /* The last word of a stream. `offset` is how many bytes it sent, so a client that has fewer knows it lost some. */
 export const PortEndEventSchema = z.object({
     streamId: PortStreamIdSchema,
     offset: z.number().int().nonnegative(),
-    reason: z.enum(PORT_END_REASONS),
+    reason: PortEndReasonSchema,
     message: z.string().max(300).optional()
 });
 export type PortEndEvent = z.infer<typeof PortEndEventSchema>;

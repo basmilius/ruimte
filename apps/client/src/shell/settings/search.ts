@@ -160,6 +160,7 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     row('agents.resumeAtReset'),
     row('agents.deleteAnyView'),
     row('agents.reachOpenProjects'),
+    row('agents.sharePorts'),
     row('agents.working.sound'),
     row('agents.quietHours'),
     row('agents.breakReminder', breakReminderOffered),

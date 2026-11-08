@@ -31,6 +31,8 @@ export interface ServerInfo {
     agentsDeleteAnyView: boolean;
     /* Whether an agent on this machine may reach its other open projects. The daemon enforces it. */
     reachOpenProjects: boolean;
+    /* Whether an agent on this machine may share a development port with the person's other devices. The daemon enforces it. */
+    agentsSharePorts: boolean;
     /* Whether the daemon permits browser and device streaming. */
     streamingAllowed: boolean;
     /* Whether a chat that stopped on a limit may be taken up again on a clock. */
@@ -94,6 +96,7 @@ const UNKNOWN: ServerInfo = {
     icon: null,
     agentsDeleteAnyView: false,
     reachOpenProjects: false,
+    agentsSharePorts: false,
     streamingAllowed: true,
     resumeAtReset: false,
     visualReplies: true,
@@ -134,6 +137,7 @@ interface ServersStore {
             | 'icon'
             | 'agentsDeleteAnyView'
             | 'reachOpenProjects'
+            | 'agentsSharePorts'
             | 'streamingAllowed'
             | 'resumeAtReset'
             | 'visualReplies'
@@ -175,6 +179,7 @@ interface ServersStore {
                 Pick<
                     ServerInfo,
                     | 'reachOpenProjects'
+                    | 'agentsSharePorts'
                     | 'streamingAllowed'
                     | 'resumeAtReset'
                     | 'visualReplies'

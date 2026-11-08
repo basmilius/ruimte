@@ -22,6 +22,8 @@ import {
     type LaunchConfigKind,
     type LaunchStartResult,
     type LaunchStatus,
+    type PortGrant,
+    type PortHost,
     type ProjectCanvasView,
     type ProjectContent,
     type RegistryCatalog,
@@ -130,6 +132,8 @@ export interface CanvasHost {
     computer?: ComputerHost;
     /* Seeing, starting and operating the devices of this machine; absent on a host without devices. */
     devices?: DeviceDriveHost;
+    /* Sharing a development port with the person's other devices; absent on a host without ports. */
+    ports?: PortShareHost;
     /* What a person linked into a session, which `list` and `read` answer with. */
     context?: ContextHost;
     /* The launches of a project, as an agent may see and run them; absent on a host that runs none. */
@@ -217,6 +221,18 @@ type LineageHost = Pick<AgentLineageStore, 'depthOf' | 'madeBy' | 'put'>;
 /* The machine's switches a tool is held to; `agentsDeleteAnyView` lets an agent remove a view it did not make,
    and `nodeSize` is the size a person on the machine gave new nodes of a kind. */
 export type MachineHost = Pick<EndpointIdentity, 'agentsDeleteAnyView' | 'nodeSize'>;
+
+/*
+ * Sharing a development port with the person's other devices. `allowed` is the machine's switch, read at every call;
+ * an agent lists the ports of its own project and stops only a share an agent made, never a person's.
+ */
+export interface PortShareHost {
+    allowed(): boolean;
+    list(projectId: string): PortGrant[];
+    share(projectId: string, port: number, host: PortHost): PortGrant;
+    /* Whether a share of an agent in this project with this port was there to stop. */
+    stop(projectId: string, port: number, host: PortHost): boolean;
+}
 
 /* What starting an agent node takes. */
 export interface AgentStartHost {

@@ -22,6 +22,7 @@ import * as envelope from '../src/envelope.ts';
 import { REQUEST_SCHEMAS, EVENT_SCHEMAS } from '../src/index.ts';
 import { MachineUpdateStatusSchema } from '../src/machine-update.ts';
 import { RuntimeModeSchema } from '../src/model.ts';
+import { PortEndReasonSchema, PortHostSchema, PortSharedBySchema } from '../src/port.ts';
 import {
     CameraSchema,
     CanvasNodeSchema,
@@ -274,7 +275,10 @@ const openVocabularies: ReadonlyMap<unknown, readonly string[]> = new Map<unknow
     [UsageProviderSchema, UsageProviderSchema.options],
     [VoicePhaseSchema, VoicePhaseSchema.options],
     [VoiceActivityKindSchema, VoiceActivityKindSchema.options],
-    [VoiceActivityStatusSchema, VoiceActivityStatusSchema.options]
+    [VoiceActivityStatusSchema, VoiceActivityStatusSchema.options],
+    [PortHostSchema, PortHostSchema.options],
+    [PortSharedBySchema, PortSharedBySchema.options],
+    [PortEndReasonSchema, PortEndReasonSchema.options]
 ]);
 // Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.
 const apiRoots: Record<string, z.ZodType> = {};

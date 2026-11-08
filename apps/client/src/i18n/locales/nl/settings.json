@@ -1174,6 +1174,12 @@
             "description": "Agents in het ene project kunnen je andere open projecten lezen en daar agents starten. Ze kunnen ook een project uit Recent openen, er een naar voren halen en je vragen er een te sluiten. Een nieuw project maken ze pas als jij dat bevestigt.",
             "notConnected": "{{machine}} is niet verbonden. Pas dit aan in de details onder Account, of open een van zijn projecten."
         },
+        "sharePorts": {
+            "label": "Agents mogen een dev-poort delen",
+            "rowLabel": "Agents op {{machine}} mogen een dev-poort delen",
+            "description": "Een agent kan de poort van een dev server met je andere apparaten delen, die hem dan openen via de verbinding met deze machine. Een ontwikkelsite vertrouwt misschien elk verzoek van deze machine. Je stopt een gedeelde poort vanuit de browser-node.",
+            "notConnected": "{{machine}} is niet verbonden. Pas dit aan in de details onder Account, of open een van zijn projecten."
+        },
         "resumeAtReset": {
             "label": "Doorgaan na een verbruikslimiet",
             "rowLabel": "Chats op {{machine}} gaan door na een verbruikslimiet",

@@ -49,6 +49,9 @@ const FileSchema = z.object({
     /* Whether an agent may reach the other projects open here with the field `project`. A machine setting because
        the daemon enforces it. Absent is off. */
     reachOpenProjects: z.boolean().optional().catch(undefined),
+    /* Whether an agent may share a development port of this machine with the person's other devices (`port_share`). A machine
+       setting because the daemon enforces it. Absent is off. */
+    agentsSharePorts: z.boolean().optional().catch(undefined),
     /* Whether a message of an agent joins a running turn. The person's "Send to a working agent right away",
        a machine setting because no client stands between two agents. Absent is off. */
     steerMessages: z.boolean().optional().catch(undefined),
@@ -97,6 +100,7 @@ interface IdentityOptions {
     icon: ProjectIconChoice | null;
     agentsDeleteAnyView: boolean;
     reachOpenProjects: boolean;
+    agentsSharePorts: boolean;
     steerMessages: boolean;
     streamingAllowed: boolean;
     resumeAtReset: boolean;
@@ -145,6 +149,7 @@ interface IdentityAgentIntegrations {
 export interface IdentityFlags {
     agentsDeleteAnyView?: boolean;
     reachOpenProjects?: boolean;
+    agentsSharePorts?: boolean;
     steerMessages?: boolean;
     streamingAllowed?: boolean;
     resumeAtReset?: boolean;
@@ -179,6 +184,7 @@ export class EndpointIdentity {
     private chosenIcon: ProjectIconChoice | null;
     private deleteAnyView: boolean;
     private reachOpen: boolean;
+    private sharePorts: boolean;
     private steerAgents: boolean;
     private allowStreaming: boolean;
     private resumeLimited: boolean;
@@ -207,6 +213,7 @@ export class EndpointIdentity {
         this.chosenIcon = options.icon;
         this.deleteAnyView = options.agentsDeleteAnyView;
         this.reachOpen = options.reachOpenProjects;
+        this.sharePorts = options.agentsSharePorts;
         this.steerAgents = options.steerMessages;
         this.allowStreaming = options.streamingAllowed;
         this.resumeLimited = options.resumeAtReset;
@@ -242,6 +249,11 @@ export class EndpointIdentity {
     /* Read at every call across projects, so turning it off refuses the next one. */
     get reachOpenProjects(): boolean {
         return this.reachOpen;
+    }
+
+    /* Read at every `port_share`, so turning it off refuses the next one. */
+    get agentsSharePorts(): boolean {
+        return this.sharePorts;
     }
 
     get steerMessages(): boolean {
@@ -374,6 +386,7 @@ export class EndpointIdentity {
         this.chosenIcon = icon;
         this.deleteAnyView = flags.agentsDeleteAnyView ?? this.deleteAnyView;
         this.reachOpen = flags.reachOpenProjects ?? this.reachOpen;
+        this.sharePorts = flags.agentsSharePorts ?? this.sharePorts;
         this.steerAgents = flags.steerMessages ?? this.steerAgents;
         this.allowStreaming = flags.streamingAllowed ?? this.allowStreaming;
         this.resumeLimited = flags.resumeAtReset ?? this.resumeLimited;
@@ -417,6 +430,7 @@ export class EndpointIdentity {
                 icon: this.chosenIcon,
                 agentsDeleteAnyView: this.deleteAnyView,
                 reachOpenProjects: this.reachOpen,
+                agentsSharePorts: this.sharePorts,
                 steerMessages: this.steerAgents,
                 streamingAllowed: this.allowStreaming,
                 resumeAtReset: this.resumeLimited,
@@ -447,6 +461,7 @@ export class EndpointIdentity {
             ...(this.chosenIcon === null ? {} : { icon: this.chosenIcon }),
             ...(this.deleteAnyView ? { agentsDeleteAnyView: true } : {}),
             ...(this.reachOpen ? { reachOpenProjects: true } : {}),
+            ...(this.sharePorts ? { agentsSharePorts: true } : {}),
             ...(this.steerAgents ? { steerMessages: true } : {}),
             ...(!this.allowStreaming ? { streamingAllowed: false } : {}),
             ...(this.resumeLimited ? { resumeAtReset: true } : {}),
@@ -517,6 +532,7 @@ export async function readOrCreateEndpointIdentity(home: string, defaultName: st
         icon: file?.icon ?? null,
         agentsDeleteAnyView: file?.agentsDeleteAnyView ?? false,
         reachOpenProjects: file?.reachOpenProjects ?? false,
+        agentsSharePorts: file?.agentsSharePorts ?? false,
         steerMessages: file?.steerMessages ?? false,
         streamingAllowed: file?.streamingAllowed ?? true,
         resumeAtReset: file?.resumeAtReset ?? false,

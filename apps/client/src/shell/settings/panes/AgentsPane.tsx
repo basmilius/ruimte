@@ -38,7 +38,10 @@ export function AgentsPane() {
         <>
             <AgentDefaultsSection />
             <TextModelSection />
-            <MachineSwitchSection title={t('agents.machine.title')} settings={['agentsDeleteAnyView', 'reachOpenProjects', 'resumeAtReset']} />
+            <MachineSwitchSection
+                title={t('agents.machine.title')}
+                settings={['agentsDeleteAnyView', 'reachOpenProjects', 'agentsSharePorts', 'resumeAtReset']}
+            />
             <SettingsSection title={t('agents.notifications.title')}>
                 <SettingSwitchRow id="agents.working.sound" setting="agentsTurnSound" />
                 <QuietHoursRows />

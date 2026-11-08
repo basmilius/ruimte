@@ -45,6 +45,7 @@ export function adoptEndpointInfo(endpointId: string, info: EndpointInfo): void 
         icon: info.icon ?? null,
         agentsDeleteAnyView: info.agentsDeleteAnyView === true,
         reachOpenProjects: info.reachOpenProjects === true,
+        agentsSharePorts: info.agentsSharePorts === true,
         streamingAllowed: info.streamingAllowed ?? true,
         resumeAtReset: info.resumeAtReset === true,
         visualReplies: info.visualReplies ?? true,

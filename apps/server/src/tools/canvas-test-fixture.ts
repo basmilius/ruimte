@@ -31,6 +31,7 @@ import { DeviceDriver } from '../devices/agent-driver.ts';
 import { RecordingBackend } from '../devices/device-test-helpers.ts';
 import { DeviceManager } from '../devices/manager.ts';
 import { freeBranch } from '../git/worktrees.ts';
+import { testGrants } from '../ports/port-test-helpers.ts';
 import { DiagramStore } from '../projects/diagram-store.ts';
 import { DrawingStore } from '../projects/drawing-store.ts';
 import { documentOnDisk, projectLinks, UNSYNCED_WRITE_IO } from '../projects/project-file-test-helpers.ts';
@@ -42,6 +43,8 @@ import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 /* What a test turns between the fakes and the machine, reset before every test. */
 export interface Knobs {
     deleteAnyView: boolean;
+    /* The machine's switch that lets an agent share a development port. */
+    sharePorts: boolean;
     /* Whether any client on this machine has the page open, which is what a driver answers null without. */
     pageOpen: boolean;
     breakWrites: boolean;
@@ -58,6 +61,9 @@ export interface Knobs {
 }
 
 export const knobs = {} as Knobs;
+
+/* The shared ports of the fixture's machine, which a test reads to see what a tool left. */
+export let portGrants: ReturnType<typeof testGrants>['grants'];
 
 export let alerts: { nodeId: string; text: string }[];
 export let root: string;
@@ -203,6 +209,8 @@ export function canvasFixture(): void {
         started = [];
         knobs.onStart = null;
         knobs.deleteAnyView = false;
+        knobs.sharePorts = false;
+        portGrants = testGrants([4210]).grants;
         knobs.nodeSizes = {};
         ended = [];
         watching = [];
@@ -311,6 +319,18 @@ export function host(): CanvasHost {
         },
         lineage,
         machine: { agentsDeleteAnyView: knobs.deleteAnyView, nodeSize: (kind) => nodeSizeOf(knobs.nodeSizes, kind) },
+        ports: {
+            allowed: () => knobs.sharePorts,
+            list: (id) => portGrants.list().filter((grant) => grant.projectId === id),
+            share: (id, port, portHost) => portGrants.share(id, port, portHost, 'agent'),
+            stop: (id, port, portHost) => {
+                const mine = portGrants
+                    .list()
+                    .find((grant) => grant.projectId === id && grant.port === port && grant.host === portHost && grant.sharedBy === 'agent');
+
+                return mine !== undefined && portGrants.revoke(mine.id);
+            }
+        },
         endSession: async (kind, nodeId) => {
             ended.push(`${kind}\t${nodeId}`);
         },
