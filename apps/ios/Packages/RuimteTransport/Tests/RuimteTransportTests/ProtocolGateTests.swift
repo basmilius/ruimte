@@ -32,6 +32,32 @@ private func event(_ name: String) -> String {
         #expect(frame["payload"]?["client"]?.stringValue == "ios")
     }
 
+    @Test func startTellsTheMachineWhatThisAppRunsOn() throws {
+        var sent: [String] = []
+        let gate = ProtocolGate(
+            send: { sent.append($0) }, open: { _ in }, message: { _ in }, refuse: { _ in },
+            identity: ClientIdentity(version: "0.31.0", os: "ipados", osVersion: "27.1", device: "tablet"))
+        gate.start()
+        let text = try #require(sent.first)
+        let payload = try JSONValue.decode(Data(text.utf8))["payload"]
+        #expect(
+            payload
+                == .object([
+                    "client": .string("ios"), "clientVersion": .string("0.31.0"), "clientOs": .string("ipados"),
+                    "clientOsVersion": .string("27.1"), "clientDevice": .string("tablet"),
+                ]))
+    }
+
+    @Test func startLeavesOutWhatIsUnknown() throws {
+        var sent: [String] = []
+        let gate = ProtocolGate(
+            send: { sent.append($0) }, open: { _ in }, message: { _ in }, refuse: { _ in }, identity: ClientIdentity())
+        gate.start()
+        let text = try #require(sent.first)
+        let payload = try JSONValue.decode(Data(text.utf8))["payload"]
+        #expect(payload == .object(["client": .string("ios")]))
+    }
+
     @Test func aMachineWithoutFeaturesIsRefusedAsOlder() throws {
         let probe = GateProbe()
         probe.gate.receive(event("chat.status"))

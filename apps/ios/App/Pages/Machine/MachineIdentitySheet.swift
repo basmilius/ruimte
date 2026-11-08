@@ -64,6 +64,7 @@ struct MachineIdentitySheet: View {
                     Section { Text(problem).foregroundStyle(MobileStyle.statusError) }
                 }
                 if let access {
+                    MachineClientsSection(session: access.session)
                     MachineAccessSection(session: access.session, runtime: access.runtime, name: fallbackName)
                 }
             }
