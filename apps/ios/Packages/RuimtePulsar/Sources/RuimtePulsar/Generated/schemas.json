@@ -53564,7 +53564,8 @@
           "rust",
           "markdown",
           "go",
-          "swift"
+          "swift",
+          "toml"
         ]
       }
     },
@@ -53732,7 +53733,8 @@
           "rust",
           "markdown",
           "go",
-          "swift"
+          "swift",
+          "toml"
         ]
       }
     },
@@ -53900,7 +53902,8 @@
           "rust",
           "markdown",
           "go",
-          "swift"
+          "swift",
+          "toml"
         ]
       }
     },

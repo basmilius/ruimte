@@ -4,23 +4,24 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import type { LanguageServerKind } from '@ruimte/contracts';
 import { sha256, type FileDownload } from '../artifacts/artifact-fs.ts';
-import { extractEntries, readArchive, type ArchiveFormat } from './archive.ts';
+import { extractEntries, isSingleFileFormat, readArchive, readSingleFile, type ArchiveFormat, type SingleFileFormat } from './archive.ts';
 import markdownRelease from './markdown-native-release.json' with { type: 'json' };
 import phpRelease from './php-native-release.json' with { type: 'json' };
 import sqlRelease from './sql-native-release.json' with { type: 'json' };
+import tomlRelease from './toml-native-release.json' with { type: 'json' };
 import { cargoBin } from './toolchain.ts';
 
 /* A kind whose server is a program of its own, downloaded or built once, and not an npm package. */
-export type NativeKind = 'php-native' | 'sql-native' | 'markdown';
+export type NativeKind = 'php-native' | 'sql-native' | 'markdown' | 'toml';
 
-const NATIVE_KINDS: readonly NativeKind[] = ['php-native', 'sql-native', 'markdown'];
+const NATIVE_KINDS: readonly NativeKind[] = ['php-native', 'sql-native', 'markdown', 'toml'];
 
 export function isNativeKind(kind: LanguageServerKind): kind is NativeKind {
     return (NATIVE_KINDS as readonly string[]).includes(kind);
 }
 
 /* How a release ships: an archive, or the program itself as one file. */
-export type ReleaseFormat = ArchiveFormat | 'raw';
+export type ReleaseFormat = ArchiveFormat | SingleFileFormat;
 
 /* One download of a release: the archive for a platform and architecture. */
 export interface NativeAsset {
@@ -44,7 +45,7 @@ export interface NativeRelease {
 }
 
 function releaseAsset(asset: { url: string; sha256: string; format: string; executable: string }): NativeAsset {
-    if (asset.format !== 'tar.gz' && asset.format !== 'zip' && asset.format !== 'raw') {
+    if (asset.format !== 'tar.gz' && asset.format !== 'zip' && !isSingleFileFormat(asset.format)) {
         throw new Error(`Unsupported native archive format: ${asset.format}`);
     }
     return { ...asset, format: asset.format };
@@ -76,7 +77,8 @@ export const NATIVE_RELEASES: Partial<Record<NativeKind, NativeRelease>> = Objec
         [
             ['php-native', pinnedRelease(phpRelease)],
             ['sql-native', pinnedRelease(sqlRelease as ReleaseDescriptor)],
-            ['markdown', pinnedRelease(markdownRelease)]
+            ['markdown', pinnedRelease(markdownRelease)],
+            ['toml', pinnedRelease(tomlRelease)]
         ] as const
     ).filter(([, release]) => release !== undefined)
 );
@@ -160,7 +162,8 @@ const NATIVE_SPECS: Record<NativeKind, NativeSpec> = {
         stubs: false,
         source: { sibling: ['language-servers', 'sql'], variable: 'RUIMTE_SQL_LANGUAGE_SERVER_SOURCE', read: readSqlCheckout }
     },
-    markdown: { program: 'marksman', title: 'Markdown', stubs: false }
+    markdown: { program: 'marksman', title: 'Markdown', stubs: false },
+    toml: { program: 'taplo', title: 'TOML', stubs: false }
 };
 
 /* The name of the program a native kind runs, which is also the name its version is pinned under. */
@@ -333,7 +336,7 @@ async function withDownload<T>(url: string, name: string, get: Download, handle:
 
 /* Downloads a release build, checks it against its pinned checksum before reading a byte of it, and unpacks it into `<directory>/bin`. */
 export async function installRelease(asset: NativeAsset, directory: string, get: Download, log: (line: string) => void): Promise<void> {
-    await withDownload(asset.url, `release.${asset.format === 'raw' ? 'bin' : asset.format}`, get, async (file) => {
+    await withDownload(asset.url, `release.${asset.format}`, get, async (file) => {
         log(`Downloaded ${asset.url}`);
         const actual = sha256(await readFile(file));
         if (actual !== asset.sha256.toLowerCase()) {
@@ -341,7 +344,7 @@ export async function installRelease(asset: NativeAsset, directory: string, get:
         }
         log('Checksum matches');
         const bytes = await readFile(file);
-        const entries = asset.format === 'raw' ? [{ path: asset.executable, data: bytes, mode: 0o755 }] : readArchive(bytes, asset.format);
+        const entries = isSingleFileFormat(asset.format) ? readSingleFile(bytes, asset.format, asset.executable) : readArchive(bytes, asset.format);
         const target = join(directory, 'bin');
         await rm(target, { recursive: true, force: true });
         const written = await extractEntries(entries, target);

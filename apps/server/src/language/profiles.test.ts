@@ -129,6 +129,16 @@ describe('server profiles', () => {
         expect(component!.env).toMatchObject({ GOTOOLCHAIN: 'local' });
     });
 
+    it('serves TOML in any project with taplo, told to fetch no schema', () => {
+        expect(kindForLanguage('toml')).toBe('toml');
+        expect(KIND_PROFILES.toml.activation).toBeUndefined();
+        expect(KIND_PROFILES.toml.runsProjectCode).toBeUndefined();
+        expect(KIND_PROFILES.toml.runsBuildCode).toBeUndefined();
+        const [component] = KIND_PROFILES.toml.components;
+        expect(component!.args(context)).toEqual(['lsp', 'stdio']);
+        expect(component!.configuration).toEqual({ evenBetterToml: { schema: { enabled: false, links: false } } });
+    });
+
     it('serves Swift in any project, as a kind that builds and cannot do without', () => {
         expect(kindForLanguage('swift')).toBe('swift');
         expect(KIND_PROFILES.swift.activation).toBeUndefined();

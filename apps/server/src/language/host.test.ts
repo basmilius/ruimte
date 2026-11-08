@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve, sep } from 'node:path';
+import { gzipSync } from 'node:zlib';
 import { CodedError } from '@adecore/agents';
 import { FakeWatch } from '@adecore/agents/testing';
 import { pathToFileUri } from '@adecore/lsp';
@@ -2501,6 +2502,41 @@ describe('a server from a pinned release of someone else', () => {
         expect(process!.spec.args).toEqual(['server']);
         expect(process!.server.documents.has(uri('docs/guide.md'))).toBe(true);
         expect((await open(host, 'src/a.ts')).servers).not.toContain('markdown');
+    });
+
+    it('unzips taplo and starts it for TOML with its language server command and no schemas', async () => {
+        const toml = gzipSync(file);
+        const { host, spawner } = await installed(['toml'], {
+            native: new NativePolicy({
+                checkouts: {},
+                releases: {
+                    toml: {
+                        sourceRevision: 'a'.repeat(40),
+                        version: '0.10.0',
+                        checksumOnly: true,
+                        assets: {
+                            [`${process.platform}-${process.arch}`]: {
+                                url: 'https://example.test/taplo.gz',
+                                sha256: sha256(toml),
+                                format: 'gz',
+                                executable: 'taplo'
+                            }
+                        }
+                    }
+                }
+            }),
+            download: async (_url, destination) => {
+                await writeFile(destination, toml);
+            }
+        });
+
+        expect((await open(host, 'Cargo.toml', '[package]\n', 'client-1', 'toml')).servers).toEqual(['toml']);
+        await ready(host, 'toml');
+
+        const [taplo] = spawner.of('toml');
+        expect(taplo!.spec.command).toBe(join(root, 'toml', 'versions', '0.10.0', 'bin', 'taplo'));
+        expect(taplo!.spec.args).toEqual(['lsp', 'stdio']);
+        expect(await readFile(taplo!.spec.command, 'utf8')).toBe('#!/bin/sh\n');
     });
 
     it('keeps the server for work from another machine too, since it runs nothing of the project', async () => {

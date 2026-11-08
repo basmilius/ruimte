@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
 import { tempHomes } from '../temp-home-test-helpers.ts';
-import { extractEntries, extractZipFile, readArchive } from './archive.ts';
+import { extractEntries, extractZipFile, isSingleFileFormat, readArchive, readSingleFile } from './archive.ts';
 import { tarGz, zip, type FixtureFile } from './test-archives.ts';
 
 let folder = '';
@@ -17,6 +18,32 @@ const FILES: FixtureFile[] = [
     { path: 'bin/server', text: '#!/bin/sh\n', mode: 0o755 },
     { path: 'docs/readme.txt', text: 'hello' }
 ];
+
+describe('single-file releases', () => {
+    const program = new TextEncoder().encode('#!/bin/sh\n');
+
+    it('names the one file after what the release says, plain or gunzipped, and makes it runnable', () => {
+        for (const [format, bytes] of [
+            ['raw', program],
+            ['gz', gzipSync(program)]
+        ] as const) {
+            const entries = readSingleFile(bytes, format, 'taplo');
+
+            expect(entries.map((entry) => entry.path)).toEqual(['taplo']);
+            expect(new TextDecoder().decode(entries[0]!.data)).toBe('#!/bin/sh\n');
+            expect(entries[0]!.mode).toBe(0o755);
+        }
+    });
+
+    it('tells the formats that are one file from those that are not', () => {
+        expect([isSingleFileFormat('raw'), isSingleFileFormat('gz'), isSingleFileFormat('tar.gz'), isSingleFileFormat('zip')]).toEqual([
+            true,
+            true,
+            false,
+            false
+        ]);
+    });
+});
 
 describe('archives', () => {
     for (const format of ['tar.gz', 'zip'] as const) {

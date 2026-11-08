@@ -158,6 +158,18 @@ export function readArchive(bytes: Uint8Array, format: ArchiveFormat): ArchiveEn
     return format === 'zip' ? readZip(bytes) : readTar(gunzipSync(bytes));
 }
 
+/* A release that is the program itself, as it is (`raw`) or gzipped (`gz`), with no archive of files around it. */
+export type SingleFileFormat = 'raw' | 'gz';
+
+export function isSingleFileFormat(format: string): format is SingleFileFormat {
+    return format === 'raw' || format === 'gz';
+}
+
+/* The one file of a single-file release, saved under `name` and runnable. */
+export function readSingleFile(bytes: Uint8Array, format: SingleFileFormat, name: string): ArchiveEntry[] {
+    return [{ path: name, data: format === 'gz' ? gunzipSync(bytes) : bytes, mode: 0o755 }];
+}
+
 /* A file is executable for everyone or for nobody, whatever else the archive's mode says. */
 function executableMode(mode: number): number {
     return mode & 0o111 ? 0o755 : 0o644;

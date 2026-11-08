@@ -20,7 +20,8 @@ const SERVER_NAMES: Record<LanguageServerKind, { name: string; package: string }
     rust: { name: 'Rust', package: 'rust-analyzer' },
     markdown: { name: 'Markdown', package: 'marksman' },
     go: { name: 'Go', package: 'gopls' },
-    swift: { name: 'Swift', package: 'sourcekit-lsp' }
+    swift: { name: 'Swift', package: 'sourcekit-lsp' },
+    toml: { name: 'TOML', package: 'taplo' }
 };
 
 export type ServerTone = 'ok' | 'busy' | 'error' | 'idle';
@@ -58,7 +59,7 @@ export function packageOf(server: string, statuses: readonly LanguageServerStatu
 const SERVER_GROUPS = [
     { id: 'scripts', kinds: ['typescript', 'vue', 'eslint'] },
     { id: 'web', kinds: ['html', 'css', 'tailwind'] },
-    { id: 'data', kinds: ['json', 'yaml', 'sql-native'] },
+    { id: 'data', kinds: ['json', 'yaml', 'toml', 'sql-native'] },
     { id: 'other', kinds: ['php-native', 'php', 'python', 'rust', 'go', 'swift', 'markdown', 'bash', 'docker'] }
 ] as const satisfies readonly { id: string; kinds: readonly LanguageServerKind[] }[];
 

@@ -2,12 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
 import markdownDescriptor from './markdown-native-release.json' with { type: 'json' };
 import {
     fetchStubs,
     installRelease,
     NativePolicy,
     nativeProgramFile,
+    nativeProgramOf,
     nativeStubsOf,
     NATIVE_RELEASES,
     phpLanguageServerCheckout,
@@ -22,6 +24,7 @@ import {
 import descriptor from './php-native-release.json' with { type: 'json' };
 import sqlDescriptor from './sql-native-release.json' with { type: 'json' };
 import { sha256, tarGz, zip } from './test-archives.ts';
+import tomlDescriptor from './toml-native-release.json' with { type: 'json' };
 
 let folder = '';
 
@@ -259,17 +262,25 @@ describe('native policy', () => {
         }
     });
 
-    it('pins a third-party release for every platform it ships, by checksum alone and with no checkout to build from', () => {
-        expect(markdownDescriptor.version).toBe('2026-02-08');
-        expect(Object.keys(markdownDescriptor.assets).sort()).toEqual(['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64', 'win32-x64']);
-        for (const [target, asset] of Object.entries(markdownDescriptor.assets)) {
-            const [platform, arch] = target.split('-');
-            const plan = new NativePolicy({ checkouts: {}, platform: platform as NodeJS.Platform, arch }).plan('markdown', folder);
-            expect(plan).toMatchObject({ source: 'release', version: markdownDescriptor.version, printsVersion: false, asset });
-            expect(asset.sha256).toMatch(/^[a-f0-9]{64}$/);
-            expect(asset.url).toStartWith(`https://github.com/artempyanykh/marksman/releases/download/${markdownDescriptor.version}/`);
+    it.each([
+        ['markdown', markdownDescriptor, '2026-02-08', 'https://github.com/artempyanykh/marksman/releases/download/2026-02-08/', 'raw'],
+        ['toml', tomlDescriptor, '0.10.0', 'https://github.com/tamasfe/taplo/releases/download/0.10.0/', 'gz']
+    ] as const)(
+        'pins the release of %s for every platform it ships, by checksum alone and with no checkout to build from',
+        (kind, release, version, base, format) => {
+            expect(release.version).toBe(version);
+            expect(Object.keys(release.assets).sort()).toEqual(['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64', 'win32-x64']);
+            for (const [target, asset] of Object.entries(release.assets)) {
+                const [platform, arch] = target.split('-');
+                const plan = new NativePolicy({ checkouts: {}, platform: platform as NodeJS.Platform, arch }).plan(kind, folder);
+                expect(plan).toMatchObject({ source: 'release', version, printsVersion: false, asset });
+                expect(asset.format).toBe(format);
+                expect(asset.sha256).toMatch(/^[a-f0-9]{64}$/);
+                expect(asset.url).toStartWith(base);
+                expect(asset.executable).toBe(platform === 'win32' ? `${nativeProgramOf(kind)}.exe` : nativeProgramOf(kind));
+            }
         }
-    });
+    );
 
     it('runs the checkout the daemon is in, whatever a release says', () => {
         const policy = new NativePolicy({
@@ -349,6 +360,17 @@ describe('installing a release', () => {
         if (process.platform !== 'win32') {
             expect((await stat(join(folder, 'bin', 'marksman'))).mode & 0o111).not.toBe(0);
         }
+    });
+
+    it('unzips a release that is one gzipped file, checking the download and not the file inside', async () => {
+        const bytes = gzipSync(new TextEncoder().encode('#!/bin/sh\n'));
+        await installRelease(
+            asset({ format: 'gz', sha256: sha256(bytes), executable: 'taplo' }),
+            folder,
+            serving({ 'https://example.test/server.tar.gz': bytes }),
+            () => undefined
+        );
+        expect(await readFile(join(folder, 'bin', 'taplo'), 'utf8')).toBe('#!/bin/sh\n');
     });
 
     it('refuses a download that does not match its checksum and unpacks none of it', async () => {

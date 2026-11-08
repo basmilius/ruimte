@@ -33,7 +33,9 @@ export const LanguageServerKindSchema = z.enum([
     // gopls as Go brings it; Ruimte finds it and never installs it.
     'go',
     // sourcekit-lsp as the Swift toolchain brings it; found, never installed.
-    'swift'
+    'swift',
+    // taplo, a pinned release of someone else's server.
+    'toml'
 ]);
 export type LanguageServerKind = z.infer<typeof LanguageServerKindSchema>;
 

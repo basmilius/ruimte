@@ -359,6 +359,26 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
             }
         ]
     },
+    /*
+     * taplo, from a pinned release: `@taplo/cli` on npm is the WebAssembly build, which has no `lsp` command.
+     * The server is told to fetch no schema catalog, and nothing of the project is run.
+     */
+    toml: {
+        kind: 'toml',
+        components: [
+            {
+                name: 'toml',
+                title: 'Taplo',
+                languages: ['toml'],
+                entry: 'taplo',
+                program: (context) => context.native?.executable ?? '',
+                args: () => ['lsp', 'stdio'],
+                initializationOptions: () => ({}),
+                // Taplo asks for the section `evenBetterToml`. With schemas off it downloads nothing, not the catalog and not a schema a file names.
+                configuration: { evenBetterToml: { schema: { enabled: false, links: false } } }
+            }
+        ]
+    },
     css: {
         kind: 'css',
         components: [

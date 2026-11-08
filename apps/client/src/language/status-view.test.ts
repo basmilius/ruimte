@@ -86,7 +86,8 @@ describe('the servers of the languages added later', () => {
     const named: Array<[LanguageServerKind, string, string]> = [
         ['markdown', 'Markdown', 'marksman'],
         ['go', 'Go', 'gopls'],
-        ['swift', 'Swift', 'sourcekit-lsp']
+        ['swift', 'Swift', 'sourcekit-lsp'],
+        ['toml', 'TOML', 'taplo']
     ];
 
     test.each(named)('names %s and its program, and groups it with the others', (kind, name, program) => {

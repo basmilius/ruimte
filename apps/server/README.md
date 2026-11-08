@@ -473,6 +473,7 @@ The daemon looks up no addresses, holds no map ticket and never contacts the map
 | `rust` | rust-analyzer from the Rust toolchain, never installed by Ruimte | Rust, in a project with a `Cargo.toml` in its folder or up to three folders down |
 | `go` | gopls from Go, never installed by Ruimte | Go, `go.mod` and `go.work`, in any project |
 | `swift` | sourcekit-lsp from the Swift toolchain, never installed by Ruimte | Swift, in any project |
+| `toml` | taplo, a pinned release (`toml-native-release.json`) | TOML, in any project, with no schema catalog |
 | `markdown` | marksman, a pinned release (`markdown-native-release.json`) | Markdown, in any project: links, headings and references across files |
 
 Intelephense (kind `php`) was removed, and nothing removes a `language-servers/php` install left on disk.
@@ -495,7 +496,7 @@ The `go` kind runs the `gopls` on `PATH` or in `GOBIN`, `$GOPATH/bin`, `~/go/bin
 
 The `swift` kind runs the `sourcekit-lsp` on `PATH`, in Xcode's or the command line tools' folder, or in `~/.swiftly/bin`. It prints no version, so the `swift` beside it is asked (`swift --version`). Loading a `Package.swift` runs it, so the kind builds code (`runsBuildCode`) and has no setting that turns that off: it does not start in the worktree of an agent. An Xcode project without a `Package.swift` shows less to sourcekit-lsp than a package does.
 
-A kind whose server is someone else's program installs from a descriptor of ours (`<kind>-native-release.json`, same shape as the PHP one) with a checksum per platform, and has no development build. A release that is one file has `format: "raw"`; `checksumOnly: true` marks a release whose program is not run at install, since the checksum already names its bytes.
+A kind whose server is someone else's program installs from a descriptor of ours (`<kind>-native-release.json`, same shape as the PHP one) with a checksum per platform, and has no development build. The TOML server is taplo's release binary run as `taplo lsp stdio`, because `@taplo/cli` on npm is the WebAssembly build and has no `lsp` command. A release that is one file has `format: "raw"`, or `"gz"` when gzipped; `checksumOnly: true` marks a release whose program is not run at install, since the checksum already names its bytes.
 
 A kind with `runsBuildCode` builds the code it reads. In a worktree the register made for an agent's node it runs without that (rust-analyzer gets build scripts, proc macros and `checkOnSave` off) or, like Swift and Zig, does not start, until a person calls `language.worktreeBuild` for the repository (local secret only). `language-servers/worktree-build.json` holds the main checkouts they allowed. The status carries `buildHeld`, and an agent reads the same sentence as the `message` of that server.
 
