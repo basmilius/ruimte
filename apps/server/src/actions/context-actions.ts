@@ -72,9 +72,11 @@ async function externalSource({ host, place }: ServerActionContext, sourceId: st
 }
 
 /* Why a chat view's read of a node found nothing: it named no canvas, which is what stands in for a line. */
-async function chatViewRefusal({ host, place: reached, external }: ServerActionContext, caller: string, sourceId: string): Promise<ToolRefusal | null> {
-    // A client elsewhere stands in no project, so the one it named is where it looked.
-    const place = external === undefined ? host.projects.locate(caller) : reached;
+async function chatViewRefusal(context: ServerActionContext, caller: string, sourceId: string): Promise<ToolRefusal | null> {
+    const { host } = context;
+    // A client elsewhere stands in no project, so the one it named is where it looked. `place` is read only then: it
+    // refuses a caller in no project, which an agent's read must answer with its own refusal.
+    const place = context.external === undefined ? host.projects.locate(caller) : context.place;
     if (place === null) {
         return null;
     }
