@@ -6,7 +6,7 @@ import { fileExists } from '@adecore/utils/fs';
 import { MachineHome } from '../fs/machine-home.ts';
 import { LanguageHost } from './host.ts';
 import { eventually } from './test-integration.ts';
-import { toolchainCandidates } from './toolchain.ts';
+import { cargoBin, toolchainCandidates } from './toolchain.ts';
 
 /*
  * A crate whose build script, proc macro and rustc wrapper each write a marker file, opened as the folder
@@ -15,7 +15,8 @@ import { toolchainCandidates } from './toolchain.ts';
 
 const fixtureRoot = process.env.RUIMTE_INTEGRATION_FIXTURE_ROOT;
 const hasToolchain =
-    toolchainCandidates('rust-analyzer').some((path) => Bun.file(path).size > 0) && toolchainCandidates('cargo').some((path) => Bun.file(path).size > 0);
+    toolchainCandidates('rust-analyzer').some((path) => Bun.file(path).size > 0) &&
+    [Bun.which('cargo'), join(cargoBin(), 'cargo')].some((path) => path !== null && Bun.file(path).size > 0);
 
 let base = '';
 let project = '';
