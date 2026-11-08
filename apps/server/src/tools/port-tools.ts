@@ -7,7 +7,7 @@ import { defineTool } from './tool.ts';
 
 export const portShare = defineTool('browser', {
     name: 'port_share',
-    description: "Shares a dev server's port with the person's other devices so they open it, or stops a share you made. Needs the machine's Agents setting.",
+    description: "Shares a dev server's port with the person's other devices, or stops a share you made. Needs the machine's Agents setting.",
     input: z.object({
         port: z
             .number({ error: 'port needs a port number' })

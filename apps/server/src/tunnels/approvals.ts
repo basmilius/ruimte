@@ -172,7 +172,7 @@ export function approvalTools(ports: ApprovalPorts): Tool[] {
     const answer = defineTool('approval', {
         name: 'approval_answer',
         description:
-            'Approves or declines one thing approval_list names, as the person would. An approved command, launch or routine runs as a shell command here; an id whose command changed is refused.',
+            'Approves or declines one thing approval_list names, as the person would. An approved command, launch or routine runs as a shell command here. An id whose command changed is refused.',
         input: z.object({
             id: z.string({ error: 'approval_answer needs id, from approval_list' }).min(1, 'approval_answer needs id, from approval_list'),
             decision: z.enum(['allow', 'deny']).optional().describe('allow when left out; only a chat request and a routine can be denied')
