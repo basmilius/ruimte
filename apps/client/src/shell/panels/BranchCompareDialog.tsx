@@ -71,12 +71,13 @@ function Picker({ seed }: { seed: BranchCompareSeed }) {
     const cwd = chosen !== '' ? chosen : repos.length === 1 ? repos[0]!.path : '';
     const { refs, error, retry } = useRefs(cwd);
 
-    const items = (refs ?? []).map((ref) => ({
-        value: fullRefName(ref),
+    // A git ref's `current` flag, read by destructuring so the compiler does not take it for a React ref.
+    const current = refs?.find(({ current: checkedOut }) => checkedOut);
+    const items = (refs ?? []).map((branch) => ({
+        value: fullRefName(branch),
         // The checkout the dialog reads is in a worktree list too, but it is not another worktree.
-        label: ref.worktree === undefined || ref.current ? ref.name : `${ref.name} (${t('git.branchMenu.inWorktree')})`
+        label: branch.worktree === undefined || branch === current ? branch.name : `${branch.name} (${t('git.branchMenu.inWorktree')})`
     }));
-    const current = refs?.find((ref) => ref.current);
     const base = refs?.find((ref) => ref.isDefault) ?? refs?.[0];
     const left = from !== '' ? from : base === undefined ? 'HEAD' : fullRefName(base);
     const right = to !== '' ? to : current === undefined ? 'HEAD' : fullRefName(current);
