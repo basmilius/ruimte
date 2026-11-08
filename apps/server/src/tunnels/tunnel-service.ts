@@ -516,7 +516,7 @@ export class TunnelService {
             throw new TunnelConfigError('no-tunnel', 'This machine uses no tunnel');
         }
 
-        await this.jobs.run(async () => {
+        await this.changing(async () => {
             const tunnel = this.stored.tunnel;
 
             if (tunnel === null) {
@@ -570,7 +570,7 @@ export class TunnelService {
      * record Ruimte did not make is refused before anything is written.
      */
     async add(input: { kind: TunnelRowKind; zone: string; label: string; port?: number; comeBack?: boolean; origin?: TunnelOrigin }): Promise<TunnelState> {
-        await this.jobs.run(async () => {
+        await this.changing(async () => {
             const tunnel = this.stored.tunnel;
 
             if (tunnel === null) {
@@ -627,7 +627,7 @@ export class TunnelService {
                 throw new TunnelConfigError('hostname-on-tunnel', `${hostname} is on this tunnel already. Pick another name.`);
             }
 
-            const earlier = await this.ourRecordNamed(api, zone, hostname, tunnel.id);
+            const earlier = await this.ourRecordNamed(api, zone.id, hostname, tunnel.id);
             const row: StoredRow = {
                 id: this.ports.random(6),
                 kind: input.kind,
@@ -642,18 +642,23 @@ export class TunnelService {
             };
 
             // A rule someone else set (a catch-all that serves) would answer the name the moment its record points at the
-            // tunnel, so Cloudflare takes the 404 first. Saved off once it did, so Remove still finds the rule and the record.
-            await this.syncRows([...this.stored.rows, row]);
+            // tunnel, so Cloudflare takes the 404 first. Saved off before that, so Remove still finds a 404 whose answer got
+            // lost, and dropped again only when Cloudflare turned it down.
             this.stored = { ...this.stored, rows: [...this.stored.rows, row] };
             this.save();
 
-            const record = await this.routeHostname(api, zone, hostname, tunnel.id);
+            try {
+                await this.syncRows(this.stored.rows);
+            } catch (e) {
+                if (e instanceof CloudflareError && e.refused) {
+                    this.stored = { ...this.stored, rows: this.stored.rows.filter((candidate) => candidate.id !== row.id) };
+                    this.save();
+                }
 
-            this.stored = {
-                ...this.stored,
-                rows: this.stored.rows.map((candidate) => (candidate.id === row.id ? { ...candidate, recordId: record.id } : candidate))
-            };
-            this.save();
+                throw e;
+            }
+
+            await this.recordRow(api, row, tunnel.id);
 
             const rows = this.stored.rows.map((candidate) => (candidate.id === row.id ? { ...candidate, enabled: true } : candidate));
 
@@ -684,7 +689,7 @@ export class TunnelService {
         };
 
         // Decided on the row as the job finds it, since a change queued before this one may have turned it on.
-        const touchesIngress = await this.jobs.run(async () => {
+        const touchesIngress = await this.changing(async () => {
             const row = this.stored.rows.find((candidate) => candidate.id === id);
 
             if (row === undefined) {
@@ -709,6 +714,13 @@ export class TunnelService {
 
             if (touches) {
                 this.requireToken();
+            }
+
+            const tunnel = this.stored.tunnel;
+
+            // A row whose record was refused on add held its name with a 404 only; it serves once the record is there.
+            if (change.enabled === true && row.recordId === null && tunnel !== null) {
+                await this.recordRow(this.api(), row, tunnel.id);
             }
 
             const rows = this.stored.rows.map((candidate) => (candidate.id === id ? apply(candidate) : candidate));
@@ -755,7 +767,7 @@ export class TunnelService {
             throw new TunnelConfigError('unknown-row', 'That hostname is not on this tunnel');
         }
 
-        await this.jobs.run(async () => {
+        await this.changing(async () => {
             const row = this.stored.rows.find((candidate) => candidate.id === id);
             const tunnel = this.stored.tunnel;
 
@@ -931,8 +943,40 @@ export class TunnelService {
     /* Checks the tunnel, writes the hostnames to Cloudflare and starts or stops the child to match. */
     private async bringUp(): Promise<void> {
         await this.checkTunnel();
+
+        const refused = await this.recordRowsComingBack();
+
         await this.syncIngress();
         await this.reconcileChild();
+
+        if (refused !== null) {
+            throw refused;
+        }
+    }
+
+    /* A row that comes back on without a record gets one first; one whose record fails stays off, and the first failure is said. */
+    private async recordRowsComingBack(): Promise<unknown> {
+        const tunnel = this.stored.tunnel;
+        let refused: unknown = null;
+
+        if (tunnel === null) {
+            return refused;
+        }
+
+        for (const row of this.stored.rows.filter((candidate) => candidate.enabled && candidate.recordId === null)) {
+            try {
+                await this.recordRow(this.api(), row, tunnel.id);
+            } catch (e) {
+                refused ??= e;
+                this.stored = {
+                    ...this.stored,
+                    rows: this.stored.rows.map((candidate) => (candidate.id === row.id ? { ...candidate, enabled: false } : candidate))
+                };
+                this.save();
+            }
+        }
+
+        return refused;
     }
 
     /* What a request that changed a row leaves to the background: the child starts or stops, and the clients hear of it. */
@@ -956,17 +1000,17 @@ export class TunnelService {
     }
 
     /* Creates the proxied CNAME to the tunnel, or updates the one Ruimte made earlier. */
-    private async routeHostname(api: CloudflareApi, zone: CloudflareZone, hostname: string, tunnelId: string): Promise<CloudflareRecord> {
+    private async routeHostname(api: CloudflareApi, zoneId: string, hostname: string, tunnelId: string): Promise<CloudflareRecord> {
         const input = { name: hostname, content: this.targetOf(tunnelId), comment: this.recordComment() };
-        const ours = await this.ourRecordNamed(api, zone, hostname, tunnelId);
+        const ours = await this.ourRecordNamed(api, zoneId, hostname, tunnelId);
 
-        return ours === undefined ? api.createRecord(zone.id, input) : api.updateRecord(zone.id, ours.id, input);
+        return ours === undefined ? api.createRecord(zoneId, input) : api.updateRecord(zoneId, ours.id, input);
     }
 
     /* The record Ruimte made under the name earlier, if any. Any other record under the name refuses it. */
-    private async ourRecordNamed(api: CloudflareApi, zone: CloudflareZone, hostname: string, tunnelId: string): Promise<CloudflareRecord | undefined> {
+    private async ourRecordNamed(api: CloudflareApi, zoneId: string, hostname: string, tunnelId: string): Promise<CloudflareRecord | undefined> {
         const target = this.targetOf(tunnelId);
-        const existing = await api.recordsNamed(zone.id, hostname);
+        const existing = await api.recordsNamed(zoneId, hostname);
         const foreign = existing.find((record) => !this.isOurs(record, target));
 
         if (foreign !== undefined && (foreign.comment ?? '').startsWith(RECORD_MARK)) {
@@ -1007,13 +1051,48 @@ export class TunnelService {
         try {
             await this.syncIngress(rows, gone);
         } catch (e) {
-            this.failure = this.plain(e, 'Saving the hostnames did not work');
-            this.ports.log(`Tunnels: ${this.failure}`);
+            this.noteFailure(e, 'Saving the hostnames did not work');
 
             if (!this.isLive(rows)) {
                 await this.stopChild().catch(() => undefined);
             }
 
+            throw e;
+        }
+    }
+
+    private noteFailure(e: unknown, fallback: string): void {
+        this.failure = this.plain(e, fallback);
+        this.ports.log(`Tunnels: ${this.failure}`);
+    }
+
+    /*
+     * Points the DNS record of a row at the tunnel, refusing a record Ruimte did not make, and saves its id. A row is
+     * turned on only after this, so it never serves on Cloudflare without a record that leads to it.
+     */
+    private async recordRow(api: CloudflareApi, row: StoredRow, tunnelId: string): Promise<void> {
+        let record: CloudflareRecord;
+
+        try {
+            record = await this.routeHostname(api, row.zoneId, row.hostname, tunnelId);
+        } catch (e) {
+            this.noteFailure(e, `Making the DNS record of ${row.hostname} did not work`);
+
+            throw e;
+        }
+
+        this.stored = {
+            ...this.stored,
+            rows: this.stored.rows.map((candidate) => (candidate.id === row.id ? { ...candidate, recordId: record.id } : candidate))
+        };
+        this.save();
+    }
+
+    /* Runs a change of the rows as a job. A failure tells the clients too, since what it saved before failing may differ from what they show. */
+    private async changing<T>(work: () => Promise<T>): Promise<T> {
+        try {
+            return await this.jobs.run(work);
+        } catch (e) {
             this.announce();
 
             throw e;

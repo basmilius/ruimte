@@ -16,10 +16,18 @@ export type CloudflareErrorCode = 'token-refused' | 'no-permission' | 'not-found
 /* A failure in the words of a person: what Ruimte was doing and why Cloudflare would not. Never holds the token. */
 export class CloudflareError extends Error {
     readonly code: CloudflareErrorCode;
+    /* The status Cloudflare answered with, or null when no answer came. */
+    readonly status: number | null;
 
-    constructor(code: CloudflareErrorCode, message: string) {
+    constructor(code: CloudflareErrorCode, message: string, status: number | null = null) {
         super(message);
         this.code = code;
+        this.status = status;
+    }
+
+    /* Cloudflare answered and turned the request down, so it did nothing. A lost answer or a 5xx may hide a write that landed. */
+    get refused(): boolean {
+        return this.status !== null && this.status < 500 && this.code !== 'rate-limited';
     }
 }
 
@@ -299,30 +307,32 @@ export class CloudflareApi {
         if (status === 401) {
             return new CloudflareError(
                 'token-refused',
-                `${what} failed. Cloudflare does not accept this API token. Make a new one and paste it here.${reason}`
+                `${what} failed. Cloudflare does not accept this API token. Make a new one and paste it here.${reason}`,
+                status
             );
         }
 
         if (status === 403) {
             return new CloudflareError(
                 'no-permission',
-                `${what} failed. The API token may not do that. It needs Zone read, DNS edit and Cloudflare Tunnel edit.${reason}`
+                `${what} failed. The API token may not do that. It needs Zone read, DNS edit and Cloudflare Tunnel edit.${reason}`,
+                status
             );
         }
 
         if (status === 404) {
-            return new CloudflareError('not-found', `${what} failed. Cloudflare could not find it.${reason}`);
+            return new CloudflareError('not-found', `${what} failed. Cloudflare could not find it.${reason}`, status);
         }
 
         if (status === 409) {
-            return new CloudflareError('conflict', `${what} failed. It already exists.${reason}`);
+            return new CloudflareError('conflict', `${what} failed. It already exists.${reason}`, status);
         }
 
         if (status === 429) {
-            return new CloudflareError('rate-limited', `${what} failed. Cloudflare asks Ruimte to slow down. Try again in a minute.`);
+            return new CloudflareError('rate-limited', `${what} failed. Cloudflare asks Ruimte to slow down. Try again in a minute.`, status);
         }
 
-        return new CloudflareError('cloudflare', `${what} failed (Cloudflare answered ${status}).${reason}`);
+        return new CloudflareError('cloudflare', `${what} failed (Cloudflare answered ${status}).${reason}`, status);
     }
 
     private withoutToken(text: string): string {

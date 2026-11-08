@@ -1089,6 +1089,169 @@ describe('an existing tunnel', () => {
         expect((await f.state()).rows).toEqual([]);
     });
 
+    test('tells the clients about a hostname kept after Cloudflare refused its record, so they can remove it', async () => {
+        const f = await fixture();
+        const picked = f.cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
+
+        await linked(f, picked);
+        f.cloudflare.failing.set('POST /zones/zone-bmnw.nl/dns_records', 403);
+
+        const before = f.events.count;
+
+        await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 })).rejects.toBeInstanceOf(CloudflareError);
+
+        expect(f.events.count).toBeGreaterThan(before);
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'shop.bmnw.nl', enabled: false }]);
+    });
+
+    test('tells the clients about a hostname switched off when Cloudflare refused to delete its record', async () => {
+        const f = await fixture();
+        const picked = f.cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
+
+        await linked(f, picked);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+        f.cloudflare.failing.set('DELETE /zones/zone-bmnw.nl/dns_records', 403);
+
+        const before = f.events.count;
+
+        await expect(f.service.remove((await f.state()).rows[0]!.id)).rejects.toBeInstanceOf(CloudflareError);
+
+        expect(f.events.count).toBeGreaterThan(before);
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'shop.bmnw.nl', enabled: false }]);
+    });
+
+    test('keeps a new hostname whose 404 Cloudflare may have taken without the answer arriving, and Remove takes it off', async () => {
+        const cloudflare = new FakeCloudflare();
+        const lost = { value: false };
+        const f = await fixture(
+            {
+                cloudflare: async (url, init) => {
+                    const answer = await cloudflare.fetch(url, init);
+
+                    if (lost.value && init.method === 'PUT' && url.endsWith('/configurations')) {
+                        lost.value = false;
+
+                        throw new Error('offline');
+                    }
+
+                    return answer;
+                }
+            },
+            '/usr/bin/cloudflared',
+            { cloudflare }
+        );
+        const picked = cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
+
+        await linked(f, picked);
+        lost.value = true;
+
+        await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 })).rejects.toMatchObject({ code: 'unreachable' });
+
+        await f.service.idle();
+
+        expect(cloudflare.records).toEqual([]);
+        expect(picked.ingress).toEqual([{ hostname: 'shop.bmnw.nl', service: 'http_status:404' }, { service: 'http://localhost:8080' }]);
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'shop.bmnw.nl', enabled: false }]);
+
+        await f.service.remove((await f.state()).rows[0]!.id);
+        await f.service.idle();
+
+        expect(picked.ingress).toEqual([{ service: 'http://localhost:8080' }]);
+        expect((await f.state()).rows).toEqual([]);
+    });
+
+    test('drops a new hostname whose 404 Cloudflare turned down, and tells the clients', async () => {
+        const f = await fixture();
+        const picked = f.cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
+
+        await linked(f, picked);
+        f.cloudflare.failing.set('PUT /accounts/acc-1/cfd_tunnel', 403);
+
+        const before = f.events.count;
+
+        await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 })).rejects.toMatchObject({ code: 'no-permission' });
+
+        expect(f.events.count).toBeGreaterThan(before);
+        expect(picked.ingress).toEqual([{ service: 'http://localhost:8080' }]);
+        expect((await f.state()).rows).toEqual([]);
+        expect(tunnelStore(f.home).read()?.rows).toEqual([]);
+    });
+
+    test('makes the missing record of a hostname before it turns it on, and keeps it off while Cloudflare refuses the record', async () => {
+        const f = await fixture();
+        const picked = f.cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
+
+        await linked(f, picked);
+        f.cloudflare.failing.set('POST /zones/zone-bmnw.nl/dns_records', 403);
+
+        await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 })).rejects.toBeInstanceOf(CloudflareError);
+
+        const row = (await f.state()).rows[0]!;
+
+        await expect(f.service.update(row.id, { enabled: true })).rejects.toMatchObject({ code: 'no-permission' });
+
+        await f.service.idle();
+
+        expect(f.cloudflare.records).toEqual([]);
+        expect(picked.ingress).toEqual([{ hostname: 'shop.bmnw.nl', service: 'http_status:404' }, { service: 'http://localhost:8080' }]);
+        expect(await f.state()).toMatchObject({ stage: 'failed', rows: [{ hostname: 'shop.bmnw.nl', enabled: false }] });
+        expect(f.runner.running).toBe(0);
+
+        // The person gave the token DNS edit.
+        f.cloudflare.failing.clear();
+        await f.service.update(row.id, { enabled: true });
+        await f.service.idle();
+
+        expect(f.cloudflare.records.map((record) => [record.name, record.content, record.comment])).toEqual([
+            ['shop.bmnw.nl', `${picked.id}.cfargotunnel.com`, MARKER]
+        ]);
+        expect(picked.ingress).toEqual([{ hostname: 'shop.bmnw.nl', service: 'http://127.0.0.1:3000' }, { service: 'http://localhost:8080' }]);
+        expect(await f.state()).toMatchObject({ stage: 'running', rows: [{ hostname: 'shop.bmnw.nl', enabled: true }] });
+        expect(f.runner.running).toBe(1);
+    });
+
+    test('makes the missing record of a hostname that comes back on after a restart, and keeps it off while Cloudflare refuses the record', async () => {
+        const f = await fixture();
+        const picked = f.cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
+
+        await linked(f, picked);
+        f.cloudflare.failing.set('POST /zones/zone-bmnw.nl/dns_records', 403);
+
+        await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000, comeBack: true })).rejects.toBeInstanceOf(CloudflareError);
+
+        await f.service.stop();
+
+        // An older Ruimte turned the row on without its record.
+        const stored = tunnelStore(f.home).read()!;
+
+        tunnelStore(f.home).write({ ...stored, rows: stored.rows.map((row) => ({ ...row, enabled: true })) });
+
+        const refused = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
+
+        await refused.service.resume();
+        await refused.service.idle();
+
+        expect(f.cloudflare.records).toEqual([]);
+        expect(picked.ingress).toEqual([{ hostname: 'shop.bmnw.nl', service: 'http_status:404' }, { service: 'http://localhost:8080' }]);
+        expect(await refused.state()).toMatchObject({ stage: 'failed', rows: [{ hostname: 'shop.bmnw.nl', enabled: false }] });
+        expect(refused.runner.running).toBe(0);
+
+        await refused.service.stop();
+        tunnelStore(f.home).write({ ...stored, rows: stored.rows.map((row) => ({ ...row, enabled: true })) });
+        f.cloudflare.failing.clear();
+
+        const again = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
+
+        await again.service.resume();
+        await again.service.idle();
+
+        expect(f.cloudflare.records.map((record) => [record.name, record.comment])).toEqual([['shop.bmnw.nl', MARKER]]);
+        expect(picked.ingress).toEqual([{ hostname: 'shop.bmnw.nl', service: 'http://127.0.0.1:3000' }, { service: 'http://localhost:8080' }]);
+        expect(await again.state()).toMatchObject({ stage: 'running', rows: [{ hostname: 'shop.bmnw.nl', enabled: true }] });
+        expect(again.runner.running).toBe(1);
+    });
+
     test('writes the origin settings into its own rule only, and lists the host header of a rule of the dashboard', async () => {
         const f = await fixture();
         const picked = f.cloudflare.tunnel(
