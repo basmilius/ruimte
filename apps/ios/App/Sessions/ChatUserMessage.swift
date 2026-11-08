@@ -330,6 +330,12 @@ struct ChatReferenceChip: View {
     /// Without the project around it a thread cannot tell a reference that left it from one it does not know.
     /// `lastName` is what the message knows the reference was called, shown when it is not in the project now.
     static func look(_ id: String, chat: Bool, lookup: ChatReferenceLookup, lastName: String = "") -> Look {
+        // The person's external MCP client sent it, as the daemon's `isExternalActor` reads the id: no node, and never gone.
+        if id.hasPrefix("external-") {
+            return Look(
+                id: id, icon: "plug", title: lastName.isEmpty ? String(localized: "External MCP client") : lastName,
+                opens: false, gone: false)
+        }
         guard lookup.known else {
             let fallback = chat ? String(localized: "Chat") : String(localized: "View or node")
             return Look(

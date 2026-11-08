@@ -79,6 +79,14 @@ import XCTest
         XCTAssertEqual(ChatReferenceChip.look("drawing-sketch", chat: false, lookup: lookup).icon, "brain")
     }
 
+    func testAMessageOfAnExternalMCPClientWearsAPlugAndIsNotGone() {
+        let lookup = ChatReferenceLookup(items: [], known: true)
+        let look = ChatReferenceChip.look("external-cred-1", chat: false, lookup: lookup, lastName: "MCP · claude.ai")
+        XCTAssertEqual(look.icon, "plug")
+        XCTAssertEqual(look.title, "MCP · claude.ai")
+        XCTAssertFalse(look.gone)
+    }
+
     func testAReferenceSentFromTheIPhoneCarriesWhatTheDesktopSends() async throws {
         let fixture = try fixture()
         let client = ReferenceClientFake()
