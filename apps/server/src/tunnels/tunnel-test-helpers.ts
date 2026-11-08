@@ -96,6 +96,12 @@ export interface FakeTunnel {
     account: string;
     name: string;
     ingress: Array<Record<string, unknown>>;
+    /* The settings beside the ingress, which a write of Ruimte's has to keep. */
+    rest: Record<string, unknown>;
+    /* `cloudflare` for a tunnel managed in the dashboard, `local` for one whose settings live in a file. */
+    configSrc: 'cloudflare' | 'local';
+    /* How many connections something other than the test's `cloudflared` holds open. */
+    connections: number;
 }
 
 export interface FakeCall {
@@ -173,10 +179,24 @@ export class FakeCloudflare {
     }
 
     /* A tunnel that already sits on the account, made by something other than Ruimte. */
-    tunnel(account: string, name: string, ingress: Array<Record<string, unknown>> = [{ service: 'http_status:404' }]): FakeTunnel {
+    tunnel(
+        account: string,
+        name: string,
+        ingress: Array<Record<string, unknown>> = [{ service: 'http_status:404' }],
+        change: Partial<Pick<FakeTunnel, 'rest' | 'configSrc' | 'connections'>> = {}
+    ): FakeTunnel {
         this.counter += 1;
 
-        const tunnel = { id: `00000000-0000-4000-8000-${String(this.counter).padStart(12, '0')}`, account, name, ingress };
+        const tunnel: FakeTunnel = {
+            id: `00000000-0000-4000-8000-${String(this.counter).padStart(12, '0')}`,
+            account,
+            name,
+            ingress,
+            rest: {},
+            configSrc: 'cloudflare',
+            connections: 0,
+            ...change
+        };
 
         this.tunnels.push(tunnel);
 
@@ -222,8 +242,12 @@ export class FakeCloudflare {
     private routeTunnel(method: string, account: string, id: string | undefined, part: string | undefined, query: URLSearchParams, body: unknown): Response {
         if (id === undefined) {
             if (method === 'GET') {
+                const name = query.get('name');
+
                 return this.ok(
-                    this.tunnels.filter((tunnel) => tunnel.account === account && tunnel.name === query.get('name')).map(({ id, name }) => ({ id, name }))
+                    this.tunnels
+                        .filter((tunnel) => tunnel.account === account && (name === null || tunnel.name === name))
+                        .map((tunnel) => this.described(tunnel))
                 );
             }
 
@@ -250,13 +274,27 @@ export class FakeCloudflare {
 
         if (part === 'configurations') {
             if (method === 'PUT') {
-                tunnel.ingress = (body as { config: { ingress: Array<Record<string, unknown>> } }).config.ingress;
+                const { ingress, ...rest } = (body as { config: { ingress: Array<Record<string, unknown>> } }).config;
+
+                tunnel.ingress = ingress;
+                tunnel.rest = rest;
             }
 
-            return this.ok({ config: { ingress: tunnel.ingress } });
+            return this.ok({ config: { ...tunnel.rest, ingress: tunnel.ingress } });
         }
 
-        return this.ok({ id: tunnel.id, name: tunnel.name });
+        return this.ok(this.described(tunnel));
+    }
+
+    private described(tunnel: FakeTunnel): Record<string, unknown> {
+        return {
+            id: tunnel.id,
+            name: tunnel.name,
+            config_src: tunnel.configSrc,
+            remote_config: tunnel.configSrc === 'cloudflare',
+            status: tunnel.connections > 0 ? 'healthy' : 'inactive',
+            connections: Array.from({ length: tunnel.connections }, (_, i) => ({ id: `conn-${i}`, is_pending_reconnect: false }))
+        };
     }
 
     private routeRecord(method: string, zone: string, id: string | undefined, query: URLSearchParams, body: unknown): Response {

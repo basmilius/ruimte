@@ -40,6 +40,9 @@ export function registerTunnelHandlers(dispatcher: Dispatcher, deps: TunnelHandl
     dispatcher.register('tunnel.setToken', ({ token }) => refusing(() => service.setToken(token)), { owner: true });
     dispatcher.register('tunnel.clearToken', () => service.clearToken(), { owner: true });
     dispatcher.register('tunnel.setup', ({ account }) => refusing(() => service.setup(account)), { owner: true });
+    dispatcher.register('tunnel.list', async ({ account }) => ({ tunnels: await refusing(() => service.existing(account)) }), { owner: true });
+    dispatcher.register('tunnel.link', ({ account, tunnel }) => refusing(() => service.link(account, tunnel)), { owner: true });
+    dispatcher.register('tunnel.unlink', () => refusing(() => service.unlink()), { owner: true });
     dispatcher.register('tunnel.add', (payload) => refusing(() => service.add(payload)), { owner: true });
     dispatcher.register('tunnel.update', ({ id, ...change }) => refusing(() => service.update(id, change)), { owner: true });
     dispatcher.register('tunnel.remove', ({ id }) => refusing(() => service.remove(id)), { owner: true });

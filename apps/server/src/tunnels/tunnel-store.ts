@@ -10,12 +10,13 @@ const StoredRowSchema = TunnelRowSchema.extend({ zoneId: z.string().min(1), reco
 export type StoredRow = z.infer<typeof StoredRowSchema>;
 
 /*
- * What Ruimte keeps of a tunnel: the account and id of the tunnel it made, and its rows. The API token lives in a file
- * of its own (`cloudflare-token-store.ts`) and never in this one.
+ * What Ruimte keeps of a tunnel: the account and id of the tunnel it uses, whether it made that tunnel, and its rows.
+ * A file from before Ruimte could use an existing tunnel only knew tunnels it made. The API token lives in a file of
+ * its own (`cloudflare-token-store.ts`) and never in this one.
  */
 const CurrentSchema = z.object({
     version: z.literal(2),
-    tunnel: z.object({ id: z.string().min(1), name: z.string().min(1), account: TunnelNamedSchema }).nullable(),
+    tunnel: z.object({ id: z.string().min(1), name: z.string().min(1), account: TunnelNamedSchema, created: z.boolean().default(true) }).nullable(),
     mcp: z.object({ enabled: z.boolean(), label: z.string().nullable() }),
     rows: z.array(StoredRowSchema)
 });

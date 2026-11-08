@@ -33,7 +33,13 @@ const EnvelopeSchema = z.object({
 const NamedSchema = z.object({ id: z.string().min(1), name: z.string().min(1) });
 const TokenStatusSchema = z.object({ status: z.string() });
 const ZoneSchema = NamedSchema.extend({ account: NamedSchema });
-const TunnelSchema = NamedSchema.extend({ deleted_at: z.string().nullish() });
+const TunnelSchema = NamedSchema.extend({
+    deleted_at: z.string().nullish(),
+    config_src: z.string().nullish(),
+    remote_config: z.boolean().nullish(),
+    status: z.string().nullish(),
+    connections: z.array(z.object({ is_pending_reconnect: z.boolean().nullish() })).nullish()
+});
 const RecordSchema = z.object({
     id: z.string().min(1),
     type: z.string(),
@@ -42,15 +48,38 @@ const RecordSchema = z.object({
     proxied: z.boolean().optional(),
     comment: z.string().nullish()
 });
-const ConfigSchema = z.object({ config: z.object({ ingress: z.array(z.record(z.string(), z.unknown())).optional() }).nullish() });
+const ConfigSchema = z.object({ config: z.looseObject({ ingress: z.array(z.record(z.string(), z.unknown())).optional() }).nullish() });
 
 export type CloudflareNamed = z.infer<typeof NamedSchema>;
 export type CloudflareZone = z.infer<typeof ZoneSchema>;
 export type CloudflareTunnel = z.infer<typeof TunnelSchema>;
 export type CloudflareRecord = z.infer<typeof RecordSchema>;
 
+/* Whether the tunnel's settings live in the dashboard, which is the only kind whose hostnames the API changes. */
+export function isDashboardManaged(tunnel: CloudflareTunnel): boolean {
+    return tunnel.config_src === 'cloudflare' || tunnel.remote_config === true;
+}
+
+/*
+ * Whether something runs the tunnel now, from its connections, or from its status where Cloudflare leaves the
+ * connections out. A connection waiting to reconnect is no runner.
+ */
+export function isRunning(tunnel: CloudflareTunnel): boolean {
+    if (tunnel.connections !== null && tunnel.connections !== undefined) {
+        return tunnel.connections.some((connection) => connection.is_pending_reconnect !== true);
+    }
+
+    return tunnel.status === 'healthy' || tunnel.status === 'degraded';
+}
+
 /* A rule of a tunnel's ingress as Cloudflare keeps it. Rules Ruimte did not write keep every key they had. */
 export type CloudflareIngressRule = Record<string, unknown>;
+
+/* A tunnel's configuration: its ingress, and the settings beside it (such as `warp-routing`) that Ruimte never changes. */
+export interface CloudflareTunnelConfig {
+    readonly ingress: readonly CloudflareIngressRule[];
+    readonly rest: Readonly<Record<string, unknown>>;
+}
 
 export interface CloudflareRecordInput {
     readonly name: string;
@@ -109,6 +138,11 @@ export class CloudflareApi {
         return found.find((tunnel) => tunnel.name === name) ?? null;
     }
 
+    /* Every tunnel on the account that is not deleted, whoever made it. */
+    tunnels(accountId: string): Promise<CloudflareTunnel[]> {
+        return this.pages(`/accounts/${accountId}/cfd_tunnel?is_deleted=false`, 'Listing the tunnels of the account', TunnelSchema);
+    }
+
     /* A tunnel whose ingress lives in Cloudflare, so the dashboard shows the same as Ruimte. */
     async createTunnel(accountId: string, name: string): Promise<CloudflareTunnel> {
         return TunnelSchema.parse(
@@ -141,16 +175,20 @@ export class CloudflareApi {
         return token;
     }
 
-    async ingress(accountId: string, tunnelId: string): Promise<CloudflareIngressRule[]> {
-        const config = ConfigSchema.parse(
+    async configuration(accountId: string, tunnelId: string): Promise<CloudflareTunnelConfig> {
+        const { config } = ConfigSchema.parse(
             await this.call('GET', `/accounts/${accountId}/cfd_tunnel/${tunnelId}/configurations`, "Reading the tunnel's hostnames")
         );
+        const { ingress, ...rest } = config ?? {};
 
-        return config.config?.ingress ?? [];
+        return { ingress: ingress ?? [], rest };
     }
 
-    async putIngress(accountId: string, tunnelId: string, ingress: readonly CloudflareIngressRule[]): Promise<void> {
-        await this.call('PUT', `/accounts/${accountId}/cfd_tunnel/${tunnelId}/configurations`, "Saving the tunnel's hostnames", { config: { ingress } });
+    /* Writes the ingress back with every other setting the configuration had, since Cloudflare replaces it whole. */
+    async putConfiguration(accountId: string, tunnelId: string, config: CloudflareTunnelConfig): Promise<void> {
+        await this.call('PUT', `/accounts/${accountId}/cfd_tunnel/${tunnelId}/configurations`, "Saving the tunnel's hostnames", {
+            config: { ...config.rest, ingress: config.ingress }
+        });
     }
 
     /* Every record with this name, of any type, since a CNAME cannot sit beside another one. */

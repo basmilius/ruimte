@@ -256,7 +256,7 @@ describe('the tunnel', () => {
 
         expect(f.cloudflare.called('POST', '/accounts/acc-1/cfd_tunnel')[0]!.body).toEqual({ name: 'ruimte-bas-macbook-f7a7', config_src: 'cloudflare' });
         expect(ourTunnel(f).ingress).toEqual([{ service: 'http_status:404' }]);
-        expect(await f.state()).toMatchObject({ stage: 'running', tunnel: { name: 'ruimte-bas-macbook-f7a7' }, rows: [] });
+        expect(await f.state()).toMatchObject({ stage: 'running', tunnel: { name: 'ruimte-bas-macbook-f7a7', created: true, runner: null }, rows: [] });
         expect(f.runner.running).toBe(0);
     });
 
@@ -389,7 +389,7 @@ describe('a row', () => {
         expect(refused).toBeInstanceOf(TunnelConfigError);
         expect(refused).toMatchObject({ code: 'foreign-record' });
         expect((refused as Error).message).toContain('app.bmnw.nl already has a DNS record of type A pointing at 203.0.113.9 that Ruimte did not make');
-        expect(f.cloudflare.calls.slice(before).map((call) => call.method)).toEqual(['GET']);
+        expect(f.cloudflare.calls.slice(before).filter((call) => call.method !== 'GET')).toEqual([]);
         expect(f.cloudflare.records).toEqual([foreign]);
         expect(ourTunnel(f).ingress).toEqual([{ service: 'http_status:404' }]);
         expect((await f.state()).stage).toBe('running');
@@ -630,6 +630,158 @@ describe('removal', () => {
         ).toBe(true);
         expect(f.cloudflare.calls.some((call) => call.path.includes(other.id))).toBe(false);
         expect(other.ingress).toEqual([{ service: 'http_status:404' }]);
+    });
+});
+
+describe('an existing tunnel', () => {
+    const OFFICE_INGRESS = [
+        { hostname: 'nas.bmnw.nl', service: 'http://nas:80' },
+        { hostname: 'shop.bmnw.nl', path: '/admin', service: 'http://localhost:9000' },
+        { service: 'http_status:503' }
+    ];
+
+    function office(f: Fixture, change: Parameters<FakeCloudflare['tunnel']>[3] = {}) {
+        return f.cloudflare.tunnel('acc-1', 'office', structuredClone(OFFICE_INGRESS), { rest: { 'warp-routing': { enabled: true } }, ...change });
+    }
+
+    async function linked(f: Fixture, tunnel: { id: string }): Promise<void> {
+        await f.service.setToken(FAKE_API_TOKEN);
+        await f.service.link(undefined, tunnel.id);
+        await f.service.idle();
+    }
+
+    test('lists the tunnels of the account, which Ruimte can use and which run, and uses a picked one without changing it', async () => {
+        const f = await fixture();
+        const picked = office(f, { connections: 2 });
+
+        f.cloudflare.tunnel('acc-1', 'legacy', [], { configSrc: 'local' });
+        await f.service.setToken(FAKE_API_TOKEN);
+
+        expect(await f.service.existing()).toEqual([
+            { id: picked.id, name: 'office', usable: true, running: true },
+            { id: expect.any(String), name: 'legacy', usable: false, running: false }
+        ]);
+
+        await f.service.link(undefined, picked.id);
+        await f.service.idle();
+
+        expect(await f.state()).toMatchObject({
+            stage: 'running',
+            tunnel: {
+                name: 'office',
+                created: false,
+                runner: 'other',
+                others: [
+                    { hostname: 'nas.bmnw.nl', path: null, service: 'http://nas:80' },
+                    { hostname: 'shop.bmnw.nl', path: '/admin', service: 'http://localhost:9000' }
+                ]
+            },
+            rows: []
+        });
+        expect(f.cloudflare.calls.filter((call) => call.method !== 'GET')).toEqual([]);
+        expect(picked.ingress).toEqual(OFFICE_INGRESS);
+    });
+
+    test('refuses a tunnel whose settings live in a file on the computer that runs it', async () => {
+        const f = await fixture();
+        const legacy = f.cloudflare.tunnel('acc-1', 'legacy', [], { configSrc: 'local' });
+
+        await linked(f, legacy);
+
+        const state = await f.state();
+
+        expect(state).toMatchObject({ stage: 'failed', tunnel: null });
+        expect(state.message).toContain('legacy is managed in a file');
+    });
+
+    test('adds and removes only its own hostname and record, keeping every rule, the catch-all, the settings and the records it found', async () => {
+        const f = await fixture();
+        const picked = office(f);
+        const stranger = f.cloudflare.record(f.bmnw, { name: 'nas.bmnw.nl', type: 'CNAME', content: `${picked.id}.cfargotunnel.com`, proxied: true });
+
+        await linked(f, picked);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+
+        expect(picked.ingress).toEqual([...OFFICE_INGRESS.slice(0, 2), { hostname: 'shop.bmnw.nl', service: 'http://127.0.0.1:3000' }, OFFICE_INGRESS[2]]);
+        expect(picked.rest).toEqual({ 'warp-routing': { enabled: true } });
+
+        await f.service.remove((await f.state()).rows[0]!.id);
+        await f.service.idle();
+
+        expect(picked.ingress).toEqual(OFFICE_INGRESS);
+        expect(picked.rest).toEqual({ 'warp-routing': { enabled: true } });
+        expect(f.cloudflare.records).toEqual([stranger]);
+    });
+
+    test('refuses a hostname the dashboard already routes on the tunnel, and writes nothing', async () => {
+        const f = await fixture();
+        const picked = office(f);
+
+        await linked(f, picked);
+
+        const before = f.cloudflare.calls.length;
+
+        expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'nas', port: 3000 })).rejects.toMatchObject({ code: 'hostname-on-tunnel' });
+
+        await f.service.idle();
+
+        expect(f.cloudflare.calls.slice(before).filter((call) => call.method !== 'GET')).toEqual([]);
+        expect(picked.ingress).toEqual(OFFICE_INGRESS);
+    });
+
+    test('starts no cloudflared while something else runs the tunnel, and runs its own once that stopped and Try again looked', async () => {
+        const f = await fixture();
+        const picked = office(f, { connections: 1 });
+
+        await linked(f, picked);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+
+        expect(f.runner.calls).toEqual([]);
+        expect(f.cloudflare.called('GET', `/accounts/acc-1/cfd_tunnel/${picked.id}/token`)).toEqual([]);
+        expect((await f.state()).tunnel).toMatchObject({ runner: 'other' });
+
+        picked.connections = 0;
+        await f.service.retry();
+        await f.service.idle();
+
+        expect(f.runner.running).toBe(1);
+        expect((await f.state()).tunnel).toMatchObject({ runner: 'ruimte' });
+    });
+
+    test('unlinks by taking off only what Ruimte added, and never deletes the tunnel at Cloudflare', async () => {
+        const f = await fixture();
+        const picked = office(f);
+
+        await linked(f, picked);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+
+        expect(f.runner.running).toBe(1);
+
+        await f.service.unlink();
+
+        expect(await f.state()).toMatchObject({ stage: 'no-tunnel', tunnel: null, rows: [] });
+        expect(f.cloudflare.tunnels).toContain(picked);
+        expect(picked.ingress).toEqual(OFFICE_INGRESS);
+        expect(f.cloudflare.records).toEqual([]);
+        expect(f.cloudflare.called('DELETE', '/accounts/')).toEqual([]);
+        expect(f.runner.running).toBe(0);
+    });
+
+    test('unlinks a tunnel it made the same way, leaving it in Cloudflare for this machine to pick again', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+        await f.service.unlink();
+
+        expect(f.cloudflare.tunnels.map((tunnel) => tunnel.name)).toEqual(['ruimte-bas-macbook-f7a7']);
+        expect(hostnamesOf(f)).toEqual(['http_status:404']);
+        expect(f.cloudflare.called('DELETE', '/accounts/')).toEqual([]);
+        expect(await f.service.existing()).toMatchObject([{ name: 'ruimte-bas-macbook-f7a7', usable: true }]);
     });
 });
 

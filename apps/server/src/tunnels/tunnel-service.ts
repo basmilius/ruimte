@@ -1,10 +1,12 @@
 import { cancellableTimeout, Serializer } from '@adecore/utils/async';
-import type { TunnelNamed, TunnelRowKind, TunnelStage, TunnelState } from '@ruimte/contracts';
+import type { TunnelExisting, TunnelNamed, TunnelOtherRule, TunnelRowKind, TunnelStage, TunnelState } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 import type { JsonFileStore } from '../json-file-store.ts';
 import {
     CloudflareApi,
     CloudflareError,
+    isDashboardManaged,
+    isRunning,
     type CloudflareFetch,
     type CloudflareIngressRule,
     type CloudflareRecord,
@@ -21,6 +23,7 @@ const STOP_WAIT_MS = 10_000;
 const RECORD_COMMENT = 'Managed by Ruimte';
 const TUNNEL_TARGET = 'cfargotunnel.com';
 const TOKEN_MASK = '[token]';
+const MAX_OTHER_RULES = 200;
 
 /* The lines `cloudflared` printed, cut to the one a person can read: the last, without its clock and level. */
 export function sentenceOf(lines: readonly string[], fallback: string): string {
@@ -36,6 +39,13 @@ export function sentenceOf(lines: readonly string[], fallback: string): string {
         .trim();
 
     return plain.slice(0, MAX_MESSAGE);
+}
+
+/* A rule someone else wrote, cut to what the screen shows. */
+function otherRuleOf(rule: CloudflareIngressRule): TunnelOtherRule {
+    const text = (value: unknown, max: number): string | null => (typeof value === 'string' && value !== '' ? value.slice(0, max) : null);
+
+    return { hostname: text(rule.hostname, 253), path: text(rule.path, 500), service: text(rule.service, 500) ?? '' };
 }
 
 export interface TunnelPorts {
@@ -72,9 +82,10 @@ type Busy = 'installing' | 'checking' | 'starting' | null;
 
 /*
  * Tunnels on this machine: one tunnel on the person's own Cloudflare account, whose hostnames live in Cloudflare
- * (the dashboard shows the same), and a `cloudflared` that runs it. Ruimte reaches Cloudflare only with the API token
- * the person typed, and changes only the tunnel it made and the DNS records it made for it. The token that runs the
- * tunnel is fetched when the child starts and goes to the child's environment, never to a command line or a file.
+ * (the dashboard shows the same), and a `cloudflared` that runs it unless something else already does. The tunnel is
+ * one Ruimte made or one the person picked. Ruimte reaches Cloudflare only with the API token the person typed, and
+ * changes only its own rules on that tunnel and the DNS records it made for it. The token that runs the tunnel is
+ * fetched when the child starts and goes to the child's environment, never to a command line or a file.
  */
 export class TunnelService {
     private readonly ports: TunnelPorts;
@@ -91,6 +102,10 @@ export class TunnelService {
     private stopped = false;
     /* The last job failed because Cloudflare could not be reached or asked Ruimte to wait, so the network coming back tries again. */
     private waitsForNetwork = false;
+    /* Something other than Ruimte ran the tunnel when Ruimte last looked, so it started no child of its own. */
+    private runsElsewhere = false;
+    /* The rules on the tunnel that are not Ruimte's, from the last time Ruimte read its configuration. */
+    private others: TunnelOtherRule[] = [];
 
     constructor(ports: TunnelPorts) {
         this.ports = ports;
@@ -132,7 +147,15 @@ export class TunnelService {
             account,
             zones: account === null ? [] : this.zones.filter((zone) => zone.account.id === account.id).map(({ id, name }) => ({ id, name })),
             zoneCount: this.zones.length,
-            tunnel: this.stored.tunnel === null ? null : { name: this.stored.tunnel.name },
+            tunnel:
+                this.stored.tunnel === null
+                    ? null
+                    : {
+                          name: this.stored.tunnel.name,
+                          created: this.stored.tunnel.created,
+                          runner: this.child !== null ? 'ruimte' : this.runsElsewhere ? 'other' : null,
+                          others: this.others
+                      },
             rows: this.stored.rows.map((row) => ({
                 id: row.id,
                 kind: row.kind,
@@ -304,8 +327,8 @@ export class TunnelService {
         return this.describe();
     }
 
-    /* Makes this machine's tunnel on the account, with its hostnames kept in Cloudflare. */
-    async setup(accountId?: string): Promise<TunnelState> {
+    /* The account a request names, or the only one the token reaches, while this machine has no tunnel yet. */
+    private accountForNewTunnel(accountId: string | undefined): TunnelNamed {
         if (this.token === null || this.stored.tunnel !== null) {
             throw new TunnelConfigError('wrong-stage', this.token === null ? 'Add a Cloudflare API token first' : 'This machine has a tunnel already');
         }
@@ -317,6 +340,13 @@ export class TunnelService {
             throw new TunnelConfigError('account-required', 'Pick the Cloudflare account that gets the tunnel');
         }
 
+        return account;
+    }
+
+    /* Makes this machine's tunnel on the account, with its hostnames kept in Cloudflare. */
+    async setup(accountId?: string): Promise<TunnelState> {
+        const account = this.accountForNewTunnel(accountId);
+
         this.binary = await this.ports.installer.locate();
         this.start('starting', async () => {
             const api = this.api();
@@ -325,7 +355,7 @@ export class TunnelService {
             if ((await api.findTunnel(account.id, name)) !== null) {
                 throw new TunnelConfigError(
                     'tunnel-exists',
-                    `${account.name} has a tunnel named ${name} already, and Ruimte only works with a tunnel it made itself. It may belong to another machine of yours, so check that first. Delete it in the Cloudflare dashboard (Networks, Tunnels) only if no machine uses it, then try again.`
+                    `${account.name} has a tunnel named ${name} already. It may belong to another machine; if not, pick it under Your tunnels.`
                 );
             }
 
@@ -333,12 +363,106 @@ export class TunnelService {
 
             this.stored = {
                 ...this.stored,
-                tunnel: { id: created.id, name: created.name, account },
+                tunnel: { id: created.id, name: created.name, account, created: true },
                 mcp: { ...this.stored.mcp, label: `mcp-${this.ports.random(16)}` }
             };
             this.save();
             await this.syncIngress();
         });
+
+        return this.describe();
+    }
+
+    /* The tunnels already on the account, each with whether Ruimte can add hostnames to it and whether something runs it. */
+    async existing(accountId?: string): Promise<TunnelExisting[]> {
+        const account = this.accountForNewTunnel(accountId);
+        const tunnels = await this.api().tunnels(account.id);
+
+        return tunnels
+            .filter((tunnel) => !tunnel.deleted_at)
+            .map((tunnel) => ({ id: tunnel.id, name: tunnel.name, usable: isDashboardManaged(tunnel), running: isRunning(tunnel) }));
+    }
+
+    /*
+     * Uses a tunnel the person already has. Only one whose settings live in the dashboard qualifies, since Ruimte adds
+     * its hostnames through the API; every rule and record already on it stays as it is.
+     */
+    async link(accountId: string | undefined, tunnelId: string): Promise<TunnelState> {
+        const account = this.accountForNewTunnel(accountId);
+
+        this.binary = await this.ports.installer.locate();
+        this.start('starting', async () => {
+            const found = await this.api().tunnel(account.id, tunnelId);
+
+            if (found === null) {
+                throw new TunnelConfigError('unknown-tunnel', `That tunnel is gone from ${account.name}.`);
+            }
+
+            if (!isDashboardManaged(found)) {
+                throw new TunnelConfigError('tunnel-local', `${found.name} is managed in a file, not in the Cloudflare dashboard, so Ruimte cannot use it.`);
+            }
+
+            this.runsElsewhere = isRunning(found);
+            this.stored = {
+                ...this.stored,
+                tunnel: { id: found.id, name: found.name, account, created: false },
+                mcp: { ...this.stored.mcp, label: `mcp-${this.ports.random(16)}` }
+            };
+            this.save();
+            await this.syncIngress();
+        });
+
+        return this.describe();
+    }
+
+    /*
+     * Stops using the tunnel: Ruimte takes its own rules off it, deletes the records it made and forgets it. The tunnel
+     * itself stays in Cloudflare, whoever made it, and so does everything else on it. A refusal keeps what is left.
+     */
+    async unlink(): Promise<TunnelState> {
+        if (this.stored.tunnel === null) {
+            throw new TunnelConfigError('no-tunnel', 'This machine uses no tunnel');
+        }
+
+        await this.jobs.run(async () => {
+            const tunnel = this.stored.tunnel;
+
+            if (tunnel === null) {
+                return;
+            }
+
+            const api = this.api();
+
+            if ((await api.tunnel(tunnel.account.id, tunnel.id)) !== null) {
+                const released = this.stored.rows.map((row) => ({ ...row, enabled: false }));
+
+                await this.syncRows(released);
+                this.stored = { ...this.stored, rows: released };
+                this.save();
+            }
+
+            await this.stopChild();
+
+            const target = this.targetOf(tunnel.id);
+
+            for (const row of this.stored.rows) {
+                const live = (await api.recordsNamed(row.zoneId, row.hostname)).find((record) => record.id === row.recordId);
+
+                if (live !== undefined && this.isOurs(live, target)) {
+                    await api.deleteRecord(row.zoneId, row.recordId, row.hostname);
+                }
+
+                this.stored = { ...this.stored, rows: this.stored.rows.filter((candidate) => candidate.id !== row.id) };
+                this.save();
+            }
+
+            this.runsElsewhere = false;
+            this.others = [];
+            this.failure = null;
+            this.stored = { ...this.stored, tunnel: null, rows: [] };
+            this.save();
+        });
+        this.announce();
 
         return this.describe();
     }
@@ -389,6 +513,13 @@ export class TunnelService {
                 }
 
                 port = input.port;
+            }
+
+            // A rule for the name that someone set in the dashboard is theirs, and taking the row would overwrite it.
+            const { ingress } = await api.configuration(tunnel.account.id, tunnel.id);
+
+            if (ingress.some((rule) => rule.hostname === hostname && rule.path === undefined)) {
+                throw new TunnelConfigError('hostname-on-tunnel', `${hostname} is on this tunnel already. Pick another name.`);
             }
 
             const record = await this.routeHostname(api, zone, hostname, tunnel.id);
@@ -607,11 +738,19 @@ export class TunnelService {
             );
         }
 
-        if ((await this.api().tunnel(tunnel.account.id, tunnel.id)) !== null) {
+        const found = await this.api().tunnel(tunnel.account.id, tunnel.id);
+
+        if (found !== null) {
+            if (this.child === null) {
+                this.runsElsewhere = isRunning(found);
+            }
+
             return;
         }
 
         await this.stopChild();
+        this.runsElsewhere = false;
+        this.others = [];
         this.stored = { ...this.stored, tunnel: null, rows: [] };
         this.save();
 
@@ -697,18 +836,26 @@ export class TunnelService {
         }
 
         const api = this.api();
-        const current = await api.ingress(tunnel.account.id, tunnel.id);
+        const current = await api.configuration(tunnel.account.id, tunnel.id);
         const managed = new Set(rows.map((row) => row.hostname));
         const isOurs = (rule: CloudflareIngressRule): boolean => typeof rule.hostname === 'string' && rule.path === undefined && managed.has(rule.hostname);
-        const kept = current.filter((rule) => !isCatchAll(rule) && !isOurs(rule));
-        const catchAll = current.find((rule) => isCatchAll(rule)) ?? CATCH_ALL;
+        const kept = current.ingress.filter((rule) => !isCatchAll(rule) && !isOurs(rule));
+
+        this.others = kept.slice(0, MAX_OTHER_RULES).map(otherRuleOf);
+        const catchAll = current.ingress.find((rule) => isCatchAll(rule)) ?? CATCH_ALL;
         const rules = ingressRules({
             rows,
             listenerPort: this.stored.mcp.enabled ? this.ports.listenerPort() : null,
             denied: this.ports.deniedPorts()
         });
+        const ingress = [...kept, ...rules.map((rule) => ({ ...rule })), { ...catchAll }];
 
-        await api.putIngress(tunnel.account.id, tunnel.id, [...kept, ...rules.map((rule) => ({ ...rule })), { ...catchAll }]);
+        // Nothing of Ruimte's changed, so a tunnel that is not Ruimte's gets no write at all.
+        if (JSON.stringify(ingress) === JSON.stringify(current.ingress)) {
+            return;
+        }
+
+        await api.putConfiguration(tunnel.account.id, tunnel.id, { ingress, rest: current.rest });
     }
 
     private isLive(rows: readonly StoredRow[] = this.stored.rows): boolean {
@@ -717,16 +864,30 @@ export class TunnelService {
         return rows.some((row) => row.enabled && (row.kind === 'dev' || listenerPort !== null));
     }
 
-    /* A tunnel that Cloudflare keeps the hostnames of needs no restart for a change: the child runs while any hostname is on. */
+    /*
+     * A tunnel that Cloudflare keeps the hostnames of needs no restart for a change: the child runs while any hostname
+     * is on. Before it starts one, Ruimte asks Cloudflare whether something already runs the tunnel (a service of the
+     * person's, here or on another computer), and then starts nothing; bring-up and Try again look again.
+     */
     private async reconcileChild(): Promise<void> {
-        if (this.stopped || !this.isLive() || this.stored.tunnel === null || this.token === null) {
+        const tunnel = this.stored.tunnel;
+
+        if (this.stopped || !this.isLive() || tunnel === null || this.token === null) {
             await this.stopChild();
 
             return;
         }
 
-        if (this.child === null && this.binary !== null) {
-            await this.startChild(this.binary, this.stored.tunnel);
+        if (this.child !== null) {
+            return;
+        }
+
+        const found = await this.api().tunnel(tunnel.account.id, tunnel.id);
+
+        this.runsElsewhere = found !== null && isRunning(found);
+
+        if (!this.runsElsewhere && this.binary !== null) {
+            await this.startChild(this.binary, tunnel);
         }
     }
 
