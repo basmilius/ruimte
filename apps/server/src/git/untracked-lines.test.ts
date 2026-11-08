@@ -29,13 +29,17 @@ async function counted(name: string, content: string | Uint8Array): Promise<unkn
 }
 
 describe('openFlags', () => {
-    test('opens read-only without blocking or following a link, except on Windows', () => {
+    // Windows has no O_NONBLOCK or O_NOFOLLOW in `constants`, so the POSIX flags are only checked where they exist.
+    test.skipIf(process.platform === 'win32')('opens read-only without blocking or following a link', () => {
         const flags = openFlags('darwin') as number;
 
         expect(flags & constants.O_NONBLOCK).toBe(constants.O_NONBLOCK);
         expect(flags & constants.O_NOFOLLOW).toBe(constants.O_NOFOLLOW);
         expect(flags & (constants.O_WRONLY | constants.O_RDWR)).toBe(0);
         expect(openFlags('linux')).toBe(flags);
+    });
+
+    test('opens a plain read on Windows', () => {
         expect(openFlags('win32')).toBe('r');
     });
 });
