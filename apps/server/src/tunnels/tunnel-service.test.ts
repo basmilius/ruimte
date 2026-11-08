@@ -416,15 +416,17 @@ describe('Cloudflare credentials', () => {
                 .map(async (name) => ({ name, text: await readFile(join(folder, name), 'utf8') }))
         );
 
-        for (const { name, text } of sources) {
-            // Comments say what Ruimte does not do; only code is held to it.
-            const code = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+        // The files of this folder that touch the disk read only what Ruimte wrote itself.
+        const hits = (pattern: RegExp, only?: (name: string) => boolean): string[] =>
+            sources
+                .filter(({ name, text }) => (only?.(name) ?? true) && pattern.test(text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')))
+                .map(({ name }) => name);
 
-            expect(code, name).not.toMatch(/cert\.pem/);
-            expect(code, name).not.toMatch(/api\.cloudflare\.com/);
-            expect(code, name).not.toMatch(/tunnel['",\s]+token/);
-
-            expect(code, name).not.toMatch(/readFile|createReadStream|\bopen\(/);
-        }
+        expect(hits(/cert\.pem/)).toEqual([]);
+        expect(hits(/api\.cloudflare\.com/)).toEqual([]);
+        expect(hits(/tunnel['",\s]+token/)).toEqual([]);
+        expect(hits(/readFile|createReadStream|\bopen\(/, (name) => name !== 'credential-store.ts')).toEqual([]);
+        // The one file that reads is the credential store, and it reads its own file and nothing of Cloudflare's.
+        expect(sources.find(({ name }) => name === 'credential-store.ts')?.text).toContain("'credentials.json'");
     });
 });

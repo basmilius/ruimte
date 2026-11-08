@@ -52,6 +52,7 @@ import type { DatabaseAgentHost } from '../database/agent-databases.ts';
 import type { DeviceDriver } from '../devices/agent-driver.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { AgentLanguage } from '../language/agent-language.ts';
+import type { ExternalCaller } from '../mcp/caller.ts';
 import type { StartRemoteAgentPayload } from '../outbox/outbox.ts';
 import type { UntrustedFolders } from '../peering/untrusted.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
@@ -456,6 +457,8 @@ export interface AgentCall {
     reached?: IndexedPlace;
     /* The rev of the project file the caller read before it decided on this write. */
     expectedRevision?: number;
+    /* Set only for a client elsewhere: `caller` is then its actor id, `reached` the project its credential reaches, and no node stands behind it. */
+    external?: ExternalCaller;
 }
 
 /* The snooze on a node as the actions hand it on: an ISO time, or null for none. */

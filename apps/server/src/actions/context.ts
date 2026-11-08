@@ -1,5 +1,6 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionCall } from '@ruimte/actions';
+import type { ExternalCaller } from '../mcp/caller.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { type CanvasHost, type ProjectHost, type AgentCall } from '../tools/host.ts';
 import { callerKind } from '../tools/tasks.ts';
@@ -18,6 +19,8 @@ export interface ServerActionContext {
     voice?: VoiceCaller;
     /* Set only for an extension whose manifest names the permission: it has no node, so no line can run to it. */
     extension?: true;
+    /* Set only for a client elsewhere with a credential: it acts as the person within the grant, and no node stands behind it. */
+    external?: ExternalCaller;
     /*
      * Throws once whoever asked may no longer, such as an extension turned off since. Set for an extension's chat start,
      * which calls it after every await of its own up to the agent's start. A refusal after the node is written takes the
@@ -154,6 +157,28 @@ export function serverActionCall(
     };
 }
 
+/*
+ * The call of a client elsewhere. The actor is a person whose id belongs to the credential, so an action that
+ * refuses a person refuses it too, and nothing mistakes it for a node. The place is the project its scope allows.
+ */
+export function externalActionCall(
+    host: CanvasHost,
+    place: IndexedPlace,
+    external: ExternalCaller,
+    dryRun = false,
+    expectedRevision?: number
+): ServerActionCall {
+    const context = contextOf(expectedRevision === undefined ? host : heldTo(host, expectedRevision), place);
+    context.external = external;
+
+    return {
+        actor: { kind: 'person', id: external.id },
+        context,
+        dryRun,
+        ...(expectedRevision === undefined ? {} : { expectedRevision })
+    };
+}
+
 const VOICE_ACTOR_PREFIX = 'voice:';
 
 /* The actor id of a Voice session, apart from every node id, which is what a lineage or a claim is kept under. */
@@ -194,5 +219,5 @@ export function noVoiceProject(): ToolRefusal {
 
 /* The caller in the shape the canvas helpers take, which ask who it is and who made what. */
 export function agentCallOf(call: ServerActionCall): AgentCall {
-    return { caller: call.actor.id, host: call.context.host };
+    return { caller: call.actor.id, host: call.context.host, ...(call.context.external === undefined ? {} : { external: call.context.external }) };
 }

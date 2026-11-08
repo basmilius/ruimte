@@ -110,11 +110,14 @@ export async function runTool(tool: Tool, raw: unknown, call: ToolCaller): Promi
 
     const input = parseToolInput(tool, raw) as Record<string, unknown>;
     const { reached: _reached, expectedRevision: _revision, ...own } = call;
-    const project = typeof input.project === 'string' ? input.project : undefined;
+    // A client elsewhere names its project to the route, which checked the credential's scope and handed the place in `reached`.
+    const external = call.external !== undefined;
+    const project = !external && typeof input.project === 'string' ? input.project : undefined;
     const revision = input[REVISION_FIELD];
     const images: string[] = [];
     const ran: ToolCall = {
         ...own,
+        ...(external && call.reached !== undefined ? { reached: call.reached } : {}),
         ...(project === undefined ? {} : { reached: await reachedPlace(call.host, call.caller, project) }),
         ...(typeof revision === 'number' ? { expectedRevision: revision } : {}),
         image: (path) => {

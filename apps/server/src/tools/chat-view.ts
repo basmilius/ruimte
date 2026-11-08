@@ -1,5 +1,6 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { chatHostOf, isCanvasView, isHiddenChatView, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
+import { isExternalActor } from '../mcp/caller.ts';
 import { canvasNamed } from './host.ts';
 
 /*
@@ -8,6 +9,11 @@ import { canvasNamed } from './host.ts';
  * is its to read and operate. A chat an inline edit runs in is no such chat.
  */
 export function isChatView(content: Pick<ProjectContent, 'views'>, caller: string): boolean {
+    // A client elsewhere has no node, so no line can run to it: it names a canvas with view, as a chat that is a view of its own does.
+    if (isExternalActor(caller)) {
+        return true;
+    }
+
     const host = chatHostOf(content.views, caller);
 
     return host !== null && !isHiddenChatView(host.view);
