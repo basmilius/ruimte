@@ -158,7 +158,7 @@ test('the comparison shows its files and reads the unfoldable sides from the com
         { cwd: CWD, commit: BASE, path: 'cart.ts' },
         { cwd: CWD, commit: RIGHT, path: 'cart.ts' }
     ]);
-    expect(document.body.textContent).toContain(`measured from the common ancestor ${BASE.slice(0, 7)}`);
+    expect(document.body.textContent).toContain(`counted from the common ancestor ${BASE.slice(0, 7)}`);
 });
 
 test('commits only on one side page against the pinned commits', async () => {
@@ -166,7 +166,7 @@ test('commits only on one side page against the pinned commits', async () => {
     await until(() => buttonWithText('Commits') !== null);
     await clickOn(buttonWithText('Commits'));
     await until(() => document.body.textContent?.includes('Only on left') === true);
-    expect(document.body.textContent).toContain('No commits only on this branch.');
+    expect(document.body.textContent).toContain('This branch has no commits of its own.');
     await clickOn(buttonWithText('Show more commits'));
     await until(() => document.body.textContent?.includes('Older commit on left') === true);
     expect(machine.requests('git.compareCommits')).toEqual([{ cwd: CWD, fromCommit: LEFT, toCommit: RIGHT, side: 'left', skip: 1, limit: 30 }]);
@@ -179,7 +179,7 @@ test('a mode switch keeps the commits it resolved after a branch moved, and Read
         comparison({ from, to, mode, toCommit: moved && to === 'refs/heads/right' ? MOVED : RIGHT, baseCommit: mode === 'tips' ? LEFT : BASE })
     );
     await act(async () => openComparison(CWD, 'refs/heads/left', 'refs/heads/right', 'merge-base'));
-    await until(() => document.body.textContent?.includes('measured from the common ancestor') === true);
+    await until(() => document.body.textContent?.includes('counted from the common ancestor') === true);
     moved = true;
     await choose('Comparison', 'Difference between the two tips');
     await until(() => machine.requests('git.compare').length === 2);

@@ -714,7 +714,7 @@
             },
             "sidebarSortThen": {
                 "label": "Binnen dezelfde soort of status",
-                "description": "Welke node eerst komt als er meer dezelfde soort of status hebben.",
+                "description": "Welke node eerst komt als er meerdere van dezelfde soort of status zijn.",
                 "options": {
                     "recent": "Recent bijgewerkt",
                     "least-recent": "Langst niet bijgewerkt",
@@ -1177,7 +1177,7 @@
         "sharePorts": {
             "label": "Agents mogen een dev-poort delen",
             "rowLabel": "Agents op {{machine}} mogen een dev-poort delen",
-            "description": "Een agent kan de poort van een dev server met je andere apparaten delen, die hem dan openen via de verbinding met deze machine. Een ontwikkelsite vertrouwt misschien elk verzoek van deze machine. Je stopt een gedeelde poort vanuit de browser-node.",
+            "description": "Een agent kan de poort van een dev server delen met je andere apparaten. Die openen de poort via de verbinding met deze machine. Een ontwikkelsite vertrouwt misschien elk verzoek van deze machine. Je stopt een gedeelde poort vanuit de browser-node.",
             "notConnected": "{{machine}} is niet verbonden. Pas dit aan in de details onder Account, of open een van zijn projecten."
         },
         "resumeAtReset": {
@@ -1233,7 +1233,7 @@
             },
             "times": {
                 "label": "Uren",
-                "description": "Op de klok van deze computer. Een einde voor het begin loopt door in de volgende dag.",
+                "description": "Op de klok van deze computer. Een einde voor het begin loopt door tot de volgende dag.",
                 "from": "Stil vanaf",
                 "to": "tot",
                 "until": "Stil tot"
@@ -1241,7 +1241,7 @@
         },
         "breakReminder": {
             "label": "Pauzeherinnering",
-            "description": "Stelt een pauze voor na een tijd werken aan deze computer. Vijf minuten weg telt als pauze.",
+            "description": "Stelt een pauze voor na een tijd werken aan deze computer. Vijf minuten van je computer af tellen als pauze.",
             "stretch": {
                 "label": "Herinner me na",
                 "description": "Werken zonder pauze."
