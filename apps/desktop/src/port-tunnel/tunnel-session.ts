@@ -56,7 +56,13 @@ export function installPortTunnels(isAppSender: (event: Electron.IpcMainEvent | 
     app.on('login', (event, contents, _request, authInfo, callback) => {
         const tunnel = contents === null ? undefined : bySession.get(contents.session);
 
-        if (tunnel === undefined || !authInfo.isProxy || authInfo.host !== '127.0.0.1' || authInfo.port !== tunnel.listener.port || authInfo.realm !== PROXY_REALM) {
+        if (
+            tunnel === undefined ||
+            !authInfo.isProxy ||
+            authInfo.host !== '127.0.0.1' ||
+            authInfo.port !== tunnel.listener.port ||
+            authInfo.realm !== PROXY_REALM
+        ) {
             return;
         }
 

@@ -49,8 +49,11 @@ export interface PortStreamsOptions {
 /* Bytes of one stream's output that wait here for credit or room on the channel before its service is told to pause. */
 const STREAM_QUEUE_BYTES = 64 * 1024;
 
-/* Past this a service that ignored the pause is cut off rather than buffered. */
-const STREAM_OVERLOAD_BYTES = 4 * STREAM_QUEUE_BYTES;
+/*
+ * Past this a service that ignored the pause is cut off rather than buffered. A pause holds from the next read on,
+ * and one read of Bun's sockets is up to 512 KiB (`scripts/measure-port-bridge`), so the queue may pass its 64 KiB by that much.
+ */
+const STREAM_OVERLOAD_BYTES = STREAM_QUEUE_BYTES + 2 * 512 * 1024;
 
 /* A full channel is asked again this often when no drain came, since a drain only fires when the channel crossed its own threshold. */
 const RECHECK_MS = 20;

@@ -160,7 +160,13 @@ describe('a request', () => {
     });
 
     test('refuses another port, another host and another scheme without a stream', async () => {
-        for (const target of ['http://localhost:3001/', 'http://example.com:3000/', 'http://127.1:3000/', 'http://localhost:3000@evil.test/', 'https://localhost:3000/']) {
+        for (const target of [
+            'http://localhost:3001/',
+            'http://example.com:3000/',
+            'http://127.1:3000/',
+            'http://localhost:3000@evil.test/',
+            'https://localhost:3000/'
+        ]) {
             socket = new FakeSocket();
             connection = new ProxyConnection({ socket, relay, port: 3000, secret: SECRET, refused: (authority) => refused.push(authority) });
             send(get(target));

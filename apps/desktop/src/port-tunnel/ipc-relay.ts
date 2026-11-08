@@ -1,4 +1,10 @@
-import { PORT_TUNNEL_MAX_STREAMS, PORT_TUNNEL_MESSAGE_BYTES, PORT_TUNNEL_WINDOW_BYTES, type PortTunnelToPage, type PortTunnelToShell } from '@ruimte/desktop-bridge';
+import {
+    PORT_TUNNEL_MAX_STREAMS,
+    PORT_TUNNEL_MESSAGE_BYTES,
+    PORT_TUNNEL_WINDOW_BYTES,
+    type PortTunnelToPage,
+    type PortTunnelToShell
+} from '@ruimte/desktop-bridge';
 import type { TunnelRelay, TunnelStream, TunnelStreamEvents } from './relay';
 
 interface OpenStream {

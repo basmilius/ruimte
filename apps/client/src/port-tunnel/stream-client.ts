@@ -1,6 +1,6 @@
 import { PORT_CHUNK_BYTES, type EventMap, type EventType, type PortEndEvent, type RequestMap, type RequestType } from '@ruimte/contracts';
-import { base64Of } from '@/base64';
-import { decodeBase64 } from '@/transport/piece';
+import { base64Of } from '../base64';
+import { decodeBase64 } from '../transport/piece';
 
 /* As much of a `Transport` as the streams use, so a test or a measurement hands in a plainer one. */
 export interface PortTransport {

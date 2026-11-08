@@ -16,7 +16,14 @@ export function parseTunnelRequest(value: unknown): PortTunnelRequest | null {
 
     const { endpointId, grantId, port } = value;
 
-    if (typeof endpointId !== 'string' || endpointId === '' || endpointId.length > 1024 || typeof grantId !== 'string' || grantId === '' || grantId.length > 64) {
+    if (
+        typeof endpointId !== 'string' ||
+        endpointId === '' ||
+        endpointId.length > 1024 ||
+        typeof grantId !== 'string' ||
+        grantId === '' ||
+        grantId.length > 64
+    ) {
         return null;
     }
 
@@ -33,7 +40,9 @@ export function parseToShell(value: unknown): PortTunnelToShell | null {
 
     switch (value.kind) {
         case 'opened':
-            return value.error === null || typeof value.error === 'string' ? { kind: 'opened', id, stream, error: value.error === null ? null : value.error.slice(0, 300) } : null;
+            return value.error === null || typeof value.error === 'string'
+                ? { kind: 'opened', id, stream, error: value.error === null ? null : value.error.slice(0, 300) }
+                : null;
         case 'data':
             return value.data instanceof Uint8Array && value.data.byteLength > 0 && value.data.byteLength <= PORT_TUNNEL_MESSAGE_BYTES
                 ? { kind: 'data', id, stream, data: value.data }
@@ -41,7 +50,9 @@ export function parseToShell(value: unknown): PortTunnelToShell | null {
         case 'flushed':
             return Number.isSafeInteger(value.bytes) && (value.bytes as number) >= 0 ? { kind: 'flushed', id, stream, bytes: value.bytes as number } : null;
         case 'end':
-            return value.reason === null || typeof value.reason === 'string' ? { kind: 'end', id, stream, reason: value.reason === null ? null : value.reason.slice(0, 300) } : null;
+            return value.reason === null || typeof value.reason === 'string'
+                ? { kind: 'end', id, stream, reason: value.reason === null ? null : value.reason.slice(0, 300) }
+                : null;
         default:
             return null;
     }

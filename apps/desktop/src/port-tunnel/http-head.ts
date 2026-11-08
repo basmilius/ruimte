@@ -17,10 +17,7 @@ export interface RequestHead {
     headers: Array<[name: string, value: string]>;
 }
 
-export type HeadResult =
-    | { kind: 'need-more' }
-    | { kind: 'head'; head: RequestHead; rest: Buffer }
-    | { kind: 'bad'; status: 400 | 431 | 501; reason: string };
+export type HeadResult = { kind: 'need-more' } | { kind: 'head'; head: RequestHead; rest: Buffer } | { kind: 'bad'; status: 400 | 431 | 501; reason: string };
 
 export function parseRequestHead(buffer: Buffer): HeadResult {
     const end = buffer.indexOf(HEAD_END);
@@ -83,7 +80,9 @@ export function framingOf(headers: RequestHead['headers']): Framing {
             return { kind: 'bad', reason: 'The request names both a length and a transfer encoding' };
         }
 
-        return encodings.length === 1 && encodings[0]!.toLowerCase() === 'chunked' ? { kind: 'chunked' } : { kind: 'bad', reason: 'The transfer encoding is not plain chunked' };
+        return encodings.length === 1 && encodings[0]!.toLowerCase() === 'chunked'
+            ? { kind: 'chunked' }
+            : { kind: 'bad', reason: 'The transfer encoding is not plain chunked' };
     }
 
     if (lengths.length === 0) {

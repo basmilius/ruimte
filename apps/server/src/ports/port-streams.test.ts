@@ -278,7 +278,7 @@ describe('data toward the client', () => {
         const { client, service } = await opened();
 
         service.handlers.data(bytes(PORT_WINDOW_BYTES));
-        service.handlers.data(bytes(300 * 1024));
+        service.handlers.data(bytes(1200 * 1024));
 
         expect(service.closed).toBe(true);
         expect(eventsOf(client, 'port.end')[0]).toMatchObject({ reason: 'overload' });

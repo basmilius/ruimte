@@ -6,7 +6,6 @@ import { createAppIpc, createPageKeys, createTheme, createWindows, type WindowOr
 import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
 import { windowUrl } from './app-windows';
 import { installBrowserRoutes } from './browser-routes';
-import { installPortTunnels } from './port-tunnel/tunnel-session';
 import { askDaemonWork, clearVoiceKey, handVoiceKey } from './daemon-proof';
 import { LAUNCHER_PIPE_VARIABLE } from './launcher-pipe';
 import { moveLegacyStorage } from './legacy-storage';
@@ -32,6 +31,7 @@ import { startTelemetry } from './main/telemetry';
 import { installUpdates } from './main/updates';
 import { installUsage } from './main/usage';
 import { installWindows } from './main/windows';
+import { installPortTunnels } from './port-tunnel/tunnel-session';
 import { quitQuestion } from './quit-question';
 import { runSmoke } from './smoke';
 import { installSocketTypeOfServiceGuard } from './socket-tos-guard';
