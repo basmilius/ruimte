@@ -72,7 +72,7 @@ export class PortGrants {
         }
 
         if (this.grants.length >= MAX_PORT_GRANTS) {
-            throw new PortGrantError('too-many-grants', `At most ${MAX_PORT_GRANTS} ports can be shared; stop sharing one first`);
+            throw new PortGrantError('too-many-grants', `Only ${MAX_PORT_GRANTS} ports can be shared at once. Stop sharing one first`);
         }
 
         const grant: PortGrant = {

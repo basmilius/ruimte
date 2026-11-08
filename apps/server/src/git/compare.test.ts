@@ -15,7 +15,7 @@ describe('mergeBaseFrom', () => {
     });
 
     test('says the read failed instead of claiming there is no ancestor', () => {
-        expect(() => mergeBaseFrom({ code: 128, stdout: '' })).toThrow('The merge base could not be read');
-        expect(() => mergeBaseFrom({ code: 137, stdout: '' })).toThrow('The merge base could not be read');
+        expect(() => mergeBaseFrom({ code: 128, stdout: '' })).toThrow('Could not read the merge base');
+        expect(() => mergeBaseFrom({ code: 137, stdout: '' })).toThrow('Could not read the merge base');
     });
 });

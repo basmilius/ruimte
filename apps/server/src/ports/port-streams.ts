@@ -124,7 +124,7 @@ export class PortStreams {
         const grant = this.options.grants.find(grantId);
 
         if (grant === undefined) {
-            throw new PortStreamError('unknown-grant', 'That port is not shared (any longer)');
+            throw new PortStreamError('unknown-grant', 'That port is not shared');
         }
 
         const denied = this.options.grants.deniedReason(grant);
@@ -136,11 +136,11 @@ export class PortStreams {
         const entry = this.entryOf(client);
 
         if (entry.streams.has(streamId)) {
-            throw new PortStreamError('stream-exists', 'That stream is open already');
+            throw new PortStreamError('stream-exists', 'That stream is already open');
         }
 
         if (entry.streams.size >= PORT_CLIENT_STREAMS || this.count() >= PORT_MACHINE_STREAMS) {
-            throw new PortStreamError('port-busy', 'Too many connections to shared ports are open; wait for one to finish');
+            throw new PortStreamError('port-busy', 'Too many connections to shared ports are open. Wait for one to finish');
         }
 
         let leave: () => void = () => undefined;
@@ -241,7 +241,7 @@ export class PortStreams {
 
             if (outcome === 'timeout') {
                 this.finish(stream, { reason: 'error', message: 'The service stopped reading' }, true);
-                throw new PortStreamError('port-stalled', 'The service did not take the bytes in time; the request may or may not have reached it');
+                throw new PortStreamError('port-stalled', 'The service did not take the bytes in time. The request may not have reached it');
             }
 
             if (outcome === 'gone') {

@@ -33,7 +33,7 @@ export function registerPortHandlers(dispatcher: Dispatcher, grants: PortGrants,
         'port.revoke',
         ({ id }) => {
             if (!grants.revoke(id)) {
-                throw new RequestError('unknown-grant', 'That port is not shared (any longer)');
+                throw new RequestError('unknown-grant', 'That port is not shared');
             }
 
             return {};

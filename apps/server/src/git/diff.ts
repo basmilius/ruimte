@@ -429,7 +429,7 @@ export async function diffCommits(top: string, from: string, to: string, leftOut
     const diff = await diffTrees(top, from, to, '', PANEL_CAPS, await leftOut(top));
 
     if (diff === null) {
-        throw new GitError('git-failed', 'The difference between the two commits could not be read.');
+        throw new GitError('git-failed', 'Could not read the difference between the two commits.');
     }
 
     return filesResult(diff);

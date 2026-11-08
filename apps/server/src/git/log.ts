@@ -86,7 +86,7 @@ export async function readRangeLog(top: string, excluded: string, included: stri
     );
 
     if (output === null) {
-        throw new GitError('git-failed', 'The commits of the comparison could not be read.');
+        throw new GitError('git-failed', 'Could not read the commits of the comparison.');
     }
 
     const commits = parseLog(output);

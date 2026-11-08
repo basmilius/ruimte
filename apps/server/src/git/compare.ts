@@ -27,7 +27,7 @@ async function mergeBaseOf(top: string, fromCommit: string, toCommit: string): P
 /* `git merge-base` exits 1 with no output for unrelated histories; every other failure is a read that did not happen. */
 export function mergeBaseFrom({ code, stdout }: Pick<GitResult, 'code' | 'stdout'>): string {
     if (code !== 0 && !(code === 1 && stdout.trim() === '')) {
-        throw new GitError('git-failed', 'The merge base could not be read.');
+        throw new GitError('git-failed', 'Could not read the merge base.');
     }
 
     const bases = stdout.trim().split(/\s+/).filter(Boolean);
@@ -102,7 +102,7 @@ export async function readSnapshot(cwd: string, commitId: string, path: string):
     const listed = await git(['ls-tree', '--full-tree', '-z', commit, '--', `:(literal)${path}`], top);
 
     if (listed === null) {
-        throw new GitError('git-failed', 'The tree of the commit could not be read.');
+        throw new GitError('git-failed', 'Could not read the tree of the commit.');
     }
 
     if (listed === '') {
@@ -113,7 +113,7 @@ export async function readSnapshot(cwd: string, commitId: string, path: string):
 
     // A pathspec could still match more than the one entry; only the exact path is an answer.
     if (tab < 0 || listed.slice(tab + 1) !== `${path}\0`) {
-        throw new GitError('git-failed', 'The path does not name exactly one entry of the commit.');
+        throw new GitError('git-failed', 'The path matches no file of the commit, or more than one.');
     }
 
     const [mode, type, object] = listed.slice(0, tab).split(' ');
@@ -129,7 +129,7 @@ export async function readSnapshot(cwd: string, commitId: string, path: string):
     const size = Number((await git(['cat-file', '-s', object], top))?.trim());
 
     if (!Number.isFinite(size)) {
-        throw new GitError('git-failed', 'The size of the file could not be read.');
+        throw new GitError('git-failed', 'Could not read the size of the file.');
     }
 
     if (size > GIT_BLOB_MAX_BYTES) {
@@ -139,7 +139,7 @@ export async function readSnapshot(cwd: string, commitId: string, path: string):
     const blob = await runGitBytes(['cat-file', 'blob', object], top);
 
     if (blob.code !== 0) {
-        throw new GitError('git-failed', 'The content of the file could not be read.');
+        throw new GitError('git-failed', 'Could not read the content of the file.');
     }
 
     if (blob.stdout.includes(0)) {

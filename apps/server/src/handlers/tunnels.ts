@@ -89,7 +89,7 @@ export function registerTunnelHandlers(dispatcher: Dispatcher, deps: TunnelHandl
         'consent.answer',
         ({ id, approve, grant, expiresAt }) => {
             if (!consent.answer(id, approve, grant, expiresAt)) {
-                throw new RequestError('unknown-consent', 'That request was answered already or ran out of time');
+                throw new RequestError('unknown-consent', 'That request was already answered or timed out');
             }
 
             return { credential: null };
