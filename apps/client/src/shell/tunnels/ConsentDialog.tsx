@@ -1,4 +1,4 @@
-import { Button, Dialog, FormError, messageOf } from '@adecore/ui';
+import { Button, Dialog, FormError, messageOf, ScrollArea } from '@adecore/ui';
 import type { ConsentRequest } from '@ruimte/contracts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -56,10 +56,10 @@ function ConsentPrompt({ request, others }: { request: ConsentRequest; others: n
 
     return (
         <Dialog.Root open onOpenChange={(next) => (next ? undefined : void answer(false))}>
-            <Dialog.Popup size="sm">
+            <Dialog.Popup size="sm" className="flex max-h-[85vh] flex-col">
                 <Dialog.Title className="break-all">{t('tunnels.consent.title', { host: hostOf(request.clientUrl) })}</Dialog.Title>
                 <Dialog.Description className="mt-1 break-words">{t('tunnels.consent.description')}</Dialog.Description>
-                <div className="flex flex-col gap-3 py-3">
+                <ScrollArea className="-mx-5 min-h-0" viewportClassName="flex flex-col gap-3 px-5 py-3">
                     <p className="flex items-center gap-2 text-sm text-text-muted">
                         {t('tunnels.consent.code')}
                         <code aria-label={t('tunnels.consent.code')} className="rounded-md bg-surface-hover px-2 py-1 text-base tracking-widest text-text">
@@ -72,7 +72,7 @@ function ConsentPrompt({ request, others }: { request: ConsentRequest; others: n
                     <GrantFields endpointId={LOCAL_ENDPOINT_ID} draft={shown} onChange={setDraft} />
                     {failure !== null && <FormError>{failure}</FormError>}
                     {others > 0 && <p className="text-xs text-text-muted">{t('tunnels.consent.others', { count: others })}</p>}
-                </div>
+                </ScrollArea>
                 <Dialog.Footer>
                     <Button onClick={() => void answer(false)}>{t('tunnels.consent.deny')}</Button>
                     <Button variant="primary" onClick={() => void answer(true)}>

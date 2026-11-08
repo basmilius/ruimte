@@ -1,5 +1,5 @@
 import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@adecore/agents-react/chat';
-import { Checkbox, Field, Segmented, Select } from '@adecore/ui';
+import { Checkbox, Field, MiddleTruncate, ScrollArea, Segmented, Select } from '@adecore/ui';
 import { EXTERNAL_TIERS, type ExternalTier, type RuntimeMode } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
 import type { Expiry, GrantDraft } from '@/shell/settings/tunnels/grant-draft';
@@ -41,17 +41,30 @@ export function GrantFields({ endpointId, draft, onChange }: { endpointId: strin
                         ]}
                         onValueChange={(next) => set({ projects: next === 'all' ? null : [] })}
                     />
-                    {draft.projects !== null &&
-                        projects.map((row) => (
-                            <label key={row.summary.projectId} className="flex min-h-8 items-center gap-2.5">
-                                <Checkbox
-                                    label={row.summary.name}
-                                    checked={draft.projects?.includes(row.summary.projectId) === true}
-                                    onCheckedChange={(on) => set({ projects: toggled(row.summary.projectId, on) })}
-                                />
-                                <span className="text-text">{row.summary.name}</span>
-                            </label>
-                        ))}
+                    {draft.projects !== null && (
+                        <ScrollArea
+                            render={<ul />}
+                            className="max-h-48 overflow-hidden rounded-md border border-border"
+                            viewportClassName="divide-y divide-border"
+                            aria-label={t('tunnels.grant.projects')}
+                        >
+                            {projects.map((row) => (
+                                <li key={row.summary.projectId}>
+                                    <label className="flex min-h-8 min-w-0 items-center gap-2.5 px-2.5 py-1.5">
+                                        <Checkbox
+                                            label={row.summary.name}
+                                            checked={draft.projects?.includes(row.summary.projectId) === true}
+                                            onCheckedChange={(on) => set({ projects: toggled(row.summary.projectId, on) })}
+                                        />
+                                        <span className="flex min-w-0 flex-col">
+                                            <span className="truncate text-sm text-text">{row.summary.name}</span>
+                                            {row.summary.scratch !== true && <MiddleTruncate className="text-xs text-text-muted" text={row.summary.folder} />}
+                                        </span>
+                                    </label>
+                                </li>
+                            ))}
+                        </ScrollArea>
+                    )}
                 </div>
             </Field>
             <Field orientation="horizontal" label={t('tunnels.grant.ceiling')} hint={t('tunnels.grant.ceilingHint')}>

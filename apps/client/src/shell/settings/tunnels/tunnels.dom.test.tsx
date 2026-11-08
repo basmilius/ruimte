@@ -382,7 +382,7 @@ describe('a bearer', () => {
         await typeInto(document.querySelector<HTMLInputElement>('input[maxlength="120"]')!, 'Hosted bot');
         await clickOn(buttonWithText('Make bearer'));
         await until(() => everything().includes('rmb_only-shown-once'));
-        expect(everything()).toContain('Ruimte keeps only a hash and cannot show it again.');
+        expect(everything()).toContain('Ruimte cannot show it again.');
         expect(machine.requests('credential.create')[0]).toMatchObject({
             label: 'Hosted bot',
             grant: { tier: 'work', projects: null, ceiling: 'supervised', approvals: false },
@@ -401,9 +401,8 @@ describe('a bearer', () => {
         await open();
         await until(() => buttonWithText('New bearer') !== null);
         await clickOn(buttonWithText('New bearer'));
-        await until(() => everything().includes('Let it answer approvals'));
-        expect(everything()).toContain('With this on, the client can run shell commands on this machine.');
-        expect(everything()).toContain('Supervised then limits nothing.');
+        await until(() => everything().includes('Approve on your behalf'));
+        expect(everything()).toContain('The client can then run shell commands on this machine as you.');
     });
 });
 

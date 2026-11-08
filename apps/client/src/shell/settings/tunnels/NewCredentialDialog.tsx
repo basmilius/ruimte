@@ -1,4 +1,4 @@
-import { Button, Checkbox, Dialog, Field, FormError, Input, messageOf } from '@adecore/ui';
+import { Button, Checkbox, Dialog, Field, FormError, Input, messageOf, ScrollArea } from '@adecore/ui';
 import { DEFAULT_EXTERNAL_CEILING, DEFAULT_EXTERNAL_TIER } from '@ruimte/contracts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +10,8 @@ const FRESH: GrantDraft = { tier: DEFAULT_EXTERNAL_TIER, ceiling: DEFAULT_EXTERN
 
 /*
  * A bearer for a client that can only set a header. It is made here and shown once: the machine keeps a hash and cannot show
- * it again. It works on loopback; on the public hostname only if the person says so, which is the weaker form.
+ * it again. It works on loopback; on the public hostname only if the person says so, which is the weaker form. The body
+ * scrolls, so a long project list never pushes the footer out of the window.
  */
 export function NewCredentialDialog({
     open,
@@ -69,12 +70,12 @@ export function NewCredentialDialog({
 
     return (
         <Dialog.Root open={open} onOpenChange={close}>
-            <Dialog.Popup size="sm">
+            <Dialog.Popup size="sm" className="flex max-h-[85vh] flex-col">
                 <Dialog.Title>{t('tunnels.credentials.new.title')}</Dialog.Title>
                 {secret === null ? (
                     <>
                         <Dialog.Description className="mt-1 break-words">{t('tunnels.credentials.new.description')}</Dialog.Description>
-                        <div className="flex flex-col gap-3 py-3">
+                        <ScrollArea className="-mx-5 min-h-0" viewportClassName="flex flex-col gap-3 px-5 py-3">
                             <Field orientation="horizontal" label={t('tunnels.credentials.new.label')}>
                                 <Input autoFocus value={label} maxLength={120} onChange={(e) => setLabel(e.target.value)} />
                             </Field>
@@ -87,7 +88,7 @@ export function NewCredentialDialog({
                                 </span>
                             </label>
                             {failure !== null && <FormError>{failure}</FormError>}
-                        </div>
+                        </ScrollArea>
                         <Dialog.Footer>
                             <Button onClick={() => close(false)}>{t('common:action.cancel')}</Button>
                             <Button variant="primary" disabled={busy || label.trim() === ''} onClick={() => void create()}>

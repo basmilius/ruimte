@@ -1125,15 +1125,15 @@
             },
             "new": {
                 "title": "Nieuwe bearer",
-                "description": "Een bearer is een geheim voor een client die alleen een header kan zetten. Hij werkt op deze machine zonder tunnel.",
+                "description": "Een bearer is een vaste sleutel voor een client die niet met OAuth kan inloggen. Hij werkt op deze machine zonder tunnel.",
                 "label": "Naam",
                 "action": "Bearer maken",
-                "once": "Kopieer hem nu. Ruimte bewaart alleen een hash en kan hem niet nog eens tonen.",
+                "once": "Kopieer hem nu. Ruimte kan hem niet nog eens tonen.",
                 "secret": "Bearer",
                 "where": "Gebruik hem op {{address}}.",
                 "copy": "Kopiëren",
-                "onHostname": "Ook toestaan op de openbare hostnaam",
-                "onHostnameWarning": "Hetzelfde geheim gaat dan bij elk verzoek door Cloudflare en niemand merkt een gestolen kopie op. OAuth is de betere keuze voor elke client die het biedt."
+                "onHostname": "Toestaan vanaf internet",
+                "onHostnameWarning": "Wie deze bearer in handen krijgt, kan hem dan overal gebruiken. Gebruik OAuth als de client dat ondersteunt."
             }
         },
         "grant": {
@@ -1145,7 +1145,7 @@
             },
             "projects": "Projecten",
             "allProjects": "Alle",
-            "someProjects": "Alleen deze",
+            "someProjects": "Selectie",
             "ceiling": "Agents die hij start draaien tot",
             "ceilingHint": "Agents die hij start krijgen nooit een bredere modus.",
             "expiry": "Eindigt",
@@ -1156,8 +1156,8 @@
                 "90": "Na 90 dagen",
                 "365": "Na een jaar"
             },
-            "approvals": "Laat hem goedkeuringen beantwoorden",
-            "approvalsWarning": "Staat dit aan, dan kan de client shell commands op deze machine uitvoeren. Hij keurt de commands goed die terminals, launches en routines vasthouden, en wat hij goedkeurt draait als jijzelf. Supervised beperkt dan niets."
+            "approvals": "Goedkeuren namens jou",
+            "approvalsWarning": "De client kan dan namens jou shell commands op deze machine uitvoeren. Een supervised agent wacht dan niet meer op jou."
         },
         "consent": {
             "title": "{{host}} wil Ruimte gebruiken",

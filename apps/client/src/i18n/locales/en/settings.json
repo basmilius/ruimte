@@ -1125,15 +1125,15 @@
             },
             "new": {
                 "title": "New bearer",
-                "description": "A bearer is a secret for a client that can only set a header. It works on this machine without a tunnel.",
+                "description": "A bearer is a fixed key for a client that cannot sign in with OAuth. It works on this machine without a tunnel.",
                 "label": "Name",
                 "action": "Make bearer",
-                "once": "Copy it now. Ruimte keeps only a hash and cannot show it again.",
+                "once": "Copy it now. Ruimte cannot show it again.",
                 "secret": "Bearer",
                 "where": "Use it at {{address}}.",
                 "copy": "Copy",
-                "onHostname": "Also allow it on the public hostname",
-                "onHostnameWarning": "The same secret then crosses Cloudflare on every request, and nothing notices a stolen copy. OAuth is the better choice for any client that offers it."
+                "onHostname": "Allow from the internet",
+                "onHostnameWarning": "Anyone who gets hold of this bearer can then use it from anywhere. Use OAuth if the client supports it."
             }
         },
         "grant": {
@@ -1145,7 +1145,7 @@
             },
             "projects": "Projects",
             "allProjects": "All",
-            "someProjects": "Only these",
+            "someProjects": "Selected",
             "ceiling": "Agents it starts run up to",
             "ceilingHint": "Agents it starts never get a wider mode.",
             "expiry": "Ends",
@@ -1156,8 +1156,8 @@
                 "90": "After 90 days",
                 "365": "After a year"
             },
-            "approvals": "Let it answer approvals",
-            "approvalsWarning": "With this on, the client can run shell commands on this machine. It approves the commands that terminals, launches and routines hold, and what it approves runs as you. Supervised then limits nothing."
+            "approvals": "Approve on your behalf",
+            "approvalsWarning": "The client can then run shell commands on this machine as you. A supervised agent no longer waits for you."
         },
         "consent": {
             "title": "{{host}} wants to use Ruimte",
