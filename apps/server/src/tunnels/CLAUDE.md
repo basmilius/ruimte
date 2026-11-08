@@ -1,0 +1,22 @@
+# Tunnels
+
+Tunnels run `cloudflared` under the person's own Cloudflare account and put two things in reach from outside: Ruimte's MCP and dev servers. The same folder holds the listener an external MCP client talks to, its credentials and the OAuth consent. The guide page is "Tunnels" in `apps/site`, and a scene of the section is drawn beside it.
+
+- `tunnel-service.ts` is the screen's state machine (install, sign in, tunnel, hostnames, child process). It runs only behind owner requests (`handlers/tunnels.ts`); `tunnel.state` is the one request a client let in may read. State is `$RUIMTE_HOME/tunnels/tunnels.json`, the config `cloudflared` runs with is `config.yml` beside it, a downloaded build lives in `bin/`, and none of it is in a project file.
+- `cloudflared` is a seam (`cloudflared-runner.ts`): a test hands in `FakeCloudflared`, and only an integration test may run the real binary. The installer downloads the official build only after its sha256 matched the one pinned in `cloudflared-pins.ts`, which a bump recomputes from the downloaded asset. It always runs with `--no-autoupdate`.
+- One `cloudflared` per machine, a child of the daemon. A change writes `config.yml.next`, has `cloudflared` validate it, moves it over `config.yml` and restarts the child. A child that will not stop gets a warning and no signal of ours.
+- A dev row points at one literal loopback port. The deny list holds Ruimte's own ports (the API, the door on the local network and the external listener); the config builder refuses them again, and only the MCP row may name the listener.
+- After a restart each row has its own setting. The MCP row defaults to come back on, a dev row to stay off. The deny list is checked again when a row comes back.
+
+## Product rules
+
+Decisions the code cannot show. Do not reverse one without asking Bas.
+
+- Ruimte reads no Cloudflare credential. It opens neither `cert.pem` nor the tunnel's credentials file, stores no API token, calls no Cloudflare API and never runs `tunnel token`. The config names the credentials file by path and nothing more. `tunnel-service.test.ts` holds this against the source.
+- Nothing reaches a tunnel through the broker, and Ruimte relays none of its bytes. `cloudflared` dials from the machine to the dev port or to the listener.
+- The listener (`external-listener.ts`) is on `127.0.0.1` with a port of its own (`--external-port`, the API port plus 20), off by default, and only the local secret turns it on. It answers `/mcp` and the fixed OAuth paths (`oauth.ts`), which serve no data. Every other path is a 404. It refuses any `Origin` with 403, takes neither a session token nor the local secret as a credential, and the API port refuses `Cf-Ray` and `Cf-Connecting-Ip` (`refuseTunnelled`). Those headers and `Host` prove nothing and only ever refuse.
+- A credential is on every request. The source address, `Host`, `Cf-*`, `local.key` and an account token are no proof. A bearer works on loopback, and on the public hostname only if its credential allows that (off by default). Failures are rate limited, and the answer is a bare 401.
+- `credential-store.ts` keeps hashes only, 0600 under a 0700 folder. A secret exists in the clear once, in the answer that makes it, and never in a log, an error, an event or the wire again. A revoke deletes the record, so it counts from the next request. A reused refresh token revokes its credential.
+- A hosted client defaults to all projects, tier Work, `supervised` and no expiry until a person revokes it. Narrower is an explicit choice, and only a person in the app makes it. A credential cannot change its own tier, scope, ceiling or box.
+- Consent happens in Ruimte (`consent-book.ts`, the consent window of the client), never on the public page. The page shows the client's name and a code and waits; the client metadata document is fetched from a public https address only (`client-metadata.ts`), and a redirect must be listed in it exactly. There is no `/register`.
+- The approvals box (`approvals.ts`) is off by default and adds `approval_list` and `approval_answer`. With it on, the client answers a chat's runtime approvals and approves a command, launch, routine or mode as the person, a mode never wider than its ceiling. It never types into a terminal.

@@ -1,7 +1,7 @@
 /*
  * The `cloudflared` build the daemon downloads when it finds none on the path. Each build is checked against
  * the sha256 pinned here before it runs. A bump downloads each asset and computes the sha256 itself
- * (`bun scripts/cloudflared-pins.ts <version>`), so a changed asset on the release page never goes unnoticed.
+ * (`bun apps/server/scripts/cloudflared-pins.ts <version>`), so a changed asset on the release page never goes unnoticed.
  */
 export const CLOUDFLARED_VERSION = '2026.10.7';
 

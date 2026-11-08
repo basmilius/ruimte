@@ -28,6 +28,7 @@ The `dev` script runs on port `4211` with `RUIMTE_HOME` from `RUIMTE_DEV_HOME` (
 | `--direct-host-address <ip>` | none | An extra address to announce as a candidate, such as the one a container is published on. Repeatable. |
 | `--broker <url>` | the machine's setting | Announce the machine to this Pulsar broker (`RUIMTE_BROKER_URL`; `off` turns it off). `wss://`, or `ws://` for a broker on this machine or the local network. Without it, the broker set under Settings, Machines, default `wss://broker.ruimte.app`. |
 | `--no-broker` | off | Announce the machine to no broker, whatever else says otherwise. |
+| `--external-port <port>` | the port plus 20 | The loopback port of the listener for external MCP clients (see "External MCP"). It listens only while a person turned the MCP on; `0` lets the system pick one. |
 | `--broker-advertise <url>` | the broker | The broker URL clients are told in `endpoint.info`, when they reach it under another name (`RUIMTE_BROKER_ADVERTISE_URL`). |
 | `--lan-port <port>` | `--port` plus 10 | The port of the door on the local network; `0` lets the system pick one. |
 | `--no-lan` | off | Keep the door on the local network closed, whatever the machine's setting says. |
@@ -198,6 +199,9 @@ $RUIMTE_HOME/
   database-access/<projectId>.json 0700, what agents may do with each connection (see "Databases")
   secrets/<hash>.json              0700 folder, 0600 files: the secrets of a project's launches (see "Launch secrets")
   voice/openai.json                0700 folder, 0600 file: the OpenAI key of Voice run by the daemon (`ruimte voice key`)
+  tunnels/tunnels.json             0700 folder: the tunnel id, the path of its credentials file (never opened), the domain, the rows and whether the external MCP is on
+  tunnels/config.yml               0600, the file `cloudflared` runs with; tunnels/bin/ holds a downloaded `cloudflared`
+  tunnels/credentials.json         0600, hashes of the credentials of external MCP clients and nothing else (see "External MCP")
   voice/preferences.json           the language and voice Voice speaks on this machine (`voice.setPreferences`)
   database-snapshots/<projectId>/<connectionId>/<database>.json
                                    schema snapshots the SQL language servers read, gone with their connection or project
@@ -518,6 +522,14 @@ A browser upgrade is accepted from the daemon's own origin, `app://ruimte` and l
 ### The door on the local network
 
 `src/pulsar/lan-door.ts` listens on every IPv4 interface at the daemon's port plus 10 (`--lan-port`). It answers one WebSocket at `/signal` and 404 for the rest, so the API stays on loopback. The machine proves its key first. One address opens at most 30 sockets a minute and holds at most 8. `endpoint.info` carries `lan: { port, addresses }` while open (private ranges first, then a tailnet's `100.64.0.0/10`, never a container or VM bridge). The door is open unless `lanDoor` is off or `--no-lan` is set; a busy port leaves it closed with a log line.
+
+### External MCP and tunnels
+
+`src/tunnels` opens a second listener on `127.0.0.1` (`--external-port`), off by default and turned on only with the local secret (`tunnel.setMcp`). It answers `/mcp`, `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/authorize` and `/token`, and 404 for everything else, so no API route is on it. Every request needs a credential of its own: an OAuth access token (authorization code with PKCE S256, the client named by a Client ID Metadata Document, consent given in a window of the app on this machine) or a bearer made in the app. Any `Origin` is refused with 403. A session token and the local secret are no credential, and the API port refuses a request that carries `Cf-Ray` or `Cf-Connecting-Ip`.
+
+The client acts as the person within the grant on its credential: a tier (`read`, `work`, `machine`), the projects it reaches, the widest mode of the agents it starts, and an approvals box that adds `approval_list` and `approval_answer`. A hosted client defaults to all projects, `work`, `supervised` and no expiry. It has a tool list of its own (`src/mcp/external-tiers.ts`), never types into a terminal, and is never the owner.
+
+Tunnels run `cloudflared` as a child of the daemon under the person's own Cloudflare account. Ruimte installs the official build when it finds none (checked against a sha256 pinned in the release, `scripts/cloudflared-pins.ts` recomputes it), signs in through `cloudflared tunnel login`, and writes `tunnels/config.yml` with a hostname per row and a closing 404. It reads no Cloudflare credential and relays no byte. Requests: `tunnel.state` (any client), `tunnel.install`, `tunnel.signIn`, `tunnel.setup`, `tunnel.add`, `tunnel.update`, `tunnel.remove`, `tunnel.retry`, `tunnel.discover`, `tunnel.setMcp`, `credential.list`, `credential.create`, `credential.update`, `credential.revoke`, `consent.list` and `consent.answer` (all the local secret's); the events `tunnel.changed` and `consent.changed` carry no data.
 
 ### Push notifications
 

@@ -1,0 +1,61 @@
+import { Note } from '@/components/docs/guide/ui.tsx';
+import { SettingsTunnels } from '@/components/docs/guide/SettingsTunnels.tsx';
+
+export const metadata = { title: 'Tunnels' };
+
+# Tunnels
+
+<p className="lead">A tunnel puts Ruimte's MCP and your dev servers on the internet, under your own Cloudflare account. A bot that runs somewhere else can then work in Ruimte as you.</p>
+
+You need a domain on Cloudflare, and you manage tunnels from the Ruimte app on the machine itself. Other windows show the state and change nothing.
+
+<SettingsTunnels />
+
+## Set up a tunnel
+
+1. Open Settings, Tunnels.
+2. Click **Install** if Ruimte does not find `cloudflared`. Ruimte downloads Cloudflare's official build, checks it against a checksum, and keeps it in its own folder. Where no build exists for your system, the pane says what to install yourself.
+3. Click **Sign in**. Cloudflare opens in your browser, where you pick the domain. Ruimte never reads your Cloudflare login. `cloudflared` does.
+4. Type the domain and click **Create tunnel**.
+
+If something goes wrong, the pane shows the sentence `cloudflared` gave and a **Try again** button.
+
+<Note tone="warning">Cloudflare ends the encryption at its edge, so it can read everything that passes through a tunnel. That includes prompts, file contents, credentials and the cookies of a dev site. A bot you connect reads whatever it is told or asks for, too.</Note>
+
+## Add a dev server
+
+Under **Hostnames**, pick a port that one of your sessions listens on, give it a hostname and tick that you know anyone with the address reaches it. Nothing sits in front of a dev server. No login, no gate.
+
+Each hostname has its own switch and its own choice for after a restart. A dev server stays off by default, because its port may hold something else by then. Set **Comes back on** for a server that always runs on the same port.
+
+## Connect a bot to the MCP
+
+1. Turn on **External MCP**. Ruimte now listens on this machine, on a port of its own, and nowhere else.
+2. Add an MCP hostname. Ruimte suggests a long random name, so scanners do not find it. The name protects nothing. A credential does.
+3. Give the bot the address, ending in `/mcp`.
+
+The bot connects in one of two ways.
+
+A client that supports OAuth asks Ruimte for access. A window opens on your machine with the client's name and a short code. Check that the code matches the one on the client's page, choose what the client may do, and approve. Until you do, the client's page only waits, and it gives up after a few minutes.
+
+A client that can only set a header gets a bearer. Click **New bearer** under External clients, name it and copy the secret. Ruimte shows it once and keeps a hash, so it cannot show it again. A bearer works on this machine without a tunnel. On the public hostname it works only if you tick that box, and it is the weaker form. The same secret then crosses Cloudflare on every request, and nothing notices a stolen copy.
+
+## What a client may do
+
+A client acts as you, and what it gets is set when you approve it or make the bearer.
+
+| Choice | Default | Effect |
+| --- | --- | --- |
+| Reach | Work | Read looks at projects, canvases and tasks. Work also changes canvases and starts agents. Machine also runs launches, routines, browsers, devices, databases and computer use. |
+| Projects | All | A client sees and changes only the projects you name. |
+| Agents it starts run up to | Supervised | A mode wider than this is refused. |
+| Ends | Never | A credential lasts until you revoke it, unless you set an end. |
+| Let it answer approvals | Off | See below. |
+
+A client never types into a terminal, and a terminal's prompts stay where they are. It cannot make a credential, change its own reach or open the tunnels.
+
+<Note tone="warning">With **Let it answer approvals** on, the client answers its own agents' approvals and can approve a command, launch, routine or mode on this machine. Supervised then limits nothing, and the credential reaches about as far as a shell.</Note>
+
+## Keep an eye on clients
+
+Nothing expires unless you set it, so noticing is the way to stop a client. Under **External clients**, each credential shows its name, what it reaches and when it was last used. The trash button revokes it. The client loses access from its next request. Agents it already started keep running.
