@@ -53566,7 +53566,8 @@
           "go",
           "swift",
           "toml",
-          "lua"
+          "lua",
+          "zig"
         ]
       }
     },
@@ -53736,7 +53737,8 @@
           "go",
           "swift",
           "toml",
-          "lua"
+          "lua",
+          "zig"
         ]
       }
     },
@@ -53906,7 +53908,8 @@
           "go",
           "swift",
           "toml",
-          "lua"
+          "lua",
+          "zig"
         ]
       }
     },

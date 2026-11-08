@@ -129,6 +129,14 @@ describe('server profiles', () => {
         expect(component!.env).toMatchObject({ GOTOOLCHAIN: 'local' });
     });
 
+    it('serves Zig and its package files in any project, as a kind that builds and cannot do without', () => {
+        expect(kindForLanguage('zig')).toBe('zig');
+        expect(kindForLanguage('plaintext', {}, 'build.zig.zon')).toBe('zig');
+        expect(KIND_PROFILES.zig.activation).toBeUndefined();
+        expect(KIND_PROFILES.zig.runsProjectCode).toBe(true);
+        expect(KIND_PROFILES.zig.runsBuildCode).toEqual({});
+    });
+
     it('serves Lua in any project, keeps the log and the meta of the server out of the install, and runs project code', () => {
         expect(kindForLanguage('lua')).toBe('lua');
         expect(KIND_PROFILES.lua.activation).toBeUndefined();

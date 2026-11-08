@@ -32,6 +32,17 @@ describe('toolchain kinds', () => {
         expect(isToolchainKind('swift')).toBe(true);
     });
 
+    it('reads the bare version zls prints, and looks for it where Zig is installed', () => {
+        const { args, parse } = toolchainVersionSpecOf('zig');
+
+        expect(args).toEqual(['--version']);
+        expect(parse(['0.14.0'])).toBe('0.14.0');
+        expect(parse(['0.15.0-dev.1+abcdef'])).toBe('0.15.0-dev.1+abcdef');
+        expect(parse(['usage: zls [command]'])).toBeNull();
+        expect(isToolchainKind('zig')).toBe(true);
+        expect(toolchainCandidates('zls')).toContain(join('/opt/homebrew/bin', 'zls'));
+    });
+
     it('reads the version gopls prints for its version command', () => {
         const { args, parse } = toolchainVersionSpecOf('go');
 

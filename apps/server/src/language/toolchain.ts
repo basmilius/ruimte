@@ -7,9 +7,9 @@ import type { LanguageServerKind } from '@ruimte/contracts';
  * is a component of rustup, and has to match the toolchain a project builds with, so Ruimte pins no
  * version of it and downloads nothing. Install looks for it again, and says how to get it when it is not there.
  */
-export type ToolchainKind = 'rust' | 'go' | 'swift';
+export type ToolchainKind = 'rust' | 'go' | 'swift' | 'zig';
 
-const TOOLCHAIN_KINDS: readonly ToolchainKind[] = ['rust', 'go', 'swift'];
+const TOOLCHAIN_KINDS: readonly ToolchainKind[] = ['rust', 'go', 'swift', 'zig'];
 
 export function isToolchainKind(kind: LanguageServerKind): kind is ToolchainKind {
     return (TOOLCHAIN_KINDS as readonly string[]).includes(kind);
@@ -70,6 +70,14 @@ const TOOLCHAINS: Record<ToolchainKind, ToolchainSpec> = {
                     .find((text) => text.startsWith('golang.org/x/tools/gopls '))
                     ?.split(' ')[1] ?? null
         }
+    },
+    zig: {
+        program: 'zls',
+        missing: 'zls is not on this machine. Install the zls that matches your Zig version, for example with Homebrew: brew install zls',
+        // zls has to match the Zig a project builds with, and runs `zig`, so both are found in the same places.
+        folders: () => ['/opt/homebrew/bin', '/usr/local/bin', join(homedir(), '.local', 'bin'), join(homedir(), '.zvm', 'bin')],
+        // It prints only the version, such as `0.14.0`.
+        version: { args: ['--version'], parse: (lines) => lines.map((text) => text.trim()).find((text) => /^\d+\.\d+\.\d+/.test(text)) ?? null }
     },
     swift: {
         program: 'sourcekit-lsp',

@@ -119,6 +119,10 @@ function rig(
                 await writeFile(join(spec.cwd, 'target', 'release', nativeProgramFile('php-native', process.platform)), '');
                 return 0;
             }
+            if (spec.command.endsWith('zls')) {
+                onLine('0.14.0');
+                return 0;
+            }
             if (spec.command.endsWith('swift')) {
                 onLine('Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)');
                 return 0;
@@ -153,7 +157,7 @@ function rig(
         watch: { platform: options.platform ?? 'darwin', seams: watch, stat: async (path) => (disk.has(path) ? 'file' : null) },
         custom: new CustomLanguageServers({
             path: join(root, 'custom.json'),
-            resolve: (command) => (['zls', 'taplo'].includes(command) ? `/bin/${command}` : null)
+            resolve: (command) => (['nimlsp', 'taplo'].includes(command) ? `/bin/${command}` : null)
         }),
         exists: async (path) => (options.files ?? []).includes(path) || (options.folders ?? []).includes(path),
         isFolder: async (path) => (options.folders ?? []).includes(path),
@@ -912,34 +916,34 @@ describe('several servers on one document', () => {
 });
 
 describe('language servers of a person', () => {
-    const zig = {
-        name: 'Zig',
-        command: 'zls',
+    const nim = {
+        name: 'Nim',
+        command: 'nimlsp',
         args: ['--stdio'],
         env: { ZLS_LOG: '1' },
-        languages: ['zig'],
+        languages: ['nim'],
         patterns: [],
         initializationOptions: { snippets: true }
     };
 
     it('starts on the first document it serves, as the command it was saved with, and reports under its id', async () => {
         const { host, spawner, events } = rig();
-        const saved = await host.customSave(zig);
-        const opened = await open(host, 'src/main.zig', 'const a = 1;', 'client-1', 'zig');
+        const saved = await host.customSave(nim);
+        const opened = await open(host, 'src/main.nim', 'const a = 1;', 'client-1', 'nim');
         expect(opened.servers).toEqual([saved.id]);
         await ready(host, saved.id);
-        const [process] = spawner.of('zls');
-        expect(process!.spec).toMatchObject({ command: 'zls', args: ['--stdio'], cwd: WORK, env: { ZLS_LOG: '1' } });
+        const [process] = spawner.of('nimlsp');
+        expect(process!.spec).toMatchObject({ command: 'nimlsp', args: ['--stdio'], cwd: WORK, env: { ZLS_LOG: '1' } });
         expect(process!.spec.env.BUN_BE_BUN).toBeUndefined();
         expect(process!.server.received.find((message) => message.method === 'initialize')?.params).toMatchObject({
             initializationOptions: { snippets: true }
         });
-        process!.server.handle('textDocument/hover', () => ({ contents: 'zig hover' }));
-        expect(await host.request({ projectId: 'p1', path: 'src/main.zig', method: 'textDocument/hover', params: {} })).toMatchObject({
-            result: { contents: 'zig hover' },
+        process!.server.handle('textDocument/hover', () => ({ contents: 'nim hover' }));
+        expect(await host.request({ projectId: 'p1', path: 'src/main.nim', method: 'textDocument/hover', params: {} })).toMatchObject({
+            result: { contents: 'nim hover' },
             server: saved.id
         });
-        await process!.server.connection.notify('textDocument/publishDiagnostics', { uri: uri('src/main.zig'), version: 1, diagnostics: [] });
+        await process!.server.connection.notify('textDocument/publishDiagnostics', { uri: uri('src/main.nim'), version: 1, diagnostics: [] });
         await settle();
         expect(kinds(events['client-1'], 'language.diagnostics').at(-1)).toMatchObject({ payload: { server: saved.id } });
     });
@@ -947,31 +951,31 @@ describe('language servers of a person', () => {
     it('serves by file pattern, and only the projects it was saved for', async () => {
         const { host } = rig();
         const byPattern = await host.customSave({ name: 'Templates', command: 'taplo', args: [], languages: [], patterns: ['*.tpl'] });
-        await host.customSave({ ...zig, projects: ['/elsewhere'] });
+        await host.customSave({ ...nim, projects: ['/elsewhere'] });
         expect((await open(host, 'views/a.tpl', '', 'client-1', 'plaintext')).servers).toEqual([byPattern.id]);
-        expect((await open(host, 'src/main.zig', '', 'client-1', 'zig')).servers).toEqual([]);
+        expect((await open(host, 'src/main.nim', '', 'client-1', 'nim')).servers).toEqual([]);
         const statuses = await host.status('p1');
         expect(statuses.filter((status) => status.server.startsWith('custom:')).map((status) => status.name)).toEqual(['Templates']);
     });
 
     it('starts for the file that is open when it is saved, and stops when it is removed', async () => {
         const { host, spawner, events } = rig();
-        expect((await open(host, 'src/main.zig', '', 'client-1', 'zig')).servers).toEqual([]);
-        const saved = await host.customSave(zig);
+        expect((await open(host, 'src/main.nim', '', 'client-1', 'nim')).servers).toEqual([]);
+        const saved = await host.customSave(nim);
         await ready(host, saved.id);
-        expect(spawner.of('zls')[0]!.server.documents.has(uri('src/main.zig'))).toBe(true);
+        expect(spawner.of('nimlsp')[0]!.server.documents.has(uri('src/main.nim'))).toBe(true);
         expect(kinds(events['client-2'], 'language.custom.changed')).toHaveLength(1);
         await host.customRemove(saved.id);
-        expect(spawner.of('zls')[0]!.server.exited).toBe(true);
+        expect(spawner.of('nimlsp')[0]!.server.exited).toBe(true);
         expect((await host.status('p1')).some((status) => status.server === saved.id)).toBe(false);
-        expect(kinds(events['client-1'], 'language.providers').at(-1)).toMatchObject({ payload: { path: 'src/main.zig', providers: {} } });
+        expect(kinds(events['client-1'], 'language.providers').at(-1)).toMatchObject({ payload: { path: 'src/main.nim', providers: {} } });
     });
 
     // Windows keeps a folder writable whatever its mode says, so the write this test makes fail would succeed there.
     it.skipIf(process.platform === 'win32')('stops the servers of an extension whose removal the file did not take, and never starts them again', async () => {
         const { host, spawner } = rig();
-        const saved = await host.customSaveFor('poc.machine', zig);
-        await open(host, 'src/main.zig', '', 'client-1', 'zig');
+        const saved = await host.customSaveFor('poc.machine', nim);
+        await open(host, 'src/main.nim', '', 'client-1', 'nim');
         await ready(host, saved.id);
         await chmod(root, 0o555);
         try {
@@ -979,26 +983,26 @@ describe('language servers of a person', () => {
         } finally {
             await chmod(root, 0o755);
         }
-        expect(spawner.of('zls')[0]!.server.exited).toBe(true);
+        expect(spawner.of('nimlsp')[0]!.server.exited).toBe(true);
         expect(host.customOwners()).toEqual([]);
-        expect((await open(host, 'src/other.zig', '', 'client-1', 'zig')).servers).toEqual([]);
-        expect(spawner.of('zls')).toHaveLength(1);
+        expect((await open(host, 'src/other.nim', '', 'client-1', 'nim')).servers).toEqual([]);
+        expect(spawner.of('nimlsp')).toHaveLength(1);
     });
 
     it('starts again with what was saved when a server is changed', async () => {
         const { host, spawner } = rig();
-        const saved = await host.customSave(zig);
-        await open(host, 'src/main.zig', '', 'client-1', 'zig');
+        const saved = await host.customSave(nim);
+        await open(host, 'src/main.nim', '', 'client-1', 'nim');
         await ready(host, saved.id);
-        await host.customSave({ ...zig, id: saved.id, args: ['--other'] });
-        await until(host, () => spawner.of('zls').length === 2);
-        expect(spawner.of('zls')[0]!.server.exited).toBe(true);
-        expect(spawner.of('zls')[1]!.spec.args).toEqual(['--other']);
+        await host.customSave({ ...nim, id: saved.id, args: ['--other'] });
+        await until(host, () => spawner.of('nimlsp').length === 2);
+        expect(spawner.of('nimlsp')[0]!.server.exited).toBe(true);
+        expect(spawner.of('nimlsp')[1]!.spec.args).toEqual(['--other']);
     });
 
     it('never starts a server whose command was changed in the file, and says so', async () => {
         const { host, spawner } = rig();
-        const saved = await host.customSave(zig);
+        const saved = await host.customSave(nim);
         const file = JSON.parse(await readFile(join(root, 'custom.json'), 'utf8')) as { servers: { command: string }[] };
         file.servers[0]!.command = 'taplo';
         await writeFile(join(root, 'custom.json'), JSON.stringify(file));
@@ -1014,25 +1018,25 @@ describe('language servers of a person', () => {
             custom: second
         });
         held.subscribe('client-1', () => undefined);
-        expect((await held.open('client-1', { projectId: 'p1', path: 'a.zig', languageId: 'zig', text: '' })).servers).toEqual([]);
+        expect((await held.open('client-1', { projectId: 'p1', path: 'a.nim', languageId: 'nim', text: '' })).servers).toEqual([]);
         expect((await held.status('p1')).find((status) => status.server === saved.id)).toMatchObject({ state: 'crashed' });
         expect(spawner.processes).toHaveLength(0);
     });
 
     it('stays crashed when the process ends, and starts again only on a restart', async () => {
         const { host, spawner } = rig();
-        const saved = await host.customSave(zig);
-        await open(host, 'src/main.zig', '', 'client-1', 'zig');
+        const saved = await host.customSave(nim);
+        await open(host, 'src/main.nim', '', 'client-1', 'nim');
         await ready(host, saved.id);
-        await spawner.of('zls')[0]!.crash(2);
+        await spawner.of('nimlsp')[0]!.crash(2);
         await settle();
         expect((await host.status('p1')).find((status) => status.server === saved.id)).toMatchObject({
             state: 'crashed',
-            message: expect.stringContaining('Zig')
+            message: expect.stringContaining('Nim')
         });
         await host.restart('p1', saved.id);
         await ready(host, saved.id);
-        expect(spawner.of('zls')).toHaveLength(2);
+        expect(spawner.of('nimlsp')).toHaveLength(2);
     });
 });
 
@@ -2628,7 +2632,8 @@ describe('Go', () => {
 /* Every kind that builds the code it reads, with a file it serves and what a project has to hold for it. */
 const BUILDING_KINDS: Array<{ kind: CatalogKind; languageId: string; path: string; program: string; manifest: string | null; works: boolean }> = [
     { kind: 'rust', languageId: 'rust', path: 'src/main.rs', program: 'rust-analyzer', manifest: 'Cargo.toml', works: true },
-    { kind: 'swift', languageId: 'swift', path: 'Sources/App/main.swift', program: 'sourcekit-lsp', manifest: null, works: false }
+    { kind: 'swift', languageId: 'swift', path: 'Sources/App/main.swift', program: 'sourcekit-lsp', manifest: null, works: false },
+    { kind: 'zig', languageId: 'zig', path: 'src/main.zig', program: 'zls', manifest: null, works: false }
 ];
 
 describe('every kind that builds the code it reads', () => {

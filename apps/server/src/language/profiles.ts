@@ -599,6 +599,30 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
             }
         ]
     },
+    /*
+     * zls, found where Zig's installers put it (`toolchain.ts`). It has to match the Zig a project builds
+     * with, so Ruimte pins none. It runs `build.zig` to learn the build, which no setting turns off: in the
+     * worktree of an agent it does not start.
+     */
+    zig: {
+        kind: 'zig',
+        runsProjectCode: true,
+        runsBuildCode: {},
+        components: [
+            {
+                name: 'zig',
+                title: 'zls',
+                languages: ['zig', 'zon'],
+                patterns: ['*.zon'],
+                entry: 'zls',
+                program: (context) => context.native?.executable ?? '',
+                args: () => [],
+                initializationOptions: () => ({}),
+                // zls runs `zig` for the build and for its environment.
+                env: { PATH: toolchainPath('zig') }
+            }
+        ]
+    },
     tailwind: {
         kind: 'tailwind',
         runsProjectCode: true,

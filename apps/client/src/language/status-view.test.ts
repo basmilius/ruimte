@@ -88,7 +88,8 @@ describe('the servers of the languages added later', () => {
         ['go', 'Go', 'gopls'],
         ['swift', 'Swift', 'sourcekit-lsp'],
         ['toml', 'TOML', 'taplo'],
-        ['lua', 'Lua', 'lua-language-server']
+        ['lua', 'Lua', 'lua-language-server'],
+        ['zig', 'Zig', 'zls']
     ];
 
     test.each(named)('names %s and its program, and groups it with the others', (kind, name, program) => {

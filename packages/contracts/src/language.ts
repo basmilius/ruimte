@@ -37,7 +37,9 @@ export const LanguageServerKindSchema = z.enum([
     // taplo, a pinned release of someone else's server.
     'toml',
     // lua-language-server, a pinned release of someone else's server.
-    'lua'
+    'lua',
+    // zls as the Zig installation brings it; found, never installed.
+    'zig'
 ]);
 export type LanguageServerKind = z.infer<typeof LanguageServerKindSchema>;
 

@@ -29,9 +29,11 @@ Besides code, Ruimte shows images, PDFs, audio, video, Markdown, HTML pages, tab
 
 ## Edit code
 
-The editor uses language servers for TypeScript, Vue, PHP, SQL, CSS, Python, Markdown, Go, Swift, TOML, Lua and more: completion, problems while you type, go to definition, find usages, rename, code actions, refactorings, organize imports and formatting. **Toggle problems panel** lists the problems of the open files.
+The editor uses language servers for TypeScript, Vue, PHP, SQL, CSS, Python, Markdown, Go, Swift, TOML, Lua, Zig and more: completion, problems while you type, go to definition, find usages, rename, code actions, refactorings, organize imports and formatting. **Toggle problems panel** lists the problems of the open files.
 
-A server that builds the code it reads, such as the one for Rust, builds nothing in a worktree where an agent works. The language status then says "Build scripts and macros are off in this worktree." and the server answers with less, for instance without expanded macros. **Turn on for this repository** lets the servers of that repository build there. Only you can press it, and no agent can.
+The servers for Rust, Swift and Zig build the code they read. In a worktree where an agent works they build nothing. The language status then says "Build scripts and macros are off in this worktree." The Rust server keeps running with less, for instance without expanded macros, and the Swift and Zig servers do not start there. **Turn on for this repository** lets the servers of that repository build in those worktrees. Only you can press it, and no agent can.
+
+Ruimte finds the servers for Rust, Go, Swift and Zig where their toolchains put them, and never installs them. For the others, press Install under Settings, Editor.
 
 | Shortcut | Action |
 | --- | --- |

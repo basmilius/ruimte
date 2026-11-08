@@ -473,6 +473,7 @@ The daemon looks up no addresses, holds no map ticket and never contacts the map
 | `rust` | rust-analyzer from the Rust toolchain, never installed by Ruimte | Rust, in a project with a `Cargo.toml` in its folder or up to three folders down |
 | `go` | gopls from Go, never installed by Ruimte | Go, `go.mod` and `go.work`, in any project |
 | `swift` | sourcekit-lsp from the Swift toolchain, never installed by Ruimte | Swift, in any project |
+| `zig` | zls from the Zig installation, never installed by Ruimte | Zig and `.zon` files, in any project |
 | `lua` | lua-language-server, a pinned release (`lua-native-release.json`) | Lua, in any project; it runs the plugins a `.luarc.json` names, so not on work from another machine |
 | `toml` | taplo, a pinned release (`toml-native-release.json`) | TOML, in any project, with no schema catalog |
 | `markdown` | marksman, a pinned release (`markdown-native-release.json`) | Markdown, in any project: links, headings and references across files |
@@ -496,6 +497,8 @@ The `rust` kind runs the `rust-analyzer` on `PATH` or in `~/.cargo/bin` that ans
 The `go` kind runs the `gopls` on `PATH` or in `GOBIN`, `$GOPATH/bin`, `~/go/bin`, `/usr/local/go/bin` or Homebrew's folder that answers `gopls version`, with those folders on its `PATH` so it finds `go`. It runs with `GOTOOLCHAIN=local`, so a `go.mod` asking for a newer Go downloads nothing, and with the `generate` code lenses off. Without one it says to run `go install golang.org/x/tools/gopls@latest`; Install only looks again. It runs project code (`go list` runs cgo tools), so it stays off work from another machine.
 
 The `swift` kind runs the `sourcekit-lsp` on `PATH`, in Xcode's or the command line tools' folder, or in `~/.swiftly/bin`. It prints no version, so the `swift` beside it is asked (`swift --version`). Loading a `Package.swift` runs it, so the kind builds code (`runsBuildCode`) and has no setting that turns that off: it does not start in the worktree of an agent. An Xcode project without a `Package.swift` shows less to sourcekit-lsp than a package does.
+
+The `zig` kind runs the `zls` on `PATH`, in Homebrew's folder, `~/.local/bin` or `~/.zvm/bin`, that answers `--version`, with those folders on its `PATH` so it finds `zig`. Ruimte pins no zls, since it has to match the Zig a project builds with. zls runs `build.zig` to learn the build, so, like Swift, the kind builds code and does not start in the worktree of an agent.
 
 A kind whose server is someone else's program installs from a descriptor of ours (`<kind>-native-release.json`, same shape as the PHP one) with a checksum per platform, and has no development build. The TOML server is taplo's release binary run as `taplo lsp stdio`, because `@taplo/cli` on npm is the WebAssembly build and has no `lsp` command. A release that is one file has `format: "raw"`, or `"gz"` when gzipped; `checksumOnly: true` marks a release whose program is not run at install, since the checksum already names its bytes.
 
