@@ -18,6 +18,7 @@ import { registerExtensionChatRead } from './handlers/extension-chat-read.ts';
 import { registerExtensionHandlers, runExtensionPrompt } from './handlers/extensions.ts';
 import { registerRoutineHandlers } from './handlers/routine.ts';
 import { registerTemplateHandlers } from './handlers/template.ts';
+import { registerTunnelHandlers } from './handlers/tunnels.ts';
 import { registerVoiceHandlers } from './handlers/voice.ts';
 import { readMachineModel } from './machine-model.ts';
 import { markDrawnChat } from './projects/drawn-chat.ts';
@@ -51,6 +52,7 @@ import { wireRemote } from './wiring/remote.ts';
 import { wireRoutines } from './wiring/routines.ts';
 import type { DaemonRuntime } from './wiring/runtime.ts';
 import { wireTemplates } from './wiring/templates.ts';
+import { wireTunnels } from './wiring/tunnels.ts';
 import { wireUsageStats } from './wiring/usage-stats.ts';
 import { wireUsage } from './wiring/usage.ts';
 import { wireVoice } from './wiring/voice.ts';
@@ -189,6 +191,8 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         later: { language: () => language.host, push: () => push }
     });
 
+    const tunnels = await wireTunnels({ config, canvasHost, agents, projects, processes, artifacts, later: { apiPort: () => server.port ?? config.port } });
+
     const { sessions, chats } = agents;
     const push = wirePush(home, machine.auth, identity, agents, projects.store, work.snoozes, usage);
     sessions.observe((event) => push.consume(event));
@@ -237,6 +241,12 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     registerVoiceHandlers(dispatcher, voice);
     registerRoutineHandlers(dispatcher, routines);
     registerTemplateHandlers(dispatcher, templates.store);
+    registerTunnelHandlers(dispatcher, {
+        service: tunnels.service,
+        credentials: tunnels.credentials,
+        consent: tunnels.consent,
+        changed: () => tunnels.sinks.emit({ event: 'tunnel.changed', payload: {} })
+    });
     const language = await wireLanguage({
         home,
         compiled,
@@ -390,7 +400,8 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         proposals: agents.proposals,
         artifacts: artifacts.artifacts,
         routines: routines.watchers,
-        templates: templates.store
+        templates: templates.store,
+        tunnels: tunnels.sinks
     });
     // Before the socket answers, so no client attaches to or writes in a chat that is half moved; the outbox starts after.
     await repairChatMoves({
@@ -452,6 +463,8 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     void chats.recoverInterrupted().catch((e) => console.error('Resuming interrupted turns failed:', errorText(e)));
 
     void network.brokerSwitch.publish({ host: config.host, port: server.port ?? config.port });
+    // After the API answers, so the deny list of the tunnels knows its port.
+    await tunnels.service.resume().catch((e: unknown) => console.error('Bringing the tunnels back failed:', errorText(e)));
 
     let shuttingDown = false;
     const shutdown = async (reason: string): Promise<void> => {
@@ -491,6 +504,8 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
                 console.error(`${what} on shutdown failed:`, errorText(e));
             }
         };
+        await step('Stopping tunnels', () => tunnels.service.stop());
+        tunnels.listener.stop();
         await step('Stopping maintenance', () => maintenance.stop());
         await step('Stopping extensions', async () => extensions.stopAll());
         // Before the sessions go: a Voice session left open at OpenAI keeps costing.

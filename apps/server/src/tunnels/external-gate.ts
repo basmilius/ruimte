@@ -14,6 +14,14 @@ export function hasTunnelHeaders(headers: Headers): boolean {
 }
 
 /*
+ * The answer of the API port to a request that came through a tunnel: the API is never a tunnel target, so a request that
+ * carries the headers Cloudflare's edge adds is refused. The headers prove nothing and only ever refuse. Null for any other request.
+ */
+export function refuseTunnelled(request: Request): Response | null {
+    return hasTunnelHeaders(request.headers) ? new Response('The API does not answer through a tunnel', { status: 403 }) : null;
+}
+
+/*
  * Whether the `Host` is the listener's own address. A tunnel passes the public hostname on, so any other `Host` means
  * the request did not come straight from this machine. Like the headers above, this is no proof of anything: it only refuses.
  */

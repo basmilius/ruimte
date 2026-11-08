@@ -148,6 +148,11 @@ export class CredentialStore {
         });
     }
 
+    /* Resolves once the writes started so far are on disk. */
+    settled(): Promise<void> {
+        return this.writes.run(async () => undefined);
+    }
+
     list(): Credential[] {
         return this.records.map(publicCredential);
     }

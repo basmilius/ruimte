@@ -39,6 +39,7 @@ import { handleMachineNotify } from '../push/notify-route.ts';
 import { shotFolders } from '../shots.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from '../streams/http-stream.ts';
 import type { CanvasHost } from '../tools/host.ts';
+import { refuseTunnelled } from '../tunnels/external-gate.ts';
 import { BUILD, VERSION } from '../version.ts';
 import { handleVoiceKeyRequest } from '../voice/key-route.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
@@ -318,6 +319,13 @@ export function serveDaemon(input: HttpInput): Server<SocketData> {
         port: config.port,
         maxRequestBodySize: MAX_MCP_BODY_BYTES,
         async fetch(request, server) {
+            // The API is never a tunnel target. A request Cloudflare's edge forwarded carries these headers, and they only ever refuse.
+            const tunnelled = refuseTunnelled(request);
+
+            if (tunnelled !== null) {
+                return tunnelled;
+            }
+
             const cors = crossOriginHeaders(request);
             if (cors !== null && request.method === 'OPTIONS') {
                 return new Response(null, { status: 204, headers: preflightHeaders(cors) });

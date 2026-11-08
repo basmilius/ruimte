@@ -38,6 +38,8 @@ export interface ServerConfig {
     lanPort: number;
     // `--no-lan`: the door stays closed whatever the machine's setting says.
     lanDoorOff: boolean;
+    // The port of the listener for external MCP clients (`src/tunnels`), on loopback and only while a person turned the MCP on; 0 lets the system pick one.
+    externalPort: number;
     // Started by the background service (`RUIMTE_SERVICE=1` in its definition), which starts it again when it exits.
     underService: boolean;
     // `login` puts it on an account with a code; `status` says how the running daemon is reached;
@@ -76,6 +78,13 @@ export function portFlag(port: number): string {
 
 // The door on the local network listens this far above the daemon's port: 4220 beside 4210, 4221 beside a dev daemon on 4211.
 const LAN_PORT_OFFSET = 10;
+
+// The external MCP listener sits above the door: 4230 beside 4210, 4231 beside a dev daemon on 4211.
+const EXTERNAL_PORT_OFFSET = 20;
+
+function defaultExternalPort(port: number): number {
+    return port === 0 || port + EXTERNAL_PORT_OFFSET > 65535 ? 0 : port + EXTERNAL_PORT_OFFSET;
+}
 
 /* The door's port when no flag names one; a daemon on a port the system picked gets a door on one too. */
 function defaultLanPort(port: number): number {
@@ -135,6 +144,7 @@ export function parseServerArgs(argv: string[], env: Record<string, string | und
             'broker-advertise': { type: 'string' },
             'lan-port': { type: 'string' },
             'no-lan': { type: 'boolean', default: false },
+            'external-port': { type: 'string' },
             node: { type: 'string' },
             json: { type: 'boolean', default: false },
             check: { type: 'boolean', default: false },
@@ -178,6 +188,16 @@ export function parseServerArgs(argv: string[], env: Record<string, string | und
         throw new Error(`Invalid --lan-port: ${values['lan-port']}`);
     }
 
+    const externalPort = values['external-port'] === undefined ? defaultExternalPort(port) : Number(values['external-port']);
+    if (
+        !Number.isInteger(externalPort) ||
+        externalPort < 0 ||
+        externalPort > 65535 ||
+        (externalPort !== 0 && (externalPort === port || externalPort === lanPort))
+    ) {
+        throw new Error(`Invalid --external-port: ${values['external-port']}`);
+    }
+
     return {
         host: values.host,
         port,
@@ -193,6 +213,7 @@ export function parseServerArgs(argv: string[], env: Record<string, string | und
         brokerAdvertise: parseBrokerUrl(values['broker-advertise'] ?? env.RUIMTE_BROKER_ADVERTISE_URL, '--broker-advertise'),
         lanPort,
         lanDoorOff: values['no-lan'],
+        externalPort,
         underService: env.RUIMTE_SERVICE === '1',
         command,
         args: cli || service ? argv.slice(1) : positionals.slice(1),

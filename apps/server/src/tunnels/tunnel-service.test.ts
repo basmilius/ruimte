@@ -151,7 +151,7 @@ describe('the screen states', () => {
 
     test('offers the address cloudflared printed while the person signs in', async () => {
         const f = await fixture();
-        let seen: string | null = null;
+        let seen = null as string | null;
         const original = f.runner.start.bind(f.runner);
 
         f.runner.start = (binary, args, onLine) => {

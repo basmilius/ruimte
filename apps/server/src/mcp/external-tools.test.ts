@@ -67,7 +67,18 @@ describe('the tiers', () => {
     });
 
     test('keeps what a client elsewhere never gets out of every tier', () => {
-        const outside = ['secret_request', 'task_done', 'context_list', 'chat_attach', 'visual_write', 'plan_new', 'artifact_publish', 'device_install', 'device_media', 'language_file'];
+        const outside = [
+            'secret_request',
+            'task_done',
+            'context_list',
+            'chat_attach',
+            'visual_write',
+            'plan_new',
+            'artifact_publish',
+            'device_install',
+            'device_media',
+            'language_file'
+        ];
 
         for (const name of outside) {
             expect(TIER_TOOLS.machine, name).not.toContain(name);
@@ -184,7 +195,7 @@ describe('a client elsewhere writes', () => {
     });
 
     test('writes in a note it did not make, by naming the canvas', async () => {
-        const { refused, text } = await call(caller('work'), 'node_edit', { project: projectId, view: 'main', node_id: 'note-1', text: 'edited from outside' });
+        const { refused } = await call(caller('work'), 'node_edit', { project: projectId, view: 'main', node_id: 'note-1', text: 'edited from outside' });
 
         expect(refused).toBe(false);
         expect(JSON.stringify(await onDisk())).toContain('edited from outside');
@@ -199,7 +210,13 @@ describe('a client elsewhere writes', () => {
 describe('agents a client elsewhere starts', () => {
     test('starts a chat at depth 0 under its credential, within the ceiling', async () => {
         const who = caller('work', { ceiling: 'supervised' });
-        const { refused, text } = await call(who, 'agent_start', { project: projectId, view: 'main', cli: 'claude', prompt: 'look around', mode: 'supervised' });
+        const { refused } = await call(who, 'agent_start', {
+            project: projectId,
+            view: 'main',
+            cli: 'claude',
+            prompt: 'look around',
+            mode: 'supervised'
+        });
 
         expect(refused).toBe(false);
         expect(started.at(-1)).toMatchObject({ openedBy: who.id, node: 'chat', runtimeMode: 'supervised' });
