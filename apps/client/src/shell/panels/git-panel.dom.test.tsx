@@ -1,7 +1,8 @@
 import { afterAll, afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
-import type { GitStatus, ProjectCanvasView } from '@ruimte/contracts';
+import type { GitCapabilitiesResult, GitStatus, ProjectCanvasView } from '@ruimte/contracts';
 import { act } from 'react';
 import { focusedCanvas } from '@/state/canvas';
+import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { clickOn, mount, openSubmenu, until, type Mounted } from '../../../testing/dom';
 import { buttonWithText, menuItem } from '../../../testing/dom-helpers';
@@ -113,10 +114,39 @@ afterEach(async () => {
     await act(async () => useUi.getState().setPanel({ open: false, kind: 'git' }));
     await page.unmount();
     workspace.close();
+    useServers.getState().forget('fake-machine');
     setSystemTime();
 });
 
 describe('the git panel over a folder of two repositories', () => {
+    test('capabilities are asked again when the writer kind changes, not for other settings, and an older answer is dropped', async () => {
+        await until(() => machine.requests('git.capabilities').length > 0);
+
+        const before = machine.requests('git.capabilities').length;
+        const pending = Promise.withResolvers<GitCapabilitiesResult>();
+        const identity = { label: 'Mac', nameSource: 'default' as const, icon: null, agentsDeleteAnyView: false };
+
+        machine.answer('git.capabilities', () => pending.promise);
+        await act(async () => useServers.getState().setIdentity('fake-machine', { ...identity, textModel: { provider: 'codex', model: null } }));
+        await until(() => machine.requests('git.capabilities').length === before + 1);
+        await act(async () =>
+            useServers.getState().setIdentity('fake-machine', { ...identity, keepAwake: 'always', textModel: { provider: 'codex', model: 'another-model' } })
+        );
+
+        expect(machine.requests('git.capabilities')).toHaveLength(before + 1);
+
+        machine.answer('git.capabilities', () => ({ gh: false, messageProvider: 'claude', amend: true }));
+        await act(async () => useServers.getState().setIdentity('fake-machine', { ...identity, textModel: { provider: 'claude', model: null } }));
+
+        const write = () => document.querySelector('button[aria-label="Writes for one repository at a time"]');
+
+        await until(() => write() !== null);
+        await act(async () => pending.resolve({ gh: false, messageProvider: null, amend: true }));
+
+        expect(write()).not.toBeNull();
+        expect(machine.requests('git.capabilities')).toHaveLength(before + 2);
+    });
+
     test('rebasing a repository waits for the person to confirm and cancel leaves it alone', async () => {
         machine.answer('git.refs', () => ({
             refs: [

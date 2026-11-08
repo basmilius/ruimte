@@ -1036,6 +1036,18 @@
             "description": "A chart, table or mockup above a reply. When off, agents answer in text.",
             "notConnected": "{{machine}} is not connected. Open one of its projects to change this."
         },
+        "textModel": {
+            "title": "Short texts",
+            "label": "Text model",
+            "description": "Writes new chat titles, commit messages and conflict proposals on this machine. Automatic leaves the choice to Ruimte. Editor AI has its own model.",
+            "automatic": "Automatic",
+            "choose": "Choose",
+            "footer": "Writes short texts on this machine. Without a model, the cheapest one is used, at the CLI's default reasoning.",
+            "loading": "Loading the CLIs on this machine…",
+            "update": "Update this machine to choose a text model.",
+            "unavailable": "This CLI, model or account is not available on this machine. Choose another or Automatic.",
+            "failed": "Could not show the text model."
+        },
         "machine": {
             "title": "What agents may do",
             "description": "Saved per machine. Applies to every device connected to it."

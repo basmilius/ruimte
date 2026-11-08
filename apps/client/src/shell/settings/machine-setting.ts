@@ -1,5 +1,5 @@
 import { messageOf } from '@adecore/ui';
-import type { TerminalShell } from '@ruimte/contracts';
+import type { TerminalShell, TextModelChoice } from '@ruimte/contracts';
 import type { BrokerSetting } from '@ruimte/pulsar';
 import i18next from 'i18next';
 import { useState } from 'react';
@@ -17,6 +17,7 @@ export interface MachineSettingPatch extends Partial<Record<MachineSwitch, boole
     readonly worktreeRoot?: string;
     readonly terminalShell?: TerminalShell;
     readonly usageStats?: boolean;
+    readonly textModel?: TextModelChoice | null;
 }
 
 function folderRefusal(e: unknown): string | null {

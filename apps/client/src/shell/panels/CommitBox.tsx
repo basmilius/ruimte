@@ -1,3 +1,4 @@
+import { useProviders } from '@adecore/agents-react/state';
 import { Button, Checkbox, Icon, IconButton, Menu, ScrollArea, SplitButton, TextArea, Tooltip, KEY_SHORTCUTS, matchesShortcut, messageOf } from '@adecore/ui';
 import type { GitCapabilitiesResult } from '@ruimte/contracts';
 import clsx from 'clsx';
@@ -32,6 +33,8 @@ interface CommitBoxProps {
  */
 export function CommitBox({ messageKey, checkouts, named, capabilities, busy, onCommit }: CommitBoxProps) {
     const { t } = useTranslation('panels');
+    const providers = useProviders((state) => state.providers);
+    const writerName = providers.find((provider) => provider.kind === capabilities?.messageProvider)?.name ?? capabilities?.messageProvider;
     const message = useGit((s) => s.messages[messageKey] ?? '');
     const version = useGit((s) => s.messageVersions[messageKey] ?? 0);
     const [offered, setOffered] = useState<{ key: string; source: string; message: string } | null>(null);
@@ -195,7 +198,7 @@ export function CommitBox({ messageKey, checkouts, named, capabilities, busy, on
                                     ? t('git.commit.stopWriting')
                                     : writeFrom === null
                                       ? t('git.commit.writeOneRepo')
-                                      : t('git.commit.letWrite', { provider: capabilities.messageProvider })
+                                      : t('git.commit.letWrite', { provider: writerName })
                             }
                             disabled={!changed || (writeFrom === null && !writing)}
                             onClick={write}

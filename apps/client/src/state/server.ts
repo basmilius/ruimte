@@ -6,7 +6,8 @@ import type {
     NodeSizes,
     ProjectIconChoice,
     Reachability,
-    TerminalShell
+    TerminalShell,
+    TextModelChoice
 } from '@ruimte/contracts';
 import type { BrokerSetting } from '@ruimte/pulsar';
 import { create } from 'zustand';
@@ -36,6 +37,8 @@ export interface ServerInfo {
     resumeAtReset: boolean;
     /* Whether an agent may show a page above its reply. */
     visualReplies: boolean;
+    /* The model that writes the machine's short texts; null is Automatic, undefined a machine that predates the setting. */
+    textModel?: TextModelChoice | null;
     /* When the machine keeps itself awake. */
     keepAwake: KeepAwakeMode;
     keepAwakeOnBattery: boolean;
@@ -134,6 +137,7 @@ interface ServersStore {
             | 'streamingAllowed'
             | 'resumeAtReset'
             | 'visualReplies'
+            | 'textModel'
             | 'keepAwake'
             | 'keepAwakeOnBattery'
             | 'keepAwakeDisplay'
@@ -174,6 +178,7 @@ interface ServersStore {
                     | 'streamingAllowed'
                     | 'resumeAtReset'
                     | 'visualReplies'
+                    | 'textModel'
                     | 'keepAwake'
                     | 'keepAwakeOnBattery'
                     | 'keepAwakeDisplay'

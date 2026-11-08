@@ -1036,6 +1036,18 @@
             "description": "Een grafiek, tabel of mockup boven een antwoord. Als dit uit staat, antwoorden agents in tekst.",
             "notConnected": "{{machine}} is niet verbonden. Open een van zijn projecten om dit aan te passen."
         },
+        "textModel": {
+            "title": "Korte teksten",
+            "label": "Tekstmodel",
+            "description": "Schrijft nieuwe chattitels, commitberichten en conflictvoorstellen op deze machine. Bij Automatisch beslist Ruimte. Editor-AI heeft een eigen model.",
+            "automatic": "Automatisch",
+            "choose": "Kiezen",
+            "footer": "Schrijft korte teksten op deze machine. Zonder model wordt het goedkoopste gebruikt, met de standaardreasoning van de CLI.",
+            "loading": "De CLI's op deze machine laden…",
+            "update": "Werk deze machine bij om een tekstmodel te kiezen.",
+            "unavailable": "Deze CLI, dit model of dit account is niet beschikbaar op deze machine. Kies een ander of Automatisch.",
+            "failed": "Kon het tekstmodel niet tonen."
+        },
         "machine": {
             "title": "Wat agents mogen",
             "description": "Per machine opgeslagen. Geldt voor elk apparaat dat ermee verbonden is."

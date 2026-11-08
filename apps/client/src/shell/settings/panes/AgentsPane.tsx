@@ -10,6 +10,7 @@ import { MachineSwitchSection } from '@/shell/settings/MachineSwitchSection';
 import { ComputerSections } from '@/shell/settings/panes/ComputerSections';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
+import { TextModelSection } from '@/shell/settings/TextModelSection';
 import {
     setClosedLidRule,
     setKeepAwake,
@@ -34,6 +35,7 @@ export function AgentsPane() {
     return (
         <>
             <AgentDefaultsSection />
+            <TextModelSection />
             <MachineSwitchSection title={t('agents.machine.title')} settings={['agentsDeleteAnyView', 'reachOpenProjects', 'resumeAtReset']} />
             <SettingsSection title={t('agents.notifications.title')}>
                 <SettingSwitchRow id="agents.working.sound" setting="agentsTurnSound" />
