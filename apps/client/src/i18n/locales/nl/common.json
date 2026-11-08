@@ -34,6 +34,7 @@
             "pages": "De browserpagina's konden niet worden getoond",
             "cellChrome": "De knoppen boven de weergaven konden niet worden getoond",
             "routines": "Routines konden niet worden getoond",
+            "consent": "Het verzoek om een client te verbinden kon niet worden getoond",
             "machine": "De status van de machine kon niet worden getoond",
             "projectSwitch": "Het scherm voor het wisselen van project kon niet worden getoond",
             "projectBanner": "De projectbanner kon niet worden getoond",

@@ -32,6 +32,7 @@ const PANES: Record<CoreSettingsSectionId, ComponentType> = {
     voice: lazyNamed(() => import('@/shell/settings/panes/VoicePane'), 'VoicePane'),
     usage: lazyNamed(() => import('@/shell/settings/panes/UsagePane'), 'UsagePane'),
     agents: lazyNamed(() => import('@/shell/settings/panes/AgentsPane'), 'AgentsPane'),
+    tunnels: lazyNamed(() => import('@/shell/settings/panes/TunnelsPane'), 'TunnelsPane'),
     machines: lazyNamed(() => import('@/shell/settings/panes/MachinesPane'), 'MachinesPane'),
     keyboard: lazyNamed(() => import('@/shell/settings/panes/KeyboardPane'), 'KeyboardPane'),
     about: lazyNamed(() => import('@/shell/settings/panes/AboutPane'), 'AboutPane')

@@ -136,6 +136,7 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     },
     { id: 'agents.defaults.permissions', section: 'agents', label: 'settings:agents.defaults.permissions' },
     row('agents.textModel', hasOpenedMachine),
+    { id: 'tunnels.mcp', section: 'tunnels', label: 'settings:tunnels.mcp.label', description: 'settings:tunnels.mcp.off', available: hasLocalMachine },
     { id: 'agents.defaults.terminalMode', section: 'agents', label: 'settings:agents.defaults.terminalMode' },
     {
         id: 'chats.streaming',

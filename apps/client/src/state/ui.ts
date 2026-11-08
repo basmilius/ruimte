@@ -19,6 +19,7 @@ export type CoreSettingsSectionId =
     | 'chats'
     | 'voice'
     | 'agents'
+    | 'tunnels'
     | 'usage'
     | 'machines'
     | 'about';

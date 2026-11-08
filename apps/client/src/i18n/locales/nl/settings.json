@@ -649,6 +649,10 @@
             "label": "Agents",
             "description": "Waarmee nieuwe agents beginnen en wat ze mogen."
         },
+        "tunnels": {
+            "label": "Tunnels",
+            "description": "Bereik de MCP van Ruimte en je dev servers van buitenaf."
+        },
         "voice": {
             "label": "Voice",
             "description": "Microfoon, dicteren en Voice Control."
@@ -1010,6 +1014,149 @@
         "thisMachine": "Deze machine",
         "onAccount": "Op je account",
         "openedThroughAccount": "Geopend via je account"
+    },
+    "tunnels": {
+        "title": "Tunnels",
+        "description": "Bereik de MCP van Ruimte en je dev servers van buitenaf, via je eigen Cloudflare-account.",
+        "visibility": "Cloudflare beëindigt de versleuteling aan zijn rand en kan dus alles lezen wat door een tunnel gaat: prompts, bestandsinhoud, inloggegevens en de cookies van een dev site. Ruimte voegt zelf geen versleuteling toe.",
+        "update": "Deze machine heeft een nieuwere Ruimte nodig voor tunnels.",
+        "loading": "De tunnels worden geladen.",
+        "elsewhere": "Tunnels stel je in met de desktop-app op de machine zelf. Dit venster toont alleen hun status.",
+        "loadFailed": "De tunnels konden niet worden geladen.",
+        "changeFailed": "Dat is niet gelukt.",
+        "failed": "Tunnels konden niet worden getoond",
+        "cannotInstall": "cloudflared kan hier niet worden geïnstalleerd",
+        "retry": "Opnieuw proberen",
+        "clients_one": "{{count}} client gebruikte onlangs een inlogsleutel",
+        "clients_other": "{{count}} clients gebruikten onlangs een inlogsleutel",
+        "stage": {
+            "not-installed": "cloudflared is niet geïnstalleerd",
+            "installing": "cloudflared wordt geïnstalleerd",
+            "cannot-install": "cloudflared kan hier niet worden geïnstalleerd",
+            "signed-out": "Niet ingelogd bij Cloudflare",
+            "signing-in": "Inloggen bij Cloudflare",
+            "no-tunnel": "Nog geen tunnel",
+            "starting": "De tunnel wordt bijgewerkt",
+            "running": "De tunnel draait",
+            "failed": "cloudflared meldt een probleem"
+        },
+        "install": {
+            "label": "cloudflared installeren",
+            "description": "Ruimte downloadt de officiële build van Cloudflare, controleert die met een checksum die in deze release is vastgelegd en bewaart hem in een eigen map.",
+            "action": "Installeren"
+        },
+        "signIn": {
+            "label": "Inloggen bij Cloudflare",
+            "description": "Ruimte start cloudflared, dat Cloudflare in je browser opent. Daar kies je het domein. Ruimte leest je Cloudflare-login nooit.",
+            "action": "Inloggen",
+            "waiting": "Rond het inloggen af in je browser en kom dan terug.",
+            "open": "Pagina openen"
+        },
+        "domain": {
+            "label": "Domein",
+            "description": "Het domein op je Cloudflare-account waar de hostnamen onder vallen.",
+            "action": "Tunnel maken"
+        },
+        "rows": {
+            "title": "Hostnamen",
+            "mcp": "De MCP van Ruimte, beveiligd met een inlogsleutel bij elk verzoek",
+            "dev": "Dev server op poort {{port}}, open voor iedereen met het adres",
+            "enabled": "{{hostname}} staat aan",
+            "afterRestart": "{{hostname}} na een herstart",
+            "comeBack": "Komt weer aan",
+            "stayOff": "Blijft uit",
+            "remove": "{{hostname}} verwijderen",
+            "add": "Toevoegen"
+        },
+        "mcp": {
+            "label": "Externe MCP",
+            "on": "Luistert op 127.0.0.1, poort {{port}}. Een hostnaam hieronder maakt hem van buitenaf bereikbaar.",
+            "off": "Uit. Er luistert niets totdat je hem aanzet.",
+            "hostname": "MCP-hostnaam",
+            "hostnameHint": "Een lange willekeurige naam, zodat scanners hem niet vinden. De naam beschermt niets: je inlogsleutels doen dat."
+        },
+        "dev": {
+            "label": "Dev server toevoegen",
+            "description": "Kies een poort waarop een sessie van jou luistert en de hostnaam die je eraan geeft. Voor een dev server staat niets: iedereen met het adres komt erbij.",
+            "port": "Poort",
+            "pick": "Kies een poort",
+            "hostname": "Hostnaam",
+            "gate": "Ik weet dat iedereen met het adres bij deze server komt"
+        },
+        "credentials": {
+            "title": "Externe clients",
+            "description": "Met een inlogsleutel bedient een gehoste client, zoals een bot, Ruimte als jij. Zonder einddatum, tenzij je er een kiest. Trek hem in als je de client niet meer vertrouwt.",
+            "address": "Adres op deze machine",
+            "addressOff": "Zet de externe MCP aan voor een adres.",
+            "clients_one": "{{count}} client gebruikte onlangs een inlogsleutel",
+            "clients_other": "{{count}} clients gebruikten onlangs een inlogsleutel",
+            "create": "Nieuwe bearer",
+            "tier": {
+                "read": "Lezen",
+                "work": "Werken",
+                "machine": "Machine"
+            },
+            "allProjects": "alle projecten",
+            "someProjects_one": "{{count}} project",
+            "someProjects_other": "{{count}} projecten",
+            "ceilingIs": "agents tot {{mode}}",
+            "oauth": "OAuth",
+            "bearer": "bearer",
+            "approvalsOn": "beantwoordt goedkeuringen",
+            "expires": "verloopt",
+            "neverUsed": "nooit gebruikt",
+            "lastUsed": "laatst gebruikt {{ago}}",
+            "revokeOne": "{{label}} intrekken",
+            "revoke": "Intrekken",
+            "createFailed": "De inlogsleutel kon niet worden gemaakt.",
+            "confirm": {
+                "title": "{{label}} intrekken?",
+                "text": "De client verliest de toegang vanaf het volgende verzoek. Agents die hij al startte blijven draaien."
+            },
+            "new": {
+                "title": "Nieuwe bearer",
+                "description": "Een bearer is een geheim voor een client die alleen een header kan zetten. Hij werkt op deze machine zonder tunnel.",
+                "label": "Naam",
+                "action": "Bearer maken",
+                "once": "Kopieer hem nu. Ruimte bewaart alleen een hash en kan hem niet nog eens tonen.",
+                "secret": "Bearer",
+                "where": "Gebruik hem op {{address}}.",
+                "copy": "Kopiëren",
+                "onHostname": "Ook toestaan op de openbare hostnaam",
+                "onHostnameWarning": "Hetzelfde geheim gaat dan bij elk verzoek door Cloudflare en niemand merkt een gestolen kopie op. OAuth is de betere keuze voor elke client die het biedt."
+            }
+        },
+        "grant": {
+            "tier": "Bereik",
+            "tierHint": {
+                "read": "Kijkt naar projecten, canvassen, taken en bestanden.",
+                "work": "Past ook canvassen aan en start agents.",
+                "machine": "Draait ook launches, routines, browsers, apparaten, databases en computergebruik."
+            },
+            "projects": "Projecten",
+            "allProjects": "Alle",
+            "someProjects": "Alleen deze",
+            "ceiling": "Agents die hij start draaien tot",
+            "ceilingHint": "Agents die hij start krijgen nooit een bredere modus.",
+            "expiry": "Eindigt",
+            "expiryHint": "Een inlogsleutel heeft standaard geen einddatum.",
+            "expiryOption": {
+                "never": "Nooit",
+                "30": "Na 30 dagen",
+                "90": "Na 90 dagen",
+                "365": "Na een jaar"
+            },
+            "approvals": "Laat hem goedkeuringen beantwoorden",
+            "approvalsWarning": "Staat dit aan, dan beantwoordt de client de goedkeuringen van zijn eigen agents en kan hij een command op deze machine goedkeuren. Supervised beperkt dan niets, en de inlogsleutel reikt ongeveer zo ver als een shell."
+        },
+        "consent": {
+            "title": "{{client}} wil Ruimte gebruiken",
+            "description": "Controleer of de code hieronder dezelfde is als op de pagina van de client. Kies dan wat hij mag en keur goed.",
+            "code": "Code",
+            "deny": "Weigeren",
+            "approve": "Goedkeuren",
+            "failed": "Het antwoord kon niet worden verstuurd."
+        }
     },
     "agents": {
         "deleteAnyView": {

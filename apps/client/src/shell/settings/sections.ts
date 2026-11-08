@@ -2,6 +2,7 @@ import { PROVIDERS_SECTION, USAGE_SECTION, type AgentsSettingsSection } from '@a
 import i18next from 'i18next';
 import {
     Bot,
+    Cable,
     CodeXml,
     Folder,
     Info,
@@ -62,6 +63,7 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
             { id: 'providers', icon: PROVIDERS_SECTION.icon, split: PROVIDERS_SECTION.split },
             { id: 'chats', icon: MessagesSquare },
             { id: 'agents', icon: Bot },
+            { id: 'tunnels', icon: Cable },
             { id: 'voice', icon: Mic },
             { id: 'usage', icon: USAGE_SECTION.icon }
         ]

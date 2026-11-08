@@ -649,6 +649,10 @@
             "label": "Agents",
             "description": "What new agents start with and what they may do."
         },
+        "tunnels": {
+            "label": "Tunnels",
+            "description": "Reach Ruimte's MCP and your dev servers from outside."
+        },
         "voice": {
             "label": "Voice",
             "description": "Microphone, dictation and Voice Control."
@@ -1010,6 +1014,149 @@
         "thisMachine": "This machine",
         "onAccount": "On your account",
         "openedThroughAccount": "Opened through your account"
+    },
+    "tunnels": {
+        "title": "Tunnels",
+        "description": "Reach Ruimte's MCP and your dev servers from outside, through your own Cloudflare account.",
+        "visibility": "Cloudflare ends the encryption at its edge, so it can read everything that passes through a tunnel: prompts, file contents, credentials and the cookies of a dev site. Ruimte adds no encryption of its own on top.",
+        "update": "This machine needs a newer Ruimte to offer tunnels.",
+        "loading": "Loading the tunnels.",
+        "elsewhere": "Tunnels are set up in the desktop app on the machine itself. This window only shows their state.",
+        "loadFailed": "The tunnels could not be loaded.",
+        "changeFailed": "That did not work.",
+        "failed": "Tunnels could not be shown",
+        "cannotInstall": "cloudflared cannot be installed here",
+        "retry": "Try again",
+        "clients_one": "{{count}} client used a credential lately",
+        "clients_other": "{{count}} clients used a credential lately",
+        "stage": {
+            "not-installed": "cloudflared is not installed",
+            "installing": "Installing cloudflared",
+            "cannot-install": "cloudflared cannot be installed here",
+            "signed-out": "Not signed in to Cloudflare",
+            "signing-in": "Signing in to Cloudflare",
+            "no-tunnel": "No tunnel yet",
+            "starting": "Updating the tunnel",
+            "running": "The tunnel is running",
+            "failed": "cloudflared reported a problem"
+        },
+        "install": {
+            "label": "Install cloudflared",
+            "description": "Ruimte downloads Cloudflare's official build, checks it against a checksum pinned in this release, and keeps it in its own folder.",
+            "action": "Install"
+        },
+        "signIn": {
+            "label": "Sign in with Cloudflare",
+            "description": "Ruimte runs cloudflared, which opens Cloudflare in your browser. You pick the domain there. Ruimte never reads your Cloudflare login.",
+            "action": "Sign in",
+            "waiting": "Finish signing in in your browser, then come back.",
+            "open": "Open the page"
+        },
+        "domain": {
+            "label": "Domain",
+            "description": "The domain on your Cloudflare account that the hostnames use.",
+            "action": "Create tunnel"
+        },
+        "rows": {
+            "title": "Hostnames",
+            "mcp": "Ruimte's MCP, guarded by a credential on every request",
+            "dev": "Dev server on port {{port}}, open to anyone with the address",
+            "enabled": "{{hostname}} is on",
+            "afterRestart": "{{hostname}} after a restart",
+            "comeBack": "Comes back on",
+            "stayOff": "Stays off",
+            "remove": "Remove {{hostname}}",
+            "add": "Add"
+        },
+        "mcp": {
+            "label": "External MCP",
+            "on": "Listening on 127.0.0.1, port {{port}}. A hostname below makes it reachable from outside.",
+            "off": "Off. Nothing listens until you turn it on.",
+            "hostname": "MCP hostname",
+            "hostnameHint": "A long random name, so scanners do not find it. The name protects nothing: your credentials do."
+        },
+        "dev": {
+            "label": "Add a dev server",
+            "description": "Pick a port a session of yours listens on, and the hostname to give it. Nothing sits in front of a dev server: anyone with the address reaches it.",
+            "port": "Port",
+            "pick": "Pick a port",
+            "hostname": "Hostname",
+            "gate": "I know anyone with the address reaches this server"
+        },
+        "credentials": {
+            "title": "External clients",
+            "description": "A credential lets a hosted client, such as a bot, operate Ruimte as you. It has no end date unless you set one. Revoke it when you stop trusting the client.",
+            "address": "Address on this machine",
+            "addressOff": "Turn the external MCP on to get an address.",
+            "clients_one": "{{count}} client used a credential lately",
+            "clients_other": "{{count}} clients used a credential lately",
+            "create": "New bearer",
+            "tier": {
+                "read": "Read",
+                "work": "Work",
+                "machine": "Machine"
+            },
+            "allProjects": "all projects",
+            "someProjects_one": "{{count}} project",
+            "someProjects_other": "{{count}} projects",
+            "ceilingIs": "agents up to {{mode}}",
+            "oauth": "OAuth",
+            "bearer": "bearer",
+            "approvalsOn": "answers approvals",
+            "expires": "expires",
+            "neverUsed": "never used",
+            "lastUsed": "last used {{ago}}",
+            "revokeOne": "Revoke {{label}}",
+            "revoke": "Revoke",
+            "createFailed": "The credential could not be made.",
+            "confirm": {
+                "title": "Revoke {{label}}?",
+                "text": "The client loses access from its next request. Agents it already started keep running."
+            },
+            "new": {
+                "title": "New bearer",
+                "description": "A bearer is a secret for a client that can only set a header. It works on this machine without a tunnel.",
+                "label": "Name",
+                "action": "Make bearer",
+                "once": "Copy it now. Ruimte keeps only a hash and cannot show it again.",
+                "secret": "Bearer",
+                "where": "Use it at {{address}}.",
+                "copy": "Copy",
+                "onHostname": "Also allow it on the public hostname",
+                "onHostnameWarning": "The same secret then crosses Cloudflare on every request, and nothing notices a stolen copy. OAuth is the better choice for any client that offers it."
+            }
+        },
+        "grant": {
+            "tier": "Reach",
+            "tierHint": {
+                "read": "Looks at projects, canvases, tasks and files.",
+                "work": "Also changes canvases and starts agents.",
+                "machine": "Also runs launches, routines, browsers, devices, databases and computer use."
+            },
+            "projects": "Projects",
+            "allProjects": "All",
+            "someProjects": "Only these",
+            "ceiling": "Agents it starts run up to",
+            "ceilingHint": "Agents it starts never get a wider mode.",
+            "expiry": "Ends",
+            "expiryHint": "A credential has no end date by default.",
+            "expiryOption": {
+                "never": "Never",
+                "30": "After 30 days",
+                "90": "After 90 days",
+                "365": "After a year"
+            },
+            "approvals": "Let it answer approvals",
+            "approvalsWarning": "With this on, the client answers its own agents' approvals and can approve a command on this machine. Supervised then limits nothing, and the credential reaches about as far as a shell."
+        },
+        "consent": {
+            "title": "{{client}} wants to use Ruimte",
+            "description": "Check that the code below is the one on the client's page. Then choose what it may do and approve.",
+            "code": "Code",
+            "deny": "Deny",
+            "approve": "Approve",
+            "failed": "The answer could not be sent."
+        }
     },
     "agents": {
         "deleteAnyView": {

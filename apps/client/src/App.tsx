@@ -18,6 +18,7 @@ import { StartScreen } from '@/shell/StartScreen';
 import { FLOATING_FAILURE, failed } from '@/shell/surface-failure';
 import { Toasts } from '@/shell/Toasts';
 import { watchDrags } from '@/shell/view-drag';
+import { useConsent } from '@/state/consent';
 import { useProject } from '@/state/project';
 import { useReleaseNotes } from '@/state/release-notes';
 import { useSettings } from '@/state/settings';
@@ -57,6 +58,12 @@ const LoginDialog = lazyDialog(
     'LoginDialog',
     useUi,
     (s) => s.login !== null
+);
+const ConsentDialog = lazyDialog(
+    () => import('@/shell/tunnels/ConsentDialog'),
+    'ConsentDialog',
+    useConsent,
+    (s) => s.requests.length > 0
 );
 const ProviderCommandDialog = lazyDialog(
     () => import('@/chat/ProviderCommandDialog'),
@@ -209,6 +216,9 @@ export function App() {
                     </Floating>
                     <Floating surface="login">
                         <LoginDialog />
+                    </Floating>
+                    <Floating surface="consent">
+                        <ConsentDialog />
                     </Floating>
                     <Floating surface="providerCommand">
                         <ProviderCommandDialog />
