@@ -362,7 +362,10 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         agents,
         artifacts
     });
-    const network = wireNetwork(config, compiled, machine, dispatcher, { clients: () => clients });
+    const network = wireNetwork(config, compiled, machine, dispatcher, {
+        clients: () => clients,
+        brokerSettled: () => tunnels.service.networkBack()
+    });
 
     noteMoment('daemon.boot', 'wired');
     void extensions.startAutostarted();

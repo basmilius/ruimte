@@ -317,6 +317,24 @@ describe('the tunnel', () => {
         expect(f.cloudflare.records).toHaveLength(1);
         expect(f.runner.running).toBe(0);
     });
+
+    test('keeps a tunnel on an account the new token does not reach, and says so', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+        f.cloudflare.zones.splice(0);
+        f.cloudflare.zone('work.dev', { id: 'acc-2', name: 'Work' });
+        await f.service.setToken(FAKE_API_TOKEN);
+        await f.service.idle();
+
+        const state = await f.state();
+
+        expect(state).toMatchObject({ stage: 'failed', tunnel: { name: 'ruimte-bas-macbook-f7a7' }, rows: [{ hostname: 'shop.bmnw.nl' }] });
+        expect(state.message).toContain('does not reach that account');
+        expect(f.cloudflare.tunnels).toHaveLength(1);
+    });
 });
 
 describe('a row', () => {
@@ -684,6 +702,81 @@ describe('after a restart', () => {
 
         expect(await again.state()).toMatchObject({ stage: 'failed' });
         expect((await again.state()).message).toContain('Ruimte could not reach Cloudflare');
+    });
+
+    test('brings the tunnel up once the network is back after a boot without it', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000, comeBack: true });
+        await f.service.idle();
+        await f.service.stop();
+
+        const offline = { value: true };
+        const again = await fixture(
+            { cloudflare: (url, init) => (offline.value ? Promise.reject(new Error('offline')) : f.cloudflare.fetch(url, init)) },
+            '/usr/bin/cloudflared',
+            { home: f.home, tokens: f.tokens, cloudflare: f.cloudflare }
+        );
+
+        await again.service.resume();
+        await again.service.idle();
+        offline.value = false;
+        again.service.networkBack();
+        await again.service.idle();
+
+        expect(await again.state()).toMatchObject({ stage: 'running', message: null });
+        expect(again.runner.running).toBe(1);
+    });
+
+    test('tries nothing again when the network comes back after a failure that was not about the network', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        f.cloudflare.failing.set('GET /accounts/acc-1/cfd_tunnel', 403);
+        await f.service.retry();
+        await f.service.idle();
+
+        const calls = f.cloudflare.calls.length;
+
+        f.service.networkBack();
+        await f.service.idle();
+
+        expect(f.cloudflare.calls).toHaveLength(calls);
+        expect((await f.state()).stage).toBe('failed');
+    });
+
+    test('starts no cloudflared after it stopped, also when Cloudflare answers the run token later', async () => {
+        let release: () => void = () => undefined;
+        const held = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        const cloudflare = new FakeCloudflare();
+        const f = await fixture(
+            {
+                cloudflare: async (url, init) => {
+                    if (url.endsWith('/token')) {
+                        await held;
+                    }
+
+                    return cloudflare.fetch(url, init);
+                }
+            },
+            '/usr/bin/cloudflared',
+            { cloudflare }
+        );
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 });
+
+        const stopped = f.service.stop();
+
+        release();
+        await stopped;
+        await f.service.idle();
+
+        expect(f.runner.calls).toHaveLength(0);
+        expect(f.runner.running).toBe(0);
     });
 
     test('leaves a child that will not stop running and says so', async () => {

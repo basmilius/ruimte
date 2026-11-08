@@ -38,7 +38,11 @@ export function wireNetwork(
     compiled: boolean,
     machine: MachineBundle,
     dispatcher: Dispatcher,
-    later: { clients(): ClientsBundle }
+    later: {
+        clients(): ClientsBundle;
+        /* The broker took this machine, which is the sign the network is there again. */
+        brokerSettled(): void;
+    }
 ): NetworkBundle {
     const { identity, auth, handshake, access } = machine;
     // A TURN server that restarts under an allocation must not take the daemon with it; any other crash is reported on the way out.
@@ -95,7 +99,10 @@ export function wireNetwork(
                 publicKey: identity.publicKey,
                 sign: (message) => identity.sign(message),
                 gate,
-                onSettled: () => reach.brokerSettled()
+                onSettled: () => {
+                    reach.brokerSettled();
+                    later.brokerSettled();
+                }
             })
     });
     identity.attachBroker(brokerSwitch);

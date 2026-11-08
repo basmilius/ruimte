@@ -88,6 +88,9 @@ export class TunnelService {
     private child: { process: CloudflaredProcess; lines: string[]; stopping: boolean } | null = null;
     private binary: string | null = null;
     private pending: Promise<void> = Promise.resolve();
+    private stopped = false;
+    /* The last job failed because Cloudflare could not be reached or asked Ruimte to wait, so the network coming back tries again. */
+    private waitsForNetwork = false;
 
     constructor(ports: TunnelPorts) {
         this.ports = ports;
@@ -200,14 +203,20 @@ export class TunnelService {
 
     /* Starts a job in the background, behind the one before it, and tells the clients when it ended. */
     private start(busy: Exclude<Busy, null>, work: () => Promise<void>): void {
+        if (this.stopped) {
+            return;
+        }
+
         this.busy = busy;
         this.failure = null;
+        this.waitsForNetwork = false;
         this.announce();
         this.pending = this.jobs
             .run(async () => {
                 try {
                     await work();
                 } catch (e) {
+                    this.waitsForNetwork = e instanceof CloudflareError && (e.code === 'unreachable' || e.code === 'rate-limited');
                     this.failure = this.plain(e, 'That did not work');
                     this.ports.log(`Tunnels: ${this.failure}`);
                 } finally {
@@ -552,19 +561,37 @@ export class TunnelService {
         this.binary = await this.ports.installer.locate();
 
         if (this.token !== null) {
-            this.start('checking', async () => {
-                this.zones = await this.api().zones();
-                await this.bringUp();
-            });
+            this.start('checking', () => this.refresh());
         }
     }
 
-    /* The daemon ends its child with it. */
-    async stop(): Promise<void> {
-        await this.stopChild();
+    /*
+     * The network is back, which the daemon learns from the broker taking this machine again. A bring-up that failed
+     * because Cloudflare could not be reached tries once more, so the MCP row that comes back on needs no Try again.
+     */
+    networkBack(): void {
+        if (!this.waitsForNetwork || this.busy !== null || this.token === null) {
+            return;
+        }
+
+        this.start('checking', () => this.refresh());
     }
 
-    /* A tunnel that is gone from the account, or on an account this token does not reach, is forgotten with its rows, and the person is told. */
+    /* The daemon ends its child with it, after the work in flight, and starts nothing from then on. */
+    async stop(): Promise<void> {
+        this.stopped = true;
+        await this.jobs.run(() => this.stopChild());
+    }
+
+    private async refresh(): Promise<void> {
+        this.zones = await this.api().zones();
+        await this.bringUp();
+    }
+
+    /*
+     * A tunnel on an account this token does not reach stays as it is, since another token may reach it. Only a token
+     * that reaches the account and finds the tunnel gone makes Ruimte forget it and its rows.
+     */
     private async checkTunnel(): Promise<void> {
         const tunnel = this.stored.tunnel;
 
@@ -572,9 +599,14 @@ export class TunnelService {
             return;
         }
 
-        const reachable = this.accounts().some((account) => account.id === tunnel.account.id);
+        if (!this.accounts().some((account) => account.id === tunnel.account.id)) {
+            throw new TunnelConfigError(
+                'tunnel-unreachable',
+                `The tunnel ${tunnel.name} is on the Cloudflare account ${tunnel.account.name}, and this API token does not reach that account. Paste a token that does.`
+            );
+        }
 
-        if (reachable && (await this.api().tunnel(tunnel.account.id, tunnel.id)) !== null) {
+        if ((await this.api().tunnel(tunnel.account.id, tunnel.id)) !== null) {
             return;
         }
 
@@ -584,7 +616,7 @@ export class TunnelService {
 
         throw new TunnelConfigError(
             'tunnel-gone',
-            `The tunnel ${tunnel.name} is not on the Cloudflare account this token reaches, so Ruimte forgot it and its hostnames. Their DNS records are still in Cloudflare. Delete them there if you no longer need them.`
+            `The tunnel ${tunnel.name} is gone from the Cloudflare account ${tunnel.account.name}, so Ruimte forgot it and its hostnames. Their DNS records are still in Cloudflare. Delete them there if you no longer need them.`
         );
     }
 
@@ -686,7 +718,7 @@ export class TunnelService {
 
     /* A tunnel that Cloudflare keeps the hostnames of needs no restart for a change: the child runs while any hostname is on. */
     private async reconcileChild(): Promise<void> {
-        if (!this.isLive() || this.stored.tunnel === null || this.token === null) {
+        if (this.stopped || !this.isLive() || this.stored.tunnel === null || this.token === null) {
             await this.stopChild();
 
             return;
@@ -699,6 +731,12 @@ export class TunnelService {
 
     private async startChild(binary: string, tunnel: { id: string; account: TunnelNamed }): Promise<void> {
         const runToken = await this.api().tunnelToken(tunnel.account.id, tunnel.id);
+
+        // The daemon may have stopped while Cloudflare answered; a child started now would outlive it.
+        if (this.stopped) {
+            return;
+        }
+
         const lines: string[] = [];
         const process = this.ports.runner.start(
             binary,
