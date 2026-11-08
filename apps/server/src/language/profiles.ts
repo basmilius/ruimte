@@ -509,6 +509,28 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
             }
         ]
     },
+    /*
+     * gopls, found where Go put it (`toolchain.ts`). It loads packages with `go list`, which runs cgo tools,
+     * so it stays off work from another machine. `GOTOOLCHAIN=local` keeps a `go.mod` that asks for a newer Go
+     * from downloading one, and the `generate` lenses are off so no command of the server runs `go generate`.
+     */
+    go: {
+        kind: 'go',
+        runsProjectCode: true,
+        components: [
+            {
+                name: 'go',
+                title: 'gopls',
+                languages: ['go', 'go.mod', 'go.work'],
+                patterns: ['go.mod', 'go.work'],
+                entry: 'gopls',
+                program: (context) => context.native?.executable ?? '',
+                args: () => [],
+                initializationOptions: () => ({ codelenses: { generate: false, regenerate_cgo: false } }),
+                env: { PATH: toolchainPath('go'), GOTOOLCHAIN: 'local' }
+            }
+        ]
+    },
     tailwind: {
         kind: 'tailwind',
         runsProjectCode: true,
@@ -578,10 +600,13 @@ export function lspLanguageId(languageId: string): string {
 const JSONC_FILES =
     /(^|\/)(tsconfig(\..+)?\.json|jsconfig(\..+)?\.json|\.eslintrc(\.json)?|\.babelrc(\.json)?|\.swcrc|devcontainer\.json|\.devcontainer\/.+\.json|\.vscode\/.+\.json|.+\.jsonc)$/;
 
-/* The language id a document opens with: the client's, except for a JSON file that allows comments. */
+/* The files gopls tells apart by the language id of the document, not by its name. */
+const GO_FILES: Record<string, string> = { 'go.mod': 'go.mod', 'go.work': 'go.work' };
+
+/* The language id a document opens with: the client's, except for a JSON file that allows comments and the module files of Go. */
 export function documentLanguageId(languageId: string, storedPath: string): string {
     const id = lspLanguageId(languageId);
-    return id === 'json' && JSONC_FILES.test(storedPath) ? 'jsonc' : id;
+    return id === 'json' && JSONC_FILES.test(storedPath) ? 'jsonc' : (GO_FILES[storedPath.slice(storedPath.lastIndexOf('/') + 1)] ?? id);
 }
 
 /* Whether a process serves a document, by its language or by its path. */

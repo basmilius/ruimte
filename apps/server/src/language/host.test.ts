@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve, sep } from 'node:path';
+import { basename, dirname, join, resolve, sep } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { FakeWatch } from '@adecore/agents/testing';
 import { pathToFileUri } from '@adecore/lsp';
@@ -91,7 +91,7 @@ function rig(
         root,
         folderOf: (projectId) => (projectId === 'p1' ? (options.folder ?? WORK) : null),
         holders: () => [...holders],
-        findProgram: () => options.programs ?? [],
+        findProgram: (program) => (options.programs ?? []).filter((path) => basename(path) === program),
         ...(options.agentWorktrees === undefined ? {} : { agentWorktrees: async () => options.agentWorktrees! }),
         ...(options.worktreeBuild === undefined ? {} : { worktreeBuild: options.worktreeBuild }),
         machineHome: {
@@ -116,6 +116,10 @@ function rig(
                 installs.push('php-native');
                 await mkdir(join(spec.cwd, 'target', 'release'), { recursive: true });
                 await writeFile(join(spec.cwd, 'target', 'release', nativeProgramFile('php-native', process.platform)), '');
+                return 0;
+            }
+            if (spec.command.endsWith('gopls')) {
+                onLine('golang.org/x/tools/gopls v0.18.1');
                 return 0;
             }
             if (spec.command.endsWith('rust-analyzer')) {
@@ -2505,6 +2509,39 @@ describe('a server from a pinned release of someone else', () => {
         });
 
         expect((await open(host, 'docs/guide.md', '# Guide\n', 'client-1', 'markdown')).servers).toEqual(['markdown']);
+    });
+});
+
+describe('Go', () => {
+    async function withGo(options: { untrusted?: string[] } = {}) {
+        const program = join(root, 'go', 'bin', 'gopls');
+        await mkdir(dirname(program), { recursive: true });
+        await writeFile(program, '');
+
+        return installed(['go'], { programs: [program], ...options });
+    }
+
+    const openGo = (host: LanguageHost, path: string, languageId = 'go') => open(host, path, 'package main\n', 'client-1', languageId);
+
+    it('serves Go files and module files in any project, with go.mod opened as the language gopls expects', async () => {
+        const { host, spawner } = await withGo();
+
+        expect((await openGo(host, 'cmd/main.go')).servers).toEqual(['go']);
+        await ready(host, 'go');
+        expect((await openGo(host, 'go.mod', 'plaintext')).servers).toEqual(['go']);
+
+        const [process] = spawner.of('go');
+        expect(process!.spec.env).toMatchObject({ GOTOOLCHAIN: 'local' });
+        expect(process!.server.paramsOf('initialize')[0]).toMatchObject({ initializationOptions: { codelenses: { generate: false } } });
+        expect(
+            process!.server.paramsOf('textDocument/didOpen').map((params) => (params as { textDocument: { languageId: string } }).textDocument.languageId)
+        ).toEqual(expect.arrayContaining(['go', 'go.mod']));
+    });
+
+    it('stays off work from another machine, which would run its cgo tools', async () => {
+        const { host } = await withGo({ untrusted: [WORK] });
+
+        expect((await openGo(host, 'cmd/main.go')).servers).toEqual([]);
     });
 });
 

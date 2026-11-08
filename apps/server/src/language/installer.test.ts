@@ -771,7 +771,7 @@ describe('the SQL server install', () => {
             run,
             onChange: () => undefined,
             onSwitched: (kind) => switched.push(kind),
-            findProgram: () => [proxy, executable]
+            findProgram: (program) => (program === 'rust-analyzer' ? [proxy, executable] : [])
         });
         await installer.load();
         expect(await installer.state('rust')).toBe('missing');
@@ -792,6 +792,38 @@ describe('the SQL server install', () => {
         expect(calls).toEqual([proxy, proxy, executable]);
         expect(await readdir(root)).not.toContain('rust');
         await expect(installer.rollback('rust')).rejects.toThrow();
+    });
+
+    it('finds gopls by its version command, with the folders of Go on the PATH it runs with', async () => {
+        const executable = join(root, 'go', 'bin', 'gopls');
+        await mkdir(dirname(executable), { recursive: true });
+        await writeFile(executable, '');
+        const calls: Array<{ command: string; args: string[]; path: string | undefined }> = [];
+        const run: RunCommand = async (spec, onLine) => {
+            calls.push({ command: spec.command, args: spec.args, path: spec.env.PATH });
+            onLine('golang.org/x/tools/gopls v0.18.1');
+            onLine('    golang.org/x/tools/gopls@v0.18.1 h1:abc=');
+            return 0;
+        };
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run,
+            onChange: () => undefined,
+            findProgram: (program) => (program === 'gopls' ? [executable] : [])
+        });
+        await installer.load();
+
+        expect(await installer.state('go')).toBe('installed');
+        expect(installer.versionOf('go')).toBe('v0.18.1');
+        expect(installer.launchOf('go')).toEqual({ executable });
+        expect(calls).toEqual([{ command: executable, args: ['version'], path: expect.stringContaining('/usr/local/go/bin') }]);
+
+        const lacking = new LanguageInstaller({ root, runtime, run, onChange: () => undefined, findProgram: () => [] });
+        await lacking.load();
+
+        expect(await lacking.state('go')).toBe('missing');
+        expect(lacking.failureOf('go')).toBe('gopls is not on this machine. It comes with Go: run go install golang.org/x/tools/gopls@latest');
     });
 });
 

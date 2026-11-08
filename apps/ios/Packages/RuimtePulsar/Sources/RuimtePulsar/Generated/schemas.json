@@ -53562,7 +53562,8 @@
           "tailwind",
           "sql-native",
           "rust",
-          "markdown"
+          "markdown",
+          "go"
         ]
       }
     },
@@ -53728,7 +53729,8 @@
           "tailwind",
           "sql-native",
           "rust",
-          "markdown"
+          "markdown",
+          "go"
         ]
       }
     },
@@ -53894,7 +53896,8 @@
           "tailwind",
           "sql-native",
           "rust",
-          "markdown"
+          "markdown",
+          "go"
         ]
       }
     },

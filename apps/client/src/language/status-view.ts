@@ -18,7 +18,8 @@ const SERVER_NAMES: Record<LanguageServerKind, { name: string; package: string }
     tailwind: { name: 'Tailwind CSS', package: '@tailwindcss/language-server' },
     'sql-native': { name: 'SQL', package: 'sql-language-server' },
     rust: { name: 'Rust', package: 'rust-analyzer' },
-    markdown: { name: 'Markdown', package: 'marksman' }
+    markdown: { name: 'Markdown', package: 'marksman' },
+    go: { name: 'Go', package: 'gopls' }
 };
 
 export type ServerTone = 'ok' | 'busy' | 'error' | 'idle';
@@ -57,7 +58,7 @@ const SERVER_GROUPS = [
     { id: 'scripts', kinds: ['typescript', 'vue', 'eslint'] },
     { id: 'web', kinds: ['html', 'css', 'tailwind'] },
     { id: 'data', kinds: ['json', 'yaml', 'sql-native'] },
-    { id: 'other', kinds: ['php-native', 'php', 'python', 'rust', 'markdown', 'bash', 'docker'] }
+    { id: 'other', kinds: ['php-native', 'php', 'python', 'rust', 'go', 'markdown', 'bash', 'docker'] }
 ] as const satisfies readonly { id: string; kinds: readonly LanguageServerKind[] }[];
 
 type ServerGroupId = (typeof SERVER_GROUPS)[number]['id'];

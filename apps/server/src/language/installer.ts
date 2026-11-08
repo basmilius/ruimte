@@ -31,7 +31,7 @@ import {
     toolchainMissingOf,
     toolchainPath,
     toolchainProgramOf,
-    toolchainVersionOf,
+    toolchainVersionSpecOf,
     type ToolchainKind
 } from './toolchain.ts';
 import { pinnedVersionsOf, versionOf, type NpmKind } from './versions.ts';
@@ -496,16 +496,18 @@ export class LanguageInstaller {
     private async detect(kind: ToolchainKind): Promise<{ executable: string; version: string } | null> {
         const program = toolchainProgramOf(kind);
         const candidates = (this.options.findProgram ?? toolchainCandidates)(program);
+        const { program: asker, args, parse } = toolchainVersionSpecOf(kind);
         let found: { executable: string; version: string } | null = null;
         for (const executable of candidates) {
             if (!(await fileExists(executable))) {
                 continue;
             }
             const lines: string[] = [];
-            const code = await this.run({ command: executable, args: ['--version'], cwd: dirname(executable), env: { PATH: toolchainPath() } }, (line) =>
-                lines.push(line)
-            ).catch(() => null);
-            const version = code === 0 ? toolchainVersionOf(program, lines) : null;
+            const command = asker === undefined ? executable : join(dirname(executable), asker);
+            const code = await this.run({ command, args, cwd: dirname(executable), env: { PATH: toolchainPath(kind) } }, (line) => lines.push(line)).catch(
+                () => null
+            );
+            const version = code === 0 ? parse(lines) : null;
             if (version !== null) {
                 found = { executable, version };
                 break;

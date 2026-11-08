@@ -83,7 +83,10 @@ describe('what a person can do', () => {
 });
 
 describe('the servers of the languages added later', () => {
-    const named: Array<[LanguageServerKind, string, string]> = [['markdown', 'Markdown', 'marksman']];
+    const named: Array<[LanguageServerKind, string, string]> = [
+        ['markdown', 'Markdown', 'marksman'],
+        ['go', 'Go', 'gopls']
+    ];
 
     test.each(named)('names %s and its program, and groups it with the others', (kind, name, program) => {
         expect(nameOf(kind)).toBe(name);

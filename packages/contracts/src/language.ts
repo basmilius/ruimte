@@ -29,7 +29,9 @@ export const LanguageServerKindSchema = z.enum([
     // rust-analyzer as the Rust toolchain brings it; Ruimte finds it and never installs it.
     'rust',
     // marksman, a pinned release of someone else's server.
-    'markdown'
+    'markdown',
+    // gopls as Go brings it; Ruimte finds it and never installs it.
+    'go'
 ]);
 export type LanguageServerKind = z.infer<typeof LanguageServerKindSchema>;
 

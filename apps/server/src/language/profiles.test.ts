@@ -114,6 +114,21 @@ describe('server profiles', () => {
         expect(component!.initializationOptions({ ...launch, cargoManifests: manifests })).toEqual({ linkedProjects: manifests });
     });
 
+    it('serves Go and its module files in any project, with no Go toolchain download and no go generate', () => {
+        expect(kindForLanguage('go')).toBe('go');
+        expect(kindForLanguage('plaintext', {}, 'service/go.mod')).toBe('go');
+        expect(kindForLanguage('plaintext', {}, 'go.work')).toBe('go');
+        expect(KIND_PROFILES.go.activation).toBeUndefined();
+        expect(KIND_PROFILES.go.runsProjectCode).toBe(true);
+        expect(documentLanguageId('plaintext', 'service/go.mod')).toBe('go.mod');
+        expect(documentLanguageId('go', 'main.go')).toBe('go');
+        const [component] = KIND_PROFILES.go.components;
+        const launch = { ...context, native: { executable: '/home/go/bin/gopls' } };
+        expect(component!.program!(launch)).toBe('/home/go/bin/gopls');
+        expect(component!.initializationOptions(launch)).toEqual({ codelenses: { generate: false, regenerate_cgo: false } });
+        expect(component!.env).toMatchObject({ GOTOOLCHAIN: 'local' });
+    });
+
     it('turns the building of code off in the initialization options only for a project held back', () => {
         const rust = KIND_PROFILES.rust;
         const [component] = rust.components;
