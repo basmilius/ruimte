@@ -1754,6 +1754,29 @@
             "search": "Anonymous daily totals of feature use, sent once a day",
             "toggle": "Send usage statistics from {{machine}}"
         },
+        "clients": {
+            "title": "Connected now",
+            "description": "The apps, browsers and machines connected to this machine right now.",
+            "listFailed": "Could not list what is connected",
+            "empty": "Nothing is connected right now.",
+            "machine": "Another machine",
+            "browser": "Browser",
+            "unknown": "Unknown app",
+            "unknownVersion": "Unknown version",
+            "connected": "connected {{ago}}",
+            "lastRequest": "Last request {{ago}}",
+            "connections_one": "{{count}} connection",
+            "connections_other": "{{count}} connections",
+            "reach": {
+                "loopback": "This computer",
+                "lan": "Local network",
+                "internet": "Internet"
+            },
+            "silent": {
+                "label": "Not answering",
+                "description": "The list loads once the machine is back."
+            }
+        },
         "access": {
             "title": "Apps with access",
             "description": "Browsers and apps that came in through an account.",

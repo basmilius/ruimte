@@ -12,6 +12,7 @@ import { BackgroundServiceSection } from '@/shell/settings/BackgroundServiceSect
 import { forgetOnClient, machineDialogModel, removeFromAccount, type MachineActionDeps, type MachineDialogModel } from '@/shell/settings/machine-actions';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf, reachLabel, type MachineEntry } from '@/shell/settings/machine-list';
+import { MachineClients } from '@/shell/settings/MachineClients';
 import { MachineIdentityForm } from '@/shell/settings/MachineIdentityForm';
 import {
     BrokerRow,
@@ -170,6 +171,7 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
                     {tab === 'storage' && <MachineStorage endpoint={entry.endpoint} />}
                     {tab === 'access' && (
                         <>
+                            <MachineClients endpoint={entry.endpoint} />
                             <MachineAccess endpoint={entry.endpoint} />
                             <AccountSection entry={entry} endpoint={entry.endpoint} model={model} machineAccount={machineAccount} reason={reason} />
                             <RemoveSection entry={entry} model={model} />

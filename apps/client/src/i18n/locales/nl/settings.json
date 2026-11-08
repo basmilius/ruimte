@@ -1754,6 +1754,29 @@
             "search": "Anonieme dagtotalen van gebruikte functies, één keer per dag verstuurd",
             "toggle": "Gebruiksstatistieken versturen vanaf {{machine}}"
         },
+        "clients": {
+            "title": "Nu verbonden",
+            "description": "De apps, browsers en machines die nu met deze machine verbonden zijn.",
+            "listFailed": "Kon niet opsommen wat er verbonden is",
+            "empty": "Er is nu niets verbonden.",
+            "machine": "Een andere machine",
+            "browser": "Browser",
+            "unknown": "Onbekende app",
+            "unknownVersion": "Onbekende versie",
+            "connected": "verbonden {{ago}}",
+            "lastRequest": "Laatste verzoek {{ago}}",
+            "connections_one": "{{count}} verbinding",
+            "connections_other": "{{count}} verbindingen",
+            "reach": {
+                "loopback": "Deze computer",
+                "lan": "Lokaal netwerk",
+                "internet": "Internet"
+            },
+            "silent": {
+                "label": "Geeft geen antwoord",
+                "description": "De lijst laadt zodra de machine terug is."
+            }
+        },
         "access": {
             "title": "Apps met toegang",
             "description": "Browsers en apps die via een account binnenkwamen.",

@@ -1,5 +1,5 @@
 import { RUNTIME_MODES, runtimeModeLabel } from '@adecore/agents-react/chat';
-import { messageOf, Segmented, Select, Skeleton, Switch, Button, IconButton, Tooltip, FormError, Input, useNow } from '@adecore/ui';
+import { messageOf, Segmented, Select, Switch, Button, IconButton, Tooltip, FormError, Input, useNow } from '@adecore/ui';
 import { formatNumericDate, formatAgo } from '@adecore/ui/format';
 import { ConfirmDialog, SettingsRow } from '@adecore/ui/settings';
 import type { AuthSession, PeerLink, ReachCheck, RuntimeMode, TerminalShell } from '@ruimte/contracts';
@@ -11,8 +11,9 @@ import { perform } from '@/actions/client-actions';
 import { desktop, openInSystemBrowser } from '@/desktop/bridge';
 import { forgetEndpoint } from '@/endpoint';
 import { saveMachineSetting, useMachineSetting, type MachineSettingPatch } from '@/shell/settings/machine-setting';
+import { MachineListSection } from '@/shell/settings/MachineListSection';
 import { reachText } from '@/shell/settings/reach-text';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { useMachineList } from '@/shell/settings/use-machine-list';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
@@ -383,77 +384,6 @@ export function UsageStatsRow({ endpoint, reason }: { endpoint: Endpoint; reason
 
 function ago(timestamp: number, now: number): string {
     return formatAgo(now - timestamp);
-}
-
-type ListWords = 'machine.access' | 'machine.links';
-
-/* A list the machine behind the socket keeps, so it loads again on every reconnect. */
-function useMachineList<Item>(endpointId: string, enabled: boolean, read: (transport: Transport) => Promise<Item[]>, words: ListWords) {
-    const { t } = useTranslation('settings');
-    const status = useEndpointConnection(endpointId).status;
-    const [items, setItems] = useState<Item[] | null>(null);
-    const [failure, setFailure] = useState<string | null>(null);
-
-    const load = (): void => {
-        const transport = transportFor(endpointId);
-
-        if (!transport) {
-            return;
-        }
-
-        read(transport)
-            .then((next) => {
-                setItems(next);
-                setFailure(null);
-            })
-            .catch((e: unknown) => setFailure(messageOf(e, t(`${words}.listFailed`))));
-    };
-
-    useEffect(() => {
-        if (status === 'open' && enabled) {
-            load();
-        }
-        // oxlint-disable-next-line react-hooks/exhaustive-deps
-    }, [status, enabled, endpointId]);
-
-    return { open: status === 'open', items, failure, setFailure, load };
-}
-
-/* The section around such a list, with what it shows while the machine is silent, loading, empty or failed. */
-function MachineListSection({
-    words,
-    open,
-    items,
-    failure,
-    children
-}: {
-    words: ListWords;
-    open: boolean;
-    items: readonly unknown[] | null;
-    failure: string | null;
-    children: ReactNode;
-}) {
-    const { t } = useTranslation('settings');
-    const waiting = items === null && failure === null;
-
-    return (
-        <SettingsSection title={t(`${words}.title`)} description={t(`${words}.description`)}>
-            {!open && waiting && <SettingsRow muted label={t(`${words}.silent.label`)} description={t(`${words}.silent.description`)} />}
-            {open && waiting && <SettingsRow label={<Skeleton className="w-40" />} control={<Skeleton className="w-8" />} />}
-            {items?.length === 0 && <SettingsRow muted label={t(`${words}.empty`)} />}
-            {children}
-            {failure && (
-                <SettingsRow
-                    muted
-                    label={
-                        <span className="break-words text-status-error" role="alert">
-                            {failure}
-                        </span>
-                    }
-                />
-            )}
-        </SettingsSection>
-    );
 }
 
 async function readSessions(transport: Transport): Promise<AuthSession[]> {
