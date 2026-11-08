@@ -41,7 +41,10 @@ describe('a call', () => {
 
         zonesWork.value = false;
 
-        await expect(new CloudflareApi(TOKEN, send).verifyToken()).rejects.toMatchObject({ code: 'token-refused', message: expect.stringContaining('Checking the API token') });
+        await expect(new CloudflareApi(TOKEN, send).verifyToken()).rejects.toMatchObject({
+            code: 'token-refused',
+            message: expect.stringContaining('Checking the API token')
+        });
     });
 
     test('reads every page of the zones', async () => {
