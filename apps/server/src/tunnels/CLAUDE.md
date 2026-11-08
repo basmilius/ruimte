@@ -20,6 +20,7 @@ Tunnels put two things in reach from outside, through a tunnel on the person's o
 ## Known limits
 
 - Cloudflare's configuration has no version to write against, so a write of Ruimte's is a read, a change and a PUT. A writer on a shared tunnel (another machine, the dashboard) can put back a rule Ruimte just changed. Ruimte reads every write back and writes once more; when the other writer undoes that one too, the rows show what Cloudflare serves, and a write that lands after the read back stays unseen until Ruimte next reads the configuration.
+- Cloudflare may still list connections for a short while after Ruimte's own `cloudflared` stopped or crashed, and names no connector Ruimte could recognize as its own. Until the next bring-up or Try again, such a tunnel reads as running elsewhere and Ruimte starts nothing.
 
 ## Product rules
 
