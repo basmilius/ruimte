@@ -1150,8 +1150,12 @@
             "approvalsWarning": "Staat dit aan, dan beantwoordt de client de goedkeuringen van zijn eigen agents en kan hij een command op deze machine goedkeuren. Supervised beperkt dan niets, en de inlogsleutel reikt ongeveer zo ver als een shell."
         },
         "consent": {
-            "title": "{{client}} wil Ruimte gebruiken",
+            "title": "{{host}} wil Ruimte gebruiken",
             "description": "Controleer of de code hieronder dezelfde is als op de pagina van de client. Kies dan wat hij mag en keur goed.",
+            "unverifiedName": "Hij noemt zichzelf \"{{name}}\". Ruimte heeft die naam niet gecontroleerd.",
+            "terminals": "Een client kan elke terminal lezen in de projecten die hij mag gebruiken.",
+            "others_one": "Nog {{count}} client wacht na deze.",
+            "others_other": "Nog {{count}} clients wachten na deze.",
             "code": "Code",
             "deny": "Weigeren",
             "approve": "Goedkeuren",

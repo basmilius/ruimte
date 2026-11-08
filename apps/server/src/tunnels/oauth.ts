@@ -36,10 +36,12 @@ function escaped(text: string): string {
 }
 
 /* The page a client's browser shows while a person approves in Ruimte. No script, no form, and nothing on it to guess or type. */
-function waitingPage(clientName: string, code: string, pendingUrl: string, timedOut = false): Response {
-    const body = timedOut
-        ? '<p>Nobody approved this in Ruimte in time. Start the connection again from the client.</p>'
-        : `<p><strong>${escaped(clientName)}</strong> asks to use Ruimte on this person's machine.</p><p>Check that Ruimte shows this code, then approve it there:</p><p class="code">${escaped(code)}</p><p>This page goes on by itself.</p>`;
+function waitingPage(client: { host: string; name: string } | null, code: string, pendingUrl: string, timedOut = false): Response {
+    // The host is where the client's document came from. The name is whatever that document says, so it comes second.
+    const body =
+        timedOut || client === null
+            ? '<p>Nobody approved this in Ruimte in time. Start the connection again from the client.</p>'
+            : `<p><strong>${escaped(client.host)}</strong> asks to use Ruimte on this person's machine. It calls itself "${escaped(client.name)}", which nobody has verified.</p><p>Check that Ruimte shows this code, then approve it there:</p><p class="code">${escaped(code)}</p><p>This page goes on by itself.</p>`;
 
     return new Response(
         `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Connect to Ruimte</title>${timedOut ? '' : `<meta http-equiv="refresh" content="2;url=${escaped(pendingUrl)}">`}<meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font:16px system-ui,sans-serif;max-width:32rem;margin:4rem auto;padding:0 1rem}.code{font:600 2rem ui-monospace,monospace;letter-spacing:.3rem}</style></head><body>${body}</body></html>`,
@@ -53,6 +55,14 @@ function waitingPage(clientName: string, code: string, pendingUrl: string, timed
             }
         }
     );
+}
+
+function hostOf(clientId: string): string {
+    try {
+        return new URL(clientId).host;
+    } catch {
+        return clientId;
+    }
 }
 
 function redirect(location: string): Response {
@@ -106,11 +116,13 @@ async function authorize(request: Request, url: URL, deps: OAuthDeps): Promise<R
         if (poll.status === 'pending') {
             const waiting = deps.consent.list().find((entry) => entry.id === pendingId);
 
-            return waitingPage(waiting?.clientName ?? '', waiting?.code ?? '', here);
+            return waiting === undefined
+                ? waitingPage(null, '', here, true)
+                : waitingPage({ host: hostOf(waiting.clientUrl), name: waiting.clientName }, waiting.code, here);
         }
 
         if (poll.status === 'gone') {
-            return waitingPage('', '', here, true);
+            return waitingPage(null, '', here, true);
         }
 
         if (poll.status === 'denied') {
@@ -146,7 +158,8 @@ async function authorize(request: Request, url: URL, deps: OAuthDeps): Promise<R
     }
 
     const state = url.searchParams.get('state');
-    const pending = deps.consent.request({ clientId, clientName: metadata.clientName, redirectUri, state, challenge });
+    const source = request.headers.get('cf-connecting-ip') ?? 'direct';
+    const pending = deps.consent.request({ clientId, clientName: metadata.clientName, redirectUri, state, challenge, source });
 
     if (pending === null) {
         return oauthError('temporarily_unavailable', 'Too many clients wait for approval', 503);

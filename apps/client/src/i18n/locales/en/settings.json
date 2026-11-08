@@ -1150,8 +1150,12 @@
             "approvalsWarning": "With this on, the client answers its own agents' approvals and can approve a command on this machine. Supervised then limits nothing, and the credential reaches about as far as a shell."
         },
         "consent": {
-            "title": "{{client}} wants to use Ruimte",
+            "title": "{{host}} wants to use Ruimte",
             "description": "Check that the code below is the one on the client's page. Then choose what it may do and approve.",
+            "unverifiedName": "It calls itself \"{{name}}\". Ruimte has not verified that name.",
+            "terminals": "A client can read every terminal in the projects it may use.",
+            "others_one": "{{count}} more client waits after this one.",
+            "others_other": "{{count}} more clients wait after this one.",
             "code": "Code",
             "deny": "Deny",
             "approve": "Approve",

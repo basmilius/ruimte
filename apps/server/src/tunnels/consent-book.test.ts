@@ -19,9 +19,57 @@ function book(overrides: Partial<ConsentBookOptions> = {}): { book: ConsentBook;
     return { book: consent, clock };
 }
 
-function request(clientId = 'https://client.example/meta.json') {
-    return { clientId, clientName: 'Hosted Claude', redirectUri: 'https://client.example/callback', state: null, challenge: challengeOf(VERIFIER) };
+function request(clientId = 'https://client.example/meta.json', source = '203.0.113.1') {
+    return { clientId, clientName: 'Hosted Claude', redirectUri: 'https://client.example/callback', state: null, challenge: challengeOf(VERIFIER), source };
 }
+
+describe('the requests that wait for a person', () => {
+    test('are at most a few from one source address, however many clients it names', () => {
+        const { book: consent } = book();
+        const answers = Array.from({ length: 6 }, (_, i) => consent.request(request(`https://client-${i}.example/meta.json`, '203.0.113.7')));
+
+        expect(answers.filter((entry) => entry !== null)).toHaveLength(3);
+        // Another source is not held back by the first one.
+        expect(consent.request(request('https://other.example/meta.json', '203.0.113.8'))).not.toBeNull();
+    });
+
+    test('are at most a few for one client address, however many sources ask', () => {
+        const { book: consent } = book();
+        const answers = Array.from({ length: 6 }, (_, i) => consent.request(request('https://client.example/meta.json', `203.0.113.${i + 20}`)));
+
+        expect(answers.filter((entry) => entry !== null)).toHaveLength(3);
+        expect(consent.request(request('https://other.example/meta.json', '203.0.113.99'))).not.toBeNull();
+    });
+
+    test('are replaced by the same client asking again from the same source', () => {
+        const { book: consent } = book();
+        const first = consent.request(request())!;
+        const second = consent.request(request())!;
+
+        expect(consent.list().map((entry) => entry.id)).toEqual([second.id]);
+        expect(consent.poll(first.id)).toEqual({ status: 'gone' });
+    });
+
+    test('free their place once answered, expired or spent', () => {
+        const { book: consent, clock } = book();
+        const held = Array.from({ length: 3 }, (_, i) => consent.request(request(`https://client-${i}.example/meta.json`, '203.0.113.7'))!);
+
+        expect(consent.request(request('https://more.example/meta.json', '203.0.113.7'))).toBeNull();
+        consent.answer(held[0]!.id, false, undefined, null);
+        expect(consent.request(request('https://more.example/meta.json', '203.0.113.7'))).not.toBeNull();
+
+        clock.now += 10 * 60_000;
+        expect(consent.request(request('https://later.example/meta.json', '203.0.113.7'))).not.toBeNull();
+    });
+
+    test('never show the source address to a client', () => {
+        const { book: consent } = book();
+
+        consent.request(request());
+
+        expect(JSON.stringify(consent.list())).not.toContain('203.0.113');
+    });
+});
 
 describe('an authorization code', () => {
     function approved(): { book: ConsentBook; code: string } {

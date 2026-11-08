@@ -7,7 +7,10 @@ import { defaultGrant, mergedGrant } from './credential-store.ts';
 export const CONSENT_TIMEOUT_MS = 5 * 60_000;
 /* How long an authorization code lives once approved. */
 export const AUTHORIZATION_CODE_MS = 60_000;
+/* Every cap counts requests that wait for a person, so none of them lets one party fill the window with strangers. */
 const MAX_PENDING = 20;
+const MAX_PENDING_PER_SOURCE = 3;
+const MAX_PENDING_PER_CLIENT = 3;
 
 // No 0 or O, 1 or I: the code is read off one screen and compared with another.
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -21,6 +24,8 @@ export interface PendingConsent {
     redirectUri: string;
     state: string | null;
     challenge: string;
+    /* Where the request came from (`Cf-Connecting-Ip`, or `direct`). It never leaves the daemon. */
+    source: string;
     createdAt: number;
     decision: { approved: true; grant: ExternalGrant; expiresAt: number | null; authorizationCode: string; approvedAt: number } | { approved: false } | null;
 }
@@ -77,11 +82,26 @@ export class ConsentBook {
         return Array.from({ length: CODE_LENGTH }, () => CODE_ALPHABET[this.options.pick(CODE_ALPHABET.length)]).join('');
     }
 
-    /* Null when too many requests wait already, which keeps a flood from filling the window. */
-    request(input: Pick<PendingConsent, 'clientId' | 'clientName' | 'redirectUri' | 'state' | 'challenge'>): PendingConsent | null {
+    /*
+     * Null when too many requests wait already, which keeps a flood from filling the window: in all, from one source address and
+     * for one client address. A client that asks again from the same source replaces its own unanswered request.
+     */
+    request(input: Pick<PendingConsent, 'clientId' | 'clientName' | 'redirectUri' | 'state' | 'challenge' | 'source'>): PendingConsent | null {
         this.sweep();
 
-        if (this.pending.size >= MAX_PENDING) {
+        for (const [id, entry] of this.pending) {
+            if (entry.decision === null && entry.source === input.source && entry.clientId === input.clientId) {
+                this.pending.delete(id);
+            }
+        }
+
+        const waiting = [...this.pending.values()].filter((entry) => entry.decision === null);
+
+        if (
+            this.pending.size >= MAX_PENDING ||
+            waiting.filter((entry) => entry.source === input.source).length >= MAX_PENDING_PER_SOURCE ||
+            waiting.filter((entry) => entry.clientId === input.clientId).length >= MAX_PENDING_PER_CLIENT
+        ) {
             return null;
         }
 

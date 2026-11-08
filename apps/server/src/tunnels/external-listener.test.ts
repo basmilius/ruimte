@@ -238,11 +238,25 @@ describe('OAuth with consent in Ruimte', () => {
         const html = await waiting.text();
         const [request] = consent.list();
 
-        expect(html).toContain('Hosted Claude');
+        // The host of the client's address comes first, the name its document claims only after it and as unverified.
+        expect(html).toContain('<strong>client.example</strong>');
+        expect(html).toContain('calls itself "Hosted Claude", which nobody has verified');
+        expect(html.indexOf('client.example')).toBeLessThan(html.indexOf('Hosted Claude'));
         expect(html).toContain(request!.code);
         expect(html).not.toContain('<form');
         expect(html).not.toContain('<script');
         expect(waiting.headers.get('content-security-policy')).toContain("default-src 'none'");
+    });
+
+    test('keeps one waiting request for a client per source address, read from Cf-Connecting-Ip', async () => {
+        const { handle, consent } = setup();
+
+        for (const ip of ['203.0.113.1', '203.0.113.1', '203.0.113.1', '203.0.113.2']) {
+            expect((await handle(authorizeUrl(), { headers: { 'cf-connecting-ip': ip } })).status).toBe(302);
+        }
+
+        // A client that asks again replaces its own request instead of piling up in the window.
+        expect(consent.list()).toHaveLength(2);
     });
 
     test('hands a code to the client once a person approved, and the code buys tokens that work', async () => {

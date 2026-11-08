@@ -243,9 +243,13 @@ describe('the consent of a client that waits', () => {
         });
         machine.answer('consent.answer', () => ({ credential: null }));
         await page.render(<ConsentDialog />);
-        await until(() => everything().includes('Hosted Claude wants to use Ruimte'));
+        await until(() => everything().includes('client.example wants to use Ruimte'));
         expect(everything()).toContain('K7QM2X');
         expect(everything()).toContain('https://client.example/meta.json');
+        // The name the document gives comes after the host and is marked as unchecked.
+        expect(everything()).toContain('It calls itself "Hosted Claude". Ruimte has not verified that name.');
+        expect(everything()).not.toContain('Hosted Claude wants');
+        expect(everything()).toContain('A client can read every terminal in the projects it may use.');
 
         await clickOn(buttonWithText('Approve'));
         await until(() => machine.requests('consent.answer').length === 1);
@@ -254,5 +258,32 @@ describe('the consent of a client that waits', () => {
             approve: true,
             grant: { tier: 'work', projects: null, ceiling: 'supervised', approvals: false }
         });
+    });
+
+    test('leads with the host of a client that claims a famous name, and shows one request at a time', async () => {
+        const defaults = { tier: 'work', projects: null, ceiling: 'supervised', approvals: false } as const;
+
+        useConsent.setState({
+            requests: [
+                { id: 'c1', clientName: 'Claude by Anthropic', clientUrl: 'https://evil.example/meta.json', code: 'AAAAAA', requestedAt: 1, defaults },
+                { id: 'c2', clientName: 'Second', clientUrl: 'https://second.example/meta.json', code: 'BBBBBB', requestedAt: 2, defaults },
+                { id: 'c3', clientName: 'Third', clientUrl: 'https://third.example/meta.json', code: 'CCCCCC', requestedAt: 3, defaults }
+            ]
+        });
+        machine.answer('consent.answer', () => ({ credential: null }));
+        await page.render(<ConsentDialog />);
+        await until(() => everything().includes('evil.example wants to use Ruimte'));
+        expect(everything()).not.toContain('Claude by Anthropic wants');
+        expect(everything()).toContain('"Claude by Anthropic"');
+        expect(everything()).toContain('2 more clients wait after this one.');
+        expect(everything()).not.toContain('second.example wants');
+        expect(everything()).not.toContain('BBBBBB');
+
+        // Answered, the next one takes the place of the first. They never stand beside each other.
+        await clickOn(buttonWithText('Deny'));
+        await until(() => machine.requests('consent.answer').length === 1);
+        act(() => useConsent.getState().setRequests(useConsent.getState().requests.slice(1)));
+        await until(() => everything().includes('second.example wants to use Ruimte'));
+        expect(everything()).not.toContain('evil.example wants');
     });
 });
