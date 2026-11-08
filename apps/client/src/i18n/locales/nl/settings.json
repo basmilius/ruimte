@@ -1088,10 +1088,12 @@
             "copy": "Adres kopiëren",
             "open": "Openen",
             "comeBack": "Aan na herstart",
+            "edit": "Bewerken",
             "remove": "Verwijderen"
         },
         "add": {
             "title": "Hostnaam toevoegen",
+            "editTitle": "Hostnaam bewerken",
             "kind": "Wijst naar",
             "dev": "Dev server",
             "mcp": "Ruimte MCP",
@@ -1104,6 +1106,15 @@
             "pickZone": "Kies domein",
             "devWarning": "Iedereen met het adres bereikt deze dev server.",
             "action": "Toevoegen"
+        },
+        "origin": {
+            "advanced": "Geavanceerd",
+            "protocol": "Protocol",
+            "hostHeader": "Host-header",
+            "hostHeaderHint": "Gaat naar de server in plaats van de hostnaam.",
+            "noTlsVerify": "TLS-controle overslaan",
+            "noTlsVerifyHint": "Voor een server met een zelfondertekend certificaat.",
+            "serverName": "Servernaam"
         },
         "clients": {
             "title": "Externe clients",

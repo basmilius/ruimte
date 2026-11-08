@@ -389,6 +389,80 @@ describe('the hostnames', () => {
         expect(machine.requests('tunnel.add')[0]).toEqual({ kind: 'mcp', zone: 'zone-bmnw', label: 'mcp-0123456789abcdef' });
     });
 
+    test('adds a dev server with a host header and https under Advanced', async () => {
+        machine.answer('tunnel.add', () => state);
+        await open();
+        await until(() => buttonWithText('Add hostname') !== null);
+        await clickOn(buttonWithText('Add hostname'));
+        await until(() => dialog() !== null);
+        expect(document.querySelector('input[aria-label="Host header"]')).toBeNull();
+
+        await pick('Port', 'Other port');
+        await until(() => document.querySelector('input[aria-label="Port"]') !== null);
+        await typeInto(inputNamed('Port'), '443');
+        await typeInto(inputNamed('Label'), 'passly');
+        await clickOn(buttonWithText('Advanced', dialog()!));
+        await until(() => document.querySelector('input[aria-label="Host header"]') !== null);
+        await typeInto(inputNamed('Host header'), 'passly.test');
+        // The certificate settings only mean something with https.
+        expect(document.querySelector('[aria-label="Skip TLS check"]')).toBeNull();
+
+        await clickOn([...document.querySelectorAll('[role="radio"]')].find((radio) => radio.textContent === 'HTTPS') ?? null);
+        await until(() => document.querySelector('[aria-label="Skip TLS check"]') !== null);
+        await clickOn(document.querySelector('[role="checkbox"][aria-label="Skip TLS check"]')?.closest('label') ?? null);
+        await clickOn(buttonWithText('Add', dialog()!));
+        await until(() => machine.requests('tunnel.add').length === 1);
+        expect(machine.requests('tunnel.add')[0]).toEqual({
+            kind: 'dev',
+            zone: 'zone-bmnw',
+            label: 'passly',
+            port: 443,
+            origin: { https: true, hostHeader: 'passly.test', noTlsVerify: true }
+        });
+    });
+
+    test('edits the port and host header of a dev server from its menu, with the hostname fixed', async () => {
+        state = stateOf({
+            rows: [{ id: 'b', kind: 'dev', hostname: 'passly.bmnw.nl', port: 80, enabled: true, comeBack: false, origin: { hostHeader: 'passly.test' } }]
+        });
+        machine.answer('tunnel.update', () => state);
+        await open();
+        await until(() => cells().includes('localhost:80 · passly.test'));
+        await clickOn(document.querySelector('button[aria-label="More for passly.bmnw.nl"]'));
+        await until(() => menuItem('Edit') !== null);
+        await clickOn(menuItem('Edit'));
+        await until(() => dialog()?.textContent?.includes('Edit hostname') === true);
+        expect(dialog()?.textContent).toContain('passly.bmnw.nl');
+        expect(document.querySelector('input[aria-label="Label"]')).toBeNull();
+        // Advanced is open, since the row has a setting there.
+        expect(inputNamed('Host header').value).toBe('passly.test');
+        expect(inputNamed('Port').value).toBe('80');
+
+        await typeInto(inputNamed('Port'), '8080');
+        await typeInto(inputNamed('Host header'), '');
+        await clickOn(buttonWithText('Save', dialog()!));
+        await until(() => machine.requests('tunnel.update').length === 1);
+        expect(machine.requests('tunnel.update')[0]).toEqual({ id: 'b', port: 8080, origin: {} });
+    });
+
+    test('offers no Edit for the MCP, and shows the host header of a rule someone else made', async () => {
+        state = stateOf({
+            mcp: { enabled: true, port: 4230 },
+            rows: [{ id: 'a', kind: 'mcp', hostname: 'mcp-0123.bmnw.nl', port: null, enabled: true, comeBack: true }],
+            tunnel: {
+                name: 'office',
+                created: false,
+                runner: 'other',
+                others: [{ hostname: 'nas.bmnw.nl', path: null, service: 'http://localhost:80', hostHeader: 'nas.local' }]
+            }
+        });
+        await open();
+        await until(() => cells().includes('localhost:80 · nas.local'));
+        await clickOn(document.querySelector('button[aria-label="More for mcp-0123.bmnw.nl"]'));
+        await until(() => menuItem('Copy address') !== null);
+        expect(menuItem('Edit')).toBeNull();
+    });
+
     test('opens the dialog empty again after a cancel', async () => {
         await open();
         await until(() => buttonWithText('Add hostname') !== null);

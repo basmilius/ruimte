@@ -1088,10 +1088,12 @@
             "copy": "Copy address",
             "open": "Open",
             "comeBack": "On after restart",
+            "edit": "Edit",
             "remove": "Remove"
         },
         "add": {
             "title": "Add hostname",
+            "editTitle": "Edit hostname",
             "kind": "Points to",
             "dev": "Dev server",
             "mcp": "Ruimte MCP",
@@ -1104,6 +1106,15 @@
             "pickZone": "Pick domain",
             "devWarning": "Anyone with the address reaches this dev server.",
             "action": "Add"
+        },
+        "origin": {
+            "advanced": "Advanced",
+            "protocol": "Protocol",
+            "hostHeader": "Host header",
+            "hostHeaderHint": "Sent to the server instead of the hostname.",
+            "noTlsVerify": "Skip TLS check",
+            "noTlsVerifyHint": "For a server with a self-signed certificate.",
+            "serverName": "Server name"
         },
         "clients": {
             "title": "External clients",
