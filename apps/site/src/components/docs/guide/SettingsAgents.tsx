@@ -11,7 +11,7 @@ const ROWS = [
     {
         label: 'Agents may share a dev port',
         description:
-            'An agent can share the port of a dev server with your other devices, which then open it through the connection to this machine. A development site may trust every request that comes from this machine. You can stop a share from the browser node.',
+            'An agent can share the port of a dev server with your other devices. They open it through the connection to this machine. A development site may trust every request that comes from this machine. You can stop a share from the browser node.',
         on: false
     },
     {
