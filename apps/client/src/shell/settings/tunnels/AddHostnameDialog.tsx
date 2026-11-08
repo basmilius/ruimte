@@ -14,6 +14,29 @@ const OTHER_PORT = 'other';
  * the confirmation. The MCP starts from a long random label, so scanners do not find it; a credential guards it.
  */
 export function AddHostnameDialog({
+    open,
+    state,
+    endpointId,
+    attempt,
+    onOpenChange
+}: {
+    open: boolean;
+    state: TunnelState;
+    endpointId: string;
+    attempt: (type: TunnelChangeType, payload?: object) => Promise<string | null>;
+    onOpenChange: (open: boolean) => void;
+}) {
+    return (
+        <Dialog.Root open={open} onOpenChange={onOpenChange}>
+            <Dialog.Popup size="sm">
+                <HostnameForm state={state} endpointId={endpointId} attempt={attempt} onClose={() => onOpenChange(false)} />
+            </Dialog.Popup>
+        </Dialog.Root>
+    );
+}
+
+/* Inside the popup, so what a person typed lasts through the closing transition and is gone once the popup unmounts. */
+function HostnameForm({
     state,
     endpointId,
     attempt,
@@ -90,67 +113,65 @@ export function AddHostnameDialog({
     };
 
     return (
-        <Dialog.Root open onOpenChange={(next) => (next ? undefined : onClose())}>
-            <Dialog.Popup size="sm">
-                <Dialog.Title>{t('tunnels.add.title')}</Dialog.Title>
-                <div className="flex flex-col gap-3 py-3">
-                    {!hasMcp && (
-                        <Segmented<TunnelRowKind>
-                            value={kind}
-                            label={t('tunnels.add.kind')}
-                            options={[
-                                { id: 'dev', label: t('tunnels.add.dev') },
-                                { id: 'mcp', label: t('tunnels.add.mcp') }
-                            ]}
-                            onValueChange={switchKind}
-                        />
-                    )}
-                    {kind === 'dev' && (
-                        <Field orientation="horizontal" label={t('tunnels.add.port')}>
-                            {ports.length > 0 && !typing ? (
-                                <Select<string>
-                                    label={t('tunnels.add.port')}
-                                    variant="outlined"
-                                    value={ports.some((entry) => String(entry.port) === port) ? port : ''}
-                                    placeholder={t('tunnels.add.pickPort')}
-                                    items={[
-                                        ...ports.map((entry) => ({
-                                            value: String(entry.port),
-                                            label: entry.session === null ? String(entry.port) : `${entry.port} · ${entry.session}`
-                                        })),
-                                        { value: OTHER_PORT, label: t('tunnels.add.otherPort') }
-                                    ]}
-                                    onValueChange={pick}
-                                />
-                            ) : (
-                                <Input
-                                    aria-label={t('tunnels.add.port')}
-                                    className="w-24"
-                                    inputMode="numeric"
-                                    value={port}
-                                    onChange={(e) => suggest(e.target.value.replace(/\D/g, ''))}
-                                />
-                            )}
-                        </Field>
-                    )}
-                    <Field orientation="horizontal" group label={t('tunnels.add.hostname')}>
-                        <ZoneField zones={state.zones} zone={zone} label={label} onZone={setZone} onLabel={setLabel} />
+        <>
+            <Dialog.Title>{t('tunnels.add.title')}</Dialog.Title>
+            <div className="flex flex-col gap-3 py-3">
+                {!hasMcp && (
+                    <Segmented<TunnelRowKind>
+                        value={kind}
+                        label={t('tunnels.add.kind')}
+                        options={[
+                            { id: 'dev', label: t('tunnels.add.dev') },
+                            { id: 'mcp', label: t('tunnels.add.mcp') }
+                        ]}
+                        onValueChange={switchKind}
+                    />
+                )}
+                {kind === 'dev' && (
+                    <Field orientation="horizontal" label={t('tunnels.add.port')}>
+                        {ports.length > 0 && !typing ? (
+                            <Select<string>
+                                label={t('tunnels.add.port')}
+                                variant="outlined"
+                                value={ports.some((entry) => String(entry.port) === port) ? port : ''}
+                                placeholder={t('tunnels.add.pickPort')}
+                                items={[
+                                    ...ports.map((entry) => ({
+                                        value: String(entry.port),
+                                        label: entry.session === null ? String(entry.port) : `${entry.port} · ${entry.session}`
+                                    })),
+                                    { value: OTHER_PORT, label: t('tunnels.add.otherPort') }
+                                ]}
+                                onValueChange={pick}
+                            />
+                        ) : (
+                            <Input
+                                aria-label={t('tunnels.add.port')}
+                                className="w-24"
+                                inputMode="numeric"
+                                value={port}
+                                onChange={(e) => suggest(e.target.value.replace(/\D/g, ''))}
+                            />
+                        )}
                     </Field>
-                    {kind === 'dev' && (
-                        <p className="flex items-center gap-2 text-xs text-status-needs-you">
-                            <Icon icon={TriangleAlert} size={14} className="shrink-0" />
-                            {t('tunnels.add.devWarning')}
-                        </p>
-                    )}
-                    {failure !== null && <FormError>{failure}</FormError>}
-                </div>
-                <Dialog.Footer>
-                    <Button onClick={onClose}>{t('common:action.cancel')}</Button>
-                    <Button variant="primary" disabled={!ready || busy} onClick={() => void add()}>
-                        {t('tunnels.add.action')}
-                    </Button>
-                </Dialog.Footer>
-            </Dialog.Popup>
-        </Dialog.Root>
+                )}
+                <Field orientation="horizontal" group label={t('tunnels.add.hostname')}>
+                    <ZoneField zones={state.zones} zone={zone} label={label} onZone={setZone} onLabel={setLabel} />
+                </Field>
+                {kind === 'dev' && (
+                    <p className="flex items-center gap-2 text-xs text-status-needs-you">
+                        <Icon icon={TriangleAlert} size={14} className="shrink-0" />
+                        {t('tunnels.add.devWarning')}
+                    </p>
+                )}
+                {failure !== null && <FormError>{failure}</FormError>}
+            </div>
+            <Dialog.Footer>
+                <Button onClick={onClose}>{t('common:action.cancel')}</Button>
+                <Button variant="primary" disabled={!ready || busy} onClick={() => void add()}>
+                    {t('tunnels.add.action')}
+                </Button>
+            </Dialog.Footer>
+        </>
     );
 }

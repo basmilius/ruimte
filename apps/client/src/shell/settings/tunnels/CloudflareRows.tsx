@@ -105,6 +105,30 @@ function StatusLine({ tone, children }: { tone: Tone; children: string }) {
 function TunnelRow({ state, endpointId, change }: { state: TunnelState; endpointId: string; change: TunnelChange }) {
     const { t } = useTranslation('settings');
     const [confirming, setConfirming] = useState(false);
+    // Unlinking clears the tunnel before the confirmation has faded out, so the title keeps the last name.
+    const [name, setName] = useState(state.tunnel?.name ?? '');
+
+    if (state.tunnel !== null && state.tunnel.name !== name) {
+        setName(state.tunnel.name);
+    }
+
+    return (
+        <>
+            <TunnelLine state={state} endpointId={endpointId} change={change} onUnlink={() => setConfirming(true)} />
+            <ConfirmDialog
+                open={confirming}
+                onOpenChange={setConfirming}
+                title={t('tunnels.unlink.title', { name })}
+                description={t('tunnels.unlink.description')}
+                confirmLabel={t('tunnels.unlink.action')}
+                onConfirm={() => change('tunnel.unlink')}
+            />
+        </>
+    );
+}
+
+function TunnelLine({ state, endpointId, change, onUnlink }: { state: TunnelState; endpointId: string; change: TunnelChange; onUnlink: () => void }) {
+    const { t } = useTranslation('settings');
     const { tunnel } = state;
 
     if (state.stage === 'checking') {
@@ -129,33 +153,21 @@ function TunnelRow({ state, endpointId, change }: { state: TunnelState; endpoint
         );
 
     return (
-        <>
-            <SettingsRow
-                label={t('tunnels.tunnel.label')}
-                description={
-                    <>
-                        {tunnel !== null && <span className="block text-text">{tunnel.name}</span>}
-                        {status}
-                    </>
-                }
-                control={
-                    <>
-                        {state.stage === 'failed' && <Button onClick={() => void change('tunnel.retry')}>{t('tunnels.retry')}</Button>}
-                        {tunnel !== null && <Button onClick={() => setConfirming(true)}>{t('tunnels.unlink.action')}</Button>}
-                    </>
-                }
-            />
-            {tunnel !== null && (
-                <ConfirmDialog
-                    open={confirming}
-                    onOpenChange={setConfirming}
-                    title={t('tunnels.unlink.title', { name: tunnel.name })}
-                    description={t('tunnels.unlink.description')}
-                    confirmLabel={t('tunnels.unlink.action')}
-                    onConfirm={() => change('tunnel.unlink')}
-                />
-            )}
-        </>
+        <SettingsRow
+            label={t('tunnels.tunnel.label')}
+            description={
+                <>
+                    {tunnel !== null && <span className="block text-text">{tunnel.name}</span>}
+                    {status}
+                </>
+            }
+            control={
+                <>
+                    {state.stage === 'failed' && <Button onClick={() => void change('tunnel.retry')}>{t('tunnels.retry')}</Button>}
+                    {tunnel !== null && <Button onClick={onUnlink}>{t('tunnels.unlink.action')}</Button>}
+                </>
+            }
+        />
     );
 }
 

@@ -39,7 +39,11 @@ export function HostnamesSection({
         <SettingsSection
             title={t('tunnels.hostnames.title')}
             description={t('tunnels.hostnames.description')}
-            action={<Button onClick={() => setAdding(true)}>{t('tunnels.hostnames.add')}</Button>}
+            action={
+                <Button size="sm" onClick={() => setAdding(true)}>
+                    {t('tunnels.hostnames.add')}
+                </Button>
+            }
             scope="machine"
             machine="picked"
         >
@@ -69,7 +73,7 @@ export function HostnamesSection({
                     </Table.Group>
                 )}
             </Table.Root>
-            {adding && <AddHostnameDialog state={state} endpointId={endpointId} attempt={attempt} onClose={() => setAdding(false)} />}
+            <AddHostnameDialog open={adding} state={state} endpointId={endpointId} attempt={attempt} onOpenChange={setAdding} />
         </SettingsSection>
     );
 }

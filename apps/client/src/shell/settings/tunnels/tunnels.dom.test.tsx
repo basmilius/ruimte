@@ -389,6 +389,20 @@ describe('the hostnames', () => {
         expect(machine.requests('tunnel.add')[0]).toEqual({ kind: 'mcp', zone: 'zone-bmnw', label: 'mcp-0123456789abcdef' });
     });
 
+    test('opens the dialog empty again after a cancel', async () => {
+        await open();
+        await until(() => buttonWithText('Add hostname') !== null);
+        await clickOn(buttonWithText('Add hostname'));
+        await until(() => dialog() !== null);
+        await typeInto(inputNamed('Label'), 'shop');
+        await clickOn(buttonWithText('Cancel', dialog()!));
+        await until(() => dialog() === null);
+
+        await clickOn(buttonWithText('Add hostname'));
+        await until(() => dialog() !== null);
+        expect(inputNamed('Label').value).toBe('');
+    });
+
     test('shows the refusal for a name that has a record Ruimte did not make in the dialog', async () => {
         machine.answer('tunnel.add', () => {
             throw new Error('app.bmnw.nl already has a A record pointing at 203.0.113.9 that Ruimte did not make, so Ruimte leaves it alone.');

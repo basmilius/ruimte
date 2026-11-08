@@ -41,7 +41,9 @@ export function CredentialsSection({
 }) {
     const { t } = useTranslation('settings');
     const [creating, setCreating] = useState(false);
+    // The credential stays after Revoke closes, so the title holds its label through the closing transition.
     const [target, setTarget] = useState<Credential | null>(null);
+    const [revoking, setRevoking] = useState(false);
     const address = state.mcp.enabled && state.mcp.port !== null ? `http://127.0.0.1:${state.mcp.port}/mcp` : null;
 
     const revoke = async (): Promise<void> => {
@@ -64,7 +66,7 @@ export function CredentialsSection({
             action={
                 <div className="flex items-center gap-3">
                     <McpSwitch enabled={state.mcp.enabled} onChange={(enabled) => void change('tunnel.setMcp', { enabled })} />
-                    <Button disabled={!state.mcp.enabled} onClick={() => setCreating(true)}>
+                    <Button size="sm" disabled={!state.mcp.enabled} onClick={() => setCreating(true)}>
                         {t('tunnels.clients.create')}
                     </Button>
                 </div>
@@ -83,13 +85,22 @@ export function CredentialsSection({
                 {credentials === null || credentials.length === 0 ? (
                     <Table.Empty>{t('tunnels.clients.empty')}</Table.Empty>
                 ) : (
-                    credentials.map((credential) => <CredentialRow key={credential.id} credential={credential} onRevoke={() => setTarget(credential)} />)
+                    credentials.map((credential) => (
+                        <CredentialRow
+                            key={credential.id}
+                            credential={credential}
+                            onRevoke={() => {
+                                setTarget(credential);
+                                setRevoking(true);
+                            }}
+                        />
+                    ))
                 )}
             </Table.Root>
             <NewCredentialDialog open={creating} endpointId={endpointId} port={state.mcp.port} onOpenChange={setCreating} onCreated={reload} />
             <ConfirmDialog
-                open={target !== null}
-                onOpenChange={(next) => (next ? undefined : setTarget(null))}
+                open={revoking}
+                onOpenChange={setRevoking}
                 title={t('tunnels.clients.revokeTitle', { label: target?.label ?? '' })}
                 description={t('tunnels.clients.revokeText')}
                 confirmLabel={t('tunnels.clients.revoke')}

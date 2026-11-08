@@ -34,9 +34,10 @@ export function NewCredentialDialog({
     const [failure, setFailure] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
 
-    const close = (next: boolean): void => {
-        onOpenChange(next);
+    const close = (): void => onOpenChange(false);
 
+    // Only once the popup is gone, so the secret does not turn back into the form while it fades out.
+    const reset = (next: boolean): void => {
         if (!next) {
             setLabel('');
             setDraft(FRESH);
@@ -69,7 +70,7 @@ export function NewCredentialDialog({
     };
 
     return (
-        <Dialog.Root open={open} onOpenChange={close}>
+        <Dialog.Root open={open} onOpenChange={onOpenChange} onOpenChangeComplete={reset}>
             <Dialog.Popup size="sm" className="flex max-h-[85vh] flex-col">
                 <Dialog.Title>{t('tunnels.bearer.title')}</Dialog.Title>
                 {secret === null ? (
@@ -90,7 +91,7 @@ export function NewCredentialDialog({
                             {failure !== null && <FormError>{failure}</FormError>}
                         </ScrollArea>
                         <Dialog.Footer>
-                            <Button onClick={() => close(false)}>{t('common:action.cancel')}</Button>
+                            <Button onClick={close}>{t('common:action.cancel')}</Button>
                             <Button variant="primary" disabled={busy || label.trim() === ''} onClick={() => void create()}>
                                 {t('tunnels.bearer.action')}
                             </Button>
@@ -109,7 +110,7 @@ export function NewCredentialDialog({
                         </div>
                         <Dialog.Footer>
                             <Button onClick={() => void navigator.clipboard.writeText(secret)}>{t('common:action.copy')}</Button>
-                            <Button variant="primary" onClick={() => close(false)}>
+                            <Button variant="primary" onClick={close}>
                                 {t('common:action.close')}
                             </Button>
                         </Dialog.Footer>
