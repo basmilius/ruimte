@@ -10,7 +10,7 @@ import { openNewChatAfterSend } from '@/chat/new-chat-after-send';
 import { prepareCodeBlockAction } from '@/chat/prepare-code-block';
 import { useProjectChats } from '@/chat/project-chats';
 import { MarkdownImage, ReadImage } from '@/chat/ReadImage';
-import { openReference, useReferables } from '@/chat/referables';
+import { openReference, outsideReference, useReferables } from '@/chat/referables';
 import { ReferenceGlyph } from '@/chat/ReferenceGlyph';
 import { openUiLink, openUiUrl } from '@/chat/ui-links';
 import { useTimelineFind } from '@/chat/use-chat-find';
@@ -93,6 +93,7 @@ export const WORKSPACE_CHAT_HOST: Partial<ChatHost> = {
     useReferables,
     ReferenceIcon: ReferenceGlyph,
     openReference,
+    outsideReference,
     useChatPlace,
     useContextSources,
     useThreadCards: useOutputThreadCards,

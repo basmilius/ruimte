@@ -42,7 +42,7 @@ describe('a bearer', () => {
 
         const checked = credentials.authenticate(secret, 'loopback');
 
-        expect(checked).toMatchObject({ ok: true, credential: { label: 'Bot', lastUsedAt: clock.now } });
+        expect(checked).toMatchObject({ ok: true, credential: { label: 'Bot', lastUsedAt: clock.now }, client: 'Bot' });
     });
 
     test('is refused on the public hostname unless the credential allows it', async () => {
@@ -167,7 +167,8 @@ describe('an OAuth credential', () => {
         const { tokens, credential } = await credentials.createOAuth({ label: 'Claude', clientId: 'https://client.example/meta.json', grant });
 
         expect(credential.kind).toBe('oauth');
-        expect(credentials.authenticate(tokens.accessToken, 'hostname')).toMatchObject({ ok: true });
+        // The host consent verified, never the name the client's document gave.
+        expect(credentials.authenticate(tokens.accessToken, 'hostname')).toMatchObject({ ok: true, client: 'client.example' });
 
         clock.now += ACCESS_TOKEN_LIFETIME_MS;
 

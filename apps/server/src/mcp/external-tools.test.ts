@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { DEFAULT_EXTERNAL_CEILING, type ExternalGrant, type ExternalTier } from '@ruimte/contracts';
 import { ContextRefusal } from '../context/context-store.ts';
-import { canvasFixture, folder, host, lineage, onDisk, projectId, started } from '../tools/canvas-test-fixture.ts';
+import { canvasFixture, folder, host, lineage, notified, onDisk, projectId, started } from '../tools/canvas-test-fixture.ts';
 import type { CanvasHost } from '../tools/host.ts';
 import { externalActorId, isExternalActor, type ExternalCaller } from './caller.ts';
 import { externalCatalog, visibleExternalTools } from './external-catalog.ts';
@@ -226,6 +226,17 @@ describe('a client elsewhere writes', () => {
 
         expect(refused).toBe(false);
         expect(JSON.stringify(await onDisk())).toContain('edited from outside');
+    });
+
+    test('signs a message with the name of its client, a bearer by its label and an OAuth client by its host', async () => {
+        const bearer = await call(caller('work'), 'notify', { project: projectId, id: 'chat-1', text: 'check the build' });
+        const oauth = await call({ ...caller('work', {}, 'cred-2'), label: 'grok.com' }, 'notify', { project: projectId, id: 'chat-1', text: 'and the docs' });
+
+        expect([bearer.refused, oauth.refused]).toEqual([false, false]);
+        expect(notified.map(({ from, fromTitle }) => [from, fromTitle])).toEqual([
+            ['external-cred-1', 'MCP · Hosted bot'],
+            ['external-cred-2', 'MCP · grok.com']
+        ]);
     });
 
     test('has an actor id that no node can equal', () => {

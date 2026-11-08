@@ -1,4 +1,4 @@
-import type { ExternalGrant } from '@ruimte/contracts';
+import { externalActorId, isExternalActor, type ExternalGrant } from '@ruimte/contracts';
 import { bearerToken } from '../agents/bearer.ts';
 import { isPathSegment } from '../fs/path-segment.ts';
 
@@ -14,6 +14,7 @@ export interface ExternalCaller {
     /* `external-<credential>`: apart from every node id and from Voice, so no lineage, claim or line ever mistakes it for one. */
     readonly id: string;
     readonly credentialId: string;
+    /* The name a person reads for the client, taken at this request: a bearer's label, the host of an OAuth client's address. */
     readonly label: string;
     readonly grant: ExternalGrant;
 }
@@ -21,15 +22,11 @@ export interface ExternalCaller {
 /* Who asks `/mcp`: a node on the daemon's own port, an external client on the listener of its own. */
 export type Caller = NodeCaller | ExternalCaller;
 
-const EXTERNAL_ACTOR_PREFIX = 'external-';
+export { externalActorId, isExternalActor };
 
-export function externalActorId(credentialId: string): string {
-    return `${EXTERNAL_ACTOR_PREFIX}${credentialId}`;
-}
-
-/* Whether an actor id belongs to an external client, which no project places and no node id can equal. */
-export function isExternalActor(id: string): boolean {
-    return id.startsWith(EXTERNAL_ACTOR_PREFIX);
+/* How a person reads an external client wherever it acted, such as the sender of a message. */
+export function externalActorTitle(caller: ExternalCaller): string {
+    return `MCP · ${caller.label}`;
 }
 
 /*

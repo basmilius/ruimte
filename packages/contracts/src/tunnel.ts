@@ -6,6 +6,17 @@ export const EXTERNAL_TIERS = ['read', 'work', 'machine'] as const;
 export const ExternalTierSchema = z.enum(EXTERNAL_TIERS);
 export type ExternalTier = z.infer<typeof ExternalTierSchema>;
 
+const EXTERNAL_ACTOR_PREFIX = 'external-';
+
+/* The actor id of an external MCP client, such as the sender of a message: apart from every node id, so nothing mistakes it for one. */
+export function externalActorId(credentialId: string): string {
+    return `${EXTERNAL_ACTOR_PREFIX}${credentialId}`;
+}
+
+export function isExternalActor(id: string): boolean {
+    return id.startsWith(EXTERNAL_ACTOR_PREFIX);
+}
+
 /* The tier a hosted client gets when a person names none. */
 export const DEFAULT_EXTERNAL_TIER: ExternalTier = 'work';
 

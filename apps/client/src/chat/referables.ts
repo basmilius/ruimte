@@ -1,7 +1,9 @@
+import type { OutsideReference } from '@adecore/agents-react';
 import { REFERENCE_ICONS, type Referable, type ReferableKind, type Referables } from '@adecore/agents-react/chat';
 import {
     isCanvasView,
     isDividerView,
+    isExternalActor,
     isUnlistedView,
     nodeChats,
     UNKNOWN_KIND,
@@ -10,6 +12,7 @@ import {
     type ProjectText,
     type ProjectView
 } from '@ruimte/contracts';
+import { Plug } from 'lucide-react';
 import { useReachedProjects, useReachedReferables } from '@/chat/reached-referables';
 import { useExtensionReferables } from '@/extensions/chat-references';
 import { useChatDrawers } from '@/extensions/drawn-chats';
@@ -18,8 +21,10 @@ import { useViewNodes, type NodesOfView } from '@/project/view-nodes';
 import { revealNode, showView } from '@/project/views';
 import { liveCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { isThisMachine } from '@/state/local-machine';
 import { useProject } from '@/state/project';
 import { useServers } from '@/state/server';
+import { useUi } from '@/state/ui';
 
 type ReachedProject = ProjectReferablesResult['projects'][number];
 
@@ -222,6 +227,18 @@ export function openReference(endpointId: string, id: string): void {
     }
 
     void openProject(endpointId, elsewhere.project.projectId).then(() => openHere(id));
+}
+
+/* An external MCP client that sent a message: Tunnels lists it, and only this machine's settings show its Tunnels. */
+export function outsideReference(endpointId: string, id: string): OutsideReference | null {
+    if (!isExternalActor(id)) {
+        return null;
+    }
+
+    return {
+        icon: Plug,
+        open: isThisMachine(endpointId) ? () => useUi.getState().setSettings({ open: true, section: 'tunnels', target: 'tunnels.mcp' }) : null
+    };
 }
 
 /* The open project's views and nodes for a chat's `#`; a machine from before `viewReferences` is offered its chats only. */

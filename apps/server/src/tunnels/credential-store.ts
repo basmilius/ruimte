@@ -6,6 +6,7 @@ import { isNotFound } from '@adecore/utils/errors';
 import { writeAtomic } from '@adecore/utils/fs';
 import { CredentialSchema, DEFAULT_EXTERNAL_CEILING, DEFAULT_EXTERNAL_TIER, type Credential, type CredentialKind, type ExternalGrant } from '@ruimte/contracts';
 import { z } from 'zod';
+import { clientHost } from './client-metadata.ts';
 import { tunnelsFolder } from './tunnel-store.ts';
 
 export const BEARER_PREFIX = 'rmb_';
@@ -65,7 +66,12 @@ export interface CredentialStoreOptions {
 export type CredentialRefusal = 'unknown' | 'expired' | 'wrong-door';
 
 /* What a request that presented a token is, or why it is nothing. */
-export type CredentialCheck = { ok: true; credential: Credential } | { ok: false; reason: CredentialRefusal };
+export type CredentialCheck = { ok: true; credential: Credential; client: string } | { ok: false; reason: CredentialRefusal };
+
+/* The name a person reads for a client: a bearer's label, or the host of an OAuth client's address, never the unverified name it gave. */
+function clientOf(stored: StoredCredential): string {
+    return stored.oauth === null ? stored.label : clientHost(stored.oauth.clientId);
+}
 
 /* The grant a hosted client gets when a person names none: all projects, Work, `supervised`, no approvals. */
 export function defaultGrant(): ExternalGrant {
@@ -329,7 +335,7 @@ export class CredentialStore {
 
         this.touch(found);
 
-        return { ok: true, credential: publicCredential(found) };
+        return { ok: true, credential: publicCredential(found), client: clientOf(found) };
     }
 
     private touch(record: StoredCredential): void {

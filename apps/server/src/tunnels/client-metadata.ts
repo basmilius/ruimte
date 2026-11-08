@@ -25,6 +25,15 @@ export interface ClientMetadata {
     redirectUris: string[];
 }
 
+/* The host of a client's address, which consent verified, unlike the name its document gives. */
+export function clientHost(clientId: string): string {
+    try {
+        return new URL(clientId).host;
+    } catch {
+        return clientId;
+    }
+}
+
 /* The eight 16-bit groups of an IPv6 address, an embedded IPv4 tail included; null for a text that is none. */
 function hextetsOf(address: string): number[] | null {
     let text = address;

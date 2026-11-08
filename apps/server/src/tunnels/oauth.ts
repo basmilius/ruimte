@@ -1,4 +1,4 @@
-import { allowedRedirect, CLIENT_NOT_IDENTIFIED, type ClientMetadata } from './client-metadata.ts';
+import { allowedRedirect, CLIENT_NOT_IDENTIFIED, clientHost, type ClientMetadata } from './client-metadata.ts';
 import type { ConsentBook } from './consent-book.ts';
 import type { CredentialStore } from './credential-store.ts';
 import { challenge as unauthorized, FailureLimiter } from './external-gate.ts';
@@ -57,14 +57,6 @@ function waitingPage(client: { host: string; name: string } | null, code: string
     );
 }
 
-function hostOf(clientId: string): string {
-    try {
-        return new URL(clientId).host;
-    } catch {
-        return clientId;
-    }
-}
-
 function redirect(location: string): Response {
     return new Response(null, { status: 302, headers: { location, 'cache-control': 'no-store' } });
 }
@@ -118,7 +110,7 @@ async function authorize(request: Request, url: URL, deps: OAuthDeps): Promise<R
 
             return waiting === undefined
                 ? waitingPage(null, '', here, true)
-                : waitingPage({ host: hostOf(waiting.clientUrl), name: waiting.clientName }, waiting.code, here);
+                : waitingPage({ host: clientHost(waiting.clientUrl), name: waiting.clientName }, waiting.code, here);
         }
 
         if (poll.status === 'gone') {

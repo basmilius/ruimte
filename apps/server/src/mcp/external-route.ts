@@ -27,8 +27,9 @@ export interface ExternalMcpDeps {
     budgetMs?: number;
 }
 
-export function externalCallerOf(credential: Credential): ExternalCaller {
-    return { kind: 'external', id: externalActorId(credential.id), credentialId: credential.id, label: credential.label, grant: credential.grant };
+/* `client` is the name a person reads for it, from the credential store's check. */
+export function externalCallerOf(credential: Credential, client: string): ExternalCaller {
+    return { kind: 'external', id: externalActorId(credential.id), credentialId: credential.id, label: client, grant: credential.grant };
 }
 
 function slowResult(name: string): CallToolResult {

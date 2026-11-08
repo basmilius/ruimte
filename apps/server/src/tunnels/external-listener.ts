@@ -48,7 +48,9 @@ export function externalHandler(deps: ExternalListenerDeps): (request: Request) 
         if (url.pathname === EXTERNAL_MCP_PATH) {
             const gated = gateRequest(request, deps.port(), deps.credentials, deps.limiter, `${baseOf(request)}${OAUTH_PROTECTED_RESOURCE_PATH}`);
 
-            return gated.ok ? handleExternalMcpRequest(request, externalCallerOf(gated.credential.credential), deps.mcp) : gated.response;
+            return gated.ok
+                ? handleExternalMcpRequest(request, externalCallerOf(gated.credential.credential, gated.credential.client), deps.mcp)
+                : gated.response;
         }
 
         const oauth = await handleOAuthRequest(request, url, {
