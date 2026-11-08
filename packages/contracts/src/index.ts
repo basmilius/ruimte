@@ -533,6 +533,7 @@ export * from './ids.ts';
 export * from './language.ts';
 export * from './editor-assist.ts';
 export { cheapestEditorModel, type EditorModelPrice } from './editor-assist-model.ts';
+export { TextModelChoiceSchema, type TextModelChoice } from './text-model.ts';
 export * from './launches.ts';
 export * from './secrets.ts';
 export * from './live-stream.ts';

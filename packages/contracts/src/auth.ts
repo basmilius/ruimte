@@ -17,6 +17,7 @@ import { MachineUpdateSchema } from './machine-update.ts';
 import { NODE_SIZE_MAX, NODE_SIZE_MIN } from './node-defaults.ts';
 import { NodeKindSchema, ProjectIconChoiceSchema } from './project.ts';
 import { ProtocolVersionSchema } from './protocol.ts';
+import { TextModelChoiceSchema } from './text-model.ts';
 
 export const TerminalShellSchema = z.enum(['powershell', 'git-bash', 'cmd', 'wsl']);
 export type TerminalShell = z.infer<typeof TerminalShellSchema>;
@@ -54,6 +55,9 @@ const MACHINE_SWITCHES = {
     resumeAtReset: z.boolean().optional(),
     // The `visual_*` tools. Off only when a person turned it off; absent reads as on.
     visualReplies: z.boolean().optional(),
+    // The model that writes new chat titles, commit messages and conflict proposals. Null is Automatic;
+    // absent means the machine predates the setting.
+    textModel: TextModelChoiceSchema.nullable().optional(),
     // The daemon holds the block, so it holds without a window and for a phone. Absent reads as off.
     keepAwake: KeepAwakeModeSchema.optional(),
     // Hold the block on battery as well; off, it holds on the power adapter only.

@@ -6411,6 +6411,45 @@
           "visualReplies": {
             "type": "boolean"
           },
+          "textModel": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32,
+                    "pattern": "^[a-z][a-z0-9-]*$"
+                  },
+                  "model": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "account": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "provider",
+                  "model"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "keepAwake": {
             "type": "string",
             "enum": [
@@ -64651,6 +64690,52 @@
       "visualReplies": {
         "type": "boolean"
       },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
+                  "claude",
+                  "codex",
+                  "gemini",
+                  "copilot",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
       "keepAwake": {
         "type": "string",
         "enum": [
@@ -65191,6 +65276,52 @@
       "visualReplies": {
         "type": "boolean"
       },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
+                  "claude",
+                  "codex",
+                  "gemini",
+                  "copilot",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
       "keepAwake": {
         "type": "string",
         "enum": [
@@ -65509,6 +65640,52 @@
       },
       "visualReplies": {
         "type": "boolean"
+      },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
+                  "claude",
+                  "codex",
+                  "gemini",
+                  "copilot",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
       },
       "keepAwake": {
         "type": "string",
@@ -65841,6 +66018,52 @@
       "visualReplies": {
         "type": "boolean"
       },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
+                  "claude",
+                  "codex",
+                  "gemini",
+                  "copilot",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
       "keepAwake": {
         "type": "string",
         "enum": [
@@ -66155,6 +66378,52 @@
       },
       "visualReplies": {
         "type": "boolean"
+      },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
+                  "claude",
+                  "codex",
+                  "gemini",
+                  "copilot",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
       },
       "keepAwake": {
         "type": "string",
@@ -66751,6 +67020,52 @@
       "visualReplies": {
         "type": "boolean"
       },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
+                  "claude",
+                  "codex",
+                  "gemini",
+                  "copilot",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
       "keepAwake": {
         "type": "string",
         "enum": [
@@ -67305,6 +67620,52 @@
       },
       "visualReplies": {
         "type": "boolean"
+      },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
+                  "claude",
+                  "codex",
+                  "gemini",
+                  "copilot",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
       },
       "keepAwake": {
         "type": "string",
@@ -68097,6 +68458,52 @@
       },
       "visualReplies": {
         "type": "boolean"
+      },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
+                  "claude",
+                  "codex",
+                  "gemini",
+                  "copilot",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
       },
       "keepAwake": {
         "type": "string",
@@ -82824,6 +83231,52 @@
       },
       "visualReplies": {
         "type": "boolean"
+      },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
+                  "claude",
+                  "codex",
+                  "gemini",
+                  "copilot",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
       },
       "keepAwake": {
         "type": "string",
