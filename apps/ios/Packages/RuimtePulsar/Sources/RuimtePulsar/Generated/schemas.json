@@ -69728,6 +69728,10 @@
                     "service": {
                       "type": "string",
                       "maxLength": 500
+                    },
+                    "hostHeader": {
+                      "type": "string",
+                      "maxLength": 500
                     }
                   },
                   "required": [
@@ -69790,6 +69794,27 @@
             },
             "comeBack": {
               "type": "boolean"
+            },
+            "origin": {
+              "type": "object",
+              "properties": {
+                "https": {
+                  "type": "boolean"
+                },
+                "hostHeader": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 259
+                },
+                "noTlsVerify": {
+                  "type": "boolean"
+                },
+                "serverName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
             }
           },
           "required": [
@@ -70071,6 +70096,10 @@
                     "service": {
                       "type": "string",
                       "maxLength": 500
+                    },
+                    "hostHeader": {
+                      "type": "string",
+                      "maxLength": 500
                     }
                   },
                   "required": [
@@ -70133,6 +70162,27 @@
             },
             "comeBack": {
               "type": "boolean"
+            },
+            "origin": {
+              "type": "object",
+              "properties": {
+                "https": {
+                  "type": "boolean"
+                },
+                "hostHeader": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 259
+                },
+                "noTlsVerify": {
+                  "type": "boolean"
+                },
+                "serverName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
             }
           },
           "required": [
@@ -70380,6 +70430,10 @@
                     "service": {
                       "type": "string",
                       "maxLength": 500
+                    },
+                    "hostHeader": {
+                      "type": "string",
+                      "maxLength": 500
                     }
                   },
                   "required": [
@@ -70442,6 +70496,27 @@
             },
             "comeBack": {
               "type": "boolean"
+            },
+            "origin": {
+              "type": "object",
+              "properties": {
+                "https": {
+                  "type": "boolean"
+                },
+                "hostHeader": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 259
+                },
+                "noTlsVerify": {
+                  "type": "boolean"
+                },
+                "serverName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
             }
           },
           "required": [
@@ -70680,6 +70755,10 @@
                     "service": {
                       "type": "string",
                       "maxLength": 500
+                    },
+                    "hostHeader": {
+                      "type": "string",
+                      "maxLength": 500
                     }
                   },
                   "required": [
@@ -70742,6 +70821,27 @@
             },
             "comeBack": {
               "type": "boolean"
+            },
+            "origin": {
+              "type": "object",
+              "properties": {
+                "https": {
+                  "type": "boolean"
+                },
+                "hostHeader": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 259
+                },
+                "noTlsVerify": {
+                  "type": "boolean"
+                },
+                "serverName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
             }
           },
           "required": [
@@ -70986,6 +71086,10 @@
                     "service": {
                       "type": "string",
                       "maxLength": 500
+                    },
+                    "hostHeader": {
+                      "type": "string",
+                      "maxLength": 500
                     }
                   },
                   "required": [
@@ -71048,6 +71152,27 @@
             },
             "comeBack": {
               "type": "boolean"
+            },
+            "origin": {
+              "type": "object",
+              "properties": {
+                "https": {
+                  "type": "boolean"
+                },
+                "hostHeader": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 259
+                },
+                "noTlsVerify": {
+                  "type": "boolean"
+                },
+                "serverName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
             }
           },
           "required": [
@@ -71351,6 +71476,10 @@
                     "service": {
                       "type": "string",
                       "maxLength": 500
+                    },
+                    "hostHeader": {
+                      "type": "string",
+                      "maxLength": 500
                     }
                   },
                   "required": [
@@ -71413,6 +71542,27 @@
             },
             "comeBack": {
               "type": "boolean"
+            },
+            "origin": {
+              "type": "object",
+              "properties": {
+                "https": {
+                  "type": "boolean"
+                },
+                "hostHeader": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 259
+                },
+                "noTlsVerify": {
+                  "type": "boolean"
+                },
+                "serverName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
             }
           },
           "required": [
@@ -71651,6 +71801,10 @@
                     "service": {
                       "type": "string",
                       "maxLength": 500
+                    },
+                    "hostHeader": {
+                      "type": "string",
+                      "maxLength": 500
                     }
                   },
                   "required": [
@@ -71713,6 +71867,27 @@
             },
             "comeBack": {
               "type": "boolean"
+            },
+            "origin": {
+              "type": "object",
+              "properties": {
+                "https": {
+                  "type": "boolean"
+                },
+                "hostHeader": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 259
+                },
+                "noTlsVerify": {
+                  "type": "boolean"
+                },
+                "serverName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
             }
           },
           "required": [
@@ -71808,6 +71983,27 @@
       },
       "comeBack": {
         "type": "boolean"
+      },
+      "origin": {
+        "type": "object",
+        "properties": {
+          "https": {
+            "type": "boolean"
+          },
+          "hostHeader": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 259
+          },
+          "noTlsVerify": {
+            "type": "boolean"
+          },
+          "serverName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253
+          }
+        }
       }
     },
     "required": [
@@ -71982,6 +72178,10 @@
                     "service": {
                       "type": "string",
                       "maxLength": 500
+                    },
+                    "hostHeader": {
+                      "type": "string",
+                      "maxLength": 500
                     }
                   },
                   "required": [
@@ -72044,6 +72244,27 @@
             },
             "comeBack": {
               "type": "boolean"
+            },
+            "origin": {
+              "type": "object",
+              "properties": {
+                "https": {
+                  "type": "boolean"
+                },
+                "hostHeader": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 259
+                },
+                "noTlsVerify": {
+                  "type": "boolean"
+                },
+                "serverName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
             }
           },
           "required": [
@@ -72125,6 +72346,32 @@
       },
       "comeBack": {
         "type": "boolean"
+      },
+      "port": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 65535
+      },
+      "origin": {
+        "type": "object",
+        "properties": {
+          "https": {
+            "type": "boolean"
+          },
+          "hostHeader": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 259
+          },
+          "noTlsVerify": {
+            "type": "boolean"
+          },
+          "serverName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253
+          }
+        }
       }
     },
     "required": [
@@ -72297,6 +72544,10 @@
                     "service": {
                       "type": "string",
                       "maxLength": 500
+                    },
+                    "hostHeader": {
+                      "type": "string",
+                      "maxLength": 500
                     }
                   },
                   "required": [
@@ -72359,6 +72610,27 @@
             },
             "comeBack": {
               "type": "boolean"
+            },
+            "origin": {
+              "type": "object",
+              "properties": {
+                "https": {
+                  "type": "boolean"
+                },
+                "hostHeader": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 259
+                },
+                "noTlsVerify": {
+                  "type": "boolean"
+                },
+                "serverName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
             }
           },
           "required": [
@@ -72606,6 +72878,10 @@
                     "service": {
                       "type": "string",
                       "maxLength": 500
+                    },
+                    "hostHeader": {
+                      "type": "string",
+                      "maxLength": 500
                     }
                   },
                   "required": [
@@ -72668,6 +72944,27 @@
             },
             "comeBack": {
               "type": "boolean"
+            },
+            "origin": {
+              "type": "object",
+              "properties": {
+                "https": {
+                  "type": "boolean"
+                },
+                "hostHeader": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 259
+                },
+                "noTlsVerify": {
+                  "type": "boolean"
+                },
+                "serverName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
             }
           },
           "required": [
@@ -72906,6 +73203,10 @@
                     "service": {
                       "type": "string",
                       "maxLength": 500
+                    },
+                    "hostHeader": {
+                      "type": "string",
+                      "maxLength": 500
                     }
                   },
                   "required": [
@@ -72968,6 +73269,27 @@
             },
             "comeBack": {
               "type": "boolean"
+            },
+            "origin": {
+              "type": "object",
+              "properties": {
+                "https": {
+                  "type": "boolean"
+                },
+                "hostHeader": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 259
+                },
+                "noTlsVerify": {
+                  "type": "boolean"
+                },
+                "serverName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
             }
           },
           "required": [
@@ -73213,6 +73535,10 @@
                     "service": {
                       "type": "string",
                       "maxLength": 500
+                    },
+                    "hostHeader": {
+                      "type": "string",
+                      "maxLength": 500
                     }
                   },
                   "required": [
@@ -73275,6 +73601,27 @@
             },
             "comeBack": {
               "type": "boolean"
+            },
+            "origin": {
+              "type": "object",
+              "properties": {
+                "https": {
+                  "type": "boolean"
+                },
+                "hostHeader": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 259
+                },
+                "noTlsVerify": {
+                  "type": "boolean"
+                },
+                "serverName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
             }
           },
           "required": [

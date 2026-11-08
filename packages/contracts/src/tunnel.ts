@@ -100,6 +100,19 @@ export type TunnelStage = z.infer<typeof TunnelStageSchema>;
 export const TunnelRowKindSchema = z.enum(['mcp', 'dev']);
 export type TunnelRowKind = z.infer<typeof TunnelRowKindSchema>;
 
+/*
+ * How Cloudflare talks to a dev server, as its `originRequest` and the scheme of its service: https instead of http, the
+ * `Host` header it sends (a hostname, with a port or without), and with https whether it skips the certificate check and
+ * the name it expects on that certificate. Left out is Cloudflare's default.
+ */
+export const TunnelOriginSchema = z.object({
+    https: z.boolean().optional(),
+    hostHeader: z.string().min(1).max(259).optional(),
+    noTlsVerify: z.boolean().optional(),
+    serverName: z.string().min(1).max(253).optional()
+});
+export type TunnelOrigin = z.infer<typeof TunnelOriginSchema>;
+
 /* One hostname of the tunnel. A dev server has a port of its own on this machine; the MCP row always points at the external listener. */
 export const TunnelRowSchema = z.object({
     id: z.string().min(1).max(64),
@@ -109,7 +122,9 @@ export const TunnelRowSchema = z.object({
     /* Whether the hostname is in the running configuration now. */
     enabled: z.boolean(),
     /* Whether it is on again after the daemon restarts. */
-    comeBack: z.boolean()
+    comeBack: z.boolean(),
+    /* A dev server only; left out for the defaults. */
+    origin: TunnelOriginSchema.optional()
 });
 export type TunnelRow = z.infer<typeof TunnelRowSchema>;
 
@@ -124,7 +139,9 @@ export type TunnelRunner = z.infer<typeof TunnelRunnerSchema>;
 export const TunnelOtherRuleSchema = z.object({
     hostname: z.string().max(253).nullable(),
     path: z.string().max(500).nullable(),
-    service: z.string().max(500)
+    service: z.string().max(500),
+    /* The `Host` header the rule sends, when it sets one. */
+    hostHeader: z.string().max(500).optional()
 });
 export type TunnelOtherRule = z.infer<typeof TunnelOtherRuleSchema>;
 
@@ -201,13 +218,17 @@ export const TunnelAddPayloadSchema = z.object({
     /* A label in front of the zone, or a full hostname inside it. */
     label: z.string().trim().min(1).max(253),
     port: z.number().int().min(1).max(65535).optional(),
-    comeBack: z.boolean().optional()
+    comeBack: z.boolean().optional(),
+    origin: TunnelOriginSchema.optional()
 });
 
+/* `port` and `origin` are a dev server's; `origin` replaces the one the row had, so a field left out goes back to its default. */
 export const TunnelUpdatePayloadSchema = z.object({
     id: TunnelRowSchema.shape.id,
     enabled: z.boolean().optional(),
-    comeBack: z.boolean().optional()
+    comeBack: z.boolean().optional(),
+    port: z.number().int().min(1).max(65535).optional(),
+    origin: TunnelOriginSchema.optional()
 });
 
 export const TunnelRemovePayloadSchema = z.object({ id: TunnelRowSchema.shape.id });
