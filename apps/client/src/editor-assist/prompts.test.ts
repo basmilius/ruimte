@@ -20,6 +20,16 @@ describe('explainPrompt', () => {
         expect(prompt.endsWith('Code:\nfunction f() {}')).toBe(true);
     });
 
+    test('says symbol for a symbol that is no function', () => {
+        const prompt = explainPrompt(
+            { language: 'typescript', file: 'a.ts', signature: 'class Queue', subject: 'symbol', source: 'class Queue {}' },
+            'English'
+        );
+
+        expect(prompt.split('\n')[0]).toBe('Explain this symbol.');
+        expect(prompt).toContain('Signature: class Queue');
+    });
+
     test('says code for a selection, and bounds the source', () => {
         const prompt = explainPrompt({ language: 'php', file: 'a.php', source: 'x\n'.repeat(5000) }, 'English');
         expect(prompt.startsWith('Explain this code.')).toBe(true);

@@ -1360,6 +1360,7 @@
     },
     "editorMenu": {
         "inlineEdit": "Inline wijzigen",
+        "explain": "Uitleg",
         "selectionToChat": "Selectie aan chat toevoegen",
         "askAgent": "Agent vragen"
     },

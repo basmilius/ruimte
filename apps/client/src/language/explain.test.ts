@@ -5,7 +5,7 @@ import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { TransportError } from '@/transport/transport';
-import { innermostFunction } from './explain';
+import { innermostFunction, innermostSymbol } from './explain';
 import { FakeLanguageTransport } from './fake-daemon';
 import { EditorLanguage } from './ruimte-editor-language';
 import { ProjectLanguage } from './ruimte-project-language';
@@ -64,12 +64,34 @@ describe('explain in the hover card', () => {
         expect(language.explain.store.getState()).toMatchObject({ offered: true, phase: 'idle' });
     });
 
-    test('offers nothing for a value, with the setting off, or on a machine without the model', async () => {
-        const plain = await setup();
-        showCard(plain.language, infoOf('const share: number'));
+    test('offers Explain on any symbol that has something to explain it from, and on nothing else', async () => {
+        const value = await setup();
+        showCard(value.language, infoOf('const share: number'));
         await settle();
-        expect(plain.language.explain.store.getState().offered).toBe(false);
+        expect(value.language.explain.store.getState().offered).toBe(true);
 
+        const bare = await setup();
+        showCard(bare.language, { text: { signatures: [], markdown: 'Docs.' }, definition: null, word: 'share', references: null });
+        await settle();
+        expect(bare.language.explain.store.getState().offered).toBe(false);
+
+        const noInfo = await setup();
+        showCard(noInfo.language, null);
+        await settle();
+        expect(noInfo.language.explain.store.getState().offered).toBe(false);
+    });
+
+    test('asks for a symbol, not a function, when the card is of a class or a value', async () => {
+        const { language, model } = await setup();
+        showCard(language, infoOf('class SkillSet'));
+        await settle();
+        void language.explain.explainCard();
+        await settle();
+        expect(model.last.prompt.split('\n')[0]).toBe('Explain this symbol.');
+        expect(model.last.prompt).toContain('Signature: class SkillSet');
+    });
+
+    test('offers nothing with the setting off, or on a machine without the model', async () => {
         useSettings.setState({ aiCodeHelp: false });
         const off = await setup();
         showCard(off.language, infoOf('function f(): void'));
@@ -167,7 +189,17 @@ describe('explain the selection', () => {
         expect(model.last.prompt).toContain('function skillOverlap(have: string[], need: string[]): number {');
     });
 
-    test('says there is nothing to explain without a selection or a function', async () => {
+    test('without a selection and outside every function explains the symbol around the caret, whatever it is', async () => {
+        const symbols = [{ name: 'share', kind: 14, range: range(3, 0, 36), selectionRange: range(3, 6, 11) }];
+        const { language, editor, model } = await setup({ symbols });
+        editor.moveCaret(at(3, 8));
+        void language.explain.explainHere();
+        await settle();
+        expect(language.popups.getState().hover!.subject).toEqual(range(3, 0, 36));
+        expect(model.last.prompt).toContain('const share = skillOverlap([], []);');
+    });
+
+    test('says there is nothing to explain without a selection or a symbol', async () => {
         const { language, editor, model } = await setup();
         editor.moveCaret(at(3, 3));
         await language.explain.explainHere();
@@ -207,5 +239,26 @@ describe('innermostFunction', () => {
         expect(innermostFunction(symbols, 4)).toEqual(lines(2, 10));
         expect(innermostFunction(symbols, 11)).toBeNull();
         expect(innermostFunction(null, 1)).toBeNull();
+    });
+});
+
+describe('innermostSymbol', () => {
+    test('takes the innermost symbol of any kind around a line', () => {
+        const symbols = [
+            {
+                kind: 5,
+                range: lines(0, 20),
+                children: [
+                    { kind: 8, range: lines(2, 2) },
+                    { kind: 6, range: lines(4, 10) }
+                ]
+            },
+            { kind: 13, range: lines(22, 22) }
+        ];
+        expect(innermostSymbol(symbols, 2)).toEqual(lines(2, 2));
+        expect(innermostSymbol(symbols, 12)).toEqual(lines(0, 20));
+        expect(innermostSymbol(symbols, 22)).toEqual(lines(22, 22));
+        expect(innermostSymbol(symbols, 21)).toBeNull();
+        expect(innermostSymbol(null, 1)).toBeNull();
     });
 });

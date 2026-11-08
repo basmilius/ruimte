@@ -1360,6 +1360,7 @@
     },
     "editorMenu": {
         "inlineEdit": "Inline edit",
+        "explain": "Explain",
         "selectionToChat": "Add selection to chat",
         "askAgent": "Ask agent"
     },

@@ -1074,7 +1074,7 @@
             "note": "Written by the model chosen in Settings, Editor, AI.",
             "thinking": "Explaining…",
             "off": "Explain is off. Turn it on in Settings, Editor, AI.",
-            "nothing": "Select code, or put the caret in a function, to explain it.",
+            "nothing": "Select code, or put the caret in a symbol, to explain it.",
             "tooOld": "Update this machine to use the editor model."
         }
     },

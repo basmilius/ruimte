@@ -5,9 +5,11 @@ import { Bot, Cpu, MessageSquarePlus, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
 import { InlineEditLayer } from '@/editor-ai/InlineEditLayer';
+import { useEditorAssistAvailability } from '@/editor-assist/use-availability';
 import { highlightCode } from '@/shell/panels/highlight';
 import { RowKbd } from '@/shell/RowKbd';
 import { useCodeTheme } from '@/state/code-theme';
+import { useSettings } from '@/state/settings';
 import { useAskAgents } from './ask-agents';
 import type { EditorLanguage } from './ruimte-editor-language';
 
@@ -61,15 +63,23 @@ function HoverActions({ language, view }: { language: EditorLanguage; view: Hove
     );
 }
 
-function MenuActions({ language }: { language: EditorLanguage }) {
+export function MenuActions({ language }: { language: EditorLanguage }) {
     const { t } = useTranslation('shell');
     const { t: chat } = useTranslation('chat');
     const agents = useAskAgents();
+    const aiCodeHelp = useSettings((state) => state.aiCodeHelp);
+    const available = useEditorAssistAvailability()?.available === true;
+    const explains = aiCodeHelp && available;
     return (
         <>
             <ContextMenu.Item onClick={() => language.inlineEdit.start()}>
                 <Icon icon={Sparkles} size={14} /> {t('editorMenu.inlineEdit')} <RowKbd row="inlineEdit" />
             </ContextMenu.Item>
+            {explains && (
+                <ContextMenu.Item onClick={() => void language.explain.explainHere()}>
+                    <Icon icon={Cpu} size={14} /> {t('editorMenu.explain')}
+                </ContextMenu.Item>
+            )}
             <ContextMenu.Item onClick={() => language.selectionChat.choose()}>
                 <Icon icon={MessageSquarePlus} size={14} /> {t('editorMenu.selectionToChat')} <RowKbd row="selectionToChat" />
             </ContextMenu.Item>
