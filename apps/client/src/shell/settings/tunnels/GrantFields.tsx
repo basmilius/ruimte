@@ -64,7 +64,7 @@ export function GrantFields({ endpointId, draft, onChange }: { endpointId: strin
                         const on = picked.includes(id);
 
                         return (
-                            <Table.Row key={id} selected={on} onClick={() => set({ projects: toggled(id, !on) })}>
+                            <Table.Row key={id} selected={on} focusable={false} onClick={() => set({ projects: toggled(id, !on) })}>
                                 <Table.Cell>
                                     <Checkbox label={row.summary.name} checked={on} onCheckedChange={(next) => set({ projects: toggled(id, next) })} />
                                 </Table.Cell>

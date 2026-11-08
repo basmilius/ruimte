@@ -652,6 +652,8 @@ describe('a bearer', () => {
         await until(() => document.querySelector('[role="table"][aria-label="Projects"]') !== null);
         expect(cells()).toContain('/work/p-shop');
         expect(cells()).not.toContain('/work/p-chats');
+        // The box is the one tab stop of a row.
+        expect(document.querySelectorAll('[role="table"][aria-label="Projects"] [role="row"][tabindex]')).toHaveLength(0);
 
         // A click on the row ticks it, as the box does.
         await clickOn([...document.querySelectorAll('[role="row"]')].find((row) => row.textContent?.includes('Site')) ?? null);
