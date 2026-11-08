@@ -1057,6 +1057,43 @@ describe('an existing tunnel', () => {
         expect(f.runner.running).toBe(0);
     });
 
+    test('forgets a tunnel when unlinking with a token Cloudflare no longer takes, and says its hostnames and records stay', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+        f.cloudflare.acceptedToken = 'cf-api-token-of-another-day';
+        await f.service.unlink();
+
+        const state = await f.state();
+
+        expect(state).toMatchObject({ stage: 'failed', tunnel: null, rows: [] });
+        expect(state.message).toBe('Ruimte forgot ruimte-bas-macbook-f7a7, but its hostnames and DNS records stay in Cloudflare.');
+        expect(f.cloudflare.records).toHaveLength(1);
+        expect(f.runner.running).toBe(0);
+    });
+
+    test('forgets a tunnel when unlinking after the token was removed, without asking Cloudflare', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+        await f.service.clearToken();
+
+        const calls = f.cloudflare.calls.length;
+
+        await f.service.unlink();
+
+        const state = await f.state();
+
+        expect(state).toMatchObject({ tunnel: null, rows: [] });
+        expect(state.message).toBe('Ruimte forgot ruimte-bas-macbook-f7a7, but its hostnames and DNS records stay in Cloudflare.');
+        expect(f.cloudflare.calls).toHaveLength(calls);
+        expect(f.cloudflare.records).toHaveLength(1);
+    });
+
     test('forgets a tunnel on an account the token does not reach when unlinking, without asking that account', async () => {
         const f = await fixture();
 

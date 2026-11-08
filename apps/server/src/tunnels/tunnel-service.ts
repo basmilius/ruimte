@@ -478,7 +478,8 @@ export class TunnelService {
     /*
      * Stops using the tunnel: Ruimte takes its own rules off it, deletes the records it made and forgets it. The tunnel
      * itself stays in Cloudflare, whoever made it, and so does everything else on it. A refusal keeps what is left,
-     * except when the token cannot reach the tunnel's account at all: then Ruimte only forgets it, and says so.
+     * except when there is no token, Cloudflare refuses it or it cannot reach the tunnel's account: then Ruimte only
+     * forgets the tunnel, and says so.
      */
     async unlink(): Promise<TunnelState> {
         if (this.stored.tunnel === null) {
@@ -492,12 +493,12 @@ export class TunnelService {
                 return;
             }
 
-            const api = this.api();
-            const reached = this.zones.length === 0 || this.accounts().some((account) => account.id === tunnel.account.id);
-            const found = reached ? await api.tunnel(tunnel.account.id, tunnel.id).catch((e: unknown) => this.unlessRefused(e)) : undefined;
+            const reached = this.token !== null && (this.zones.length === 0 || this.accounts().some((account) => account.id === tunnel.account.id));
+            const api = reached ? this.api() : null;
+            const found = api === null ? undefined : await api.tunnel(tunnel.account.id, tunnel.id).catch((e: unknown) => this.unlessRefused(e));
 
             // A token that cannot reach the tunnel's account cannot take anything off it, and the person still needs a way out.
-            if (found === undefined) {
+            if (api === null || found === undefined) {
                 await this.stopChild();
                 this.forget();
                 this.failure = `Ruimte forgot ${tunnel.name}, but its hostnames and DNS records stay in Cloudflare.`;
@@ -703,7 +704,7 @@ export class TunnelService {
 
     /* Undefined for a refusal of the token, which cannot reach what it asked for; anything else stays a failure. */
     private unlessRefused(e: unknown): undefined {
-        if (e instanceof CloudflareError && e.code === 'no-permission') {
+        if (e instanceof CloudflareError && (e.code === 'no-permission' || e.code === 'token-refused')) {
             return undefined;
         }
 

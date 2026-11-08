@@ -282,6 +282,23 @@ describe('the Cloudflare card', () => {
         await until(() => buttonWithText('Use') !== null);
     });
 
+    test('still stops using the tunnel once the token is gone, and says its hostnames stay in Cloudflare', async () => {
+        const forgot = 'Ruimte forgot ruimte-studio-4f2a, but its hostnames and DNS records stay in Cloudflare.';
+
+        state = stateOf({ stage: 'no-token', hasToken: false, accounts: [], account: null, zones: [] });
+        machine.answer('tunnel.unlink', () => (state = bareState({ stage: 'failed', message: forgot })));
+        await open();
+        await until(() => buttonWithText('Stop using') !== null);
+        expect(everything()).toContain('ruimte-studio-4f2a');
+        expect(tokenField()).not.toBeNull();
+
+        await clickOn(buttonWithText('Stop using'));
+        await until(() => dialog() !== null);
+        await clickOn(buttonWithText('Stop using', dialog() ?? document));
+        await until(() => machine.requests('tunnel.unlink').length === 1);
+        await until(() => everything().includes(forgot));
+    });
+
     test('shows the state of the tunnels to a window that does not manage them', async () => {
         // Another machine of the account: its state is readable here, and nothing on it changes from this window.
         const other = new FakeMachine();

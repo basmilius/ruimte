@@ -21,10 +21,13 @@ export function CloudflareRows({ state, endpointId, change }: { state: TunnelSta
         return <InstallRow state={state} change={change} />;
     }
 
+    // Without a working token the tunnel still shows, so Stop using stays in reach.
+    const showsTunnel = state.hasToken || state.tunnel !== null || state.stage === 'failed';
+
     return (
         <>
             <TokenRow state={state} change={change} />
-            {state.hasToken && <TunnelRow state={state} endpointId={endpointId} change={change} />}
+            {showsTunnel && <TunnelRow state={state} endpointId={endpointId} change={change} />}
         </>
     );
 }
@@ -140,7 +143,7 @@ function TunnelLine({ state, endpointId, change, onUnlink }: { state: TunnelStat
     }
 
     const status =
-        state.stage === 'failed' ? (
+        state.stage === 'no-token' ? null : state.stage === 'failed' ? (
             <StatusLine tone="error">{state.message ?? t('tunnels.stage.failed')}</StatusLine>
         ) : state.stage === 'starting' ? (
             <StatusLine tone="idle">{t('tunnels.stage.starting')}</StatusLine>
