@@ -148,7 +148,7 @@ export async function registerHandlers(dispatcher: Dispatcher, input: HandlersIn
     const { identity } = machine;
     const { sessions, chats } = agents;
     const store = projects.store;
-    registerPushHandlers(dispatcher, machine.auth, () => push.synchronizeActivities(), push);
+    registerPushHandlers(dispatcher, machine.auth, () => push.subscriptionsChanged(), push);
     registerSnoozeHandlers(dispatcher, work.snoozes, (nodeId) => store.index.locate(nodeId));
     registerActivityHandlers(dispatcher, work.activity);
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await input.machineModel });

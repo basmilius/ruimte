@@ -937,6 +937,10 @@ describe('what a device chose to hear of', () => {
         const projects = [{ projectId: 'project', notify: ['turn' as const] }];
         await auth.setPush(sessionId, { ...subscription, notify: ['process'], projects });
         expect(await ask(sessionId)).toMatchObject({ ok: true, result: { subscribed: true, notify: ['process'], projects } });
+        const quietHours = { days: [1, 2, 3], start: '22:00', end: '07:00', timeZone: 'Europe/Amsterdam' };
+        expect(await ask(sessionId)).not.toHaveProperty('result.quietHours');
+        await auth.setPush(sessionId, { ...subscription, quietHours });
+        expect(await ask(sessionId)).toMatchObject({ ok: true, result: { quietHours } });
         await auth.removePush(sessionId, subscription.handle);
         expect(await ask(sessionId)).toMatchObject({ ok: true, result: { subscribed: false, notify: ['needs-you'], projects: [] } });
         expect(await ask(null)).toMatchObject({ ok: false, error: { code: 'unauthorized' } });
@@ -1302,5 +1306,201 @@ describe('a chat stopped on a usage limit', () => {
             await limited.settled();
             expect(alerts()).toEqual([]);
         });
+    });
+});
+
+describe('a device in quiet hours', () => {
+    const OTHER_HANDLE = 'o'.repeat(43);
+    // Tuesday 3 November 2026, an hour after the quiet hours of the phone began.
+    const NIGHT = Date.UTC(2026, 10, 3, 23, 0);
+    const MORNING = Date.UTC(2026, 10, 4, 7, 0);
+    const hours = { days: [1, 2, 3, 4, 5, 6, 7], start: '22:00', end: '07:00', timeZone: 'UTC' };
+    let clock: ManualClock;
+    let otherSession: string;
+    let quiet: PushService;
+
+    const open = (snoozes?: ConstructorParameters<typeof PushService>[0]['snoozes']): PushService =>
+        new PushService({
+            auth,
+            identity: { id: 'machine', sign: (text) => signMessage(machine.privateKey, text) },
+            now: () => clock.now(),
+            clock,
+            send: async (push) => {
+                pushes.push(push);
+                return 204;
+            },
+            ...(snoozes ? { snoozes } : {})
+        });
+
+    const alerts = (handle = subscription.handle): Array<{ kind: string; nodeId: string; body: string; expiresAt: number }> =>
+        pushes
+            .filter((push) => push.pushType === 'alert' && push.handle === handle)
+            .map((push) => decrypt(push) as { kind: string; nodeId: string; body: string; expiresAt: number });
+
+    const activities = (): PushEnvelope[] => pushes.filter((push) => push.pushType === 'liveactivity' && push.handle === subscription.handle);
+
+    const untilMorning = async (): Promise<void> => {
+        await quiet.settled();
+        clock.advance(MORNING - clock.now());
+        await quiet.settled();
+    };
+
+    beforeEach(async () => {
+        clock = new ManualClock();
+        clock.time = NIGHT;
+        await auth.setPush(sessionId, { ...subscription, quietHours: hours });
+        otherSession = await admitClient(auth, generateKeyPair().publicKey, 'Tablet');
+        await auth.setPush(otherSession, { ...subscription, handle: OTHER_HANDLE });
+        quiet = open();
+    });
+
+    afterEach(async () => {
+        await quiet.settled();
+    });
+
+    test('holds a wait from that device only, and announces it when the hours end', async () => {
+        status('running', 'node', quiet);
+        status('needs-you', 'node', quiet, [shellRequest('bun test')]);
+        await quiet.settled();
+        expect(alerts()).toEqual([]);
+        expect(alerts(OTHER_HANDLE)).toHaveLength(1);
+        await untilMorning();
+        expect(alerts()).toMatchObject([{ kind: 'attention', nodeId: 'node', body: 'Wants to run a command' }]);
+        expect(alerts(OTHER_HANDLE)).toHaveLength(1);
+    });
+
+    test('a wait that changes its ask meanwhile is announced as it is then', async () => {
+        status('running', 'node', quiet);
+        status('needs-you', 'node', quiet);
+        status('needs-you', 'node', quiet, [shellRequest('bun test')]);
+        await untilMorning();
+        expect(alerts().map((alert) => alert.body)).toEqual(['Wants to run a command']);
+    });
+
+    test('keeps one alert per node however often it was raised', async () => {
+        quiet.alert('chat', 'node', 'Agent', 'First');
+        quiet.alert('chat', 'node', 'Agent', 'Second');
+        await untilMorning();
+        expect(alerts().map((alert) => alert.body)).toEqual(['Second']);
+    });
+
+    test('lets an alert someone asked for through', async () => {
+        quiet.notify('chat', 'node', 'Agent', 'Look at this', {});
+        await quiet.settled();
+        expect(alerts().map((alert) => alert.body)).toEqual(['Look at this']);
+    });
+
+    test('holds an alert the daemon raised, such as a failed task', async () => {
+        quiet.alert('chat', 'node', 'Agent', 'The task failed');
+        await quiet.settled();
+        expect(alerts()).toEqual([]);
+        await untilMorning();
+        expect(alerts().map((alert) => alert.body)).toEqual(['The task failed']);
+    });
+
+    test('drops a finished turn instead of announcing it later', async () => {
+        await auth.setPush(sessionId, { ...subscription, notify: ['needs-you', 'turn'], quietHours: hours });
+        status('running', 'node', quiet);
+        status('idle', 'node', quiet);
+        await untilMorning();
+        expect(alerts()).toEqual([]);
+        expect(clock.timers).toEqual([]);
+    });
+
+    test('says nothing for a wait that was answered in the night', async () => {
+        status('running', 'node', quiet);
+        status('needs-you', 'node', quiet);
+        status('running', 'node', quiet);
+        await untilMorning();
+        expect(alerts()).toEqual([]);
+    });
+
+    test('says nothing for a node snoozed meanwhile', async () => {
+        const snoozed = new Set<string>();
+        quiet = open({ isSnoozed: (nodeId) => snoozed.has(nodeId), noteStatus: () => undefined, observe: () => () => undefined });
+        status('running', 'node', quiet);
+        status('needs-you', 'node', quiet);
+        snoozed.add('node');
+        await untilMorning();
+        expect(alerts()).toEqual([]);
+    });
+
+    test('brings an approval back with a fresh expiry, and not one that was answered', async () => {
+        quiet.consume(approvalFrame('node', 'answered'));
+        quiet.consume(approvalFrame('node', 'open'));
+        quiet.consume(approvalFrame('node', 'answered', { decision: 'allow' }));
+        await quiet.settled();
+        expect(alerts()).toEqual([]);
+        await untilMorning();
+        const sent = alerts();
+        expect(sent).toMatchObject([{ kind: 'approval' }]);
+        expect(sent[0]!.expiresAt).toBeGreaterThan(MORNING);
+        expect(sent[0]!.expiresAt).toBeLessThanOrEqual(MORNING + 110_000);
+    });
+
+    test('arms no timer when nothing was held, and none once it was announced', async () => {
+        status('running', 'node', quiet);
+        status('idle', 'node', quiet);
+        await quiet.settled();
+        expect(clock.timers).toEqual([]);
+        status('needs-you', 'node', quiet);
+        await quiet.settled();
+        expect(clock.timers).toHaveLength(1);
+        await untilMorning();
+        expect(clock.timers).toEqual([]);
+    });
+
+    test('hears nothing twice when it was not quiet', async () => {
+        clock.time = MORNING;
+        status('running', 'node', quiet);
+        status('needs-you', 'node', quiet);
+        await quiet.settled();
+        expect(alerts()).toHaveLength(1);
+        expect(clock.timers).toEqual([]);
+    });
+
+    test('new hours that no longer cover now announce what was held at once', async () => {
+        status('running', 'node', quiet);
+        status('needs-you', 'node', quiet);
+        await quiet.settled();
+        await auth.setPush(sessionId, { ...subscription, quietHours: { ...hours, start: '01:00', end: '02:00' } });
+        quiet.subscriptionsChanged();
+        await quiet.settled();
+        expect(alerts()).toHaveLength(1);
+    });
+
+    test('keeps its hold when new hours still cover now', async () => {
+        status('running', 'node', quiet);
+        status('needs-you', 'node', quiet);
+        await quiet.settled();
+        await auth.setPush(sessionId, { ...subscription, quietHours: { ...hours, end: '08:00' } });
+        quiet.subscriptionsChanged();
+        await quiet.settled();
+        clock.advance(MORNING - clock.now());
+        await quiet.settled();
+        expect(alerts()).toEqual([]);
+        clock.advance(3_600_000);
+        await quiet.settled();
+        expect(alerts()).toHaveLength(1);
+    });
+
+    test('drops its hold when the device unsubscribes', async () => {
+        status('running', 'node', quiet);
+        status('needs-you', 'node', quiet);
+        await quiet.settled();
+        await auth.removePush(sessionId, subscription.handle);
+        quiet.subscriptionsChanged();
+        await untilMorning();
+        expect(alerts()).toEqual([]);
+        expect(clock.timers).toEqual([]);
+    });
+
+    test('keeps its Live Activities quiet and sends the counts again when the hours end', async () => {
+        await auth.setPush(sessionId, { ...subscription, activities: true, activityScope: 'machine', quietHours: hours });
+        status('running', 'node', quiet);
+        await quiet.settled();
+        expect(activities()).toEqual([]);
+        await untilMorning();
+        expect(activities()).toHaveLength(1);
     });
 });

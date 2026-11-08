@@ -1,10 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto';
+import type { OutboxClock } from '@adecore/agents/coordination';
 import { unrefTimeout } from '@adecore/utils/async';
 import {
     PUSH_NOTIFY_DEFAULT,
     chatWaitAsk,
     clipText,
     pushWaitText,
+    quietState,
     terminalWaitAsk,
     type WaitAsk,
     type ChatItem,
@@ -14,7 +16,8 @@ import {
     type ProcessAlert,
     type PushNotifyKind,
     type PushSubscribePayload,
-    type PushAttentionEntry
+    type PushAttentionEntry,
+    type QuietHours
 } from '@ruimte/contracts';
 import {
     ADDRESS_BOOK_URL,
@@ -33,6 +36,7 @@ import { PushAttention } from './attention.ts';
 import { encryptPush } from './encrypt.ts';
 import { limitBody, limitKey, limitWindow, type LimitContext } from './limit-alert.ts';
 import { processAlertBody } from './process-alert.ts';
+import { QuietHold, type QuietRelease } from './quiet-hold.ts';
 import type { SnoozeChange } from './snoozes.ts';
 
 interface PushServiceOptions {
@@ -52,6 +56,20 @@ interface PushServiceOptions {
     snoozes?: Snoozes;
     schedule?: (delayMs: number, run: () => void) => () => void;
     limitContext?: (chatId: string) => LimitContext | null;
+
+    /* The clock the end of quiet hours waits on. */
+    clock?: OutboxClock;
+}
+
+/* What shapes one delivery besides the alert itself. */
+interface Delivery {
+    /* Someone asked for this alert (`alert` tool), so quiet hours do not hold it. */
+    asked?: boolean;
+    limit?: LimitReservation;
+    wait?: boolean;
+
+    /* Only this session hears it: the one whose quiet hours ended. */
+    session?: string;
 }
 
 /* The provider and account of a chat as it stopped, which `limitContext` names when it can. */
@@ -160,12 +178,27 @@ export class PushService {
     private held: HeldAlert[] = [];
     private cancelRelease: (() => void) | null = null;
     private readonly now: () => number;
+    private readonly quietHold: QuietHold;
 
     constructor(options: PushServiceOptions) {
         this.options = options;
         this.now = options.now ?? Date.now;
         this.attention = new PushAttention(options.attentionPath, this.now);
         options.snoozes?.observe((change) => this.snoozeChanged(change));
+        this.quietHold = new QuietHold({
+            clock: options.clock,
+            now: this.now,
+            subscriptions: async () =>
+                (await options.auth.pushSubscriptions()).map(({ sessionId, subscription }) => ({ sessionId, quietHours: subscription.quietHours })),
+            release: (sessionId, released) => this.releaseQuiet(sessionId, released),
+            track: (work) => this.track(work)
+        });
+    }
+
+    /* A device changed its choices, quiet hours among them: what waited for hours that no longer hold goes out. */
+    subscriptionsChanged(): void {
+        this.track(this.quietHold.look());
+        this.synchronizeActivities();
     }
 
     /* The ledger as clients mark nodes from it: only the nodes a person can open. */
@@ -387,6 +420,46 @@ export class PushService {
 
     private snoozed(nodeId: string): boolean {
         return this.options.snoozes?.isSnoozed(nodeId) ?? false;
+    }
+
+    /* The hours a device is quiet in right now, else null. */
+    private quietHoursOf(subscription: PushSubscribePayload): QuietHours | null {
+        const hours = subscription.quietHours;
+
+        return hours !== undefined && quietState(hours, this.now()).quiet ? hours : null;
+    }
+
+    /*
+     * The quiet hours of a device ended, so it hears what still waits, each alert looked at again as a held
+     * one is: a snoozed node, an approval already answered and a limit that lifted in the night stay silent,
+     * and the rest goes out fresh, to that device only.
+     */
+    private releaseQuiet(sessionId: string, { alerts, activities }: QuietRelease): void {
+        const now = this.now();
+
+        for (const alert of alerts) {
+            const { content } = alert;
+
+            if (
+                this.snoozed(content.nodeId) ||
+                (content.kind === 'approval' && !this.approvals.get(content.nodeId)?.has(content.requestId ?? '')) ||
+                (content.resetsAt !== undefined && content.resetsAt <= now)
+            ) {
+                continue;
+            }
+
+            const fresh = {
+                ...content,
+                ...(alert.wait ? { body: clipText(this.waitBody(content.nodeId), BODY_MAX) } : {}),
+                expiresAt: now + (content.kind === 'approval' ? APPROVAL_MAX_AGE_MS : PUSH_MAX_AGE_MS)
+            };
+
+            this.queueAlert(() => this.deliverAlert(fresh, alert.issuedAt, alert.preference, alert.ledger, { session: sessionId }));
+        }
+
+        if (activities) {
+            this.synchronizeActivities();
+        }
     }
 
     private activityNodes(): { nodeId: string; target: PushAlertContent['target']; title: string; status: AgentStatus }[] {
@@ -623,6 +696,12 @@ export class PushService {
                 this.machineActivityStates.delete(sessionId);
                 continue;
             }
+            // A push that starts an activity alerts, so the quiet device hears of the counts again when its hours end.
+            const quiet = this.quietHoursOf(subscription);
+            if (quiet) {
+                this.quietHold.withholdActivity(sessionId, quiet);
+                continue;
+            }
             const cacheKey = JSON.stringify([subscription.handle, state]);
             if (this.machineActivityStates.get(sessionId) === cacheKey) {
                 continue;
@@ -638,7 +717,7 @@ export class PushService {
         const entry = this.attention.notify(content.nodeId);
         this.tell(entry);
         if (immediate) {
-            this.queueAlert(() => this.deliverAlert(content, entry.issuedAt, 'needs-you', true));
+            this.queueAlert(() => this.deliverAlert(content, entry.issuedAt, 'needs-you', true, { asked: true }));
         } else {
             this.dispatch({ content, issuedAt: entry.issuedAt, preference: 'needs-you', ledger: true, ...(wait ? { wait } : {}), ...(limit ? { limit } : {}) });
         }
@@ -654,7 +733,7 @@ export class PushService {
 
     private dispatch(alert: Omit<HeldAlert, 'dueAt'>): void {
         if (!this.present()) {
-            this.queueAlert(() => this.deliverAlert(alert.content, alert.issuedAt, alert.preference, alert.ledger, alert.limit));
+            this.queueAlert(() => this.deliverAlert(alert.content, alert.issuedAt, alert.preference, alert.ledger, { limit: alert.limit, wait: alert.wait }));
             return;
         }
         const dueAt = this.now() + (alert.content.kind === 'approval' ? APPROVAL_HOLD_MS : HOLD_MS);
@@ -697,7 +776,7 @@ export class PushService {
 
                 continue;
             }
-            this.queueAlert(() => this.deliverAlert(content, alert.issuedAt, alert.preference, alert.ledger, alert.limit));
+            this.queueAlert(() => this.deliverAlert(content, alert.issuedAt, alert.preference, alert.ledger, { limit: alert.limit, wait: alert.wait }));
         }
         if (this.held.length === 0) {
             return;
@@ -739,19 +818,31 @@ export class PushService {
         issuedAt: number,
         preference: PushNotifyKind,
         ledger: boolean,
-        limit?: LimitReservation
+        delivery: Delivery = {}
     ): Promise<void> {
+        const { limit, session } = delivery;
         let sent = false;
 
         try {
             const projectId = this.options.projectOf?.(content.nodeId) ?? null;
             for (const { sessionId, subscription } of await this.options.auth.pushSubscriptions()) {
                 if (
+                    (session !== undefined && sessionId !== session) ||
                     (ledger && this.attention.isRead(content.nodeId, issuedAt)) ||
                     this.connectedSessions.has(sessionId) ||
                     (content.kind === 'approval' ? !subscription.approvals : !subscription.followAll && !subscription.follow.includes(content.nodeId)) ||
                     !notifyKinds(subscription, projectId).includes(preference)
                 ) {
+                    continue;
+                }
+                const quiet = delivery.asked ? null : this.quietHoursOf(subscription);
+
+                if (quiet) {
+                    // A finished turn or a process warning is over by the time the quiet ends; a wait, an approval or an alert the daemon raised is not.
+                    if (preference === 'needs-you') {
+                        this.quietHold.withhold(sessionId, quiet, { content, issuedAt, preference, ledger, ...(delivery.wait ? { wait: true } : {}) });
+                    }
+
                     continue;
                 }
                 // A finished turn or a process warning must never replace a wait or an approval still open on the phone.
@@ -779,6 +870,11 @@ export class PushService {
                 !subscription.follow.includes(nodeId) ||
                 (subscription.activityNodeId !== undefined && subscription.activityNodeId !== nodeId)
             ) {
+                continue;
+            }
+            const quiet = this.quietHoursOf(subscription);
+            if (quiet) {
+                this.quietHold.withholdActivity(sessionId, quiet);
                 continue;
             }
             const cacheKey = `${sessionId}:${nodeId}`;
