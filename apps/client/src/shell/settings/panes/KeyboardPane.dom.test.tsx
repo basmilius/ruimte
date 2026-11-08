@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { useProvidersStore } from '@adecore/agents-react/state';
 import { isApplePlatform } from '@/desktop/bridge';
 import { useAppShortcuts } from '@/shell/app-shortcuts';
 import { appCommands } from '@/shell/commands';
@@ -63,6 +64,8 @@ function menuAccelerator(id: string): string | undefined {
 }
 
 beforeEach(async () => {
+    // The menu lists the machine's agents; a run that left half a provider behind must not decide this test.
+    useProvidersStore.setState({ byScope: {} });
     useUi.getState().setPaletteOpen(false);
     page = mount();
     await page.render(
