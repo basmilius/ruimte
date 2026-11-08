@@ -554,6 +554,13 @@ A client with a key (the iPhone app) registers with `push.subscribe`, kept in `a
 
 A chat that stops on its plan's usage limit raises an attention alert instead of a finished turn, heard under `needs-you`: "Codex (Blis): weekly limit reached." The window comes from the plan reads (`usage.limits`), and the content carries `resetsAt` so the phone words when the limit lifts. It sets `timeSensitive` unless the machine takes the chat up again at the reset. One limit of one account (`src/push/limit-alert.ts`) pushes once until it lifts, or for an hour without a time, kept in memory only.
 
+A device can set quiet hours with an optional `quietHours` on `push.subscribe` (`days` as ISO weekdays, `start` and `end` as `HH:MM`, `timeZone`), read back by `push.preferences`. An older machine drops the field and keeps pushing, and its `push.preferences` answers without it. `quietState` (`packages/contracts/src/quiet-hours.ts`) decides at send time. A window belongs to the day it starts on, an `end` at or before `start` runs into the next day, and a time zone the runtime refuses reads as not quiet. For a quiet device:
+
+- An alert someone asked for (`alert`) still goes out.
+- A wait, an approval and an alert the daemon raised (a failed task, a wake given up, a usage limit) are held in memory (`src/push/quiet-hold.ts`), one per node and one per approval request. Live Activity pushes are skipped.
+- A finished turn and a process warning are dropped.
+- One timer, on the clock the outbox uses, waits for the soonest end while anything is held, and a `push.subscribe` that changes the hours looks again. At the end each held alert is checked as a held one is (snoozed, answered, limit lifted), gets a fresh expiry, goes to that device only, and the machine's counts are sent again. A restart forgets what was held.
+
 Read state lives in `push-attention.json`; a client acknowledges what a focused window shows with `push.read`.
 
 ### One account per machine
