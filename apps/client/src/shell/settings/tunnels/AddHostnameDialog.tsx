@@ -68,9 +68,11 @@ function HostnameForm({
     const [failure, setFailure] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const chosenZone = state.zones.find((entry) => entry.id === zone) ?? state.zones[0];
+    // A hostname points at loopback of whatever computer runs the tunnel, so this machine's ports mean nothing then.
+    const elsewhere = state.tunnel?.runner === 'other';
 
     useEffect(() => {
-        if (editing) {
+        if (editing || elsewhere) {
             return;
         }
 
@@ -78,7 +80,7 @@ function HostnameForm({
             ?.request('tunnel.discover', {})
             .then((found) => setPorts(found.ports))
             .catch(() => setPorts([]));
-    }, [endpointId, editing]);
+    }, [endpointId, editing, elsewhere]);
 
     const chosenPort = Number(port);
     const portReady = Number.isInteger(chosenPort) && chosenPort > 0;
@@ -155,7 +157,7 @@ function HostnameForm({
                 )}
                 {kind === 'dev' && (
                     <Field orientation="horizontal" label={t('tunnels.add.port')}>
-                        {ports.length > 0 && !typing ? (
+                        {ports.length > 0 && !typing && !elsewhere ? (
                             <Select<string>
                                 label={t('tunnels.add.port')}
                                 variant="outlined"
@@ -195,6 +197,12 @@ function HostnameForm({
                     <p className="flex items-center gap-2 text-xs text-status-needs-you">
                         <Icon icon={TriangleAlert} size={14} className="shrink-0" />
                         {t('tunnels.add.devWarning')}
+                    </p>
+                )}
+                {elsewhere && kind === 'dev' && portReady && (
+                    <p className="flex items-center gap-2 text-xs text-status-needs-you">
+                        <Icon icon={TriangleAlert} size={14} className="shrink-0" />
+                        {t('tunnels.add.otherRunner', { port: String(chosenPort) })}
                     </p>
                 )}
                 {failure !== null && <FormError>{failure}</FormError>}

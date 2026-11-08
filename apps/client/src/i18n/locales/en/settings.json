@@ -1105,6 +1105,7 @@
             "zone": "Domain",
             "pickZone": "Pick domain",
             "devWarning": "Anyone with the address reaches this dev server.",
+            "otherRunner": "Points to port {{port}} on the computer that runs this tunnel.",
             "action": "Add"
         },
         "origin": {
