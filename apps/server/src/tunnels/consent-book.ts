@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { ConsentRequest, ExternalGrant } from '@ruimte/contracts';
+import { sameSecret } from '../auth/local-secret.ts';
 import { defaultGrant, mergedGrant } from './credential-store.ts';
 
 /* How long a client waits for a person on this machine before the request is nothing. */
@@ -155,14 +156,15 @@ export class ConsentBook {
         this.sweep();
 
         for (const [id, entry] of this.pending) {
-            if (entry.decision?.approved !== true || entry.decision.authorizationCode !== code) {
+            // Constant time, so how long the answer takes says nothing about how much of a guessed code was right.
+            if (entry.decision?.approved !== true || !sameSecret(code, entry.decision.authorizationCode)) {
                 continue;
             }
 
             // Spent whether or not the rest matches, so a guessed verifier gets one try.
             this.pending.delete(id);
 
-            return entry.clientId === input.clientId && entry.redirectUri === input.redirectUri && challengeOf(input.verifier) === entry.challenge
+            return entry.clientId === input.clientId && entry.redirectUri === input.redirectUri && sameSecret(challengeOf(input.verifier), entry.challenge)
                 ? entry
                 : null;
         }
