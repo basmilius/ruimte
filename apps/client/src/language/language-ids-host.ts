@@ -1,11 +1,8 @@
 import { lspLanguageIdOf } from '@adecore/editor-react';
 import { matchesFilePattern, type LanguageServerStatus } from '@ruimte/contracts';
 
-/* The languages of the native servers that `lspLanguageIdOf` of ADE CORE does not know yet, by the id the machine reads a file as. */
-const NATIVE_LANGUAGES = new Set(['markdown', 'toml', 'lua', 'go', 'swift', 'zig']);
-
-/* The same languages for a file known by its path alone. */
-const NATIVE_BY_EXTENSION: Record<string, string> = { md: 'markdown', toml: 'toml', lua: 'lua', go: 'go', swift: 'swift', zig: 'zig', zon: 'zon' };
+/* The files of a native server that no highlighter id names: Zig's package manifests. */
+const NATIVE_BY_EXTENSION: Record<string, string> = { zon: 'zon' };
 
 /* The files gopls tells apart by the language id of the document, which the machine reads as no language. */
 const NATIVE_BY_NAME: Record<string, string> = { 'go.mod': 'go.mod', 'go.work': 'go.work' };
@@ -19,10 +16,6 @@ export function lspLanguageIdFor(language: string | undefined, path: string): st
 
     if (known !== null) {
         return known;
-    }
-
-    if (language !== undefined && NATIVE_LANGUAGES.has(language)) {
-        return language;
     }
 
     const name = path.slice(path.lastIndexOf('/') + 1).toLowerCase();
