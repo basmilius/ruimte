@@ -157,6 +157,19 @@ describe('the external MCP', () => {
         expect(everything()).not.toContain('127.0.0.1');
     });
 
+    test('turns on without a tunnel, which is how it works on loopback with no Cloudflare account', async () => {
+        state = stateOf({ stage: 'signed-out', domain: null });
+        machine.answer(
+            'tunnel.setMcp',
+            ({ enabled }) => (state = stateOf({ stage: 'signed-out', domain: null, mcp: { enabled, port: enabled ? 4230 : null } }))
+        );
+        await open();
+        await until(() => document.querySelector('[role="switch"][aria-label="External MCP"]') !== null);
+        await clickOn(document.querySelector('[role="switch"][aria-label="External MCP"]'));
+        await until(() => everything().includes('http://127.0.0.1:4230/mcp'));
+        expect(machine.requests('tunnel.setMcp')).toEqual([{ enabled: true }]);
+    });
+
     test('shows its address on loopback once it is on', async () => {
         state = stateOf({ mcp: { enabled: true, port: 4230 } });
         await open();

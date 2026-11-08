@@ -17,18 +17,6 @@ export function TunnelRows({ state, change, endpointId }: { state: TunnelState; 
 
     return (
         <SettingsSection title={t('tunnels.rows.title')} description={t('tunnels.visibility')} scope="machine" machine="picked">
-            <SettingsRow
-                searchId="tunnels.mcp"
-                label={t('tunnels.mcp.label')}
-                description={state.mcp.enabled ? t('tunnels.mcp.on', { port: state.mcp.port ?? 0 }) : t('tunnels.mcp.off')}
-                control={
-                    <Switch
-                        checked={state.mcp.enabled}
-                        label={t('tunnels.mcp.label')}
-                        onCheckedChange={(enabled) => void change('tunnel.setMcp', { enabled })}
-                    />
-                }
-            />
             {mcp === undefined ? <AddMcp state={state} change={change} /> : <HostnameRow row={mcp} change={change} />}
             {devs.map((row) => (
                 <HostnameRow key={row.id} row={row} change={change} />

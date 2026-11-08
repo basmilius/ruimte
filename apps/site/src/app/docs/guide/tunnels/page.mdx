@@ -30,8 +30,8 @@ Each hostname has its own switch and its own choice for after a restart. A dev s
 
 ## Connect a bot to the MCP
 
-1. Turn on **External MCP**. Ruimte now listens on this machine, on a port of its own, and nowhere else.
-2. Add an MCP hostname. Ruimte suggests a long random name, so scanners do not find it. The name protects nothing. A credential does.
+1. Under **External clients**, turn on **External MCP**. Ruimte now listens on this machine, on a port of its own, and nowhere else. This works without a tunnel: a bot on the same computer uses the address shown there.
+2. To reach it from outside, add an MCP hostname under **Hostnames**. Ruimte suggests a long random name, so scanners do not find it. The name protects nothing. A credential does.
 3. Give the bot the address, ending in `/mcp`.
 
 The bot connects in one of two ways.

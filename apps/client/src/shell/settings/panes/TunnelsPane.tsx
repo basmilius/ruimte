@@ -56,7 +56,9 @@ function TunnelsOf({ endpoint }: { endpoint: Endpoint }) {
             {state !== null && manages && (state.stage === 'running' || state.stage === 'starting') && (
                 <TunnelRows state={state} change={tunnels.change} endpointId={endpoint.id} />
             )}
-            {state !== null && manages && <CredentialsSection endpointId={endpoint.id} state={state} credentials={tunnels.credentials} reload={tunnels.load} />}
+            {state !== null && manages && (
+                <CredentialsSection endpointId={endpoint.id} state={state} credentials={tunnels.credentials} reload={tunnels.load} change={tunnels.change} />
+            )}
         </>
     );
 }

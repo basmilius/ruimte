@@ -40,17 +40,12 @@ export function SettingsTunnels() {
             active="Tunnels"
             description="Reach Ruimte's MCP and your dev servers from outside."
             height={820}
-            label="The Settings dialog on Tunnels. Under Hostnames, the External MCP switch is on, with one hostname for the MCP that a credential guards and one for a dev server on port 3000 that anyone with the address reaches. Under External clients, one credential, Hosted bot, is listed with a button to revoke it."
+            label="The Settings dialog on Tunnels. Under Hostnames, one hostname for the MCP that a credential guards and one for a dev server on port 3000 that anyone with the address reaches. Under External clients, the External MCP switch is on and shows its address on this machine, and one credential, Hosted bot, is listed with a button to revoke it."
         >
             <SettingsSection
                 title="Hostnames"
                 description="Cloudflare ends the encryption at its edge, so it can read everything that passes through a tunnel: prompts, file contents, credentials and the cookies of a dev site. Ruimte adds no encryption of its own on top."
             >
-                <SettingsRow
-                    label="External MCP"
-                    description="Listening on 127.0.0.1, port 4230. A hostname below makes it reachable from outside."
-                    control={<Switch checked onCheckedChange={() => undefined} label="External MCP" />}
-                />
                 <Hostname name="mcp-4f9a1c7e2b83d605.example.com" what="Ruimte's MCP, guarded by a credential on every request" back />
                 <Hostname name="shop-3000.example.com" what="Dev server on port 3000, open to anyone with the address" back={false} />
             </SettingsSection>
@@ -58,6 +53,12 @@ export function SettingsTunnels() {
                 title="External clients"
                 description="A credential lets a hosted client, such as a bot, operate Ruimte as you. It has no end date unless you set one. Revoke it when you stop trusting the client."
             >
+                <SettingsRow
+                    label="External MCP"
+                    description="Listening on 127.0.0.1, port 4230. A hostname above makes it reachable from outside."
+                    control={<Switch checked onCheckedChange={() => undefined} label="External MCP" />}
+                />
+                <SettingsRow label="Address on this machine" control={<code className="text-xs text-text-muted select-all">http://127.0.0.1:4230/mcp</code>} />
                 <SettingsRow label="1 client used a credential lately" control={<Button onClick={() => undefined}>New bearer</Button>} />
                 <SettingsRow
                     label="Hosted bot"

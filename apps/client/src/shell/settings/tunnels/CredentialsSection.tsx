@@ -1,4 +1,4 @@
-import { Button, IconButton, useNow } from '@adecore/ui';
+import { Button, IconButton, Switch, useNow } from '@adecore/ui';
 import { formatAgo } from '@adecore/ui/format';
 import { ConfirmDialog, SettingsRow } from '@adecore/ui/settings';
 import type { Credential, TunnelState } from '@ruimte/contracts';
@@ -44,12 +44,14 @@ export function CredentialsSection({
     endpointId,
     state,
     credentials,
-    reload
+    reload,
+    change
 }: {
     endpointId: string;
     state: TunnelState;
     credentials: Credential[] | null;
     reload: () => void;
+    change: (type: 'tunnel.setMcp', payload: { enabled: boolean }) => Promise<void>;
 }) {
     const { t } = useTranslation('settings');
     const now = useNow(MINUTE_MS);
@@ -65,6 +67,18 @@ export function CredentialsSection({
 
     return (
         <SettingsSection title={t('tunnels.credentials.title')} description={t('tunnels.credentials.description')} scope="machine" machine="picked">
+            <SettingsRow
+                searchId="tunnels.mcp"
+                label={t('tunnels.mcp.label')}
+                description={state.mcp.enabled ? t('tunnels.mcp.on', { port: state.mcp.port ?? 0 }) : t('tunnels.mcp.off')}
+                control={
+                    <Switch
+                        checked={state.mcp.enabled}
+                        label={t('tunnels.mcp.label')}
+                        onCheckedChange={(enabled) => void change('tunnel.setMcp', { enabled })}
+                    />
+                }
+            />
             <SettingsRow
                 label={t('tunnels.credentials.address')}
                 description={state.mcp.enabled && state.mcp.port !== null ? undefined : t('tunnels.credentials.addressOff')}
