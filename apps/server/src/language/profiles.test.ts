@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { normalize } from 'node:path';
+import { join, normalize } from 'node:path';
 import {
     activates,
     additionKindsForLanguage,
@@ -127,6 +127,17 @@ describe('server profiles', () => {
         expect(component!.program!(launch)).toBe('/home/go/bin/gopls');
         expect(component!.initializationOptions(launch)).toEqual({ codelenses: { generate: false, regenerate_cgo: false } });
         expect(component!.env).toMatchObject({ GOTOOLCHAIN: 'local' });
+    });
+
+    it('serves Lua in any project, keeps the log and the meta of the server out of the install, and runs project code', () => {
+        expect(kindForLanguage('lua')).toBe('lua');
+        expect(KIND_PROFILES.lua.activation).toBeUndefined();
+        expect(KIND_PROFILES.lua.runsProjectCode).toBe(true);
+        expect(KIND_PROFILES.lua.runsBuildCode).toBeUndefined();
+        const [component] = KIND_PROFILES.lua.components;
+        const storage = join(context.installDirectory, 'storage');
+        expect(component!.args(context)).toEqual([`--logpath=${join(storage, 'log')}`, `--metapath=${join(storage, 'meta')}`]);
+        expect(component!.configuration).toEqual({ Lua: { telemetry: { enable: false }, workspace: { checkThirdParty: false } } });
     });
 
     it('serves TOML in any project with taplo, told to fetch no schema', () => {

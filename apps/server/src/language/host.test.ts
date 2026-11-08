@@ -2539,6 +2539,46 @@ describe('a server from a pinned release of someone else', () => {
         expect(await readFile(taplo!.spec.command, 'utf8')).toBe('#!/bin/sh\n');
     });
 
+    it('unpacks Lua next to its own files and keeps it off work from another machine, where a plugin would run', async () => {
+        const archive = tarGz([
+            { path: 'bin/lua-language-server', text: '#!/bin/sh\n', mode: 0o755 },
+            { path: 'main.lua', text: '-- main' }
+        ]);
+        const lua = {
+            native: new NativePolicy({
+                checkouts: {},
+                releases: {
+                    lua: {
+                        sourceRevision: 'a'.repeat(40),
+                        version: '3.19.2',
+                        checksumOnly: true,
+                        assets: {
+                            [`${process.platform}-${process.arch}`]: {
+                                url: 'https://example.test/lua.tar.gz',
+                                sha256: sha256(archive),
+                                format: 'tar.gz' as const,
+                                executable: 'bin/lua-language-server'
+                            }
+                        }
+                    }
+                }
+            }),
+            download: async (_url: string, destination: string) => {
+                await writeFile(destination, archive);
+            }
+        };
+        const { host, spawner } = await installed(['lua'], lua);
+
+        expect((await open(host, 'init.lua', 'print(1)\n', 'client-1', 'lua')).servers).toEqual(['lua']);
+        await ready(host, 'lua');
+        expect(spawner.of('lua')[0]!.spec.command).toBe(join(root, 'lua', 'versions', '3.19.2', 'bin', 'bin', 'lua-language-server'));
+        expect(await readFile(join(root, 'lua', 'versions', '3.19.2', 'bin', 'main.lua'), 'utf8')).toBe('-- main');
+
+        const peer = await installed(['lua'], { ...lua, untrusted: [WORK] });
+
+        expect((await open(peer.host, 'init.lua', 'print(1)\n', 'client-1', 'lua')).servers).toEqual([]);
+    });
+
     it('keeps the server for work from another machine too, since it runs nothing of the project', async () => {
         const { host } = await installed(['markdown'], {
             untrusted: [WORK],

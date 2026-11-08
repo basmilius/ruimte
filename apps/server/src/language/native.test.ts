@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile } from
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
+import luaDescriptor from './lua-native-release.json' with { type: 'json' };
 import markdownDescriptor from './markdown-native-release.json' with { type: 'json' };
 import {
     fetchStubs,
@@ -264,7 +265,8 @@ describe('native policy', () => {
 
     it.each([
         ['markdown', markdownDescriptor, '2026-02-08', 'https://github.com/artempyanykh/marksman/releases/download/2026-02-08/', 'raw'],
-        ['toml', tomlDescriptor, '0.10.0', 'https://github.com/tamasfe/taplo/releases/download/0.10.0/', 'gz']
+        ['toml', tomlDescriptor, '0.10.0', 'https://github.com/tamasfe/taplo/releases/download/0.10.0/', 'gz'],
+        ['lua', luaDescriptor, '3.19.2', 'https://github.com/LuaLS/lua-language-server/releases/download/3.19.2/', 'archive']
     ] as const)(
         'pins the release of %s for every platform it ships, by checksum alone and with no checkout to build from',
         (kind, release, version, base, format) => {
@@ -274,10 +276,10 @@ describe('native policy', () => {
                 const [platform, arch] = target.split('-');
                 const plan = new NativePolicy({ checkouts: {}, platform: platform as NodeJS.Platform, arch }).plan(kind, folder);
                 expect(plan).toMatchObject({ source: 'release', version, printsVersion: false, asset });
-                expect(asset.format).toBe(format);
+                expect(format === 'archive' ? ['tar.gz', 'zip'] : [format]).toContain(asset.format);
                 expect(asset.sha256).toMatch(/^[a-f0-9]{64}$/);
                 expect(asset.url).toStartWith(base);
-                expect(asset.executable).toBe(platform === 'win32' ? `${nativeProgramOf(kind)}.exe` : nativeProgramOf(kind));
+                expect(asset.executable.endsWith(platform === 'win32' ? `${nativeProgramOf(kind)}.exe` : nativeProgramOf(kind))).toBe(true);
             }
         }
     );

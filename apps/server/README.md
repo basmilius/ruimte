@@ -473,6 +473,7 @@ The daemon looks up no addresses, holds no map ticket and never contacts the map
 | `rust` | rust-analyzer from the Rust toolchain, never installed by Ruimte | Rust, in a project with a `Cargo.toml` in its folder or up to three folders down |
 | `go` | gopls from Go, never installed by Ruimte | Go, `go.mod` and `go.work`, in any project |
 | `swift` | sourcekit-lsp from the Swift toolchain, never installed by Ruimte | Swift, in any project |
+| `lua` | lua-language-server, a pinned release (`lua-native-release.json`) | Lua, in any project; it runs the plugins a `.luarc.json` names, so not on work from another machine |
 | `toml` | taplo, a pinned release (`toml-native-release.json`) | TOML, in any project, with no schema catalog |
 | `markdown` | marksman, a pinned release (`markdown-native-release.json`) | Markdown, in any project: links, headings and references across files |
 

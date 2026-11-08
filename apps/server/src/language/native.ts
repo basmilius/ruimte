@@ -5,6 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import type { LanguageServerKind } from '@ruimte/contracts';
 import { sha256, type FileDownload } from '../artifacts/artifact-fs.ts';
 import { extractEntries, isSingleFileFormat, readArchive, readSingleFile, type ArchiveFormat, type SingleFileFormat } from './archive.ts';
+import luaRelease from './lua-native-release.json' with { type: 'json' };
 import markdownRelease from './markdown-native-release.json' with { type: 'json' };
 import phpRelease from './php-native-release.json' with { type: 'json' };
 import sqlRelease from './sql-native-release.json' with { type: 'json' };
@@ -12,9 +13,9 @@ import tomlRelease from './toml-native-release.json' with { type: 'json' };
 import { cargoBin } from './toolchain.ts';
 
 /* A kind whose server is a program of its own, downloaded or built once, and not an npm package. */
-export type NativeKind = 'php-native' | 'sql-native' | 'markdown' | 'toml';
+export type NativeKind = 'php-native' | 'sql-native' | 'markdown' | 'toml' | 'lua';
 
-const NATIVE_KINDS: readonly NativeKind[] = ['php-native', 'sql-native', 'markdown', 'toml'];
+const NATIVE_KINDS: readonly NativeKind[] = ['php-native', 'sql-native', 'markdown', 'toml', 'lua'];
 
 export function isNativeKind(kind: LanguageServerKind): kind is NativeKind {
     return (NATIVE_KINDS as readonly string[]).includes(kind);
@@ -78,7 +79,8 @@ export const NATIVE_RELEASES: Partial<Record<NativeKind, NativeRelease>> = Objec
             ['php-native', pinnedRelease(phpRelease)],
             ['sql-native', pinnedRelease(sqlRelease as ReleaseDescriptor)],
             ['markdown', pinnedRelease(markdownRelease)],
-            ['toml', pinnedRelease(tomlRelease)]
+            ['toml', pinnedRelease(tomlRelease)],
+            ['lua', pinnedRelease(luaRelease)]
         ] as const
     ).filter(([, release]) => release !== undefined)
 );
@@ -163,7 +165,8 @@ const NATIVE_SPECS: Record<NativeKind, NativeSpec> = {
         source: { sibling: ['language-servers', 'sql'], variable: 'RUIMTE_SQL_LANGUAGE_SERVER_SOURCE', read: readSqlCheckout }
     },
     markdown: { program: 'marksman', title: 'Markdown', stubs: false },
-    toml: { program: 'taplo', title: 'TOML', stubs: false }
+    toml: { program: 'taplo', title: 'TOML', stubs: false },
+    lua: { program: 'lua-language-server', title: 'Lua', stubs: false }
 };
 
 /* The name of the program a native kind runs, which is also the name its version is pinned under. */

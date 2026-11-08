@@ -21,7 +21,8 @@ const SERVER_NAMES: Record<LanguageServerKind, { name: string; package: string }
     markdown: { name: 'Markdown', package: 'marksman' },
     go: { name: 'Go', package: 'gopls' },
     swift: { name: 'Swift', package: 'sourcekit-lsp' },
-    toml: { name: 'TOML', package: 'taplo' }
+    toml: { name: 'TOML', package: 'taplo' },
+    lua: { name: 'Lua', package: 'lua-language-server' }
 };
 
 export type ServerTone = 'ok' | 'busy' | 'error' | 'idle';
@@ -60,7 +61,7 @@ const SERVER_GROUPS = [
     { id: 'scripts', kinds: ['typescript', 'vue', 'eslint'] },
     { id: 'web', kinds: ['html', 'css', 'tailwind'] },
     { id: 'data', kinds: ['json', 'yaml', 'toml', 'sql-native'] },
-    { id: 'other', kinds: ['php-native', 'php', 'python', 'rust', 'go', 'swift', 'markdown', 'bash', 'docker'] }
+    { id: 'other', kinds: ['php-native', 'php', 'python', 'rust', 'go', 'swift', 'lua', 'markdown', 'bash', 'docker'] }
 ] as const satisfies readonly { id: string; kinds: readonly LanguageServerKind[] }[];
 
 type ServerGroupId = (typeof SERVER_GROUPS)[number]['id'];

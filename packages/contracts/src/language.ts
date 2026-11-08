@@ -35,7 +35,9 @@ export const LanguageServerKindSchema = z.enum([
     // sourcekit-lsp as the Swift toolchain brings it; found, never installed.
     'swift',
     // taplo, a pinned release of someone else's server.
-    'toml'
+    'toml',
+    // lua-language-server, a pinned release of someone else's server.
+    'lua'
 ]);
 export type LanguageServerKind = z.infer<typeof LanguageServerKindSchema>;
 

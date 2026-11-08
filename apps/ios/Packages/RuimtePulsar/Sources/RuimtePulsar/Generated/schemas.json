@@ -53565,7 +53565,8 @@
           "markdown",
           "go",
           "swift",
-          "toml"
+          "toml",
+          "lua"
         ]
       }
     },
@@ -53734,7 +53735,8 @@
           "markdown",
           "go",
           "swift",
-          "toml"
+          "toml",
+          "lua"
         ]
       }
     },
@@ -53903,7 +53905,8 @@
           "markdown",
           "go",
           "swift",
-          "toml"
+          "toml",
+          "lua"
         ]
       }
     },

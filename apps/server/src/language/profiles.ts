@@ -379,6 +379,32 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
             }
         ]
     },
+    /*
+     * lua-language-server, from a pinned release. A plugin that `.luarc.json` names is Lua that runs inside
+     * the server, so it stays off work from another machine. The server keeps its log and its generated
+     * `meta` in the storage of the kind and not in the install, which an update replaces.
+     */
+    lua: {
+        kind: 'lua',
+        runsProjectCode: true,
+        components: [
+            {
+                name: 'lua',
+                title: 'Lua Language Server',
+                languages: ['lua'],
+                entry: 'lua-language-server',
+                program: (context) => context.native?.executable ?? '',
+                args: (context) => {
+                    const storage = nativeStorageOf(context.installDirectory);
+
+                    return [`--logpath=${join(storage, 'log')}`, `--metapath=${join(storage, 'meta')}`];
+                },
+                initializationOptions: () => ({}),
+                // Without these the server asks, with a prompt, whether to send telemetry and whether to configure a third-party library.
+                configuration: { Lua: { telemetry: { enable: false }, workspace: { checkThirdParty: false } } }
+            }
+        ]
+    },
     css: {
         kind: 'css',
         components: [
