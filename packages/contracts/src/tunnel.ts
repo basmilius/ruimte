@@ -124,10 +124,15 @@ export const TunnelStateSchema = z.object({
     message: z.string().max(2000).nullable(),
     /* Whether the machine holds an API token that Cloudflare accepted. */
     hasToken: z.boolean(),
-    /* The accounts the token reaches, the one the tunnel lives on (or the only one), and the zones of that account. */
-    accounts: z.array(TunnelNamedSchema).max(50),
+    /*
+     * The accounts the token reaches, the one the tunnel lives on (or the only one), and the zones of that account. The
+     * daemon reads up to 1000 zones, and each may be on an account of its own.
+     */
+    accounts: z.array(TunnelNamedSchema).max(1000),
     account: TunnelNamedSchema.nullable(),
-    zones: z.array(TunnelNamedSchema).max(500),
+    zones: z.array(TunnelNamedSchema).max(1000),
+    /* How many zones the token reaches on all its accounts, for the sentence shown before an account is picked. */
+    zoneCount: z.number().int().nonnegative().optional(),
     /* The name of this machine's tunnel in the Cloudflare dashboard; null until it is made. */
     tunnel: z.object({ name: z.string().max(253) }).nullable(),
     rows: z.array(TunnelRowSchema).max(100),

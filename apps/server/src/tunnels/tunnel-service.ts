@@ -131,6 +131,7 @@ export class TunnelService {
             accounts,
             account,
             zones: account === null ? [] : this.zones.filter((zone) => zone.account.id === account.id).map(({ id, name }) => ({ id, name })),
+            zoneCount: this.zones.length,
             tunnel: this.stored.tunnel === null ? null : { name: this.stored.tunnel.name },
             rows: this.stored.rows.map((row) => ({
                 id: row.id,

@@ -69595,7 +69595,7 @@
         "type": "boolean"
       },
       "accounts": {
-        "maxItems": 50,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -69644,7 +69644,7 @@
         ]
       },
       "zones": {
-        "maxItems": 500,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -69665,6 +69665,11 @@
             "name"
           ]
         }
+      },
+      "zoneCount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
       },
       "tunnel": {
         "anyOf": [
@@ -69873,7 +69878,7 @@
         "type": "boolean"
       },
       "accounts": {
-        "maxItems": 50,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -69922,7 +69927,7 @@
         ]
       },
       "zones": {
-        "maxItems": 500,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -69943,6 +69948,11 @@
             "name"
           ]
         }
+      },
+      "zoneCount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
       },
       "tunnel": {
         "anyOf": [
@@ -70117,7 +70127,7 @@
         "type": "boolean"
       },
       "accounts": {
-        "maxItems": 50,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -70166,7 +70176,7 @@
         ]
       },
       "zones": {
-        "maxItems": 500,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -70187,6 +70197,11 @@
             "name"
           ]
         }
+      },
+      "zoneCount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
       },
       "tunnel": {
         "anyOf": [
@@ -70352,7 +70367,7 @@
         "type": "boolean"
       },
       "accounts": {
-        "maxItems": 50,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -70401,7 +70416,7 @@
         ]
       },
       "zones": {
-        "maxItems": 500,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -70422,6 +70437,11 @@
             "name"
           ]
         }
+      },
+      "zoneCount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
       },
       "tunnel": {
         "anyOf": [
@@ -70593,7 +70613,7 @@
         "type": "boolean"
       },
       "accounts": {
-        "maxItems": 50,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -70642,7 +70662,7 @@
         ]
       },
       "zones": {
-        "maxItems": 500,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -70663,6 +70683,11 @@
             "name"
           ]
         }
+      },
+      "zoneCount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
       },
       "tunnel": {
         "anyOf": [
@@ -70859,7 +70884,7 @@
         "type": "boolean"
       },
       "accounts": {
-        "maxItems": 50,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -70908,7 +70933,7 @@
         ]
       },
       "zones": {
-        "maxItems": 500,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -70929,6 +70954,11 @@
             "name"
           ]
         }
+      },
+      "zoneCount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
       },
       "tunnel": {
         "anyOf": [
@@ -71109,7 +71139,7 @@
         "type": "boolean"
       },
       "accounts": {
-        "maxItems": 50,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -71158,7 +71188,7 @@
         ]
       },
       "zones": {
-        "maxItems": 500,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -71179,6 +71209,11 @@
             "name"
           ]
         }
+      },
+      "zoneCount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
       },
       "tunnel": {
         "anyOf": [
@@ -71353,7 +71388,7 @@
         "type": "boolean"
       },
       "accounts": {
-        "maxItems": 50,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -71402,7 +71437,7 @@
         ]
       },
       "zones": {
-        "maxItems": 500,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -71423,6 +71458,11 @@
             "name"
           ]
         }
+      },
+      "zoneCount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
       },
       "tunnel": {
         "anyOf": [
@@ -71588,7 +71628,7 @@
         "type": "boolean"
       },
       "accounts": {
-        "maxItems": 50,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -71637,7 +71677,7 @@
         ]
       },
       "zones": {
-        "maxItems": 500,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -71658,6 +71698,11 @@
             "name"
           ]
         }
+      },
+      "zoneCount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
       },
       "tunnel": {
         "anyOf": [
@@ -71830,7 +71875,7 @@
         "type": "boolean"
       },
       "accounts": {
-        "maxItems": 50,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -71879,7 +71924,7 @@
         ]
       },
       "zones": {
-        "maxItems": 500,
+        "maxItems": 1000,
         "type": "array",
         "items": {
           "type": "object",
@@ -71900,6 +71945,11 @@
             "name"
           ]
         }
+      },
+      "zoneCount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
       },
       "tunnel": {
         "anyOf": [

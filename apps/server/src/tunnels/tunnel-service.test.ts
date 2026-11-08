@@ -1,7 +1,7 @@
 import { describe, expect, spyOn, test } from 'bun:test';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { TunnelState } from '@ruimte/contracts';
+import { TunnelStateSchema, type TunnelState } from '@ruimte/contracts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { CloudflareError } from './cloudflare-api.ts';
 import { TunnelConfigError } from './tunnel-config.ts';
@@ -816,6 +816,25 @@ describe('after a restart', () => {
 });
 
 describe('what the section reads and offers', () => {
+    test('describes every zone the API reads in a state the wire takes, on one account or each on its own', async () => {
+        const oneAccount = new FakeCloudflare();
+        const ownAccounts = new FakeCloudflare();
+
+        for (let i = 0; i < 1000; i += 1) {
+            oneAccount.zone(`d${i}.nl`);
+            ownAccounts.zone(`d${i}.nl`, { id: `acc-${i}`, name: `Account ${i}` });
+        }
+
+        const one = await fixture({}, '/usr/bin/cloudflared', { cloudflare: oneAccount });
+        const own = await fixture({}, '/usr/bin/cloudflared', { cloudflare: ownAccounts });
+        const states = [await one.service.setToken(FAKE_API_TOKEN), await own.service.setToken(FAKE_API_TOKEN)];
+
+        expect(states.map((state) => [state.zones.length, state.accounts.length, state.zoneCount])).toEqual([
+            [1000, 1, 1000],
+            [0, 1000, 1000]
+        ]);
+        expect(states.every((state) => TunnelStateSchema.safeParse(state).success)).toBe(true);
+    });
     test('offers the discovered ports without Ruimte own ports and those already on the tunnel', async () => {
         const f = await fixture();
 
