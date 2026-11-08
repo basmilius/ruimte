@@ -5,7 +5,7 @@ import { ChatChild, type SpawnChatProcess } from '@adecore/agents/chat';
 import type { EditorAssistAgent, EditorAssistGenerateResult, EditorAssistPurpose, EditorAssistStatusResult } from '@ruimte/contracts';
 import { oneShotRun } from '../git/one-shot.ts';
 import { PURPOSES } from './instructions.ts';
-import { selectAssistAgent, type AssistProviders } from './selection.ts';
+import { assistEnvironment, selectAssistAgent, type AssistProviders } from './selection.ts';
 
 interface EditorAssistModelOptions extends AssistProviders {
     home: string;
@@ -79,16 +79,13 @@ export class EditorAssistModel {
 
             const spec = PURPOSES[request.purpose];
             const prompt = `${spec.instructions}\nDo not use tools, read files or run commands. Answer using only the following text.\n\n${request.prompt}`;
-            const run = oneShotRun(provider, prompt);
+            const run = oneShotRun(provider, prompt, model);
 
             if (run === null) {
                 throw new CodedError('unavailable', `${provider.name} cannot answer an editor request.`);
             }
 
             const args = [...run.args];
-            // Codex's stdin marker is positional, so flags must precede it.
-            const modelAt = provider.kind === 'codex' && args.at(-1) === '-' ? args.length - 1 : args.length;
-            args.splice(modelAt, 0, '--model', model);
 
             if (provider.kind === 'claude') {
                 args.push('--tools', '', '--strict-mcp-config', '--setting-sources', '', '--no-session-persistence', '--effort', 'low');
@@ -98,12 +95,7 @@ export class EditorAssistModel {
                 args.splice(1, 0, '-c', 'model_reasoning_effort="low"');
             }
 
-            const inherited = this.options.accounts.envFor(provider.kind, account, this.options.env ?? process.env);
-            const env = Object.fromEntries(
-                Object.entries(inherited).filter(
-                    (entry): entry is [string, string] => entry[1] !== undefined && !entry[0].startsWith('RUIMTE_') && entry[0] !== 'CLAUDECODE'
-                )
-            );
+            const env = assistEnvironment(this.options.accounts, { provider, account }, this.options.env ?? process.env);
             let exit!: (code: number | null) => void;
             const exited = new Promise<number | null>((resolve) => {
                 exit = resolve;

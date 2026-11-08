@@ -60,6 +60,15 @@ describe('oneShotRun', () => {
     test('falls back to the command line for a CLI that only takes it there', () => {
         expect(oneShotRun(provider(), 'the prompt')).toEqual({ args: ['-p', 'the prompt'] });
     });
+
+    test('adds the model as a flag, before the stdin marker of Codex', () => {
+        expect(oneShotRun(provider(['-p']), 'the prompt', 'small')).toEqual({ args: ['-p', '--model', 'small'], stdin: 'the prompt' });
+        expect(oneShotRun(provider(), 'the prompt', 'small')).toEqual({ args: ['-p', 'the prompt', '--model', 'small'] });
+
+        const codex = { name: 'Codex', kind: 'codex', oneShotStdinArgs: ['exec', '-'] } as unknown as ChatProvider;
+
+        expect(oneShotRun(codex, 'the prompt', 'small')).toEqual({ args: ['exec', '--model', 'small', '-'], stdin: 'the prompt' });
+    });
 });
 
 describe('parseResolution', () => {
