@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { TunnelRow } from '@ruimte/contracts';
+import type { TunnelOrigin, TunnelRow } from '@ruimte/contracts';
 
 const LABEL = '[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?';
 const HOSTNAME = new RegExp(`^${LABEL}(\\.${LABEL})+$`);
@@ -79,6 +79,77 @@ export function deniedPortReason(port: number, denied: readonly number[]): strin
     return denied.includes(port) ? `Port ${port} belongs to Ruimte itself, and a tunnel never points at it` : null;
 }
 
+const ORIGIN_NAME = new RegExp(`^${LABEL}(\\.${LABEL})*$`);
+
+/* A name a dev server is asked for, one label or more, so `passly.test` and `localhost` both pass. Null for one that is none. */
+function originName(raw: string, allowPort: boolean): string | null {
+    const typed = raw.trim().toLowerCase().replace(/\.$/, '');
+    const match = /^(.*?)(?::(\d{1,5}))?$/.exec(typed);
+    const name = match?.[1] ?? '';
+    const port = match?.[2];
+
+    if (name.length > 253 || !ORIGIN_NAME.test(name)) {
+        return null;
+    }
+
+    if (port !== undefined && (!allowPort || Number(port) < 1 || Number(port) > 65535)) {
+        return null;
+    }
+
+    return port === undefined ? name : `${name}:${Number(port)}`;
+}
+
+/*
+ * The origin settings of a dev row as they are kept: only what differs from Cloudflare's default, undefined for none.
+ * Throws a `TunnelConfigError` for a name that is none, or for a certificate setting without https.
+ */
+export function normalizedOrigin(origin: TunnelOrigin | undefined): TunnelOrigin | undefined {
+    if (origin === undefined) {
+        return undefined;
+    }
+
+    const hostHeader = origin.hostHeader?.trim() ?? '';
+    const serverName = origin.serverName?.trim() ?? '';
+    const kept: TunnelOrigin = {};
+
+    if (origin.https === true) {
+        kept.https = true;
+    }
+
+    if (hostHeader !== '') {
+        const name = originName(hostHeader, true);
+
+        if (name === null) {
+            throw new TunnelConfigError(
+                'invalid-host-header',
+                `${hostHeader} is not a host header. Use a hostname such as passly.test, with a port or without.`
+            );
+        }
+
+        kept.hostHeader = name;
+    }
+
+    if ((origin.noTlsVerify === true || serverName !== '') && kept.https !== true) {
+        throw new TunnelConfigError('tls-without-https', 'Skip TLS check and Server name only apply to https');
+    }
+
+    if (origin.noTlsVerify === true) {
+        kept.noTlsVerify = true;
+    }
+
+    if (serverName !== '') {
+        const name = originName(serverName, false);
+
+        if (name === null) {
+            throw new TunnelConfigError('invalid-server-name', `${serverName} is not a server name. Use a hostname such as passly.test, without a port.`);
+        }
+
+        kept.serverName = name;
+    }
+
+    return Object.keys(kept).length === 0 ? undefined : kept;
+}
+
 export interface IngressInput {
     readonly rows: readonly TunnelRow[];
     /* Where the external listener is; the MCP row has no ingress without one. */
@@ -89,9 +160,25 @@ export interface IngressInput {
 export interface IngressRule {
     readonly hostname: string;
     readonly service: string;
+    readonly originRequest?: { httpHostHeader?: string; noTLSVerify?: boolean; originServerName?: string };
 }
 
-/* The rules of the rows that are on: a dev row points at its one literal loopback port, the MCP row at the external listener. */
+/* A dev row's rule in Cloudflare's words, with an `originRequest` only when the row sets something. */
+function devRule(hostname: string, port: number, origin: TunnelOrigin | undefined): IngressRule {
+    const service = `${origin?.https === true ? 'https' : 'http'}://127.0.0.1:${port}`;
+    const originRequest = {
+        ...(origin?.hostHeader === undefined ? {} : { httpHostHeader: origin.hostHeader }),
+        ...(origin?.noTlsVerify === true ? { noTLSVerify: true } : {}),
+        ...(origin?.serverName === undefined ? {} : { originServerName: origin.serverName })
+    };
+
+    return Object.keys(originRequest).length === 0 ? { hostname, service } : { hostname, service, originRequest };
+}
+
+/*
+ * The rules of the rows that are on: a dev row points at its one literal loopback port, over http or https, the MCP row
+ * at the external listener with no origin settings of its own.
+ */
 export function ingressRules({ rows, listenerPort, denied }: IngressInput): IngressRule[] {
     const rules: IngressRule[] = [];
 
@@ -108,13 +195,17 @@ export function ingressRules({ rows, listenerPort, denied }: IngressInput): Ingr
             continue;
         }
 
-        const reason = row.port === null ? 'A dev server needs a port' : deniedPortReason(row.port, denied);
+        if (row.port === null) {
+            throw new TunnelConfigError('port-denied', 'A dev server needs a port');
+        }
+
+        const reason = deniedPortReason(row.port, denied);
 
         if (reason !== null) {
             throw new TunnelConfigError('port-denied', reason);
         }
 
-        rules.push({ hostname: row.hostname, service: `http://127.0.0.1:${row.port}` });
+        rules.push(devRule(row.hostname, row.port, row.origin));
     }
 
     return rules;

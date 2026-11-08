@@ -543,6 +543,125 @@ describe('a row', () => {
     });
 });
 
+describe('the origin of a dev row', () => {
+    test('sends a host header to a plain http server, with a port or without', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 80, origin: { hostHeader: ' Passly.Test ' } });
+        await f.service.add({
+            kind: 'dev',
+            zone: f.bmnw.id,
+            label: 'b',
+            port: 8080,
+            origin: { https: false, hostHeader: 'localhost:8080', noTlsVerify: false }
+        });
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress).toEqual([
+            { hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:80', originRequest: { httpHostHeader: 'passly.test' } },
+            { hostname: 'b.bmnw.nl', service: 'http://127.0.0.1:8080', originRequest: { httpHostHeader: 'localhost:8080' } },
+            { service: 'http_status:404' }
+        ]);
+        expect((await f.state()).rows.map((row) => row.origin)).toEqual([{ hostHeader: 'passly.test' }, { hostHeader: 'localhost:8080' }]);
+    });
+
+    test('refuses a host header or server name that is no hostname, certificate settings without https, and any on the MCP', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        for (const [origin, code] of [
+            [{ hostHeader: 'passly.test/admin' }, 'invalid-host-header'],
+            [{ hostHeader: 'passly.test:99999' }, 'invalid-host-header'],
+            [{ hostHeader: 'two words' }, 'invalid-host-header'],
+            [{ https: true, serverName: 'passly.test:443' }, 'invalid-server-name'],
+            [{ noTlsVerify: true }, 'tls-without-https'],
+            [{ serverName: 'passly.test' }, 'tls-without-https']
+        ] as const) {
+            await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 80, origin })).rejects.toMatchObject({ code });
+        }
+
+        await expect(f.service.add({ kind: 'mcp', zone: f.bmnw.id, label: 'mcp-1', origin: { hostHeader: 'passly.test' } })).rejects.toMatchObject({
+            code: 'mcp-fixed'
+        });
+        expect(f.cloudflare.records).toHaveLength(0);
+        expect(hostnamesOf(f)).toEqual(['http_status:404']);
+    });
+
+    test('changes the port and origin of a row that is on in Cloudflare, and back to the defaults', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 });
+        await f.service.idle();
+
+        const row = (await f.state()).rows[0]!;
+
+        await f.service.update(row.id, { port: 443, origin: { https: true, hostHeader: 'passly.test', noTlsVerify: true } });
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress[0]).toEqual({
+            hostname: 'a.bmnw.nl',
+            service: 'https://127.0.0.1:443',
+            originRequest: { httpHostHeader: 'passly.test', noTLSVerify: true }
+        });
+
+        await f.service.update(row.id, { origin: {} });
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:443' });
+        expect((await f.state()).rows[0]).not.toHaveProperty('origin');
+        await expect(f.service.update(row.id, { port: API_PORT })).rejects.toMatchObject({ code: 'port-denied' });
+        await expect(f.service.update(row.id, { origin: { hostHeader: 'no host' } })).rejects.toMatchObject({ code: 'invalid-host-header' });
+    });
+
+    test('keeps the origin of a row that is off without asking Cloudflare, and refuses one on the MCP', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        f.listener.on = true;
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 });
+        await f.service.add({ kind: 'mcp', zone: f.bmnw.id, label: 'mcp-1' });
+        await f.service.idle();
+
+        const [dev, mcp] = (await f.state()).rows;
+
+        await f.service.update(dev!.id, { enabled: false });
+        await f.service.idle();
+
+        const calls = f.cloudflare.calls.length;
+
+        await f.service.update(dev!.id, { origin: { hostHeader: 'passly.test' } });
+
+        expect(f.cloudflare.calls).toHaveLength(calls);
+        expect(JSON.parse(await readFile(join(f.home, 'tunnels', 'tunnels.json'), 'utf8')).rows[0].origin).toEqual({ hostHeader: 'passly.test' });
+        await expect(f.service.update(mcp!.id, { origin: { hostHeader: 'passly.test' } })).rejects.toMatchObject({ code: 'mcp-fixed' });
+        await expect(f.service.update(mcp!.id, { port: 3001 })).rejects.toMatchObject({ code: 'mcp-fixed' });
+    });
+
+    test('keeps a key of a row that a newer Ruimte wrote', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 });
+        await f.service.idle();
+
+        const path = join(f.home, 'tunnels', 'tunnels.json');
+        const saved = JSON.parse(await readFile(path, 'utf8'));
+
+        saved.rows[0].later = { kept: true };
+        await writeFile(path, JSON.stringify(saved));
+
+        const again = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
+
+        await again.service.update(saved.rows[0].id, { comeBack: true });
+
+        expect(JSON.parse(await readFile(path, 'utf8')).rows[0].later).toEqual({ kept: true });
+        expect((await again.state()).rows[0]).not.toHaveProperty('later');
+    });
+});
+
 describe('removal', () => {
     test('deletes the record and the rule it made, and nothing else of the account', async () => {
         const f = await fixture();
@@ -712,6 +831,45 @@ describe('an existing tunnel', () => {
         expect(picked.ingress).toEqual(OFFICE_INGRESS);
         expect(picked.rest).toEqual({ 'warp-routing': { enabled: true } });
         expect(f.cloudflare.records).toEqual([stranger]);
+    });
+
+    test('writes the origin settings into its own rule only, and lists the host header of a rule of the dashboard', async () => {
+        const f = await fixture();
+        const picked = f.cloudflare.tunnel(
+            'acc-1',
+            'office',
+            [
+                { hostname: 'nas.bmnw.nl', service: 'http://nas:80', originRequest: { httpHostHeader: 'nas.local', noTLSVerify: true } },
+                { service: 'http_status:503' }
+            ],
+            { rest: { originRequest: { connectTimeout: '10s' } } }
+        );
+
+        await linked(f, picked);
+        await f.service.add({
+            kind: 'dev',
+            zone: f.bmnw.id,
+            label: 'passly',
+            port: 443,
+            origin: { https: true, hostHeader: 'passly.test', noTlsVerify: true, serverName: 'passly.test' }
+        });
+        await f.service.idle();
+
+        expect(picked.ingress).toEqual([
+            { hostname: 'nas.bmnw.nl', service: 'http://nas:80', originRequest: { httpHostHeader: 'nas.local', noTLSVerify: true } },
+            {
+                hostname: 'passly.bmnw.nl',
+                service: 'https://127.0.0.1:443',
+                originRequest: { httpHostHeader: 'passly.test', noTLSVerify: true, originServerName: 'passly.test' }
+            },
+            { service: 'http_status:503' }
+        ]);
+        expect(picked.rest).toEqual({ originRequest: { connectTimeout: '10s' } });
+
+        const state = await f.state();
+
+        expect(state.rows[0]?.origin).toEqual({ https: true, hostHeader: 'passly.test', noTlsVerify: true, serverName: 'passly.test' });
+        expect(state.tunnel?.others).toEqual([{ hostname: 'nas.bmnw.nl', path: null, service: 'http://nas:80', hostHeader: 'nas.local' }]);
     });
 
     test('refuses a hostname the dashboard already routes on the tunnel, and writes nothing', async () => {

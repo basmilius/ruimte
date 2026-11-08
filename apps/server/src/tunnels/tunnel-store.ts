@@ -5,8 +5,11 @@ import { JsonFileStore } from '../json-file-store.ts';
 
 export const TUNNELS_DIR = 'tunnels';
 
-/* A row of the screen with what Ruimte needs to undo it: the zone and the DNS record it made, which is the only record it ever deletes. */
-const StoredRowSchema = TunnelRowSchema.extend({ zoneId: z.string().min(1), recordId: z.string().min(1) });
+/*
+ * A row of the screen with what Ruimte needs to undo it: the zone and the DNS record it made, which is the only record it
+ * ever deletes. A key a newer Ruimte wrote survives this one.
+ */
+const StoredRowSchema = TunnelRowSchema.extend({ zoneId: z.string().min(1), recordId: z.string().min(1) }).loose();
 export type StoredRow = z.infer<typeof StoredRowSchema>;
 
 /*

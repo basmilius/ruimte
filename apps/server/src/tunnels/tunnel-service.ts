@@ -1,5 +1,5 @@
 import { cancellableTimeout, Serializer } from '@adecore/utils/async';
-import type { TunnelExisting, TunnelNamed, TunnelOtherRule, TunnelRowKind, TunnelStage, TunnelState } from '@ruimte/contracts';
+import type { TunnelExisting, TunnelNamed, TunnelOrigin, TunnelOtherRule, TunnelRowKind, TunnelStage, TunnelState } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 import type { JsonFileStore } from '../json-file-store.ts';
 import {
@@ -15,7 +15,7 @@ import {
 import type { CloudflareTokenStore } from './cloudflare-token-store.ts';
 import type { CloudflaredInstaller } from './cloudflared-installer.ts';
 import type { CloudflaredProcess, CloudflaredRunner } from './cloudflared-runner.ts';
-import { CATCH_ALL, deniedPortReason, hostnameInZone, ingressRules, isCatchAll, TunnelConfigError, tunnelNameOf } from './tunnel-config.ts';
+import { CATCH_ALL, deniedPortReason, hostnameInZone, ingressRules, isCatchAll, normalizedOrigin, TunnelConfigError, tunnelNameOf } from './tunnel-config.ts';
 import { EMPTY_TUNNELS, type StoredRow, type StoredTunnels } from './tunnel-store.ts';
 
 const MAX_MESSAGE = 500;
@@ -45,7 +45,15 @@ export function sentenceOf(lines: readonly string[], fallback: string): string {
 function otherRuleOf(rule: CloudflareIngressRule): TunnelOtherRule {
     const text = (value: unknown, max: number): string | null => (typeof value === 'string' && value !== '' ? value.slice(0, max) : null);
 
-    return { hostname: text(rule.hostname, 253), path: text(rule.path, 500), service: text(rule.service, 500) ?? '' };
+    const originRequest = typeof rule.originRequest === 'object' && rule.originRequest !== null ? (rule.originRequest as Record<string, unknown>) : {};
+    const hostHeader = text(originRequest.httpHostHeader, 500);
+
+    return {
+        hostname: text(rule.hostname, 253),
+        path: text(rule.path, 500),
+        service: text(rule.service, 500) ?? '',
+        ...(hostHeader === null ? {} : { hostHeader })
+    };
 }
 
 export interface TunnelPorts {
@@ -162,7 +170,8 @@ export class TunnelService {
                 hostname: row.hostname,
                 port: row.port,
                 enabled: row.enabled,
-                comeBack: row.comeBack
+                comeBack: row.comeBack,
+                ...(row.origin === undefined ? {} : { origin: row.origin })
             })),
             mcp: { enabled: this.stored.mcp.enabled, port: this.ports.listenerPort() },
             clients: this.ports.clients(),
@@ -471,7 +480,7 @@ export class TunnelService {
      * Puts a hostname on the tunnel: the DNS record first, then the rule in Cloudflare. A name that has a record Ruimte did
      * not make is refused before anything is written.
      */
-    async add(input: { kind: TunnelRowKind; zone: string; label: string; port?: number; comeBack?: boolean }): Promise<TunnelState> {
+    async add(input: { kind: TunnelRowKind; zone: string; label: string; port?: number; comeBack?: boolean; origin?: TunnelOrigin }): Promise<TunnelState> {
         await this.jobs.run(async () => {
             const tunnel = this.stored.tunnel;
 
@@ -496,12 +505,19 @@ export class TunnelService {
             }
 
             let port: number | null = null;
+            let origin: TunnelOrigin | undefined;
 
             if (input.kind === 'mcp') {
                 if (this.stored.rows.some((row) => row.kind === 'mcp')) {
                     throw new TunnelConfigError('mcp-exists', 'The MCP already has a hostname. Remove that one first');
                 }
+
+                if (input.origin !== undefined) {
+                    throw new TunnelConfigError('mcp-fixed', 'The MCP always points at Ruimte itself');
+                }
             } else {
+                origin = normalizedOrigin(input.origin);
+
                 if (input.port === undefined) {
                     throw new TunnelConfigError('port-required', 'A dev server needs a port');
                 }
@@ -536,6 +552,7 @@ export class TunnelService {
                         enabled: true,
                         // The MCP has a credential on every request and a hosted client cannot turn it on from outside; a dev server has no gate.
                         comeBack: input.comeBack ?? input.kind === 'mcp',
+                        ...(origin === undefined ? {} : { origin }),
                         zoneId: zone.id,
                         recordId: record.id
                     }
@@ -549,29 +566,53 @@ export class TunnelService {
         return this.describe();
     }
 
-    async update(id: string, change: { enabled?: boolean; comeBack?: boolean }): Promise<TunnelState> {
+    /* A new port or new origin settings of a row that is on reach Cloudflare first, like a switch does. */
+    async update(id: string, change: { enabled?: boolean; comeBack?: boolean; port?: number; origin?: TunnelOrigin }): Promise<TunnelState> {
         const row = this.stored.rows.find((candidate) => candidate.id === id);
 
         if (row === undefined) {
             throw new TunnelConfigError('unknown-row', 'That hostname is not on this tunnel');
         }
 
-        if (change.enabled === true && row.kind === 'dev') {
-            const reason = row.port === null ? 'A dev server needs a port' : deniedPortReason(row.port, this.ports.deniedPorts());
+        const retargets = change.port !== undefined || change.origin !== undefined;
+
+        if (retargets && row.kind === 'mcp') {
+            throw new TunnelConfigError('mcp-fixed', 'The MCP always points at Ruimte itself');
+        }
+
+        const { origin: typedOrigin, ...flags } = change;
+        const origin = normalizedOrigin(typedOrigin);
+        const port = change.port ?? row.port;
+
+        if (row.kind === 'dev' && (change.enabled === true || change.port !== undefined)) {
+            const reason = port === null ? 'A dev server needs a port' : deniedPortReason(port, this.ports.deniedPorts());
 
             if (reason !== null) {
                 throw new TunnelConfigError('port-denied', reason);
             }
         }
 
-        if (change.enabled !== undefined) {
+        const touchesIngress = change.enabled !== undefined || (retargets && (change.enabled ?? row.enabled));
+
+        if (touchesIngress) {
             this.requireToken();
         }
 
-        await this.jobs.run(async () => {
-            const rows = this.stored.rows.map((candidate) => (candidate.id === id ? { ...candidate, ...change } : candidate));
+        // An origin sent replaces the one the row had, so a setting left out goes back to Cloudflare's default.
+        const apply = (candidate: StoredRow): StoredRow => {
+            if (typedOrigin === undefined) {
+                return { ...candidate, ...flags };
+            }
 
-            if (change.enabled !== undefined) {
+            const { origin: _replaced, ...rest } = candidate;
+
+            return origin === undefined ? { ...rest, ...flags } : { ...rest, ...flags, origin };
+        };
+
+        await this.jobs.run(async () => {
+            const rows = this.stored.rows.map((candidate) => (candidate.id === id ? apply(candidate) : candidate));
+
+            if (touchesIngress) {
                 await this.syncRows(rows);
             }
 
@@ -579,7 +620,7 @@ export class TunnelService {
             this.save();
         });
 
-        if (change.enabled !== undefined) {
+        if (touchesIngress) {
             await this.followUp();
         } else {
             this.announce();
