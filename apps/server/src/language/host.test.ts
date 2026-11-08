@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve, sep } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { CodedError } from '@adecore/agents';
@@ -2726,6 +2726,18 @@ describe('build code in the worktree of an agent', () => {
         expect(spawner.of('rust')[0]!.server.documents.has(uri('src/main.rs'))).toBe(true);
         expect(spawner.of('rust')[0]!.server.documents.has(uri('.worktrees/agent/src/main.rs'))).toBe(false);
         expect((await host.status('p1')).find((status) => status.server === 'rust')).toMatchObject({ state: 'ready', buildHeld: true });
+    });
+
+    it('goes by the real path, so a link into the worktree of an agent holds a file back too', async () => {
+        const project = join(root, 'project');
+        const worktree = join(root, 'real-worktree');
+        await mkdir(join(worktree, 'src'), { recursive: true });
+        await mkdir(project, { recursive: true });
+        await symlink(worktree, join(project, 'link'));
+        const { host } = await withRust({ folder: project, agentWorktrees: { main: MAIN, paths: [await realpath(worktree)] } });
+
+        expect((await openRust(host, 'src/main.rs')).servers).toEqual(['rust']);
+        expect((await openRust(host, 'link/src/main.rs')).servers).toEqual([]);
     });
 
     it('holds back nothing in a repository without a worktree of an agent, or outside one', async () => {
