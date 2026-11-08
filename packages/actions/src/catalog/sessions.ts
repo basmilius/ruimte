@@ -29,6 +29,7 @@ import {
     givenName,
     forActors,
     agentField,
+    daemonField,
     ARRANGE_LAYOUTS,
     PERSON_AND_VOICE,
     PERSON_VOICE_AND_AGENT,
@@ -481,7 +482,7 @@ export const SESSION_ACTIONS = {
         description: 'Lists the views of the project in sidebar order, with whether you may delete each and why.',
         effect: 'read',
         domain: 'views',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({}),
         output: z.object({
             views: z.array(
@@ -525,7 +526,7 @@ export const SESSION_ACTIONS = {
         description: 'Lists the nodes of a canvas, where each stands and the group it is in.',
         effect: 'read',
         domain: 'canvas',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ viewId }),
         output: z.object({
             viewId,
@@ -572,7 +573,7 @@ export const SESSION_ACTIONS = {
         agentDescription: 'Writes in several notes in one write, each a note you made or a line joins you to, or any note of the canvas a chat view names.',
         effect: 'shared',
         domain: 'content',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             viewId,
             nodes: z
@@ -612,7 +613,7 @@ export const SESSION_ACTIONS = {
         description: 'Lays nodes out in a grid, a row or a column without overlap.',
         effect: 'shared',
         domain: 'canvas',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             viewId,
             nodeIds: z.array(nodeId).min(1).describe('The nodes to tidy; they are laid out in the order they are named'),
@@ -631,7 +632,7 @@ export const SESSION_ACTIONS = {
         description: 'Lists the lines of a canvas.',
         effect: 'read',
         domain: 'canvas',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ viewId }),
         // The revision is that of the project file.
         output: z.object({ viewId, edges: z.array(canvasLine), revision })
@@ -646,8 +647,8 @@ export const SESSION_ACTIONS = {
             viewId,
             from: nodeId.nullable().describe('Where the line starts; without it, you'),
             to: z.array(nodeId).min(1).describe('The nodes the line runs into'),
-            label: agentField(givenName).describe('What the line is called on the canvas'),
-            role: agentField(z.string().min(1)).describe('What the line is for')
+            label: daemonField(givenName).describe('What the line is called on the canvas'),
+            role: daemonField(z.string().min(1)).describe('What the line is for')
         }),
         output: z.object({
             viewId,
@@ -668,7 +669,7 @@ export const SESSION_ACTIONS = {
         description: 'Removes one line whose ends are both yours.',
         effect: 'shared',
         domain: 'canvas',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ viewId, edgeId: z.string().min(1) }),
         output: z.object({ viewId, ...canvasLine.shape })
     },
@@ -678,7 +679,7 @@ export const SESSION_ACTIONS = {
             'Removes several lines of one canvas in one write, each the way link.delete removes one. Every line is checked before any goes, so a refusal removes none.',
         effect: 'shared',
         domain: 'canvas',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ viewId, edgeIds: z.array(z.string().min(1)).min(1).max(MAX_PER_CALL) }),
         output: z.object({ viewId, edges: z.array(canvasLine) })
     },
@@ -687,7 +688,7 @@ export const SESSION_ACTIONS = {
         description: 'Lists the tools the extensions on this machine offer agents, each with what it does and the input it takes.',
         effect: 'read',
         domain: 'agents',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({}),
         output: z.object({ tools: z.array(z.object({ id: z.string(), description: z.string(), parameters: z.string() })) })
     },
@@ -696,7 +697,7 @@ export const SESSION_ACTIONS = {
         description: 'Runs a tool an extension on this machine offers, with its input as JSON, and prints what it answers.',
         effect: 'external',
         domain: 'agents',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             id: z.string().min(1).max(256).describe('The tool, as tool list prints it'),
             input: z.string().max(100_000).describe('Its input, as JSON')
@@ -717,7 +718,7 @@ export const SESSION_ACTIONS = {
         description: 'Sends a message to the agent in another node, along a line that runs from you into it, which gives a chat between turns a turn on it.',
         effect: 'external',
         domain: 'communicate',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ nodeId: nodeId.describe('The node to notify, by id'), text: z.string().min(1).describe('The message') }),
         output: z.object({
             nodeId,
@@ -733,7 +734,7 @@ export const SESSION_ACTIONS = {
         description: 'Answers a question an agent you opened asked and waits on, the way a person answers it in that node; an approval stays with the person.',
         effect: 'external',
         domain: 'agents',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             nodeId: nodeId.describe('The agent that asked, by id; only one you opened yourself'),
             requestId: z.string().min(1).describe('The request the question came with, as the > Question line of a read or the note about it names it'),
@@ -751,7 +752,7 @@ export const SESSION_ACTIONS = {
             'Lists the tasks you gave and the task you were given that are still open or have yet to wake you: id, direction, status, the other node, title, wake, result, batch.',
         effect: 'read',
         domain: 'agents',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             all: z.boolean().describe('Also lists the history: tasks that settled and already woke their chat, and a task you were given that settled')
         }),
@@ -766,7 +767,7 @@ export const SESSION_ACTIONS = {
         description: 'Gives a task to an agent you opened that is already running, whose result wakes you the way the task of a new one does.',
         effect: 'external',
         domain: 'agents',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             nodeId: nodeId.describe('The agent to give the task to, by id; only a chat you opened yourself'),
             prompt: z.string().nullable().describe('What the task asks'),

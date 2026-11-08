@@ -11,6 +11,7 @@ import {
     revision,
     optionalFields,
     AGENT,
+    PERSON_AND_AGENT,
     PERSON,
     launchName,
     launchStarted,
@@ -49,7 +50,7 @@ export const LAUNCH_ACTIONS = {
         agentDescription: 'Lists the launches of the project: id, name, kind, state, approved, port, url',
         effect: 'read',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({}),
         output: z.object({
             launches: z.array(
@@ -74,7 +75,7 @@ export const LAUNCH_ACTIONS = {
         description: 'Prints the output of a launch, whole or its last lines, as its terminal shows it now.',
         effect: 'read',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             launch: launchName,
             tail: z.number().int().min(1).nullable().describe('Only the last this many lines; without it the whole output')
@@ -89,7 +90,7 @@ export const LAUNCH_ACTIONS = {
         effect: 'shared',
         domain: 'developer',
         // An agent's launch is never approved by its save; a person approves it from the launch chip.
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             name: launchFieldName,
             kind: LaunchConfigKindSchema.describe('service runs until stopped, task runs once and ends, group starts other launches'),
@@ -103,7 +104,7 @@ export const LAUNCH_ACTIONS = {
         description: 'Changes fields of a launch of the project; a change to what it runs waits on a person to approve it again before it starts.',
         effect: 'shared',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ launch: launchName, ...optionalFields(launchFields) }),
         output: launchSaved
     },
@@ -112,7 +113,7 @@ export const LAUNCH_ACTIONS = {
         description: 'Starts a launch a person approved on this machine as it stands now; one that already runs is left running.',
         effect: 'external',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ launch: launchName }),
         output: launchStarted
     },
@@ -121,7 +122,7 @@ export const LAUNCH_ACTIONS = {
         description: 'Stops a launch a person approved on this machine and starts it again, or starts it when it did not run.',
         effect: 'external',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ launch: launchName }),
         output: launchStarted
     },
@@ -130,7 +131,7 @@ export const LAUNCH_ACTIONS = {
         description: 'Stops a launch, or every launch of a group, with Ctrl+C and SIGTERM after a grace period; only a person kills one.',
         effect: 'external',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ launch: launchName }),
         // How many of its launches ran and are being stopped.
         output: z.object({ launchId: z.string(), name: z.string(), stopping: z.number().int() })
@@ -140,7 +141,7 @@ export const LAUNCH_ACTIONS = {
         description: 'Lists the routines of the project: what each runs and when, whether a person approved it here, whether it is paused, and its last run.',
         effect: 'read',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({}),
         output: z.object({ routines: z.array(RoutineEntrySchema), timeZone: z.string() })
     },
@@ -151,7 +152,7 @@ export const LAUNCH_ACTIONS = {
         effect: 'shared',
         domain: 'developer',
         // An agent's save never approves; a person saves and approves through Routines in the app.
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             title: routineTitle,
             schedule: routineSchedule,
@@ -165,7 +166,7 @@ export const LAUNCH_ACTIONS = {
         description: 'Changes fields of a routine of the project; a change that touches what it runs or when waits on a person to approve it again.',
         effect: 'shared',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ routineId, ...optionalFields(routineFields) }),
         output: routineSaved
     },
@@ -174,7 +175,7 @@ export const LAUNCH_ACTIONS = {
         description: 'Pauses a routine on this machine, so it starts nothing until it is resumed.',
         effect: 'local',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ routineId }),
         output: routineNamed
     },
@@ -183,7 +184,7 @@ export const LAUNCH_ACTIONS = {
         description: 'Resumes a paused routine from its next time on; the times it was paused through do not run.',
         effect: 'local',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ routineId }),
         output: routineNamed
     },
@@ -192,7 +193,7 @@ export const LAUNCH_ACTIONS = {
         description: 'Starts a run of a routine now, only when a person approved it on this machine as it stands and its previous run has ended.',
         effect: 'external',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ routineId }),
         output: routineNamed.extend({ runId: z.string() })
     },

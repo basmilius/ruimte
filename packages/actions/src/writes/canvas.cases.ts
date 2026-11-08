@@ -69,16 +69,16 @@ export const cases: WriteCases = {
             'no title at all': without(note, 'title')
         },
         restricted: {
-            kind: { value: 'drawing', actors: ['agent'] },
+            kind: { value: 'drawing', actors: ['person', 'agent'] },
             browserOwner: { value: 'endpoint-2', actors: ['person'] },
             account: { value: 'work', actors: ['person'] },
-            source: { value: 'sketch', actors: ['agent'] },
+            source: { value: 'sketch', actors: ['person', 'agent'] },
             cwd: { value: 'apps/client', actors: ['person', 'agent'] },
-            beside: { value: 'chat-1', actors: ['agent'] },
-            device: { value: 'sim-1', actors: ['agent'] },
+            beside: { value: 'chat-1', actors: ['person', 'agent'] },
+            device: { value: 'sim-1', actors: ['person', 'agent'] },
             resume: { value: 'session-1', actors: ['person'] },
             issue: { value: { repo: 'basmilius/ruimte', number: 58, url: 'https://github.com/basmilius/ruimte/issues/58' }, actors: ['person'] },
-            color: { value: 'teal', actors: ['agent'] },
+            color: { value: 'teal', actors: ['person', 'agent'] },
             artifact: { value: 'art-1', actors: ['person', 'agent'] },
             artifactVersion: { value: 'ver-1', actors: ['person', 'agent'] },
             routine: { value: 'morning-summary', actors: ['person', 'agent'] }
@@ -132,8 +132,8 @@ export const cases: WriteCases = {
         input: { viewId: 'board', nodeIds: ['note-1', 'chat-1'] },
         refused: { 'nothing to group': { viewId: 'board', nodeIds: [] } },
         restricted: {
-            label: { value: 'Research', actors: ['agent'] },
-            color: { value: 'teal', actors: ['agent'] }
+            label: { value: 'Research', actors: ['person', 'agent'] },
+            color: { value: 'teal', actors: ['person', 'agent'] }
         }
     },
     'group.arrange': {
@@ -182,7 +182,7 @@ export const cases: WriteCases = {
         }
     },
     'node.arrange': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { viewId: 'board', nodeIds: ['chat-1', 'chat-2', 'chat-3'], layout: 'grid', columns: 2 },
         refused: {
             'a layout it has not': { viewId: 'board', nodeIds: ['chat-1'], layout: 'circle', columns: null },
@@ -195,17 +195,17 @@ export const cases: WriteCases = {
         input: { viewId: 'board', from: null, to: ['chat-2'] },
         refused: { 'nowhere to run': { viewId: 'board', from: null, to: [] }, 'an empty start': { viewId: 'board', from: '', to: ['chat-2'] } },
         restricted: {
-            label: { value: 'Reviews', actors: ['agent'] },
-            role: { value: 'reviewer', actors: ['agent'] }
+            label: { value: 'Reviews', actors: ['person', 'agent'] },
+            role: { value: 'reviewer', actors: ['person', 'agent'] }
         }
     },
     'link.delete': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { viewId: 'board', edgeId: 'edge-1' },
         refused: { 'an empty line': { viewId: 'board', edgeId: '' } }
     },
     'link.deleteMany': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { viewId: 'board', edgeIds: ['edge-1', 'edge-2'] },
         refused: {
             'no lines at all': { viewId: 'board', edgeIds: [] },

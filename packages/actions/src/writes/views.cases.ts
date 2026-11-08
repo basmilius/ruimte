@@ -32,7 +32,7 @@ export const cases: WriteCases = {
             kind: { value: 'device', actors: ['person'] },
             browserOwner: { value: 'endpoint-2', actors: ['person'] },
             account: { value: 'work', actors: ['person'] },
-            after: { value: 'board', actors: ['agent'] },
+            after: { value: 'board', actors: ['person', 'agent'] },
             device: { value: { platform: 'ios', kind: 'simulator', name: 'iPhone 17', runtime: 'iOS 27.0' }, actors: ['person'] },
             resume: { value: 'session-1', actors: ['person'] },
             cwd: { value: 'apps/server', actors: ['person'] }

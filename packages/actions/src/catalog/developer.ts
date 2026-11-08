@@ -13,6 +13,7 @@ import { z } from 'zod';
 import {
     PERSON_AND_VOICE,
     AGENT,
+    PERSON_AND_AGENT,
     PERSON,
     databaseConnection,
     databaseSchema,
@@ -45,7 +46,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Lists the database connections of the project, where each points and what agents may do with it; never a password.',
         effect: 'read',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({}),
         output: z.object({
             connections: z.array(
@@ -65,7 +66,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Lists the schemas of a database connection and the tables and views of one of them, with the row count the server estimates.',
         effect: 'read',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             connection: databaseConnection,
             schema: databaseSchema.describe("The schema whose tables to list; without it the connection's own database, or every schema when it has none")
@@ -81,7 +82,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Describes a table or view of a database connection: its columns, primary key, indexes and foreign keys.',
         effect: 'read',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             connection: databaseConnection,
             table: z.string().min(1).describe('The table or view, by name'),
@@ -122,7 +123,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Runs one statement that reads (SELECT or WITH) on a read-only session of a database connection and answers its first rows.',
         effect: 'read',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             connection: databaseConnection,
             sql: z.string().min(1).describe('One statement that starts with SELECT or WITH'),
@@ -147,7 +148,7 @@ export const DEVELOPER_ACTIONS = {
             'Runs one or more statements on a database connection a person allowed agents to write to, and answers what each did; never in the supervised mode.',
         effect: 'external',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             connection: databaseConnection,
             sql: z.string().min(1).describe('The statements, separated by semicolons'),

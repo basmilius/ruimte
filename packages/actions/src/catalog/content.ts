@@ -26,7 +26,7 @@ import {
     revision,
     forActors,
     PERSON_AND_VOICE,
-    AGENT,
+    PERSON_AND_AGENT,
     PERSON,
     filePath,
     FILE_READ_MAX_LINES,
@@ -330,7 +330,7 @@ export const CONTENT_ACTIONS = {
         description: 'Adds, changes and removes elements of a drawing view by id in one step, while a person may draw in it at the same time.',
         effect: 'shared',
         domain: 'content',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             viewId: viewId.describe('A drawing view of this project, or the id of a node that shows one'),
             revision: revision.describe('The revision of the drawing the edit was decided on, as read --elements printed it'),

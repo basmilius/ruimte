@@ -80,6 +80,14 @@ export function agentField<Schema extends z.ZodType>(schema: Schema) {
     return forActors(['agent'], schema);
 }
 
+/*
+ * A field the daemon honors for an agent and for a client elsewhere acting as a person (a credential on the external listener).
+ * The app's own gestures never fill it. A field that reads a file stays `agentField`, so a client elsewhere names no path.
+ */
+export function daemonField<Schema extends z.ZodType>(schema: Schema) {
+    return forActors(['person', 'agent'], schema);
+}
+
 export function optionalFields<Shape extends z.ZodRawShape>(shape: Shape) {
     return z.object(shape).partial().shape;
 }
@@ -155,7 +163,7 @@ export const recentMessages = z.array(z.object({ role: z.enum(['user', 'assistan
 export const flagColor = z.enum(NODE_ACCENT_NAMES);
 
 /* No line runs to a chat view, so naming the canvas is what lets one reach a node there. */
-export const operatedView = agentField(viewId).describe(
+export const operatedView = daemonField(viewId).describe(
     'The canvas the node stands on, which a chat view names to read or operate a node there without a line; a node on a canvas leaves it out'
 );
 export const browserNode = nodeId.describe('The browser node, by id');

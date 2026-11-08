@@ -6,9 +6,10 @@ import {
     nodeId,
     givenName,
     agentField,
+    daemonField,
     PERSON_VOICE_AND_AGENT,
     AGENT,
-    AGENT_AND_VOICE,
+    PERSON_AND_AGENT,
     operatedView,
     OperationStatusSchema,
     OPERATION_ACTIONS,
@@ -39,7 +40,7 @@ export const AGENT_ACTIONS = {
         description: 'Prints one linked source, whole or its last lines.',
         effect: 'read',
         domain: 'communicate',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             sourceId: z
                 .string()
@@ -75,32 +76,32 @@ export const AGENT_ACTIONS = {
         effect: 'external',
         domain: 'agents',
         // Voice starts a chat with the person's CLI and nothing more: what only an agent gives stays an agent field.
-        actors: AGENT_AND_VOICE,
+        actors: PERSON_VOICE_AND_AGENT,
         input: z.object({
             provider: AgentKindSchema.describe('The CLI the agent runs'),
             terminal: z.boolean().describe('Makes a terminal node instead of a chat node'),
             prompt: z.string().nullish().describe('What the agent starts working on'),
             promptFile: agentField(z.string().min(1)).describe('The same prompt out of a file, for one with exact bytes'),
-            cwd: agentField(z.string().min(1)).describe('The directory the agent starts in'),
-            reads: agentField(z.array(nodeId)).describe('Nodes the new agent can read from its first turn: a line is drawn from each of them into it'),
+            cwd: daemonField(z.string().min(1)).describe('The directory the agent starts in'),
+            reads: daemonField(z.array(nodeId)).describe('Nodes the new agent can read from its first turn: a line is drawn from each of them into it'),
             viewId: viewId.nullish().describe('The canvas to add to; null uses your canvas or keeps the agent hidden from a chat view'),
             beside: nodeId.nullish().describe('Puts the node directly right of this node, top edges level'),
-            group: agentField(nodeId).describe('Puts the node inside this group node of that canvas'),
+            group: daemonField(nodeId).describe('Puts the node inside this group node of that canvas'),
             title: givenName.nullish().describe('The title; without one the node is called after the CLI, and the session may rename it'),
-            task: agentField(givenName).describe('Gives the new agent a task with this title, which the prompt describes and whose result wakes you'),
+            task: daemonField(givenName).describe('Gives the new agent a task with this title, which the prompt describes and whose result wakes you'),
             model: z.string().trim().min(1).nullish().describe("The model id for a chat agent, with that model's default options"),
             mode: RuntimeModeSchema.nullish().describe(
                 'The permission mode the agent runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own'
             ),
-            worktree: agentField(z.boolean()).describe('Starts the agent in a git worktree of its own on a new branch'),
-            branch: agentField(z.string().min(1)).describe('The branch of that worktree instead of one named after the task or the title'),
+            worktree: daemonField(z.boolean()).describe('Starts the agent in a git worktree of its own on a new branch'),
+            branch: daemonField(z.string().min(1)).describe('The branch of that worktree instead of one named after the task or the title'),
             requestId: z
                 .string()
                 .regex(/^[A-Za-z0-9._:-]{1,128}$/)
                 .nullish()
                 .describe('An id of your choosing; a retry with the same id and the same input answers with what the first call made'),
-            base: agentField(z.string().min(1)).describe('With a worktree: the branch, tag or commit a new branch starts at instead of HEAD'),
-            machine: agentField(z.string().min(1)).describe(
+            base: daemonField(z.string().min(1)).describe('With a worktree: the branch, tag or commit a new branch starts at instead of HEAD'),
+            machine: daemonField(z.string().min(1)).describe(
                 'Runs the agent on another machine this project is linked to, named by its name or id; needs a task, and a worktree there is made from your checkout'
             ),
             effort: z
@@ -109,7 +110,7 @@ export const AGENT_ACTIONS = {
                 .min(1)
                 .nullish()
                 .describe("The reasoning effort for a chat agent, one the model offers; null keeps the person's last pick when the model offers it"),
-            account: agentField(z.string().min(1)).describe(
+            account: daemonField(z.string().min(1)).describe(
                 "An account a person named in the calling chat as @account:<cli>/<id>, for this CLI; null inherits the caller's"
             )
         }),
@@ -130,7 +131,7 @@ export const AGENT_ACTIONS = {
         description: `Starts a team of up to ${MAX_OPENED_PER_CALLER} agents in this project`,
         effect: 'external',
         domain: 'agents',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             label: givenName.describe('The name of the group the agents land in'),
             roles: z
@@ -196,7 +197,7 @@ export const AGENT_ACTIONS = {
         description: 'Reads where an operation an action answered with stands: queued, running, completed, failed or cancelled, per agent it started.',
         effect: 'read',
         domain: 'agents',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ operationId: z.string().min(1).describe('The id the action answered with') }),
         output: z.object({
             operationId: z.string(),

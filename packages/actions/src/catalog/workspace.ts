@@ -24,7 +24,7 @@ import {
     revision,
     givenName,
     forActors,
-    agentField,
+    daemonField,
     AGENT_NODE_KINDS,
     OUTPUT_NODE_KINDS,
     PERSON_VIEW_KINDS,
@@ -394,7 +394,7 @@ export const WORKSPACE_ACTIONS = {
             path: z.string().trim().min(1).nullable().describe('The file the view shows, relative to the project folder or absolute'),
             provider: AgentKindSchema.nullable(),
             account: forActors(PERSON, ProviderAccountIdSchema).describe("The account of the provider's CLI on this machine"),
-            after: agentField(viewId).describe('Puts the row right under this view; without it the row goes last'),
+            after: daemonField(viewId).describe('Puts the row right under this view; without it the row goes last'),
             device: forActors(PERSON, DeviceReferenceSchema).describe('The simulator or device a device view shows'),
             resume: resumedSession,
             cwd: forActors(PERSON, z.string().min(1)).describe('The directory the chat or terminal works in'),
@@ -515,7 +515,7 @@ export const WORKSPACE_ACTIONS = {
             viewId,
             kind: z.union([
                 ActionCreatableCanvasNodeKindSchema,
-                z.enum(AGENT_NODE_KINDS).meta({ actors: [...AGENT] }),
+                z.enum(AGENT_NODE_KINDS).meta({ actors: [...PERSON_AND_AGENT] }),
                 z.enum(OUTPUT_NODE_KINDS).meta({ actors: [...PERSON_AND_AGENT] })
             ]),
             title: givenName.nullable(),
@@ -530,17 +530,17 @@ export const WORKSPACE_ACTIONS = {
                 "The account of the provider's CLI on this machine. With a command, a terminal runs that command in the account's environment instead of the CLI"
             ),
             at: worldPoint.nullable(),
-            source: agentField(viewId).describe(
+            source: daemonField(viewId).describe(
                 'The id of a view of this project of the same kind as the node, a drawing for a drawing and a diagram for a diagram'
             ),
             cwd: forActors(PERSON_AND_AGENT, z.string().min(1)).describe('The directory the shell starts in'),
-            beside: agentField(nodeId).describe('Puts the node directly right of this node, top edges level, whatever is there already'),
-            device: agentField(z.string().min(1)).describe('The device a device node shows, by the id device.list gives it'),
+            beside: daemonField(nodeId).describe('Puts the node directly right of this node, top edges level, whatever is there already'),
+            device: daemonField(z.string().min(1)).describe('The device a device node shows, by the id device.list gives it'),
             resume: resumedSession,
             issue: forActors(PERSON, z.object({ repo: z.string().min(1), number: z.number().int().positive(), url: z.string().min(1) })).describe(
                 'The GitHub issue an agent node is started on, which the node shows as a pill'
             ),
-            color: agentField(z.enum(NODE_ACCENT_NAMES)).describe('The color of the node; a note takes its paper from it'),
+            color: daemonField(z.enum(NODE_ACCENT_NAMES)).describe('The color of the node; a note takes its paper from it'),
             artifact: forActors(PERSON_AND_AGENT, ArtifactIdSchema).describe("The artifact of this project's Output an artifact node shows"),
             artifactVersion: forActors(PERSON_AND_AGENT, ArtifactVersionIdSchema).describe(
                 'The version an artifact node stays on; without it the node follows the latest'
@@ -667,8 +667,8 @@ export const WORKSPACE_ACTIONS = {
         input: z.object({
             viewId,
             nodeIds: z.array(z.string().min(1)).min(1),
-            label: agentField(givenName).describe('The name of the group'),
-            color: agentField(z.string().min(1)).describe("The color of the frame; without one it is drawn in the faint gray a person's own grouping gives it")
+            label: daemonField(givenName).describe('The name of the group'),
+            color: daemonField(z.string().min(1)).describe("The color of the frame; without one it is drawn in the faint gray a person's own grouping gives it")
         }),
         output: z.object({
             viewId,

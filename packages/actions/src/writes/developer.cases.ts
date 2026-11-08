@@ -218,7 +218,7 @@ export const cases: WriteCases = {
         }
     },
     'launch.create': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { name: 'Dev', kind: 'service', command: 'bun dev', url: 'http://localhost:5173', env: { PORT: '5173' } },
         refused: {
             'a kind of launch it has not': { name: 'Dev', kind: 'daemon', command: 'bun dev' },
@@ -228,27 +228,27 @@ export const cases: WriteCases = {
         }
     },
     'launch.edit': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { launch: 'dev', command: 'bun run dev', env: { DEBUG: null } },
         refused: { 'no launch': { command: 'bun run dev' }, 'an empty command': { launch: 'dev', command: ' ' } }
     },
     'launch.start': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { launch: 'dev' },
         refused: { 'a blank launch': { launch: ' ' } }
     },
     'launch.restart': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { launch: 'Dev server' },
         refused: { 'no launch': {} }
     },
     'launch.stop': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { launch: 'dev' },
         refused: { 'an empty launch': { launch: '' } }
     },
     'routine.create': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: routine,
         refused: {
             'a blank title': { ...routine, title: ' ' },
@@ -258,7 +258,7 @@ export const cases: WriteCases = {
         }
     },
     'routine.edit': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { routineId: 'weekly-report', title: 'Monday report' },
         refused: {
             'no routine': { title: 'Monday report' },
@@ -266,17 +266,17 @@ export const cases: WriteCases = {
         }
     },
     'routine.pause': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { routineId: 'weekly-report' },
         refused: { 'an empty routine': { routineId: '' } }
     },
     'routine.resume': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { routineId: 'weekly-report' },
         refused: { 'no routine': {} }
     },
     'routine.run': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { routineId: 'weekly-report' },
         refused: { 'an empty routine': { routineId: '' } }
     },
@@ -306,7 +306,7 @@ export const cases: WriteCases = {
         refused: { 'no request object': null, 'a request as a word': 'tables' }
     },
     'database.execute': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { connection: 'local', sql: "UPDATE users SET name = 'Bas' WHERE id = 1", schema: null },
         refused: {
             'no statement': { connection: 'local', sql: '', schema: null },
