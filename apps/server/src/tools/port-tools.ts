@@ -50,6 +50,16 @@ export const portShare = defineTool('browser', {
             ];
         }
 
+        // A person shares any port; an agent shares a dev server, never whatever else listens on loopback.
+        const launched = ((await call.host.launches?.list(projectId)) ?? []).some((launch) => launch.port === input.port);
+
+        if (!launched && !(await ports.answersHttp(input.port, host))) {
+            throw new ToolRefusal(
+                'not-a-dev-server',
+                `Nothing answers HTTP on ${host === '::1' ? '[::1]' : host} port ${input.port}, and no launch of this project uses it; start the dev server first`
+            );
+        }
+
         try {
             const grant = ports.share(projectId, input.port, host);
 

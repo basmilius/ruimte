@@ -228,6 +228,8 @@ export type MachineHost = Pick<EndpointIdentity, 'agentsDeleteAnyView' | 'nodeSi
  */
 export interface PortShareHost {
     allowed(): boolean;
+    /* Whether the address answers HTTP now, which is what a dev server is; a port that answers something else is not an agent's to share. */
+    answersHttp(port: number, host: PortHost): Promise<boolean>;
     list(projectId: string): PortGrant[];
     share(projectId: string, port: number, host: PortHost): PortGrant;
     /* Whether a share of an agent in this project with this port was there to stop. */

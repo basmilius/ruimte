@@ -45,6 +45,10 @@ export interface Knobs {
     deleteAnyView: boolean;
     /* The machine's switch that lets an agent share a development port. */
     sharePorts: boolean;
+    /* The loopback ports that answer HTTP now. */
+    httpPorts: number[];
+    /* The ports the launches of the project declare. */
+    launchPorts: number[];
     /* Whether any client on this machine has the page open, which is what a driver answers null without. */
     pageOpen: boolean;
     breakWrites: boolean;
@@ -210,6 +214,8 @@ export function canvasFixture(): void {
         knobs.onStart = null;
         knobs.deleteAnyView = false;
         knobs.sharePorts = false;
+        knobs.httpPorts = [3000, 5173];
+        knobs.launchPorts = [];
         portGrants = testGrants([4210]).grants;
         knobs.nodeSizes = {};
         ended = [];
@@ -319,8 +325,30 @@ export function host(): CanvasHost {
         },
         lineage,
         machine: { agentsDeleteAnyView: knobs.deleteAnyView, nodeSize: (kind) => nodeSizeOf(knobs.nodeSizes, kind) },
+        // Only the reading a port share asks for; the launch tools have a fixture of their own.
+        launches: {
+            list: async () =>
+                knobs.launchPorts.map((port) => ({
+                    launchId: `launch-${port}`,
+                    name: `Launch ${port}`,
+                    kind: 'service',
+                    approved: true,
+                    url: null,
+                    port,
+                    members: [],
+                    status: null
+                })),
+            text: async () => null,
+            start: async () => {
+                throw new Error('The canvas fixture starts no launch');
+            },
+            stop: async () => 0,
+            entries: async () => [],
+            save: async () => undefined
+        },
         ports: {
             allowed: () => knobs.sharePorts,
+            answersHttp: async (port) => knobs.httpPorts.includes(port),
             list: (id) => portGrants.list().filter((grant) => grant.projectId === id),
             share: (id, port, portHost) => portGrants.share(id, port, portHost, 'agent'),
             stop: (id, port, portHost) => {

@@ -21,6 +21,27 @@ describe('port_share', () => {
         expect(portGrants.list()).toMatchObject([{ projectId, port: 3000, host: '127.0.0.1', sharedBy: 'agent' }]);
     });
 
+    test('refuses a loopback service that answers no HTTP and no launch of the project uses', async () => {
+        knobs.sharePorts = true;
+
+        const refused = await invoke('port_share', { port: 5432 });
+
+        expect(refused.status).toBe(422);
+        expect(refused.lines[0]).toStartWith('refused\tnot-a-dev-server\t');
+        expect(portGrants.list()).toEqual([]);
+    });
+
+    test('shares a port a launch of the project uses, before its server answers', async () => {
+        knobs.sharePorts = true;
+        knobs.launchPorts = [8080];
+
+        expect((await invoke('port_share', { port: 8080 })).lines).toEqual(['shared\t8080\t127.0.0.1\tagent']);
+    });
+
+    test('leaves a share of a person as it was, whatever listens', async () => {
+        expect(portGrants.share(projectId, 5432, '127.0.0.1', 'person')).toMatchObject({ port: 5432, sharedBy: 'person' });
+    });
+
     test('takes the other address family only when asked for it', async () => {
         knobs.sharePorts = true;
 
@@ -31,6 +52,8 @@ describe('port_share', () => {
 
     test('refuses the ports Ruimte listens on', async () => {
         knobs.sharePorts = true;
+
+        knobs.httpPorts = [4210];
 
         const refused = await invoke('port_share', { port: 4210 });
 

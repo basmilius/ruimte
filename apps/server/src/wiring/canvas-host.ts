@@ -1,6 +1,7 @@
 import { chatRequests } from '@adecore/agents/coordination';
 import { agentStates } from '../agents/agent-state.ts';
 import { openedAgentCount } from '../agents/hidden-agents.ts';
+import { probeDevServers } from '../browser/dev-servers.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { chatForkDeps, forkForAgent } from '../chat/fork.ts';
 import { agentMessages } from '../context/agent-messages.ts';
@@ -132,6 +133,7 @@ export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
         databases: databases.agents,
         ports: {
             allowed: () => identity.agentsSharePorts,
+            answersHttp: async (port, portHost) => (await probeDevServers([port], fetch, portHost)).length > 0,
             list: (projectId) =>
                 later
                     .ports()
