@@ -599,27 +599,28 @@ export class TunnelService {
             }
 
             const record = await this.routeHostname(api, zone, hostname, tunnel.id);
-
-            this.stored = {
-                ...this.stored,
-                rows: [
-                    ...this.stored.rows,
-                    {
-                        id: this.ports.random(6),
-                        kind: input.kind,
-                        hostname,
-                        port,
-                        enabled: true,
-                        // The MCP has a credential on every request and a hosted client cannot turn it on from outside; a dev server has no gate.
-                        comeBack: input.comeBack ?? input.kind === 'mcp',
-                        ...(origin === undefined ? {} : { origin }),
-                        zoneId: zone.id,
-                        recordId: record.id
-                    }
-                ]
+            const row: StoredRow = {
+                id: this.ports.random(6),
+                kind: input.kind,
+                hostname,
+                port,
+                enabled: false,
+                // The MCP has a credential on every request and a hosted client cannot turn it on from outside; a dev server has no gate.
+                comeBack: input.comeBack ?? input.kind === 'mcp',
+                ...(origin === undefined ? {} : { origin }),
+                zoneId: zone.id,
+                recordId: record.id
             };
+
+            // Saved off first, so Remove still finds the record, and on only once Cloudflare took the rule.
+            this.stored = { ...this.stored, rows: [...this.stored.rows, row] };
             this.save();
-            await this.syncIngress();
+
+            const rows = this.stored.rows.map((candidate) => (candidate.id === row.id ? { ...candidate, enabled: true } : candidate));
+
+            await this.syncRows(rows);
+            this.stored = { ...this.stored, rows };
+            this.save();
         });
         await this.followUp();
 

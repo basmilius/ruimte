@@ -542,6 +542,31 @@ describe('a row', () => {
         expect(f.runner.running).toBe(0);
     });
 
+    test('keeps a new hostname off that Cloudflare would not put on the tunnel, so Try again does not publish it', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        f.cloudflare.failing.set('PUT /accounts/acc-1/cfd_tunnel', 403);
+
+        await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000, comeBack: true })).rejects.toBeInstanceOf(CloudflareError);
+
+        await f.service.idle();
+        f.cloudflare.failing.clear();
+
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: false }]);
+
+        await f.service.retry();
+        await f.service.idle();
+
+        expect(hostnamesOf(f)).toEqual(['http_status:404']);
+        expect(f.runner.running).toBe(0);
+
+        await f.service.remove((await f.state()).rows[0]!.id);
+        await f.service.idle();
+
+        expect(f.cloudflare.records).toHaveLength(0);
+    });
+
     test('leaves the rules of the dashboard on a hostname of its own with a path, and the catch-all it set', async () => {
         const f = await fixture();
 
