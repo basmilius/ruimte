@@ -1,7 +1,6 @@
 import type { Editor } from '@adecore/editor';
 import {
     ClipboardHistory,
-    lspLanguageIdOf,
     ProjectLanguage as SharedProjectLanguage,
     shikiLanguageOf,
     shikiLanguageOfPath,
@@ -25,6 +24,7 @@ import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { machineAnswers } from '@/transport/features';
 import type { Transport } from '@/transport/transport';
+import { lspLanguageIdFor } from './language-ids-host';
 import { readPanelHeight, writePanelHeight } from './panel-height';
 import type { DraftProjectFiles } from './project-files';
 import { createSnippetTransformWorker } from './snippet-transform-worker';
@@ -183,7 +183,7 @@ function holdUnsavedTexts(service: WireLanguageService, folder: string, files: D
     return files.watchUnsaved((texts) => {
         const holding = new Set<string>();
         for (const [path, text] of texts) {
-            const languageId = isPathBelow(folder, path) ? lspLanguageIdOf(shikiLanguageOfPath(path)) : null;
+            const languageId = isPathBelow(folder, path) ? lspLanguageIdFor(shikiLanguageOfPath(path), path) : null;
             if (languageId !== null) {
                 const uri = pathToFileUri(path);
                 holding.add(uri);
