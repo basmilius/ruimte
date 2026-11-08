@@ -191,7 +191,18 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         later: { language: () => language.host, push: () => push }
     });
 
-    const tunnels = await wireTunnels({ config, canvasHost, agents, projects, processes, artifacts, later: { apiPort: () => server.port ?? config.port } });
+    const tunnels = await wireTunnels({
+        config,
+        canvasHost,
+        agents,
+        projects,
+        processes,
+        artifacts,
+        stores,
+        launches,
+        routines,
+        later: { apiPort: () => server.port ?? config.port }
+    });
 
     const { sessions, chats } = agents;
     const push = wirePush(home, machine.auth, identity, agents, projects.store, work.snoozes, usage);

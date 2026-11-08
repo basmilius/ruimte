@@ -81,7 +81,7 @@ describe('the MCP route', () => {
         const { handle } = setup();
 
         for (const forged of [
-            {},
+            {} as Record<string, string>,
             { 'cf-ray': 'abc-AMS' },
             { 'cf-connecting-ip': '203.0.113.9' },
             { host: 'mcp.example.com' },
@@ -293,7 +293,7 @@ describe('OAuth with consent in Ruimte', () => {
         const { handle, consent } = setup();
 
         for (const overrides of [
-            { code_verifier: 'w'.repeat(64) },
+            { code_verifier: 'w'.repeat(64) } as Record<string, string>,
             { redirect_uri: 'https://client.example/other' },
             { client_id: 'https://other.example/meta.json' }
         ]) {

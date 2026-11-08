@@ -1,0 +1,5676 @@
+{
+    "read": [
+        {
+            "name": "artifact_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "artifact_read",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "artifact_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "file",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "version",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "context_read",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "form",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "elements",
+                        "image"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "subagent",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "tail",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "guide",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "topic",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "diagram",
+                        "drawing",
+                        "models",
+                        "nodes",
+                        "notes",
+                        "plan",
+                        "roles",
+                        "schedule"
+                    ],
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "link_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "node_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "operation_get",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "project_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": []
+        },
+        {
+            "name": "task_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "all",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "view_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "worktree_diff",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "branch",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "stat",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "tail",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "worktree_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        }
+    ],
+    "work": [
+        {
+            "name": "agent_answer",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "answer",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "answers",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "request",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "agent_fork",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "branch",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "agent_start",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "account",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "base",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "beside",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "branch",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "cli",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "cwd",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "dry_run",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "effort",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "group",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "machine",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "mode",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "auto",
+                        "auto-accept-edits",
+                        "full-access",
+                        "supervised"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "model",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "prompt",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "reads",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "request_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "task",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "terminal",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "worktree",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "agent_team",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "cwd",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "dry_run",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "label",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "machine",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "mode",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "auto",
+                        "auto-accept-edits",
+                        "full-access",
+                        "supervised"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "reads",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "roles",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "task",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "worktree",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "artifact_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "artifact_read",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "artifact_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "file",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "version",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "context_read",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "form",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "elements",
+                        "image"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "subagent",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "tail",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "flag",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "color",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "amber",
+                        "blue",
+                        "cyan",
+                        "emerald",
+                        "fuchsia",
+                        "green",
+                        "indigo",
+                        "lime",
+                        "null",
+                        "orange",
+                        "pink",
+                        "purple",
+                        "red",
+                        "rose",
+                        "sky",
+                        "teal",
+                        "violet",
+                        "yellow"
+                    ],
+                    "required": true
+                },
+                {
+                    "key": "id",
+                    "type": "array",
+                    "items": "string",
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "guide",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "topic",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "diagram",
+                        "drawing",
+                        "models",
+                        "nodes",
+                        "notes",
+                        "plan",
+                        "roles",
+                        "schedule"
+                    ],
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "link_delete",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": true
+            },
+            "fields": [
+                {
+                    "key": "edge_id",
+                    "type": "array",
+                    "items": "string",
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "link_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "link_new",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "from",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "label",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "role",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "to",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "node_arrange",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "cols",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "layout",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "column",
+                        "grid",
+                        "row"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "nodes",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "node_delete",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": true
+            },
+            "fields": [
+                {
+                    "key": "node_id",
+                    "type": "array",
+                    "items": "string",
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "node_edit",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "append",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "json",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "node_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "text",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "node_group",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "color",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "label",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "nodes",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "node_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "node_new",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "artifact",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "beside",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "color",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "cwd",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "device",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "dry_run",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "json",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "kind",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "artifact",
+                        "browser",
+                        "chat",
+                        "device",
+                        "diagram",
+                        "drawing",
+                        "file",
+                        "note",
+                        "routine",
+                        "terminal"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "path",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "routine",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "source",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "text",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "url",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "version",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "node_update",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "color",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "node_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "notify",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "text",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "operation_cancel",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": true
+            },
+            "fields": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "operation_get",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "project_activate",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "project_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": []
+        },
+        {
+            "name": "project_open",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "task_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "all",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "task_new",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "prompt",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "view_delete",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": true
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "view_diagram",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "document",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "view_drawing",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "dry_run",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "edit",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "view_edit",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "after",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "first",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "icon",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "name",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "view_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "view_new",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "after",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "connection",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "kind",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "browser",
+                        "canvas",
+                        "chat",
+                        "database",
+                        "diagram",
+                        "drawing",
+                        "file",
+                        "separator",
+                        "subheader",
+                        "terminal"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "mode",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "data",
+                        "structure"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "name",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "path",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "schema",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "table",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "url",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "where",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "view_open",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "worktree_diff",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "branch",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "stat",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "tail",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "worktree_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        }
+    ],
+    "machine": [
+        {
+            "name": "agent_answer",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "answer",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "answers",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "request",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "agent_fork",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "branch",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "agent_start",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "account",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "base",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "beside",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "branch",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "cli",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "cwd",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "dry_run",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "effort",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "group",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "machine",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "mode",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "auto",
+                        "auto-accept-edits",
+                        "full-access",
+                        "supervised"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "model",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "prompt",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "reads",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "request_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "task",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "terminal",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "worktree",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "agent_team",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "cwd",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "dry_run",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "label",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "machine",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "mode",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "auto",
+                        "auto-accept-edits",
+                        "full-access",
+                        "supervised"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "reads",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "roles",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "task",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "worktree",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "artifact_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "artifact_read",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "artifact_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "file",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "version",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "browser_go",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "url",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "browser_history",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "action",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "back",
+                        "forward",
+                        "reload",
+                        "stop"
+                    ],
+                    "required": true
+                },
+                {
+                    "key": "hard",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "browser_shot",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "browser_state",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "computer_act",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "action",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "click",
+                        "drag",
+                        "key",
+                        "scroll",
+                        "set-value",
+                        "type"
+                    ],
+                    "required": true
+                },
+                {
+                    "key": "app",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "button",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "left",
+                        "right"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "combo",
+                    "type": "array",
+                    "items": "string",
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "count",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "direction",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "down",
+                        "left",
+                        "right",
+                        "up"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "element",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "from",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "from_x",
+                    "type": "number",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "from_y",
+                    "type": "number",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "front",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "max_depth",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "max_elements",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "max_text",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "no_screenshot",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "pages",
+                    "type": "number",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "state",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "full",
+                        "on"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "text",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "to",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "to_x",
+                    "type": "number",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "to_y",
+                    "type": "number",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "value",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "wait",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "x",
+                    "type": "number",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "y",
+                    "type": "number",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "computer_apps",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "computer_menu",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "app",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "front",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "item",
+                    "type": "array",
+                    "items": "string",
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "max_depth",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "max_elements",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "max_text",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "no_screenshot",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "state",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "full",
+                        "on"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "wait",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "computer_open",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "app",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "front",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "max_depth",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "max_elements",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "max_text",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "no_screenshot",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "state",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "full",
+                        "on"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "wait",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "computer_read",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "app",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "element",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "front",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "wait",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "computer_state",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "app",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "find",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "front",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "max_depth",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "max_elements",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "max_text",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "no_screenshot",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "wait",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "within",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "computer_wait",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "app",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "element",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "front",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "gone",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "max_depth",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "max_elements",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "max_text",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "no_screenshot",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "state",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "full",
+                        "on"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "text",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "timeout",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "value",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "wait",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "context_read",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "form",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "elements",
+                        "image"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "subagent",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "tail",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "database_describe",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "connection",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "schema",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "table",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "database_execute",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": true
+            },
+            "fields": [
+                {
+                    "key": "connection",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "schema",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "sql",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "database_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "database_query",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "connection",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "limit",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "schema",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "show",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "sql",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "database_tables",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "connection",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "schema",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "device_app",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "action",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "launch",
+                        "terminate"
+                    ],
+                    "required": true
+                },
+                {
+                    "key": "app",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "device",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "device_biometric",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "device",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "enroll",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "match",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "nomatch",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "sensor",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "face",
+                        "finger"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "unenroll",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "device_clipboard",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "device",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "text",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "device_input",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "action",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "button",
+                        "swipe",
+                        "tap",
+                        "type"
+                    ],
+                    "required": true
+                },
+                {
+                    "key": "at",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "device",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "element",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "from",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "ms",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "name",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "text",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "to",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "device_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "device_open",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "device",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "url",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "device_permission",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "all",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "app",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "device",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "grant",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "name",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "calendar",
+                        "camera",
+                        "contacts",
+                        "faceid",
+                        "location",
+                        "media-library",
+                        "microphone",
+                        "motion",
+                        "photos",
+                        "reminders"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "reset",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "revoke",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "device_push",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "app",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "device",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "payload",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "device_record",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "device",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "seconds",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "device_set",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "appearance",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "dark",
+                        "light"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "battery",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "charging",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "clear_location",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "device",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "location",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "status_bar",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "clean",
+                        "default"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "text_size",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "default",
+                        "extra-large",
+                        "large",
+                        "small"
+                    ],
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "device_shot",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "device",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "device_start",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "device",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "device_state",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "device",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "find",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "flag",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "color",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "amber",
+                        "blue",
+                        "cyan",
+                        "emerald",
+                        "fuchsia",
+                        "green",
+                        "indigo",
+                        "lime",
+                        "null",
+                        "orange",
+                        "pink",
+                        "purple",
+                        "red",
+                        "rose",
+                        "sky",
+                        "teal",
+                        "violet",
+                        "yellow"
+                    ],
+                    "required": true
+                },
+                {
+                    "key": "id",
+                    "type": "array",
+                    "items": "string",
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "guide",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "topic",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "diagram",
+                        "drawing",
+                        "models",
+                        "nodes",
+                        "notes",
+                        "plan",
+                        "roles",
+                        "schedule"
+                    ],
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "launch_control",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "action",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "restart",
+                        "start",
+                        "stop"
+                    ],
+                    "required": true
+                },
+                {
+                    "key": "launch",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "launch_edit",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "command",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "cwd",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "env",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "launch",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "members",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "name",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "url",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "launch_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "launch_new",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "command",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "cwd",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "env",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "kind",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "group",
+                        "service",
+                        "task"
+                    ],
+                    "required": true
+                },
+                {
+                    "key": "members",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "name",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "shared",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "url",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "launch_read",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "launch",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "tail",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "link_delete",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": true
+            },
+            "fields": [
+                {
+                    "key": "edge_id",
+                    "type": "array",
+                    "items": "string",
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "link_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "link_new",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "from",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "label",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "role",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "to",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "node_arrange",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "cols",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "layout",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "column",
+                        "grid",
+                        "row"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "nodes",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "node_delete",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": true
+            },
+            "fields": [
+                {
+                    "key": "node_id",
+                    "type": "array",
+                    "items": "string",
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "node_edit",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "append",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "json",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "node_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "text",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "node_group",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "color",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "label",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "nodes",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "node_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "node_new",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "artifact",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "beside",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "color",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "cwd",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "device",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "dry_run",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "json",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "kind",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "artifact",
+                        "browser",
+                        "chat",
+                        "device",
+                        "diagram",
+                        "drawing",
+                        "file",
+                        "note",
+                        "routine",
+                        "terminal"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "path",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "routine",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "source",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "text",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "url",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "version",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "node_update",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "color",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "node_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "notify",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "text",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "operation_cancel",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": true
+            },
+            "fields": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "operation_get",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "project_activate",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "project_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": []
+        },
+        {
+            "name": "project_open",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "routine_edit",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "agent",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "at",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "command",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "cwd",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "key",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "kind",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "agent",
+                        "command",
+                        "launch"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "launch",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "mode",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "auto",
+                        "auto-accept-edits",
+                        "full-access",
+                        "supervised"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "model",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "per_run",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "continue",
+                        "new"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "prompt",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "routine",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "routine_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "routine_new",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "agent",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "at",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "command",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "cwd",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "key",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "kind",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "agent",
+                        "command",
+                        "launch"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "launch",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "mode",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "auto",
+                        "auto-accept-edits",
+                        "full-access",
+                        "supervised"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "model",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "per_run",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "continue",
+                        "new"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "prompt",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "shared",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "routine_run",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "routine",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "routine_toggle",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "action",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "pause",
+                        "resume"
+                    ],
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "routine",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "task_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "all",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "task_new",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "prompt",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "tool_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "tool_run",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "input",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "view_delete",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": true
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "view_diagram",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "document",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "view_drawing",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "dry_run",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "edit",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "view_edit",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "after",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "first",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "icon",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "name",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "view_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "view_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "view_new",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "after",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "connection",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "kind",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "browser",
+                        "canvas",
+                        "chat",
+                        "database",
+                        "diagram",
+                        "drawing",
+                        "file",
+                        "separator",
+                        "subheader",
+                        "terminal"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "mode",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "data",
+                        "structure"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "name",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "path",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "revision",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "schema",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "table",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "url",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "where",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "view_open",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "view_id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "worktree_diff",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "branch",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "stat",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "tail",
+                    "type": "integer",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "worktree_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "worktree_merge",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": true
+            },
+            "fields": [
+                {
+                    "key": "branch",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "message",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "project",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                },
+                {
+                    "key": "rebase",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "squash",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                }
+            ]
+        }
+    ],
+    "approvals": [
+        {
+            "name": "approval_answer",
+            "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false
+            },
+            "fields": [
+                {
+                    "key": "decision",
+                    "type": "string",
+                    "items": null,
+                    "enum": [
+                        "allow",
+                        "deny"
+                    ],
+                    "required": false
+                },
+                {
+                    "key": "id",
+                    "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "approval_list",
+            "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false
+            },
+            "fields": []
+        }
+    ]
+}

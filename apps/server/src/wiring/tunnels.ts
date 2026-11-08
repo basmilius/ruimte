@@ -5,6 +5,7 @@ import { ClientSinks } from '../client-sinks.ts';
 import type { ServerConfig } from '../config.ts';
 import { shotFolders } from '../shots.ts';
 import type { CanvasHost } from '../tools/host.ts';
+import { approvalTools } from '../tunnels/approvals.ts';
 import { fetchClientMetadata } from '../tunnels/client-metadata.ts';
 import { CloudflaredInstaller } from '../tunnels/cloudflared-installer.ts';
 import { realInstallerPorts } from '../tunnels/cloudflared-real.ts';
@@ -15,10 +16,13 @@ import { FailureLimiter } from '../tunnels/external-gate.ts';
 import { externalHandler, ExternalListener } from '../tunnels/external-listener.ts';
 import { TunnelService } from '../tunnels/tunnel-service.ts';
 import { tunnelsFolder, tunnelStore } from '../tunnels/tunnel-store.ts';
-import type { AgentsBundle } from './agents.ts';
+import type { AgentStores, AgentsBundle } from './agents.ts';
+import { approvalPorts } from './approvals.ts';
 import type { ArtifactsBundle } from './artifacts.ts';
+import type { LaunchesBundle } from './launches.ts';
 import type { ProcessesBundle } from './processes.ts';
 import type { ProjectsBundle } from './projects.ts';
+import type { RoutinesBundle } from './routines.ts';
 
 /* Tunnels, the credentials of external MCP clients and the listener they reach. */
 export interface TunnelsBundle {
@@ -37,12 +41,15 @@ interface TunnelsInput {
     projects: ProjectsBundle;
     processes: ProcessesBundle;
     artifacts: ArtifactsBundle;
+    stores: Pick<AgentStores, 'modeApprovals'>;
+    launches: Pick<LaunchesBundle, 'store' | 'agentHost'>;
+    routines: Pick<RoutinesBundle, 'routines'>;
     /* The port the API answers on, which is not `config.port` when the system picked one. */
     later: { apiPort(): number };
 }
 
 export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
-    const { config, canvasHost, agents, projects, processes, artifacts, later } = input;
+    const { config, canvasHost, agents, projects, processes, artifacts, stores, launches, routines, later } = input;
     const sinks = new ClientSinks();
     const changed = (): void => sinks.emit({ event: 'tunnel.changed', payload: {} });
     const consentChanged = (): void => sinks.emit({ event: 'consent.changed', payload: {} });
@@ -64,7 +71,8 @@ export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
             host: canvasHost,
             uploads: artifacts.artifacts,
             callerFolders: (caller) => callerFolders(config.home, caller),
-            shotFolders: shotFolders(config.home)
+            shotFolders: shotFolders(config.home),
+            extraTools: approvalTools(approvalPorts({ stores, agents, projects, launches, routines }))
         },
         fetchMetadata: (clientId) =>
             fetchClientMetadata(clientId, {

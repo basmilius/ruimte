@@ -1,4 +1,4 @@
-import { ceilingForOpening } from '@adecore/agents/providers';
+import { ceilingForOpening, MODE_ORDER } from '@adecore/agents/providers';
 import type { RuntimeMode } from '@ruimte/contracts';
 import type { AgentCall } from './host.ts';
 
@@ -8,4 +8,9 @@ import type { AgentCall } from './host.ts';
  */
 export function modeForOpening(call: AgentCall, requested: RuntimeMode | undefined): RuntimeMode {
     return ceilingForOpening(call.external?.grant.ceiling ?? call.host.starts.modeOf(call.caller), requested);
+}
+
+/* How wide a mode is: a higher number allows more. */
+export function modeRank(mode: RuntimeMode): number {
+    return MODE_ORDER.indexOf(mode);
 }
