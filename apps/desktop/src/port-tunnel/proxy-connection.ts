@@ -35,6 +35,12 @@ export interface ProxyConnectionOptions {
     secret: string;
     /* A request for something the tunnel does not reach, for the page to say so. */
     refused(authority: string): void;
+    /*
+     * How long the connection may take to send a whole request head that carries the secret, counted from
+     * the connection and not from its first byte, so a process that drips bytes holds its slot no longer
+     * than one that sends none. Without it the connection waits as long as the page does.
+     */
+    headTimeoutMs?: number;
 }
 
 type Mode = 'head' | 'length' | 'chunked' | 'upgrading' | 'tunnel' | 'closing';
@@ -77,8 +83,25 @@ export class ProxyConnection {
     private responseHead: Buffer = Buffer.alloc(0);
     private over = false;
 
+    private deadline: ReturnType<typeof setTimeout> | null = null;
+
     constructor(options: ProxyConnectionOptions) {
         this.options = options;
+
+        if (options.headTimeoutMs !== undefined) {
+            this.deadline = setTimeout(() => {
+                this.deadline = null;
+                this.over = true;
+                options.socket.destroy();
+            }, options.headTimeoutMs);
+        }
+    }
+
+    private stopDeadline(): void {
+        if (this.deadline !== null) {
+            clearTimeout(this.deadline);
+            this.deadline = null;
+        }
     }
 
     receive(chunk: Uint8Array): void {
@@ -93,6 +116,7 @@ export class ProxyConnection {
     /* The page went away. */
     closed(): void {
         this.over = true;
+        this.stopDeadline();
         this.stream?.close();
         this.stream = null;
     }
@@ -165,6 +189,9 @@ export class ProxyConnection {
 
             return false;
         }
+
+        // A whole head that carries the secret is a page; from here the page sets the pace.
+        this.stopDeadline();
 
         if (head.method === 'CONNECT') {
             return this.connect(head);

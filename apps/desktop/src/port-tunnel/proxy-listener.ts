@@ -6,7 +6,7 @@ import type { TunnelRelay } from './relay';
 /* A page opens a handful of connections; more than this is not a page. */
 const MAX_CONNECTIONS = 64;
 
-/* A connection that has not sent a request head by then is not a browser. */
+/* A connection that has not sent a whole request head with the secret by then is not a browser, however slowly it writes. */
 const HEAD_TIMEOUT_MS = 10_000;
 
 export interface ProxyListenerOptions {
@@ -60,15 +60,13 @@ export async function startProxyListener(options: ProxyListenerOptions): Promise
             relay: options.relay,
             port: options.port,
             secret,
-            refused: options.refused
+            refused: options.refused,
+            headTimeoutMs: HEAD_TIMEOUT_MS
         });
-        const waiting = setTimeout(() => socket.destroy(), HEAD_TIMEOUT_MS);
 
-        socket.once('data', () => clearTimeout(waiting));
         socket.on('data', (chunk: Buffer) => connection.receive(chunk));
         socket.on('error', () => socket.destroy());
         socket.on('close', () => {
-            clearTimeout(waiting);
             sockets.delete(socket);
             connection.closed();
         });

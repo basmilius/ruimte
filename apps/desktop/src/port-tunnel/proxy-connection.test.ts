@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { ProxyConnection, PROXY_USER, type ProxySocket } from './proxy-connection';
 import type { TunnelRelay, TunnelStream, TunnelStreamEvents } from './relay';
 
@@ -113,6 +113,69 @@ async function settle(): Promise<void> {
 function get(target: string, headers = ''): string {
     return `GET ${target} HTTP/1.1\r\n${LOGIN}Proxy-Connection: keep-alive\r\nAccept: */*\r\n${headers}\r\n`;
 }
+
+describe('the head deadline', () => {
+    const DEADLINE = 10_000;
+
+    function timed(): void {
+        connection = new ProxyConnection({ socket, relay, port: 3000, secret: SECRET, refused: () => undefined, headTimeoutMs: DEADLINE });
+    }
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    test('ends a connection that drips a head without ever finishing it', () => {
+        timed();
+
+        for (let second = 0; second < 9; second++) {
+            send('X');
+            jest.advanceTimersByTime(1000);
+        }
+
+        send('Y');
+        expect(socket.destroyed).toBe(false);
+
+        jest.advanceTimersByTime(1000);
+
+        expect(socket.destroyed).toBe(true);
+    });
+
+    test('ends a connection that finishes a head without the secret, since it is no page', async () => {
+        timed();
+        send('GET http://localhost:3000/ HTTP/1.1\r\n\r\n');
+        await settle();
+
+        expect(socket.destroyed).toBe(false);
+
+        jest.advanceTimersByTime(DEADLINE);
+
+        expect(socket.destroyed).toBe(true);
+    });
+
+    test('lets a page that sent a whole head with the secret keep its connection as long as it likes', async () => {
+        timed();
+        send(get('http://localhost:3000/'));
+        await settle();
+
+        jest.advanceTimersByTime(DEADLINE * 10);
+
+        expect(socket.destroyed).toBe(false);
+    });
+
+    test('lets a connection that went away leave no deadline behind', () => {
+        timed();
+        connection.closed();
+
+        jest.advanceTimersByTime(DEADLINE * 2);
+
+        expect(socket.destroyed).toBe(false);
+    });
+});
 
 describe('the proxy login', () => {
     test('asks for credentials when there are none and opens no stream', async () => {
