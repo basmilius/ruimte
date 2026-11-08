@@ -249,6 +249,7 @@
             "undoAll": "Alles ongedaan maken",
             "next": "Volgende wijziging",
             "previous": "Vorige wijziging",
+            "onlyChanges": "Alleen de wijzigingen tonen",
             "position": "{{current}} van {{total}}",
             "summary_one": "{{name}} heeft {{count}} plek gewijzigd",
             "summary_other": "{{name}} heeft {{count}} plekken gewijzigd",

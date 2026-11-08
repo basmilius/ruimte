@@ -249,6 +249,7 @@
             "undoAll": "Undo all",
             "next": "Next change",
             "previous": "Previous change",
+            "onlyChanges": "Show only the changes",
             "position": "{{current}} of {{total}}",
             "summary_one": "{{name}} changed {{count}} place",
             "summary_other": "{{name}} changed {{count}} places",
