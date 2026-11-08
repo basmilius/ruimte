@@ -123,6 +123,12 @@
         "restartNow": "Restart now",
         "whenIdle": "When idle"
     },
+    "breakReminder": {
+        "title": "Time for a break?",
+        "description": "You have worked {{duration}} without a break.",
+        "take": "Take a break",
+        "later": "Later"
+    },
     "notifications": {
         "finished": "Finished",
         "needsYou": "Needs you",

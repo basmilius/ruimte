@@ -37,6 +37,15 @@ import { type CodeFolding, codeFoldingFrom, DEFAULT_CODE_FOLDING } from '@/state
 import { useExtensionTheme } from '@/state/extension-theme';
 import { applyPalette, isHexColor, type PaletteSide, type PaletteSideInput } from '@/state/palette';
 import { palettePresetFrom, presetTokens, type PalettePreset } from '@/state/palette-presets';
+import {
+    breakStretchFrom,
+    DEFAULT_BREAK_STRETCH,
+    DEFAULT_QUIET_DAYS,
+    DEFAULT_QUIET_END,
+    DEFAULT_QUIET_START,
+    quietClockFrom,
+    quietDaysFrom
+} from '@/state/quiet-hours';
 import { storedJson, switchesFrom } from '@/state/stored-json';
 
 export const SETTINGS_STORAGE_KEY = 'ruimte.settings';
@@ -273,6 +282,18 @@ export interface Settings {
     /* Whether agent notifications make a sound. Off, because a sound arrives in whatever the person
        walked away to do, which may be a call. */
     agentsTurnSound: boolean;
+    /* Whether this computer raises no alert of its own in the hours below, which follow the computer's clock.
+       Off to start with. Agents keep working, and what still waits is announced when the hours end. */
+    quietHoursOn: boolean;
+    /* ISO weekdays, 1 is Monday. A window belongs to the day it starts on. */
+    quietHoursDays: number[];
+    quietHoursStart: string;
+    /* At or before the start, the hours run into the next day. */
+    quietHoursEnd: string;
+    /* Whether the desktop app suggests a break after a stretch of work. Off to start with. */
+    breakReminderOn: boolean;
+    /* Minutes of work after which the reminder shows, one of `BREAK_STRETCHES`. */
+    breakReminderMinutes: number;
     /* Whether two fingers sideways on a trackpad go back and forward in a browser page. On, because
        it is what every browser on macOS does; off, the pages do not even report their wheel. */
     browserSwipe: boolean;
@@ -382,6 +403,12 @@ const DEFAULT_SETTINGS: Settings = {
     keepAwakeOnBattery: false,
     keepAwakeDisplay: false,
     agentsTurnSound: false,
+    quietHoursOn: false,
+    quietHoursDays: [...DEFAULT_QUIET_DAYS],
+    quietHoursStart: DEFAULT_QUIET_START,
+    quietHoursEnd: DEFAULT_QUIET_END,
+    breakReminderOn: false,
+    breakReminderMinutes: DEFAULT_BREAK_STRETCH,
     browserSwipe: true,
     canvasMinimap: false,
     directStunServers: DEFAULT_STUN_SERVER,
@@ -498,6 +525,12 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
                 : DEFAULT_SETTINGS.voiceInputDeviceId,
         voiceConfirmDestructiveActions: stored.voiceConfirmDestructiveActions !== false,
         agentsTurnSound: stored.agentsTurnSound === true,
+        quietHoursOn: stored.quietHoursOn === true,
+        quietHoursDays: quietDaysFrom(stored.quietHoursDays),
+        quietHoursStart: quietClockFrom(stored.quietHoursStart, DEFAULT_QUIET_START),
+        quietHoursEnd: quietClockFrom(stored.quietHoursEnd, DEFAULT_QUIET_END),
+        breakReminderOn: stored.breakReminderOn === true,
+        breakReminderMinutes: breakStretchFrom(stored.breakReminderMinutes),
         browserSwipe: stored.browserSwipe !== false,
         canvasMinimap: stored.canvasMinimap === true,
         worktreeMergeStrategy:

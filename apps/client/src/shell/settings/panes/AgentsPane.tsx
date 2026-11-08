@@ -6,8 +6,10 @@ import { CLOSED_LID_BATTERY_FLOOR, type RuntimeMode } from '@ruimte/contracts';
 import { BatteryCharging } from 'lucide-react';
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
+import { BreakReminderRows } from '@/shell/settings/BreakReminderRows';
 import { MachineSwitchSection } from '@/shell/settings/MachineSwitchSection';
 import { ComputerSections } from '@/shell/settings/panes/ComputerSections';
+import { QuietHoursRows } from '@/shell/settings/QuietHoursRows';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { TextModelSection } from '@/shell/settings/TextModelSection';
@@ -39,6 +41,8 @@ export function AgentsPane() {
             <MachineSwitchSection title={t('agents.machine.title')} settings={['agentsDeleteAnyView', 'reachOpenProjects', 'resumeAtReset']} />
             <SettingsSection title={t('agents.notifications.title')}>
                 <SettingSwitchRow id="agents.working.sound" setting="agentsTurnSound" />
+                <QuietHoursRows />
+                <BreakReminderRows />
             </SettingsSection>
             <SettingsSection title={t('agents.views.title')}>
                 <SettingSwitchRow id="agents.showViews" setting="agentsShowViews" />

@@ -8,13 +8,14 @@ import { openSidebarTarget } from '@/shell/sidebar-navigation';
 import { subscribeChatStatuses } from '@/state/chats';
 import { seenNodeIds } from '@/state/in-sight';
 import { currentEndpointId, endpointOfNode } from '@/state/keys';
+import { clientQuietState } from '@/state/quiet-hours';
 import { nodeStatus, nodeWaitAsk, useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
 import { waitAskLine } from './wait-ask';
 
 /* Whether this window may raise anything at all. What a person is looking at is asked per node. */
-function mayNotify(): boolean {
+export function mayNotify(): boolean {
     return 'Notification' in window && Notification.permission === 'granted';
 }
 
@@ -57,10 +58,14 @@ const CLOCK_SLACK_MS = 5_000;
 // Concurrent approvals must settle before same-tag replacement can withdraw the first banner.
 const WAIT_SETTLE_MS = 1_000;
 
+// A timer holds at most this long; a longer wait comes back to the clock and arms again.
+const MAX_TIMER_MS = 2_000_000_000;
+
 /*
  * Notify once while a hidden node needs input, then withdraw when it resumes. A snoozed wait reads as no
  * wait, so a snooze that runs out is a new one and announces itself; one that ended before its time was
- * a person's own doing (here or on another client), and stays quiet.
+ * a person's own doing (here or on another client), and stays quiet. Quiet hours read the same way, and
+ * one timer on their end announces what still waits. Counts, the queue and the marks stay as they are.
  */
 export function startAgentNotifications(now: () => number = Date.now): () => void {
     const shown = new Map<string, Notification>();
@@ -87,22 +92,54 @@ export function startAgentNotifications(now: () => number = Date.now): () => voi
         }
     };
 
+    let quietTimer: ReturnType<typeof setTimeout> | null = null;
+    let quietTimerAt: number | null = null;
+
+    const armQuietTimer = (changesAt: number | null): void => {
+        if (changesAt === quietTimerAt) {
+            return;
+        }
+
+        if (quietTimer !== null) {
+            clearTimeout(quietTimer);
+            quietTimer = null;
+        }
+
+        quietTimerAt = changesAt;
+
+        if (changesAt !== null) {
+            quietTimer = setTimeout(
+                () => {
+                    quietTimer = null;
+                    quietTimerAt = null;
+                    check();
+                },
+                Math.min(Math.max(0, changesAt - now()), MAX_TIMER_MS)
+            );
+        }
+    };
+
     const check = (): void => {
         const nodes = projectNodes();
         const seen = seenNodeIds();
         const endpointId = currentEndpointId();
         const sessions = useSessions.getState().byKey;
         const chats = useChats.getState().statusByKey;
-        const { agentsTurnSound } = useSettings.getState();
+        const settings = useSettings.getState();
+        const { agentsTurnSound } = settings;
         const snoozes = useSnoozes.getState().byKey;
+        const quiet = clientQuietState(settings, now());
         const current = new Map<string, string | undefined>();
         const sleeping = new Map<string, number>();
+
+        armQuietTimer(quiet.changesAt);
+
         for (const node of nodes) {
             const until = snoozeOf(snoozes, endpointOfNode(node, endpointId), node.id);
             if (until !== null) {
                 sleeping.set(node.id, until);
             }
-            const status = until === null ? nodeStatus(node, sessions, chats, endpointId) : undefined;
+            const status = until === null && !quiet.quiet ? nodeStatus(node, sessions, chats, endpointId) : undefined;
             const endedEarly = status === 'needs-you' && (asleep.get(node.id) ?? 0) - now() > CLOCK_SLACK_MS;
             current.set(node.id, status);
             if (status !== 'needs-you') {
@@ -176,6 +213,7 @@ export function startAgentNotifications(now: () => number = Date.now): () => voi
         offChats();
         offSettings();
         offSnoozes();
+        armQuietTimer(null);
 
         for (const nodeId of pending.keys()) {
             cancelPending(nodeId);

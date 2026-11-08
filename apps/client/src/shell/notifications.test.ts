@@ -225,6 +225,76 @@ test('a snooze that runs out announces the wait again, one a person ended does n
     }
 });
 
+test('a wait in quiet hours raises nothing, and the end of the hours announces it', () => {
+    const shown: { title: string; options: NotificationOptions }[] = [];
+    const restore = fakeNotifications(shown);
+    const endpointId = currentEndpointId();
+    const key = endpointKey(endpointId, 'agent');
+    // The hours are read on this computer's clock, so the window is built on the local one: 12:00 to 13:00.
+    let now = new Date(2026, 10, 4, 12, 30).getTime();
+    const hours = { quietHoursOn: true, quietHoursDays: [1, 2, 3, 4, 5, 6, 7], quietHoursStart: '12:00', quietHoursEnd: '13:00' };
+    const before = useSettings.getState();
+    let stopNotifications = () => {};
+    try {
+        useSettings.setState(hours);
+        loadBuildTerminal();
+        stopNotifications = startAgentNotifications(() => now);
+        setStatus(key, 'needs-you');
+        jest.advanceTimersByTime(1_000);
+        expect(shown).toEqual([]);
+
+        notifyRequested(endpointId, { projectId: 'project', viewId: 'agent', nodeId: 'agent', title: 'Build', body: 'Asked for.' });
+        expect(shown).toHaveLength(1);
+
+        now = new Date(2026, 10, 4, 13, 0).getTime();
+        jest.advanceTimersByTime(30 * 60_000);
+        jest.advanceTimersByTime(1_000);
+        expect(shown).toHaveLength(2);
+        expect(shown[1]).toMatchObject({ title: 'Build', options: { tag: 'ruimte-agent' } });
+    } finally {
+        stopNotifications();
+        useSettings.setState({
+            quietHoursOn: before.quietHoursOn,
+            quietHoursDays: before.quietHoursDays,
+            quietHoursStart: before.quietHoursStart,
+            quietHoursEnd: before.quietHoursEnd
+        });
+        useSessions.getState().forget(key);
+        useDocument.getState().load(null, null);
+        restore();
+    }
+});
+
+test('a wait that was answered during quiet hours is not announced when they end', () => {
+    const shown: { title: string; options: NotificationOptions }[] = [];
+    const restore = fakeNotifications(shown);
+    const key = endpointKey(currentEndpointId(), 'agent');
+    let now = new Date(2026, 10, 4, 12, 30).getTime();
+    const before = useSettings.getState();
+    let stopNotifications = () => {};
+    try {
+        useSettings.setState({ quietHoursOn: true, quietHoursDays: [1, 2, 3, 4, 5, 6, 7], quietHoursStart: '12:00', quietHoursEnd: '13:00' });
+        loadBuildTerminal();
+        stopNotifications = startAgentNotifications(() => now);
+        setStatus(key, 'needs-you');
+        setStatus(key, 'running');
+        now = new Date(2026, 10, 4, 13, 0).getTime();
+        jest.advanceTimersByTime(30 * 60_000 + 1_000);
+        expect(shown).toEqual([]);
+    } finally {
+        stopNotifications();
+        useSettings.setState({
+            quietHoursOn: before.quietHoursOn,
+            quietHoursDays: before.quietHoursDays,
+            quietHoursStart: before.quietHoursStart,
+            quietHoursEnd: before.quietHoursEnd
+        });
+        useSessions.getState().forget(key);
+        useDocument.getState().load(null, null);
+        restore();
+    }
+});
+
 test.each(['resume', 'snooze', 'remove', 'permission', 'visible', 'stop'] as const)('a pending notification is suppressed after %s', (change) => {
     const shown: { title: string; options: NotificationOptions }[] = [];
     const restore = fakeNotifications(shown);

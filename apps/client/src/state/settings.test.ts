@@ -297,6 +297,36 @@ describe('agent notifications', () => {
     });
 });
 
+describe('quiet hours and the break reminder', () => {
+    test('start off, with a night and every day to start from', () => {
+        expect(settingsFrom({})).toMatchObject({
+            quietHoursOn: false,
+            quietHoursDays: [1, 2, 3, 4, 5, 6, 7],
+            quietHoursStart: '22:00',
+            quietHoursEnd: '07:00',
+            breakReminderOn: false,
+            breakReminderMinutes: 50
+        });
+    });
+
+    test('keep what is stored and repair what is not', () => {
+        expect(settingsFrom({ quietHoursOn: true, quietHoursDays: [7, 5, 5], quietHoursStart: '23:30', quietHoursEnd: '06:15' })).toMatchObject({
+            quietHoursOn: true,
+            quietHoursDays: [5, 7],
+            quietHoursStart: '23:30',
+            quietHoursEnd: '06:15'
+        });
+        const broken = settingsFrom({
+            quietHoursDays: [9, 'x'] as unknown as number[],
+            quietHoursStart: '25:00',
+            quietHoursEnd: 7 as unknown as string,
+            breakReminderMinutes: 44
+        });
+        expect(broken).toMatchObject({ quietHoursDays: [1, 2, 3, 4, 5, 6, 7], quietHoursStart: '22:00', quietHoursEnd: '07:00', breakReminderMinutes: 50 });
+        expect(settingsFrom({ breakReminderMinutes: 90 }).breakReminderMinutes).toBe(90);
+    });
+});
+
 describe('sending to a running agent', () => {
     test('queues by default and enables steering only on a stored true', () => {
         expect(settingsFrom({}).chatSteerByDefault).toBe(false);

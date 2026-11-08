@@ -123,6 +123,12 @@
         "restartNow": "Nu herstarten",
         "whenIdle": "Zodra het stil is"
     },
+    "breakReminder": {
+        "title": "Tijd voor een pauze?",
+        "description": "Je werkt al {{duration}} zonder pauze.",
+        "take": "Pauze nemen",
+        "later": "Straks"
+    },
     "notifications": {
         "finished": "Klaar",
         "needsYou": "Wacht op jou",

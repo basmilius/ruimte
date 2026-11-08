@@ -1218,6 +1218,29 @@
             "label": "Let agents switch views",
             "description": "A view or project an agent opens replaces yours, and a message lets you go back. When off, the message offers to go there."
         },
+        "quietHours": {
+            "label": "Quiet hours",
+            "description": "No alert on this computer in these hours. Agents keep working, and what still waits is announced when the hours end.",
+            "days": {
+                "label": "Days",
+                "description": "A night belongs to the day it starts on."
+            },
+            "times": {
+                "label": "Hours",
+                "description": "On this computer's clock. An end before the start runs into the next day.",
+                "from": "Quiet from",
+                "to": "to",
+                "until": "Quiet until"
+            }
+        },
+        "breakReminder": {
+            "label": "Break reminder",
+            "description": "Suggests a break after a stretch of work at this computer. Five minutes away counts as a break.",
+            "stretch": {
+                "label": "Remind me after",
+                "description": "Of work without a break."
+            }
+        },
         "working": {
             "title": "Keep awake",
             "description": "When this computer sleeps, every agent pauses.",

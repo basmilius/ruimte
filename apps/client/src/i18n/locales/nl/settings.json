@@ -1218,6 +1218,29 @@
             "label": "Agents van weergave laten wisselen",
             "description": "Een weergave of project dat een agent opent, vervangt het jouwe, en een melding laat je teruggaan. Als dit uit staat, biedt de melding aan erheen te gaan."
         },
+        "quietHours": {
+            "label": "Stille uren",
+            "description": "Geen melding op deze computer in deze uren. Agents blijven werken, en wat nog wacht hoor je als de uren eindigen.",
+            "days": {
+                "label": "Dagen",
+                "description": "Een nacht hoort bij de dag waarop hij begint."
+            },
+            "times": {
+                "label": "Uren",
+                "description": "Op de klok van deze computer. Een einde voor het begin loopt door in de volgende dag.",
+                "from": "Stil vanaf",
+                "to": "tot",
+                "until": "Stil tot"
+            }
+        },
+        "breakReminder": {
+            "label": "Pauzeherinnering",
+            "description": "Stelt een pauze voor na een tijd werken aan deze computer. Vijf minuten weg telt als pauze.",
+            "stretch": {
+                "label": "Herinner me na",
+                "description": "Werken zonder pauze."
+            }
+        },
         "working": {
             "title": "Wakker houden",
             "description": "Als deze computer slaapt, pauzeert elke agent.",

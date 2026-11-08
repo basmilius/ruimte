@@ -3,6 +3,7 @@ import i18next from 'i18next';
 import { canSwipeBetweenPages, desktop, isDesktop } from '@/desktop/bridge';
 import { useContributions } from '@/extensions/registry';
 import { RENDERED_DOC_COMMENTS } from '@/features';
+import { breakReminderOffered } from '@/shell/break-reminder';
 import { FOLDING_GROUPS } from '@/shell/settings/folding-rows';
 import { allSettingsSections, sectionDescription, sectionLabel } from '@/shell/settings/sections';
 import { shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
@@ -160,6 +161,8 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     row('agents.deleteAnyView'),
     row('agents.reachOpenProjects'),
     row('agents.working.sound'),
+    row('agents.quietHours'),
+    row('agents.breakReminder', breakReminderOffered),
     row('agents.showViews'),
     {
         id: 'agents.keepAwake.mode',
