@@ -3,7 +3,7 @@ import { GIT_BLOB_MAX_BYTES, type GitBlobResult, type GitCompareMode, type GitCo
 import { languageOf } from '../fs/read.ts';
 import { diffCommits } from './diff.ts';
 import { readRangeLog } from './log.ts';
-import { GitError, LEAVE_NOTHING_OUT, git, runGitBytes, toplevel, verifyRev, type LeftOut } from './run.ts';
+import { GitError, LEAVE_NOTHING_OUT, git, runGit, runGitBytes, toplevel, verifyRev, type GitResult, type LeftOut } from './run.ts';
 
 const KEEP_BOM = new TextDecoder('utf-8', { ignoreBOM: true });
 // The first page of each side that `git.compare` answers with.
@@ -21,8 +21,16 @@ async function pinCommit(top: string, ref: string): Promise<string> {
 }
 
 async function mergeBaseOf(top: string, fromCommit: string, toCommit: string): Promise<string> {
-    const output = await git(['merge-base', '--all', fromCommit, toCommit], top);
-    const bases = output?.trim().split(/\s+/).filter(Boolean) ?? [];
+    return mergeBaseFrom(await runGit(['merge-base', '--all', fromCommit, toCommit], top));
+}
+
+/* `git merge-base` exits 1 with no output for unrelated histories; every other failure is a read that did not happen. */
+export function mergeBaseFrom({ code, stdout }: Pick<GitResult, 'code' | 'stdout'>): string {
+    if (code !== 0 && !(code === 1 && stdout.trim() === '')) {
+        throw new GitError('git-failed', 'The merge base could not be read.');
+    }
+
+    const bases = stdout.trim().split(/\s+/).filter(Boolean);
 
     if (bases.length === 0) {
         throw new GitError('git-failed', 'These branches have no common ancestor. Compare their tips instead.');
