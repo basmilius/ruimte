@@ -364,6 +364,20 @@ import {
     PlanRemovedEventSchema
 } from './plan-host.ts';
 import {
+    PortClosePayloadSchema,
+    PortCreditPayloadSchema,
+    PortDataEventSchema,
+    PortEndEventSchema,
+    PortListResultSchema,
+    PortOpenPayloadSchema,
+    PortOpenResultSchema,
+    PortRevokePayloadSchema,
+    PortSharePayloadSchema,
+    PortShareResultSchema,
+    PortWritePayloadSchema,
+    PortWriteResultSchema
+} from './port.ts';
+import {
     ProcessesAlertsSchema,
     ProcessesDismissPayloadSchema,
     ProcessesSampleEventSchema,
@@ -565,6 +579,7 @@ export * from './nanogpt.ts';
 export * from './node-defaults.ts';
 export { emptyCanvasGroupIds, groupUnder, joinGroupUnder } from './canvas-groups.ts';
 export * from './plan-host.ts';
+export * from './port.ts';
 export * from './processes.ts';
 export * from './provenance.ts';
 export * from './reach.ts';
@@ -976,6 +991,14 @@ export const REQUEST_SCHEMAS = {
     'tunnel.remove': { payload: TunnelRemovePayloadSchema, result: TunnelStateSchema },
     'tunnel.retry': { payload: EmptySchema, result: TunnelStateSchema },
     'tunnel.setMcp': { payload: TunnelSetMcpPayloadSchema, result: TunnelStateSchema },
+    // A development port shared through the machine connection. Any client of the account reads the grants and opens streams; sharing and revoking are the local secret's, or an agent's while the machine allows it.
+    'port.list': { payload: EmptySchema, result: PortListResultSchema },
+    'port.share': { payload: PortSharePayloadSchema, result: PortShareResultSchema },
+    'port.revoke': { payload: PortRevokePayloadSchema, result: EmptySchema },
+    'port.open': { payload: PortOpenPayloadSchema, result: PortOpenResultSchema },
+    'port.write': { payload: PortWritePayloadSchema, result: PortWriteResultSchema },
+    'port.credit': { payload: PortCreditPayloadSchema, result: EmptySchema },
+    'port.close': { payload: PortClosePayloadSchema, result: EmptySchema },
     'credential.list': { payload: EmptySchema, result: CredentialListResultSchema },
     'credential.create': { payload: CredentialCreatePayloadSchema, result: CredentialCreateResultSchema },
     'credential.update': { payload: CredentialUpdatePayloadSchema, result: z.object({ credential: CredentialSchema }) },
@@ -1051,6 +1074,11 @@ export const EVENT_SCHEMAS = {
     // Tunnels or the external MCP changed, or a credential was used after a minute of quiet; every client reloads what it shows.
     'tunnel.changed': EmptySchema,
     'consent.changed': EmptySchema,
+    // A port was shared or revoked, to every client, which asks `port.list` again.
+    'port.changed': EmptySchema,
+    // The bytes of a stream and its end, to the one client that opened it.
+    'port.data': PortDataEventSchema,
+    'port.end': PortEndEventSchema,
     // Sent to the machine that gave the task, over its own link only.
     'peer.taskSettled': PeerTaskSettledEventSchema,
     // The link to another machine opened, was lost or is waiting to be tried again.
