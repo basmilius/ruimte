@@ -58,7 +58,7 @@ export function SettingsTunnels() {
                     label="Tunnel ruimte-studio"
                     description="Its hostnames show in the Cloudflare dashboard too. Ruimte only changes the records it made."
                 />
-                <Hostname name="mcp-4f9a1c7e2b83d605.bmnw.nl" what="Ruimte's MCP, guarded by a credential on every request" back />
+                <Hostname name="mcp-4f9a1c7e2b83d605.bmnw.nl" what="Ruimte's MCP, which asks for a credential on every request" back />
                 <Hostname name="shop-tunnel.passly.dev" what="Dev server on port 3000, open to anyone with the address" back={false} />
             </SettingsSection>
             <SettingsSection

@@ -14,7 +14,7 @@ You need a domain on Cloudflare and an API token for it. You manage tunnels from
 ## Set up a tunnel
 
 1. Open Settings, Tunnels.
-2. Click **Install** if Ruimte does not find `cloudflared`. Ruimte downloads Cloudflare's official build, checks it against a checksum, and keeps it in its own folder. Where no build exists for your system, the pane says what to install yourself.
+2. Click **Install** if Ruimte does not find `cloudflared`. Ruimte downloads Cloudflare's official build, checks that it is the build this release expects, and keeps it in its own folder. Where no build exists for your system, the pane says what to install yourself.
 3. Click **Make a token**. Cloudflare opens its token page with Zone read, DNS edit and Cloudflare Tunnel edit already ticked. Make the token, copy it, paste it into Ruimte and click **Check token**. Ruimte asks Cloudflare whether the token works, then lists the domains it reaches.
 4. Click **Create tunnel**. If the token reaches more than one Cloudflare account, pick the account first. Ruimte makes one tunnel for this machine, named `ruimte-` and the machine's name.
 
@@ -34,13 +34,13 @@ Removing a hostname deletes the record and the hostname Ruimte made, and nothing
 
 ## Add a dev server
 
-Under **Hostnames**, pick a port that one of your sessions listens on, choose the domain and label, and tick that you know anyone with the address reaches it. Nothing sits in front of a dev server. No login, no gate.
+Under **Hostnames**, pick a port that one of your sessions listens on, choose the domain and label, and tick that you know anyone with the address reaches it. Nothing guards a dev server. There is no login.
 
 Each hostname has its own switch and its own choice for after a restart. A dev server stays off by default, because its port may hold something else by then. Set **Comes back on** for a server that always runs on the same port.
 
 ## Connect a bot to the MCP
 
-1. Under **External clients**, turn on **External MCP**. Ruimte now listens on this machine, on a port of its own, and nowhere else. This works without a tunnel: a bot on the same computer uses the address shown there.
+1. Under **External clients**, turn on **External MCP**. Ruimte now listens on this machine, on a port of its own, and nowhere else. A bot on the same computer uses the address shown there, without a tunnel.
 2. To reach it from outside, add an MCP hostname under **Hostnames**. Ruimte suggests a long random label, so scanners do not find it. The name protects nothing. A credential does.
 3. Give the bot the address, ending in `/mcp`.
 
@@ -52,7 +52,7 @@ A client that can only set a header gets a bearer. Click **New bearer** under Ex
 
 ## What a client may do
 
-A client acts as you, and what it gets is set when you approve it or make the bearer.
+A client acts as you. You choose what it may do when you approve it or make the bearer.
 
 | Choice | Default | Effect |
 | --- | --- | --- |
@@ -68,4 +68,4 @@ A client never types into a terminal, and a terminal's prompts stay where they a
 
 ## Keep an eye on clients
 
-Nothing expires unless you set it, so noticing is the way to stop a client. Under **External clients**, each credential shows its name, what it reaches and when it was last used. The trash button revokes it. The client loses access from its next request. Agents it already started keep running.
+Nothing expires unless you set an end, so look at this list now and then. Under **External clients**, each credential shows its name, what it reaches and when it was last used. The trash button revokes it. The client loses access from its next request. Agents it already started keep running.
