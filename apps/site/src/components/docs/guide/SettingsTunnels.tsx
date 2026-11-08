@@ -40,7 +40,7 @@ export function SettingsTunnels() {
             active="Tunnels"
             description="Reach Ruimte's MCP and your dev servers from outside."
             height={1160}
-            label="The Settings dialog on Tunnels. A Cloudflare API token that Cloudflare accepts, reaching 2 domains, with a button to remove it. Under Hostnames, the tunnel ruimte-studio, one hostname on bmnw.nl for the MCP that a credential guards and one on passly.dev for a dev server on port 3000 that anyone with the address reaches. Under External clients, the External MCP switch is on and shows its address on this machine, and one credential, Hosted bot, is listed with a button to revoke it."
+            label="The Settings dialog on Tunnels. A Cloudflare API token that Cloudflare accepts, reaching 2 domains, with a button to remove it. Under Hostnames, the tunnel ruimte-studio-4f2a, made and run by Ruimte, with a button to stop using it, one hostname on bmnw.nl for the MCP that a credential guards and one on passly.dev for a dev server on port 3000 that anyone with the address reaches. Under External clients, the External MCP switch is on and shows its address on this machine, and one credential, Hosted bot, is listed with a button to revoke it."
         >
             <SettingsSection title="Tunnels">
                 <SettingsRow
@@ -55,8 +55,9 @@ export function SettingsTunnels() {
             </SettingsSection>
             <SettingsSection title="Hostnames">
                 <SettingsRow
-                    label="Tunnel ruimte-studio"
-                    description="Its hostnames show in the Cloudflare dashboard too. Ruimte only changes the records it made."
+                    label="Tunnel ruimte-studio-4f2a"
+                    description="Made by Ruimte. Ruimte runs it."
+                    control={<Button onClick={() => undefined}>Stop using</Button>}
                 />
                 <Hostname name="mcp-4f9a1c7e2b83d605.bmnw.nl" what="Ruimte's MCP, which asks for a credential on every request" back />
                 <Hostname name="shop-tunnel.passly.dev" what="Dev server on port 3000, open to anyone with the address" back={false} />

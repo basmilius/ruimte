@@ -16,13 +16,27 @@ You need a domain on Cloudflare and an API token for it. You manage tunnels from
 1. Open Settings, Tunnels.
 2. Click **Install** if Ruimte does not find `cloudflared`. Ruimte downloads Cloudflare's official build, checks that it is the build this release expects, and keeps it in its own folder. Where no build exists for your system, the pane says what to install yourself.
 3. Click **Make a token**. Cloudflare opens its token page with Zone read, DNS edit and Cloudflare Tunnel edit already ticked. Make the token, copy it, paste it into Ruimte and click **Check token**. Ruimte asks Cloudflare whether the token works, then lists the domains it reaches.
-4. Click **Create tunnel**. If the token reaches more than one Cloudflare account, pick the account first. Ruimte makes one tunnel for this machine, named `ruimte-` and the machine's name.
+4. Click **Create tunnel**. If the token reaches more than one Cloudflare account, pick the account first. Ruimte makes one tunnel for this machine, named `ruimte-`, the machine's name and four characters that keep two machines with the same name apart. To use a tunnel you already have instead, see below.
 
 Ruimte keeps the token on this machine and sends it only to Cloudflare. It never shows the token again. **Remove token** forgets it. The tunnel and its records stay in Cloudflare.
 
 If something goes wrong, the pane says what Ruimte was doing and what Cloudflare answered, with a **Try again** button.
 
 <Note tone="warning">Cloudflare ends the encryption at its edge, so it can read everything that passes through a tunnel. That includes prompts, file contents, credentials and the cookies of a dev site. A bot you connect reads whatever it is told or asks for, too.</Note>
+
+## Use a tunnel you already have
+
+Under **Your tunnels**, the pane lists the tunnels on the Cloudflare account. Click **Use** next to one. Ruimte adds only its own hostnames and DNS records to it. Every hostname, path rule and record you set up yourself stays as it is. Your own hostnames show under **Already on this tunnel**, with where each one points, and Ruimte never changes them.
+
+Ruimte can only use a tunnel that is managed in the Cloudflare dashboard. A tunnel managed in a file on a computer shows without **Use**. Move it to the dashboard in Cloudflare first if you want Ruimte to use it.
+
+If the tunnel already runs, on this computer or another one, Ruimte starts nothing for it and says so. It looks again when the machine starts and when you click **Try again**. If nothing runs it, Ruimte runs it on this computer while a hostname is on.
+
+<Note>A hostname points at a port on the computer that runs the tunnel. If your own service runs the tunnel on another computer, a dev server or the MCP on this machine is out of its reach.</Note>
+
+## Stop using a tunnel
+
+Click **Stop using** next to the tunnel under **Hostnames** and confirm. Ruimte takes its hostnames off the tunnel, deletes the DNS records it made and forgets the tunnel. The tunnel stays in Cloudflare, also when Ruimte made it, so you can pick it again later or delete it in the dashboard yourself.
 
 ## Add a hostname
 
@@ -34,7 +48,7 @@ Removing a hostname deletes the record and the hostname Ruimte made, and nothing
 
 ## Add a dev server
 
-Under **Hostnames**, pick a port that one of your sessions listens on, choose the domain and label, and tick that you know anyone with the address reaches it. Nothing guards a dev server. There is no login.
+Under **Hostnames**, pick a port that one of your sessions listens on, or **Other port** to type one. Type a label, choose the domain and click **Add**. Ruimte asks once more, because nothing guards a dev server. Anyone with the address reaches it, without a login.
 
 Each hostname has its own switch and its own choice for after a restart. A dev server stays off by default, because its port may hold something else by then. Set **Comes back on** for a server that always runs on the same port.
 
