@@ -47,3 +47,32 @@ export const RenderAnswerSchema = z.discriminatedUnion('ok', [
     z.object({ ok: z.literal(false), code: z.enum(['browser-unavailable', 'render-failed']), message: z.string() })
 ]);
 export type RenderAnswer = z.infer<typeof RenderAnswerSchema>;
+
+/*
+ * A line the child writes before its answer: the port of the SOCKS proxy it started on loopback, so the daemon
+ * keeps that port out of anything it shares while the child runs.
+ */
+export const RenderProxyNoticeSchema = z.object({ proxyPort: z.number().int().min(1).max(65535) });
+
+export type RenderLine = { kind: 'proxy'; port: number } | { kind: 'answer'; answer: RenderAnswer };
+
+/* What one line of the child's stdout is, or null for a line that is neither. */
+export function classifyRenderLine(line: string): RenderLine | null {
+    let json: unknown;
+
+    try {
+        json = JSON.parse(line);
+    } catch {
+        return null;
+    }
+
+    const notice = RenderProxyNoticeSchema.safeParse(json);
+
+    if (notice.success) {
+        return { kind: 'proxy', port: notice.data.proxyPort };
+    }
+
+    const answer = RenderAnswerSchema.safeParse(json);
+
+    return answer.success ? { kind: 'answer', answer: answer.data } : null;
+}

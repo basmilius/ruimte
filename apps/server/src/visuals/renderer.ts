@@ -5,8 +5,9 @@ import { CodedError } from '@adecore/agents';
 import { cancellableTimeout } from '@adecore/utils/async';
 import { VISUAL_MEASURE_WIDTHS, type VisualAppearance, type VisualHeight } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
+import { reservedPorts } from '../ports/reserved-ports.ts';
 import type { ConsoleEntry } from './page-console.ts';
-import { RENDER_COMMAND, RenderAnswerSchema, type RenderAnswer, type RenderRequest } from './render-protocol.ts';
+import { RENDER_COMMAND, classifyRenderLine, type RenderAnswer, type RenderRequest } from './render-protocol.ts';
 
 /*
  * Renders an agent's page in a child process with a Chrome of its own (`render-child.ts`), for a
@@ -66,16 +67,44 @@ export function renderCommand(compiled: boolean, execPath: string, execArgv: rea
     return [execPath, ...execArgv.filter((argument) => argument.startsWith('--conditions')), join(sourceDir, 'main.ts'), RENDER_COMMAND];
 }
 
-function parseAnswer(text: string): RenderAnswer | null {
-    const line = text.split('\n').find((candidate) => candidate.trim() !== '');
-    if (line === undefined) {
-        return null;
-    }
-    try {
-        const parsed = RenderAnswerSchema.safeParse(JSON.parse(line));
-        return parsed.success ? parsed.data : null;
-    } catch {
-        return null;
+/*
+ * Reads the child's stdout line by line: the port of its proxy is reserved the moment it is told, and the
+ * first answer is the child's. Ends with what the child said once its output closes.
+ */
+export async function readOutput(
+    stdout: ReadableStream<Uint8Array>,
+    reserve: (port: number) => () => void,
+    releases: Array<() => void>
+): Promise<RenderAnswer | null> {
+    const reader = stdout.getReader();
+    const decoder = new TextDecoder();
+    let pending = '';
+    let answer: RenderAnswer | null = null;
+    const take = (line: string): void => {
+        const read = line.trim() === '' ? null : classifyRenderLine(line);
+
+        if (read?.kind === 'proxy') {
+            releases.push(reserve(read.port));
+        } else if (read?.kind === 'answer' && answer === null) {
+            answer = read.answer;
+        }
+    };
+
+    for (;;) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+            take(pending);
+
+            return answer;
+        }
+
+        pending += decoder.decode(value, { stream: true });
+
+        for (let end = pending.indexOf('\n'); end >= 0; end = pending.indexOf('\n')) {
+            take(pending.slice(0, end));
+            pending = pending.slice(end + 1);
+        }
     }
 }
 
@@ -83,8 +112,13 @@ function parseAnswer(text: string): RenderAnswer | null {
  * Starts `command` in a process group of its own, so a kill reaches the browser it starts as well,
  * with a profile folder made for it and removed once the group is gone.
  */
-export function childLauncher(command: readonly string[], env: Record<string, string | undefined> = process.env): RenderLauncher {
+export function childLauncher(
+    command: readonly string[],
+    env: Record<string, string | undefined> = process.env,
+    reserve: (port: number) => () => void = (port) => reservedPorts.reserve(port)
+): RenderLauncher {
     return (job, budgetMs) => {
+        const releases: Array<() => void> = [];
         let child: Bun.Subprocess<'pipe', 'pipe', 'ignore'> | null = null;
         let killed = false;
         let profile: string | null = null;
@@ -107,7 +141,7 @@ export function childLauncher(command: readonly string[], env: Record<string, st
             // Stdin stays open: its end is how the child learns the daemon went.
             await child.stdin.write(`${JSON.stringify({ ...job, profile, budgetMs } satisfies RenderRequest)}\n`);
             await child.stdin.flush();
-            return parseAnswer(await new Response(child.stdout).text());
+            return readOutput(child.stdout, reserve, releases);
         })();
         const gone = answer
             .catch(() => null)
@@ -115,6 +149,8 @@ export function childLauncher(command: readonly string[], env: Record<string, st
                 const running = child;
                 if (running !== null) {
                     await running.exited;
+                    // The child's proxy went with it.
+                    releases.splice(0).forEach((release) => release());
                     // A helper of the browser that outlived the child still holds the profile.
                     killGroup();
                     try {
