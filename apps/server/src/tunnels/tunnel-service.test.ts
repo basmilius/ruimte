@@ -470,7 +470,7 @@ describe('a row', () => {
         await f.service.add({ kind: 'mcp', zone: f.passly.id, label: 'mcp-secret-tunnel' });
         await f.service.idle();
 
-        expect(hostnamesOf(f)).toEqual(['http_status:404']);
+        expect(ourTunnel(f).ingress).toEqual([{ hostname: 'mcp-secret-tunnel.passly.dev', service: 'http_status:404' }, { service: 'http_status:404' }]);
 
         await f.service.setMcp(true);
         await f.service.idle();
@@ -480,7 +480,7 @@ describe('a row', () => {
         await f.service.setMcp(false);
         await f.service.idle();
 
-        expect(hostnamesOf(f)).toEqual(['http_status:404']);
+        expect(ourTunnel(f).ingress).toEqual([{ hostname: 'mcp-secret-tunnel.passly.dev', service: 'http_status:404' }, { service: 'http_status:404' }]);
         expect(f.listener.on).toBe(false);
     });
 
@@ -507,7 +507,7 @@ describe('a row', () => {
         await f.service.update(row.id, { enabled: false });
         await f.service.idle();
 
-        expect(hostnamesOf(f)).toEqual(['http_status:404']);
+        expect(ourTunnel(f).ingress).toEqual([{ hostname: 'a.bmnw.nl', service: 'http_status:404' }, { service: 'http_status:404' }]);
         expect(f.cloudflare.records).toHaveLength(1);
         expect(f.runner.running).toBe(0);
 
@@ -546,7 +546,8 @@ describe('a row', () => {
         const f = await fixture();
 
         await readyTunnel(f);
-        f.cloudflare.failing.set('PUT /accounts/acc-1/cfd_tunnel', 403);
+        // Cloudflare takes the 404 that holds the name and turns down the rule that would serve it.
+        f.cloudflare.writers.push(() => f.cloudflare.failing.set('PUT /accounts/acc-1/cfd_tunnel', 403));
 
         await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000, comeBack: true })).rejects.toBeInstanceOf(CloudflareError);
 
@@ -558,7 +559,8 @@ describe('a row', () => {
         await f.service.retry();
         await f.service.idle();
 
-        expect(hostnamesOf(f)).toEqual(['http_status:404']);
+        expect(hostnamesOf(f)).toEqual(['a.bmnw.nl', 'http_status:404']);
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http_status:404' });
         expect(f.runner.running).toBe(0);
 
         await f.service.remove((await f.state()).rows[0]!.id);
@@ -1543,7 +1545,8 @@ describe('after a restart', () => {
             ['three.bmnw.nl', true]
         ]);
         expect(state.zones.map((zone) => zone.name)).toEqual(['bmnw.nl', 'passly.dev']);
-        expect(hostnamesOf(again)).toEqual(['one.bmnw.nl', 'three.bmnw.nl', 'http_status:404']);
+        expect(hostnamesOf(again)).toEqual(['one.bmnw.nl', 'three.bmnw.nl', 'two.bmnw.nl', 'http_status:404']);
+        expect(ourTunnel(again).ingress[2]).toEqual({ hostname: 'two.bmnw.nl', service: 'http_status:404' });
         expect(again.runner.running).toBe(1);
 
         // A row that was off goes on again only if its port is still not Ruimte's own.
@@ -1780,7 +1783,8 @@ describe('what Cloudflare serves after a failure', () => {
 
         await readyTunnel(f);
         await rowOn(f, 'a', 3000);
-        f.cloudflare.lose(SAVE, 502);
+        // The first write of the add is the 404 that holds the name; the second serves it.
+        f.cloudflare.lose(SAVE, 502, 1);
 
         await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'b', port: 3001 })).rejects.toBeInstanceOf(CloudflareError);
 
@@ -1877,7 +1881,7 @@ describe('what Cloudflare serves after a failure', () => {
         await again.service.retry();
         await again.service.idle();
 
-        expect(hostnamesOf(again)).toEqual(['http_status:404']);
+        expect(ourTunnel(again).ingress).toEqual([{ hostname: 'a.bmnw.nl', service: 'http_status:404' }, { service: 'http_status:404' }]);
         expect(await again.state()).toMatchObject({ stage: 'running', rows: [{ hostname: 'a.bmnw.nl', enabled: false }] });
         expect(tunnelStore(f.home).read()?.rows).toMatchObject([{ enabled: false }]);
         expect(again.runner.running).toBe(0);
@@ -1897,7 +1901,7 @@ describe('what Cloudflare serves after a failure', () => {
         await f.service.update(id, { enabled: false });
         await f.service.idle();
 
-        expect(hostnamesOf(f)).toEqual(['http_status:404']);
+        expect(ourTunnel(f).ingress).toEqual([{ hostname: 'a.bmnw.nl', service: 'http_status:404' }, { service: 'http_status:404' }]);
         expect((await f.state()).rows).toMatchObject([{ enabled: false }]);
         expect(f.runner.running).toBe(0);
     });
@@ -1920,6 +1924,104 @@ describe('what Cloudflare serves after a failure', () => {
         expect(hostnamesOf(f)).toEqual(['a.bmnw.nl', 'http_status:404']);
         expect((await f.state()).rows).toMatchObject([{ enabled: true }]);
         expect(f.runner.running).toBe(1);
+    });
+
+    test('holds a hostname that is off with a 404 of its own, so a catch-all another writer makes serve never answers it', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const id = await rowOn(f, 'a', 3000);
+
+        f.cloudflare.writers.push((tunnel) => {
+            tunnel.ingress = tunnel.ingress.map((rule) => (rule.hostname === undefined ? { service: 'http://localhost:9999' } : rule));
+        });
+        await f.service.update(id, { enabled: false });
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress).toEqual([{ hostname: 'a.bmnw.nl', service: 'http_status:404' }, { service: 'http://localhost:9999' }]);
+        expect((await f.state()).rows).toMatchObject([{ enabled: false }]);
+    });
+
+    test('shows a hostname on whose 404 another writer keeps taking away, since a catch-all may serve it', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const id = await rowOn(f, 'a', 3000);
+        const serving = (tunnel: { ingress: Array<Record<string, unknown>> }): void => {
+            tunnel.ingress = [{ service: 'http://localhost:9999' }];
+        };
+
+        f.cloudflare.writers.push(serving, serving);
+        await f.service.update(id, { enabled: false });
+        await f.service.idle();
+
+        expect((await f.state()).rows).toMatchObject([{ enabled: true }]);
+    });
+
+    test('makes the record again when a hostname turns on after Remove deleted its record and its last write failed', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const id = await rowOn(f, 'a', 3000);
+
+        f.cloudflare.writers.push(() => f.cloudflare.failing.set(SAVE, 500));
+
+        await expect(f.service.remove(id)).rejects.toBeInstanceOf(CloudflareError);
+
+        expect(f.cloudflare.records).toHaveLength(0);
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: false }]);
+
+        f.cloudflare.failing.clear();
+        await f.service.update(id, { enabled: true });
+        await f.service.idle();
+
+        expect(f.cloudflare.records).toMatchObject([{ name: 'a.bmnw.nl', comment: MARKER }]);
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: true }]);
+    });
+
+    test('keeps the tunnel and its rows when unlinking while another writer keeps putting a rule of Ruimte back', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await rowOn(f, 'a', 3000);
+
+        const stale = [...ourTunnel(f).ingress];
+        const putBack = (tunnel: { ingress: Array<Record<string, unknown>> }): void => {
+            tunnel.ingress = stale;
+        };
+
+        f.cloudflare.writers.push(() => undefined, putBack, putBack);
+
+        await expect(f.service.unlink()).rejects.toMatchObject({ code: 'unlink-incomplete' });
+
+        const state = await f.state();
+
+        expect(state.tunnel).toMatchObject({ name: 'ruimte-bas-macbook-f7a7' });
+        expect(state.rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: true }]);
+        expect(state.message).toContain('a.bmnw.nl');
+        expect(tunnelStore(f.home).read()?.tunnel).not.toBeNull();
+    });
+
+    test('keeps a new hostname whose first 404 landed when Cloudflare turned down the write after it', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await rowOn(f, 'a', 3000);
+        f.cloudflare.writers.push((tunnel) => {
+            tunnel.ingress = tunnel.ingress.map((rule) => (rule.hostname === 'a.bmnw.nl' ? { ...rule, service: 'http://127.0.0.1:3005' } : rule));
+            f.cloudflare.failing.set(SAVE, 403);
+        });
+
+        await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'b', port: 3001 })).rejects.toMatchObject({ code: 'no-permission' });
+
+        expect(ourTunnel(f).ingress).toContainEqual({ hostname: 'b.bmnw.nl', service: 'http_status:404' });
+        expect((await f.state()).rows).toMatchObject([
+            { hostname: 'a.bmnw.nl', enabled: true, port: 3005 },
+            { hostname: 'b.bmnw.nl', enabled: false }
+        ]);
     });
 });
 
