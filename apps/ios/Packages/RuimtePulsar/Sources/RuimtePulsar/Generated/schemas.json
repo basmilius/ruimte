@@ -53525,6 +53525,9 @@
             },
             "buildHeld": {
               "type": "boolean"
+            },
+            "buildAllowed": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -53697,6 +53700,9 @@
           },
           "buildHeld": {
             "type": "boolean"
+          },
+          "buildAllowed": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -53867,6 +53873,9 @@
             "type": "string"
           },
           "buildHeld": {
+            "type": "boolean"
+          },
+          "buildAllowed": {
             "type": "boolean"
           }
         },
@@ -54039,6 +54048,9 @@
           },
           "buildHeld": {
             "type": "boolean"
+          },
+          "buildAllowed": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -54191,6 +54203,9 @@
             "type": "string"
           },
           "buildHeld": {
+            "type": "boolean"
+          },
+          "buildAllowed": {
             "type": "boolean"
           }
         },
@@ -54346,6 +54361,9 @@
               "type": "string"
             },
             "buildHeld": {
+              "type": "boolean"
+            },
+            "buildAllowed": {
               "type": "boolean"
             }
           },
@@ -55296,6 +55314,9 @@
             "type": "string"
           },
           "buildHeld": {
+            "type": "boolean"
+          },
+          "buildAllowed": {
             "type": "boolean"
           }
         },
@@ -92564,6 +92585,9 @@
             "type": "string"
           },
           "buildHeld": {
+            "type": "boolean"
+          },
+          "buildAllowed": {
             "type": "boolean"
           }
         },

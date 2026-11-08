@@ -897,6 +897,8 @@
         "restartAll": "Alles herstarten",
         "buildHeld": "Buildscripts en macro's staan uit in deze worktree.",
         "buildAllow": "Aanzetten voor deze repository",
+        "buildAllowed": "Buildscripts en macro's draaien in de worktrees van agents.",
+        "buildHold": "Uitzetten voor deze repository",
         "showLog": "Toon log",
         "logTitle": "Log van {{name}}",
         "logEmpty": "Nog niets gelogd",

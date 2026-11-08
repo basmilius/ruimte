@@ -36,6 +36,19 @@ describe('a server kept from building code in a worktree', () => {
         await until(() => tracker.getSnapshot()[0]?.buildHeld === undefined);
     });
 
+    test('offers to turn building off again once it is on, and takes the held statuses the machine answers with', async () => {
+        const allowed: LanguageServerStatus = { ...HELD, buildHeld: undefined, buildAllowed: true };
+        machine.answer('language.worktreeBuild', ({ on }) => ({ servers: [on ? allowed : HELD] }));
+        await page.render(<ServerActionButtons status={allowed} tracker={tracker} size="xs" stepBack={false} onLog={() => undefined} />);
+
+        await until(() => document.body.textContent?.includes('Turn off for this repository') === true);
+        expect(document.body.textContent).not.toContain('Turn on for this repository');
+        await clickOn([...document.querySelectorAll('button')].find((button) => button.textContent === 'Turn off for this repository') ?? null);
+
+        expect(machine.requests('language.worktreeBuild')).toEqual([{ projectId: 'project-atlas', on: false }]);
+        await until(() => tracker.getSnapshot()[0]?.buildHeld === true);
+    });
+
     test('offers nothing for a server that is not held', async () => {
         await page.render(
             <ServerActionButtons status={{ ...HELD, buildHeld: undefined }} tracker={tracker} size="xs" stepBack={false} onLog={() => undefined} />

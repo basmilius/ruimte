@@ -897,6 +897,8 @@
         "restartAll": "Restart all",
         "buildHeld": "Build scripts and macros are off in this worktree.",
         "buildAllow": "Turn on for this repository",
+        "buildAllowed": "Build scripts and macros run in the worktrees of agents.",
+        "buildHold": "Turn off for this repository",
         "showLog": "Show log",
         "logTitle": "{{name}} log",
         "logEmpty": "Nothing logged yet",

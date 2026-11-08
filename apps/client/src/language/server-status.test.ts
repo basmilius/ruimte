@@ -17,6 +17,7 @@ describe('the line under a server', () => {
 
     test('says that building is off in a worktree, and nothing for a server that builds', () => {
         expect(buildHeldDetail(status({ buildHeld: true }), t)).toBe('Build scripts and macros are off in this worktree.');
+        expect(buildHeldDetail(status({ buildAllowed: true }), t)).toBe('Build scripts and macros run in the worktrees of agents.');
         expect(buildHeldDetail(status(), t)).toBe('');
     });
 

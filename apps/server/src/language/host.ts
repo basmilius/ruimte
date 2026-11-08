@@ -217,6 +217,8 @@ interface ProjectLanguage {
     watcher: ProjectFileWatcher | null;
     /* Whether the project folder lies in a worktree of an agent whose build code a person has not allowed; as of the last document that asked. */
     buildHeld: boolean;
+    /* Whether a person allowed building in the worktrees of agents of the project's repository, which has some; as of the same read. */
+    buildAllowed: boolean;
 }
 
 /*
@@ -426,11 +428,9 @@ export class LanguageHost {
         const project = this.projects.get(projectId) ?? null;
         const folder = project?.folder ?? this.options.folderOf(projectId);
         const own = folder === null ? [] : this.custom.list().filter((server) => runsFor(server, folder));
-        const folderHeld = folder === null ? false : await this.heldBack(folder, folder);
-        if (project) {
-            project.buildHeld = folderHeld;
-        }
-        return Promise.all([...CATALOG_KINDS, ...own.map((server) => server.id as LanguageServerId)].map((id) => this.statusOf(project, id, folderHeld)));
+        const standing =
+            folder === null ? { held: false, allowed: false } : project ? await this.refreshStanding(project) : await this.standingOf(folder, folder);
+        return Promise.all([...CATALOG_KINDS, ...own.map((server) => server.id as LanguageServerId)].map((id) => this.statusOf(project, id, standing)));
     }
 
     /* Starts installing a kind, or updating it beside what it runs, and answers while it runs; the end comes as a `language.status` event. */
@@ -542,7 +542,7 @@ export class LanguageHost {
     /* The hold on build code changed for a project: its documents take the kinds they have now, and a server whose own start depends on it starts again. */
     private async applyBuildHold(project: ProjectLanguage): Promise<void> {
         const before = project.buildHeld;
-        project.buildHeld = await this.heldBack(project.folder, project.folder);
+        await this.refreshStanding(project);
         for (const document of project.documents.values()) {
             await this.reroute(project, document);
         }
@@ -1029,7 +1029,8 @@ export class LanguageHost {
             vueCheck: undefined,
             commands: new Map(),
             watcher: null,
-            buildHeld: false
+            buildHeld: false,
+            buildAllowed: false
         };
         this.projects.set(projectId, project);
         return project;
@@ -1097,7 +1098,7 @@ export class LanguageHost {
             return { kept: [...kinds], held: [] };
         }
 
-        project.buildHeld = await this.heldBack(project.folder, project.folder);
+        await this.refreshStanding(project);
         const documentHeld = !project.buildHeld && (await this.heldBack(project.folder, resolve(project.folder, storedPath)));
         const held = kinds.filter((kind) => {
             const build = buildCodeOf(kind);
@@ -1110,16 +1111,39 @@ export class LanguageHost {
 
     /* Whether a path lies in a worktree the daemon made for an agent's node, in a repository whose build code a person has not allowed. */
     private async heldBack(projectFolder: string, path: string): Promise<boolean> {
+        return (await this.standingOf(projectFolder, path)).held;
+    }
+
+    /*
+     * Where a path stands against the build rule: `held` when it lies in a worktree made for an agent's node
+     * and the repository is not allowed to build there, `allowed` when the repository has such worktrees and
+     * a person turned building on for it, which is what lets them turn it off again.
+     */
+    private async standingOf(projectFolder: string, path: string): Promise<{ held: boolean; allowed: boolean }> {
         const worktrees = await this.options.agentWorktrees?.(projectFolder);
 
-        if (worktrees === undefined || worktrees === null || this.worktreeBuild.isOn(worktrees.main)) {
-            return false;
+        if (worktrees === undefined || worktrees === null || worktrees.paths.length === 0) {
+            return { held: false, allowed: false };
+        }
+
+        if (this.worktreeBuild.isOn(worktrees.main)) {
+            return { held: false, allowed: true };
         }
 
         const real = await realOrSelf(path);
         const roots = await Promise.all(worktrees.paths.map(realOrSelf));
 
-        return roots.some((root) => isWithin(root, real));
+        return { held: roots.some((root) => isWithin(root, real)), allowed: false };
+    }
+
+    /* Reads again where the project folder stands against the build rule. */
+    private async refreshStanding(project: ProjectLanguage): Promise<{ held: boolean; allowed: boolean }> {
+        const standing = await this.standingOf(project.folder, project.folder);
+
+        project.buildHeld = standing.held;
+        project.buildAllowed = standing.allowed;
+
+        return standing;
     }
 
     /* The servers of a person's own that run for the project and serve the document; one that is held never does. */
@@ -1794,15 +1818,25 @@ export class LanguageHost {
         return null;
     }
 
-    private async statusOf(project: ProjectLanguage | null, id: LanguageServerId, folderHeld = project?.buildHeld ?? false): Promise<LanguageServerStatus> {
+    private async statusOf(
+        project: ProjectLanguage | null,
+        id: LanguageServerId,
+        standing = { held: project?.buildHeld ?? false, allowed: project?.buildAllowed ?? false }
+    ): Promise<LanguageServerStatus> {
         if (!isCatalogKind(id)) {
             return this.customStatus(project, id);
         }
         const status = await this.catalogStatus(project, id);
 
-        return status.state !== 'not-installed' && status.state !== 'installing' && this.buildHeldIn(project, id, folderHeld)
+        if (status.state === 'not-installed' || status.state === 'installing') {
+            return status;
+        }
+
+        return this.buildHeldIn(project, id, standing.held)
             ? { ...status, buildHeld: true }
-            : status;
+            : buildCodeOf(id) !== undefined && standing.allowed
+              ? { ...status, buildAllowed: true }
+              : status;
     }
 
     /* Whether a kind that builds code runs without that, or not at all, in the project: the folder lies in a worktree held back, or an open file does. */
@@ -1843,6 +1877,7 @@ export class LanguageHost {
             state: server.state,
             documents: server.documentCount,
             ...(this.buildHeldIn(project, server.kind, project?.buildHeld ?? false) ? { buildHeld: true } : {}),
+            ...(buildCodeOf(server.kind) !== undefined && project?.buildAllowed === true ? { buildAllowed: true } : {}),
             ...(server.message ? { message: server.message } : {}),
             ...(capabilities ? { capabilities } : {}),
             ...(sidecars.length > 0 ? { sidecars } : {}),

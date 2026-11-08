@@ -99,7 +99,9 @@ export const LanguageServerStatusSchema = z.object({
     // `messages` or `verbose` while the server traces, absent while off. Open on purpose, like `server`.
     trace: z.string().optional(),
     // The kind builds code it reads, and in this project it runs without that or not at all, because the project or an open file lies in a worktree an agent works in. `language.worktreeBuild` turns that on.
-    buildHeld: z.boolean().optional()
+    buildHeld: z.boolean().optional(),
+    // The kind builds code it reads, the project's repository has worktrees of agents, and a person allowed building in them, which `language.worktreeBuild` with `on: false` takes back.
+    buildAllowed: z.boolean().optional()
 });
 export type LanguageServerStatus = z.infer<typeof LanguageServerStatusSchema>;
 

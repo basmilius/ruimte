@@ -66,6 +66,11 @@ export class LanguageStatusTracker extends SnapshotTracker<readonly LanguageServ
         this.replace((await this.transport.request('language.worktreeBuild', { projectId: this.projectId, on: true })).servers);
     }
 
+    /* A person takes that back, so the servers of this repository build nothing in the worktrees of agents again. */
+    async holdWorktreeBuild(): Promise<void> {
+        this.replace((await this.transport.request('language.worktreeBuild', { projectId: this.projectId, on: false })).servers);
+    }
+
     async log(server: string): Promise<LanguageLogLine[]> {
         return (await this.transport.request('language.log', { projectId: this.projectId, server })).lines;
     }

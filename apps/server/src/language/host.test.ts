@@ -2759,13 +2759,25 @@ describe('build code in the worktree of an agent', () => {
         const statuses = await host.setWorktreeBuild('p1', true);
 
         expect(statuses.find((status) => status.server === 'rust')?.buildHeld).toBeUndefined();
+        expect(statuses.find((status) => status.server === 'rust')?.buildAllowed).toBe(true);
+        expect(statuses.find((status) => status.server === 'css')?.buildAllowed).toBeUndefined();
         expect(JSON.parse(await readFile(path, 'utf8'))).toEqual({ on: [MAIN] });
         expect((await openRust(host, '.worktrees/agent/src/lib.rs')).servers).toEqual(['rust']);
 
-        await host.setWorktreeBuild('p1', false);
+        const back = await host.setWorktreeBuild('p1', false);
 
+        expect(back.find((status) => status.server === 'rust')).toMatchObject({ buildHeld: true });
+        expect(back.find((status) => status.server === 'rust')?.buildAllowed).toBeUndefined();
         expect((await openRust(host, '.worktrees/agent/src/bin.rs')).servers).toEqual([]);
         expect(JSON.parse(await readFile(path, 'utf8'))).toEqual({ on: [] });
+    });
+
+    it('offers to turn building off only for a repository that has worktrees of agents', async () => {
+        const choices = new WorktreeBuildChoices({ path: join(root, 'worktree-build.json') });
+        await choices.set(MAIN, true);
+        const without = await withRust({ agentWorktrees: { main: MAIN, paths: [] }, worktreeBuild: choices });
+
+        expect((await without.host.status('p1')).find((status) => status.server === 'rust')?.buildAllowed).toBeUndefined();
     });
 
     it('moves the open files of a worktree to the kind when the switch goes on, and takes them off when it goes off', async () => {
