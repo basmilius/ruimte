@@ -1,4 +1,5 @@
 import { externalActorId, type ConnectedClient } from '@ruimte/contracts';
+import { isOwner } from '../auth/access.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import type { ConnectedClients } from '../clients/connected-clients.ts';
 import type { Dispatcher } from '../dispatcher.ts';
@@ -23,13 +24,17 @@ function externalClient({ credentialId, client, lastUsedAt }: ActiveClient): Con
     };
 }
 
-/* Who is connected now. None of these is on a peer's list; any client a machine let in may ask, as with `auth.sessions`. */
+/*
+ * Who is connected now. None of these is on a peer's list; any client a machine let in may ask, as with `auth.sessions`.
+ * External MCP clients are the owner's alone to see, as their credentials are (`credential.list`).
+ */
 export function registerClientHandlers(dispatcher: Dispatcher, { connected, auth, external }: ClientHandlersInput): void {
     dispatcher.register('client.list', async (_payload, client) => {
         const labels = new Map((await auth.list(null)).map((session) => [session.id, session.label]));
+        const clients = connected.list(client.id, (sessionId) => labels.get(sessionId));
 
         return {
-            clients: [...connected.list(client.id, (sessionId) => labels.get(sessionId)), ...external().map(externalClient)]
+            clients: isOwner(client.access) ? [...clients, ...external().map(externalClient)] : clients
         };
     });
 

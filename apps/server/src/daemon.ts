@@ -207,7 +207,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         launches,
         routines,
         machineId: identity.id,
-        externalUsed: () => connected.changed(),
+        externalUsed: () => connected.externalChanged(),
         later: { apiPort: () => server.port ?? config.port }
     });
     const ports = wirePorts(config, tunnels.deniedPorts);
@@ -269,7 +269,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         changed: () => {
             tunnels.sinks.emit({ event: 'tunnel.changed', payload: {} });
             // A revoked credential leaves the list of connected clients at once.
-            connected.changed();
+            connected.externalChanged();
         }
     });
     registerPortHandlers(dispatcher, ports.grants, ports.streams);

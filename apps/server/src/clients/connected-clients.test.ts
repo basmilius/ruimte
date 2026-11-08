@@ -89,4 +89,18 @@ describe('ConnectedClients', () => {
         ]);
         expect(heard['client-2']).toEqual([]);
     });
+
+    test('tells only the owner of a change among the external MCP clients', () => {
+        const { connected, heard, listen } = clients();
+        listen('owner');
+        listen('phone');
+        connected.opened('owner', { reachability: 'loopback', sessionId: null });
+        connected.opened('phone', ACCOUNT);
+        connected.watch('owner');
+        connected.watch('phone');
+        connected.externalChanged();
+
+        expect(heard['owner']).toEqual([{ event: 'client.changed', payload: {} }]);
+        expect(heard['phone']).toEqual([]);
+    });
 });

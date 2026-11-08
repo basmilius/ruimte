@@ -8,6 +8,7 @@ import { askOnce } from './test-helpers.ts';
 
 const SESSION: AuthSession = { id: 'session-1', label: 'Station on a Pixel', origin: 'statement', createdAt: 1, lastSeenAt: 1, current: false };
 const PERSON = { id: 'client-1', access: { reachability: 'lan', sessionId: 'session-1' } } as const;
+const OWNER = { id: 'client-0', access: { reachability: 'loopback', sessionId: null } } as const;
 
 function machine() {
     const clock = { now: 1_000_000 };
@@ -30,13 +31,13 @@ describe('client.list', () => {
         });
     });
 
-    test('lists an external MCP client by its name while it made a request lately, and not once it went quiet', async () => {
+    test('lists an external MCP client to the owner by its name while it made a request lately, and not once it went quiet', async () => {
         const { clock, credentials, dispatcher } = machine();
         const { secret, credential } = await credentials.createBearer({ label: 'Claude' });
         credentials.authenticate(secret, 'loopback');
         clock.now += 60_000;
 
-        expect(await askOnce(dispatcher, PERSON, 'client.list', {})).toMatchObject({
+        expect(await askOnce(dispatcher, OWNER, 'client.list', {})).toMatchObject({
             ok: true,
             result: {
                 clients: [
@@ -48,7 +49,18 @@ describe('client.list', () => {
 
         clock.now += ACTIVE_USE_MS;
 
-        expect(await askOnce(dispatcher, PERSON, 'client.list', {})).toMatchObject({ ok: true, result: { clients: [{ id: 'client-1' }] } });
+        expect(await askOnce(dispatcher, OWNER, 'client.list', {})).toMatchObject({ ok: true, result: { clients: [{ id: 'client-1' }] } });
+    });
+
+    test('keeps external MCP clients from a client the machine let in, as their credentials are', async () => {
+        const { credentials, dispatcher } = machine();
+        const { secret } = await credentials.createBearer({ label: 'Claude' });
+        credentials.authenticate(secret, 'loopback');
+
+        const answer = await askOnce(dispatcher, PERSON, 'client.list', {});
+
+        expect(answer).toMatchObject({ ok: true });
+        expect((answer as { result: { clients: Array<{ id: string }> } }).result.clients.map(({ id }) => id)).toEqual(['client-1']);
     });
 
     test('is refused to another machine', async () => {
