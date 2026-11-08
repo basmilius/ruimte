@@ -226,14 +226,19 @@ export class PortStreamHub {
         this.streams.delete(streamId);
     }
 
-    /* The link or the tunnel ended: every stream ends for its page. */
+    /* The link went: every stream ends for its page, and a page that asks again opens a new one. */
+    abortAll(reason: string): void {
+        for (const stream of [...this.streams.values()]) {
+            stream.abort(reason);
+        }
+    }
+
+    /* The tunnel ended: the hub stops listening, and every stream ends. */
     dispose(reason: string): void {
         for (const stop of this.stops) {
             stop();
         }
 
-        for (const stream of [...this.streams.values()]) {
-            stream.abort(reason);
-        }
+        this.abortAll(reason);
     }
 }

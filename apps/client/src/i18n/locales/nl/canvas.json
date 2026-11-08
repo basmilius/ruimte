@@ -270,7 +270,16 @@
         "conversationFailed": "Kon dit gesprek niet tonen"
     },
     "browser": {
-        "routeUnavailable": "Dit adres staat op de machine van het project, en die kan deze browser niet bereiken.",
+        "routeUnavailable": "Dit adres staat op de machine van het project, en die kan deze browser niet bereiken. Een poort die die machine deelt, opent hier wel.",
+        "sharedFrom": "op {{machine}}",
+        "refusedAssets_one": "{{count}} verzoek geweigerd",
+        "refusedAssets_other": "{{count}} verzoeken geweigerd",
+        "refusedAssetsHint": "Deze pagina vroeg om bestanden op andere adressen. Een gedeelde poort opent niets anders dan zichzelf, dus die zijn niet geladen.",
+        "openExternalShared": "Een gedeelde poort opent alleen hier",
+        "sharedOnly": {
+            "title": "Alleen de gedeelde poort opent hier",
+            "hint": "Deze pagina komt van een poort die {{machine}} deelt en kan geen andere adressen openen. Je kunt het adres wel in de systeembrowser openen."
+        },
         "ownerUnavailable": "Kon de machine van het project niet bereiken",
         "back": "Terug",
         "forward": "Vooruit",

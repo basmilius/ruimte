@@ -3,6 +3,8 @@ import { localBrowserRouteAvailable } from '@/browser/owner-route';
 import { browserRegistry } from '@/browser/registry';
 import { isDesktop } from '@/desktop/bridge';
 import { useNodeHost } from '@/nodes/node-host';
+import { usePortGrants, usePortGrantWatch } from '@/port-tunnel/grants';
+import { usePortTunnelPartitions } from '@/port-tunnel/tunnel-pages';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { endpointKey, useEndpointId } from '@/state/keys';
 
@@ -23,7 +25,12 @@ export function usePage(id: string): void {
     const endpointId = useEndpointId();
     const key = endpointKey(endpointId, id);
     const localDaemonId = useLocalDaemonId();
+    // A port shared on another machine opens once its tunnel is ready, and ends with the grant, so both redraw the node.
+    const grants = usePortGrants((store) => store.byEndpoint[endpointId]);
+    const tunnelPartition = usePortTunnelPartitions((store) => store.byKey[key]);
     const available = isDesktop() && localBrowserRouteAvailable(endpointId, savedUrl, owner, localDaemonId);
+
+    usePortGrantWatch(endpointId);
 
     useEffect(() => {
         if (isDesktop() && savedUrl !== '') {
@@ -32,5 +39,5 @@ export function usePage(id: string): void {
             browserRegistry.suspend(key);
         }
         // The page stays when this unmounts (culling, a view switch); only a delete destroys it.
-    }, [key, available, savedUrl, owner]);
+    }, [key, available, savedUrl, owner, grants, tunnelPartition]);
 }

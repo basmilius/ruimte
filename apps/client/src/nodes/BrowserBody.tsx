@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, EmptyState, Icon, IconButton, Select, formatShortcut, KEY_SHORTCUTS } from '@adecore/ui';
+import { Button, ButtonGroup, EmptyState, Icon, IconButton, Select, Tooltip, formatShortcut, KEY_SHORTCUTS } from '@adecore/ui';
 import clsx from 'clsx';
 import { ArrowLeft, ArrowRight, Code, ExternalLink, Lock, RotateCw, Unplug, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -21,6 +21,8 @@ import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { useNodeHost } from '@/nodes/node-host';
 import { useLocalDaemonId, usePage } from '@/nodes/use-page';
+import { usePortTunnelPartitions } from '@/port-tunnel/tunnel-pages';
+import { useEndpoints } from '@/state/endpoints';
 import { endpointKey, useEndpointId } from '@/state/keys';
 
 /* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
@@ -48,6 +50,10 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
     const scaleLimit = browserStreamScaleLimit();
     const scale = clampBrowserStreamScale(preferredScale, scaleLimit);
     const scaleItems = browserStreamScaleOptions(scaleLimit).map((value) => ({ value: String(value), label: `${value}×` }));
+    // A page of a port shared on another machine: the address stays localhost, and the node says whose it is.
+    const shared = usePortTunnelPartitions((store) => store.byKey[key]) !== undefined;
+    const machine = useEndpoints((store) => store.endpoints.find((endpoint) => endpoint.id === endpointId)?.label ?? '');
+    const refused = state?.refusedAssets ?? 0;
 
     // The whole address arrives with the render that follows the focus, so it is selected after it.
     useEffect(() => {
@@ -108,6 +114,16 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                         }
                     }}
                 />
+                {shared && !editing && (
+                    <span className="shrink-0 text-xs text-text-faint">
+                        {t('browser.sharedFrom', { machine })}
+                        {refused > 0 && (
+                            <Tooltip label={t('browser.refusedAssetsHint')}>
+                                <span> · {t('browser.refusedAssets', { count: refused })}</span>
+                            </Tooltip>
+                        )}
+                    </span>
+                )}
                 {/* A guest reports a start and a stop and nothing in between, so the line sweeps
                     rather than fills: it says the wait is the page's, not how far along it is. */}
                 {state?.loading && <div className="progress-line absolute inset-x-0 bottom-0" role="progressbar" aria-label={t('browser.loading')} />}
@@ -129,8 +145,8 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                 <IconButton
                     icon={ExternalLink}
                     size="sm"
-                    label={t('browser.openExternal')}
-                    disabled={!hasPage}
+                    label={shared ? t('browser.openExternalShared') : t('browser.openExternal')}
+                    disabled={!hasPage || shared}
                     onClick={() => {
                         const target = state?.url ?? url;
                         if (!browserRouteAvailable(endpointId, target, host?.browserOwner)) {
@@ -161,7 +177,9 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
 function BrowserErrorPlate({ id }: { id: string }) {
     const { t } = useTranslation('canvas');
     const failure = useBrowserRow(id, (row) => row?.error ?? null);
-    const key = endpointKey(useEndpointId(), id);
+    const endpointId = useEndpointId();
+    const machine = useEndpoints((store) => store.endpoints.find((endpoint) => endpoint.id === endpointId)?.label ?? '');
+    const key = endpointKey(endpointId, id);
     // The host is the page's parent, adopted by the layer long before any load can fail.
     const host = failure === null ? null : (browserRegistry.get(key)?.parentElement ?? null);
     if (!failure || !host) {
@@ -171,7 +189,20 @@ function BrowserErrorPlate({ id }: { id: string }) {
     const error = failure.ownerRoute ? null : classifyLoadError(failure.code, failure.description);
     return createPortal(
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg" role="alert">
-            {error === null ? (
+            {failure.sharedPort ? (
+                <EmptyState
+                    icon={Unplug}
+                    title={t('browser.sharedOnly.title')}
+                    action={
+                        <Button variant="secondary" size="sm" onClick={() => void desktop()?.openExternal(failure.url)}>
+                            {t('browser.error.openExternal')}
+                        </Button>
+                    }
+                >
+                    {address}
+                    <span className="mt-2 block">{t('browser.sharedOnly.hint', { machine })}</span>
+                </EmptyState>
+            ) : error === null ? (
                 <EmptyState icon={Unplug} title={t('browser.ownerUnavailable')}>
                     {address}
                     <span className="mt-2 block">{t('browser.routeUnavailable')}</span>

@@ -5,6 +5,7 @@ import { allowGuestPermission, TUNNEL_PARTITION_PREFIX } from '../web-guards';
 import { IpcRelay } from './ipc-relay';
 import { parseToShell, parseTunnelRequest } from './messages';
 import { PROXY_REALM, PROXY_USER } from './proxy-connection';
+import { RefusedBatch } from './refused-batch';
 import { startProxyListener, type ProxyListener } from './proxy-listener';
 import { tunnelDestinationAllowedFor } from './tunnel-policy';
 import { markTunnelSession } from './tunnel-sessions';
@@ -125,12 +126,25 @@ export function installPortTunnels(isAppSender: (event: Electron.IpcMainEvent | 
         ses.setPermissionRequestHandler((_contents, permission, callback) => callback(allowGuestPermission(permission)));
         ses.setPermissionCheckHandler((_contents, permission) => allowGuestPermission(permission));
         ses.setDevicePermissionHandler(() => false);
+        const refused = new RefusedBatch(
+            (webContentsId, url, count) => {
+                if (!host.isDestroyed()) {
+                    host.send('browser:route-blocked', { webContentsId, url, subresource: true, count } satisfies BrowserRouteBlocked);
+                }
+            },
+            (ms, fire) => void setTimeout(fire, ms)
+        );
+
         ses.webRequest.onBeforeRequest((details, callback) => {
             const guest = details.webContents;
             const allowed = tunnelDestinationAllowedFor(guest !== undefined && guest.hostWebContents === host, details.url, tunnel.port);
 
-            if (!allowed && details.resourceType === 'mainFrame' && guest !== undefined && !host.isDestroyed()) {
-                host.send('browser:route-blocked', { webContentsId: guest.id, url: details.url } satisfies BrowserRouteBlocked);
+            if (!allowed && guest !== undefined && !host.isDestroyed()) {
+                if (details.resourceType === 'mainFrame') {
+                    host.send('browser:route-blocked', { webContentsId: guest.id, url: details.url } satisfies BrowserRouteBlocked);
+                } else {
+                    refused.add(guest.id, details.url);
+                }
             }
 
             callback({ cancel: !allowed });
