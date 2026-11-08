@@ -892,6 +892,40 @@ describe('an existing tunnel', () => {
         expect(state.tunnel?.others).toEqual([{ hostname: 'nas.bmnw.nl', path: null, service: 'http://nas:80', hostHeader: 'nas.local' }]);
     });
 
+    test('puts its rule before a wildcard of the dashboard that would catch its hostname, keeping the order of the rest', async () => {
+        const f = await fixture();
+        const picked = f.cloudflare.tunnel('acc-1', 'office', [
+            { hostname: 'shop.bmnw.nl', path: '/admin', service: 'http://localhost:9000' },
+            { hostname: 'nas.passly.dev', service: 'http://nas:80' },
+            { hostname: '*.bmnw.nl', service: 'http://proxy:80' },
+            { service: 'http_status:503' }
+        ]);
+
+        await linked(f, picked);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+
+        expect(picked.ingress).toEqual([
+            { hostname: 'shop.bmnw.nl', path: '/admin', service: 'http://localhost:9000' },
+            { hostname: 'nas.passly.dev', service: 'http://nas:80' },
+            { hostname: 'shop.bmnw.nl', service: 'http://127.0.0.1:3000' },
+            { hostname: '*.bmnw.nl', service: 'http://proxy:80' },
+            { service: 'http_status:503' }
+        ]);
+    });
+
+    test('writes nothing to a picked tunnel without a catch-all while it has no hostname of Ruimte', async () => {
+        const f = await fixture();
+        const picked = f.cloudflare.tunnel('acc-1', 'bare', [{ hostname: 'nas.bmnw.nl', service: 'http://nas:80' }]);
+
+        await linked(f, picked);
+        await f.service.retry();
+        await f.service.idle();
+
+        expect(f.cloudflare.called('PUT', '/accounts/')).toEqual([]);
+        expect(picked.ingress).toEqual([{ hostname: 'nas.bmnw.nl', service: 'http://nas:80' }]);
+    });
+
     test('refuses a hostname the dashboard already routes on the tunnel, and writes nothing', async () => {
         const f = await fixture();
         const picked = office(f);

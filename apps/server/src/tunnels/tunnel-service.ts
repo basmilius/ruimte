@@ -66,6 +66,22 @@ function otherRuleOf(rule: CloudflareIngressRule): TunnelOtherRule {
     };
 }
 
+/*
+ * Whether a rule someone else wrote could take the traffic of a hostname. One without a hostname takes its path on every
+ * host, and a wildcard counts for every name under it; an exact hostname, also Ruimte's own with a path, takes nothing else.
+ */
+function mayCatch(rule: CloudflareIngressRule, hostname: string): boolean {
+    if (typeof rule.hostname !== 'string') {
+        return true;
+    }
+
+    if (!rule.hostname.includes('*')) {
+        return false;
+    }
+
+    return !rule.hostname.startsWith('*.') || hostname.endsWith(rule.hostname.slice(1));
+}
+
 export interface TunnelPorts {
     store: Pick<JsonFileStore<StoredTunnels>, 'read' | 'write'>;
     installer: Pick<CloudflaredInstaller, 'locate' | 'install' | 'impossible'>;
@@ -885,8 +901,9 @@ export class TunnelService {
 
     /*
      * Writes the hostnames of the rows that are on into the tunnel's ingress in Cloudflare. Ruimte owns only the rule
-     * without a path for each hostname of a row, on or off; every other rule stays as it was, and so does a catch-all
-     * someone set in the dashboard.
+     * without a path for each hostname of a row, on or off; every other rule stays as it was and where it was, and so
+     * does a catch-all someone set in the dashboard. Cloudflare takes the first rule that matches, so a rule of Ruimte's
+     * goes before the first other rule that could catch its hostname (a wildcard, or a path on any host).
      */
     private async syncIngress(rows: readonly StoredRow[] = this.stored.rows): Promise<void> {
         const tunnel = this.stored.tunnel;
@@ -908,9 +925,22 @@ export class TunnelService {
             listenerPort: this.stored.mcp.enabled ? this.ports.listenerPort() : null,
             denied: this.ports.deniedPorts()
         });
-        const ingress = [...kept, ...rules.map((rule) => ({ ...rule })), { ...catchAll }];
 
-        // Nothing of Ruimte's changed, so a tunnel that is not Ruimte's gets no write at all.
+        // Without a rule of Ruimte's before or after, a tunnel Ruimte did not make gets no write, also when it lacks a catch-all.
+        if (!tunnel.created && rules.length === 0 && !current.ingress.some(isOurs)) {
+            return;
+        }
+
+        const ingress: CloudflareIngressRule[] = [];
+        let waiting = rules.map((rule) => ({ ...rule }));
+
+        for (const rule of kept) {
+            ingress.push(...waiting.filter((ours) => mayCatch(rule, ours.hostname)), rule);
+            waiting = waiting.filter((ours) => !mayCatch(rule, ours.hostname));
+        }
+
+        ingress.push(...waiting, { ...catchAll });
+
         if (JSON.stringify(ingress) === JSON.stringify(current.ingress)) {
             return;
         }
