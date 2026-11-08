@@ -166,7 +166,7 @@ struct AccountLoginSheet: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16).padding(.vertical, 8)
                 Text(
-                    "The CLI runs on the machine. A browser it opens there may need completion there; follow a printed code or link from this phone."
+                    "The CLI runs on the machine. If it opens a browser there, finish the login from this phone with the code or link it shows."
                 )
                 .font(.caption).foregroundStyle(MobileStyle.muted).padding(.horizontal, 16)
                 if let notice = model.notice {

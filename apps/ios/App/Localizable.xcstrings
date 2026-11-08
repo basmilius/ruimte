@@ -259,7 +259,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bijwerktijd onbekend"
+            "value" : "Tijd van laatste update onbekend"
           }
         }
       }
@@ -643,24 +643,24 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze CLI kan een afgeronde login niet melden. Tik op Klaar als je klaar bent en controleer daarna de accountstatus."
+            "value" : "Deze CLI kan een afgeronde login niet melden. Tik op Klaar zodra je bent ingelogd en controleer daarna de accountstatus."
           }
         }
       }
     },
-    "The CLI runs on the machine. A browser it opens there may need completion there; follow a printed code or link from this phone." : {
+    "The CLI runs on the machine. If it opens a browser there, finish the login from this phone with the code or link it shows." : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The CLI runs on the machine. A browser it opens there may need completion there; follow a printed code or link from this phone."
+            "value" : "The CLI runs on the machine. If it opens a browser there, finish the login from this phone with the code or link it shows."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De CLI draait op de machine. Een browser die daar opent kan daar afronding vragen; volg een getoonde code of link vanaf deze telefoon."
+            "value" : "De CLI draait op de machine. Opent hij daar een browser, rond de login dan vanaf deze telefoon af met de code of link die hij toont."
           }
         }
       }
