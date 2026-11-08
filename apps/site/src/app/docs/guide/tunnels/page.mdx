@@ -5,9 +5,9 @@ export const metadata = { title: 'Tunnels' };
 
 # Tunnels
 
-<p className="lead">A tunnel puts Ruimte's MCP and your dev servers on the internet, under your own Cloudflare account. A bot that runs somewhere else can then work in Ruimte as you.</p>
+<p className="lead">A tunnel puts Ruimte's MCP and your dev servers on the internet, through your own Cloudflare account. A bot that runs somewhere else can then work in Ruimte as you.</p>
 
-You need a domain on Cloudflare, and you manage tunnels from the Ruimte app on the machine itself. Other windows show the state and change nothing.
+You need a domain on Cloudflare and an API token for it. You manage tunnels from the Ruimte app on the machine itself. Other windows show the state and change nothing.
 
 <SettingsTunnels />
 
@@ -15,23 +15,33 @@ You need a domain on Cloudflare, and you manage tunnels from the Ruimte app on t
 
 1. Open Settings, Tunnels.
 2. Click **Install** if Ruimte does not find `cloudflared`. Ruimte downloads Cloudflare's official build, checks it against a checksum, and keeps it in its own folder. Where no build exists for your system, the pane says what to install yourself.
-3. Click **Sign in**. Cloudflare opens in your browser, where you pick the domain. Ruimte never reads your Cloudflare login. `cloudflared` does.
-4. Type the domain and click **Create tunnel**.
+3. Click **Make a token**. Cloudflare opens its token page with Zone read, DNS edit and Cloudflare Tunnel edit already ticked. Make the token, copy it, paste it into Ruimte and click **Check token**. Ruimte asks Cloudflare whether the token works, then lists the domains it reaches.
+4. Click **Create tunnel**. If the token reaches more than one Cloudflare account, pick the account first. Ruimte makes one tunnel for this machine, named `ruimte-` and the machine's name.
 
-If something goes wrong, the pane shows the sentence `cloudflared` gave and a **Try again** button.
+Ruimte keeps the token on this machine and sends it only to Cloudflare. It never shows the token again. **Remove token** forgets it. The tunnel and its records stay in Cloudflare.
+
+If something goes wrong, the pane says what Ruimte was doing and what Cloudflare answered, with a **Try again** button.
 
 <Note tone="warning">Cloudflare ends the encryption at its edge, so it can read everything that passes through a tunnel. That includes prompts, file contents, credentials and the cookies of a dev site. A bot you connect reads whatever it is told or asks for, too.</Note>
 
+## Add a hostname
+
+Every hostname sits on a domain from the list, so one tunnel can serve `shop.bmnw.nl` and `api-tunnel.passly.dev` side by side. Pick the domain, then type a label such as `shop`, or a full hostname inside that domain.
+
+Ruimte adds a proxied CNAME to the tunnel and the hostname to the tunnel's settings in Cloudflare, so the dashboard shows what Ruimte shows. If the name already has a DNS record that Ruimte did not make, Ruimte refuses and leaves the record alone. Delete the record in Cloudflare or pick another name.
+
+Removing a hostname deletes the record and the hostname Ruimte made, and nothing else. Ruimte changes no other tunnel and no other record on your account.
+
 ## Add a dev server
 
-Under **Hostnames**, pick a port that one of your sessions listens on, give it a hostname and tick that you know anyone with the address reaches it. Nothing sits in front of a dev server. No login, no gate.
+Under **Hostnames**, pick a port that one of your sessions listens on, choose the domain and label, and tick that you know anyone with the address reaches it. Nothing sits in front of a dev server. No login, no gate.
 
 Each hostname has its own switch and its own choice for after a restart. A dev server stays off by default, because its port may hold something else by then. Set **Comes back on** for a server that always runs on the same port.
 
 ## Connect a bot to the MCP
 
 1. Under **External clients**, turn on **External MCP**. Ruimte now listens on this machine, on a port of its own, and nowhere else. This works without a tunnel: a bot on the same computer uses the address shown there.
-2. To reach it from outside, add an MCP hostname under **Hostnames**. Ruimte suggests a long random name, so scanners do not find it. The name protects nothing. A credential does.
+2. To reach it from outside, add an MCP hostname under **Hostnames**. Ruimte suggests a long random label, so scanners do not find it. The name protects nothing. A credential does.
 3. Give the bot the address, ending in `/mcp`.
 
 The bot connects in one of two ways.
