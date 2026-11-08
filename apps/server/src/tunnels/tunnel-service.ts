@@ -1,19 +1,19 @@
-import { mkdir, rename, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { cancellableTimeout, Serializer } from '@adecore/utils/async';
-import type { TunnelRow, TunnelRowKind, TunnelStage, TunnelState } from '@ruimte/contracts';
+import type { TunnelNamed, TunnelRowKind, TunnelStage, TunnelState } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 import type { JsonFileStore } from '../json-file-store.ts';
+import { CloudflareApi, CloudflareError, type CloudflareFetch, type CloudflareRecord, type CloudflareZone } from './cloudflare-api.ts';
+import type { CloudflareTokenStore } from './cloudflare-token-store.ts';
 import type { CloudflaredInstaller } from './cloudflared-installer.ts';
 import type { CloudflaredProcess, CloudflaredRunner } from './cloudflared-runner.ts';
-import { configYaml, deniedPortReason, normalizedDomain, normalizedHostname, TunnelConfigError } from './tunnel-config.ts';
-import { EMPTY_TUNNELS, tunnelsFolder, type StoredTunnels } from './tunnel-store.ts';
+import { CATCH_ALL, deniedPortReason, hostnameInZone, ingressRules, isCatchAll, TunnelConfigError, tunnelNameOf } from './tunnel-config.ts';
+import { EMPTY_TUNNELS, type StoredTunnels } from './tunnel-store.ts';
 
-const URL_PATTERN = /https:\/\/\S+/;
-const CREATED_PATTERN = /Created tunnel (\S+) with id ([0-9a-f-]{36})/i;
-const CREDENTIALS_PATTERN = /credentials written to (.+?\.json)(?=[.\s]|$)/i;
 const MAX_MESSAGE = 500;
 const STOP_WAIT_MS = 10_000;
+const RECORD_COMMENT = 'Managed by Ruimte';
+const TUNNEL_TARGET = 'cfargotunnel.com';
+const TOKEN_MASK = '[token]';
 
 /* The lines `cloudflared` printed, cut to the one a person can read: the last, without its clock and level. */
 export function sentenceOf(lines: readonly string[], fallback: string): string {
@@ -35,6 +35,12 @@ export interface TunnelPorts {
     store: Pick<JsonFileStore<StoredTunnels>, 'read' | 'write'>;
     installer: Pick<CloudflaredInstaller, 'locate' | 'install' | 'impossible'>;
     runner: CloudflaredRunner;
+    /* Where the API token lives. */
+    tokens: CloudflareTokenStore;
+    /* The network, for `api.cloudflare.com` and nothing else. */
+    cloudflare: CloudflareFetch;
+    /* The name of this machine, which names its tunnel in the Cloudflare dashboard. */
+    machineName(): string;
     /* The ports Ruimte listens on, which no dev server row may name. */
     deniedPorts(): readonly number[];
     /* Starts or stops the external listener; the port it listens on while it is on. */
@@ -49,27 +55,27 @@ export interface TunnelPorts {
     /* A string of random hex digits, `bytes` bytes long. */
     random(bytes: number): string;
     log(line: string): void;
-    /* Where the config file lives. */
-    home: string;
     /* Waits for the child to end after a stop; a test resolves it at once. */
     stopWaitMs?: number;
 }
 
-type Busy = 'installing' | 'signing-in' | 'starting' | null;
+type Busy = 'installing' | 'checking' | 'starting' | null;
 
 /*
- * Tunnels on this machine: `cloudflared` under the person's own Cloudflare account. The daemon runs the CLI
- * and writes the config it runs with. It opens neither `cert.pem` nor the tunnel's credentials file, stores no
- * API token and calls no Cloudflare API: only `cloudflared` reads its own login.
+ * Tunnels on this machine: one tunnel on the person's own Cloudflare account, whose hostnames live in Cloudflare
+ * (the dashboard shows the same), and a `cloudflared` that runs it. Ruimte reaches Cloudflare only with the API token
+ * the person typed, and changes only the tunnel it made and the DNS records it made for it. The token that runs the
+ * tunnel is fetched when the child starts and goes to the child's environment, never to a command line or a file.
  */
 export class TunnelService {
     private readonly ports: TunnelPorts;
     private readonly jobs = new Serializer();
     private stored: StoredTunnels;
+    private token: string | null;
+    private zones: CloudflareZone[] = [];
     private busy: Busy = null;
     private failure: string | null = null;
     private installFailed = false;
-    private signInUrl: string | null = null;
     private child: { process: CloudflaredProcess; lines: string[]; stopping: boolean } | null = null;
     private binary: string | null = null;
     private pending: Promise<void> = Promise.resolve();
@@ -77,10 +83,7 @@ export class TunnelService {
     constructor(ports: TunnelPorts) {
         this.ports = ports;
         this.stored = ports.store.read() ?? EMPTY_TUNNELS;
-    }
-
-    private get configPath(): string {
-        return join(tunnelsFolder(this.ports.home), 'config.yml');
+        this.token = ports.tokens.read();
     }
 
     /* Resolves once the work a request started has ended. */
@@ -94,18 +97,40 @@ export class TunnelService {
         return this.describe();
     }
 
+    private accounts(): TunnelNamed[] {
+        const found = new Map<string, TunnelNamed>();
+
+        for (const zone of this.zones) {
+            found.set(zone.account.id, zone.account);
+        }
+
+        return [...found.values()];
+    }
+
     private describe(): TunnelState {
         const { stage, message } = this.stageOf();
+        const accounts = this.accounts();
+        const account = this.stored.tunnel?.account ?? (accounts.length === 1 ? accounts[0]! : null);
 
         return {
             stage,
             message,
-            signInUrl: stage === 'signing-in' ? this.signInUrl : null,
-            domain: this.stored.domain,
-            rows: this.stored.rows,
+            hasToken: this.token !== null,
+            accounts,
+            account,
+            zones: account === null ? [] : this.zones.filter((zone) => zone.account.id === account.id).map(({ id, name }) => ({ id, name })),
+            tunnel: this.stored.tunnel === null ? null : { name: this.stored.tunnel.name },
+            rows: this.stored.rows.map((row) => ({
+                id: row.id,
+                kind: row.kind,
+                hostname: row.hostname,
+                port: row.port,
+                enabled: row.enabled,
+                comeBack: row.comeBack
+            })),
             mcp: { enabled: this.stored.mcp.enabled, port: this.ports.listenerPort() },
             clients: this.ports.clients(),
-            suggestedMcpHostname: this.stored.domain !== null && this.stored.mcp.label !== null ? `${this.stored.mcp.label}.${this.stored.domain}` : null
+            suggestedMcpLabel: this.stored.tunnel === null ? null : this.stored.mcp.label
         };
     }
 
@@ -128,16 +153,16 @@ export class TunnelService {
             return { stage: 'failed', message: this.failure };
         }
 
-        if (this.busy === 'signing-in') {
-            return { stage: 'signing-in', message: null };
+        if (this.busy === 'checking') {
+            return { stage: 'checking', message: null };
         }
 
-        if (!this.stored.signedIn) {
-            return { stage: 'signed-out', message: null };
+        if (this.token === null) {
+            return { stage: 'no-token', message: null };
         }
 
         if (this.stored.tunnel === null) {
-            return { stage: 'no-tunnel', message: null };
+            return { stage: this.busy === 'starting' ? 'starting' : 'no-tunnel', message: null };
         }
 
         return { stage: this.busy === 'starting' ? 'starting' : 'running', message: null };
@@ -151,6 +176,19 @@ export class TunnelService {
         this.ports.changed();
     }
 
+    /* Anything a sentence can carry out of this service, without the token of Cloudflare or the one that runs the tunnel. */
+    private plain(e: unknown, fallback: string): string {
+        if (e instanceof TunnelConfigError || e instanceof CloudflareError) {
+            return e.message;
+        }
+
+        return this.masked(sentenceOf([errorText(e)], fallback));
+    }
+
+    private masked(text: string, ...secrets: Array<string | null>): string {
+        return [this.token, ...secrets].reduce<string>((safe, secret) => (secret === null || secret === '' ? safe : safe.replaceAll(secret, TOKEN_MASK)), text);
+    }
+
     /* Starts a job in the background, behind the one before it, and tells the clients when it ended. */
     private start(busy: Exclude<Busy, null>, work: () => Promise<void>): void {
         this.busy = busy;
@@ -161,7 +199,7 @@ export class TunnelService {
                 try {
                     await work();
                 } catch (e) {
-                    this.failure = e instanceof TunnelConfigError ? e.message : sentenceOf([errorText(e)], 'That did not work');
+                    this.failure = this.plain(e, 'That did not work');
                     this.ports.log(`Tunnels: ${this.failure}`);
                 } finally {
                     this.busy = null;
@@ -171,29 +209,16 @@ export class TunnelService {
             .catch(() => undefined);
     }
 
-    /* Runs `cloudflared` to its end and hands back its exit code and what it printed. */
-    private async exec(args: readonly string[], onLine?: (line: string) => void): Promise<{ code: number; lines: string[] }> {
-        if (this.binary === null) {
-            throw new Error('cloudflared is not installed');
+    private requireToken(): string {
+        if (this.token === null) {
+            throw new TunnelConfigError('no-token', 'Add a Cloudflare API token first');
         }
 
-        const lines: string[] = [];
-        const process = this.ports.runner.start(this.binary, args, (line) => {
-            lines.push(line);
-            onLine?.(line);
-        });
-
-        return { code: await process.exited, lines };
+        return this.token;
     }
 
-    private async mustSucceed(args: readonly string[], fallback: string): Promise<string[]> {
-        const { code, lines } = await this.exec(args);
-
-        if (code !== 0) {
-            throw new Error(sentenceOf(lines, fallback));
-        }
-
-        return lines;
+    private api(): CloudflareApi {
+        return new CloudflareApi(this.requireToken(), this.ports.cloudflare);
     }
 
     async install(): Promise<TunnelState> {
@@ -215,118 +240,161 @@ export class TunnelService {
         return this.describe();
     }
 
-    async signIn(): Promise<TunnelState> {
-        this.binary = await this.ports.installer.locate();
+    /* Checks the token with Cloudflare, lists the zones it reaches, and keeps it only when both work. */
+    async setToken(raw: string): Promise<TunnelState> {
+        const token = raw.trim();
 
-        if (this.binary === null || this.busy !== null) {
-            return this.describe();
-        }
+        await this.jobs.run(async () => {
+            const api = new CloudflareApi(token, this.ports.cloudflare);
 
-        this.signInUrl = null;
-        this.start('signing-in', async () => {
-            const { code, lines } = await this.exec(['tunnel', 'login'], (line) => {
-                const url = URL_PATTERN.exec(line)?.[0];
+            await api.verifyToken();
 
-                if (url !== undefined && this.signInUrl === null) {
-                    this.signInUrl = url;
-                    this.announce();
-                }
-            });
+            const zones = await api.zones();
 
-            this.signInUrl = null;
-
-            if (code !== 0) {
-                throw new Error(sentenceOf(lines, 'Signing in with Cloudflare did not finish'));
+            if (zones.length === 0) {
+                throw new TunnelConfigError('no-zones', 'This API token reaches no domain. Give it Zone read on the domains you want to use.');
             }
 
-            this.stored = { ...this.stored, signedIn: true };
-            this.save();
+            await this.ports.tokens.write(token);
+            this.token = token;
+            this.zones = zones;
+            this.failure = null;
         });
+        this.binary = await this.ports.installer.locate();
+
+        if (this.stored.tunnel === null) {
+            this.announce();
+        } else {
+            this.start('checking', () => this.bringUp());
+        }
 
         return this.describe();
     }
 
-    async setup(rawDomain: string): Promise<TunnelState> {
-        const domain = normalizedDomain(rawDomain);
+    /* Forgets the token and stops the child. The tunnel and its records stay in Cloudflare, as they are. */
+    async clearToken(): Promise<TunnelState> {
+        await this.jobs.run(async () => {
+            await this.stopChild();
+            await this.ports.tokens.clear();
+            this.token = null;
+            this.zones = [];
+            this.failure = null;
+        });
+        this.announce();
 
-        if (!this.stored.signedIn || this.stored.tunnel !== null) {
-            throw new TunnelConfigError('wrong-stage', this.stored.tunnel === null ? 'Sign in with Cloudflare first' : 'This machine has a tunnel already');
+        return this.describe();
+    }
+
+    /* Makes this machine's tunnel on the account, with its hostnames kept in Cloudflare. */
+    async setup(accountId?: string): Promise<TunnelState> {
+        if (this.token === null || this.stored.tunnel !== null) {
+            throw new TunnelConfigError('wrong-stage', this.token === null ? 'Add a Cloudflare API token first' : 'This machine has a tunnel already');
+        }
+
+        const accounts = this.accounts();
+        const account = accountId === undefined ? (accounts.length === 1 ? accounts[0] : undefined) : accounts.find((candidate) => candidate.id === accountId);
+
+        if (account === undefined) {
+            throw new TunnelConfigError('account-required', 'Pick the Cloudflare account that gets the tunnel');
         }
 
         this.binary = await this.ports.installer.locate();
         this.start('starting', async () => {
-            const name = `ruimte-${this.ports.random(4)}`;
-            const lines = await this.mustSucceed(['tunnel', 'create', name], 'Creating the tunnel failed');
-            const created = lines.map((line) => CREATED_PATTERN.exec(line)).find((match) => match !== null);
-            const file = lines.map((line) => CREDENTIALS_PATTERN.exec(line)).find((match) => match !== null)?.[1];
+            const api = this.api();
+            const name = tunnelNameOf(this.ports.machineName());
 
-            if (!created || file === undefined) {
-                throw new Error('cloudflared created a tunnel but did not say where it keeps its credentials');
+            if ((await api.findTunnel(account.id, name)) !== null) {
+                throw new TunnelConfigError(
+                    'tunnel-exists',
+                    `${account.name} has a tunnel named ${name} already, and Ruimte only works with a tunnel it made itself. Delete that tunnel in the Cloudflare dashboard (Networks, Tunnels), then try again.`
+                );
             }
+
+            const created = await api.createTunnel(account.id, name);
 
             this.stored = {
                 ...this.stored,
-                domain,
-                tunnel: { id: created[2]!, name: created[1]!, credentialsFile: file },
+                tunnel: { id: created.id, name: created.name, account },
                 mcp: { ...this.stored.mcp, label: `mcp-${this.ports.random(16)}` }
             };
             this.save();
+            await this.syncIngress();
         });
 
         return this.describe();
     }
 
-    /* Validates the row, then routes its hostname through Cloudflare and puts it in the running config. */
-    async add(input: { kind: TunnelRowKind; hostname: string; port?: number; comeBack?: boolean }): Promise<TunnelState> {
-        const tunnel = this.stored.tunnel;
+    /*
+     * Puts a hostname on the tunnel: the DNS record first, then the rule in Cloudflare. A name that has a record Ruimte did
+     * not make is refused before anything is written.
+     */
+    async add(input: { kind: TunnelRowKind; zone: string; label: string; port?: number; comeBack?: boolean }): Promise<TunnelState> {
+        await this.jobs.run(async () => {
+            const tunnel = this.stored.tunnel;
 
-        if (tunnel === null) {
-            throw new TunnelConfigError('no-tunnel', 'Set up a tunnel first');
-        }
-
-        const hostname = normalizedHostname(input.hostname);
-
-        if (this.stored.rows.some((row) => row.hostname === hostname)) {
-            throw new TunnelConfigError('hostname-taken', `${hostname} is on this tunnel already`);
-        }
-
-        let port: number | null = null;
-
-        if (input.kind === 'mcp') {
-            if (this.stored.rows.some((row) => row.kind === 'mcp')) {
-                throw new TunnelConfigError('mcp-exists', 'The MCP has a hostname already; remove it first');
-            }
-        } else {
-            if (input.port === undefined) {
-                throw new TunnelConfigError('port-required', 'A dev server needs a port');
+            if (tunnel === null) {
+                throw new TunnelConfigError('no-tunnel', 'Set up a tunnel first');
             }
 
-            const reason = deniedPortReason(input.port, this.ports.deniedPorts());
+            const api = this.api();
+            const zone = this.zones.find((candidate) => candidate.id === input.zone && candidate.account.id === tunnel.account.id);
 
-            if (reason !== null) {
-                throw new TunnelConfigError('port-denied', reason);
+            if (zone === undefined) {
+                throw new TunnelConfigError('unknown-zone', 'That domain is not on the Cloudflare account of this tunnel. Pick one from the list.');
             }
 
-            port = input.port;
-        }
+            const others = this.zones
+                .filter((candidate) => candidate.id !== zone.id && candidate.account.id === zone.account.id)
+                .map((candidate) => candidate.name);
+            const hostname = hostnameInZone(input.label, zone.name, others);
 
-        const row: TunnelRow = {
-            id: this.ports.random(6),
-            kind: input.kind,
-            hostname,
-            port,
-            enabled: true,
-            // The MCP has a credential on every request and a hosted client cannot turn it on from outside; a dev server has no gate.
-            comeBack: input.comeBack ?? input.kind === 'mcp'
-        };
+            if (this.stored.rows.some((row) => row.hostname === hostname)) {
+                throw new TunnelConfigError('hostname-taken', `${hostname} is on this tunnel already`);
+            }
 
-        this.binary = await this.ports.installer.locate();
-        this.start('starting', async () => {
-            await this.mustSucceed(['tunnel', 'route', 'dns', tunnel.id, hostname], 'Routing the hostname through Cloudflare failed');
-            this.stored = { ...this.stored, rows: [...this.stored.rows, row] };
+            let port: number | null = null;
+
+            if (input.kind === 'mcp') {
+                if (this.stored.rows.some((row) => row.kind === 'mcp')) {
+                    throw new TunnelConfigError('mcp-exists', 'The MCP has a hostname already; remove it first');
+                }
+            } else {
+                if (input.port === undefined) {
+                    throw new TunnelConfigError('port-required', 'A dev server needs a port');
+                }
+
+                const reason = deniedPortReason(input.port, this.ports.deniedPorts());
+
+                if (reason !== null) {
+                    throw new TunnelConfigError('port-denied', reason);
+                }
+
+                port = input.port;
+            }
+
+            const record = await this.routeHostname(api, zone, hostname, tunnel.id);
+
+            this.stored = {
+                ...this.stored,
+                rows: [
+                    ...this.stored.rows,
+                    {
+                        id: this.ports.random(6),
+                        kind: input.kind,
+                        hostname,
+                        port,
+                        enabled: true,
+                        // The MCP has a credential on every request and a hosted client cannot turn it on from outside; a dev server has no gate.
+                        comeBack: input.comeBack ?? input.kind === 'mcp',
+                        zoneId: zone.id,
+                        recordId: record.id
+                    }
+                ]
+            };
             this.save();
-            await this.apply();
+            await this.syncIngress();
         });
+        await this.followUp();
 
         return this.describe();
     }
@@ -346,30 +414,62 @@ export class TunnelService {
             }
         }
 
-        this.binary = await this.ports.installer.locate();
-        this.start('starting', async () => {
+        if (change.enabled !== undefined) {
+            this.requireToken();
+        }
+
+        await this.jobs.run(async () => {
             this.stored = {
                 ...this.stored,
                 rows: this.stored.rows.map((candidate) => (candidate.id === id ? { ...candidate, ...change } : candidate))
             };
             this.save();
-            await this.apply();
+
+            if (change.enabled !== undefined) {
+                await this.syncIngress();
+            }
         });
+
+        if (change.enabled !== undefined) {
+            await this.followUp();
+        } else {
+            this.announce();
+        }
 
         return this.describe();
     }
 
+    /* Takes the rule out of Cloudflare, then deletes the DNS record, but only while it is still the one Ruimte made. */
     async remove(id: string): Promise<TunnelState> {
         if (!this.stored.rows.some((row) => row.id === id)) {
             throw new TunnelConfigError('unknown-row', 'That hostname is not on this tunnel');
         }
 
-        this.binary = await this.ports.installer.locate();
-        this.start('starting', async () => {
-            this.stored = { ...this.stored, rows: this.stored.rows.filter((row) => row.id !== id) };
+        await this.jobs.run(async () => {
+            const row = this.stored.rows.find((candidate) => candidate.id === id);
+            const tunnel = this.stored.tunnel;
+
+            if (row === undefined || tunnel === null) {
+                return;
+            }
+
+            const api = this.api();
+
+            this.stored = { ...this.stored, rows: this.stored.rows.map((candidate) => (candidate.id === id ? { ...candidate, enabled: false } : candidate)) };
             this.save();
-            await this.apply();
+            await this.syncIngress([row.hostname]);
+
+            const target = this.targetOf(tunnel.id);
+            const live = (await api.recordsNamed(row.zoneId, row.hostname)).find((record) => record.id === row.recordId);
+
+            if (live !== undefined && this.isOurs(live, target)) {
+                await api.deleteRecord(row.zoneId, row.recordId, row.hostname);
+            }
+
+            this.stored = { ...this.stored, rows: this.stored.rows.filter((candidate) => candidate.id !== id) };
+            this.save();
         });
+        await this.followUp();
 
         return this.describe();
     }
@@ -383,8 +483,11 @@ export class TunnelService {
         });
         this.binary = await this.ports.installer.locate();
 
-        if (this.stored.tunnel !== null && this.binary !== null) {
-            this.start('starting', () => this.apply());
+        if (this.stored.tunnel !== null && this.token !== null) {
+            this.start('starting', async () => {
+                await this.syncIngress();
+                await this.reconcileChild();
+            });
         } else {
             this.announce();
         }
@@ -401,8 +504,14 @@ export class TunnelService {
             return this.install();
         }
 
-        if (this.stored.tunnel !== null) {
-            this.start('starting', () => this.apply());
+        if (this.token !== null) {
+            this.start('checking', async () => {
+                const api = this.api();
+
+                await api.verifyToken();
+                this.zones = await api.zones();
+                await this.bringUp();
+            });
 
             return this.describe();
         }
@@ -419,7 +528,7 @@ export class TunnelService {
         return (await this.ports.discover()).filter((entry) => deniedPortReason(entry.port, denied) === null && !taken.has(entry.port));
     }
 
-    /* Boot: a row that does not come back is off, the listener returns as it was, and the child starts for the rows that are on. */
+    /* Boot: a row that does not come back is off, the listener returns as it was, and the tunnel is brought in line with the rows that are on. */
     async resume(): Promise<void> {
         this.stored = {
             ...this.stored,
@@ -433,8 +542,11 @@ export class TunnelService {
 
         this.binary = await this.ports.installer.locate();
 
-        if (this.stored.tunnel !== null && this.binary !== null && this.stored.rows.some((row) => row.enabled)) {
-            this.start('starting', () => this.apply());
+        if (this.token !== null) {
+            this.start('checking', async () => {
+                this.zones = await this.api().zones();
+                await this.bringUp();
+            });
         }
     }
 
@@ -443,47 +555,129 @@ export class TunnelService {
         await this.stopChild();
     }
 
-    /* Writes the config, has `cloudflared` check it, and restarts the child, so every hostname drops for a moment. */
-    private async apply(): Promise<void> {
+    /* A tunnel that is gone from the account, or on an account this token does not reach, is forgotten with its rows, and the person is told. */
+    private async checkTunnel(): Promise<void> {
         const tunnel = this.stored.tunnel;
 
         if (tunnel === null) {
             return;
         }
 
-        const listenerPort = this.stored.mcp.enabled ? this.ports.listenerPort() : null;
-        const yaml = configYaml({
-            tunnelId: tunnel.id,
-            credentialsFile: tunnel.credentialsFile,
+        const reachable = this.accounts().some((account) => account.id === tunnel.account.id);
+
+        if (reachable && (await this.api().tunnel(tunnel.account.id, tunnel.id)) !== null) {
+            return;
+        }
+
+        await this.stopChild();
+        this.stored = { ...this.stored, tunnel: null, rows: [] };
+        this.save();
+
+        throw new TunnelConfigError(
+            'tunnel-gone',
+            `The tunnel ${tunnel.name} is not on the Cloudflare account this token reaches, so Ruimte forgot it and its hostnames. Their DNS records are still in Cloudflare; delete them there if you no longer want them.`
+        );
+    }
+
+    /* Checks the tunnel, writes the hostnames to Cloudflare and starts or stops the child to match. */
+    private async bringUp(): Promise<void> {
+        await this.checkTunnel();
+        await this.syncIngress();
+        await this.reconcileChild();
+    }
+
+    /* What a request that changed a row leaves to the background: the child starts or stops, and the clients hear of it. */
+    private async followUp(): Promise<void> {
+        this.binary = await this.ports.installer.locate();
+        this.start('starting', () => this.reconcileChild());
+    }
+
+    private targetOf(tunnelId: string): string {
+        return `${tunnelId}.${TUNNEL_TARGET}`;
+    }
+
+    /* A record is Ruimte's only when it is a CNAME to this tunnel that carries Ruimte's comment. */
+    private isOurs(record: CloudflareRecord, target: string): boolean {
+        return record.type === 'CNAME' && record.content === target && (record.comment ?? '').startsWith(RECORD_COMMENT);
+    }
+
+    /* Creates the proxied CNAME to the tunnel, or updates the one Ruimte made earlier. Any other record under the name stops it. */
+    private async routeHostname(api: CloudflareApi, zone: CloudflareZone, hostname: string, tunnelId: string): Promise<CloudflareRecord> {
+        const target = this.targetOf(tunnelId);
+        const existing = await api.recordsNamed(zone.id, hostname);
+        const foreign = existing.find((record) => !this.isOurs(record, target));
+
+        if (foreign !== undefined) {
+            throw new TunnelConfigError(
+                'foreign-record',
+                `${hostname} already has a ${foreign.type} record${foreign.content === undefined ? '' : ` pointing at ${foreign.content}`} that Ruimte did not make, so Ruimte leaves it alone. Delete it in Cloudflare or pick another name.`
+            );
+        }
+
+        const input = { name: hostname, content: target, comment: RECORD_COMMENT };
+        const ours = existing[0];
+
+        return ours === undefined ? api.createRecord(zone.id, input) : api.updateRecord(zone.id, ours.id, input);
+    }
+
+    /*
+     * Writes the hostnames of the rows that are on into the tunnel's ingress in Cloudflare. A rule for a hostname Ruimte
+     * does not manage stays as it was; `released` names hostnames of rows that just went, whose rules must go with them.
+     */
+    private async syncIngress(released: readonly string[] = []): Promise<void> {
+        const tunnel = this.stored.tunnel;
+
+        if (tunnel === null) {
+            return;
+        }
+
+        const api = this.api();
+        const current = await api.ingress(tunnel.account.id, tunnel.id);
+        const managed = new Set([...this.stored.rows.map((row) => row.hostname), ...released]);
+        const foreign = current.filter((rule) => !isCatchAll(rule) && !(typeof rule.hostname === 'string' && managed.has(rule.hostname)));
+        const rules = ingressRules({
             rows: this.stored.rows,
-            listenerPort,
+            listenerPort: this.stored.mcp.enabled ? this.ports.listenerPort() : null,
             denied: this.ports.deniedPorts()
         });
 
-        await mkdir(tunnelsFolder(this.ports.home), { recursive: true, mode: 0o700 });
+        await api.putIngress(tunnel.account.id, tunnel.id, [...foreign, ...rules.map((rule) => ({ ...rule })), { ...CATCH_ALL }]);
+    }
 
-        const next = `${this.configPath}.next`;
-        await writeFile(next, yaml, { mode: 0o600 });
-        await this.mustSucceed(['tunnel', '--config', next, 'ingress', 'validate'], 'cloudflared did not accept the configuration');
-        await rename(next, this.configPath);
-        await this.stopChild();
+    private isLive(): boolean {
+        const listenerPort = this.stored.mcp.enabled ? this.ports.listenerPort() : null;
 
-        const live = this.stored.rows.some((row) => row.enabled && (row.kind === 'dev' || listenerPort !== null));
+        return this.stored.rows.some((row) => row.enabled && (row.kind === 'dev' || listenerPort !== null));
+    }
 
-        if (live && this.binary !== null) {
-            this.startChild(this.binary);
+    /* A tunnel that Cloudflare keeps the hostnames of needs no restart for a change: the child runs while any hostname is on. */
+    private async reconcileChild(): Promise<void> {
+        if (!this.isLive() || this.stored.tunnel === null || this.token === null) {
+            await this.stopChild();
+
+            return;
+        }
+
+        if (this.child === null && this.binary !== null) {
+            await this.startChild(this.binary, this.stored.tunnel);
         }
     }
 
-    private startChild(binary: string): void {
+    private async startChild(binary: string, tunnel: { id: string; account: TunnelNamed }): Promise<void> {
+        const runToken = await this.api().tunnelToken(tunnel.account.id, tunnel.id);
         const lines: string[] = [];
-        const process = this.ports.runner.start(binary, ['tunnel', '--no-autoupdate', '--config', this.configPath, 'run'], (line) => {
-            lines.push(line);
+        const process = this.ports.runner.start(
+            binary,
+            ['tunnel', '--no-autoupdate', 'run'],
+            (line) => {
+                lines.push(this.masked(line, runToken));
 
-            if (lines.length > 20) {
-                lines.shift();
-            }
-        });
+                if (lines.length > 20) {
+                    lines.shift();
+                }
+            },
+            { TUNNEL_TOKEN: runToken }
+        );
         const child = { process, lines, stopping: false };
         this.child = child;
 

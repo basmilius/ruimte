@@ -8,6 +8,7 @@ import type { CanvasHost } from '../tools/host.ts';
 import { approvalTools } from '../tunnels/approvals.ts';
 import { realMetadataPorts } from '../tunnels/client-metadata-real.ts';
 import { fetchClientMetadata } from '../tunnels/client-metadata.ts';
+import { FileTokenStore } from '../tunnels/cloudflare-token-store.ts';
 import { CloudflaredInstaller } from '../tunnels/cloudflared-installer.ts';
 import { realInstallerPorts } from '../tunnels/cloudflared-real.ts';
 import { spawnRunner } from '../tunnels/cloudflared-runner.ts';
@@ -94,10 +95,12 @@ export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
         deniedRuimtePorts([later.apiPort(), config.lanPort, config.externalPort, listener.port].filter((port): port is number => port !== null && port > 0));
 
     const service = new TunnelService({
-        home: config.home,
         store: tunnelStore(config.home),
         installer: new CloudflaredInstaller(tunnelsFolder(config.home), realInstallerPorts()),
         runner: spawnRunner,
+        tokens: new FileTokenStore(config.home),
+        cloudflare: (url, init) => fetch(url, init),
+        machineName: () => config.label,
         deniedPorts,
         setListener: async (enabled) => {
             if (enabled) {

@@ -1,4 +1,5 @@
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
+import { CloudflareError } from '../tunnels/cloudflare-api.ts';
 import type { ConsentBook } from '../tunnels/consent-book.ts';
 import type { CredentialStore } from '../tunnels/credential-store.ts';
 import { TunnelConfigError } from '../tunnels/tunnel-config.ts';
@@ -12,12 +13,12 @@ export interface TunnelHandlerDeps {
     changed(): void;
 }
 
-/* A refusal of the tunnels as a request error, with the code and sentence the screen shows. */
+/* A refusal of the tunnels, or a failure Cloudflare gave, as a request error with the code and sentence the screen shows. */
 async function refusing<T>(work: () => Promise<T>): Promise<T> {
     try {
         return await work();
     } catch (e) {
-        if (e instanceof TunnelConfigError) {
+        if (e instanceof TunnelConfigError || e instanceof CloudflareError) {
             throw new RequestError(e.code, e.message);
         }
 
@@ -36,8 +37,9 @@ export function registerTunnelHandlers(dispatcher: Dispatcher, deps: TunnelHandl
     dispatcher.register('tunnel.state', () => service.state());
     dispatcher.register('tunnel.discover', async () => ({ ports: await service.discover() }), { owner: true });
     dispatcher.register('tunnel.install', () => service.install(), { owner: true });
-    dispatcher.register('tunnel.signIn', () => service.signIn(), { owner: true });
-    dispatcher.register('tunnel.setup', ({ domain }) => refusing(() => service.setup(domain)), { owner: true });
+    dispatcher.register('tunnel.setToken', ({ token }) => refusing(() => service.setToken(token)), { owner: true });
+    dispatcher.register('tunnel.clearToken', () => service.clearToken(), { owner: true });
+    dispatcher.register('tunnel.setup', ({ account }) => refusing(() => service.setup(account)), { owner: true });
     dispatcher.register('tunnel.add', (payload) => refusing(() => service.add(payload)), { owner: true });
     dispatcher.register('tunnel.update', ({ id, ...change }) => refusing(() => service.update(id, change)), { owner: true });
     dispatcher.register('tunnel.remove', ({ id }) => refusing(() => service.remove(id)), { owner: true });

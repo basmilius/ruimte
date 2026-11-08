@@ -2,6 +2,7 @@ import type { TunnelRow } from '@ruimte/contracts';
 
 const LABEL = '[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?';
 const HOSTNAME = new RegExp(`^${LABEL}(\\.${LABEL})+$`);
+const MACHINE_NAME_MAX = 40;
 
 export class TunnelConfigError extends Error {
     readonly code: string;
@@ -26,15 +27,38 @@ export function normalizedHostname(raw: string): string {
     return hostname;
 }
 
-/* The domain a person picked: a hostname of its own. */
-export function normalizedDomain(raw: string): string {
-    const domain = raw.trim().toLowerCase().replace(/\.$/, '');
+/*
+ * The hostname a person's input names in a zone: a label goes in front of the zone, a hostname that already ends in the
+ * zone is taken as it is. A hostname in another zone the token reaches is refused rather than nested under this one.
+ */
+export function hostnameInZone(raw: string, zone: string, otherZones: readonly string[]): string {
+    const typed = raw.trim().toLowerCase().replace(/\.$/, '');
 
-    if (!HOSTNAME.test(domain) || domain.length > 253) {
-        throw new TunnelConfigError('invalid-domain', `${raw.trim()} is no domain; use the domain that sits on your Cloudflare account, such as example.com`);
+    if (typed === zone) {
+        throw new TunnelConfigError('apex', `${zone} itself is not a name for a tunnel; give it a label, such as app.${zone}`);
     }
 
-    return domain;
+    if (!typed.endsWith(`.${zone}`)) {
+        const other = otherZones.find((candidate) => typed.endsWith(`.${candidate}`));
+
+        if (other !== undefined) {
+            throw new TunnelConfigError('wrong-zone', `${typed} belongs to ${other}, not to ${zone}. Pick ${other} in the list of domains.`);
+        }
+    }
+
+    return normalizedHostname(typed.endsWith(`.${zone}`) ? typed : `${typed}.${zone}`);
+}
+
+/* The name of this machine's tunnel in the Cloudflare dashboard. */
+export function tunnelNameOf(machine: string): string {
+    const slug = machine
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, MACHINE_NAME_MAX)
+        .replace(/-+$/g, '');
+
+    return `ruimte-${slug === '' ? 'machine' : slug}`;
 }
 
 /*
@@ -50,9 +74,6 @@ export function deniedPortReason(port: number, denied: readonly number[]): strin
 }
 
 export interface IngressInput {
-    readonly tunnelId: string;
-    /* The path `cloudflared tunnel create` named. Ruimte writes it into the config and never opens it. */
-    readonly credentialsFile: string;
     readonly rows: readonly TunnelRow[];
     /* Where the external listener is; the MCP row has no ingress without one. */
     readonly listenerPort: number | null;
@@ -93,20 +114,10 @@ export function ingressRules({ rows, listenerPort, denied }: IngressInput): Ingr
     return rules;
 }
 
-/* A JSON string is a YAML string, so a path with a space or a quote needs no escaping of its own. */
-function scalar(value: string): string {
-    return JSON.stringify(value);
-}
+/* The catch-all every ingress ends in, which answers 404 for any other hostname. */
+export const CATCH_ALL = { service: 'http_status:404' } as const;
 
-/* The file `cloudflared` runs with: the tunnel, the path of its credentials, the rules and a closing 404 for every other hostname. */
-export function configYaml(input: IngressInput): string {
-    const lines = [`tunnel: ${scalar(input.tunnelId)}`, `credentials-file: ${scalar(input.credentialsFile)}`, 'ingress:'];
-
-    for (const rule of ingressRules(input)) {
-        lines.push(`  - hostname: ${scalar(rule.hostname)}`, `    service: ${scalar(rule.service)}`);
-    }
-
-    lines.push('  - service: http_status:404');
-
-    return `${lines.join('\n')}\n`;
+/* A rule with neither hostname nor path matches everything, so it can only be the last one. */
+export function isCatchAll(rule: Record<string, unknown>): boolean {
+    return rule.hostname === undefined && rule.path === undefined;
 }

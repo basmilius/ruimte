@@ -8,7 +8,8 @@ export interface CloudflaredProcess {
 
 /* The one seam to a process: a test hands in a fake, and only the integration suite runs a real `cloudflared`. */
 export interface CloudflaredRunner {
-    start(binary: string, args: readonly string[], onLine: (line: string) => void): CloudflaredProcess;
+    /* `env` is added to the person's own environment; the tunnel token goes there and never on the command line. */
+    start(binary: string, args: readonly string[], onLine: (line: string) => void, env?: Readonly<Record<string, string>>): CloudflaredProcess;
 }
 
 async function readLines(stream: ReadableStream<Uint8Array> | null, onLine: (line: string) => void): Promise<void> {
@@ -34,10 +35,10 @@ async function readLines(stream: ReadableStream<Uint8Array> | null, onLine: (lin
     }
 }
 
-/* Runs the real binary with the person's own environment, so `cloudflared` finds its login where it left it. */
+/* Runs the real binary with the person's own environment. */
 export const spawnRunner: CloudflaredRunner = {
-    start(binary, args, onLine) {
-        const child = Bun.spawn([binary, ...args], { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe' });
+    start(binary, args, onLine, env) {
+        const child = Bun.spawn([binary, ...args], { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ...env } });
         const output = Promise.all([readLines(child.stdout, onLine), readLines(child.stderr, onLine)]);
 
         return {

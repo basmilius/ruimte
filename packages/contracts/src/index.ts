@@ -512,6 +512,7 @@ import {
     TunnelDiscoverResultSchema,
     TunnelRemovePayloadSchema,
     TunnelSetMcpPayloadSchema,
+    TunnelSetTokenPayloadSchema,
     TunnelSetupPayloadSchema,
     TunnelStateSchema,
     TunnelUpdatePayloadSchema
@@ -980,11 +981,12 @@ export const REQUEST_SCHEMAS = {
     // Any client may ask, `update-no-app` without the desktop app and `update-none` with nothing to install.
     'endpoint.installUpdate': { payload: EndpointInstallUpdatePayloadSchema, result: EndpointInstallUpdateResultSchema },
     'endpoint.reach': { payload: EndpointReachPayloadSchema, result: EndpointReachResultSchema },
-    // Tunnels run `cloudflared` under the person's own Cloudflare account. Any client reads the state; every other request is the local secret's.
+    // Tunnels run `cloudflared` for a tunnel on the person's own Cloudflare account, managed through an API token they typed. Any client reads the state; every other request is the local secret's.
     'tunnel.state': { payload: EmptySchema, result: TunnelStateSchema },
     'tunnel.discover': { payload: EmptySchema, result: TunnelDiscoverResultSchema },
     'tunnel.install': { payload: EmptySchema, result: TunnelStateSchema },
-    'tunnel.signIn': { payload: EmptySchema, result: TunnelStateSchema },
+    'tunnel.setToken': { payload: TunnelSetTokenPayloadSchema, result: TunnelStateSchema },
+    'tunnel.clearToken': { payload: EmptySchema, result: TunnelStateSchema },
     'tunnel.setup': { payload: TunnelSetupPayloadSchema, result: TunnelStateSchema },
     'tunnel.add': { payload: TunnelAddPayloadSchema, result: TunnelStateSchema },
     'tunnel.update': { payload: TunnelUpdatePayloadSchema, result: TunnelStateSchema },

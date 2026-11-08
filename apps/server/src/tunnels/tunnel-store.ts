@@ -1,29 +1,35 @@
 import { join } from 'node:path';
-import { TunnelRowSchema } from '@ruimte/contracts';
+import { TunnelNamedSchema, TunnelRowSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 import { JsonFileStore } from '../json-file-store.ts';
 
 export const TUNNELS_DIR = 'tunnels';
 
+/* A row of the screen with what Ruimte needs to undo it: the zone and the DNS record it made, which is the only record it ever deletes. */
+const StoredRowSchema = TunnelRowSchema.extend({ zoneId: z.string().min(1), recordId: z.string().min(1) });
+export type StoredRow = z.infer<typeof StoredRowSchema>;
+
 /*
- * What Ruimte keeps of a tunnel: no credential of Cloudflare's, only the id of the tunnel, the path of the
- * file `cloudflared` wrote for it (which Ruimte never opens) and the rows of the screen.
+ * What Ruimte keeps of a tunnel: the account and id of the tunnel it made, and its rows. The API token lives in a file
+ * of its own (`cloudflare-token-store.ts`) and never in this one.
  */
-const StoredTunnelsSchema = z.object({
-    version: z.literal(1),
-    /* Set once `cloudflared tunnel login` ended well. Ruimte cannot look at the login itself, so this is all it knows of it. */
-    signedIn: z.boolean(),
-    domain: z.string().nullable(),
-    tunnel: z.object({ id: z.string().min(1), name: z.string().min(1), credentialsFile: z.string().min(1) }).nullable(),
+const CurrentSchema = z.object({
+    version: z.literal(2),
+    tunnel: z.object({ id: z.string().min(1), name: z.string().min(1), account: TunnelNamedSchema }).nullable(),
     mcp: z.object({ enabled: z.boolean(), label: z.string().nullable() }),
-    rows: z.array(TunnelRowSchema)
+    rows: z.array(StoredRowSchema)
 });
-export type StoredTunnels = z.infer<typeof StoredTunnelsSchema>;
+export type StoredTunnels = z.infer<typeof CurrentSchema>;
+
+/* The file of the `cloudflared login` version keeps only what still means something: whether the external MCP was on. */
+const PreviousSchema = z
+    .object({ version: z.literal(1), mcp: z.object({ enabled: z.boolean() }) })
+    .transform((previous): StoredTunnels => ({ ...EMPTY_TUNNELS, mcp: { enabled: previous.mcp.enabled, label: null } }));
+
+const StoredTunnelsSchema = z.union([CurrentSchema, PreviousSchema]);
 
 export const EMPTY_TUNNELS: StoredTunnels = {
-    version: 1,
-    signedIn: false,
-    domain: null,
+    version: 2,
     tunnel: null,
     mcp: { enabled: false, label: null },
     rows: []

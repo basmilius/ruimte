@@ -93,17 +93,7 @@ export const ConsentAnswerPayloadSchema = z.object({
 
 export const ConsentAnswerResultSchema = z.object({ credential: CredentialSchema.nullable() });
 
-export const TUNNEL_STAGES = [
-    'not-installed',
-    'installing',
-    'cannot-install',
-    'signed-out',
-    'signing-in',
-    'no-tunnel',
-    'starting',
-    'running',
-    'failed'
-] as const;
+export const TUNNEL_STAGES = ['not-installed', 'installing', 'cannot-install', 'no-token', 'checking', 'no-tunnel', 'starting', 'running', 'failed'] as const;
 export const TunnelStageSchema = z.enum(TUNNEL_STAGES);
 export type TunnelStage = z.infer<typeof TunnelStageSchema>;
 
@@ -123,21 +113,30 @@ export const TunnelRowSchema = z.object({
 });
 export type TunnelRow = z.infer<typeof TunnelRowSchema>;
 
-/* The state every client may read; no tool and no client let in changes a tunnel. */
+/* A Cloudflare account or zone the API token reaches, by the id Cloudflare gave it and the name a person knows it by. */
+export const TunnelNamedSchema = z.object({ id: z.string().min(1).max(64), name: z.string().min(1).max(253) });
+export type TunnelNamed = z.infer<typeof TunnelNamedSchema>;
+
+/* The state every client may read; no tool and no client let in changes a tunnel. The API token is never in it. */
 export const TunnelStateSchema = z.object({
     stage: TunnelStageSchema,
-    /* What to install, or the sentence `cloudflared` gave when it failed; null otherwise. */
+    /* What to install, or the sentence that says what went wrong; null otherwise. */
     message: z.string().max(2000).nullable(),
-    /* The address `cloudflared tunnel login` printed while a person signs in; null otherwise. */
-    signInUrl: z.string().max(2048).nullable(),
-    domain: z.string().max(253).nullable(),
+    /* Whether the machine holds an API token that Cloudflare accepted. */
+    hasToken: z.boolean(),
+    /* The accounts the token reaches, the one the tunnel lives on (or the only one), and the zones of that account. */
+    accounts: z.array(TunnelNamedSchema).max(50),
+    account: TunnelNamedSchema.nullable(),
+    zones: z.array(TunnelNamedSchema).max(500),
+    /* The name of this machine's tunnel in the Cloudflare dashboard; null until it is made. */
+    tunnel: z.object({ name: z.string().max(253) }).nullable(),
     rows: z.array(TunnelRowSchema).max(100),
     /* Whether the external MCP listener is on, and where it listens on loopback. */
     mcp: z.object({ enabled: z.boolean(), port: z.number().int().min(0).max(65535).nullable() }),
     /* How many credentials were used lately, for the count the section shows. */
     clients: z.number().int().nonnegative(),
-    /* A hostname with a long random label on the domain, for the MCP row; null until there is a domain. */
-    suggestedMcpHostname: z.string().max(253).nullable()
+    /* A long random label for the MCP row, which the screen puts in front of the zone a person picks; null until there is a tunnel. */
+    suggestedMcpLabel: z.string().max(63).nullable()
 });
 export type TunnelState = z.infer<typeof TunnelStateSchema>;
 
@@ -145,11 +144,17 @@ export const TunnelDiscoverResultSchema = z.object({
     ports: z.array(z.object({ port: z.number().int().min(1).max(65535), session: z.string().max(200).nullable() })).max(128)
 });
 
-export const TunnelSetupPayloadSchema = z.object({ domain: z.string().trim().min(3).max(253) });
+/* The token a person typed. It travels once, on the local secret, and is never in a state. */
+export const TunnelSetTokenPayloadSchema = z.object({ token: z.string().trim().min(10).max(500) });
+
+export const TunnelSetupPayloadSchema = z.object({ account: TunnelNamedSchema.shape.id.optional() });
 
 export const TunnelAddPayloadSchema = z.object({
     kind: TunnelRowKindSchema,
-    hostname: z.string().trim().min(3).max(253),
+    /* The zone the hostname lives in, by the id the state listed. */
+    zone: TunnelNamedSchema.shape.id,
+    /* A label in front of the zone, or a full hostname inside it. */
+    label: z.string().trim().min(1).max(253),
     port: z.number().int().min(1).max(65535).optional(),
     comeBack: z.boolean().optional()
 });

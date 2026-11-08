@@ -69572,8 +69572,8 @@
           "not-installed",
           "installing",
           "cannot-install",
-          "signed-out",
-          "signing-in",
+          "no-token",
+          "checking",
           "no-tunnel",
           "starting",
           "running",
@@ -69591,22 +69591,94 @@
           }
         ]
       },
-      "signInUrl": {
+      "hasToken": {
+        "type": "boolean"
+      },
+      "accounts": {
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "account": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 2048
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
           },
           {
             "type": "null"
           }
         ]
       },
-      "domain": {
+      "zones": {
+        "maxItems": 500,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "tunnel": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 253
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "name"
+            ]
           },
           {
             "type": "null"
@@ -69694,11 +69766,11 @@
         "minimum": 0,
         "maximum": 9007199254740991
       },
-      "suggestedMcpHostname": {
+      "suggestedMcpLabel": {
         "anyOf": [
           {
             "type": "string",
-            "maxLength": 253
+            "maxLength": 63
           },
           {
             "type": "null"
@@ -69709,12 +69781,15 @@
     "required": [
       "stage",
       "message",
-      "signInUrl",
-      "domain",
+      "hasToken",
+      "accounts",
+      "account",
+      "zones",
+      "tunnel",
       "rows",
       "mcp",
       "clients",
-      "suggestedMcpHostname"
+      "suggestedMcpLabel"
     ]
   },
   "request.tunnel.discover.payload": {
@@ -69775,8 +69850,8 @@
           "not-installed",
           "installing",
           "cannot-install",
-          "signed-out",
-          "signing-in",
+          "no-token",
+          "checking",
           "no-tunnel",
           "starting",
           "running",
@@ -69794,22 +69869,94 @@
           }
         ]
       },
-      "signInUrl": {
+      "hasToken": {
+        "type": "boolean"
+      },
+      "accounts": {
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "account": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 2048
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
           },
           {
             "type": "null"
           }
         ]
       },
-      "domain": {
+      "zones": {
+        "maxItems": 500,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "tunnel": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 253
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "name"
+            ]
           },
           {
             "type": "null"
@@ -69897,11 +70044,11 @@
         "minimum": 0,
         "maximum": 9007199254740991
       },
-      "suggestedMcpHostname": {
+      "suggestedMcpLabel": {
         "anyOf": [
           {
             "type": "string",
-            "maxLength": 253
+            "maxLength": 63
           },
           {
             "type": "null"
@@ -69912,20 +70059,32 @@
     "required": [
       "stage",
       "message",
-      "signInUrl",
-      "domain",
+      "hasToken",
+      "accounts",
+      "account",
+      "zones",
+      "tunnel",
       "rows",
       "mcp",
       "clients",
-      "suggestedMcpHostname"
+      "suggestedMcpLabel"
     ]
   },
-  "request.tunnel.signIn.payload": {
+  "request.tunnel.setToken.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
-    "properties": {}
+    "properties": {
+      "token": {
+        "type": "string",
+        "minLength": 10,
+        "maxLength": 500
+      }
+    },
+    "required": [
+      "token"
+    ]
   },
-  "request.tunnel.signIn.result": {
+  "request.tunnel.setToken.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
@@ -69935,8 +70094,8 @@
           "not-installed",
           "installing",
           "cannot-install",
-          "signed-out",
-          "signing-in",
+          "no-token",
+          "checking",
           "no-tunnel",
           "starting",
           "running",
@@ -69954,22 +70113,94 @@
           }
         ]
       },
-      "signInUrl": {
+      "hasToken": {
+        "type": "boolean"
+      },
+      "accounts": {
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "account": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 2048
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
           },
           {
             "type": "null"
           }
         ]
       },
-      "domain": {
+      "zones": {
+        "maxItems": 500,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "tunnel": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 253
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "name"
+            ]
           },
           {
             "type": "null"
@@ -70057,11 +70288,11 @@
         "minimum": 0,
         "maximum": 9007199254740991
       },
-      "suggestedMcpHostname": {
+      "suggestedMcpLabel": {
         "anyOf": [
           {
             "type": "string",
-            "maxLength": 253
+            "maxLength": 63
           },
           {
             "type": "null"
@@ -70072,27 +70303,262 @@
     "required": [
       "stage",
       "message",
-      "signInUrl",
-      "domain",
+      "hasToken",
+      "accounts",
+      "account",
+      "zones",
+      "tunnel",
       "rows",
       "mcp",
       "clients",
-      "suggestedMcpHostname"
+      "suggestedMcpLabel"
+    ]
+  },
+  "request.tunnel.clearToken.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.tunnel.clearToken.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "stage": {
+        "type": "string",
+        "enum": [
+          "not-installed",
+          "installing",
+          "cannot-install",
+          "no-token",
+          "checking",
+          "no-tunnel",
+          "starting",
+          "running",
+          "failed"
+        ]
+      },
+      "message": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "hasToken": {
+        "type": "boolean"
+      },
+      "accounts": {
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "account": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "zones": {
+        "maxItems": 500,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "tunnel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "rows": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "mcp",
+                "dev"
+              ]
+            },
+            "hostname": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "port": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "comeBack": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "hostname",
+            "port",
+            "enabled",
+            "comeBack"
+          ]
+        }
+      },
+      "mcp": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "port"
+        ]
+      },
+      "clients": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "suggestedMcpLabel": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 63
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "stage",
+      "message",
+      "hasToken",
+      "accounts",
+      "account",
+      "zones",
+      "tunnel",
+      "rows",
+      "mcp",
+      "clients",
+      "suggestedMcpLabel"
     ]
   },
   "request.tunnel.setup.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
-      "domain": {
+      "account": {
         "type": "string",
-        "minLength": 3,
-        "maxLength": 253
+        "minLength": 1,
+        "maxLength": 64
       }
-    },
-    "required": [
-      "domain"
-    ]
+    }
   },
   "request.tunnel.setup.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -70104,8 +70570,8 @@
           "not-installed",
           "installing",
           "cannot-install",
-          "signed-out",
-          "signing-in",
+          "no-token",
+          "checking",
           "no-tunnel",
           "starting",
           "running",
@@ -70123,22 +70589,94 @@
           }
         ]
       },
-      "signInUrl": {
+      "hasToken": {
+        "type": "boolean"
+      },
+      "accounts": {
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "account": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 2048
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
           },
           {
             "type": "null"
           }
         ]
       },
-      "domain": {
+      "zones": {
+        "maxItems": 500,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "tunnel": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 253
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "name"
+            ]
           },
           {
             "type": "null"
@@ -70226,11 +70764,11 @@
         "minimum": 0,
         "maximum": 9007199254740991
       },
-      "suggestedMcpHostname": {
+      "suggestedMcpLabel": {
         "anyOf": [
           {
             "type": "string",
-            "maxLength": 253
+            "maxLength": 63
           },
           {
             "type": "null"
@@ -70241,12 +70779,15 @@
     "required": [
       "stage",
       "message",
-      "signInUrl",
-      "domain",
+      "hasToken",
+      "accounts",
+      "account",
+      "zones",
+      "tunnel",
       "rows",
       "mcp",
       "clients",
-      "suggestedMcpHostname"
+      "suggestedMcpLabel"
     ]
   },
   "request.tunnel.add.payload": {
@@ -70260,9 +70801,14 @@
           "dev"
         ]
       },
-      "hostname": {
+      "zone": {
         "type": "string",
-        "minLength": 3,
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "label": {
+        "type": "string",
+        "minLength": 1,
         "maxLength": 253
       },
       "port": {
@@ -70276,7 +70822,8 @@
     },
     "required": [
       "kind",
-      "hostname"
+      "zone",
+      "label"
     ]
   },
   "request.tunnel.add.result": {
@@ -70289,8 +70836,8 @@
           "not-installed",
           "installing",
           "cannot-install",
-          "signed-out",
-          "signing-in",
+          "no-token",
+          "checking",
           "no-tunnel",
           "starting",
           "running",
@@ -70308,22 +70855,94 @@
           }
         ]
       },
-      "signInUrl": {
+      "hasToken": {
+        "type": "boolean"
+      },
+      "accounts": {
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "account": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 2048
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
           },
           {
             "type": "null"
           }
         ]
       },
-      "domain": {
+      "zones": {
+        "maxItems": 500,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "tunnel": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 253
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "name"
+            ]
           },
           {
             "type": "null"
@@ -70411,11 +71030,11 @@
         "minimum": 0,
         "maximum": 9007199254740991
       },
-      "suggestedMcpHostname": {
+      "suggestedMcpLabel": {
         "anyOf": [
           {
             "type": "string",
-            "maxLength": 253
+            "maxLength": 63
           },
           {
             "type": "null"
@@ -70426,12 +71045,15 @@
     "required": [
       "stage",
       "message",
-      "signInUrl",
-      "domain",
+      "hasToken",
+      "accounts",
+      "account",
+      "zones",
+      "tunnel",
       "rows",
       "mcp",
       "clients",
-      "suggestedMcpHostname"
+      "suggestedMcpLabel"
     ]
   },
   "request.tunnel.update.payload": {
@@ -70464,8 +71086,8 @@
           "not-installed",
           "installing",
           "cannot-install",
-          "signed-out",
-          "signing-in",
+          "no-token",
+          "checking",
           "no-tunnel",
           "starting",
           "running",
@@ -70483,22 +71105,94 @@
           }
         ]
       },
-      "signInUrl": {
+      "hasToken": {
+        "type": "boolean"
+      },
+      "accounts": {
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "account": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 2048
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
           },
           {
             "type": "null"
           }
         ]
       },
-      "domain": {
+      "zones": {
+        "maxItems": 500,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "tunnel": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 253
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "name"
+            ]
           },
           {
             "type": "null"
@@ -70586,11 +71280,11 @@
         "minimum": 0,
         "maximum": 9007199254740991
       },
-      "suggestedMcpHostname": {
+      "suggestedMcpLabel": {
         "anyOf": [
           {
             "type": "string",
-            "maxLength": 253
+            "maxLength": 63
           },
           {
             "type": "null"
@@ -70601,12 +71295,15 @@
     "required": [
       "stage",
       "message",
-      "signInUrl",
-      "domain",
+      "hasToken",
+      "accounts",
+      "account",
+      "zones",
+      "tunnel",
       "rows",
       "mcp",
       "clients",
-      "suggestedMcpHostname"
+      "suggestedMcpLabel"
     ]
   },
   "request.tunnel.remove.payload": {
@@ -70633,8 +71330,8 @@
           "not-installed",
           "installing",
           "cannot-install",
-          "signed-out",
-          "signing-in",
+          "no-token",
+          "checking",
           "no-tunnel",
           "starting",
           "running",
@@ -70652,22 +71349,94 @@
           }
         ]
       },
-      "signInUrl": {
+      "hasToken": {
+        "type": "boolean"
+      },
+      "accounts": {
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "account": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 2048
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
           },
           {
             "type": "null"
           }
         ]
       },
-      "domain": {
+      "zones": {
+        "maxItems": 500,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "tunnel": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 253
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "name"
+            ]
           },
           {
             "type": "null"
@@ -70755,11 +71524,11 @@
         "minimum": 0,
         "maximum": 9007199254740991
       },
-      "suggestedMcpHostname": {
+      "suggestedMcpLabel": {
         "anyOf": [
           {
             "type": "string",
-            "maxLength": 253
+            "maxLength": 63
           },
           {
             "type": "null"
@@ -70770,12 +71539,15 @@
     "required": [
       "stage",
       "message",
-      "signInUrl",
-      "domain",
+      "hasToken",
+      "accounts",
+      "account",
+      "zones",
+      "tunnel",
       "rows",
       "mcp",
       "clients",
-      "suggestedMcpHostname"
+      "suggestedMcpLabel"
     ]
   },
   "request.tunnel.retry.payload": {
@@ -70793,8 +71565,8 @@
           "not-installed",
           "installing",
           "cannot-install",
-          "signed-out",
-          "signing-in",
+          "no-token",
+          "checking",
           "no-tunnel",
           "starting",
           "running",
@@ -70812,22 +71584,94 @@
           }
         ]
       },
-      "signInUrl": {
+      "hasToken": {
+        "type": "boolean"
+      },
+      "accounts": {
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "account": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 2048
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
           },
           {
             "type": "null"
           }
         ]
       },
-      "domain": {
+      "zones": {
+        "maxItems": 500,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "tunnel": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 253
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "name"
+            ]
           },
           {
             "type": "null"
@@ -70915,11 +71759,11 @@
         "minimum": 0,
         "maximum": 9007199254740991
       },
-      "suggestedMcpHostname": {
+      "suggestedMcpLabel": {
         "anyOf": [
           {
             "type": "string",
-            "maxLength": 253
+            "maxLength": 63
           },
           {
             "type": "null"
@@ -70930,12 +71774,15 @@
     "required": [
       "stage",
       "message",
-      "signInUrl",
-      "domain",
+      "hasToken",
+      "accounts",
+      "account",
+      "zones",
+      "tunnel",
       "rows",
       "mcp",
       "clients",
-      "suggestedMcpHostname"
+      "suggestedMcpLabel"
     ]
   },
   "request.tunnel.setMcp.payload": {
@@ -70960,8 +71807,8 @@
           "not-installed",
           "installing",
           "cannot-install",
-          "signed-out",
-          "signing-in",
+          "no-token",
+          "checking",
           "no-tunnel",
           "starting",
           "running",
@@ -70979,22 +71826,94 @@
           }
         ]
       },
-      "signInUrl": {
+      "hasToken": {
+        "type": "boolean"
+      },
+      "accounts": {
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "account": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 2048
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
           },
           {
             "type": "null"
           }
         ]
       },
-      "domain": {
+      "zones": {
+        "maxItems": 500,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "tunnel": {
         "anyOf": [
           {
-            "type": "string",
-            "maxLength": 253
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "name"
+            ]
           },
           {
             "type": "null"
@@ -71082,11 +72001,11 @@
         "minimum": 0,
         "maximum": 9007199254740991
       },
-      "suggestedMcpHostname": {
+      "suggestedMcpLabel": {
         "anyOf": [
           {
             "type": "string",
-            "maxLength": 253
+            "maxLength": 63
           },
           {
             "type": "null"
@@ -71097,12 +72016,15 @@
     "required": [
       "stage",
       "message",
-      "signInUrl",
-      "domain",
+      "hasToken",
+      "accounts",
+      "account",
+      "zones",
+      "tunnel",
       "rows",
       "mcp",
       "clients",
-      "suggestedMcpHostname"
+      "suggestedMcpLabel"
     ]
   },
   "request.port.list.payload": {
