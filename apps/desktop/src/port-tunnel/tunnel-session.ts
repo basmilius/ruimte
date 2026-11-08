@@ -7,6 +7,7 @@ import { parseToShell, parseTunnelRequest } from './messages';
 import { PROXY_REALM, PROXY_USER } from './proxy-connection';
 import { startProxyListener, type ProxyListener } from './proxy-listener';
 import { RefusedBatch } from './refused-batch';
+import { guardTunnelGuest } from './tunnel-guest';
 import { tunnelDestinationAllowedFor } from './tunnel-policy';
 import { markTunnelSession } from './tunnel-sessions';
 
@@ -78,20 +79,15 @@ export function installPortTunnels(isAppSender: (event: Electron.IpcMainEvent | 
             return;
         }
 
-        const owned = (): boolean => guest.hostWebContents === tunnel.host;
-        const guard = (event: { url: string; isMainFrame: boolean; preventDefault(): void }): void => {
-            if (!tunnelDestinationAllowedFor(owned(), event.url, tunnel.port)) {
-                event.preventDefault();
-
-                if (event.isMainFrame && !tunnel.host.isDestroyed()) {
-                    tunnel.host.send('browser:route-blocked', { webContentsId: guest.id, url: event.url } satisfies BrowserRouteBlocked);
+        guardTunnelGuest(guest, {
+            owned: () => guest.hostWebContents === tunnel.host,
+            port: tunnel.port,
+            blocked: (message) => {
+                if (!tunnel.host.isDestroyed()) {
+                    tunnel.host.send('browser:route-blocked', message satisfies BrowserRouteBlocked);
                 }
             }
-        };
-
-        guest.on('will-frame-navigate', guard);
-        guest.on('will-redirect', guard);
-        guest.setWindowOpenHandler(() => ({ action: 'deny' }));
+        });
     });
 
     ipcMain.handle('port-tunnel:open', async (event, value: unknown): Promise<PortTunnelOpened | null> => {
