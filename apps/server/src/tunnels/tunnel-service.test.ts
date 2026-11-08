@@ -999,6 +999,42 @@ describe('an existing tunnel', () => {
         expect(f.runner.running).toBe(0);
     });
 
+    test('forgets a tunnel the token may not read when unlinking, and says its hostnames and records stay', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+        f.cloudflare.failing.set('GET /accounts/acc-1/cfd_tunnel', 403);
+        await f.service.unlink();
+
+        const state = await f.state();
+
+        expect(state).toMatchObject({ stage: 'failed', tunnel: null, rows: [] });
+        expect(state.message).toBe('Ruimte forgot ruimte-bas-macbook-f7a7, but its hostnames and DNS records stay in Cloudflare.');
+        expect(f.cloudflare.records).toHaveLength(1);
+        expect(hostnamesOf(f)).toEqual(['shop.bmnw.nl', 'http_status:404']);
+        expect(f.runner.running).toBe(0);
+    });
+
+    test('forgets a tunnel on an account the token does not reach when unlinking, without asking that account', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+        f.cloudflare.zones.splice(0);
+        f.cloudflare.zone('work.dev', { id: 'acc-2', name: 'Work' });
+        await f.service.setToken(FAKE_API_TOKEN);
+        await f.service.idle();
+        f.cloudflare.failing.set('GET /accounts/acc-1/cfd_tunnel', 404);
+        f.cloudflare.failing.set('GET /zones/zone-bmnw.nl', 403);
+        await f.service.unlink();
+
+        expect(await f.state()).toMatchObject({ tunnel: null, rows: [] });
+        expect(f.cloudflare.records).toHaveLength(1);
+    });
+
     test('unlinks a tunnel it made the same way, leaving it in Cloudflare for this machine to pick again', async () => {
         const f = await fixture();
 

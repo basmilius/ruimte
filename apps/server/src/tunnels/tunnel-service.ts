@@ -468,7 +468,8 @@ export class TunnelService {
 
     /*
      * Stops using the tunnel: Ruimte takes its own rules off it, deletes the records it made and forgets it. The tunnel
-     * itself stays in Cloudflare, whoever made it, and so does everything else on it. A refusal keeps what is left.
+     * itself stays in Cloudflare, whoever made it, and so does everything else on it. A refusal keeps what is left,
+     * except when the token cannot reach the tunnel's account at all: then Ruimte only forgets it, and says so.
      */
     async unlink(): Promise<TunnelState> {
         if (this.stored.tunnel === null) {
@@ -483,8 +484,19 @@ export class TunnelService {
             }
 
             const api = this.api();
+            const reached = this.zones.length === 0 || this.accounts().some((account) => account.id === tunnel.account.id);
+            const found = reached ? await api.tunnel(tunnel.account.id, tunnel.id).catch((e: unknown) => this.unlessRefused(e)) : undefined;
 
-            if ((await api.tunnel(tunnel.account.id, tunnel.id)) !== null) {
+            // A token that cannot reach the tunnel's account cannot take anything off it, and the person still needs a way out.
+            if (found === undefined) {
+                await this.stopChild();
+                this.forget();
+                this.failure = `Ruimte forgot ${tunnel.name}, but its hostnames and DNS records stay in Cloudflare.`;
+
+                return;
+            }
+
+            if (found !== null) {
                 const released = this.stored.rows.map((row) => ({ ...row, enabled: false }));
 
                 await this.syncRows(released);
@@ -507,11 +519,8 @@ export class TunnelService {
                 this.save();
             }
 
-            this.runsElsewhere = false;
-            this.others = [];
+            this.forget();
             this.failure = null;
-            this.stored = { ...this.stored, tunnel: null, rows: [] };
-            this.save();
         });
         this.announce();
 
@@ -672,6 +681,23 @@ export class TunnelService {
         }
 
         return this.describe();
+    }
+
+    /* Forgets the tunnel and its rows here; nothing in Cloudflare changes. */
+    private forget(): void {
+        this.runsElsewhere = false;
+        this.others = [];
+        this.stored = { ...this.stored, tunnel: null, rows: [] };
+        this.save();
+    }
+
+    /* Undefined for a refusal of the token, which cannot reach what it asked for; anything else stays a failure. */
+    private unlessRefused(e: unknown): undefined {
+        if (e instanceof CloudflareError && e.code === 'no-permission') {
+            return undefined;
+        }
+
+        throw e;
     }
 
     /* Takes the rule out of Cloudflare, then deletes the DNS record, but only while it is still the one Ruimte made. */
@@ -846,10 +872,7 @@ export class TunnelService {
         }
 
         await this.stopChild();
-        this.runsElsewhere = false;
-        this.others = [];
-        this.stored = { ...this.stored, tunnel: null, rows: [] };
-        this.save();
+        this.forget();
 
         throw new TunnelConfigError(
             'tunnel-gone',
