@@ -13,7 +13,8 @@ const homeOf = tempHomes('ruimte-tunnels-');
 
 const API_PORT = 4210;
 const LISTENER_PORT = 4230;
-const MARKER = 'Managed by Ruimte';
+// The mark is the same piece of the machine id that ends the tunnel's name.
+const MARKER = 'Managed by Ruimte · f7a7';
 
 interface Fixture {
     service: TunnelService;
@@ -403,6 +404,25 @@ describe('a row', () => {
         f.cloudflare.record(f.bmnw, { name: 'app.bmnw.nl', type: 'CNAME', content: `${ourTunnel(f).id}.cfargotunnel.com`, comment: 'by hand' });
 
         expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'app', port: 3000 })).rejects.toMatchObject({ code: 'foreign-record' });
+    });
+
+    test('refuses a record that Ruimte on another machine made for the same tunnel, and leaves it alone', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const theirs = f.cloudflare.record(f.bmnw, {
+            name: 'app.bmnw.nl',
+            type: 'CNAME',
+            content: `${ourTunnel(f).id}.cfargotunnel.com`,
+            comment: 'Managed by Ruimte · 0b1c',
+            proxied: true
+        });
+        const refused = await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'app', port: 3000 }).catch((e: unknown) => e);
+
+        expect(refused).toMatchObject({ code: 'other-machine', message: 'app.bmnw.nl belongs to Ruimte on another computer. Pick another name.' });
+        expect(f.cloudflare.records).toEqual([theirs]);
+        expect(ourTunnel(f).ingress).toEqual([{ service: 'http_status:404' }]);
     });
 
     test('updates a record it made earlier instead of making a second one', async () => {

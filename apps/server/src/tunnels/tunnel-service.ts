@@ -15,12 +15,22 @@ import {
 import type { CloudflareTokenStore } from './cloudflare-token-store.ts';
 import type { CloudflaredInstaller } from './cloudflared-installer.ts';
 import type { CloudflaredProcess, CloudflaredRunner } from './cloudflared-runner.ts';
-import { CATCH_ALL, deniedPortReason, hostnameInZone, ingressRules, isCatchAll, normalizedOrigin, TunnelConfigError, tunnelNameOf } from './tunnel-config.ts';
+import {
+    CATCH_ALL,
+    deniedPortReason,
+    hostnameInZone,
+    ingressRules,
+    isCatchAll,
+    machineMarkOf,
+    normalizedOrigin,
+    TunnelConfigError,
+    tunnelNameOf
+} from './tunnel-config.ts';
 import { EMPTY_TUNNELS, type StoredRow, type StoredTunnels } from './tunnel-store.ts';
 
 const MAX_MESSAGE = 500;
 const STOP_WAIT_MS = 10_000;
-const RECORD_COMMENT = 'Managed by Ruimte';
+const RECORD_MARK = 'Managed by Ruimte';
 const TUNNEL_TARGET = 'cfargotunnel.com';
 const TOKEN_MASK = '[token]';
 const MAX_OTHER_RULES = 200;
@@ -818,9 +828,14 @@ export class TunnelService {
         return `${tunnelId}.${TUNNEL_TARGET}`;
     }
 
-    /* A record is Ruimte's only when it is a CNAME to this tunnel that carries Ruimte's comment. */
+    /* Two machines may share a tunnel, so the comment names the machine that made the record. */
+    private recordComment(): string {
+        return `${RECORD_MARK} · ${machineMarkOf(this.ports.machineId())}`;
+    }
+
+    /* A record is Ruimte's only when it is a CNAME to this tunnel that carries the comment of this machine. */
     private isOurs(record: CloudflareRecord, target: string): boolean {
-        return record.type === 'CNAME' && record.content === target && (record.comment ?? '').startsWith(RECORD_COMMENT);
+        return record.type === 'CNAME' && record.content === target && record.comment === this.recordComment();
     }
 
     /* Creates the proxied CNAME to the tunnel, or updates the one Ruimte made earlier. Any other record under the name stops it. */
@@ -829,6 +844,10 @@ export class TunnelService {
         const existing = await api.recordsNamed(zone.id, hostname);
         const foreign = existing.find((record) => !this.isOurs(record, target));
 
+        if (foreign !== undefined && (foreign.comment ?? '').startsWith(RECORD_MARK)) {
+            throw new TunnelConfigError('other-machine', `${hostname} belongs to Ruimte on another computer. Pick another name.`);
+        }
+
         if (foreign !== undefined) {
             throw new TunnelConfigError(
                 'foreign-record',
@@ -836,7 +855,7 @@ export class TunnelService {
             );
         }
 
-        const input = { name: hostname, content: target, comment: RECORD_COMMENT };
+        const input = { name: hostname, content: target, comment: this.recordComment() };
         const ours = existing[0];
 
         return ours === undefined ? api.createRecord(zone.id, input) : api.updateRecord(zone.id, ours.id, input);

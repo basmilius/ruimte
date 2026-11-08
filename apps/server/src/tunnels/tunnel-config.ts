@@ -62,9 +62,13 @@ export function tunnelNameOf(machine: string, machineId: string): string {
         .replace(/^-+|-+$/g, '')
         .slice(0, MACHINE_NAME_MAX)
         .replace(/-+$/g, '');
-    const suffix = createHash('sha256').update(machineId).digest('hex').slice(0, MACHINE_SUFFIX_LENGTH);
 
-    return `ruimte-${slug === '' ? 'machine' : slug}-${suffix}`;
+    return `ruimte-${slug === '' ? 'machine' : slug}-${machineMarkOf(machineId)}`;
+}
+
+/* A short piece of the machine's id, which tells this machine's tunnel and DNS records from another machine's. */
+export function machineMarkOf(machineId: string): string {
+    return createHash('sha256').update(machineId).digest('hex').slice(0, MACHINE_SUFFIX_LENGTH);
 }
 
 /*
