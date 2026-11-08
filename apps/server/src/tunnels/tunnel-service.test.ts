@@ -838,6 +838,21 @@ describe('an existing tunnel', () => {
         expect(picked.ingress).toEqual(OFFICE_INGRESS);
     });
 
+    test('keeps the tunnel of a first press when a second one asks to use another, and makes or links nothing more', async () => {
+        const f = await fixture();
+        const picked = office(f);
+
+        await f.service.setToken(FAKE_API_TOKEN);
+        await f.service.setup();
+        await f.service.link(undefined, picked.id);
+        await f.service.setup();
+        await f.service.idle();
+
+        expect(await f.state()).toMatchObject({ stage: 'running', message: null, tunnel: { name: 'ruimte-bas-macbook-f7a7', created: true } });
+        expect(f.cloudflare.called('POST', '/accounts/')).toHaveLength(1);
+        expect(picked.ingress).toEqual(OFFICE_INGRESS);
+    });
+
     test('refuses a tunnel whose settings live in a file on the computer that runs it', async () => {
         const f = await fixture();
         const legacy = f.cloudflare.tunnel('acc-1', 'legacy', [], { configSrc: 'local' });

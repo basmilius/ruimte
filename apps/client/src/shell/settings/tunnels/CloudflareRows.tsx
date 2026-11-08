@@ -182,6 +182,8 @@ function PickTunnel({ state, endpointId, change }: { state: TunnelState; endpoin
     const [chosen, setChosen] = useState(NEW_TUNNEL);
     const [failure, setFailure] = useState<string | null>(null);
     const account = picked ?? state.account?.id ?? null;
+    // A second press while the first one works would make or pick a tunnel the first one no longer needs.
+    const starting = state.stage === 'starting';
 
     useEffect(() => {
         setTunnels([]);
@@ -218,6 +220,7 @@ function PickTunnel({ state, endpointId, change }: { state: TunnelState; endpoin
                             label={t('tunnels.tunnel.account')}
                             variant="outlined"
                             value={account ?? ''}
+                            disabled={starting}
                             placeholder={t('tunnels.tunnel.pickAccount')}
                             items={state.accounts.map((entry) => ({ value: entry.id, label: entry.name }))}
                             onValueChange={setPicked}
@@ -227,7 +230,7 @@ function PickTunnel({ state, endpointId, change }: { state: TunnelState; endpoin
                         label={t('tunnels.tunnel.pick')}
                         variant="outlined"
                         value={chosen}
-                        disabled={account === null}
+                        disabled={account === null || starting}
                         items={[
                             { value: NEW_TUNNEL, label: t('tunnels.tunnel.new') },
                             ...tunnels.map((tunnel) => ({
@@ -238,7 +241,7 @@ function PickTunnel({ state, endpointId, change }: { state: TunnelState; endpoin
                         ]}
                         onValueChange={setChosen}
                     />
-                    <Button variant="primary" disabled={account === null} onClick={use}>
+                    <Button variant="primary" disabled={account === null || starting} onClick={use}>
                         {t('tunnels.tunnel.use')}
                     </Button>
                 </>

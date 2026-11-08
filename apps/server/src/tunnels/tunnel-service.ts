@@ -400,6 +400,11 @@ export class TunnelService {
 
         this.binary = await this.ports.installer.locate();
         this.start('starting', async () => {
+            // A second press queued behind the first finds the tunnel the first one made or picked.
+            if (this.stored.tunnel !== null) {
+                return;
+            }
+
             const api = this.api();
             const name = tunnelNameOf(this.ports.machineName(), this.ports.machineId());
 
@@ -443,6 +448,10 @@ export class TunnelService {
 
         this.binary = await this.ports.installer.locate();
         this.start('starting', async () => {
+            if (this.stored.tunnel !== null) {
+                return;
+            }
+
             const found = await this.api().tunnel(account.id, tunnelId);
 
             if (found === null) {

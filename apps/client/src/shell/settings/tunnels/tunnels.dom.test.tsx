@@ -211,6 +211,16 @@ describe('the Cloudflare card', () => {
         expect(machine.requests('tunnel.setup')).toEqual([{ account: 'acc-1' }]);
     });
 
+    test('takes no second press of Use while the first one makes the tunnel', async () => {
+        state = stateOf({ stage: 'no-tunnel', tunnel: null });
+        machine.answer('tunnel.setup', () => (state = stateOf({ stage: 'starting', tunnel: null })));
+        await open();
+        await until(() => buttonWithText('Use') !== null);
+        await clickOn(buttonWithText('Use'));
+        await until(() => buttonWithText('Use')?.disabled === true);
+        expect(document.querySelector<HTMLButtonElement>('[aria-label="Which tunnel"]')?.disabled).toBe(true);
+    });
+
     test('offers the usable tunnels of the account, and uses the one picked', async () => {
         state = stateOf({ stage: 'no-tunnel', tunnel: null });
         machine.answer('tunnel.list', () => ({
