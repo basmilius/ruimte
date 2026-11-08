@@ -1047,7 +1047,7 @@ export const EVENT_SCHEMAS = {
     'activity.changed': NodeActivityListSchema,
     // The links of other machines to projects here changed, so the list in settings reloads.
     'peer.changed': EmptySchema,
-    // Tunnels or the external MCP changed, and a client waits for a person's consent; every client reloads what it shows.
+    // Tunnels or the external MCP changed, or a credential was used after a minute of quiet; every client reloads what it shows.
     'tunnel.changed': EmptySchema,
     'consent.changed': EmptySchema,
     // Sent to the machine that gave the task, over its own link only.

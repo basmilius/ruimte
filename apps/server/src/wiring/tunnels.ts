@@ -53,7 +53,12 @@ export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
     const sinks = new ClientSinks();
     const changed = (): void => sinks.emit({ event: 'tunnel.changed', payload: {} });
     const consentChanged = (): void => sinks.emit({ event: 'consent.changed', payload: {} });
-    const credentials = new CredentialStore({ home: config.home, now: Date.now, random: (bytes) => randomBytes(bytes).toString('base64url') });
+    const credentials = new CredentialStore({
+        home: config.home,
+        now: Date.now,
+        random: (bytes) => randomBytes(bytes).toString('base64url'),
+        used: changed
+    });
     await credentials.load();
     const consent = new ConsentBook({
         now: Date.now,

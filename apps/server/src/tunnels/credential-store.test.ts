@@ -6,13 +6,14 @@ import { ACCESS_TOKEN_LIFETIME_MS, CredentialStore, RECENT_USE_MS } from './cred
 
 const homeOf = tempHomes('ruimte-credentials-');
 
-function store(home?: string): { credentials: CredentialStore; clock: { now: number } } {
+function store(home?: string, used?: () => void): { credentials: CredentialStore; clock: { now: number } } {
     const clock = { now: 1_000_000 };
     let counter = 0;
     const credentials = new CredentialStore({
         home,
         now: () => clock.now,
-        random: (bytes) => `${'x'.repeat(bytes)}${(counter += 1)}`
+        random: (bytes) => `${'x'.repeat(bytes)}${(counter += 1)}`,
+        used
     });
 
     return { credentials, clock };
@@ -115,6 +116,34 @@ describe('a bearer', () => {
         clock.now += RECENT_USE_MS + 1;
 
         expect(credentials.recentlyUsed()).toBe(0);
+    });
+
+    test('says so on a first use and after a minute without one, not on every request', async () => {
+        const uses: number[] = [];
+        const { credentials, clock } = store(undefined, () => uses.push(clock.now));
+        const { secret } = await credentials.createBearer({ label: 'Bot' });
+
+        credentials.authenticate(secret, 'loopback');
+        clock.now += 30_000;
+        credentials.authenticate(secret, 'loopback');
+        credentials.authenticate(secret, 'loopback');
+
+        expect(uses).toEqual([1_000_000]);
+
+        clock.now += 60_000;
+        credentials.authenticate(secret, 'loopback');
+
+        expect(uses).toEqual([1_000_000, 1_090_000]);
+    });
+
+    test('says nothing about a refused token', async () => {
+        const uses: number[] = [];
+        const { credentials, clock } = store(undefined, () => uses.push(clock.now));
+
+        await credentials.createBearer({ label: 'Bot' });
+        credentials.authenticate('rmb_nope', 'loopback');
+
+        expect(uses).toEqual([]);
     });
 
     test('changes its grant only through an update from the app, and a narrower scope counts at once', async () => {

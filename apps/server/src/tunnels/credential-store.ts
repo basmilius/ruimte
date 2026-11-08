@@ -18,6 +18,8 @@ const RETIRED_REFRESH_TOKENS = 8;
 // What the settings read as a client "connected lately".
 export const RECENT_USE_MS = 10 * 60_000;
 const LAST_USED_WRITE_MS = 60_000;
+// The settings show "used N minutes ago", so a use is news only after this long without one.
+const USE_NEWS_MS = 60_000;
 
 /* The hash of a token, which is all the daemon keeps of one. */
 export function hashToken(token: string): string {
@@ -55,6 +57,9 @@ export interface CredentialStoreOptions {
     now(): number;
     /* Random bytes, as base64url text. */
     random(bytes: number): string;
+
+    /* Called when a credential is used for the first time, or again after a minute without use, so settings can refresh what they show. */
+    used?(): void;
 }
 
 export type CredentialRefusal = 'unknown' | 'expired' | 'wrong-door';
@@ -329,8 +334,13 @@ export class CredentialStore {
 
     private touch(record: StoredCredential): void {
         const now = this.options.now();
+        const previous = record.lastUsedAt;
 
         record.lastUsedAt = now;
+
+        if (previous === null || now - previous >= USE_NEWS_MS) {
+            this.options.used?.();
+        }
 
         if (now - (this.persistedUse.get(record.id) ?? 0) >= LAST_USED_WRITE_MS) {
             this.persistedUse.set(record.id, now);
