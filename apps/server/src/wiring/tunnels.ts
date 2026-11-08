@@ -1,11 +1,11 @@
 import { randomBytes, randomInt } from 'node:crypto';
-import { lookup } from 'node:dns/promises';
 import { callerFolders } from '../agents/caller-folders.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import type { ServerConfig } from '../config.ts';
 import { shotFolders } from '../shots.ts';
 import type { CanvasHost } from '../tools/host.ts';
 import { approvalTools } from '../tunnels/approvals.ts';
+import { realMetadataPorts } from '../tunnels/client-metadata-real.ts';
 import { fetchClientMetadata } from '../tunnels/client-metadata.ts';
 import { CloudflaredInstaller } from '../tunnels/cloudflared-installer.ts';
 import { realInstallerPorts } from '../tunnels/cloudflared-real.ts';
@@ -74,11 +74,7 @@ export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
             shotFolders: shotFolders(config.home),
             extraTools: approvalTools(approvalPorts({ stores, agents, projects, launches, routines }))
         },
-        fetchMetadata: (clientId) =>
-            fetchClientMetadata(clientId, {
-                resolve: async (hostname) => (await lookup(hostname, { all: true })).map((entry) => entry.address),
-                fetch: (url, init) => fetch(url, init)
-            }),
+        fetchMetadata: (clientId) => fetchClientMetadata(clientId, realMetadataPorts()),
         now: Date.now,
         port: () => listener.port
     });

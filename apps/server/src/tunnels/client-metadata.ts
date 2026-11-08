@@ -4,7 +4,14 @@ import { z } from 'zod';
 export const METADATA_TIMEOUT_MS = 5_000;
 export const METADATA_MAX_BYTES = 64 * 1024;
 
-export class ClientMetadataError extends Error {}
+/* What every failure to identify a client says, so the answer tells a caller nothing about this machine's network. */
+export const CLIENT_NOT_IDENTIFIED = 'The client could not be identified';
+
+export class ClientMetadataError extends Error {
+    constructor() {
+        super(CLIENT_NOT_IDENTIFIED);
+    }
+}
 
 const MetadataSchema = z.object({
     client_id: z.string(),
@@ -18,17 +25,43 @@ export interface ClientMetadata {
     redirectUris: string[];
 }
 
+/* The eight 16-bit groups of an IPv6 address, an embedded IPv4 tail included; null for a text that is none. */
+function hextetsOf(address: string): number[] | null {
+    let text = address;
+    const tail = /(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(text);
+
+    if (tail !== null) {
+        const [, a, b, c, d] = tail.map(Number) as [number, number, number, number, number];
+
+        text = `${text.slice(0, tail.index)}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+    }
+
+    const halves = text.split('::');
+
+    if (halves.length > 2) {
+        return null;
+    }
+
+    const head = halves[0] === '' ? [] : halves[0]!.split(':');
+    const rest = halves.length === 2 ? (halves[1] === '' ? [] : halves[1]!.split(':')) : [];
+    const missing = 8 - head.length - rest.length;
+
+    if ((halves.length === 1 && missing !== 0) || missing < 0 || (halves.length === 2 && missing < 1)) {
+        return null;
+    }
+
+    const groups = [...head, ...Array<string>(halves.length === 2 ? missing : 0).fill('0'), ...rest].map((group) => Number.parseInt(group, 16));
+
+    return groups.length === 8 && groups.every((group) => Number.isInteger(group) && group >= 0 && group <= 0xffff) ? groups : null;
+}
+
 /*
  * Whether an address leads somewhere only this machine or its network can go: loopback, private, link-local, carrier-grade NAT,
- * unique-local, the unspecified address and the ones an IPv4 address hides in. A metadata document is never fetched from one.
+ * unique-local, the unspecified address, the IPv4-compatible range `::/96` and the ones an IPv4 address hides in. A metadata
+ * document is never fetched from one.
  */
 export function isBlockedAddress(address: string): boolean {
     const plain = address.replace(/^\[|\]$/g, '').toLowerCase();
-    const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(plain);
-
-    if (mapped !== null) {
-        return isBlockedAddress(mapped[1]!);
-    }
 
     if (isIP(plain) === 4) {
         const [first = 0, second = 0] = plain.split('.').map(Number);
@@ -47,41 +80,61 @@ export function isBlockedAddress(address: string): boolean {
     }
 
     if (isIP(plain) === 6) {
+        const groups = hextetsOf(plain);
+
+        if (groups === null) {
+            return true;
+        }
+
+        const [first = 0, second = 0] = groups;
+
+        // ::/96 holds the unspecified address, the loopback and every IPv4-compatible address, whichever way it is written.
         return (
-            plain === '::' || plain === '::1' || /^f[cd]/.test(plain) || /^fe[89ab]/.test(plain) || plain.startsWith('64:ff9b:') || plain.startsWith('::ffff:')
+            groups.slice(0, 6).every((group) => group === 0) ||
+            // An IPv4-mapped address, a NAT64 one and the 6to4 range lead wherever their IPv4 part does, so none is fetched.
+            (groups.slice(0, 5).every((group) => group === 0) && groups[5] === 0xffff) ||
+            (first === 0x64 && second === 0xff9b) ||
+            first === 0x2002 ||
+            // Unique-local fc00::/7 and link-local fe80::/10.
+            (first & 0xfe00) === 0xfc00 ||
+            (first & 0xffc0) === 0xfe80
         );
     }
 
     return true;
 }
 
+/* What a get hands back: the status, the content type and the body in pieces, so the reader can stop at the size cap. */
+export interface MetadataResponse {
+    status: number;
+    contentType: string | null;
+    body: AsyncIterable<Uint8Array>;
+}
+
 export interface MetadataPorts {
     /* Every address the name leads to. */
     resolve(hostname: string): Promise<string[]>;
-    fetch(url: string, init: RequestInit): Promise<Response>;
+    /*
+     * Reads the document from exactly this address, and from no other: the connection is made to `address` while the name stays the
+     * name of the TLS certificate and of the `Host` header. A second lookup here would let a name answer once with a public address
+     * and once with a private one.
+     */
+    get(url: URL, address: string, signal: AbortSignal): Promise<MetadataResponse>;
 }
 
-async function boundedText(response: Response): Promise<string> {
-    const reader = response.body?.getReader();
-
-    if (reader === undefined) {
-        return '';
-    }
-
+async function boundedText(body: AsyncIterable<Uint8Array>): Promise<string> {
     const decoder = new TextDecoder();
     let text = '';
     let total = 0;
 
-    for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
-        total += chunk.value.byteLength;
+    for await (const chunk of body) {
+        total += chunk.byteLength;
 
         if (total > METADATA_MAX_BYTES) {
-            void reader.cancel();
-
-            throw new ClientMetadataError('The client metadata document is larger than 64 KiB');
+            throw new ClientMetadataError();
         }
 
-        text += decoder.decode(chunk.value, { stream: true });
+        text += decoder.decode(chunk, { stream: true });
     }
 
     return text + decoder.decode();
@@ -89,55 +142,43 @@ async function boundedText(response: Response): Promise<string> {
 
 /*
  * Fetches the Client ID Metadata Document a client names itself with. The address must be an https URL on a public host: no
- * credentials in it, no IP literal in a private range, and no name that leads to one. A redirect is never followed, the answer
- * has a size cap and a short timeout, and the document has to name that same URL as its `client_id`.
+ * credentials in it, no IP literal in a private range, and no name that leads to one. The name is resolved once, every answer is
+ * checked, and the document is read from the first address that was checked. A redirect is never followed, the answer has a size cap
+ * and a short timeout, and the document has to name that same URL as its `client_id`. Whatever goes wrong, the error is the same.
  */
 export async function fetchClientMetadata(clientId: string, ports: MetadataPorts): Promise<ClientMetadata> {
-    let url: URL;
-
     try {
-        url = new URL(clientId);
+        return await read(clientId, ports);
     } catch {
-        throw new ClientMetadataError('client_id is no address');
+        throw new ClientMetadataError();
     }
+}
+
+async function read(clientId: string, ports: MetadataPorts): Promise<ClientMetadata> {
+    const url = new URL(clientId);
 
     if (url.protocol !== 'https:' || url.username !== '' || url.password !== '' || url.hash !== '' || url.pathname === '/') {
-        throw new ClientMetadataError('client_id has to be an https address with a path, and no credentials or fragment');
+        throw new ClientMetadataError();
     }
 
     const hostname = url.hostname.replace(/^\[|\]$/g, '');
-    const addresses = isIP(hostname) === 0 ? await ports.resolve(hostname).catch(() => []) : [hostname];
+    const addresses = isIP(hostname) === 0 ? await ports.resolve(hostname) : [hostname];
+    const address = addresses[0];
 
-    if (addresses.length === 0 || addresses.some(isBlockedAddress)) {
-        throw new ClientMetadataError('client_id leads to an address that is not public');
+    if (address === undefined || addresses.some(isBlockedAddress)) {
+        throw new ClientMetadataError();
     }
 
-    let response: Response;
+    const response = await ports.get(url, address, AbortSignal.timeout(METADATA_TIMEOUT_MS));
 
-    try {
-        response = await ports.fetch(url.href, {
-            redirect: 'manual',
-            signal: AbortSignal.timeout(METADATA_TIMEOUT_MS),
-            headers: { accept: 'application/json' }
-        });
-    } catch {
-        throw new ClientMetadataError('The client metadata document could not be fetched');
+    if (response.status < 200 || response.status > 299 || !(response.contentType ?? '').includes('json')) {
+        throw new ClientMetadataError();
     }
 
-    if (!response.ok || !(response.headers.get('content-type') ?? '').includes('json')) {
-        throw new ClientMetadataError('The client metadata document is not JSON');
-    }
-
-    let parsed: z.infer<typeof MetadataSchema>;
-
-    try {
-        parsed = MetadataSchema.parse(JSON.parse(await boundedText(response)));
-    } catch (e) {
-        throw e instanceof ClientMetadataError ? e : new ClientMetadataError('The client metadata document does not say who the client is');
-    }
+    const parsed = MetadataSchema.parse(JSON.parse(await boundedText(response.body)));
 
     if (parsed.client_id !== clientId) {
-        throw new ClientMetadataError('The client metadata document names another client_id');
+        throw new ClientMetadataError();
     }
 
     return { clientId, clientName: parsed.client_name, redirectUris: parsed.redirect_uris };

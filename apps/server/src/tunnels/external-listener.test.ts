@@ -35,7 +35,7 @@ function setup(): {
         mcp: { host },
         fetchMetadata: async (clientId) => {
             if (clientId !== CLIENT_ID) {
-                throw new ClientMetadataError('The client metadata document could not be fetched');
+                throw new ClientMetadataError();
             }
 
             return { clientId, clientName: 'Hosted Claude', redirectUris: ['https://client.example/callback'] };
@@ -320,7 +320,10 @@ describe('OAuth with consent in Ruimte', () => {
         const { handle } = setup();
 
         expect((await handle(authorizeUrl(undefined, undefined, 'plain'))).status).toBe(400);
-        expect((await handle(authorizeUrl(undefined, 'https://unknown.example/meta.json'))).status).toBe(400);
+        const unknown = await handle(authorizeUrl(undefined, 'https://unknown.example/meta.json'));
+
+        expect(unknown.status).toBe(400);
+        expect(await unknown.json()).toMatchObject({ error: 'invalid_client', error_description: 'The client could not be identified' });
     });
 
     test('lets a request time out when nobody approves it', async () => {
