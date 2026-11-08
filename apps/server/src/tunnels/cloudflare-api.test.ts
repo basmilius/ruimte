@@ -27,6 +27,23 @@ describe('a call', () => {
         expect(seen[0]!.init.redirect).toBe('error');
     });
 
+    test('takes a token an account owns, which the check under /user refuses, once it lists zones', async () => {
+        const zonesWork = { value: true };
+        const send: CloudflareFetch = async (url) => {
+            if (new URL(url).pathname.endsWith('/user/tokens/verify') || !zonesWork.value) {
+                return Response.json({ success: false, errors: [{ message: 'Invalid API Token' }] }, { status: 401 });
+            }
+
+            return Response.json({ success: true, result: [{ id: 'z', name: 'z.nl', account: { id: 'a', name: 'Bas' } }] });
+        };
+
+        await new CloudflareApi(TOKEN, send).verifyToken();
+
+        zonesWork.value = false;
+
+        await expect(new CloudflareApi(TOKEN, send).verifyToken()).rejects.toMatchObject({ code: 'token-refused', message: expect.stringContaining('Checking the API token') });
+    });
+
     test('reads every page of the zones', async () => {
         const pages: string[] = [];
         const send: CloudflareFetch = async (url) => {
@@ -84,7 +101,7 @@ describe('a call', () => {
     test('refuses a token Cloudflare calls inactive', async () => {
         const { send } = answering(200, { success: true, result: { id: 't', status: 'disabled' } });
 
-        expect(new CloudflareApi(TOKEN, send).verifyToken()).rejects.toMatchObject({ code: 'token-refused' });
+        await expect(new CloudflareApi(TOKEN, send).verifyToken()).rejects.toMatchObject({ code: 'token-refused' });
     });
 
     test('treats a record that is gone as deleted', async () => {

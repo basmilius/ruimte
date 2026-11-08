@@ -74,7 +74,23 @@ export class CloudflareApi {
 
     /* The token is active; Cloudflare's own check, which needs no permission. */
     async verifyToken(): Promise<void> {
-        const status = TokenStatusSchema.parse(await this.call('GET', '/user/tokens/verify', 'Checking the API token'));
+        const what = 'Checking the API token';
+        let status: z.infer<typeof TokenStatusSchema>;
+
+        try {
+            status = TokenStatusSchema.parse(await this.call('GET', '/user/tokens/verify', what));
+        } catch (e) {
+            if (!(e instanceof CloudflareError && e.code === 'token-refused')) {
+                throw e;
+            }
+
+            // The check under /user refuses a token an account owns; such a token that lists zones works all the same.
+            await this.call('GET', '/zones?per_page=5', what).catch(() => {
+                throw e;
+            });
+
+            return;
+        }
 
         if (status.status !== 'active') {
             throw new CloudflareError('token-refused', `Cloudflare says this API token is ${status.status}. Make a new token and paste it here.`);
