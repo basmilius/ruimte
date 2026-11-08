@@ -26,7 +26,7 @@ export type WriteDomain = {
 export type WriteCases = { [Name in ActionName]?: WriteCase<Name> };
 
 /* The canvas a chat view names to operate a node on it, which only an agent gives. */
-export const operatedView: Record<string, RestrictedValue> = { viewId: { value: 'main', actors: ['person', 'agent'] } };
+export const operatedView: Record<string, RestrictedValue> = { viewId: { value: 'main', actors: ['agent'] } };
 
 export function without<Input extends object>(input: Input, field: keyof Input): Record<string, unknown> {
     const { [field]: _left, ...rest } = input as Record<PropertyKey, unknown>;

@@ -69,16 +69,16 @@ export const cases: WriteCases = {
             'no title at all': without(note, 'title')
         },
         restricted: {
-            kind: { value: 'drawing', actors: ['person', 'agent'] },
+            kind: { value: 'drawing', actors: ['agent'] },
             browserOwner: { value: 'endpoint-2', actors: ['person'] },
             account: { value: 'work', actors: ['person'] },
-            source: { value: 'sketch', actors: ['person', 'agent'] },
+            source: { value: 'sketch', actors: ['agent'] },
             cwd: { value: 'apps/client', actors: ['person', 'agent'] },
-            beside: { value: 'chat-1', actors: ['person', 'agent'] },
-            device: { value: 'sim-1', actors: ['person', 'agent'] },
+            beside: { value: 'chat-1', actors: ['agent'] },
+            device: { value: 'sim-1', actors: ['agent'] },
             resume: { value: 'session-1', actors: ['person'] },
             issue: { value: { repo: 'basmilius/ruimte', number: 58, url: 'https://github.com/basmilius/ruimte/issues/58' }, actors: ['person'] },
-            color: { value: 'teal', actors: ['person', 'agent'] },
+            color: { value: 'teal', actors: ['agent'] },
             artifact: { value: 'art-1', actors: ['person', 'agent'] },
             artifactVersion: { value: 'ver-1', actors: ['person', 'agent'] },
             routine: { value: 'morning-summary', actors: ['person', 'agent'] }
@@ -132,8 +132,8 @@ export const cases: WriteCases = {
         input: { viewId: 'board', nodeIds: ['note-1', 'chat-1'] },
         refused: { 'nothing to group': { viewId: 'board', nodeIds: [] } },
         restricted: {
-            label: { value: 'Research', actors: ['person', 'agent'] },
-            color: { value: 'teal', actors: ['person', 'agent'] }
+            label: { value: 'Research', actors: ['agent'] },
+            color: { value: 'teal', actors: ['agent'] }
         }
     },
     'group.arrange': {
@@ -195,8 +195,8 @@ export const cases: WriteCases = {
         input: { viewId: 'board', from: null, to: ['chat-2'] },
         refused: { 'nowhere to run': { viewId: 'board', from: null, to: [] }, 'an empty start': { viewId: 'board', from: '', to: ['chat-2'] } },
         restricted: {
-            label: { value: 'Reviews', actors: ['person', 'agent'] },
-            role: { value: 'reviewer', actors: ['person', 'agent'] }
+            label: { value: 'Reviews', actors: ['agent'] },
+            role: { value: 'reviewer', actors: ['agent'] }
         }
     },
     'link.delete': {

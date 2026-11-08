@@ -6,7 +6,6 @@ import {
     nodeId,
     givenName,
     agentField,
-    daemonField,
     PERSON_VOICE_AND_AGENT,
     AGENT,
     PERSON_AND_AGENT,
@@ -82,26 +81,26 @@ export const AGENT_ACTIONS = {
             terminal: z.boolean().describe('Makes a terminal node instead of a chat node'),
             prompt: z.string().nullish().describe('What the agent starts working on'),
             promptFile: agentField(z.string().min(1)).describe('The same prompt out of a file, for one with exact bytes'),
-            cwd: daemonField(z.string().min(1)).describe('The directory the agent starts in'),
-            reads: daemonField(z.array(nodeId)).describe('Nodes the new agent can read from its first turn: a line is drawn from each of them into it'),
+            cwd: agentField(z.string().min(1)).describe('The directory the agent starts in'),
+            reads: agentField(z.array(nodeId)).describe('Nodes the new agent can read from its first turn: a line is drawn from each of them into it'),
             viewId: viewId.nullish().describe('The canvas to add to; null uses your canvas or keeps the agent hidden from a chat view'),
             beside: nodeId.nullish().describe('Puts the node directly right of this node, top edges level'),
-            group: daemonField(nodeId).describe('Puts the node inside this group node of that canvas'),
+            group: agentField(nodeId).describe('Puts the node inside this group node of that canvas'),
             title: givenName.nullish().describe('The title; without one the node is called after the CLI, and the session may rename it'),
-            task: daemonField(givenName).describe('Gives the new agent a task with this title, which the prompt describes and whose result wakes you'),
+            task: agentField(givenName).describe('Gives the new agent a task with this title, which the prompt describes and whose result wakes you'),
             model: z.string().trim().min(1).nullish().describe("The model id for a chat agent, with that model's default options"),
             mode: RuntimeModeSchema.nullish().describe(
                 'The permission mode the agent runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own'
             ),
-            worktree: daemonField(z.boolean()).describe('Starts the agent in a git worktree of its own on a new branch'),
-            branch: daemonField(z.string().min(1)).describe('The branch of that worktree instead of one named after the task or the title'),
+            worktree: agentField(z.boolean()).describe('Starts the agent in a git worktree of its own on a new branch'),
+            branch: agentField(z.string().min(1)).describe('The branch of that worktree instead of one named after the task or the title'),
             requestId: z
                 .string()
                 .regex(/^[A-Za-z0-9._:-]{1,128}$/)
                 .nullish()
                 .describe('An id of your choosing; a retry with the same id and the same input answers with what the first call made'),
-            base: daemonField(z.string().min(1)).describe('With a worktree: the branch, tag or commit a new branch starts at instead of HEAD'),
-            machine: daemonField(z.string().min(1)).describe(
+            base: agentField(z.string().min(1)).describe('With a worktree: the branch, tag or commit a new branch starts at instead of HEAD'),
+            machine: agentField(z.string().min(1)).describe(
                 'Runs the agent on another machine this project is linked to, named by its name or id; needs a task, and a worktree there is made from your checkout'
             ),
             effort: z
@@ -110,7 +109,7 @@ export const AGENT_ACTIONS = {
                 .min(1)
                 .nullish()
                 .describe("The reasoning effort for a chat agent, one the model offers; null keeps the person's last pick when the model offers it"),
-            account: daemonField(z.string().min(1)).describe(
+            account: agentField(z.string().min(1)).describe(
                 "An account a person named in the calling chat as @account:<cli>/<id>, for this CLI; null inherits the caller's"
             )
         }),

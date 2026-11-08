@@ -29,7 +29,6 @@ import {
     givenName,
     forActors,
     agentField,
-    daemonField,
     ARRANGE_LAYOUTS,
     PERSON_AND_VOICE,
     PERSON_VOICE_AND_AGENT,
@@ -647,8 +646,8 @@ export const SESSION_ACTIONS = {
             viewId,
             from: nodeId.nullable().describe('Where the line starts; without it, you'),
             to: z.array(nodeId).min(1).describe('The nodes the line runs into'),
-            label: daemonField(givenName).describe('What the line is called on the canvas'),
-            role: daemonField(z.string().min(1)).describe('What the line is for')
+            label: agentField(givenName).describe('What the line is called on the canvas'),
+            role: agentField(z.string().min(1)).describe('What the line is for')
         }),
         output: z.object({
             viewId,

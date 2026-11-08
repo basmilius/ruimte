@@ -25,7 +25,6 @@ const start: ActionInput<'agent.start'> = {
     account: null
 };
 const AGENT_ONLY = ['agent'] as const;
-const DAEMON_FIELD = ['person', 'agent'] as const;
 const role = { title: 'Tester', prompt: 'Write the tests', provider: 'codex', model: null, terminal: false, effort: 'medium' } as const;
 const team: ActionInput<'team.start'> = { label: 'Release', roles: [role], cwd: null, reads: null, viewId: null, mode: null, worktree: false, task: true };
 
@@ -81,15 +80,15 @@ export const cases: WriteCases = {
         },
         restricted: {
             promptFile: { value: 'prompts/review.md', actors: AGENT_ONLY },
-            cwd: { value: 'packages/actions', actors: DAEMON_FIELD },
-            reads: { value: ['note-1'], actors: DAEMON_FIELD },
-            group: { value: 'group-1', actors: DAEMON_FIELD },
-            task: { value: 'Review', actors: DAEMON_FIELD },
-            worktree: { value: true, actors: DAEMON_FIELD },
-            branch: { value: 'review', actors: DAEMON_FIELD },
-            base: { value: 'main', actors: DAEMON_FIELD },
-            machine: { value: 'machine-b', actors: DAEMON_FIELD },
-            account: { value: 'codex_work', actors: DAEMON_FIELD }
+            cwd: { value: 'packages/actions', actors: AGENT_ONLY },
+            reads: { value: ['note-1'], actors: AGENT_ONLY },
+            group: { value: 'group-1', actors: AGENT_ONLY },
+            task: { value: 'Review', actors: AGENT_ONLY },
+            worktree: { value: true, actors: AGENT_ONLY },
+            branch: { value: 'review', actors: AGENT_ONLY },
+            base: { value: 'main', actors: AGENT_ONLY },
+            machine: { value: 'machine-b', actors: AGENT_ONLY },
+            account: { value: 'codex_work', actors: AGENT_ONLY }
         }
     },
     'team.start': {

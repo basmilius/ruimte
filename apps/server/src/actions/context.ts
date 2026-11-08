@@ -172,7 +172,7 @@ export function externalActionCall(
     context.external = external;
 
     return {
-        actor: { kind: 'person', id: external.id },
+        actor: { kind: 'person', id: external.id, via: 'daemon' },
         context,
         dryRun,
         ...(expectedRevision === undefined ? {} : { expectedRevision })
