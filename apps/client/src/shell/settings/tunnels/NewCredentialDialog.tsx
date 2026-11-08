@@ -62,7 +62,7 @@ export function NewCredentialDialog({
                 onCreated();
             }
         } catch (e) {
-            setFailure(messageOf(e, t('tunnels.credentials.createFailed')));
+            setFailure(messageOf(e, t('tunnels.bearer.failed')));
         } finally {
             setBusy(false);
         }
@@ -71,20 +71,20 @@ export function NewCredentialDialog({
     return (
         <Dialog.Root open={open} onOpenChange={close}>
             <Dialog.Popup size="sm" className="flex max-h-[85vh] flex-col">
-                <Dialog.Title>{t('tunnels.credentials.new.title')}</Dialog.Title>
+                <Dialog.Title>{t('tunnels.bearer.title')}</Dialog.Title>
                 {secret === null ? (
                     <>
-                        <Dialog.Description className="mt-1 break-words">{t('tunnels.credentials.new.description')}</Dialog.Description>
+                        <Dialog.Description className="mt-1 break-words">{t('tunnels.bearer.description')}</Dialog.Description>
                         <ScrollArea className="-mx-5 min-h-0" viewportClassName="flex flex-col gap-3 px-5 py-3">
-                            <Field orientation="horizontal" label={t('tunnels.credentials.new.label')}>
+                            <Field orientation="horizontal" label={t('tunnels.bearer.label')}>
                                 <Input autoFocus value={label} maxLength={120} onChange={(e) => setLabel(e.target.value)} />
                             </Field>
                             <GrantFields endpointId={endpointId} draft={draft} onChange={setDraft} />
                             <label className="flex items-start gap-2.5">
-                                <Checkbox label={t('tunnels.credentials.new.onHostname')} checked={onHostname} onCheckedChange={setOnHostname} />
+                                <Checkbox label={t('tunnels.bearer.onHostname')} checked={onHostname} onCheckedChange={setOnHostname} />
                                 <span className="flex flex-col gap-0.5">
-                                    <span className="text-text">{t('tunnels.credentials.new.onHostname')}</span>
-                                    <span className="text-xs text-text-muted">{t('tunnels.credentials.new.onHostnameWarning')}</span>
+                                    <span className="text-text">{t('tunnels.bearer.onHostname')}</span>
+                                    <span className="text-xs text-text-muted">{t('tunnels.bearer.onHostnameWarning')}</span>
                                 </span>
                             </label>
                             {failure !== null && <FormError>{failure}</FormError>}
@@ -92,23 +92,23 @@ export function NewCredentialDialog({
                         <Dialog.Footer>
                             <Button onClick={() => close(false)}>{t('common:action.cancel')}</Button>
                             <Button variant="primary" disabled={busy || label.trim() === ''} onClick={() => void create()}>
-                                {t('tunnels.credentials.new.action')}
+                                {t('tunnels.bearer.action')}
                             </Button>
                         </Dialog.Footer>
                     </>
                 ) : (
                     <>
-                        <Dialog.Description className="mt-1 break-words">{t('tunnels.credentials.new.once')}</Dialog.Description>
+                        <Dialog.Description className="mt-1 break-words">{t('tunnels.bearer.once')}</Dialog.Description>
                         <div className="flex flex-col gap-2 py-3">
-                            <code aria-label={t('tunnels.credentials.new.secret')} className="rounded-md bg-surface-hover p-2 text-xs break-all select-all">
+                            <code aria-label={t('tunnels.bearer.secret')} className="rounded-md bg-surface-hover p-2 text-xs break-all select-all">
                                 {secret}
                             </code>
                             {port !== null && (
-                                <p className="text-xs text-text-muted">{t('tunnels.credentials.new.where', { address: `http://127.0.0.1:${port}/mcp` })}</p>
+                                <p className="text-xs text-text-muted">{t('tunnels.bearer.where', { address: `http://127.0.0.1:${port}/mcp` })}</p>
                             )}
                         </div>
                         <Dialog.Footer>
-                            <Button onClick={() => void navigator.clipboard.writeText(secret)}>{t('tunnels.credentials.new.copy')}</Button>
+                            <Button onClick={() => void navigator.clipboard.writeText(secret)}>{t('common:action.copy')}</Button>
                             <Button variant="primary" onClick={() => close(false)}>
                                 {t('common:action.close')}
                             </Button>

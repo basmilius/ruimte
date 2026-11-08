@@ -6,6 +6,10 @@ import { transportFor } from '@/transport';
 import { useMachineAnswers } from '@/transport/features';
 import { useEndpointConnection } from '@/transport/status';
 
+export type TunnelChangeType = Extract<RequestType, `tunnel.${string}`>;
+
+export type TunnelChange = (type: TunnelChangeType, payload?: object) => Promise<void>;
+
 /*
  * The tunnels of one machine and the credentials of the clients elsewhere, read again whenever the machine says they
  * moved. Each change is a request that answers with the state it left, so the screen never waits for the event.
@@ -51,23 +55,27 @@ export function useTunnels(endpointId: string) {
         // oxlint-disable-next-line react-hooks/exhaustive-deps
     }, [status, answers, endpointId]);
 
-    /* A request that answers with the new state. A refusal shows as the sentence the machine gave. */
-    const change = async (type: Extract<RequestType, `tunnel.${string}`>, payload: object = {}): Promise<void> => {
+    /* A request that answers with the new state, or the sentence the machine refused it with, for a dialog to show itself. */
+    const attempt = async (type: TunnelChangeType, payload: object = {}): Promise<string | null> => {
         const transport = transportFor(endpointId);
 
         if (!transport) {
-            return;
+            return null;
         }
 
         try {
-            const next = (await transport.request(type as 'tunnel.install', payload as never)) as TunnelState;
+            setState((await transport.request(type as 'tunnel.install', payload as never)) as TunnelState);
 
-            setState(next);
-            setFailure(null);
+            return null;
         } catch (e) {
-            setFailure(messageOf(e, t('tunnels.changeFailed')));
+            return messageOf(e, t('tunnels.changeFailed'));
         }
     };
 
-    return { answers, open: status === 'open', state, credentials, failure, setFailure, load, change };
+    /* A request whose refusal shows under the section. */
+    const change = async (type: TunnelChangeType, payload: object = {}): Promise<void> => {
+        setFailure(await attempt(type, payload));
+    };
+
+    return { answers, open: status === 'open', state, credentials, failure, load, attempt, change };
 }

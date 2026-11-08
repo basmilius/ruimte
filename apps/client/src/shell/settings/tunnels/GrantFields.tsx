@@ -1,9 +1,12 @@
 import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@adecore/agents-react/chat';
-import { Checkbox, Field, MiddleTruncate, ScrollArea, Segmented, Select } from '@adecore/ui';
+import { Checkbox, Field, MiddleTruncate, Segmented, Select, Table } from '@adecore/ui';
 import { EXTERNAL_TIERS, type ExternalTier, type RuntimeMode } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
 import type { Expiry, GrantDraft } from '@/shell/settings/tunnels/grant-draft';
 import { useProjectList } from '@/state/project-list';
+
+/* The dialogs are narrower than the smallest breakpoint, so the folder stays and truncates in the middle instead. */
+const PROJECT_COLUMNS = [{ width: 'auto' }, { width: 'minmax(0,1fr)' }, { width: 'minmax(0,1fr)' }] as const;
 
 /*
  * What a person decides for a client elsewhere: how far it reaches, which projects, the widest mode of the agents it
@@ -12,9 +15,10 @@ import { useProjectList } from '@/state/project-list';
 export function GrantFields({ endpointId, draft, onChange }: { endpointId: string; draft: GrantDraft; onChange: (next: GrantDraft) => void }) {
     const { t } = useTranslation('settings');
     const projects = useProjectList((state) => state.projects).filter((row) => row.endpointId === endpointId);
+    const picked = draft.projects;
     const set = (change: Partial<GrantDraft>): void => onChange({ ...draft, ...change });
     const toggled = (id: string, on: boolean): string[] => {
-        const kept = (draft.projects ?? []).filter((candidate) => candidate !== id);
+        const kept = (picked ?? []).filter((candidate) => candidate !== id);
 
         return on ? [...kept, id] : kept;
     };
@@ -26,48 +30,54 @@ export function GrantFields({ endpointId, draft, onChange }: { endpointId: strin
                     label={t('tunnels.grant.tier')}
                     variant="outlined"
                     value={draft.tier}
-                    items={EXTERNAL_TIERS.map((tier) => ({ value: tier, label: t(`tunnels.credentials.tier.${tier}`) }))}
+                    items={EXTERNAL_TIERS.map((tier) => ({ value: tier, label: t(`tunnels.tier.${tier}`) }))}
                     onValueChange={(tier) => set({ tier })}
                 />
             </Field>
-            <Field orientation="horizontal" label={t('tunnels.grant.projects')}>
-                <div className="flex flex-col gap-1.5">
-                    <Segmented<'all' | 'some'>
-                        value={draft.projects === null ? 'all' : 'some'}
-                        label={t('tunnels.grant.projects')}
-                        options={[
-                            { id: 'all', label: t('tunnels.grant.allProjects') },
-                            { id: 'some', label: t('tunnels.grant.someProjects') }
-                        ]}
-                        onValueChange={(next) => set({ projects: next === 'all' ? null : [] })}
-                    />
-                    {draft.projects !== null && (
-                        <ScrollArea
-                            render={<ul />}
-                            className="max-h-48 overflow-hidden rounded-md border border-border"
-                            viewportClassName="divide-y divide-border"
-                            aria-label={t('tunnels.grant.projects')}
-                        >
-                            {projects.map((row) => (
-                                <li key={row.summary.projectId}>
-                                    <label className="flex min-h-8 min-w-0 items-center gap-2.5 px-2.5 py-1.5">
-                                        <Checkbox
-                                            label={row.summary.name}
-                                            checked={draft.projects?.includes(row.summary.projectId) === true}
-                                            onCheckedChange={(on) => set({ projects: toggled(row.summary.projectId, on) })}
-                                        />
-                                        <span className="flex min-w-0 flex-col">
-                                            <span className="truncate text-sm text-text">{row.summary.name}</span>
-                                            {row.summary.scratch !== true && <MiddleTruncate className="text-xs text-text-muted" text={row.summary.folder} />}
-                                        </span>
-                                    </label>
-                                </li>
-                            ))}
-                        </ScrollArea>
-                    )}
-                </div>
+            <Field orientation="horizontal" group label={t('tunnels.grant.projects')}>
+                <Segmented<'all' | 'some'>
+                    value={draft.projects === null ? 'all' : 'some'}
+                    label={t('tunnels.grant.projects')}
+                    options={[
+                        { id: 'all', label: t('tunnels.grant.allProjects') },
+                        { id: 'some', label: t('tunnels.grant.someProjects') }
+                    ]}
+                    onValueChange={(next) => set({ projects: next === 'all' ? null : [] })}
+                />
             </Field>
-            <Field orientation="horizontal" label={t('tunnels.grant.ceiling')} hint={t('tunnels.grant.ceilingHint')}>
+            {picked !== null && (
+                <Table.Root label={t('tunnels.grant.projects')} columns={PROJECT_COLUMNS} density="compact" framed maxHeight={192}>
+                    <Table.Head>
+                        <Table.Column>
+                            <Checkbox
+                                label={t('tunnels.grant.pickAll')}
+                                checked={projects.length > 0 && picked.length === projects.length}
+                                indeterminate={picked.length > 0 && picked.length < projects.length}
+                                onCheckedChange={(on) => set({ projects: on ? projects.map((row) => row.summary.projectId) : [] })}
+                            />
+                        </Table.Column>
+                        <Table.Column>{t('tunnels.grant.project')}</Table.Column>
+                        <Table.Column>{t('tunnels.grant.folder')}</Table.Column>
+                    </Table.Head>
+                    {projects.map((row) => {
+                        const id = row.summary.projectId;
+                        const on = picked.includes(id);
+
+                        return (
+                            <Table.Row key={id} selected={on} onClick={() => set({ projects: toggled(id, !on) })}>
+                                <Table.Cell>
+                                    <Checkbox label={row.summary.name} checked={on} onCheckedChange={(next) => set({ projects: toggled(id, next) })} />
+                                </Table.Cell>
+                                <Table.Cell>{row.summary.name}</Table.Cell>
+                                <Table.Cell mono>
+                                    {row.summary.scratch === true ? '' : <MiddleTruncate className="min-w-0" text={row.summary.folder} />}
+                                </Table.Cell>
+                            </Table.Row>
+                        );
+                    })}
+                </Table.Root>
+            )}
+            <Field orientation="horizontal" label={t('tunnels.grant.ceiling')}>
                 <Select<RuntimeMode>
                     label={t('tunnels.grant.ceiling')}
                     variant="outlined"
@@ -76,7 +86,7 @@ export function GrantFields({ endpointId, draft, onChange }: { endpointId: strin
                     onValueChange={(ceiling) => set({ ceiling })}
                 />
             </Field>
-            <Field orientation="horizontal" label={t('tunnels.grant.expiry')} hint={t('tunnels.grant.expiryHint')}>
+            <Field orientation="horizontal" label={t('tunnels.grant.expiry')}>
                 <Select<Expiry>
                     label={t('tunnels.grant.expiry')}
                     variant="outlined"

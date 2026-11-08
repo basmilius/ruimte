@@ -651,7 +651,7 @@
         },
         "tunnels": {
             "label": "Tunnels",
-            "description": "Reach Ruimte's MCP and your dev servers from outside, through your own Cloudflare account."
+            "description": "Reach Ruimte's MCP and your dev servers from outside."
         },
         "voice": {
             "label": "Voice",
@@ -1016,183 +1016,169 @@
         "openedThroughAccount": "Opened through your account"
     },
     "tunnels": {
-        "title": "Tunnels",
-        "visibility": "Cloudflare ends the encryption at its edge, so it can read everything that passes through a tunnel: prompts, file contents, credentials and the cookies of a dev site. Ruimte adds no encryption of its own on top.",
-        "update": "This machine needs a newer Ruimte to offer tunnels.",
-        "loading": "Loading the tunnels.",
-        "elsewhere": "Tunnels are set up in the desktop app on the machine itself. This window only shows their state.",
+        "cloudflare": "Cloudflare",
+        "update": "This machine needs a newer Ruimte.",
+        "loading": "Loading",
+        "elsewhere": "Set up tunnels in the app on that machine.",
         "loadFailed": "Could not load the tunnels.",
         "changeFailed": "That did not work.",
         "failed": "Could not show the tunnels",
-        "cannotInstall": "Ruimte cannot install cloudflared here",
         "retry": "Try again",
-        "clients_one": "{{count}} client used a credential lately",
-        "clients_other": "{{count}} clients used a credential lately",
+        "clients_one": "{{count}} client active lately",
+        "clients_other": "{{count}} clients active lately",
         "stage": {
-            "not-installed": "cloudflared is not installed",
+            "not-installed": "cloudflared not installed",
             "installing": "Installing cloudflared",
-            "cannot-install": "Ruimte cannot install cloudflared here",
-            "no-token": "No Cloudflare API token",
+            "cannot-install": "Cannot install cloudflared here",
+            "no-token": "No API token",
             "checking": "Checking with Cloudflare",
             "no-tunnel": "No tunnel yet",
-            "starting": "Updating the tunnel",
-            "running": "The tunnel is running",
-            "failed": "Tunnels ran into a problem"
+            "starting": "Starting",
+            "running": "Running",
+            "failed": "Not working"
         },
         "install": {
-            "label": "Install cloudflared",
-            "description": "Ruimte downloads Cloudflare's official build, checks that it is the build this release expects, and keeps it in its own folder.",
             "action": "Install"
         },
         "token": {
-            "label": "Cloudflare API token",
-            "description": "Ruimte manages one tunnel on your Cloudflare account with a token you make. It needs Zone read, DNS edit and Cloudflare Tunnel edit. The token stays on this machine and goes only to Cloudflare.",
-            "placeholder": "Paste the token",
-            "make": "Make a token",
-            "action": "Check token",
-            "accepted_one": "Cloudflare accepts this token. It reaches {{count}} domain on {{account}}.",
-            "accepted_other": "Cloudflare accepts this token. It reaches {{count}} domains on {{account}}.",
-            "acceptedAccounts_one": "Cloudflare accepts this token. It reaches {{count}} domain on {{accounts}} accounts.",
-            "acceptedAccounts_other": "Cloudflare accepts this token. It reaches {{count}} domains on {{accounts}} accounts.",
-            "remove": "Remove token"
+            "label": "API token",
+            "description": "Needs Zone read, DNS edit and Cloudflare Tunnel edit.",
+            "placeholder": "Paste token",
+            "make": "Make token",
+            "check": "Check",
+            "reaches_one": "Reaches {{count}} domain on {{account}}.",
+            "reaches_other": "Reaches {{count}} domains on {{account}}.",
+            "reachesAccounts_one": "Reaches {{count}} domain on {{accounts}} accounts.",
+            "reachesAccounts_other": "Reaches {{count}} domains on {{accounts}} accounts.",
+            "remove": "Remove"
         },
         "tunnel": {
             "label": "Tunnel",
-            "description": "Ruimte makes one tunnel for this machine on your Cloudflare account. It also shows in the Cloudflare dashboard.",
-            "account": "Cloudflare account",
-            "pickAccount": "Pick an account",
-            "action": "Create tunnel"
-        },
-        "existing": {
-            "label": "Your tunnels",
-            "description": "Ruimte adds only its own hostnames.",
-            "loading": "Loading your tunnels.",
-            "none": "No tunnels on this account.",
+            "account": "Account",
+            "pickAccount": "Pick account",
+            "pick": "Which tunnel",
+            "new": "New tunnel",
+            "running": "Running",
+            "idle": "Not running",
+            "use": "Use",
             "loadFailed": "Could not list your tunnels.",
-            "running": "Already running. Ruimte starts nothing.",
-            "idle": "Not running. Ruimte runs it here.",
-            "local": "Managed in a file, not in the dashboard.",
-            "action": "Use"
+            "runner": {
+                "ruimte": "Runs on this computer",
+                "other": "Runs outside Ruimte",
+                "none": "Starts with the first hostname"
+            }
         },
         "unlink": {
             "action": "Stop using",
             "title": "Stop using {{name}}?",
             "description": "Ruimte removes its hostnames. The tunnel stays in Cloudflare."
         },
-        "zone": {
-            "label": "Domain",
-            "pick": "Pick a domain"
-        },
-        "rows": {
+        "hostnames": {
             "title": "Hostnames",
-            "tunnel": "Tunnel {{name}}",
+            "description": "Cloudflare can read all traffic through a tunnel.",
+            "add": "Add hostname",
+            "hostname": "Hostname",
+            "target": "Points to",
+            "ruimte": "Ruimte",
             "others": "Already on this tunnel",
-            "made": "Made by Ruimte.",
-            "picked": "Your own tunnel.",
-            "runner": {
-                "ruimte": "Ruimte runs it.",
-                "other": "Already running here or elsewhere. Ruimte starts nothing.",
-                "none": "Runs once a hostname is on."
-            },
-            "mcp": "Ruimte's MCP, which asks for a credential on every request",
-            "dev": "Dev server on port {{port}}, open to anyone with the address",
-            "enabled": "{{hostname}} is on",
-            "afterRestart": "{{hostname}} after a restart",
-            "comeBack": "Comes back on",
-            "stayOff": "Stays off",
-            "remove": "Remove {{hostname}}",
-            "add": "Add"
+            "empty": "No hostnames yet",
+            "mcp": "Ruimte MCP",
+            "on": "{{hostname}} on",
+            "more": "More for {{hostname}}",
+            "copy": "Copy address",
+            "open": "Open",
+            "comeBack": "On after restart",
+            "remove": "Remove"
         },
-        "mcp": {
-            "label": "External MCP",
-            "on": "Listening on 127.0.0.1, port {{port}}. A hostname above makes it reachable from outside.",
-            "off": "Off. Nothing listens until you turn it on.",
-            "hostname": "MCP label or hostname",
-            "hostnameHint": "Start from a long random label, so scanners do not find it. Your credentials protect the MCP, not the name."
-        },
-        "dev": {
-            "label": "Add a dev server",
+        "add": {
+            "title": "Add hostname",
+            "kind": "Points to",
+            "dev": "Dev server",
+            "mcp": "Ruimte MCP",
             "port": "Port",
-            "other": "Other port",
-            "hostname": "Label or hostname",
-            "confirm": {
-                "title": "Open to anyone?",
-                "description": "Anyone with the address reaches this server, without a login."
-            }
+            "pickPort": "Pick port",
+            "otherPort": "Other port",
+            "hostname": "Hostname",
+            "label": "Label",
+            "zone": "Domain",
+            "pickZone": "Pick domain",
+            "devWarning": "Anyone with the address reaches this dev server.",
+            "action": "Add"
         },
-        "credentials": {
+        "clients": {
             "title": "External clients",
-            "description": "A credential lets a hosted client, such as a bot, operate Ruimte as you. It has no end date unless you set one. Revoke it when you stop trusting the client.",
-            "address": "Address on this machine",
-            "addressOff": "Turn the external MCP on to get an address.",
-            "clients_one": "{{count}} client used a credential lately",
-            "clients_other": "{{count}} clients used a credential lately",
+            "mcp": "External MCP",
+            "address": "On this machine at",
             "create": "New bearer",
-            "tier": {
-                "read": "Read",
-                "work": "Work",
-                "machine": "Machine"
-            },
-            "allProjects": "all projects",
-            "someProjects_one": "{{count}} project",
-            "someProjects_other": "{{count}} projects",
-            "ceilingIs": "agents up to {{mode}}",
+            "client": "Client",
+            "kind": "Kind",
+            "reach": "Reach",
+            "lastUsed": "Last used",
+            "never": "Never",
+            "empty": "No clients yet",
+            "neverExpires": "Never expires",
+            "expired": "Expired",
+            "expiresIn_one": "Expires in {{count}} day",
+            "expiresIn_other": "Expires in {{count}} days",
+            "bearer": "Bearer",
             "oauth": "OAuth",
-            "bearer": "bearer",
-            "approvalsOn": "answers approvals",
-            "expires": "expires",
-            "neverUsed": "never used",
-            "lastUsed": "last used {{ago}}",
-            "revokeOne": "Revoke {{label}}",
+            "allProjects": "All projects",
+            "projects_one": "{{count}} project",
+            "projects_other": "{{count}} projects",
+            "approves": "Approves",
+            "more": "More for {{label}}",
             "revoke": "Revoke",
-            "createFailed": "Could not make the credential.",
-            "confirm": {
-                "title": "Revoke {{label}}?",
-                "text": "The client loses access from its next request. Agents it already started keep running."
-            },
-            "new": {
-                "title": "New bearer",
-                "description": "A bearer is a fixed key for a client that cannot sign in with OAuth. It works on this machine without a tunnel.",
-                "label": "Name",
-                "action": "Make bearer",
-                "once": "Copy it now. Ruimte cannot show it again.",
-                "secret": "Bearer",
-                "where": "Use it at {{address}}.",
-                "copy": "Copy",
-                "onHostname": "Allow from the internet",
-                "onHostnameWarning": "Anyone who gets hold of this bearer can then use it from anywhere. Use OAuth if the client supports it."
-            }
+            "revokeTitle": "Revoke {{label}}?",
+            "revokeText": "It loses access on its next request. Agents it started keep running."
+        },
+        "tier": {
+            "read": "Read",
+            "work": "Work",
+            "machine": "Machine"
+        },
+        "bearer": {
+            "title": "New bearer",
+            "description": "A fixed key for a client without OAuth.",
+            "label": "Name",
+            "action": "Create",
+            "once": "Copy it now. Ruimte cannot show it again.",
+            "secret": "Bearer",
+            "where": "Use it at {{address}}.",
+            "onHostname": "Allow over the tunnel",
+            "onHostnameWarning": "Anyone with the key can then use it from anywhere.",
+            "failed": "Could not create the bearer."
         },
         "grant": {
             "tier": "Reach",
             "tierHint": {
-                "read": "Looks at projects, canvases, tasks and files.",
-                "work": "Also changes canvases and starts agents.",
+                "read": "Reads projects, canvases, tasks and files.",
+                "work": "Also edits canvases and starts agents.",
                 "machine": "Also runs launches, routines, browsers, devices, databases and computer use."
             },
             "projects": "Projects",
             "allProjects": "All",
             "someProjects": "Selected",
-            "ceiling": "Agents it starts run up to",
-            "ceilingHint": "Agents it starts never get a wider mode.",
-            "expiry": "Ends",
-            "expiryHint": "A credential has no end date by default.",
+            "pickAll": "All projects",
+            "project": "Project",
+            "folder": "Folder",
+            "ceiling": "Highest agent mode",
+            "expiry": "Expires",
             "expiryOption": {
                 "never": "Never",
-                "30": "After 30 days",
-                "90": "After 90 days",
-                "365": "After a year"
+                "30": "In 30 days",
+                "90": "In 90 days",
+                "365": "In a year"
             },
             "approvals": "Approve on your behalf",
-            "approvalsWarning": "The client can then run shell commands on this machine as you. A supervised agent no longer waits for you."
+            "approvalsWarning": "The client can run shell commands on this machine as you."
         },
         "consent": {
-            "title": "{{host}} wants to use Ruimte",
-            "description": "Check that the code below is the one on the client's page. Then choose what it may do and approve.",
-            "unverifiedName": "It calls itself \"{{name}}\". Ruimte has not verified that name.",
-            "terminals": "A client can read every terminal in the projects it may use.",
-            "others_one": "{{count}} more client waits after this one.",
-            "others_other": "{{count}} more clients wait after this one.",
+            "title": "{{host}} wants access",
+            "description": "Check that this code matches the client's page.",
+            "unverifiedName": "Calls itself \"{{name}}\" (not verified).",
+            "terminals": "It can read every terminal in the projects it reaches.",
+            "others_one": "{{count}} more waiting",
+            "others_other": "{{count}} more waiting",
             "code": "Code",
             "deny": "Deny",
             "approve": "Approve",
