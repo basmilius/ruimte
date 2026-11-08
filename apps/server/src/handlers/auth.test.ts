@@ -437,6 +437,23 @@ describe('auth handlers', () => {
         expect(identity.usageStats).toBe(false);
     });
 
+    test('only a person on this machine lets agents share ports', async () => {
+        const lan: ClientAccess = { reachability: 'lan', sessionId: 's1' };
+
+        expect(await ask(lan, 'endpoint.settings', { agentsSharePorts: true })).toMatchObject({ ok: false, error: { code: 'owner-only' } });
+        expect(await ask(lan, 'endpoint.setIdentity', { name: null, icon: null, agentsSharePorts: true })).toMatchObject({
+            ok: false,
+            error: { code: 'owner-only' }
+        });
+        expect(identity.agentsSharePorts).toBe(false);
+
+        expect(await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.settings', { agentsSharePorts: true })).toMatchObject({
+            ok: true,
+            result: { agentsSharePorts: true }
+        });
+        expect(identity.agentsSharePorts).toBe(true);
+    });
+
     test('only the app on this machine says how long it took to start', async () => {
         expect(await ask({ reachability: 'lan', sessionId: 's1' }, 'usage.startup', { ms: 1200 })).toMatchObject({ ok: false, error: { code: 'forbidden' } });
         expect(await ask({ reachability: 'loopback', sessionId: null }, 'usage.startup', { ms: 1200 })).toEqual(expect.objectContaining({ ok: true }));
