@@ -53561,7 +53561,8 @@
           "eslint",
           "tailwind",
           "sql-native",
-          "rust"
+          "rust",
+          "markdown"
         ]
       }
     },
@@ -53726,7 +53727,8 @@
           "eslint",
           "tailwind",
           "sql-native",
-          "rust"
+          "rust",
+          "markdown"
         ]
       }
     },
@@ -53891,7 +53893,8 @@
           "eslint",
           "tailwind",
           "sql-native",
-          "rust"
+          "rust",
+          "markdown"
         ]
       }
     },

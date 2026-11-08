@@ -471,6 +471,7 @@ The daemon looks up no addresses, holds no map ticket and never contacts the map
 | `tailwind` | `@tailwindcss/language-server` | HTML, CSS, scripts, Vue and PHP, in a project that uses Tailwind |
 | `sql-native` | the native server from `basmilius/language-server-sql`, shown as SQL | `.sql` files, against the project's schema snapshots |
 | `rust` | rust-analyzer from the Rust toolchain, never installed by Ruimte | Rust, in a project with a `Cargo.toml` in its folder or up to three folders down |
+| `markdown` | marksman, a pinned release (`markdown-native-release.json`) | Markdown, in any project: links, headings and references across files |
 
 Intelephense (kind `php`) was removed, and nothing removes a `language-servers/php` install left on disk.
 
@@ -487,6 +488,8 @@ Native servers (`src/language/native.ts`, `installer.ts`):
 - Install downloads PHP's stubs for the server's commit; the server starts with `storagePath` and `stubsPath` and never goes online.
 
 The `rust` kind runs the `rust-analyzer` on `PATH` or in `~/.cargo/bin` that answers `--version` (`src/language/toolchain.ts`), with `~/.cargo/bin` on its `PATH`. Without one it says to run `rustup component add rust-analyzer`; Install only looks again. It is told every `Cargo.toml` no other one holds (`linkedProjects`, `src/language/manifests.ts`).
+
+A kind whose server is someone else's program installs from a descriptor of ours (`<kind>-native-release.json`, same shape as the PHP one) with a checksum per platform, and has no development build. A release that is one file has `format: "raw"`; `checksumOnly: true` marks a release whose program is not run at install, since the checksum already names its bytes.
 
 A kind with `runsBuildCode` builds the code it reads. In a worktree the register made for an agent's node it runs without that (rust-analyzer gets build scripts, proc macros and `checkOnSave` off) or, like Swift and Zig, does not start, until a person calls `language.worktreeBuild` for the repository (local secret only). `language-servers/worktree-build.json` holds the main checkouts they allowed. The status carries `buildHeld`, and an agent reads the same sentence as the `message` of that server.
 

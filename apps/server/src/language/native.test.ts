@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import markdownDescriptor from './markdown-native-release.json' with { type: 'json' };
 import {
     fetchStubs,
     installRelease,
@@ -190,7 +191,8 @@ describe('the SQL checkout', () => {
             source: 'dev',
             version: '0.1.4',
             executable: join('/checkout/sql', 'target', 'release', nativeProgramFile('sql-native', process.platform)),
-            checkout: '/checkout/sql'
+            checkout: '/checkout/sql',
+            printsVersion: true
         });
         expect(policy.plan('php-native', '/home/php-native')).not.toBeNull();
     });
@@ -226,7 +228,8 @@ describe('the SQL checkout', () => {
             source: 'release',
             version: '0.1.4',
             executable: join('/home/sql-native', 'bin', 'sql-language-server'),
-            asset: release.assets['linux-x64']
+            asset: release.assets['linux-x64'],
+            printsVersion: true
         });
     });
 });
@@ -256,6 +259,18 @@ describe('native policy', () => {
         }
     });
 
+    it('pins a third-party release for every platform it ships, by checksum alone and with no checkout to build from', () => {
+        expect(markdownDescriptor.version).toBe('2026-02-08');
+        expect(Object.keys(markdownDescriptor.assets).sort()).toEqual(['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64', 'win32-x64']);
+        for (const [target, asset] of Object.entries(markdownDescriptor.assets)) {
+            const [platform, arch] = target.split('-');
+            const plan = new NativePolicy({ checkouts: {}, platform: platform as NodeJS.Platform, arch }).plan('markdown', folder);
+            expect(plan).toMatchObject({ source: 'release', version: markdownDescriptor.version, printsVersion: false, asset });
+            expect(asset.sha256).toMatch(/^[a-f0-9]{64}$/);
+            expect(asset.url).toStartWith(`https://github.com/artempyanykh/marksman/releases/download/${markdownDescriptor.version}/`);
+        }
+    });
+
     it('runs the checkout the daemon is in, whatever a release says', () => {
         const policy = new NativePolicy({
             checkouts: { 'php-native': { folder: '/checkout/php-language-server', version: '0.1.0', stubsCommit: COMMIT } },
@@ -266,7 +281,8 @@ describe('native policy', () => {
             version: '0.1.0',
             stubsCommit: COMMIT,
             executable: join('/checkout/php-language-server', 'target', 'release', nativeProgramFile('php-native', process.platform)),
-            checkout: '/checkout/php-language-server'
+            checkout: '/checkout/php-language-server',
+            printsVersion: true
         });
     });
 
@@ -319,6 +335,20 @@ describe('installing a release', () => {
             () => undefined
         );
         expect(await readFile(join(folder, 'bin', 'php-language-server'), 'utf8')).toBe('x');
+    });
+
+    it('saves a release that is one file under the name it gives, runnable', async () => {
+        const bytes = new TextEncoder().encode('#!/bin/sh\n');
+        await installRelease(
+            asset({ format: 'raw', sha256: sha256(bytes), executable: 'marksman' }),
+            folder,
+            serving({ 'https://example.test/server.tar.gz': bytes }),
+            () => undefined
+        );
+        expect(await readFile(join(folder, 'bin', 'marksman'), 'utf8')).toBe('#!/bin/sh\n');
+        if (process.platform !== 'win32') {
+            expect((await stat(join(folder, 'bin', 'marksman'))).mode & 0o111).not.toBe(0);
+        }
     });
 
     it('refuses a download that does not match its checksum and unpacks none of it', async () => {

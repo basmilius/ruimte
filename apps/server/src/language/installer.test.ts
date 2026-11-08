@@ -490,6 +490,43 @@ describe('native install', () => {
             expect(installer.versionOf('php-native')).toBe('1.2.3');
         });
 
+        it('installs a release of someone else’s server that is one file, by its checksum alone and without running it', async () => {
+            const calls: unknown[] = [];
+            const file = new TextEncoder().encode('#!/bin/sh\n');
+            const release: NativeRelease = {
+                sourceRevision: COMMIT,
+                version: '2026-02-08',
+                checksumOnly: true,
+                assets: {
+                    [`${process.platform}-${process.arch}`]: {
+                        url: 'https://example.test/marksman',
+                        sha256: sha256(file),
+                        format: 'raw',
+                        executable: 'marksman'
+                    }
+                }
+            };
+            const installer = new LanguageInstaller({
+                root,
+                runtime,
+                run: async (spec) => {
+                    calls.push(spec);
+                    return 0;
+                },
+                native: new NativePolicy({ checkouts: {}, releases: { markdown: release } }),
+                download: async (_url, destination) => {
+                    await writeFile(destination, file);
+                },
+                onChange: () => undefined
+            });
+            await installer.install('markdown');
+            expect(installer.failureOf('markdown')).toBeNull();
+            expect(await installer.state('markdown')).toBe('installed');
+            expect(installer.launchOf('markdown')?.executable).toBe(join(root, 'markdown', 'versions', '2026-02-08', 'bin', 'marksman'));
+            expect(installer.versionOf('markdown')).toBe('2026-02-08');
+            expect(calls).toEqual([]);
+        });
+
         it('stops at a checksum that does not match, before it runs anything', async () => {
             const calls: unknown[] = [];
             const installer = new LanguageInstaller({

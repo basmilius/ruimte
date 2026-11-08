@@ -5,32 +5,38 @@ import { basename, dirname, join, resolve } from 'node:path';
 import type { LanguageServerKind } from '@ruimte/contracts';
 import { sha256, type FileDownload } from '../artifacts/artifact-fs.ts';
 import { extractEntries, readArchive, type ArchiveFormat } from './archive.ts';
+import markdownRelease from './markdown-native-release.json' with { type: 'json' };
 import phpRelease from './php-native-release.json' with { type: 'json' };
 import sqlRelease from './sql-native-release.json' with { type: 'json' };
 import { cargoBin } from './toolchain.ts';
 
 /* A kind whose server is a program of its own, downloaded or built once, and not an npm package. */
-export type NativeKind = 'php-native' | 'sql-native';
+export type NativeKind = 'php-native' | 'sql-native' | 'markdown';
 
-const NATIVE_KINDS: readonly NativeKind[] = ['php-native', 'sql-native'];
+const NATIVE_KINDS: readonly NativeKind[] = ['php-native', 'sql-native', 'markdown'];
 
 export function isNativeKind(kind: LanguageServerKind): kind is NativeKind {
     return (NATIVE_KINDS as readonly string[]).includes(kind);
 }
+
+/* How a release ships: an archive, or the program itself as one file. */
+export type ReleaseFormat = ArchiveFormat | 'raw';
 
 /* One download of a release: the archive for a platform and architecture. */
 export interface NativeAsset {
     url: string;
     /* Lowercase hex. The archive has to match before anything is unpacked. */
     sha256: string;
-    format: ArchiveFormat;
-    /* The executable's path inside the archive. */
+    format: ReleaseFormat;
+    /* The executable's path inside the archive, or the name a `raw` download is saved under. */
     executable: string;
 }
 
 export interface NativeRelease {
     version: string;
     sourceRevision: string;
+    /* A release of someone else's server may print no version we can compare; the checksum then vouches for the bytes alone and the program is not run at install. */
+    checksumOnly?: true;
     /* The commit of the standard library stubs the server was built against, which Install fetches along with it; only a kind that reads stubs has one. */
     stubsCommit?: string;
     /* By `<platform>-<arch>`, as Node names them (`darwin-arm64`, `linux-x64`). */
@@ -38,17 +44,18 @@ export interface NativeRelease {
 }
 
 function releaseAsset(asset: { url: string; sha256: string; format: string; executable: string }): NativeAsset {
-    if (asset.format !== 'tar.gz' && asset.format !== 'zip') {
+    if (asset.format !== 'tar.gz' && asset.format !== 'zip' && asset.format !== 'raw') {
         throw new Error(`Unsupported native archive format: ${asset.format}`);
     }
     return { ...asset, format: asset.format };
 }
 
-/* A descriptor as the repository of a server publishes it; one with no version pins no release yet. */
+/* A descriptor as the repository of a server publishes it, or ours for a server of someone else's; one with no version pins no release yet. */
 interface ReleaseDescriptor {
     version: string;
     sourceRevision: string;
     stubsCommit?: string;
+    checksumOnly?: boolean;
     assets: Record<string, { url: string; sha256: string; format: string; executable: string }>;
 }
 
@@ -56,14 +63,20 @@ export function pinnedRelease(descriptor: ReleaseDescriptor): NativeRelease | un
     if (descriptor.version === '') {
         return undefined;
     }
-    return { ...descriptor, assets: Object.fromEntries(Object.entries(descriptor.assets).map(([platform, asset]) => [platform, releaseAsset(asset)])) };
+    const { checksumOnly, ...release } = descriptor;
+    return {
+        ...release,
+        ...(checksumOnly === true ? { checksumOnly: true as const } : {}),
+        assets: Object.fromEntries(Object.entries(descriptor.assets).map(([platform, asset]) => [platform, releaseAsset(asset)]))
+    };
 }
 
 export const NATIVE_RELEASES: Partial<Record<NativeKind, NativeRelease>> = Object.fromEntries(
     (
         [
             ['php-native', pinnedRelease(phpRelease)],
-            ['sql-native', pinnedRelease(sqlRelease as ReleaseDescriptor)]
+            ['sql-native', pinnedRelease(sqlRelease as ReleaseDescriptor)],
+            ['markdown', pinnedRelease(markdownRelease)]
         ] as const
     ).filter(([, release]) => release !== undefined)
 );
@@ -78,15 +91,18 @@ interface NativeCheckout {
 
 interface NativeSpec {
     program: string;
-    /* The checkout beside Ruimte's own, as path segments. */
-    sibling: readonly string[];
-    /* The variable that names a checkout elsewhere. */
-    sourceVariable: string;
     /* What a person reads a failed build is for. */
     title: string;
     /* Whether an install brings the standard library stubs beside the program. */
     stubs: boolean;
-    read(folder: string): NativeCheckout | null;
+    /* Where a development daemon builds the server from; absent for a server of someone else's, which only a pinned release supplies. */
+    source?: {
+        /* The checkout beside Ruimte's own, as path segments. */
+        sibling: readonly string[];
+        /* The variable that names a checkout elsewhere. */
+        variable: string;
+        read(folder: string): NativeCheckout | null;
+    };
 }
 
 // The root of Ruimte's sources, beside which a development daemon looks for a native checkout.
@@ -134,20 +150,17 @@ export function readSqlCheckout(folder: string): NativeCheckout | null {
 const NATIVE_SPECS: Record<NativeKind, NativeSpec> = {
     'php-native': {
         program: 'php-language-server',
-        sibling: ['language-servers', 'php'],
-        sourceVariable: 'RUIMTE_PHP_LANGUAGE_SERVER_SOURCE',
         title: 'PHP',
         stubs: true,
-        read: readNativeCheckout
+        source: { sibling: ['language-servers', 'php'], variable: 'RUIMTE_PHP_LANGUAGE_SERVER_SOURCE', read: readNativeCheckout }
     },
     'sql-native': {
         program: 'sql-language-server',
-        sibling: ['language-servers', 'sql'],
-        sourceVariable: 'RUIMTE_SQL_LANGUAGE_SERVER_SOURCE',
         title: 'SQL',
         stubs: false,
-        read: readSqlCheckout
-    }
+        source: { sibling: ['language-servers', 'sql'], variable: 'RUIMTE_SQL_LANGUAGE_SERVER_SOURCE', read: readSqlCheckout }
+    },
+    markdown: { program: 'marksman', title: 'Markdown', stubs: false }
 };
 
 /* The name of the program a native kind runs, which is also the name its version is pinned under. */
@@ -190,26 +203,26 @@ function mainCheckoutRoot(root: string): string | null {
 function nativeCheckout(
     kind: NativeKind,
     compiled: boolean,
-    sourcePath: string | null = process.env[NATIVE_SPECS[kind].sourceVariable] ?? null,
+    sourcePath: string | null = process.env[NATIVE_SPECS[kind].source?.variable ?? ''] ?? null,
     ruimteRoot: string = RUIMTE_ROOT
 ): NativeCheckout | null {
-    if (compiled) {
+    const source = NATIVE_SPECS[kind].source;
+    if (compiled || source === undefined) {
         return null;
     }
-    const spec = NATIVE_SPECS[kind];
     if (sourcePath !== null) {
-        return spec.read(resolve(sourcePath));
+        return source.read(resolve(sourcePath));
     }
     try {
         // Anchor discovery to the sources, even when the daemon starts elsewhere or through a symlink.
         const root = realpathSync(ruimteRoot);
-        const sibling = spec.read(join(dirname(root), ...spec.sibling));
+        const sibling = source.read(join(dirname(root), ...source.sibling));
         if (sibling !== null) {
             return sibling;
         }
         // A Ruimte worktree can use the standalone checkout beside its primary checkout.
         const main = mainCheckoutRoot(root);
-        return main === null ? null : spec.read(join(dirname(main), ...spec.sibling));
+        return main === null ? null : source.read(join(dirname(main), ...source.sibling));
     } catch {
         return null;
     }
@@ -237,6 +250,8 @@ export interface NativePlan {
     asset?: NativeAsset;
     /* The folder `cargo build` runs in. A checkout only. */
     checkout?: string;
+    /* Whether the install runs the program for `--version` and expects `version` in it; false for a `checksumOnly` release. */
+    printsVersion: boolean;
 }
 
 interface NativePolicyOptions {
@@ -265,7 +280,8 @@ export class NativePolicy {
                 version: checkout.version,
                 ...(checkout.stubsCommit === undefined ? {} : { stubsCommit: checkout.stubsCommit }),
                 executable: join(checkout.folder, 'target', 'release', nativeProgramFile(kind, platform)),
-                checkout: checkout.folder
+                checkout: checkout.folder,
+                printsVersion: true
             };
         }
         const release = (this.options.releases ?? NATIVE_RELEASES)[kind];
@@ -278,7 +294,8 @@ export class NativePolicy {
             version: release.version,
             ...(release.stubsCommit === undefined ? {} : { stubsCommit: release.stubsCommit }),
             executable: join(installDirectory, 'bin', asset?.executable ?? nativeProgramFile(kind, platform)),
-            ...(asset ? { asset } : {})
+            ...(asset ? { asset } : {}),
+            printsVersion: release.checksumOnly !== true
         };
     }
 }
@@ -316,14 +333,15 @@ async function withDownload<T>(url: string, name: string, get: Download, handle:
 
 /* Downloads a release build, checks it against its pinned checksum before reading a byte of it, and unpacks it into `<directory>/bin`. */
 export async function installRelease(asset: NativeAsset, directory: string, get: Download, log: (line: string) => void): Promise<void> {
-    await withDownload(asset.url, `release.${asset.format}`, get, async (file) => {
+    await withDownload(asset.url, `release.${asset.format === 'raw' ? 'bin' : asset.format}`, get, async (file) => {
         log(`Downloaded ${asset.url}`);
         const actual = sha256(await readFile(file));
         if (actual !== asset.sha256.toLowerCase()) {
             throw new Error('The download is damaged. Try again.');
         }
         log('Checksum matches');
-        const entries = readArchive(await readFile(file), asset.format);
+        const bytes = await readFile(file);
+        const entries = asset.format === 'raw' ? [{ path: asset.executable, data: bytes, mode: 0o755 }] : readArchive(bytes, asset.format);
         const target = join(directory, 'bin');
         await rm(target, { recursive: true, force: true });
         const written = await extractEntries(entries, target);

@@ -1480,6 +1480,16 @@
         "starting",
         "stopped"
     ],
+    "request.language.worktreeBuild.result #/properties/servers/items/properties/sidecars/items/properties/state": ["crashed", "idle", "ready", "starting"],
+    "request.language.worktreeBuild.result #/properties/servers/items/properties/state": [
+        "crashed",
+        "indexing",
+        "installing",
+        "not-installed",
+        "ready",
+        "starting",
+        "stopped"
+    ],
     "request.launch.list.result #/properties/launches/items/properties/kind": ["group", "service", "task"],
     "request.launch.list.result #/properties/launches/items/properties/state": ["exited", "running", "starting", "stopping"],
     "request.launch.restart.result #/properties/outcome": ["busy", "held", "started"],

@@ -344,6 +344,21 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
             }
         ]
     },
+    /* marksman, from a pinned release. It reads Markdown and runs nothing of the project. */
+    markdown: {
+        kind: 'markdown',
+        components: [
+            {
+                name: 'markdown',
+                title: 'marksman',
+                languages: ['markdown'],
+                entry: 'marksman',
+                program: (context) => context.native?.executable ?? '',
+                args: () => ['server'],
+                initializationOptions: () => ({})
+            }
+        ]
+    },
     css: {
         kind: 'css',
         components: [

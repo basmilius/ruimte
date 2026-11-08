@@ -12,7 +12,7 @@ import { CustomLanguageServers } from './custom.ts';
 import { LanguageHost } from './host.ts';
 import { NativePolicy, nativeProgramFile, type Download } from './native.ts';
 import { KIND_PROFILES, type CatalogKind, type ProjectSqlSettings } from './profiles.ts';
-import { tarGz } from './test-archives.ts';
+import { sha256, tarGz } from './test-archives.ts';
 import { FULL_CAPABILITIES, fakeSpawner, makeAlternatives, ManualClock, settle, type FakeProcess, type FakeSpawner } from './test-fakes.ts';
 import { LANGUAGE_KIND_PACKAGES, pinnedVersionsOf, versionOf, type NpmKind } from './versions.ts';
 import { BUILD_HELD_MESSAGE, WorktreeBuildChoices } from './worktree-build.ts';
@@ -63,6 +63,7 @@ function rig(
         platform?: NodeJS.Platform;
         choices?: LanguageChoices;
         native?: NativePolicy;
+        download?: Download;
         /* The text of files that are no document, by path. */
         texts?: Record<string, string>;
         folders?: string[];
@@ -104,7 +105,7 @@ function rig(
         spawn: spawner.spawn,
         native:
             options.native ?? new NativePolicy({ checkouts: { 'php-native': { folder: join(root, 'repo'), version: '0.1.0', stubsCommit: STUBS_COMMIT } } }),
-        download: stubsDownload,
+        download: options.download ?? stubsDownload,
         checkoutRevision: async () => options.revision?.() ?? null,
         run: async (spec, onLine) => {
             if (spec.command.endsWith(nativeProgramFile('php-native', process.platform))) {
@@ -173,6 +174,7 @@ async function installed(
         spawner?: FakeSpawner;
         platform?: NodeJS.Platform;
         native?: NativePolicy;
+        download?: Download;
         texts?: Record<string, string>;
         folders?: string[];
         sqlSettings?: (projectId: string) => Promise<ProjectSqlSettings | null>;
@@ -2454,6 +2456,55 @@ describe('the problems of the whole project', () => {
                 .filter((report) => report.path === 'src/b.ts')
                 .at(-1)
         ).toMatchObject({ diagnostics: [] });
+    });
+});
+
+describe('a server from a pinned release of someone else', () => {
+    const file = new TextEncoder().encode('#!/bin/sh\n');
+    const release = {
+        sourceRevision: 'a'.repeat(40),
+        version: '2026-02-08',
+        checksumOnly: true as const,
+        assets: {
+            [`${process.platform}-${process.arch}`]: {
+                url: 'https://example.test/marksman',
+                sha256: sha256(file),
+                format: 'raw' as const,
+                executable: 'marksman'
+            }
+        }
+    };
+    const markdown = () =>
+        installed(['markdown'], {
+            native: new NativePolicy({ checkouts: {}, releases: { markdown: release } }),
+            download: async (_url, destination) => {
+                await writeFile(destination, file);
+            }
+        });
+
+    it('serves Markdown files in a project with no file of its own for it, from the program of the install', async () => {
+        const { host, spawner } = await markdown();
+
+        expect((await open(host, 'docs/guide.md', '# Guide\n', 'client-1', 'markdown')).servers).toEqual(['markdown']);
+        await ready(host, 'markdown');
+
+        const [process] = spawner.of('markdown');
+        expect(process!.spec.command).toBe(join(root, 'markdown', 'versions', '2026-02-08', 'bin', 'marksman'));
+        expect(process!.spec.args).toEqual(['server']);
+        expect(process!.server.documents.has(uri('docs/guide.md'))).toBe(true);
+        expect((await open(host, 'src/a.ts')).servers).not.toContain('markdown');
+    });
+
+    it('keeps the server for work from another machine too, since it runs nothing of the project', async () => {
+        const { host } = await installed(['markdown'], {
+            untrusted: [WORK],
+            native: new NativePolicy({ checkouts: {}, releases: { markdown: release } }),
+            download: async (_url, destination) => {
+                await writeFile(destination, file);
+            }
+        });
+
+        expect((await open(host, 'docs/guide.md', '# Guide\n', 'client-1', 'markdown')).servers).toEqual(['markdown']);
     });
 });
 

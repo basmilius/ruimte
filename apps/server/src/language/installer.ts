@@ -735,7 +735,7 @@ export class LanguageInstaller {
         if (!(await fileExists(plan.executable))) {
             throw new Error(`The install did not leave ${plan.executable}`);
         }
-        if (!(await this.reportsVersion(plan.executable, dirname(plan.executable), plan.version, push))) {
+        if (plan.printsVersion && !(await this.reportsVersion(plan.executable, dirname(plan.executable), plan.version, push))) {
             throw new Error(`The server did not report version ${plan.version}`);
         }
         if (plan.stubsCommit !== undefined) {

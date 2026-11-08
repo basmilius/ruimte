@@ -27,7 +27,9 @@ export const LanguageServerKindSchema = z.enum([
     'tailwind',
     'sql-native',
     // rust-analyzer as the Rust toolchain brings it; Ruimte finds it and never installs it.
-    'rust'
+    'rust',
+    // marksman, a pinned release of someone else's server.
+    'markdown'
 ]);
 export type LanguageServerKind = z.infer<typeof LanguageServerKindSchema>;
 
