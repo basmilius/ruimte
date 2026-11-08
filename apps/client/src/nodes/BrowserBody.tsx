@@ -21,6 +21,7 @@ import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { useNodeHost } from '@/nodes/node-host';
 import { useLocalDaemonId, usePage } from '@/nodes/use-page';
+import { usePortGrants } from '@/port-tunnel/grants';
 import { usePortTunnelPartitions } from '@/port-tunnel/tunnel-pages';
 import { useEndpoints } from '@/state/endpoints';
 import { endpointKey, useEndpointId } from '@/state/keys';
@@ -52,6 +53,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
     const scaleItems = browserStreamScaleOptions(scaleLimit).map((value) => ({ value: String(value), label: `${value}×` }));
     // A page of a port shared on another machine: the address stays localhost, and the node says whose it is.
     const shared = usePortTunnelPartitions((store) => store.byKey[key]) !== undefined;
+    usePortGrants((store) => store.byEndpoint[endpointId]);
     const machine = useEndpoints((store) => store.endpoints.find((endpoint) => endpoint.id === endpointId)?.label ?? '');
     const refused = state?.refusedAssets ?? 0;
 
@@ -281,6 +283,8 @@ export function BrowserFallback({ id, className }: { id: string; className?: str
     const far = usePageFar(id);
     const endpointId = useEndpointId();
     const localDaemonId = useLocalDaemonId();
+    // The route reads the shared ports of the machine, so a port shared or stopped redraws the node.
+    usePortGrants((store) => store.byEndpoint[endpointId]);
     if (!browserRouteAvailable(endpointId, saved, host?.browserOwner, localDaemonId) || (routeFailed && !browserRegistry.has(endpointKey(endpointId, id)))) {
         return (
             <div className={clsx('flex h-full items-center justify-center bg-surface-sunken', className)}>

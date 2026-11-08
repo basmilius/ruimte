@@ -366,6 +366,16 @@
         }
       }
     },
+    "This address is on the project's machine, which this browser cannot open yet." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit adres staat op de machine van het project, en die kan deze browser nog niet openen."
+          }
+        }
+      }
+    },
     "This account is no longer available. Choose another account." : {
       "extractionState" : "manual",
       "localizations" : {

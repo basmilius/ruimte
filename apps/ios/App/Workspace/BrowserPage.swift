@@ -17,6 +17,11 @@ private final class BrowserState {
             problem = String(localized: "Enter an HTTP or HTTPS address.")
             return
         }
+        // The web view runs on this phone, so a loopback address would reach the phone and not the project's machine.
+        if let sentence = BrowserLoopback.refusal(for: url) {
+            problem = sentence
+            return
+        }
         problem = nil
         webView?.load(URLRequest(url: url))
     }
@@ -121,7 +126,7 @@ struct BrowserPage: View {
         Menu {
             Button(String(localized: "Forward"), lucideIcon: "arrow-right") { state.webView?.goForward() }
                 .disabled(!state.forward)
-            if let url {
+            if let url, !BrowserLoopback.isLoopback(url) {
                 ShareLink(item: url) { Label(String(localized: "Share"), lucideIcon: "share") }
                 Button(String(localized: "Copy link"), lucideIcon: "copy") { UIPasteboard.general.url = url }
                 Button(String(localized: "Open in Safari"), lucideIcon: "external-link") { UIApplication.shared.open(url) }
@@ -148,7 +153,11 @@ private struct BrowserContent: UIViewRepresentable {
         view.allowsBackForwardNavigationGestures = true
         view.scrollView.contentInsetAdjustmentBehavior = .never
         state.webView = view
-        state.navigate()
+        // The first page waits for the rules that keep a site from asking this phone's loopback for assets.
+        Task { @MainActor in
+            if let rules = await BrowserLoopback.compiledRules() { view.configuration.userContentController.add(rules) }
+            state.navigate()
+        }
         return view
     }
     func updateUIView(_ view: WKWebView, context: Context) {
@@ -170,6 +179,11 @@ private struct BrowserContent: UIViewRepresentable {
         {
             guard let url = action.request.url, ["http", "https", "about"].contains(url.scheme?.lowercased() ?? "")
             else { return .cancel }
+            // Every navigation passes here: redirects, back and forward, links and frames included.
+            if let sentence = BrowserLoopback.refusal(for: url) {
+                if action.targetFrame?.isMainFrame ?? true { state.problem = sentence }
+                return .cancel
+            }
             return .allow
         }
         func webView(
