@@ -48,12 +48,13 @@ interface TunnelsInput {
     stores: Pick<AgentStores, 'modeApprovals'>;
     launches: Pick<LaunchesBundle, 'store' | 'agentHost'>;
     routines: Pick<RoutinesBundle, 'routines'>;
+    machineId: string;
     /* The port the API answers on, which is not `config.port` when the system picked one. */
     later: { apiPort(): number };
 }
 
 export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
-    const { config, canvasHost, agents, projects, processes, artifacts, stores, launches, routines, later } = input;
+    const { config, canvasHost, agents, projects, processes, artifacts, stores, launches, routines, machineId, later } = input;
     const sinks = new ClientSinks();
     const changed = (): void => sinks.emit({ event: 'tunnel.changed', payload: {} });
     const consentChanged = (): void => sinks.emit({ event: 'consent.changed', payload: {} });
@@ -101,6 +102,7 @@ export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
         tokens: new FileTokenStore(config.home),
         cloudflare: (url, init) => fetch(url, init),
         machineName: () => config.label,
+        machineId: () => machineId,
         deniedPorts,
         setListener: async (enabled) => {
             if (enabled) {

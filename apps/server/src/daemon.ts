@@ -203,6 +203,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         stores,
         launches,
         routines,
+        machineId: identity.id,
         later: { apiPort: () => server.port ?? config.port }
     });
     const ports = wirePorts(config, tunnels.deniedPorts);

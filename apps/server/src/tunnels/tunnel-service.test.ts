@@ -66,6 +66,7 @@ async function fixture(overrides: Partial<TunnelPorts> = {}, installed: string |
         tokens,
         cloudflare: cloudflare.fetch,
         machineName: () => 'Bas MacBook',
+        machineId: () => 'machine-1',
         deniedPorts: () => [API_PORT, LISTENER_PORT],
         setListener: async (enabled) => {
             listener.on = enabled;
@@ -109,7 +110,7 @@ async function readyTunnel(f: Fixture): Promise<void> {
 }
 
 function ourTunnel(f: Fixture) {
-    return f.cloudflare.tunnels.find((tunnel) => tunnel.name === 'ruimte-bas-macbook')!;
+    return f.cloudflare.tunnels.find((tunnel) => tunnel.name === 'ruimte-bas-macbook-f7a7')!;
 }
 
 function hostnamesOf(f: Fixture): unknown[] {
@@ -253,9 +254,9 @@ describe('the tunnel', () => {
 
         await readyTunnel(f);
 
-        expect(f.cloudflare.called('POST', '/accounts/acc-1/cfd_tunnel')[0]!.body).toEqual({ name: 'ruimte-bas-macbook', config_src: 'cloudflare' });
+        expect(f.cloudflare.called('POST', '/accounts/acc-1/cfd_tunnel')[0]!.body).toEqual({ name: 'ruimte-bas-macbook-f7a7', config_src: 'cloudflare' });
         expect(ourTunnel(f).ingress).toEqual([{ service: 'http_status:404' }]);
-        expect(await f.state()).toMatchObject({ stage: 'running', tunnel: { name: 'ruimte-bas-macbook' }, rows: [] });
+        expect(await f.state()).toMatchObject({ stage: 'running', tunnel: { name: 'ruimte-bas-macbook-f7a7' }, rows: [] });
         expect(f.runner.running).toBe(0);
     });
 
@@ -278,15 +279,27 @@ describe('the tunnel', () => {
     test('works with a tunnel it made itself and refuses one of the same name that it did not', async () => {
         const f = await fixture();
 
-        f.cloudflare.tunnel('acc-1', 'ruimte-bas-macbook', [{ hostname: 'old.bmnw.nl', service: 'http://localhost:1' }]);
+        f.cloudflare.tunnel('acc-1', 'ruimte-bas-macbook-f7a7', [{ hostname: 'old.bmnw.nl', service: 'http://localhost:1' }]);
         await f.service.setToken(FAKE_API_TOKEN);
         await f.service.setup();
         await f.service.idle();
 
         expect(await f.state()).toMatchObject({ stage: 'failed' });
-        expect((await f.state()).message).toContain('has a tunnel named ruimte-bas-macbook already');
+        expect((await f.state()).message).toContain('has a tunnel named ruimte-bas-macbook-f7a7 already');
+        expect((await f.state()).message).toContain('may belong to another machine');
         expect(f.cloudflare.tunnels).toHaveLength(1);
         expect(f.cloudflare.tunnels[0]!.ingress).toEqual([{ hostname: 'old.bmnw.nl', service: 'http://localhost:1' }]);
+    });
+
+    test('gives two machines with the same name a tunnel each on one account', async () => {
+        const first = await fixture();
+        const second = await fixture({ machineId: () => 'machine-2' }, '/usr/bin/cloudflared', { cloudflare: first.cloudflare });
+
+        await readyTunnel(first);
+        await readyTunnel(second);
+
+        expect(first.cloudflare.tunnels.map((tunnel) => tunnel.name)).toEqual(['ruimte-bas-macbook-f7a7', 'ruimte-bas-macbook-d934']);
+        expect((await second.state()).stage).toBe('running');
     });
 
     test('forgets a tunnel that was deleted in the dashboard and says its records stay', async () => {

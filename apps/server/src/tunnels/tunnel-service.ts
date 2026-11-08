@@ -41,6 +41,8 @@ export interface TunnelPorts {
     cloudflare: CloudflareFetch;
     /* The name of this machine, which names its tunnel in the Cloudflare dashboard. */
     machineName(): string;
+    /* The id of this machine, a piece of which keeps its tunnel apart from one of another machine with the same name. */
+    machineId(): string;
     /* The ports Ruimte listens on, which no dev server row may name. */
     deniedPorts(): readonly number[];
     /* Starts or stops the external listener; the port it listens on while it is on. */
@@ -301,12 +303,12 @@ export class TunnelService {
         this.binary = await this.ports.installer.locate();
         this.start('starting', async () => {
             const api = this.api();
-            const name = tunnelNameOf(this.ports.machineName());
+            const name = tunnelNameOf(this.ports.machineName(), this.ports.machineId());
 
             if ((await api.findTunnel(account.id, name)) !== null) {
                 throw new TunnelConfigError(
                     'tunnel-exists',
-                    `${account.name} has a tunnel named ${name} already, and Ruimte only works with a tunnel it made itself. Delete that tunnel in the Cloudflare dashboard (Networks, Tunnels), then try again.`
+                    `${account.name} has a tunnel named ${name} already, and Ruimte only works with a tunnel it made itself. It may belong to another machine of yours, so check that first. Delete it in the Cloudflare dashboard (Networks, Tunnels) only if no machine uses it, then try again.`
                 );
             }
 

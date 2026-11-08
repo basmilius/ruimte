@@ -1,8 +1,10 @@
+import { createHash } from 'node:crypto';
 import type { TunnelRow } from '@ruimte/contracts';
 
 const LABEL = '[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?';
 const HOSTNAME = new RegExp(`^${LABEL}(\\.${LABEL})+$`);
 const MACHINE_NAME_MAX = 40;
+const MACHINE_SUFFIX_LENGTH = 4;
 
 export class TunnelConfigError extends Error {
     readonly code: string;
@@ -49,16 +51,20 @@ export function hostnameInZone(raw: string, zone: string, otherZones: readonly s
     return normalizedHostname(typed.endsWith(`.${zone}`) ? typed : `${typed}.${zone}`);
 }
 
-/* The name of this machine's tunnel in the Cloudflare dashboard. */
-export function tunnelNameOf(machine: string): string {
+/*
+ * The name of this machine's tunnel in the Cloudflare dashboard. Two machines often share a host name, so a short
+ * piece of the machine's id keeps their tunnels apart on one account.
+ */
+export function tunnelNameOf(machine: string, machineId: string): string {
     const slug = machine
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '')
         .slice(0, MACHINE_NAME_MAX)
         .replace(/-+$/g, '');
+    const suffix = createHash('sha256').update(machineId).digest('hex').slice(0, MACHINE_SUFFIX_LENGTH);
 
-    return `ruimte-${slug === '' ? 'machine' : slug}`;
+    return `ruimte-${slug === '' ? 'machine' : slug}-${suffix}`;
 }
 
 /*
